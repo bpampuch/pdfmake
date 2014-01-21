@@ -121,6 +121,8 @@
 
 		/**
 		 * Creates an instance of TextTools - a helper which turns text into a set of Lines
+		 * 
+		 * @constructor
 		 * @param {FontProvider} fontProvider
 		 */
 		function TextTools(fontProvider) {
@@ -284,8 +286,107 @@
 
 		return TextTools;
 	})();
-	
-	
+
+
+
+
+	////////////////////////////////////////
+	// Block
+
+	/**
+	 * Creates an instance of Block
+	 * 
+	 * @constructor
+	 * @param {Number} maximum block width (inherited by the Lines)
+	 */
+	function Block(maxWidth) {
+		this.maxWidth = maxWidth;
+	}
+
+	/**
+	 * Returns minimum width the Block could have without inner-inline splits
+	 * 
+	 * @return {Number}
+	 */
+	Block.prototype.getMinWidth = function() {
+		var max = 0;
+
+		for (var i = 0, l = this.lines.length; i < l; i++) {
+			var line = this.lines[i];
+			max = Math.max(max, (line.getMinWidth() || 0));
+		}
+
+		return max;
+	}
+
+	/**
+	 * Returns width of the longest Line contained within the Block
+	 * @return {Number}
+	 */
+	Block.prototype.getWidth = function() {
+		var max = 0;
+
+		for (var i = 0, l = this.lines.length; i < l; i++) {
+			var line = this.lines[i];
+			max = Math.max(max, (line.getWidth() || 0));
+		}
+
+		return max;
+	}
+
+	/**
+	 * Returns Block height
+	 * @return {Number}
+	 */
+	Block.prototype.getHeight = function() {
+		var sum = 0;
+
+		for (var i = 0, l = this.lines.length; i < l; i++) {
+			var line = this.lines[i];
+			sum += line.getHeight() || 0;
+		}
+
+		return sum;
+	}
+
+	/**
+	 * Sets the Lines, aligns them and returns overflown lines if maxHeight is specified
+	 * @param {Array} lines - an array of Lines
+	 * @param {String} alignment - 'left'/'right'/'center' (no support for 'justify' yet)
+	 * @param {Number} maxHeight - maximum height the Block can have (if specified - overflown lines are not added to the Block, but rather - returned)
+	 * @return {Array} an array containing all overflown Lines (if maxHeight was specified)
+	 */
+	Block.prototype.setLines = function(lines, alignment, maxHeight) {
+		alignment = alignment || 'left';
+		var y = 0;
+
+		this.lines = lines;
+
+		for(var i = 0, l = lines.length; i < l; i++) {
+			var line = lines[i];
+
+			line.y = y;
+			y += line.getHeight();
+			var lineWidth = line.getWidth();
+
+			switch(alignment.toLowerCase()) {
+				case 'left':
+					line.x = 0;
+				break;
+				case 'right':
+					line.x = this.maxWidth - lineWidth;
+				break;
+				case 'center':
+					line.x = (this.maxWidth - lineWidth) / 2;
+				break;
+			}
+
+			if (maxHeight && y > maxHeight) {
+				return lines.splice(i);
+			}
+		}
+	}
+
 
 	////////////////////////////////////////
 	// Exports
@@ -293,6 +394,7 @@
 	var pdfMake = {
 		Line: Line,
 		TextTools: TextTools,
+		Block: Block,
 	};
 
 	if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {

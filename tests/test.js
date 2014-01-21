@@ -3,6 +3,7 @@ var assert = require('assert');
 var pdfMake = require('../src/layout.js');
 var Line = pdfMake.Line;
 var TextTools = pdfMake.TextTools;
+var Block = pdfMake.Block;
 
 describe('Line', function() {
 	describe('addInline', function() {
@@ -150,6 +151,25 @@ describe('Line', function() {
 
 
 
+
+
+
+
+var sampleTestProvider = {
+	provideFont: function(familyName, bold, italics) {
+		return {
+			widthOfString: function(text, size) {
+				return text.length * size * (bold ? 1.5 : 1);
+			},
+			lineHeight: function(size) {
+				return size;
+			}
+		}
+	}
+};
+
+var textTools = new TextTools(sampleTestProvider);
+
 describe('TextTools', function() {
 	var sampleText = 'Przyklad, bez nowych linii,   ale !!!! rozne!!!konstrukcje i ..blablablabla.';
 	var sampleText2 = 'Przyklad, z nowy\nmi liniami\n, \n \n  ale\n\n !!!! rozne!!!konstrukcje i ..blablablabla.';
@@ -175,20 +195,6 @@ describe('TextTools', function() {
 		' Nowak Dodatkowe informacje:'
 	]
 
-	var sampleTestProvider = {
-		provideFont: function(familyName, bold, italics) {
-			return {
-				widthOfString: function(text, size) {
-					return text.length * size * (bold ? 1.5 : 1);
-				},
-				lineHeight: function(size) {
-					return size;
-				}
-			}
-		}
-	};
-
-	var textTools = new TextTools(sampleTestProvider);
 
 	describe('splitWords', function() {
 		it('should do basic splitting', function() {
@@ -327,4 +333,87 @@ describe('TextTools', function() {
 			assert.equal(lines.length, 6);
 		});
 	});
+});
+
+
+
+describe('Block', function() {
+	function createBlock(maxWidth, textArray, alignment) {
+		var lines = textTools.buildLines(textArray, maxWidth);
+		var block = new Block(maxWidth);
+		block.setLines(lines, alignment);
+		return block;
+	}
+
+	describe('setLines', function() {
+		it('should addLines to block.lines collection', function() {
+			var lines = textTools.buildLines(['To jest testowy komentarz\nA to jakis inny\nA tu jeszcze cos'], 500);
+			var block = new Block(500);
+			block.setLines(lines);
+			assert.equal(block.lines, lines);
+		});
+
+		it('should not add overflown lines to block if maxHeight is specified', function() {
+			var lines = textTools.buildLines(['To jest testowy komentarz\nA to jakis inny\nA tu jeszcze cos'], 500);
+			var block = new Block(500);
+			block.setLines(lines, 'left', 20);
+			assert.equal(block.lines.length, 1);
+		});
+
+		it('should return overflown lines if maxHeight is specified', function() {
+			var lines = textTools.buildLines(['To jest testowy komentarz\nA to jakis inny\nA tu jeszcze cos'], 500);
+			var block = new Block(500);
+			var remainingLines = block.setLines(lines, 'left', 20);
+			assert.equal(remainingLines.length, 2);
+		});
+
+		describe('align left', function() {
+			it('should set x to 0 for all lines if there are no leading cuts (no left-trimming)', function() {
+				var block = createBlock(500, ['To jest testowy komentarz\nA to jakis inny\nA tu jeszcze cos'], 'left');
+				assert.equal(block.lines.length, 3);
+				block.lines.forEach(function(line) { assert.equal(line.x, 0 )});
+			});
+		});
+
+		describe('align center', function() {
+			it('should set x to (block width - line width) / 2', function() {
+				var block = createBlock(500, ['To jest testowy komentarz\nA to jakis inny\nA tu jeszcze cos'], 'center');
+				assert.equal(block.lines.length, 3);
+				block.lines.forEach(function(line) { assert.equal(line.x, (500 - line.getWidth())/2 )});
+			});
+		});
+
+		describe('align right', function() {
+			it('should set x to blockWidth - line width', function() {
+				var block = createBlock(500, ['To\ninna\nlinia'], 'right');
+				assert.equal(block.lines.length, 3);
+				block.lines.forEach(function(line) { assert.equal(500 - line.getWidth(), line.x )});
+			});
+
+			it('should set x to blockWidth - line width even if there are leading spaces', function() {
+				var block = createBlock(500, ['To\n  inna\nlinia'], 'right');
+				assert.equal(block.lines.length, 3);
+				block.lines.forEach(function(line) { assert.equal(500 - line.getWidth(), line.x )});
+			});
+
+			it('should set x to blockWidth - line width even if there are trailing spaces', function() {
+				var block = createBlock(500, ['To\n  inna\nlinia    '], 'right');
+				assert.equal(block.lines.length, 3);
+				block.lines.forEach(function(line) { assert.equal(500 - line.getWidth(), line.x )});
+			});
+		});
+	});
+
+	describe('getHeight', function() {
+		it('should return sum of all line heights', function() {
+			var block = createBlock(500, ['To jest testowy komentarz\nA to jakis inny\nA tu jeszcze cos']);
+			assert.equal(block.lines.length, 3);
+			
+			var sum = 0;
+			block.lines.forEach(function(line) { sum += line.getHeight(); });
+			assert.equal(block.getHeight(), sum);
+		});
+
+		it('should take into account line-spacing');
+	})
 });
