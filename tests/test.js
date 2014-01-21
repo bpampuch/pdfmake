@@ -417,3 +417,70 @@ describe('Block', function() {
 		it('should take into account line-spacing');
 	})
 });
+
+
+
+
+describe('LayoutBuilder', function() {
+	describe('processDocument', function(){
+		it('should arrange elements one below another');
+		it('should split blocks onto following pages if theres not enough space left on current page');
+		it('should support columns');
+		it('should support fixed column widths');
+		it('should support columns without specified width');
+		it('should divide available width equally between all columns without specified width');
+		it('should pass column widths to inner elements');
+
+		describe.skip('TODO', function() {
+			it('should support block margins');
+			it('should support inline margins');
+			it('should support default document style');
+			it('should support style inheritance');
+			it('should support style overrides');
+			it('should support style shortcuts');
+			it('should support line indents');
+			it('should support unordered lists');
+			it('should support ordered lists');
+			it('should support sub-lists');
+			it('should support subscript');
+			it('should support superscript');
+			it('should support tables with fixed column widths');
+			it('should support tables with auto column widths');
+			it('should support tables with percentage column widths');
+			it('should support table headers');
+			it('should support table splitting between pages and repeat table headers');
+			it('should support table-cell splitting between pages');
+			it('should support subtables created from arrays');
+			it('should support subtables created from another table');
+			it('should support vertical alignment inside cells');
+			it('should support table styling');
+			it('should support column spans');
+			it('should support row spans');
+			it('should support programmatic cell styling');
+			it('should support multiline content in table cells');
+			it('should support page headers');
+			it('should support page footers');
+			it('should support justify alignment');
+			it('should support non-breaking-spaces');
+			it('should support non-breaking-lines');
+			it('should support current page number');
+			it('should support page count');
+			it('should support custom page breaks');
+			it('should support custom page breaks inside nested elements');
+			it('should support images');
+			it('should support image scaling');
+			it('should support vectors');
+			it('should support various page orientations');
+			it('should support various page sizes');
+			it('should support colors');
+			it('should support absolute positioning');
+			it('should support text continuations');
+			it('should support line-height');
+			it('should support programmatic styling');
+			it('should support line filling action');
+			it('should render lines to pdf in a single call if style is the same');
+			it('should support document encryption');
+			it('should support document permissions');
+		});
+	});
+});
