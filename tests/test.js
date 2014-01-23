@@ -87,7 +87,7 @@ describe('Line', function() {
 			assert.equal(line.inlines[2].x, 80 - 30);
 		});
 
-		it('should not subtract leadingCuts other than the from first inline when setting x', function() {
+		it('should not subtract leadingCuts other than from the first inline when setting x', function() {
 			var line = new Line(100);
 			assert(line.addInline({ width: 40, leadingCut: 30, trailingCut: 0 }));
 			assert(line.addInline({ width: 40, leadingCut: 10, trailingCut: 0 }));
@@ -174,6 +174,8 @@ describe('TextTools', function() {
 	var sampleText = 'Przyklad, bez nowych linii,   ale !!!! rozne!!!konstrukcje i ..blablablabla.';
 	var sampleText2 = 'Przyklad, z nowy\nmi liniami\n, \n \n  ale\n\n !!!! rozne!!!konstrukcje i ..blablablabla.';
 
+	var plainText = 'Imię: Jan      Nazwisko: Nowak\nDodatkowe informacje:';
+
 	var plainTextArray = [
 		'Imię: ',
 		'Jan   ',
@@ -230,11 +232,18 @@ describe('TextTools', function() {
 
 	describe('normalizeTextArray', function() {
 		it('should support plain strings', function() {
+			assert.fail();
+		});
+		it('should support plain strings with new-lines', function() {
+			assert.fail();
+		});
+
+		it('should support an array of plain strings', function() {
 			var result = textTools.normalizeTextArray(plainTextArray);
 			assert.equal(result.length, 8);
 		});
 
-		it('should support new lines in plain strings', function() {
+		it('should support an array of plain strings with new-lines', function() {
 			var result = textTools.normalizeTextArray(plainTextArray);
 			assert.equal(result[5].lineEnd, true);
 		});
@@ -244,7 +253,7 @@ describe('TextTools', function() {
 			assert.equal(result.length, 8);
 		});
 
-		it('should keep style definition after splitting', function() {
+		it('should keep style definitions after splitting new-lines', function() {
 			var result = textTools.normalizeTextArray(mixedTextArray);
 			[0, 2, 3, 4, 5, 6, 7].forEach(function(i) { 
 				assert.equal(result[i].bold, true);
@@ -252,15 +261,14 @@ describe('TextTools', function() {
 
 			assert(!result[1].bold);
 		});
+
+		it('should keep unknown style fields after splitting new-lines', function() {
+			assert.fail();
+		});
 	});
 
 	describe('measure', function() {
-		it('should use default style', function(){
-			var result = textTools.measure(sampleTestProvider, plainTextArray);
-			assert.notEqual(result, null);
-			assert.notEqual(result.length, 0);
-		});
-
+		// width + positioning
 		it('should set width', function() {
 			var result = textTools.measure(sampleTestProvider, plainTextArray);
 			assert.notEqual(result, null);
@@ -293,23 +301,51 @@ describe('TextTools', function() {
 			assert.equal(result[5].leadingCut, 0);
 		});
 
-		it('should support default style overrides', function() {
-			var result = textTools.measure(sampleTestProvider, plainTextArray, { fontSize: 100 });
-			assert.equal(result[0].width, 600);
+		// styling
+		it('should use default style', function() {
+			assert.fail();
+
+			// var result = textTools.measure(sampleTestProvider, plainTextArray);
+			// assert.notEqual(result, null);
+			// assert.notEqual(result.length, 0);
 		});
 
-		it('should take into account styles defined in textArrays', function() {
-			var result = textTools.measure(sampleTestProvider, mixedTextArray);
-			assert.equal(result[0].width, 108);
-			assert.equal(result[0].trailingCut, 18);
-			assert.equal(result[0].leadingCut, 0);
-			assert.equal(result[0].bold, true);
-
-			assert.equal(result[1].width, 72);
-			assert.equal(result[1].trailingCut, 36);
-			assert.equal(result[1].leadingCut, 0);
-			assert(!result[1].bold);
+		it('should support named styles', function() {
+			assert.fail();
 		});
+
+		it('should support partial named styles', function() {
+			assert.fail();
+		});
+
+		it('should support multiple named styles', function() {
+			assert.fail();
+		});
+
+		it('should take into account named styles order', function() {
+			assert.fail();
+		});
+
+		it('should support custom style overrides', function() {
+			assert.fail();
+		});
+
+		it('should support style overrides at text definition level', function() {
+			assert.fail();
+		});
+
+		// it('should take into account styles defined in textArrays', function() {
+		// 	var result = textTools.measure(sampleTestProvider, mixedTextArray);
+		// 	assert.equal(result[0].width, 108);
+		// 	assert.equal(result[0].trailingCut, 18);
+		// 	assert.equal(result[0].leadingCut, 0);
+		// 	assert.equal(result[0].bold, true);
+
+		// 	assert.equal(result[1].width, 72);
+		// 	assert.equal(result[1].trailingCut, 36);
+		// 	assert.equal(result[1].leadingCut, 0);
+		// 	assert(!result[1].bold);
+		// });
 	});
 
 	describe('buildLines', function() {
@@ -422,13 +458,24 @@ describe('Block', function() {
 
 
 describe('LayoutBuilder', function() {
-	describe('processDocument', function(){
-		it('should arrange elements one below another');
-		it('should split blocks onto following pages if theres not enough space left on current page');
+	describe('processDocument', function() {
+		describe('vertical container', function() {
+			it('should arrange elements one below another', function() {
+				// var docElements = [
+					// { textArray: '' }
+				// ];
+
+			});
+			it('should add new pages when required');
+			it('should split blocks onto following pages if theres not enough space left on current page');
+			it('should be able to split blocks onto more than 2 pages');
+		})
+
 		it('should support columns');
 		it('should support fixed column widths');
-		it('should support columns without specified width');
-		it('should divide available width equally between all columns without specified width');
+		it('should support star columns');
+		it('should divide available width equally between all star columns');
+		it('should support auto columns');
 		it('should pass column widths to inner elements');
 
 		describe.skip('TODO', function() {
