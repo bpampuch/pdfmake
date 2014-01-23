@@ -109,6 +109,70 @@
 	};
 
 
+	////////////////////////////////////////
+	// StyleContextStack
+
+	/**
+	 * Creates an instance of StyleContextStack used for style inheritance and style overrides
+	 *
+	 * @constructor
+	 * @this {StyleContextStack}
+	 * @param {Object} named styles dictionary
+	 * @param {Object} optional default style definition
+	 */
+	function StyleContextStack (styleDictionary, defaultStyle) {
+		this.defaultStyle = defaultStyle || {};
+		this.styleDictionary = styleDictionary;
+		this.styleOverrides = [];
+	}
+
+	/**
+	 * Pushes style-name or style-overrides-object onto the stack for future evaluation
+	 *
+	 * @param {String|Object} styleNameOrOverride style-name (referring to styleDictionary) or
+	 *	                                          a new dictionary defining overriding properties
+	 */
+	StyleContextStack.prototype.push = function(styleNameOrOverride) {
+		this.styleOverrides.push(styleNameOrOverride);
+	}
+
+	/**
+	 * Removes latest style-name or style-overrides-object from the stack
+	 */
+	StyleContextStack.prototype.pop = function() {
+		this.styleOverrides.pop();
+	}
+
+	/**
+	 * Evaluates stack and returns value of a named property
+	 *
+	 * @param {String} property - property name
+	 * @return property value or null if not found
+	 */ 
+	StyleContextStack.prototype.getProperty = function(property) {
+		if (this.styleOverrides) {
+			for(var i = this.styleOverrides.length - 1; i >= 0; i--) {
+				var item = this.styleOverrides[i];
+				if (typeof item == "string" || item instanceof String) {
+					// named-style-override
+
+					var style = this.styleDictionary[item];
+					if (style && style[property]) {
+						return style[property];
+					}
+				} else {
+					// style-overrides-object
+					if (item[property]) {
+						return item[property];
+					}
+				}
+			}
+		}
+
+		return this.defaultStyle && this.defaultStyle[property];
+	}
+
+
 
 
 	////////////////////////////////////////
@@ -116,6 +180,8 @@
 
 	var TextTools = (function(){
 		var WORD_RE = /([^ ,\/!.?:;\-\n]*[ ,\/!.?:;\-]*)|\n/g;
+		// /\S*\s*/g to be considered (I'm not sure however - we shouldn't split "aaa !!!!")
+
 		var LEADING = /^(\s)+/g;
 		var TRAILING = /(\s)+$/g;
 
@@ -191,17 +257,26 @@
 			destination = destination || {};
 			source = source || {}; //TODO: default style
 
-			[ 'bold', 'italics', 'fontSize', 'font' ].forEach(function(key){
-				if (source[key]) {
+			for(var key in source) {
+				if (key != 'text' && source.hasOwnProperty(key)) {
 					destination[key] = source[key];
-				}
-			});
+				};
+			}
+			// [ 'bold', 'italics', 'fontSize', 'font' ].forEach(function(key){
+			// 	if (source[key]) {
+			// 		destination[key] = source[key];
+			// 	}
+			// });
 
 			return destination;
 		}
 
 		function normalizeTextArray(array) {
 			var results = [];
+
+			if (typeof array == 'string' || array instanceof String) {
+				array = [ array ];
+			}
 
 			for(var i = 0, l = array.length; i < l; i++) {
 				var item = array[i];
@@ -242,15 +317,56 @@
 			});
 		}
 
-		function measure(fontProvider, textArray, defaultStyle) {
+
+		function getStyleProperty(item, styleContextStack, property, defaultValue) {
+			if (item[property] != undefined && item[property] != null) {
+				// item defines this property
+				return item[property];
+			}
+
+			var value;
+
+			if (styleContextStack) {
+				var stylesArray = [];
+
+				if (item.style) {
+					// item has the 'style' property referring to a named style (or an array of names)
+					if (item.style instanceof Array) {
+						stylesArray = item.style;
+					} else {
+						stylesArray = [ item.style ];
+					}
+
+					for(var i = 0, l = stylesArray.length; i < l; i ++) {
+						styleContextStack.push(stylesArray[i]);
+					}
+				}
+
+				value = styleContextStack.getProperty(property);
+
+				for(var i = stylesArray.length; i > 0; i--) {
+					styleContextStack.pop();
+				}
+			}
+
+			if (value != null && value != undefined) {
+				return value;
+			} else {
+				return defaultValue;
+			}
+		}
+
+		function measure(fontProvider, textArray, styleContextStack) {
 			var normalized = normalizeTextArray(textArray);
 
 			normalized.forEach(function(item) {
-				var fontName = item.font || defaultStyle && defaultStyle.font || 'Roboto';
-				var fontSize = item.fontSize || defaultStyle && defaultStyle.fontSize || 12;
+				var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
+				var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
+				var bold = getStyleProperty(item, styleContextStack, 'bold', false);
+				var italics = getStyleProperty(item, styleContextStack, 'italics', false);
 				//var color = item.color || defaultStyle && defaultStyle.color || "black";
 
-				var font = fontProvider.provideFont(fontName, item.bold, item.italics);
+				var font = fontProvider.provideFont(fontName, bold, italics);
 
 				// TODO: character spacing
 				item.width = font.widthOfString(removeDiacritics(item.text), fontSize);
@@ -396,6 +512,7 @@
 		Line: Line,
 		TextTools: TextTools,
 		Block: Block,
+		StyleContextStack: StyleContextStack
 	};
 
 	if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {

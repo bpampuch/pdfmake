@@ -4,6 +4,7 @@ var pdfMake = require('../src/layout.js');
 var Line = pdfMake.Line;
 var TextTools = pdfMake.TextTools;
 var Block = pdfMake.Block;
+var StyleContextStack = pdfMake.StyleContextStack;
 
 describe('Line', function() {
 	describe('addInline', function() {
@@ -168,6 +169,91 @@ var sampleTestProvider = {
 	}
 };
 
+
+describe('StyleContextStack', function() {
+
+	var defaultStyle = { fontSize: 12, bold: false, font: 'Helvetica' };
+
+	var stackWithDefaultStyle;
+	var fullStack;
+
+	beforeEach(function() {
+		stackWithDefaultStyle = new StyleContextStack({}, defaultStyle);
+
+		fullStack = new StyleContextStack(
+			{
+				header: { 
+					fontSize: 150, 
+					font: 'Roboto' 
+				}, 
+				small: { 
+					fontSize: 8 
+				} 
+			}, 
+			{ 
+				fontSize: 12, 
+				bold: false,
+				font: 'Helvetica'
+			});
+	});
+
+	describe('getProperty', function() {
+		it('should return null for an empty stack', function(){
+			assert(!(new StyleContextStack().getProperty('fontSize')));
+		});
+
+		it('should return null if default style has been provided, but does not define the property', function(){
+			assert(!stackWithDefaultStyle.getProperty('unknownProperty'));
+		});
+
+		it('should return property value from default style if found', function(){
+			assert.equal(stackWithDefaultStyle.getProperty('fontSize'), 12);
+		});
+
+		it('should return overriden property value from style overrides', function(){
+			stackWithDefaultStyle.push({ fontSize: 50 });
+			assert.equal(stackWithDefaultStyle.getProperty('fontSize'), 50);
+			stackWithDefaultStyle.pop();
+			assert.equal(stackWithDefaultStyle.getProperty('fontSize'), 12);
+		});
+
+		it('should return latest overriden property value from style overrides if multiple style overrides have been provided', function(){
+			stackWithDefaultStyle.push({ fontSize: 50 });
+			stackWithDefaultStyle.push({ fontSize: 150 });
+			assert.equal(stackWithDefaultStyle.getProperty('fontSize'), 150);
+			stackWithDefaultStyle.pop();
+			assert.equal(stackWithDefaultStyle.getProperty('fontSize'), 50);
+			stackWithDefaultStyle.pop();
+			assert.equal(stackWithDefaultStyle.getProperty('fontSize'), 12);
+		});
+
+		it('should return property value from named style', function(){
+			fullStack.push('header');
+			assert.equal(fullStack.getProperty('fontSize'), 150);
+		});
+
+		it('should support named styles mixed with style overrides and obey their order', function(){
+			// default value
+			assert.equal(fullStack.getProperty('fontSize'), 12);
+
+			// named style value
+			fullStack.push('header');
+			assert.equal(fullStack.getProperty('fontSize'), 150);
+
+			// overriden value
+			fullStack.push({ fontSize: 50 });
+			assert.equal(fullStack.getProperty('fontSize'), 50);
+
+			// overriden second type with a named style
+			fullStack.push('small');
+			assert.equal(fullStack.getProperty('fontSize'), 8);
+
+			// taken from previous overrides (not found in latest overrides)
+			assert.equal(fullStack.getProperty('font'), 'Roboto');
+		});
+	});
+});
+
 var textTools = new TextTools(sampleTestProvider);
 
 describe('TextTools', function() {
@@ -190,12 +276,34 @@ describe('TextTools', function() {
 		{ text: ' Nowak\nDodatkowe informacje:', bold: true }
 	]
 
+	var mixedTextArrayWithUnknownStyleDefinitions = [
+		{ text: 'Imię: ', bold: true },
+		'Jan   ',
+		{ text: '   Nazwisko:', bold: true },
+		{ text: ' Nowak\nDodatkowe informacje:', bold: true, unknownStyle: 123 }
+	]
+
 	var plainTextArrayWithoutNewLines = [
 		'Imię: ',
 		'Jan   ',
 		'   Nazwisko:',
 		' Nowak Dodatkowe informacje:'
 	]
+
+	var styleStack = new StyleContextStack({
+		header: { 
+			fontSize: 150, 
+			font: 'Roboto' 
+		}, 
+		small: { 
+			fontSize: 8 
+		} 
+	}, 
+	{ 
+		fontSize: 15, 
+		bold: false,
+		font: 'Helvetica'
+	});
 
 
 	describe('splitWords', function() {
@@ -232,10 +340,13 @@ describe('TextTools', function() {
 
 	describe('normalizeTextArray', function() {
 		it('should support plain strings', function() {
-			assert.fail();
+			var result = textTools.normalizeTextArray(plainText);
+			assert.equal(result.length, 6);
 		});
+
 		it('should support plain strings with new-lines', function() {
-			assert.fail();
+			var result = textTools.normalizeTextArray(plainText);
+			assert(result[3].lineEnd);
 		});
 
 		it('should support an array of plain strings', function() {
@@ -263,7 +374,10 @@ describe('TextTools', function() {
 		});
 
 		it('should keep unknown style fields after splitting new-lines', function() {
-			assert.fail();
+			var result = textTools.normalizeTextArray(mixedTextArrayWithUnknownStyleDefinitions);
+			assert.equal(result.length, 8);
+			assert.equal(result[6].unknownStyle, 123);
+			assert.equal(result[7].unknownStyle, 123);
 		});
 	});
 
@@ -303,49 +417,44 @@ describe('TextTools', function() {
 
 		// styling
 		it('should use default style', function() {
-			assert.fail();
-
-			// var result = textTools.measure(sampleTestProvider, plainTextArray);
-			// assert.notEqual(result, null);
-			// assert.notEqual(result.length, 0);
+			var result = textTools.measure(sampleTestProvider, [{ text: 'Imię' }], styleStack);
+			assert.equal(result[0].width, 4 * 15);
 		});
 
-		it('should support named styles', function() {
-			assert.fail();
-		});
-
-		it('should support partial named styles', function() {
-			assert.fail();
-		});
-
-		it('should support multiple named styles', function() {
-			assert.fail();
-		});
-
-		it('should take into account named styles order', function() {
-			assert.fail();
-		});
-
-		it('should support custom style overrides', function() {
-			assert.fail();
-		});
+		it('should use overriden styles from styleStack', function() {
+			styleStack.push('header');
+			var result = textTools.measure(sampleTestProvider, [{ text: 'Imię' }], styleStack);
+			assert.equal(result[0].width, 4 * 150);
+			styleStack.pop();
+		})
 
 		it('should support style overrides at text definition level', function() {
-			assert.fail();
+			var result = textTools.measure(sampleTestProvider, [{ text: 'Imię', fontSize: 20 }], styleStack);
+			assert.equal(result[0].width, 4 * 20);
 		});
 
-		// it('should take into account styles defined in textArrays', function() {
-		// 	var result = textTools.measure(sampleTestProvider, mixedTextArray);
-		// 	assert.equal(result[0].width, 108);
-		// 	assert.equal(result[0].trailingCut, 18);
-		// 	assert.equal(result[0].leadingCut, 0);
-		// 	assert.equal(result[0].bold, true);
+		it('should support named styles at text definition level', function() {
+			var result = textTools.measure(sampleTestProvider, [{ text: 'Imię', style: 'header' }], styleStack);
+			assert.equal(result[0].width, 4 * 150);
+		});
 
-		// 	assert.equal(result[1].width, 72);
-		// 	assert.equal(result[1].trailingCut, 36);
-		// 	assert.equal(result[1].leadingCut, 0);
-		// 	assert(!result[1].bold);
-		// });
+		it('should support multiple named styles at text definition level', function() {
+			var result = textTools.measure(sampleTestProvider, [{ text: 'Imię', style: ['header', 'small'] }], styleStack);
+			assert.equal(result[0].width, 4 * 8);
+		});
+
+		it('should obey named styles order', function() {
+			var result = textTools.measure(sampleTestProvider, [{ text: 'Imię', style: ['header', 'small'] }], styleStack);
+			assert.equal(result[0].width, 4 * 8);
+
+			result = textTools.measure(sampleTestProvider, [{ text: 'Imię', style: ['small', 'header'] }], styleStack);
+			assert.equal(result[0].width, 4 * 150);
+		});
+
+		it('should not take values from named styles if style-overrides have been providede', function() {
+			var result = textTools.measure(sampleTestProvider, [{ text: 'Imię', fontSize: 123, style: 'header' }], styleStack);
+			assert.equal(result[0].width, 4 * 123);
+		});
 	});
 
 	describe('buildLines', function() {
@@ -365,7 +474,7 @@ describe('TextTools', function() {
 		});
 
 		it('should take into account styled inlines in text', function() {
-			var lines = textTools.buildLines(mixedTextArray, 72+36);
+			var lines = textTools.buildLines(mixedTextArray, (6+3)*12);
 			assert.equal(lines.length, 6);
 		});
 	});
@@ -457,7 +566,7 @@ describe('Block', function() {
 
 
 
-describe('LayoutBuilder', function() {
+describe.skip('LayoutBuilder', function() {
 	describe('processDocument', function() {
 		describe('vertical container', function() {
 			it('should arrange elements one below another', function() {
@@ -531,3 +640,4 @@ describe('LayoutBuilder', function() {
 		});
 	});
 });
+
