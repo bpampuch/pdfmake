@@ -252,6 +252,49 @@ describe('StyleContextStack', function() {
 			assert.equal(fullStack.getProperty('font'), 'Roboto');
 		});
 	});
+
+	describe('autopush', function() {
+		it('should not push anything if no style nor style-property is defined', function() {
+			assert.equal(fullStack.autopush({ anotherProperty: 'test' }), 0);
+		});
+
+		it('should push style name if object specifies it in the style property', function() {
+			assert.equal(fullStack.styleOverrides.length, 0);
+			assert.equal(fullStack.autopush({ anotherProperty: 'test', style: 'header' }), 1);
+			assert.equal(fullStack.styleOverrides.length, 1);
+			assert.equal(fullStack.styleOverrides[0], 'header');
+		});
+
+		it('should push all style names if object specifies them as an array in the style property', function() {
+			assert.equal(fullStack.styleOverrides.length, 0);
+			assert.equal(fullStack.autopush({ anotherProperty: 'test', style: ['header', 'small'] }), 2);
+			assert.equal(fullStack.styleOverrides.length, 2);
+			assert.equal(fullStack.styleOverrides[0], 'header');
+			assert.equal(fullStack.styleOverrides[1], 'small');
+		});
+
+		it('should create a style-overrides-object from all styling properties and push it onto the stack', function() {
+			assert.equal(fullStack.styleOverrides.length, 0);
+			assert.equal(fullStack.autopush({ anotherProperty: 'test', font: 'Helvetica', fontSize: 123, bold: false, italics: true, alignment: 'left' }), 1);
+			assert.equal(fullStack.styleOverrides.length, 1);
+			assert.equal(fullStack.styleOverrides[0].font, 'Helvetica');
+			assert.equal(fullStack.styleOverrides[0].fontSize, 123);
+			assert.equal(fullStack.styleOverrides[0].bold, false);
+			assert.equal(fullStack.styleOverrides[0].italics, true);
+			assert.equal(fullStack.styleOverrides[0].alignment, 'left');
+		});
+
+		it('should support mixed styles and styling properties and also make sure the style-overrides-object is pushed as the last element', function() {
+			assert.equal(fullStack.styleOverrides.length, 0);
+			assert.equal(fullStack.autopush({ anotherProperty: 'test', font: 'Helvetica', style: ['a', 'b', 'c'], fontSize: 123 }), 4);
+			assert.equal(fullStack.styleOverrides.length, 4);
+			assert.equal(fullStack.styleOverrides[0], 'a');
+			assert.equal(fullStack.styleOverrides[1], 'b');
+			assert.equal(fullStack.styleOverrides[2], 'c');
+			assert.equal(fullStack.styleOverrides[3].font, 'Helvetica');
+			assert.equal(fullStack.styleOverrides[3].fontSize, 123);
+		});
+	});
 });
 
 var textTools = new TextTools(sampleTestProvider);
@@ -417,13 +460,13 @@ describe('TextTools', function() {
 
 		// styling
 		it('should use default style', function() {
-			var result = textTools.measure(sampleTestProvider, [{ text: 'Imię' }], styleStack);
+			var result = textTools.measure(sampleTestProvider, 'Imię', styleStack);
 			assert.equal(result[0].width, 4 * 15);
 		});
 
 		it('should use overriden styles from styleStack', function() {
 			styleStack.push('header');
-			var result = textTools.measure(sampleTestProvider, [{ text: 'Imię' }], styleStack);
+			var result = textTools.measure(sampleTestProvider, 'Imię', styleStack);
 			assert.equal(result[0].width, 4 * 150);
 			styleStack.pop();
 		})

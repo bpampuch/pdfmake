@@ -137,10 +137,57 @@
 	}
 
 	/**
-	 * Removes latest style-name or style-overrides-object from the stack
+	 * Removes last style-name or style-overrides-object from the stack
+	 *
+	 * @param {Number} howMany - optional number of elements to be popped (if not specified, 
+	 *                           one element will be removed from the stack)
 	 */
-	StyleContextStack.prototype.pop = function() {
-		this.styleOverrides.pop();
+	StyleContextStack.prototype.pop = function(howMany) {
+		howMany = howMany || 1;
+
+		while(howMany-- > 0) {
+			this.styleOverrides.pop();
+		}
+	}
+
+	/**
+	 * Creates a set of named styles or/and a style-overrides-object based on the item,
+	 * pushes those elements onto the stack for future evaluation and returns the number 
+	 * of elements pushed, so they can be easily poped then.
+	 * 
+	 * @param {Object} item - an object with optional style property and/or style overrides
+	 * @return the number of items pushed onto the stack
+	 */
+	StyleContextStack.prototype.autopush = function(item) {
+		var styleNames = [];
+
+		if (item.style) {
+			if (item.style instanceof Array) {
+				styleNames = item.style;
+			} else {
+				styleNames = [ item.style ];
+			}
+		}
+
+		for(var i = 0, l = styleNames.length; i < l; i++) {
+			this.push(styleNames[i]);
+		}
+
+		var styleOverrideObject = {};
+		var pushSOO = false;
+
+		['font', 'fontSize', 'bold', 'italics', 'alignment'].forEach(function(key) {
+			if (item[key] != undefined && item[key] != null) {
+				styleOverrideObject[key] = item[key];
+				pushSOO = true;
+			}
+		});
+
+		if (pushSOO) {
+			this.push(styleOverrideObject);
+		}
+
+		return styleNames.length + (pushSOO ? 1 : 0);
 	}
 
 	/**
@@ -324,30 +371,13 @@
 				return item[property];
 			}
 
-			var value;
+			if (!styleContextStack) return defaultValue;
 
-			if (styleContextStack) {
-				var stylesArray = [];
+			var pushed = styleContextStack.autopush(item);
+			var value = styleContextStack.getProperty(property);
 
-				if (item.style) {
-					// item has the 'style' property referring to a named style (or an array of names)
-					if (item.style instanceof Array) {
-						stylesArray = item.style;
-					} else {
-						stylesArray = [ item.style ];
-					}
-
-					for(var i = 0, l = stylesArray.length; i < l; i ++) {
-						styleContextStack.push(stylesArray[i]);
-					}
-				}
-
-				value = styleContextStack.getProperty(property);
-
-				for(var i = stylesArray.length; i > 0; i--) {
-					styleContextStack.pop();
-				}
-			}
+			if (pushed > 0)
+				styleContextStack.pop(pushed);
 
 			if (value != null && value != undefined) {
 				return value;
@@ -505,6 +535,12 @@
 
 
 
+
+
+
+
+
+
 	////////////////////////////////////////
 	// Exports
 
@@ -512,7 +548,8 @@
 		Line: Line,
 		TextTools: TextTools,
 		Block: Block,
-		StyleContextStack: StyleContextStack
+		StyleContextStack: StyleContextStack,
+		//LayoutBuilder: LayoutBuilder
 	};
 
 	if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
