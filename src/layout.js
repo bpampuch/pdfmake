@@ -159,6 +159,8 @@
 	 * @return the number of items pushed onto the stack
 	 */
 	StyleContextStack.prototype.autopush = function(item) {
+		if (typeof item == 'string' || item instanceof String) return 0;
+
 		var styleNames = [];
 
 		if (item.style) {
@@ -188,6 +190,25 @@
 		}
 
 		return styleNames.length + (pushSOO ? 1 : 0);
+	}
+
+	/**
+	 * Automatically pushes elements onto the stack, using autopush based on item,
+	 * executes callback and then pops elements back. Returns value returned by callback
+	 * 
+	 * @param  {Object}   item - an object with optional style property and/or style overrides
+	 * @param  {Function} function to be called between autopush and pop
+	 * @return {Object} value returned by callback
+	 */
+	StyleContextStack.prototype.auto = function(item, callback) {
+		var pushedItems = this.autopush(item);
+		var result = callback();
+
+		if (pushedItems > 0) {
+			this.pop(pushedItems);
+		}
+
+		return result;
 	}
 
 	/**
@@ -248,8 +269,8 @@
 		 * @param  {Number} maxWidth - max width a single Line should have
 		 * @return {Array} an array of Lines
 		 */
-		TextTools.prototype.buildLines = function(textArray, maxWidth) {
-			var measured = measure(this.fontProvider, textArray/*, defaultStyle*/);
+		TextTools.prototype.buildLines = function(textArray, maxWidth, styleContextStack) {
+			var measured = measure(this.fontProvider, textArray, styleContextStack);
 
 			var lines = [];
 
@@ -373,11 +394,9 @@
 
 			if (!styleContextStack) return defaultValue;
 
-			var pushed = styleContextStack.autopush(item);
-			var value = styleContextStack.getProperty(property);
-
-			if (pushed > 0)
-				styleContextStack.pop(pushed);
+			styleContextStack.auto(item, function() {
+				value = styleContextStack.getProperty(property);
+			});
 
 			if (value != null && value != undefined) {
 				return value;
@@ -537,7 +556,161 @@
 
 
 
+	////////////////////////////////////////
+	// LayoutBuilder
 
+	/**
+	 * Creates an instance of LayoutBuilder - layout engine which turns document-definition-object 
+	 * into a set of pages, blocks, lines and inlines ready to be rendered into a PDF
+	 * 
+	 * @param {FontProvider} fontProvider - required for text measurements
+	 * @param {Object} pageSize - an object defining page width and height
+	 * @param {Object} pageMargins - an object defining top, left, right and bottom margins
+	 */
+	function LayoutBuilder(fontProvider, pageSize, pageMargins) {
+		this.textTools = new TextTools(fontProvider);
+		this.pageSize = pageSize;
+		this.pageMargins = pageMargins;
+	}
+
+	/**
+	 * Executes layout engine on document-definition-object and creates an array of pages
+	 * containing positioned Blocks, Lines and inlines
+	 * 
+	 * @param {Object} docStructure document-definition-object
+	 * @param {Object} styleDictionary dictionary with style definitions
+	 * @param {Object} defaultStyle default style definition
+	 * @return {Array} an array of pages
+	 */
+	LayoutBuilder.prototype.layoutDocument = function (docStructure, styleDictionary, defaultStyle) {
+		this.pages = [];
+		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
+
+		this._processVerticalContainer(docStructure, 
+			{ 
+				page: 0, 
+				x: this.pageMargins.left, 
+				y: this.pageMargins.top, 
+				availableWidth: this.pageSize.width - this.pageMargins.left - this.pageMargins.right 
+			});
+
+		return this.pages;
+	};
+
+	LayoutBuilder.prototype._getPage = function(pageNumber) {
+		while(this.pages.length <= pageNumber) {
+			this.pages.push({ blocks: [] });
+		}
+
+		return this.pages[pageNumber];
+	};
+
+	LayoutBuilder.prototype._processVerticalContainer = function(nodes, startPosition) {
+		for(var i = 0, l = nodes.length; i < l; i++) {
+			startPosition = this._processNode(nodes[i], startPosition);
+		}
+
+		return startPosition;
+	};
+
+	LayoutBuilder.prototype._processNode = function(node, startPosition) {
+		if (node instanceof Array) {
+			return this._processVerticalContainer(node, startPosition);
+		} else {
+			var self = this;
+
+			return this.styleStack.auto(node, function() {
+				if (node.columns) {
+					return self.processColumns(node.columns, startPosition);
+				} else if (node.text) {
+					return self._processLeaf(node, startPosition);
+				} else if (typeof node == 'string' || node instanceof String) {
+					return self._processLeaf({ text: node }, startPosition);
+				} else {
+					throw 'Unrecognized document structure: ' + node;
+				}
+			});
+		}
+	};
+
+	LayoutBuilder.prototype._ensureColumnWidths = function(columns, availableWidth) {
+		var columnsWithoutWidth = [];
+
+		for(var i = 0, l = columns.length; i < l; i++) {
+			var column = columns[i];
+
+			if (column.width) {
+				availableWidth -= column.width;
+			} else {
+				columnsWithoutWidth.push(column);
+			}
+		}
+
+		for(var i = 0, l = columnsWithoutWidth.length; i < l; i++) {
+			columnsWithoutWidth[i].width = availableWidth / l;
+		}
+	};
+
+	LayoutBuilder.prototype.processColumns = function(columns, startPosition) {
+		var finalPosition = startPosition;
+		var cumulativeX = 0;
+
+		this._ensureColumnWidths(columns, startPosition.availableWidth);
+
+		for(var i = 0, l = columns.length; i < l; i++) {
+			var columnStartPosition = { 
+				page: startPosition.page, 
+				y: startPosition.y, 
+				x: startPosition.x + cumulativeX, 
+				availableWidth: columns[i].width 
+			};
+
+			cumulativeX += columns[i].width || 0;
+
+			var columnFinalPosition = this._processNode(columns[i], columnStartPosition);
+
+			var columnFinalY = columnFinalPosition.page * this.pageSize.height + columnFinalPosition.y;
+			var finalY = finalPosition.page * this.pageSize.height + finalPosition.y;
+
+			if (columnFinalY > finalY)
+				finalPosition = columnFinalPosition;
+		}
+
+		return { 
+			page: finalPosition.page, 
+			x: startPosition.x, 
+			y: finalPosition.y, 
+			availableWidth: startPosition.availableWidth 
+		};
+	};
+
+	LayoutBuilder.prototype._processLeaf = function(node, startPosition) {
+		var width = node.width || startPosition.availableWidth;
+
+		var lines = this.textTools.buildLines(node.text, width, this.styleStack);
+
+		while (lines) {
+			var spaceLeft = this.pageSize.height - this.pageMargins.bottom - startPosition.y;
+
+			var block = new Block(width);
+			lines = block.setLines(lines, node.alignment, spaceLeft);
+
+			block.x = startPosition.x;
+			block.y = startPosition.y;
+
+			var page = this._getPage(startPosition.page);
+			page.blocks.push(block);
+
+			if (lines) {
+				// bottom page margin overflow
+				startPosition = { page: startPosition.page + 1, x: startPosition.x, y: this.pageMargins.top, availableWidth: startPosition.availableWidth };
+			} else {
+				startPosition = { page: startPosition.page, x: startPosition.x, y: startPosition.y + block.getHeight(), availableWidth: startPosition.availableWidth  };
+			}
+		}
+
+		return startPosition;
+	};
 
 
 
@@ -549,7 +722,7 @@
 		TextTools: TextTools,
 		Block: Block,
 		StyleContextStack: StyleContextStack,
-		//LayoutBuilder: LayoutBuilder
+		LayoutBuilder: LayoutBuilder
 	};
 
 	if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {

@@ -5,6 +5,7 @@ var Line = pdfMake.Line;
 var TextTools = pdfMake.TextTools;
 var Block = pdfMake.Block;
 var StyleContextStack = pdfMake.StyleContextStack;
+var LayoutBuilder = pdfMake.LayoutBuilder;
 
 describe('Line', function() {
 	describe('addInline', function() {
@@ -523,8 +524,6 @@ describe('TextTools', function() {
 	});
 });
 
-
-
 describe('Block', function() {
 	function createBlock(maxWidth, textArray, alignment) {
 		var lines = textTools.buildLines(textArray, maxWidth);
@@ -606,29 +605,308 @@ describe('Block', function() {
 	})
 });
 
+describe('LayoutBuilder', function() {
+	var builder;
 
+	before(function() {
+		builder = new LayoutBuilder(sampleTestProvider, { width: 400, height: 800 }, { left: 40, right: 40, top: 40, bottom: 40 });
+	});
 
-
-describe.skip('LayoutBuilder', function() {
 	describe('processDocument', function() {
-		describe('vertical container', function() {
-			it('should arrange elements one below another', function() {
-				// var docElements = [
-					// { textArray: '' }
-				// ];
+		it('should arrange texts one below another', function() {
+			var desc = [
+				'first paragraph',
+				'another paragraph'
+			];
 
-			});
-			it('should add new pages when required');
-			it('should split blocks onto following pages if theres not enough space left on current page');
-			it('should be able to split blocks onto more than 2 pages');
-		})
+			var pages = builder.layoutDocument(desc);
 
-		it('should support columns');
-		it('should support fixed column widths');
-		it('should support star columns');
-		it('should divide available width equally between all star columns');
-		it('should support auto columns');
-		it('should pass column widths to inner elements');
+			assert.equal(pages.length, 1);
+			assert(pages[0].blocks[0].y < pages[0].blocks[1].y);
+			assert.equal(pages[0].blocks[0].y + pages[0].blocks[0].getHeight(), pages[0].blocks[1].y);
+		});
+
+		it('should span text into lines if theres not enough horizontal space', function() {
+			var desc = [
+				'first paragraph',
+				'another paragraph, this time a little bit longer though, we want to force this line to be broken into several lines'
+			];
+
+			var pages = builder.layoutDocument(desc);
+
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].blocks.length, 2);
+			assert.equal(pages[0].blocks[1].lines.length, 5);
+		});
+
+		it('should add new pages when required and split blocks when theres not enough space left on current page', function() {
+			var desc = [
+				'first paragraph',
+				'another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block'
+			];
+
+			var pages = builder.layoutDocument(desc);
+
+			assert.equal(pages.length, 2);
+			assert.equal(pages[0].blocks.length, 2);
+			assert.equal(pages[1].blocks.length, 1);
+		});
+
+		it('should be able to split blocks onto more than 2 pages', function() {
+			var desc = [
+				'first paragraph',
+				'another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block'
+			];
+
+			var pages = builder.layoutDocument(desc);
+
+			assert.equal(pages.length, 3);
+			assert.equal(pages[0].blocks.length, 2);
+			assert.equal(pages[1].blocks.length, 1);
+			assert.equal(pages[2].blocks.length, 1);
+		});
+
+		it('should support named styles', function() {
+			var desc = [
+				'paragraph',
+				{ text: 'paragraph', style: 'header' }
+			];
+
+			var pages = builder.layoutDocument(desc, { header: { fontSize: 70 }});
+
+			assert.equal(pages[0].blocks[0].lines[0].getWidth(), 9*12);
+			assert.equal(pages[0].blocks[1].lines[0].getWidth(), 9*70);
+		});
+
+		it('should support inline styling and style overrides', function() {
+			var desc = [
+				'paragraph',
+				{ 
+					text: [ 
+						'paragraph', 
+						{ text: 'paragraph', fontSize: 4 }, 
+					],
+					style: 'header'
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, { header: { fontSize: 70 }});
+
+			assert.equal(pages[0].blocks[0].lines[0].getWidth(), 9*12);
+			assert.equal(pages[0].blocks[1].lines[0].getWidth(), 9*70);
+			assert.equal(pages[0].blocks[1].lines[1].getWidth(), 9*4);
+		});
+
+		it('should support multiple styles (last property wins)', function() {
+			var desc = [
+				'paragraph',
+				{ text: 'paragraph', style: [ 'header', 'small' ] }
+			];
+
+			var pages = builder.layoutDocument(desc, { header: { fontSize: 70 }, small: { fontSize: 35 }});
+
+			assert.equal(pages[0].blocks[0].lines[0].getWidth(), 9*12);
+			assert.equal(pages[0].blocks[1].lines[0].getWidth(), 9*35);
+		});
+
+		it('should support styles-overrides', function() {
+			var desc = [
+				'paragraph',
+				{ text: 'paragraph', fontSize: 40 }
+			];
+
+			var pages = builder.layoutDocument(desc, { header: { fontSize: 70 }});
+
+			assert.equal(pages[0].blocks[0].lines[0].getWidth(), 9*12);
+			assert.equal(pages[0].blocks[1].lines[0].getWidth(), 9*40);
+		});
+
+		it('styles-overrides should take precedence over named styles', function() {
+			var desc = [
+				'paragraph',
+				{ text: 'paragraph', fontSize: 40, style: 'header' }
+			];
+
+			var pages = builder.layoutDocument(desc, { header: { fontSize: 70 }});
+
+			assert.equal(pages[0].blocks[1].lines[0].getWidth(), 9*40);
+		});
+
+		it('should support columns', function() {
+			var desc = [
+				{
+					columns: [
+						{
+							text: 'column 1'
+						},
+						{
+							text: 'column 2'
+						}
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert.equal(pages[0].blocks[0].x, 40);
+			assert.equal(pages[0].blocks[1].x, 200);
+		});
+
+		it('column descriptor should enable named style inheritance', function() {
+			var desc = [
+				{
+					style: 'header',
+
+					columns: [
+						{
+							text: 'column 1'
+						},
+						{
+							text: 'column 2'
+						}
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, { header: { fontSize: 40 }});
+			assert.equal(pages[0].blocks[0].lines.length, 2);
+			assert.equal(pages[0].blocks[0].lines[0].getWidth(), 6*40);
+			assert.equal(pages[0].blocks[0].lines[1].getWidth(), 40);
+		});
+
+		it('column descriptor should enable style overrides', function() {
+			var desc = [
+				{
+					fontSize: 8,
+
+					columns: [
+						{
+							text: 'column 1'
+						},
+						{
+							text: 'column 2'
+						}
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, { header: { fontSize: 40 }});
+			assert.equal(pages[0].blocks[0].lines.length, 1);
+			assert.equal(pages[0].blocks[0].lines[0].getWidth(), 8*8);
+		});
+
+		it('should support fixed column widths', function() {
+			var desc = [
+				{
+					columns: [
+						{
+							text: 'col1',
+							width: 100,
+						},
+						{
+							text: 'col2',
+							width: 150,
+						},
+						{
+							text: 'col3',
+							width: 90,
+						}
+
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert(pages[0].blocks.length, 3);
+			assert.equal(pages[0].blocks[0].x, 40);
+			assert.equal(pages[0].blocks[1].x, 40 + 100);
+			assert.equal(pages[0].blocks[2].x, 40 + 100 + 150);
+		});
+
+		it('should support star columns and divide available width equally between all star columns', function() {
+			var desc = [
+				{
+					columns: [
+						{
+							text: 'col1',
+						},
+						{
+							text: 'col2',
+							width: 50
+						},
+						{
+							text: 'col3',
+						}
+
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+
+			var pageSpace = 400 - 40 - 40;
+			var starWidth = (pageSpace - 50)/2;
+
+			assert(pages[0].blocks.length, 3);
+			assert.equal(pages[0].blocks[0].x, 40);
+			assert.equal(pages[0].blocks[1].x, 40 + starWidth);
+			assert.equal(pages[0].blocks[2].x, 40 + starWidth + 50);
+		});
+
+		it('should pass column widths to inner elements', function() {
+			var desc = [
+				{
+					columns: [
+						{
+							columns: [
+								{ 
+									text: 'sample text here, should have maxWidth set to ((400-40-40-50)/2)/2'
+								},
+								{
+									text: 'second column'
+								}
+							]
+						},
+						{
+							text: 'col2',
+							width: 50
+						},
+						{
+							text: 'col3',
+						}
+
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			var maxWidth = (400-40-40-50)/4;
+
+			assert.equal(pages[0].blocks[0].lines[0].maxWidth, maxWidth);
+		});
+
+		it.skip('should support auto columns', function() {
+			var desc = [
+				{
+					columns: [
+						{
+							text: 'col1',
+							width: 'auto'
+						},
+						{
+							text: 'col2',
+							width: 50
+						},
+						{
+							text: 'col3',
+						}
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+
+			//TODO:
+		});
 
 		describe.skip('TODO', function() {
 			it('should support block margins');
