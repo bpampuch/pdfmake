@@ -438,6 +438,7 @@
 				}
 
 				item.font = font;
+				item.fontSize = fontSize;
 			})
 
 			return normalized;
@@ -735,7 +736,8 @@
 			});
 		}
 		else {
-			window.PDFMake = pdfMake;
+			window.PDFMake = window.PDFMake || {};
+			window.PDFMake.layout = pdfMake;
 		}
 	}
 })();

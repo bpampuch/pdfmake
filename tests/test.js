@@ -669,7 +669,10 @@ describe('LayoutBuilder', function() {
 		it('should support named styles', function() {
 			var desc = [
 				'paragraph',
-				{ text: 'paragraph', style: 'header' }
+				{ 
+					text: 'paragraph', 
+					style: 'header' 
+				}
 			];
 
 			var pages = builder.layoutDocument(desc, { header: { fontSize: 70 }});
@@ -678,13 +681,36 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].blocks[1].lines[0].getWidth(), 9*70);
 		});
 
+		it('should support arrays of inlines (as an alternative to simple strings)', function() {
+			var desc = [
+				'paragraph',
+				{ 
+					text: [
+						'paragraph ', 
+						'nextInline'
+					],
+					style: 'header' 
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, { header: { fontSize: 15 }});
+
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].blocks.length, 2);
+			assert.equal(pages[0].blocks[0].lines.length, 1);
+			assert.equal(pages[0].blocks[1].lines.length, 1);
+		});
+
 		it('should support inline styling and style overrides', function() {
 			var desc = [
 				'paragraph',
 				{ 
 					text: [ 
 						'paragraph', 
-						{ text: 'paragraph', fontSize: 4 }, 
+						{ 
+							text: 'paragraph', 
+							fontSize: 4 
+						}, 
 					],
 					style: 'header'
 				}
@@ -709,7 +735,7 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].blocks[1].lines[0].getWidth(), 9*35);
 		});
 
-		it('should support styles-overrides', function() {
+		it('should support style-overrides', function() {
 			var desc = [
 				'paragraph',
 				{ text: 'paragraph', fontSize: 40 }
@@ -721,7 +747,7 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].blocks[1].lines[0].getWidth(), 9*40);
 		});
 
-		it('styles-overrides should take precedence over named styles', function() {
+		it('style-overrides should take precedence over named styles', function() {
 			var desc = [
 				'paragraph',
 				{ text: 'paragraph', fontSize: 40, style: 'header' }
@@ -730,6 +756,17 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, { header: { fontSize: 70 }});
 
 			assert.equal(pages[0].blocks[1].lines[0].getWidth(), 9*40);
+		});
+
+		it('should support default document style', function() {
+			var desc = [
+				'text',
+				'text2'
+			];
+
+			var pages = builder.layoutDocument(desc, {}, { fontSize: 50 });
+
+			assert.equal(pages[0].blocks[0].lines[0].getWidth(), 4 * 50);
 		});
 
 		it('should support columns', function() {
@@ -751,7 +788,7 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].blocks[1].x, 200);
 		});
 
-		it('column descriptor should enable named style inheritance', function() {
+		it('column descriptor should support named style inheritance', function() {
 			var desc = [
 				{
 					style: 'header',
@@ -773,7 +810,7 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].blocks[0].lines[1].getWidth(), 40);
 		});
 
-		it('column descriptor should enable style overrides', function() {
+		it('column descriptor should support style overrides', function() {
 			var desc = [
 				{
 					fontSize: 8,
@@ -879,7 +916,8 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc);
-			var maxWidth = (400-40-40-50)/4;
+			// ((pageWidth - margins - fixed_column_width) / 2_columns) / 2_subcolumns
+			var maxWidth = (400-40-40-50)/2/2;
 
 			assert.equal(pages[0].blocks[0].lines[0].maxWidth, maxWidth);
 		});
@@ -908,13 +946,10 @@ describe('LayoutBuilder', function() {
 			//TODO:
 		});
 
+
 		describe.skip('TODO', function() {
 			it('should support block margins');
 			it('should support inline margins');
-			it('should support default document style');
-			it('should support style inheritance');
-			it('should support style overrides');
-			it('should support style shortcuts');
 			it('should support line indents');
 			it('should support unordered lists');
 			it('should support ordered lists');
