@@ -189,7 +189,11 @@ describe('StyleContextStack', function() {
 				}, 
 				small: { 
 					fontSize: 8 
-				} 
+				}, 
+				samplebold: {
+					bold: true,
+				}
+
 			}, 
 			{ 
 				fontSize: 12, 
@@ -251,6 +255,14 @@ describe('StyleContextStack', function() {
 
 			// taken from previous overrides (not found in latest overrides)
 			assert.equal(fullStack.getProperty('font'), 'Roboto');
+		});
+
+		it('"false" boolean overrides (bold, italics, etc) should override inherited "true" values', function() {
+			assert.equal(fullStack.getProperty('bold'), false);
+			fullStack.push('samplebold');
+			assert.equal(fullStack.getProperty('bold'), true);
+			fullStack.push({bold: false});
+			assert.equal(fullStack.getProperty('bold'), false);
 		});
 	});
 

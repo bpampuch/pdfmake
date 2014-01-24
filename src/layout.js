@@ -225,12 +225,12 @@
 					// named-style-override
 
 					var style = this.styleDictionary[item];
-					if (style && style[property]) {
+					if (style && style[property] != null && style[property] != undefined) {
 						return style[property];
 					}
 				} else {
 					// style-overrides-object
-					if (item[property]) {
+					if (item[property] != undefined && item[property] != null) {
 						return item[property];
 					}
 				}
