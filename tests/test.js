@@ -800,6 +800,23 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].blocks[1].x, 200);
 		});
 
+
+		it('should support text-only column definitions', function() {
+			var desc = [
+				{
+					columns: [
+						'column 1',
+						'column 2'
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert.equal(pages[0].blocks[0].x, 40);
+			assert.equal(pages[0].blocks[1].x, 200);
+		});
+
+
 		it('column descriptor should support named style inheritance', function() {
 			var desc = [
 				{

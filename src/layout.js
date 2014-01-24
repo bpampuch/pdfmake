@@ -640,6 +640,10 @@
 		for(var i = 0, l = columns.length; i < l; i++) {
 			var column = columns[i];
 
+			if (typeof column == 'string' || column instanceof String) {
+				column = columns[i] = { text: column };
+			}
+
 			if (column.width) {
 				availableWidth -= column.width;
 			} else {
