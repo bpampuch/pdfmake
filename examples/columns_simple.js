@@ -82,7 +82,7 @@ var docDefinition = {
 			]			
 		},
 		'\n\nOh, don\'t forget, we can use everything from styling examples (named styles, custom overrides) here as well.\n\n',
-		'For instance - our next paragraph will use the \'bigger\' style (with fontSize set to 15 and italics - true). We\'ll split it into two columns and make sure they inherit the style:\n\n',
+		'For instance - our next paragraph will use the \'bigger\' style (with fontSize set to 15 and italics - true). We\'ll split it into three columns and make sure they inherit the style:\n\n',
 		{
 			style: 'bigger',
 			columns: [
