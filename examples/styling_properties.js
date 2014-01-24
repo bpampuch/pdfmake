@@ -27,4 +27,4 @@ var docDefinition = {
 };
 
 var pdfDoc = printer.createPdfKitDocument(docDefinition);
-pdfDoc.write('pdfs/styling_without_named_styles.pdf');
+pdfDoc.write('pdfs/styling_properties.pdf');

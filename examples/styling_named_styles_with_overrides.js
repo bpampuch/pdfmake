@@ -33,4 +33,4 @@ var docDefinition = {
 };
 
 var pdfDoc = printer.createPdfKitDocument(docDefinition);
-pdfDoc.write('pdfs/named_styles_plus_overrides.pdf');
+pdfDoc.write('pdfs/named_styles_with_overrides.pdf');

@@ -19,4 +19,4 @@ var docDefinition = {
 };
 
 var pdfDoc = printer.createPdfKitDocument(docDefinition);
-pdfDoc.write('pdfs/simple.pdf');
+pdfDoc.write('pdfs/basics.pdf');
