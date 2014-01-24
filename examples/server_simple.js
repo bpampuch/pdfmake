@@ -2,8 +2,8 @@ var fonts = {
 	Roboto: {
 		normal: 'fonts/Roboto-Regular.ttf',
 		bold: 'fonts/Roboto-Medium.ttf',
-		italics: 'fonts/Roboto-Italics.ttf',
-		bolditalics: 'fonts/Roboto-Italics.ttf'
+		italics: 'fonts/Roboto-Italic.ttf',
+		bolditalics: 'fonts/Roboto-Italic.ttf'
 	}
 };
 
@@ -19,4 +19,4 @@ var docDefinition = {
 };
 
 var pdfDoc = printer.createPdfKitDocument(docDefinition);
-pdfDoc.write('simple.pdf');
+pdfDoc.write('pdfs/simple.pdf');

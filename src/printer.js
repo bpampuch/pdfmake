@@ -14,8 +14,8 @@
 		 *	Roboto: {
 		 *		normal: 'fonts/Roboto-Regular.ttf',
 		 *		bold: 'fonts/Roboto-Medium.ttf',
-		 *		italics: 'fonts/Roboto-Italics.ttf',
-		 *		bolditalics: 'fonts/Roboto-Italics.ttf'
+		 *		italics: 'fonts/Roboto-Italic.ttf',
+		 *		bolditalics: 'fonts/Roboto-Italic.ttf'
 		 *	}
 		 * };
 		 * 
