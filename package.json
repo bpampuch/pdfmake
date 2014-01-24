@@ -12,7 +12,8 @@
   "devDependencies": {
     "grunt-cli": "~0.1.11",
     "grunt-mocha-test": "~0.8.2",
-    "pdfkit": "~0.2.7"
+    "pdfkit": "~0.2.7",
+    "grunt-jsdoc": "~0.5.1"
   },
   "scripts": {
     "test": "grunt test"

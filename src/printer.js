@@ -1,11 +1,70 @@
-(function() {
+(function PdfPrinter() {
 	function printer(layout, pdfkit) {
 
+		////////////////////////////////////////
+		// PdfPrinter
+
+		/**
+		 * @class Creates an instance of a PdfPrinter which turns document definition into a pdf
+		 *
+		 * @param {Object} fontDescriptors font definition dictionary
+		 *
+		 * @example
+		 * var fontDescriptors = {
+		 *	Roboto: {
+		 *		normal: 'fonts/Roboto-Regular.ttf',
+		 *		bold: 'fonts/Roboto-Medium.ttf',
+		 *		italics: 'fonts/Roboto-Italics.ttf',
+		 *		bolditalics: 'fonts/Roboto-Italics.ttf'
+		 *	}
+		 * };
+		 * 
+		 * var printer = new PdfPrinter(fontDescriptors);
+		 */
 		function PdfPrinter(fontDescriptors) {
 			this.pdfKitDoc = new pdfkit();
 			this.fontProvider = new FontProvider(fontDescriptors, this.pdfKitDoc);
 		}
 
+		/**
+		 * Executes layout engine for the specified document and renders it into a pdfkit document 
+		 * ready to be saved.
+		 *
+		 * @param {Object} docDefinition document definition
+		 * @param {Object} docDefinition.content an array describing the pdf structure (for more information take a look at the examples in the /examples folder)
+		 * @param {Object} [docDefinition.defaultStyle] default (implicit) style definition
+		 * @param {Object} [docDefinition.styles] dictionary defining all styles which can be used in the document
+		 * @param {Object} [docDefinition.pageSize] page size (pdfkit units, A4 dimensions by default)
+		 * @param {Number} docDefinition.pageSize.width width
+		 * @param {Number} docDefinition.pageSize.height height
+		 * @param {Object} [docDefinition.pageMargins] page margins (pdfkit units)
+		 * @param {Object} docDefinition.pageMargins.left
+		 * @param {Object} docDefinition.pageMargins.top
+		 * @param {Object} docDefinition.pageMargins.right
+		 * @param {Object} docDefinition.pageMargins.bottom
+		 *
+		 * @example
+		 *
+		 * var docDefinition = {
+		 *	content: [
+		 *		'First paragraph',
+		 *		'Second paragraph, this time a little bit longer',
+		 *		{ text: 'Third paragraph, slightly bigger font size', fontSize: 20 },
+		 *		{ text: 'Another paragraph using a named style', style: 'header' },
+		 *		{ text: ['playing with ', 'inlines' ] },
+		 *		{ text: ['and ', { text: 'restyling ', bold: true }, 'them'] },
+		 *	],
+		 *	styles: {
+		 *		header: { fontSize: 30, bold: true }
+		 *	}
+		 * }
+		 *
+		 * var pdfDoc = printer.createPdfKitDocument(docDefinition);
+		 *
+		 * pdfDoc.write('sample.pdf');
+		 *
+		 * @return {Object} a pdfKit document object which can be saved or encode to data-url
+		 */
 		PdfPrinter.prototype.createPdfKitDocument = function(docDefinition) {
 			var builder = new layout.LayoutBuilder(
 				this.fontProvider, 

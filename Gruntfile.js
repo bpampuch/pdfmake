@@ -1,20 +1,29 @@
 module.exports = function(grunt) {
 
-  // Add the grunt-mocha-test tasks.
-  grunt.loadNpmTasks('grunt-mocha-test');
+	grunt.initConfig({
+		mochaTest: {
+			test: {
+				options: {
+					reporter: 'spec'
+				},
+				src: ['tests/**/*.js']
+			}
+		},
 
-  grunt.initConfig({
-    // Configure a mochaTest task
-    mochaTest: {
-      test: {
-        options: {
-          reporter: 'spec'
-        },
-        src: ['tests/**/*.js']
-      }
-    }
-  });
+		jsdoc: {
+			dist: {
+				src: ['src/*.js'],
+				options: {
+					destination: 'doc',
+					a: 'true'
+				}
+			}
+		}
+	});
 
-  grunt.registerTask('default', 'mochaTest');
+	grunt.loadNpmTasks('grunt-mocha-test');
+	grunt.loadNpmTasks('grunt-jsdoc');
 
-};
+	grunt.registerTask('default', 'mochaTest');
+
+};  
