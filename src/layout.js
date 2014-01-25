@@ -34,12 +34,12 @@
 	Line.prototype.addInline = function(inline) {
 		if (this.newLineForced) return false;
 
-		if (inline.leadingCut === inline.trailingCut && inline.leadingCut === inline.width) {
-			// double-trimming fix
-			inline.leadingCut = 0;
-			inline.trailingCut = 0;
-			inline.width = 0;
-		}
+//		if (inline.leadingCut === inline.trailingCut && inline.leadingCut === inline.width) {
+//			// double-trimming fix
+//			inline.leadingCut = 0;
+//			inline.trailingCut = 0;
+//			inline.width = 0;
+//		}
 
 		var leadingCut;
 

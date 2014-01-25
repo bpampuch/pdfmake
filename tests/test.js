@@ -533,6 +533,20 @@ describe('TextTools', function() {
 			var lines = textTools.buildLines(mixedTextArray, (6+3)*12);
 			assert.equal(lines.length, 6);
 		});
+
+		it('should not set width to 0 for whitespace-only-inlines (bugfix)', function() {
+			var textArray = [
+				{ text: 'test', bold: true },
+				' test'
+			];
+
+			var lines = textTools.buildLines(textArray, 10000);
+			assert.equal(lines.length, 1);
+			assert.equal(lines[0].inlines.length, 3);
+			assert.equal(lines[0].inlines[0].width, 4*12*1.5);
+			assert.equal(lines[0].inlines[1].width, 12);
+			assert.equal(lines[0].inlines[2].width, 4*12);
+		});
 	});
 });
 
