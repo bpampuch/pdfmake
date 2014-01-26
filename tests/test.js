@@ -161,7 +161,7 @@ var sampleTestProvider = {
 	provideFont: function(familyName, bold, italics) {
 		return {
 			widthOfString: function(text, size) {
-				return text.length * size * (bold ? 1.5 : 1);
+				return text.length * size * (bold ? 1.5 : 1) * (italics ? 1.1 : 1);
 			},
 			lineHeight: function(size) {
 				return size;
@@ -784,14 +784,13 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].blocks[1].lines[0].getWidth(), 9*40);
 		});
 
-		it('should support default document style', function() {
+		it('should support default style', function() {
 			var desc = [
 				'text',
 				'text2'
 			];
 
 			var pages = builder.layoutDocument(desc, {}, { fontSize: 50 });
-
 			assert.equal(pages[0].blocks[0].lines[0].getWidth(), 4 * 50);
 		});
 
@@ -963,6 +962,69 @@ describe('LayoutBuilder', function() {
 			var maxWidth = (400-40-40-50)/2/2;
 
 			assert.equal(pages[0].blocks[0].lines[0].maxWidth, maxWidth);
+		});
+
+
+		it('should support stack of paragraphs', function() {
+			var desc = [
+				{
+					stack: [
+						'paragraph1',
+						'paragraph2'
+					]
+				}	
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert.equal(pages.length, 1);
+			assert(pages[0].blocks[0].getHeight() > 0);
+			assert.equal(pages[0].blocks.length, 2);
+			assert.equal(pages[0].blocks[0].y + pages[0].blocks[0].getHeight(), pages[0].blocks[1].y);
+		});
+
+		it('stack of paragraphs should inherit styles and overriden properties from column descriptors', function() {
+			var desc = [
+				{
+					style: 'header',
+					italics: false,
+					columns: [
+						{
+							bold: true,
+							stack: [
+								'paragraph',
+								{ text: 'paragraph2' },
+								{ text: 'paragraph3', bold: false }
+							]
+						},
+						'another column',
+						{
+							text: 'third column'
+						}
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, {
+				header: {
+					italics: true,
+					fontSize: 50
+				}
+			});
+
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].blocks.length, 5);
+			assert.equal(pages[0].blocks[0].x, pages[0].blocks[1].x);
+			assert.equal(pages[0].blocks[1].x, pages[0].blocks[2].x);
+
+			assert.equal(pages[0].blocks[0].y, pages[0].blocks[3].y);
+			assert.equal(pages[0].blocks[0].y, pages[0].blocks[4].y);
+
+			assert.equal(pages[0].blocks[0].lines[0].inlines[0].width, 9 * 50 * 1.5);
+			assert.equal(pages[0].blocks[1].lines[0].inlines[0].width, 10 * 50 * 1.5);
+			
+			assert.equal(pages[0].blocks[2].lines[0].inlines[0].width, 10 * 50);
+			assert.equal(pages[0].blocks[3].lines[0].inlines[0].width, 8 * 50);
+			assert.equal(pages[0].blocks[4].lines[0].inlines[0].width, 6 * 50);
 		});
 
 		it.skip('should support auto columns', function() {

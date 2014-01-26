@@ -587,7 +587,7 @@
 		this.pages = [];
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 
-		this._processVerticalContainer(docStructure, 
+		this._processNode(docStructure, 
 			{ 
 				page: 0, 
 				x: this.pageMargins.left, 
@@ -616,22 +616,24 @@
 
 	LayoutBuilder.prototype._processNode = function(node, startPosition) {
 		if (node instanceof Array) {
-			return this._processVerticalContainer(node, startPosition);
-		} else {
-			var self = this;
-
-			return this.styleStack.auto(node, function() {
-				if (node.columns) {
-					return self.processColumns(node.columns, startPosition);
-				} else if (node.text) {
-					return self._processLeaf(node, startPosition);
-				} else if (typeof node == 'string' || node instanceof String) {
-					return self._processLeaf({ text: node }, startPosition);
-				} else {
-					throw 'Unrecognized document structure: ' + node;
-				}
-			});
+			node = { stack: node };
 		}
+
+		var self = this;
+
+		return this.styleStack.auto(node, function() {
+			if (node.columns) {
+				return self.processColumns(node.columns, startPosition);
+			} else if (node.stack) {
+				return self._processVerticalContainer(node.stack, startPosition);
+			} else if (node.text) {
+				return self._processLeaf(node, startPosition);
+			} else if (typeof node == 'string' || node instanceof String) {
+				return self._processLeaf({ text: node }, startPosition);
+			} else {
+				throw 'Unrecognized document structure: ' + node;
+			}
+		});
 	};
 
 	LayoutBuilder.prototype._ensureColumnWidths = function(columns, availableWidth) {
