@@ -90,6 +90,10 @@
 					var block = page.blocks[bi];
 					renderBlock(block, pdfKitDoc);
 				}
+				for(var vi = 0, vl = page.vectors.length; vi < vl; vi++) {
+					var vector = page.vectors[vi];
+					renderVector(vector, pdfKitDoc);
+				}
 			}
 		}
 
@@ -158,7 +162,16 @@
 			return text;
 		}
 
-
+		function renderVector(vector, pdfDoc) {
+			switch(vector.type) {
+				case 'ellipse':
+					pdfDoc.fillAndStroke(vector.outlineColor || vector.color || 'black', vector.color || 'black');
+					pdfDoc.lineWidth(vector.outlineWidth || 0);
+					pdfDoc.ellipse(vector.x, vector.y, vector.r1, vector.r2);
+					pdfDoc.fill();
+				break;
+			}
+		}
 
 		function FontProvider(fontDescriptors, pdfDoc) {
 			this.fonts = {};

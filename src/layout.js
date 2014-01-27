@@ -291,6 +291,27 @@
 			return lines;
 		}
 
+		/**
+		 * Returns size of the specified string (without breaking it) using the current style
+		 * @param  {String} text              text to be measured
+		 * @param  {Object} styleContextStack current style stack
+		 * @return {Object}                   size of the specified string
+		 */
+		TextTools.prototype.sizeOfString = function(text, styleContextStack) {
+			//TODO: refactor - extract from measure
+			var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
+			var fontSize = getStyleProperty({}, styleContextStack, 'fontSize', 12);
+			var bold = getStyleProperty({}, styleContextStack, 'bold', false);
+			var italics = getStyleProperty({}, styleContextStack, 'italics', false);
+
+			var font = this.fontProvider.provideFont(fontName, bold, italics);
+
+			return {
+				width: font.widthOfString(removeDiacritics(text), fontSize),
+				height: font.lineHeight(fontSize)
+			};
+		}
+
 		function splitWords(text) {
 			var results = [];
 
@@ -554,9 +575,6 @@
 	}
 
 
-
-
-
 	////////////////////////////////////////
 	// LayoutBuilder
 
@@ -600,7 +618,7 @@
 
 	LayoutBuilder.prototype._getPage = function(pageNumber) {
 		while(this.pages.length <= pageNumber) {
-			this.pages.push({ blocks: [] });
+			this.pages.push({ blocks: [], vectors: [] });
 		}
 
 		return this.pages[pageNumber];
@@ -615,10 +633,14 @@
 	};
 
 	LayoutBuilder.prototype._processNode = function(node, startPosition) {
+		// expand shortcuts
 		if (node instanceof Array) {
 			node = { stack: node };
+		} else if (typeof node == 'string' || node instanceof String) {
+			node = { text: node };
 		}
 
+		// process
 		var self = this;
 
 		return this.styleStack.auto(node, function() {
@@ -626,10 +648,12 @@
 				return self.processColumns(node.columns, startPosition);
 			} else if (node.stack) {
 				return self._processVerticalContainer(node.stack, startPosition);
+			} else if (node.ul) {
+				return self._processUnorderedList(node.ul, startPosition);
+			} else if (node.ol) {
+				return self._processOrderedList(node.ol, startPosition);
 			} else if (node.text) {
 				return self._processLeaf(node, startPosition);
-			} else if (typeof node == 'string' || node instanceof String) {
-				return self._processLeaf({ text: node }, startPosition);
 			} else {
 				throw 'Unrecognized document structure: ' + node;
 			}
@@ -665,12 +689,10 @@
 		this._ensureColumnWidths(columns, startPosition.availableWidth);
 
 		for(var i = 0, l = columns.length; i < l; i++) {
-			var columnStartPosition = { 
-				page: startPosition.page, 
-				y: startPosition.y, 
+			var columnStartPosition = pack(startPosition, { 
 				x: startPosition.x + cumulativeX, 
 				availableWidth: columns[i].width 
-			};
+			});
 
 			cumulativeX += columns[i].width || 0;
 
@@ -683,12 +705,94 @@
 				finalPosition = columnFinalPosition;
 		}
 
-		return { 
+		return pack(startPosition, { 
 			page: finalPosition.page, 
-			x: startPosition.x, 
 			y: finalPosition.y, 
-			availableWidth: startPosition.availableWidth 
+		});
+	};
+
+	LayoutBuilder.prototype._processOrderedList = function(listItems, startPosition) {
+		var sizes = [];
+		var maxSize;
+
+		var maxLength = (listItems.length).toString().length;
+
+		for(var i = 1; i <= maxLength; i++) {
+			sizes[i] = this.textTools.sizeOfString(Array(i + 1).join('9'), this.styleStack);
+			maxSize = sizes[i];
+		}
+
+		var separatorSize = this.textTools.sizeOfString('. ', this.styleStack);
+		var indent = maxSize.width + separatorSize.width;
+		var radius = maxSize.height / 6;
+
+		var counter = 1;
+		var nextItemPosition = pack(startPosition, {
+			x: startPosition.x + indent,
+			availableWidth: startPosition.availableWidth - indent
+		});
+
+		var self = this;
+
+		var addCounter = function(pageNumber, page, block) {
+			var lines = self.textTools.buildLines(counter.toString() + '.', null, self.styleStack);
+			var b = new Block();
+			b.setLines(lines, 'left');
+			b.y = block.y;
+			b.x = block.x - indent;
+
+			page.blocks.push(b);
+
+			self.onBlockAdded = null;
+			counter++;
 		};
+
+		for(var i = 0, l = listItems.length; i < l; i++) {
+			var item = listItems[i];
+
+			this.onBlockAdded = addCounter;
+			nextItemPosition = this._processNode(item, nextItemPosition);
+		}
+
+		return pack(startPosition, {
+			page: nextItemPosition.page,
+			y: nextItemPosition.y,
+		});
+	}
+
+	LayoutBuilder.prototype._processUnorderedList = function(listItems, startPosition) {
+		var size = this.textTools.sizeOfString('oo ', this.styleStack);
+		var indent = size.width;
+		var radius = size.height / 6;
+
+		var nextItemPosition = pack(startPosition, {
+			x: startPosition.x + indent,
+			availableWidth: startPosition.availableWidth - indent
+		});
+
+		var addCircle = function(pageNumber, page, block) {
+			page.vectors.push({ 
+				x: block.x - indent + radius, 
+				y: block.y + size.height * 2 / 3,
+				r1: radius, 
+				r2: radius,
+				type: 'ellipse' 
+			});
+			
+			this.onBlockAdded = null;
+		};
+
+		for(var i = 0, l = listItems.length; i < l; i++) {
+			var item = listItems[i];
+
+			this.onBlockAdded = addCircle;
+			nextItemPosition = this._processNode(item, nextItemPosition);
+		}
+
+		return pack(startPosition, {
+			page: nextItemPosition.page,
+			y: nextItemPosition.y,
+		});
 	};
 
 	LayoutBuilder.prototype._processLeaf = function(node, startPosition) {
@@ -702,22 +806,45 @@
 			var block = new Block(width);
 			lines = block.setLines(lines, node.alignment, spaceLeft);
 
-			block.x = startPosition.x;
-			block.y = startPosition.y;
+			if (block.lines.length > 0) {
+				block.x = startPosition.x;
+				block.y = startPosition.y;
 
-			var page = this._getPage(startPosition.page);
-			page.blocks.push(block);
+				var page = this._getPage(startPosition.page);
+				page.blocks.push(block);
+				if (this.onBlockAdded) {
+					this.onBlockAdded(startPosition.page, page, block);
+				}
+			}
 
 			if (lines) {
 				// bottom page margin overflow
-				startPosition = { page: startPosition.page + 1, x: startPosition.x, y: this.pageMargins.top, availableWidth: startPosition.availableWidth };
+				startPosition = pack(startPosition, { page: startPosition.page + 1, y: this.pageMargins.top });
 			} else {
-				startPosition = { page: startPosition.page, x: startPosition.x, y: startPosition.y + block.getHeight(), availableWidth: startPosition.availableWidth  };
+				startPosition = pack(startPosition, { y: startPosition.y + block.getHeight() });
 			}
 		}
 
 		return startPosition;
 	};
+
+	function pack() {
+		var result = {};
+
+		for(var i = 0, l = arguments.length; i < l; i++) {
+			var obj = arguments[i];
+
+			if (obj) {
+				for(var key in obj) {
+					if (obj.hasOwnProperty(key)) {
+						result[key] = obj[key];
+					}
+				}
+			}
+		}
+
+		return result;
+	}
 
 
 

@@ -1051,13 +1051,38 @@ describe('LayoutBuilder', function() {
 			//TODO:
 		});
 
+		it('should support unordered lists', function() {
+			var desc = [
+				'paragraph',
+				{
+					ul: [
+						'item 1',
+						'item 2',
+						'item 3'
+					]
+				}
+			]
+
+			var pages = builder.layoutDocument(desc);
+
+//			assert()
+		});
+
+//		it('unordered lists should align broken lines properly', function)
+
+		it('should support ordered lists', function() {
+			assert.fail();
+		});
+		it('should support line indents', function() {
+			assert.fail();
+		});
 
 		describe.skip('TODO', function() {
-			it('should support block margins');
-			it('should support inline margins');
-			it('should support line indents');
-			it('should support unordered lists');
-			it('should support ordered lists');
+			it('should support block margins', function() {
+			});
+			it('should support inline margins', function() {
+			});
+
 			it('should support sub-lists');
 			it('should support subscript');
 			it('should support superscript');
