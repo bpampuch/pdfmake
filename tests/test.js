@@ -615,6 +615,18 @@ describe('Block', function() {
 				block.lines.forEach(function(line) { assert.equal(500 - line.getWidth(), line.x )});
 			});
 		});
+
+		describe('justify', function() {
+			it('should calculate wordSpacing for all lines apart from the last one');
+
+			it('should not calculate wordSpacing for lines ending with new-line');
+
+			it('should influence getWidth()')
+
+			it('should take info account inline styles');
+
+			it('should not squash white-characters between words');
+		});
 	});
 
 	describe('getHeight', function() {
@@ -1356,14 +1368,13 @@ describe('LayoutBuilder', function() {
 //		it('should support line indents', function() {
 //		//	assert.fail();
 //		});
+//		
 
 		describe.skip('TODO', function() {
-			it('should support block margins', function() {
-			});
-			it('should support inline margins', function() {
-			});
-
-			it('should support sub-lists');
+			it('should support block margins');
+			it('should support inline margins');
+			it('should support page headers');
+			it('should support page footers');
 			it('should support subscript');
 			it('should support superscript');
 			it('should support tables with fixed column widths');
@@ -1380,9 +1391,6 @@ describe('LayoutBuilder', function() {
 			it('should support row spans');
 			it('should support programmatic cell styling');
 			it('should support multiline content in table cells');
-			it('should support page headers');
-			it('should support page footers');
-			it('should support justify alignment');
 			it('should support non-breaking-spaces');
 			it('should support non-breaking-lines');
 			it('should support current page number');
@@ -1391,9 +1399,19 @@ describe('LayoutBuilder', function() {
 			it('should support custom page breaks inside nested elements');
 			it('should support images');
 			it('should support image scaling');
-			it('should support vectors');
+			it('should support vector lines');
+			it('should support vector paths');
+			it('should support vector dashed lines');
+			it('should support vector line join styles');
+			it('should support vector rectangles');
+			it('should support vector rounded rectangles');
+			it('should support vector polygons');
+			it('should support vector winding rules');
+			it('should support clipping');
 			it('should support various page orientations');
 			it('should support various page sizes');
+			it('should support border styling');
+			it('should support padding');
 			it('should support colors');
 			it('should support absolute positioning');
 			it('should support text continuations');
@@ -1403,6 +1421,8 @@ describe('LayoutBuilder', function() {
 			it('should render lines to pdf in a single call if style is the same');
 			it('should support document encryption');
 			it('should support document permissions');
+			it('should support TOC');
+			it('should support in-document-references');
 		});
 	});
 });
