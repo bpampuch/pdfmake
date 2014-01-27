@@ -692,6 +692,29 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[2].blocks.length, 1);
 		});
 
+		it('should not assume there is enough space left if line boundary is exactly on the page boundary (bugfix)', function() {
+			var desc = [
+				{
+					fontSize: 72,
+					stack: [
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert.equal(pages.length, 2);
+		});
 		it('should support named styles', function() {
 			var desc = [
 				'paragraph',
@@ -1064,18 +1087,275 @@ describe('LayoutBuilder', function() {
 			]
 
 			var pages = builder.layoutDocument(desc);
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].blocks.length, 4);
+		});
 
-//			assert()
+		it('unordered lists should have circles to the left of each element', function() {
+			var desc = [
+				'paragraph',
+				{
+					ul: [
+						'item 1',
+						'item 2',
+						'item 3'
+					]
+				}
+			]
+
+			var pages = builder.layoutDocument(desc);
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].vectors.length, 3);
+
+			for(var i = 0; i < 3; i++) {
+				var circle = pages[0].vectors[i];
+				var paragraphBlock = pages[0].blocks[i + 1];
+
+				assert(circle.x < paragraphBlock.x);
+				assert(circle.y > paragraphBlock.y && circle.y < paragraphBlock.y + paragraphBlock.getHeight());
+			}
+		});
+
+		it('circle radius for unordered lists should be based on fontSize', function() {
+			var desc = [
+				{
+					fontSize: 10,
+					ul: [
+						'item 1',
+						'item 2',
+						'item 3'
+					]
+				},
+				{
+					fontSize: 18,
+					ul: [
+						'item 1',
+						'item 2',
+						'item 3'
+					]
+				},
+			];
+
+			var pages = builder.layoutDocument(desc);
+			// without Math.round we get AssertionError: 1.7999999999999998 == 1.8
+			assert.equal(Math.round(pages[0].vectors[3].r1 / pages[0].vectors[0].r1), Math.round(18 / 10));
+		});
+
+		it('unordered lists should support nested lists', function() {
+			var desc = [
+				{
+					fontSize: 10,
+					ul: [
+						'item 1',
+						{
+							ul: [
+								'subitem 1',
+								'subitem 2',
+								'subitem 3',
+							]
+						},
+						'item 3'
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert.equal(pages[0].vectors.length, 2 + 3);
+
+			// positioning
+			assert.equal(pages[0].blocks[0].x, pages[0].blocks[4].x);
+			assert.equal(pages[0].blocks[1].x, pages[0].blocks[2].x);
+			assert(pages[0].blocks[0].x < pages[0].blocks[1].x);
+
+			// circle positioning
+			var circle = pages[0].vectors[1];
+			var paragraphBlock = pages[0].blocks[1];
+			assert(circle.x < paragraphBlock.x);
+			assert(circle.y > paragraphBlock.y && circle.y < paragraphBlock.y + paragraphBlock.getHeight());
+		});
+
+		it('if there is enough space left on the page for the circle but not enough for the following line of text, circle should be drawn on the next page, together with the text', function() {
+			var desc = [
+				{
+					fontSize: 72,
+					stack: [
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+						'paragraph',
+					]
+				},
+				{
+					fontSize: 90,
+					ul: [
+						'line 1'
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert.equal(pages.length, 2);
+			assert.equal(pages[0].vectors.length, 0);
+			assert.equal(pages[1].vectors.length, 1);
 		});
 
 //		it('unordered lists should align broken lines properly', function)
 
 		it('should support ordered lists', function() {
-			assert.fail();
+			var desc = [
+				'paragraph',
+				{
+					ol: [
+						'item 1',
+						'item 2',
+						'item 3'
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].blocks.length, 4 + 3);
 		});
-		it('should support line indents', function() {
-			assert.fail();
+
+		it('numbers in ordered lists should be positioned to the left of each item', function() {
+			var desc = [
+				'paragraph',
+				{
+					ol: [
+						'item 1',
+						'item 2',
+						'item 3'
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].blocks.length, 4 + 3);
+
+
+			for(var i = 0; i < 3; i++) {
+				var paragraphBlock = pages[0].blocks[1 + 2 * i];
+				var numberBlock = pages[0].blocks[2 + 2 * i];
+				
+				assert(numberBlock.x < paragraphBlock.x);
+				assert(numberBlock.x + numberBlock.getWidth() <= paragraphBlock.x);
+				assert(numberBlock.y >= paragraphBlock.y && numberBlock.y <= paragraphBlock.y + paragraphBlock.getHeight());
+			}
 		});
+
+		it('numbers in ordered lists should be positioned to the left of each item also in more complex cases', function() {
+			var desc = [
+				'paragraph',
+				{
+					ol: [
+						'item 1',
+						{ fontSize: 40, text: 'item 2' },
+						{ text: [ 'item 3', { text: 'next inline', fontSize: 30 } ] },
+						'item 4\nhaving two lines',
+						{ text: [ 'item 5', { text: 'next inline\nand next line', fontSize: 30 } ] }
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert.equal(pages.length, 1);
+	
+			for(var i = 0; i < 3; i++) {
+				var paragraphBlock = pages[0].blocks[1 + 2 * i];
+				var numberBlock = pages[0].blocks[2 + 2 * i];
+				
+				assert(numberBlock.x < paragraphBlock.x);
+				assert(numberBlock.x + numberBlock.getWidth() <= paragraphBlock.x);
+			}
+		});
+
+		it('numbers in ordered lists should be aligned (vertically) to the bottom of the first line of each item', function() {
+			var desc = [
+				'paragraph',
+				{
+					ol: [
+						'item 1',
+						{ fontSize: 40, text: 'item 2' },
+						{ text: [ 'item 3', { text: 'next inline', fontSize: 30 } ] },
+						'item 4\nhaving two lines',
+						{ text: [ 'item 5', { text: 'next inline\nand next line', fontSize: 30 } ] }
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert.equal(pages.length, 1);
+	
+			for(var i = 0; i < 3; i++) {
+				var paragraphBlock = pages[0].blocks[1 + 2 * i];
+				var numberBlock = pages[0].blocks[2 + 2 * i];
+
+				assert.equal(numberBlock.y + numberBlock.getHeight(), paragraphBlock.y + paragraphBlock.lines[0].getHeight());
+			}
+		});
+
+		it('numbers in ordered list should be automatically incremented', function() {
+			var desc = [
+				{
+					ol: [
+						'item',
+						'item',
+						'item',
+						'item',
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+
+			for(var i = 0; i < 4; i++) {
+				var numberBlock = pages[0].blocks[1 + 2 * i];
+
+				assert.equal(numberBlock.lines[0].inlines[0].text, (i + 1).toString() + '.');
+			}
+		});
+
+		it('numbers in ordered sublist should have indepentend counters', function() {
+			var desc = [
+				{
+					ol: [
+						'item 1',
+						'item 2',
+						{ 
+							ol: [
+								'subitem 1',
+								'subitem 2',
+								'subitem 3',
+							]
+						},
+						'item 3',
+						'item 4',
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+
+			// item 2
+			assert.equal(pages[0].blocks[3].lines[0].inlines[0].text, '2.');
+			// item 3
+			assert.equal(pages[0].blocks[3 + 6].lines[0].inlines[0].text, '3.');
+
+			// subitem 1
+			assert.equal(pages[0].blocks[5].lines[0].inlines[0].text, '1.');
+			// subitem 2
+			assert.equal(pages[0].blocks[7].lines[0].inlines[0].text, '2.');
+		});
+//		it('should support line indents', function() {
+//		//	assert.fail();
+//		});
 
 		describe.skip('TODO', function() {
 			it('should support block margins', function() {

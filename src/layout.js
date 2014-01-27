@@ -127,6 +127,19 @@
 	}
 
 	/**
+	 * Creates cloned version of current stack
+	 * @return {StyleContextStack} current stack snapshot
+	 */
+	StyleContextStack.prototype.clone = function() {
+		var stack = new StyleContextStack(this.styleDictionary, this.defaultStyle);
+		for(var i = 0, l = this.styleOverrides; i < l; i++) {
+			stack.styleOverrides.push(this.styleOverrides[i]);
+		}
+
+		return stack;
+	}
+
+	/**
 	 * Pushes style-name or style-overrides-object onto the stack for future evaluation
 	 *
 	 * @param {String|Object} styleNameOrOverride style-name (referring to styleDictionary) or
@@ -568,7 +581,7 @@
 				break;
 			}
 
-			if (maxHeight && y > maxHeight) {
+			if (maxHeight && y >= maxHeight) {
 				return lines.splice(i);
 			}
 		}
@@ -649,9 +662,9 @@
 			} else if (node.stack) {
 				return self._processVerticalContainer(node.stack, startPosition);
 			} else if (node.ul) {
-				return self._processUnorderedList(node.ul, startPosition);
+				return self._processList(false, node.ul, startPosition);
 			} else if (node.ol) {
-				return self._processOrderedList(node.ol, startPosition);
+				return self._processList(true, node.ol, startPosition);
 			} else if (node.text) {
 				return self._processLeaf(node, startPosition);
 			} else {
@@ -711,46 +724,68 @@
 		});
 	};
 
-	LayoutBuilder.prototype._processOrderedList = function(listItems, startPosition) {
-		var sizes = [];
-		var maxSize;
-
-		var maxLength = (listItems.length).toString().length;
-
-		for(var i = 1; i <= maxLength; i++) {
-			sizes[i] = this.textTools.sizeOfString(Array(i + 1).join('9'), this.styleStack);
-			maxSize = sizes[i];
+	LayoutBuilder.prototype._gapSizeForList = function(isOrderedList, listItems) {
+		if (isOrderedList) {
+			var longestNo = (listItems.length).toString().replace(/./g, '9');
+			return this.textTools.sizeOfString(longestNo + '. ', this.styleStack);
+		} else {
+			return this.textTools.sizeOfString('oo ', this.styleStack);
 		}
+	}
 
-		var separatorSize = this.textTools.sizeOfString('. ', this.styleStack);
-		var indent = maxSize.width + separatorSize.width;
-		var radius = maxSize.height / 6;
+	LayoutBuilder.prototype._getOnItemAddedCallback = function(isOrderedList, styleStack, gapSize) {
+		var self = this;
+		var indent = gapSize.width;
 
-		var counter = 1;
+		if (isOrderedList) {
+			var counter = 1;
+
+			return function(pageNumber, page, block) {
+				var lines = self.textTools.buildLines(counter.toString() + '.', null, styleStack);
+				var b = new Block();
+				b.setLines(lines);
+				b.x = block.x - indent;
+				b.y = block.y + (block.lines.length > 0 ? block.lines[0].getHeight() : block.getHeight()) - b.getHeight();
+
+				page.blocks.push(b);
+
+				counter++;
+
+				self.onBlockAdded = null;
+			}
+		} else {
+			var radius = gapSize.height / 6;
+
+			return function(pageNumber, page, block) {
+				page.vectors.push({
+					x: block.x - indent + radius, 
+					y: block.y + gapSize.height * 2 / 3,
+					r1: radius, 
+					r2: radius,
+					type: 'ellipse' 
+				});
+				
+				self.onBlockAdded = null;
+			}
+		}
+	}
+
+	LayoutBuilder.prototype._processList = function(isOrderedList, listItems, startPosition) {
+		var styleStack = this.styleStack.clone();
+
+		var gapSize = this._gapSizeForList(isOrderedList, listItems);
+
 		var nextItemPosition = pack(startPosition, {
-			x: startPosition.x + indent,
-			availableWidth: startPosition.availableWidth - indent
+			x: startPosition.x + gapSize.width,
+			availableWidth: startPosition.availableWidth - gapSize.width
 		});
 
-		var self = this;
-
-		var addCounter = function(pageNumber, page, block) {
-			var lines = self.textTools.buildLines(counter.toString() + '.', null, self.styleStack);
-			var b = new Block();
-			b.setLines(lines, 'left');
-			b.y = block.y;
-			b.x = block.x - indent;
-
-			page.blocks.push(b);
-
-			self.onBlockAdded = null;
-			counter++;
-		};
+		var addListItemMark = this._getOnItemAddedCallback(isOrderedList, styleStack, gapSize);
 
 		for(var i = 0, l = listItems.length; i < l; i++) {
 			var item = listItems[i];
 
-			this.onBlockAdded = addCounter;
+			this.onBlockAdded = addListItemMark;
 			nextItemPosition = this._processNode(item, nextItemPosition);
 		}
 
@@ -759,41 +794,6 @@
 			y: nextItemPosition.y,
 		});
 	}
-
-	LayoutBuilder.prototype._processUnorderedList = function(listItems, startPosition) {
-		var size = this.textTools.sizeOfString('oo ', this.styleStack);
-		var indent = size.width;
-		var radius = size.height / 6;
-
-		var nextItemPosition = pack(startPosition, {
-			x: startPosition.x + indent,
-			availableWidth: startPosition.availableWidth - indent
-		});
-
-		var addCircle = function(pageNumber, page, block) {
-			page.vectors.push({ 
-				x: block.x - indent + radius, 
-				y: block.y + size.height * 2 / 3,
-				r1: radius, 
-				r2: radius,
-				type: 'ellipse' 
-			});
-			
-			this.onBlockAdded = null;
-		};
-
-		for(var i = 0, l = listItems.length; i < l; i++) {
-			var item = listItems[i];
-
-			this.onBlockAdded = addCircle;
-			nextItemPosition = this._processNode(item, nextItemPosition);
-		}
-
-		return pack(startPosition, {
-			page: nextItemPosition.page,
-			y: nextItemPosition.y,
-		});
-	};
 
 	LayoutBuilder.prototype._processLeaf = function(node, startPosition) {
 		var width = node.width || startPosition.availableWidth;
