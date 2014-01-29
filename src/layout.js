@@ -747,8 +747,6 @@
 				page.blocks.push(b);
 
 				counter++;
-
-				self.onBlockAdded = null;
 			}
 		} else {
 			var radius = gapSize.height / 6;
@@ -761,8 +759,6 @@
 					r2: radius,
 					type: 'ellipse' 
 				});
-				
-				self.onBlockAdded = null;
 			}
 		}
 	}
@@ -782,7 +778,7 @@
 		for(var i = 0, l = listItems.length; i < l; i++) {
 			var item = listItems[i];
 
-			this.onBlockAdded = addListItemMark;
+			this.itemListCallback = addListItemMark;
 			nextItemPosition = this._processNode(item, nextItemPosition);
 		}
 
@@ -791,6 +787,17 @@
 			y: nextItemPosition.y,
 		});
 	}
+
+	LayoutBuilder.prototype.onBlockAdded = function(pageNumber, page, block) {
+		if (this.itemListCallback) {
+			this.itemListCallback(pageNumber, page, block);
+			this.itemListCallback = null;
+		}
+
+		// var currentColumnHunter;
+		// currentColumnHunter.push({ pageNumber: pageNumber, page: page, block: block });
+	}
+
 
 	LayoutBuilder.prototype._processLeaf = function(node, startPosition) {
 		var width = node.width || startPosition.availableWidth;
@@ -809,9 +816,7 @@
 
 				var page = this._getPage(startPosition.page);
 				page.blocks.push(block);
-				if (this.onBlockAdded) {
-					this.onBlockAdded(startPosition.page, page, block);
-				}
+				this.onBlockAdded(startPosition.page, page, block);
 			}
 
 			if (lines) {
