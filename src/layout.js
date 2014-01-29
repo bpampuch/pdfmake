@@ -584,6 +584,115 @@
 		}
 	}
 
+	var ColumnManager = (function() {
+		/**
+		 * Creates an instance of ColumnManager - a helper responsible for column width management
+		 * and updating block positions. Does not support nested tables/column sets yet.
+		 */
+		function ColumnManager() {
+			this.stack = [];
+		}
+
+		/**
+		 * Creates and pushes a new table / column set
+		 * @param  {Number} maxWidth maximum width the table/columnset can consume
+		 */
+		ColumnManager.prototype.beginColumnSet = function(maxWidth) {
+			this.stack.push( { columns: [], maxWidth: maxWidth });
+		}
+
+		ColumnManager.prototype.addColumn = function(width, processColumnCallback) {
+			var columns = this.stack[this.stack.length - 1].columns;
+			columns.push({ width: width, callback: processColumnCallback, blocks: [] });
+		}
+
+		ColumnManager.prototype.complete = function() {
+			var set = this.stack.pop();
+			var widthLeft = set.maxWidth;
+
+			getFixedColumns(set).forEach(function (column) {
+				var result = column.callback(column.width);
+				afterColumnCallback(column, result);
+			});
+
+			getAutoColumns(set).forEach(function (column) {
+				var result = column.callback(widthLeft);
+				afterColumnCallback(column, result);
+			});
+
+			var starColumns = getStarColumns(set);
+			var starWidth = (starColumns.length > 0) ? widthLeft / starColumns.length : 0;
+			
+			starColumns.forEach(function (column) {
+				var result = column.callback(starWidth);
+				// we override widths for star columns, no matter of what's been returned
+				result.width = starWidth;
+				afterColumnCallback(column, result);
+			});
+
+			// update block positions
+			var x = 0;
+			for (var i = 1, l = set.columns.length; i < l; i++) {
+				x += set.columns[i - 1].realWidth;
+				set.columns[i].blocks.forEach(function (block) {
+					block.x += x;
+				});
+			}
+
+			// real width
+			return set.maxWidth - widthLeft;
+
+			function afterColumnCallback(column, result) {
+				column.realWidth = result.width;
+				column.blocks = result.blocks;
+				widthLeft -= result.width;
+			}
+		}
+
+		function getFixedColumns(set) {
+			var columns = [];
+			for(var i = 0, l = set.columns.length; i < l; i++) {
+				var col = set.columns[i];
+
+				if (typeof col.width === 'number' || col.width instanceof Number) {
+					columns.push(col);
+				}
+			}
+
+			return columns;
+		}
+
+		function getAutoColumns(set) {
+			var columns = [];
+			for(var i = 0, l = set.columns.length; i < l; i++) {
+				var col = set.columns[i];
+				
+				if (col.width === 'auto') {
+					columns.push(col);
+				}
+			}
+
+			return columns;
+		}
+
+		function getStarColumns(set) {
+			var columns = [];
+			for(var i = 0, l = set.columns.length; i < l; i++) {
+				var col = set.columns[i];
+				
+				if (!col.width || col.width === 'star' || col.width === '*') {
+					columns.push(col);
+				}
+			}
+
+			return columns;
+		}
+
+		return ColumnManager;
+	})();
+	
+
+
 
 	////////////////////////////////////////
 	// LayoutBuilder
@@ -858,7 +967,8 @@
 		TextTools: TextTools,
 		Block: Block,
 		StyleContextStack: StyleContextStack,
-		LayoutBuilder: LayoutBuilder
+		LayoutBuilder: LayoutBuilder,
+		ColumnManager: ColumnManager
 	};
 
 	if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {

@@ -5,6 +5,7 @@ var Line = pdfMake.Line;
 var TextTools = pdfMake.TextTools;
 var Block = pdfMake.Block;
 var StyleContextStack = pdfMake.StyleContextStack;
+var ColumnManager = pdfMake.ColumnManager;
 var LayoutBuilder = pdfMake.LayoutBuilder;
 
 describe('Line', function() {
@@ -643,6 +644,175 @@ describe('Block', function() {
 	})
 });
 
+describe('ColumnManager', function() {
+	describe('complete', function() {
+		function createCallback(expectedWidth, returnedWidth, blocks) {
+			return function(providedWidth) {
+				assert.equal(expectedWidth, providedWidth);
+
+				return { width: (returnedWidth || 0), blocks: (blocks || []) };
+			};
+		}
+
+		var cm;
+
+		beforeEach(function() { 
+			cm = new ColumnManager();
+			cm.beginColumnSet(1000);
+		});
+
+		it('should call the callback for all provided columns', function() {
+			var counter = 0;
+
+			function processColumn() {
+				counter++;
+				return { width: 0, blocks: [] };
+			}
+
+			cm.addColumn(100, processColumn);
+			cm.addColumn('auto', processColumn);
+			cm.addColumn('star', processColumn);
+			cm.addColumn('*', processColumn);
+			cm.addColumn('auto', processColumn);
+			cm.addColumn(null, processColumn);
+			cm.addColumn(50, processColumn);
+
+			assert.equal(counter, 0);
+			cm.complete();
+			assert.equal(counter, 7);
+		});
+
+		it('should pass defined width to fixed-width-column processing callback', function() {
+			cm.addColumn(230, createCallback(230));
+			cm.addColumn(340, createCallback(340));
+			cm.complete();
+		});
+
+		it('should pass equally divided width to star-column processing callback', function() {
+			cm.addColumn('star', createCallback(1000/3));
+			cm.addColumn('*', createCallback(1000/3));
+			cm.addColumn(null, createCallback(1000/3));
+			cm.complete();
+		});
+
+		it('should pass left width to auto-column processing callback', function() {
+			cm.addColumn('auto', createCallback(1000, 123));
+			cm.addColumn('auto', createCallback(877, 100));
+			cm.addColumn('auto', createCallback(777, 100));
+			cm.complete();
+		});
+
+		it('should pass appropriate widths to all column type callback', function() {
+			cm.addColumn(100, createCallback(100, 100));
+			cm.addColumn('auto', createCallback(1000 - 100 - 50, 70));
+			cm.addColumn('*', createCallback((1000 - 100 - 50 - 70 - 80)/2, 0));
+			cm.addColumn('auto', createCallback(1000 - 100 - 50 - 70, 80));
+			cm.addColumn('*', createCallback((1000 - 100 - 50 - 70 - 80)/2, 0));
+			cm.addColumn(50, createCallback(50, 50));
+			cm.complete();
+		});
+
+		it('should calculate widths for any column order', function() {
+			var columns = [
+				{ width: 100, callback: createCallback(100, 100) },
+				{ width: 'auto', callback: createCallback(1000 - 100 - 50, 70) },
+				{ width: '*', callback: createCallback((1000 - 100 - 50 - 70)/2, 0) },
+				{ width: '*', callback: createCallback((1000 - 100 - 50 - 70)/2, 0) },
+				{ width: 50, callback: createCallback(50, 50) }
+			]
+
+			var order = [
+				[ 0, 1, 2, 3, 4 ],
+				// auto at the beginning
+				[ 1, 0, 2, 3, 4 ],
+				// auto at the end
+				[ 4, 0, 2, 3, 1 ],
+				// stars at the beginning
+				[ 2, 3, 0, 4, 1 ],
+				// stars at the end
+				[ 0, 4, 1, 2, 3 ],
+				// stars at boundaries
+				[ 2, 4, 1, 0, 3 ],
+			];
+
+			order.forEach(function(colIndexes) {
+				var manager = new ColumnManager();
+				manager.beginColumnSet(1000);
+
+				colIndexes.forEach(function(index) {
+					manager.addColumn(columns[index].width, columns[index].callback);
+				});
+
+				manager.complete();
+			});
+		});
+
+		it('should offset block x values for all blocks in columns', function() {
+			var blocks = [[{x:10}, {x: 0}], [{x:0}], [{x:0}], [{x:0}, {x:10}], [{x:15}], [{x:0}, {x:5}]];
+
+			cm.addColumn(50, createCallback(50, 50, blocks[0]));
+			cm.addColumn('*', createCallback((1000 - 200 - 100)/2, 0, blocks[1]));
+			cm.addColumn('auto', createCallback(1000 - 200, 75, blocks[2]));
+			cm.addColumn('*', createCallback((1000 - 200 - 100)/2, 0, blocks[3]));
+			cm.addColumn('auto', createCallback(1000 - 200 - 75, 25, blocks[4]));
+			cm.addColumn(150, createCallback(150, 150, blocks[5]));
+
+			cm.complete();
+
+			assert.equal(blocks[0][0].x,      10);
+			assert.equal(blocks[0][1].x,      0);
+			assert.equal(blocks[1][0].x,      50);
+			assert.equal(blocks[2][0].x,      50 + (1000 - 200 - 100)/2);
+			assert.equal(blocks[3][0].x,      50 + (1000 - 200 - 100)/2 + 75);
+			assert.equal(blocks[3][1].x, 10 + 50 + (1000 - 200 - 100)/2 + 75);
+			assert.equal(blocks[4][0].x, 15 + 50 + (1000 - 200 - 100)/2 + 75 + (1000 - 200 - 100)/2);
+			assert.equal(blocks[5][0].x,      50 + (1000 - 200 - 100)/2 + 75 + (1000 - 200 - 100)/2 + 25);
+			assert.equal(blocks[5][1].x,  5 + 50 + (1000 - 200 - 100)/2 + 75 + (1000 - 200 - 100)/2 + 25);
+		});
+/*		it('should divide width among star columns', function() {
+			var blocks = [[{x:0}], [{x:0}], [{x:0}, {x:0}], [{x:0}]];
+			function processColumn(blocks, width, providedWidth) {
+				assert.equal(providedWidth, )
+				return { blocks: blocks, width: width };
+			}
+
+			var man = new ColumnManager();
+
+			man.beginColumnSet(1000);
+			man.addColumn('*', processColumn.bind(null, blocks[0]));
+			man.addColumn('star', processColumn.bind(null, blocks[1]));
+			man.addColumn(null, processColumn.bind(null, blocks[2]));
+			man.complete();
+			
+			assert.equal(blocks[0][0].x, 0);
+			assert.equal(blocks[1][0].x, 1000/3);
+			assert.equal(blocks[2][0].x, 1000 * 2/3);
+			assert.equal(blocks[2][1].x, 1000 * 2/3);
+		});*/
+
+		// it('should support autoColumns', function() {
+		// 	var blocks = [[{x:0}], [{x:0}], [{x:0}, {x:0}], [{x:0}]];
+		// 	function processColumn(blocks, width) {
+		// 		return { blocks: blocks, width: width };
+		// 	}
+
+		// 	var man = new ColumnManager();
+
+		// 	man.beginColumnSet(1000);
+		// 	man.addColumn('*', processColumn.bind(null, blocks[0]));
+		// 	man.addColumn('star', processColumn.bind(null, blocks[1]));
+		// 	man.addColumn(50, processColumn.bind(null, blocks[2]));
+		// 	man.addColumn('auto', processColumn.bind(null, blocks[3], 150));
+		// 	man.complete();
+			
+		// 	assert.equal(blocks[0][0].x, 0);
+		// 	assert.equal(blocks[1][0].x, 1000/3);
+		// 	assert.equal(blocks[2][0].x, 1000 * 2/3);
+		// 	assert.equal(blocks[2][1].x, 1000 * 2/3);
+		// });
+	});
+});
+
 describe('LayoutBuilder', function() {
 	var builder;
 
@@ -1086,6 +1256,8 @@ describe('LayoutBuilder', function() {
 			//TODO:
 		});
 
+		it.skip('should support auto columns ')
+
 		it('should support unordered lists', function() {
 			var desc = [
 				'paragraph',
@@ -1235,6 +1407,22 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].blocks.length, 4 + 3);
 		});
 
+		it('numbers in ordered list should use list style, not item-level style (bugfix)', function() {
+			var desc = [
+				{
+					fontSize: 5,
+					ol: [
+						{ text: 'item 1', fontSize: 15 },
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert.equal(pages[0].blocks.length, 2);
+			assert.equal(pages[0].blocks[0].lines[0].inlines[0].fontSize, 15);
+			assert.equal(pages[0].blocks[1].lines[0].inlines[0].fontSize, 5);
+		});
+
 		it('numbers in ordered lists should be positioned to the left of each item', function() {
 			var desc = [
 				'paragraph',
@@ -1368,21 +1556,21 @@ describe('LayoutBuilder', function() {
 //		it('should support line indents', function() {
 //		//	assert.fail();
 //		});
-//		
 
 		describe.skip('TODO', function() {
-			it('should support block margins');
-			it('should support inline margins');
-			it('should support page headers');
-			it('should support page footers');
-			it('should support subscript');
-			it('should support superscript');
 			it('should support tables with fixed column widths');
 			it('should support tables with auto column widths');
 			it('should support tables with percentage column widths');
 			it('should support table headers');
 			it('should support table splitting between pages and repeat table headers');
 			it('should support table-cell splitting between pages');
+
+			it('should support block margins');
+			it('should support inline margins');
+			it('should support page headers');
+			it('should support page footers');
+			it('should support subscript');
+			it('should support superscript');
 			it('should support subtables created from arrays');
 			it('should support subtables created from another table');
 			it('should support vertical alignment inside cells');
@@ -1423,6 +1611,8 @@ describe('LayoutBuilder', function() {
 			it('should support document permissions');
 			it('should support TOC');
 			it('should support in-document-references');
+			it('should support uppercase text transforms');
+			it('should support lowercase text transforms');
 		});
 	});
 });
