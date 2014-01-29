@@ -34,13 +34,6 @@
 	Line.prototype.addInline = function(inline) {
 		if (this.newLineForced) return false;
 
-//		if (inline.leadingCut === inline.trailingCut && inline.leadingCut === inline.width) {
-//			// double-trimming fix
-//			inline.leadingCut = 0;
-//			inline.trailingCut = 0;
-//			inline.width = 0;
-//		}
-
 		var leadingCut;
 
 		if (this.inlines.length === 0) {
@@ -52,7 +45,9 @@
 
 		var trailingCut = inline.trailingCut || 0;
 
-		if (this.inlineWidths + inline.width - leadingCut - trailingCut <= this.maxWidth || this.inlines.length === 0) {
+		var enoughSpace = this.inlineWidths + inline.width - leadingCut - trailingCut <= this.maxWidth;
+
+		if (enoughSpace || this.inlines.length === 0) {
 			this.leadingCut = leadingCut;
 			this.trailingCut = trailingCut;
 
@@ -86,10 +81,10 @@
 	 */
 	Line.prototype.getMinWidth = function() {
 		var max = 0;
-		for(var i = 0, l = this.inlines.length; i < l; i++) {
-			var item = this.inlines[i];
+
+		this.inlines.forEach(function(item) {
 			max = Math.max(max, (item.width || 0) - (item.leadingCut || 0) - (item.trailingCut || 0));
-		}
+		});
 
 		return max;
 	};
@@ -100,10 +95,10 @@
 	 */
 	Line.prototype.getHeight = function() {
 		var max = 0;
-		for(var i = 0, l = this.inlines.length; i < l; i++) {
-			var item = this.inlines[i];
+
+		this.inlines.forEach(function(item) {
 			max = Math.max(max, item.height || 0);
-		}
+		});
 
 		return max;
 	};
@@ -132,9 +127,10 @@
 	 */
 	StyleContextStack.prototype.clone = function() {
 		var stack = new StyleContextStack(this.styleDictionary, this.defaultStyle);
-		for(var i = 0, l = this.styleOverrides; i < l; i++) {
-			stack.styleOverrides.push(this.styleOverrides[i]);
-		}
+
+		this.styleOverrides.forEach(function(item) {
+			stack.styleOverrides.push(item);
+		});
 
 		return stack;
 	}
@@ -234,6 +230,7 @@
 		if (this.styleOverrides) {
 			for(var i = this.styleOverrides.length - 1; i >= 0; i--) {
 				var item = this.styleOverrides[i];
+
 				if (typeof item == "string" || item instanceof String) {
 					// named-style-override
 
