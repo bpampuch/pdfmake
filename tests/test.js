@@ -5,7 +5,8 @@ var Line = pdfMake.Line;
 var TextTools = pdfMake.TextTools;
 var Block = pdfMake.Block;
 var StyleContextStack = pdfMake.StyleContextStack;
-var ColumnManager = pdfMake.ColumnManager;
+var BlockSet = pdfMake.BlockSet;
+var ColumnSet = pdfMake.ColumnSet;
 var LayoutBuilder = pdfMake.LayoutBuilder;
 
 describe('Line', function() {
@@ -644,10 +645,10 @@ describe('Block', function() {
 	})
 });
 
-describe('ColumnManager', function() {
+describe('ColumnSet', function() {
 	describe('complete', function() {
 		function createCallback(expectedWidth, returnedWidth, blocks) {
-			return function(providedWidth) {
+			return function(data, providedWidth) {
 				assert.equal(expectedWidth, providedWidth);
 
 				return { width: (returnedWidth || 0), blocks: (blocks || []) };
@@ -657,8 +658,7 @@ describe('ColumnManager', function() {
 		var cm;
 
 		beforeEach(function() { 
-			cm = new ColumnManager();
-			cm.beginColumnSet(1000);
+			cm = new ColumnSet(1000);
 		});
 
 		it('should call the callback for all provided columns', function() {
@@ -669,13 +669,13 @@ describe('ColumnManager', function() {
 				return { width: 0, blocks: [] };
 			}
 
-			cm.addColumn(100, processColumn);
-			cm.addColumn('auto', processColumn);
-			cm.addColumn('star', processColumn);
-			cm.addColumn('*', processColumn);
-			cm.addColumn('auto', processColumn);
-			cm.addColumn(null, processColumn);
-			cm.addColumn(50, processColumn);
+			cm.addColumn(null, 100, processColumn);
+			cm.addColumn(null, 'auto', processColumn);
+			cm.addColumn(null, 'star', processColumn);
+			cm.addColumn(null, '*', processColumn);
+			cm.addColumn(null, 'auto', processColumn);
+			cm.addColumn(null, null, processColumn);
+			cm.addColumn(null, 50, processColumn);
 
 			assert.equal(counter, 0);
 			cm.complete();
@@ -683,32 +683,32 @@ describe('ColumnManager', function() {
 		});
 
 		it('should pass defined width to fixed-width-column processing callback', function() {
-			cm.addColumn(230, createCallback(230));
-			cm.addColumn(340, createCallback(340));
+			cm.addColumn(null, 230, createCallback(230));
+			cm.addColumn(null, 340, createCallback(340));
 			cm.complete();
 		});
 
 		it('should pass equally divided width to star-column processing callback', function() {
-			cm.addColumn('star', createCallback(1000/3));
-			cm.addColumn('*', createCallback(1000/3));
-			cm.addColumn(null, createCallback(1000/3));
+			cm.addColumn(null, 'star', createCallback(1000/3));
+			cm.addColumn(null, '*', createCallback(1000/3));
+			cm.addColumn(null, null, createCallback(1000/3));
 			cm.complete();
 		});
 
 		it('should pass left width to auto-column processing callback', function() {
-			cm.addColumn('auto', createCallback(1000, 123));
-			cm.addColumn('auto', createCallback(877, 100));
-			cm.addColumn('auto', createCallback(777, 100));
+			cm.addColumn(null, 'auto', createCallback(1000, 123));
+			cm.addColumn(null, 'auto', createCallback(877, 100));
+			cm.addColumn(null, 'auto', createCallback(777, 100));
 			cm.complete();
 		});
 
 		it('should pass appropriate widths to all column type callback', function() {
-			cm.addColumn(100, createCallback(100, 100));
-			cm.addColumn('auto', createCallback(1000 - 100 - 50, 70));
-			cm.addColumn('*', createCallback((1000 - 100 - 50 - 70 - 80)/2, 0));
-			cm.addColumn('auto', createCallback(1000 - 100 - 50 - 70, 80));
-			cm.addColumn('*', createCallback((1000 - 100 - 50 - 70 - 80)/2, 0));
-			cm.addColumn(50, createCallback(50, 50));
+			cm.addColumn(null, 100, createCallback(100, 100));
+			cm.addColumn(null, 'auto', createCallback(1000 - 100 - 50, 70));
+			cm.addColumn(null, '*', createCallback((1000 - 100 - 50 - 70 - 80)/2, 0));
+			cm.addColumn(null, 'auto', createCallback(1000 - 100 - 50 - 70, 80));
+			cm.addColumn(null, '*', createCallback((1000 - 100 - 50 - 70 - 80)/2, 0));
+			cm.addColumn(null, 50, createCallback(50, 50));
 			cm.complete();
 		});
 
@@ -736,11 +736,10 @@ describe('ColumnManager', function() {
 			];
 
 			order.forEach(function(colIndexes) {
-				var manager = new ColumnManager();
-				manager.beginColumnSet(1000);
+				var manager = new ColumnSet(1000);
 
 				colIndexes.forEach(function(index) {
-					manager.addColumn(columns[index].width, columns[index].callback);
+					manager.addColumn(null, columns[index].width, columns[index].callback);
 				});
 
 				manager.complete();
@@ -750,12 +749,12 @@ describe('ColumnManager', function() {
 		it('should offset block x values for all blocks in columns', function() {
 			var blocks = [[{x:10}, {x: 0}], [{x:0}], [{x:0}], [{x:0}, {x:10}], [{x:15}], [{x:0}, {x:5}]];
 
-			cm.addColumn(50, createCallback(50, 50, blocks[0]));
-			cm.addColumn('*', createCallback((1000 - 200 - 100)/2, 0, blocks[1]));
-			cm.addColumn('auto', createCallback(1000 - 200, 75, blocks[2]));
-			cm.addColumn('*', createCallback((1000 - 200 - 100)/2, 0, blocks[3]));
-			cm.addColumn('auto', createCallback(1000 - 200 - 75, 25, blocks[4]));
-			cm.addColumn(150, createCallback(150, 150, blocks[5]));
+			cm.addColumn(null, 50, createCallback(50, 50, blocks[0]));
+			cm.addColumn(null, '*', createCallback((1000 - 200 - 100)/2, 0, blocks[1]));
+			cm.addColumn(null, 'auto', createCallback(1000 - 200, 75, blocks[2]));
+			cm.addColumn(null, '*', createCallback((1000 - 200 - 100)/2, 0, blocks[3]));
+			cm.addColumn(null, 'auto', createCallback(1000 - 200 - 75, 25, blocks[4]));
+			cm.addColumn(null, 150, createCallback(150, 150, blocks[5]));
 
 			cm.complete();
 
@@ -816,8 +815,72 @@ describe('ColumnManager', function() {
 describe('LayoutBuilder', function() {
 	var builder;
 
-	before(function() {
+	beforeEach(function() {
 		builder = new LayoutBuilder(sampleTestProvider, { width: 400, height: 800 }, { left: 40, right: 40, top: 40, bottom: 40 });
+	});
+
+	describe('processColumns', function() {
+		var startPosition;
+
+		beforeEach(function() {
+			startPosition = {
+				page: 0, 
+				x: builder.pageMargins.left, 
+				y: builder.pageMargins.top, 
+				availableWidth: builder.pageSize.width - builder.pageMargins.left - builder.pageMargins.right
+			};
+
+			builder.pages = [];
+			builder.styleStack = new StyleContextStack(builder.styleDictionary, builder.defaultStyle);
+			builder.blockTracker = new BlockSet();
+		});
+
+		console.log('builder')
+		console.log(builder) 
+
+		it('should convert text columns to column objects', function() {
+			builder._processNode = function(node, position) { return position; };
+
+			var columns = [ { text: 'aaa' }, 'bbb', 'ccc', { text: 'ddd'} ];
+			builder._processColumns(columns, startPosition);
+
+			assert(columns[1].text);
+			assert(columns[2].text);
+			assert.equal(columns[0].text, 'aaa');
+			assert.equal(columns[1].text, 'bbb');
+		});
+
+		it('should use ColumnSet for column width management', function() {
+			var blocks = [];
+
+			builder._processNode = function(node, position) { 
+				var block = { x: 40, y: 0, getWidth: function() { return 75; } };
+				blocks.push(block);
+
+				builder.onBlockAdded(0, builder.pages[0], block);
+				return position; 
+			};
+
+			var columns = [
+				{ width: 90 },
+				{ width: 'auto' },
+				{ width: 70 },
+				{ },
+			];
+
+			builder._processColumns(columns, startPosition);
+
+			assert.equal(blocks.length, 4);
+
+			// availableWidth = 400-40-40 = 320
+			// autoColumnWidth = 75
+			// starColumnWidth = 320-90-70-75 = 85
+			// block order (block<->column mapping): 0, 2, 1, 3
+			assert.equal(blocks[0].x, 40);
+			assert.equal(blocks[2].x, 40 + 90);
+			assert.equal(blocks[1].x, 40 + 90 + 75);
+			assert.equal(blocks[3].x, 40 + 90 + 75 + 70);
+		});
 	});
 
 	describe('processDocument', function() {
@@ -1131,8 +1194,8 @@ describe('LayoutBuilder', function() {
 			var starWidth = (pageSpace - 50)/2;
 
 			assert(pages[0].blocks.length, 3);
-			assert.equal(pages[0].blocks[0].x, 40);
-			assert.equal(pages[0].blocks[1].x, 40 + starWidth);
+			assert.equal(pages[0].blocks[1].x, 40);
+			assert.equal(pages[0].blocks[0].x, 40 + starWidth);
 			assert.equal(pages[0].blocks[2].x, 40 + starWidth + 50);
 		});
 

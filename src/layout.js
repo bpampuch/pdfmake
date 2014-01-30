@@ -584,63 +584,59 @@
 		}
 	}
 
-	var ColumnManager = (function() {
+	var ColumnSet = (function() {
 		/**
-		 * Creates an instance of ColumnManager - a helper responsible for column width management
-		 * and updating block positions. Does not support nested tables/column sets yet.
+		 * Creates an instance of ColumnSet - a helper responsible for column width management
+		 * and updating block positions.
 		 */
-		function ColumnManager() {
-			this.stack = [];
+		function ColumnSet(maxWidth) {
+			this.maxWidth = maxWidth;
+			this.columns = [];
 		}
 
-		/**
-		 * Creates and pushes a new table / column set
-		 * @param  {Number} maxWidth maximum width the table/columnset can consume
-		 */
-		ColumnManager.prototype.beginColumnSet = function(maxWidth) {
-			this.stack.push( { columns: [], maxWidth: maxWidth });
+		ColumnSet.prototype.addColumn = function(columnData, width, processColumnCallback) {
+			this.columns.push({ width: width, callback: processColumnCallback, blocks: [], data: columnData });
 		}
 
-		ColumnManager.prototype.addColumn = function(width, processColumnCallback) {
-			var columns = this.stack[this.stack.length - 1].columns;
-			columns.push({ width: width, callback: processColumnCallback, blocks: [] });
-		}
+		ColumnSet.prototype.complete = function() {
+			var widthLeft = this.maxWidth;
 
-		ColumnManager.prototype.complete = function() {
-			var set = this.stack.pop();
-			var widthLeft = set.maxWidth;
-
-			getFixedColumns(set).forEach(function (column) {
-				var result = column.callback(column.width);
+			getFixedColumns(this).forEach(function (column) {
+				var result = column.callback(column.data, column.width);
+				// we override widths for fixed columns, no matter of what's been returned
+				result.width = column.width;
 				afterColumnCallback(column, result);
 			});
 
-			getAutoColumns(set).forEach(function (column) {
-				var result = column.callback(widthLeft);
+			getAutoColumns(this).forEach(function (column) {
+				var result = column.callback(column.data, widthLeft);
 				afterColumnCallback(column, result);
 			});
 
-			var starColumns = getStarColumns(set);
+			var starColumns = getStarColumns(this);
 			var starWidth = (starColumns.length > 0) ? widthLeft / starColumns.length : 0;
-			
+
 			starColumns.forEach(function (column) {
-				var result = column.callback(starWidth);
+				var result = column.callback(column.data, starWidth);
 				// we override widths for star columns, no matter of what's been returned
 				result.width = starWidth;
 				afterColumnCallback(column, result);
 			});
 
+
+			//TODO: rethink responsibilities (shouldn't BlockSet have the offsetBlocks method?)
+
 			// update block positions
 			var x = 0;
-			for (var i = 1, l = set.columns.length; i < l; i++) {
-				x += set.columns[i - 1].realWidth;
-				set.columns[i].blocks.forEach(function (block) {
+			for (var i = 1, l = this.columns.length; i < l; i++) {
+				x += this.columns[i - 1].realWidth;
+				this.columns[i].blocks.forEach(function (block) {
 					block.x += x;
 				});
 			}
 
 			// real width
-			return set.maxWidth - widthLeft;
+			return this.maxWidth - widthLeft;
 
 			function afterColumnCallback(column, result) {
 				column.realWidth = result.width;
@@ -688,9 +684,74 @@
 			return columns;
 		}
 
-		return ColumnManager;
+		return ColumnSet;
 	})();
 	
+
+
+	////////////////////////////////////////
+	// BlockSet
+
+	/**
+	 * Creates an instance of BlockSet - block grouping structure with the ability
+	 * to manage nested blocks.
+	 */
+	function BlockSet() {
+		this.stack = [];
+	}
+
+	/**
+	 * Creates a new level, so that blocks can be added
+	 */
+	BlockSet.prototype.createNestedLevel = function() {
+		this.stack.push({ blocks: [] });
+	}
+
+	/**
+	 * Adds a Block to the current level
+	 * @param {Block} block a Block element
+	 */
+	BlockSet.prototype.addBlock = function(block) {
+		if (this.stack.length === 0) return;
+
+		var blocks = this.stack[this.stack.length - 1].blocks;
+		blocks.push(block);
+	}
+
+	/**
+	 * Returns an array of blocks added to current level (or its sublevels) and then
+	 * merges blocks to the parent level
+	 * @return {Array} an array of blocks added to current level and its sub-levels
+	 */
+	BlockSet.prototype.levelUp = function() {
+		var currentSet = this.stack.pop();
+
+		if (this.stack.length > 0) {
+			var upperSet = this.stack[this.stack.length - 1];
+
+			currentSet.blocks.forEach(function(block) {
+				upperSet.blocks.push(block);
+			});
+		}
+
+		return currentSet.blocks;
+	}
+
+	/**
+	 * Returns the right-most point of the BlockSet (if blocks begin at x == 0, it's
+	 * equal to the BlockSet width)
+	 * @return {Number} right-most point of the BlockSet 
+	 */
+	BlockSet.prototype.getRightBoundary = function() {
+		var currentSet = this.stack[this.stack.length - 1];
+		var maxY = 0;
+
+		currentSet.blocks.forEach(function (block) {
+			maxY = Math.max(maxY, block.getWidth() + block.x);
+		});
+
+		return maxY;
+	}
 
 
 
@@ -723,6 +784,7 @@
 	LayoutBuilder.prototype.layoutDocument = function (docStructure, styleDictionary, defaultStyle) {
 		this.pages = [];
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
+		this.blockTracker = new BlockSet();
 
 		this._processNode(docStructure, 
 			{ 
@@ -764,7 +826,7 @@
 
 		return this.styleStack.auto(node, function() {
 			if (node.columns) {
-				return self.processColumns(node.columns, startPosition);
+				return self._processColumns(node.columns, startPosition);
 			} else if (node.stack) {
 				return self._processVerticalContainer(node.stack, startPosition);
 			} else if (node.ul) {
@@ -779,8 +841,32 @@
 		});
 	};
 
-	LayoutBuilder.prototype._ensureColumnWidths = function(columns, availableWidth) {
-		var columnsWithoutWidth = [];
+	// LayoutBuilder.prototype._ensureColumnWidths = function(columns, availableWidth) {
+	// 	var columnsWithoutWidth = [];
+
+	// 	for(var i = 0, l = columns.length; i < l; i++) {
+	// 		var column = columns[i];
+
+	// 		if (typeof column == 'string' || column instanceof String) {
+	// 			column = columns[i] = { text: column };
+	// 		}
+
+	// 		if (column.width) {
+	// 			availableWidth -= column.width;
+	// 		} else {
+	// 			columnsWithoutWidth.push(column);
+	// 		}
+	// 	}
+
+	// 	for(var i = 0, l = columnsWithoutWidth.length; i < l; i++) {
+	// 		columnsWithoutWidth[i].width = availableWidth / l;
+	// 	}
+	// };
+
+	LayoutBuilder.prototype._processColumns = function(columns, startPosition) {
+		var finalPosition = startPosition;
+
+		var columnSet = new ColumnSet(startPosition.availableWidth);
 
 		for(var i = 0, l = columns.length; i < l; i++) {
 			var column = columns[i];
@@ -789,40 +875,29 @@
 				column = columns[i] = { text: column };
 			}
 
-			if (column.width) {
-				availableWidth -= column.width;
-			} else {
-				columnsWithoutWidth.push(column);
-			}
-		}
+			var self = this;
 
-		for(var i = 0, l = columnsWithoutWidth.length; i < l; i++) {
-			columnsWithoutWidth[i].width = availableWidth / l;
-		}
-	};
+			columnSet.addColumn(column, column.width, function(column, maxWidth) {
+				self.blockTracker.createNestedLevel();
 
-	LayoutBuilder.prototype.processColumns = function(columns, startPosition) {
-		var finalPosition = startPosition;
-		var cumulativeX = 0;
+				var columnStartPosition = pack(startPosition, { availableWidth: maxWidth });
 
-		this._ensureColumnWidths(columns, startPosition.availableWidth);
+				var columnFinalPosition = self._processNode(column, columnStartPosition);
 
-		for(var i = 0, l = columns.length; i < l; i++) {
-			var columnStartPosition = pack(startPosition, { 
-				x: startPosition.x + cumulativeX, 
-				availableWidth: columns[i].width 
+				var columnFinalY = columnFinalPosition.page * self.pageSize.height + columnFinalPosition.y;
+				var finalY = finalPosition.page * self.pageSize.height + finalPosition.y;
+
+				if (columnFinalY > finalY)
+					finalPosition = columnFinalPosition;
+
+				var realColumnWidth = self.blockTracker.getRightBoundary() - startPosition.x;
+				var addedBlocks = self.blockTracker.levelUp();
+
+				return { width: realColumnWidth, blocks: addedBlocks };
 			});
-
-			cumulativeX += columns[i].width || 0;
-
-			var columnFinalPosition = this._processNode(columns[i], columnStartPosition);
-
-			var columnFinalY = columnFinalPosition.page * this.pageSize.height + columnFinalPosition.y;
-			var finalY = finalPosition.page * this.pageSize.height + finalPosition.y;
-
-			if (columnFinalY > finalY)
-				finalPosition = columnFinalPosition;
 		}
+
+		columnSet.complete();
 
 		return pack(startPosition, { 
 			page: finalPosition.page, 
@@ -903,13 +978,18 @@
 			this.itemListCallback = null;
 		}
 
-		// var currentColumnHunter;
-		// currentColumnHunter.push({ pageNumber: pageNumber, page: page, block: block });
+		this.blockTracker.addBlock(block);
 	}
 
 
 	LayoutBuilder.prototype._processLeaf = function(node, startPosition) {
-		var width = node.width || startPosition.availableWidth;
+		var width;
+
+		if(node.width === 'auto' || node.width === 'star' || node.width === '*') {
+			width = startPosition.availableWidth;
+		} else {
+			width = node.width || startPosition.availableWidth;
+		}
 
 		var lines = this.textTools.buildLines(node.text, width, this.styleStack);
 
@@ -968,7 +1048,8 @@
 		Block: Block,
 		StyleContextStack: StyleContextStack,
 		LayoutBuilder: LayoutBuilder,
-		ColumnManager: ColumnManager
+		ColumnSet: ColumnSet,
+		BlockSet: BlockSet
 	};
 
 	if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
