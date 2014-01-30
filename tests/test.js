@@ -768,47 +768,6 @@ describe('ColumnSet', function() {
 			assert.equal(blocks[5][0].x,      50 + (1000 - 200 - 100)/2 + 75 + (1000 - 200 - 100)/2 + 25);
 			assert.equal(blocks[5][1].x,  5 + 50 + (1000 - 200 - 100)/2 + 75 + (1000 - 200 - 100)/2 + 25);
 		});
-/*		it('should divide width among star columns', function() {
-			var blocks = [[{x:0}], [{x:0}], [{x:0}, {x:0}], [{x:0}]];
-			function processColumn(blocks, width, providedWidth) {
-				assert.equal(providedWidth, )
-				return { blocks: blocks, width: width };
-			}
-
-			var man = new ColumnManager();
-
-			man.beginColumnSet(1000);
-			man.addColumn('*', processColumn.bind(null, blocks[0]));
-			man.addColumn('star', processColumn.bind(null, blocks[1]));
-			man.addColumn(null, processColumn.bind(null, blocks[2]));
-			man.complete();
-			
-			assert.equal(blocks[0][0].x, 0);
-			assert.equal(blocks[1][0].x, 1000/3);
-			assert.equal(blocks[2][0].x, 1000 * 2/3);
-			assert.equal(blocks[2][1].x, 1000 * 2/3);
-		});*/
-
-		// it('should support autoColumns', function() {
-		// 	var blocks = [[{x:0}], [{x:0}], [{x:0}, {x:0}], [{x:0}]];
-		// 	function processColumn(blocks, width) {
-		// 		return { blocks: blocks, width: width };
-		// 	}
-
-		// 	var man = new ColumnManager();
-
-		// 	man.beginColumnSet(1000);
-		// 	man.addColumn('*', processColumn.bind(null, blocks[0]));
-		// 	man.addColumn('star', processColumn.bind(null, blocks[1]));
-		// 	man.addColumn(50, processColumn.bind(null, blocks[2]));
-		// 	man.addColumn('auto', processColumn.bind(null, blocks[3], 150));
-		// 	man.complete();
-			
-		// 	assert.equal(blocks[0][0].x, 0);
-		// 	assert.equal(blocks[1][0].x, 1000/3);
-		// 	assert.equal(blocks[2][0].x, 1000 * 2/3);
-		// 	assert.equal(blocks[2][1].x, 1000 * 2/3);
-		// });
 	});
 });
 
@@ -1169,6 +1128,74 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].blocks[2].x, 40 + 100 + 150);
 		});
 
+		it('should support auto-width columns', function() {
+			var desc = [
+				{
+					columns: [
+						{
+							text: 'col1',
+							width: 'auto',
+						},
+						{
+							text: 'column',
+							width: 'auto',
+						},
+						{
+							text: 'col3',
+							width: 'auto',
+						}
+
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert(pages[0].blocks.length, 3);
+			assert.equal(pages[0].blocks[0].x, 40);
+			assert.equal(pages[0].blocks[1].x, 40 + 4 * 12);
+			assert.equal(pages[0].blocks[2].x, 40 + 4 * 12 + 6 * 12);
+		});
+
+		it('should support auto-width columns mixed with other types of columns', function() {
+			var desc = [
+				{
+					columns: [
+						{
+							text: 'col1',
+							width: 'auto',
+						},
+						{
+							text: 'column',
+							width: 58,
+						},
+						{
+							text: 'column',
+							width: '*',
+						},
+						{
+							text: 'column',
+							width: '*',
+						},
+						{
+							text: 'col3',
+							width: 'auto',
+						}
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc);
+			assert.equal(pages[0].blocks.length, 5);
+			console.log(pages[0].blocks)
+
+			var starWidth = (400-40-40-58-2*4*12)/2;
+			assert.equal(pages[0].blocks[1].x, 40);
+			assert.equal(pages[0].blocks[0].x, 40 + 4 * 12);
+			assert.equal(pages[0].blocks[3].x, 40 + 4 * 12 + 58);
+			assert.equal(pages[0].blocks[4].x, 40 + 4 * 12 + 58 + starWidth);
+			assert.equal(pages[0].blocks[2].x, 40 + 4 * 12 + 58 + 2 * starWidth);
+		});
+
 		it('should support star columns and divide available width equally between all star columns', function() {
 			var desc = [
 				{
@@ -1229,7 +1256,7 @@ describe('LayoutBuilder', function() {
 			// ((pageWidth - margins - fixed_column_width) / 2_columns) / 2_subcolumns
 			var maxWidth = (400-40-40-50)/2/2;
 
-			assert.equal(pages[0].blocks[0].lines[0].maxWidth, maxWidth);
+			assert.equal(pages[0].blocks[1].lines[0].maxWidth, maxWidth);
 		});
 
 
