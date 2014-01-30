@@ -1322,32 +1322,6 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].blocks[4].lines[0].inlines[0].width, 6 * 50);
 		});
 
-		it.skip('should support auto columns', function() {
-			var desc = [
-				{
-					columns: [
-						{
-							text: 'col1',
-							width: 'auto'
-						},
-						{
-							text: 'col2',
-							width: 50
-						},
-						{
-							text: 'col3',
-						}
-					]
-				}
-			];
-
-			var pages = builder.layoutDocument(desc);
-
-			//TODO:
-		});
-
-		it.skip('should support auto columns ')
-
 		it('should support unordered lists', function() {
 			var desc = [
 				'paragraph',
