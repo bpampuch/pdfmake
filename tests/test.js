@@ -794,9 +794,6 @@ describe('LayoutBuilder', function() {
 			builder.blockTracker = new BlockSet();
 		});
 
-		console.log('builder')
-		console.log(builder) 
-
 		it('should convert text columns to column objects', function() {
 			builder._processNode = function(node, position) { return position; };
 
@@ -1186,7 +1183,6 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc);
 			assert.equal(pages[0].blocks.length, 5);
-			console.log(pages[0].blocks)
 
 			var starWidth = (400-40-40-58-2*4*12)/2;
 			assert.equal(pages[0].blocks[1].x, 40);
