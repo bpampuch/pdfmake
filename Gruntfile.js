@@ -18,12 +18,17 @@ module.exports = function(grunt) {
 					a: 'true'
 				}
 			}
+		},
+
+		jshint: {
+			all: [ 'src/**/*.js' ]
 		}
 	});
 
 	grunt.loadNpmTasks('grunt-mocha-test');
 	grunt.loadNpmTasks('grunt-jsdoc');
+	grunt.loadNpmTasks('grunt-contrib-jshint');
 
-	grunt.registerTask('default', 'mochaTest');
+	grunt.registerTask('default', [ 'jshint', 'mochaTest' ]);
 
 };  

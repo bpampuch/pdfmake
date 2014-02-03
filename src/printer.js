@@ -1,5 +1,7 @@
 (function PdfPrinter() {
-	function printer(layout, pdfkit) {
+	'use strict';
+
+	function printer(layout, PdfKit) {
 
 		////////////////////////////////////////
 		// PdfPrinter
@@ -22,7 +24,7 @@
 		 * var printer = new PdfPrinter(fontDescriptors);
 		 */
 		function PdfPrinter(fontDescriptors) {
-			this.pdfKitDoc = new pdfkit();
+			this.pdfKitDoc = new PdfKit();
 			this.fontProvider = new FontProvider(fontDescriptors, this.pdfKitDoc);
 		}
 
@@ -67,7 +69,7 @@
 		 */
 		PdfPrinter.prototype.createPdfKitDocument = function(docDefinition) {
 			var builder = new layout.LayoutBuilder(
-				this.fontProvider, 
+				this.fontProvider,
 				docDefinition.pageSize || { width: 595.28, height: 741.89 },
 				docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 });
 
@@ -103,8 +105,9 @@
 
 				for (var fontType in desc) {
 					var font = desc[fontType];
+					var _ref, _base, _name;
 
-					if ((_ref = (_base = pdfKitDoc.page.fonts)[_name = font.id]) == null) {
+					if (!(_ref = (_base = pdfKitDoc.page.fonts)[_name = font.id])) {
 						_base[_name] = font.ref;
 					}
 				}
@@ -124,8 +127,8 @@
 		}
 
 		function renderLine(line, x, y, pdfKitDoc) {
-			var x = x || 0,
-				y = y || 0;
+			x = x || 0;
+			y = y || 0;
 
 			//TODO: line.optimizeInlines();
 
@@ -136,10 +139,10 @@
 				pdfKitDoc.transform(1, 0, 0, -1, 0, pdfKitDoc.page.height);
 
 				pdfKitDoc.addContent('BT');
-				pdfKitDoc.addContent("" + (x + inline.x) + " " + (pdfKitDoc.page.height - y - line.getHeight()) + " Td");
-				pdfKitDoc.addContent("/" + inline.font.id + " " + inline.fontSize + " Tf");
+				pdfKitDoc.addContent('' + (x + inline.x) + ' ' + (pdfKitDoc.page.height - y - line.getHeight()) + ' Td');
+				pdfKitDoc.addContent('/' + inline.font.id + ' ' + inline.fontSize + ' Tf');
 
-				pdfKitDoc.addContent("<" + encode(inline.font, inline.text) + "> Tj");
+				pdfKitDoc.addContent('<' + encode(inline.font, inline.text) + '> Tj');
 
 				pdfKitDoc.addContent('ET');
 				pdfKitDoc.restore();
@@ -151,10 +154,10 @@
 
 			text = font.encode(text);
 			text = ((function() {
-				var _ref2, _results;
-				_results = [];
+				var _results = [];
+
 				for (var i = 0, _ref2 = text.length; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
-				  _results.push(text.charCodeAt(i).toString(16));
+					_results.push(text.charCodeAt(i).toString(16));
 				}
 				return _results;
 			})()).join('');
@@ -187,7 +190,7 @@
 						bold: fontDef.bold,
 						italics: fontDef.italics,
 						bolditalics: fontDef.bolditalics
-					}
+					};
 				}
 			}
 		}
@@ -209,11 +212,11 @@
 
 			var fontCache = (this.cache[familyName] = this.cache[familyName] || {});
 			fontCache[type] = this.pdfDoc.font(this.fonts[familyName][type])._font;
-			return fontCache[type]
+			return fontCache[type];
 		};
 
 		return PdfPrinter;
-	};
+	}
 
 	if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 		module.exports = printer(require('./layout'), require('pdfkit'));

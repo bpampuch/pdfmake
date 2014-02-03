@@ -1,4 +1,20 @@
+///TODO: refactor i zmiana algorytmow
+/// 1/ posrednia struktura zawierajaca poziomy zagniezdzen i logiczne kontenery z mozliwoscia 
+///    offsetowania w poziomie, lub wrecz jawnego ustawiania x
+/// 2/ druga metoda traversujaca po strukturze na potrzeby pomiarow (min/max), tylko mierzy inline'y
+///    nieco slabo ze dwa razy sa inline'y mierzone, fajniej gdyby nie bylo takiej potrzeby, ale
+///    to by wymagalo modyfikacji struktur zrodlowych... ?moze to nie jest takie glupie?
+/// 
+/// traversal idzie i robi
+/// - measure inlines + calculate min/max dla kazdego elementu w strukturze zrodlowej
+/// 
+/// drugi przebieg idzie tak samo i ustawia juz konkretne szerokosci, z algorytmem budujacym
+/// bloki i dzielacym je na strony, gdy zajdzie taka potrzeba, ale nic poza tym... juz nie mierzy
+/// inline'ow, zwraca jedynie faktyczna pozycje rozpoczecia, oraz zakonczenia
+/// przy dzieleniu na strony uwzglednia koniecznosc dorysowania naglowkow tabelek
+
 (function() {
+	'use strict';
 	////////////////////////////////////////
 	// Line
 
@@ -133,17 +149,17 @@
 		});
 
 		return stack;
-	}
+	};
 
 	/**
 	 * Pushes style-name or style-overrides-object onto the stack for future evaluation
 	 *
 	 * @param {String|Object} styleNameOrOverride style-name (referring to styleDictionary) or
-	 *	                                          a new dictionary defining overriding properties
+	 *                                            a new dictionary defining overriding properties
 	 */
 	StyleContextStack.prototype.push = function(styleNameOrOverride) {
 		this.styleOverrides.push(styleNameOrOverride);
-	}
+	};
 
 	/**
 	 * Removes last style-name or style-overrides-object from the stack
@@ -157,7 +173,7 @@
 		while(howMany-- > 0) {
 			this.styleOverrides.pop();
 		}
-	}
+	};
 
 	/**
 	 * Creates a set of named styles or/and a style-overrides-object based on the item,
@@ -168,7 +184,7 @@
 	 * @return the number of items pushed onto the stack
 	 */
 	StyleContextStack.prototype.autopush = function(item) {
-		if (typeof item == 'string' || item instanceof String) return 0;
+		if (typeof item === 'string' || item instanceof String) return 0;
 
 		var styleNames = [];
 
@@ -188,7 +204,7 @@
 		var pushSOO = false;
 
 		['font', 'fontSize', 'bold', 'italics', 'alignment'].forEach(function(key) {
-			if (item[key] != undefined && item[key] != null) {
+			if (item[key] !== undefined && item[key] !== null) {
 				styleOverrideObject[key] = item[key];
 				pushSOO = true;
 			}
@@ -199,7 +215,7 @@
 		}
 
 		return styleNames.length + (pushSOO ? 1 : 0);
-	}
+	};
 
 	/**
 	 * Automatically pushes elements onto the stack, using autopush based on item,
@@ -218,29 +234,29 @@
 		}
 
 		return result;
-	}
+	};
 
 	/**
 	 * Evaluates stack and returns value of a named property
 	 *
 	 * @param {String} property - property name
 	 * @return property value or null if not found
-	 */ 
+	 */
 	StyleContextStack.prototype.getProperty = function(property) {
 		if (this.styleOverrides) {
 			for(var i = this.styleOverrides.length - 1; i >= 0; i--) {
 				var item = this.styleOverrides[i];
 
-				if (typeof item == "string" || item instanceof String) {
+				if (typeof item == 'string' || item instanceof String) {
 					// named-style-override
 
 					var style = this.styleDictionary[item];
-					if (style && style[property] != null && style[property] != undefined) {
+					if (style && style[property] !== null && style[property] !== undefined) {
 						return style[property];
 					}
 				} else {
 					// style-overrides-object
-					if (item[property] != undefined && item[property] != null) {
+					if (item[property] !== undefined && item[property] !== null) {
 						return item[property];
 					}
 				}
@@ -248,7 +264,7 @@
 		}
 
 		return this.defaultStyle && this.defaultStyle[property];
-	}
+	};
 
 
 
@@ -258,7 +274,7 @@
 
 	var TextTools = (function(){
 		var WORD_RE = /([^ ,\/!.?:;\-\n]*[ ,\/!.?:;\-]*)|\n/g;
-		// /\S*\s*/g to be considered (I'm not sure however - we shouldn't split "aaa !!!!")
+		// /\S*\s*/g to be considered (I'm not sure however - we shouldn't split 'aaa !!!!')
 
 		var LEADING = /^(\s)+/g;
 		var TRAILING = /(\s)+$/g;
@@ -299,7 +315,7 @@
 			}
 
 			return lines;
-		}
+		};
 
 		/**
 		 * Returns size of the specified string (without breaking it) using the current style
@@ -320,7 +336,7 @@
 				width: font.widthOfString(removeDiacritics(text), fontSize),
 				height: font.lineHeight(fontSize)
 			};
-		}
+		};
 
 		function splitWords(text) {
 			var results = [];
@@ -336,7 +352,7 @@
 
 				if (!isNewLine) {
 					results.push({text: item});
-				} 
+				}
 				else {
 					var shouldAddLine = (results.length === 0 || results[results.length - 1].lineEnd);
 
@@ -359,13 +375,8 @@
 			for(var key in source) {
 				if (key != 'text' && source.hasOwnProperty(key)) {
 					destination[key] = source[key];
-				};
+				}
 			}
-			// [ 'bold', 'italics', 'fontSize', 'font' ].forEach(function(key){
-			// 	if (source[key]) {
-			// 		destination[key] = source[key];
-			// 	}
-			// });
 
 			return destination;
 		}
@@ -390,15 +401,15 @@
 				}
 
 				for(var i2 = 0, l2 = words.length; i2 < l2; i2++) {
-					var result = { 
-						text: words[i2].text 
+					var result = {
+						text: words[i2].text
 					};
 
-					if (words[i2].lineEnd) { 
-						result.lineEnd = true; 
+					if (words[i2].lineEnd) {
+						result.lineEnd = true;
 					}
 
-					copyStyle(style, result)
+					copyStyle(style, result);
 
 					results.push(result);
 				}
@@ -418,7 +429,9 @@
 
 
 		function getStyleProperty(item, styleContextStack, property, defaultValue) {
-			if (item[property] != undefined && item[property] != null) {
+			var value;
+
+			if (item[property] !== undefined && item[property] !== null) {
 				// item defines this property
 				return item[property];
 			}
@@ -429,7 +442,7 @@
 				value = styleContextStack.getProperty(property);
 			});
 
-			if (value != null && value != undefined) {
+			if (value !== null && value !== undefined) {
 				return value;
 			} else {
 				return defaultValue;
@@ -444,7 +457,7 @@
 				var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
 				var bold = getStyleProperty(item, styleContextStack, 'bold', false);
 				var italics = getStyleProperty(item, styleContextStack, 'italics', false);
-				//var color = item.color || defaultStyle && defaultStyle.color || "black";
+				//var color = item.color || defaultStyle && defaultStyle.color || 'black';
 
 				var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -457,7 +470,7 @@
 				if (leadingSpaces) {
 					item.leadingCut = font.widthOfString(leadingSpaces[0], fontSize);
 				}
-				else { 
+				else {
 					item.leadingCut = 0;
 				}
 
@@ -470,7 +483,7 @@
 
 				item.font = font;
 				item.fontSize = fontSize;
-			})
+			});
 
 			return normalized;
 		}
@@ -514,7 +527,7 @@
 		}
 
 		return max;
-	}
+	};
 
 	/**
 	 * Returns width of the longest Line contained within the Block
@@ -529,7 +542,7 @@
 		}
 
 		return max;
-	}
+	};
 
 	/**
 	 * Returns Block height
@@ -544,7 +557,7 @@
 		}
 
 		return sum;
-	}
+	};
 
 	/**
 	 * Sets the Lines, aligns them and returns overflown lines if maxHeight is specified
@@ -582,7 +595,7 @@
 				return lines.splice(i);
 			}
 		}
-	}
+	};
 
 	var ColumnSet = (function() {
 		/**
@@ -596,7 +609,7 @@
 
 		ColumnSet.prototype.addColumn = function(columnData, width, processColumnCallback) {
 			this.columns.push({ width: width, callback: processColumnCallback, blocks: [], data: columnData });
-		}
+		};
 
 		ColumnSet.prototype.complete = function() {
 			var widthLeft = this.maxWidth;
@@ -630,9 +643,10 @@
 			var x = 0;
 			for (var i = 1, l = this.columns.length; i < l; i++) {
 				x += this.columns[i - 1].realWidth;
-				this.columns[i].blocks.forEach(function (block) {
-					block.x += x;
-				});
+
+				for (var j = 0, l2 = this.columns[i].blocks.length; j < l2; j++) {
+					this.columns[i].blocks[j].x += x;
+				}
 			}
 
 			// real width
@@ -643,7 +657,7 @@
 				column.blocks = result.blocks;
 				widthLeft -= result.width;
 			}
-		}
+		};
 
 		function getFixedColumns(set) {
 			var columns = [];
@@ -705,7 +719,7 @@
 	 */
 	BlockSet.prototype.createNestedLevel = function() {
 		this.stack.push({ blocks: [] });
-	}
+	};
 
 	/**
 	 * Adds a Block to the current level
@@ -716,7 +730,7 @@
 
 		var blocks = this.stack[this.stack.length - 1].blocks;
 		blocks.push(block);
-	}
+	};
 
 	/**
 	 * Returns an array of blocks added to current level (or its sublevels) and then
@@ -735,7 +749,7 @@
 		}
 
 		return currentSet.blocks;
-	}
+	};
 
 	/**
 	 * Returns the right-most point of the BlockSet (if blocks begin at x == 0, it's
@@ -751,7 +765,7 @@
 		});
 
 		return maxY;
-	}
+	};
 
 
 
@@ -772,6 +786,7 @@
 		this.pageMargins = pageMargins;
 	}
 
+	
 	/**
 	 * Executes layout engine on document-definition-object and creates an array of pages
 	 * containing positioned Blocks, Lines and inlines
@@ -786,12 +801,12 @@
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 		this.blockTracker = new BlockSet();
 
-		this._processNode(docStructure, 
-			{ 
-				page: 0, 
-				x: this.pageMargins.left, 
-				y: this.pageMargins.top, 
-				availableWidth: this.pageSize.width - this.pageMargins.left - this.pageMargins.right 
+		this._processNode(docStructure,
+			{
+				page: 0,
+				x: this.pageMargins.left,
+				y: this.pageMargins.top,
+				availableWidth: this.pageSize.width - this.pageMargins.left - this.pageMargins.right
 			});
 
 		return this.pages;
@@ -842,31 +857,34 @@
 	};
 
 	// LayoutBuilder.prototype._ensureColumnWidths = function(columns, availableWidth) {
-	// 	var columnsWithoutWidth = [];
+	//	var columnsWithoutWidth = [];
 
-	// 	for(var i = 0, l = columns.length; i < l; i++) {
-	// 		var column = columns[i];
+	//	for(var i = 0, l = columns.length; i < l; i++) {
+	//		var column = columns[i];
 
-	// 		if (typeof column == 'string' || column instanceof String) {
-	// 			column = columns[i] = { text: column };
-	// 		}
+	//		if (typeof column == 'string' || column instanceof String) {
+	//			column = columns[i] = { text: column };
+	//		}
 
-	// 		if (column.width) {
-	// 			availableWidth -= column.width;
-	// 		} else {
-	// 			columnsWithoutWidth.push(column);
-	// 		}
-	// 	}
+	//		if (column.width) {
+	//			availableWidth -= column.width;
+	//		} else {
+	//			columnsWithoutWidth.push(column);
+	//		}
+	//	}
 
-	// 	for(var i = 0, l = columnsWithoutWidth.length; i < l; i++) {
-	// 		columnsWithoutWidth[i].width = availableWidth / l;
-	// 	}
+	//	for(var i = 0, l = columnsWithoutWidth.length; i < l; i++) {
+	//		columnsWithoutWidth[i].width = availableWidth / l;
+	//	}
 	// };
+
+
 
 	LayoutBuilder.prototype._processColumns = function(columns, startPosition) {
 		var finalPosition = startPosition;
 
 		var columnSet = new ColumnSet(startPosition.availableWidth);
+		var self = this;
 
 		for(var i = 0, l = columns.length; i < l; i++) {
 			var column = columns[i];
@@ -875,34 +893,34 @@
 				column = columns[i] = { text: column };
 			}
 
-			var self = this;
-
-			columnSet.addColumn(column, column.width, function(column, maxWidth) {
-				self.blockTracker.createNestedLevel();
-
-				var columnStartPosition = pack(startPosition, { availableWidth: maxWidth });
-
-				var columnFinalPosition = self._processNode(column, columnStartPosition);
-
-				var columnFinalY = columnFinalPosition.page * self.pageSize.height + columnFinalPosition.y;
-				var finalY = finalPosition.page * self.pageSize.height + finalPosition.y;
-
-				if (columnFinalY > finalY)
-					finalPosition = columnFinalPosition;
-
-				var realColumnWidth = self.blockTracker.getRightBoundary() - startPosition.x;
-				var addedBlocks = self.blockTracker.levelUp();
-
-				return { width: realColumnWidth, blocks: addedBlocks };
-			});
+			columnSet.addColumn(column, column.width, processColumn);
 		}
 
 		columnSet.complete();
 
-		return pack(startPosition, { 
-			page: finalPosition.page, 
-			y: finalPosition.y, 
+		return pack(startPosition, {
+			page: finalPosition.page,
+			y: finalPosition.y,
 		});
+
+		function processColumn(column, maxWidth) {
+			self.blockTracker.createNestedLevel();
+
+			var columnStartPosition = pack(startPosition, { availableWidth: maxWidth });
+
+			var columnFinalPosition = self._processNode(column, columnStartPosition);
+
+			var columnFinalY = columnFinalPosition.page * self.pageSize.height + columnFinalPosition.y;
+			var finalY = finalPosition.page * self.pageSize.height + finalPosition.y;
+
+			if (columnFinalY > finalY)
+				finalPosition = columnFinalPosition;
+
+			var realColumnWidth = self.blockTracker.getRightBoundary() - startPosition.x;
+			var addedBlocks = self.blockTracker.levelUp();
+
+			return { width: realColumnWidth, blocks: addedBlocks };
+		}
 	};
 
 	LayoutBuilder.prototype._gapSizeForList = function(isOrderedList, listItems) {
@@ -912,7 +930,7 @@
 		} else {
 			return this.textTools.sizeOfString('oo ', this.styleStack);
 		}
-	}
+	};
 
 	LayoutBuilder.prototype._getOnItemAddedCallback = function(isOrderedList, styleStack, gapSize) {
 		var self = this;
@@ -931,21 +949,21 @@
 				page.blocks.push(b);
 
 				counter++;
-			}
+			};
 		} else {
 			var radius = gapSize.height / 6;
 
 			return function(pageNumber, page, block) {
 				page.vectors.push({
-					x: block.x - indent + radius, 
+					x: block.x - indent + radius,
 					y: block.y + gapSize.height * 2 / 3,
-					r1: radius, 
+					r1: radius,
 					r2: radius,
-					type: 'ellipse' 
+					type: 'ellipse'
 				});
-			}
+			};
 		}
-	}
+	};
 
 	LayoutBuilder.prototype._processList = function(isOrderedList, listItems, startPosition) {
 		var styleStack = this.styleStack.clone();
@@ -970,7 +988,7 @@
 			page: nextItemPosition.page,
 			y: nextItemPosition.y,
 		});
-	}
+	};
 
 	LayoutBuilder.prototype.onBlockAdded = function(pageNumber, page, block) {
 		if (this.itemListCallback) {
@@ -979,12 +997,12 @@
 		}
 
 		this.blockTracker.addBlock(block);
-	}
-
+	};
 
 	LayoutBuilder.prototype._processLeaf = function(node, startPosition) {
 		var width;
 
+		//TODO: refactor, currently breaks OCP
 		if(node.width === 'auto' || node.width === 'star' || node.width === '*') {
 			width = startPosition.availableWidth;
 		} else {
