@@ -577,6 +577,7 @@
 
 	Line.prototype.hasEnoughSpaceForInline = function(inline) {
 		if (this.inlines.length === 0) return true;
+		if (this.newLineForced) return false;
 
 		return this.inlineWidths + inline.width - this.leadingCut - (inline.trailingCut || 0) <= this.maxWidth;
 	};
@@ -591,6 +592,10 @@
 
 		this.inlines.push(inline);
 		this.inlineWidths += inline.width;
+
+		if (inline.lineEnd) {
+			this.newLineForced = true;
+		}
 	};
 
 	Line.prototype.getWidth = function() {
@@ -610,6 +615,8 @@
 
 		return max;
 	};
+
+
 
 
 	////////////////////////////////////////
@@ -632,26 +639,26 @@
 	 * containing positioned Blocks, Lines and inlines
 	 * 
 	 * @param {Object} docStructure document-definition-object
-	 * @param {Object} fontDescriptors dictionary with font definitions
+	 * @param {Object} fontProvider font provider
 	 * @param {Object} styleDictionary dictionary with style definitions
 	 * @param {Object} defaultStyle default style definition
 	 * @return {Array} an array of pages
 	 */
-	LayoutBuilder.prototype.layoutDocument = function (docStructure, fontDescriptors, styleDictionary, defaultStyle) {
-		this.docMeasure = new DocMeasure(fontDescriptors, styleDictionary, defaultStyle);
+	LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle) {
+		new DocMeasure(fontProvider, styleDictionary, defaultStyle).measureDocument(docStructure);
+
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 
 		this.pages = [];
-
 		this.context = [
 			{
 				page: -1,
-				availableWidth: pageSize.width - pageMargins.left - pageMargins.right,
+				availableWidth: this.pageSize.width - this.pageMargins.left - this.pageMargins.right,
 				availableHeight: 0
 			}
 		];
 
-		this.processNode(docStructure);
+		this.processNode({ stack: docStructure });
 
 		return this.pages;
 	};
@@ -678,34 +685,41 @@
 
 	LayoutBuilder.prototype.addLine = function(line) {
 		var context = this.getContext();
+		var lineHeight = line.getHeight();
 
-		if(context.availableHeight < line.getHeight()) {
+		if(context.availableHeight < lineHeight) {
 			context.page++;
 			context.x = this.pageMargins.left;
 
 			//TODO: table header support
 			context.y = this.pageMargins.top;
-			this.availableHeight = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+			context.availableHeight = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
 		}
 
-		this.getPage(context.page).lines.add(line);
+		line.x = context.x + this.alignmentOffset(line, this.styleStack.getProperty('alignment') || 'left');
+		line.y = context.y;
+
+		context.availableHeight -= lineHeight;
+		context.y += lineHeight;
+
+		this.getPage(context.page).lines.push(line);
 	};
 
 	LayoutBuilder.prototype.processNode = function(node) {
 		var self = this;
 
 		this.styleStack.auto(node, function() {
-			if/* (node.columns) {
-				self._processColumns(node.columns, context);
-			} else if (node.stack) {
-				self._processVerticalContainer(node.stack, context);
-			} else if (node.ul) {
+			if (node.stack) {
+				self.processVerticalContainer(node);
+			} else if (node.columns) {
+				self.processColumns(node.columns, context);
+			} /* else if (node.ul) {
 				self._processList(false, node.ul, context);
 			} else if (node.ol) {
 				self._processList(true, node.ol, context);
 			} else if (node.table) {
 				self._processTable(node);
-			} else if*/ (node.text) {
+			}*/ else if (node.text) {
 				self.processLeaf(node);
 			} else {
 				throw 'Unrecognized document structure: ' + node;
@@ -715,7 +729,7 @@
 
 
 	LayoutBuilder.prototype.buildNextLine = function(textNode) {
-		if (!textNode.inlines || textNode.inlines.length === 0) return null;
+		if (!textNode._inlines || textNode._inlines.length === 0) return null;
 
 		var line = new Line(this.getContext().availableWidth);
 
@@ -727,56 +741,39 @@
 	};
 
 
-	LayoutBuilder.prototype.alignLine = function(line, alignment) {
-		//TODO:
-		line.x = this.context.x;
+	LayoutBuilder.prototype.alignmentOffset = function(line, alignment) {
+		var width = this.getContext().availableWidth;
+		var lineWidth = line.getWidth();
+
+		switch(alignment.toLowerCase()) {
+			case 'right':
+				return width - lineWidth;
+			case 'center':
+				return (width - lineWidth) / 2;
+		}
+
+		return 0;
 	};
 
 	LayoutBuilder.prototype.processLeaf = function(node) {
 		var line = this.buildNextLine(node);
 
 		while (line) {
-			this.alignLine(line, this.styleStack.getProperty('alignment') || 'left');
-			this.positioner.addLine(line);
+			this.addLine(line);
 			line = this.buildNextLine(node);
 		}
 	};
-/*
-	LayoutBuilder.prototype._processVerticalContainer = function(nodes, startPosition) {
-		for(var i = 0, l = nodes.length; i < l; i++) {
-			startPosition = this.processNode(nodes[i], startPosition);
-		}
 
-		return startPosition;
+	LayoutBuilder.prototype.processVerticalContainer = function(node) {
+		var self = this;
+		node.stack.forEach(function(subnode) {
+			self.processNode(subnode);
+		});
 	};
-*/
 
-	// LayoutBuilder.prototype._ensureColumnWidths = function(columns, availableWidth) {
-	//	var columnsWithoutWidth = [];
 
-	//	for(var i = 0, l = columns.length; i < l; i++) {
-	//		var column = columns[i];
-
-	//		if (typeof column == 'string' || column instanceof String) {
-	//			column = columns[i] = { text: column };
-	//		}
-
-	//		if (column.width) {
-	//			availableWidth -= column.width;
-	//		} else {
-	//			columnsWithoutWidth.push(column);
-	//		}
-	//	}
-
-	//	for(var i = 0, l = columnsWithoutWidth.length; i < l; i++) {
-	//		columnsWithoutWidth[i].width = availableWidth / l;
-	//	}
-	// };
-
-/*
-
-	LayoutBuilder.prototype._processColumns = function(columns, startPosition) {
-		var finalPosition = startPosition;
+	LayoutBuilder.prototype.processColumns = function(columns) {
+/*		var finalPosition = startPosition;
 
 		var columnSet = new ColumnSet(startPosition.availableWidth);
 		var self = this;
@@ -815,8 +812,37 @@
 			var addedBlocks = self.blockTracker.levelUp();
 
 			return { width: realColumnWidth, blocks: addedBlocks };
-		}
+		}*/
 	};
+/*
+
+*/
+
+	// LayoutBuilder.prototype._ensureColumnWidths = function(columns, availableWidth) {
+	//	var columnsWithoutWidth = [];
+
+	//	for(var i = 0, l = columns.length; i < l; i++) {
+	//		var column = columns[i];
+
+	//		if (typeof column == 'string' || column instanceof String) {
+	//			column = columns[i] = { text: column };
+	//		}
+
+	//		if (column.width) {
+	//			availableWidth -= column.width;
+	//		} else {
+	//			columnsWithoutWidth.push(column);
+	//		}
+	//	}
+
+	//	for(var i = 0, l = columnsWithoutWidth.length; i < l; i++) {
+	//		columnsWithoutWidth[i].width = availableWidth / l;
+	//	}
+	// };
+
+/*
+
+	
 
 	LayoutBuilder.prototype._gapSizeForList = function(isOrderedList, listItems) {
 		if (isOrderedList) {

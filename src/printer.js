@@ -69,11 +69,10 @@
 		 */
 		PdfPrinter.prototype.createPdfKitDocument = function(docDefinition) {
 			var builder = new layout.LayoutBuilder(
-				this.fontProvider,
 				docDefinition.pageSize || { width: 595.28, height: 741.89 },
 				docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 });
 
-			var pages = builder.layoutDocument(docDefinition.content, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' });
+			var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' });
 
 			renderPages(pages, this.fontProvider, this.pdfKitDoc);
 			return this.pdfKitDoc;
@@ -88,9 +87,9 @@
 				setFontRefs(fontProvider, pdfKitDoc);
 
 				var page = pages[i];
-				for(var bi = 0, bl = page.blocks.length; bi < bl; bi++) {
-					var block = page.blocks[bi];
-					renderBlock(block, pdfKitDoc);
+				for(var li = 0, ll = page.lines.length; li < ll; li++) {
+					var line = page.lines[li];
+					renderLine(line, line.x, line.y, pdfKitDoc);
 				}
 				for(var vi = 0, vl = page.vectors.length; vi < vl; vi++) {
 					var vector = page.vectors[vi];
