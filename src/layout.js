@@ -1,18 +1,3 @@
-///TODO: refactor i zmiana algorytmow
-/// 1/ posrednia struktura zawierajaca poziomy zagniezdzen i logiczne kontenery z mozliwoscia 
-///    offsetowania w poziomie, lub wrecz jawnego ustawiania x
-/// 2/ druga metoda traversujaca po strukturze na potrzeby pomiarow (min/max), tylko mierzy inline'y
-///    nieco slabo ze dwa razy sa inline'y mierzone, fajniej gdyby nie bylo takiej potrzeby, ale
-///    to by wymagalo modyfikacji struktur zrodlowych... ?moze to nie jest takie glupie?
-/// 
-/// traversal idzie i robi
-/// - measure inlines + calculate min/max dla kazdego elementu w strukturze zrodlowej
-/// 
-/// drugi przebieg idzie tak samo i ustawia juz konkretne szerokosci, z algorytmem budujacym
-/// bloki i dzielacym je na strony, gdy zajdzie taka potrzeba, ale nic poza tym... juz nie mierzy
-/// inline'ow, zwraca jedynie faktyczna pozycje rozpoczecia, oraz zakonczenia
-/// przy dzieleniu na strony uwzglednia koniecznosc dorysowania naglowkow tabelek
-
 (function() {
 	'use strict';
 
@@ -570,11 +555,380 @@
 		}
 	};
 
+
+
+	////////////////////////////////////////
+	// Line
+
+	/**
+	 * Creates an instance of Line
+	 *
+	 * @constructor
+	 * @this {Line}
+	 * @param {Number} Maximum width this line can have
+	 */
+	function Line(maxWidth) {
+		this.maxWidth = maxWidth;
+		this.leadingCut = 0;
+		this.trailingCut = 0;
+		this.inlineWidths = 0;
+		this.inlines = [];
+	}
+
+	Line.prototype.hasEnoughSpaceForInline = function(inline) {
+		if (this.inlines.length === 0) return true;
+
+		return this.inlineWidths + inline.width - this.leadingCut - (inline.trailingCut || 0) <= this.maxWidth;
+	};
+
+	Line.prototype.addInline = function(inline) {
+		if (this.inlines.length === 0) {
+			this.leadingCut = inline.leadingCut || 0;
+		}
+		this.trailingCut = inline.trailingCut || 0;
+
+		inline.x = this.inlineWidths - this.leadingCut;
+
+		this.inlines.push(inline);
+		this.inlineWidths += inline.width;
+	};
+
+	Line.prototype.getWidth = function() {
+		return this.inlineWidths - this.leadingCut - this.trailingCut;
+	};
+
+	/**
+	 * Returns line height
+	 * @return {Number}
+	 */
+	Line.prototype.getHeight = function() {
+		var max = 0;
+
+		this.inlines.forEach(function(item) {
+			max = Math.max(max, item.height || 0);
+		});
+
+		return max;
+	};
+
+
+	////////////////////////////////////////
+	// LayoutBuilder
+
+	/**
+	 * Creates an instance of LayoutBuilder - layout engine which turns document-definition-object 
+	 * into a set of pages, blocks, lines and inlines ready to be rendered into a PDF
+	 * 
+	 * @param {Object} pageSize - an object defining page width and height
+	 * @param {Object} pageMargins - an object defining top, left, right and bottom margins
+	 */
+	function LayoutBuilder(pageSize, pageMargins) {
+		this.pageSize = pageSize;
+		this.pageMargins = pageMargins;
+	}
+
+	/**
+	 * Executes layout engine on document-definition-object and creates an array of pages
+	 * containing positioned Blocks, Lines and inlines
+	 * 
+	 * @param {Object} docStructure document-definition-object
+	 * @param {Object} fontDescriptors dictionary with font definitions
+	 * @param {Object} styleDictionary dictionary with style definitions
+	 * @param {Object} defaultStyle default style definition
+	 * @return {Array} an array of pages
+	 */
+	LayoutBuilder.prototype.layoutDocument = function (docStructure, fontDescriptors, styleDictionary, defaultStyle) {
+		this.docMeasure = new DocMeasure(fontDescriptors, styleDictionary, defaultStyle);
+		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
+
+		this.pages = [];
+
+		this.context = [
+			{
+				page: -1,
+				availableWidth: pageSize.width - pageMargins.left - pageMargins.right,
+				availableHeight: 0
+			}
+		];
+
+		this.processNode(docStructure);
+
+		return this.pages;
+	};
+
+	LayoutBuilder.prototype.getContext = function() {
+		return this.context[this.context.length - 1];
+	};
+
+	LayoutBuilder.prototype.pushContext = function() {
+		this.context.push(pack(this.getContext()));
+	};
+
+	LayoutBuilder.prototype.popContext = function() {
+		this.context.pop();
+	};
+
+	LayoutBuilder.prototype.getPage = function(pageNumber) {
+		while(this.pages.length <= pageNumber) {
+			this.pages.push({ lines: [], vectors: [] });
+		}
+
+		return this.pages[pageNumber];
+	};
+
+	LayoutBuilder.prototype.addLine = function(line) {
+		var context = this.getContext();
+
+		if(context.availableHeight < line.getHeight()) {
+			context.page++;
+			context.x = this.pageMargins.left;
+
+			//TODO: table header support
+			context.y = this.pageMargins.top;
+			this.availableHeight = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+		}
+
+		this.getPage(context.page).lines.add(line);
+	};
+
+	LayoutBuilder.prototype.processNode = function(node) {
+		var self = this;
+
+		this.styleStack.auto(node, function() {
+			if/* (node.columns) {
+				self._processColumns(node.columns, context);
+			} else if (node.stack) {
+				self._processVerticalContainer(node.stack, context);
+			} else if (node.ul) {
+				self._processList(false, node.ul, context);
+			} else if (node.ol) {
+				self._processList(true, node.ol, context);
+			} else if (node.table) {
+				self._processTable(node);
+			} else if*/ (node.text) {
+				self.processLeaf(node);
+			} else {
+				throw 'Unrecognized document structure: ' + node;
+			}
+		});
+	};
+
+
+	LayoutBuilder.prototype.buildNextLine = function(textNode) {
+		if (!textNode.inlines || textNode.inlines.length === 0) return null;
+
+		var line = new Line(this.getContext().availableWidth);
+
+		while(textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
+			line.addInline(textNode._inlines.shift());
+		}
+
+		return line;
+	};
+
+
+	LayoutBuilder.prototype.alignLine = function(line, alignment) {
+		//TODO:
+		line.x = this.context.x;
+	};
+
+	LayoutBuilder.prototype.processLeaf = function(node) {
+		var line = this.buildNextLine(node);
+
+		while (line) {
+			this.alignLine(line, this.styleStack.getProperty('alignment') || 'left');
+			this.positioner.addLine(line);
+			line = this.buildNextLine(node);
+		}
+	};
+/*
+	LayoutBuilder.prototype._processVerticalContainer = function(nodes, startPosition) {
+		for(var i = 0, l = nodes.length; i < l; i++) {
+			startPosition = this.processNode(nodes[i], startPosition);
+		}
+
+		return startPosition;
+	};
+*/
+
+	// LayoutBuilder.prototype._ensureColumnWidths = function(columns, availableWidth) {
+	//	var columnsWithoutWidth = [];
+
+	//	for(var i = 0, l = columns.length; i < l; i++) {
+	//		var column = columns[i];
+
+	//		if (typeof column == 'string' || column instanceof String) {
+	//			column = columns[i] = { text: column };
+	//		}
+
+	//		if (column.width) {
+	//			availableWidth -= column.width;
+	//		} else {
+	//			columnsWithoutWidth.push(column);
+	//		}
+	//	}
+
+	//	for(var i = 0, l = columnsWithoutWidth.length; i < l; i++) {
+	//		columnsWithoutWidth[i].width = availableWidth / l;
+	//	}
+	// };
+
+/*
+
+	LayoutBuilder.prototype._processColumns = function(columns, startPosition) {
+		var finalPosition = startPosition;
+
+		var columnSet = new ColumnSet(startPosition.availableWidth);
+		var self = this;
+
+		for(var i = 0, l = columns.length; i < l; i++) {
+			var column = columns[i];
+
+			if (typeof column == 'string' || column instanceof String) {
+				column = columns[i] = { text: column };
+			}
+
+			columnSet.addColumn(column, column.width, processColumn);
+		}
+
+		columnSet.complete();
+
+		return pack(startPosition, {
+			page: finalPosition.page,
+			y: finalPosition.y,
+		});
+
+		function processColumn(column, maxWidth) {
+			self.blockTracker.createNestedLevel();
+
+			var columnStartPosition = pack(startPosition, { availableWidth: maxWidth });
+
+			var columnFinalPosition = self.processNode(column, columnStartPosition);
+
+			var columnFinalY = columnFinalPosition.page * self.pageSize.height + columnFinalPosition.y;
+			var finalY = finalPosition.page * self.pageSize.height + finalPosition.y;
+
+			if (columnFinalY > finalY)
+				finalPosition = columnFinalPosition;
+
+			var realColumnWidth = self.blockTracker.getRightBoundary() - startPosition.x;
+			var addedBlocks = self.blockTracker.levelUp();
+
+			return { width: realColumnWidth, blocks: addedBlocks };
+		}
+	};
+
+	LayoutBuilder.prototype._gapSizeForList = function(isOrderedList, listItems) {
+		if (isOrderedList) {
+			var longestNo = (listItems.length).toString().replace(/./g, '9');
+			return this.textTools.sizeOfString(longestNo + '. ', this.styleStack);
+		} else {
+			return this.textTools.sizeOfString('oo ', this.styleStack);
+		}
+	};
+
+	LayoutBuilder.prototype._getOnItemAddedCallback = function(isOrderedList, styleStack, gapSize) {
+		var self = this;
+		var indent = gapSize.width;
+
+		if (isOrderedList) {
+			var counter = 1;
+
+			return function(pageNumber, page, block) {
+				var lines = self.textTools.buildLines(counter.toString() + '.', null, styleStack);
+				var b = new Block();
+				b.setLines(lines);
+				b.x = block.x - indent;
+				b.y = block.y + (block.lines.length > 0 ? block.lines[0].getHeight() : block.getHeight()) - b.getHeight();
+
+				page.blocks.push(b);
+
+				counter++;
+			};
+		} else {
+			var radius = gapSize.height / 6;
+
+			return function(pageNumber, page, block) {
+				page.vectors.push({
+					x: block.x - indent + radius,
+					y: block.y + gapSize.height * 2 / 3,
+					r1: radius,
+					r2: radius,
+					type: 'ellipse'
+				});
+			};
+		}
+	};
+
+	LayoutBuilder.prototype._processList = function(isOrderedList, listItems, startPosition) {
+		var styleStack = this.styleStack.clone();
+
+		var gapSize = this._gapSizeForList(isOrderedList, listItems);
+
+		var nextItemPosition = pack(startPosition, {
+			x: startPosition.x + gapSize.width,
+			availableWidth: startPosition.availableWidth - gapSize.width
+		});
+
+		var addListItemMark = this._getOnItemAddedCallback(isOrderedList, styleStack, gapSize);
+
+		for(var i = 0, l = listItems.length; i < l; i++) {
+			var item = listItems[i];
+
+			this.itemListCallback = addListItemMark;
+			nextItemPosition = this.processNode(item, nextItemPosition);
+		}
+
+		return pack(startPosition, {
+			page: nextItemPosition.page,
+			y: nextItemPosition.y,
+		});
+	};
+
+	LayoutBuilder.prototype.onBlockAdded = function(pageNumber, page, block) {
+		if (this.itemListCallback) {
+			this.itemListCallback(pageNumber, page, block);
+			this.itemListCallback = null;
+		}
+
+		this.blockTracker.addBlock(block);
+	};
+*/
+
+	function pack() {
+		var result = {};
+
+		for(var i = 0, l = arguments.length; i < l; i++) {
+			var obj = arguments[i];
+
+			if (obj) {
+				for(var key in obj) {
+					if (obj.hasOwnProperty(key)) {
+						result[key] = obj[key];
+					}
+				}
+			}
+		}
+
+		return result;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
 	////////////////////////////////////////
 	// Exports
 
 	var pdfMake = {
-//		Line: Line,
+		Line: Line,
 		TextTools: TextTools,
 //		Block: Block,
 		StyleContextStack: StyleContextStack,
