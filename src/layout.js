@@ -15,110 +15,6 @@
 
 (function() {
 	'use strict';
-	////////////////////////////////////////
-	// Line
-
-	/**
-	 * Creates an instance of Line
-	 *
-	 * @constructor
-	 * @this {Line}
-	 * @param {Number} Maximum width this line can have
-	 */
-	function Line(maxWidth) {
-		this.clear(maxWidth);
-	}
-
-	/**
-	 * Removes all inlines from the Line and sets new maxWidth
-	 * @param  {Number} new maximum width this line can have
-	 */
-	Line.prototype.clear = function(newMaxWidth) {
-		this.maxWidth = newMaxWidth || this.maxWidth;
-		this.inlineWidths = 0;
-		this.leadingCut = 0;
-		this.trailingCut = 0;
-		this.newLineForced = false;
-		this.inlines = [];
-	};
-
-	/**
-	 * Adds an inline to the Line if there's enough space left
-	 * @param {Object} inline 
-	 * @return {Boolean} boolean value indicating whether inline has been added (there was enough space)
-	 */
-	Line.prototype.addInline = function(inline) {
-		if (this.newLineForced) return false;
-
-		var leadingCut;
-
-		if (this.inlines.length === 0) {
-			leadingCut = inline.leadingCut || 0;
-		}
-		else {
-			leadingCut = this.leadingCut;
-		}
-
-		var trailingCut = inline.trailingCut || 0;
-
-		var enoughSpace = this.inlineWidths + inline.width - leadingCut - trailingCut <= this.maxWidth;
-
-		if (enoughSpace || this.inlines.length === 0) {
-			this.leadingCut = leadingCut;
-			this.trailingCut = trailingCut;
-
-			inline.x = this.inlineWidths - this.leadingCut;
-
-			this.inlines.push(inline);
-			this.inlineWidths += inline.width;
-
-			if (inline.lineEnd) {
-				this.newLineForced = true;
-			}
-
-			return true;
-		}
-
-		return false;
-	};
-
-	/**
-	 * Returns line width for the specified maxWidth
-	 * @return {Number} width of the Line
-	 */
-	Line.prototype.getWidth = function() {
-		return this.inlineWidths - this.leadingCut - this.trailingCut;
-	};
-
-	/**
-	 * Returns width of the widest inline (minimum maxWidth the Line could 
-	 * have to render inlines without inner-inline splits)
-	 * @return {Number} minimum width
-	 */
-	Line.prototype.getMinWidth = function() {
-		var max = 0;
-
-		this.inlines.forEach(function(item) {
-			max = Math.max(max, (item.width || 0) - (item.leadingCut || 0) - (item.trailingCut || 0));
-		});
-
-		return max;
-	};
-
-	/**
-	 * Returns line height
-	 * @return {Number}
-	 */
-	Line.prototype.getHeight = function() {
-		var max = 0;
-
-		this.inlines.forEach(function(item) {
-			max = Math.max(max, item.height || 0);
-		});
-
-		return max;
-	};
-
 
 	////////////////////////////////////////
 	// StyleContextStack
@@ -268,7 +164,6 @@
 
 
 
-
 	////////////////////////////////////////
 	// TextTools
 
@@ -280,7 +175,7 @@
 		var TRAILING = /(\s)+$/g;
 
 		/**
-		 * Creates an instance of TextTools - a helper which turns text into a set of Lines
+		 * Creates an instance of TextTools - text measurement utility
 		 * 
 		 * @constructor
 		 * @param {FontProvider} fontProvider
@@ -290,31 +185,45 @@
 		}
 
 		/**
-		 * Converts an array of strings (or inline-definition-objects) into a set of Lines
+		 * Converts an array of strings (or inline-definition-objects) into a set of inlines
+		 * and their min/max widths
 		 * @param  {Object} textArray - an array of inline-definition-objects (or strings)
 		 * @param  {Number} maxWidth - max width a single Line should have
 		 * @return {Array} an array of Lines
 		 */
-		TextTools.prototype.buildLines = function(textArray, maxWidth, styleContextStack) {
+		TextTools.prototype.buildInlines = function(textArray, styleContextStack) {
 			var measured = measure(this.fontProvider, textArray, styleContextStack);
 
-			var lines = [];
+			var minWidth = 0,
+				maxWidth = 0,
+				currentLineWidth;
 
-			var currentLine = new Line(maxWidth);
-			lines.push(currentLine);
+			measured.forEach(function (inline) {
+				minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);
 
-			var nextInline = measured.shift();
-
-			while (nextInline) {
-				if (currentLine.addInline(nextInline)) {
-					nextInline = measured.shift();
-				} else {
-					currentLine = new Line(maxWidth);
-					lines.push(currentLine);
+				if (!currentLineWidth) {
+					currentLineWidth = { width: 0, leadingCut: inline.leadingCut, trailingCut: 0 };
 				}
-			}
 
-			return lines;
+				currentLineWidth.width += inline.width;
+				currentLineWidth.trailingCut = inline.trailingCut;
+
+				maxWidth = Math.max(maxWidth, getTrimmedWidth(currentLineWidth));
+
+				if (inline.lineEnd) {
+					currentLineWidth = null;
+				}
+			});
+
+			return {
+				items: measured,
+				minWidth: minWidth,
+				maxWidth: maxWidth
+			};
+
+			function getTrimmedWidth(item) {
+				return Math.max(0, item.width - item.leadingCut - item.trailingCut);
+			}
 		};
 
 		/**
@@ -498,337 +407,28 @@
 	})();
 
 
-
-
 	////////////////////////////////////////
-	// Block
+	// DocMeasure
 
 	/**
-	 * Creates an instance of Block
-	 * 
-	 * @constructor
-	 * @param {Number} maximum block width (inherited by the Lines)
+	 * @private
 	 */
-	function Block(maxWidth) {
-		this.maxWidth = maxWidth;
-	}
-
-	/**
-	 * Returns minimum width the Block could have without inner-inline splits
-	 * 
-	 * @return {Number}
-	 */
-	Block.prototype.getMinWidth = function() {
-		var max = 0;
-
-		for (var i = 0, l = this.lines.length; i < l; i++) {
-			var line = this.lines[i];
-			max = Math.max(max, (line.getMinWidth() || 0));
-		}
-
-		return max;
-	};
-
-	/**
-	 * Returns width of the longest Line contained within the Block
-	 * @return {Number}
-	 */
-	Block.prototype.getWidth = function() {
-		var max = 0;
-
-		for (var i = 0, l = this.lines.length; i < l; i++) {
-			var line = this.lines[i];
-			max = Math.max(max, (line.getWidth() || 0));
-		}
-
-		return max;
-	};
-
-	/**
-	 * Returns Block height
-	 * @return {Number}
-	 */
-	Block.prototype.getHeight = function() {
-		var sum = 0;
-
-		for (var i = 0, l = this.lines.length; i < l; i++) {
-			var line = this.lines[i];
-			sum += line.getHeight() || 0;
-		}
-
-		return sum;
-	};
-
-	/**
-	 * Sets the Lines, aligns them and returns overflown lines if maxHeight is specified
-	 * @param {Array} lines - an array of Lines
-	 * @param {String} alignment - 'left'/'right'/'center' (no support for 'justify' yet)
-	 * @param {Number} maxHeight - maximum height the Block can have (if specified - overflown lines are not added to the Block, but rather - returned)
-	 * @return {Array} an array containing all overflown Lines (if maxHeight was specified)
-	 */
-	Block.prototype.setLines = function(lines, alignment, maxHeight) {
-		alignment = alignment || 'left';
-		var y = 0;
-
-		this.lines = lines;
-
-		for(var i = 0, l = lines.length; i < l; i++) {
-			var line = lines[i];
-
-			line.y = y;
-			y += line.getHeight();
-			var lineWidth = line.getWidth();
-
-			switch(alignment.toLowerCase()) {
-				case 'left':
-					line.x = 0;
-				break;
-				case 'right':
-					line.x = this.maxWidth - lineWidth;
-				break;
-				case 'center':
-					line.x = (this.maxWidth - lineWidth) / 2;
-				break;
-			}
-
-			if (maxHeight && y >= maxHeight) {
-				return lines.splice(i);
-			}
-		}
-	};
-
-	var ColumnSet = (function() {
-		/**
-		 * Creates an instance of ColumnSet - a helper responsible for column width management
-		 * and updating block positions.
-		 */
-		function ColumnSet(maxWidth) {
-			this.maxWidth = maxWidth;
-			this.columns = [];
-		}
-
-		ColumnSet.prototype.addColumn = function(columnData, width, processColumnCallback) {
-			this.columns.push({ width: width, callback: processColumnCallback, blocks: [], data: columnData });
-		};
-
-		ColumnSet.prototype.complete = function() {
-			var widthLeft = this.maxWidth;
-
-			getFixedColumns(this).forEach(function (column) {
-				var result = column.callback(column.data, column.width);
-				// we override widths for fixed columns, no matter of what's been returned
-				result.width = column.width;
-				afterColumnCallback(column, result);
-			});
-
-			getAutoColumns(this).forEach(function (column) {
-				var result = column.callback(column.data, widthLeft);
-				afterColumnCallback(column, result);
-			});
-
-			var starColumns = getStarColumns(this);
-			var starWidth = (starColumns.length > 0) ? widthLeft / starColumns.length : 0;
-
-			starColumns.forEach(function (column) {
-				var result = column.callback(column.data, starWidth);
-				// we override widths for star columns, no matter of what's been returned
-				result.width = starWidth;
-				afterColumnCallback(column, result);
-			});
-
-
-			//TODO: rethink responsibilities (shouldn't BlockSet have the offsetBlocks method?)
-
-			// update block positions
-			var x = 0;
-			for (var i = 1, l = this.columns.length; i < l; i++) {
-				x += this.columns[i - 1].realWidth;
-
-				for (var j = 0, l2 = this.columns[i].blocks.length; j < l2; j++) {
-					this.columns[i].blocks[j].x += x;
-				}
-			}
-
-			// real width
-			return this.maxWidth - widthLeft;
-
-			function afterColumnCallback(column, result) {
-				column.realWidth = result.width;
-				column.blocks = result.blocks;
-				widthLeft -= result.width;
-			}
-		};
-
-		function getFixedColumns(set) {
-			var columns = [];
-			for(var i = 0, l = set.columns.length; i < l; i++) {
-				var col = set.columns[i];
-
-				if (typeof col.width === 'number' || col.width instanceof Number) {
-					columns.push(col);
-				}
-			}
-
-			return columns;
-		}
-
-		function getAutoColumns(set) {
-			var columns = [];
-			for(var i = 0, l = set.columns.length; i < l; i++) {
-				var col = set.columns[i];
-				
-				if (col.width === 'auto') {
-					columns.push(col);
-				}
-			}
-
-			return columns;
-		}
-
-		function getStarColumns(set) {
-			var columns = [];
-			for(var i = 0, l = set.columns.length; i < l; i++) {
-				var col = set.columns[i];
-				
-				if (!col.width || col.width === 'star' || col.width === '*') {
-					columns.push(col);
-				}
-			}
-
-			return columns;
-		}
-
-		return ColumnSet;
-	})();
-	
-
-
-	////////////////////////////////////////
-	// BlockSet
-
-	/**
-	 * Creates an instance of BlockSet - block grouping structure with the ability
-	 * to manage nested blocks.
-	 */
-	function BlockSet() {
-		this.stack = [];
-	}
-
-	/**
-	 * Creates a new level, so that blocks can be added
-	 */
-	BlockSet.prototype.createNestedLevel = function() {
-		this.stack.push({ blocks: [] });
-	};
-
-	/**
-	 * Adds a Block to the current level
-	 * @param {Block} block a Block element
-	 */
-	BlockSet.prototype.addBlock = function(block) {
-		if (this.stack.length === 0) return;
-
-		var blocks = this.stack[this.stack.length - 1].blocks;
-		blocks.push(block);
-	};
-
-	/**
-	 * Returns an array of blocks added to current level (or its sublevels) and then
-	 * merges blocks to the parent level
-	 * @return {Array} an array of blocks added to current level and its sub-levels
-	 */
-	BlockSet.prototype.levelUp = function() {
-		var currentSet = this.stack.pop();
-
-		if (this.stack.length > 0) {
-			var upperSet = this.stack[this.stack.length - 1];
-
-			currentSet.blocks.forEach(function(block) {
-				upperSet.blocks.push(block);
-			});
-		}
-
-		return currentSet.blocks;
-	};
-
-	/**
-	 * Returns the right-most point of the BlockSet (if blocks begin at x == 0, it's
-	 * equal to the BlockSet width)
-	 * @return {Number} right-most point of the BlockSet 
-	 */
-	BlockSet.prototype.getRightBoundary = function() {
-		var currentSet = this.stack[this.stack.length - 1];
-		var maxY = 0;
-
-		currentSet.blocks.forEach(function (block) {
-			maxY = Math.max(maxY, block.getWidth() + block.x);
-		});
-
-		return maxY;
-	};
-
-
-
-	////////////////////////////////////////
-	// LayoutBuilder
-
-	/**
-	 * Creates an instance of LayoutBuilder - layout engine which turns document-definition-object 
-	 * into a set of pages, blocks, lines and inlines ready to be rendered into a PDF
-	 * 
-	 * @param {FontProvider} fontProvider - required for text measurements
-	 * @param {Object} pageSize - an object defining page width and height
-	 * @param {Object} pageMargins - an object defining top, left, right and bottom margins
-	 */
-	function LayoutBuilder(fontProvider, pageSize, pageMargins) {
+	function DocMeasure(fontProvider, styleDictionary, defaultStyle) {
 		this.textTools = new TextTools(fontProvider);
-		this.pageSize = pageSize;
-		this.pageMargins = pageMargins;
+		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 	}
 
-	
 	/**
-	 * Executes layout engine on document-definition-object and creates an array of pages
-	 * containing positioned Blocks, Lines and inlines
-	 * 
-	 * @param {Object} docStructure document-definition-object
-	 * @param {Object} styleDictionary dictionary with style definitions
-	 * @param {Object} defaultStyle default style definition
-	 * @return {Array} an array of pages
+	 * Measures all nodes and sets min/max-width properties required for the second
+	 * layout-pass.
+	 * @param  {Object} docStructure document-definition-object
+	 * @return {Object}              document-measurement-object
 	 */
-	LayoutBuilder.prototype.layoutDocument = function (docStructure, styleDictionary, defaultStyle) {
-		this.pages = [];
-		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
-		this.blockTracker = new BlockSet();
-
-		this._processNode(docStructure,
-			{
-				page: 0,
-				x: this.pageMargins.left,
-				y: this.pageMargins.top,
-				availableWidth: this.pageSize.width - this.pageMargins.left - this.pageMargins.right
-			});
-
-		return this.pages;
+	DocMeasure.prototype.measureDocument = function(docStructure) {
+		return this.measureNode(docStructure);
 	};
 
-	LayoutBuilder.prototype._getPage = function(pageNumber) {
-		while(this.pages.length <= pageNumber) {
-			this.pages.push({ blocks: [], vectors: [] });
-		}
-
-		return this.pages[pageNumber];
-	};
-
-	LayoutBuilder.prototype._processVerticalContainer = function(nodes, startPosition) {
-		for(var i = 0, l = nodes.length; i < l; i++) {
-			startPosition = this._processNode(nodes[i], startPosition);
-		}
-
-		return startPosition;
-	};
-
-	LayoutBuilder.prototype._processNode = function(node, startPosition) {
+	DocMeasure.prototype.measureNode = function(node) {
 		// expand shortcuts
 		if (node instanceof Array) {
 			node = { stack: node };
@@ -836,94 +436,70 @@
 			node = { text: node };
 		}
 
-		// process
+		// measure
 		var self = this;
 
 		return this.styleStack.auto(node, function() {
 			if (node.columns) {
-				return self._processColumns(node.columns, startPosition);
+				return self.measureColumns(node);
 			} else if (node.stack) {
-				return self._processVerticalContainer(node.stack, startPosition);
+				return self.measureVerticalContainer(node);
 			} else if (node.ul) {
-				return self._processList(false, node.ul, startPosition);
+				return self.measureList(false, node);
 			} else if (node.ol) {
-				return self._processList(true, node.ol, startPosition);
+				return self.measureList(true, node);
+			} else if (node.table) {
+				return self.measureTable(node);
 			} else if (node.text) {
-				return self._processLeaf(node, startPosition);
+				return self.measureLeaf(node);
 			} else {
 				throw 'Unrecognized document structure: ' + node;
 			}
 		});
 	};
 
-	// LayoutBuilder.prototype._ensureColumnWidths = function(columns, availableWidth) {
-	//	var columnsWithoutWidth = [];
+	DocMeasure.prototype.measureLeaf = function(node) {
+		var data = this.textTools.buildInlines(node.text, this.styleStack);
 
-	//	for(var i = 0, l = columns.length; i < l; i++) {
-	//		var column = columns[i];
+		node._inlines = data.items;
+		node._minWidth = data.minWidth;
+		node._maxWidth = data.maxWidth;
 
-	//		if (typeof column == 'string' || column instanceof String) {
-	//			column = columns[i] = { text: column };
-	//		}
-
-	//		if (column.width) {
-	//			availableWidth -= column.width;
-	//		} else {
-	//			columnsWithoutWidth.push(column);
-	//		}
-	//	}
-
-	//	for(var i = 0, l = columnsWithoutWidth.length; i < l; i++) {
-	//		columnsWithoutWidth[i].width = availableWidth / l;
-	//	}
-	// };
-
-
-
-	LayoutBuilder.prototype._processColumns = function(columns, startPosition) {
-		var finalPosition = startPosition;
-
-		var columnSet = new ColumnSet(startPosition.availableWidth);
-		var self = this;
-
-		for(var i = 0, l = columns.length; i < l; i++) {
-			var column = columns[i];
-
-			if (typeof column == 'string' || column instanceof String) {
-				column = columns[i] = { text: column };
-			}
-
-			columnSet.addColumn(column, column.width, processColumn);
-		}
-
-		columnSet.complete();
-
-		return pack(startPosition, {
-			page: finalPosition.page,
-			y: finalPosition.y,
-		});
-
-		function processColumn(column, maxWidth) {
-			self.blockTracker.createNestedLevel();
-
-			var columnStartPosition = pack(startPosition, { availableWidth: maxWidth });
-
-			var columnFinalPosition = self._processNode(column, columnStartPosition);
-
-			var columnFinalY = columnFinalPosition.page * self.pageSize.height + columnFinalPosition.y;
-			var finalY = finalPosition.page * self.pageSize.height + finalPosition.y;
-
-			if (columnFinalY > finalY)
-				finalPosition = columnFinalPosition;
-
-			var realColumnWidth = self.blockTracker.getRightBoundary() - startPosition.x;
-			var addedBlocks = self.blockTracker.levelUp();
-
-			return { width: realColumnWidth, blocks: addedBlocks };
-		}
+		return node;
 	};
 
-	LayoutBuilder.prototype._gapSizeForList = function(isOrderedList, listItems) {
+	DocMeasure.prototype.measureVerticalContainer = function(node) {
+		var items = node.stack;
+
+		node._minWidth = 0;
+		node._maxWidth = 0;
+
+		for(var i = 0, l = items.length; i < l; i++) {
+			items[i] = this.measureNode(items[i]);
+
+			node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
+			node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth);
+		}
+
+		return node;
+	};
+
+	DocMeasure.prototype.measureColumns = function(node) {
+		var columns = node.columns;
+		node._minWidth = 0;
+		node._maxWidth = 0;
+
+		for(var i = 0, l = columns.length; i < l; i++) {
+			columns[i] = this.measureNode(columns[i]);
+
+			node._minWidth += columns[i]._minWidth;
+			node._maxWidth += columns[i]._maxWidth;
+		}
+
+		return node;
+	};
+
+	DocMeasure.prototype.gapSizeForList = function(isOrderedList, listItems) {
 		if (isOrderedList) {
 			var longestNo = (listItems.length).toString().replace(/./g, '9');
 			return this.textTools.sizeOfString(longestNo + '. ', this.styleStack);
@@ -932,142 +508,80 @@
 		}
 	};
 
-	LayoutBuilder.prototype._getOnItemAddedCallback = function(isOrderedList, styleStack, gapSize) {
-		var self = this;
-		var indent = gapSize.width;
+	DocMeasure.prototype.measureList = function(isOrdered, node) {
+		var items = isOrdered ? node.ol : node.ul;
 
-		if (isOrderedList) {
-			var counter = 1;
+		node._gapSize = this.gapSizeForList(isOrdered, items);
+		node._minWidth = 0;
+		node._maxWidth = 0;
 
-			return function(pageNumber, page, block) {
-				var lines = self.textTools.buildLines(counter.toString() + '.', null, styleStack);
-				var b = new Block();
-				b.setLines(lines);
-				b.x = block.x - indent;
-				b.y = block.y + (block.lines.length > 0 ? block.lines[0].getHeight() : block.getHeight()) - b.getHeight();
+		for(var i = 0, l = items.length; i < l; i++) {
+			items[i] = this.measureNode(items[i]);
 
-				page.blocks.push(b);
-
-				counter++;
-			};
-		} else {
-			var radius = gapSize.height / 6;
-
-			return function(pageNumber, page, block) {
-				page.vectors.push({
-					x: block.x - indent + radius,
-					y: block.y + gapSize.height * 2 / 3,
-					r1: radius,
-					r2: radius,
-					type: 'ellipse'
-				});
-			};
+			node._minWidth = Math.max(node._minWidth, items[i]._minWidth + node._gapSize.width);
+			node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth + node._gapSize.width);
 		}
+
+		return node;
 	};
 
-	LayoutBuilder.prototype._processList = function(isOrderedList, listItems, startPosition) {
-		var styleStack = this.styleStack.clone();
+	DocMeasure.prototype.measureTable = function(node) {
+		extendTableWidths(node);
 
-		var gapSize = this._gapSizeForList(isOrderedList, listItems);
+		node.table._minWidth = 0;
+		node.table._maxWidth = 0;
 
-		var nextItemPosition = pack(startPosition, {
-			x: startPosition.x + gapSize.width,
-			availableWidth: startPosition.availableWidth - gapSize.width
-		});
+		for(var col = 0, cols = node.table.body[0].length; col < cols; col++) {
+			node.table.widths[col]._minWidth = 0;
+			node.table.widths[col]._maxWidth = 0;
 
-		var addListItemMark = this._getOnItemAddedCallback(isOrderedList, styleStack, gapSize);
+			for(var row = 0, rows = node.table.body.length; row < rows; row++) {
+				node.table.body[row][col] = this.measureNode(node.table.body[row][col]);
 
-		for(var i = 0, l = listItems.length; i < l; i++) {
-			var item = listItems[i];
-
-			this.itemListCallback = addListItemMark;
-			nextItemPosition = this._processNode(item, nextItemPosition);
-		}
-
-		return pack(startPosition, {
-			page: nextItemPosition.page,
-			y: nextItemPosition.y,
-		});
-	};
-
-	LayoutBuilder.prototype.onBlockAdded = function(pageNumber, page, block) {
-		if (this.itemListCallback) {
-			this.itemListCallback(pageNumber, page, block);
-			this.itemListCallback = null;
-		}
-
-		this.blockTracker.addBlock(block);
-	};
-
-	LayoutBuilder.prototype._processLeaf = function(node, startPosition) {
-		var width;
-
-		//TODO: refactor, currently breaks OCP
-		if(node.width === 'auto' || node.width === 'star' || node.width === '*') {
-			width = startPosition.availableWidth;
-		} else {
-			width = node.width || startPosition.availableWidth;
-		}
-
-		var lines = this.textTools.buildLines(node.text, width, this.styleStack);
-
-		while (lines) {
-			var spaceLeft = this.pageSize.height - this.pageMargins.bottom - startPosition.y;
-
-			var block = new Block(width);
-			lines = block.setLines(lines, node.alignment, spaceLeft);
-
-			if (block.lines.length > 0) {
-				block.x = startPosition.x;
-				block.y = startPosition.y;
-
-				var page = this._getPage(startPosition.page);
-				page.blocks.push(block);
-				this.onBlockAdded(startPosition.page, page, block);
+				node.table.widths[col]._minWidth = Math.max(node.table.widths[col]._minWidth, node.table.body[row][col]._minWidth);
+				node.table.widths[col]._maxWidth = Math.max(node.table.widths[col]._maxWidth, node.table.body[row][col]._maxWidth);
 			}
 
-			if (lines) {
-				// bottom page margin overflow
-				startPosition = pack(startPosition, { page: startPosition.page + 1, y: this.pageMargins.top });
-			} else {
-				startPosition = pack(startPosition, { y: startPosition.y + block.getHeight() });
-			}
+			node.table._minWidth += node.table.widths[col]._minWidth;
+			node.table._maxWidth += node.table.widths[col]._maxWidth;
 		}
 
-		return startPosition;
-	};
+		return node;
 
-	function pack() {
-		var result = {};
+		function extendTableWidths(node) {
+			if (!node.table.widths) {
+				node.table.widths = 'auto';
+			}
 
-		for(var i = 0, l = arguments.length; i < l; i++) {
-			var obj = arguments[i];
+			if (typeof node.table.widths === 'string' || node.table.widths instanceof String) {
+				node.table.widths = [ node.table.widths ];
 
-			if (obj) {
-				for(var key in obj) {
-					if (obj.hasOwnProperty(key)) {
-						result[key] = obj[key];
-					}
+				while(node.table.widths.length < node.table.body[0].length) {
+					node.table.widths.push(node.table.widths[0]);
+				}
+			}
+
+			for(var i = 0, l = node.table.widths.length; i < l; i++) {
+				var w = node.table.widths[i];
+				if (typeof w === 'number' || w instanceof Number || typeof w === 'string' || w instanceof String) {
+					node.table.widths[i] = { _desiredWidth: w };
 				}
 			}
 		}
-
-		return result;
-	}
-
-
+	};
 
 	////////////////////////////////////////
 	// Exports
 
 	var pdfMake = {
-		Line: Line,
+//		Line: Line,
 		TextTools: TextTools,
-		Block: Block,
+//		Block: Block,
 		StyleContextStack: StyleContextStack,
+		DocMeasure: DocMeasure,
 		LayoutBuilder: LayoutBuilder,
-		ColumnSet: ColumnSet,
-		BlockSet: BlockSet
+//		ColumnSet: ColumnSet,
+//		BlockSet: BlockSet
 	};
 
 	if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
