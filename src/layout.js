@@ -653,6 +653,8 @@
 		this.context = [
 			{
 				page: -1,
+				x: this.pageMargins.left,
+				y: this.pageMargins.top,
 				availableWidth: this.pageSize.width - this.pageMargins.left - this.pageMargins.right,
 				availableHeight: 0
 			}
@@ -689,7 +691,6 @@
 
 		if(context.availableHeight < lineHeight) {
 			context.page++;
-			context.x = this.pageMargins.left;
 
 			//TODO: table header support
 			context.y = this.pageMargins.top;
@@ -712,7 +713,7 @@
 			if (node.stack) {
 				self.processVerticalContainer(node);
 			} else if (node.columns) {
-				self.processColumns(node.columns, context);
+				self.processColumns(node);
 			} /* else if (node.ul) {
 				self._processList(false, node.ul, context);
 			} else if (node.ol) {
@@ -727,7 +728,6 @@
 		});
 	};
 
-
 	LayoutBuilder.prototype.buildNextLine = function(textNode) {
 		if (!textNode._inlines || textNode._inlines.length === 0) return null;
 
@@ -739,7 +739,6 @@
 
 		return line;
 	};
-
 
 	LayoutBuilder.prototype.alignmentOffset = function(line, alignment) {
 		var width = this.getContext().availableWidth;
@@ -771,51 +770,134 @@
 		});
 	};
 
+	LayoutBuilder.prototype.buildColumnWidths = function(node) {
+		var availableWidth = this.getContext().availableWidth;
 
-	LayoutBuilder.prototype.processColumns = function(columns) {
-/*		var finalPosition = startPosition;
+		var autoColumns = [],
+			autoMin = 0, autoMax = 0,
+			starColumns = [],
+			starMaxMin = 0,
+			starMaxMax = 0,
+			fixedColumns = [];
 
-		var columnSet = new ColumnSet(startPosition.availableWidth);
-		var self = this;
-
-		for(var i = 0, l = columns.length; i < l; i++) {
-			var column = columns[i];
-
-			if (typeof column == 'string' || column instanceof String) {
-				column = columns[i] = { text: column };
+		node.columns.forEach(function(column) {
+			if (isAutoColumn(column)) {
+				autoColumns.push(column);
+				autoMin += column._minWidth;
+				autoMax += column._maxWidth;
+			} else if (isStarColumn(column)) {
+				starColumns.push(column);
+				starMaxMin = Math.max(starMaxMin, column._minWidth);
+				starMaxMax = Math.max(starMaxMax, column._maxWidth);
+			} else {
+				fixedColumns.push(column);
 			}
-
-			columnSet.addColumn(column, column.width, processColumn);
-		}
-
-		columnSet.complete();
-
-		return pack(startPosition, {
-			page: finalPosition.page,
-			y: finalPosition.y,
 		});
 
-		function processColumn(column, maxWidth) {
-			self.blockTracker.createNestedLevel();
+		fixedColumns.forEach(function(col) {
+			if (col.width < col._minWidth && col.elasticWidth) {
+				col._calcWidth = col._minWidth;
+			} else {
+				col._calcWidth = col.width;
+			}
 
-			var columnStartPosition = pack(startPosition, { availableWidth: maxWidth });
+			availableWidth -= col._calcWidth;
+		});
 
-			var columnFinalPosition = self.processNode(column, columnStartPosition);
+		// http://www.freesoft.org/CIE/RFC/1942/18.htm
+		// http://www.w3.org/TR/CSS2/tables.html#width-layout
+		// http://dev.w3.org/csswg/css3-tables-algorithms/Overview.src.htm
+		var minW = autoMin + starMaxMin * starColumns.length;
+		var maxW = autoMax + starMaxMax * starColumns.length;
+		if (minW >= availableWidth) {
+			// case 1 - there's no way to fit all columns within available width
+			// that's actually pretty bad situation with PDF as we have no horizontal scroll
+			// no easy workaround (unless we decide, in the future, to split single words)
+			// currently we simply use minWidths for all columns
+			autoColumns.forEach(function(col) {
+				col._calcWidth = col._minWidth;
+			});
 
-			var columnFinalY = columnFinalPosition.page * self.pageSize.height + columnFinalPosition.y;
-			var finalY = finalPosition.page * self.pageSize.height + finalPosition.y;
+			starColumns.forEach(function(col) {
+				col._calcWidth = starMaxMin;
+			});
+		} else {
+			if (maxW < availableWidth) {
+				// case 2 - we can fit rest of the table within available space
+				autoColumns.forEach(function(col) {
+					col._calcWidth = col._maxWidth;
+					availableWidth -= col._calcWidth;
+				});
+			} else {
+				// maxW is too large, but minW fits within available width
+				var W = availableWidth - minW;
+				var D = maxW - minW;
 
-			if (columnFinalY > finalY)
-				finalPosition = columnFinalPosition;
+				autoColumns.forEach(function(col) {
+					var d = col._maxWidth - col._minWidth;
+					col._calcWidth = col._minWidth + d * W / D;
+					availableWidth -= col._calcWidth;
+				});
+			}
 
-			var realColumnWidth = self.blockTracker.getRightBoundary() - startPosition.x;
-			var addedBlocks = self.blockTracker.levelUp();
+			if (starColumns.length > 0) {
+				var starSize = availableWidth / starColumns.length;
 
-			return { width: realColumnWidth, blocks: addedBlocks };
-		}*/
+				starColumns.forEach(function(col) {
+					col._calcWidth = starSize;
+				});
+			}
+		}
+
+		function isAutoColumn(column) {
+			return column.width === 'auto';
+		}
+
+		function isStarColumn(column) {
+			return column.width === null || column.width === undefined || column.width === '*' || column.width === 'star';
+		}
+	};
+
+	LayoutBuilder.prototype.getBottomMostContext = function(context1, context2) {
+		if (!context1) return context2;
+		if (!context2) return context1;
+
+		var h1 = context1.page * this.pageSize.height + context1.y;
+		var h2 = context2.page * this.pageSize.height + context2.y;
+		return (h1 > h2) ? context1 : context2;
+	};
+
+	LayoutBuilder.prototype.processColumns = function(node) {
+		var self = this;
+		var xOffset = 0;
+
+		this.buildColumnWidths(node);
+		var bottomMostContext;
+
+		for(var i = 0, l = node.columns.length; i < l; i++) {
+			var column = node.columns[i];
+
+			self.pushContext();
+			var context = self.getContext();
+			context.availableWidth = column._calcWidth;
+			context.x += xOffset;
+
+			self.processNode(column);
+
+			xOffset += column._calcWidth;
+
+			bottomMostContext = self.getBottomMostContext(bottomMostContext, context);
+			self.popContext();
+		}
+
+		var cc = self.getContext();
+		if (bottomMostContext) {
+			cc.page = bottomMostContext.page;
+			cc.y = bottomMostContext.y;
+			cc.availableHeight = bottomMostContext.availableHeight;
+		}
 	};
 /*
-
 */
 
 	// LayoutBuilder.prototype._ensureColumnWidths = function(columns, availableWidth) {
@@ -841,8 +923,6 @@
 	// };
 
 /*
-
-	
 
 	LayoutBuilder.prototype._gapSizeForList = function(isOrderedList, listItems) {
 		if (isOrderedList) {
@@ -938,9 +1018,6 @@
 
 		return result;
 	}
-
-
-
 
 
 

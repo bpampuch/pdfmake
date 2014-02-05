@@ -75,6 +75,117 @@ describe('LayoutBuilder', function() {
 		});
 	});
 
+	describe('buildColumnWidths', function() {
+		it('should set calcWidth to specified width for fixed columns', function() {
+			var node = { columns: [ 
+				{ width: 50, _minWidth: 30, _maxWidth: 80 },
+				{ width: 35, _minWidth: 30, _maxWidth: 80 },
+				{ width: 20, _minWidth: 30, _maxWidth: 80 }
+			]};
+
+			builder.buildColumnWidths(node);
+
+			node.columns.forEach(function(col) {
+				assert.equal(col._calcWidth, col.width);
+			});
+		});
+
+		it('should set calcWidth to minWidth for fixed columns with elasticWidth set to true', function() {
+			var node = { columns: [ 
+				{ width: 50, _minWidth: 30, _maxWidth: 80 },
+				{ width: 35, _minWidth: 30, _maxWidth: 80 },
+				{ width: 20, _minWidth: 30, _maxWidth: 80, elasticWidth: true }
+			]};
+
+			builder.buildColumnWidths(node);
+
+			assert.equal(node.columns[0]._calcWidth, node.columns[0].width);
+			assert.equal(node.columns[1]._calcWidth, node.columns[1].width);
+			assert.equal(node.columns[2]._calcWidth, node.columns[2]._minWidth);
+		});
+
+		it('should set auto to maxWidth if there is enough space for all columns', function() {
+			var node = { columns: [ 
+				{ width: 'auto', _minWidth: 30, _maxWidth: 41 },
+				{ width: 'auto', _minWidth: 30, _maxWidth: 42 },
+				{ width: 'auto', _minWidth: 30, _maxWidth: 43 }
+			]};
+
+			builder.buildColumnWidths(node);
+
+			node.columns.forEach(function(col) {
+				assert.equal(col._calcWidth, col._maxWidth);
+			});
+		});
+
+		it('should equally divide availableSpace to star columns', function() {
+			var node = { columns: [ 
+				{ width: '*', _minWidth: 30, _maxWidth: 41 },
+				{ width: 'star', _minWidth: 30, _maxWidth: 42 },
+				{ _minWidth: 30, _maxWidth: 43 }
+			]};
+
+			builder.buildColumnWidths(node);
+
+			node.columns.forEach(function(col) {
+				assert.equal(col._calcWidth, 320/3);
+			});
+		});
+
+		it('should set calcWidth to minWidth if there is not enough space for the table', function() {
+			var node = { columns: [ 
+				{ width: 'auto', _minWidth: 300, _maxWidth: 410 },
+				{ width: 'auto', _minWidth: 301, _maxWidth: 420 },
+				{ width: 'auto', _minWidth: 303, _maxWidth: 421 },
+			]};
+
+			builder.buildColumnWidths(node);
+
+			node.columns.forEach(function(col) {
+				assert.equal(col._calcWidth, col._minWidth);
+			});
+		});
+
+		it('should set calcWidth of star columns to largest star min-width if there is not enough space for the table', function() {
+			var node = { columns: [ 
+				{ width: 'auto', _minWidth: 300, _maxWidth: 410 },
+				{ width: '*', _minWidth: 301, _maxWidth: 420 },
+				{ width: 'star', _minWidth: 303, _maxWidth: 421 },
+			]};
+
+			builder.buildColumnWidths(node);
+			assert.equal(node.columns[0]._calcWidth, node.columns[0]._minWidth);
+			assert.equal(node.columns[1]._calcWidth, 303);
+			assert.equal(node.columns[2]._calcWidth, 303);
+		});
+
+		it('should make columns wider proportionally if table can fit within the available space', function() {
+			var node = { columns: [ 
+				{ width: 'auto', _minWidth: 30, _maxWidth: 41 },
+				{ width: 'auto', _minWidth: 31, _maxWidth: 42 },
+				{ width: 'auto', _minWidth: 33, _maxWidth: 421 },
+			]};
+
+			builder.buildColumnWidths(node);
+			assert(node.columns[0]._calcWidth > 30);
+			assert(node.columns[1]._calcWidth > 31);
+			assert(node.columns[2]._calcWidth > 220);
+		});
+
+		it('should first take into account auto columns and then divide remaining space equally between all star if there is enough space for the table', function() {
+			var node = { columns: [ 
+				{ width: '*', _minWidth: 30, _maxWidth: 41 },
+				{ width: 'auto', _minWidth: 31, _maxWidth: 42 },
+				{ width: '*', _minWidth: 33, _maxWidth: 421 },
+			]};
+
+			builder.buildColumnWidths(node);
+			assert(node.columns[1]._calcWidth > 31);
+			assert.equal(node.columns[0]._calcWidth, node.columns[0]._calcWidth);
+			assert.equal(node.columns[0]._calcWidth + node.columns[1]._calcWidth + node.columns[2]._calcWidth, 320);
+		});
+	});
+
 	describe('processDocument', function() {
 		it('should arrange texts one below another', function() {
 			var desc = [
@@ -263,70 +374,7 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, { fontSize: 50 });
 			assert.equal(pages[0].lines[0].getWidth(), 4 * 50);
 		});
-	});
 /*
-	describe('processColumns', function() {
-		var startPosition;
-
-		beforeEach(function() {
-			startPosition = {
-				page: 0, 
-				x: builder.pageMargins.left, 
-				y: builder.pageMargins.top, 
-				availableWidth: builder.pageSize.width - builder.pageMargins.left - builder.pageMargins.right
-			};
-
-			builder.pages = [];
-			builder.styleStack = new StyleContextStack(builder.styleDictionary, builder.defaultStyle);
-			builder.blockTracker = new BlockSet();
-		});
-
-		it('should convert text columns to column objects', function() {
-			builder._processNode = function(node, position) { return position; };
-
-			var columns = [ { text: 'aaa' }, 'bbb', 'ccc', { text: 'ddd'} ];
-			builder._processColumns(columns, startPosition);
-
-			assert(columns[1].text);
-			assert(columns[2].text);
-			assert.equal(columns[0].text, 'aaa');
-			assert.equal(columns[1].text, 'bbb');
-		});
-
-		it('should use ColumnSet for column width management', function() {
-			var blocks = [];
-
-			builder._processNode = function(node, position) { 
-				var block = { x: 40, y: 0, getWidth: function() { return 75; } };
-				blocks.push(block);
-
-				builder.onBlockAdded(0, builder.pages[0], block);
-				return position; 
-			};
-
-			var columns = [
-				{ width: 90 },
-				{ width: 'auto' },
-				{ width: 70 },
-				{ },
-			];
-
-			builder._processColumns(columns, startPosition);
-
-			assert.equal(blocks.length, 4);
-
-			// availableWidth = 400-40-40 = 320
-			// autoColumnWidth = 75
-			// starColumnWidth = 320-90-70-75 = 85
-			// block order (block<->column mapping): 0, 2, 1, 3
-			assert.equal(blocks[0].x, 40);
-			assert.equal(blocks[2].x, 40 + 90);
-			assert.equal(blocks[1].x, 40 + 90 + 75);
-			assert.equal(blocks[3].x, 40 + 90 + 75 + 70);
-		});
-	});
-
-
 		it('should support columns', function() {
 			var desc = [
 				{
@@ -342,9 +390,40 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].blocks[0].x, 40);
-			assert.equal(pages[0].blocks[1].x, 200);
+			assert.equal(pages[0].lines[0].x, 40);
+			assert.equal(pages[0].lines[1].x, 200);
 		});
+
+		it('should support fixed column widths', function() {
+			var desc = [
+				{
+					columns: [
+						{
+							text: 'col1',
+							width: 100,
+						},
+						{
+							text: 'col2',
+							width: 150,
+						},
+						{
+							text: 'col3',
+							width: 90,
+						}
+
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			assert(pages[0].lines.length, 3);
+			assert.equal(pages[0].lines[0].x, 40);
+			assert.equal(pages[0].lines[1].x, 40 + 100);
+			assert.equal(pages[0].lines[2].x, 40 + 100 + 150);
+		});
+*/
+	});
+/*
 
 
 		it('should support text-only column definitions', function() {
@@ -925,6 +1004,66 @@ describe('LayoutBuilder', function() {
 //		it('should support line indents', function() {
 //		//	assert.fail();
 //		});
+describe('processColumns', function() {
+		var startPosition;
+
+		beforeEach(function() {
+			startPosition = {
+				page: 0, 
+				x: builder.pageMargins.left, 
+				y: builder.pageMargins.top, 
+				availableWidth: builder.pageSize.width - builder.pageMargins.left - builder.pageMargins.right
+			};
+
+			builder.pages = [];
+			builder.styleStack = new StyleContextStack(builder.styleDictionary, builder.defaultStyle);
+			builder.blockTracker = new BlockSet();
+		});
+
+		it('should convert text columns to column objects', function() {
+			builder._processNode = function(node, position) { return position; };
+
+			var columns = [ { text: 'aaa' }, 'bbb', 'ccc', { text: 'ddd'} ];
+			builder._processColumns(columns, startPosition);
+
+			assert(columns[1].text);
+			assert(columns[2].text);
+			assert.equal(columns[0].text, 'aaa');
+			assert.equal(columns[1].text, 'bbb');
+		});
+
+		it('should use ColumnSet for column width management', function() {
+			var blocks = [];
+
+			builder._processNode = function(node, position) { 
+				var block = { x: 40, y: 0, getWidth: function() { return 75; } };
+				blocks.push(block);
+
+				builder.onBlockAdded(0, builder.pages[0], block);
+				return position; 
+			};
+
+			var columns = [
+				{ width: 90 },
+				{ width: 'auto' },
+				{ width: 70 },
+				{ },
+			];
+
+			builder._processColumns(columns, startPosition);
+
+			assert.equal(blocks.length, 4);
+
+			// availableWidth = 400-40-40 = 320
+			// autoColumnWidth = 75
+			// starColumnWidth = 320-90-70-75 = 85
+			// block order (block<->column mapping): 0, 2, 1, 3
+			assert.equal(blocks[0].x, 40);
+			assert.equal(blocks[2].x, 40 + 90);
+			assert.equal(blocks[1].x, 40 + 90 + 75);
+			assert.equal(blocks[3].x, 40 + 90 + 75 + 70);
+		});
+	});
 
 		describe.skip('TODO', function() {
 			it('should support tables with fixed column widths');

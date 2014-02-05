@@ -86,6 +86,27 @@ var docDefinition = {
 				},
 			]
 		},
+		'\nIf all auto columns fit within available width, the table does not occupy whole space (the effect is a little bit awkward, as there is no paddings set in this example):\n\n',
+		{
+			columns: [
+				{
+					width: 'auto',
+					text: 'val1'
+				},
+				{
+					width: 'auto',
+					text: 'val2'
+				},
+				{
+					width: 'auto',
+					text: 'value3'
+				},
+				{
+					width: 'auto',
+					text: 'value 4'
+				},
+			]
+		},
 		'\nAnother cool feature of pdfmake is the ability to have nested elements. Each column is actually quite similar to the whole document, so we can have inner paragraphs and further divisions, like in the following example:\n\n',
 		{
 			columns: [
