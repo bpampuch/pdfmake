@@ -375,6 +375,7 @@
 					item.trailingCut = 0;
 				}
 
+				item.alignment = getStyleProperty(item, styleContextStack, 'alignment', 'left');
 				item.font = font;
 				item.fontSize = fontSize;
 			});
@@ -493,7 +494,16 @@
 		}
 	};
 
+	DocMeasure.prototype.buildMarker = function(isOrderedList, index1, style) {
+		if (isOrderedList)
+			return this.textTools.buildInlines(index1 + '. ', style);
+//		else
+//			return { vectors: [ circle: { cx =  } ] }
+	};
+
 	DocMeasure.prototype.measureList = function(isOrdered, node) {
+		var style = this.styleStack.clone();
+
 		var items = isOrdered ? node.ol : node.ul;
 
 		node._gapSize = this.gapSizeForList(isOrdered, items);
@@ -501,6 +511,8 @@
 		node._maxWidth = 0;
 
 		for(var i = 0, l = items.length; i < l; i++) {
+			this.nextLeafMarker = this.buildMarker(isOrdered, i + 1, style);
+
 			items[i] = this.measureNode(items[i]);
 
 			node._minWidth = Math.max(node._minWidth, items[i]._minWidth + node._gapSize.width);
@@ -647,8 +659,6 @@
 	LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle) {
 		new DocMeasure(fontProvider, styleDictionary, defaultStyle).measureDocument(docStructure);
 
-		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
-
 		this.pages = [];
 		this.context = [
 			{
@@ -697,7 +707,7 @@
 			context.availableHeight = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
 		}
 
-		line.x = context.x + this.alignmentOffset(line, this.styleStack.getProperty('alignment') || 'left');
+		line.x = context.x + this.alignmentOffset(line);
 		line.y = context.y;
 
 		context.availableHeight -= lineHeight;
@@ -707,25 +717,21 @@
 	};
 
 	LayoutBuilder.prototype.processNode = function(node) {
-		var self = this;
-
-		this.styleStack.auto(node, function() {
-			if (node.stack) {
-				self.processVerticalContainer(node);
-			} else if (node.columns) {
-				self.processColumns(node);
-			} /* else if (node.ul) {
-				self._processList(false, node.ul, context);
-			} else if (node.ol) {
-				self._processList(true, node.ol, context);
-			} else if (node.table) {
-				self._processTable(node);
-			}*/ else if (node.text) {
-				self.processLeaf(node);
-			} else {
-				throw 'Unrecognized document structure: ' + node;
-			}
-		});
+		if (node.stack) {
+			this.processVerticalContainer(node.stack);
+		} else if (node.columns) {
+			this.processColumns(node.columns);
+		} else if (node.ul) {
+			this.processVerticalContainer(node.ul);
+		} else if (node.ol) {
+			this.processVerticalContainer(node.ol);
+		} /* else if (node.table) {
+			this._processTable(node);
+		}*/ else if (node.text) {
+			this.processLeaf(node);
+		} else {
+			throw 'Unrecognized document structure: ' + node;
+		}
 	};
 
 	LayoutBuilder.prototype.buildNextLine = function(textNode) {
@@ -740,11 +746,12 @@
 		return line;
 	};
 
-	LayoutBuilder.prototype.alignmentOffset = function(line, alignment) {
+	LayoutBuilder.prototype.alignmentOffset = function(line) {
 		var width = this.getContext().availableWidth;
 		var lineWidth = line.getWidth();
 
-		switch(alignment.toLowerCase()) {
+		var alignment = line.inlines && line.inlines.length > 0 && line.inlines[0].alignment;
+		switch(alignment) {
 			case 'right':
 				return width - lineWidth;
 			case 'center':
@@ -763,14 +770,14 @@
 		}
 	};
 
-	LayoutBuilder.prototype.processVerticalContainer = function(node) {
+	LayoutBuilder.prototype.processVerticalContainer = function(items) {
 		var self = this;
-		node.stack.forEach(function(subnode) {
-			self.processNode(subnode);
+		items.forEach(function(item) {
+			self.processNode(item);
 		});
 	};
 
-	LayoutBuilder.prototype.buildColumnWidths = function(node) {
+	LayoutBuilder.prototype.buildColumnWidths = function(columns) {
 		var availableWidth = this.getContext().availableWidth;
 
 		var autoColumns = [],
@@ -780,7 +787,7 @@
 			starMaxMax = 0,
 			fixedColumns = [];
 
-		node.columns.forEach(function(column) {
+		columns.forEach(function(column) {
 			if (isAutoColumn(column)) {
 				autoColumns.push(column);
 				autoMin += column._minWidth;
@@ -867,15 +874,15 @@
 		return (h1 > h2) ? context1 : context2;
 	};
 
-	LayoutBuilder.prototype.processColumns = function(node) {
+	LayoutBuilder.prototype.processColumns = function(columns) {
 		var self = this;
 		var xOffset = 0;
 
-		this.buildColumnWidths(node);
+		this.buildColumnWidths(columns);
 		var bottomMostContext;
 
-		for(var i = 0, l = node.columns.length; i < l; i++) {
-			var column = node.columns[i];
+		for(var i = 0, l = columns.length; i < l; i++) {
+			var column = columns[i];
 
 			self.pushContext();
 			var context = self.getContext();
@@ -897,31 +904,6 @@
 			cc.availableHeight = bottomMostContext.availableHeight;
 		}
 	};
-/*
-*/
-
-	// LayoutBuilder.prototype._ensureColumnWidths = function(columns, availableWidth) {
-	//	var columnsWithoutWidth = [];
-
-	//	for(var i = 0, l = columns.length; i < l; i++) {
-	//		var column = columns[i];
-
-	//		if (typeof column == 'string' || column instanceof String) {
-	//			column = columns[i] = { text: column };
-	//		}
-
-	//		if (column.width) {
-	//			availableWidth -= column.width;
-	//		} else {
-	//			columnsWithoutWidth.push(column);
-	//		}
-	//	}
-
-	//	for(var i = 0, l = columnsWithoutWidth.length; i < l; i++) {
-	//		columnsWithoutWidth[i].width = availableWidth / l;
-	//	}
-	// };
-
 /*
 
 	LayoutBuilder.prototype._gapSizeForList = function(isOrderedList, listItems) {
@@ -966,30 +948,6 @@
 		}
 	};
 
-	LayoutBuilder.prototype._processList = function(isOrderedList, listItems, startPosition) {
-		var styleStack = this.styleStack.clone();
-
-		var gapSize = this._gapSizeForList(isOrderedList, listItems);
-
-		var nextItemPosition = pack(startPosition, {
-			x: startPosition.x + gapSize.width,
-			availableWidth: startPosition.availableWidth - gapSize.width
-		});
-
-		var addListItemMark = this._getOnItemAddedCallback(isOrderedList, styleStack, gapSize);
-
-		for(var i = 0, l = listItems.length; i < l; i++) {
-			var item = listItems[i];
-
-			this.itemListCallback = addListItemMark;
-			nextItemPosition = this.processNode(item, nextItemPosition);
-		}
-
-		return pack(startPosition, {
-			page: nextItemPosition.page,
-			y: nextItemPosition.y,
-		});
-	};
 
 	LayoutBuilder.prototype.onBlockAdded = function(pageNumber, page, block) {
 		if (this.itemListCallback) {
