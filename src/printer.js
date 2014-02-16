@@ -24,8 +24,7 @@
 		 * var printer = new PdfPrinter(fontDescriptors);
 		 */
 		function PdfPrinter(fontDescriptors) {
-			this.pdfKitDoc = new PdfKit();
-			this.fontProvider = new FontProvider(fontDescriptors, this.pdfKitDoc);
+			this.fontDescriptors = fontDescriptors;
 		}
 
 		/**
@@ -68,8 +67,14 @@
 		 * @return {Object} a pdfKit document object which can be saved or encode to data-url
 		 */
 		PdfPrinter.prototype.createPdfKitDocument = function(docDefinition) {
+			var pageSize = docDefinition.pageSize || { width: 595.28, height: 841.89 };
+			this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ]});			
+			this.pdfKitDoc.info['Producer'] = 'pdfmake';
+			this.pdfKitDoc.info['Creator'] = 'pdfmake';
+			this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
+
 			var builder = new layout.LayoutBuilder(
-				docDefinition.pageSize || { width: 595.28, height: 741.89 },
+				pageSize,
 				docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 });
 
 			var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' });
