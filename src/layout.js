@@ -84,7 +84,7 @@
 		var styleOverrideObject = {};
 		var pushSOO = false;
 
-		['font', 'fontSize', 'bold', 'italics', 'alignment'].forEach(function(key) {
+		['font', 'fontSize', 'bold', 'italics', 'alignment', 'color'].forEach(function(key) {
 			if (item[key] !== undefined && item[key] !== null) {
 				styleOverrideObject[key] = item[key];
 				pushSOO = true;
@@ -351,7 +351,7 @@
 				var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
 				var bold = getStyleProperty(item, styleContextStack, 'bold', false);
 				var italics = getStyleProperty(item, styleContextStack, 'italics', false);
-				//var color = item.color || defaultStyle && defaultStyle.color || 'black';
+				var color = getStyleProperty(item, styleContextStack, 'color', 'black');
 
 				var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -378,6 +378,7 @@
 				item.alignment = getStyleProperty(item, styleContextStack, 'alignment', 'left');
 				item.font = font;
 				item.fontSize = fontSize;
+				item.color = color;
 			});
 
 			return normalized;
@@ -438,8 +439,10 @@
 				return self.measureTable(node);
 			} else if (node.text) {
 				return self.measureLeaf(node);
+			} else if (node.canvas) {
+				return self.measureCanvas(node);
 			} else {
-				throw 'Unrecognized document structure: ' + node;
+				throw 'Unrecognized document structure: ' + JSON.stringify(node);
 			}
 		});
 	};
@@ -567,7 +570,40 @@
 		}
 	};
 
+	DocMeasure.prototype.measureCanvas = function(node) {
+		var w = 0, h = 0;
 
+		for(var i = 0, l = node.canvas.length; i < l; i++) {
+			var vector = node.canvas[i];
+
+			switch(vector.type) {
+			case 'ellipse':
+				w = Math.max(w, vector.x + vector.r1);
+				h = Math.max(h, vector.y + vector.r2);
+				break;
+			case 'rect':
+				w = Math.max(w, vector.x + vector.w);
+				h = Math.max(h, vector.y + vector.h);
+
+				break;
+			case 'line':
+				w = Math.max(w, vector.x1, vector.x2);
+				h = Math.max(h, vector.y1, vector.y2);
+				break;
+			case 'polyline':
+				for(var i2 = 0, l2 = vector.points.length; i2 < l2; i2++) {
+					w = Math.max(w, vector.points[i2].x);
+					h = Math.max(h, vector.points[i2].y);
+				}
+				break;
+			}
+		}
+
+		node._minWidth = node._maxWidth = w;
+		node._minHeight = node._maxHeight = h;
+
+		return node;
+	};
 
 	////////////////////////////////////////
 	// Line
@@ -586,6 +622,15 @@
 		this.inlineWidths = 0;
 		this.inlines = [];
 	}
+
+	Line.prototype.getAscenderHeight = function() {
+		var y = 0;
+
+		this.inlines.forEach(function(inline) {
+			y = Math.max(y, inline.font.ascender / 1000 * inline.fontSize);
+		});
+		return y;
+	};
 
 	Line.prototype.hasEnoughSpaceForInline = function(inline) {
 		if (this.inlines.length === 0) return true;
@@ -687,6 +732,16 @@
 		this.context.pop();
 	};
 
+	LayoutBuilder.prototype.moveContextToNextPage = function(ctx) {
+		var context = ctx || this.getContext();
+
+		context.page++;
+
+		//TODO: table header support
+		context.y = this.pageMargins.top;
+		context.availableHeight = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+	};
+
 	LayoutBuilder.prototype.getPage = function(pageNumber) {
 		while(this.pages.length <= pageNumber) {
 			this.pages.push({ lines: [], vectors: [] });
@@ -700,11 +755,7 @@
 		var lineHeight = line.getHeight();
 
 		if(context.availableHeight < lineHeight) {
-			context.page++;
-
-			//TODO: table header support
-			context.y = this.pageMargins.top;
-			context.availableHeight = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+			this.moveContextToNextPage(context);
 		}
 
 		line.x = context.x + this.alignmentOffset(line);
@@ -714,6 +765,49 @@
 		context.y += lineHeight;
 
 		this.getPage(context.page).lines.push(line);
+	};
+
+	function offsetVector(vector, x, y) {
+		switch(vector.type) {
+		case 'ellipse':
+		case 'rect':
+			vector.x += x;
+			vector.y += y;
+			break;
+		case 'line':
+			vector.x1 += x;
+			vector.x2 += x;
+			vector.y1 += y;
+			vector.y2 += y;
+			break;
+		case 'polyline':
+			for(var i = 0, l = vector.points.length; i < l; i++) {
+				vector.points[i].x += x;
+				vector.points[i].y += y;
+			}
+			break;
+		}
+	}
+
+	LayoutBuilder.prototype.processCanvas = function(node) {
+		var context = this.getContext();
+		var height = node._minHeight;
+
+		if (context.availableHeight < height) {
+			// TODO: support for canvas larger than a page
+			// TODO: support for other overflow methods
+
+			this.moveContextToNextPage(context);
+		}
+
+		var page = this.getPage(context.page);
+
+		node.canvas.forEach(function(vector) {
+			offsetVector(vector, context.x, context.y);
+			page.vectors.push(vector);
+		});
+
+		context.y += height;
 	};
 
 	LayoutBuilder.prototype.processNode = function(node) {
@@ -729,6 +823,8 @@
 			this._processTable(node);
 		}*/ else if (node.text) {
 			this.processLeaf(node);
+		} else if (node.canvas) {
+			this.processCanvas(node);
 		} else {
 			throw 'Unrecognized document structure: ' + node;
 		}

@@ -92,13 +92,13 @@
 				setFontRefs(fontProvider, pdfKitDoc);
 
 				var page = pages[i];
-				for(var li = 0, ll = page.lines.length; li < ll; li++) {
-					var line = page.lines[li];
-					renderLine(line, line.x, line.y, pdfKitDoc);
-				}
 				for(var vi = 0, vl = page.vectors.length; vi < vl; vi++) {
 					var vector = page.vectors[vi];
 					renderVector(vector, pdfKitDoc);
+				}
+				for(var li = 0, ll = page.lines.length; li < ll; li++) {
+					var line = page.lines[li];
+					renderLine(line, line.x, line.y, pdfKitDoc);
 				}
 			}
 		}
@@ -118,32 +118,26 @@
 			}
 		}
 
-		function renderBlock(block, pdfKitDoc) {
-			var x = block.x || 0,
-				y = block.y || 0,
-				yOffset = 0;
-
-			for(var i = 0, l = block.lines.length; i < l; i++) {
-				var line = block.lines[i];
-				renderLine(line, x + line.x, y + yOffset, pdfKitDoc);
-				yOffset += line.getHeight();
-			}
-		}
-
 		function renderLine(line, x, y, pdfKitDoc) {
 			x = x || 0;
 			y = y || 0;
 
-			//TODO: line.optimizeInlines();
+			var ascenderHeight = line.getAscenderHeight();
+			var lineHeight = line.getHeight();
 
+			//TODO: line.optimizeInlines();
 			for(var i = 0, l = line.inlines.length; i < l; i++) {
 				var inline = line.inlines[i];
+
+				pdfKitDoc.fill(inline.color || 'black');
 
 				pdfKitDoc.save();
 				pdfKitDoc.transform(1, 0, 0, -1, 0, pdfKitDoc.page.height);
 
 				pdfKitDoc.addContent('BT');
-				pdfKitDoc.addContent('' + (x + inline.x) + ' ' + (pdfKitDoc.page.height - y - line.getHeight()) + ' Td');
+				var a = (inline.font.ascender / 1000 * inline.fontSize);
+
+				pdfKitDoc.addContent('' + (x + inline.x) + ' ' + (pdfKitDoc.page.height - y - ascenderHeight) + ' Td');
 				pdfKitDoc.addContent('/' + inline.font.id + ' ' + inline.fontSize + ' Tf');
 
 				pdfKitDoc.addContent('<' + encode(inline.font, inline.text) + '> Tj');
@@ -170,13 +164,59 @@
 		}
 
 		function renderVector(vector, pdfDoc) {
+			//TODO: pdf optimization (there's no need to write all properties everytime)
+			pdfDoc.lineWidth(vector.lineWidth || 1);
+			if (vector.dash) {
+				pdfDoc.dash(vector.dash.length, { space: vector.dash.space || vector.dash.length });
+			} else {
+				pdfDoc.undash();
+			}
+			pdfDoc.fillOpacity(vector.fillOpacity || 1);
+			pdfDoc.strokeOpacity(vector.strokeOpacity || 1);
+			pdfDoc.lineJoin(vector.lineJoin || 'miter');
+
+			//TODO: clipping
+
 			switch(vector.type) {
 				case 'ellipse':
-					pdfDoc.fillAndStroke(vector.outlineColor || vector.color || 'black', vector.color || 'black');
-					pdfDoc.lineWidth(vector.outlineWidth || 0);
 					pdfDoc.ellipse(vector.x, vector.y, vector.r1, vector.r2);
-					pdfDoc.fill();
-				break;
+					break;
+				case 'rect':
+					if (vector.r) {
+						pdfDoc.roundedRect(vector.x, vector.y, vector.w, vector.h, vector.r);
+					} else {
+						pdfDoc.rect(vector.x, vector.y, vector.w, vector.h);
+					}
+					break;
+				case 'line':
+					pdfDoc.moveTo(vector.x1, vector.y1);
+					pdfDoc.lineTo(vector.x2, vector.y2);
+					break;
+				case 'polyline':
+					if (vector.points.length === 0) break;
+
+					pdfDoc.moveTo(vector.points[0].x, vector.points[0].y);
+					for(var i = 1, l = vector.points.length; i < l; i++) {
+						pdfDoc.lineTo(vector.points[i].x, vector.points[i].y);
+					}
+
+					if (vector.points.length > 1) {
+						var p1 = vector.points[0];
+						var pn = vector.points[vector.points.length - 1];
+
+						if (vector.closePath || p1.x === pn.x && p1.y === pn.y) {
+							pdfDoc.closePath();
+						}
+					}
+					break;
+			}
+
+			if (vector.color && vector.lineColor) {
+				pdfDoc.fillAndStroke(vector.color, vector.lineColor);
+			} else if (vector.color) {
+				pdfDoc.fill(vector.color);
+			} else {
+				pdfDoc.stroke(vector.lineColor || 'black');
 			}
 		}
 
