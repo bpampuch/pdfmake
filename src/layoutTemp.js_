@@ -1,0 +1,277 @@
+
+
+
+
+
+
+
+	////////////////////////////////////////
+	// Block
+
+	/**
+	 * Creates an instance of Block
+	 * 
+	 * @constructor
+	 * @param {Number} maximum block width (inherited by the Lines)
+	 */
+	function Block(maxWidth) {
+		this.maxWidth = maxWidth;
+	}
+
+	/**
+	 * Returns minimum width the Block could have without inner-inline splits
+	 * 
+	 * @return {Number}
+	 */
+	Block.prototype.getMinWidth = function() {
+		var max = 0;
+
+		for (var i = 0, l = this.lines.length; i < l; i++) {
+			var line = this.lines[i];
+			max = Math.max(max, (line.getMinWidth() || 0));
+		}
+
+		return max;
+	};
+
+	/**
+	 * Returns width of the longest Line contained within the Block
+	 * @return {Number}
+	 */
+	Block.prototype.getWidth = function() {
+		var max = 0;
+
+		for (var i = 0, l = this.lines.length; i < l; i++) {
+			var line = this.lines[i];
+			max = Math.max(max, (line.getWidth() || 0));
+		}
+
+		return max;
+	};
+
+	/**
+	 * Returns Block height
+	 * @return {Number}
+	 */
+	Block.prototype.getHeight = function() {
+		var sum = 0;
+
+		for (var i = 0, l = this.lines.length; i < l; i++) {
+			var line = this.lines[i];
+			sum += line.getHeight() || 0;
+		}
+
+		return sum;
+	};
+
+	/**
+	 * Sets the Lines, aligns them and returns overflown lines if maxHeight is specified
+	 * @param {Array} lines - an array of Lines
+	 * @param {String} alignment - 'left'/'right'/'center' (no support for 'justify' yet)
+	 * @param {Number} maxHeight - maximum height the Block can have (if specified - overflown lines are not added to the Block, but rather - returned)
+	 * @return {Array} an array containing all overflown Lines (if maxHeight was specified)
+	 */
+	Block.prototype.setLines = function(lines, alignment, maxHeight) {
+		alignment = alignment || 'left';
+		var y = 0;
+
+		this.lines = lines;
+
+		for(var i = 0, l = lines.length; i < l; i++) {
+			var line = lines[i];
+
+			line.y = y;
+			y += line.getHeight();
+			var lineWidth = line.getWidth();
+
+			switch(alignment.toLowerCase()) {
+				case 'left':
+					line.x = 0;
+				break;
+				case 'right':
+					line.x = this.maxWidth - lineWidth;
+				break;
+				case 'center':
+					line.x = (this.maxWidth - lineWidth) / 2;
+				break;
+			}
+
+			if (maxHeight && y >= maxHeight) {
+				return lines.splice(i);
+			}
+		}
+	};
+
+	var ColumnSet = (function() {
+		/**
+		 * Creates an instance of ColumnSet - a helper responsible for column width management
+		 * and updating block positions.
+		 */
+		function ColumnSet(maxWidth) {
+			this.maxWidth = maxWidth;
+			this.columns = [];
+		}
+
+		ColumnSet.prototype.addColumn = function(columnData, width, processColumnCallback) {
+			this.columns.push({ width: width, callback: processColumnCallback, blocks: [], data: columnData });
+		};
+
+		ColumnSet.prototype.complete = function() {
+			var widthLeft = this.maxWidth;
+
+			getFixedColumns(this).forEach(function (column) {
+				var result = column.callback(column.data, column.width);
+				// we override widths for fixed columns, no matter of what's been returned
+				result.width = column.width;
+				afterColumnCallback(column, result);
+			});
+
+			getAutoColumns(this).forEach(function (column) {
+				var result = column.callback(column.data, widthLeft);
+				afterColumnCallback(column, result);
+			});
+
+			var starColumns = getStarColumns(this);
+			var starWidth = (starColumns.length > 0) ? widthLeft / starColumns.length : 0;
+
+			starColumns.forEach(function (column) {
+				var result = column.callback(column.data, starWidth);
+				// we override widths for star columns, no matter of what's been returned
+				result.width = starWidth;
+				afterColumnCallback(column, result);
+			});
+
+
+			//TODO: rethink responsibilities (shouldn't BlockSet have the offsetBlocks method?)
+
+			// update block positions
+			var x = 0;
+			for (var i = 1, l = this.columns.length; i < l; i++) {
+				x += this.columns[i - 1].realWidth;
+
+				for (var j = 0, l2 = this.columns[i].blocks.length; j < l2; j++) {
+					this.columns[i].blocks[j].x += x;
+				}
+			}
+
+			// real width
+			return this.maxWidth - widthLeft;
+
+			function afterColumnCallback(column, result) {
+				column.realWidth = result.width;
+				column.blocks = result.blocks;
+				widthLeft -= result.width;
+			}
+		};
+
+		function getFixedColumns(set) {
+			var columns = [];
+			for(var i = 0, l = set.columns.length; i < l; i++) {
+				var col = set.columns[i];
+
+				if (typeof col.width === 'number' || col.width instanceof Number) {
+					columns.push(col);
+				}
+			}
+
+			return columns;
+		}
+
+		function getAutoColumns(set) {
+			var columns = [];
+			for(var i = 0, l = set.columns.length; i < l; i++) {
+				var col = set.columns[i];
+				
+				if (col.width === 'auto') {
+					columns.push(col);
+				}
+			}
+
+			return columns;
+		}
+
+		function getStarColumns(set) {
+			var columns = [];
+			for(var i = 0, l = set.columns.length; i < l; i++) {
+				var col = set.columns[i];
+				
+				if (!col.width || col.width === 'star' || col.width === '*') {
+					columns.push(col);
+				}
+			}
+
+			return columns;
+		}
+
+		return ColumnSet;
+	})();
+
+
+
+
+	////////////////////////////////////////
+	// BlockSet
+
+	/**
+	 * Creates an instance of BlockSet - block grouping structure with the ability
+	 * to manage nested blocks.
+	 */
+	function BlockSet() {
+		this.stack = [];
+	}
+
+	/**
+	 * Creates a new level, so that blocks can be added
+	 */
+	BlockSet.prototype.createNestedLevel = function() {
+		this.stack.push({ blocks: [] });
+	};
+
+	/**
+	 * Adds a Block to the current level
+	 * @param {Block} block a Block element
+	 */
+	BlockSet.prototype.addBlock = function(block) {
+		if (this.stack.length === 0) return;
+
+		var blocks = this.stack[this.stack.length - 1].blocks;
+		blocks.push(block);
+	};
+
+	/**
+	 * Returns an array of blocks added to current level (or its sublevels) and then
+	 * merges blocks to the parent level
+	 * @return {Array} an array of blocks added to current level and its sub-levels
+	 */
+	BlockSet.prototype.levelUp = function() {
+		var currentSet = this.stack.pop();
+
+		if (this.stack.length > 0) {
+			var upperSet = this.stack[this.stack.length - 1];
+
+			currentSet.blocks.forEach(function(block) {
+				upperSet.blocks.push(block);
+			});
+		}
+
+		return currentSet.blocks;
+	};
+
+	/**
+	 * Returns the right-most point of the BlockSet (if blocks begin at x == 0, it's
+	 * equal to the BlockSet width)
+	 * @return {Number} right-most point of the BlockSet 
+	 */
+	BlockSet.prototype.getRightBoundary = function() {
+		var currentSet = this.stack[this.stack.length - 1];
+		var maxY = 0;
+
+		currentSet.blocks.forEach(function (block) {
+			maxY = Math.max(maxY, block.getWidth() + block.x);
+		});
+
+		return maxY;
+	};
+
+
+

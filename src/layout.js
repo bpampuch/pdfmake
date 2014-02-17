@@ -228,7 +228,10 @@
 
 			return {
 				width: font.widthOfString(removeDiacritics(text), fontSize),
-				height: font.lineHeight(fontSize)
+				height: font.lineHeight(fontSize),
+				fontSize: fontSize,
+				ascender: font.ascender / 1000 * fontSize,
+				decender: font.decender / 1000 * fontSize
 			};
 		};
 
@@ -454,11 +457,6 @@
 		node._minWidth = data.minWidth;
 		node._maxWidth = data.maxWidth;
 
-		if (node._inlines.length > 0 && this.nextListMarker) {
-			node._inlines[0].listMarker = this.nextListMarker;
-			this.nextListMarker = null;
-		}
-
 		return node;
 	};
 
@@ -498,33 +496,34 @@
 			var longestNo = (listItems.length).toString().replace(/./g, '9');
 			return this.textTools.sizeOfString(longestNo + '. ', this.styleStack);
 		} else {
-			return this.textTools.sizeOfString('oo ', this.styleStack);
+			return this.textTools.sizeOfString('9. ', this.styleStack);
 		}
 	};
 
-	DocMeasure.prototype.buildMarker = function(isOrderedList, counter, style, gapSize) {
+	DocMeasure.prototype.buildMarker = function(isOrderedList, counter, styleStack, gapSize) {
 		var marker;
 
 		if (isOrderedList) {
-			marker = this.textTools.buildInlines(counter + '. ', style);
+			marker = { _inlines: this.textTools.buildInlines(counter + '. ', styleStack).items };
 		}
 		else {
 			// TODO: ascender-based calculations
-			var radius = gapSize.height / 6;
+			var radius = gapSize.fontSize / 6;
 
-			marker = { 
-				vector: {
+			marker = {
+				canvas: [ {
 					x: radius,
-					y: gapSize.height * 2 / 3,
+					y: gapSize.height + gapSize.decender - gapSize.fontSize / 3,//0,// gapSize.fontSize * 2 / 3,
 					r1: radius,
 					r2: radius,
 					type: 'ellipse',
 					color: 'black'
-				}
+				} ]
 			};
 		}
 
-		marker._gapSize = gapSize;
+		marker._minWidth = marker._maxWidth = gapSize.width;
+		marker._minHeight = marker._maxHeight = gapSize.height;
 
 		return marker;
 	};
@@ -533,7 +532,6 @@
 		var style = this.styleStack.clone();
 
 		var items = isOrdered ? node.ol : node.ul;
-
 		node._gapSize = this.gapSizeForList(isOrdered, items);
 		node._minWidth = 0;
 		node._maxWidth = 0;
@@ -541,13 +539,12 @@
 		var counter = 1;
 
 		for(var i = 0, l = items.length; i < l; i++) {
-			var nextItem = items[i];
-
+			var nextItem = items[i] = this.measureNode(items[i]);
+			
 			if (!nextItem.ol && !nextItem.ul) {
-				this.nextListMarker = this.buildMarker(isOrdered, counter++, style, node._gapSize);
-			}
+				nextItem.listMarker = this.buildMarker(isOrdered, counter++, style, node._gapSize);
+			}  // TODO: else - nested lists numbering 
 
-			items[i] = this.measureNode(items[i]);
 
 			node._minWidth = Math.max(node._minWidth, items[i]._minWidth + node._gapSize.width);
 			node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth + node._gapSize.width);
@@ -704,14 +701,53 @@
 	};
 
 
+	function TraversalTracker() {
+		this.events = {};
+	}
 
+	TraversalTracker.prototype.startTracking = function(event, cb) {
+		var callbacks = (this.events[event] || (this.events[event] = []));
+
+		if (callbacks.indexOf(cb) < 0) {
+			callbacks.push(cb);
+		}
+	};
+
+	TraversalTracker.prototype.stopTracking = function(event, cb) {
+		var callbacks = this.events[event];
+		
+		if (callbacks) {
+			var index = callbacks.indexOf(cb);
+			if (index >= 0) {
+				callbacks.splice(index, 1);
+			}
+		}
+	};
+
+	TraversalTracker.prototype.emit = function(event) {
+		var args = Array.prototype.slice.call(arguments, 1);
+
+		var callbacks = this.events[event];
+
+		if (callbacks) {
+			callbacks.forEach(function(cb) {
+				cb.apply(this, args);
+			});
+		}
+	};
+
+	TraversalTracker.prototype.auto = function(event, cb, innerBlock) {
+		this.startTracking(event, cb);
+		innerBlock();
+		this.stopTracking(event, cb);
+	};
 
 	////////////////////////////////////////
 	// LayoutBuilder
 
 	/**
 	 * Creates an instance of LayoutBuilder - layout engine which turns document-definition-object 
-	 * into a set of pages, blocks, lines and inlines ready to be rendered into a PDF
+	 * into a set of pages, lines, inlines and vectors ready to be rendered into a PDF
 	 * 
 	 * @param {Object} pageSize - an object defining page width and height
 	 * @param {Object} pageMargins - an object defining top, left, right and bottom margins
@@ -719,6 +755,7 @@
 	function LayoutBuilder(pageSize, pageMargins) {
 		this.pageSize = pageSize;
 		this.pageMargins = pageMargins;
+		this.tracker = new TraversalTracker();
 	}
 
 	/**
@@ -786,9 +823,9 @@
 		} else if (node.columns) {
 			this.processColumns(node.columns);
 		} else if (node.ul) {
-			this.processVerticalContainer(node.ul);
+			this.processList(false, node.ul, node._gapSize);
 		} else if (node.ol) {
-			this.processVerticalContainer(node.ol);
+			this.processList(true, node.ol, node._gapSize);
 		} /* else if (node.table) {
 			this._processTable(node);
 		}*/ else if (node.text) {
@@ -806,29 +843,31 @@
 		while (line) {
 			this.addLine(line);
 
-			if (isListItem(line)) {
-				this.addMarker(line);
-			}
+			this.tracker.emit('lineAdded', line);
 
 			line = this.buildNextLine(node);
 		}
 	};
 
+/*
+			if (isListItem(line)) {
+				this.addMarker(line);
+			}
+
+
 	LayoutBuilder.prototype.addMarker = function(line) {
 		var context = this.getContext();
 	
 		var marker = line.inlines[0].listMarker;
-		var gapSize = marker._gapSize;
 
-		var x = line.x - gapSize.width;
+		var x = line.x - marker._minWidth;
 		var y = line.y;
 
-		if (marker.vector) {
-			this.getPage(context.page).vectors.push(marker.vector);
+		if (marker.canvas) {
+			this.getPage(context.page).vectors.push(marker.canvas[0]);
 		} else {			
 			var markerLine = new Line(this.pageSize.width);
-			markerLine.addInline(marker.items[0]);
-			console.log(markerLine.inlines[0])
+			markerLine.addInline(marker._inlines[0]);
 			this.getPage(context.page).lines.push(markerLine);
 		}
 	};
@@ -836,6 +875,79 @@
 	function isListItem(line) {
 		return (line.inlines.length > 0 && line.inlines[0].listMarker);
 	}
+*/
+
+	LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
+		var self = this;
+		var currentContext = this.getContext();
+
+		this.pushContext();
+		var context = this.getContext();
+
+		context.x += gapSize.width;
+		context.availableWidth -= gapSize.width;
+
+		var nextMarker;
+		this.tracker.auto('lineAdded', addMarkerToFirstLeaf, function() {
+			items.forEach(function(item) {
+				nextMarker = item.listMarker;
+				self.processNode(item);
+			});
+		});
+
+		this.popContext();
+
+		currentContext.page = context.page;
+		currentContext.y = context.y;
+		currentContext.availableHeight = context.availableHeight;
+
+		function addMarkerToFirstLeaf(line) {
+			if (nextMarker) {
+				var currentPage = self.getPage(self.getContext().page);
+
+				if (nextMarker.canvas) {
+					offsetVector(nextMarker.canvas[0], line.x - nextMarker._minWidth, line.y);
+					currentPage.vectors.push(nextMarker.canvas[0]);
+				} else {
+					var markerLine = new Line(self.pageSize.width);
+					markerLine.addInline(nextMarker._inlines[0]);
+					markerLine.x = line.x - nextMarker._minWidth;
+					markerLine.y = line.y;
+					currentPage.lines.push(markerLine);
+				}
+				nextMarker = null;
+			}
+		}
+	};
+
+/*		var self = this;
+		var xOffset = 0;
+
+		this.buildColumnWidths(columns);
+		var bottomMostContext;
+
+		for(var i = 0, l = columns.length; i < l; i++) {
+			var column = columns[i];
+
+			self.pushContext();
+			var context = self.getContext();
+			context.availableWidth = column._calcWidth;
+			context.x += xOffset;
+
+			self.processNode(column);
+
+			xOffset += column._calcWidth;
+
+			bottomMostContext = self.getBottomMostContext(bottomMostContext, context);
+			self.popContext();
+		}
+
+		var cc = self.getContext();
+		if (bottomMostContext) {
+			cc.page = bottomMostContext.page;
+			cc.y = bottomMostContext.y;
+			cc.availableHeight = bottomMostContext.availableHeight;
+		}*/
 
 	LayoutBuilder.prototype.buildNextLine = function(textNode) {
 		if (!textNode._inlines || textNode._inlines.length === 0) return null;

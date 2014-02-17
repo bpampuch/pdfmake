@@ -122,7 +122,6 @@
 			x = x || 0;
 			y = y || 0;
 
-console.log(line);
 			var ascenderHeight = line.getAscenderHeight();
 			var lineHeight = line.getHeight();
 
