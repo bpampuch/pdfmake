@@ -454,6 +454,11 @@
 		node._minWidth = data.minWidth;
 		node._maxWidth = data.maxWidth;
 
+		if (node._inlines.length > 0 && this.nextListMarker) {
+			node._inlines[0].listMarker = this.nextListMarker;
+			this.nextListMarker = null;
+		}
+
 		return node;
 	};
 
@@ -497,11 +502,31 @@
 		}
 	};
 
-	DocMeasure.prototype.buildMarker = function(isOrderedList, index1, style) {
-		if (isOrderedList)
-			return this.textTools.buildInlines(index1 + '. ', style);
-//		else
-//			return { vectors: [ circle: { cx =  } ] }
+	DocMeasure.prototype.buildMarker = function(isOrderedList, counter, style, gapSize) {
+		var marker;
+
+		if (isOrderedList) {
+			marker = this.textTools.buildInlines(counter + '. ', style);
+		}
+		else {
+			// TODO: ascender-based calculations
+			var radius = gapSize.height / 6;
+
+			marker = { 
+				vector: {
+					x: radius,
+					y: gapSize.height * 2 / 3,
+					r1: radius,
+					r2: radius,
+					type: 'ellipse',
+					color: 'black'
+				}
+			};
+		}
+
+		marker._gapSize = gapSize;
+
+		return marker;
 	};
 
 	DocMeasure.prototype.measureList = function(isOrdered, node) {
@@ -513,8 +538,14 @@
 		node._minWidth = 0;
 		node._maxWidth = 0;
 
+		var counter = 1;
+
 		for(var i = 0, l = items.length; i < l; i++) {
-			this.nextLeafMarker = this.buildMarker(isOrdered, i + 1, style);
+			var nextItem = items[i];
+
+			if (!nextItem.ol && !nextItem.ul) {
+				this.nextListMarker = this.buildMarker(isOrdered, counter++, style, node._gapSize);
+			}
 
 			items[i] = this.measureNode(items[i]);
 
@@ -557,7 +588,7 @@
 				node.table.widths = [ node.table.widths ];
 
 				while(node.table.widths.length < node.table.body[0].length) {
-					node.table.widths.push(node.table.widths[0]);
+					node.table.widths.push(node.table.widths[node.table.widths.length - 1]);
 				}
 			}
 
@@ -584,7 +615,6 @@
 			case 'rect':
 				w = Math.max(w, vector.x + vector.w);
 				h = Math.max(h, vector.y + vector.h);
-
 				break;
 			case 'line':
 				w = Math.max(w, vector.x1, vector.x2);
@@ -750,68 +780,6 @@
 		return this.pages[pageNumber];
 	};
 
-	LayoutBuilder.prototype.addLine = function(line) {
-		var context = this.getContext();
-		var lineHeight = line.getHeight();
-
-		if(context.availableHeight < lineHeight) {
-			this.moveContextToNextPage(context);
-		}
-
-		this.alignLine(line);
-
-		line.x = context.x;
-		line.y = context.y;
-
-		context.availableHeight -= lineHeight;
-		context.y += lineHeight;
-
-		this.getPage(context.page).lines.push(line);
-	};
-
-	function offsetVector(vector, x, y) {
-		switch(vector.type) {
-		case 'ellipse':
-		case 'rect':
-			vector.x += x;
-			vector.y += y;
-			break;
-		case 'line':
-			vector.x1 += x;
-			vector.x2 += x;
-			vector.y1 += y;
-			vector.y2 += y;
-			break;
-		case 'polyline':
-			for(var i = 0, l = vector.points.length; i < l; i++) {
-				vector.points[i].x += x;
-				vector.points[i].y += y;
-			}
-			break;
-		}
-	}
-
-	LayoutBuilder.prototype.processCanvas = function(node) {
-		var context = this.getContext();
-		var height = node._minHeight;
-
-		if (context.availableHeight < height) {
-			// TODO: support for canvas larger than a page
-			// TODO: support for other overflow methods
-
-			this.moveContextToNextPage(context);
-		}
-
-		var page = this.getPage(context.page);
-
-		node.canvas.forEach(function(vector) {
-			offsetVector(vector, context.x, context.y);
-			page.vectors.push(vector);
-		});
-
-		context.y += height;
-	};
-
 	LayoutBuilder.prototype.processNode = function(node) {
 		if (node.stack) {
 			this.processVerticalContainer(node.stack);
@@ -832,6 +800,43 @@
 		}
 	};
 
+	LayoutBuilder.prototype.processLeaf = function(node) {
+		var line = this.buildNextLine(node);
+
+		while (line) {
+			this.addLine(line);
+
+			if (isListItem(line)) {
+				this.addMarker(line);
+			}
+
+			line = this.buildNextLine(node);
+		}
+	};
+
+	LayoutBuilder.prototype.addMarker = function(line) {
+		var context = this.getContext();
+	
+		var marker = line.inlines[0].listMarker;
+		var gapSize = marker._gapSize;
+
+		var x = line.x - gapSize.width;
+		var y = line.y;
+
+		if (marker.vector) {
+			this.getPage(context.page).vectors.push(marker.vector);
+		} else {			
+			var markerLine = new Line(this.pageSize.width);
+			markerLine.addInline(marker.items[0]);
+			console.log(markerLine.inlines[0])
+			this.getPage(context.page).lines.push(markerLine);
+		}
+	};
+
+	function isListItem(line) {
+		return (line.inlines.length > 0 && line.inlines[0].listMarker);
+	}
+
 	LayoutBuilder.prototype.buildNextLine = function(textNode) {
 		if (!textNode._inlines || textNode._inlines.length === 0) return null;
 
@@ -843,6 +848,25 @@
 
 		line.lastLineInParagraph = textNode._inlines.length === 0;
 		return line;
+	};
+
+	LayoutBuilder.prototype.addLine = function(line) {
+		var context = this.getContext();
+		var lineHeight = line.getHeight();
+
+		if(context.availableHeight < lineHeight) {
+			this.moveContextToNextPage(context);
+		}
+
+		this.alignLine(line);
+
+		line.x = context.x;
+		line.y = context.y;
+
+		context.availableHeight -= lineHeight;
+		context.y += lineHeight;
+
+		this.getPage(context.page).lines.push(line);
 	};
 
 	LayoutBuilder.prototype.alignLine = function(line) {
@@ -876,15 +900,6 @@
 
 				line.inlines[i].x += offset;
 			}
-		}
-	};
-
-	LayoutBuilder.prototype.processLeaf = function(node) {
-		var line = this.buildNextLine(node);
-
-		while (line) {
-			this.addLine(line);
-			line = this.buildNextLine(node);
 		}
 	};
 
@@ -1022,6 +1037,50 @@
 			cc.availableHeight = bottomMostContext.availableHeight;
 		}
 	};
+
+	LayoutBuilder.prototype.processCanvas = function(node) {
+		var context = this.getContext();
+		var height = node._minHeight;
+
+		if (context.availableHeight < height) {
+			// TODO: support for canvas larger than a page
+			// TODO: support for other overflow methods
+
+			this.moveContextToNextPage(context);
+		}
+
+		var page = this.getPage(context.page);
+
+		node.canvas.forEach(function(vector) {
+			offsetVector(vector, context.x, context.y);
+			page.vectors.push(vector);
+		});
+
+		context.y += height;
+	};
+
+	function offsetVector(vector, x, y) {
+		switch(vector.type) {
+		case 'ellipse':
+		case 'rect':
+			vector.x += x;
+			vector.y += y;
+			break;
+		case 'line':
+			vector.x1 += x;
+			vector.x2 += x;
+			vector.y1 += y;
+			vector.y2 += y;
+			break;
+		case 'polyline':
+			for(var i = 0, l = vector.points.length; i < l; i++) {
+				vector.points[i].x += x;
+				vector.points[i].y += y;
+			}
+			break;
+		}
+	}
+
 /*
 
 	LayoutBuilder.prototype._gapSizeForList = function(isOrderedList, listItems) {
