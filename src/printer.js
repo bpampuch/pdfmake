@@ -69,8 +69,8 @@
 		PdfPrinter.prototype.createPdfKitDocument = function(docDefinition) {
 			var pageSize = docDefinition.pageSize || { width: 595.28, height: 841.89 };
 			this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ]});			
-			this.pdfKitDoc.info['Producer'] = 'pdfmake';
-			this.pdfKitDoc.info['Creator'] = 'pdfmake';
+			this.pdfKitDoc.info.Producer = 'pdfmake';
+			this.pdfKitDoc.info.Creator = 'pdfmake';
 			this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
 			var builder = new layout.LayoutBuilder(
