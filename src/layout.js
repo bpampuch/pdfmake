@@ -758,7 +758,9 @@
 			this.moveContextToNextPage(context);
 		}
 
-		line.x = context.x + this.alignmentOffset(line);
+		this.alignLine(line);
+
+		line.x = context.x;
 		line.y = context.y;
 
 		context.availableHeight -= lineHeight;
@@ -839,22 +841,42 @@
 			line.addInline(textNode._inlines.shift());
 		}
 
+		line.lastLineInParagraph = textNode._inlines.length === 0;
 		return line;
 	};
 
-	LayoutBuilder.prototype.alignmentOffset = function(line) {
+	LayoutBuilder.prototype.alignLine = function(line) {
 		var width = this.getContext().availableWidth;
 		var lineWidth = line.getWidth();
 
 		var alignment = line.inlines && line.inlines.length > 0 && line.inlines[0].alignment;
+
+		var offset = 0;
 		switch(alignment) {
 			case 'right':
-				return width - lineWidth;
+				offset = width - lineWidth;
+				break;
 			case 'center':
-				return (width - lineWidth) / 2;
+				offset = (width - lineWidth) / 2;
+				break;
 		}
 
-		return 0;
+		if (offset) {
+			line.inlines.forEach(function(inline) { inline.x += offset; });
+		}
+
+		if (alignment === 'justify' &&
+			!line.newLineForced &&
+			!line.lastLineInParagraph &&
+			line.inlines.length > 1) {
+			var additionalSpacing = (width - lineWidth) / (line.inlines.length - 1);
+
+			for(var i = 1, l = line.inlines.length; i < l; i++) {
+				offset = i * additionalSpacing;
+
+				line.inlines[i].x += offset;
+			}
+		}
 	};
 
 	LayoutBuilder.prototype.processLeaf = function(node) {
