@@ -849,34 +849,6 @@
 		}
 	};
 
-/*
-			if (isListItem(line)) {
-				this.addMarker(line);
-			}
-
-
-	LayoutBuilder.prototype.addMarker = function(line) {
-		var context = this.getContext();
-	
-		var marker = line.inlines[0].listMarker;
-
-		var x = line.x - marker._minWidth;
-		var y = line.y;
-
-		if (marker.canvas) {
-			this.getPage(context.page).vectors.push(marker.canvas[0]);
-		} else {			
-			var markerLine = new Line(this.pageSize.width);
-			markerLine.addInline(marker._inlines[0]);
-			this.getPage(context.page).lines.push(markerLine);
-		}
-	};
-
-	function isListItem(line) {
-		return (line.inlines.length > 0 && line.inlines[0].listMarker);
-	}
-*/
-
 	LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
 		var self = this;
 		var currentContext = this.getContext();
@@ -912,42 +884,15 @@
 					var markerLine = new Line(self.pageSize.width);
 					markerLine.addInline(nextMarker._inlines[0]);
 					markerLine.x = line.x - nextMarker._minWidth;
-					markerLine.y = line.y;
+					var d1 = line.inlines[0].font.decender * line.inlines[0].fontSize / 1000;
+					var d2 = markerLine.inlines[0].font.decender * markerLine.inlines[0].fontSize / 1000;
+					markerLine.y = line.y + line.getAscenderHeight() - markerLine.getAscenderHeight();
 					currentPage.lines.push(markerLine);
 				}
 				nextMarker = null;
 			}
 		}
 	};
-
-/*		var self = this;
-		var xOffset = 0;
-
-		this.buildColumnWidths(columns);
-		var bottomMostContext;
-
-		for(var i = 0, l = columns.length; i < l; i++) {
-			var column = columns[i];
-
-			self.pushContext();
-			var context = self.getContext();
-			context.availableWidth = column._calcWidth;
-			context.x += xOffset;
-
-			self.processNode(column);
-
-			xOffset += column._calcWidth;
-
-			bottomMostContext = self.getBottomMostContext(bottomMostContext, context);
-			self.popContext();
-		}
-
-		var cc = self.getContext();
-		if (bottomMostContext) {
-			cc.page = bottomMostContext.page;
-			cc.y = bottomMostContext.y;
-			cc.availableHeight = bottomMostContext.availableHeight;
-		}*/
 
 	LayoutBuilder.prototype.buildNextLine = function(textNode) {
 		if (!textNode._inlines || textNode._inlines.length === 0) return null;
@@ -970,10 +915,10 @@
 			this.moveContextToNextPage(context);
 		}
 
-		this.alignLine(line);
-
 		line.x = context.x;
 		line.y = context.y;
+
+		this.alignLine(line);
 
 		context.availableHeight -= lineHeight;
 		context.y += lineHeight;
@@ -998,7 +943,7 @@
 		}
 
 		if (offset) {
-			line.inlines.forEach(function(inline) { inline.x += offset; });
+			line.x = (line.x || 0) + offset;
 		}
 
 		if (alignment === 'justify' &&
@@ -1193,61 +1138,6 @@
 		}
 	}
 
-/*
-
-	LayoutBuilder.prototype._gapSizeForList = function(isOrderedList, listItems) {
-		if (isOrderedList) {
-			var longestNo = (listItems.length).toString().replace(/./g, '9');
-			return this.textTools.sizeOfString(longestNo + '. ', this.styleStack);
-		} else {
-			return this.textTools.sizeOfString('oo ', this.styleStack);
-		}
-	};
-
-	LayoutBuilder.prototype._getOnItemAddedCallback = function(isOrderedList, styleStack, gapSize) {
-		var self = this;
-		var indent = gapSize.width;
-
-		if (isOrderedList) {
-			var counter = 1;
-
-			return function(pageNumber, page, block) {
-				var lines = self.textTools.buildLines(counter.toString() + '.', null, styleStack);
-				var b = new Block();
-				b.setLines(lines);
-				b.x = block.x - indent;
-				b.y = block.y + (block.lines.length > 0 ? block.lines[0].getHeight() : block.getHeight()) - b.getHeight();
-
-				page.blocks.push(b);
-
-				counter++;
-			};
-		} else {
-			var radius = gapSize.height / 6;
-
-			return function(pageNumber, page, block) {
-				page.vectors.push({
-					x: block.x - indent + radius,
-					y: block.y + gapSize.height * 2 / 3,
-					r1: radius,
-					r2: radius,
-					type: 'ellipse'
-				});
-			};
-		}
-	};
-
-
-	LayoutBuilder.prototype.onBlockAdded = function(pageNumber, page, block) {
-		if (this.itemListCallback) {
-			this.itemListCallback(pageNumber, page, block);
-			this.itemListCallback = null;
-		}
-
-		this.blockTracker.addBlock(block);
-	};
-*/
-
 	function pack() {
 		var result = {};
 
@@ -1280,12 +1170,9 @@
 	var pdfMake = {
 		Line: Line,
 		TextTools: TextTools,
-//		Block: Block,
 		StyleContextStack: StyleContextStack,
 		DocMeasure: DocMeasure,
 		LayoutBuilder: LayoutBuilder,
-//		ColumnSet: ColumnSet,
-//		BlockSet: BlockSet
 	};
 
 	if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {

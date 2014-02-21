@@ -19,7 +19,9 @@ var sampleTestProvider = {
 			},
 			lineHeight: function(size) {
 				return size;
-			}
+			},
+			ascender: 150,
+			decender: -50
 		}
 	}
 };
@@ -701,7 +703,6 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].lines[3].inlines[0].width, 8 * 50);
 			assert.equal(pages[0].lines[4].inlines[0].width, 6 * 50);
 		});
-/*
 
 		it('should support unordered lists', function() {
 			var desc = [
@@ -717,7 +718,7 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].blocks.length, 4);
+			assert.equal(pages[0].lines.length, 4);
 		});
 
 		it('unordered lists should have circles to the left of each element', function() {
@@ -738,10 +739,10 @@ describe('LayoutBuilder', function() {
 
 			for(var i = 0; i < 3; i++) {
 				var circle = pages[0].vectors[i];
-				var paragraphBlock = pages[0].blocks[i + 1];
+				var itemLine = pages[0].lines[i + 1];
 
-				assert(circle.x < paragraphBlock.x);
-				assert(circle.y > paragraphBlock.y && circle.y < paragraphBlock.y + paragraphBlock.getHeight());
+				assert(circle.x < itemLine.x);
+				assert(circle.y > itemLine.y && circle.y < itemLine.y + itemLine.getHeight());
 			}
 		});
 
@@ -766,8 +767,8 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			// without Math.round we get AssertionError: 1.7999999999999998 == 1.8
-			assert.equal(Math.round(pages[0].vectors[3].r1 / pages[0].vectors[0].r1), Math.round(18 / 10));
+			// without Math.toFixed an AssertionError occurs: 1.7999999999999998 == 1.8
+			assert.equal((pages[0].vectors[3].r1 / pages[0].vectors[0].r1).toFixed(1), (18 / 10).toFixed(1));
 		});
 
 		it('unordered lists should support nested lists', function() {
@@ -792,15 +793,15 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].vectors.length, 2 + 3);
 
 			// positioning
-			assert.equal(pages[0].blocks[0].x, pages[0].blocks[4].x);
-			assert.equal(pages[0].blocks[1].x, pages[0].blocks[2].x);
-			assert(pages[0].blocks[0].x < pages[0].blocks[1].x);
+			assert.equal(pages[0].lines[0].x, pages[0].lines[4].x);
+			assert.equal(pages[0].lines[1].x, pages[0].lines[2].x);
+			assert(pages[0].lines[0].x < pages[0].lines[1].x);
 
 			// circle positioning
 			var circle = pages[0].vectors[1];
-			var paragraphBlock = pages[0].blocks[1];
-			assert(circle.x < paragraphBlock.x);
-			assert(circle.y > paragraphBlock.y && circle.y < paragraphBlock.y + paragraphBlock.getHeight());
+			var itemLine = pages[0].lines[1];
+			assert(circle.x < itemLine.x);
+			assert(circle.y > itemLine.y && circle.y < itemLine.y + itemLine.getHeight());
 		});
 
 		it('if there is enough space left on the page for the circle but not enough for the following line of text, circle should be drawn on the next page, together with the text', function() {
@@ -849,7 +850,7 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].blocks.length, 4 + 3);
+			assert.equal(pages[0].lines.length, 4 + 3);
 		});
 
 		it('numbers in ordered list should use list style, not item-level style (bugfix)', function() {
@@ -863,9 +864,9 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].blocks.length, 2);
-			assert.equal(pages[0].blocks[0].lines[0].inlines[0].fontSize, 15);
-			assert.equal(pages[0].blocks[1].lines[0].inlines[0].fontSize, 5);
+			assert.equal(pages[0].lines.length, 2);
+			assert.equal(pages[0].lines[0].inlines[0].fontSize, 15);
+			assert.equal(pages[0].lines[1].inlines[0].fontSize, 5);
 		});
 
 		it('numbers in ordered lists should be positioned to the left of each item', function() {
@@ -882,16 +883,16 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].blocks.length, 4 + 3);
+			assert.equal(pages[0].lines.length, 4 + 3);
 
 
 			for(var i = 0; i < 3; i++) {
-				var paragraphBlock = pages[0].blocks[1 + 2 * i];
-				var numberBlock = pages[0].blocks[2 + 2 * i];
+				var itemLine = pages[0].lines[1 + 2 * i];
+				var numberLine = pages[0].lines[2 + 2 * i];
 				
-				assert(numberBlock.x < paragraphBlock.x);
-				assert(numberBlock.x + numberBlock.getWidth() <= paragraphBlock.x);
-				assert(numberBlock.y >= paragraphBlock.y && numberBlock.y <= paragraphBlock.y + paragraphBlock.getHeight());
+				assert(numberLine.x < itemLine.x);
+				assert(numberLine.x + numberLine.getWidth() <= itemLine.x);
+				assert(numberLine.y >= itemLine.y && numberLine.y <= itemLine.y + itemLine.getHeight());
 			}
 		});
 
@@ -913,11 +914,11 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages.length, 1);
 	
 			for(var i = 0; i < 3; i++) {
-				var paragraphBlock = pages[0].blocks[1 + 2 * i];
-				var numberBlock = pages[0].blocks[2 + 2 * i];
+				var paragraphLine = pages[0].lines[1 + 2 * i];
+				var numberLine = pages[0].lines[2 + 2 * i];
 				
-				assert(numberBlock.x < paragraphBlock.x);
-				assert(numberBlock.x + numberBlock.getWidth() <= paragraphBlock.x);
+				assert(numberLine.x < paragraphLine.x);
+				assert(numberLine.x + numberLine.getWidth() <= paragraphLine.x);
 			}
 		});
 
@@ -939,10 +940,10 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages.length, 1);
 	
 			for(var i = 0; i < 3; i++) {
-				var paragraphBlock = pages[0].blocks[1 + 2 * i];
-				var numberBlock = pages[0].blocks[2 + 2 * i];
+				var paragraphLine = pages[0].lines[1 + 2 * i];
+				var numberLine = pages[0].lines[2 + 2 * i];
 
-				assert.equal(numberBlock.y + numberBlock.getHeight(), paragraphBlock.y + paragraphBlock.lines[0].getHeight());
+				assert.equal(numberLine.y + numberLine.getAscenderHeight(), paragraphLine.y + paragraphLine.getAscenderHeight());
 			}
 		});
 
@@ -961,9 +962,9 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			for(var i = 0; i < 4; i++) {
-				var numberBlock = pages[0].blocks[1 + 2 * i];
+				var numberLine = pages[0].lines[1 + 2 * i];
 
-				assert.equal(numberBlock.lines[0].inlines[0].text, (i + 1).toString() + '.');
+				assert.equal(numberLine.inlines[0].text, (i + 1).toString() + '. ');
 			}
 		});
 
@@ -989,15 +990,17 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			// item 2
-			assert.equal(pages[0].blocks[3].lines[0].inlines[0].text, '2.');
+			assert.equal(pages[0].lines[3].inlines[0].text, '2. ');
 			// item 3
-			assert.equal(pages[0].blocks[3 + 6].lines[0].inlines[0].text, '3.');
+			assert.equal(pages[0].lines[3 + 6].inlines[0].text, '3. ');
 
 			// subitem 1
-			assert.equal(pages[0].blocks[5].lines[0].inlines[0].text, '1.');
+			assert.equal(pages[0].lines[5].inlines[0].text, '1. ');
 			// subitem 2
-			assert.equal(pages[0].blocks[7].lines[0].inlines[0].text, '2.');
+			assert.equal(pages[0].lines[7].inlines[0].text, '2. ');
 		});
+/*
+
 //		it('should support line indents', function() {
 //		//	assert.fail();
 //		});
