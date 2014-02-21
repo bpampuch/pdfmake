@@ -11,10 +11,10 @@
   },
   "devDependencies": {
     "grunt-cli": "~0.1.11",
-    "grunt-mocha-test": "~0.8.2",
     "pdfkit": "~0.2.7",
     "grunt-jsdoc": "~0.5.1",
-    "grunt-contrib-jshint": "~0.8.0"
+    "grunt-contrib-jshint": "~0.8.0",
+    "grunt-mocha-cov": "~0.2.1"
   },
   "scripts": {
     "test": "grunt test"
@@ -34,5 +34,11 @@
   "bugs": {
     "url": "https://github.com/bpampuch/pdfmake/issues"
   },
-  "homepage": "https://github.com/bpampuch/pdfmake"
+  "homepage": "https://github.com/bpampuch/pdfmake",
+  "config": {
+    "blanket": {
+      "pattern": "src",
+      "data-cover-never": [ "node_modules", "tests" ]
+    }
+  }
 }

@@ -1,12 +1,11 @@
 module.exports = function(grunt) {
-
 	grunt.initConfig({
-		mochaTest: {
+		mochacov: {
 			test: {
 				options: {
-					reporter: 'spec'
+					reporter: '<%= (grunt.option("cc") ? "html-cov" : "spec") %>',
 				},
-				src: ['tests/**/*.js']
+				src: ['tests/**/*.js'],
 			}
 		},
 
@@ -25,10 +24,9 @@ module.exports = function(grunt) {
 		}
 	});
 
-	grunt.loadNpmTasks('grunt-mocha-test');
+	grunt.loadNpmTasks('grunt-mocha-cov');
 	grunt.loadNpmTasks('grunt-jsdoc');
 	grunt.loadNpmTasks('grunt-contrib-jshint');
 
-	grunt.registerTask('default', [ 'jshint', 'mochaTest' ]);
-
+	grunt.registerTask('default', [ 'jshint', 'mochacov' ]);
 };  
