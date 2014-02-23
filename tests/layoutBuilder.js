@@ -999,102 +999,19 @@ describe('LayoutBuilder', function() {
 			// subitem 2
 			assert.equal(pages[0].lines[7].inlines[0].text, '2. ');
 		});
-/*
 
-//		it('should support line indents', function() {
-//		//	assert.fail();
-//		});
-describe('processColumns', function() {
-		var startPosition;
-
-		beforeEach(function() {
-			startPosition = {
-				page: 0, 
-				x: builder.pageMargins.left, 
-				y: builder.pageMargins.top, 
-				availableWidth: builder.pageSize.width - builder.pageMargins.left - builder.pageMargins.right
-			};
-
-			builder.pages = [];
-			builder.styleStack = new StyleContextStack(builder.styleDictionary, builder.defaultStyle);
-			builder.blockTracker = new BlockSet();
+		it('should throw an exception if unrecognized structure is detected', function() {
+			assert.throws(
+				function() {
+					builder.layoutDocument([ { ol: [ 'item', { abc: 'test' }]}], sampleTestProvider);
+				}
+			);
 		});
 
-		it('should convert text columns to column objects', function() {
-			builder._processNode = function(node, position) { return position; };
-
-			var columns = [ { text: 'aaa' }, 'bbb', 'ccc', { text: 'ddd'} ];
-			builder._processColumns(columns, startPosition);
-
-			assert(columns[1].text);
-			assert(columns[2].text);
-			assert.equal(columns[0].text, 'aaa');
-			assert.equal(columns[1].text, 'bbb');
-		});
-
-		it('should use ColumnSet for column width management', function() {
-			var blocks = [];
-
-			builder._processNode = function(node, position) { 
-				var block = { x: 40, y: 0, getWidth: function() { return 75; } };
-				blocks.push(block);
-
-				builder.onBlockAdded(0, builder.pages[0], block);
-				return position; 
-			};
-
-			var columns = [
-				{ width: 90 },
-				{ width: 'auto' },
-				{ width: 70 },
-				{ },
-			];
-
-			builder._processColumns(columns, startPosition);
-
-			assert.equal(blocks.length, 4);
-
-			// availableWidth = 400-40-40 = 320
-			// autoColumnWidth = 75
-			// starColumnWidth = 320-90-70-75 = 85
-			// block order (block<->column mapping): 0, 2, 1, 3
-			assert.equal(blocks[0].x, 40);
-			assert.equal(blocks[2].x, 40 + 90);
-			assert.equal(blocks[1].x, 40 + 90 + 75);
-			assert.equal(blocks[3].x, 40 + 90 + 75 + 70);
-		});
-	});
-*/
 		describe.skip('TODO', function() {
-			it('should support tables with fixed column widths');
-			it('should support tables with auto column widths');
-			it('should support tables with percentage column widths');
-			it('should support table headers');
-			it('should support table splitting between pages and repeat table headers');
-			it('should support table-cell splitting between pages');
-
+			//DONE
 			it('should support block margins');
-			it('should support inline margins');
-			it('should support page headers');
-			it('should support page footers');
-			it('should support subscript');
-			it('should support superscript');
-			it('should support subtables created from arrays');
-			it('should support subtables created from another table');
-			it('should support vertical alignment inside cells');
-			it('should support table styling');
-			it('should support column spans');
-			it('should support row spans');
-			it('should support programmatic cell styling');
-			it('should support multiline content in table cells');
-			it('should support non-breaking-spaces');
-			it('should support non-breaking-lines');
-			it('should support current page number');
-			it('should support page count');
-			it('should support custom page breaks');
-			it('should support custom page breaks inside nested elements');
-			it('should support images');
-			it('should support image scaling');
+
 			it('should support vector lines');
 			it('should support vector paths');
 			it('should support vector dashed lines');
@@ -1103,12 +1020,48 @@ describe('processColumns', function() {
 			it('should support vector rounded rectangles');
 			it('should support vector polygons');
 			it('should support vector winding rules');
+			it('should support colors');
+
+			it('should support tables with fixed column widths');
+			it('should support tables with auto column widths');
+			it('should support tables with percentage column widths');
+			it('should support table-cell splitting between pages');
+			it('should support multiline content in table cells');
+			it('should support subtables');
+
+			// DOING
+			it('should support table styling');
+
+			// TODO
+			it('should support table headers');
+			it('should support multiline headers');
+			it('should repeat table headers');
+			it('should move table header to the next page if there is not enough space for full header on the current page');
+			it('should support subtable headers');
+
+			it('should support inline margins');
+			it('should support padding');
+			it('should support border styling');
+			it('should support page headers');
+			it('should support page footers');
+			it('should support subscript');
+			it('should support superscript');
+			it('should support vertical alignment inside cells');
+			it('should support column spans');
+			it('should support row spans');
+			it('should support programmatic cell styling');
+			it('should support non-breaking-spaces');
+			it('should support non-breaking-lines');
+			it('should support current page number');
+			it('should support page count');
+			it('should support custom page breaks');
+			it('should support custom page breaks inside nested elements');
+			it('should support images');
+			it('should support image scaling');
+
 			it('should support clipping');
 			it('should support various page orientations');
 			it('should support various page sizes');
-			it('should support border styling');
-			it('should support padding');
-			it('should support colors');
 			it('should support absolute positioning');
 			it('should support text continuations');
 			it('should support line-height');
