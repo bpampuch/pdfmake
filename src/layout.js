@@ -160,7 +160,6 @@
 	};
 
 
-
 	////////////////////////////////////////
 	// TextTools
 
@@ -438,10 +437,17 @@
 			node = { text: node };
 		}
 
-		// measure
 		var self = this;
 
 		return this.styleStack.auto(node, function() {
+			// TODO: refactor + rethink whether this is the proper way to handle margins
+			if (!node.margin && node.style) {
+				var style = self.styleStack.styleDictionary[node.style];
+				if (style && style.margin) {
+					node.margin = style.margin;
+				}
+			}
+
 			if (node.columns) {
 				return self.measureColumns(node);
 			} else if (node.stack) {
@@ -829,7 +835,66 @@
 		return this.pages[pageNumber];
 	};
 
+	LayoutBuilder.prototype.offsetY = function(height, moveToNextPageIfRequired) {
+		var cc = this.getContext();
+
+		cc.y += height;
+		cc.availableHeight -= height;
+
+		if (cc.availableHeight < 0 && moveToNextPageIfRequired) {
+			this.moveContextToNextPage(cc);
+
+			cc.y += height;
+			cc.availableHeight -= height;
+		}
+	};
+
+	LayoutBuilder.prototype.doHorizontalMargin = function(left, right) {
+		var cc = this.getContext();
+		cc.x += left;
+		cc.availableWidth -= left + right;
+	};
+
+	LayoutBuilder.prototype.undoHorizontalMargin = function(left, right) {
+		var cc = this.getContext();
+		cc.x -= left;
+		cc.availableWidth += left + right;
+	};
+
+	function getMargin(node, side, arrayCb) {
+		if (!node.margin) return 0;
+
+		if (typeof node.margin === 'number' || node.margin instanceof Number) {
+			return node.margin;
+		}
+
+		if (node.margin instanceof Array) {
+			return arrayCb(node.margin);
+		}
+
+		return 0;
+	}
+
+	function getTopMargin(node) {
+		return getMargin(node, 'Top', function(margin) { return margin[1]; });
+	}
+
+	function getBottomMargin(node) {
+		return getMargin(node, 'Bottom', function(margin) { return margin.length === 2 ? margin[1] : margin[3]; } );
+	}
+
+	function getLeftMargin(node) {
+		return getMargin(node, 'Left', function(margin) { return margin[0]; });
+	}
+
+	function getRightMargin(node) {
+		return getMargin(node, 'Right', function(margin) { return margin.length === 2 ? margin[0] : margin[2]; });
+	}
+
 	LayoutBuilder.prototype.processNode = function(node) {
+		this.offsetY(getTopMargin(node), true);
+		this.doHorizontalMargin(getLeftMargin(node), getRightMargin(node));
+
 		if (node.stack) {
 			this.processVerticalContainer(node.stack);
 		} else if (node.columns) {
@@ -847,6 +912,9 @@
 		} else {
 			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
+
+		this.undoHorizontalMargin(getLeftMargin(node), getRightMargin(node));
+		this.offsetY(getBottomMargin(node));
 	};
 
 	function fontStringify(key, val) {
