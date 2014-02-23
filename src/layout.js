@@ -445,7 +445,7 @@
 			} else if (node.canvas) {
 				return self.measureCanvas(node);
 			} else {
-				throw 'Unrecognized document structure: ' + JSON.stringify(node);
+				throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 			}
 		});
 	};
@@ -833,9 +833,16 @@
 		} else if (node.canvas) {
 			this.processCanvas(node);
 		} else {
-			throw 'Unrecognized document structure: ' + node;
+			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
 	};
+
+	function fontStringify(key, val) {
+		if (key === 'font') {
+			return 'font';
+		}
+		return val;
+	}
 
 	LayoutBuilder.prototype.processLeaf = function(node) {
 		var line = this.buildNextLine(node);
@@ -884,8 +891,6 @@
 					var markerLine = new Line(self.pageSize.width);
 					markerLine.addInline(nextMarker._inlines[0]);
 					markerLine.x = line.x - nextMarker._minWidth;
-					var d1 = line.inlines[0].font.decender * line.inlines[0].fontSize / 1000;
-					var d2 = markerLine.inlines[0].font.decender * markerLine.inlines[0].fontSize / 1000;
 					markerLine.y = line.y + line.getAscenderHeight() - markerLine.getAscenderHeight();
 					currentPage.lines.push(markerLine);
 				}
