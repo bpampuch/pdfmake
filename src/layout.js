@@ -84,7 +84,19 @@
 		var styleOverrideObject = {};
 		var pushSOO = false;
 
-		['font', 'fontSize', 'bold', 'italics', 'alignment', 'color'].forEach(function(key) {
+		[
+			'font',
+			'fontSize',
+			'bold',
+			'italics',
+			'alignment',
+			'color',
+			'cellBorder',
+			'headerCellBorder',
+			'oddRowCellBorder',
+			'evenRowCellBorder',
+			'tableBorder'
+		].forEach(function(key) {
 			if (item[key] !== undefined && item[key] !== null) {
 				styleOverrideObject[key] = item[key];
 				pushSOO = true;
@@ -592,7 +604,7 @@
 			for(var i = 0, l = node.table.widths.length; i < l; i++) {
 				var w = node.table.widths[i];
 				if (typeof w === 'number' || w instanceof Number || typeof w === 'string' || w instanceof String) {
-					node.table.widths[i] = { _desiredWidth: w };
+					node.table.widths[i] = { width: w };
 				}
 			}
 		}
@@ -826,9 +838,9 @@
 			this.processList(false, node.ul, node._gapSize);
 		} else if (node.ol) {
 			this.processList(true, node.ol, node._gapSize);
-		} /* else if (node.table) {
-			this._processTable(node);
-		}*/ else if (node.text) {
+		} else if (node.table) {
+			this.processTable(node);
+		} else if (node.text) {
 			this.processLeaf(node);
 		} else if (node.canvas) {
 			this.processCanvas(node);
@@ -1069,30 +1081,82 @@
 		return (h1 > h2) ? context1 : context2;
 	};
 
-	LayoutBuilder.prototype.processColumns = function(columns) {
-		var self = this;
-		var xOffset = 0;
+	function getTableWidth(tableNode) {
+		var width = 0;
 
+		tableNode.table.widths.forEach(function(w) {
+			width += w._calcWidth;
+		});
+
+		return width;
+	}
+
+	LayoutBuilder.prototype.processTable = function(tableNode) {
+		this.buildColumnWidths(tableNode.table.widths);
+		var tableWidth = getTableWidth(tableNode);
+		//TODO: header on following pages
+
+		// top line
+		this.addHorizontalLine(0, tableWidth, 1);
+
+		for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
+			this.processRow(tableNode.table.body[i], tableNode.table.widths);
+			this.addHorizontalLine(0, tableWidth, 1);
+		}
+
+		// bottom line
+	};
+
+	LayoutBuilder.prototype.addHorizontalLine = function(x1, x2, lh) {
+		var context = this.getContext();
+		context.y += lh/2;
+		context.availableHeight -= lh/2;
+
+		var line = {
+			type: 'line',
+			x1: context.x + x1,
+			y1: context.y,
+			x2: context.x + x2,
+			y2: context.y,
+			lineWidth: lh,
+		};
+
+		context.y += lh/2;
+		context.availableHeight -= lh/2;
+
+		this.getPage(context.page).vectors.push(line);
+	};
+
+	LayoutBuilder.prototype.processColumns = function(columns) {
 		this.buildColumnWidths(columns);
+		this.processRow(columns);
+	};
+
+	LayoutBuilder.prototype.processRow = function(columns, widths) {
+		if (!widths) {
+			widths = columns;
+		}
+
+		var xOffset = 0;
 		var bottomMostContext;
 
 		for(var i = 0, l = columns.length; i < l; i++) {
 			var column = columns[i];
 
-			self.pushContext();
-			var context = self.getContext();
-			context.availableWidth = column._calcWidth;
+			this.pushContext();
+			var context = this.getContext();
+			context.availableWidth = widths[i]._calcWidth;
 			context.x += xOffset;
 
-			self.processNode(column);
+			this.processNode(column);
 
-			xOffset += column._calcWidth;
+			xOffset += widths[i]._calcWidth;
 
-			bottomMostContext = self.getBottomMostContext(bottomMostContext, context);
-			self.popContext();
+			bottomMostContext = this.getBottomMostContext(bottomMostContext, context);
+			this.popContext();
 		}
 
-		var cc = self.getContext();
+		var cc = this.getContext();
 		if (bottomMostContext) {
 			cc.page = bottomMostContext.page;
 			cc.y = bottomMostContext.y;
