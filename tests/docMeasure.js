@@ -162,7 +162,7 @@ describe('DocMeasure', function() {
 			assert(result.table.body[0][3]._maxWidth);
 			assert(result.table.widths[0]._maxWidth);
 			assert(result.table.widths[0]._minWidth);
-			assert(result.table.widths[0]._desiredWidth);
+			assert(result.table.widths[0].width);
 		});
 
 		it('should not spoil widths if measureTable has been called before', function() {
@@ -171,8 +171,8 @@ describe('DocMeasure', function() {
 
 			assert(result.table.widths[0]._maxWidth);
 			assert(result.table.widths[0]._minWidth);
-			assert(result.table.widths[0]._desiredWidth);
-			assert.equal(result.table.widths[0]._desiredWidth, '*');
+			assert(result.table.widths[0].width);
+			assert.equal(result.table.widths[0].width, '*');
 		});
 
 		it('should calculate _minWidth and _maxWidth for all columns', function() {
@@ -181,7 +181,7 @@ describe('DocMeasure', function() {
 			result.table.widths.forEach(function(width){
 				assert(width._maxWidth);
 				assert(width._minWidth);
-				assert(width._desiredWidth);
+				assert(width.width);
 			});
 		});
 
@@ -210,7 +210,7 @@ describe('DocMeasure', function() {
 
 			assert(node.table.widths instanceof Array);
 			assert.equal(node.table.widths.length, 4);
-			node.table.widths.forEach(function(w) { assert.equal(w._desiredWidth, 'auto'); });
+			node.table.widths.forEach(function(w) { assert.equal(w.width, 'auto'); });
 		});
 
 		it('should set _minWidth and _maxWidth to the sum of column min/max widths', function() {
