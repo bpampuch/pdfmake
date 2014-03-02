@@ -982,8 +982,8 @@
 		block.lines.forEach(function(line) {
 			var l = pack(line);
 
-			l.x += ctx.x;
-			l.y += ctx.y;
+			l.x = (l.x || 0) + ctx.x;
+			l.y = (l.y || 0) + ctx.y;
 
 			page.lines.push(l);
 		});
@@ -996,6 +996,8 @@
 		});
 
 		ctx.moveDown(block.height);
+
+		return true;
 	};
 
 	function offsetVector(vector, x, y) {
@@ -1035,18 +1037,25 @@
 		this.transactionLevel = 0;
 		this.repeatables = [];
 
-		this.writer = new ElementWriter();
+		this.writer = new ElementWriter(context);
 	}
 
-	PageElementWriter.addLine = function(line) {
+	PageElementWriter.prototype.addLine = function(line) {
 		if (!this.writer.addLine(line)) {
 			this._moveToPage(this.context.page + 1);
 			this.writer.addLine(line);
 		}
 	};
 
-	PageElementWriter.addVector = function(vector) {
+	PageElementWriter.prototype.addVector = function(vector) {
 		this.writer.addVector(vector);
+	};
+
+	PageElementWriter.prototype.addFragment = function(fragment) {
+		if (!this.writer.addFragment(fragment)) {
+			this._moveToPage(this.context.page + 1);
+			this.writer.addFragment(fragment);
+		}
 	};
 
 	PageElementWriter.prototype._moveToPage = function(pageIndex) {
@@ -1078,14 +1087,17 @@
 
 	PageElementWriter.prototype.commitUnbreakableBlock = function() {
 		if (--this.transactionLevel === 0) {
-			// no support for multi-page unbreakableBlocks
-			var fragment = this.transactionContext.pages[0];
+			this.writer.setContext(this.context);
 
-			//TODO: vectors can influence height in some situations
-			fragment.height = this.transactionContext.y;
+			if(this.transactionContext.pages.length > 0) {
+				// no support for multi-page unbreakableBlocks
+				var fragment = this.transactionContext.pages[0];
 
-			this.writer.setContext(this.contex);
-			this.writer.addFragment(fragment);
+				//TODO: vectors can influence height in some situations
+				fragment.height = this.transactionContext.y;
+
+				this.addFragment(fragment);
+			}
 		}
 	};
 
@@ -1119,7 +1131,7 @@
 	* @private
 	*/
 	var ColumnCalculator = {
-		calculateWidths: function(columns, availableWidth) {
+		buildColumnWidths: function(columns, availableWidth) {
 			var autoColumns = [],
 				autoMin = 0, autoMax = 0,
 				starColumns = [],
@@ -1738,7 +1750,8 @@
 		LayoutBuilder: LayoutBuilder,
 		DocumentContext: DocumentContext,
 		ElementWriter: ElementWriter,
-		PageElementWriter: PageElementWriter
+		PageElementWriter: PageElementWriter,
+		ColumnCalculator: ColumnCalculator
 	};
 
 	if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
