@@ -91,11 +91,13 @@
 			'italics',
 			'alignment',
 			'color',
-			'cellBorder',
-			'headerCellBorder',
-			'oddRowCellBorder',
-			'evenRowCellBorder',
-			'tableBorder'
+			'columnGap'
+			//'tableCellPadding'
+			// 'cellBorder',
+			// 'headerCellBorder',
+			// 'oddRowCellBorder',
+			// 'evenRowCellBorder',
+			// 'tableBorder'
 		].forEach(function(key) {
 			if (item[key] !== undefined && item[key] !== null) {
 				styleOverrideObject[key] = item[key];
@@ -499,6 +501,7 @@
 		var columns = node.columns;
 		node._minWidth = 0;
 		node._maxWidth = 0;
+		node._gap = this.styleStack.getProperty('columnGap');
 
 		for(var i = 0, l = columns.length; i < l; i++) {
 			columns[i] = this.measureNode(columns[i]);
@@ -1172,31 +1175,32 @@
 	* @private
 	*/
 	var ColumnCalculator = {
-		buildColumnWidths: function(columns, availableWidth) {
+		buildColumnWidths: function(columns, availableWidth, horizontalPadding) {
 			var autoColumns = [],
 				autoMin = 0, autoMax = 0,
 				starColumns = [],
 				starMaxMin = 0,
 				starMaxMax = 0,
-				fixedColumns = [];
+				fixedColumns = [],
+				padding = horizontalPadding || 0;
 
 			columns.forEach(function(column) {
 				if (isAutoColumn(column)) {
 					autoColumns.push(column);
-					autoMin += column._minWidth;
-					autoMax += column._maxWidth;
+					autoMin += column._minWidth + padding;
+					autoMax += column._maxWidth + padding;
 				} else if (isStarColumn(column)) {
 					starColumns.push(column);
-					starMaxMin = Math.max(starMaxMin, column._minWidth);
-					starMaxMax = Math.max(starMaxMax, column._maxWidth);
+					starMaxMin = Math.max(starMaxMin, column._minWidth) + padding;
+					starMaxMax = Math.max(starMaxMax, column._maxWidth) + padding;
 				} else {
 					fixedColumns.push(column);
 				}
 			});
 
 			fixedColumns.forEach(function(col) {
-				if (col.width < col._minWidth && col.elasticWidth) {
-					col._calcWidth = col._minWidth;
+				if (col.width < (col._minWidth + padding) && col.elasticWidth) {
+					col._calcWidth = col._minWidth + padding;
 				} else {
 					col._calcWidth = col.width;
 				}
@@ -1215,17 +1219,17 @@
 				// no easy workaround (unless we decide, in the future, to split single words)
 				// currently we simply use minWidths for all columns
 				autoColumns.forEach(function(col) {
-					col._calcWidth = col._minWidth;
+					col._calcWidth = col._minWidth + padding;
 				});
 
 				starColumns.forEach(function(col) {
-					col._calcWidth = starMaxMin;
+					col._calcWidth = starMaxMin; // starMaxMin already contains padding
 				});
 			} else {
 				if (maxW < availableWidth) {
 					// case 2 - we can fit rest of the table within available space
 					autoColumns.forEach(function(col) {
-						col._calcWidth = col._maxWidth;
+						col._calcWidth = col._maxWidth + padding;
 						availableWidth -= col._calcWidth;
 					});
 				} else {
@@ -1235,7 +1239,7 @@
 
 					autoColumns.forEach(function(col) {
 						var d = col._maxWidth - col._minWidth;
-						col._calcWidth = col._minWidth + d * W / D;
+						col._calcWidth = col._minWidth + padding + d * W / D;
 						availableWidth -= col._calcWidth;
 					});
 				}
@@ -1305,7 +1309,7 @@
 		if (node.stack) {
 			this.processVerticalContainer(node.stack);
 		} else if (node.columns) {
-			this.processColumns(node.columns);
+			this.processColumns(node);
 		} else if (node.ul) {
 			this.processList(false, node.ul, node._gapSize);
 		} else if (node.ol) {
@@ -1335,27 +1339,48 @@
 	};
 
 	// columns
-	LayoutBuilder.prototype.processColumns = function(columns) {
-		ColumnCalculator.buildColumnWidths(columns, this.writer.context.availableWidth);
-		this.processRow(columns);
+	LayoutBuilder.prototype.processColumns = function(columnNode) {
+		var columns = columnNode.columns;
+		var availableWidth = this.writer.context.availableWidth;
+		var gaps = gapArray(columnNode._gap);
+
+		if (gaps) availableWidth -= (gaps.length - 1) * columnNode._gap;
+
+		ColumnCalculator.buildColumnWidths(columns, availableWidth);
+		this.processRow(columns, columns, gaps);
+
+
+		function gapArray(gap) {
+			if (!gap) return null;
+
+			var gaps = [];
+			gaps.push(0);
+
+			for(var i = columns.length - 1; i > 0; i--) {
+				gaps.push(gap);
+			}
+
+			return gaps;
+		}
 	};
 
-	LayoutBuilder.prototype.processRow = function(columns, widths) {
+	LayoutBuilder.prototype.processRow = function(columns, widths, gaps) {
 		widths = widths || columns;
 
 		this.writer.context.beginColumnGroup();
-//console.log('columns start');
-//console.log(this.writer.context)
 
 		for(var i = 0, l = columns.length; i < l; i++) {
 			var column = columns[i];
-			this.writer.context.beginColumn(widths[i]._calcWidth);
-//console.log('col ' + widths[i]._calcWidth)
-//console.log(this.writer.context)
+			this.writer.context.beginColumn(widths[i]._calcWidth, colLeftOffset(i));
 			this.processNode(column);
 		}
 
 		this.writer.context.completeColumnGroup();
+
+		function colLeftOffset(i) {
+			if (gaps && gaps.length > i) return gaps[i];
+			return 0;
+		}
 	};
 
 	// lists

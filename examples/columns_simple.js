@@ -15,8 +15,9 @@ var docDefinition = {
 	content: [
 		'By default paragraphs are stacked one on top of (or actually - below) another. ',
 		'It\'s possible however to split any paragraph (or even the whole document) into columns.\n\n',
-		'Here we go with 2 star-sized columns:\n\n',
+		'Here we go with 2 star-sized columns, with justified text and gap set to 20:\n\n',
 		{
+			alignment: 'justify',
 			columns: [
 				{
 					text: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit, officiis viveremus aeternum superstitio suspicor alia nostram, quando nostros congressus susceperant concederetur leguntur iam, vigiliae democritea tantopere causae, atilii plerumque ipsas potitur pertineant multis rem quaeri pro, legendum didicisse credere ex maluisset per videtis. Cur discordans praetereat aliae ruinae dirigentur orestem eodem, praetermittenda divinum. Collegisti, deteriora malint loquuntur officii cotidie finitas referri doleamus ambigua acute. Adhaesiones ratione beate arbitraretur detractis perdiscere, constituant hostis polyaeno. Diu concederetur.'
@@ -86,7 +87,7 @@ var docDefinition = {
 				},
 			]
 		},
-		'\nIf all auto columns fit within available width, the table does not occupy whole space (the effect is a little bit awkward, as there is no paddings set in this example):\n\n',
+		'\nIf all auto columns fit within available width, the table does not occupy whole space:\n\n',
 		{
 			columns: [
 				{
@@ -126,7 +127,7 @@ var docDefinition = {
 						]
 					}
 				]
-			]			
+			]
 		},
 		'\n\nOh, don\'t forget, we can use everything from styling examples (named styles, custom overrides) here as well.\n\n',
 		'For instance - our next paragraph will use the \'bigger\' style (with fontSize set to 15 and italics - true). We\'ll split it into three columns and make sure they inherit the style:\n\n',
@@ -155,6 +156,9 @@ var docDefinition = {
 			fontSize: 15,
 			italics: true,
 		}
+	},
+	defaultStyle: {
+		columnGap: 20,
 	}
 };
 

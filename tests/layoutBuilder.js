@@ -330,6 +330,40 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].lines[0].getWidth(), 8*8);
 		});
 
+		it('should support column gap', function() {
+			var desc = [
+			{
+				fontSize: 8,
+				columnGap: 23,
+				columns: [
+					{ text: 'column 1', width: 100 },
+					{ text: 'column 2', width: 100 }
+				]
+			}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].lines.length, 2);
+			assert.equal(pages[0].lines[0].x, 40);
+			assert.equal(pages[0].lines[1].x, 40 + 100 + 23);
+		});
+
+		it('should support column gap inheritance', function() {
+			var desc = [
+			{
+				fontSize: 8,
+				columns: [
+					{ text: 'column 1', width: 100 },
+					{ text: 'column 2', width: 100 }
+				]
+			}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, { columnGap:25 });
+			assert.equal(pages[0].lines[1].x, 40 + 100 + 25);
+		});
+
 		it('should support fixed column widths', function() {
 			var desc = [
 				{
