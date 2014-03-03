@@ -36,47 +36,6 @@ describe('LayoutBuilder', function() {
 		builder.styleStack = new StyleContextStack();
 	});
 
-	describe('addLine', function() {
-		it('should add line to current page if there is enough vertical space left', function() {
-			builder.context = [ { page: 0, availableWidth: 320, availableHeight: 720 }];
-
-			for(var i = 0; i < 10; i++) {
-				var line = new Line(100);
-				line.addInline({width: 40, height: 72});
-				builder.addLine(line);
-			}
-
-			assert.equal(builder.pages.length, 1);
-			assert.equal(builder.pages[0].lines.length, 10);
-		});
-
-		it('should subtract line height from availableHeight when adding a line and update current y position', function() {
-			builder.context = [ { page: 0, availableWidth: 320, availableHeight: 720, y: 40 } ];
-
-			var line = new Line(100);
-			line.addInline({width: 40, height: 72});
-
-			builder.addLine(line);
-
-			assert.equal(builder.context[0].availableHeight, 720 - 72);
-			assert.equal(builder.context[0].y, 40 + 72);
-		});
-
-		it('should add line to the next page if there was not enough vertical space left on current page', function() {
-			builder.context = [ { page: 1, availableWidth: 320, availableHeight: 10, y: 710 } ];
-
-			var line = new Line(100);
-			line.addInline({width: 40, height: 72});
-
-			builder.addLine(line);
-
-			assert.equal(builder.pages.length, 3);
-			assert.equal(builder.context[0].availableHeight, 720 - 72);
-			assert.equal(builder.context[0].y, 40 + 72);
-			assert.equal(builder.context[0].page, 2);
-		});
-	});
-
 	describe('processDocument', function() {
 		it('should arrange texts one below another', function() {
 			var desc = [
@@ -103,7 +62,7 @@ describe('LayoutBuilder', function() {
 			assert(pages[0].lines.length, 3);
 		});
 
-		it('should span text into lines if theres not enough horizontal space', function() {
+		it.skip('should span text into lines if theres not enough horizontal space', function() {
 			var desc = [
 				'first paragraph',
 				'another paragraph, this time a little bit longer though, we want to force this line to be broken into several lines'
@@ -723,8 +682,6 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[1].vectors.length, 1);
 		});
 
-//		it('unordered lists should align broken lines properly', function)
-
 		it('should support ordered lists', function() {
 			var desc = [
 				'paragraph',
@@ -889,6 +846,229 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].lines[7].inlines[0].text, '2. ');
 		});
 
+		it('ordered lists should not add an empty line below the number (bugfix)', function() {
+			var desc = [
+				{
+					ol: [
+						'item 1',
+						'item 2'
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages[0].lines[0].y, 40);
+			assert.equal(pages[0].lines[1].y, 40);
+			assert.equal(pages[0].lines[2].y, 40 + 12);
+		});
+
+		it('should support tables with fixed widths', function() {
+			var desc = [
+				{
+					table: {
+						widths: [ 30, 50, 40 ],
+						body: [
+							['a', 'b', 'c'],
+							['aaa', 'bbb', 'ccc'],
+						]
+					}
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].lines.length, 6);
+			assert.equal(pages[0].lines[0].x, 40);
+			assert.equal(pages[0].lines[1].x, 40 + 30);
+			assert.equal(pages[0].lines[2].x, 40 + 30 + 50);
+			assert.equal(pages[0].lines[3].x, 40);
+			assert.equal(pages[0].lines[4].x, 40 + 30);
+			assert.equal(pages[0].lines[5].x, 40 + 30 + 50);
+			assert.equal(pages[0].lines[0].y, 40);
+			assert.equal(pages[0].lines[1].y, 40);
+			assert.equal(pages[0].lines[2].y, 40);
+			assert.equal(pages[0].lines[3].y, 40 + 12);
+			assert.equal(pages[0].lines[4].y, 40 + 12);
+			assert.equal(pages[0].lines[5].y, 40 + 12);
+		});
+
+		it('should support tables with auto column widths', function() {
+			var desc = [
+				{
+					table: {
+						widths: 'auto',
+						body: [
+							['a', 'b', 'c'],
+							['aaa', 'bbb', 'ccc'],
+						]
+					}
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].lines.length, 6);
+			assert.equal(pages[0].lines[0].x, 40);
+			assert.equal(pages[0].lines[1].x, 40 + 3*12);
+			assert.equal(pages[0].lines[2].x, 40 + 6*12);
+			assert.equal(pages[0].lines[3].x, 40);
+			assert.equal(pages[0].lines[4].x, 40 + 3*12);
+			assert.equal(pages[0].lines[5].x, 40 + 6*12);
+			assert.equal(pages[0].lines[0].y, 40);
+			assert.equal(pages[0].lines[1].y, 40);
+			assert.equal(pages[0].lines[2].y, 40);
+			assert.equal(pages[0].lines[3].y, 40 + 12);
+			assert.equal(pages[0].lines[4].y, 40 + 12);
+			assert.equal(pages[0].lines[5].y, 40 + 12);
+		});
+
+		it('should support tables spanning across pages', function() {
+			var desc = [{
+				table: {
+					widths: 'auto',
+					body: []
+				}
+			}];
+
+			for(var i = 0; i < 80; i++) {
+				desc[0].table.body.push(['a', 'b', 'c']);
+			}
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 2);
+		});
+
+		it('should support table-cell spanning across pages', function() {
+			var desc = [{
+				table: {
+					widths: 'auto',
+					body: []
+				}
+			}];
+
+			for(var i = 0; i < 59; i++) {
+				desc[0].table.body.push(['a', 'b', 'c']);
+			}
+
+			desc[0].table.body.push(['a\nb\nc', 'a\nb\nc', 'a\nb\nc']);
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 2);
+			assert.equal(pages[1].lines.length, 6);
+		});
+
+		it('should not split table headers', function() {
+			var desc = [
+				{
+					stack: []
+				},
+				{
+				table: {
+					headerRows: 1,
+					widths: 'auto',
+					body: [
+						['a1\na2', 'b1\nb2', 'c1\nc2'],
+						['a', 'b', 'c'],
+					]
+				}
+			}];
+
+			for(var i = 0; i < 59; i++) {
+				desc[0].stack.push('sample line');
+			}
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 2);
+			assert.equal(pages[0].lines.length, 59);
+			assert.equal(pages[1].lines.length, 9);
+		});
+
+		it('should not split multi-row headers', function() {
+			var desc = [
+				{
+					stack: []
+				},
+				{
+				table: {
+					headerRows: 2,
+
+					widths: 'auto',
+					body: [
+						['a1', 'b1', 'c1'],
+						['a2', 'b2', 'c2'],
+						['a', 'b', 'c'],
+					]
+				}
+			}];
+
+			for(var i = 0; i < 59; i++) {
+				desc[0].stack.push('sample line');
+			}
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 2);
+			assert.equal(pages[0].lines.length, 59);
+			assert.equal(pages[1].lines.length, 9);
+		});
+
+		it('should repeat table headers', function() {
+			var desc = [{
+				table: {
+					headerRows: 1,
+					widths: 'auto',
+					body: [
+						['h1', 'h2', 'h3'],
+					]
+				}
+			}];
+
+			for(var i = 0; i < 590; i++) {
+				desc[0].table.body.push(['a', 'b', 'c']);
+			}
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 10);
+			pages.forEach(function(page){
+				assert.equal(page.lines[0].inlines[0].text, 'h1');
+				assert.equal(page.lines[0].y, 40);
+				assert.equal(page.lines[0].x, 40);
+			});
+		});
+
+		it('should not change x positions of repeated table headers, if context.x has changed (bugfix)', function() {
+			var desc = [{
+				table: {
+					headerRows: 1,
+					widths: 'auto',
+					body: [
+						['h1', 'h2', 'h3'],
+						[{ ul: [
+
+						]}, 'b', 'c']
+					]
+				}
+			}];
+
+			for(var i = 0; i < 100; i++) {
+				desc[0].table.body[1][0].ul.push('item');
+			}
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 2);
+			assert.equal(pages[0].lines[0].x, 40);
+			assert(pages[0].lines[4].x > 40);
+			assert.equal(pages[1].lines[0].x, 40);
+		});
+
 		it('should throw an exception if unrecognized structure is detected', function() {
 			assert.throws(
 				function() {
@@ -899,70 +1079,62 @@ describe('LayoutBuilder', function() {
 
 		describe.skip('TODO', function() {
 			//DONE
-			it('should support block margins');
+			it.skip('should support block margins');
 
-			it('should support vector lines');
-			it('should support vector paths');
-			it('should support vector dashed lines');
-			it('should support vector line join styles');
-			it('should support vector rectangles');
-			it('should support vector rounded rectangles');
-			it('should support vector polygons');
-			it('should support vector winding rules');
-			it('should support colors');
+			it.skip('should support vector lines');
+			it.skip('should support vector paths');
+			it.skip('should support vector dashed lines');
+			it.skip('should support vector line join styles');
+			it.skip('should support vector rectangles');
+			it.skip('should support vector rounded rectangles');
+			it.skip('should support vector polygons');
+			it.skip('should support vector winding rules');
+			it.skip('should support colors');
 
-			it('should support tables with fixed column widths');
-			it('should support tables with auto column widths');
-			it('should support tables with percentage column widths');
-			it('should support table-cell splitting between pages');
-			it('should support multiline content in table cells');
-			it('should support subtables');
+			it.skip('should support custom page breaks');
+			it.skip('should support custom page breaks inside nested elements');
 
 			// DOING
-			it('should support table styling');
+			it.skip('should support table styling');
 
 			// TODO
-			it('should support table headers');
-			it('should support multiline headers');
-			it('should repeat table headers');
-			it('should move table header to the next page if there is not enough space for full header on the current page');
-			it('should support subtable headers');
+			it.skip('should support subtables');
+			it.skip('should support subtable headers');
+			it.skip('should support tables with percentage column widths');
 
-			it('should support inline margins');
-			it('should support padding');
-			it('should support border styling');
-			it('should support page headers');
-			it('should support page footers');
-			it('should support subscript');
-			it('should support superscript');
-			it('should support vertical alignment inside cells');
-			it('should support column spans');
-			it('should support row spans');
-			it('should support programmatic cell styling');
-			it('should support non-breaking-spaces');
-			it('should support non-breaking-lines');
-			it('should support current page number');
-			it('should support page count');
-			it('should support custom page breaks');
-			it('should support custom page breaks inside nested elements');
-			it('should support images');
-			it('should support image scaling');
+			it.skip('should support inline margins');
+			it.skip('should support padding');
+			it.skip('should support border styling');
+			it.skip('should support page headers');
+			it.skip('should support page footers');
+			it.skip('should support subscript');
+			it.skip('should support superscript');
+			it.skip('should support vertical alignment inside cells');
+			it.skip('should support column spans');
+			it.skip('should support row spans');
+			it.skip('should support programmatic cell styling');
+			it.skip('should support non-breaking-spaces');
+			it.skip('should support non-breaking-lines');
+			it.skip('should support current page number');
+			it.skip('should support page count');
+			it.skip('should support images');
+			it.skip('should support image scaling');
 
-			it('should support clipping');
-			it('should support various page orientations');
-			it('should support various page sizes');
-			it('should support absolute positioning');
-			it('should support text continuations');
-			it('should support line-height');
-			it('should support programmatic styling');
-			it('should support line filling action');
-			it('should render lines to pdf in a single call if style is the same');
-			it('should support document encryption');
-			it('should support document permissions');
-			it('should support TOC');
-			it('should support in-document-references');
-			it('should support uppercase text transforms');
-			it('should support lowercase text transforms');
+			it.skip('should support clipping');
+			it.skip('should support various page orientations');
+			it.skip('should support various page sizes');
+			it.skip('should support absolute positioning');
+			it.skip('should support text continuations');
+			it.skip('should support line-height');
+			it.skip('should support programmatic styling');
+			it.skip('should support line filling action');
+			it.skip('should render lines to pdf in a single call if style is the same');
+			it.skip('should support document encryption');
+			it.skip('should support document permissions');
+			it.skip('should support TOC');
+			it.skip('should support in-document-references');
+			it.skip('should support uppercase text transforms');
+			it.skip('should support lowercase text transforms');
 		});
 	});
 });

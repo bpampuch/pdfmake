@@ -67,6 +67,13 @@ describe('PageElementWriter', function() {
 			assert.equal(ctx.pages[1].lines.length, 1);
 		});
 
+		it('should subtract line height from availableHeight when adding a line and update current y position', function() {
+			pew.addLine(buildLine(40));
+
+			assert.equal(ctx.y, 60 + 40);
+			assert.equal(ctx.availableHeight, 800 - 60 - 60 - 40);
+		});
+
 		it('should add repeatable fragments if they exist and a new page is created before adding the line', function() {
 			addOneTenthLines(10);
 
@@ -190,27 +197,30 @@ describe('PageElementWriter', function() {
 		});
 	});
 
-	describe('pushCurrentBlockStateToRepeatables', function() {
-		it('should copy all elements from unbreakableBlock and add them to the repeatable fragments collection', function() {
+	describe('unbreakableBlockToRepeatable', function() {
+		it('should return a copy of all elements from unbreakableBlock', function() {
 			pew.beginUnbreakableBlock();
 			pew.addLine(buildLine(30));
 			pew.addLine(buildLine(30));
-			pew.pushCurrentBlockStateToRepeatables();
+			var rep = pew.unbreakableBlockToRepeatable();
+			pew.pushToRepeatables(rep);
 
-			assert.equal(pew.repeatables.length, 1);
-			assert.equal(pew.repeatables[0].lines.length, 2);
+			assert.equal(rep.lines.length, 2);
 
 			pew.addLine(buildLine(30));
-			assert.equal(pew.repeatables[0].lines.length, 2);
+			assert.equal(rep.lines.length, 2);
 		});
+	});
 
-		it('should add repeatable fragments to the top of new pages even if the block on the current page is rendered in a different position', function() {
+	describe('creating a new page', function() {
+		it('should add a repeatable fragment to the top', function() {
 			addOneTenthLines(6);
 
 			pew.beginUnbreakableBlock();
 			addOneTenthLines(3);
 			pew.transactionContext.pages[0].lines.forEach(function(line) { line.marker = 'rep'; });
-			pew.pushCurrentBlockStateToRepeatables();
+			var rep = pew.unbreakableBlockToRepeatable();
+			pew.pushToRepeatables(rep);
 			pew.commitUnbreakableBlock();
 
 			addOneTenthLines(3);
@@ -230,7 +240,7 @@ describe('PageElementWriter', function() {
 			assert.equal(ctx.pages[1].lines[3].y, ctx.pages[1].lines[2].y + 68);
 		});
 
-		it('should add repeatable fragments to new pages in the order they have been added to the repeatable fragments collection', function() {
+		it('should add repeatable fragments in the same order they have been added to the repeatable fragments collection', function() {
 			addOneTenthLines(9);
 			pew.repeatables.push(createRepeatable('rep1', 50));
 			pew.repeatables.push(createRepeatable('rep2', 60));

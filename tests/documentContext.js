@@ -31,14 +31,14 @@ describe('DocumentContext', function() {
 		});
 	});
 
-	describe('nextColumn', function() {
+	describe('beginColumn', function() {
 		it('should set y, page and availableHeight back to the values stored in beginColumnGroup', function() {
 			pc.beginColumnGroup();
 			pc.y = 150;
 			pc.page = 5;
 			pc.availableHeight = 123;
 
-			pc.nextColumn();
+			pc.beginColumn();
 
 			assert.equal(pc.y, 60);
 			assert.equal(pc.page, 0);
@@ -47,18 +47,24 @@ describe('DocumentContext', function() {
 
 		it('should add offset to current x', function() {
 			pc.beginColumnGroup();
-			pc.nextColumn(30);
+			pc.beginColumn(50, 30);
 
 			assert.equal(pc.x, 40 + 30);
 		});
 
-		it('should decrease availableWidth', function() {
-			var awidth = pc.availableWidth;
-
+		it('should add previous column widths to x when starting a new column', function() {
 			pc.beginColumnGroup();
-			pc.nextColumn(30);
+			pc.beginColumn(30);
+			assert.equal(pc.x, 40);
+			pc.beginColumn(20);
+			assert.equal(pc.x, 40 + 30);
+		});
 
-			assert.equal(pc.availableWidth, awidth - 30);
+		it('should set availableWidth to the specified column width', function() {
+			pc.beginColumnGroup();
+			pc.beginColumn(30);
+
+			assert.equal(pc.availableWidth, 30);
 		});
 	});
 
@@ -73,10 +79,11 @@ describe('DocumentContext', function() {
 
 		it('should set page to the value pointing to the end of the longest column', function() {
 			pc.beginColumnGroup();
+			pc.beginColumn(30);
 			pc.page = 3;
-			pc.nextColumn();
+			pc.beginColumn(30);
 			pc.page = 7
-			pc.nextColumn();
+			pc.beginColumn(30);
 			pc.page = 4;
 			pc.completeColumnGroup();
 
@@ -166,19 +173,21 @@ describe('DocumentContext', function() {
 
 	it('should support nesting', function(){
 		pc.beginColumnGroup();
+		pc.beginColumn(50)
 		pc.y = 200;
-		pc.nextColumn(50);
+		pc.beginColumn(40);
 		pc.y = 150;
-		pc.nextColumn(40);
+		pc.beginColumn(80);
 
 		pc.beginColumnGroup();
 
 		assert.equal(pc.snapshots.length, 2);
 		assert.equal(pc.snapshots[1].x, 40 + 50 + 40);
 
+		pc.beginColumn(20);
 		pc.y = 240;
 		pc.page = 2;
-		pc.nextColumn(20);
+		pc.beginColumn(20);
 		pc.y = 260;
 		pc.completeColumnGroup();
 

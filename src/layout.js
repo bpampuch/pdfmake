@@ -779,7 +779,7 @@
 	 * Creates an instance of DocumentContext - a store for current x, y positions and available width/height.
 	 * It facilitates column divisions and vertical sync
 	 */
-	function DocumentContext(pageSize, pageMargins) {
+	function DocumentContext(pageSize, pageMargins, addFirstPageAutomatically) {
 		this.pages = [];
 
 		this.pageSize = pageSize;
@@ -791,6 +791,8 @@
 		this.page = -1;
 
 		this.snapshots = [];
+
+		if (addFirstPageAutomatically) this.addPage();
 	}
 
 	DocumentContext.prototype.beginColumnGroup = function() {
@@ -802,19 +804,21 @@
 			page: this.page,
 			bottomMost: { y: this.y, page: this.page }
 		});
+
+		this.lastColumnWidth = 0;
 	};
 
-	DocumentContext.prototype.nextColumn = function(offset) {
-		offset = offset || 0;
-
+	DocumentContext.prototype.beginColumn = function(width, offset) {
 		var saved = this.snapshots[this.snapshots.length - 1];
 		saved.bottomMost = bottomMostContext(this, saved.bottomMost);
 
 		this.page = saved.page;
-		this.x = this.x + offset;
+		this.x = this.x + this.lastColumnWidth + (offset || 0);
 		this.y = saved.y;
-		this.availableWidth = saved.availableWidth - offset;
+		this.availableWidth = width;	//saved.availableWidth - offset;
 		this.availableHeight = saved.availableHeight;
+
+		this.lastColumnWidth = width;
 	};
 
 	DocumentContext.prototype.completeColumnGroup = function() {
@@ -898,15 +902,16 @@
 	* Creates an instance of ElementWriter - a line/vector writer, which adds
 	* elements to current page and sets their positions based on the context
 	*/
-	function ElementWriter(context) {
+	function ElementWriter(context, tracker) {
 		this.setContext(context);
+		this.tracker = tracker || { emit: function() { } };
 	}
 
 	ElementWriter.prototype.setContext = function(context) {
 		this.context = context;
 	};
 
-	ElementWriter.prototype.addLine = function(line) {
+	ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition) {
 		var height = line.getHeight();
 		var context = this.context;
 		var page = context.getCurrentPage();
@@ -915,14 +920,15 @@
 			return false;
 		}
 
-		line.x = context.x;
-		line.y = context.y;
+		line.x = context.x + (line.x || 0);
+		line.y = context.y + (line.y || 0);
 
 		this.alignLine(line);
 
 		page.lines.push(line);
+		this.tracker.emit('lineAdded', line);
 
-		context.moveDown(height);
+		if (!dontUpdateContextPosition) context.moveDown(height);
 
 		return true;
 	};
@@ -973,16 +979,28 @@
 		}
 	};
 
-	ElementWriter.prototype.addFragment = function(block) {
+	function cloneLine(line) {
+		var result = new Line(line.maxWidth);
+
+		for(var key in line) {
+			if (line.hasOwnProperty(key)) {
+				result[key] = line[key];
+			}
+		}
+
+		return result;
+	}
+
+	ElementWriter.prototype.addFragment = function(block, isRepeatable) {
 		var ctx = this.context;
 		var page = ctx.getCurrentPage();
 
 		if (block.height > ctx.availableHeight) return false;
 
 		block.lines.forEach(function(line) {
-			var l = pack(line);
+			var l = cloneLine(line);
 
-			l.x = (l.x || 0) + ctx.x;
+			l.x = (l.x || 0) + (isRepeatable ? block.xOffset : ctx.x);
 			l.y = (l.y || 0) + ctx.y;
 
 			page.lines.push(l);
@@ -991,7 +1009,7 @@
 		block.vectors.forEach(function(vector) {
 			var v = pack(vector);
 
-			offsetVector(v, ctx.x, ctx.y);
+			offsetVector(v, isRepeatable ? block.xOffset : ctx.x, ctx.y);
 			page.vectors.push(v);
 		});
 
@@ -1032,18 +1050,18 @@
 	* It creates new pages when required, supports repeatable fragments
 	* (ie. table headers), headers and footers.
 	*/
-	function PageElementWriter(context) {
-		this.context = context;
+	function PageElementWriter(context, tracker) {
+		this.originalContext = this.context = context;
 		this.transactionLevel = 0;
 		this.repeatables = [];
 
-		this.writer = new ElementWriter(context);
+		this.writer = new ElementWriter(context, tracker);
 	}
 
-	PageElementWriter.prototype.addLine = function(line) {
-		if (!this.writer.addLine(line)) {
-			this._moveToPage(this.context.page + 1);
-			this.writer.addLine(line);
+	PageElementWriter.prototype.addLine = function(line, dontUpdateContextPosition) {
+		if (!this.writer.addLine(line, dontUpdateContextPosition)) {
+			this.moveToNextPage();
+			this.writer.addLine(line, dontUpdateContextPosition);
 		}
 	};
 
@@ -1053,41 +1071,47 @@
 
 	PageElementWriter.prototype.addFragment = function(fragment) {
 		if (!this.writer.addFragment(fragment)) {
-			this._moveToPage(this.context.page + 1);
+			this.moveToNextPage();
 			this.writer.addFragment(fragment);
 		}
 	};
 
-	PageElementWriter.prototype._moveToPage = function(pageIndex) {
-		while (pageIndex >= this.context.pages.length) {
+	PageElementWriter.prototype.moveToNextPage = function() {
+		var nextPageIndex = this.context.page + 1;
+
+		if (nextPageIndex >= this.context.pages.length) {
 			// create new Page
 			var page = { lines: [], vectors: [] };
-			this.context.page = pageIndex;
-			this.context.moveToPageTop();
 			this.context.pages.push(page);
+			this.context.page = nextPageIndex;
+			this.context.moveToPageTop();
 
 			// add repeatable fragments
-			for(var i = 0, l = this.repeatables.length; i < l; i++) {
-				var rep = this.repeatables[i];
-				this.writer.addFragment(rep);
-			}
+			this.repeatables.forEach(function(rep) {
+				this.writer.addFragment(rep, true);
+			}, this);
 
 			// add header/footer
-		}
+		} else {
+			this.context.page = nextPageIndex;
+			this.context.moveToPageTop();
 
-		this.writer.setContext(this.context);
+			this.repeatables.forEach(function(rep) {
+				this.context.moveDown(rep.height);
+			}, this);
+		}
 	};
 
 	PageElementWriter.prototype.beginUnbreakableBlock = function() {
 		if (this.transactionLevel++ === 0) {
 			this.transactionContext = this.context.createUnbreakableSubcontext();
-			this.writer.setContext(this.transactionContext);
+			this._activateTransactionContext();
 		}
 	};
 
 	PageElementWriter.prototype.commitUnbreakableBlock = function() {
 		if (--this.transactionLevel === 0) {
-			this.writer.setContext(this.context);
+			this._removeTransactionContext();
 
 			if(this.transactionContext.pages.length > 0) {
 				// no support for multi-page unbreakableBlocks
@@ -1101,7 +1125,7 @@
 		}
 	};
 
-	PageElementWriter.prototype.pushCurrentBlockStateToRepeatables = function() {
+	PageElementWriter.prototype.unbreakableBlockToRepeatable = function() {
 		var rep = { lines: [], vectors: [] };
 
 		this.transactionContext.pages[0].lines.forEach(function(line) {
@@ -1112,14 +1136,31 @@
 			rep.vectors.push(vector);
 		});
 
+		rep.xOffset = this.originalContext.x;
+
 		//TODO: vectors can influence height in some situations
 		rep.height = this.transactionContext.y;
 
+		return rep;
+	};
+
+	PageElementWriter.prototype.pushToRepeatables = function(rep) {
 		this.repeatables.push(rep);
 	};
 
 	PageElementWriter.prototype.popFromRepeatables = function() {
 		this.repeatables.pop();
+	};
+
+
+	PageElementWriter.prototype._activateTransactionContext = function() {
+		this.context = this.transactionContext;
+		this.writer.setContext(this.context);
+	};
+
+	PageElementWriter.prototype._removeTransactionContext = function() {
+		this.context = this.originalContext;
+		this.writer.setContext(this.context);
 	};
 
 
@@ -1248,111 +1289,18 @@
 	LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle) {
 		new DocMeasure(fontProvider, styleDictionary, defaultStyle).measureDocument(docStructure);
 
-		this.pages = [];
-		this.context = [
-			{
-				page: -1,
-				x: this.pageMargins.left,
-				y: this.pageMargins.top,
-				availableWidth: this.pageSize.width - this.pageMargins.left - this.pageMargins.right,
-				availableHeight: 0
-			}
-		];
+		this.writer = new PageElementWriter(
+			new DocumentContext(this.pageSize, this.pageMargins, true),
+			this.tracker);
 
 		this.processNode({ stack: docStructure });
 
-		return this.pages;
+		return this.writer.context.pages;
 	};
-
-	LayoutBuilder.prototype.getContext = function() {
-		return this.context[this.context.length - 1];
-	};
-
-	LayoutBuilder.prototype.pushContext = function() {
-		this.context.push(pack(this.getContext()));
-	};
-
-	LayoutBuilder.prototype.popContext = function() {
-		this.context.pop();
-	};
-
-	LayoutBuilder.prototype.moveContextToNextPage = function(ctx) {
-		var context = ctx || this.getContext();
-
-		context.page++;
-
-		//TODO: table header support
-		context.y = this.pageMargins.top;
-		context.availableHeight = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-	};
-
-	LayoutBuilder.prototype.getPage = function(pageNumber) {
-		while(this.pages.length <= pageNumber) {
-			this.pages.push({ lines: [], vectors: [] });
-		}
-
-		return this.pages[pageNumber];
-	};
-
-	LayoutBuilder.prototype.offsetY = function(height, moveToNextPageIfRequired) {
-		var cc = this.getContext();
-
-		cc.y += height;
-		cc.availableHeight -= height;
-
-		if (cc.availableHeight < 0 && moveToNextPageIfRequired) {
-			this.moveContextToNextPage(cc);
-
-			cc.y += height;
-			cc.availableHeight -= height;
-		}
-	};
-
-	LayoutBuilder.prototype.doHorizontalMargin = function(left, right) {
-		var cc = this.getContext();
-		cc.x += left;
-		cc.availableWidth -= left + right;
-	};
-
-	LayoutBuilder.prototype.undoHorizontalMargin = function(left, right) {
-		var cc = this.getContext();
-		cc.x -= left;
-		cc.availableWidth += left + right;
-	};
-
-	function getMargin(node, side, arrayCb) {
-		if (!node.margin) return 0;
-
-		if (typeof node.margin === 'number' || node.margin instanceof Number) {
-			return node.margin;
-		}
-
-		if (node.margin instanceof Array) {
-			return arrayCb(node.margin);
-		}
-
-		return 0;
-	}
-
-	function getTopMargin(node) {
-		return getMargin(node, 'Top', function(margin) { return margin[1]; });
-	}
-
-	function getBottomMargin(node) {
-		return getMargin(node, 'Bottom', function(margin) { return margin.length === 2 ? margin[1] : margin[3]; } );
-	}
-
-	function getLeftMargin(node) {
-		return getMargin(node, 'Left', function(margin) { return margin[0]; });
-	}
-
-	function getRightMargin(node) {
-		return getMargin(node, 'Right', function(margin) { return margin.length === 2 ? margin[0] : margin[2]; });
-	}
 
 	LayoutBuilder.prototype.processNode = function(node) {
-		this.offsetY(getTopMargin(node), true);
-		this.doHorizontalMargin(getLeftMargin(node), getRightMargin(node));
+		// this.offsetY(getTopMargin(node), true);
+		// this.doHorizontalMargin(getLeftMargin(node), getRightMargin(node));
 
 		if (node.stack) {
 			this.processVerticalContainer(node.stack);
@@ -1372,38 +1320,49 @@
 			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
 
-		this.undoHorizontalMargin(getLeftMargin(node), getRightMargin(node));
-		this.offsetY(getBottomMargin(node));
+		// this.undoHorizontalMargin(getLeftMargin(node), getRightMargin(node));
+		// this.offsetY(getBottomMargin(node));
 	};
 
-	function fontStringify(key, val) {
-		if (key === 'font') {
-			return 'font';
-		}
-		return val;
-	}
+	// vertical container
+	LayoutBuilder.prototype.processVerticalContainer = function(items) {
+		var self = this;
+		items.forEach(function(item) {
+			self.processNode(item);
 
-	LayoutBuilder.prototype.processLeaf = function(node) {
-		var line = this.buildNextLine(node);
-
-		while (line) {
-			this.addLine(line);
-
-			this.tracker.emit('lineAdded', line);
-
-			line = this.buildNextLine(node);
-		}
+			//TODO: paragraph gap
+		});
 	};
 
+	// columns
+	LayoutBuilder.prototype.processColumns = function(columns) {
+		ColumnCalculator.buildColumnWidths(columns, this.writer.context.availableWidth);
+		this.processRow(columns);
+	};
+
+	LayoutBuilder.prototype.processRow = function(columns, widths) {
+		widths = widths || columns;
+
+		this.writer.context.beginColumnGroup();
+//console.log('columns start');
+//console.log(this.writer.context)
+
+		for(var i = 0, l = columns.length; i < l; i++) {
+			var column = columns[i];
+			this.writer.context.beginColumn(widths[i]._calcWidth);
+//console.log('col ' + widths[i]._calcWidth)
+//console.log(this.writer.context)
+			this.processNode(column);
+		}
+
+		this.writer.context.completeColumnGroup();
+	};
+
+	// lists
 	LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
 		var self = this;
-		var currentContext = this.getContext();
 
-		this.pushContext();
-		var context = this.getContext();
-
-		context.x += gapSize.width;
-		context.availableWidth -= gapSize.width;
+		this.writer.context.addMargin(gapSize.width);
 
 		var nextMarker;
 		this.tracker.auto('lineAdded', addMarkerToFirstLeaf, function() {
@@ -1413,199 +1372,72 @@
 			});
 		});
 
-		this.popContext();
-
-		currentContext.page = context.page;
-		currentContext.y = context.y;
-		currentContext.availableHeight = context.availableHeight;
+		this.writer.context.addMargin(-gapSize.width);
 
 		function addMarkerToFirstLeaf(line) {
+			// I'm not very happy with the way list processing is implemented
+			// (both code and algorithm should be rethinked)
 			if (nextMarker) {
-				var currentPage = self.getPage(self.getContext().page);
+				var marker = nextMarker;
+				nextMarker = null;
 
-				if (nextMarker.canvas) {
-					offsetVector(nextMarker.canvas[0], line.x - nextMarker._minWidth, line.y);
-					currentPage.vectors.push(nextMarker.canvas[0]);
+				if (marker.canvas) {
+					var vector = marker.canvas[0];
+
+					offsetVector(vector, -marker._minWidth, 0);
+					self.writer.addVector(vector);
 				} else {
 					var markerLine = new Line(self.pageSize.width);
-					markerLine.addInline(nextMarker._inlines[0]);
-					markerLine.x = line.x - nextMarker._minWidth;
-					markerLine.y = line.y + line.getAscenderHeight() - markerLine.getAscenderHeight();
-					currentPage.lines.push(markerLine);
+					markerLine.addInline(marker._inlines[0]);
+					markerLine.x = -marker._minWidth;
+					markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
+					self.writer.addLine(markerLine, true);
 				}
-				nextMarker = null;
 			}
 		}
 	};
 
-	LayoutBuilder.prototype.buildNextLine = function(textNode) {
-		if (!textNode._inlines || textNode._inlines.length === 0) return null;
+	// tables
+	LayoutBuilder.prototype.processTable = function(tableNode) {
+		ColumnCalculator.buildColumnWidths(tableNode.table.widths, this.writer.context.availableWidth);
 
-		var line = new Line(this.getContext().availableWidth);
+		var headerRows = tableNode.table.headerRows;
+		var keepWithHeaderRows = (tableNode.table.keepWithHeaderRows === undefined) ? 0 : tableNode.table.keepWithHeaderRows;
+		var waitingForCommit = false;
+		var headerBlock;
 
-		while(textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
-			line.addInline(textNode._inlines.shift());
+		if(headerRows) {
+			this.writer.beginUnbreakableBlock();
+			waitingForCommit = true;
 		}
 
-		line.lastLineInParagraph = textNode._inlines.length === 0;
-		return line;
-	};
+		for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
+			this.processRow(tableNode.table.body[i], tableNode.table.widths);
 
-	LayoutBuilder.prototype.addLine = function(line) {
-		var context = this.getContext();
-		var lineHeight = line.getHeight();
-
-		if(context.availableHeight < lineHeight) {
-			this.moveContextToNextPage(context);
-		}
-
-		line.x = context.x;
-		line.y = context.y;
-
-		this.alignLine(line);
-
-		context.availableHeight -= lineHeight;
-		context.y += lineHeight;
-
-		this.getPage(context.page).lines.push(line);
-	};
-
-	LayoutBuilder.prototype.alignLine = function(line) {
-		var width = this.getContext().availableWidth;
-		var lineWidth = line.getWidth();
-
-		var alignment = line.inlines && line.inlines.length > 0 && line.inlines[0].alignment;
-
-		var offset = 0;
-		switch(alignment) {
-			case 'right':
-				offset = width - lineWidth;
-				break;
-			case 'center':
-				offset = (width - lineWidth) / 2;
-				break;
-		}
-
-		if (offset) {
-			line.x = (line.x || 0) + offset;
-		}
-
-		if (alignment === 'justify' &&
-			!line.newLineForced &&
-			!line.lastLineInParagraph &&
-			line.inlines.length > 1) {
-			var additionalSpacing = (width - lineWidth) / (line.inlines.length - 1);
-
-			for(var i = 1, l = line.inlines.length; i < l; i++) {
-				offset = i * additionalSpacing;
-
-				line.inlines[i].x += offset;
-			}
-		}
-	};
-
-	LayoutBuilder.prototype.processVerticalContainer = function(items) {
-		var self = this;
-		items.forEach(function(item) {
-			self.processNode(item);
-		});
-	};
-
-	LayoutBuilder.prototype.buildColumnWidths = function(columns) {
-		var availableWidth = this.getContext().availableWidth;
-
-		var autoColumns = [],
-			autoMin = 0, autoMax = 0,
-			starColumns = [],
-			starMaxMin = 0,
-			starMaxMax = 0,
-			fixedColumns = [];
-
-		columns.forEach(function(column) {
-			if (isAutoColumn(column)) {
-				autoColumns.push(column);
-				autoMin += column._minWidth;
-				autoMax += column._maxWidth;
-			} else if (isStarColumn(column)) {
-				starColumns.push(column);
-				starMaxMin = Math.max(starMaxMin, column._minWidth);
-				starMaxMax = Math.max(starMaxMax, column._maxWidth);
-			} else {
-				fixedColumns.push(column);
-			}
-		});
-
-		fixedColumns.forEach(function(col) {
-			if (col.width < col._minWidth && col.elasticWidth) {
-				col._calcWidth = col._minWidth;
-			} else {
-				col._calcWidth = col.width;
+			if (headerRows && i === headerRows - 1) {
+				// header has been created
+				headerBlock = this.writer.unbreakableBlockToRepeatable();
 			}
 
-			availableWidth -= col._calcWidth;
-		});
-
-		// http://www.freesoft.org/CIE/RFC/1942/18.htm
-		// http://www.w3.org/TR/CSS2/tables.html#width-layout
-		// http://dev.w3.org/csswg/css3-tables-algorithms/Overview.src.htm
-		var minW = autoMin + starMaxMin * starColumns.length;
-		var maxW = autoMax + starMaxMax * starColumns.length;
-		if (minW >= availableWidth) {
-			// case 1 - there's no way to fit all columns within available width
-			// that's actually pretty bad situation with PDF as we have no horizontal scroll
-			// no easy workaround (unless we decide, in the future, to split single words)
-			// currently we simply use minWidths for all columns
-			autoColumns.forEach(function(col) {
-				col._calcWidth = col._minWidth;
-			});
-
-			starColumns.forEach(function(col) {
-				col._calcWidth = starMaxMin;
-			});
-		} else {
-			if (maxW < availableWidth) {
-				// case 2 - we can fit rest of the table within available space
-				autoColumns.forEach(function(col) {
-					col._calcWidth = col._maxWidth;
-					availableWidth -= col._calcWidth;
-				});
-			} else {
-				// maxW is too large, but minW fits within available width
-				var W = availableWidth - minW;
-				var D = maxW - minW;
-
-				autoColumns.forEach(function(col) {
-					var d = col._maxWidth - col._minWidth;
-					col._calcWidth = col._minWidth + d * W / D;
-					availableWidth -= col._calcWidth;
-				});
+			if (waitingForCommit && ((i === headerRows + keepWithHeaderRows - 1) || (i === l - 1))) {
+				this.writer.commitUnbreakableBlock();
+				if (headerBlock) this.writer.pushToRepeatables(headerBlock);
+				waitingForCommit = false;
 			}
-
-			if (starColumns.length > 0) {
-				var starSize = availableWidth / starColumns.length;
-
-				starColumns.forEach(function(col) {
-					col._calcWidth = starSize;
-				});
-			}
+		//			this.addHorizontalLine(0, tableWidth, 1);
 		}
 
-		function isAutoColumn(column) {
-			return column.width === 'auto';
-		}
+		this.writer.popFromRepeatables();
 
-		function isStarColumn(column) {
-			return column.width === null || column.width === undefined || column.width === '*' || column.width === 'star';
-		}
-	};
+//		//console.log(tableNode.table.widths);
+		//var tableWidth = getTableWidth(tableNode);
+		//TODO: header on following pages
 
-	LayoutBuilder.prototype.getBottomMostContext = function(context1, context2) {
-		if (!context1) return context2;
-		if (!context2) return context1;
+		// top line
+//		this.addHorizontalLine(0, tableWidth, 1);
 
-		var h1 = context1.page * this.pageSize.height + context1.y;
-		var h2 = context2.page * this.pageSize.height + context2.y;
-		return (h1 > h2) ? context1 : context2;
+
+		// bottom line
 	};
 
 	function getTableWidth(tableNode) {
@@ -1617,22 +1449,6 @@
 
 		return width;
 	}
-
-	LayoutBuilder.prototype.processTable = function(tableNode) {
-		this.buildColumnWidths(tableNode.table.widths);
-		var tableWidth = getTableWidth(tableNode);
-		//TODO: header on following pages
-
-		// top line
-		this.addHorizontalLine(0, tableWidth, 1);
-
-		for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
-			this.processRow(tableNode.table.body[i], tableNode.table.widths);
-			this.addHorizontalLine(0, tableWidth, 1);
-		}
-
-		// bottom line
-	};
 
 	LayoutBuilder.prototype.addHorizontalLine = function(x1, x2, lh) {
 		var context = this.getContext();
@@ -1654,64 +1470,45 @@
 		this.getPage(context.page).vectors.push(line);
 	};
 
-	LayoutBuilder.prototype.processColumns = function(columns) {
-		this.buildColumnWidths(columns);
-		this.processRow(columns);
+	// leafs (texts)
+	LayoutBuilder.prototype.processLeaf = function(node) {
+		var line = this.buildNextLine(node);
+
+		while (line) {
+			this.writer.addLine(line);
+			line = this.buildNextLine(node);
+		}
 	};
 
-	LayoutBuilder.prototype.processRow = function(columns, widths) {
-		if (!widths) {
-			widths = columns;
+	LayoutBuilder.prototype.buildNextLine = function(textNode) {
+		if (!textNode._inlines || textNode._inlines.length === 0) return null;
+
+		var line = new Line(this.writer.context.availableWidth);
+
+		while(textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
+			line.addInline(textNode._inlines.shift());
 		}
 
-		var xOffset = 0;
-		var bottomMostContext;
-
-		for(var i = 0, l = columns.length; i < l; i++) {
-			var column = columns[i];
-
-			this.pushContext();
-			var context = this.getContext();
-			context.availableWidth = widths[i]._calcWidth;
-			context.x += xOffset;
-
-			this.processNode(column);
-
-			xOffset += widths[i]._calcWidth;
-
-			bottomMostContext = this.getBottomMostContext(bottomMostContext, context);
-			this.popContext();
-		}
-
-		var cc = this.getContext();
-		if (bottomMostContext) {
-			cc.page = bottomMostContext.page;
-			cc.y = bottomMostContext.y;
-			cc.availableHeight = bottomMostContext.availableHeight;
-		}
+		line.lastLineInParagraph = textNode._inlines.length === 0;
+		return line;
 	};
 
 	LayoutBuilder.prototype.processCanvas = function(node) {
-		var context = this.getContext();
 		var height = node._minHeight;
 
-		if (context.availableHeight < height) {
+		if (this.writer.context.availableHeight < height) {
 			// TODO: support for canvas larger than a page
 			// TODO: support for other overflow methods
 
-			this.moveContextToNextPage(context);
+			this.writer.moveToNextPage();
 		}
 
-		var page = this.getPage(context.page);
-
 		node.canvas.forEach(function(vector) {
-			offsetVector(vector, context.x, context.y);
-			page.vectors.push(vector);
-		});
+			this.writer.addVector(vector);
+		}, this);
 
-		context.y += height;
+		this.writer.context.moveDown(height);
 	};
-
 
 	function pack() {
 		var result = {};
@@ -1729,6 +1526,13 @@
 		}
 
 		return result;
+	}
+
+	function fontStringify(key, val) {
+		if (key === 'font') {
+			return 'font';
+		}
+		return val;
 	}
 
 
