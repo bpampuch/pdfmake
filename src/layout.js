@@ -338,7 +338,6 @@
 			});
 		}
 
-
 		function getStyleProperty(item, styleContextStack, property, defaultValue) {
 			var value;
 
@@ -444,31 +443,66 @@
 
 		return this.styleStack.auto(node, function() {
 			// TODO: refactor + rethink whether this is the proper way to handle margins
-			if (!node.margin && node.style) {
-				var style = self.styleStack.styleDictionary[node.style];
-				if (style && style.margin) {
-					node.margin = style.margin;
-				}
-			}
+			node._margin = getNodeMargin(node);
 
 			if (node.columns) {
-				return self.measureColumns(node);
+				return extendMargins(self.measureColumns(node));
 			} else if (node.stack) {
-				return self.measureVerticalContainer(node);
+				return extendMargins(self.measureVerticalContainer(node));
 			} else if (node.ul) {
-				return self.measureList(false, node);
+				return extendMargins(self.measureList(false, node));
 			} else if (node.ol) {
-				return self.measureList(true, node);
+				return extendMargins(self.measureList(true, node));
 			} else if (node.table) {
-				return self.measureTable(node);
+				return extendMargins(self.measureTable(node));
 			} else if (node.text) {
-				return self.measureLeaf(node);
+				return extendMargins(self.measureLeaf(node));
 			} else if (node.canvas) {
-				return self.measureCanvas(node);
+				return extendMargins(self.measureCanvas(node));
 			} else {
 				throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 			}
 		});
+
+		function extendMargins(node) {
+			var margin = node._margin;
+
+			if (margin) {
+				node._minWidth += margin[0] + margin[2];
+				node._maxWidth += margin[0] + margin[2];
+			}
+
+			return node;
+		}
+
+		function getNodeMargin() {
+			var margin = node.margin;
+
+			if (!margin && node.style) {
+				var styleArray = (node.style instanceof Array) ? node.style : [ node.style ];
+
+				for(var i = styleArray.length - 1; i >= 0; i--) {
+					var styleName = styleArray[i];
+					var style = self.styleStack.styleDictionary[node.style];
+					if (style && style.margin) {
+						margin = style.margin;
+						break;
+					}
+				}
+			}
+
+			if (!margin) return null;
+
+			if (typeof margin === 'number' || margin instanceof Number) {
+				margin = [ margin, margin, margin, margin ];
+			} else if (margin instanceof Array) {
+				if (margin.length === 2) {
+					margin = [ margin[0], margin[1], margin[0], margin[1] ];
+				}
+			}
+
+			return margin;
+		}
 	};
 
 	DocMeasure.prototype.measureLeaf = function(node) {
@@ -1302,29 +1336,43 @@
 	};
 
 	LayoutBuilder.prototype.processNode = function(node) {
-		// this.offsetY(getTopMargin(node), true);
-		// this.doHorizontalMargin(getLeftMargin(node), getRightMargin(node));
+		var self = this;
 
-		if (node.stack) {
-			this.processVerticalContainer(node.stack);
-		} else if (node.columns) {
-			this.processColumns(node);
-		} else if (node.ul) {
-			this.processList(false, node.ul, node._gapSize);
-		} else if (node.ol) {
-			this.processList(true, node.ol, node._gapSize);
-		} else if (node.table) {
-			this.processTable(node);
-		} else if (node.text) {
-			this.processLeaf(node);
-		} else if (node.canvas) {
-			this.processCanvas(node);
-		} else {
-			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+		applyMargins(function() {
+			if (node.stack) {
+				self.processVerticalContainer(node.stack);
+			} else if (node.columns) {
+				self.processColumns(node);
+			} else if (node.ul) {
+				self.processList(false, node.ul, node._gapSize);
+			} else if (node.ol) {
+				self.processList(true, node.ol, node._gapSize);
+			} else if (node.table) {
+				self.processTable(node);
+			} else if (node.text) {
+				self.processLeaf(node);
+			} else if (node.canvas) {
+				self.processCanvas(node);
+			} else {
+				throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+			}
+		});
+
+		function applyMargins(callback) {
+			var margin = node._margin;
+
+			if (margin) {
+				self.writer.context.moveDown(margin[1]);
+				self.writer.context.addMargin(margin[0], margin[2]);
+			}
+
+			callback();
+
+			if(margin) {
+				self.writer.context.addMargin(-margin[0], -margin[2]);
+				self.writer.context.moveDown(margin[3]);
+			}
 		}
-
-		// this.undoHorizontalMargin(getLeftMargin(node), getRightMargin(node));
-		// this.offsetY(getBottomMargin(node));
 	};
 
 	// vertical container
