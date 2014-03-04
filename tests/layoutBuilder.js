@@ -26,6 +26,17 @@ var sampleTestProvider = {
 	}
 };
 
+var emptyTableLayout = {
+	hLineWidth: function(i) { return 0; },
+	vLineWidth: function(i) { return 0; },
+	hLineColor: function(i) { return 'black'; },
+	vLineColor: function(i) { return 'black'; },
+	paddingLeft: function(i) { return 0; },
+	paddingRight: function(i) { return 0; },
+	paddingTop: function(i) { return 0; },
+	paddingBottom: function(i) { return 0; }
+};
+
 describe('LayoutBuilder', function() {
 	var builder;
 
@@ -906,7 +917,8 @@ describe('LayoutBuilder', function() {
 							['a', 'b', 'c'],
 							['aaa', 'bbb', 'ccc'],
 						]
-					}
+					},
+					layout: emptyTableLayout
 				}
 			];
 
@@ -937,7 +949,8 @@ describe('LayoutBuilder', function() {
 							['a', 'b', 'c'],
 							['aaa', 'bbb', 'ccc'],
 						]
-					}
+					},
+					layout: emptyTableLayout
 				}
 			];
 
@@ -964,7 +977,8 @@ describe('LayoutBuilder', function() {
 				table: {
 					widths: 'auto',
 					body: []
-				}
+				},
+				layout: emptyTableLayout
 			}];
 
 			for(var i = 0; i < 80; i++) {
@@ -981,7 +995,8 @@ describe('LayoutBuilder', function() {
 				table: {
 					widths: 'auto',
 					body: []
-				}
+				},
+				layout: emptyTableLayout
 			}];
 
 			for(var i = 0; i < 59; i++) {
@@ -1009,7 +1024,8 @@ describe('LayoutBuilder', function() {
 						['a1\na2', 'b1\nb2', 'c1\nc2'],
 						['a', 'b', 'c'],
 					]
-				}
+				},
+				layout: emptyTableLayout
 			}];
 
 			for(var i = 0; i < 59; i++) {
@@ -1038,7 +1054,8 @@ describe('LayoutBuilder', function() {
 						['a2', 'b2', 'c2'],
 						['a', 'b', 'c'],
 					]
-				}
+				},
+				layout: emptyTableLayout
 			}];
 
 			for(var i = 0; i < 59; i++) {
@@ -1060,7 +1077,8 @@ describe('LayoutBuilder', function() {
 					body: [
 						['h1', 'h2', 'h3'],
 					]
-				}
+				},
+				layout: emptyTableLayout
 			}];
 
 			for(var i = 0; i < 590; i++) {
@@ -1088,7 +1106,8 @@ describe('LayoutBuilder', function() {
 
 						]}, 'b', 'c']
 					]
-				}
+				},
+				layout: emptyTableLayout
 			}];
 
 			for(var i = 0; i < 100; i++) {

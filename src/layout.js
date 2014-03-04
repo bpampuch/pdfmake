@@ -1175,32 +1175,31 @@
 	* @private
 	*/
 	var ColumnCalculator = {
-		buildColumnWidths: function(columns, availableWidth, horizontalPadding) {
+		buildColumnWidths: function(columns, availableWidth) {
 			var autoColumns = [],
 				autoMin = 0, autoMax = 0,
 				starColumns = [],
 				starMaxMin = 0,
 				starMaxMax = 0,
-				fixedColumns = [],
-				padding = horizontalPadding || 0;
+				fixedColumns = [];
 
 			columns.forEach(function(column) {
 				if (isAutoColumn(column)) {
 					autoColumns.push(column);
-					autoMin += column._minWidth + padding;
-					autoMax += column._maxWidth + padding;
+					autoMin += column._minWidth;
+					autoMax += column._maxWidth;
 				} else if (isStarColumn(column)) {
 					starColumns.push(column);
-					starMaxMin = Math.max(starMaxMin, column._minWidth) + padding;
-					starMaxMax = Math.max(starMaxMax, column._maxWidth) + padding;
+					starMaxMin = Math.max(starMaxMin, column._minWidth);
+					starMaxMax = Math.max(starMaxMax, column._maxWidth);
 				} else {
 					fixedColumns.push(column);
 				}
 			});
 
 			fixedColumns.forEach(function(col) {
-				if (col.width < (col._minWidth + padding) && col.elasticWidth) {
-					col._calcWidth = col._minWidth + padding;
+				if (col.width < (col._minWidth) && col.elasticWidth) {
+					col._calcWidth = col._minWidth;
 				} else {
 					col._calcWidth = col.width;
 				}
@@ -1219,7 +1218,7 @@
 				// no easy workaround (unless we decide, in the future, to split single words)
 				// currently we simply use minWidths for all columns
 				autoColumns.forEach(function(col) {
-					col._calcWidth = col._minWidth + padding;
+					col._calcWidth = col._minWidth;
 				});
 
 				starColumns.forEach(function(col) {
@@ -1229,7 +1228,7 @@
 				if (maxW < availableWidth) {
 					// case 2 - we can fit rest of the table within available space
 					autoColumns.forEach(function(col) {
-						col._calcWidth = col._maxWidth + padding;
+						col._calcWidth = col._maxWidth;
 						availableWidth -= col._calcWidth;
 					});
 				} else {
@@ -1239,7 +1238,7 @@
 
 					autoColumns.forEach(function(col) {
 						var d = col._maxWidth - col._minWidth;
-						col._calcWidth = col._minWidth + padding + d * W / D;
+						col._calcWidth = col._minWidth + d * W / D;
 						availableWidth -= col._calcWidth;
 					});
 				}
@@ -1424,7 +1423,10 @@
 
 	// tables
 	LayoutBuilder.prototype.processTable = function(tableNode) {
-		ColumnCalculator.buildColumnWidths(tableNode.table.widths, this.writer.context.availableWidth);
+		var layout = getLayout();
+		var offsets = getOffsets(layout);
+
+		ColumnCalculator.buildColumnWidths(tableNode.table.widths, this.writer.context.availableWidth - offsets.total);
 
 		var headerRows = tableNode.table.headerRows;
 		var keepWithHeaderRows = (tableNode.table.keepWithHeaderRows === undefined) ? 0 : tableNode.table.keepWithHeaderRows;
@@ -1437,7 +1439,9 @@
 		}
 
 		for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
-			this.processRow(tableNode.table.body[i], tableNode.table.widths);
+			this.writer.context.moveDown(layout.paddingTop(i));
+			this.processRow(tableNode.table.body[i], tableNode.table.widths, offsets.offsets);
+			this.writer.context.moveDown(layout.paddingBottom(i));
 
 			if (headerRows && i === headerRows - 1) {
 				// header has been created
@@ -1449,20 +1453,44 @@
 				if (headerBlock) this.writer.pushToRepeatables(headerBlock);
 				waitingForCommit = false;
 			}
-		//			this.addHorizontalLine(0, tableWidth, 1);
 		}
 
 		this.writer.popFromRepeatables();
 
-//		//console.log(tableNode.table.widths);
-		//var tableWidth = getTableWidth(tableNode);
-		//TODO: header on following pages
+		function getLayout() {
+			var defaultLayout = {
+				hLineWidth: function(i) { return 1; },
+				vLineWidth: function(i) { return 1; },
+				hLineColor: function(i) { return 'black'; },
+				vLineColor: function(i) { return 'black'; },
+				paddingLeft: function(i) { return 4; },
+				paddingRight: function(i) { return 4; },
+				paddingTop: function(i) { return 2; },
+				paddingBottom: function(i) { return 2; }
+			};
 
-		// top line
-//		this.addHorizontalLine(0, tableWidth, 1);
+			return pack(defaultLayout, tableNode.layout);
+		}
 
+		function getOffsets(layout) {
+			var offsets = [];
+			var totalOffset = 0;
+			var prevRightPadding = 0;
 
-		// bottom line
+			for(var i = 0, l = tableNode.table.widths.length; i < l; i++) {
+				var lOffset = prevRightPadding + layout.vLineWidth(i) + layout.paddingLeft(i);
+				offsets.push(lOffset);
+				totalOffset += lOffset;
+				prevRightPadding = layout.paddingRight(i);
+			}
+
+			totalOffset += prevRightPadding + layout.vLineWidth(tableNode.table.widths.length);
+
+			return {
+				total: totalOffset,
+				offsets: offsets
+			};
+		}
 	};
 
 	function getTableWidth(tableNode) {
