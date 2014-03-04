@@ -1423,10 +1423,13 @@
 
 	// tables
 	LayoutBuilder.prototype.processTable = function(tableNode) {
+		var self = this;
 		var layout = getLayout();
 		var offsets = getOffsets(layout);
 
 		ColumnCalculator.buildColumnWidths(tableNode.table.widths, this.writer.context.availableWidth - offsets.total);
+
+		var totalTableWidth = offsets.total + getTableWidth();
 
 		var headerRows = tableNode.table.headerRows;
 		var keepWithHeaderRows = (tableNode.table.keepWithHeaderRows === undefined) ? 0 : tableNode.table.keepWithHeaderRows;
@@ -1438,10 +1441,13 @@
 			waitingForCommit = true;
 		}
 
+		drawHorizontalLine(layout, 0);
+
 		for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
-			this.writer.context.moveDown(layout.paddingTop(i));
+			this.writer.context.moveDown(layout.paddingTop(i, tableNode));
 			this.processRow(tableNode.table.body[i], tableNode.table.widths, offsets.offsets);
-			this.writer.context.moveDown(layout.paddingBottom(i));
+			this.writer.context.moveDown(layout.paddingBottom(i, tableNode));
+			drawHorizontalLine(layout, i + 1);
 
 			if (headerRows && i === headerRows - 1) {
 				// header has been created
@@ -1457,16 +1463,26 @@
 
 		this.writer.popFromRepeatables();
 
+		function drawHorizontalLine(layout, i) {
+			var width = layout.hLineWidth(i, tableNode, tableNode);
+			if (width) {
+				var offset = width / 2;
+
+				self.writer.addVector({ type:'line', x1: 0, x2: totalTableWidth, y1: offset, y2: offset, lineWidth: width, lineColor: layout.hLineColor(i, tableNode) });
+				self.writer.context.moveDown(width);
+			}
+		}
+
 		function getLayout() {
 			var defaultLayout = {
-				hLineWidth: function(i) { return 1; },
-				vLineWidth: function(i) { return 1; },
-				hLineColor: function(i) { return 'black'; },
-				vLineColor: function(i) { return 'black'; },
-				paddingLeft: function(i) { return 4; },
-				paddingRight: function(i) { return 4; },
-				paddingTop: function(i) { return 2; },
-				paddingBottom: function(i) { return 2; }
+				hLineWidth: function(i, node) { return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
+				vLineWidth: function(i, node) { return 1; },
+				hLineColor: function(i, node) { return 'black'; },
+				vLineColor: function(i, node) { return 'black'; },
+				paddingLeft: function(i, node) { return i && 4 || 0; },
+				paddingRight: function(i, node) { return (i < node.table.widths.length - 1) ? 4 : 0; },
+				paddingTop: function(i, node) { return 2; },
+				paddingBottom: function(i, node) { return 2; }
 			};
 
 			return pack(defaultLayout, tableNode.layout);
@@ -1478,30 +1494,31 @@
 			var prevRightPadding = 0;
 
 			for(var i = 0, l = tableNode.table.widths.length; i < l; i++) {
-				var lOffset = prevRightPadding + layout.vLineWidth(i) + layout.paddingLeft(i);
+				var lOffset = prevRightPadding + layout.vLineWidth(i, tableNode) + layout.paddingLeft(i, tableNode);
 				offsets.push(lOffset);
 				totalOffset += lOffset;
-				prevRightPadding = layout.paddingRight(i);
+				prevRightPadding = layout.paddingRight(i, tableNode);
 			}
 
-			totalOffset += prevRightPadding + layout.vLineWidth(tableNode.table.widths.length);
+			totalOffset += prevRightPadding + layout.vLineWidth(tableNode.table.widths.length, tableNode);
 
 			return {
 				total: totalOffset,
 				offsets: offsets
 			};
 		}
+
+		function getTableWidth() {
+			var width = 0;
+
+			tableNode.table.widths.forEach(function(w) {
+				width += w._calcWidth;
+			});
+
+			return width;
+		}
 	};
 
-	function getTableWidth(tableNode) {
-		var width = 0;
-
-		tableNode.table.widths.forEach(function(w) {
-			width += w._calcWidth;
-		});
-
-		return width;
-	}
 
 	LayoutBuilder.prototype.addHorizontalLine = function(x1, x2, lh) {
 		var context = this.getContext();
