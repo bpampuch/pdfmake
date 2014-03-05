@@ -1,0 +1,6 @@
+.git*
+docs/
+examples/
+test/
+.DS_Store
+

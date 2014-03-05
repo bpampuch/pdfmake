@@ -1,17 +1,17 @@
 {
   "name": "pdfmake",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Client/server side PDF printing in pure JavaScript",
-  "main": "",
+  "main": "src/printer.js",
   "directories": {
     "test": "tests"
   },
   "dependencies": {
-    "grunt": "~0.4.2"
+    "pdfkit": "~0.2.7"
   },
   "devDependencies": {
+    "grunt": "~0.4.2",
     "grunt-cli": "~0.1.11",
-    "pdfkit": "~0.2.7",
     "grunt-jsdoc": "~0.5.1",
     "grunt-contrib-jshint": "~0.8.0",
     "grunt-mocha-cov": "~0.2.1"
@@ -29,7 +29,7 @@
     "printing",
     "layout"
   ],
-  "author": "Bartek Pampuch",
+  "author": "Bartosz Pampuch <bartosz.pampuch@gmail.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/bpampuch/pdfmake/issues"
