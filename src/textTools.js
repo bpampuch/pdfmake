@@ -235,7 +235,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 	return normalized;
 }
 
-//****TESTS**** (remove first '/' to comment)
+/****TESTS**** (remove first '/' to comment)
 TextTools.prototype.splitWords = splitWords;
 TextTools.prototype.normalizeTextArray = normalizeTextArray;
 TextTools.prototype.measure = measure;
