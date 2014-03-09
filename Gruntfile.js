@@ -18,6 +18,21 @@ module.exports = function(grunt) {
 					from: /^(\/(\/(\*)*TESTS.*$))/gm,
 					to: '$2'
 				}]
+			},
+			// updates pdfkit for client-side-support
+			fixPdfKit: {
+				src: ['node_modules/pdfkit/js/document.js'],
+				overwrite: true,
+				replacements: [{
+					from: /^(\s*mixin = function\()(name)(\) {.*)$/mg,
+					to: '$1$2, methods$3'
+				},{
+					from: /^(.*require.*\.\/mixins\/'.*$)/mg,
+					to: '//'
+				}, {
+					from: /^(\s*mixin\('([a-zA-Z]*)')(\);)/mg,
+					to: '$1, require(\'./mixins/$2.js\')$3'
+				}]
 			}
 		},
 
@@ -42,6 +57,32 @@ module.exports = function(grunt) {
 
 		jshint: {
 			all: [ 'src/**/*.js' ]
+		},
+
+		browserify: {
+			build: {
+				options: {
+					'standalone': 'pdfMake',
+					// 'r': './src/fs.js:fs'
+				},
+				files: {
+					'build/pdfmake.js': ['src/printer.js']
+				}
+			}
+		},
+
+		uglify: {
+			build: {
+				options: {
+					sourceMap: true,
+					compress: {
+						drop_console: true
+					}
+				},
+				files: {
+					'build/pdfmake.min.js': ['build/pdfmake.js']
+				}
+			}
 		}
 	});
 
@@ -49,8 +90,12 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-jsdoc');
 	grunt.loadNpmTasks('grunt-contrib-jshint');
 	grunt.loadNpmTasks('grunt-text-replace');
+	grunt.loadNpmTasks('grunt-browserify');
+	grunt.loadNpmTasks('grunt-contrib-uglify');
 
 	grunt.registerTask('test', [ 'replace:exposeTestMethods', 'jshint', 'mochacov', 'replace:hideTestMethods' ]);
 
-	grunt.registerTask('default', [ 'test' ]);
+	grunt.registerTask('build', [ 'replace:fixPdfKit', 'browserify', 'uglify' ]);
+
+	grunt.registerTask('default', [ 'test', 'build' ]);
 };

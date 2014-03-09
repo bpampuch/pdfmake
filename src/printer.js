@@ -1,7 +1,7 @@
 /* jslint node: true */
 'use strict';
 
-var layout = require('./layout');
+var layout = require('./layoutBuilder');
 var PdfKit = require('pdfkit');
 
 ////////////////////////////////////////
