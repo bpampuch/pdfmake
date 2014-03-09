@@ -1,8 +1,7 @@
 var assert = require('assert');
 
-var pdfMake = require('../src/layout.js');
-var TextTools = pdfMake.TextTools;
-var StyleContextStack = pdfMake.StyleContextStack;
+var TextTools = require('../src/textTools');
+var StyleContextStack = require('../src/styleContextStack');
 
 var sampleTestProvider = {
 	provideFont: function(familyName, bold, italics) {
@@ -75,16 +74,16 @@ describe('TextTools', function() {
 	];
 
 	var styleStack = new StyleContextStack({
-		header: { 
-			fontSize: 150, 
-			font: 'Roboto' 
-		}, 
-		small: { 
-			fontSize: 8 
-		} 
-	}, 
-	{ 
-		fontSize: 15, 
+		header: {
+			fontSize: 150,
+			font: 'Roboto'
+		},
+		small: {
+			fontSize: 8
+		}
+	},
+	{
+		fontSize: 15,
 		bold: false,
 		font: 'Helvetica'
 	});
@@ -111,13 +110,13 @@ describe('TextTools', function() {
 
 		it('should split properly when adjacent newlines appear', function() {
 			var result = textTools.splitWords(sampleText2);
-			assert.equal(result[9].text.length, 0);			
+			assert.equal(result[9].text.length, 0);
 			assert.equal(result[9].lineEnd, true);
 		});
 
 		it('should support whitespace-only lines', function() {
 			var result = textTools.splitWords(sampleText2);
-			assert.equal(result[6].text, ' ');			
+			assert.equal(result[6].text, ' ');
 			assert.equal(result[6].lineEnd, true);
 		})
 	});
@@ -150,7 +149,7 @@ describe('TextTools', function() {
 
 		it('should keep style definitions after splitting new-lines', function() {
 			var result = textTools.normalizeTextArray(mixedTextArray);
-			[0, 2, 3, 4, 5, 6, 7].forEach(function(i) { 
+			[0, 2, 3, 4, 5, 6, 7].forEach(function(i) {
 				assert.equal(result[i].bold, true);
 			});
 

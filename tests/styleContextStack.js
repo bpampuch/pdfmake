@@ -1,7 +1,6 @@
 var assert = require('assert');
 
-var pdfMake = require('../src/layout.js');
-var StyleContextStack = pdfMake.StyleContextStack;
+var StyleContextStack = require('../src/styleContextStack');
 
 var sampleTestProvider = {
 	provideFont: function(familyName, bold, italics) {
@@ -28,20 +27,20 @@ describe('StyleContextStack', function() {
 
 		fullStack = new StyleContextStack(
 			{
-				header: { 
-					fontSize: 150, 
-					font: 'Roboto' 
-				}, 
-				small: { 
-					fontSize: 8 
-				}, 
+				header: {
+					fontSize: 150,
+					font: 'Roboto'
+				},
+				small: {
+					fontSize: 8
+				},
 				samplebold: {
 					bold: true,
 				}
 
-			}, 
-			{ 
-				fontSize: 12, 
+			},
+			{
+				fontSize: 12,
 				bold: false,
 				font: 'Helvetica'
 			});

@@ -1,8 +1,7 @@
 var assert = require('assert');
 
-var pdfMake = require('../src/layout.js');
-var DocMeasure = pdfMake.DocMeasure;
-var StyleContextStack = pdfMake.StyleContextStack;
+var DocMeasure = require('../src/docMeasure');
+var StyleContextStack = require('../src/styleContextStack');
 
 var sampleTestProvider = {
 	provideFont: function(familyName, bold, italics) {
@@ -16,7 +15,6 @@ var sampleTestProvider = {
 		}
 	}
 };
-
 
 var docMeasure = new DocMeasure(sampleTestProvider);
 
@@ -111,7 +109,7 @@ describe('DocMeasure', function() {
 
 			assert(result.ul[0]._minWidth);
 			assert(result.ul[0]._maxWidth);
-			
+
 			assert(result._gapSize);
 		});
 
@@ -143,7 +141,7 @@ describe('DocMeasure', function() {
 				table: {
 					headerLines: 1,
 					widths: [ '*', 150, 'auto', 'auto' ],
-					body: 
+					body:
 					[
 						[ 'Header 1', 'H2', 'Header\nwith\nlines', { text: 'last', fontSize: 20 } ],
 						[ 'Column 1', 'Column 2', 'Column 3', 'Column 4' ],
@@ -197,7 +195,7 @@ describe('DocMeasure', function() {
 				table: {
 					headerLines: 1,
 					widths: 'auto',
-					body: 
+					body:
 					[
 						[ 'Header 1', 'H2', 'Header\nwith\nlines', { text: 'last', fontSize: 20 } ],
 						[ 'Column 1', 'Column 2', 'Column 3', 'Column 4' ],

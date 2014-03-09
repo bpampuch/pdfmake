@@ -1,7 +1,6 @@
 var assert = require('assert');
 
-var pdfMake = require('../src/layout.js');
-var ElementWriter = pdfMake.ElementWriter;
+var ElementWriter = require('../src/elementWriter');
 
 describe('ElementWriter', function() {
 	var ew, ctx, page;

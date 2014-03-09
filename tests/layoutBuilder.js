@@ -1,9 +1,9 @@
 var assert = require('assert');
 
-var pdfMake = require('../src/layout.js');
-var Line = pdfMake.Line;
-var LayoutBuilder = pdfMake.LayoutBuilder;
-var StyleContextStack = pdfMake.StyleContextStack;
+var Line = require('../src/line');
+var LayoutBuilder = require('../src/layoutBuilder');
+var StyleContextStack = require('../src/styleContextStack');
+// var TraversalTracker = require('../src/traversalTracker');
 
 // var TextTools = pdfMake.TextTools;
 // var Block = pdfMake.Block;

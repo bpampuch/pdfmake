@@ -1,7 +1,6 @@
 var assert = require('assert');
 
-var pdfMake = require('../src/layout.js');
-var ColumnCalculator = pdfMake.ColumnCalculator;
+var ColumnCalculator = require('../src/columnCalculator');
 
 describe('ColumnCalculator', function(){
 	describe('buildColumnWidths', function() {

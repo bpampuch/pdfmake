@@ -1,7 +1,6 @@
 var assert = require('assert');
 
-var pdfMake = require('../src/layout.js');
-var Line = pdfMake.Line;
+var Line = require('../src/line');
 
 describe('Line', function() {
 	describe('hasEnoughSpaceForInline', function() {
@@ -75,7 +74,7 @@ describe('Line', function() {
 		it('should set x to 0 for first inline if there is no left-trimming (leadingCut)', function() {
 			var line = new Line(100);
 			line.addInline({ width: 40, leadingCut: 0, trailingCut: 20 });
-			
+
 			assert.equal(line.inlines[0].x, 0);
 		});
 

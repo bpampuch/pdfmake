@@ -1,8 +1,6 @@
 var assert = require('assert');
 
-var pdfMake = require('../src/layout.js');
-var DocumentContext = pdfMake.DocumentContext;
-
+var DocumentContext = require('../src/documentContext');
 
 describe('DocumentContext', function() {
 	var pc;

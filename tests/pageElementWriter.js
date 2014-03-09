@@ -1,8 +1,7 @@
 var assert = require('assert');
 
-var pdfMake = require('../src/layout.js');
-var DocumentContext = pdfMake.DocumentContext;
-var PageElementWriter = pdfMake.PageElementWriter;
+var DocumentContext = require('../src/documentContext');
+var PageElementWriter = require('../src/pageElementWriter');
 
 describe('PageElementWriter', function() {
 	var pew;
