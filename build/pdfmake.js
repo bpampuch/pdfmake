@@ -1,6 +1,4 @@
 !function(e){if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.pdfMake=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
-
-},{}],2:[function(_dereq_,module,exports){
 /**
  * The buffer module from node.js, for the browser.
  *
@@ -1112,7 +1110,7 @@ function assert (test, message) {
   if (!test) throw new Error(message || 'Failed assertion')
 }
 
-},{"base64-js":3,"ieee754":4}],3:[function(_dereq_,module,exports){
+},{"base64-js":2,"ieee754":3}],2:[function(_dereq_,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -1235,7 +1233,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	module.exports.fromByteArray = uint8ToBase64
 }())
 
-},{}],4:[function(_dereq_,module,exports){
+},{}],3:[function(_dereq_,module,exports){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -1321,7 +1319,7 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],5:[function(_dereq_,module,exports){
+},{}],4:[function(_dereq_,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -1623,7 +1621,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],6:[function(_dereq_,module,exports){
+},{}],5:[function(_dereq_,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1678,7 +1676,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],7:[function(_dereq_,module,exports){
+},{}],6:[function(_dereq_,module,exports){
 (function (Buffer){
 var Zlib = module.exports = _dereq_('./zlib');
 
@@ -1725,7 +1723,7 @@ Zlib.gzip = function gzip(stringOrBuffer, callback) {
 };
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"./zlib":8,"buffer":2}],8:[function(_dereq_,module,exports){
+},{"./zlib":7,"buffer":1}],7:[function(_dereq_,module,exports){
 (function (process,Buffer){
 /** @license zlib.js 0.1.7 2012 - imaya [ https://github.com/imaya/zlib.js ] The MIT License */(function() {'use strict';function q(b){throw b;}var t=void 0,u=!0;var A="undefined"!==typeof Uint8Array&&"undefined"!==typeof Uint16Array&&"undefined"!==typeof Uint32Array;function E(b,a){this.index="number"===typeof a?a:0;this.m=0;this.buffer=b instanceof(A?Uint8Array:Array)?b:new (A?Uint8Array:Array)(32768);2*this.buffer.length<=this.index&&q(Error("invalid index"));this.buffer.length<=this.index&&this.f()}E.prototype.f=function(){var b=this.buffer,a,c=b.length,d=new (A?Uint8Array:Array)(c<<1);if(A)d.set(b);else for(a=0;a<c;++a)d[a]=b[a];return this.buffer=d};
 E.prototype.d=function(b,a,c){var d=this.buffer,f=this.index,e=this.m,g=d[f],k;c&&1<a&&(b=8<a?(G[b&255]<<24|G[b>>>8&255]<<16|G[b>>>16&255]<<8|G[b>>>24&255])>>32-a:G[b]>>8-a);if(8>a+e)g=g<<a|b,e+=a;else for(k=0;k<a;++k)g=g<<1|b>>a-k-1&1,8===++e&&(e=0,d[f++]=G[g],g=0,f===d.length&&(d=this.f()));d[f]=g;this.buffer=d;this.m=e;this.index=f};E.prototype.finish=function(){var b=this.buffer,a=this.index,c;0<this.m&&(b[a]<<=8-this.m,b[a]=G[b[a]],a++);A?c=b.subarray(0,a):(b.length=a,c=b);return c};
@@ -1783,7 +1781,7 @@ function xb(b,a){var c;b.subarray=b.slice;c=(new pb(b)).i();a||(a={});return a.n
 function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[c];return a};}).call(this); //@ sourceMappingURL=node-zlib.js.map
 
 }).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":6,"buffer":2}],9:[function(_dereq_,module,exports){
+},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1}],8:[function(_dereq_,module,exports){
 (function() {
   var Data;
 
@@ -1973,7 +1971,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{}],10:[function(_dereq_,module,exports){
+},{}],9:[function(_dereq_,module,exports){
 (function (Buffer){
 (function() {
 
@@ -2202,7 +2200,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"./mixins/annotations.js":34,"./mixins/color.js":35,"./mixins/fonts.js":36,"./mixins/images.js":37,"./mixins/text.js":38,"./mixins/vector.js":39,"./object":40,"./page":41,"./reference":43,"./store":44,"buffer":2,"fs":1}],11:[function(_dereq_,module,exports){
+},{"./mixins/annotations.js":33,"./mixins/color.js":34,"./mixins/fonts.js":35,"./mixins/images.js":36,"./mixins/text.js":37,"./mixins/vector.js":38,"./object":39,"./page":40,"./reference":42,"./store":43,"buffer":1,"fs":"x/K9gc"}],10:[function(_dereq_,module,exports){
 (function (__dirname){
 (function() {
 
@@ -2488,7 +2486,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,"/../node_modules/pdfkit/js")
-},{"./font/afm":12,"./font/subset":15,"./font/ttf":27,"zlib":7}],12:[function(_dereq_,module,exports){
+},{"./font/afm":11,"./font/subset":14,"./font/ttf":26,"zlib":6}],11:[function(_dereq_,module,exports){
 (function() {
   var AFMFont, fs;
 
@@ -2579,7 +2577,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"fs":1}],13:[function(_dereq_,module,exports){
+},{"fs":"x/K9gc"}],12:[function(_dereq_,module,exports){
 (function() {
   var DFont, Data, Directory, NameTable, fs;
 
@@ -2684,7 +2682,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../data":9,"./directory":14,"./tables/name":24,"fs":1}],14:[function(_dereq_,module,exports){
+},{"../data":8,"./directory":13,"./tables/name":23,"fs":"x/K9gc"}],13:[function(_dereq_,module,exports){
 (function (Buffer){
 (function() {
   var Data, Directory;
@@ -2776,7 +2774,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"../data":9,"buffer":2}],15:[function(_dereq_,module,exports){
+},{"../data":8,"buffer":1}],14:[function(_dereq_,module,exports){
 (function() {
   var CmapTable, Subset, utils;
   var __hasProp = Object.prototype.hasOwnProperty, __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (__hasProp.call(this, i) && this[i] === item) return i; } return -1; };
@@ -2929,7 +2927,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"./tables/cmap":17,"./utils":28}],16:[function(_dereq_,module,exports){
+},{"./tables/cmap":16,"./utils":27}],15:[function(_dereq_,module,exports){
 (function() {
   var Table;
 
@@ -2968,7 +2966,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{}],17:[function(_dereq_,module,exports){
+},{}],16:[function(_dereq_,module,exports){
 (function() {
   var CmapEntry, CmapTable, Data, Table;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -3242,7 +3240,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../../data":9,"../table":16}],18:[function(_dereq_,module,exports){
+},{"../../data":8,"../table":15}],17:[function(_dereq_,module,exports){
 (function() {
   var CompoundGlyph, Data, GlyfTable, SimpleGlyph, Table;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; }, __slice = Array.prototype.slice;
@@ -3393,7 +3391,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../../data":9,"../table":16}],19:[function(_dereq_,module,exports){
+},{"../../data":8,"../table":15}],18:[function(_dereq_,module,exports){
 (function() {
   var Data, HeadTable, Table;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -3462,7 +3460,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../../data":9,"../table":16}],20:[function(_dereq_,module,exports){
+},{"../../data":8,"../table":15}],19:[function(_dereq_,module,exports){
 (function() {
   var Data, HheaTable, Table;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -3527,7 +3525,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../../data":9,"../table":16}],21:[function(_dereq_,module,exports){
+},{"../../data":8,"../table":15}],20:[function(_dereq_,module,exports){
 (function() {
   var Data, HmtxTable, Table;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -3610,7 +3608,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../../data":9,"../table":16}],22:[function(_dereq_,module,exports){
+},{"../../data":8,"../table":15}],21:[function(_dereq_,module,exports){
 (function() {
   var Data, LocaTable, Table;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -3694,7 +3692,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../../data":9,"../table":16}],23:[function(_dereq_,module,exports){
+},{"../../data":8,"../table":15}],22:[function(_dereq_,module,exports){
 (function() {
   var Data, MaxpTable, Table;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -3759,7 +3757,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../../data":9,"../table":16}],24:[function(_dereq_,module,exports){
+},{"../../data":8,"../table":15}],23:[function(_dereq_,module,exports){
 (function() {
   var Data, NameEntry, NameTable, Table, utils;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -3897,7 +3895,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../../data":9,"../table":16,"../utils":28}],25:[function(_dereq_,module,exports){
+},{"../../data":8,"../table":15,"../utils":27}],24:[function(_dereq_,module,exports){
 (function() {
   var OS2Table, Table;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -3988,7 +3986,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../table":16}],26:[function(_dereq_,module,exports){
+},{"../table":15}],25:[function(_dereq_,module,exports){
 (function() {
   var Data, PostTable, Table;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -4118,7 +4116,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../../data":9,"../table":16}],27:[function(_dereq_,module,exports){
+},{"../../data":8,"../table":15}],26:[function(_dereq_,module,exports){
 (function() {
   var CmapTable, DFont, Data, Directory, GlyfTable, HeadTable, HheaTable, HmtxTable, LocaTable, MaxpTable, NameTable, OS2Table, PostTable, TTFFont, fs;
 
@@ -4215,7 +4213,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../data":9,"./dfont":13,"./directory":14,"./tables/cmap":17,"./tables/glyf":18,"./tables/head":19,"./tables/hhea":20,"./tables/hmtx":21,"./tables/loca":22,"./tables/maxp":23,"./tables/name":24,"./tables/os2":25,"./tables/post":26,"fs":1}],28:[function(_dereq_,module,exports){
+},{"../data":8,"./dfont":12,"./directory":13,"./tables/cmap":16,"./tables/glyf":17,"./tables/head":18,"./tables/hhea":19,"./tables/hmtx":20,"./tables/loca":21,"./tables/maxp":22,"./tables/name":23,"./tables/os2":24,"./tables/post":25,"fs":"x/K9gc"}],27:[function(_dereq_,module,exports){
 
   /*
   # An implementation of Ruby's string.succ method.
@@ -4285,7 +4283,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     return ret;
   };
 
-},{}],29:[function(_dereq_,module,exports){
+},{}],28:[function(_dereq_,module,exports){
 (function() {
   var PDFGradient, PDFLinearGradient, PDFRadialGradient;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -4495,7 +4493,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{}],30:[function(_dereq_,module,exports){
+},{}],29:[function(_dereq_,module,exports){
 (function (Buffer){
 (function() {
 
@@ -4548,7 +4546,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"./data":9,"./image/jpeg":31,"./image/png":32,"buffer":2,"fs":1}],31:[function(_dereq_,module,exports){
+},{"./data":8,"./image/jpeg":30,"./image/png":31,"buffer":1,"fs":"x/K9gc"}],30:[function(_dereq_,module,exports){
 (function (process){
 (function() {
   var Data, JPEG, fs, setImmediate;
@@ -4622,7 +4620,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
-},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":6,"fs":1}],32:[function(_dereq_,module,exports){
+},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"fs":"x/K9gc"}],31:[function(_dereq_,module,exports){
 (function (process,Buffer){
 (function() {
   var PNG, PNGImage, setImmediate, zlib;
@@ -4775,7 +4773,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":6,"buffer":2,"png-js":45,"zlib":7}],33:[function(_dereq_,module,exports){
+},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"png-js":44,"zlib":6}],32:[function(_dereq_,module,exports){
 (function() {
   var EventEmitter, LineWrapper, WORD_RE;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -4890,7 +4888,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"events":5}],34:[function(_dereq_,module,exports){
+},{"events":4}],33:[function(_dereq_,module,exports){
 (function() {
   var PDFObject;
   var __slice = Array.prototype.slice;
@@ -5000,7 +4998,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../object":40}],35:[function(_dereq_,module,exports){
+},{"../object":39}],34:[function(_dereq_,module,exports){
 (function() {
   var PDFGradient, PDFLinearGradient, PDFRadialGradient, namedColors, _ref;
 
@@ -5288,7 +5286,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../gradient":29}],36:[function(_dereq_,module,exports){
+},{"../gradient":28}],35:[function(_dereq_,module,exports){
 (function() {
   var PDFFont;
 
@@ -5360,7 +5358,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../font":11}],37:[function(_dereq_,module,exports){
+},{"../font":10}],36:[function(_dereq_,module,exports){
 (function() {
   var PDFImage;
   var __hasProp = Object.prototype.hasOwnProperty, __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (__hasProp.call(this, i) && this[i] === item) return i; } return -1; };
@@ -5464,7 +5462,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../image":30}],38:[function(_dereq_,module,exports){
+},{"../image":29}],37:[function(_dereq_,module,exports){
 (function() {
   var LineWrapper, WORD_RE;
 
@@ -5679,7 +5677,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../line_wrapper":33}],39:[function(_dereq_,module,exports){
+},{"../line_wrapper":32}],38:[function(_dereq_,module,exports){
 (function() {
   var KAPPA, SVGPath;
   var __slice = Array.prototype.slice;
@@ -5893,7 +5891,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../path":42}],40:[function(_dereq_,module,exports){
+},{"../path":41}],39:[function(_dereq_,module,exports){
 (function (Buffer){
 (function() {
 
@@ -5987,7 +5985,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"./reference":43,"buffer":2}],41:[function(_dereq_,module,exports){
+},{"./reference":42,"buffer":1}],40:[function(_dereq_,module,exports){
 (function() {
 
   /*
@@ -6141,7 +6139,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{}],42:[function(_dereq_,module,exports){
+},{}],41:[function(_dereq_,module,exports){
 (function() {
   var SVGPath;
 
@@ -6474,7 +6472,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{}],43:[function(_dereq_,module,exports){
+},{}],42:[function(_dereq_,module,exports){
 (function (process,Buffer){
 (function() {
 
@@ -6572,7 +6570,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"./object":40,"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":6,"buffer":2,"zlib":7}],44:[function(_dereq_,module,exports){
+},{"./object":39,"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"zlib":6}],43:[function(_dereq_,module,exports){
 (function() {
 
   /*
@@ -6624,7 +6622,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"./reference":43}],45:[function(_dereq_,module,exports){
+},{"./reference":42}],44:[function(_dereq_,module,exports){
 (function (Buffer){
 // Generated by CoffeeScript 1.4.0
 
@@ -6945,7 +6943,55 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"buffer":2,"fs":1,"zlib":7}],46:[function(_dereq_,module,exports){
+},{"buffer":1,"fs":"x/K9gc","zlib":6}],"fs":[function(_dereq_,module,exports){
+module.exports=_dereq_('x/K9gc');
+},{}],"x/K9gc":[function(_dereq_,module,exports){
+(function (Buffer,__dirname){
+/* jslint node: true */
+'use strict';
+
+// var b64 = require('./base64.js').base64DecToArr;
+function VirtualFileSystem() {
+	this.fileSystem = {};
+	this.baseSystem = {};
+}
+
+VirtualFileSystem.prototype.readFileSync = function(filename) {
+	filename = fixFilename(filename);
+
+	var base64content = this.baseSystem[filename];
+	if (base64content) {
+		return new Buffer(base64content, 'base64');
+	}
+
+	return this.fileSystem[filename];
+};
+
+VirtualFileSystem.prototype.writeFileSync = function(filename, content) {
+	this.fileSystem[fixFilename(filename)] = content;
+};
+
+VirtualFileSystem.prototype.setBaseFS = function(data) {
+	this.baseSystem = data;
+};
+
+
+function fixFilename(filename) {
+	if (filename.indexOf(__dirname) === 0) {
+		filename = filename.substring(__dirname.length);
+	}
+
+	if (filename.indexOf('/') === 0) {
+		filename = filename.substring(1);
+	}
+
+	return filename;
+}
+
+module.exports = VirtualFileSystem;
+
+}).call(this,_dereq_("buffer").Buffer,"/browser-extensions")
+},{"buffer":1}],47:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7041,7 +7087,7 @@ module.exports = {
 	}
 };
 
-},{}],47:[function(_dereq_,module,exports){
+},{}],48:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7328,7 +7374,7 @@ DocMeasure.prototype.measureCanvas = function(node) {
 
 module.exports = DocMeasure;
 
-},{"./helpers":50,"./styleContextStack":55,"./textTools":56}],48:[function(_dereq_,module,exports){
+},{"./helpers":51,"./styleContextStack":56,"./textTools":57}],49:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7453,7 +7499,7 @@ DocumentContext.bottomMostContext = bottomMostContext;
 
 module.exports = DocumentContext;
 
-},{}],49:[function(_dereq_,module,exports){
+},{}],50:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7584,7 +7630,7 @@ ElementWriter.prototype.addFragment = function(block, isRepeatable) {
 
 module.exports = ElementWriter;
 
-},{"./helpers":50,"./line":52}],50:[function(_dereq_,module,exports){
+},{"./helpers":51,"./line":53}],51:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7641,7 +7687,7 @@ module.exports = {
 	offsetVector: offsetVector
 };
 
-},{}],51:[function(_dereq_,module,exports){
+},{}],52:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7986,7 +8032,7 @@ LayoutBuilder.prototype.processCanvas = function(node) {
 
 module.exports = LayoutBuilder;
 
-},{"./columnCalculator":46,"./docMeasure":47,"./documentContext":48,"./helpers":50,"./line":52,"./pageElementWriter":53,"./traversalTracker":57}],52:[function(_dereq_,module,exports){
+},{"./columnCalculator":47,"./docMeasure":48,"./documentContext":49,"./helpers":51,"./line":53,"./pageElementWriter":54,"./traversalTracker":58}],53:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8057,7 +8103,7 @@ Line.prototype.getHeight = function() {
 
 module.exports = Line;
 
-},{}],53:[function(_dereq_,module,exports){
+},{}],54:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8185,7 +8231,7 @@ PageElementWriter.prototype._removeTransactionContext = function() {
 
 module.exports = PageElementWriter;
 
-},{"./elementWriter":49}],54:[function(_dereq_,module,exports){
+},{"./elementWriter":50}],55:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8450,7 +8496,7 @@ FontProvider.prototype.provideFont = function(familyName, bold, italics) {
 
 module.exports = PdfPrinter;
 
-},{"./layoutBuilder":51,"pdfkit":10}],55:[function(_dereq_,module,exports){
+},{"./layoutBuilder":52,"pdfkit":9}],56:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8613,7 +8659,7 @@ StyleContextStack.prototype.getProperty = function(property) {
 
 module.exports = StyleContextStack;
 
-},{}],56:[function(_dereq_,module,exports){
+},{}],57:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8860,7 +8906,7 @@ TextTools.prototype.measure = measure;
 
 module.exports = TextTools;
 
-},{}],57:[function(_dereq_,module,exports){
+},{}],58:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8912,6 +8958,6 @@ TraversalTracker.prototype.auto = function(event, cb, innerBlock) {
 
 module.exports = TraversalTracker;
 
-},{}]},{},[54])
-(54)
+},{}]},{},[55])
+(55)
 });

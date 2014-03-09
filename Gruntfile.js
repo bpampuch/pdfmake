@@ -62,11 +62,23 @@ module.exports = function(grunt) {
 		browserify: {
 			build: {
 				options: {
-					'standalone': 'pdfMake',
-					// 'r': './src/fs.js:fs'
+					standalone: 'pdfMake',
+					alias: './src/browser-extensions/virtual-fs.js:fs'
 				},
 				files: {
 					'build/pdfmake.js': ['src/printer.js']
+				}
+			}
+		},
+
+		dump_dir: {
+			fonts: {
+				options: {
+					pre: 'var vfs_fonts = ',
+					root: 'examples/'
+				},
+				files: {
+					'build/vfs_fonts.js': ['examples/fonts/*' ]
 				}
 			}
 		},
@@ -92,10 +104,12 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-text-replace');
 	grunt.loadNpmTasks('grunt-browserify');
 	grunt.loadNpmTasks('grunt-contrib-uglify');
+	grunt.loadNpmTasks('grunt-dump-dir');
 
 	grunt.registerTask('test', [ 'replace:exposeTestMethods', 'jshint', 'mochacov', 'replace:hideTestMethods' ]);
 
-	grunt.registerTask('build', [ 'replace:fixPdfKit', 'browserify', 'uglify' ]);
+	grunt.registerTask('buildFonts', [ 'dump_dir' ]);
+	grunt.registerTask('build', [ 'replace:fixPdfKit', 'browserify', 'uglify', 'buildFonts' ]);
 
 	grunt.registerTask('default', [ 'test', 'build' ]);
 };

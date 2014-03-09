@@ -1,6 +1,8 @@
 .git*
 docs/
 examples/
-test/
+tests/
+src/browser-extensions/
+build/
 .DS_Store
 
