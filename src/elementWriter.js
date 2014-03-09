@@ -1,7 +1,7 @@
 /* jslint node: true */
 'use strict';
 
-var Line = require('./Line');
+var Line = require('./line');
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 
