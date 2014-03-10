@@ -1,3 +1,6 @@
+<script type="text/javascript" charset="utf-8" src='build/pdfmake.min.js'></script>
+<script type="text/javascript" charset="utf-8" src='ace-builds/src-min/ace.js'></script>
+
 <div class='playground'>
 	<div class='container'>
 		<ul>
@@ -6,19 +9,101 @@
 	</div>
 </div>
 
+<div class='playgroundBody'>
+	<div class='notEnoughSpace'>
+		<div class='container'>
+			<h2>Playground doesn't work with horizontal resolution below 768px</h2>
+		</div>
+	</div>
+	<div class='content'>
+		<div id='editor'></div>
+	</div>
+</div>
+
 <script type="text/javascript" charset="utf-8">
-	function PlaygroundController($scope) {
+	function PlaygroundController($scope, $http) {
 		$scope.examples = [];
+
+		var editor = ace.edit('editor');
+		setupEditor(editor);
 
 		['basics', 'inline-styling', 'named-styles', 'style-overrides', 'columns', 'lists', 'margins', 'tables'].forEach(function(example) {
 			$scope.examples.push({
 				name: example,
 				activate: function() {
 					$http.get('samples/' + example).success(function(data) {
-						$scope.docDefinition = data;
+						editor.getSession().setValue('// playground requires you to assign document definition to a variable called dd\n\nvar dd = {\n' + data.replace(/(^)/gm, '\t') + '\n}');
 					});
 				}
 			});
 		});
-	}
+
+		$scope.examples[0].activate();
+
+		var fonts = {
+			Roboto: {
+				normal: 'fonts/Roboto-Regular.ttf',
+				bold: 'fonts/Roboto-Medium.ttf',
+				italics: 'fonts/Roboto-Italic.ttf',
+				bolditalics: 'fonts/Roboto-Italic.ttf'
+			}
+		}
+
+		// var printer = new pdfMake(fonts);
+
+
+		function setupEditor() {
+			var timer;
+			var lastGen, lastChanged;
+
+			editor.setTheme('ace/theme/monokai');
+			editor.getSession().setMode('ace/mode/javascript');
+			// editor.commands.addCommand({
+			// 	name: 'Generate',
+			// 	bindKey: { win: 'Ctrl-B', mac: 'Command-B' },
+			// 	exec: generate
+			// });
+			// editor.commands.addCommand({
+			// 	name: 'Print',
+			// 	bindKey: { win: 'Ctrl-P', mac: 'Command-P' },
+			// 	exec: function() { alert('print')}
+			// });
+			editor.getSession().on('change', function(e) {
+				if (timer) {
+					clearTimeout(timer);
+				}
+				lastChanged = new Date();
+
+				timer = setTimeout(function() {
+					if (!lastGen || lastGen < lastChanged) {
+						generate();
+					};
+				}, 300);
+			});
+
+			function generate() {
+				lastGen = new Date();
+
+				eval(editor.getSession().getValue());
+
+				// var doc = printer.createPdfKitDocument(dd);
+				// doc.output(function(outDoc) {
+					// PDFView.open(outDoc, 0);
+					// editor.focus();
+				// });
+			}
+			//
+			// $scope.print = function print() {
+			// 	eval(editor.getSession().getValue());
+			//
+			// 	var doc = printer.createPdfKitDocument(dd);
+			// 	doc.output(function(outDoc) {
+			// 		window.open('data:application/pdf;base64,' + outDoc.toString('base64'), '_blank');
+			// 	});
+			// }
+			// printer.setFileSystem()
+		}
+	};
+
+
 </script>

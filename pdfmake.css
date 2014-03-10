@@ -47,6 +47,7 @@ h1 {
 	padding: 8px;
 	text-transform: uppercase;
 	cursor: pointer;
+	font-size: 12px;
 }
 
 .playground li:hover {
@@ -80,4 +81,32 @@ h1 {
 }
 .make {
 	font-weight: 600
+}
+
+.playgroundBody .content {
+	display: none;
+}
+
+
+@media(min-width: 768px) {
+	.playgroundBody .content {
+		position: fixed;
+		display: block;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		top: 83px;
+	}
+
+	.playgroundBody .notEnoughSpace {
+		display: none;
+	}
+}
+
+#editor {
+	position: absolute;
+	top: 0px;
+	right: 50%;
+	bottom: 0;
+	left: 0;
 }
