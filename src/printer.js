@@ -261,3 +261,7 @@ FontProvider.prototype.provideFont = function(familyName, bold, italics) {
 };
 
 module.exports = PdfPrinter;
+
+
+/* temporary browser extension */
+PdfPrinter.fs = require('fs');

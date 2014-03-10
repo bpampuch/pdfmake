@@ -6971,7 +6971,7 @@ VirtualFileSystem.prototype.writeFileSync = function(filename, content) {
 	this.fileSystem[fixFilename(filename)] = content;
 };
 
-VirtualFileSystem.prototype.setBaseFS = function(data) {
+VirtualFileSystem.prototype.bindFS = function(data) {
 	this.baseSystem = data;
 };
 
@@ -8496,7 +8496,11 @@ FontProvider.prototype.provideFont = function(familyName, bold, italics) {
 
 module.exports = PdfPrinter;
 
-},{"./layoutBuilder":52,"pdfkit":9}],56:[function(_dereq_,module,exports){
+
+/* temporary browser extension */
+PdfPrinter.fs = _dereq_('fs');
+
+},{"./layoutBuilder":52,"fs":"x/K9gc","pdfkit":9}],56:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 

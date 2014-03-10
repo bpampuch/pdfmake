@@ -22,7 +22,7 @@ VirtualFileSystem.prototype.writeFileSync = function(filename, content) {
 	this.fileSystem[fixFilename(filename)] = content;
 };
 
-VirtualFileSystem.prototype.setBaseFS = function(data) {
+VirtualFileSystem.prototype.bindFS = function(data) {
 	this.baseSystem = data;
 };
 
