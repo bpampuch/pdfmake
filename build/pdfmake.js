@@ -4219,12 +4219,12 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
   # An implementation of Ruby's string.succ method.
   # By Devon Govett
   #
-  # Returns the successor to str. The successor is calculated by incrementing characters starting 
+  # Returns the successor to str. The successor is calculated by incrementing characters starting
   # from the rightmost alphanumeric (or the rightmost character if there are no alphanumerics) in the
   # string. Incrementing a digit always results in another digit, and incrementing a letter results in
   # another letter of the same case.
   #
-  # If the increment generates a carry, the character to the left of it is incremented. This 
+  # If the increment generates a carry, the character to the left of it is incremented. This
   # process repeats until there is no carry, adding an additional character if necessary.
   #
   # succ("abcd")      == "abce"
@@ -5299,7 +5299,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       this._fontSize = 12;
       this._font = null;
       this._registeredFonts = {};
-      return this.font('Helvetica');
+
     },
     font: function(filename, family, size) {
       var id, _ref;
@@ -6629,20 +6629,20 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 /*
 # MIT LICENSE
 # Copyright (c) 2011 Devon Govett
-# 
-# Permission is hereby granted, free of charge, to any person obtaining a copy of this 
-# software and associated documentation files (the "Software"), to deal in the Software 
-# without restriction, including without limitation the rights to use, copy, modify, merge, 
-# publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this
+# software and associated documentation files (the "Software"), to deal in the Software
+# without restriction, including without limitation the rights to use, copy, modify, merge,
+# publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
 # to whom the Software is furnished to do so, subject to the following conditions:
-# 
-# The above copyright notice and this permission notice shall be included in all copies or 
+#
+# The above copyright notice and this permission notice shall be included in all copies or
 # substantial portions of the Software.
-# 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING 
-# BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
-# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, 
-# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+# BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
@@ -8235,7 +8235,7 @@ module.exports = PageElementWriter;
 /* jslint node: true */
 'use strict';
 
-var layout = _dereq_('./layoutBuilder');
+var LayoutBuilder = _dereq_('./layoutBuilder');
 var PdfKit = _dereq_('pdfkit');
 
 ////////////////////////////////////////
@@ -8308,7 +8308,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition) {
 	this.pdfKitDoc.info.Creator = 'pdfmake';
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
-	var builder = new layout.LayoutBuilder(
+	var builder = new LayoutBuilder(
 		pageSize,
 		docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 });
 

@@ -110,3 +110,19 @@ h1 {
 	bottom: 0;
 	left: 0;
 }
+
+#pdfeViewer {
+	position: absolute;
+	top: 0px;
+	left: 50%;
+	bottom: 0;
+	right: 0;
+}
+
+#toolbarViewerRight, #sidebarToggle, .toolbarButtonSpacer, #viewFind {
+	display:none;
+}
+
+#toolbarViewerLeft {
+	width: 100%
+}
