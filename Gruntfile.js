@@ -21,7 +21,7 @@ module.exports = function(grunt) {
 			},
 			// updates pdfkit for client-side-support
 			fixPdfKit: {
-				src: ['node_modules/pdfkit/js/document.js', 'node_modules/pdfkit/js/mixins/fonts.js'],
+				src: ['node_modules/pdfkit/js/document.js', 'node_modules/pdfkit/js/mixins/fonts.js', 'node_modules/pdfkit/js/font/table.js'],
 				overwrite: true,
 				replacements: [{
 					from: /^(\s*mixin = function\()(name)(\) {.*)$/mg,
@@ -35,6 +35,11 @@ module.exports = function(grunt) {
 				}, {
 					from: 'return this.font(\'Helvetica\');',
 					to: ''
+				},
+				/* IE workaround for no constructor.name */
+					{
+					from: 'this.constructor.name.replace',
+					to: '(this.constructor.name || this.constructor.toString().match(/function (.{1,})\\(/)[1]).replace'
 				}]
 			}
 		},

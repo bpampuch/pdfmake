@@ -2938,7 +2938,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       this.file = file;
       this.tag = tag;
       if ((_ref = this.tag) == null) {
-        this.tag = this.constructor.name.replace('Table', '').toLowerCase();
+        this.tag = (this.constructor.name || this.constructor.toString().match(/function (.{1,})\(/)[1]).replace('Table', '').toLowerCase();
       }
       info = this.file.directory.tables[this.tag];
       this.exists = !!info;
