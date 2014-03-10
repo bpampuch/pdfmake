@@ -1,7 +1,7 @@
 /* jslint node: true */
 'use strict';
 
-var layout = require('./layoutBuilder');
+var LayoutBuilder = require('./layoutBuilder');
 var PdfKit = require('pdfkit');
 
 ////////////////////////////////////////
@@ -74,7 +74,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition) {
 	this.pdfKitDoc.info.Creator = 'pdfmake';
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
-	var builder = new layout.LayoutBuilder(
+	var builder = new LayoutBuilder(
 		pageSize,
 		docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 });
 
@@ -264,4 +264,4 @@ module.exports = PdfPrinter;
 
 
 /* temporary browser extension */
-PdfPrinter.fs = require('fs');
+PdfPrinter.prototype.fs = require('fs');

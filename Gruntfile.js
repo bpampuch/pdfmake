@@ -21,17 +21,20 @@ module.exports = function(grunt) {
 			},
 			// updates pdfkit for client-side-support
 			fixPdfKit: {
-				src: ['node_modules/pdfkit/js/document.js'],
+				src: ['node_modules/pdfkit/js/document.js', 'node_modules/pdfkit/js/mixins/fonts.js'],
 				overwrite: true,
 				replacements: [{
 					from: /^(\s*mixin = function\()(name)(\) {.*)$/mg,
 					to: '$1$2, methods$3'
-				},{
+				}, {
 					from: /^(.*require.*\.\/mixins\/'.*$)/mg,
 					to: '//'
 				}, {
 					from: /^(\s*mixin\('([a-zA-Z]*)')(\);)/mg,
 					to: '$1, require(\'./mixins/$2.js\')$3'
+				}, {
+					from: 'return this.font(\'Helvetica\');',
+					to: ''
 				}]
 			}
 		},
@@ -75,7 +78,7 @@ module.exports = function(grunt) {
 			fonts: {
 				options: {
 					pre: 'var vfs_fonts = ',
-					root: 'examples/'
+					rootPath: 'examples/fonts/'
 				},
 				files: {
 					'build/vfs_fonts.js': ['examples/fonts/*' ]

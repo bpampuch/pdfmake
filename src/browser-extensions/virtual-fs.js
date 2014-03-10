@@ -39,4 +39,4 @@ function fixFilename(filename) {
 	return filename;
 }
 
-module.exports = VirtualFileSystem;
+module.exports = new VirtualFileSystem();

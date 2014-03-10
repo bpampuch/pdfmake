@@ -5299,7 +5299,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       this._fontSize = 12;
       this._font = null;
       this._registeredFonts = {};
-      return this.font('Helvetica');
+      
     },
     font: function(filename, family, size) {
       var id, _ref;
@@ -6988,7 +6988,7 @@ function fixFilename(filename) {
 	return filename;
 }
 
-module.exports = VirtualFileSystem;
+module.exports = new VirtualFileSystem();
 
 }).call(this,_dereq_("buffer").Buffer,"/browser-extensions")
 },{"buffer":1}],47:[function(_dereq_,module,exports){
@@ -8235,7 +8235,7 @@ module.exports = PageElementWriter;
 /* jslint node: true */
 'use strict';
 
-var layout = _dereq_('./layoutBuilder');
+var LayoutBuilder = _dereq_('./layoutBuilder');
 var PdfKit = _dereq_('pdfkit');
 
 ////////////////////////////////////////
@@ -8308,7 +8308,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition) {
 	this.pdfKitDoc.info.Creator = 'pdfmake';
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
-	var builder = new layout.LayoutBuilder(
+	var builder = new LayoutBuilder(
 		pageSize,
 		docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 });
 
@@ -8498,7 +8498,7 @@ module.exports = PdfPrinter;
 
 
 /* temporary browser extension */
-PdfPrinter.fs = _dereq_('fs');
+PdfPrinter.prototype.fs = _dereq_('fs');
 
 },{"./layoutBuilder":52,"fs":"x/K9gc","pdfkit":9}],56:[function(_dereq_,module,exports){
 /* jslint node: true */
