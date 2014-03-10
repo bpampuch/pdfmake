@@ -1,0 +1,83 @@
+body {
+	font-family: 'Open Sans', sans-serif;
+	color: #666;
+}
+.navbar {
+	margin-bottom: 0;
+	background-color: white;
+	border-bottom: 0;
+}
+#top.navbar-default a {
+	color: #0074c1;
+}
+#top.navbar-default .navbar-nav a{
+	text-transform: uppercase;
+}
+#top.navbar-default li:hover {
+	background: rgb(249,249,249);
+}
+h2 {
+	font-weight: 300;
+	color: #0074c1;
+	font-size: 24px;
+}
+.header, .playground {
+	background: #0074c1;
+	color: white;
+}
+.header p {
+	opacity: 0.7;
+	font-weight: 300;
+	font-size: 18px;
+}
+h1 {
+	font-size: 36px;
+	font-weight: 300;
+}
+
+.playground ul {
+	list-style: none;
+	padding: 0;
+	margin-left: -8px;
+	margin-bottom: 0;
+}
+
+.playground li {
+	display: inline-block;
+	padding: 8px;
+	text-transform: uppercase;
+	cursor: pointer;
+}
+
+.playground li:hover {
+	background: rgba(0,0,0,0.1);
+}
+
+@media(min-width: 768px) {
+	h1 {
+		font-size: 60px;
+	}
+	.header {
+		padding-top: 20px;
+		padding-bottom: 40px;
+		margin-bottom: 30px;
+		height: 400px;
+	}
+	.header p {
+		font-size: 24px;
+		line-height: 1.4;
+	}
+	.page h1 {
+		font-size: 40px;
+	}
+	h2 {
+		font-size: 30px;
+
+	}
+}
+.pdf {
+	font-weight: 300;
+}
+.make {
+	font-weight: 600
+}

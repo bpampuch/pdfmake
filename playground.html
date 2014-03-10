@@ -1,0 +1,24 @@
+<div class='playground'>
+	<div class='container'>
+		<ul>
+			<li ng-repeat='e in examples' ng-click='e.activate()'>{{e.name}}</li>
+		</ul>
+	</div>
+</div>
+
+<script type="text/javascript" charset="utf-8">
+	function PlaygroundController($scope) {
+		$scope.examples = [];
+
+		['basics', 'inline-styling', 'named-styles', 'style-overrides', 'columns', 'lists', 'margins', 'tables'].forEach(function(example) {
+			$scope.examples.push({
+				name: example,
+				activate: function() {
+					$http.get('samples/' + example).success(function(data) {
+						$scope.docDefinition = data;
+					});
+				}
+			});
+		});
+	}
+</script>

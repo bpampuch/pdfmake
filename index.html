@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang='en' ng-app='pdfmake'>
+<head>
+	<meta charset='utf-8'>
+	<meta http-equiv='X-UA-Compatible' content='IE=edge'>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+	<meta name='description' content='pdfmake, client/server side PDF printing in pure JavaScript'>
+	<meta name='keywords' content='pdfmake, javascript, printing, layout, pdf, web development, frontend, nodejs, node'>
+	<link rel='stylesheet' href='//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css'>
+	<link rel='stylesheet' href='pdfmake.css'>
+	<link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
+</head>
+<body>
+
+	<header id='top' class='navbar navbar-default' role='navigation'>
+		<div class='container'>
+			<div class='navbar-header'>
+		      <button type='button' class='navbar-toggle' data-toggle='collapse' data-target='.navbar-collapse'>
+		        <span class='sr-only'>Toggle navigation</span>
+		        <span class='icon-bar'></span>
+		        <span class='icon-bar'></span>
+		        <span class='icon-bar'></span>
+		      </button>
+		      <a class='navbar-brand' href='#'>pdf<span style='font-weight: 600'>make</span></a>
+		    </div>
+			<nav class='navbar-collapse collapse' role='navigation' style='height: 1px;'>
+				<ul class='nav navbar-nav navbar-right'>
+					<li><a href="#/gettingstarted">Getting started</a></li>
+					<li><a href="#/playground">Playground</a></li>
+					<li><a href="#/docs">Docs</a></li>
+					<li><a href="https://github.com/bpampuch/pdfmake">Sources</a></li>
+				</ul>
+			</nav>
+		</div>
+	</header>
+	<ng-view></ng-view>
+	<script src='https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js'></script>
+	<script src='//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js'></script>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.10/angular.min.js"></script>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.10/angular-route.min.js"></script>
+
+	<script type="text/javascript" charset="utf-8">
+		var app = angular.module('pdfmake', ['ngRoute']);
+
+		app.config(function($routeProvider) {
+			$routeProvider
+				.when('/', {
+					templateUrl: 'mainPage.html',
+				})
+				.when('/gettingstarted', {
+					templateUrl: 'gettingstarted.html',
+				})
+				.when('/docs', {
+					templateUrl: 'docs.html',
+				})
+				.when('/playground', {
+					templateUrl: 'playground.html',
+					controller: 'PlaygroundController'
+				})
+				.otherwise({ redirectTo: '/' });
+		});
+	</script>
+</body>
+</html>
