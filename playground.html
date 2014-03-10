@@ -420,7 +420,7 @@
 		var editor = ace.edit('editor');
 		setupEditor(editor);
 
-		['basics', 'inline-styling', 'named-styles', 'style-overrides', 'columns', 'lists', 'margins', 'tables'].forEach(function(example) {
+		['basics', 'named-styles', 'inline-styling', 'style-overrides', 'columns', 'lists', 'margins', 'tables'].forEach(function(example) {
 			$scope.examples.push({
 				name: example,
 				activate: function() {
@@ -431,7 +431,13 @@
 			});
 		});
 
-		$scope.examples[0].activate();
+		var old = localStorage.pdfMakeDD;
+
+		if (!old) {
+			$scope.examples[0].activate();
+		} else {
+			editor.getSession().setValue(old);
+		}
 
 		var fonts = {
 			Roboto: {
@@ -468,6 +474,8 @@
 				}
 				lastChanged = new Date();
 
+				localStorage.pdfMakeDD = editor.getSession().getValue();
+
 				timer = setTimeout(function() {
 					if (!lastGen || lastGen < lastChanged) {
 						generate();
@@ -482,7 +490,6 @@
 
 				var doc = printer.createPdfKitDocument(dd);
 				doc.output(function(outDoc) {
-					debugger;
 					$scope.$apply(function() {
 						$scope.stats = 'generated in ' + (new Date().getTime() - lastGen.getTime()) + ' ms';
 					});
