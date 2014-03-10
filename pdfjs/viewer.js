@@ -2805,7 +2805,7 @@ var PDFView = {
     if (typeof url === 'string') { // URL
       this.setTitleUsingUrl(url);
       parameters.url = url;
-    } else if (url && 'byteLength' in url) { // ArrayBuffer
+  } else if (url && url.length) { // ArrayBuffer
       parameters.data = url;
     }
     if (args) {
