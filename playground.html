@@ -40,6 +40,8 @@
 		<ul>
 			<li ng-repeat='e in examples' ng-click='e.activate()'>{{e.name}}</li>
 		</ul>
+
+		<span id='stats'>{{stats}}</span>
 	</div>
 </div>
 
@@ -480,6 +482,11 @@
 
 				var doc = printer.createPdfKitDocument(dd);
 				doc.output(function(outDoc) {
+					debugger;
+					$scope.$apply(function() {
+						$scope.stats = 'generated in ' + (new Date().getTime() - lastGen.getTime()) + ' ms';
+					});
+
 					// PDFJS.disableWorker = true;
 					// PDFJS.getDocument()
 					// pdfCanvas

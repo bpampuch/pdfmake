@@ -126,3 +126,13 @@ h1 {
 #toolbarViewerLeft {
 	width: 100%
 }
+
+.playground {
+	position: relative;
+}
+#stats {
+	position: absolute;
+	right: 10px;
+	top: 6px;
+	opacity: 0.5;
+}
