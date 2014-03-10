@@ -34,7 +34,7 @@ body,
 input,
 button,
 select {
-  font: message-box;
+/*  font: message-box;*/
   outline: none;
 }
 
@@ -1017,7 +1017,7 @@ html[dir='rtl'] .verticalToolbarSeparator {
 }
 
 .horizontalToolbarSeparator {
-  display: block; 
+  display: block;
   margin: 0 0 4px 0;
   height: 1px;
   width: 100%;
@@ -1469,7 +1469,7 @@ canvas {
 }
 
 #documentPropertiesContainer .separator {
-  display: block; 
+  display: block;
   margin: 4px 0 4px 0;
   height: 1px;
   width: 100%;
@@ -1645,7 +1645,7 @@ html[dir='rtl'] #documentPropertiesContainer .row > * {
     background: url(images/toolbarButton-menuArrows@2x.png) no-repeat;
     background-size: 7px 16px;
   }
-  
+
   html[dir='ltr'] .toolbarButton#sidebarToggle::before {
     content: url(images/toolbarButton-sidebarToggle@2x.png);
   }
@@ -1931,4 +1931,3 @@ html[dir='rtl'] #documentPropertiesContainer .row > * {
     display: none;
   }
 }
-
