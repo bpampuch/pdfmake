@@ -1,4 +1,5 @@
-<script type="text/javascript" charset="utf-8" src='build/pdfmake.min.js'></script>
+<script type="text/javascript" charset="utf-8" src='build/pdfmake.js'></script>
+<script type="text/javascript" charset="utf-8" src='build/vfs_fonts.js'></script>
 <script type="text/javascript" charset="utf-8" src='ace-builds/src-min/ace.js'></script>
 
 <div class='playground'>
@@ -49,8 +50,9 @@
 			}
 		}
 
-		// var printer = new pdfMake(fonts);
+		var printer = new pdfMake(fonts);
 
+		printer.fs.bindFS(vfs_fonts);
 
 		function setupEditor() {
 			var timer;
@@ -86,11 +88,12 @@
 
 				eval(editor.getSession().getValue());
 
-				// var doc = printer.createPdfKitDocument(dd);
-				// doc.output(function(outDoc) {
+				var doc = printer.createPdfKitDocument(dd);
+				doc.output(function(outDoc) {
+					console.log('done')
 					// PDFView.open(outDoc, 0);
 					// editor.focus();
-				// });
+				});
 			}
 			//
 			// $scope.print = function print() {
