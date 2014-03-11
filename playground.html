@@ -41,6 +41,7 @@
 			<li ng-repeat='e in examples' ng-click='e.activate()'>{{e.name}}</li>
 		</ul>
 
+		<li id='printThis' ng-click='print()'>print (ctrl+b)</li>
 		<span id='stats'>{{stats}}</span>
 	</div>
 </div>
@@ -48,7 +49,7 @@
 <div class='playgroundBody'>
 	<div class='notEnoughSpace'>
 		<div class='container'>
-			<h2>Playground doesn't work with horizontal resolution below 768px</h2>
+			<h1>Playground doesn't work with horizontal resolution below 1024px</h1>
 		</div>
 	</div>
 	<div class='content'>
@@ -461,13 +462,9 @@
 			editor.commands.addCommand({
 				name: 'Generate',
 				bindKey: { win: 'Ctrl-B', mac: 'Command-B' },
-				exec: generate
+				exec: printDoc
 			});
-			// editor.commands.addCommand({
-			// 	name: 'Print',
-			// 	bindKey: { win: 'Ctrl-P', mac: 'Command-P' },
-			// 	exec: function() { alert('print')}
-			// });
+
 			editor.getSession().on('change', function(e) {
 				if (timer) {
 					clearTimeout(timer);
@@ -503,14 +500,15 @@
 				});
 			}
 			//
-			// $scope.print = function print() {
-			// 	eval(editor.getSession().getValue());
-			//
-			// 	var doc = printer.createPdfKitDocument(dd);
-			// 	doc.output(function(outDoc) {
-			// 		window.open('data:application/pdf;base64,' + outDoc.toString('base64'), '_blank');
-			// 	});
-			// }
+			function printDoc() {
+				eval(editor.getSession().getValue());
+
+				var doc = printer.createPdfKitDocument(dd);
+				doc.output(function(outDoc) {
+					window.open('data:application/pdf;base64,' + outDoc.toString('base64'), '_blank');
+				});
+			}
+			$scope.print = printDoc;
 			// printer.setFileSystem()
 		}
 	};

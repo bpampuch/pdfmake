@@ -1,6 +1,7 @@
 body {
 	font-family: 'Open Sans', sans-serif;
 	color: #666;
+	background: white !important;
 }
 .navbar {
 	margin-bottom: 0;
@@ -43,15 +44,20 @@ h1 {
 }
 
 .playground li {
-	display: inline-block;
+	display: none;
 	padding: 8px;
 	text-transform: uppercase;
 	cursor: pointer;
 	font-size: 12px;
+	text-overflow: ellipsis;
 }
 
 .playground li:hover {
 	background: rgba(0,0,0,0.1);
+}
+
+#pdfeViewer {
+	background-color: #404040;
 }
 
 @media(min-width: 768px) {
@@ -88,7 +94,10 @@ h1 {
 }
 
 
-@media(min-width: 768px) {
+@media(min-width: 1015px) {
+	.playground .container li {
+		display: inline-block;
+	}
 	.playgroundBody .content {
 		position: fixed;
 		display: block;
@@ -130,9 +139,15 @@ h1 {
 .playground {
 	position: relative;
 }
-#stats {
+#stats, #printThis {
 	position: absolute;
-	right: 10px;
+}
+#stats {
 	top: 6px;
+	right: 10px;
 	opacity: 0.5;
+}
+#printThis {
+	top:0;
+	right: 180px;
 }
