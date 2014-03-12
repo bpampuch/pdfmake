@@ -86,21 +86,24 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 
 	if(options.autoPrint){
 		var PDFReference = this.pdfKitDoc.store.objects[2].constructor;
-		var js = new PDFReference('( this.print\\(true\\); )');
-			js.toString = function() { return this.id; };
-		var r = this.pdfKitDoc.ref({
+		var jsRef = this.pdfKitDoc.ref({
 			S: 'JavaScript',
-			JS: js
+			JS: new StringObject('this.print\\(true\\);')
 		});
-		var embeddedJs = new PDFReference('[(EmbeddedJS)' + r.id + ' 0 R]');
-		embeddedJs.toString = function() { return this.id; };
-		this.pdfKitDoc.ref({
-			Names: embeddedJs,
+		var namesRef = this.pdfKitDoc.ref({
+			Names: [new StringObject('EmbeddedJS'), new PDFReference(jsRef.id)],
 		});
-		this.pdfKitDoc.store.objects[2].data.Names = { JavaScript: new PDFReference(r.id + 1) };
+		this.pdfKitDoc.store.objects[2].data.Names = { JavaScript: new PDFReference(namesRef.id) };
 	}
 	return this.pdfKitDoc;
 };
+
+function StringObject(str){
+	this.isString = true;
+	this.toString = function(){
+		return str;
+	};
+}
 
 function renderPages(pages, fontProvider, pdfKitDoc) {
 	for(var i = 0, l = pages.length; i < l; i++) {
