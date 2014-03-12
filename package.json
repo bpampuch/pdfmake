@@ -1,6 +1,6 @@
 {
   "name": "pdfmake",
-  "version": "0.0.41",
+  "version": "0.0.5",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/printer.js",
   "directories": {
@@ -33,12 +33,12 @@
     "printing",
     "layout"
   ],
-  "author": "Bartosz Pampuch <bartosz.pampuch@gmail.com>",
+  "author": "Bartek Pampuch <bartosz.pampuch@gmail.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/bpampuch/pdfmake/issues"
   },
-  "homepage": "https://github.com/bpampuch/pdfmake",
+  "homepage": "https://bpampuch.github.io/pdfmake",
   "config": {
     "blanket": {
       "pattern": "src",
