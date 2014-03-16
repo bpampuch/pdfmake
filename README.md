@@ -1,4 +1,4 @@
-pdfmake
+pdfmake [![Build Status](https://travis-ci.org/bpampuch/pdfmake.png?branch=master)](https://travis-ci.org/bpampuch/pdfmake)
 =======
 
 Client/server side PDF printing in pure JavaScript
