@@ -1780,8 +1780,8 @@ k+4&&(this.a=new Uint8Array(g.length+4),this.a.set(g),g=this.a),g=g.subarray(0,k
 function xb(b,a){var c;b.subarray=b.slice;c=(new pb(b)).i();a||(a={});return a.noBuffer?c:Cb(c)}function yb(b,a,c){process.nextTick(function(){var d,f;try{f=zb(b,c)}catch(e){d=e}a(d,f)})}function zb(b,a){var c;b.subarray=b.slice;c=(new Aa(b)).h();a||(a={});return a.H?c:Cb(c)}function Ab(b,a,c){process.nextTick(function(){var d,f;try{f=Bb(b,c)}catch(e){d=e}a(d,f)})}function Bb(b,a){var c;b.subarray=b.slice;c=(new nb(b)).i();a||(a={});return a.H?c:Cb(c)}
 function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[c];return a};}).call(this); //@ sourceMappingURL=node-zlib.js.map
 
-}).call(this,_dereq_("/Users/dominikalatocha/Desktop/kamil/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"/Users/dominikalatocha/Desktop/kamil/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1}],8:[function(_dereq_,module,exports){
+}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
+},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1}],8:[function(_dereq_,module,exports){
 (function() {
   var Data;
 
@@ -4619,8 +4619,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-}).call(this,_dereq_("/Users/dominikalatocha/Desktop/kamil/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
-},{"/Users/dominikalatocha/Desktop/kamil/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"fs":"x/K9gc"}],31:[function(_dereq_,module,exports){
+}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
+},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"fs":"x/K9gc"}],31:[function(_dereq_,module,exports){
 (function (process,Buffer){
 (function() {
   var PNG, PNGImage, setImmediate, zlib;
@@ -4772,8 +4772,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-}).call(this,_dereq_("/Users/dominikalatocha/Desktop/kamil/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"/Users/dominikalatocha/Desktop/kamil/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"png-js":44,"zlib":6}],32:[function(_dereq_,module,exports){
+}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
+},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"png-js":44,"zlib":6}],32:[function(_dereq_,module,exports){
 (function() {
   var EventEmitter, LineWrapper, WORD_RE;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -6569,8 +6569,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-}).call(this,_dereq_("/Users/dominikalatocha/Desktop/kamil/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"./object":39,"/Users/dominikalatocha/Desktop/kamil/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"zlib":6}],43:[function(_dereq_,module,exports){
+}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
+},{"./object":39,"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"zlib":6}],43:[function(_dereq_,module,exports){
 (function() {
 
   /*
