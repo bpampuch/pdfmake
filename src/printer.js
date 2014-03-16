@@ -3,6 +3,7 @@
 
 var LayoutBuilder = require('./layoutBuilder');
 var PdfKit = require('pdfkit');
+var sizes = require('./standardPageSizes');
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -70,7 +71,7 @@ function PdfPrinter(fontDescriptors) {
 PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	options = options || {};
 
-	var pageSize = docDefinition.pageSize || { width: 595.28, height: 841.89 };
+	var pageSize = pageSize2widthAndHeight(docDefinition.pageSize || 'a4');
 	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ]});
 	this.pdfKitDoc.info.Producer = 'pdfmake';
 	this.pdfKitDoc.info.Creator = 'pdfmake';
@@ -97,6 +98,16 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	}
 	return this.pdfKitDoc;
 };
+
+function pageSize2widthAndHeight(pageSize) {
+    if (typeof pageSize == 'string' || pageSize instanceof String) {
+        var size = sizes[pageSize.toUpperCase()];
+        if (!size) throw ('Page size ' + pageSize + ' not recognized');
+        return { width: size[0], height: size[1] };
+    }
+
+    return pageSize;
+}
 
 function StringObject(str){
 	this.isString = true;
