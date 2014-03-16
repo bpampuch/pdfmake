@@ -118,7 +118,16 @@ describe('TextTools', function() {
 			var result = textTools.splitWords(sampleText2);
 			assert.equal(result[6].text, ' ');
 			assert.equal(result[6].lineEnd, true);
-		})
+		});
+
+		it('should replace tab with 4 spaces', function() {
+			var txt = 'A\ttest';
+
+			assert.equal(txt.length, 6);
+			var result = textTools.splitWords(txt);
+			assert.equal(result[0].text, 'A    ');
+			assert.equal(result[1].text, 'test');
+		});
 	});
 
 	describe('normalizeTextArray', function() {
@@ -276,6 +285,16 @@ describe('TextTools', function() {
 		it('should take into account trimming at line level when calculating maxWidth', function() {
 			var inlines = textTools.buildInlines(textArrayWithNewLinesWhichRequiresTrimming);
 			assert.equal(inlines.maxWidth, 21 * 12);
+		});
+	});
+
+	describe('sizeOfString', function() {
+		it('should treat tab as 4 spaces', function() {
+			var explicitSpaces = textTools.sizeOfString('a    b', styleStack);
+			var tab = textTools.sizeOfString('a\tb', styleStack);
+
+			assert.equal(explicitSpaces.width, tab.width);
+			assert.equal(explicitSpaces.height, tab.height);
 		});
 	});
 });

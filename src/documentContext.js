@@ -116,7 +116,7 @@ function bottomMostContext(c1, c2) {
 	};
 }
 
-/****TESTS**** (remove first '/' to comment)
+/****TESTS**** (add a leading '/' to uncomment)
 DocumentContext.bottomMostContext = bottomMostContext;
 // */
 

@@ -66,6 +66,8 @@ TextTools.prototype.buildInlines = function(textArray, styleContextStack) {
 * @return {Object}                   size of the specified string
 */
 TextTools.prototype.sizeOfString = function(text, styleContextStack) {
+	text = text.replace('\t', '    ');
+
 	//TODO: refactor - extract from measure
 	var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
 	var fontSize = getStyleProperty({}, styleContextStack, 'fontSize', 12);
@@ -85,6 +87,7 @@ TextTools.prototype.sizeOfString = function(text, styleContextStack) {
 
 function splitWords(text) {
 	var results = [];
+	text = text.replace('\t', '    ');
 
 	var array = text.match(WORD_RE);
 
@@ -235,7 +238,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 	return normalized;
 }
 
-/****TESTS**** (remove first '/' to comment)
+/****TESTS**** (add a leading '/' to uncomment)
 TextTools.prototype.splitWords = splitWords;
 TextTools.prototype.normalizeTextArray = normalizeTextArray;
 TextTools.prototype.measure = measure;
