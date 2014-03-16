@@ -67,7 +67,9 @@ function PdfPrinter(fontDescriptors) {
  *
  * @return {Object} a pdfKit document object which can be saved or encode to data-url
  */
-PdfPrinter.prototype.createPdfKitDocument = function(docDefinition) {
+PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
+	options = options || {};
+
 	var pageSize = docDefinition.pageSize || { width: 595.28, height: 841.89 };
 	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ]});
 	this.pdfKitDoc.info.Producer = 'pdfmake';
@@ -81,8 +83,27 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition) {
 	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' });
 
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
+
+	if(options.autoPrint){
+		var PDFReference = this.pdfKitDoc.store.objects[2].constructor;
+		var jsRef = this.pdfKitDoc.ref({
+			S: 'JavaScript',
+			JS: new StringObject('this.print\\(true\\);')
+		});
+		var namesRef = this.pdfKitDoc.ref({
+			Names: [new StringObject('EmbeddedJS'), new PDFReference(jsRef.id)],
+		});
+		this.pdfKitDoc.store.objects[2].data.Names = { JavaScript: new PDFReference(namesRef.id) };
+	}
 	return this.pdfKitDoc;
 };
+
+function StringObject(str){
+	this.isString = true;
+	this.toString = function(){
+		return str;
+	};
+}
 
 function renderPages(pages, fontProvider, pdfKitDoc) {
 	for(var i = 0, l = pages.length; i < l; i++) {
