@@ -8305,7 +8305,7 @@ function PdfPrinter(fontDescriptors) {
 PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	options = options || {};
 
-	var pageSize = docDefinition.pageSize || { width: 595.28, height: 841.89 };
+	var pageSize = pageSize2widthAndHeight(docDefinition.pageSize || 'a4');
 	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ]});
 	this.pdfKitDoc.info.Producer = 'pdfmake';
 	this.pdfKitDoc.info.Creator = 'pdfmake';
@@ -8336,7 +8336,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 function pageSize2widthAndHeight(pageSize) {
     if (typeof pageSize == 'string' || pageSize instanceof String) {
         var size = sizes[pageSize.toUpperCase()];
-        if (!size) throw 'Page size ' + pageSize + ' not recognized';
+        if (!size) throw ('Page size ' + pageSize + ' not recognized');
         return { width: size[0], height: size[1] };
     }
 
@@ -8533,7 +8533,7 @@ module.exports = PdfPrinter;
 PdfPrinter.prototype.fs = _dereq_('fs');
 
 },{"./layoutBuilder":52,"./standardPageSizes":56,"fs":"x/K9gc","pdfkit":9}],56:[function(_dereq_,module,exports){
-module.export = {
+module.exports = {
 	'4A0': [4767.87, 6740.79],
 	'2A0': [3370.39, 4767.87],
 	A0: [2383.94, 3370.39],
