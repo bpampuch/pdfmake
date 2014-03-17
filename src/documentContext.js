@@ -18,6 +18,8 @@ function DocumentContext(pageSize, pageMargins, addFirstPageAutomatically) {
 
 	this.snapshots = [];
 
+	this.endingCell = null;
+
 	if (addFirstPageAutomatically) this.addPage();
 }
 
@@ -28,16 +30,19 @@ DocumentContext.prototype.beginColumnGroup = function() {
 		availableHeight: this.availableHeight,
 		availableWidth: this.availableWidth,
 		page: this.page,
-		bottomMost: { y: this.y, page: this.page }
+		bottomMost: { y: this.y, page: this.page },
+		endingCell: this.endingCell
 	});
 
 	this.lastColumnWidth = 0;
 };
 
-DocumentContext.prototype.beginColumn = function(width, offset) {
+DocumentContext.prototype.beginColumn = function(width, offset, endingCell) {
 	var saved = this.snapshots[this.snapshots.length - 1];
-	saved.bottomMost = bottomMostContext(this, saved.bottomMost);
 
+	this.calculateBottomMost(saved);
+
+  this.endingCell = endingCell;
 	this.page = saved.page;
 	this.x = this.x + this.lastColumnWidth + (offset || 0);
 	this.y = saved.y;
@@ -47,15 +52,46 @@ DocumentContext.prototype.beginColumn = function(width, offset) {
 	this.lastColumnWidth = width;
 };
 
+DocumentContext.prototype.calculateBottomMost = function(destContext) {
+	if (this.endingCell) {
+		this.saveContextInEndingCell(this.endingCell);
+		this.endingCell = null;
+	} else {
+		destContext.bottomMost = bottomMostContext(this, destContext.bottomMost);
+	}
+};
+
+DocumentContext.prototype.markEnding = function(endingCell) {
+	this.page = endingCell._columnEndingContext.page;
+	this.x = endingCell._columnEndingContext.x;
+	this.y = endingCell._columnEndingContext.y;
+	this.availableWidth = endingCell._columnEndingContext.availableWidth;
+	this.availableHeight = endingCell._columnEndingContext.availableHeight;
+	this.lastColumnWidth = endingCell._columnEndingContext.lastColumnWidth;
+};
+
+DocumentContext.prototype.saveContextInEndingCell = function(endingCell) {
+	endingCell._columnEndingContext = {
+		page: this.page,
+		x: this.x,
+		y: this.y,
+		availableHeight: this.availableHeight,
+		availableWidth: this.availableWidth,
+		lastColumnWidth: this.lastColumnWidth
+	};
+};
+
 DocumentContext.prototype.completeColumnGroup = function() {
 	var saved = this.snapshots.pop();
-	var bottomMost = bottomMostContext(this, saved.bottomMost);
 
+	this.calculateBottomMost(saved);
+
+	this.endingCell = null;
 	this.x = saved.x;
-	this.y = bottomMost.y;
-	this.page = bottomMost.page;
+	this.y = saved.bottomMost.y;
+	this.page = saved.bottomMost.page;
 	this.availableWidth = saved.availableWidth;
-	this.availableHeight = bottomMost.availableHeight;
+	this.availableHeight = saved.bottomMost.availableHeight;
 };
 
 DocumentContext.prototype.addMargin = function(left, right) {

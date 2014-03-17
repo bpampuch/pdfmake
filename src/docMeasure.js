@@ -48,7 +48,7 @@ DocMeasure.prototype.measureNode = function(node) {
 			return extendMargins(self.measureList(true, node));
 		} else if (node.table) {
 			return extendMargins(self.measureTable(node));
-		} else if (node.text) {
+		} else if (node.text !== undefined) {
 			return extendMargins(self.measureLeaf(node));
 		} else if (node.canvas) {
 			return extendMargins(self.measureCanvas(node));
@@ -222,19 +222,20 @@ DocMeasure.prototype.measureTable = function(node) {
 		for(row = 0, rows = node.table.body.length; row < rows; row++) {
 			var rowData = node.table.body[row];
 			var data = rowData[col];
-			if (data._span) continue;
+			if (!data._span) {
+				data = rowData[col] = this.measureNode(data);
 
-			data = node.table.body[row][col] = this.measureNode(data);
+				if (data.colSpan && data.colSpan > 1) {
+					markSpans(rowData, col, data.colSpan);
+					colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
+				} else {
+					node.table.widths[col]._minWidth = Math.max(node.table.widths[col]._minWidth, data._minWidth);
+					node.table.widths[col]._maxWidth = Math.max(node.table.widths[col]._maxWidth, data._maxWidth);
+				}
+			}
 
-			if (data.colSpan && data.colSpan > 1) {
-				// I'm not sure auto-placeholders are the way to go - they can make users
-				// confused + we can't have them for rowSpans
-				// extendSpanPlaceholders(rowData, col, data.colSpan);
-				markSpans(rowData, col, data.colSpan);
-				colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
-			} else {
-				node.table.widths[col]._minWidth = Math.max(node.table.widths[col]._minWidth, data._minWidth);
-				node.table.widths[col]._maxWidth = Math.max(node.table.widths[col]._maxWidth, data._maxWidth);
+			if (data.rowSpan && data.rowSpan > 1) {
+				markVSpans(node.table, row, col, data.rowSpan);
 			}
 		}
 	}
@@ -247,23 +248,6 @@ DocMeasure.prototype.measureTable = function(node) {
 	}
 
 	return node;
-
-	/* auto-placeholders
-	function extendSpanPlaceholders(rowData, col, span) {
-		for(var i = 1; i < span; i++) {
-			if (!isEmptyObject(rowData[col + i])) {
-				rowData.splice(col + i, 0, {});
-			}
-		}
-	}
-	function isEmptyObject(obj) {
-		var name;
-		for (name in obj) {
-			return false;
-		}
-		return true;
-	}
-	*/
 
 	function getLayout() {
 		var defaultLayout = {
@@ -341,8 +325,22 @@ DocMeasure.prototype.measureTable = function(node) {
 
 	function markSpans(rowData, col, span) {
 		for (var i = 1; i < span; i++) {
-			rowData[col + i]._span = true;
-			rowData[col + i]._minWidth = rowData[col + i]._maxWidth = 0;
+			rowData[col + i] = {
+				_span: true,
+				_minWidth: 0,
+				_maxWidth: 0,
+				rowSpan: rowData[col].rowSpan
+			};
+		}
+	}
+
+	function markVSpans(table, row, col, span) {
+		for (var i = 1; i < span; i++) {
+			table.body[row + i][col] = {
+				_span: true,
+				_minWidth: 0,
+				_maxWidth: 0,
+			};
 		}
 	}
 

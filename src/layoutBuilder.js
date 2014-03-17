@@ -60,11 +60,11 @@ LayoutBuilder.prototype.processNode = function(node) {
 			self.processList(true, node.ol, node._gapSize);
 		} else if (node.table) {
 			self.processTable(node);
-		} else if (node.text) {
+		} else if (node.text !== undefined) {
 			self.processLeaf(node);
 		} else if (node.canvas) {
 			self.processCanvas(node);
-		} else {
+    } else if (!node._span) {
 			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
 	});
@@ -122,24 +122,29 @@ LayoutBuilder.prototype.processColumns = function(columnNode) {
 	}
 };
 
-LayoutBuilder.prototype.processRow = function(columns, widths, gaps) {
+LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, tableRow) {
 	widths = widths || columns;
 
 	this.writer.context.beginColumnGroup();
 
 	for(var i = 0, l = columns.length; i < l; i++) {
 		var column = columns[i];
-        var width = widths[i]._calcWidth;
-        var leftOffset = colLeftOffset(i);
+    var width = widths[i]._calcWidth;
+    var leftOffset = colLeftOffset(i);
 
-        if (column.colSpan && column.colSpan > 1) {
-            for(var j = 1; j < column.colSpan; j++) {
-                width += widths[++i]._calcWidth + gaps[i];
-            }
+    if (column.colSpan && column.colSpan > 1) {
+        for(var j = 1; j < column.colSpan; j++) {
+            width += widths[++i]._calcWidth + gaps[i];
         }
+    }
 
-        this.writer.context.beginColumn(width, leftOffset);
-		this.processNode(column);
+    this.writer.context.beginColumn(width, leftOffset, getEndingCell(column, i));
+    if (!column._span) {
+      this.processNode(column);
+    } else if (column._columnEndingContext) {
+      // row-span ending
+      this.writer.context.markEnding(column);
+    }
 	}
 
 	this.writer.context.completeColumnGroup();
@@ -148,6 +153,16 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps) {
 		if (gaps && gaps.length > i) return gaps[i];
 		return 0;
 	}
+
+  function getEndingCell(column, columnIndex) {
+    if (column.rowSpan && column.rowSpan > 1) {
+      var endingRow = tableRow + column.rowSpan - 1;
+      if (endingRow >= tableBody.length) throw 'Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count';
+      return tableBody[endingRow][columnIndex];
+    }
+
+    return null;
+  }
 };
 
 // lists
@@ -213,7 +228,7 @@ LayoutBuilder.prototype.processTable = function(tableNode) {
 
 	for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
 		this.writer.context.moveDown(layout.paddingTop(i, tableNode));
-		this.processRow(tableNode.table.body[i], tableNode.table.widths, offsets.offsets);
+		this.processRow(tableNode.table.body[i], tableNode.table.widths, offsets.offsets, tableNode.table.body, i);
 		this.writer.context.moveDown(layout.paddingBottom(i, tableNode));
 		drawHorizontalLine(layout, i + 1);
 

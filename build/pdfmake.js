@@ -1780,8 +1780,8 @@ k+4&&(this.a=new Uint8Array(g.length+4),this.a.set(g),g=this.a),g=g.subarray(0,k
 function xb(b,a){var c;b.subarray=b.slice;c=(new pb(b)).i();a||(a={});return a.noBuffer?c:Cb(c)}function yb(b,a,c){process.nextTick(function(){var d,f;try{f=zb(b,c)}catch(e){d=e}a(d,f)})}function zb(b,a){var c;b.subarray=b.slice;c=(new Aa(b)).h();a||(a={});return a.H?c:Cb(c)}function Ab(b,a,c){process.nextTick(function(){var d,f;try{f=Bb(b,c)}catch(e){d=e}a(d,f)})}function Bb(b,a){var c;b.subarray=b.slice;c=(new nb(b)).i();a||(a={});return a.H?c:Cb(c)}
 function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[c];return a};}).call(this); //@ sourceMappingURL=node-zlib.js.map
 
-}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1}],8:[function(_dereq_,module,exports){
+}).call(this,_dereq_("/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
+},{"/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1}],8:[function(_dereq_,module,exports){
 (function() {
   var Data;
 
@@ -4619,8 +4619,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
-},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"fs":"x/K9gc"}],31:[function(_dereq_,module,exports){
+}).call(this,_dereq_("/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
+},{"/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"fs":"x/K9gc"}],31:[function(_dereq_,module,exports){
 (function (process,Buffer){
 (function() {
   var PNG, PNGImage, setImmediate, zlib;
@@ -4772,8 +4772,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"png-js":44,"zlib":6}],32:[function(_dereq_,module,exports){
+}).call(this,_dereq_("/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
+},{"/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"png-js":44,"zlib":6}],32:[function(_dereq_,module,exports){
 (function() {
   var EventEmitter, LineWrapper, WORD_RE;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -6569,8 +6569,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"./object":39,"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"zlib":6}],43:[function(_dereq_,module,exports){
+}).call(this,_dereq_("/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
+},{"./object":39,"/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"zlib":6}],43:[function(_dereq_,module,exports){
 (function() {
 
   /*
@@ -7138,7 +7138,7 @@ DocMeasure.prototype.measureNode = function(node) {
 			return extendMargins(self.measureList(true, node));
 		} else if (node.table) {
 			return extendMargins(self.measureTable(node));
-		} else if (node.text) {
+		} else if (node.text !== undefined) {
 			return extendMargins(self.measureLeaf(node));
 		} else if (node.canvas) {
 			return extendMargins(self.measureCanvas(node));
@@ -7312,19 +7312,20 @@ DocMeasure.prototype.measureTable = function(node) {
 		for(row = 0, rows = node.table.body.length; row < rows; row++) {
 			var rowData = node.table.body[row];
 			var data = rowData[col];
-			if (data._span) continue;
+			if (!data._span) {
+				data = rowData[col] = this.measureNode(data);
 
-			data = node.table.body[row][col] = this.measureNode(data);
+				if (data.colSpan && data.colSpan > 1) {
+					markSpans(rowData, col, data.colSpan);
+					colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
+				} else {
+					node.table.widths[col]._minWidth = Math.max(node.table.widths[col]._minWidth, data._minWidth);
+					node.table.widths[col]._maxWidth = Math.max(node.table.widths[col]._maxWidth, data._maxWidth);
+				}
+			}
 
-			if (data.colSpan && data.colSpan > 1) {
-				// I'm not sure auto-placeholders are the way to go - they can make users
-				// confused + we can't have them for rowSpans
-				// extendSpanPlaceholders(rowData, col, data.colSpan);
-				markSpans(rowData, col, data.colSpan);
-				colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
-			} else {
-				node.table.widths[col]._minWidth = Math.max(node.table.widths[col]._minWidth, data._minWidth);
-				node.table.widths[col]._maxWidth = Math.max(node.table.widths[col]._maxWidth, data._maxWidth);
+			if (data.rowSpan && data.rowSpan > 1) {
+				markVSpans(node.table, row, col, data.rowSpan);
 			}
 		}
 	}
@@ -7337,23 +7338,6 @@ DocMeasure.prototype.measureTable = function(node) {
 	}
 
 	return node;
-
-	/* auto-placeholders
-	function extendSpanPlaceholders(rowData, col, span) {
-		for(var i = 1; i < span; i++) {
-			if (!isEmptyObject(rowData[col + i])) {
-				rowData.splice(col + i, 0, {});
-			}
-		}
-	}
-	function isEmptyObject(obj) {
-		var name;
-		for (name in obj) {
-			return false;
-		}
-		return true;
-	}
-	*/
 
 	function getLayout() {
 		var defaultLayout = {
@@ -7431,8 +7415,22 @@ DocMeasure.prototype.measureTable = function(node) {
 
 	function markSpans(rowData, col, span) {
 		for (var i = 1; i < span; i++) {
-			rowData[col + i]._span = true;
-			rowData[col + i]._minWidth = rowData[col + i]._maxWidth = 0;
+			rowData[col + i] = {
+				_span: true,
+				_minWidth: 0,
+				_maxWidth: 0,
+				rowSpan: rowData[col].rowSpan
+			};
+		}
+	}
+
+	function markVSpans(table, row, col, span) {
+		for (var i = 1; i < span; i++) {
+			table.body[row + i][col] = {
+				_span: true,
+				_minWidth: 0,
+				_maxWidth: 0,
+			};
 		}
 	}
 
@@ -7515,6 +7513,8 @@ function DocumentContext(pageSize, pageMargins, addFirstPageAutomatically) {
 
 	this.snapshots = [];
 
+	this.endingCell = null;
+
 	if (addFirstPageAutomatically) this.addPage();
 }
 
@@ -7525,16 +7525,19 @@ DocumentContext.prototype.beginColumnGroup = function() {
 		availableHeight: this.availableHeight,
 		availableWidth: this.availableWidth,
 		page: this.page,
-		bottomMost: { y: this.y, page: this.page }
+		bottomMost: { y: this.y, page: this.page },
+		endingCell: this.endingCell
 	});
 
 	this.lastColumnWidth = 0;
 };
 
-DocumentContext.prototype.beginColumn = function(width, offset) {
+DocumentContext.prototype.beginColumn = function(width, offset, endingCell) {
 	var saved = this.snapshots[this.snapshots.length - 1];
-	saved.bottomMost = bottomMostContext(this, saved.bottomMost);
 
+	this.calculateBottomMost(saved);
+
+  this.endingCell = endingCell;
 	this.page = saved.page;
 	this.x = this.x + this.lastColumnWidth + (offset || 0);
 	this.y = saved.y;
@@ -7544,15 +7547,46 @@ DocumentContext.prototype.beginColumn = function(width, offset) {
 	this.lastColumnWidth = width;
 };
 
+DocumentContext.prototype.calculateBottomMost = function(destContext) {
+	if (this.endingCell) {
+		this.saveContextInEndingCell(this.endingCell);
+		this.endingCell = null;
+	} else {
+		destContext.bottomMost = bottomMostContext(this, destContext.bottomMost);
+	}
+};
+
+DocumentContext.prototype.markEnding = function(endingCell) {
+	this.page = endingCell._columnEndingContext.page;
+	this.x = endingCell._columnEndingContext.x;
+	this.y = endingCell._columnEndingContext.y;
+	this.availableWidth = endingCell._columnEndingContext.availableWidth;
+	this.availableHeight = endingCell._columnEndingContext.availableHeight;
+	this.lastColumnWidth = endingCell._columnEndingContext.lastColumnWidth;
+};
+
+DocumentContext.prototype.saveContextInEndingCell = function(endingCell) {
+	endingCell._columnEndingContext = {
+		page: this.page,
+		x: this.x,
+		y: this.y,
+		availableHeight: this.availableHeight,
+		availableWidth: this.availableWidth,
+		lastColumnWidth: this.lastColumnWidth
+	};
+};
+
 DocumentContext.prototype.completeColumnGroup = function() {
 	var saved = this.snapshots.pop();
-	var bottomMost = bottomMostContext(this, saved.bottomMost);
 
+	this.calculateBottomMost(saved);
+
+	this.endingCell = null;
 	this.x = saved.x;
-	this.y = bottomMost.y;
-	this.page = bottomMost.page;
+	this.y = saved.bottomMost.y;
+	this.page = saved.bottomMost.page;
 	this.availableWidth = saved.availableWidth;
-	this.availableHeight = bottomMost.availableHeight;
+	this.availableHeight = saved.bottomMost.availableHeight;
 };
 
 DocumentContext.prototype.addMargin = function(left, right) {
@@ -7870,11 +7904,11 @@ LayoutBuilder.prototype.processNode = function(node) {
 			self.processList(true, node.ol, node._gapSize);
 		} else if (node.table) {
 			self.processTable(node);
-		} else if (node.text) {
+		} else if (node.text !== undefined) {
 			self.processLeaf(node);
 		} else if (node.canvas) {
 			self.processCanvas(node);
-		} else {
+    } else if (!node._span) {
 			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
 	});
@@ -7932,24 +7966,29 @@ LayoutBuilder.prototype.processColumns = function(columnNode) {
 	}
 };
 
-LayoutBuilder.prototype.processRow = function(columns, widths, gaps) {
+LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, tableRow) {
 	widths = widths || columns;
 
 	this.writer.context.beginColumnGroup();
 
 	for(var i = 0, l = columns.length; i < l; i++) {
 		var column = columns[i];
-        var width = widths[i]._calcWidth;
-        var leftOffset = colLeftOffset(i);
+    var width = widths[i]._calcWidth;
+    var leftOffset = colLeftOffset(i);
 
-        if (column.colSpan && column.colSpan > 1) {
-            for(var j = 1; j < column.colSpan; j++) {
-                width += widths[++i]._calcWidth + gaps[i];
-            }
+    if (column.colSpan && column.colSpan > 1) {
+        for(var j = 1; j < column.colSpan; j++) {
+            width += widths[++i]._calcWidth + gaps[i];
         }
+    }
 
-        this.writer.context.beginColumn(width, leftOffset);
-		this.processNode(column);
+    this.writer.context.beginColumn(width, leftOffset, getEndingCell(column, i));
+    if (!column._span) {
+      this.processNode(column);
+    } else if (column._columnEndingContext) {
+      // row-span ending
+      this.writer.context.markEnding(column);
+    }
 	}
 
 	this.writer.context.completeColumnGroup();
@@ -7958,6 +7997,16 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps) {
 		if (gaps && gaps.length > i) return gaps[i];
 		return 0;
 	}
+
+  function getEndingCell(column, columnIndex) {
+    if (column.rowSpan && column.rowSpan > 1) {
+      var endingRow = tableRow + column.rowSpan - 1;
+      if (endingRow >= tableBody.length) throw 'Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count';
+      return tableBody[endingRow][columnIndex];
+    }
+
+    return null;
+  }
 };
 
 // lists
@@ -8023,7 +8072,7 @@ LayoutBuilder.prototype.processTable = function(tableNode) {
 
 	for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
 		this.writer.context.moveDown(layout.paddingTop(i, tableNode));
-		this.processRow(tableNode.table.body[i], tableNode.table.widths, offsets.offsets);
+		this.processRow(tableNode.table.body[i], tableNode.table.widths, offsets.offsets, tableNode.table.body, i);
 		this.writer.context.moveDown(layout.paddingBottom(i, tableNode));
 		drawHorizontalLine(layout, i + 1);
 

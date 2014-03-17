@@ -1133,6 +1133,8 @@ describe('LayoutBuilder', function() {
 		describe.skip('TODO', function() {
 			//DONE
 			it.skip('should support block margins');
+			it.skip('should support column spans');
+			it.skip('should support row spans');
 
 			it.skip('should support vector lines');
 			it.skip('should support vector paths');
@@ -1163,8 +1165,6 @@ describe('LayoutBuilder', function() {
 			it.skip('should support subscript');
 			it.skip('should support superscript');
 			it.skip('should support vertical alignment inside cells');
-			it.skip('should support column spans');
-			it.skip('should support row spans');
 			it.skip('should support programmatic cell styling');
 			it.skip('should support non-breaking-spaces');
 			it.skip('should support non-breaking-lines');

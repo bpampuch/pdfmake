@@ -64,6 +64,20 @@ describe('DocumentContext', function() {
 
 			assert.equal(pc.availableWidth, 30);
 		});
+
+		it('should save context in endingCell if provided', function() {
+			var endingCell = {};
+			pc.beginColumnGroup();
+			pc.beginColumn(30, 0, endingCell);
+			pc.y = 150;
+			pc.page = 3;
+			pc.availableHeight = 123;
+			pc.beginColumn(30, 0);
+
+			assert.equal(endingCell._columnEndingContext.y, 150);
+			assert.equal(endingCell._columnEndingContext.page, 3);
+			assert.equal(endingCell._columnEndingContext.availableHeight, 123);
+		});
 	});
 
 	describe('completeColumnGroup', function() {
@@ -86,6 +100,80 @@ describe('DocumentContext', function() {
 			pc.completeColumnGroup();
 
 			assert.equal(pc.page, 7);
+		});
+
+		it('should skip non-ending-cells (spanning over multiple rows) during vsync', function() {
+			var endingCell = {};
+
+			pc.beginColumnGroup();
+			pc.beginColumn(30, 0, endingCell);
+			pc.y = 150;
+			pc.page = 3;
+			pc.availableHeight = 123;
+			pc.beginColumn(30, 0);
+			pc.y = 100;
+			pc.page = 3;
+			pc.completeColumnGroup();
+
+			assert.equal(pc.page, 3);
+			assert.equal(pc.y, 100);
+		});
+
+		it('non-ending-cells (spanning over multiple rows) should also work with nested columns', function() {
+			var endingCell = {};
+			var endingCell2 = {};
+
+			// external table
+			pc.beginColumnGroup();
+			// col1 spans over 2 rows
+			pc.beginColumn(30, 0, endingCell);
+			pc.y = 350;
+			pc.beginColumn(40);
+			pc.y = 100;
+			// column3 contains a nested table
+			pc.beginColumn(100);
+
+				pc.beginColumnGroup();
+				pc.beginColumn(20);
+				pc.y = 100;
+				pc.beginColumn(20);
+				pc.y = 120;
+				// col3.3 spans over 2 rows
+				pc.beginColumn(40, 0, endingCell2);
+				pc.y = 180;
+				pc.completeColumnGroup();
+
+				//// bottom of all non-spanned columns
+				assert.equal(pc.y, 120);
+
+				// second row (of nested table)
+				pc.beginColumnGroup();
+				pc.beginColumn(20);
+				pc.y = 10;
+				pc.beginColumn(20);
+				pc.y = 20;
+				// col3.3 spans over 2 rows
+				pc.beginColumn(40, 0);
+				pc.markEnding(endingCell2);
+				pc.completeColumnGroup();
+
+				//// spanned column was large enough to influence bottom
+				assert.equal(pc.y, 180);
+			pc.completeColumnGroup();
+
+			//// bottom of all non-spanned columns
+			assert.equal(pc.y, 180);
+
+			// second row
+			pc.beginColumnGroup();
+			pc.beginColumn(30);
+			pc.markEnding(endingCell);
+			pc.beginColumn(40);
+			pc.y = 50;
+			pc.beginColumn(100);
+			pc.y = 10;
+			pc.completeColumnGroup();
+			assert.equal(pc.y, 350);
 		});
 	});
 

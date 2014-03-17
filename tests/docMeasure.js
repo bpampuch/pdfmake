@@ -235,6 +235,20 @@ describe('DocMeasure', function() {
 			docMeasure.measureTable(tableNode);
 		});
 
+		it('should mark cells directly following colSpan-cell with _span property and set min/maxWidth to 0', function() {
+			tableNode.table.body.push([ { text: 'Col 1', colSpan: 3 }, {}, {}, 'Col 4' ]);
+			docMeasure.measureTable(tableNode);
+
+			var rows = tableNode.table.body.length;
+			assert(tableNode.table.body[rows - 1][1]._span !== undefined);
+			assert(tableNode.table.body[rows - 1][2]._span !== undefined);
+			assert(tableNode.table.body[rows - 1][3]._span === undefined);
+			assert.equal(tableNode.table.body[rows - 1][1]._minWidth, 0);
+			assert.equal(tableNode.table.body[rows - 1][1]._maxWidth, 0);
+			assert.equal(tableNode.table.body[rows - 1][2]._minWidth, 0);
+			assert.equal(tableNode.table.body[rows - 1][2]._maxWidth, 0);
+		});
+
 		it('spanning cells should not influence min/max column widths if their min/max widths are lower or equal', function() {
 			tableNode.layout = emptyTableLayout;
 
@@ -314,6 +328,26 @@ describe('DocMeasure', function() {
 
 			assert.equal(tableNode.table.widths[0]._minWidth, col0min);
 			assert.equal(tableNode.table.widths[1]._minWidth, col1min);
+		});
+
+		it('should mark cells directly below rowSpan-cell with _span property and set min/maxWidth to 0', function() {
+			tableNode.table.body.push([ { text: 'Col 1', rowSpan: 3 }, 'Col2', 'Col 3', 'Col 4' ]);
+			tableNode.table.body.push([ {}, 'Col2', 'Col 3', 'Col 4' ]);
+			tableNode.table.body.push([ {}, 'Col2', 'Col 3', 'Col 4' ]);
+			tableNode.table.body.push([ 'Another', 'Col2', 'Col 3', 'Col 4' ]);
+			docMeasure.measureTable(tableNode);
+
+			var rows = tableNode.table.body.length;
+			assert(tableNode.table.body[rows - 3][0]._span !== undefined);
+			assert(tableNode.table.body[rows - 2][0]._span !== undefined);
+			assert(tableNode.table.body[rows - 1][0]._span === undefined);
+
+			assert.equal(tableNode.table.body[rows - 3][0]._minWidth, 0);
+			assert.equal(tableNode.table.body[rows - 3][0]._maxWidth, 0);
+			assert.equal(tableNode.table.body[rows - 2][0]._minWidth, 0);
+			assert.equal(tableNode.table.body[rows - 2][0]._maxWidth, 0);
+			assert(tableNode.table.body[rows - 1][0]._minWidth != 0);
+			assert(tableNode.table.body[rows - 1][0]._maxWidth != 0);
 		});
 	});
 });
