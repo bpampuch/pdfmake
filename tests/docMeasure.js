@@ -16,6 +16,17 @@ var sampleTestProvider = {
 	}
 };
 
+var emptyTableLayout = {
+	hLineWidth: function(i) { return 0; },
+	vLineWidth: function(i) { return 0; },
+	hLineColor: function(i) { return 'black'; },
+	vLineColor: function(i) { return 'black'; },
+	paddingLeft: function(i) { return 0; },
+	paddingRight: function(i) { return 0; },
+	paddingTop: function(i) { return 0; },
+	paddingBottom: function(i) { return 0; }
+};
+
 var docMeasure = new DocMeasure(sampleTestProvider);
 
 describe('DocMeasure', function() {
@@ -216,6 +227,93 @@ describe('DocMeasure', function() {
 
 			assert.equal(tableNode.table._minWidth, 296);
 			assert.equal(tableNode.table._maxWidth, 912);
+		});
+
+		it('should support column spans', function() {
+			tableNode.table.body.push([ { text: 'Column 1', colSpan: 2 }, {}, 'Column 3', 'Column 4' ]);
+
+			docMeasure.measureTable(tableNode);
+		});
+
+		it('spanning cells should not influence min/max column widths if their min/max widths are lower or equal', function() {
+			tableNode.layout = emptyTableLayout;
+
+			docMeasure.measureTable(tableNode);
+			var col0min = tableNode.table.widths[0]._minWidth;
+			var col0max = tableNode.table.widths[0]._maxWidth;
+			var col1min = tableNode.table.widths[1]._minWidth;
+			var col1max = tableNode.table.widths[1]._maxWidth;
+
+			tableNode.table.body.push([ { text: 'Co1', colSpan: 2 }, {}, 'Column 3', 'Column 4' ]);
+			tableNode.table.body.push([ { text: '123456789012', colSpan: 2 }, {}, 'Column 3', 'Column 4' ]);
+			docMeasure.measureTable(tableNode);
+
+			assert.equal(tableNode.table.widths[0]._minWidth, col0min);
+			assert.equal(tableNode.table.widths[0]._maxWidth, col0max);
+			assert.equal(tableNode.table.widths[1]._minWidth, col1min);
+			assert.equal(tableNode.table.widths[1]._maxWidth, col1max);
+		});
+
+		it('spanning cells, having min-width larger than the sum of min-widths of the columns they span over, should update column min-widths equally', function() {
+			tableNode.layout = emptyTableLayout;
+
+			docMeasure.measureTable(tableNode);
+			var col0min = tableNode.table.widths[0]._minWidth;
+			var col1min = tableNode.table.widths[1]._minWidth;
+
+			assert.equal(col0min, 6 * 12);
+			assert.equal(col1min, 6 * 12);
+
+			// make sure we know default values for
+
+			tableNode.table.body.push([ { text: 'thisislongera', colSpan: 2 }, {}, 'Column 3', 'Column 4' ]);
+			docMeasure.measureTable(tableNode);
+
+			assert(tableNode.table.widths[0]._minWidth > col0min);
+			assert(tableNode.table.widths[1]._minWidth > col1min);
+
+			assert.equal(tableNode.table.widths[0]._minWidth, col1min + 1 * 12 / 2);
+			assert.equal(tableNode.table.widths[1]._minWidth, col1min + 1 * 12 / 2);
+		});
+
+		it('spanning cells, having max-width larger than the sum of max-widths of the columns they span over, should update column max-widths equally', function() {
+			tableNode.layout = emptyTableLayout;
+
+			docMeasure.measureTable(tableNode);
+			var col0max = tableNode.table.widths[0]._maxWidth;
+			var col1max = tableNode.table.widths[1]._maxWidth;
+
+			assert.equal(col0max, 26 * 12);
+			assert.equal(col1max, 22 * 12);
+
+			tableNode.table.body.push([ { text: '1234 6789 1234 6789 1234 6789 1234 6789 1234 6789', colSpan: 2 }, {}, 'Column 3', 'Column 4' ]);
+			docMeasure.measureTable(tableNode);
+
+			assert.equal(tableNode.table.widths[0]._maxWidth, col0max + 1 * 12/2);
+			assert.equal(tableNode.table.widths[1]._maxWidth, col1max + 1 * 12/2);
+		});
+
+		it('calculating widths (when colSpan are used) should take into account cell padding and borders', function() {
+			// 5 + 3 + 4 == 12 --- the exact width of the overflowing letter in thisislongera
+			// it means we have enough space and there's no need to change column widths
+			tableNode.layout = {
+				vLineWidth: function() { return 5; },
+				paddingLeft: function() { return 3; },
+				paddingRight: function() { return 4; }
+			};
+
+			docMeasure.measureTable(tableNode);
+			var col0min = tableNode.table.widths[0]._minWidth;
+			var col1min = tableNode.table.widths[1]._minWidth;
+
+			assert.equal(col0min, 6 * 12);
+			assert.equal(col1min, 6 * 12);
+
+			tableNode.table.body.push([ { text: 'thisislongera', colSpan: 2 }, {}, 'Column 3', 'Column 4' ]);
+			docMeasure.measureTable(tableNode);
+
+			assert.equal(tableNode.table.widths[0]._minWidth, col0min);
+			assert.equal(tableNode.table.widths[1]._minWidth, col1min);
 		});
 	});
 });

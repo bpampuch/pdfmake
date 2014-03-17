@@ -4,6 +4,7 @@
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
 var fontStringify = require('./helpers').fontStringify;
+var pack = require('./helpers').pack;
 
 /**
 * @private
@@ -205,26 +206,145 @@ DocMeasure.prototype.measureList = function(isOrdered, node) {
 
 DocMeasure.prototype.measureTable = function(node) {
 	extendTableWidths(node);
+	node._layout = getLayout();
+	node._offsets = getOffsets(node._layout);
+
+	var colSpans = [];
+	var col, row, cols, rows;
 
 	node.table._minWidth = 0;
 	node.table._maxWidth = 0;
 
-	for(var col = 0, cols = node.table.body[0].length; col < cols; col++) {
+	for(col = 0, cols = node.table.body[0].length; col < cols; col++) {
 		node.table.widths[col]._minWidth = 0;
 		node.table.widths[col]._maxWidth = 0;
 
-		for(var row = 0, rows = node.table.body.length; row < rows; row++) {
-			node.table.body[row][col] = this.measureNode(node.table.body[row][col]);
+		for(row = 0, rows = node.table.body.length; row < rows; row++) {
+			var rowData = node.table.body[row];
+			var data = rowData[col];
+			if (data._span) continue;
 
-			node.table.widths[col]._minWidth = Math.max(node.table.widths[col]._minWidth, node.table.body[row][col]._minWidth);
-			node.table.widths[col]._maxWidth = Math.max(node.table.widths[col]._maxWidth, node.table.body[row][col]._maxWidth);
+			data = node.table.body[row][col] = this.measureNode(data);
+
+			if (data.colSpan && data.colSpan > 1) {
+				// I'm not sure auto-placeholders are the way to go - they can make users
+				// confused + we can't have them for rowSpans
+				// extendSpanPlaceholders(rowData, col, data.colSpan);
+				markSpans(rowData, col, data.colSpan);
+				colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
+			} else {
+				node.table.widths[col]._minWidth = Math.max(node.table.widths[col]._minWidth, data._minWidth);
+				node.table.widths[col]._maxWidth = Math.max(node.table.widths[col]._maxWidth, data._maxWidth);
+			}
 		}
+	}
 
+	extendWidthsForColSpans();
+
+	for(col = 0, cols = node.table.body[0].length; col < cols; col++) {
 		node.table._minWidth += node.table.widths[col]._minWidth;
 		node.table._maxWidth += node.table.widths[col]._maxWidth;
 	}
 
 	return node;
+
+	/* auto-placeholders
+	function extendSpanPlaceholders(rowData, col, span) {
+		for(var i = 1; i < span; i++) {
+			if (!isEmptyObject(rowData[col + i])) {
+				rowData.splice(col + i, 0, {});
+			}
+		}
+	}
+	function isEmptyObject(obj) {
+		var name;
+		for (name in obj) {
+			return false;
+		}
+		return true;
+	}
+	*/
+
+	function getLayout() {
+		var defaultLayout = {
+			hLineWidth: function(i, node) { return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
+			vLineWidth: function(i, node) { return 1; },
+			hLineColor: function(i, node) { return 'black'; },
+			vLineColor: function(i, node) { return 'black'; },
+			paddingLeft: function(i, node) { return i && 4 || 0; },
+			paddingRight: function(i, node) { return (i < node.table.widths.length - 1) ? 4 : 0; },
+			paddingTop: function(i, node) { return 2; },
+			paddingBottom: function(i, node) { return 2; }
+		};
+
+		return pack(defaultLayout, node.layout);
+	}
+
+	function getOffsets(layout) {
+		var offsets = [];
+		var totalOffset = 0;
+		var prevRightPadding = 0;
+
+		for(var i = 0, l = node.table.widths.length; i < l; i++) {
+			var lOffset = prevRightPadding + layout.vLineWidth(i, node) + layout.paddingLeft(i, node);
+			offsets.push(lOffset);
+			totalOffset += lOffset;
+			prevRightPadding = layout.paddingRight(i, node);
+		}
+
+		totalOffset += prevRightPadding + layout.vLineWidth(node.table.widths.length, node);
+
+		return {
+			total: totalOffset,
+			offsets: offsets
+		};
+	}
+
+	function extendWidthsForColSpans() {
+		var q, j;
+
+		for (var i = 0, l = colSpans.length; i < l; i++) {
+			var span = colSpans[i];
+
+			var currentMinMax = getMinMax(span.col, span.span, node._offsets);
+			var minDifference = span.minWidth - currentMinMax.minWidth;
+			var maxDifference = span.maxWidth - currentMinMax.maxWidth;
+
+			if (minDifference > 0) {
+				q = minDifference / span.span;
+
+				for(j = 0; j < span.span; j++) {
+					node.table.widths[span.col + j]._minWidth += q;
+				}
+			}
+
+			if (maxDifference > 0) {
+				q = maxDifference / span.span;
+
+				for(j = 0; j < span.span; j++) {
+					node.table.widths[span.col + j]._maxWidth += q;
+				}
+			}
+		}
+	}
+
+	function getMinMax(col, span, offsets) {
+		var result = { minWidth: 0, maxWidth: 0 };
+
+		for(var i = 0; i < span; i++) {
+			result.minWidth += node.table.widths[col + i]._minWidth + (i? offsets.offsets[col + i] : 0);
+			result.maxWidth += node.table.widths[col + i]._maxWidth + (i? offsets.offsets[col + i] : 0);
+		}
+
+		return result;
+	}
+
+	function markSpans(rowData, col, span) {
+		for (var i = 1; i < span; i++) {
+			rowData[col + i]._span = true;
+			rowData[col + i]._minWidth = rowData[col + i]._maxWidth = 0;
+		}
+	}
 
 	function extendTableWidths(node) {
 		if (!node.table.widths) {

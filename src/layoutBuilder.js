@@ -129,7 +129,16 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps) {
 
 	for(var i = 0, l = columns.length; i < l; i++) {
 		var column = columns[i];
-		this.writer.context.beginColumn(widths[i]._calcWidth, colLeftOffset(i));
+        var width = widths[i]._calcWidth;
+        var leftOffset = colLeftOffset(i);
+
+        if (column.colSpan && column.colSpan > 1) {
+            for(var j = 1; j < column.colSpan; j++) {
+                width += widths[++i]._calcWidth + gaps[i];
+            }
+        }
+
+        this.writer.context.beginColumn(width, leftOffset);
 		this.processNode(column);
 	}
 
@@ -183,8 +192,8 @@ LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
 // tables
 LayoutBuilder.prototype.processTable = function(tableNode) {
 	var self = this;
-	var layout = getLayout();
-	var offsets = getOffsets(layout);
+	var layout = tableNode._layout;
+	var offsets = tableNode._offsets;
 
 	ColumnCalculator.buildColumnWidths(tableNode.table.widths, this.writer.context.availableWidth - offsets.total);
 
@@ -230,41 +239,6 @@ LayoutBuilder.prototype.processTable = function(tableNode) {
 			self.writer.addVector({ type:'line', x1: 0, x2: totalTableWidth, y1: offset, y2: offset, lineWidth: width, lineColor: layout.hLineColor(i, tableNode) });
 			self.writer.context.moveDown(width);
 		}
-	}
-
-	function getLayout() {
-		var defaultLayout = {
-			hLineWidth: function(i, node) { return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
-			vLineWidth: function(i, node) { return 1; },
-			hLineColor: function(i, node) { return 'black'; },
-			vLineColor: function(i, node) { return 'black'; },
-			paddingLeft: function(i, node) { return i && 4 || 0; },
-			paddingRight: function(i, node) { return (i < node.table.widths.length - 1) ? 4 : 0; },
-			paddingTop: function(i, node) { return 2; },
-			paddingBottom: function(i, node) { return 2; }
-		};
-
-		return pack(defaultLayout, tableNode.layout);
-	}
-
-	function getOffsets(layout) {
-		var offsets = [];
-		var totalOffset = 0;
-		var prevRightPadding = 0;
-
-		for(var i = 0, l = tableNode.table.widths.length; i < l; i++) {
-			var lOffset = prevRightPadding + layout.vLineWidth(i, tableNode) + layout.paddingLeft(i, tableNode);
-			offsets.push(lOffset);
-			totalOffset += lOffset;
-			prevRightPadding = layout.paddingRight(i, tableNode);
-		}
-
-		totalOffset += prevRightPadding + layout.vLineWidth(tableNode.table.widths.length, tableNode);
-
-		return {
-			total: totalOffset,
-			offsets: offsets
-		};
 	}
 
 	function getTableWidth() {

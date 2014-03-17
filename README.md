@@ -10,7 +10,6 @@ Docs + getting started will appear soon.
 
 ## currently working on
 
-* tables - column spans
 * tables - row spans
 * tables - vertical lines
 * tables - vertical alignment
