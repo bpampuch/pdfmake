@@ -10,9 +10,8 @@ Docs + getting started will appear soon.
 
 ## currently working on
 
-* tables - row spans
-* tables - vertical lines
-* tables - vertical alignment
 * headers/footers
 * page numbering
+* tables - vertical lines
+* tables - vertical alignment
 * images
