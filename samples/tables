@@ -15,6 +15,7 @@ content: [
 				[ 'Header 1', 'H2', 'Header\nwith\nlines', { text: 'bigger header', style: 'bigger' } ],
 				[ 'Column 1', 'Column 2', 'Column 3', 'Column 4' ],
 				[ 'A text in the first column', 'Text in the second one', 'Other things go here', 'or here' ],
+				[ { alignment: 'justify', text: 'ColSpan = 2. Cosdsas a  asd asd ads alksdj asklj dlaksj dalsk dlaksj dlkas dlkasj dlkas dalskj da asdkl alk jdaslk dalks lkas lkasjd lkasjd lkasjd lasj lasjd lasjd asj dasld sjd as  askd askld jaslkdj aslkd jaslkj dlkasjd laksjd lkasj dlkasj dlkasj dlsakj dsalkjd lksaj dlksajd kdj askjd alskd sad jasld asd askjd laksd sajd askld jasld', colSpan: 2}, {}, 'Column 3', 'Column 4' ],
 				[ { ol: [
 				'subitem 1',
 				'subitem 2',
