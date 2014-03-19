@@ -350,4 +350,11 @@ describe('DocMeasure', function() {
 			assert(tableNode.table.body[rows - 1][0]._maxWidth != 0);
 		});
 	});
+
+	describe('measureImage', function() {
+		it('should scale height proportionally if only image width is provided');
+		it('should stretch image if both width and height are specified');
+		it('should scales image to fit whole picture in a rectangle if fit is specified');
+		it('should copy alignment from styleStack into image definition object');
+	});
 });

@@ -74,6 +74,45 @@ ElementWriter.prototype.alignLine = function(line) {
 	}
 };
 
+ElementWriter.prototype.addImage = function(image) {
+	var context = this.context;
+	var page = context.getCurrentPage();
+
+	if (context.availableHeight < image._height || !page) {
+		return false;
+	}
+
+	image.x = context.x + (image.x || 0);
+	image.y = context.y;
+
+	this.alignImage(image);
+
+	page.images.push(image);
+
+	context.moveDown(image._height);
+
+	return true;
+};
+
+ElementWriter.prototype.alignImage = function(image) {
+	var width = this.context.availableWidth;
+	var imageWidth = image._minWidth;
+	var offset = 0;
+
+	switch(image._alignment) {
+		case 'right':
+			offset = width - imageWidth;
+			break;
+		case 'center':
+			offset = (width - imageWidth) / 2;
+			break;
+	}
+
+	if (offset) {
+		image.x = (image.x || 0) + offset;
+	}
+};
+
 ElementWriter.prototype.addVector = function(vector) {
 	var context = this.context;
 	var page = context.getCurrentPage();
@@ -85,6 +124,7 @@ ElementWriter.prototype.addVector = function(vector) {
 		return true;
 	}
 };
+
 
 function cloneLine(line) {
 	var result = new Line(line.maxWidth);
@@ -120,10 +160,18 @@ ElementWriter.prototype.addFragment = function(block, isRepeatable) {
 		page.vectors.push(v);
 	});
 
+	block.images.forEach(function(image) {
+		var img = pack(image);
+
+		img.x = (img.x || 0) + (isRepeatable ? block.xOffset : ctx.x);
+		img.y = (img.y || 0) + ctx.y;
+
+		page.images.push(img);
+	});
+
 	ctx.moveDown(block.height);
 
 	return true;
 };
-
 
 module.exports = ElementWriter;

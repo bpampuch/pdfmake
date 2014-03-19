@@ -4,6 +4,7 @@
 var LayoutBuilder = require('./layoutBuilder');
 var PdfKit = require('pdfkit');
 var sizes = require('./standardPageSizes');
+var ImageMeasure = require('./imageMeasure');
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -79,7 +80,8 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 
 	var builder = new LayoutBuilder(
 		pageSize,
-		docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 });
+		docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 },
+        new ImageMeasure(this.pdfKitDoc));
 
 	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' });
 
@@ -133,6 +135,10 @@ function renderPages(pages, fontProvider, pdfKitDoc) {
 			var line = page.lines[li];
 			renderLine(line, line.x, line.y, pdfKitDoc);
 		}
+        for(var ii = 0, il = page.images.length; ii < il; ii++) {
+            var image = page.images[ii];
+            renderImage(image, image.x, image.y, pdfKitDoc);
+        }
 	}
 }
 
@@ -251,6 +257,10 @@ function renderVector(vector, pdfDoc) {
 	} else {
 		pdfDoc.stroke(vector.lineColor || 'black');
 	}
+}
+
+function renderImage(image, x, y, pdfKitDoc) {
+    pdfKitDoc.image(image.image, image.x, image.y, { width: image._width, height: image._height });
 }
 
 function FontProvider(fontDescriptors, pdfDoc) {

@@ -9,9 +9,10 @@ var pack = require('./helpers').pack;
 /**
 * @private
 */
-function DocMeasure(fontProvider, styleDictionary, defaultStyle) {
+function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure) {
 	this.textTools = new TextTools(fontProvider);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
+	this.imageMeasure = imageMeasure;
 }
 
 /**
@@ -50,6 +51,8 @@ DocMeasure.prototype.measureNode = function(node) {
 			return extendMargins(self.measureTable(node));
 		} else if (node.text !== undefined) {
 			return extendMargins(self.measureLeaf(node));
+		} else if (node.image) {
+			return extendMargins(self.measureImage(node));
 		} else if (node.canvas) {
 			return extendMargins(self.measureCanvas(node));
 		} else {
@@ -96,6 +99,22 @@ DocMeasure.prototype.measureNode = function(node) {
 
 		return margin;
 	}
+};
+
+DocMeasure.prototype.measureImage = function(node) {
+	var imageSize = this.imageMeasure.measureImage(node.image);
+
+	if (node.fit) {
+		var factor = (imageSize.width / imageSize.height > node.fit[0] / node.fit[1]) ? node.fit[0] / imageSize.width : node.fit[1] / imageSize.height;
+		node._width = node._minWidth = node._maxWidth = imageSize.width * factor;
+		node._height = imageSize.height * factor;
+	} else {
+		node._width = node._minWidth = node._maxWidth = node.width || imageSize.width;
+		node._height = node.height || (imageSize.height * node._width / imageSize.width);
+	}
+
+	node._alignment = this.styleStack.getProperty('alignment');
+	return node;
 };
 
 DocMeasure.prototype.measureLeaf = function(node) {

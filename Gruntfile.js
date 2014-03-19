@@ -35,6 +35,9 @@ module.exports = function(grunt) {
 				}, {
 					from: 'return this.font(\'Helvetica\');',
 					to: ''
+				}, {
+					from: /^\s*return PDFDocument;/mg,
+					to: '	PDFDocument.PDFImage = require("./image"); return PDFDocument;'
 				},
 				/* IE workaround for no constructor.name */
 					{

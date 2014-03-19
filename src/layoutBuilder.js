@@ -18,10 +18,11 @@ var fontStringify = require('./helpers').fontStringify;
  * @param {Object} pageSize - an object defining page width and height
  * @param {Object} pageMargins - an object defining top, left, right and bottom margins
  */
-function LayoutBuilder(pageSize, pageMargins) {
+function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
 	this.pageSize = pageSize;
 	this.pageMargins = pageMargins;
 	this.tracker = new TraversalTracker();
+    this.imageMeasure = imageMeasure;
 }
 
 /**
@@ -35,7 +36,7 @@ function LayoutBuilder(pageSize, pageMargins) {
  * @return {Array} an array of pages
  */
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle) {
-	new DocMeasure(fontProvider, styleDictionary, defaultStyle).measureDocument(docStructure);
+	new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure).measureDocument(docStructure);
 
 	this.writer = new PageElementWriter(
 		new DocumentContext(this.pageSize, this.pageMargins, true),
@@ -49,7 +50,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 LayoutBuilder.prototype.processNode = function(node) {
 	var self = this;
 
-	applyMargins(function() {
+    applyMargins(function() {
 		if (node.stack) {
 			self.processVerticalContainer(node.stack);
 		} else if (node.columns) {
@@ -62,9 +63,11 @@ LayoutBuilder.prototype.processNode = function(node) {
 			self.processTable(node);
 		} else if (node.text !== undefined) {
 			self.processLeaf(node);
-		} else if (node.canvas) {
+		} else if (node.image) {
+            self.processImage(node);
+        } else if (node.canvas) {
 			self.processCanvas(node);
-    } else if (!node._span) {
+        } else if (!node._span) {
 			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
 	});
@@ -309,6 +312,11 @@ LayoutBuilder.prototype.buildNextLine = function(textNode) {
 
 	line.lastLineInParagraph = textNode._inlines.length === 0;
 	return line;
+};
+
+// images
+LayoutBuilder.prototype.processImage = function(node) {
+    this.writer.addImage(node);
 };
 
 LayoutBuilder.prototype.processCanvas = function(node) {

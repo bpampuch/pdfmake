@@ -1130,6 +1130,12 @@ describe('LayoutBuilder', function() {
 			);
 		});
 
+		it('should support images');
+		it('should align image properly');
+		it('should break pages if image cannot fit on current page');
+		it('should move images drawn inside unbreakable blocks properly to the next page');
+		it('should copy image if it\'s inside a repeatable block (ie. table header)');
+
 		describe.skip('TODO', function() {
 			//DONE
 			it.skip('should support block margins');

@@ -36,7 +36,7 @@ describe('PageElementWriter', function() {
 	}
 
 	function createRepeatable(marker, height) {
-		var rep = { lines: [], vectors: [] };
+		var rep = { lines: [], vectors: [], images: [] };
 		rep.height = height;
 
 		var repLine = buildLine(height);

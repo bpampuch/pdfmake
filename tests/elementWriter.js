@@ -6,7 +6,7 @@ describe('ElementWriter', function() {
 	var ew, ctx, page;
 
 	beforeEach(function() {
-		page = { lines: [], vectors: [] };
+		page = { lines: [], vectors: [], images: [] };
 		ctx = {
 			x: 10,
 			y: 20,
@@ -146,7 +146,8 @@ describe('ElementWriter', function() {
 				vectors: [
 					{ type: 'rect', x: 10, y: 20 },
 					{ type: 'rect', x: 40, y: 60 },
-				]
+				],
+				images: []
 			};
 		});
 

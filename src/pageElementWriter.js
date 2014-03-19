@@ -29,6 +29,13 @@ PageElementWriter.prototype.addVector = function(vector) {
 	this.writer.addVector(vector);
 };
 
+PageElementWriter.prototype.addImage = function(image) {
+	if(!this.writer.addImage(image)) {
+		this.moveToNextPage();
+		this.writer.addImage(image);
+	}
+};
+
 PageElementWriter.prototype.addFragment = function(fragment) {
 	if (!this.writer.addFragment(fragment)) {
 		this.moveToNextPage();
@@ -41,7 +48,7 @@ PageElementWriter.prototype.moveToNextPage = function() {
 
 	if (nextPageIndex >= this.context.pages.length) {
 		// create new Page
-		var page = { lines: [], vectors: [] };
+		var page = { lines: [], vectors: [], images:[] };
 		this.context.pages.push(page);
 		this.context.page = nextPageIndex;
 		this.context.moveToPageTop();
@@ -86,7 +93,7 @@ PageElementWriter.prototype.commitUnbreakableBlock = function() {
 };
 
 PageElementWriter.prototype.unbreakableBlockToRepeatable = function() {
-	var rep = { lines: [], vectors: [] };
+	var rep = { lines: [], vectors: [], images: [] };
 
 	this.transactionContext.pages[0].lines.forEach(function(line) {
 		rep.lines.push(line);
@@ -94,6 +101,10 @@ PageElementWriter.prototype.unbreakableBlockToRepeatable = function() {
 
 	this.transactionContext.pages[0].vectors.forEach(function(vector) {
 		rep.vectors.push(vector);
+	});
+
+	this.transactionContext.pages[0].images.forEach(function(img) {
+		rep.images.push(img);
 	});
 
 	rep.xOffset = this.originalContext.x;
