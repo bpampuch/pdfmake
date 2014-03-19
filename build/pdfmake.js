@@ -2190,8 +2190,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     PDFDocument.prototype.toString = function() {
       return "[object PDFDocument]";
     };
-
-    return PDFDocument;
+	PDFDocument.PDFImage = _dereq_("./image"); return PDFDocument;
 
   }).call(this);
 
@@ -2200,7 +2199,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"./mixins/annotations.js":33,"./mixins/color.js":34,"./mixins/fonts.js":35,"./mixins/images.js":36,"./mixins/text.js":37,"./mixins/vector.js":38,"./object":39,"./page":40,"./reference":42,"./store":43,"buffer":1,"fs":"x/K9gc"}],10:[function(_dereq_,module,exports){
+},{"./image":29,"./mixins/annotations.js":33,"./mixins/color.js":34,"./mixins/fonts.js":35,"./mixins/images.js":36,"./mixins/text.js":37,"./mixins/vector.js":38,"./object":39,"./page":40,"./reference":42,"./store":43,"buffer":1,"fs":"x/K9gc"}],10:[function(_dereq_,module,exports){
 (function (__dirname){
 (function() {
 
@@ -7099,9 +7098,10 @@ var pack = _dereq_('./helpers').pack;
 /**
 * @private
 */
-function DocMeasure(fontProvider, styleDictionary, defaultStyle) {
+function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure) {
 	this.textTools = new TextTools(fontProvider);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
+	this.imageMeasure = imageMeasure;
 }
 
 /**
@@ -7138,8 +7138,10 @@ DocMeasure.prototype.measureNode = function(node) {
 			return extendMargins(self.measureList(true, node));
 		} else if (node.table) {
 			return extendMargins(self.measureTable(node));
-		} else if (node.text) {
+		} else if (node.text !== undefined) {
 			return extendMargins(self.measureLeaf(node));
+		} else if (node.image) {
+			return extendMargins(self.measureImage(node));
 		} else if (node.canvas) {
 			return extendMargins(self.measureCanvas(node));
 		} else {
@@ -7186,6 +7188,22 @@ DocMeasure.prototype.measureNode = function(node) {
 
 		return margin;
 	}
+};
+
+DocMeasure.prototype.measureImage = function(node) {
+	var imageSize = this.imageMeasure.measureImage(node.image);
+
+	if (node.fit) {
+		var factor = (imageSize.width / imageSize.height > node.fit[0] / node.fit[1]) ? node.fit[0] / imageSize.width : node.fit[1] / imageSize.height;
+		node._width = node._minWidth = node._maxWidth = imageSize.width * factor;
+		node._height = imageSize.height * factor;
+	} else {
+		node._width = node._minWidth = node._maxWidth = node.width || imageSize.width;
+		node._height = node.height || (imageSize.height * node._width / imageSize.width);
+	}
+
+	node._alignment = this.styleStack.getProperty('alignment');
+	return node;
 };
 
 DocMeasure.prototype.measureLeaf = function(node) {
@@ -7312,19 +7330,20 @@ DocMeasure.prototype.measureTable = function(node) {
 		for(row = 0, rows = node.table.body.length; row < rows; row++) {
 			var rowData = node.table.body[row];
 			var data = rowData[col];
-			if (data._span) continue;
+			if (!data._span) {
+				data = rowData[col] = this.measureNode(data);
 
-			data = node.table.body[row][col] = this.measureNode(data);
+				if (data.colSpan && data.colSpan > 1) {
+					markSpans(rowData, col, data.colSpan);
+					colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
+				} else {
+					node.table.widths[col]._minWidth = Math.max(node.table.widths[col]._minWidth, data._minWidth);
+					node.table.widths[col]._maxWidth = Math.max(node.table.widths[col]._maxWidth, data._maxWidth);
+				}
+			}
 
-			if (data.colSpan && data.colSpan > 1) {
-				// I'm not sure auto-placeholders are the way to go - they can make users
-				// confused + we can't have them for rowSpans
-				// extendSpanPlaceholders(rowData, col, data.colSpan);
-				markSpans(rowData, col, data.colSpan);
-				colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
-			} else {
-				node.table.widths[col]._minWidth = Math.max(node.table.widths[col]._minWidth, data._minWidth);
-				node.table.widths[col]._maxWidth = Math.max(node.table.widths[col]._maxWidth, data._maxWidth);
+			if (data.rowSpan && data.rowSpan > 1) {
+				markVSpans(node.table, row, col, data.rowSpan);
 			}
 		}
 	}
@@ -7337,23 +7356,6 @@ DocMeasure.prototype.measureTable = function(node) {
 	}
 
 	return node;
-
-	/* auto-placeholders
-	function extendSpanPlaceholders(rowData, col, span) {
-		for(var i = 1; i < span; i++) {
-			if (!isEmptyObject(rowData[col + i])) {
-				rowData.splice(col + i, 0, {});
-			}
-		}
-	}
-	function isEmptyObject(obj) {
-		var name;
-		for (name in obj) {
-			return false;
-		}
-		return true;
-	}
-	*/
 
 	function getLayout() {
 		var defaultLayout = {
@@ -7431,8 +7433,22 @@ DocMeasure.prototype.measureTable = function(node) {
 
 	function markSpans(rowData, col, span) {
 		for (var i = 1; i < span; i++) {
-			rowData[col + i]._span = true;
-			rowData[col + i]._minWidth = rowData[col + i]._maxWidth = 0;
+			rowData[col + i] = {
+				_span: true,
+				_minWidth: 0,
+				_maxWidth: 0,
+				rowSpan: rowData[col].rowSpan
+			};
+		}
+	}
+
+	function markVSpans(table, row, col, span) {
+		for (var i = 1; i < span; i++) {
+			table.body[row + i][col] = {
+				_span: true,
+				_minWidth: 0,
+				_maxWidth: 0,
+			};
 		}
 	}
 
@@ -7494,7 +7510,7 @@ DocMeasure.prototype.measureCanvas = function(node) {
 
 module.exports = DocMeasure;
 
-},{"./helpers":51,"./styleContextStack":57,"./textTools":58}],49:[function(_dereq_,module,exports){
+},{"./helpers":51,"./styleContextStack":58,"./textTools":59}],49:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7515,6 +7531,8 @@ function DocumentContext(pageSize, pageMargins, addFirstPageAutomatically) {
 
 	this.snapshots = [];
 
+	this.endingCell = null;
+
 	if (addFirstPageAutomatically) this.addPage();
 }
 
@@ -7525,16 +7543,19 @@ DocumentContext.prototype.beginColumnGroup = function() {
 		availableHeight: this.availableHeight,
 		availableWidth: this.availableWidth,
 		page: this.page,
-		bottomMost: { y: this.y, page: this.page }
+		bottomMost: { y: this.y, page: this.page },
+		endingCell: this.endingCell
 	});
 
 	this.lastColumnWidth = 0;
 };
 
-DocumentContext.prototype.beginColumn = function(width, offset) {
+DocumentContext.prototype.beginColumn = function(width, offset, endingCell) {
 	var saved = this.snapshots[this.snapshots.length - 1];
-	saved.bottomMost = bottomMostContext(this, saved.bottomMost);
 
+	this.calculateBottomMost(saved);
+
+  this.endingCell = endingCell;
 	this.page = saved.page;
 	this.x = this.x + this.lastColumnWidth + (offset || 0);
 	this.y = saved.y;
@@ -7544,15 +7565,46 @@ DocumentContext.prototype.beginColumn = function(width, offset) {
 	this.lastColumnWidth = width;
 };
 
+DocumentContext.prototype.calculateBottomMost = function(destContext) {
+	if (this.endingCell) {
+		this.saveContextInEndingCell(this.endingCell);
+		this.endingCell = null;
+	} else {
+		destContext.bottomMost = bottomMostContext(this, destContext.bottomMost);
+	}
+};
+
+DocumentContext.prototype.markEnding = function(endingCell) {
+	this.page = endingCell._columnEndingContext.page;
+	this.x = endingCell._columnEndingContext.x;
+	this.y = endingCell._columnEndingContext.y;
+	this.availableWidth = endingCell._columnEndingContext.availableWidth;
+	this.availableHeight = endingCell._columnEndingContext.availableHeight;
+	this.lastColumnWidth = endingCell._columnEndingContext.lastColumnWidth;
+};
+
+DocumentContext.prototype.saveContextInEndingCell = function(endingCell) {
+	endingCell._columnEndingContext = {
+		page: this.page,
+		x: this.x,
+		y: this.y,
+		availableHeight: this.availableHeight,
+		availableWidth: this.availableWidth,
+		lastColumnWidth: this.lastColumnWidth
+	};
+};
+
 DocumentContext.prototype.completeColumnGroup = function() {
 	var saved = this.snapshots.pop();
-	var bottomMost = bottomMostContext(this, saved.bottomMost);
 
+	this.calculateBottomMost(saved);
+
+	this.endingCell = null;
 	this.x = saved.x;
-	this.y = bottomMost.y;
-	this.page = bottomMost.page;
+	this.y = saved.bottomMost.y;
+	this.page = saved.bottomMost.page;
 	this.availableWidth = saved.availableWidth;
-	this.availableHeight = bottomMost.availableHeight;
+	this.availableHeight = saved.bottomMost.availableHeight;
 };
 
 DocumentContext.prototype.addMargin = function(left, right) {
@@ -7573,7 +7625,7 @@ DocumentContext.prototype.moveToPageTop = function() {
 };
 
 DocumentContext.prototype.addPage = function() {
-	var page = { lines: [], vectors: [] };
+	var page = { lines: [], vectors: [], images: [] };
 	this.pages.push(page);
 	this.page = this.pages.length - 1;
 	this.moveToPageTop();
@@ -7696,6 +7748,45 @@ ElementWriter.prototype.alignLine = function(line) {
 	}
 };
 
+ElementWriter.prototype.addImage = function(image) {
+	var context = this.context;
+	var page = context.getCurrentPage();
+
+	if (context.availableHeight < image._height || !page) {
+		return false;
+	}
+
+	image.x = context.x + (image.x || 0);
+	image.y = context.y;
+
+	this.alignImage(image);
+
+	page.images.push(image);
+
+	context.moveDown(image._height);
+
+	return true;
+};
+
+ElementWriter.prototype.alignImage = function(image) {
+	var width = this.context.availableWidth;
+	var imageWidth = image._minWidth;
+	var offset = 0;
+
+	switch(image._alignment) {
+		case 'right':
+			offset = width - imageWidth;
+			break;
+		case 'center':
+			offset = (width - imageWidth) / 2;
+			break;
+	}
+
+	if (offset) {
+		image.x = (image.x || 0) + offset;
+	}
+};
+
 ElementWriter.prototype.addVector = function(vector) {
 	var context = this.context;
 	var page = context.getCurrentPage();
@@ -7707,6 +7798,7 @@ ElementWriter.prototype.addVector = function(vector) {
 		return true;
 	}
 };
+
 
 function cloneLine(line) {
 	var result = new Line(line.maxWidth);
@@ -7742,15 +7834,23 @@ ElementWriter.prototype.addFragment = function(block, isRepeatable) {
 		page.vectors.push(v);
 	});
 
+	block.images.forEach(function(image) {
+		var img = pack(image);
+
+		img.x = (img.x || 0) + (isRepeatable ? block.xOffset : ctx.x);
+		img.y = (img.y || 0) + ctx.y;
+
+		page.images.push(img);
+	});
+
 	ctx.moveDown(block.height);
 
 	return true;
 };
 
-
 module.exports = ElementWriter;
 
-},{"./helpers":51,"./line":53}],51:[function(_dereq_,module,exports){
+},{"./helpers":51,"./line":54}],51:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7808,6 +7908,29 @@ module.exports = {
 };
 
 },{}],52:[function(_dereq_,module,exports){
+var pdfKit = _dereq_('pdfkit');
+
+function ImageMeasure(pdfDoc) {
+	this.pdfDoc = pdfDoc;
+}
+
+ImageMeasure.prototype.measureImage = function(src) {
+	var image, label;
+
+	if (!this.pdfDoc._imageRegistry[src]) {
+		image = pdfKit.PDFImage.open(src);
+		label = "I" + (++this.pdfDoc._imageCount);
+		this.pdfDoc._imageRegistry[src] = [image, label, []];
+	} else {
+		image = this.pdfDoc._imageRegistry[src][0];
+	}
+
+	return { width: image.width, height: image.height };
+};
+
+module.exports = ImageMeasure;
+
+},{"pdfkit":9}],53:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7828,10 +7951,11 @@ var fontStringify = _dereq_('./helpers').fontStringify;
  * @param {Object} pageSize - an object defining page width and height
  * @param {Object} pageMargins - an object defining top, left, right and bottom margins
  */
-function LayoutBuilder(pageSize, pageMargins) {
+function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
 	this.pageSize = pageSize;
 	this.pageMargins = pageMargins;
 	this.tracker = new TraversalTracker();
+    this.imageMeasure = imageMeasure;
 }
 
 /**
@@ -7845,7 +7969,7 @@ function LayoutBuilder(pageSize, pageMargins) {
  * @return {Array} an array of pages
  */
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle) {
-	new DocMeasure(fontProvider, styleDictionary, defaultStyle).measureDocument(docStructure);
+	new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure).measureDocument(docStructure);
 
 	this.writer = new PageElementWriter(
 		new DocumentContext(this.pageSize, this.pageMargins, true),
@@ -7859,7 +7983,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 LayoutBuilder.prototype.processNode = function(node) {
 	var self = this;
 
-	applyMargins(function() {
+    applyMargins(function() {
 		if (node.stack) {
 			self.processVerticalContainer(node.stack);
 		} else if (node.columns) {
@@ -7870,11 +7994,13 @@ LayoutBuilder.prototype.processNode = function(node) {
 			self.processList(true, node.ol, node._gapSize);
 		} else if (node.table) {
 			self.processTable(node);
-		} else if (node.text) {
+		} else if (node.text !== undefined) {
 			self.processLeaf(node);
-		} else if (node.canvas) {
+		} else if (node.image) {
+            self.processImage(node);
+        } else if (node.canvas) {
 			self.processCanvas(node);
-		} else {
+        } else if (!node._span) {
 			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
 	});
@@ -7932,24 +8058,29 @@ LayoutBuilder.prototype.processColumns = function(columnNode) {
 	}
 };
 
-LayoutBuilder.prototype.processRow = function(columns, widths, gaps) {
+LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, tableRow) {
 	widths = widths || columns;
 
 	this.writer.context.beginColumnGroup();
 
 	for(var i = 0, l = columns.length; i < l; i++) {
 		var column = columns[i];
-        var width = widths[i]._calcWidth;
-        var leftOffset = colLeftOffset(i);
+    var width = widths[i]._calcWidth;
+    var leftOffset = colLeftOffset(i);
 
-        if (column.colSpan && column.colSpan > 1) {
-            for(var j = 1; j < column.colSpan; j++) {
-                width += widths[++i]._calcWidth + gaps[i];
-            }
+    if (column.colSpan && column.colSpan > 1) {
+        for(var j = 1; j < column.colSpan; j++) {
+            width += widths[++i]._calcWidth + gaps[i];
         }
+    }
 
-        this.writer.context.beginColumn(width, leftOffset);
-		this.processNode(column);
+    this.writer.context.beginColumn(width, leftOffset, getEndingCell(column, i));
+    if (!column._span) {
+      this.processNode(column);
+    } else if (column._columnEndingContext) {
+      // row-span ending
+      this.writer.context.markEnding(column);
+    }
 	}
 
 	this.writer.context.completeColumnGroup();
@@ -7958,6 +8089,16 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps) {
 		if (gaps && gaps.length > i) return gaps[i];
 		return 0;
 	}
+
+  function getEndingCell(column, columnIndex) {
+    if (column.rowSpan && column.rowSpan > 1) {
+      var endingRow = tableRow + column.rowSpan - 1;
+      if (endingRow >= tableBody.length) throw 'Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count';
+      return tableBody[endingRow][columnIndex];
+    }
+
+    return null;
+  }
 };
 
 // lists
@@ -8023,7 +8164,7 @@ LayoutBuilder.prototype.processTable = function(tableNode) {
 
 	for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
 		this.writer.context.moveDown(layout.paddingTop(i, tableNode));
-		this.processRow(tableNode.table.body[i], tableNode.table.widths, offsets.offsets);
+		this.processRow(tableNode.table.body[i], tableNode.table.widths, offsets.offsets, tableNode.table.body, i);
 		this.writer.context.moveDown(layout.paddingBottom(i, tableNode));
 		drawHorizontalLine(layout, i + 1);
 
@@ -8106,6 +8247,11 @@ LayoutBuilder.prototype.buildNextLine = function(textNode) {
 	return line;
 };
 
+// images
+LayoutBuilder.prototype.processImage = function(node) {
+    this.writer.addImage(node);
+};
+
 LayoutBuilder.prototype.processCanvas = function(node) {
 	var height = node._minHeight;
 
@@ -8126,7 +8272,7 @@ LayoutBuilder.prototype.processCanvas = function(node) {
 
 module.exports = LayoutBuilder;
 
-},{"./columnCalculator":47,"./docMeasure":48,"./documentContext":49,"./helpers":51,"./line":53,"./pageElementWriter":54,"./traversalTracker":59}],53:[function(_dereq_,module,exports){
+},{"./columnCalculator":47,"./docMeasure":48,"./documentContext":49,"./helpers":51,"./line":54,"./pageElementWriter":55,"./traversalTracker":60}],54:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8197,7 +8343,7 @@ Line.prototype.getHeight = function() {
 
 module.exports = Line;
 
-},{}],54:[function(_dereq_,module,exports){
+},{}],55:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8229,6 +8375,13 @@ PageElementWriter.prototype.addVector = function(vector) {
 	this.writer.addVector(vector);
 };
 
+PageElementWriter.prototype.addImage = function(image) {
+	if(!this.writer.addImage(image)) {
+		this.moveToNextPage();
+		this.writer.addImage(image);
+	}
+};
+
 PageElementWriter.prototype.addFragment = function(fragment) {
 	if (!this.writer.addFragment(fragment)) {
 		this.moveToNextPage();
@@ -8241,7 +8394,7 @@ PageElementWriter.prototype.moveToNextPage = function() {
 
 	if (nextPageIndex >= this.context.pages.length) {
 		// create new Page
-		var page = { lines: [], vectors: [] };
+		var page = { lines: [], vectors: [], images:[] };
 		this.context.pages.push(page);
 		this.context.page = nextPageIndex;
 		this.context.moveToPageTop();
@@ -8286,7 +8439,7 @@ PageElementWriter.prototype.commitUnbreakableBlock = function() {
 };
 
 PageElementWriter.prototype.unbreakableBlockToRepeatable = function() {
-	var rep = { lines: [], vectors: [] };
+	var rep = { lines: [], vectors: [], images: [] };
 
 	this.transactionContext.pages[0].lines.forEach(function(line) {
 		rep.lines.push(line);
@@ -8294,6 +8447,10 @@ PageElementWriter.prototype.unbreakableBlockToRepeatable = function() {
 
 	this.transactionContext.pages[0].vectors.forEach(function(vector) {
 		rep.vectors.push(vector);
+	});
+
+	this.transactionContext.pages[0].images.forEach(function(img) {
+		rep.images.push(img);
 	});
 
 	rep.xOffset = this.originalContext.x;
@@ -8325,13 +8482,14 @@ PageElementWriter.prototype._removeTransactionContext = function() {
 
 module.exports = PageElementWriter;
 
-},{"./elementWriter":50}],55:[function(_dereq_,module,exports){
+},{"./elementWriter":50}],56:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
 var LayoutBuilder = _dereq_('./layoutBuilder');
 var PdfKit = _dereq_('pdfkit');
 var sizes = _dereq_('./standardPageSizes');
+var ImageMeasure = _dereq_('./imageMeasure');
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -8407,7 +8565,8 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 
 	var builder = new LayoutBuilder(
 		pageSize,
-		docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 });
+		docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 },
+        new ImageMeasure(this.pdfKitDoc));
 
 	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' });
 
@@ -8461,6 +8620,10 @@ function renderPages(pages, fontProvider, pdfKitDoc) {
 			var line = page.lines[li];
 			renderLine(line, line.x, line.y, pdfKitDoc);
 		}
+        for(var ii = 0, il = page.images.length; ii < il; ii++) {
+            var image = page.images[ii];
+            renderImage(image, image.x, image.y, pdfKitDoc);
+        }
 	}
 }
 
@@ -8581,6 +8744,10 @@ function renderVector(vector, pdfDoc) {
 	}
 }
 
+function renderImage(image, x, y, pdfKitDoc) {
+    pdfKitDoc.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+}
+
 function FontProvider(fontDescriptors, pdfDoc) {
 	this.fonts = {};
 	this.pdfDoc = pdfDoc;
@@ -8626,7 +8793,7 @@ module.exports = PdfPrinter;
 /* temporary browser extension */
 PdfPrinter.prototype.fs = _dereq_('fs');
 
-},{"./layoutBuilder":52,"./standardPageSizes":56,"fs":"x/K9gc","pdfkit":9}],56:[function(_dereq_,module,exports){
+},{"./imageMeasure":52,"./layoutBuilder":53,"./standardPageSizes":57,"fs":"x/K9gc","pdfkit":9}],57:[function(_dereq_,module,exports){
 module.exports = {
 	'4A0': [4767.87, 6740.79],
 	'2A0': [3370.39, 4767.87],
@@ -8680,7 +8847,7 @@ module.exports = {
 	TABLOID: [792.00, 1224.00]
 };
 
-},{}],57:[function(_dereq_,module,exports){
+},{}],58:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8843,7 +9010,7 @@ StyleContextStack.prototype.getProperty = function(property) {
 
 module.exports = StyleContextStack;
 
-},{}],58:[function(_dereq_,module,exports){
+},{}],59:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -9093,7 +9260,7 @@ TextTools.prototype.measure = measure;
 
 module.exports = TextTools;
 
-},{}],59:[function(_dereq_,module,exports){
+},{}],60:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -9145,6 +9312,6 @@ TraversalTracker.prototype.auto = function(event, cb, innerBlock) {
 
 module.exports = TraversalTracker;
 
-},{}]},{},[55])
-(55)
+},{}]},{},[56])
+(56)
 });
