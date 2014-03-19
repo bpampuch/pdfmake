@@ -6,6 +6,7 @@ var DocMeasure = require('./docMeasure');
 var DocumentContext = require('./documentContext');
 var PageElementWriter = require('./pageElementWriter');
 var ColumnCalculator = require('./columnCalculator');
+var TableProcessor = require('./tableProcessor');
 var Line = require('./line');
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
@@ -22,7 +23,7 @@ function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
 	this.pageSize = pageSize;
 	this.pageMargins = pageMargins;
 	this.tracker = new TraversalTracker();
-    this.imageMeasure = imageMeasure;
+  this.imageMeasure = imageMeasure;
 }
 
 /**
@@ -134,31 +135,57 @@ LayoutBuilder.prototype.processColumns = function(columnNode) {
 };
 
 LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, tableRow) {
-	widths = widths || columns;
+  var self = this;
+  var pageBreaks = [];
 
-	this.writer.context.beginColumnGroup();
+  this.tracker.auto('pageChanged', storePageBreakData, function() {
+    widths = widths || columns;
 
-	for(var i = 0, l = columns.length; i < l; i++) {
-		var column = columns[i];
-    var width = widths[i]._calcWidth;
-    var leftOffset = colLeftOffset(i);
+    self.writer.context.beginColumnGroup();
 
-    if (column.colSpan && column.colSpan > 1) {
-        for(var j = 1; j < column.colSpan; j++) {
-            width += widths[++i]._calcWidth + gaps[i];
-        }
+    for(var i = 0, l = columns.length; i < l; i++) {
+      var column = columns[i];
+      var width = widths[i]._calcWidth;
+      var leftOffset = colLeftOffset(i);
+
+      if (column.colSpan && column.colSpan > 1) {
+          for(var j = 1; j < column.colSpan; j++) {
+              width += widths[++i]._calcWidth + gaps[i];
+          }
+      }
+
+      self.writer.context.beginColumn(width, leftOffset, getEndingCell(column, i));
+      if (!column._span) {
+        self.processNode(column);
+      } else if (column._columnEndingContext) {
+        // row-span ending
+        self.writer.context.markEnding(column);
+      }
     }
 
-    this.writer.context.beginColumn(width, leftOffset, getEndingCell(column, i));
-    if (!column._span) {
-      this.processNode(column);
-    } else if (column._columnEndingContext) {
-      // row-span ending
-      this.writer.context.markEnding(column);
-    }
-	}
+    self.writer.context.completeColumnGroup();
+  });
 
-	this.writer.context.completeColumnGroup();
+  return pageBreaks;
+
+  function storePageBreakData(data) {
+    var pageDesc;
+
+    for(var i = 0, l = pageBreaks.length; i < l; i++) {
+      var desc = pageBreaks[i];
+      if (desc.prevPage === data.prevPage) {
+        pageDesc = desc;
+        break;
+      }
+    }
+
+    if (!pageDesc) {
+      pageDesc = data;
+      pageBreaks.push(pageDesc);
+    }
+    pageDesc.prevY = Math.max(pageDesc.prevY, data.prevY);
+    pageDesc.y = Math.min(pageDesc.y, data.y);
+  }
 
 	function colLeftOffset(i) {
 		if (gaps && gaps.length > i) return gaps[i];
@@ -217,87 +244,22 @@ LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
 
 // tables
 LayoutBuilder.prototype.processTable = function(tableNode) {
-	var self = this;
-	var layout = tableNode._layout;
-	var offsets = tableNode._offsets;
+  var processor = new TableProcessor(tableNode);
 
-	ColumnCalculator.buildColumnWidths(tableNode.table.widths, this.writer.context.availableWidth - offsets.total);
+  processor.beginTable(this.writer);
 
-	var totalTableWidth = offsets.total + getTableWidth();
+  for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
+    processor.beginRow(i, this.writer);
 
-	var headerRows = tableNode.table.headerRows;
-	var keepWithHeaderRows = (tableNode.table.keepWithHeaderRows === undefined) ? 0 : tableNode.table.keepWithHeaderRows;
-	var waitingForCommit = false;
-	var headerBlock;
+    var pageBreaks = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i);
 
-	if(headerRows) {
-		this.writer.beginUnbreakableBlock();
-		waitingForCommit = true;
-	}
+    processor.endRow(i, this.writer, pageBreaks);
+  }
 
-	drawHorizontalLine(layout, 0);
+  processor.endTable(this.writer);
 
-	for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
-		this.writer.context.moveDown(layout.paddingTop(i, tableNode));
-		this.processRow(tableNode.table.body[i], tableNode.table.widths, offsets.offsets, tableNode.table.body, i);
-		this.writer.context.moveDown(layout.paddingBottom(i, tableNode));
-		drawHorizontalLine(layout, i + 1);
-
-		if (headerRows && i === headerRows - 1) {
-			// header has been created
-			headerBlock = this.writer.unbreakableBlockToRepeatable();
-		}
-
-		if (waitingForCommit && ((i === headerRows + keepWithHeaderRows - 1) || (i === l - 1))) {
-			this.writer.commitUnbreakableBlock();
-			if (headerBlock) this.writer.pushToRepeatables(headerBlock);
-			waitingForCommit = false;
-		}
-	}
-
-	this.writer.popFromRepeatables();
-
-	function drawHorizontalLine(layout, i) {
-		var width = layout.hLineWidth(i, tableNode, tableNode);
-		if (width) {
-			var offset = width / 2;
-
-			self.writer.addVector({ type:'line', x1: 0, x2: totalTableWidth, y1: offset, y2: offset, lineWidth: width, lineColor: layout.hLineColor(i, tableNode) });
-			self.writer.context.moveDown(width);
-		}
-	}
-
-	function getTableWidth() {
-		var width = 0;
-
-		tableNode.table.widths.forEach(function(w) {
-			width += w._calcWidth;
-		});
-
-		return width;
-	}
 };
 
-
-LayoutBuilder.prototype.addHorizontalLine = function(x1, x2, lh) {
-	var context = this.getContext();
-	context.y += lh/2;
-	context.availableHeight -= lh/2;
-
-	var line = {
-		type: 'line',
-		x1: context.x + x1,
-		y1: context.y,
-		x2: context.x + x2,
-		y2: context.y,
-		lineWidth: lh
-	};
-
-	context.y += lh/2;
-	context.availableHeight -= lh/2;
-
-	this.getPage(context.page).vectors.push(line);
-};
 
 // leafs (texts)
 LayoutBuilder.prototype.processLeaf = function(node) {

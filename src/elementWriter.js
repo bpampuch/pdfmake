@@ -113,12 +113,12 @@ ElementWriter.prototype.alignImage = function(image) {
 	}
 };
 
-ElementWriter.prototype.addVector = function(vector) {
+ElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY) {
 	var context = this.context;
 	var page = context.getCurrentPage();
 
 	if (page) {
-		offsetVector(vector, context.x, context.y);
+		offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
 		page.vectors.push(vector);
 
 		return true;

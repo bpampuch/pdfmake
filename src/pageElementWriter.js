@@ -25,8 +25,8 @@ PageElementWriter.prototype.addLine = function(line, dontUpdateContextPosition) 
 	}
 };
 
-PageElementWriter.prototype.addVector = function(vector) {
-	this.writer.addVector(vector);
+PageElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY) {
+	this.writer.addVector(vector, ignoreContextX, ignoreContextY);
 };
 
 PageElementWriter.prototype.addImage = function(image) {
@@ -46,6 +46,9 @@ PageElementWriter.prototype.addFragment = function(fragment) {
 PageElementWriter.prototype.moveToNextPage = function() {
 	var nextPageIndex = this.context.page + 1;
 
+	var prevPage = this.context.page;
+	var prevY = this.context.y;
+
 	if (nextPageIndex >= this.context.pages.length) {
 		// create new Page
 		var page = { lines: [], vectors: [], images:[] };
@@ -57,8 +60,6 @@ PageElementWriter.prototype.moveToNextPage = function() {
 		this.repeatables.forEach(function(rep) {
 			this.writer.addFragment(rep, true);
 		}, this);
-
-		// add header/footer
 	} else {
 		this.context.page = nextPageIndex;
 		this.context.moveToPageTop();
@@ -67,6 +68,12 @@ PageElementWriter.prototype.moveToNextPage = function() {
 			this.context.moveDown(rep.height);
 		}, this);
 	}
+
+	this.writer.tracker.emit('pageChanged', {
+		prevPage: prevPage,
+		prevY: prevY,
+		y: this.context.y
+	});
 };
 
 PageElementWriter.prototype.beginUnbreakableBlock = function() {

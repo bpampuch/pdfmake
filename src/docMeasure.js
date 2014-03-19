@@ -270,12 +270,12 @@ DocMeasure.prototype.measureTable = function(node) {
 
 	function getLayout() {
 		var defaultLayout = {
-			hLineWidth: function(i, node) { return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
+			hLineWidth: function(i, node) { return 1; }, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
 			vLineWidth: function(i, node) { return 1; },
 			hLineColor: function(i, node) { return 'black'; },
 			vLineColor: function(i, node) { return 'black'; },
-			paddingLeft: function(i, node) { return i && 4 || 0; },
-			paddingRight: function(i, node) { return (i < node.table.widths.length - 1) ? 4 : 0; },
+			paddingLeft: function(i, node) { return 4; }, //i && 4 || 0; },
+			paddingRight: function(i, node) { return 4; }, //(i < node.table.widths.length - 1) ? 4 : 0; },
 			paddingTop: function(i, node) { return 2; },
 			paddingBottom: function(i, node) { return 2; }
 		};

@@ -3,6 +3,11 @@ var assert = require('assert');
 var Line = require('../src/line');
 var LayoutBuilder = require('../src/layoutBuilder');
 var StyleContextStack = require('../src/styleContextStack');
+var ColumnCalculator = require('../src/columnCalculator');
+var PageElementWriter = require('../src/pageElementWriter');
+var DocumentContext = require('../src/documentContext');
+var DocMeasure = require('../src/docMeasure');
+
 // var TraversalTracker = require('../src/traversalTracker');
 
 // var TextTools = pdfMake.TextTools;
@@ -1194,6 +1199,104 @@ describe('LayoutBuilder', function() {
 			it.skip('should support in-document-references');
 			it.skip('should support uppercase text transforms');
 			it.skip('should support lowercase text transforms');
+		});
+	});
+
+	describe('processRow', function(){
+		var builder2;
+
+		function createTable(headerRows, otherRows, singleRowLines, pageBreakAfter, secondColumnPageBreakAfter) {
+			var tableNode = {
+				table: {
+					headerRows: headerRows || 0,
+					widths: [ 100, 100 ],
+					body: [
+					]
+				}
+			};
+
+			var rows = headerRows + otherRows;
+			singleRowLines = singleRowLines || 1;
+
+			while(rows--) {
+				var stack1 = { stack: [ { text: 'a' } ] };
+				var stack2 = { stack: [ { text: 'a' } ] };
+				for (var x = 0; x < singleRowLines; x++) {
+					stack1.stack.push({ text: 'a' });
+					stack2.stack.push({ text: 'b' });
+				}
+				if (pageBreakAfter) {
+					stack1.stack[pageBreakAfter - 1].pageBreak = 'after';
+				}
+				if (secondColumnPageBreakAfter) {
+					stack2.stack[secondColumnPageBreakAfter - 1].pageBreak = 'after';
+				}
+
+				tableNode.table.body.push([stack1, stack2]);
+			}
+
+			ColumnCalculator.buildColumnWidths(tableNode.table.widths, 320);
+
+			new DocMeasure(sampleTestProvider, {}, {}, {}).measureDocument(tableNode);
+			return tableNode;
+		}
+
+		beforeEach(function() {
+			var pageSize = { width: 400, height: 800 };
+			var pageMargins = { left: 40, top: 40, bottom: 40, right: 40};
+
+			builder2 = new LayoutBuilder(pageSize, pageMargins, {});
+			builder2.writer = new PageElementWriter(new DocumentContext(pageSize, pageMargins, true), builder2.tracker);
+		});
+
+		it('should return an empty array if no page breaks occur', function() {
+			var doc = createTable(1, 0);
+
+			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+
+			assert(result instanceof Array);
+			assert.equal(result.length, 0);
+		});
+
+		it('on page break should return an entry with ending/starting positions', function() {
+			var doc = createTable(0, 1, 10, 5);
+			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+
+			assert(result instanceof Array);
+			assert.equal(result.length, 1);
+			assert.equal(result[0].prevPage, 0);
+			assert.equal(result[0].prevY, 40 + 12 * 5);
+		});
+
+		it('on multi-pass page break (columns or table columns) should treat bottom-most page-break as the ending position ', function() {
+			var doc = createTable(0, 1, 10, 5, 7);
+			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+
+			assert.equal(result[0].prevY, 40 + 12 * 7);
+		});
+
+		it('on multiple page breaks (more than 2 pages), should return all entries with ending/starting positions', function() {
+			var doc = createTable(0, 1, 100, 90);
+			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+
+			assert(result instanceof Array);
+			assert.equal(result.length, 2);
+			assert.equal(result[0].prevPage, 0);
+			assert.equal(result[0].prevY, 40 + 60 * 12);
+			assert.equal(result[1].prevPage, 1);
+			assert.equal(result[1].prevY, 40 + (90 - 60) * 12);
+		});
+
+		it('on multiple and multi-pass page breaks should calculate bottom-most endings for every page', function() {
+			var doc = createTable(0, 1, 100, 90, 92);
+			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+
+			assert(result instanceof Array);
+			assert.equal(result.length, 2);
+			assert.equal(result[0].prevPage, 0);
+			assert.equal(result[0].prevY, 40 + 60 * 12);
+			assert.equal(result[1].prevPage, 1);
+			assert.equal(result[1].prevY, 40 + (92 - 60) * 12);
 		});
 	});
 });
