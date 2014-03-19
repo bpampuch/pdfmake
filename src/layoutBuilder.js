@@ -75,6 +75,10 @@ LayoutBuilder.prototype.processNode = function(node) {
 	function applyMargins(callback) {
 		var margin = node._margin;
 
+        if (node.pageBreak === 'before') {
+            self.writer.moveToNextPage();
+        }
+
 		if (margin) {
 			self.writer.context.moveDown(margin[1]);
 			self.writer.context.addMargin(margin[0], margin[2]);
@@ -86,6 +90,10 @@ LayoutBuilder.prototype.processNode = function(node) {
 			self.writer.context.addMargin(-margin[0], -margin[2]);
 			self.writer.context.moveDown(margin[3]);
 		}
+
+        if (node.pageBreak === 'after') {
+            self.writer.moveToNextPage();
+        }
 	}
 };
 
