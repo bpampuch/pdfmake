@@ -8591,7 +8591,7 @@ function registerDefaultTableLayouts(layoutBuilder) {
     headerLineOnly: {
       hLineWidth: function(i, node) {
         if (i === 0 || i === node.table.body.length) return 0;
-        return (i === node.table.headerLines) ? 2 : 0;
+        return (i === node.table.headerRows) ? 2 : 0;
       },
       vLineWidth: function(i) { return 0; },
       paddingLeft: function(i) {
@@ -8604,7 +8604,7 @@ function registerDefaultTableLayouts(layoutBuilder) {
     lightHorizontalLines: {
       hLineWidth: function(i, node) {
         if (i === 0 || i === node.table.body.length) return 0;
-        return (i === node.table.headerLines) ? 2 : 1;
+        return (i === node.table.headerRows) ? 2 : 1;
       },
       vLineWidth: function(i) { return 0; },
       hLineColor: function(i) { return i === 1 ? 'black' : '#aaa'; },
@@ -9272,34 +9272,6 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
 
     writer.context.availableHeight += this.reservedAtBottom;
 
-    //prepareRowSpanDataForCurrentRow
-    // update availableHeight -= dolny padding + krawedz
-    // this.drawVerticalLine
-
-    //TODO: page breaks
-    // if (pageBreaks && pageBreaks.length > 0) {
-    //   y2 = pageBreaks[0].prevY;
-    //   page = pageBreaks[0].prevPage;
-    // }
-    //
-    // //TODO: horizontal lines at the end of each page
-    // if (pageBreaks && pageBreaks.length > 0) {
-    //   y2 = pageBreaks[0].prevY;
-    // }
-    //
-    // this.drawVerticalLine(0, this.rowTopY, writer);
-    //
-    // for(var i = 0, l = this.rowSpanData.length; i < l; i++) {
-    //   var data = this.rowSpanData[i];
-    //
-    //   this.draw
-    // }
-    // var y = this.rowTopY;
-    // for(var i = 0, l = pageBreaks.length; i < l; i++) {
-    //
-    // }
-    // var topOffset = this.rowTopY - writer.context.y;
-
     function getLineXs() {
       var result = [];
       var cols = 0;
@@ -9316,148 +9288,11 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
         }
       }
 
-      result.push({ x: self.rowSpanData[self.rowSpanData.length - 1].left, index: self.rowSpanData.length});
+      result.push({ x: self.rowSpanData[self.rowSpanData.length - 1].left, index: self.rowSpanData.length - 1});
 
       return result;
     }
 };
-
-// var pageBreaks = renderRow()   // - zwraca gdzie na poszczegolnych stronach sie zakonczyl
-// // moveDown (top padding)
-// // processRow
-// // moveDown - bottom padding
-//
-// endRow(pageBreaks);
-//   if (pageBreaks)
-//     foreach(pageEnd && pageBeginning)
-//       drawHorizontalLine(page, y);
-//
-//   drawHorizontalLine();
-//   drawVerticalLines();
-//     // dla kazdego idziemy i jesli nie colSpan to rysujemy
-//     // while (pageBreaks)
-//     //   draw od zapamietanego y do pageBreak
-//     //   zapamietany y = pageBreak.nextStart
-//     //   pageBreak.pop()
-//     // od zapamietanego do rowEnd
-//
-//   if(drawingHeader && fullHeaderDrawn)
-//     headerBlock = unbreakableToRepeatale();
-//
-//   if (headerBlock && (keepTogetherFinished || tableFinished))
-//     commit()
-//     pushToRepeatables
-//
-//   prepareRowSpanDataForCurrentRow
-//   // update availableHeight -= dolny padding + krawedz
-//
-//
-//
-
-//
-// function TableProcessor() {
-// }
-//
-// beginTable();
-// // build widths
-// // get total width
-// // howmany rows to be kept together ? beginUnbreakableBlock
-//
-//   drawHorizontalLine();
-//   // jaka wysokosc linii, idac po kolejnych
-//   // moveDown(height)
-//   // continuity helper przesuwamy i rysujemy beginLine extendLine
-//   // currentLine = null
-//   // if (!currentLine && shouldDrawLine) beginLine(rowStart)
-//   // if (shouldDrawLine) extendLine(rowStart + rowWidth)
-//   // else {
-//   //  if (currentLine) lines.push(currentLine)
-//   //  currentLine = null
-//   // }
-//
-// beginRow()
-// // mark row beginning
-// // update availableHeight (na podstawie dolnego padding i krawedzi)
-//
-// var pageBreaks = renderRow()   // - zwraca gdzie na poszczegolnych stronach sie zakonczyl
-// // moveDown (top padding)
-// // processRow
-// // moveDown - bottom padding
-//
-// endRow(pageBreaks);
-//   if (pageBreaks)
-//     foreach(pageEnd && pageBeginning)
-//       drawHorizontalLine(page, y);
-//
-//   drawHorizontalLine();
-//   drawVerticalLines();
-//     // dla kazdego idziemy i jesli nie colSpan to rysujemy
-//     // while (pageBreaks)
-//     //   draw od zapamietanego y do pageBreak
-//     //   zapamietany y = pageBreak.nextStart
-//     //   pageBreak.pop()
-//     // od zapamietanego do rowEnd
-//
-//   if(drawingHeader && fullHeaderDrawn)
-//     headerBlock = unbreakableToRepeatale();
-//
-//   if (headerBlock && (keepTogetherFinished || tableFinished))
-//     commit()
-//     pushToRepeatables
-//
-//   // update availableHeight -= dolny padding + krawedz
-// function TableProcessor() {
-// }
-//
-// beginTable();
-// // build widths
-// // get total width
-// // howmany rows to be kept together ? beginUnbreakableBlock
-//
-//   drawHorizontalLine();
-//   // jaka wysokosc linii, idac po kolejnych
-//   // moveDown(height)
-//   // continuity helper przesuwamy i rysujemy beginLine extendLine
-//   // currentLine = null
-//   // if (!currentLine && shouldDrawLine) beginLine(rowStart)
-//   // if (shouldDrawLine) extendLine(rowStart + rowWidth)
-//   // else {
-//   //  if (currentLine) lines.push(currentLine)
-//   //  currentLine = null
-//   // }
-//
-// beginRow()
-// // mark row beginning
-// // update availableHeight (na podstawie dolnego padding i krawedzi)
-//
-// var pageBreaks = renderRow()   // - zwraca gdzie na poszczegolnych stronach sie zakonczyl
-// // moveDown (top padding)
-// // processRow
-// // moveDown - bottom padding
-//
-// endRow(pageBreaks);
-//   if (pageBreaks)
-//     foreach(pageEnd && pageBeginning)
-//       drawHorizontalLine(page, y);
-//
-//   drawHorizontalLine();
-//   drawVerticalLines();
-//     // dla kazdego idziemy i jesli nie colSpan to rysujemy
-//     // while (pageBreaks)
-//     //   draw od zapamietanego y do pageBreak
-//     //   zapamietany y = pageBreak.nextStart
-//     //   pageBreak.pop()
-//     // od zapamietanego do rowEnd
-//
-//   if(drawingHeader && fullHeaderDrawn)
-//     headerBlock = unbreakableToRepeatale();
-//
-//   if (headerBlock && (keepTogetherFinished || tableFinished))
-//     commit()
-//     pushToRepeatables
-//
-//   // update availableHeight -= dolny padding + krawedz
-
 
 module.exports = TableProcessor;
 
