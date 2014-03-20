@@ -15,5 +15,8 @@ Docs + getting started will appear soon.
 * tables - vertical alignment
 
 
-## External components
+-------
+
+
+
 pdfmake is based on a truly amazing library pdfkit.org - credits to @devongovett
