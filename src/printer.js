@@ -83,6 +83,11 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 		docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 },
         new ImageMeasure(this.pdfKitDoc));
 
+  registerDefaultTableLayouts(builder);
+  if (options.tableLayouts) {
+    builder.registerTableLayouts(options.tableLayouts);
+  }
+
 	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' });
 
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
@@ -99,6 +104,55 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 		this.pdfKitDoc.store.objects[2].data.Names = { JavaScript: new PDFReference(namesRef.id) };
 	}
 	return this.pdfKitDoc;
+};
+
+function registerDefaultTableLayouts(layoutBuilder) {
+  layoutBuilder.registerTableLayouts({
+    noBorders: {
+      hLineWidth: function(i) { return 0; },
+      vLineWidth: function(i) { return 0; },
+      paddingLeft: function(i) { return i && 4 || 0; },
+      paddingRight: function(i, node) { return (i < node.table.widths.length - 1) ? 4 : 0; },
+    },
+    headerLineOnly: {
+      hLineWidth: function(i, node) {
+        if (i === 0 || i === node.table.body.length) return 0;
+        return (i === node.table.headerRows) ? 2 : 0;
+      },
+      vLineWidth: function(i) { return 0; },
+      paddingLeft: function(i) {
+        return i === 0 ? 0 : 8;
+      },
+      paddingRight: function(i, node) {
+        return (i === node.table.widths.length - 1) ? 0 : 8;
+      }
+    },
+    lightHorizontalLines: {
+      hLineWidth: function(i, node) {
+        if (i === 0 || i === node.table.body.length) return 0;
+        return (i === node.table.headerRows) ? 2 : 1;
+      },
+      vLineWidth: function(i) { return 0; },
+      hLineColor: function(i) { return i === 1 ? 'black' : '#aaa'; },
+      paddingLeft: function(i) {
+        return i === 0 ? 0 : 8;
+      },
+      paddingRight: function(i, node) {
+        return (i === node.table.widths.length - 1) ? 0 : 8;
+      }
+    }
+  });
+}
+
+var defaultLayout = {
+  hLineWidth: function(i, node) { return 1; }, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
+  vLineWidth: function(i, node) { return 1; },
+  hLineColor: function(i, node) { return 'black'; },
+  vLineColor: function(i, node) { return 'black'; },
+  paddingLeft: function(i, node) { return 4; }, //i && 4 || 0; },
+  paddingRight: function(i, node) { return 4; }, //(i < node.table.widths.length - 1) ? 4 : 0; },
+  paddingTop: function(i, node) { return 2; },
+  paddingBottom: function(i, node) { return 2; }
 };
 
 function pageSize2widthAndHeight(pageSize) {

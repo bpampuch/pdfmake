@@ -9,10 +9,11 @@ var pack = require('./helpers').pack;
 /**
 * @private
 */
-function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure) {
+function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts) {
 	this.textTools = new TextTools(fontProvider);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 	this.imageMeasure = imageMeasure;
+	this.tableLayouts = tableLayouts;
 }
 
 /**
@@ -225,7 +226,7 @@ DocMeasure.prototype.measureList = function(isOrdered, node) {
 
 DocMeasure.prototype.measureTable = function(node) {
 	extendTableWidths(node);
-	node._layout = getLayout();
+	node._layout = getLayout(this.tableLayouts);
 	node._offsets = getOffsets(node._layout);
 
 	var colSpans = [];
@@ -268,7 +269,13 @@ DocMeasure.prototype.measureTable = function(node) {
 
 	return node;
 
-	function getLayout() {
+	function getLayout(tableLayouts) {
+		var layout = node.layout;
+
+		if (typeof node.layout === 'string' || node instanceof String) {
+			layout = tableLayouts[layout];
+		}
+
 		var defaultLayout = {
 			hLineWidth: function(i, node) { return 1; }, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
 			vLineWidth: function(i, node) { return 1; },
@@ -280,7 +287,7 @@ DocMeasure.prototype.measureTable = function(node) {
 			paddingBottom: function(i, node) { return 2; }
 		};
 
-		return pack(defaultLayout, node.layout);
+		return pack(defaultLayout, layout);
 	}
 
 	function getOffsets(layout) {

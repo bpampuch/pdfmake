@@ -24,7 +24,12 @@ function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
 	this.pageMargins = pageMargins;
 	this.tracker = new TraversalTracker();
   this.imageMeasure = imageMeasure;
+  this.tableLayouts = {};
 }
+
+LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
+  this.tableLayouts = pack(this.tableLayouts, tableLayouts);
+};
 
 /**
  * Executes layout engine on document-definition-object and creates an array of pages
@@ -37,7 +42,7 @@ function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
  * @return {Array} an array of pages
  */
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle) {
-	new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure).measureDocument(docStructure);
+	new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts).measureDocument(docStructure);
 
 	this.writer = new PageElementWriter(
 		new DocumentContext(this.pageSize, this.pageMargins, true),

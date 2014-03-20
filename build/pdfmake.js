@@ -7098,10 +7098,11 @@ var pack = _dereq_('./helpers').pack;
 /**
 * @private
 */
-function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure) {
+function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts) {
 	this.textTools = new TextTools(fontProvider);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 	this.imageMeasure = imageMeasure;
+	this.tableLayouts = tableLayouts;
 }
 
 /**
@@ -7314,7 +7315,7 @@ DocMeasure.prototype.measureList = function(isOrdered, node) {
 
 DocMeasure.prototype.measureTable = function(node) {
 	extendTableWidths(node);
-	node._layout = getLayout();
+	node._layout = getLayout(this.tableLayouts);
 	node._offsets = getOffsets(node._layout);
 
 	var colSpans = [];
@@ -7357,7 +7358,13 @@ DocMeasure.prototype.measureTable = function(node) {
 
 	return node;
 
-	function getLayout() {
+	function getLayout(tableLayouts) {
+		var layout = node.layout;
+
+		if (typeof node.layout === 'string' || node instanceof String) {
+			layout = tableLayouts[layout];
+		}
+
 		var defaultLayout = {
 			hLineWidth: function(i, node) { return 1; }, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
 			vLineWidth: function(i, node) { return 1; },
@@ -7369,7 +7376,7 @@ DocMeasure.prototype.measureTable = function(node) {
 			paddingBottom: function(i, node) { return 2; }
 		};
 
-		return pack(defaultLayout, node.layout);
+		return pack(defaultLayout, layout);
 	}
 
 	function getOffsets(layout) {
@@ -7957,7 +7964,12 @@ function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
 	this.pageMargins = pageMargins;
 	this.tracker = new TraversalTracker();
   this.imageMeasure = imageMeasure;
+  this.tableLayouts = {};
 }
+
+LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
+  this.tableLayouts = pack(this.tableLayouts, tableLayouts);
+};
 
 /**
  * Executes layout engine on document-definition-object and creates an array of pages
@@ -7970,7 +7982,7 @@ function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
  * @return {Array} an array of pages
  */
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle) {
-	new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure).measureDocument(docStructure);
+	new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts).measureDocument(docStructure);
 
 	this.writer = new PageElementWriter(
 		new DocumentContext(this.pageSize, this.pageMargins, true),
@@ -8545,6 +8557,11 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 		docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 },
         new ImageMeasure(this.pdfKitDoc));
 
+  registerDefaultTableLayouts(builder);
+  if (options.tableLayouts) {
+    builder.registerTableLayouts(options.tableLayouts);
+  }
+
 	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' });
 
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
@@ -8561,6 +8578,55 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 		this.pdfKitDoc.store.objects[2].data.Names = { JavaScript: new PDFReference(namesRef.id) };
 	}
 	return this.pdfKitDoc;
+};
+
+function registerDefaultTableLayouts(layoutBuilder) {
+  layoutBuilder.registerTableLayouts({
+    noBorders: {
+      hLineWidth: function(i) { return 0; },
+      vLineWidth: function(i) { return 0; },
+      paddingLeft: function(i) { return i && 4 || 0; },
+      paddingRight: function(i, node) { return (i < node.table.widths.length - 1) ? 4 : 0; },
+    },
+    headerLineOnly: {
+      hLineWidth: function(i, node) {
+        if (i === 0 || i === node.table.body.length) return 0;
+        return (i === node.table.headerRows) ? 2 : 0;
+      },
+      vLineWidth: function(i) { return 0; },
+      paddingLeft: function(i) {
+        return i === 0 ? 0 : 8;
+      },
+      paddingRight: function(i, node) {
+        return (i === node.table.widths.length - 1) ? 0 : 8;
+      }
+    },
+    lightHorizontalLines: {
+      hLineWidth: function(i, node) {
+        if (i === 0 || i === node.table.body.length) return 0;
+        return (i === node.table.headerRows) ? 2 : 1;
+      },
+      vLineWidth: function(i) { return 0; },
+      hLineColor: function(i) { return i === 1 ? 'black' : '#aaa'; },
+      paddingLeft: function(i) {
+        return i === 0 ? 0 : 8;
+      },
+      paddingRight: function(i, node) {
+        return (i === node.table.widths.length - 1) ? 0 : 8;
+      }
+    }
+  });
+}
+
+var defaultLayout = {
+  hLineWidth: function(i, node) { return 1; }, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
+  vLineWidth: function(i, node) { return 1; },
+  hLineColor: function(i, node) { return 'black'; },
+  vLineColor: function(i, node) { return 'black'; },
+  paddingLeft: function(i, node) { return 4; }, //i && 4 || 0; },
+  paddingRight: function(i, node) { return 4; }, //(i < node.table.widths.length - 1) ? 4 : 0; },
+  paddingTop: function(i, node) { return 2; },
+  paddingBottom: function(i, node) { return 2; }
 };
 
 function pageSize2widthAndHeight(pageSize) {
@@ -9206,34 +9272,6 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
 
     writer.context.availableHeight += this.reservedAtBottom;
 
-    //prepareRowSpanDataForCurrentRow
-    // update availableHeight -= dolny padding + krawedz
-    // this.drawVerticalLine
-
-    //TODO: page breaks
-    // if (pageBreaks && pageBreaks.length > 0) {
-    //   y2 = pageBreaks[0].prevY;
-    //   page = pageBreaks[0].prevPage;
-    // }
-    //
-    // //TODO: horizontal lines at the end of each page
-    // if (pageBreaks && pageBreaks.length > 0) {
-    //   y2 = pageBreaks[0].prevY;
-    // }
-    //
-    // this.drawVerticalLine(0, this.rowTopY, writer);
-    //
-    // for(var i = 0, l = this.rowSpanData.length; i < l; i++) {
-    //   var data = this.rowSpanData[i];
-    //
-    //   this.draw
-    // }
-    // var y = this.rowTopY;
-    // for(var i = 0, l = pageBreaks.length; i < l; i++) {
-    //
-    // }
-    // var topOffset = this.rowTopY - writer.context.y;
-
     function getLineXs() {
       var result = [];
       var cols = 0;
@@ -9250,148 +9288,11 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
         }
       }
 
-      result.push({ x: self.rowSpanData[self.rowSpanData.length - 1].left, index: self.rowSpanData.length});
+      result.push({ x: self.rowSpanData[self.rowSpanData.length - 1].left, index: self.rowSpanData.length - 1});
 
       return result;
     }
 };
-
-// var pageBreaks = renderRow()   // - zwraca gdzie na poszczegolnych stronach sie zakonczyl
-// // moveDown (top padding)
-// // processRow
-// // moveDown - bottom padding
-//
-// endRow(pageBreaks);
-//   if (pageBreaks)
-//     foreach(pageEnd && pageBeginning)
-//       drawHorizontalLine(page, y);
-//
-//   drawHorizontalLine();
-//   drawVerticalLines();
-//     // dla kazdego idziemy i jesli nie colSpan to rysujemy
-//     // while (pageBreaks)
-//     //   draw od zapamietanego y do pageBreak
-//     //   zapamietany y = pageBreak.nextStart
-//     //   pageBreak.pop()
-//     // od zapamietanego do rowEnd
-//
-//   if(drawingHeader && fullHeaderDrawn)
-//     headerBlock = unbreakableToRepeatale();
-//
-//   if (headerBlock && (keepTogetherFinished || tableFinished))
-//     commit()
-//     pushToRepeatables
-//
-//   prepareRowSpanDataForCurrentRow
-//   // update availableHeight -= dolny padding + krawedz
-//
-//
-//
-
-//
-// function TableProcessor() {
-// }
-//
-// beginTable();
-// // build widths
-// // get total width
-// // howmany rows to be kept together ? beginUnbreakableBlock
-//
-//   drawHorizontalLine();
-//   // jaka wysokosc linii, idac po kolejnych
-//   // moveDown(height)
-//   // continuity helper przesuwamy i rysujemy beginLine extendLine
-//   // currentLine = null
-//   // if (!currentLine && shouldDrawLine) beginLine(rowStart)
-//   // if (shouldDrawLine) extendLine(rowStart + rowWidth)
-//   // else {
-//   //  if (currentLine) lines.push(currentLine)
-//   //  currentLine = null
-//   // }
-//
-// beginRow()
-// // mark row beginning
-// // update availableHeight (na podstawie dolnego padding i krawedzi)
-//
-// var pageBreaks = renderRow()   // - zwraca gdzie na poszczegolnych stronach sie zakonczyl
-// // moveDown (top padding)
-// // processRow
-// // moveDown - bottom padding
-//
-// endRow(pageBreaks);
-//   if (pageBreaks)
-//     foreach(pageEnd && pageBeginning)
-//       drawHorizontalLine(page, y);
-//
-//   drawHorizontalLine();
-//   drawVerticalLines();
-//     // dla kazdego idziemy i jesli nie colSpan to rysujemy
-//     // while (pageBreaks)
-//     //   draw od zapamietanego y do pageBreak
-//     //   zapamietany y = pageBreak.nextStart
-//     //   pageBreak.pop()
-//     // od zapamietanego do rowEnd
-//
-//   if(drawingHeader && fullHeaderDrawn)
-//     headerBlock = unbreakableToRepeatale();
-//
-//   if (headerBlock && (keepTogetherFinished || tableFinished))
-//     commit()
-//     pushToRepeatables
-//
-//   // update availableHeight -= dolny padding + krawedz
-// function TableProcessor() {
-// }
-//
-// beginTable();
-// // build widths
-// // get total width
-// // howmany rows to be kept together ? beginUnbreakableBlock
-//
-//   drawHorizontalLine();
-//   // jaka wysokosc linii, idac po kolejnych
-//   // moveDown(height)
-//   // continuity helper przesuwamy i rysujemy beginLine extendLine
-//   // currentLine = null
-//   // if (!currentLine && shouldDrawLine) beginLine(rowStart)
-//   // if (shouldDrawLine) extendLine(rowStart + rowWidth)
-//   // else {
-//   //  if (currentLine) lines.push(currentLine)
-//   //  currentLine = null
-//   // }
-//
-// beginRow()
-// // mark row beginning
-// // update availableHeight (na podstawie dolnego padding i krawedzi)
-//
-// var pageBreaks = renderRow()   // - zwraca gdzie na poszczegolnych stronach sie zakonczyl
-// // moveDown (top padding)
-// // processRow
-// // moveDown - bottom padding
-//
-// endRow(pageBreaks);
-//   if (pageBreaks)
-//     foreach(pageEnd && pageBeginning)
-//       drawHorizontalLine(page, y);
-//
-//   drawHorizontalLine();
-//   drawVerticalLines();
-//     // dla kazdego idziemy i jesli nie colSpan to rysujemy
-//     // while (pageBreaks)
-//     //   draw od zapamietanego y do pageBreak
-//     //   zapamietany y = pageBreak.nextStart
-//     //   pageBreak.pop()
-//     // od zapamietanego do rowEnd
-//
-//   if(drawingHeader && fullHeaderDrawn)
-//     headerBlock = unbreakableToRepeatale();
-//
-//   if (headerBlock && (keepTogetherFinished || tableFinished))
-//     commit()
-//     pushToRepeatables
-//
-//   // update availableHeight -= dolny padding + krawedz
-
 
 module.exports = TableProcessor;
 
