@@ -45,7 +45,18 @@ var docDefinition = {
 														]
 												},
 												/* a nested table will appear here as soon as I fix a bug */
-												'Nothing interesting here',
+												[
+													'or a nested table',
+													{
+														table: {
+															body: [
+																[ 'Col1', 'Col2', 'Col3'],
+																[ '1', '2', '3'],
+																[ '1', '2', '3']
+															]
+														},
+													}
+												],
 												{ text: [
 														'Inlines can be ',
 														{ text: 'styled\n', italics: true },

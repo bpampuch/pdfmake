@@ -3,6 +3,7 @@
 
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
+var ColumnCalculator = require('./columnCalculator');
 var fontStringify = require('./helpers').fontStringify;
 var pack = require('./helpers').pack;
 
@@ -144,22 +145,6 @@ DocMeasure.prototype.measureVerticalContainer = function(node) {
 	return node;
 };
 
-DocMeasure.prototype.measureColumns = function(node) {
-	var columns = node.columns;
-	node._minWidth = 0;
-	node._maxWidth = 0;
-	node._gap = this.styleStack.getProperty('columnGap');
-
-	for(var i = 0, l = columns.length; i < l; i++) {
-		columns[i] = this.measureNode(columns[i]);
-
-		node._minWidth += columns[i]._minWidth;
-		node._maxWidth += columns[i]._maxWidth;
-	}
-
-	return node;
-};
-
 DocMeasure.prototype.gapSizeForList = function(isOrderedList, listItems) {
 	if (isOrderedList) {
 		var longestNo = (listItems.length).toString().replace(/./g, '9');
@@ -216,10 +201,25 @@ DocMeasure.prototype.measureList = function(isOrdered, node) {
 			nextItem.listMarker = this.buildMarker(isOrdered, nextItem.counter || marker, style, node._gapSize);
 		}  // TODO: else - nested lists numbering
 
-
 		node._minWidth = Math.max(node._minWidth, items[i]._minWidth + node._gapSize.width);
 		node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth + node._gapSize.width);
 	}
+
+	return node;
+};
+
+DocMeasure.prototype.measureColumns = function(node) {
+	var columns = node.columns;
+	node._gap = this.styleStack.getProperty('columnGap') || 0;
+
+	for(var i = 0, l = columns.length; i < l; i++) {
+		columns[i] = this.measureNode(columns[i]);
+	}
+
+	var measures = ColumnCalculator.measureMinMax(columns);
+
+	node._minWidth = measures.min + node._gap * (columns.length - 1);
+	node._maxWidth = measures.max + node._gap * (columns.length - 1);
 
 	return node;
 };
@@ -232,12 +232,10 @@ DocMeasure.prototype.measureTable = function(node) {
 	var colSpans = [];
 	var col, row, cols, rows;
 
-	node.table._minWidth = 0;
-	node.table._maxWidth = 0;
-
 	for(col = 0, cols = node.table.body[0].length; col < cols; col++) {
-		node.table.widths[col]._minWidth = 0;
-		node.table.widths[col]._maxWidth = 0;
+		var c = node.table.widths[col];
+		c._minWidth = 0;
+		c._maxWidth = 0;
 
 		for(row = 0, rows = node.table.body.length; row < rows; row++) {
 			var rowData = node.table.body[row];
@@ -249,8 +247,8 @@ DocMeasure.prototype.measureTable = function(node) {
 					markSpans(rowData, col, data.colSpan);
 					colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
 				} else {
-					node.table.widths[col]._minWidth = Math.max(node.table.widths[col]._minWidth, data._minWidth);
-					node.table.widths[col]._maxWidth = Math.max(node.table.widths[col]._maxWidth, data._maxWidth);
+					c._minWidth = Math.max(c._minWidth, data._minWidth);
+					c._maxWidth = Math.max(c._maxWidth, data._maxWidth);
 				}
 			}
 
@@ -262,10 +260,10 @@ DocMeasure.prototype.measureTable = function(node) {
 
 	extendWidthsForColSpans();
 
-	for(col = 0, cols = node.table.body[0].length; col < cols; col++) {
-		node.table._minWidth += node.table.widths[col]._minWidth;
-		node.table._maxWidth += node.table.widths[col]._maxWidth;
-	}
+	var measures = ColumnCalculator.measureMinMax(node.table.widths);
+
+	node._minWidth = measures.min + node._offsets.total;
+	node._maxWidth = measures.max + node._offsets.total;
 
 	return node;
 
