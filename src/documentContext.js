@@ -31,7 +31,8 @@ DocumentContext.prototype.beginColumnGroup = function() {
 		availableWidth: this.availableWidth,
 		page: this.page,
 		bottomMost: { y: this.y, page: this.page },
-		endingCell: this.endingCell
+		endingCell: this.endingCell,
+		lastColumnWidth: this.lastColumnWidth
 	});
 
 	this.lastColumnWidth = 0;
@@ -92,6 +93,7 @@ DocumentContext.prototype.completeColumnGroup = function() {
 	this.page = saved.bottomMost.page;
 	this.availableWidth = saved.availableWidth;
 	this.availableHeight = saved.bottomMost.availableHeight;
+	this.lastColumnWidth = saved.lastColumnWidth;
 };
 
 DocumentContext.prototype.addMargin = function(left, right) {
