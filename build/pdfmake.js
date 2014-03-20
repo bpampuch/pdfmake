@@ -1,5 +1,5 @@
 !function(e){if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.pdfMake=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
-/**  
+/**
  * The buffer module from node.js, for the browser.
  *
  * Author:   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
@@ -7525,7 +7525,7 @@ module.exports = DocMeasure;
 * Creates an instance of DocumentContext - a store for current x, y positions and available width/height.
 * It facilitates column divisions and vertical sync
 */
-function DocumentContext(pageSize, pageMargins, addFirstPageAutomatically) {
+function DocumentContext(pageSize, pageMargins) {
 	this.pages = [];
 
 	this.pageSize = pageSize;
@@ -7540,7 +7540,7 @@ function DocumentContext(pageSize, pageMargins, addFirstPageAutomatically) {
 
 	this.endingCell = null;
 
-	if (addFirstPageAutomatically) this.addPage();
+	this.addPage();
 }
 
 DocumentContext.prototype.beginColumnGroup = function() {
@@ -7646,16 +7646,6 @@ DocumentContext.prototype.getCurrentPage = function() {
 	return this.pages[this.page];
 };
 
-DocumentContext.prototype.createUnbreakableSubcontext = function() {
-	var height = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-	var width = this.availableWidth;
-
-	var ctx = new DocumentContext({ width: width, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
-	ctx.addPage();
-
-	return ctx;
-};
-
 function bottomMostContext(c1, c2) {
 	var r;
 
@@ -7685,19 +7675,17 @@ module.exports = DocumentContext;
 var Line = _dereq_('./line');
 var pack = _dereq_('./helpers').pack;
 var offsetVector = _dereq_('./helpers').offsetVector;
+var DocumentContext = _dereq_('./documentContext');
 
 /**
 * Creates an instance of ElementWriter - a line/vector writer, which adds
 * elements to current page and sets their positions based on the context
 */
 function ElementWriter(context, tracker) {
-	this.setContext(context);
+	this.context = context;
+	this.contextStack = [];
 	this.tracker = tracker || { emit: function() { } };
 }
-
-ElementWriter.prototype.setContext = function(context) {
-	this.context = context;
-};
 
 ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition) {
 	var height = line.getHeight();
@@ -7806,7 +7794,6 @@ ElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreConte
 	}
 };
 
-
 function cloneLine(line) {
 	var result = new Line(line.maxWidth);
 
@@ -7819,7 +7806,7 @@ function cloneLine(line) {
 	return result;
 }
 
-ElementWriter.prototype.addFragment = function(block, isRepeatable) {
+ElementWriter.prototype.addFragment = function(block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
 	var ctx = this.context;
 	var page = ctx.getCurrentPage();
 
@@ -7828,8 +7815,8 @@ ElementWriter.prototype.addFragment = function(block, isRepeatable) {
 	block.lines.forEach(function(line) {
 		var l = cloneLine(line);
 
-		l.x = (l.x || 0) + (isRepeatable ? block.xOffset : ctx.x);
-		l.y = (l.y || 0) + ctx.y;
+		l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
+		l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
 		page.lines.push(l);
 	});
@@ -7837,27 +7824,53 @@ ElementWriter.prototype.addFragment = function(block, isRepeatable) {
 	block.vectors.forEach(function(vector) {
 		var v = pack(vector);
 
-		offsetVector(v, isRepeatable ? block.xOffset : ctx.x, ctx.y);
+		offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 		page.vectors.push(v);
 	});
 
 	block.images.forEach(function(image) {
 		var img = pack(image);
 
-		img.x = (img.x || 0) + (isRepeatable ? block.xOffset : ctx.x);
-		img.y = (img.y || 0) + ctx.y;
+		img.x = (img.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
+		img.y = (img.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
 		page.images.push(img);
 	});
 
-	ctx.moveDown(block.height);
+	if (!dontUpdateContextPosition) ctx.moveDown(block.height);
 
 	return true;
 };
 
+/**
+* Pushes the provided context onto the stack or creates a new one
+*
+* pushContext(context) - pushes the provided context and makes it current
+* pushContext(width, height) - creates and pushes a new context with the specified width and height
+* pushContext() - creates a new context for unbreakable blocks (with current availableWidth and full-page-height)
+*/
+ElementWriter.prototype.pushContext = function(contextOrWidth, height) {
+	if (contextOrWidth === undefined) {
+		height = this.context.pageSize.height - this.context.pageMargins.top - this.context.pageMargins.bottom;
+		contextOrWidth = this.context.availableWidth;
+	}
+
+	if (typeof contextOrWidth === 'number' || contextOrWidth instanceof Number) {
+		contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
+	}
+
+	this.contextStack.push(this.context);
+	this.context = contextOrWidth;
+};
+
+ElementWriter.prototype.popContext = function() {
+	this.context = this.contextStack.pop();
+};
+
+
 module.exports = ElementWriter;
 
-},{"./helpers":51,"./line":54}],51:[function(_dereq_,module,exports){
+},{"./documentContext":49,"./helpers":51,"./line":54}],51:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7908,10 +7921,17 @@ function fontStringify(key, val) {
 	return val;
 }
 
+function isFunction(functionToCheck) {
+	var getType = {};
+	return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+}
+
+
 module.exports = {
 	pack: pack,
 	fontStringify: fontStringify,
-	offsetVector: offsetVector
+	offsetVector: offsetVector,
+	isFunction: isFunction
 };
 
 },{}],52:[function(_dereq_,module,exports){
@@ -7951,6 +7971,7 @@ var Line = _dereq_('./line');
 var pack = _dereq_('./helpers').pack;
 var offsetVector = _dereq_('./helpers').offsetVector;
 var fontStringify = _dereq_('./helpers').fontStringify;
+var isFunction = _dereq_('./helpers').isFunction;
 
 /**
  * Creates an instance of LayoutBuilder - layout engine which turns document-definition-object
@@ -7981,22 +8002,52 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
  * @param {Object} defaultStyle default style definition
  * @return {Array} an array of pages
  */
-LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle) {
-	new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts).measureDocument(docStructure);
+LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, header, footer) {
+	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts);
+
+  this.docMeasure.measureDocument(docStructure);
 
 	this.writer = new PageElementWriter(
-		new DocumentContext(this.pageSize, this.pageMargins, true),
+		new DocumentContext(this.pageSize, this.pageMargins),
 		this.tracker);
 
 	this.processNode({ stack: docStructure });
+  this.addHeadersAndFooters(header, footer);
 
-	return this.writer.context.pages;
+	return this.writer.context().pages;
+};
+
+LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
+  var pages = this.writer.context().pages;
+  var headerGetter = isFunction(header) ? header : function() { return header; };
+  var footerGetter = isFunction(footer) ? footer : function() { return footer; };
+
+  for(var i = 0, l = pages.length; i < l; i++) {
+    this.writer.context().page = i;
+
+    var pageHeader = headerGetter(i + 1, l);
+    var pageFooter = footerGetter(i + 1, l);
+
+    if (pageHeader) {
+      this.docMeasure.measureDocument(pageHeader);
+      this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageMargins.top);
+      this.processNode(pageHeader);
+      this.writer.commitUnbreakableBlock(0, 0);
+    }
+
+    if (pageFooter) {
+      this.docMeasure.measureDocument(pageFooter);
+      this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageMargins.bottom);
+      this.processNode(pageFooter);
+      this.writer.commitUnbreakableBlock(0, this.pageSize.height - this.pageMargins.bottom);
+    }
+  }
 };
 
 LayoutBuilder.prototype.processNode = function(node) {
-	var self = this;
+  var self = this;
 
-    applyMargins(function() {
+  applyMargins(function() {
 		if (node.stack) {
 			self.processVerticalContainer(node.stack);
 		} else if (node.columns) {
@@ -8010,36 +8061,36 @@ LayoutBuilder.prototype.processNode = function(node) {
 		} else if (node.text !== undefined) {
 			self.processLeaf(node);
 		} else if (node.image) {
-            self.processImage(node);
-        } else if (node.canvas) {
-			self.processCanvas(node);
-        } else if (!node._span) {
-			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+      self.processImage(node);
+    } else if (node.canvas) {
+      self.processCanvas(node);
+    } else if (!node._span) {
+		throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
 	});
 
 	function applyMargins(callback) {
 		var margin = node._margin;
 
-        if (node.pageBreak === 'before') {
-            self.writer.moveToNextPage();
-        }
+    if (node.pageBreak === 'before') {
+        self.writer.moveToNextPage();
+    }
 
 		if (margin) {
-			self.writer.context.moveDown(margin[1]);
-			self.writer.context.addMargin(margin[0], margin[2]);
+			self.writer.context().moveDown(margin[1]);
+			self.writer.context().addMargin(margin[0], margin[2]);
 		}
 
 		callback();
 
 		if(margin) {
-			self.writer.context.addMargin(-margin[0], -margin[2]);
-			self.writer.context.moveDown(margin[3]);
+			self.writer.context().addMargin(-margin[0], -margin[2]);
+			self.writer.context().moveDown(margin[3]);
 		}
 
-        if (node.pageBreak === 'after') {
-            self.writer.moveToNextPage();
-        }
+    if (node.pageBreak === 'after') {
+        self.writer.moveToNextPage();
+    }
 	}
 };
 
@@ -8056,7 +8107,7 @@ LayoutBuilder.prototype.processVerticalContainer = function(items) {
 // columns
 LayoutBuilder.prototype.processColumns = function(columnNode) {
 	var columns = columnNode.columns;
-	var availableWidth = this.writer.context.availableWidth;
+	var availableWidth = this.writer.context().availableWidth;
 	var gaps = gapArray(columnNode._gap);
 
 	if (gaps) availableWidth -= (gaps.length - 1) * columnNode._gap;
@@ -8086,7 +8137,7 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
   this.tracker.auto('pageChanged', storePageBreakData, function() {
     widths = widths || columns;
 
-    self.writer.context.beginColumnGroup();
+    self.writer.context().beginColumnGroup();
 
     for(var i = 0, l = columns.length; i < l; i++) {
       var column = columns[i];
@@ -8099,16 +8150,16 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
           }
       }
 
-      self.writer.context.beginColumn(width, leftOffset, getEndingCell(column, i));
+      self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
       if (!column._span) {
         self.processNode(column);
       } else if (column._columnEndingContext) {
         // row-span ending
-        self.writer.context.markEnding(column);
+        self.writer.context().markEnding(column);
       }
     }
 
-    self.writer.context.completeColumnGroup();
+    self.writer.context().completeColumnGroup();
   });
 
   return pageBreaks;
@@ -8152,7 +8203,7 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
 LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
 	var self = this;
 
-	this.writer.context.addMargin(gapSize.width);
+	this.writer.context().addMargin(gapSize.width);
 
 	var nextMarker;
 	this.tracker.auto('lineAdded', addMarkerToFirstLeaf, function() {
@@ -8162,7 +8213,7 @@ LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
 		});
 	});
 
-	this.writer.context.addMargin(-gapSize.width);
+	this.writer.context().addMargin(-gapSize.width);
 
 	function addMarkerToFirstLeaf(line) {
 		// I'm not very happy with the way list processing is implemented
@@ -8202,9 +8253,7 @@ LayoutBuilder.prototype.processTable = function(tableNode) {
   }
 
   processor.endTable(this.writer);
-
 };
-
 
 // leafs (texts)
 LayoutBuilder.prototype.processLeaf = function(node) {
@@ -8219,7 +8268,7 @@ LayoutBuilder.prototype.processLeaf = function(node) {
 LayoutBuilder.prototype.buildNextLine = function(textNode) {
 	if (!textNode._inlines || textNode._inlines.length === 0) return null;
 
-	var line = new Line(this.writer.context.availableWidth);
+	var line = new Line(this.writer.context().availableWidth);
 
 	while(textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
 		line.addInline(textNode._inlines.shift());
@@ -8237,7 +8286,7 @@ LayoutBuilder.prototype.processImage = function(node) {
 LayoutBuilder.prototype.processCanvas = function(node) {
 	var height = node._minHeight;
 
-	if (this.writer.context.availableHeight < height) {
+	if (this.writer.context().availableHeight < height) {
 		// TODO: support for canvas larger than a page
 		// TODO: support for other overflow methods
 
@@ -8248,7 +8297,7 @@ LayoutBuilder.prototype.processCanvas = function(node) {
 		this.writer.addVector(vector);
 	}, this);
 
-	this.writer.context.moveDown(height);
+	this.writer.context().moveDown(height);
 };
 
 
@@ -8332,14 +8381,15 @@ module.exports = Line;
 var ElementWriter = _dereq_('./elementWriter');
 
 /**
-* Creates an instance of PageElementWriter - line/vector writer
-* used by LayoutBuilder.
-*
-* It creates new pages when required, supports repeatable fragments
-* (ie. table headers), headers and footers.
+* Creates an instance of PageElementWriter - an extended ElementWriter
+* which can handle:
+* - page-breaks (it adds new pages when there's not enough space left),
+* - repeatable fragments (like table-headers, which are repeated everytime
+*                         a page-break occurs)
+* - transactions (used for unbreakable-blocks when we want to make sure
+*                 whole block will be rendered on the same page)
 */
 function PageElementWriter(context, tracker) {
-	this.originalContext = this.context = context;
 	this.transactionLevel = 0;
 	this.repeatables = [];
 
@@ -8353,15 +8403,15 @@ PageElementWriter.prototype.addLine = function(line, dontUpdateContextPosition) 
 	}
 };
 
-PageElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY) {
-	this.writer.addVector(vector, ignoreContextX, ignoreContextY);
-};
-
 PageElementWriter.prototype.addImage = function(image) {
 	if(!this.writer.addImage(image)) {
 		this.moveToNextPage();
 		this.writer.addImage(image);
 	}
+};
+
+PageElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY) {
+	this.writer.addVector(vector, ignoreContextX, ignoreContextY);
 };
 
 PageElementWriter.prototype.addFragment = function(fragment) {
@@ -8372,80 +8422,88 @@ PageElementWriter.prototype.addFragment = function(fragment) {
 };
 
 PageElementWriter.prototype.moveToNextPage = function() {
-	var nextPageIndex = this.context.page + 1;
+	var nextPageIndex = this.writer.context.page + 1;
 
-	var prevPage = this.context.page;
-	var prevY = this.context.y;
+	var prevPage = this.writer.context.page;
+	var prevY = this.writer.context.y;
 
-	if (nextPageIndex >= this.context.pages.length) {
+	if (nextPageIndex >= this.writer.context.pages.length) {
 		// create new Page
 		var page = { lines: [], vectors: [], images:[] };
-		this.context.pages.push(page);
-		this.context.page = nextPageIndex;
-		this.context.moveToPageTop();
+		this.writer.context.pages.push(page);
+		this.writer.context.page = nextPageIndex;
+		this.writer.context.moveToPageTop();
 
 		// add repeatable fragments
 		this.repeatables.forEach(function(rep) {
 			this.writer.addFragment(rep, true);
 		}, this);
 	} else {
-		this.context.page = nextPageIndex;
-		this.context.moveToPageTop();
+		this.writer.context.page = nextPageIndex;
+		this.writer.context.moveToPageTop();
 
 		this.repeatables.forEach(function(rep) {
-			this.context.moveDown(rep.height);
+			this.writer.context.moveDown(rep.height);
 		}, this);
 	}
 
 	this.writer.tracker.emit('pageChanged', {
 		prevPage: prevPage,
 		prevY: prevY,
-		y: this.context.y
+		y: this.writer.context.y
 	});
 };
 
-PageElementWriter.prototype.beginUnbreakableBlock = function() {
+PageElementWriter.prototype.beginUnbreakableBlock = function(width, height) {
 	if (this.transactionLevel++ === 0) {
-		this.transactionContext = this.context.createUnbreakableSubcontext();
-		this._activateTransactionContext();
+		this.originalX = this.writer.context.x;
+		this.writer.pushContext(width, height);
 	}
 };
 
-PageElementWriter.prototype.commitUnbreakableBlock = function() {
+PageElementWriter.prototype.commitUnbreakableBlock = function(forcedX, forcedY) {
 	if (--this.transactionLevel === 0) {
-		this._removeTransactionContext();
+		var unbreakableContext = this.writer.context;
+		this.writer.popContext();
 
-		if(this.transactionContext.pages.length > 0) {
+		if(unbreakableContext.pages.length > 0) {
 			// no support for multi-page unbreakableBlocks
-			var fragment = this.transactionContext.pages[0];
+			var fragment = unbreakableContext.pages[0];
+			fragment.xOffset = forcedX;
+			fragment.yOffset = forcedY;
 
 			//TODO: vectors can influence height in some situations
-			fragment.height = this.transactionContext.y;
+			fragment.height = unbreakableContext.y;
 
-			this.addFragment(fragment);
+			if (forcedX !== undefined || forcedY !== undefined) {
+				this.writer.addFragment(fragment, true, true, true);
+			} else {
+				this.addFragment(fragment);
+			}
 		}
 	}
 };
 
-PageElementWriter.prototype.unbreakableBlockToRepeatable = function() {
+PageElementWriter.prototype.currentBlockToRepeatable = function() {
+	var unbreakableContext = this.writer.context;
 	var rep = { lines: [], vectors: [], images: [] };
 
-	this.transactionContext.pages[0].lines.forEach(function(line) {
+	unbreakableContext.pages[0].lines.forEach(function(line) {
 		rep.lines.push(line);
 	});
 
-	this.transactionContext.pages[0].vectors.forEach(function(vector) {
+	unbreakableContext.pages[0].vectors.forEach(function(vector) {
 		rep.vectors.push(vector);
 	});
 
-	this.transactionContext.pages[0].images.forEach(function(img) {
+	unbreakableContext.pages[0].images.forEach(function(img) {
 		rep.images.push(img);
 	});
 
-	rep.xOffset = this.originalContext.x;
+	rep.xOffset = this.originalX;
 
 	//TODO: vectors can influence height in some situations
-	rep.height = this.transactionContext.y;
+	rep.height = unbreakableContext.y;
 
 	return rep;
 };
@@ -8458,15 +8516,8 @@ PageElementWriter.prototype.popFromRepeatables = function() {
 	this.repeatables.pop();
 };
 
-
-PageElementWriter.prototype._activateTransactionContext = function() {
-	this.context = this.transactionContext;
-	this.writer.setContext(this.context);
-};
-
-PageElementWriter.prototype._removeTransactionContext = function() {
-	this.context = this.originalContext;
-	this.writer.setContext(this.context);
+PageElementWriter.prototype.context = function() {
+	return this.writer.context;
 };
 
 module.exports = PageElementWriter;
@@ -8562,7 +8613,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
     builder.registerTableLayouts(options.tableLayouts);
   }
 
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' });
+	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.header, docDefinition.footer);
 
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
@@ -9069,7 +9120,7 @@ TableProcessor.prototype.beginTable = function(writer) {
   this.offsets = tableNode._offsets;
   this.layout = tableNode._layout;
 
-  availableWidth = writer.context.availableWidth - this.offsets.total;
+  availableWidth = writer.context().availableWidth - this.offsets.total;
   ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth);
 
   this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
@@ -9115,12 +9166,12 @@ TableProcessor.prototype.beginTable = function(writer) {
 };
 
 TableProcessor.prototype.beginRow = function(rowIndex, writer) {
-  this.rowTopY = writer.context.y;
+  this.rowTopY = writer.context().y;
   this.reservedAtBottom = this.layout.hLineWidth(rowIndex + 1, this.tableNode) + this.layout.paddingBottom(rowIndex, this.tableNode);
 
-  writer.context.availableHeight -= this.reservedAtBottom;
+  writer.context().availableHeight -= this.reservedAtBottom;
 
-  writer.context.moveDown(this.layout.paddingTop(rowIndex, this.tableNode));
+  writer.context().moveDown(this.layout.paddingTop(rowIndex, this.tableNode));
 };
 
 TableProcessor.prototype.drawHorizontalLine = function(lineIndex, writer, overrideY) {
@@ -9159,7 +9210,7 @@ TableProcessor.prototype.drawHorizontalLine = function(lineIndex, writer, overri
       }
     }
 
-    writer.context.moveDown(lineWidth);
+    writer.context().moveDown(lineWidth);
   }
 };
 
@@ -9186,10 +9237,10 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
     var i;
     var self = this;
 
-    writer.context.moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
+    writer.context().moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
 
-    var endingPage = writer.context.page;
-    var endingY = writer.context.y;
+    var endingPage = writer.context().page;
+    var endingY = writer.context().y;
 
     var xs = getLineXs();
 
@@ -9218,8 +9269,8 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
 
       var y1 = ys[yi].y0;
       var y2 = ys[yi].y1;
-      if (writer.context.page != ys[yi].page) {
-        writer.context.page = ys[yi].page;
+      if (writer.context().page != ys[yi].page) {
+        writer.context().page = ys[yi].page;
 
         //TODO: buggy, availableHeight should be updated on every pageChanged event
         // TableProcessor should be pageChanged listener, instead of processRow
@@ -9237,8 +9288,8 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
       }
     }
 
-    writer.context.page = endingPage;
-    writer.context.y = endingY;
+    writer.context().page = endingPage;
+    writer.context().y = endingY;
 
     var row = this.tableNode.table.body[rowIndex];
     for(i = 0, l = row.length; i < l; i++) {
@@ -9261,7 +9312,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
     this.drawHorizontalLine(rowIndex + 1, writer);
 
     if(this.headerRows && rowIndex === this.headerRows - 1) {
-      this.headerRepeatable = writer.unbreakableBlockToRepeatable();
+      this.headerRepeatable = writer.currentBlockToRepeatable();
     }
 
     if(this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
@@ -9270,7 +9321,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
       this.headerRepeatable = null;
     }
 
-    writer.context.availableHeight += this.reservedAtBottom;
+    writer.context().availableHeight += this.reservedAtBottom;
 
     function getLineXs() {
       var result = [];
