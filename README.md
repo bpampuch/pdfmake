@@ -14,6 +14,8 @@ Docs + getting started will appear soon.
 * page numbering
 * tables - vertical alignment
 
+## License
+MIT
 
 -------
 
