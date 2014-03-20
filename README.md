@@ -12,6 +12,4 @@ Docs + getting started will appear soon.
 
 * headers/footers
 * page numbering
-* tables - vertical lines
 * tables - vertical alignment
-* images
