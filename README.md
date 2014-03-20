@@ -10,7 +10,6 @@ Docs + getting started will appear soon.
 
 ## currently working on
 
-* headers/footers
 * page numbering
 * tables - vertical alignment
 
