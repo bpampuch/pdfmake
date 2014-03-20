@@ -69,16 +69,14 @@ LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
     var pageFooter = footerGetter(i + 1, l);
 
     if (pageHeader) {
-      this.docMeasure.measureDocument(pageHeader);
       this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageMargins.top);
-      this.processNode(pageHeader);
+      this.processNode(this.docMeasure.measureDocument(pageHeader));
       this.writer.commitUnbreakableBlock(0, 0);
     }
 
     if (pageFooter) {
-      this.docMeasure.measureDocument(pageFooter);
       this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageMargins.bottom);
-      this.processNode(pageFooter);
+      this.processNode(this.docMeasure.measureDocument(pageFooter));
       this.writer.commitUnbreakableBlock(0, this.pageSize.height - this.pageMargins.bottom);
     }
   }
