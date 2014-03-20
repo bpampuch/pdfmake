@@ -7098,10 +7098,11 @@ var pack = _dereq_('./helpers').pack;
 /**
 * @private
 */
-function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure) {
+function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts) {
 	this.textTools = new TextTools(fontProvider);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 	this.imageMeasure = imageMeasure;
+	this.tableLayouts = tableLayouts;
 }
 
 /**
@@ -7314,7 +7315,7 @@ DocMeasure.prototype.measureList = function(isOrdered, node) {
 
 DocMeasure.prototype.measureTable = function(node) {
 	extendTableWidths(node);
-	node._layout = getLayout();
+	node._layout = getLayout(this.tableLayouts);
 	node._offsets = getOffsets(node._layout);
 
 	var colSpans = [];
@@ -7357,7 +7358,13 @@ DocMeasure.prototype.measureTable = function(node) {
 
 	return node;
 
-	function getLayout() {
+	function getLayout(tableLayouts) {
+		var layout = node.layout;
+
+		if (typeof node.layout === 'string' || node instanceof String) {
+			layout = tableLayouts[layout];
+		}
+
 		var defaultLayout = {
 			hLineWidth: function(i, node) { return 1; }, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
 			vLineWidth: function(i, node) { return 1; },
@@ -7369,7 +7376,7 @@ DocMeasure.prototype.measureTable = function(node) {
 			paddingBottom: function(i, node) { return 2; }
 		};
 
-		return pack(defaultLayout, node.layout);
+		return pack(defaultLayout, layout);
 	}
 
 	function getOffsets(layout) {
@@ -7957,7 +7964,12 @@ function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
 	this.pageMargins = pageMargins;
 	this.tracker = new TraversalTracker();
   this.imageMeasure = imageMeasure;
+  this.tableLayouts = {};
 }
+
+LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
+  this.tableLayouts = pack(this.tableLayouts, tableLayouts);
+};
 
 /**
  * Executes layout engine on document-definition-object and creates an array of pages
@@ -7970,7 +7982,7 @@ function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
  * @return {Array} an array of pages
  */
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle) {
-	new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure).measureDocument(docStructure);
+	new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts).measureDocument(docStructure);
 
 	this.writer = new PageElementWriter(
 		new DocumentContext(this.pageSize, this.pageMargins, true),
@@ -8545,6 +8557,11 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 		docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 },
         new ImageMeasure(this.pdfKitDoc));
 
+  registerDefaultTableLayouts(builder);
+  if (options.tableLayouts) {
+    builder.registerTableLayouts(options.tableLayouts);
+  }
+
 	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' });
 
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
@@ -8561,6 +8578,55 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 		this.pdfKitDoc.store.objects[2].data.Names = { JavaScript: new PDFReference(namesRef.id) };
 	}
 	return this.pdfKitDoc;
+};
+
+function registerDefaultTableLayouts(layoutBuilder) {
+  layoutBuilder.registerTableLayouts({
+    noBorders: {
+      hLineWidth: function(i) { return 0; },
+      vLineWidth: function(i) { return 0; },
+      paddingLeft: function(i) { return i && 4 || 0; },
+      paddingRight: function(i, node) { return (i < node.table.widths.length - 1) ? 4 : 0; },
+    },
+    headerLineOnly: {
+      hLineWidth: function(i, node) {
+        if (i === 0 || i === node.table.body.length) return 0;
+        return (i === node.table.headerLines) ? 2 : 0;
+      },
+      vLineWidth: function(i) { return 0; },
+      paddingLeft: function(i) {
+        return i === 0 ? 0 : 8;
+      },
+      paddingRight: function(i, node) {
+        return (i === node.table.widths.length - 1) ? 0 : 8;
+      }
+    },
+    lightHorizontalLines: {
+      hLineWidth: function(i, node) {
+        if (i === 0 || i === node.table.body.length) return 0;
+        return (i === node.table.headerLines) ? 2 : 1;
+      },
+      vLineWidth: function(i) { return 0; },
+      hLineColor: function(i) { return i === 1 ? 'black' : '#aaa'; },
+      paddingLeft: function(i) {
+        return i === 0 ? 0 : 8;
+      },
+      paddingRight: function(i, node) {
+        return (i === node.table.widths.length - 1) ? 0 : 8;
+      }
+    }
+  });
+}
+
+var defaultLayout = {
+  hLineWidth: function(i, node) { return 1; }, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
+  vLineWidth: function(i, node) { return 1; },
+  hLineColor: function(i, node) { return 'black'; },
+  vLineColor: function(i, node) { return 'black'; },
+  paddingLeft: function(i, node) { return 4; }, //i && 4 || 0; },
+  paddingRight: function(i, node) { return 4; }, //(i < node.table.widths.length - 1) ? 4 : 0; },
+  paddingTop: function(i, node) { return 2; },
+  paddingBottom: function(i, node) { return 2; }
 };
 
 function pageSize2widthAndHeight(pageSize) {
