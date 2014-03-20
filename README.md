@@ -8,11 +8,6 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html)
 Docs + getting started will appear soon.
 
 
-## currently working on
-
-* page numbering
-* tables - vertical alignment
-
 ## License
 MIT
 
