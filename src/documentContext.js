@@ -5,7 +5,7 @@
 * Creates an instance of DocumentContext - a store for current x, y positions and available width/height.
 * It facilitates column divisions and vertical sync
 */
-function DocumentContext(pageSize, pageMargins, addFirstPageAutomatically) {
+function DocumentContext(pageSize, pageMargins) {
 	this.pages = [];
 
 	this.pageSize = pageSize;
@@ -20,7 +20,7 @@ function DocumentContext(pageSize, pageMargins, addFirstPageAutomatically) {
 
 	this.endingCell = null;
 
-	if (addFirstPageAutomatically) this.addPage();
+	this.addPage();
 }
 
 DocumentContext.prototype.beginColumnGroup = function() {

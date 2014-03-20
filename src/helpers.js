@@ -48,8 +48,15 @@ function fontStringify(key, val) {
 	return val;
 }
 
+function isFunction(functionToCheck) {
+	var getType = {};
+	return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+}
+
+
 module.exports = {
 	pack: pack,
 	fontStringify: fontStringify,
-	offsetVector: offsetVector
+	offsetVector: offsetVector,
+	isFunction: isFunction
 };

@@ -108,7 +108,8 @@ describe('PageElementWriter', function() {
 			pew.addLine(buildLine(30));
 			var uCtx = pew.writer.context;
 
-			assert.equal(ctx.pages.length, 0);
+			assert.equal(ctx.pages.length, 1);
+			assert.equal(ctx.pages[0].lines.length, 0);
 			assert.equal(uCtx.pages.length, 1);
 			assert.equal(uCtx.pages[0].lines.length, 2);
 		});
@@ -121,9 +122,10 @@ describe('PageElementWriter', function() {
 			pew.addLine(buildLine(30));
 			pew.commitUnbreakableBlock();
 
-			assert.equal(ctx.pages.length, 0);
-			pew.commitUnbreakableBlock();
 			assert.equal(ctx.pages.length, 1);
+			assert.equal(ctx.pages[0].lines.length, 0);
+			pew.commitUnbreakableBlock();
+			assert.equal(ctx.pages[0].lines.length, 1);
 		});
 
 		it('should copy all elements to the current page if there\'s enough space for the whole block', function() {

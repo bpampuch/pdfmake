@@ -11,6 +11,7 @@ var Line = require('./line');
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 var fontStringify = require('./helpers').fontStringify;
+var isFunction = require('./helpers').isFunction;
 
 /**
  * Creates an instance of LayoutBuilder - layout engine which turns document-definition-object
@@ -41,22 +42,52 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
  * @param {Object} defaultStyle default style definition
  * @return {Array} an array of pages
  */
-LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle) {
-	new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts).measureDocument(docStructure);
+LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, header, footer) {
+	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts);
+
+  this.docMeasure.measureDocument(docStructure);
 
 	this.writer = new PageElementWriter(
-		new DocumentContext(this.pageSize, this.pageMargins, true),
+		new DocumentContext(this.pageSize, this.pageMargins),
 		this.tracker);
 
 	this.processNode({ stack: docStructure });
+  this.addHeadersAndFooters(header, footer);
 
 	return this.writer.context().pages;
 };
 
-LayoutBuilder.prototype.processNode = function(node) {
-	var self = this;
+LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
+  var pages = this.writer.context().pages;
+  var headerGetter = isFunction(header) ? header : function() { return header; };
+  var footerGetter = isFunction(footer) ? footer : function() { return footer; };
 
-    applyMargins(function() {
+  for(var i = 0, l = pages.length; i < l; i++) {
+    this.writer.context().page = i;
+
+    var pageHeader = headerGetter(i + 1, l);
+    var pageFooter = footerGetter(i + 1, l);
+
+    if (pageHeader) {
+      this.docMeasure.measureDocument(pageHeader);
+      this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageMargins.top);
+      this.processNode(pageHeader);
+      this.writer.commitUnbreakableBlock(0, 0);
+    }
+
+    if (pageFooter) {
+      this.docMeasure.measureDocument(pageFooter);
+      this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageMargins.bottom);
+      this.processNode(pageFooter);
+      this.writer.commitUnbreakableBlock(0, this.pageSize.height - this.pageMargins.bottom);
+    }
+  }
+};
+
+LayoutBuilder.prototype.processNode = function(node) {
+  var self = this;
+
+  applyMargins(function() {
 		if (node.stack) {
 			self.processVerticalContainer(node.stack);
 		} else if (node.columns) {
@@ -70,20 +101,20 @@ LayoutBuilder.prototype.processNode = function(node) {
 		} else if (node.text !== undefined) {
 			self.processLeaf(node);
 		} else if (node.image) {
-            self.processImage(node);
-        } else if (node.canvas) {
-			self.processCanvas(node);
-        } else if (!node._span) {
-			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+      self.processImage(node);
+    } else if (node.canvas) {
+      self.processCanvas(node);
+    } else if (!node._span) {
+		throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
 	});
 
 	function applyMargins(callback) {
 		var margin = node._margin;
 
-        if (node.pageBreak === 'before') {
-            self.writer.moveToNextPage();
-        }
+    if (node.pageBreak === 'before') {
+        self.writer.moveToNextPage();
+    }
 
 		if (margin) {
 			self.writer.context().moveDown(margin[1]);
@@ -97,9 +128,9 @@ LayoutBuilder.prototype.processNode = function(node) {
 			self.writer.context().moveDown(margin[3]);
 		}
 
-        if (node.pageBreak === 'after') {
-            self.writer.moveToNextPage();
-        }
+    if (node.pageBreak === 'after') {
+        self.writer.moveToNextPage();
+    }
 	}
 };
 
@@ -262,9 +293,7 @@ LayoutBuilder.prototype.processTable = function(tableNode) {
   }
 
   processor.endTable(this.writer);
-
 };
-
 
 // leafs (texts)
 LayoutBuilder.prototype.processLeaf = function(node) {

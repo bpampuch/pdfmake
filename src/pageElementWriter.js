@@ -77,16 +77,14 @@ PageElementWriter.prototype.moveToNextPage = function() {
 	});
 };
 
-PageElementWriter.prototype.beginUnbreakableBlock = function() {
+PageElementWriter.prototype.beginUnbreakableBlock = function(width, height) {
 	if (this.transactionLevel++ === 0) {
 		this.originalX = this.writer.context.x;
-		this.writer.pushContext();
-//		this.transactionContext = this.writer.context.createUnbreakableSubcontext();
-//		this._activateTransactionContext();
+		this.writer.pushContext(width, height);
 	}
 };
 
-PageElementWriter.prototype.commitUnbreakableBlock = function() {
+PageElementWriter.prototype.commitUnbreakableBlock = function(forcedX, forcedY) {
 	if (--this.transactionLevel === 0) {
 		var unbreakableContext = this.writer.context;
 		this.writer.popContext();
@@ -94,11 +92,17 @@ PageElementWriter.prototype.commitUnbreakableBlock = function() {
 		if(unbreakableContext.pages.length > 0) {
 			// no support for multi-page unbreakableBlocks
 			var fragment = unbreakableContext.pages[0];
+			fragment.xOffset = forcedX;
+			fragment.yOffset = forcedY;
 
 			//TODO: vectors can influence height in some situations
 			fragment.height = unbreakableContext.y;
 
-			this.addFragment(fragment);
+			if (forcedX !== undefined || forcedY !== undefined) {
+				this.writer.addFragment(fragment, true, true, true);
+			} else {
+				this.addFragment(fragment);
+			}
 		}
 	}
 };

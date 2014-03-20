@@ -88,7 +88,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
     builder.registerTableLayouts(options.tableLayouts);
   }
 
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' });
+	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.header, docDefinition.footer);
 
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 

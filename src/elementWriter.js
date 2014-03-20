@@ -135,7 +135,7 @@ function cloneLine(line) {
 	return result;
 }
 
-ElementWriter.prototype.addFragment = function(block, isRepeatable) {
+ElementWriter.prototype.addFragment = function(block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
 	var ctx = this.context;
 	var page = ctx.getCurrentPage();
 
@@ -144,8 +144,8 @@ ElementWriter.prototype.addFragment = function(block, isRepeatable) {
 	block.lines.forEach(function(line) {
 		var l = cloneLine(line);
 
-		l.x = (l.x || 0) + (isRepeatable ? block.xOffset : ctx.x);
-		l.y = (l.y || 0) + ctx.y;
+		l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
+		l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
 		page.lines.push(l);
 	});
@@ -153,20 +153,20 @@ ElementWriter.prototype.addFragment = function(block, isRepeatable) {
 	block.vectors.forEach(function(vector) {
 		var v = pack(vector);
 
-		offsetVector(v, isRepeatable ? block.xOffset : ctx.x, ctx.y);
+		offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 		page.vectors.push(v);
 	});
 
 	block.images.forEach(function(image) {
 		var img = pack(image);
 
-		img.x = (img.x || 0) + (isRepeatable ? block.xOffset : ctx.x);
-		img.y = (img.y || 0) + ctx.y;
+		img.x = (img.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
+		img.y = (img.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
 		page.images.push(img);
 	});
 
-	ctx.moveDown(block.height);
+	if (!dontUpdateContextPosition) ctx.moveDown(block.height);
 
 	return true;
 };
