@@ -4,19 +4,17 @@
 var Line = require('./line');
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
+var DocumentContext = require('./documentContext');
 
 /**
 * Creates an instance of ElementWriter - a line/vector writer, which adds
 * elements to current page and sets their positions based on the context
 */
 function ElementWriter(context, tracker) {
-	this.setContext(context);
+	this.context = context;
+	this.contextStack = [];
 	this.tracker = tracker || { emit: function() { } };
 }
-
-ElementWriter.prototype.setContext = function(context) {
-	this.context = context;
-};
 
 ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition) {
 	var height = line.getHeight();
@@ -125,7 +123,6 @@ ElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreConte
 	}
 };
 
-
 function cloneLine(line) {
 	var result = new Line(line.maxWidth);
 
@@ -173,5 +170,31 @@ ElementWriter.prototype.addFragment = function(block, isRepeatable) {
 
 	return true;
 };
+
+/**
+* Pushes the provided context onto the stack or creates a new one
+*
+* pushContext(context) - pushes the provided context and makes it current
+* pushContext(width, height) - creates and pushes a new context with the specified width and height
+* pushContext() - creates a new context for unbreakable blocks (with current availableWidth and full-page-height)
+*/
+ElementWriter.prototype.pushContext = function(contextOrWidth, height) {
+	if (contextOrWidth === undefined) {
+		height = this.context.pageSize.height - this.context.pageMargins.top - this.context.pageMargins.bottom;
+		contextOrWidth = this.context.availableWidth;
+	}
+
+	if (typeof contextOrWidth === 'number' || contextOrWidth instanceof Number) {
+		contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
+	}
+
+	this.contextStack.push(this.context);
+	this.context = contextOrWidth;
+};
+
+ElementWriter.prototype.popContext = function() {
+	this.context = this.contextStack.pop();
+};
+
 
 module.exports = ElementWriter;

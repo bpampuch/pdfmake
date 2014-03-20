@@ -13,7 +13,7 @@ TableProcessor.prototype.beginTable = function(writer) {
   this.offsets = tableNode._offsets;
   this.layout = tableNode._layout;
 
-  availableWidth = writer.context.availableWidth - this.offsets.total;
+  availableWidth = writer.context().availableWidth - this.offsets.total;
   ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth);
 
   this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
@@ -59,12 +59,12 @@ TableProcessor.prototype.beginTable = function(writer) {
 };
 
 TableProcessor.prototype.beginRow = function(rowIndex, writer) {
-  this.rowTopY = writer.context.y;
+  this.rowTopY = writer.context().y;
   this.reservedAtBottom = this.layout.hLineWidth(rowIndex + 1, this.tableNode) + this.layout.paddingBottom(rowIndex, this.tableNode);
 
-  writer.context.availableHeight -= this.reservedAtBottom;
+  writer.context().availableHeight -= this.reservedAtBottom;
 
-  writer.context.moveDown(this.layout.paddingTop(rowIndex, this.tableNode));
+  writer.context().moveDown(this.layout.paddingTop(rowIndex, this.tableNode));
 };
 
 TableProcessor.prototype.drawHorizontalLine = function(lineIndex, writer, overrideY) {
@@ -103,7 +103,7 @@ TableProcessor.prototype.drawHorizontalLine = function(lineIndex, writer, overri
       }
     }
 
-    writer.context.moveDown(lineWidth);
+    writer.context().moveDown(lineWidth);
   }
 };
 
@@ -130,10 +130,10 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
     var i;
     var self = this;
 
-    writer.context.moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
+    writer.context().moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
 
-    var endingPage = writer.context.page;
-    var endingY = writer.context.y;
+    var endingPage = writer.context().page;
+    var endingY = writer.context().y;
 
     var xs = getLineXs();
 
@@ -162,8 +162,8 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
 
       var y1 = ys[yi].y0;
       var y2 = ys[yi].y1;
-      if (writer.context.page != ys[yi].page) {
-        writer.context.page = ys[yi].page;
+      if (writer.context().page != ys[yi].page) {
+        writer.context().page = ys[yi].page;
 
         //TODO: buggy, availableHeight should be updated on every pageChanged event
         // TableProcessor should be pageChanged listener, instead of processRow
@@ -181,8 +181,8 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
       }
     }
 
-    writer.context.page = endingPage;
-    writer.context.y = endingY;
+    writer.context().page = endingPage;
+    writer.context().y = endingY;
 
     var row = this.tableNode.table.body[rowIndex];
     for(i = 0, l = row.length; i < l; i++) {
@@ -205,7 +205,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
     this.drawHorizontalLine(rowIndex + 1, writer);
 
     if(this.headerRows && rowIndex === this.headerRows - 1) {
-      this.headerRepeatable = writer.unbreakableBlockToRepeatable();
+      this.headerRepeatable = writer.currentBlockToRepeatable();
     }
 
     if(this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
@@ -214,7 +214,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
       this.headerRepeatable = null;
     }
 
-    writer.context.availableHeight += this.reservedAtBottom;
+    writer.context().availableHeight += this.reservedAtBottom;
 
     function getLineXs() {
       var result = [];

@@ -106,10 +106,11 @@ describe('PageElementWriter', function() {
 			pew.beginUnbreakableBlock();
 			pew.addLine(buildLine(30));
 			pew.addLine(buildLine(30));
+			var uCtx = pew.writer.context;
 
 			assert.equal(ctx.pages.length, 0);
-			assert.equal(pew.transactionContext.pages.length, 1);
-			assert.equal(pew.transactionContext.pages[0].lines.length, 2);
+			assert.equal(uCtx.pages.length, 1);
+			assert.equal(uCtx.pages[0].lines.length, 2);
 		});
 	});
 
@@ -196,12 +197,12 @@ describe('PageElementWriter', function() {
 		});
 	});
 
-	describe('unbreakableBlockToRepeatable', function() {
+	describe('currentBlockToRepeatable', function() {
 		it('should return a copy of all elements from unbreakableBlock', function() {
 			pew.beginUnbreakableBlock();
 			pew.addLine(buildLine(30));
 			pew.addLine(buildLine(30));
-			var rep = pew.unbreakableBlockToRepeatable();
+			var rep = pew.currentBlockToRepeatable();
 			pew.pushToRepeatables(rep);
 
 			assert.equal(rep.lines.length, 2);
@@ -216,9 +217,11 @@ describe('PageElementWriter', function() {
 			addOneTenthLines(6);
 
 			pew.beginUnbreakableBlock();
+			var uCtx = pew.writer.context;
+
 			addOneTenthLines(3);
-			pew.transactionContext.pages[0].lines.forEach(function(line) { line.marker = 'rep'; });
-			var rep = pew.unbreakableBlockToRepeatable();
+			uCtx.pages[0].lines.forEach(function(line) { line.marker = 'rep'; });
+			var rep = pew.currentBlockToRepeatable();
 			pew.pushToRepeatables(rep);
 			pew.commitUnbreakableBlock();
 

@@ -126,16 +126,6 @@ DocumentContext.prototype.getCurrentPage = function() {
 	return this.pages[this.page];
 };
 
-DocumentContext.prototype.createUnbreakableSubcontext = function() {
-	var height = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-	var width = this.availableWidth;
-
-	var ctx = new DocumentContext({ width: width, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
-	ctx.addPage();
-
-	return ctx;
-};
-
 function bottomMostContext(c1, c2) {
 	var r;
 

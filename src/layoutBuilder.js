@@ -50,7 +50,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
 	this.processNode({ stack: docStructure });
 
-	return this.writer.context.pages;
+	return this.writer.context().pages;
 };
 
 LayoutBuilder.prototype.processNode = function(node) {
@@ -86,15 +86,15 @@ LayoutBuilder.prototype.processNode = function(node) {
         }
 
 		if (margin) {
-			self.writer.context.moveDown(margin[1]);
-			self.writer.context.addMargin(margin[0], margin[2]);
+			self.writer.context().moveDown(margin[1]);
+			self.writer.context().addMargin(margin[0], margin[2]);
 		}
 
 		callback();
 
 		if(margin) {
-			self.writer.context.addMargin(-margin[0], -margin[2]);
-			self.writer.context.moveDown(margin[3]);
+			self.writer.context().addMargin(-margin[0], -margin[2]);
+			self.writer.context().moveDown(margin[3]);
 		}
 
         if (node.pageBreak === 'after') {
@@ -116,7 +116,7 @@ LayoutBuilder.prototype.processVerticalContainer = function(items) {
 // columns
 LayoutBuilder.prototype.processColumns = function(columnNode) {
 	var columns = columnNode.columns;
-	var availableWidth = this.writer.context.availableWidth;
+	var availableWidth = this.writer.context().availableWidth;
 	var gaps = gapArray(columnNode._gap);
 
 	if (gaps) availableWidth -= (gaps.length - 1) * columnNode._gap;
@@ -146,7 +146,7 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
   this.tracker.auto('pageChanged', storePageBreakData, function() {
     widths = widths || columns;
 
-    self.writer.context.beginColumnGroup();
+    self.writer.context().beginColumnGroup();
 
     for(var i = 0, l = columns.length; i < l; i++) {
       var column = columns[i];
@@ -159,16 +159,16 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
           }
       }
 
-      self.writer.context.beginColumn(width, leftOffset, getEndingCell(column, i));
+      self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
       if (!column._span) {
         self.processNode(column);
       } else if (column._columnEndingContext) {
         // row-span ending
-        self.writer.context.markEnding(column);
+        self.writer.context().markEnding(column);
       }
     }
 
-    self.writer.context.completeColumnGroup();
+    self.writer.context().completeColumnGroup();
   });
 
   return pageBreaks;
@@ -212,7 +212,7 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
 LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
 	var self = this;
 
-	this.writer.context.addMargin(gapSize.width);
+	this.writer.context().addMargin(gapSize.width);
 
 	var nextMarker;
 	this.tracker.auto('lineAdded', addMarkerToFirstLeaf, function() {
@@ -222,7 +222,7 @@ LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
 		});
 	});
 
-	this.writer.context.addMargin(-gapSize.width);
+	this.writer.context().addMargin(-gapSize.width);
 
 	function addMarkerToFirstLeaf(line) {
 		// I'm not very happy with the way list processing is implemented
@@ -279,7 +279,7 @@ LayoutBuilder.prototype.processLeaf = function(node) {
 LayoutBuilder.prototype.buildNextLine = function(textNode) {
 	if (!textNode._inlines || textNode._inlines.length === 0) return null;
 
-	var line = new Line(this.writer.context.availableWidth);
+	var line = new Line(this.writer.context().availableWidth);
 
 	while(textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
 		line.addInline(textNode._inlines.shift());
@@ -297,7 +297,7 @@ LayoutBuilder.prototype.processImage = function(node) {
 LayoutBuilder.prototype.processCanvas = function(node) {
 	var height = node._minHeight;
 
-	if (this.writer.context.availableHeight < height) {
+	if (this.writer.context().availableHeight < height) {
 		// TODO: support for canvas larger than a page
 		// TODO: support for other overflow methods
 
@@ -308,7 +308,7 @@ LayoutBuilder.prototype.processCanvas = function(node) {
 		this.writer.addVector(vector);
 	}, this);
 
-	this.writer.context.moveDown(height);
+	this.writer.context().moveDown(height);
 };
 
 
