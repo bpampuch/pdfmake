@@ -8632,6 +8632,11 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	options = options || {};
 
 	var pageSize = pageSize2widthAndHeight(docDefinition.pageSize || 'a4');
+
+  if(docDefinition.pageOrientation === 'landscape') {
+    pageSize = { width: pageSize.height, height: pageSize.width };
+  }
+
 	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ]});
 	this.pdfKitDoc.info.Producer = 'pdfmake';
 	this.pdfKitDoc.info.Creator = 'pdfmake';
