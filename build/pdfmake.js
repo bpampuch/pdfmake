@@ -6994,96 +6994,132 @@ module.exports=_dereq_('x/K9gc');
 /* jslint node: true */
 'use strict';
 
+function buildColumnWidths(columns, availableWidth) {
+	var autoColumns = [],
+		autoMin = 0, autoMax = 0,
+		starColumns = [],
+		starMaxMin = 0,
+		starMaxMax = 0,
+		fixedColumns = [];
+
+	columns.forEach(function(column) {
+		if (isAutoColumn(column)) {
+			autoColumns.push(column);
+			autoMin += column._minWidth;
+			autoMax += column._maxWidth;
+		} else if (isStarColumn(column)) {
+			starColumns.push(column);
+			starMaxMin = Math.max(starMaxMin, column._minWidth);
+			starMaxMax = Math.max(starMaxMax, column._maxWidth);
+		} else {
+			fixedColumns.push(column);
+		}
+	});
+
+	fixedColumns.forEach(function(col) {
+		if (col.width < (col._minWidth) && col.elasticWidth) {
+			col._calcWidth = col._minWidth;
+		} else {
+			col._calcWidth = col.width;
+		}
+
+		availableWidth -= col._calcWidth;
+	});
+
+	// http://www.freesoft.org/CIE/RFC/1942/18.htm
+	// http://www.w3.org/TR/CSS2/tables.html#width-layout
+	// http://dev.w3.org/csswg/css3-tables-algorithms/Overview.src.htm
+	var minW = autoMin + starMaxMin * starColumns.length;
+	var maxW = autoMax + starMaxMax * starColumns.length;
+	if (minW >= availableWidth) {
+		// case 1 - there's no way to fit all columns within available width
+		// that's actually pretty bad situation with PDF as we have no horizontal scroll
+		// no easy workaround (unless we decide, in the future, to split single words)
+		// currently we simply use minWidths for all columns
+		autoColumns.forEach(function(col) {
+			col._calcWidth = col._minWidth;
+		});
+
+		starColumns.forEach(function(col) {
+			col._calcWidth = starMaxMin; // starMaxMin already contains padding
+		});
+	} else {
+		if (maxW < availableWidth) {
+			// case 2 - we can fit rest of the table within available space
+			autoColumns.forEach(function(col) {
+				col._calcWidth = col._maxWidth;
+				availableWidth -= col._calcWidth;
+			});
+		} else {
+			// maxW is too large, but minW fits within available width
+			var W = availableWidth - minW;
+			var D = maxW - minW;
+
+			autoColumns.forEach(function(col) {
+				var d = col._maxWidth - col._minWidth;
+				col._calcWidth = col._minWidth + d * W / D;
+				availableWidth -= col._calcWidth;
+			});
+		}
+
+		if (starColumns.length > 0) {
+			var starSize = availableWidth / starColumns.length;
+
+			starColumns.forEach(function(col) {
+				col._calcWidth = starSize;
+			});
+		}
+	}
+}
+
+function isAutoColumn(column) {
+	return column.width === 'auto';
+}
+
+function isStarColumn(column) {
+	return column.width === null || column.width === undefined || column.width === '*' || column.width === 'star';
+}
+
+//TODO: refactor and reuse in measureTable
+function measureMinMax(columns) {
+	var result = { min: 0, max: 0 };
+
+	var maxStar = { min: 0, max: 0 };
+	var starCount = 0;
+
+	for(var i = 0, l = columns.length; i < l; i++) {
+		var c = columns[i];
+
+		if (isStarColumn(c)) {
+			maxStar.min = Math.max(maxStar.min, c._minWidth);
+			maxStar.max = Math.max(maxStar.max, c._maxWidth);
+			starCount++;
+		} else if (isAutoColumn(c)) {
+			result.min += c._minWidth;
+			result.max += c._maxWidth;
+		} else {
+			result.min += ((c.width !== undefined && c.width) || c._minWidth);
+			result.max += ((c.width  !== undefined && c.width) || c._maxWidth);
+		}
+	}
+
+	if (starCount) {
+		result.min += starCount * maxStar.min;
+		result.max += starCount * maxStar.max;
+	}
+
+	return result;
+}
+
 /**
 * Calculates column widths
 * @private
 */
 module.exports = {
-	buildColumnWidths: function(columns, availableWidth) {
-		var autoColumns = [],
-			autoMin = 0, autoMax = 0,
-			starColumns = [],
-			starMaxMin = 0,
-			starMaxMax = 0,
-			fixedColumns = [];
-
-		columns.forEach(function(column) {
-			if (isAutoColumn(column)) {
-				autoColumns.push(column);
-				autoMin += column._minWidth;
-				autoMax += column._maxWidth;
-			} else if (isStarColumn(column)) {
-				starColumns.push(column);
-				starMaxMin = Math.max(starMaxMin, column._minWidth);
-				starMaxMax = Math.max(starMaxMax, column._maxWidth);
-			} else {
-				fixedColumns.push(column);
-			}
-		});
-
-		fixedColumns.forEach(function(col) {
-			if (col.width < (col._minWidth) && col.elasticWidth) {
-				col._calcWidth = col._minWidth;
-			} else {
-				col._calcWidth = col.width;
-			}
-
-			availableWidth -= col._calcWidth;
-		});
-
-		// http://www.freesoft.org/CIE/RFC/1942/18.htm
-		// http://www.w3.org/TR/CSS2/tables.html#width-layout
-		// http://dev.w3.org/csswg/css3-tables-algorithms/Overview.src.htm
-		var minW = autoMin + starMaxMin * starColumns.length;
-		var maxW = autoMax + starMaxMax * starColumns.length;
-		if (minW >= availableWidth) {
-			// case 1 - there's no way to fit all columns within available width
-			// that's actually pretty bad situation with PDF as we have no horizontal scroll
-			// no easy workaround (unless we decide, in the future, to split single words)
-			// currently we simply use minWidths for all columns
-			autoColumns.forEach(function(col) {
-				col._calcWidth = col._minWidth;
-			});
-
-			starColumns.forEach(function(col) {
-				col._calcWidth = starMaxMin; // starMaxMin already contains padding
-			});
-		} else {
-			if (maxW < availableWidth) {
-				// case 2 - we can fit rest of the table within available space
-				autoColumns.forEach(function(col) {
-					col._calcWidth = col._maxWidth;
-					availableWidth -= col._calcWidth;
-				});
-			} else {
-				// maxW is too large, but minW fits within available width
-				var W = availableWidth - minW;
-				var D = maxW - minW;
-
-				autoColumns.forEach(function(col) {
-					var d = col._maxWidth - col._minWidth;
-					col._calcWidth = col._minWidth + d * W / D;
-					availableWidth -= col._calcWidth;
-				});
-			}
-
-			if (starColumns.length > 0) {
-				var starSize = availableWidth / starColumns.length;
-
-				starColumns.forEach(function(col) {
-					col._calcWidth = starSize;
-				});
-			}
-		}
-
-		function isAutoColumn(column) {
-			return column.width === 'auto';
-		}
-
-		function isStarColumn(column) {
-			return column.width === null || column.width === undefined || column.width === '*' || column.width === 'star';
-		}
-	}
+	buildColumnWidths: buildColumnWidths,
+	measureMinMax: measureMinMax,
+	isAutoColumn: isAutoColumn,
+	isStarColumn: isStarColumn
 };
 
 },{}],48:[function(_dereq_,module,exports){
@@ -7092,6 +7128,7 @@ module.exports = {
 
 var TextTools = _dereq_('./textTools');
 var StyleContextStack = _dereq_('./styleContextStack');
+var ColumnCalculator = _dereq_('./columnCalculator');
 var fontStringify = _dereq_('./helpers').fontStringify;
 var pack = _dereq_('./helpers').pack;
 
@@ -7233,22 +7270,6 @@ DocMeasure.prototype.measureVerticalContainer = function(node) {
 	return node;
 };
 
-DocMeasure.prototype.measureColumns = function(node) {
-	var columns = node.columns;
-	node._minWidth = 0;
-	node._maxWidth = 0;
-	node._gap = this.styleStack.getProperty('columnGap');
-
-	for(var i = 0, l = columns.length; i < l; i++) {
-		columns[i] = this.measureNode(columns[i]);
-
-		node._minWidth += columns[i]._minWidth;
-		node._maxWidth += columns[i]._maxWidth;
-	}
-
-	return node;
-};
-
 DocMeasure.prototype.gapSizeForList = function(isOrderedList, listItems) {
 	if (isOrderedList) {
 		var longestNo = (listItems.length).toString().replace(/./g, '9');
@@ -7305,10 +7326,25 @@ DocMeasure.prototype.measureList = function(isOrdered, node) {
 			nextItem.listMarker = this.buildMarker(isOrdered, nextItem.counter || marker, style, node._gapSize);
 		}  // TODO: else - nested lists numbering
 
-
 		node._minWidth = Math.max(node._minWidth, items[i]._minWidth + node._gapSize.width);
 		node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth + node._gapSize.width);
 	}
+
+	return node;
+};
+
+DocMeasure.prototype.measureColumns = function(node) {
+	var columns = node.columns;
+	node._gap = this.styleStack.getProperty('columnGap') || 0;
+
+	for(var i = 0, l = columns.length; i < l; i++) {
+		columns[i] = this.measureNode(columns[i]);
+	}
+
+	var measures = ColumnCalculator.measureMinMax(columns);
+
+	node._minWidth = measures.min + node._gap * (columns.length - 1);
+	node._maxWidth = measures.max + node._gap * (columns.length - 1);
 
 	return node;
 };
@@ -7321,12 +7357,10 @@ DocMeasure.prototype.measureTable = function(node) {
 	var colSpans = [];
 	var col, row, cols, rows;
 
-	node.table._minWidth = 0;
-	node.table._maxWidth = 0;
-
 	for(col = 0, cols = node.table.body[0].length; col < cols; col++) {
-		node.table.widths[col]._minWidth = 0;
-		node.table.widths[col]._maxWidth = 0;
+		var c = node.table.widths[col];
+		c._minWidth = 0;
+		c._maxWidth = 0;
 
 		for(row = 0, rows = node.table.body.length; row < rows; row++) {
 			var rowData = node.table.body[row];
@@ -7338,8 +7372,8 @@ DocMeasure.prototype.measureTable = function(node) {
 					markSpans(rowData, col, data.colSpan);
 					colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
 				} else {
-					node.table.widths[col]._minWidth = Math.max(node.table.widths[col]._minWidth, data._minWidth);
-					node.table.widths[col]._maxWidth = Math.max(node.table.widths[col]._maxWidth, data._maxWidth);
+					c._minWidth = Math.max(c._minWidth, data._minWidth);
+					c._maxWidth = Math.max(c._maxWidth, data._maxWidth);
 				}
 			}
 
@@ -7351,10 +7385,10 @@ DocMeasure.prototype.measureTable = function(node) {
 
 	extendWidthsForColSpans();
 
-	for(col = 0, cols = node.table.body[0].length; col < cols; col++) {
-		node.table._minWidth += node.table.widths[col]._minWidth;
-		node.table._maxWidth += node.table.widths[col]._maxWidth;
-	}
+	var measures = ColumnCalculator.measureMinMax(node.table.widths);
+
+	node._minWidth = measures.min + node._offsets.total;
+	node._maxWidth = measures.max + node._offsets.total;
 
 	return node;
 
@@ -7517,7 +7551,7 @@ DocMeasure.prototype.measureCanvas = function(node) {
 
 module.exports = DocMeasure;
 
-},{"./helpers":51,"./styleContextStack":58,"./textTools":60}],49:[function(_dereq_,module,exports){
+},{"./columnCalculator":47,"./helpers":51,"./styleContextStack":58,"./textTools":60}],49:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7551,7 +7585,8 @@ DocumentContext.prototype.beginColumnGroup = function() {
 		availableWidth: this.availableWidth,
 		page: this.page,
 		bottomMost: { y: this.y, page: this.page },
-		endingCell: this.endingCell
+		endingCell: this.endingCell,
+		lastColumnWidth: this.lastColumnWidth
 	});
 
 	this.lastColumnWidth = 0;
@@ -7612,6 +7647,7 @@ DocumentContext.prototype.completeColumnGroup = function() {
 	this.page = saved.bottomMost.page;
 	this.availableWidth = saved.availableWidth;
 	this.availableHeight = saved.bottomMost.availableHeight;
+	this.lastColumnWidth = saved.lastColumnWidth;
 };
 
 DocumentContext.prototype.addMargin = function(left, right) {

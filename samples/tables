@@ -31,8 +31,18 @@ content: [
 															}
 													]
 											},
-											/* a nested table will appear here as soon as I fix a bug */
-											'Nothing interesting here',
+											[
+												'or a nested table',
+												{
+													table: {
+														body: [
+															[ 'Col1', 'Col2', 'Col3'],
+															[ '1', '2', '3'],
+															[ '1', '2', '3']
+														]
+													},
+												}
+											],
 											{ text: [
 													'Inlines can be ',
 													{ text: 'styled\n', italics: true },
@@ -157,8 +167,8 @@ content: [
 					},
 					layout: 'lightHorizontalLines'
 			},
-              { text: 'but you can provide a custom styler as well', margin: [0, 20, 0, 8] },
-              {
+							{ text: 'but you can provide a custom styler as well', margin: [0, 20, 0, 8] },
+							{
 					style: 'tableExample',
 					table: {
 							headerRows: 1,
@@ -172,22 +182,22 @@ content: [
 							]
 					},
 					layout: {
-                          hLineWidth: function(i, node) {
-                              return (i === 0 || i === node.table.body.length) ? 2 : 1;
-                          },
-                          vLineWidth: function(i, node) {
-                              return (i === 0 || i === node.table.widths.length) ? 2 : 1;
-                          },
-                          hLineColor: function(i, node) {
-                              return (i === 0 || i === node.table.body.length) ? 'black' : 'gray';
-                          },
-                          vLineColor: function(i, node) {
-                              return (i === 0 || i === node.table.widths.length) ? 'black' : 'gray';
-                          },
-                          // paddingLeft: function(i, node) { return 4; },
-                          // paddingRight: function(i, node) { return 4; },
-                          // paddingTop: function(i, node) { return 2; },
-                          // paddingBottom: function(i, node) { return 2; }
+													hLineWidth: function(i, node) {
+															return (i === 0 || i === node.table.body.length) ? 2 : 1;
+													},
+													vLineWidth: function(i, node) {
+															return (i === 0 || i === node.table.widths.length) ? 2 : 1;
+													},
+													hLineColor: function(i, node) {
+															return (i === 0 || i === node.table.body.length) ? 'black' : 'gray';
+													},
+													vLineColor: function(i, node) {
+															return (i === 0 || i === node.table.widths.length) ? 'black' : 'gray';
+													},
+													// paddingLeft: function(i, node) { return 4; },
+													// paddingRight: function(i, node) { return 4; },
+													// paddingTop: function(i, node) { return 2; },
+													// paddingBottom: function(i, node) { return 2; }
 					}
 			}
 ],
@@ -203,12 +213,12 @@ styles: {
 		margin: [0, 10, 0, 5]
 	},
 	tableExample: {
-					margin: [0, 5, 0, 15]
+		margin: [0, 5, 0, 15]
 	},
 	tableHeader: {
-					bold: true,
-					fontSize: 13,
-					color: 'black'
+		bold: true,
+		fontSize: 13,
+		color: 'black'
 	}
 },
 defaultStyle: {
