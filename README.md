@@ -22,9 +22,11 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) or
 * custom page breaks,
 * font embedding,
 * support for complex, multi-level (nested) structures,
-* ability to open files directly in a print-dialog.
+* helper methods for opening/printing/downloading the generated PDF.
 
 ## Getting Started (preliminary version)
+The following refers to pdfmake 0.1.2 (not available yet at github).
+
 This document will walk you through the basics of pdfmake and will show you how to create PDF files in the browser. If you're interested in server-side printing, read [getting started with pdfMake under NodeJS](NodeGettingStarted).
 
 To begin with the default configuration, you should include two files:
@@ -64,13 +66,13 @@ var docDefinition = { content: 'This is an sample PDF printed with pdfMake' };
 
 or become pretty complex (having multi-level tables, images, lists, paragraphs, margins, styles etc...).
 
-As soon as you have the document-definition-object, you're ready to create and open/print/download a PDF:
+As soon as you have the document-definition-object, you're ready to create and open/print/download the PDF:
 
 ```js
-// opens the PDF in a new window
+// open the PDF in a new window
 pdfMake.createPdf(docDefinition).open();
 
-// prints the PDF
+// print the PDF
 pdfMake.createPdf(docDefinition).print();
 
 // download the PDF
@@ -83,27 +85,37 @@ pdfmake makes it possible to style any paragraph or its part:
 ```js
 var docDefinition = {
   content: [
+    // if you don't need styles, you can use a simple string to define a paragraph
     'This is a standard paragraph, using default style',
+    
+    // using a { text: '...' } object lets you set styling properties
     { text: 'This paragraph will have a bigger font', fontSize: 15 },
-    { text: [ 
-      'This paragraph uses default style, but ', 
-      { text: 'this part is bigger ', fontSize: 15 },
-      'than the rest.'
+    
+    // if you set the value of text to an array instead of a string, you'll be able
+    // to style any part individually
+    { 
+      text: [ 
+        'This paragraph is defined as an array of elements to make it possible to ', 
+        { text: 'restyle part of it and make it bigger ', fontSize: 15 },
+        'than the rest.'
       ] 
     }
   ]
 };
 ```
 
-It's also possible to define reusable styles:
+#### Style dictionaries
+It's also possible to define a dictionary of reusable styles:
 
 ```js
 var docDefinition = {
   content: [
     { text: 'This is a header', style: 'header' },
     'No styling here, this is a standard paragraph',
-    { text: 'Another text', style: 'anotherStyle' }
+    { text: 'Another text', style: 'anotherStyle' },
+    { text: 'Multiple styles applied', style: [ 'header', 'anotherStyle' ] }
   ],
+
   styles: {
     header: {
       fontSize: 22,
@@ -118,22 +130,53 @@ var docDefinition = {
 
 ```
 
+To have an deeper understanding of styling in pdfmake check [this example](TODO) and [the resulting PDF](TODO).
 
+#### Columns
 
-* line-wrapping,
-* text-alignments (left, right, centered, justified),
+By default paragraphs are rendered as a vertical stack of elements (one below another). It is possible however to divide available space into columns.
+
+```js
+var docDefinition = {
+  content: [
+    'This paragraph fills full width, as there are no columns. Next paragraph however consists of three columns',
+    {
+      //
+      columns: [
+        {
+          text: 'First column',
+          width: 'auto'
+        },
+        {
+          text: 'Second column',
+          width: '*'
+        },
+        {
+          text: 'Third column',
+          width: 100
+        }
+      ],
+      // optional
+      columnGap: 10
+    },
+    'This paragraph goes below all columns and has full width'
+  ]
+};
+
+```
+
+Column width Width can be defined
+
 * numbered and bulleted lists,
 * tables and columns
  * auto/fixed/star-sized widths,
  * col-spans and row-spans,
  * headers automatically repeated in case of a page-break,
 * images and vector graphics,
-* convenient styling and style inheritance,
 * page headers and footers,
 * page dimensions and orientations,
 * margins,
 * custom page breaks,
-* font embedding,
 * support for complex, multi-level (nested) structures,
 * ability to open files directly in a print-dialog.
 
