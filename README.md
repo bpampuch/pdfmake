@@ -284,18 +284,87 @@ Any element in pdfMake can have a margin:
 (...)
 ```
 
+#### Stack of paragraphs
+
+You could have figured out by now (from the examples), that if you set the ```content``` key to an array, the  document becomes a stack of paragraphs.
+
+You'll quite often reuse this structure in a nested element, like in the following example:
+```js
+var docDefinition = {
+  content: [
+    'paragraph 1',
+    'paragraph 2',
+    { 
+      columns: [
+        'first column is a simple text',
+        [
+          // second column consists of paragraphs
+          'paragraph A',
+          'paragraph B',
+          'these paragraphs will be rendered one below another inside the column'
+        ]
+      ]
+    }
+  ]
+};
+```
+
+The problem with an array is that you cannot add styling properties to it (to change fontSize for example).
+
+The good news is - array is just a shortcut in pdfMake for { stack: [] }, so if you want to restyle the whole stack, you can do it using the expanded definition:
+```js
+var docDefinition = {
+  content: [
+    'paragraph 1',
+    'paragraph 2',
+    { 
+      columns: [
+        'first column is a simple text',
+        {
+          stack: [
+            // second column consists of paragraphs
+            'paragraph A',
+            'paragraph B',
+            'these paragraphs will be rendered one below another inside the column'
+          ],
+          fontSize: 15
+        }
+      ]
+    }
+  ]
+};
+```
+
+
 #### Page dimensions, orientation and margins
+There are a couple of additional keys you can set in the document-definition-object:
 
+```js
+var docDefinition = {
+  // a string
+  pageSize: 'A5',
+  
+  // by default we use portrait, you can change it to landscape if you wish
+  pageOrientation: 'landscape',
+  
+  // [left, top, right, bottom] or [horizontal, vertical] or just a number for equal margins
+  pageMargins: [ 40, 60, 40, 60 ],
+};
+```
 
-## I need more further help!
+## Does the above description cover everything?
 
-You'll find it in the:
+Not at all. 
+
+If you really want to learn pdfMake, you'll find more info in the:
 * [examples folder](TODO),
 * [playground](TODO),
 * [documentation](TODO).
 
 ## Coming soon
-Hmmm... Just let me know what you need ;) I really enjoyed creating this library and the goal is simple - make it useful for a looooooooot of people and help building responsive HTML5 apps with printing support.
+Hmmm... Just let me know what you need ;)
+
+The goal is quite simple - make pdfmake useful for a looooooooot of people and help building responsive HTML5 apps with printing support.
 
 
 ## License
