@@ -363,7 +363,7 @@ If you set ```pageSize``` to a string, you can use one of the following values:
 
 Not at all. 
 
-If you really want to learn pdfMake, you'll find more info in the:
+If you really want to learn pdfMake, go ahead and check the:
 * [examples folder](TODO),
 * [playground](TODO),
 * [documentation](TODO).
