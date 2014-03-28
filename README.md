@@ -130,7 +130,7 @@ var docDefinition = {
 
 ```
 
-To have a deeper understanding of styling in pdfmake check [this example](TODO) and [the resulting PDF](TODO).
+To have a deeper understanding of styling in pdfmake, style inheritance and local-style-overrides check [this example](TODO) and [the resulting PDF](TODO) or [open it in playground](TODO).
 
 #### Columns
 
@@ -168,21 +168,83 @@ var docDefinition = {
 
 ```
 
-Column content is not limited to a simple text. It can actually contain any valid pdfmake element. See a [complete example](TODO) and [the resulting pdf](TODO)
+Column content is not limited to a simple text. It can actually contain any valid pdfmake element. See a [complete example](TODO) and [the resulting pdf](TODO) or [open it in playground](TODO)
 
+#### Tables
 
-* numbered and bulleted lists,
-* tables and columns
- * auto/fixed/star-sized widths,
- * col-spans and row-spans,
- * headers automatically repeated in case of a page-break,
-* images and vector graphics,
-* page headers and footers,
-* page dimensions and orientations,
-* margins,
-* custom page breaks,
-* support for complex, multi-level (nested) structures,
-* ability to open files directly in a print-dialog.
+Conceptually tables are similar to columns. They can however have headers, borders and cells spanning over multiple columns/rows.
+
+```js
+var docDefinition = {
+  content: [
+    {
+      table: {
+        // headers are automatically repeated if the table spans over multiple pages
+        // you can declare how many rows should be treated as headers
+        headerRows: 1,
+        widths: [ '*', 'auto', 100, '*' ],
+        
+        body: [
+          [ 'First', 'Second', 'Third', 'The last one' ],
+          [ 'Value 1', 'Value 2', 'Value 3', 'Value 4' ],
+          [ { text: 'Bold value', bold: true }, 'Val 2', 'Val 3', 'Val 4' ]
+        ]
+      }
+    }
+  ]
+};
+```
+
+ 
+
+All concepts related to tables are covered by [this example](TODO) and [the resulting PDF](TODO). You can also [open it in playground](TODO).
+
+#### Lists
+
+pdfMake supports both numbered and bulleted lists:
+
+```js
+var docDefinition = {
+  content: [
+    'Bulleted list example:',
+    {
+      // to treat a paragraph as a bulleted list, set an array of items under the ul key 
+      ul: [
+        'Item 1',
+        'Item 2',
+        'Item 3',
+        { text: 'Item 4', bold: true },
+      ]
+    },
+    
+    'Numbered list example:',
+    {
+      // for numbered lists set the ol key
+      ol: [
+        'Item 1',
+        'Item 2',
+        'Item 3'
+      ]
+    }
+  ]
+};
+```
+
+#### Headers and footers
+
+#### Page dimensions and orientation
+
+#### Margins
+
+## I need more further help!
+
+You'll find it in the:
+* [examples folder](TODO),
+* [playground](TODO),
+* [documentation](TODO).
+
+## Coming soon
+Hmmm... Just let me know what you need ;) I really enjoyed creating this library and the goal is simple - make it useful for a looooooooot of people and help building responsive HTML5 apps with printing support.
 
 
 ## License
