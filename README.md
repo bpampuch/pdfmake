@@ -64,7 +64,7 @@ var docDefinition = { content: 'This is an sample PDF printed with pdfMake' };
 
 or become pretty complex (having multi-level tables, images, lists, paragraphs, margins, styles etc...).
 
-As soon as you have the document-definition-object, you're ready to create a PDF and open, print or download it:
+As soon as you have the document-definition-object, you're ready to create and open/print/download a PDF:
 
 ```js
 // opens the PDF in a new window
@@ -76,6 +76,66 @@ pdfMake.createPdf(docDefinition).print();
 // download the PDF
 pdfMake.createPdf(docDefinition).download();
 ```
+
+#### Styling
+pdfmake makes it possible to style any paragraph or its part:
+
+```js
+var docDefinition = {
+  content: [
+    'This is a standard paragraph, using default style',
+    { text: 'This paragraph will have a bigger font', fontSize: 15 },
+    { text: [ 
+      'This paragraph uses default style, but ', 
+      { text: 'this part is bigger ', fontSize: 15 },
+      'than the rest.'
+      ] 
+    }
+  ]
+};
+```
+
+It's also possible to define reusable styles:
+
+```js
+var docDefinition = {
+  content: [
+    { text: 'This is a header', style: 'header' },
+    'No styling here, this is a standard paragraph',
+    { text: 'Another text', style: 'anotherStyle' }
+  ],
+  styles: {
+    header: {
+      fontSize: 22,
+      bold: true
+    },
+    anotherStyle: {
+      italic: true,
+      alignment: 'right'
+    }
+  }
+};
+
+```
+
+
+
+* line-wrapping,
+* text-alignments (left, right, centered, justified),
+* numbered and bulleted lists,
+* tables and columns
+ * auto/fixed/star-sized widths,
+ * col-spans and row-spans,
+ * headers automatically repeated in case of a page-break,
+* images and vector graphics,
+* convenient styling and style inheritance,
+* page headers and footers,
+* page dimensions and orientations,
+* margins,
+* custom page breaks,
+* font embedding,
+* support for complex, multi-level (nested) structures,
+* ability to open files directly in a print-dialog.
 
 
 ## License
