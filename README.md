@@ -29,8 +29,8 @@ This document will walk you through the basics of pdfmake and will show you how 
 
 To begin with the default configuration, you should include two files:
 
-* **pdfmake.js**,
-* **vfs_fonts.js** - default font definition (it contains Roboto, you can however [use custom fonts as well](CustomFonts))
+* **pdfmake.min.js**,
+* **vfs_fonts.js** - default font definition (it contains Roboto, you can however [use custom fonts instead](CustomFonts))
 
 ```html
 <!doctype html>
@@ -59,25 +59,23 @@ pdfmake follows a declarative approach. It basically means, you'll never have to
 The most fundamental concept to be mastered is the document-definition-object which can be as simple as:
 
 ```js
-var doc = { content: 'Some text' }
+var docDefinition = { content: 'This is an sample PDF printed with pdfMake' };
 ```
 
 or become pretty complex (having multi-level tables, images, lists, paragraphs, margins, styles etc...).
 
-As soon as you have the document-definition-object ready, you create an instance of PdfPrinter and call ```createPdfKitDocument```
+As soon as you have the document-definition-object, you're ready to create a PDF and open, print or download it:
 
 ```js
-var printer = new PdfPrinter();
-var doc = printer.createPdfKitDocument(doc);
+// opens the PDF in a new window
+pdfMake.createPdf(docDefinition).open();
 
-// to make this demo simple, we'll just open the document in the same tab
-doc.output(function(data) {
-	var dataUrl = 'data:application/pdf;base64,' + data.toString('base64');
-	window.open(dataUrl);
-});
+// prints the PDF
+pdfMake.createPdf(docDefinition).print();
+
+// download the PDF
+pdfMake.createPdf(docDefinition).download();
 ```
-
-
 
 
 ## License
