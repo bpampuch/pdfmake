@@ -130,7 +130,7 @@ var docDefinition = {
 
 ```
 
-To have an deeper understanding of styling in pdfmake check [this example](TODO) and [the resulting PDF](TODO).
+To have a deeper understanding of styling in pdfmake check [this example](TODO) and [the resulting PDF](TODO).
 
 #### Columns
 
@@ -141,22 +141,25 @@ var docDefinition = {
   content: [
     'This paragraph fills full width, as there are no columns. Next paragraph however consists of three columns',
     {
-      //
       columns: [
         {
-          text: 'First column',
-          width: 'auto'
+          // auto-sized columns have their widths based on their content
+          width: 'auto',
+          text: 'First column'
         },
         {
-          text: 'Second column',
-          width: '*'
+          // star-sized columns fill the remaining space
+          // if there's more than one star-column, available width is divided equally
+          width: '*',
+          text: 'Second column'
         },
         {
-          text: 'Third column',
-          width: 100
+          // fixed width
+          width: 100,
+          text: 'Third column'
         }
       ],
-      // optional
+      // optional space between columns
       columnGap: 10
     },
     'This paragraph goes below all columns and has full width'
@@ -165,7 +168,8 @@ var docDefinition = {
 
 ```
 
-Column width Width can be defined
+Column content is not limited to a simple text. It can actually contain any valid pdfmake element. See a [complete example](TODO) and [the resulting pdf](TODO)
+
 
 * numbered and bulleted lists,
 * tables and columns
