@@ -271,7 +271,7 @@ var docDefinition = {
 
 Any element in pdfMake can have a margin:
 
-```
+```js
 (...)
 // margin: [left, top, right, bottom]
 { text: 'sample', margin: [ 5, 2, 10, 20 ] },
