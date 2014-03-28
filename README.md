@@ -16,7 +16,9 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) or
  * headers automatically repeated in case of a page-break,
 * images and vector graphics,
 * convenient styling and style inheritance,
-* page headers and footers,
+* page headers and footers:
+ * static or dynamic content,
+ * access to current page number and page count,
 * page dimensions and orientations,
 * margins,
 * custom page breaks,
@@ -232,9 +234,58 @@ var docDefinition = {
 
 #### Headers and footers
 
-#### Page dimensions and orientation
+Page headers and footers in pdfmake can be: *static* or *dynamic*. 
+
+They use the same syntax:
+
+```js
+var docDefinition = {
+  header: 'simple text',
+
+  footer: {
+    columns: [
+      'Left part',
+      { text: 'Right part', alignment: 'right' }
+    ]
+  },
+
+  content: (...)
+};
+```
+
+For dynamically generated content (including page numbers and page count) you can pass a function to the header or footer:
+
+```js
+var docDefinition = {
+  footer: function(currentPage, pageCount) { return currentPage.toString() + ' of ' + pageCount; },
+  header: function(currentPage, pageCount) {
+    // you can apply any logic and return any valid pdfmake element
+    
+    return { text: 'simple text', alignment: (currentPage % 2) ? 'left' : 'right' };
+  },
+  (...)
+};
+```
 
 #### Margins
+
+Any element in pdfMake can have a margin:
+
+```
+(...)
+// margin: [left, top, right, bottom]
+{ text: 'sample', margin: [ 5, 2, 10, 20 ] },
+
+// margin: [horizontal, vertical]
+{ text: 'another text', margin: [5, 2] },
+
+// margin: equalLeftTopRightBottom
+{ text: 'last one', margin: 5 }
+(...)
+```
+
+#### Page dimensions, orientation and margins
+
 
 ## I need more further help!
 
