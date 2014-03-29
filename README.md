@@ -3,7 +3,7 @@ pdfmake [![Build Status](https://travis-ci.org/bpampuch/pdfmake.png?branch=maste
 
 Client/server side PDF printing in pure JavaScript
 
-Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) or... (coming soon - read the docs)
+Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) or [read the docs](http://pdfmake.org/index.html#/docs)
 
 ### Features
 
@@ -364,9 +364,9 @@ If you set ```pageSize``` to a string, you can use one of the following values:
 Not at all. 
 
 If you really want to learn pdfMake, go ahead and check the:
-* [examples folder](TODO),
-* [playground](TODO),
-* [documentation](TODO).
+* [examples folder](https://github.com/bpampuch/pdfmake/tree/master/examples),
+* [playground](http://pdfmake.org/playground.html),
+* [documentation](http://pdfmake.org/index.html#/docs).
 
 ## Coming soon
 Hmmm... let me know what you need ;)
