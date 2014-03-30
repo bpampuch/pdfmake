@@ -94,7 +94,75 @@ h1 {
 }
 
 
-@media(min-width: 1015px) {
+#editor {
+	position: absolute;
+	top: 0px;
+	right: 50%;
+	left: 0;
+	width: 50%;
+	height: 100%;
+}
+
+
+#stats {
+	display: none;
+	float: right;
+	position: relative;
+	top: 6px;
+	opacity: 0.5;
+}
+#printThis {
+	float: right;
+	top:0;
+}
+
+
+@media(min-width: 300px) and (max-width: 1000px) {
+	.playground .container li {
+		display: inline-block;
+	}
+
+	#exampleList li {
+		width: 60px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.playgroundBody .content {
+		position: fixed;
+		display: block;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		top: 83px;
+	}
+
+	#editor {
+		position: absolute;
+		right: 0;
+		left: 0;
+		width: 100%;
+		height: 50%;
+		top: 0;
+		bottom: 50%;
+	}
+
+	#pdfV {
+		left: 0;
+		right: 0;
+		bottom: 0;
+		top: 50%;
+		height: 50%;
+		width: 100%;
+		position: absolute;
+	}
+
+	.playgroundBody .notEnoughSpace, #stats {
+		display: none;
+	}
+}
+
+@media(min-width: 1001px) {
 	.playground .container li {
 		display: inline-block;
 	}
@@ -107,17 +175,22 @@ h1 {
 		top: 83px;
 	}
 
+	#pdfV {
+		left: 50%;
+		width: 50%;
+		height: 100%;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		position: absolute;
+	}
 	.playgroundBody .notEnoughSpace {
 		display: none;
 	}
-}
 
-#editor {
-	position: absolute;
-	top: 0px;
-	right: 50%;
-	bottom: 0;
-	left: 0;
+	#stats {
+		display: block;
+	}
 }
 
 #pdfeViewer {
@@ -138,16 +211,4 @@ h1 {
 
 .playground {
 	position: relative;
-}
-#stats, #printThis {
-	position: absolute;
-}
-#stats {
-	top: 6px;
-	right: 10px;
-	opacity: 0.5;
-}
-#printThis {
-	top:0;
-	right: 180px;
 }
