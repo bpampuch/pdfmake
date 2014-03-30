@@ -45,14 +45,14 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, header, footer) {
 	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts);
 
-  this.docMeasure.measureDocument(docStructure);
+    docStructure = this.docMeasure.measureDocument(docStructure);
 
-	this.writer = new PageElementWriter(
-		new DocumentContext(this.pageSize, this.pageMargins),
-		this.tracker);
+    this.writer = new PageElementWriter(
+        new DocumentContext(this.pageSize, this.pageMargins),
+        this.tracker);
 
-	this.processNode({ stack: docStructure });
-  this.addHeadersAndFooters(header, footer);
+    this.processNode(docStructure);
+    this.addHeadersAndFooters(header, footer);
 
 	return this.writer.context().pages;
 };

@@ -1160,33 +1160,35 @@ describe('LayoutBuilder', function() {
 			it.skip('should support custom page breaks');
 			it.skip('should support custom page breaks inside nested elements');
 
-			// DOING
 			it.skip('should support table styling');
+			it.skip('should support subtables');
+
+			it.skip('should support page headers');
+			it.skip('should support page footers');
+			it.skip('should support current page number');
+			it.skip('should support images');
+			it.skip('should support image scaling');
+			it.skip('should support various page orientations');
+			it.skip('should support various page sizes');
+
+			// DOING
 
 			// TODO
-			it.skip('should support subtables');
 			it.skip('should support subtable headers');
 			it.skip('should support tables with percentage column widths');
 
 			it.skip('should support inline margins');
 			it.skip('should support padding');
 			it.skip('should support border styling');
-			it.skip('should support page headers');
-			it.skip('should support page footers');
 			it.skip('should support subscript');
 			it.skip('should support superscript');
 			it.skip('should support vertical alignment inside cells');
 			it.skip('should support programmatic cell styling');
 			it.skip('should support non-breaking-spaces');
 			it.skip('should support non-breaking-lines');
-			it.skip('should support current page number');
 			it.skip('should support page count');
-			it.skip('should support images');
-			it.skip('should support image scaling');
 
 			it.skip('should support clipping');
-			it.skip('should support various page orientations');
-			it.skip('should support various page sizes');
 			it.skip('should support absolute positioning');
 			it.skip('should support text continuations');
 			it.skip('should support line-height');

@@ -1,10 +1,12 @@
 /* jslint node: true */
+/* global window */
 'use strict';
 
 var LayoutBuilder = require('./layoutBuilder');
 var PdfKit = require('pdfkit');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
+
 
 ////////////////////////////////////////
 // PdfPrinter

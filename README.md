@@ -26,8 +26,9 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) or
 * support for complex, multi-level (nested) structures,
 * helper methods for opening/printing/downloading the generated PDF.
 
-## Getting Started (preliminary version)
-The following refers to pdfmake 0.1.2 (not available yet at github).
+## Getting Started
+
+*warning! links to the documentation do NOT work yet*
 
 This document will walk you through the basics of pdfmake and will show you how to create PDF files in the browser. If you're interested in server-side printing, read [getting started with pdfMake under NodeJS](NodeGettingStarted).
 
@@ -89,18 +90,18 @@ var docDefinition = {
   content: [
     // if you don't need styles, you can use a simple string to define a paragraph
     'This is a standard paragraph, using default style',
-    
+
     // using a { text: '...' } object lets you set styling properties
     { text: 'This paragraph will have a bigger font', fontSize: 15 },
-    
+
     // if you set the value of text to an array instead of a string, you'll be able
     // to style any part individually
-    { 
-      text: [ 
-        'This paragraph is defined as an array of elements to make it possible to ', 
+    {
+      text: [
+        'This paragraph is defined as an array of elements to make it possible to ',
         { text: 'restyle part of it and make it bigger ', fontSize: 15 },
         'than the rest.'
-      ] 
+      ]
     }
   ]
 };
@@ -185,7 +186,7 @@ var docDefinition = {
         // you can declare how many rows should be treated as headers
         headerRows: 1,
         widths: [ '*', 'auto', 100, '*' ],
-        
+
         body: [
           [ 'First', 'Second', 'Third', 'The last one' ],
           [ 'Value 1', 'Value 2', 'Value 3', 'Value 4' ],
@@ -197,7 +198,7 @@ var docDefinition = {
 };
 ```
 
- 
+
 
 All concepts related to tables are covered by [this example](TODO) and [the resulting PDF](TODO). You can also [open it in playground](TODO).
 
@@ -210,7 +211,7 @@ var docDefinition = {
   content: [
     'Bulleted list example:',
     {
-      // to treat a paragraph as a bulleted list, set an array of items under the ul key 
+      // to treat a paragraph as a bulleted list, set an array of items under the ul key
       ul: [
         'Item 1',
         'Item 2',
@@ -218,7 +219,7 @@ var docDefinition = {
         { text: 'Item 4', bold: true },
       ]
     },
-    
+
     'Numbered list example:',
     {
       // for numbered lists set the ol key
@@ -234,7 +235,7 @@ var docDefinition = {
 
 #### Headers and footers
 
-Page headers and footers in pdfmake can be: *static* or *dynamic*. 
+Page headers and footers in pdfmake can be: *static* or *dynamic*.
 
 They use the same syntax:
 
@@ -260,7 +261,7 @@ var docDefinition = {
   footer: function(currentPage, pageCount) { return currentPage.toString() + ' of ' + pageCount; },
   header: function(currentPage, pageCount) {
     // you can apply any logic and return any valid pdfmake element
-    
+
     return { text: 'simple text', alignment: (currentPage % 2) ? 'left' : 'right' };
   },
   (...)
@@ -294,7 +295,7 @@ var docDefinition = {
   content: [
     'paragraph 1',
     'paragraph 2',
-    { 
+    {
       columns: [
         'first column is a simple text',
         [
@@ -317,7 +318,7 @@ var docDefinition = {
   content: [
     'paragraph 1',
     'paragraph 2',
-    { 
+    {
       columns: [
         'first column is a simple text',
         {
@@ -342,10 +343,10 @@ var docDefinition = {
 var docDefinition = {
   // a string or [width, height]
   pageSize: 'A5',
-  
+
   // by default we use portrait, you can change it to landscape if you wish
   pageOrientation: 'landscape',
-  
+
   // [left, top, right, bottom] or [horizontal, vertical] or just a number for equal margins
   pageMargins: [ 40, 60, 40, 60 ],
 };
@@ -361,7 +362,7 @@ If you set ```pageSize``` to a string, you can use one of the following values:
 
 ## Does the above description cover everything?
 
-Not at all. 
+Not at all.
 
 If you really want to learn pdfMake, go ahead and check the:
 * [examples folder](https://github.com/bpampuch/pdfmake/tree/master/examples),

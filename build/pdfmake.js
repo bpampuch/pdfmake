@@ -1780,8 +1780,8 @@ k+4&&(this.a=new Uint8Array(g.length+4),this.a.set(g),g=this.a),g=g.subarray(0,k
 function xb(b,a){var c;b.subarray=b.slice;c=(new pb(b)).i();a||(a={});return a.noBuffer?c:Cb(c)}function yb(b,a,c){process.nextTick(function(){var d,f;try{f=zb(b,c)}catch(e){d=e}a(d,f)})}function zb(b,a){var c;b.subarray=b.slice;c=(new Aa(b)).h();a||(a={});return a.H?c:Cb(c)}function Ab(b,a,c){process.nextTick(function(){var d,f;try{f=Bb(b,c)}catch(e){d=e}a(d,f)})}function Bb(b,a){var c;b.subarray=b.slice;c=(new nb(b)).i();a||(a={});return a.H?c:Cb(c)}
 function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[c];return a};}).call(this); //@ sourceMappingURL=node-zlib.js.map
 
-}).call(this,_dereq_("/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1}],8:[function(_dereq_,module,exports){
+}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
+},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1}],8:[function(_dereq_,module,exports){
 (function() {
   var Data;
 
@@ -2484,7 +2484,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-}).call(this,"/../node_modules/pdfkit/js")
+}).call(this,"/../../node_modules/pdfkit/js")
 },{"./font/afm":11,"./font/subset":14,"./font/ttf":26,"zlib":6}],11:[function(_dereq_,module,exports){
 (function() {
   var AFMFont, fs;
@@ -4618,8 +4618,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-}).call(this,_dereq_("/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
-},{"/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"fs":"x/K9gc"}],31:[function(_dereq_,module,exports){
+}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
+},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"fs":"x/K9gc"}],31:[function(_dereq_,module,exports){
 (function (process,Buffer){
 (function() {
   var PNG, PNGImage, setImmediate, zlib;
@@ -4771,8 +4771,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-}).call(this,_dereq_("/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"png-js":44,"zlib":6}],32:[function(_dereq_,module,exports){
+}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
+},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"png-js":44,"zlib":6}],32:[function(_dereq_,module,exports){
 (function() {
   var EventEmitter, LineWrapper, WORD_RE;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -6568,8 +6568,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-}).call(this,_dereq_("/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"./object":39,"/Users/bartek/src/github/pdfmake/node_modules/grunt-browserify/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"zlib":6}],43:[function(_dereq_,module,exports){
+}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
+},{"./object":39,"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"zlib":6}],43:[function(_dereq_,module,exports){
 (function() {
 
   /*
@@ -6942,7 +6942,108 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"buffer":1,"fs":"x/K9gc","zlib":6}],"x/K9gc":[function(_dereq_,module,exports){
+},{"buffer":1,"fs":"x/K9gc","zlib":6}],45:[function(_dereq_,module,exports){
+/* jslint node: true */
+/* jslint browser: true */
+/* global saveAs */
+/* global BlobBuilder */
+'use strict';
+
+var PdfPrinter = _dereq_('../printer');
+
+var defaultClientFonts = {
+	Roboto: {
+		normal: 'Roboto-Regular.ttf',
+		bold: 'Roboto-Medium.ttf',
+		italics: 'Roboto-Italic.ttf',
+		bolditalics: 'Roboto-Italic.ttf'
+	}
+};
+
+function Document(docDefinition, fonts, vfs) {
+	this.docDefinition = docDefinition;
+	this.fonts = fonts || defaultClientFonts;
+	this.vfs = vfs;
+}
+
+Document.prototype._createDoc = function(callback, options) {
+	var printer = new PdfPrinter(this.fonts);
+	printer.fs.bindFS(this.vfs);
+
+	printer.createPdfKitDocument(this.docDefinition, options).output(callback);
+};
+
+Document.prototype.open = function(message) {
+	// we have to open the window immediately and store the reference
+	// otherwise popup blockers will stop us
+	var win = window.open('', '_blank');
+	message = message || 'loading...';
+	win.location.href = 'data:text/html;,<html><head><meta charset="utf-8"></head><body><h1 style="opacity: 0.5">' + message.replace(/&/, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</h1></body></html>';
+
+	try {
+		this._createDoc(function(outDoc) {
+			win.location.href = 'data:application/pdf;base64,' + outDoc.toString('base64');
+		});
+	} catch(e) {
+		win.close();
+		return false;
+	}
+};
+
+
+Document.prototype.print = function(timeout) {
+	timeout = timeout || 2000;
+
+	this._createDoc(function(outDoc) {
+		var dataUrl = 'data:application/pdf;base64,' + outDoc.toString('base64');
+
+		var iFrame = document.createElement('iframe');
+		iFrame.style.display = 'none';
+		iFrame.src = dataUrl;
+		iFrame.onload = function() {
+			setTimeout(function() {
+				document.body.removeChild(iFrame);
+			}, timeout);
+		};
+
+		document.body.appendChild(iFrame);
+	}, { autoPrint: true });
+};
+
+Document.prototype.download = function(defaultFileName) {
+	defaultFileName = defaultFileName || 'file.pdf';
+	this._createDoc(function(outDoc) {
+		saveAs(new Blob([outDoc], {type: 'application/pdf'}), defaultFileName);
+	});
+};
+
+Document.prototype.getBase64 = function(result) {
+	if (!result) throw 'getBase64 should be called with a callback argument';
+
+	this._createDoc(function(outDoc) {
+		result(outDoc.toString('base64'));
+	});
+};
+
+Document.prototype.getDataUrl = function(result) {
+	if (!result) throw 'getDataUrl should be called with a callback argument';
+	this._createDoc(function(outDoc) { result('data:application/pdf;base64,' + outDoc.toString('base64')); });
+};
+
+Document.prototype.getBuffer = function(result) {
+	if (!result) throw 'getBuffer should be called with a callback argument';
+	this._createDoc(function(outDoc) { result(outDoc); });
+};
+
+module.exports = {
+	createPdf: function(docDefinition) {
+		return new Document(docDefinition, window.pdfMake.fonts, window.pdfMake.vfs);
+	}
+};
+
+},{"../printer":57}],"fs":[function(_dereq_,module,exports){
+module.exports=_dereq_('x/K9gc');
+},{}],"x/K9gc":[function(_dereq_,module,exports){
 (function (Buffer,__dirname){
 /* jslint node: true */
 'use strict';
@@ -6987,10 +7088,8 @@ function fixFilename(filename) {
 
 module.exports = new VirtualFileSystem();
 
-}).call(this,_dereq_("buffer").Buffer,"/browser-extensions")
-},{"buffer":1}],"fs":[function(_dereq_,module,exports){
-module.exports=_dereq_('x/K9gc');
-},{}],47:[function(_dereq_,module,exports){
+}).call(this,_dereq_("buffer").Buffer,"/")
+},{"buffer":1}],48:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7122,7 +7221,7 @@ module.exports = {
 	isStarColumn: isStarColumn
 };
 
-},{}],48:[function(_dereq_,module,exports){
+},{}],49:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7551,7 +7650,7 @@ DocMeasure.prototype.measureCanvas = function(node) {
 
 module.exports = DocMeasure;
 
-},{"./columnCalculator":47,"./helpers":51,"./styleContextStack":58,"./textTools":60}],49:[function(_dereq_,module,exports){
+},{"./columnCalculator":48,"./helpers":52,"./styleContextStack":59,"./textTools":61}],50:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7704,7 +7803,7 @@ DocumentContext.bottomMostContext = bottomMostContext;
 
 module.exports = DocumentContext;
 
-},{}],50:[function(_dereq_,module,exports){
+},{}],51:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7906,7 +8005,7 @@ ElementWriter.prototype.popContext = function() {
 
 module.exports = ElementWriter;
 
-},{"./documentContext":49,"./helpers":51,"./line":54}],51:[function(_dereq_,module,exports){
+},{"./documentContext":50,"./helpers":52,"./line":55}],52:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7970,7 +8069,7 @@ module.exports = {
 	isFunction: isFunction
 };
 
-},{}],52:[function(_dereq_,module,exports){
+},{}],53:[function(_dereq_,module,exports){
 var pdfKit = _dereq_('pdfkit');
 
 function ImageMeasure(pdfDoc) {
@@ -7993,7 +8092,7 @@ ImageMeasure.prototype.measureImage = function(src) {
 
 module.exports = ImageMeasure;
 
-},{"pdfkit":9}],53:[function(_dereq_,module,exports){
+},{"pdfkit":9}],54:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8041,14 +8140,14 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, header, footer) {
 	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts);
 
-  this.docMeasure.measureDocument(docStructure);
+    docStructure = this.docMeasure.measureDocument(docStructure);
 
-	this.writer = new PageElementWriter(
-		new DocumentContext(this.pageSize, this.pageMargins),
-		this.tracker);
+    this.writer = new PageElementWriter(
+        new DocumentContext(this.pageSize, this.pageMargins),
+        this.tracker);
 
-	this.processNode({ stack: docStructure });
-  this.addHeadersAndFooters(header, footer);
+    this.processNode(docStructure);
+    this.addHeadersAndFooters(header, footer);
 
 	return this.writer.context().pages;
 };
@@ -8337,7 +8436,7 @@ LayoutBuilder.prototype.processCanvas = function(node) {
 
 module.exports = LayoutBuilder;
 
-},{"./columnCalculator":47,"./docMeasure":48,"./documentContext":49,"./helpers":51,"./line":54,"./pageElementWriter":55,"./tableProcessor":59,"./traversalTracker":61}],54:[function(_dereq_,module,exports){
+},{"./columnCalculator":48,"./docMeasure":49,"./documentContext":50,"./helpers":52,"./line":55,"./pageElementWriter":56,"./tableProcessor":60,"./traversalTracker":62}],55:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8408,7 +8507,7 @@ Line.prototype.getHeight = function() {
 
 module.exports = Line;
 
-},{}],55:[function(_dereq_,module,exports){
+},{}],56:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8556,14 +8655,16 @@ PageElementWriter.prototype.context = function() {
 
 module.exports = PageElementWriter;
 
-},{"./elementWriter":50}],56:[function(_dereq_,module,exports){
+},{"./elementWriter":51}],57:[function(_dereq_,module,exports){
 /* jslint node: true */
+/* global window */
 'use strict';
 
 var LayoutBuilder = _dereq_('./layoutBuilder');
 var PdfKit = _dereq_('pdfkit');
 var sizes = _dereq_('./standardPageSizes');
 var ImageMeasure = _dereq_('./imageMeasure');
+
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -8926,7 +9027,7 @@ module.exports = PdfPrinter;
 /* temporary browser extension */
 PdfPrinter.prototype.fs = _dereq_('fs');
 
-},{"./imageMeasure":52,"./layoutBuilder":53,"./standardPageSizes":57,"fs":"x/K9gc","pdfkit":9}],57:[function(_dereq_,module,exports){
+},{"./imageMeasure":53,"./layoutBuilder":54,"./standardPageSizes":58,"fs":"x/K9gc","pdfkit":9}],58:[function(_dereq_,module,exports){
 module.exports = {
 	'4A0': [4767.87, 6740.79],
 	'2A0': [3370.39, 4767.87],
@@ -8980,7 +9081,7 @@ module.exports = {
 	TABLOID: [792.00, 1224.00]
 };
 
-},{}],58:[function(_dereq_,module,exports){
+},{}],59:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -9143,7 +9244,7 @@ StyleContextStack.prototype.getProperty = function(property) {
 
 module.exports = StyleContextStack;
 
-},{}],59:[function(_dereq_,module,exports){
+},{}],60:[function(_dereq_,module,exports){
 var ColumnCalculator = _dereq_('./columnCalculator');
 
 function TableProcessor(tableNode) {
@@ -9386,7 +9487,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
 
 module.exports = TableProcessor;
 
-},{"./columnCalculator":47}],60:[function(_dereq_,module,exports){
+},{"./columnCalculator":48}],61:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -9636,7 +9737,7 @@ TextTools.prototype.measure = measure;
 
 module.exports = TextTools;
 
-},{}],61:[function(_dereq_,module,exports){
+},{}],62:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -9688,6 +9789,258 @@ TraversalTracker.prototype.auto = function(event, cb, innerBlock) {
 
 module.exports = TraversalTracker;
 
-},{}]},{},[56])
-(56)
-});
+},{}]},{},[45])
+(45)
+});;/*! FileSaver.js
+ *  A saveAs() FileSaver implementation.
+ *  2014-01-24
+ *
+ *  By Eli Grey, http://eligrey.com
+ *  License: X11/MIT
+ *    See LICENSE.md
+ */
+
+/*global self */
+/*jslint bitwise: true, indent: 4, laxbreak: true, laxcomma: true, smarttabs: true, plusplus: true */
+
+/*! @source http://purl.eligrey.com/github/FileSaver.js/blob/master/FileSaver.js */
+
+var saveAs = saveAs
+  // IE 10+ (native saveAs)
+  || (typeof navigator !== "undefined" &&
+      navigator.msSaveOrOpenBlob && navigator.msSaveOrOpenBlob.bind(navigator))
+  // Everyone else
+  || (function(view) {
+	"use strict";
+	// IE <10 is explicitly unsupported
+	if (typeof navigator !== "undefined" &&
+	    /MSIE [1-9]\./.test(navigator.userAgent)) {
+		return;
+	}
+	var
+		  doc = view.document
+		  // only get URL when necessary in case BlobBuilder.js hasn't overridden it yet
+		, get_URL = function() {
+			return view.URL || view.webkitURL || view;
+		}
+		, URL = view.URL || view.webkitURL || view
+		, save_link = doc.createElementNS("http://www.w3.org/1999/xhtml", "a")
+		, can_use_save_link = !view.externalHost && "download" in save_link
+		, click = function(node) {
+			var event = doc.createEvent("MouseEvents");
+			event.initMouseEvent(
+				"click", true, false, view, 0, 0, 0, 0, 0
+				, false, false, false, false, 0, null
+			);
+			node.dispatchEvent(event);
+		}
+		, webkit_req_fs = view.webkitRequestFileSystem
+		, req_fs = view.requestFileSystem || webkit_req_fs || view.mozRequestFileSystem
+		, throw_outside = function(ex) {
+			(view.setImmediate || view.setTimeout)(function() {
+				throw ex;
+			}, 0);
+		}
+		, force_saveable_type = "application/octet-stream"
+		, fs_min_size = 0
+		, deletion_queue = []
+		, process_deletion_queue = function() {
+			var i = deletion_queue.length;
+			while (i--) {
+				var file = deletion_queue[i];
+				if (typeof file === "string") { // file is an object URL
+					URL.revokeObjectURL(file);
+				} else { // file is a File
+					file.remove();
+				}
+			}
+			deletion_queue.length = 0; // clear queue
+		}
+		, dispatch = function(filesaver, event_types, event) {
+			event_types = [].concat(event_types);
+			var i = event_types.length;
+			while (i--) {
+				var listener = filesaver["on" + event_types[i]];
+				if (typeof listener === "function") {
+					try {
+						listener.call(filesaver, event || filesaver);
+					} catch (ex) {
+						throw_outside(ex);
+					}
+				}
+			}
+		}
+		, FileSaver = function(blob, name) {
+			// First try a.download, then web filesystem, then object URLs
+			var
+				  filesaver = this
+				, type = blob.type
+				, blob_changed = false
+				, object_url
+				, target_view
+				, get_object_url = function() {
+					var object_url = get_URL().createObjectURL(blob);
+					deletion_queue.push(object_url);
+					return object_url;
+				}
+				, dispatch_all = function() {
+					dispatch(filesaver, "writestart progress write writeend".split(" "));
+				}
+				// on any filesys errors revert to saving with object URLs
+				, fs_error = function() {
+					// don't create more object URLs than needed
+					if (blob_changed || !object_url) {
+						object_url = get_object_url(blob);
+					}
+					if (target_view) {
+						target_view.location.href = object_url;
+					} else {
+						window.open(object_url, "_blank");
+					}
+					filesaver.readyState = filesaver.DONE;
+					dispatch_all();
+				}
+				, abortable = function(func) {
+					return function() {
+						if (filesaver.readyState !== filesaver.DONE) {
+							return func.apply(this, arguments);
+						}
+					};
+				}
+				, create_if_not_found = {create: true, exclusive: false}
+				, slice
+			;
+			filesaver.readyState = filesaver.INIT;
+			if (!name) {
+				name = "download";
+			}
+			if (can_use_save_link) {
+				object_url = get_object_url(blob);
+				// FF for Android has a nasty garbage collection mechanism
+				// that turns all objects that are not pure javascript into 'deadObject'
+				// this means `doc` and `save_link` are unusable and need to be recreated
+				// `view` is usable though:
+				doc = view.document;
+				save_link = doc.createElementNS("http://www.w3.org/1999/xhtml", "a");
+				save_link.href = object_url;
+				save_link.download = name;
+				var event = doc.createEvent("MouseEvents");
+				event.initMouseEvent(
+					"click", true, false, view, 0, 0, 0, 0, 0
+					, false, false, false, false, 0, null
+				);
+				save_link.dispatchEvent(event);
+				filesaver.readyState = filesaver.DONE;
+				dispatch_all();
+				return;
+			}
+			// Object and web filesystem URLs have a problem saving in Google Chrome when
+			// viewed in a tab, so I force save with application/octet-stream
+			// http://code.google.com/p/chromium/issues/detail?id=91158
+			if (view.chrome && type && type !== force_saveable_type) {
+				slice = blob.slice || blob.webkitSlice;
+				blob = slice.call(blob, 0, blob.size, force_saveable_type);
+				blob_changed = true;
+			}
+			// Since I can't be sure that the guessed media type will trigger a download
+			// in WebKit, I append .download to the filename.
+			// https://bugs.webkit.org/show_bug.cgi?id=65440
+			if (webkit_req_fs && name !== "download") {
+				name += ".download";
+			}
+			if (type === force_saveable_type || webkit_req_fs) {
+				target_view = view;
+			}
+			if (!req_fs) {
+				fs_error();
+				return;
+			}
+			fs_min_size += blob.size;
+			req_fs(view.TEMPORARY, fs_min_size, abortable(function(fs) {
+				fs.root.getDirectory("saved", create_if_not_found, abortable(function(dir) {
+					var save = function() {
+						dir.getFile(name, create_if_not_found, abortable(function(file) {
+							file.createWriter(abortable(function(writer) {
+								writer.onwriteend = function(event) {
+									target_view.location.href = file.toURL();
+									deletion_queue.push(file);
+									filesaver.readyState = filesaver.DONE;
+									dispatch(filesaver, "writeend", event);
+								};
+								writer.onerror = function() {
+									var error = writer.error;
+									if (error.code !== error.ABORT_ERR) {
+										fs_error();
+									}
+								};
+								"writestart progress write abort".split(" ").forEach(function(event) {
+									writer["on" + event] = filesaver["on" + event];
+								});
+								writer.write(blob);
+								filesaver.abort = function() {
+									writer.abort();
+									filesaver.readyState = filesaver.DONE;
+								};
+								filesaver.readyState = filesaver.WRITING;
+							}), fs_error);
+						}), fs_error);
+					};
+					dir.getFile(name, {create: false}, abortable(function(file) {
+						// delete file if it already exists
+						file.remove();
+						save();
+					}), abortable(function(ex) {
+						if (ex.code === ex.NOT_FOUND_ERR) {
+							save();
+						} else {
+							fs_error();
+						}
+					}));
+				}), fs_error);
+			}), fs_error);
+		}
+		, FS_proto = FileSaver.prototype
+		, saveAs = function(blob, name) {
+			return new FileSaver(blob, name);
+		}
+	;
+	FS_proto.abort = function() {
+		var filesaver = this;
+		filesaver.readyState = filesaver.DONE;
+		dispatch(filesaver, "abort");
+	};
+	FS_proto.readyState = FS_proto.INIT = 0;
+	FS_proto.WRITING = 1;
+	FS_proto.DONE = 2;
+
+	FS_proto.error =
+	FS_proto.onwritestart =
+	FS_proto.onprogress =
+	FS_proto.onwrite =
+	FS_proto.onabort =
+	FS_proto.onerror =
+	FS_proto.onwriteend =
+		null;
+
+	view.addEventListener("unload", process_deletion_queue, false);
+	saveAs.unload = function() {
+		process_deletion_queue();
+		view.removeEventListener("unload", process_deletion_queue, false);
+	};
+	return saveAs;
+}(
+	   typeof self !== "undefined" && self
+	|| typeof window !== "undefined" && window
+	|| this.content
+));
+// `self` is undefined in Firefox for Android content script context
+// while `this` is nsIContentFrameMessageManager
+// with an attribute `content` that corresponds to the window
+
+if (typeof module !== "undefined" && module !== null) {
+  module.exports = saveAs;
+} else if ((typeof define !== "undefined" && define !== null) && (define.amd != null)) {
+  define([], function() {
+    return saveAs;
+  });
+}

@@ -77,7 +77,7 @@ module.exports = function(grunt) {
 					alias: './src/browser-extensions/virtual-fs.js:fs'
 				},
 				files: {
-					'build/pdfmake.js': ['src/printer.js']
+					'build/pdfmake.js': ['src/browser-extensions/pdfMake.js']
 				}
 			}
 		},
@@ -85,12 +85,22 @@ module.exports = function(grunt) {
 		dump_dir: {
 			fonts: {
 				options: {
-					pre: 'var vfs_fonts = ',
+					pre: 'window.pdfMake = window.pdfMake || {}; window.pdfMake.vfs = ',
 					rootPath: 'examples/fonts/'
 				},
 				files: {
 					'build/vfs_fonts.js': ['examples/fonts/*' ]
 				}
+			}
+		},
+
+		concat: {
+			options: {
+				separator: ';'
+			},
+			dist: {
+				src: ['build/pdfmake.js', 'libs/fileSaver.js'],
+				dest: 'build/pdfmake.js'
 			}
 		},
 
@@ -116,11 +126,12 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-browserify');
 	grunt.loadNpmTasks('grunt-contrib-uglify');
 	grunt.loadNpmTasks('grunt-dump-dir');
+	grunt.loadNpmTasks('grunt-contrib-concat');
 
 	grunt.registerTask('test', [ 'replace:exposeTestMethods', 'jshint', 'mochacov', 'replace:hideTestMethods' ]);
 
 	grunt.registerTask('buildFonts', [ 'dump_dir' ]);
-	grunt.registerTask('build', [ 'replace:fixPdfKit', 'browserify', 'uglify', 'buildFonts' ]);
+	grunt.registerTask('build', [ 'replace:fixPdfKit', 'browserify', 'concat', 'uglify', 'buildFonts' ]);
 
 	grunt.registerTask('default', [ 'test', 'build' ]);
 };
