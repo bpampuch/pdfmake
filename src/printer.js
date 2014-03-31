@@ -44,10 +44,6 @@ function PdfPrinter(fontDescriptors) {
  * @param {Number} docDefinition.pageSize.width width
  * @param {Number} docDefinition.pageSize.height height
  * @param {Object} [docDefinition.pageMargins] page margins (pdfkit units)
- * @param {Object} docDefinition.pageMargins.left
- * @param {Object} docDefinition.pageMargins.top
- * @param {Object} docDefinition.pageMargins.right
- * @param {Object} docDefinition.pageMargins.bottom
  *
  * @example
  *
@@ -87,7 +83,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 
 	var builder = new LayoutBuilder(
 		pageSize,
-		docDefinition.pageMargins || { left: 40, top: 40, bottom: 40, right: 40 },
+		fixPageMargins(docDefinition.pageMargins || 40),
         new ImageMeasure(this.pdfKitDoc));
 
   registerDefaultTableLayouts(builder);
@@ -112,6 +108,22 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	}
 	return this.pdfKitDoc;
 };
+
+function fixPageMargins(margin) {
+    if (!margin) return null;
+
+    if (typeof margin === 'number' || margin instanceof Number) {
+        margin = { left: margin, right: margin, top: margin, bottom: margin };
+    } else if (margin instanceof Array) {
+        if (margin.length === 2) {
+            margin = { left: margin[0], top: margin[1], right: margin[0], bottom: margin[1] };
+        } else if (margin.length === 4) {
+            margin = { left: margin[0], top: margin[1], right: margin[2], bottom: margin[3] };
+        } else throw 'Invalid pageMargins definition';
+    }
+
+    return margin;
+}
 
 function registerDefaultTableLayouts(layoutBuilder) {
   layoutBuilder.registerTableLayouts({

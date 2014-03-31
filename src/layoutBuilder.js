@@ -24,8 +24,8 @@ function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
 	this.pageSize = pageSize;
 	this.pageMargins = pageMargins;
 	this.tracker = new TraversalTracker();
-  this.imageMeasure = imageMeasure;
-  this.tableLayouts = {};
+    this.imageMeasure = imageMeasure;
+    this.tableLayouts = {};
 }
 
 LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
