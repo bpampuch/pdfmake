@@ -103,7 +103,6 @@
 
 			editor.getSession().on('change', function(e) {
 				if (timer) {
-					console.log('clear')
 					clearTimeout(timer);
 				}
 				lastChanged = new Date();
