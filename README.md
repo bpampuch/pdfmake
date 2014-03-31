@@ -3,7 +3,7 @@ pdfmake [![Build Status](https://travis-ci.org/bpampuch/pdfmake.png?branch=maste
 
 Client/server side PDF printing in pure JavaScript
 
-Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) or [read the docs](http://pdfmake.org/index.html#/docs)
+Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) or soon... [read the docs](http://pdfmake.org/index.html#/docs)
 
 ### Features
 
