@@ -45,14 +45,13 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, header, footer) {
 	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts);
 
-    docStructure = this.docMeasure.measureDocument(docStructure);
+  docStructure = this.docMeasure.measureDocument(docStructure);
 
-    this.writer = new PageElementWriter(
-        new DocumentContext(this.pageSize, this.pageMargins),
-        this.tracker);
+  this.writer = new PageElementWriter(
+    new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
-    this.processNode(docStructure);
-    this.addHeadersAndFooters(header, footer);
+  this.processNode(docStructure);
+  this.addHeadersAndFooters(header, footer);
 
 	return this.writer.context().pages;
 };
@@ -87,17 +86,17 @@ LayoutBuilder.prototype.processNode = function(node) {
 
   applyMargins(function() {
     if (node.stack) {
-    	self.processVerticalContainer(node.stack);
+      self.processVerticalContainer(node.stack);
     } else if (node.columns) {
-    	self.processColumns(node);
+      self.processColumns(node);
     } else if (node.ul) {
-    	self.processList(false, node.ul, node._gapSize);
+      self.processList(false, node.ul, node._gapSize);
     } else if (node.ol) {
-    	self.processList(true, node.ol, node._gapSize);
+      self.processList(true, node.ol, node._gapSize);
     } else if (node.table) {
-    	self.processTable(node);
+      self.processTable(node);
     } else if (node.text !== undefined) {
-    	self.processLeaf(node);
+      self.processLeaf(node);
     } else if (node.image) {
       self.processImage(node);
     } else if (node.canvas) {
