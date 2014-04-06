@@ -80,6 +80,7 @@ content: [
 					table: {
 							headerRows: 1,
 							// keepWithHeaderRows: 1,
+							// dontBreakRows: true,
 							body: [
 									[{ text: 'Header 1', style: 'tableHeader' }, { text: 'Header 2', style: 'tableHeader' }, { text: 'Header 3', style: 'tableHeader' }],
 									[

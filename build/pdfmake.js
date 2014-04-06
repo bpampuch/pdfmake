@@ -390,9 +390,14 @@ Buffer.prototype.copy = function (target, target_start, start, end) {
   if (target.length - target_start < end - start)
     end = target.length - target_start + start
 
-  // copy!
-  for (var i = 0; i < end - start; i++)
-    target[i + target_start] = this[i + start]
+  var len = end - start
+
+  if (len < 100 || !Buffer._useTypedArrays) {
+    for (var i = 0; i < len; i++)
+      target[i + target_start] = this[i + start]
+  } else {
+    target._set(new Uint8Array(this.buffer, start, len), target_start)
+  }
 }
 
 function _base64Slice (buf, start, end) {
@@ -1622,6 +1627,296 @@ function isUndefined(arg) {
 }
 
 },{}],5:[function(_dereq_,module,exports){
+if (typeof Object.create === 'function') {
+  // implementation from standard node.js 'util' module
+  module.exports = function inherits(ctor, superCtor) {
+    ctor.super_ = superCtor
+    ctor.prototype = Object.create(superCtor.prototype, {
+      constructor: {
+        value: ctor,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+  };
+} else {
+  // old school shim for old browsers
+  module.exports = function inherits(ctor, superCtor) {
+    ctor.super_ = superCtor
+    var TempCtor = function () {}
+    TempCtor.prototype = superCtor.prototype
+    ctor.prototype = new TempCtor()
+    ctor.prototype.constructor = ctor
+  }
+}
+
+},{}],6:[function(_dereq_,module,exports){
+// shim for using process in browser
+
+var process = module.exports = {};
+
+process.nextTick = (function () {
+    var canSetImmediate = typeof window !== 'undefined'
+    && window.setImmediate;
+    var canPost = typeof window !== 'undefined'
+    && window.postMessage && window.addEventListener
+    ;
+
+    if (canSetImmediate) {
+        return function (f) { return window.setImmediate(f) };
+    }
+
+    if (canPost) {
+        var queue = [];
+        window.addEventListener('message', function (ev) {
+            var source = ev.source;
+            if ((source === window || source === null) && ev.data === 'process-tick') {
+                ev.stopPropagation();
+                if (queue.length > 0) {
+                    var fn = queue.shift();
+                    fn();
+                }
+            }
+        }, true);
+
+        return function nextTick(fn) {
+            queue.push(fn);
+            window.postMessage('process-tick', '*');
+        };
+    }
+
+    return function nextTick(fn) {
+        setTimeout(fn, 0);
+    };
+})();
+
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+
+function noop() {}
+
+process.on = noop;
+process.once = noop;
+process.off = noop;
+process.emit = noop;
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+}
+
+// TODO(shtylman)
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+
+},{}],7:[function(_dereq_,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+// a duplex stream is just a stream that is both readable and writable.
+// Since JS doesn't have multiple prototypal inheritance, this class
+// prototypally inherits from Readable, and then parasitically from
+// Writable.
+
+module.exports = Duplex;
+var inherits = _dereq_('inherits');
+var setImmediate = _dereq_('process/browser.js').nextTick;
+var Readable = _dereq_('./readable.js');
+var Writable = _dereq_('./writable.js');
+
+inherits(Duplex, Readable);
+
+Duplex.prototype.write = Writable.prototype.write;
+Duplex.prototype.end = Writable.prototype.end;
+Duplex.prototype._write = Writable.prototype._write;
+
+function Duplex(options) {
+  if (!(this instanceof Duplex))
+    return new Duplex(options);
+
+  Readable.call(this, options);
+  Writable.call(this, options);
+
+  if (options && options.readable === false)
+    this.readable = false;
+
+  if (options && options.writable === false)
+    this.writable = false;
+
+  this.allowHalfOpen = true;
+  if (options && options.allowHalfOpen === false)
+    this.allowHalfOpen = false;
+
+  this.once('end', onend);
+}
+
+// the no-half-open enforcer
+function onend() {
+  // if we allow half-open state, or if the writable side ended,
+  // then we're ok.
+  if (this.allowHalfOpen || this._writableState.ended)
+    return;
+
+  // no more data can be written.
+  // But allow more writes to happen in this tick.
+  var self = this;
+  setImmediate(function () {
+    self.end();
+  });
+}
+
+},{"./readable.js":11,"./writable.js":13,"inherits":5,"process/browser.js":9}],8:[function(_dereq_,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+module.exports = Stream;
+
+var EE = _dereq_('events').EventEmitter;
+var inherits = _dereq_('inherits');
+
+inherits(Stream, EE);
+Stream.Readable = _dereq_('./readable.js');
+Stream.Writable = _dereq_('./writable.js');
+Stream.Duplex = _dereq_('./duplex.js');
+Stream.Transform = _dereq_('./transform.js');
+Stream.PassThrough = _dereq_('./passthrough.js');
+
+// Backwards-compat with node 0.4.x
+Stream.Stream = Stream;
+
+
+
+// old-style streams.  Note that the pipe method (the only relevant
+// part of this class) is overridden in the Readable class.
+
+function Stream() {
+  EE.call(this);
+}
+
+Stream.prototype.pipe = function(dest, options) {
+  var source = this;
+
+  function ondata(chunk) {
+    if (dest.writable) {
+      if (false === dest.write(chunk) && source.pause) {
+        source.pause();
+      }
+    }
+  }
+
+  source.on('data', ondata);
+
+  function ondrain() {
+    if (source.readable && source.resume) {
+      source.resume();
+    }
+  }
+
+  dest.on('drain', ondrain);
+
+  // If the 'end' option is not supplied, dest.end() will be called when
+  // source gets the 'end' or 'close' events.  Only dest.end() once.
+  if (!dest._isStdio && (!options || options.end !== false)) {
+    source.on('end', onend);
+    source.on('close', onclose);
+  }
+
+  var didOnEnd = false;
+  function onend() {
+    if (didOnEnd) return;
+    didOnEnd = true;
+
+    dest.end();
+  }
+
+
+  function onclose() {
+    if (didOnEnd) return;
+    didOnEnd = true;
+
+    if (typeof dest.destroy === 'function') dest.destroy();
+  }
+
+  // don't leave dangling pipes when there are errors.
+  function onerror(er) {
+    cleanup();
+    if (EE.listenerCount(this, 'error') === 0) {
+      throw er; // Unhandled stream error in pipe.
+    }
+  }
+
+  source.on('error', onerror);
+  dest.on('error', onerror);
+
+  // remove all the event listeners that were added.
+  function cleanup() {
+    source.removeListener('data', ondata);
+    dest.removeListener('drain', ondrain);
+
+    source.removeListener('end', onend);
+    source.removeListener('close', onclose);
+
+    source.removeListener('error', onerror);
+    dest.removeListener('error', onerror);
+
+    source.removeListener('end', cleanup);
+    source.removeListener('close', cleanup);
+
+    dest.removeListener('close', cleanup);
+  }
+
+  source.on('end', cleanup);
+  source.on('close', cleanup);
+
+  dest.on('close', cleanup);
+
+  dest.emit('pipe', source);
+
+  // Allow for unix-like usage: A.pipe(B).pipe(C)
+  return dest;
+};
+
+},{"./duplex.js":7,"./passthrough.js":10,"./readable.js":11,"./transform.js":12,"./writable.js":13,"events":4,"inherits":5}],9:[function(_dereq_,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1676,7 +1971,1774 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],6:[function(_dereq_,module,exports){
+},{}],10:[function(_dereq_,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+// a passthrough stream.
+// basically just the most minimal sort of Transform stream.
+// Every written chunk gets output as-is.
+
+module.exports = PassThrough;
+
+var Transform = _dereq_('./transform.js');
+var inherits = _dereq_('inherits');
+inherits(PassThrough, Transform);
+
+function PassThrough(options) {
+  if (!(this instanceof PassThrough))
+    return new PassThrough(options);
+
+  Transform.call(this, options);
+}
+
+PassThrough.prototype._transform = function(chunk, encoding, cb) {
+  cb(null, chunk);
+};
+
+},{"./transform.js":12,"inherits":5}],11:[function(_dereq_,module,exports){
+(function (process){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+module.exports = Readable;
+Readable.ReadableState = ReadableState;
+
+var EE = _dereq_('events').EventEmitter;
+var Stream = _dereq_('./index.js');
+var Buffer = _dereq_('buffer').Buffer;
+var setImmediate = _dereq_('process/browser.js').nextTick;
+var StringDecoder;
+
+var inherits = _dereq_('inherits');
+inherits(Readable, Stream);
+
+function ReadableState(options, stream) {
+  options = options || {};
+
+  // the point at which it stops calling _read() to fill the buffer
+  // Note: 0 is a valid value, means "don't call _read preemptively ever"
+  var hwm = options.highWaterMark;
+  this.highWaterMark = (hwm || hwm === 0) ? hwm : 16 * 1024;
+
+  // cast to ints.
+  this.highWaterMark = ~~this.highWaterMark;
+
+  this.buffer = [];
+  this.length = 0;
+  this.pipes = null;
+  this.pipesCount = 0;
+  this.flowing = false;
+  this.ended = false;
+  this.endEmitted = false;
+  this.reading = false;
+
+  // In streams that never have any data, and do push(null) right away,
+  // the consumer can miss the 'end' event if they do some I/O before
+  // consuming the stream.  So, we don't emit('end') until some reading
+  // happens.
+  this.calledRead = false;
+
+  // a flag to be able to tell if the onwrite cb is called immediately,
+  // or on a later tick.  We set this to true at first, becuase any
+  // actions that shouldn't happen until "later" should generally also
+  // not happen before the first write call.
+  this.sync = true;
+
+  // whenever we return null, then we set a flag to say
+  // that we're awaiting a 'readable' event emission.
+  this.needReadable = false;
+  this.emittedReadable = false;
+  this.readableListening = false;
+
+
+  // object stream flag. Used to make read(n) ignore n and to
+  // make all the buffer merging and length checks go away
+  this.objectMode = !!options.objectMode;
+
+  // Crypto is kind of old and crusty.  Historically, its default string
+  // encoding is 'binary' so we have to make this configurable.
+  // Everything else in the universe uses 'utf8', though.
+  this.defaultEncoding = options.defaultEncoding || 'utf8';
+
+  // when piping, we only care about 'readable' events that happen
+  // after read()ing all the bytes and not getting any pushback.
+  this.ranOut = false;
+
+  // the number of writers that are awaiting a drain event in .pipe()s
+  this.awaitDrain = 0;
+
+  // if true, a maybeReadMore has been scheduled
+  this.readingMore = false;
+
+  this.decoder = null;
+  this.encoding = null;
+  if (options.encoding) {
+    if (!StringDecoder)
+      StringDecoder = _dereq_('string_decoder').StringDecoder;
+    this.decoder = new StringDecoder(options.encoding);
+    this.encoding = options.encoding;
+  }
+}
+
+function Readable(options) {
+  if (!(this instanceof Readable))
+    return new Readable(options);
+
+  this._readableState = new ReadableState(options, this);
+
+  // legacy
+  this.readable = true;
+
+  Stream.call(this);
+}
+
+// Manually shove something into the read() buffer.
+// This returns true if the highWaterMark has not been hit yet,
+// similar to how Writable.write() returns true if you should
+// write() some more.
+Readable.prototype.push = function(chunk, encoding) {
+  var state = this._readableState;
+
+  if (typeof chunk === 'string' && !state.objectMode) {
+    encoding = encoding || state.defaultEncoding;
+    if (encoding !== state.encoding) {
+      chunk = new Buffer(chunk, encoding);
+      encoding = '';
+    }
+  }
+
+  return readableAddChunk(this, state, chunk, encoding, false);
+};
+
+// Unshift should *always* be something directly out of read()
+Readable.prototype.unshift = function(chunk) {
+  var state = this._readableState;
+  return readableAddChunk(this, state, chunk, '', true);
+};
+
+function readableAddChunk(stream, state, chunk, encoding, addToFront) {
+  var er = chunkInvalid(state, chunk);
+  if (er) {
+    stream.emit('error', er);
+  } else if (chunk === null || chunk === undefined) {
+    state.reading = false;
+    if (!state.ended)
+      onEofChunk(stream, state);
+  } else if (state.objectMode || chunk && chunk.length > 0) {
+    if (state.ended && !addToFront) {
+      var e = new Error('stream.push() after EOF');
+      stream.emit('error', e);
+    } else if (state.endEmitted && addToFront) {
+      var e = new Error('stream.unshift() after end event');
+      stream.emit('error', e);
+    } else {
+      if (state.decoder && !addToFront && !encoding)
+        chunk = state.decoder.write(chunk);
+
+      // update the buffer info.
+      state.length += state.objectMode ? 1 : chunk.length;
+      if (addToFront) {
+        state.buffer.unshift(chunk);
+      } else {
+        state.reading = false;
+        state.buffer.push(chunk);
+      }
+
+      if (state.needReadable)
+        emitReadable(stream);
+
+      maybeReadMore(stream, state);
+    }
+  } else if (!addToFront) {
+    state.reading = false;
+  }
+
+  return needMoreData(state);
+}
+
+
+
+// if it's past the high water mark, we can push in some more.
+// Also, if we have no data yet, we can stand some
+// more bytes.  This is to work around cases where hwm=0,
+// such as the repl.  Also, if the push() triggered a
+// readable event, and the user called read(largeNumber) such that
+// needReadable was set, then we ought to push more, so that another
+// 'readable' event will be triggered.
+function needMoreData(state) {
+  return !state.ended &&
+         (state.needReadable ||
+          state.length < state.highWaterMark ||
+          state.length === 0);
+}
+
+// backwards compatibility.
+Readable.prototype.setEncoding = function(enc) {
+  if (!StringDecoder)
+    StringDecoder = _dereq_('string_decoder').StringDecoder;
+  this._readableState.decoder = new StringDecoder(enc);
+  this._readableState.encoding = enc;
+};
+
+// Don't raise the hwm > 128MB
+var MAX_HWM = 0x800000;
+function roundUpToNextPowerOf2(n) {
+  if (n >= MAX_HWM) {
+    n = MAX_HWM;
+  } else {
+    // Get the next highest power of 2
+    n--;
+    for (var p = 1; p < 32; p <<= 1) n |= n >> p;
+    n++;
+  }
+  return n;
+}
+
+function howMuchToRead(n, state) {
+  if (state.length === 0 && state.ended)
+    return 0;
+
+  if (state.objectMode)
+    return n === 0 ? 0 : 1;
+
+  if (isNaN(n) || n === null) {
+    // only flow one buffer at a time
+    if (state.flowing && state.buffer.length)
+      return state.buffer[0].length;
+    else
+      return state.length;
+  }
+
+  if (n <= 0)
+    return 0;
+
+  // If we're asking for more than the target buffer level,
+  // then raise the water mark.  Bump up to the next highest
+  // power of 2, to prevent increasing it excessively in tiny
+  // amounts.
+  if (n > state.highWaterMark)
+    state.highWaterMark = roundUpToNextPowerOf2(n);
+
+  // don't have that much.  return null, unless we've ended.
+  if (n > state.length) {
+    if (!state.ended) {
+      state.needReadable = true;
+      return 0;
+    } else
+      return state.length;
+  }
+
+  return n;
+}
+
+// you can override either this method, or the async _read(n) below.
+Readable.prototype.read = function(n) {
+  var state = this._readableState;
+  state.calledRead = true;
+  var nOrig = n;
+
+  if (typeof n !== 'number' || n > 0)
+    state.emittedReadable = false;
+
+  // if we're doing read(0) to trigger a readable event, but we
+  // already have a bunch of data in the buffer, then just trigger
+  // the 'readable' event and move on.
+  if (n === 0 &&
+      state.needReadable &&
+      (state.length >= state.highWaterMark || state.ended)) {
+    emitReadable(this);
+    return null;
+  }
+
+  n = howMuchToRead(n, state);
+
+  // if we've ended, and we're now clear, then finish it up.
+  if (n === 0 && state.ended) {
+    if (state.length === 0)
+      endReadable(this);
+    return null;
+  }
+
+  // All the actual chunk generation logic needs to be
+  // *below* the call to _read.  The reason is that in certain
+  // synthetic stream cases, such as passthrough streams, _read
+  // may be a completely synchronous operation which may change
+  // the state of the read buffer, providing enough data when
+  // before there was *not* enough.
+  //
+  // So, the steps are:
+  // 1. Figure out what the state of things will be after we do
+  // a read from the buffer.
+  //
+  // 2. If that resulting state will trigger a _read, then call _read.
+  // Note that this may be asynchronous, or synchronous.  Yes, it is
+  // deeply ugly to write APIs this way, but that still doesn't mean
+  // that the Readable class should behave improperly, as streams are
+  // designed to be sync/async agnostic.
+  // Take note if the _read call is sync or async (ie, if the read call
+  // has returned yet), so that we know whether or not it's safe to emit
+  // 'readable' etc.
+  //
+  // 3. Actually pull the requested chunks out of the buffer and return.
+
+  // if we need a readable event, then we need to do some reading.
+  var doRead = state.needReadable;
+
+  // if we currently have less than the highWaterMark, then also read some
+  if (state.length - n <= state.highWaterMark)
+    doRead = true;
+
+  // however, if we've ended, then there's no point, and if we're already
+  // reading, then it's unnecessary.
+  if (state.ended || state.reading)
+    doRead = false;
+
+  if (doRead) {
+    state.reading = true;
+    state.sync = true;
+    // if the length is currently zero, then we *need* a readable event.
+    if (state.length === 0)
+      state.needReadable = true;
+    // call internal read method
+    this._read(state.highWaterMark);
+    state.sync = false;
+  }
+
+  // If _read called its callback synchronously, then `reading`
+  // will be false, and we need to re-evaluate how much data we
+  // can return to the user.
+  if (doRead && !state.reading)
+    n = howMuchToRead(nOrig, state);
+
+  var ret;
+  if (n > 0)
+    ret = fromList(n, state);
+  else
+    ret = null;
+
+  if (ret === null) {
+    state.needReadable = true;
+    n = 0;
+  }
+
+  state.length -= n;
+
+  // If we have nothing in the buffer, then we want to know
+  // as soon as we *do* get something into the buffer.
+  if (state.length === 0 && !state.ended)
+    state.needReadable = true;
+
+  // If we happened to read() exactly the remaining amount in the
+  // buffer, and the EOF has been seen at this point, then make sure
+  // that we emit 'end' on the very next tick.
+  if (state.ended && !state.endEmitted && state.length === 0)
+    endReadable(this);
+
+  return ret;
+};
+
+function chunkInvalid(state, chunk) {
+  var er = null;
+  if (!Buffer.isBuffer(chunk) &&
+      'string' !== typeof chunk &&
+      chunk !== null &&
+      chunk !== undefined &&
+      !state.objectMode &&
+      !er) {
+    er = new TypeError('Invalid non-string/buffer chunk');
+  }
+  return er;
+}
+
+
+function onEofChunk(stream, state) {
+  if (state.decoder && !state.ended) {
+    var chunk = state.decoder.end();
+    if (chunk && chunk.length) {
+      state.buffer.push(chunk);
+      state.length += state.objectMode ? 1 : chunk.length;
+    }
+  }
+  state.ended = true;
+
+  // if we've ended and we have some data left, then emit
+  // 'readable' now to make sure it gets picked up.
+  if (state.length > 0)
+    emitReadable(stream);
+  else
+    endReadable(stream);
+}
+
+// Don't emit readable right away in sync mode, because this can trigger
+// another read() call => stack overflow.  This way, it might trigger
+// a nextTick recursion warning, but that's not so bad.
+function emitReadable(stream) {
+  var state = stream._readableState;
+  state.needReadable = false;
+  if (state.emittedReadable)
+    return;
+
+  state.emittedReadable = true;
+  if (state.sync)
+    setImmediate(function() {
+      emitReadable_(stream);
+    });
+  else
+    emitReadable_(stream);
+}
+
+function emitReadable_(stream) {
+  stream.emit('readable');
+}
+
+
+// at this point, the user has presumably seen the 'readable' event,
+// and called read() to consume some data.  that may have triggered
+// in turn another _read(n) call, in which case reading = true if
+// it's in progress.
+// However, if we're not ended, or reading, and the length < hwm,
+// then go ahead and try to read some more preemptively.
+function maybeReadMore(stream, state) {
+  if (!state.readingMore) {
+    state.readingMore = true;
+    setImmediate(function() {
+      maybeReadMore_(stream, state);
+    });
+  }
+}
+
+function maybeReadMore_(stream, state) {
+  var len = state.length;
+  while (!state.reading && !state.flowing && !state.ended &&
+         state.length < state.highWaterMark) {
+    stream.read(0);
+    if (len === state.length)
+      // didn't get any data, stop spinning.
+      break;
+    else
+      len = state.length;
+  }
+  state.readingMore = false;
+}
+
+// abstract method.  to be overridden in specific implementation classes.
+// call cb(er, data) where data is <= n in length.
+// for virtual (non-string, non-buffer) streams, "length" is somewhat
+// arbitrary, and perhaps not very meaningful.
+Readable.prototype._read = function(n) {
+  this.emit('error', new Error('not implemented'));
+};
+
+Readable.prototype.pipe = function(dest, pipeOpts) {
+  var src = this;
+  var state = this._readableState;
+
+  switch (state.pipesCount) {
+    case 0:
+      state.pipes = dest;
+      break;
+    case 1:
+      state.pipes = [state.pipes, dest];
+      break;
+    default:
+      state.pipes.push(dest);
+      break;
+  }
+  state.pipesCount += 1;
+
+  var doEnd = (!pipeOpts || pipeOpts.end !== false) &&
+              dest !== process.stdout &&
+              dest !== process.stderr;
+
+  var endFn = doEnd ? onend : cleanup;
+  if (state.endEmitted)
+    setImmediate(endFn);
+  else
+    src.once('end', endFn);
+
+  dest.on('unpipe', onunpipe);
+  function onunpipe(readable) {
+    if (readable !== src) return;
+    cleanup();
+  }
+
+  function onend() {
+    dest.end();
+  }
+
+  // when the dest drains, it reduces the awaitDrain counter
+  // on the source.  This would be more elegant with a .once()
+  // handler in flow(), but adding and removing repeatedly is
+  // too slow.
+  var ondrain = pipeOnDrain(src);
+  dest.on('drain', ondrain);
+
+  function cleanup() {
+    // cleanup event handlers once the pipe is broken
+    dest.removeListener('close', onclose);
+    dest.removeListener('finish', onfinish);
+    dest.removeListener('drain', ondrain);
+    dest.removeListener('error', onerror);
+    dest.removeListener('unpipe', onunpipe);
+    src.removeListener('end', onend);
+    src.removeListener('end', cleanup);
+
+    // if the reader is waiting for a drain event from this
+    // specific writer, then it would cause it to never start
+    // flowing again.
+    // So, if this is awaiting a drain, then we just call it now.
+    // If we don't know, then assume that we are waiting for one.
+    if (!dest._writableState || dest._writableState.needDrain)
+      ondrain();
+  }
+
+  // if the dest has an error, then stop piping into it.
+  // however, don't suppress the throwing behavior for this.
+  // check for listeners before emit removes one-time listeners.
+  var errListeners = EE.listenerCount(dest, 'error');
+  function onerror(er) {
+    unpipe();
+    if (errListeners === 0 && EE.listenerCount(dest, 'error') === 0)
+      dest.emit('error', er);
+  }
+  dest.once('error', onerror);
+
+  // Both close and finish should trigger unpipe, but only once.
+  function onclose() {
+    dest.removeListener('finish', onfinish);
+    unpipe();
+  }
+  dest.once('close', onclose);
+  function onfinish() {
+    dest.removeListener('close', onclose);
+    unpipe();
+  }
+  dest.once('finish', onfinish);
+
+  function unpipe() {
+    src.unpipe(dest);
+  }
+
+  // tell the dest that it's being piped to
+  dest.emit('pipe', src);
+
+  // start the flow if it hasn't been started already.
+  if (!state.flowing) {
+    // the handler that waits for readable events after all
+    // the data gets sucked out in flow.
+    // This would be easier to follow with a .once() handler
+    // in flow(), but that is too slow.
+    this.on('readable', pipeOnReadable);
+
+    state.flowing = true;
+    setImmediate(function() {
+      flow(src);
+    });
+  }
+
+  return dest;
+};
+
+function pipeOnDrain(src) {
+  return function() {
+    var dest = this;
+    var state = src._readableState;
+    state.awaitDrain--;
+    if (state.awaitDrain === 0)
+      flow(src);
+  };
+}
+
+function flow(src) {
+  var state = src._readableState;
+  var chunk;
+  state.awaitDrain = 0;
+
+  function write(dest, i, list) {
+    var written = dest.write(chunk);
+    if (false === written) {
+      state.awaitDrain++;
+    }
+  }
+
+  while (state.pipesCount && null !== (chunk = src.read())) {
+
+    if (state.pipesCount === 1)
+      write(state.pipes, 0, null);
+    else
+      forEach(state.pipes, write);
+
+    src.emit('data', chunk);
+
+    // if anyone needs a drain, then we have to wait for that.
+    if (state.awaitDrain > 0)
+      return;
+  }
+
+  // if every destination was unpiped, either before entering this
+  // function, or in the while loop, then stop flowing.
+  //
+  // NB: This is a pretty rare edge case.
+  if (state.pipesCount === 0) {
+    state.flowing = false;
+
+    // if there were data event listeners added, then switch to old mode.
+    if (EE.listenerCount(src, 'data') > 0)
+      emitDataEvents(src);
+    return;
+  }
+
+  // at this point, no one needed a drain, so we just ran out of data
+  // on the next readable event, start it over again.
+  state.ranOut = true;
+}
+
+function pipeOnReadable() {
+  if (this._readableState.ranOut) {
+    this._readableState.ranOut = false;
+    flow(this);
+  }
+}
+
+
+Readable.prototype.unpipe = function(dest) {
+  var state = this._readableState;
+
+  // if we're not piping anywhere, then do nothing.
+  if (state.pipesCount === 0)
+    return this;
+
+  // just one destination.  most common case.
+  if (state.pipesCount === 1) {
+    // passed in one, but it's not the right one.
+    if (dest && dest !== state.pipes)
+      return this;
+
+    if (!dest)
+      dest = state.pipes;
+
+    // got a match.
+    state.pipes = null;
+    state.pipesCount = 0;
+    this.removeListener('readable', pipeOnReadable);
+    state.flowing = false;
+    if (dest)
+      dest.emit('unpipe', this);
+    return this;
+  }
+
+  // slow case. multiple pipe destinations.
+
+  if (!dest) {
+    // remove all.
+    var dests = state.pipes;
+    var len = state.pipesCount;
+    state.pipes = null;
+    state.pipesCount = 0;
+    this.removeListener('readable', pipeOnReadable);
+    state.flowing = false;
+
+    for (var i = 0; i < len; i++)
+      dests[i].emit('unpipe', this);
+    return this;
+  }
+
+  // try to find the right one.
+  var i = indexOf(state.pipes, dest);
+  if (i === -1)
+    return this;
+
+  state.pipes.splice(i, 1);
+  state.pipesCount -= 1;
+  if (state.pipesCount === 1)
+    state.pipes = state.pipes[0];
+
+  dest.emit('unpipe', this);
+
+  return this;
+};
+
+// set up data events if they are asked for
+// Ensure readable listeners eventually get something
+Readable.prototype.on = function(ev, fn) {
+  var res = Stream.prototype.on.call(this, ev, fn);
+
+  if (ev === 'data' && !this._readableState.flowing)
+    emitDataEvents(this);
+
+  if (ev === 'readable' && this.readable) {
+    var state = this._readableState;
+    if (!state.readableListening) {
+      state.readableListening = true;
+      state.emittedReadable = false;
+      state.needReadable = true;
+      if (!state.reading) {
+        this.read(0);
+      } else if (state.length) {
+        emitReadable(this, state);
+      }
+    }
+  }
+
+  return res;
+};
+Readable.prototype.addListener = Readable.prototype.on;
+
+// pause() and resume() are remnants of the legacy readable stream API
+// If the user uses them, then switch into old mode.
+Readable.prototype.resume = function() {
+  emitDataEvents(this);
+  this.read(0);
+  this.emit('resume');
+};
+
+Readable.prototype.pause = function() {
+  emitDataEvents(this, true);
+  this.emit('pause');
+};
+
+function emitDataEvents(stream, startPaused) {
+  var state = stream._readableState;
+
+  if (state.flowing) {
+    // https://github.com/isaacs/readable-stream/issues/16
+    throw new Error('Cannot switch to old mode now.');
+  }
+
+  var paused = startPaused || false;
+  var readable = false;
+
+  // convert to an old-style stream.
+  stream.readable = true;
+  stream.pipe = Stream.prototype.pipe;
+  stream.on = stream.addListener = Stream.prototype.on;
+
+  stream.on('readable', function() {
+    readable = true;
+
+    var c;
+    while (!paused && (null !== (c = stream.read())))
+      stream.emit('data', c);
+
+    if (c === null) {
+      readable = false;
+      stream._readableState.needReadable = true;
+    }
+  });
+
+  stream.pause = function() {
+    paused = true;
+    this.emit('pause');
+  };
+
+  stream.resume = function() {
+    paused = false;
+    if (readable)
+      setImmediate(function() {
+        stream.emit('readable');
+      });
+    else
+      this.read(0);
+    this.emit('resume');
+  };
+
+  // now make it start, just in case it hadn't already.
+  stream.emit('readable');
+}
+
+// wrap an old-style stream as the async data source.
+// This is *not* part of the readable stream interface.
+// It is an ugly unfortunate mess of history.
+Readable.prototype.wrap = function(stream) {
+  var state = this._readableState;
+  var paused = false;
+
+  var self = this;
+  stream.on('end', function() {
+    if (state.decoder && !state.ended) {
+      var chunk = state.decoder.end();
+      if (chunk && chunk.length)
+        self.push(chunk);
+    }
+
+    self.push(null);
+  });
+
+  stream.on('data', function(chunk) {
+    if (state.decoder)
+      chunk = state.decoder.write(chunk);
+    if (!chunk || !state.objectMode && !chunk.length)
+      return;
+
+    var ret = self.push(chunk);
+    if (!ret) {
+      paused = true;
+      stream.pause();
+    }
+  });
+
+  // proxy all the other methods.
+  // important when wrapping filters and duplexes.
+  for (var i in stream) {
+    if (typeof stream[i] === 'function' &&
+        typeof this[i] === 'undefined') {
+      this[i] = function(method) { return function() {
+        return stream[method].apply(stream, arguments);
+      }}(i);
+    }
+  }
+
+  // proxy certain important events.
+  var events = ['error', 'close', 'destroy', 'pause', 'resume'];
+  forEach(events, function(ev) {
+    stream.on(ev, function (x) {
+      return self.emit.apply(self, ev, x);
+    });
+  });
+
+  // when we try to consume some more bytes, simply unpause the
+  // underlying stream.
+  self._read = function(n) {
+    if (paused) {
+      paused = false;
+      stream.resume();
+    }
+  };
+
+  return self;
+};
+
+
+
+// exposed for testing purposes only.
+Readable._fromList = fromList;
+
+// Pluck off n bytes from an array of buffers.
+// Length is the combined lengths of all the buffers in the list.
+function fromList(n, state) {
+  var list = state.buffer;
+  var length = state.length;
+  var stringMode = !!state.decoder;
+  var objectMode = !!state.objectMode;
+  var ret;
+
+  // nothing in the list, definitely empty.
+  if (list.length === 0)
+    return null;
+
+  if (length === 0)
+    ret = null;
+  else if (objectMode)
+    ret = list.shift();
+  else if (!n || n >= length) {
+    // read it all, truncate the array.
+    if (stringMode)
+      ret = list.join('');
+    else
+      ret = Buffer.concat(list, length);
+    list.length = 0;
+  } else {
+    // read just some of it.
+    if (n < list[0].length) {
+      // just take a part of the first list item.
+      // slice is the same for buffers and strings.
+      var buf = list[0];
+      ret = buf.slice(0, n);
+      list[0] = buf.slice(n);
+    } else if (n === list[0].length) {
+      // first list is a perfect match
+      ret = list.shift();
+    } else {
+      // complex case.
+      // we have enough to cover it, but it spans past the first buffer.
+      if (stringMode)
+        ret = '';
+      else
+        ret = new Buffer(n);
+
+      var c = 0;
+      for (var i = 0, l = list.length; i < l && c < n; i++) {
+        var buf = list[0];
+        var cpy = Math.min(n - c, buf.length);
+
+        if (stringMode)
+          ret += buf.slice(0, cpy);
+        else
+          buf.copy(ret, c, 0, cpy);
+
+        if (cpy < buf.length)
+          list[0] = buf.slice(cpy);
+        else
+          list.shift();
+
+        c += cpy;
+      }
+    }
+  }
+
+  return ret;
+}
+
+function endReadable(stream) {
+  var state = stream._readableState;
+
+  // If we get here before consuming all the bytes, then that is a
+  // bug in node.  Should never happen.
+  if (state.length > 0)
+    throw new Error('endReadable called on non-empty stream');
+
+  if (!state.endEmitted && state.calledRead) {
+    state.ended = true;
+    setImmediate(function() {
+      // Check that we didn't get one last unshift.
+      if (!state.endEmitted && state.length === 0) {
+        state.endEmitted = true;
+        stream.readable = false;
+        stream.emit('end');
+      }
+    });
+  }
+}
+
+function forEach (xs, f) {
+  for (var i = 0, l = xs.length; i < l; i++) {
+    f(xs[i], i);
+  }
+}
+
+function indexOf (xs, x) {
+  for (var i = 0, l = xs.length; i < l; i++) {
+    if (xs[i] === x) return i;
+  }
+  return -1;
+}
+
+}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
+},{"./index.js":8,"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":6,"buffer":1,"events":4,"inherits":5,"process/browser.js":9,"string_decoder":14}],12:[function(_dereq_,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+// a transform stream is a readable/writable stream where you do
+// something with the data.  Sometimes it's called a "filter",
+// but that's not a great name for it, since that implies a thing where
+// some bits pass through, and others are simply ignored.  (That would
+// be a valid example of a transform, of course.)
+//
+// While the output is causally related to the input, it's not a
+// necessarily symmetric or synchronous transformation.  For example,
+// a zlib stream might take multiple plain-text writes(), and then
+// emit a single compressed chunk some time in the future.
+//
+// Here's how this works:
+//
+// The Transform stream has all the aspects of the readable and writable
+// stream classes.  When you write(chunk), that calls _write(chunk,cb)
+// internally, and returns false if there's a lot of pending writes
+// buffered up.  When you call read(), that calls _read(n) until
+// there's enough pending readable data buffered up.
+//
+// In a transform stream, the written data is placed in a buffer.  When
+// _read(n) is called, it transforms the queued up data, calling the
+// buffered _write cb's as it consumes chunks.  If consuming a single
+// written chunk would result in multiple output chunks, then the first
+// outputted bit calls the readcb, and subsequent chunks just go into
+// the read buffer, and will cause it to emit 'readable' if necessary.
+//
+// This way, back-pressure is actually determined by the reading side,
+// since _read has to be called to start processing a new chunk.  However,
+// a pathological inflate type of transform can cause excessive buffering
+// here.  For example, imagine a stream where every byte of input is
+// interpreted as an integer from 0-255, and then results in that many
+// bytes of output.  Writing the 4 bytes {ff,ff,ff,ff} would result in
+// 1kb of data being output.  In this case, you could write a very small
+// amount of input, and end up with a very large amount of output.  In
+// such a pathological inflating mechanism, there'd be no way to tell
+// the system to stop doing the transform.  A single 4MB write could
+// cause the system to run out of memory.
+//
+// However, even in such a pathological case, only a single written chunk
+// would be consumed, and then the rest would wait (un-transformed) until
+// the results of the previous transformed chunk were consumed.
+
+module.exports = Transform;
+
+var Duplex = _dereq_('./duplex.js');
+var inherits = _dereq_('inherits');
+inherits(Transform, Duplex);
+
+
+function TransformState(options, stream) {
+  this.afterTransform = function(er, data) {
+    return afterTransform(stream, er, data);
+  };
+
+  this.needTransform = false;
+  this.transforming = false;
+  this.writecb = null;
+  this.writechunk = null;
+}
+
+function afterTransform(stream, er, data) {
+  var ts = stream._transformState;
+  ts.transforming = false;
+
+  var cb = ts.writecb;
+
+  if (!cb)
+    return stream.emit('error', new Error('no writecb in Transform class'));
+
+  ts.writechunk = null;
+  ts.writecb = null;
+
+  if (data !== null && data !== undefined)
+    stream.push(data);
+
+  if (cb)
+    cb(er);
+
+  var rs = stream._readableState;
+  rs.reading = false;
+  if (rs.needReadable || rs.length < rs.highWaterMark) {
+    stream._read(rs.highWaterMark);
+  }
+}
+
+
+function Transform(options) {
+  if (!(this instanceof Transform))
+    return new Transform(options);
+
+  Duplex.call(this, options);
+
+  var ts = this._transformState = new TransformState(options, this);
+
+  // when the writable side finishes, then flush out anything remaining.
+  var stream = this;
+
+  // start out asking for a readable event once data is transformed.
+  this._readableState.needReadable = true;
+
+  // we have implemented the _read method, and done the other things
+  // that Readable wants before the first _read call, so unset the
+  // sync guard flag.
+  this._readableState.sync = false;
+
+  this.once('finish', function() {
+    if ('function' === typeof this._flush)
+      this._flush(function(er) {
+        done(stream, er);
+      });
+    else
+      done(stream);
+  });
+}
+
+Transform.prototype.push = function(chunk, encoding) {
+  this._transformState.needTransform = false;
+  return Duplex.prototype.push.call(this, chunk, encoding);
+};
+
+// This is the part where you do stuff!
+// override this function in implementation classes.
+// 'chunk' is an input chunk.
+//
+// Call `push(newChunk)` to pass along transformed output
+// to the readable side.  You may call 'push' zero or more times.
+//
+// Call `cb(err)` when you are done with this chunk.  If you pass
+// an error, then that'll put the hurt on the whole operation.  If you
+// never call cb(), then you'll never get another chunk.
+Transform.prototype._transform = function(chunk, encoding, cb) {
+  throw new Error('not implemented');
+};
+
+Transform.prototype._write = function(chunk, encoding, cb) {
+  var ts = this._transformState;
+  ts.writecb = cb;
+  ts.writechunk = chunk;
+  ts.writeencoding = encoding;
+  if (!ts.transforming) {
+    var rs = this._readableState;
+    if (ts.needTransform ||
+        rs.needReadable ||
+        rs.length < rs.highWaterMark)
+      this._read(rs.highWaterMark);
+  }
+};
+
+// Doesn't matter what the args are here.
+// _transform does all the work.
+// That we got here means that the readable side wants more data.
+Transform.prototype._read = function(n) {
+  var ts = this._transformState;
+
+  if (ts.writechunk && ts.writecb && !ts.transforming) {
+    ts.transforming = true;
+    this._transform(ts.writechunk, ts.writeencoding, ts.afterTransform);
+  } else {
+    // mark that we need a transform, so that any data that comes in
+    // will get processed, now that we've asked for it.
+    ts.needTransform = true;
+  }
+};
+
+
+function done(stream, er) {
+  if (er)
+    return stream.emit('error', er);
+
+  // if there's nothing in the write buffer, then that means
+  // that nothing more will ever be provided
+  var ws = stream._writableState;
+  var rs = stream._readableState;
+  var ts = stream._transformState;
+
+  if (ws.length)
+    throw new Error('calling transform done when ws.length != 0');
+
+  if (ts.transforming)
+    throw new Error('calling transform done when still transforming');
+
+  return stream.push(null);
+}
+
+},{"./duplex.js":7,"inherits":5}],13:[function(_dereq_,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+// A bit simpler than readable streams.
+// Implement an async ._write(chunk, cb), and it'll handle all
+// the drain event emission and buffering.
+
+module.exports = Writable;
+Writable.WritableState = WritableState;
+
+var isUint8Array = typeof Uint8Array !== 'undefined'
+  ? function (x) { return x instanceof Uint8Array }
+  : function (x) {
+    return x && x.constructor && x.constructor.name === 'Uint8Array'
+  }
+;
+var isArrayBuffer = typeof ArrayBuffer !== 'undefined'
+  ? function (x) { return x instanceof ArrayBuffer }
+  : function (x) {
+    return x && x.constructor && x.constructor.name === 'ArrayBuffer'
+  }
+;
+
+var inherits = _dereq_('inherits');
+var Stream = _dereq_('./index.js');
+var setImmediate = _dereq_('process/browser.js').nextTick;
+var Buffer = _dereq_('buffer').Buffer;
+
+inherits(Writable, Stream);
+
+function WriteReq(chunk, encoding, cb) {
+  this.chunk = chunk;
+  this.encoding = encoding;
+  this.callback = cb;
+}
+
+function WritableState(options, stream) {
+  options = options || {};
+
+  // the point at which write() starts returning false
+  // Note: 0 is a valid value, means that we always return false if
+  // the entire buffer is not flushed immediately on write()
+  var hwm = options.highWaterMark;
+  this.highWaterMark = (hwm || hwm === 0) ? hwm : 16 * 1024;
+
+  // object stream flag to indicate whether or not this stream
+  // contains buffers or objects.
+  this.objectMode = !!options.objectMode;
+
+  // cast to ints.
+  this.highWaterMark = ~~this.highWaterMark;
+
+  this.needDrain = false;
+  // at the start of calling end()
+  this.ending = false;
+  // when end() has been called, and returned
+  this.ended = false;
+  // when 'finish' is emitted
+  this.finished = false;
+
+  // should we decode strings into buffers before passing to _write?
+  // this is here so that some node-core streams can optimize string
+  // handling at a lower level.
+  var noDecode = options.decodeStrings === false;
+  this.decodeStrings = !noDecode;
+
+  // Crypto is kind of old and crusty.  Historically, its default string
+  // encoding is 'binary' so we have to make this configurable.
+  // Everything else in the universe uses 'utf8', though.
+  this.defaultEncoding = options.defaultEncoding || 'utf8';
+
+  // not an actual buffer we keep track of, but a measurement
+  // of how much we're waiting to get pushed to some underlying
+  // socket or file.
+  this.length = 0;
+
+  // a flag to see when we're in the middle of a write.
+  this.writing = false;
+
+  // a flag to be able to tell if the onwrite cb is called immediately,
+  // or on a later tick.  We set this to true at first, becuase any
+  // actions that shouldn't happen until "later" should generally also
+  // not happen before the first write call.
+  this.sync = true;
+
+  // a flag to know if we're processing previously buffered items, which
+  // may call the _write() callback in the same tick, so that we don't
+  // end up in an overlapped onwrite situation.
+  this.bufferProcessing = false;
+
+  // the callback that's passed to _write(chunk,cb)
+  this.onwrite = function(er) {
+    onwrite(stream, er);
+  };
+
+  // the callback that the user supplies to write(chunk,encoding,cb)
+  this.writecb = null;
+
+  // the amount that is being written when _write is called.
+  this.writelen = 0;
+
+  this.buffer = [];
+}
+
+function Writable(options) {
+  // Writable ctor is applied to Duplexes, though they're not
+  // instanceof Writable, they're instanceof Readable.
+  if (!(this instanceof Writable) && !(this instanceof Stream.Duplex))
+    return new Writable(options);
+
+  this._writableState = new WritableState(options, this);
+
+  // legacy.
+  this.writable = true;
+
+  Stream.call(this);
+}
+
+// Otherwise people can pipe Writable streams, which is just wrong.
+Writable.prototype.pipe = function() {
+  this.emit('error', new Error('Cannot pipe. Not readable.'));
+};
+
+
+function writeAfterEnd(stream, state, cb) {
+  var er = new Error('write after end');
+  // TODO: defer error events consistently everywhere, not just the cb
+  stream.emit('error', er);
+  setImmediate(function() {
+    cb(er);
+  });
+}
+
+// If we get something that is not a buffer, string, null, or undefined,
+// and we're not in objectMode, then that's an error.
+// Otherwise stream chunks are all considered to be of length=1, and the
+// watermarks determine how many objects to keep in the buffer, rather than
+// how many bytes or characters.
+function validChunk(stream, state, chunk, cb) {
+  var valid = true;
+  if (!Buffer.isBuffer(chunk) &&
+      'string' !== typeof chunk &&
+      chunk !== null &&
+      chunk !== undefined &&
+      !state.objectMode) {
+    var er = new TypeError('Invalid non-string/buffer chunk');
+    stream.emit('error', er);
+    setImmediate(function() {
+      cb(er);
+    });
+    valid = false;
+  }
+  return valid;
+}
+
+Writable.prototype.write = function(chunk, encoding, cb) {
+  var state = this._writableState;
+  var ret = false;
+
+  if (typeof encoding === 'function') {
+    cb = encoding;
+    encoding = null;
+  }
+
+  if (!Buffer.isBuffer(chunk) && isUint8Array(chunk))
+    chunk = new Buffer(chunk);
+  if (isArrayBuffer(chunk) && typeof Uint8Array !== 'undefined')
+    chunk = new Buffer(new Uint8Array(chunk));
+  
+  if (Buffer.isBuffer(chunk))
+    encoding = 'buffer';
+  else if (!encoding)
+    encoding = state.defaultEncoding;
+
+  if (typeof cb !== 'function')
+    cb = function() {};
+
+  if (state.ended)
+    writeAfterEnd(this, state, cb);
+  else if (validChunk(this, state, chunk, cb))
+    ret = writeOrBuffer(this, state, chunk, encoding, cb);
+
+  return ret;
+};
+
+function decodeChunk(state, chunk, encoding) {
+  if (!state.objectMode &&
+      state.decodeStrings !== false &&
+      typeof chunk === 'string') {
+    chunk = new Buffer(chunk, encoding);
+  }
+  return chunk;
+}
+
+// if we're already writing something, then just put this
+// in the queue, and wait our turn.  Otherwise, call _write
+// If we return false, then we need a drain event, so set that flag.
+function writeOrBuffer(stream, state, chunk, encoding, cb) {
+  chunk = decodeChunk(state, chunk, encoding);
+  var len = state.objectMode ? 1 : chunk.length;
+
+  state.length += len;
+
+  var ret = state.length < state.highWaterMark;
+  state.needDrain = !ret;
+
+  if (state.writing)
+    state.buffer.push(new WriteReq(chunk, encoding, cb));
+  else
+    doWrite(stream, state, len, chunk, encoding, cb);
+
+  return ret;
+}
+
+function doWrite(stream, state, len, chunk, encoding, cb) {
+  state.writelen = len;
+  state.writecb = cb;
+  state.writing = true;
+  state.sync = true;
+  stream._write(chunk, encoding, state.onwrite);
+  state.sync = false;
+}
+
+function onwriteError(stream, state, sync, er, cb) {
+  if (sync)
+    setImmediate(function() {
+      cb(er);
+    });
+  else
+    cb(er);
+
+  stream.emit('error', er);
+}
+
+function onwriteStateUpdate(state) {
+  state.writing = false;
+  state.writecb = null;
+  state.length -= state.writelen;
+  state.writelen = 0;
+}
+
+function onwrite(stream, er) {
+  var state = stream._writableState;
+  var sync = state.sync;
+  var cb = state.writecb;
+
+  onwriteStateUpdate(state);
+
+  if (er)
+    onwriteError(stream, state, sync, er, cb);
+  else {
+    // Check if we're actually ready to finish, but don't emit yet
+    var finished = needFinish(stream, state);
+
+    if (!finished && !state.bufferProcessing && state.buffer.length)
+      clearBuffer(stream, state);
+
+    if (sync) {
+      setImmediate(function() {
+        afterWrite(stream, state, finished, cb);
+      });
+    } else {
+      afterWrite(stream, state, finished, cb);
+    }
+  }
+}
+
+function afterWrite(stream, state, finished, cb) {
+  if (!finished)
+    onwriteDrain(stream, state);
+  cb();
+  if (finished)
+    finishMaybe(stream, state);
+}
+
+// Must force callback to be called on nextTick, so that we don't
+// emit 'drain' before the write() consumer gets the 'false' return
+// value, and has a chance to attach a 'drain' listener.
+function onwriteDrain(stream, state) {
+  if (state.length === 0 && state.needDrain) {
+    state.needDrain = false;
+    stream.emit('drain');
+  }
+}
+
+
+// if there's something in the buffer waiting, then process it
+function clearBuffer(stream, state) {
+  state.bufferProcessing = true;
+
+  for (var c = 0; c < state.buffer.length; c++) {
+    var entry = state.buffer[c];
+    var chunk = entry.chunk;
+    var encoding = entry.encoding;
+    var cb = entry.callback;
+    var len = state.objectMode ? 1 : chunk.length;
+
+    doWrite(stream, state, len, chunk, encoding, cb);
+
+    // if we didn't call the onwrite immediately, then
+    // it means that we need to wait until it does.
+    // also, that means that the chunk and cb are currently
+    // being processed, so move the buffer counter past them.
+    if (state.writing) {
+      c++;
+      break;
+    }
+  }
+
+  state.bufferProcessing = false;
+  if (c < state.buffer.length)
+    state.buffer = state.buffer.slice(c);
+  else
+    state.buffer.length = 0;
+}
+
+Writable.prototype._write = function(chunk, encoding, cb) {
+  cb(new Error('not implemented'));
+};
+
+Writable.prototype.end = function(chunk, encoding, cb) {
+  var state = this._writableState;
+
+  if (typeof chunk === 'function') {
+    cb = chunk;
+    chunk = null;
+    encoding = null;
+  } else if (typeof encoding === 'function') {
+    cb = encoding;
+    encoding = null;
+  }
+
+  if (typeof chunk !== 'undefined' && chunk !== null)
+    this.write(chunk, encoding);
+
+  // ignore unnecessary end() calls.
+  if (!state.ending && !state.finished)
+    endWritable(this, state, cb);
+};
+
+
+function needFinish(stream, state) {
+  return (state.ending &&
+          state.length === 0 &&
+          !state.finished &&
+          !state.writing);
+}
+
+function finishMaybe(stream, state) {
+  var need = needFinish(stream, state);
+  if (need) {
+    state.finished = true;
+    stream.emit('finish');
+  }
+  return need;
+}
+
+function endWritable(stream, state, cb) {
+  state.ending = true;
+  finishMaybe(stream, state);
+  if (cb) {
+    if (state.finished)
+      setImmediate(cb);
+    else
+      stream.once('finish', cb);
+  }
+  state.ended = true;
+}
+
+},{"./index.js":8,"buffer":1,"inherits":5,"process/browser.js":9}],14:[function(_dereq_,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+var Buffer = _dereq_('buffer').Buffer;
+
+function assertEncoding(encoding) {
+  if (encoding && !Buffer.isEncoding(encoding)) {
+    throw new Error('Unknown encoding: ' + encoding);
+  }
+}
+
+var StringDecoder = exports.StringDecoder = function(encoding) {
+  this.encoding = (encoding || 'utf8').toLowerCase().replace(/[-_]/, '');
+  assertEncoding(encoding);
+  switch (this.encoding) {
+    case 'utf8':
+      // CESU-8 represents each of Surrogate Pair by 3-bytes
+      this.surrogateSize = 3;
+      break;
+    case 'ucs2':
+    case 'utf16le':
+      // UTF-16 represents each of Surrogate Pair by 2-bytes
+      this.surrogateSize = 2;
+      this.detectIncompleteChar = utf16DetectIncompleteChar;
+      break;
+    case 'base64':
+      // Base-64 stores 3 bytes in 4 chars, and pads the remainder.
+      this.surrogateSize = 3;
+      this.detectIncompleteChar = base64DetectIncompleteChar;
+      break;
+    default:
+      this.write = passThroughWrite;
+      return;
+  }
+
+  this.charBuffer = new Buffer(6);
+  this.charReceived = 0;
+  this.charLength = 0;
+};
+
+
+StringDecoder.prototype.write = function(buffer) {
+  var charStr = '';
+  var offset = 0;
+
+  // if our last write ended with an incomplete multibyte character
+  while (this.charLength) {
+    // determine how many remaining bytes this buffer has to offer for this char
+    var i = (buffer.length >= this.charLength - this.charReceived) ?
+                this.charLength - this.charReceived :
+                buffer.length;
+
+    // add the new bytes to the char buffer
+    buffer.copy(this.charBuffer, this.charReceived, offset, i);
+    this.charReceived += (i - offset);
+    offset = i;
+
+    if (this.charReceived < this.charLength) {
+      // still not enough chars in this buffer? wait for more ...
+      return '';
+    }
+
+    // get the character that was split
+    charStr = this.charBuffer.slice(0, this.charLength).toString(this.encoding);
+
+    // lead surrogate (D800-DBFF) is also the incomplete character
+    var charCode = charStr.charCodeAt(charStr.length - 1);
+    if (charCode >= 0xD800 && charCode <= 0xDBFF) {
+      this.charLength += this.surrogateSize;
+      charStr = '';
+      continue;
+    }
+    this.charReceived = this.charLength = 0;
+
+    // if there are no more bytes in this buffer, just emit our char
+    if (i == buffer.length) return charStr;
+
+    // otherwise cut off the characters end from the beginning of this buffer
+    buffer = buffer.slice(i, buffer.length);
+    break;
+  }
+
+  var lenIncomplete = this.detectIncompleteChar(buffer);
+
+  var end = buffer.length;
+  if (this.charLength) {
+    // buffer the incomplete character bytes we got
+    buffer.copy(this.charBuffer, 0, buffer.length - lenIncomplete, end);
+    this.charReceived = lenIncomplete;
+    end -= lenIncomplete;
+  }
+
+  charStr += buffer.toString(this.encoding, 0, end);
+
+  var end = charStr.length - 1;
+  var charCode = charStr.charCodeAt(end);
+  // lead surrogate (D800-DBFF) is also the incomplete character
+  if (charCode >= 0xD800 && charCode <= 0xDBFF) {
+    var size = this.surrogateSize;
+    this.charLength += size;
+    this.charReceived += size;
+    this.charBuffer.copy(this.charBuffer, size, 0, size);
+    this.charBuffer.write(charStr.charAt(charStr.length - 1), this.encoding);
+    return charStr.substring(0, end);
+  }
+
+  // or just emit the charStr
+  return charStr;
+};
+
+StringDecoder.prototype.detectIncompleteChar = function(buffer) {
+  // determine how many bytes we have to check at the end of this buffer
+  var i = (buffer.length >= 3) ? 3 : buffer.length;
+
+  // Figure out if one of the last i bytes of our buffer announces an
+  // incomplete char.
+  for (; i > 0; i--) {
+    var c = buffer[buffer.length - i];
+
+    // See http://en.wikipedia.org/wiki/UTF-8#Description
+
+    // 110XXXXX
+    if (i == 1 && c >> 5 == 0x06) {
+      this.charLength = 2;
+      break;
+    }
+
+    // 1110XXXX
+    if (i <= 2 && c >> 4 == 0x0E) {
+      this.charLength = 3;
+      break;
+    }
+
+    // 11110XXX
+    if (i <= 3 && c >> 3 == 0x1E) {
+      this.charLength = 4;
+      break;
+    }
+  }
+
+  return i;
+};
+
+StringDecoder.prototype.end = function(buffer) {
+  var res = '';
+  if (buffer && buffer.length)
+    res = this.write(buffer);
+
+  if (this.charReceived) {
+    var cr = this.charReceived;
+    var buf = this.charBuffer;
+    var enc = this.encoding;
+    res += buf.slice(0, cr).toString(enc);
+  }
+
+  return res;
+};
+
+function passThroughWrite(buffer) {
+  return buffer.toString(this.encoding);
+}
+
+function utf16DetectIncompleteChar(buffer) {
+  var incomplete = this.charReceived = buffer.length % 2;
+  this.charLength = incomplete ? 2 : 0;
+  return incomplete;
+}
+
+function base64DetectIncompleteChar(buffer) {
+  var incomplete = this.charReceived = buffer.length % 3;
+  this.charLength = incomplete ? 3 : 0;
+  return incomplete;
+}
+
+},{"buffer":1}],15:[function(_dereq_,module,exports){
 (function (Buffer){
 var Zlib = module.exports = _dereq_('./zlib');
 
@@ -1723,7 +3785,7 @@ Zlib.gzip = function gzip(stringOrBuffer, callback) {
 };
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"./zlib":7,"buffer":1}],7:[function(_dereq_,module,exports){
+},{"./zlib":16,"buffer":1}],16:[function(_dereq_,module,exports){
 (function (process,Buffer){
 /** @license zlib.js 0.1.7 2012 - imaya [ https://github.com/imaya/zlib.js ] The MIT License */(function() {'use strict';function q(b){throw b;}var t=void 0,u=!0;var A="undefined"!==typeof Uint8Array&&"undefined"!==typeof Uint16Array&&"undefined"!==typeof Uint32Array;function E(b,a){this.index="number"===typeof a?a:0;this.m=0;this.buffer=b instanceof(A?Uint8Array:Array)?b:new (A?Uint8Array:Array)(32768);2*this.buffer.length<=this.index&&q(Error("invalid index"));this.buffer.length<=this.index&&this.f()}E.prototype.f=function(){var b=this.buffer,a,c=b.length,d=new (A?Uint8Array:Array)(c<<1);if(A)d.set(b);else for(a=0;a<c;++a)d[a]=b[a];return this.buffer=d};
 E.prototype.d=function(b,a,c){var d=this.buffer,f=this.index,e=this.m,g=d[f],k;c&&1<a&&(b=8<a?(G[b&255]<<24|G[b>>>8&255]<<16|G[b>>>16&255]<<8|G[b>>>24&255])>>32-a:G[b]>>8-a);if(8>a+e)g=g<<a|b,e+=a;else for(k=0;k<a;++k)g=g<<1|b>>a-k-1&1,8===++e&&(e=0,d[f++]=G[g],g=0,f===d.length&&(d=this.f()));d[f]=g;this.buffer=d;this.m=e;this.index=f};E.prototype.finish=function(){var b=this.buffer,a=this.index,c;0<this.m&&(b[a]<<=8-this.m,b[a]=G[b[a]],a++);A?c=b.subarray(0,a):(b.length=a,c=b);return c};
@@ -1781,12 +3843,12 @@ function xb(b,a){var c;b.subarray=b.slice;c=(new pb(b)).i();a||(a={});return a.n
 function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[c];return a};}).call(this); //@ sourceMappingURL=node-zlib.js.map
 
 }).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1}],8:[function(_dereq_,module,exports){
+},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":6,"buffer":1}],17:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
   var Data;
 
   Data = (function() {
-
     function Data(data) {
       this.data = data != null ? data : [];
       this.pos = 0;
@@ -1840,7 +3902,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     Data.prototype.writeInt32 = function(val) {
-      if (val < 0) val += 0x100000000;
+      if (val < 0) {
+        val += 0x100000000;
+      }
       return this.writeUInt32(val);
     };
 
@@ -1867,23 +3931,25 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     Data.prototype.writeInt16 = function(val) {
-      if (val < 0) val += 0x10000;
+      if (val < 0) {
+        val += 0x10000;
+      }
       return this.writeUInt16(val);
     };
 
     Data.prototype.readString = function(length) {
-      var i, ret;
+      var i, ret, _i;
       ret = [];
-      for (i = 0; 0 <= length ? i < length : i > length; 0 <= length ? i++ : i--) {
+      for (i = _i = 0; 0 <= length ? _i < length : _i > length; i = 0 <= length ? ++_i : --_i) {
         ret[i] = String.fromCharCode(this.readByte());
       }
       return ret.join('');
     };
 
     Data.prototype.writeString = function(val) {
-      var i, _ref, _results;
+      var i, _i, _ref, _results;
       _results = [];
-      for (i = 0, _ref = val.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      for (i = _i = 0, _ref = val.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
         _results.push(this.writeByte(val.charCodeAt(i)));
       }
       return _results;
@@ -1945,9 +4011,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     Data.prototype.read = function(bytes) {
-      var buf, i;
+      var buf, i, _i;
       buf = [];
-      for (i = 0; 0 <= bytes ? i < bytes : i > bytes; 0 <= bytes ? i++ : i--) {
+      for (i = _i = 0; 0 <= bytes ? _i < bytes : _i > bytes; i = 0 <= bytes ? ++_i : --_i) {
         buf.push(this.readByte());
       }
       return buf;
@@ -1971,20 +4037,23 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{}],9:[function(_dereq_,module,exports){
+},{}],18:[function(_dereq_,module,exports){
 (function (Buffer){
+// Generated by CoffeeScript 1.7.1
+
+/*
+PDFDocument - represents an entire PDF document
+By Devon Govett
+ */
+
 (function() {
+  var PDFDocument, PDFObject, PDFPage, PDFReference, fs, stream,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-  /*
-  PDFDocument - represents an entire PDF document
-  By Devon Govett
-  */
-
-  var PDFDocument, PDFObject, PDFObjectStore, PDFPage, PDFReference, fs;
+  stream = _dereq_('stream');
 
   fs = _dereq_('fs');
-
-  PDFObjectStore = _dereq_('./store');
 
   PDFObject = _dereq_('./object');
 
@@ -1992,37 +4061,49 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
   PDFPage = _dereq_('./page');
 
-  PDFDocument = (function() {
+  PDFDocument = (function(_super) {
     var mixin;
-    var _this = this;
+
+    __extends(PDFDocument, _super);
 
     function PDFDocument(options) {
-      var key, val, _ref;
+      var key, val, _ref, _ref1;
       this.options = options != null ? options : {};
+      PDFDocument.__super__.constructor.apply(this, arguments);
       this.version = 1.3;
-      this.compress = true;
-      this.store = new PDFObjectStore;
-      this.pages = [];
+      this.compress = (_ref = this.options.compress) != null ? _ref : true;
+      this._offsets = [];
+      this._waiting = 0;
+      this._ended = false;
+      this._offset = 0;
+      this._root = this.ref({
+        Type: 'Catalog',
+        Pages: this.ref({
+          Type: 'Pages',
+          Count: 0,
+          Kids: []
+        })
+      });
       this.page = null;
       this.initColor();
       this.initVector();
       this.initFonts();
       this.initText();
       this.initImages();
-      this._info = this.ref({
+      this.info = {
         Producer: 'PDFKit',
         Creator: 'PDFKit',
         CreationDate: new Date()
-      });
-      this.info = this._info.data;
+      };
       if (this.options.info) {
-        _ref = this.options.info;
-        for (key in _ref) {
-          val = _ref[key];
+        _ref1 = this.options.info;
+        for (key in _ref1) {
+          val = _ref1[key];
           this.info[key] = val;
         }
-        delete this.options.info;
       }
+      this._write("%PDF-" + this.version);
+      this._write("%\xFF\xFF\xFF\xFF");
       this.addPage();
     }
 
@@ -2050,10 +4131,17 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     mixin('annotations', _dereq_('./mixins/annotations.js'));
 
     PDFDocument.prototype.addPage = function(options) {
-      if (options == null) options = this.options;
+      var pages, _ref;
+      if (options == null) {
+        options = this.options;
+      }
+      if ((_ref = this.page) != null) {
+        _ref.end();
+      }
       this.page = new PDFPage(this, options);
-      this.store.addPage(this.page);
-      this.pages.push(this.page);
+      pages = this._root.data.Pages.data;
+      pages.Kids.push(this.page.dictionary);
+      pages.Count++;
       this.x = this.page.margins.left;
       this.y = this.page.margins.top;
       this._ctm = [1, 0, 0, 1, 0, 0];
@@ -2062,154 +4150,129 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     PDFDocument.prototype.ref = function(data) {
-      return this.store.ref(data);
+      var ref;
+      ref = new PDFReference(this, this._offsets.length + 1, data);
+      this._offsets.push(null);
+      this._waiting++;
+      return ref;
     };
 
-    PDFDocument.prototype.addContent = function(str) {
-      this.page.content.add(str);
+    PDFDocument.prototype._read = function() {};
+
+    PDFDocument.prototype._write = function(data) {
+      if (!Buffer.isBuffer(data)) {
+        data = new Buffer(data + '\n', 'binary');
+      }
+      this.push(data);
+      return this._offset += data.length;
+    };
+
+    PDFDocument.prototype.addContent = function(data) {
+      this.page.write(data);
       return this;
     };
 
+    PDFDocument.prototype._refEnd = function(ref) {
+      this._offsets[ref.id - 1] = ref.offset;
+      if (--this._waiting === 0 && this._ended) {
+        this._finalize();
+        return this._ended = false;
+      }
+    };
+
     PDFDocument.prototype.write = function(filename, fn) {
-      return this.output(function(out) {
-        return fs.writeFile(filename, out, 'binary', fn);
-      });
+      var err;
+      err = new Error('PDFDocument#write is deprecated, and will be removed in a future version of PDFKit. Please pipe the document into a Node stream.');
+      console.warn(err.stack);
+      this.pipe(fs.createWriteStream(filename));
+      this.end();
+      return this.once('end', fn);
     };
 
     PDFDocument.prototype.output = function(fn) {
-      var _this = this;
-      return this.finalize(function() {
-        var out;
-        out = [];
-        _this.generateHeader(out);
-        return _this.generateBody(out, function() {
-          var k, ret, _i, _len;
-          _this.generateXRef(out);
-          _this.generateTrailer(out);
-          ret = [];
-          for (_i = 0, _len = out.length; _i < _len; _i++) {
-            k = out[_i];
-            ret.push(k + '\n');
-          }
-          return fn(new Buffer(ret.join(''), 'binary'));
-        });
-      });
+      throw new Error('PDFDocument#output is deprecated, and has been removed from PDFKit. Please pipe the document into a Node stream.');
     };
 
-    PDFDocument.prototype.finalize = function(fn) {
-      var key, val, _ref;
-      var _this = this;
+    PDFDocument.prototype.end = function() {
+      var font, key, name, val, _ref, _ref1;
+      this.page.end();
+      this._info = this.ref();
       _ref = this.info;
       for (key in _ref) {
         val = _ref[key];
-        if (typeof val === 'string') this.info[key] = PDFObject.s(val, true);
-      }
-      return this.embedFonts(function() {
-        return _this.embedImages(function() {
-          var cb, done, page, _i, _len, _ref2, _results;
-          done = 0;
-          cb = function() {
-            if (++done === _this.pages.length) return fn();
-          };
-          _ref2 = _this.pages;
-          _results = [];
-          for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-            page = _ref2[_i];
-            _results.push(page.finalize(cb));
-          }
-          return _results;
-        });
-      });
-    };
-
-    PDFDocument.prototype.generateHeader = function(out) {
-      out.push("%PDF-" + this.version);
-      out.push("%\xFF\xFF\xFF\xFF\n");
-      return out;
-    };
-
-    PDFDocument.prototype.generateBody = function(out, fn) {
-      var id, offset, proceed, ref, refs;
-      var _this = this;
-      offset = out.join('\n').length + 1;
-      refs = (function() {
-        var _ref, _results;
-        _ref = this.store.objects;
-        _results = [];
-        for (id in _ref) {
-          ref = _ref[id];
-          _results.push(ref);
+        if (typeof val === 'string') {
+          val = PDFObject.s(val, true);
         }
-        return _results;
-      }).call(this);
-      return (proceed = function() {
-        if (ref = refs.shift()) {
-          return ref.object(_this.compress, function(object) {
-            ref.offset = offset;
-            out.push(object);
-            offset += object.length + 1;
-            return proceed();
-          });
-        } else {
-          _this.xref_offset = offset;
-          return fn();
-        }
-      })();
-    };
-
-    PDFDocument.prototype.generateXRef = function(out) {
-      var id, len, offset, ref, _ref, _results;
-      len = this.store.length + 1;
-      out.push("xref");
-      out.push("0 " + len);
-      out.push("0000000000 65535 f ");
-      _ref = this.store.objects;
-      _results = [];
-      for (id in _ref) {
-        ref = _ref[id];
-        offset = ('0000000000' + ref.offset).slice(-10);
-        _results.push(out.push(offset + ' 00000 n '));
+        this._info.data[key] = val;
       }
-      return _results;
+      this._info.end();
+      _ref1 = this._fontFamilies;
+      for (name in _ref1) {
+        font = _ref1[name];
+        font.embed();
+      }
+      this._root.end();
+      this._root.data.Pages.end();
+      if (this._waiting === 0) {
+        return this._finalize();
+      } else {
+        return this._ended = true;
+      }
     };
 
-    PDFDocument.prototype.generateTrailer = function(out) {
-      var trailer;
-      trailer = PDFObject.convert({
-        Size: this.store.length + 1,
-        Root: this.store.root,
+    PDFDocument.prototype._finalize = function(fn) {
+      var offset, xRefOffset, _i, _len, _ref;
+      xRefOffset = this._offset;
+      this._write("xref");
+      this._write("0 " + (this._offsets.length + 1));
+      this._write("0000000000 65535 f ");
+      _ref = this._offsets;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        offset = _ref[_i];
+        offset = ('0000000000' + offset).slice(-10);
+        this._write(offset + ' 00000 n ');
+      }
+      this._write('trailer');
+      this._write(PDFObject.convert({
+        Size: this._offsets.length,
+        Root: this._root,
         Info: this._info
-      });
-      out.push('trailer');
-      out.push(trailer);
-      out.push('startxref');
-      out.push(this.xref_offset);
-      return out.push('%%EOF');
+      }));
+      this._write('startxref');
+      this._write("" + xRefOffset);
+      this._write('%%EOF');
+      return this.push(null);
     };
 
     PDFDocument.prototype.toString = function() {
       return "[object PDFDocument]";
     };
-	PDFDocument.PDFImage = _dereq_("./image"); return PDFDocument;
 
-  }).call(this);
+    return PDFDocument;
+
+  })(stream.Readable);
+
+  PDFDocument.PDFImage = _dereq_('./image');
+
+  PDFDocument.PDFReference = PDFReference;
 
   module.exports = PDFDocument;
 
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"./image":29,"./mixins/annotations.js":33,"./mixins/color.js":34,"./mixins/fonts.js":35,"./mixins/images.js":36,"./mixins/text.js":37,"./mixins/vector.js":38,"./object":39,"./page":40,"./reference":42,"./store":43,"buffer":1,"fs":"x/K9gc"}],10:[function(_dereq_,module,exports){
+},{"./image":38,"./mixins/annotations.js":42,"./mixins/color.js":43,"./mixins/fonts.js":44,"./mixins/images.js":45,"./mixins/text.js":46,"./mixins/vector.js":47,"./object":48,"./page":49,"./reference":51,"buffer":1,"fs":"x/K9gc","stream":8}],19:[function(_dereq_,module,exports){
 (function (__dirname){
+// Generated by CoffeeScript 1.7.1
+
+/*
+PDFFont - embeds fonts in PDF documents
+By Devon Govett
+ */
+
 (function() {
-
-  /*
-  PDFFont - embeds fonts in PDF documents
-  By Devon Govett
-  */
-
-  var AFMFont, PDFFont, Subset, TTFFont, zlib;
-  var __hasProp = Object.prototype.hasOwnProperty, __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (__hasProp.call(this, i) && this[i] === item) return i; } return -1; };
+  var AFMFont, PDFFont, Subset, TTFFont, zlib,
+    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   TTFFont = _dereq_('./font/ttf');
 
@@ -2220,7 +4283,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
   zlib = _dereq_('zlib');
 
   PDFFont = (function() {
-    var WIN_ANSI_MAP, encodeWinAnsi, toUnicodeCmap;
+    var toUnicodeCmap;
 
     function PDFFont(document, filename, family, id) {
       var _ref;
@@ -2228,15 +4291,18 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       this.filename = filename;
       this.family = family;
       this.id = id;
+      this.ref = this.document.ref();
       if (_ref = this.filename, __indexOf.call(this._standardFonts, _ref) >= 0) {
-        this.embedStandard();
+        this.isAFM = true;
+        this.font = AFMFont.open(__dirname + ("/font/data/" + this.filename + ".afm"));
+        this.registerAFM();
       } else if (/\.(ttf|ttc)$/i.test(this.filename)) {
-        this.ttf = TTFFont.open(this.filename, this.family);
-        this.subset = new Subset(this.ttf);
+        this.font = TTFFont.open(this.filename, this.family);
+        this.subset = new Subset(this.font);
         this.registerTTF();
       } else if (/\.dfont$/i.test(this.filename)) {
-        this.ttf = TTFFont.fromDFont(this.filename, this.family);
-        this.subset = new Subset(this.ttf);
+        this.font = TTFFont.fromDFont(this.filename, this.family);
+        this.subset = new Subset(this.font);
         this.registerTTF();
       } else {
         throw new Error('Not a supported font format or standard PDF font.');
@@ -2248,9 +4314,272 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       return (_ref = this.subset) != null ? _ref.use(characters) : void 0;
     };
 
-    PDFFont.prototype.embed = function(fn) {
-      if (this.isAFM) return fn();
-      return this.embedTTF(fn);
+    PDFFont.prototype.embed = function() {
+      if (this.isAFM) {
+        return this.embedAFM();
+      } else {
+        return this.embedTTF();
+      }
+    };
+
+    PDFFont.prototype.encode = function(text) {
+      var _ref;
+      if (this.isAFM) {
+        return this.font.encodeText(text);
+      } else {
+        return ((_ref = this.subset) != null ? _ref.encodeText(text) : void 0) || text;
+      }
+    };
+
+    PDFFont.prototype.registerTTF = function() {
+      var e, hi, low, raw, _ref;
+      this.scaleFactor = 1000.0 / this.font.head.unitsPerEm;
+      this.bbox = (function() {
+        var _i, _len, _ref, _results;
+        _ref = this.font.bbox;
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          e = _ref[_i];
+          _results.push(Math.round(e * this.scaleFactor));
+        }
+        return _results;
+      }).call(this);
+      this.stemV = 0;
+      if (this.font.post.exists) {
+        raw = this.font.post.italic_angle;
+        hi = raw >> 16;
+        low = raw & 0xFF;
+        if (hi & 0x8000 !== 0) {
+          hi = -((hi ^ 0xFFFF) + 1);
+        }
+        this.italicAngle = +("" + hi + "." + low);
+      } else {
+        this.italicAngle = 0;
+      }
+      this.ascender = Math.round(this.font.ascender * this.scaleFactor);
+      this.decender = Math.round(this.font.decender * this.scaleFactor);
+      this.lineGap = Math.round(this.font.lineGap * this.scaleFactor);
+      this.capHeight = (this.font.os2.exists && this.font.os2.capHeight) || this.ascender;
+      this.xHeight = (this.font.os2.exists && this.font.os2.xHeight) || 0;
+      this.familyClass = (this.font.os2.exists && this.font.os2.familyClass || 0) >> 8;
+      this.isSerif = (_ref = this.familyClass) === 1 || _ref === 2 || _ref === 3 || _ref === 4 || _ref === 5 || _ref === 7;
+      this.isScript = this.familyClass === 10;
+      this.flags = 0;
+      if (this.font.post.isFixedPitch) {
+        this.flags |= 1 << 0;
+      }
+      if (this.isSerif) {
+        this.flags |= 1 << 1;
+      }
+      if (this.isScript) {
+        this.flags |= 1 << 3;
+      }
+      if (this.italicAngle !== 0) {
+        this.flags |= 1 << 6;
+      }
+      this.flags |= 1 << 5;
+      if (!this.font.cmap.unicode) {
+        throw new Error('No unicode cmap for font');
+      }
+    };
+
+    PDFFont.prototype.embedTTF = function() {
+      var charWidths, cmap, code, data, descriptor, firstChar, fontfile, glyph;
+      data = this.subset.encode();
+      fontfile = this.document.ref();
+      fontfile.write(data);
+      fontfile.data.Length1 = fontfile.uncompressedLength;
+      fontfile.end();
+      descriptor = this.document.ref({
+        Type: 'FontDescriptor',
+        FontName: this.subset.postscriptName,
+        FontFile2: fontfile,
+        FontBBox: this.bbox,
+        Flags: this.flags,
+        StemV: this.stemV,
+        ItalicAngle: this.italicAngle,
+        Ascent: this.ascender,
+        Descent: this.decender,
+        CapHeight: this.capHeight,
+        XHeight: this.xHeight
+      });
+      descriptor.end();
+      firstChar = +Object.keys(this.subset.cmap)[0];
+      charWidths = (function() {
+        var _ref, _results;
+        _ref = this.subset.cmap;
+        _results = [];
+        for (code in _ref) {
+          glyph = _ref[code];
+          _results.push(Math.round(this.font.widthOfGlyph(glyph)));
+        }
+        return _results;
+      }).call(this);
+      cmap = this.document.ref();
+      cmap.end(toUnicodeCmap(this.subset.subset));
+      this.ref.data = {
+        Type: 'Font',
+        BaseFont: this.subset.postscriptName,
+        Subtype: 'TrueType',
+        FontDescriptor: descriptor,
+        FirstChar: firstChar,
+        LastChar: firstChar + charWidths.length - 1,
+        Widths: charWidths,
+        Encoding: 'MacRomanEncoding',
+        ToUnicode: cmap
+      };
+      return this.ref.end();
+    };
+
+    toUnicodeCmap = function(map) {
+      var code, codes, range, unicode, unicodeMap, _i, _len;
+      unicodeMap = '/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo <<\n  /Registry (Adobe)\n  /Ordering (UCS)\n  /Supplement 0\n>> def\n/CMapName /Adobe-Identity-UCS def\n/CMapType 2 def\n1 begincodespacerange\n<00><ff>\nendcodespacerange';
+      codes = Object.keys(map).sort(function(a, b) {
+        return a - b;
+      });
+      range = [];
+      for (_i = 0, _len = codes.length; _i < _len; _i++) {
+        code = codes[_i];
+        if (range.length >= 100) {
+          unicodeMap += "\n" + range.length + " beginbfchar\n" + (range.join('\n')) + "\nendbfchar";
+          range = [];
+        }
+        unicode = ('0000' + map[code].toString(16)).slice(-4);
+        code = (+code).toString(16);
+        range.push("<" + code + "><" + unicode + ">");
+      }
+      if (range.length) {
+        unicodeMap += "\n" + range.length + " beginbfchar\n" + (range.join('\n')) + "\nendbfchar\n";
+      }
+      return unicodeMap += 'endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend';
+    };
+
+    PDFFont.prototype.registerAFM = function() {
+      var _ref;
+      return _ref = this.font, this.ascender = _ref.ascender, this.decender = _ref.decender, this.bbox = _ref.bbox, this.lineGap = _ref.lineGap, _ref;
+    };
+
+    PDFFont.prototype.embedAFM = function() {
+      this.ref.data = {
+        Type: 'Font',
+        BaseFont: this.filename,
+        Subtype: 'Type1',
+        Encoding: 'WinAnsiEncoding'
+      };
+      return this.ref.end();
+    };
+
+    PDFFont.prototype._standardFonts = ["Courier", "Courier-Bold", "Courier-Oblique", "Courier-BoldOblique", "Helvetica", "Helvetica-Bold", "Helvetica-Oblique", "Helvetica-BoldOblique", "Times-Roman", "Times-Bold", "Times-Italic", "Times-BoldItalic", "Symbol", "ZapfDingbats"];
+
+    PDFFont.prototype.widthOfString = function(string, size) {
+      var charCode, i, scale, width, _i, _ref;
+      string = '' + string;
+      width = 0;
+      for (i = _i = 0, _ref = string.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
+        charCode = string.charCodeAt(i);
+        width += this.font.widthOfGlyph(this.font.characterToGlyph(charCode)) || 0;
+      }
+      scale = size / 1000;
+      return width * scale;
+    };
+
+    PDFFont.prototype.lineHeight = function(size, includeGap) {
+      var gap;
+      if (includeGap == null) {
+        includeGap = false;
+      }
+      gap = includeGap ? this.lineGap : 0;
+      return (this.ascender + gap - this.decender) / 1000 * size;
+    };
+
+    return PDFFont;
+
+  })();
+
+  module.exports = PDFFont;
+
+}).call(this);
+
+}).call(this,"/../../node_modules/pdfmake-pdfkit/js")
+},{"./font/afm":20,"./font/subset":23,"./font/ttf":35,"zlib":15}],20:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
+(function() {
+  var AFMFont, fs;
+
+  fs = _dereq_('fs');
+
+  AFMFont = (function() {
+    var WIN_ANSI_MAP, characters;
+
+    AFMFont.open = function(filename) {
+      return new AFMFont(filename);
+    };
+
+    function AFMFont(filename) {
+      var e, i;
+      this.contents = fs.readFileSync(filename, 'utf8');
+      this.attributes = {};
+      this.glyphWidths = {};
+      this.boundingBoxes = {};
+      this.parse();
+      this.charWidths = (function() {
+        var _i, _results;
+        _results = [];
+        for (i = _i = 0; _i <= 255; i = ++_i) {
+          _results.push(this.glyphWidths[characters[i]]);
+        }
+        return _results;
+      }).call(this);
+      this.bbox = (function() {
+        var _i, _len, _ref, _results;
+        _ref = this.attributes['FontBBox'].split(/\s+/);
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          e = _ref[_i];
+          _results.push(+e);
+        }
+        return _results;
+      }).call(this);
+      this.ascender = +this.attributes['Ascender'];
+      this.decender = +this.attributes['Descender'];
+      this.lineGap = (this.bbox[3] - this.bbox[1]) - (this.ascender - this.decender);
+    }
+
+    AFMFont.prototype.parse = function() {
+      var a, key, line, match, name, section, value, _i, _len, _ref;
+      section = '';
+      _ref = this.contents.split('\n');
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        line = _ref[_i];
+        if (match = line.match(/^Start(\w+)/)) {
+          section = match[1];
+          continue;
+        } else if (match = line.match(/^End(\w+)/)) {
+          section = '';
+          continue;
+        }
+        switch (section) {
+          case 'FontMetrics':
+            match = line.match(/(^\w+)\s+(.*)/);
+            key = match[1];
+            value = match[2];
+            if (a = this.attributes[key]) {
+              if (!Array.isArray(a)) {
+                a = this.attributes[key] = [a];
+              }
+              a.push(value);
+            } else {
+              this.attributes[key] = value;
+            }
+            break;
+          case 'CharMetrics':
+            if (!/^CH?\s/.test(line)) {
+              continue;
+            }
+            name = line.match(/\bN\s+(\.?\w+)\s*;/)[1];
+            this.glyphWidths[name] = +line.match(/\bWX\s+(\d+)\s*;/)[1];
+        }
+      }
     };
 
     WIN_ANSI_MAP = {
@@ -2283,10 +4612,10 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       382: 158
     };
 
-    encodeWinAnsi = function(text) {
-      var char, i, string, _ref;
+    AFMFont.prototype.encodeText = function(text) {
+      var char, i, string, _i, _ref;
       string = '';
-      for (i = 0, _ref = text.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      for (i = _i = 0, _ref = text.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
         char = text.charCodeAt(i);
         char = WIN_ANSI_MAP[char] || char;
         string += String.fromCharCode(char);
@@ -2294,276 +4623,12 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       return string;
     };
 
-    PDFFont.prototype.encode = function(text) {
-      var _ref;
-      if (this.isAFM) {
-        return encodeWinAnsi(text);
-      } else {
-        return ((_ref = this.subset) != null ? _ref.encodeText(text) : void 0) || text;
-      }
+    AFMFont.prototype.characterToGlyph = function(character) {
+      return characters[WIN_ANSI_MAP[character] || character];
     };
 
-    PDFFont.prototype.registerTTF = function() {
-      var e, gid, hi, i, low, raw, _ref;
-      this.scaleFactor = 1000.0 / this.ttf.head.unitsPerEm;
-      this.bbox = (function() {
-        var _i, _len, _ref, _results;
-        _ref = this.ttf.bbox;
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          e = _ref[_i];
-          _results.push(Math.round(e * this.scaleFactor));
-        }
-        return _results;
-      }).call(this);
-      this.stemV = 0;
-      if (this.ttf.post.exists) {
-        raw = this.ttf.post.italic_angle;
-        hi = raw >> 16;
-        low = raw & 0xFF;
-        if (hi & 0x8000 !== 0) hi = -((hi ^ 0xFFFF) + 1);
-        this.italicAngle = +("" + hi + "." + low);
-      } else {
-        this.italicAngle = 0;
-      }
-      this.ascender = Math.round(this.ttf.ascender * this.scaleFactor);
-      this.decender = Math.round(this.ttf.decender * this.scaleFactor);
-      this.lineGap = Math.round(this.ttf.lineGap * this.scaleFactor);
-      this.capHeight = (this.ttf.os2.exists && this.ttf.os2.capHeight) || this.ascender;
-      this.xHeight = (this.ttf.os2.exists && this.ttf.os2.xHeight) || 0;
-      this.familyClass = (this.ttf.os2.exists && this.ttf.os2.familyClass || 0) >> 8;
-      this.isSerif = (_ref = this.familyClass) === 1 || _ref === 2 || _ref === 3 || _ref === 4 || _ref === 5 || _ref === 7;
-      this.isScript = this.familyClass === 10;
-      this.flags = 0;
-      if (this.ttf.post.isFixedPitch) this.flags |= 1 << 0;
-      if (this.isSerif) this.flags |= 1 << 1;
-      if (this.isScript) this.flags |= 1 << 3;
-      if (this.italicAngle !== 0) this.flags |= 1 << 6;
-      this.flags |= 1 << 5;
-      this.cmap = this.ttf.cmap.unicode;
-      if (!this.cmap) throw new Error('No unicode cmap for font');
-      this.hmtx = this.ttf.hmtx;
-      this.charWidths = (function() {
-        var _ref2, _results;
-        _ref2 = this.cmap.codeMap;
-        _results = [];
-        for (i in _ref2) {
-          gid = _ref2[i];
-          if (i >= 32) {
-            _results.push(Math.round(this.hmtx.widths[gid] * this.scaleFactor));
-          }
-        }
-        return _results;
-      }).call(this);
-      return this.ref = this.document.ref({
-        Type: 'Font',
-        Subtype: 'TrueType'
-      });
-    };
-
-    PDFFont.prototype.embedTTF = function(fn) {
-      var data;
-      var _this = this;
-      data = this.subset.encode();
-      return zlib.deflate(data, function(err, compressedData) {
-        var charWidths, cmap, code, firstChar, glyph, key, ref, val;
-        if (err) throw err;
-        _this.fontfile = _this.document.ref({
-          Length: compressedData.length,
-          Length1: data.length,
-          Filter: 'FlateDecode'
-        });
-        _this.fontfile.add(compressedData);
-        _this.descriptor = _this.document.ref({
-          Type: 'FontDescriptor',
-          FontName: _this.subset.postscriptName,
-          FontFile2: _this.fontfile,
-          FontBBox: _this.bbox,
-          Flags: _this.flags,
-          StemV: _this.stemV,
-          ItalicAngle: _this.italicAngle,
-          Ascent: _this.ascender,
-          Descent: _this.decender,
-          CapHeight: _this.capHeight,
-          XHeight: _this.xHeight
-        });
-        firstChar = +Object.keys(_this.subset.cmap)[0];
-        charWidths = (function() {
-          var _ref, _results;
-          _ref = this.subset.cmap;
-          _results = [];
-          for (code in _ref) {
-            glyph = _ref[code];
-            _results.push(Math.round(this.ttf.hmtx.forGlyph(glyph).advance * this.scaleFactor));
-          }
-          return _results;
-        }).call(_this);
-        cmap = _this.document.ref();
-        cmap.add(toUnicodeCmap(_this.subset.subset));
-        ref = {
-          Type: 'Font',
-          BaseFont: _this.subset.postscriptName,
-          Subtype: 'TrueType',
-          FontDescriptor: _this.descriptor,
-          FirstChar: firstChar,
-          LastChar: firstChar + charWidths.length - 1,
-          Widths: _this.document.ref(charWidths),
-          Encoding: 'MacRomanEncoding',
-          ToUnicode: cmap
-        };
-        for (key in ref) {
-          val = ref[key];
-          _this.ref.data[key] = val;
-        }
-        return cmap.finalize(_this.document.compress, fn);
-      });
-    };
-
-    toUnicodeCmap = function(map) {
-      var code, codes, range, unicode, unicodeMap, _i, _len;
-      unicodeMap = '/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo <<\n  /Registry (Adobe)\n  /Ordering (UCS)\n  /Supplement 0\n>> def\n/CMapName /Adobe-Identity-UCS def\n/CMapType 2 def\n1 begincodespacerange\n<00><ff>\nendcodespacerange';
-      codes = Object.keys(map).sort(function(a, b) {
-        return a - b;
-      });
-      range = [];
-      for (_i = 0, _len = codes.length; _i < _len; _i++) {
-        code = codes[_i];
-        if (range.length >= 100) {
-          unicodeMap += "\n" + range.length + " beginbfchar\n" + (range.join('\n')) + "\nendbfchar";
-          range = [];
-        }
-        unicode = ('0000' + map[code].toString(16)).slice(-4);
-        code = (+code).toString(16);
-        range.push("<" + code + "><" + unicode + ">");
-      }
-      if (range.length) {
-        unicodeMap += "\n" + range.length + " beginbfchar\n" + (range.join('\n')) + "\nendbfchar\n";
-      }
-      return unicodeMap += 'endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend';
-    };
-
-    PDFFont.prototype.embedStandard = function() {
-      var font;
-      this.isAFM = true;
-      font = AFMFont.open(__dirname + ("/font/data/" + this.filename + ".afm"));
-      this.ascender = font.ascender, this.decender = font.decender, this.bbox = font.bbox, this.lineGap = font.lineGap, this.charWidths = font.charWidths;
-      return this.ref = this.document.ref({
-        Type: 'Font',
-        BaseFont: this.filename,
-        Subtype: 'Type1',
-        Encoding: 'WinAnsiEncoding'
-      });
-    };
-
-    PDFFont.prototype._standardFonts = ["Courier", "Courier-Bold", "Courier-Oblique", "Courier-BoldOblique", "Helvetica", "Helvetica-Bold", "Helvetica-Oblique", "Helvetica-BoldOblique", "Times-Roman", "Times-Bold", "Times-Italic", "Times-BoldItalic", "Symbol", "ZapfDingbats"];
-
-    PDFFont.prototype.widthOfString = function(string, size) {
-      var charCode, i, scale, width, _ref;
-      string = '' + string;
-      width = 0;
-      for (i = 0, _ref = string.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-        charCode = string.charCodeAt(i) - (this.isAFM ? 0 : 32);
-        width += this.charWidths[charCode] || 0;
-      }
-      scale = size / 1000;
-      return width * scale;
-    };
-
-    PDFFont.prototype.lineHeight = function(size, includeGap) {
-      var gap;
-      if (includeGap == null) includeGap = false;
-      gap = includeGap ? this.lineGap : 0;
-      return (this.ascender + gap - this.decender) / 1000 * size;
-    };
-
-    return PDFFont;
-
-  })();
-
-  module.exports = PDFFont;
-
-}).call(this);
-
-}).call(this,"/../../node_modules/pdfkit/js")
-},{"./font/afm":11,"./font/subset":14,"./font/ttf":26,"zlib":6}],11:[function(_dereq_,module,exports){
-(function() {
-  var AFMFont, fs;
-
-  fs = _dereq_('fs');
-
-  AFMFont = (function() {
-    var characters;
-
-    AFMFont.open = function(filename) {
-      return new AFMFont(filename);
-    };
-
-    function AFMFont(filename) {
-      var e, i;
-      this.contents = fs.readFileSync(filename, 'utf8');
-      this.attributes = {};
-      this.glyphWidths = {};
-      this.boundingBoxes = {};
-      this.parse();
-      this.charWidths = (function() {
-        var _results;
-        _results = [];
-        for (i = 0; i <= 255; i++) {
-          _results.push(this.glyphWidths[characters[i]]);
-        }
-        return _results;
-      }).call(this);
-      this.bbox = (function() {
-        var _i, _len, _ref, _results;
-        _ref = this.attributes['FontBBox'].split(/\s+/);
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          e = _ref[_i];
-          _results.push(+e);
-        }
-        return _results;
-      }).call(this);
-      this.ascender = +this.attributes['Ascender'];
-      this.decender = +this.attributes['Descender'];
-      this.lineGap = (this.bbox[3] - this.bbox[1]) - (this.ascender - this.decender);
-    }
-
-    AFMFont.prototype.parse = function() {
-      var a, key, line, match, name, section, value, _i, _len, _ref, _results;
-      section = '';
-      _ref = this.contents.split('\n');
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        line = _ref[_i];
-        if (match = line.match(/^Start(\w+)/)) {
-          section = match[1];
-          continue;
-        } else if (match = line.match(/^End(\w+)/)) {
-          section = '';
-          continue;
-        }
-        switch (section) {
-          case 'FontMetrics':
-            match = line.match(/(^\w+)\s+(.*)/);
-            key = match[1];
-            value = match[2];
-            if (a = this.attributes[key]) {
-              if (!Array.isArray(a)) a = this.attributes[key] = [a];
-              _results.push(a.push(value));
-            } else {
-              _results.push(this.attributes[key] = value);
-            }
-            break;
-          case 'CharMetrics':
-            if (!/^CH?\s/.test(line)) continue;
-            name = line.match(/\bN\s+(\.?\w+)\s*;/)[1];
-            _results.push(this.glyphWidths[name] = +line.match(/\bWX\s+(\d+)\s*;/)[1]);
-            break;
-          default:
-            _results.push(void 0);
-        }
-      }
-      return _results;
+    AFMFont.prototype.widthOfGlyph = function(glyph) {
+      return this.glyphWidths[glyph];
     };
 
     characters = '.notdef       .notdef        .notdef        .notdef\n.notdef       .notdef        .notdef        .notdef\n.notdef       .notdef        .notdef        .notdef\n.notdef       .notdef        .notdef        .notdef\n.notdef       .notdef        .notdef        .notdef\n.notdef       .notdef        .notdef        .notdef\n.notdef       .notdef        .notdef        .notdef\n.notdef       .notdef        .notdef        .notdef\n\nspace         exclam         quotedbl       numbersign\ndollar        percent        ampersand      quotesingle\nparenleft     parenright     asterisk       plus\ncomma         hyphen         period         slash\nzero          one            two            three\nfour          five           six            seven\neight         nine           colon          semicolon\nless          equal          greater        question\n\nat            A              B              C\nD             E              F              G\nH             I              J              K\nL             M              N              O\nP             Q              R              S\nT             U              V              W\nX             Y              Z              bracketleft\nbackslash     bracketright   asciicircum    underscore\n\ngrave         a              b              c\nd             e              f              g\nh             i              j              k\nl             m              n              o\np             q              r              s\nt             u              v              w\nx             y              z              braceleft\nbar           braceright     asciitilde     .notdef\n\nEuro          .notdef        quotesinglbase florin\nquotedblbase  ellipsis       dagger         daggerdbl\ncircumflex    perthousand    Scaron         guilsinglleft\nOE            .notdef        Zcaron         .notdef\n.notdef       quoteleft      quoteright     quotedblleft\nquotedblright bullet         endash         emdash\ntilde         trademark      scaron         guilsinglright\noe            .notdef        zcaron         ydieresis\n\nspace         exclamdown     cent           sterling\ncurrency      yen            brokenbar      section\ndieresis      copyright      ordfeminine    guillemotleft\nlogicalnot    hyphen         registered     macron\ndegree        plusminus      twosuperior    threesuperior\nacute         mu             paragraph      periodcentered\ncedilla       onesuperior    ordmasculine   guillemotright\nonequarter    onehalf        threequarters  questiondown\n\nAgrave        Aacute         Acircumflex    Atilde\nAdieresis     Aring          AE             Ccedilla\nEgrave        Eacute         Ecircumflex    Edieresis\nIgrave        Iacute         Icircumflex    Idieresis\nEth           Ntilde         Ograve         Oacute\nOcircumflex   Otilde         Odieresis      multiply\nOslash        Ugrave         Uacute         Ucircumflex\nUdieresis     Yacute         Thorn          germandbls\n\nagrave        aacute         acircumflex    atilde\nadieresis     aring          ae             ccedilla\negrave        eacute         ecircumflex    edieresis\nigrave        iacute         icircumflex    idieresis\neth           ntilde         ograve         oacute\nocircumflex   otilde         odieresis      divide\noslash        ugrave         uacute         ucircumflex\nudieresis     yacute         thorn          ydieresis'.split(/\s+/);
@@ -2576,7 +4641,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"fs":"x/K9gc"}],12:[function(_dereq_,module,exports){
+},{"fs":"x/K9gc"}],21:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
   var DFont, Data, Directory, NameTable, fs;
 
@@ -2589,7 +4655,6 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
   NameTable = _dereq_('./tables/name');
 
   DFont = (function() {
-
     DFont.open = function(filename) {
       var contents;
       contents = fs.readFileSync(filename);
@@ -2602,7 +4667,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     }
 
     DFont.prototype.parse = function(data) {
-      var attr, b2, b3, b4, dataLength, dataOffset, dataOfs, entry, font, handle, i, id, j, len, length, mapLength, mapOffset, maxIndex, maxTypeIndex, name, nameListOffset, nameOfs, p, pos, refListOffset, type, typeListOffset;
+      var attr, b2, b3, b4, dataLength, dataOffset, dataOfs, entry, font, handle, i, id, j, len, length, mapLength, mapOffset, maxIndex, maxTypeIndex, name, nameListOffset, nameOfs, p, pos, refListOffset, type, typeListOffset, _i, _j;
       dataOffset = data.readInt();
       mapOffset = data.readInt();
       dataLength = data.readInt();
@@ -2613,7 +4678,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       nameListOffset = data.readShort() + mapOffset;
       data.pos = typeListOffset;
       maxIndex = data.readShort();
-      for (i = 0; i <= maxIndex; i += 1) {
+      for (i = _i = 0; _i <= maxIndex; i = _i += 1) {
         type = data.readString(4);
         maxTypeIndex = data.readShort();
         refListOffset = data.readShort();
@@ -2623,7 +4688,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         };
         pos = data.pos;
         data.pos = typeListOffset + refListOffset;
-        for (j = 0; j <= maxTypeIndex; j += 1) {
+        for (j = _j = 0; _j <= maxTypeIndex; j = _j += 1) {
           id = data.readShort();
           nameOfs = data.readShort();
           attr = data.readByte();
@@ -2654,7 +4719,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           }
           data.pos = p;
           this.map[type].list.push(entry);
-          if (entry.name) this.map[type].named[entry.name] = entry;
+          if (entry.name) {
+            this.map[type].named[entry.name] = entry;
+          }
         }
         data.pos = pos;
       }
@@ -2665,7 +4732,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       data = this.contents;
       pos = data.pos;
       entry = this.map.sfnt.named[name];
-      if (!entry) throw new Error("Font " + name + " not found in DFont file.");
+      if (!entry) {
+        throw new Error("Font " + name + " not found in DFont file.");
+      }
       data.pos = entry.offset;
       length = data.readUInt32();
       ret = data.slice(data.pos, data.pos + length);
@@ -2681,11 +4750,12 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../data":8,"./directory":13,"./tables/name":23,"fs":"x/K9gc"}],13:[function(_dereq_,module,exports){
+},{"../data":17,"./directory":22,"./tables/name":32,"fs":"x/K9gc"}],22:[function(_dereq_,module,exports){
 (function (Buffer){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var Data, Directory;
-  var __slice = Array.prototype.slice;
+  var Data, Directory,
+    __slice = [].slice;
 
   Data = _dereq_('../data');
 
@@ -2693,14 +4763,14 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     var checksum;
 
     function Directory(data) {
-      var entry, i, _ref;
+      var entry, i, _i, _ref;
       this.scalarType = data.readInt();
       this.tableCount = data.readShort();
       this.searchRange = data.readShort();
       this.entrySelector = data.readShort();
       this.rangeShift = data.readShort();
       this.tables = {};
-      for (i = 0, _ref = this.tableCount; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      for (i = _i = 0, _ref = this.tableCount; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
         entry = {
           tag: data.readString(4),
           checksum: data.readInt(),
@@ -2735,7 +4805,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         directory.writeInt(offset);
         directory.writeInt(table.length);
         tableData = tableData.concat(table);
-        if (tag === 'head') headOffset = offset;
+        if (tag === 'head') {
+          headOffset = offset;
+        }
         offset += table.length;
         while (offset % 4) {
           tableData.push(0);
@@ -2751,14 +4823,14 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     checksum = function(data) {
-      var i, sum, tmp, _ref;
+      var i, sum, tmp, _i, _ref;
       data = __slice.call(data);
       while (data.length % 4) {
         data.push(0);
       }
       tmp = new Data(data);
       sum = 0;
-      for (i = 0, _ref = data.length; i < _ref; i += 4) {
+      for (i = _i = 0, _ref = data.length; _i < _ref; i = _i += 4) {
         sum += tmp.readUInt32();
       }
       return sum & 0xFFFFFFFF;
@@ -2773,17 +4845,17 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"../data":8,"buffer":1}],14:[function(_dereq_,module,exports){
+},{"../data":17,"buffer":1}],23:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var CmapTable, Subset, utils;
-  var __hasProp = Object.prototype.hasOwnProperty, __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (__hasProp.call(this, i) && this[i] === item) return i; } return -1; };
+  var CmapTable, Subset, utils,
+    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   CmapTable = _dereq_('./tables/cmap');
 
   utils = _dereq_('./utils');
 
   Subset = (function() {
-
     function Subset(font) {
       this.font = font;
       this.subset = {};
@@ -2792,9 +4864,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     }
 
     Subset.prototype.use = function(character) {
-      var i, _ref;
+      var i, _i, _ref;
       if (typeof character === 'string') {
-        for (i = 0, _ref = character.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+        for (i = _i = 0, _ref = character.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
           this.use(character.charCodeAt(i));
         }
         return;
@@ -2806,9 +4878,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     Subset.prototype.encodeText = function(text) {
-      var char, i, string, _ref;
+      var char, i, string, _i, _ref;
       string = '';
-      for (i = 0, _ref = text.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      for (i = _i = 0, _ref = text.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
         char = this.unicodes[text.charCodeAt(i)];
         string += String.fromCharCode(char);
       }
@@ -2835,7 +4907,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       for (roman in _ref) {
         unicode = _ref[roman];
         val = unicodeCmap[unicode];
-        if ((val != null) && __indexOf.call(ret, val) < 0) ret.push(val);
+        if ((val != null) && __indexOf.call(ret, val) < 0) {
+          ret.push(val);
+        }
       }
       return ret.sort();
     };
@@ -2865,7 +4939,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     Subset.prototype.encode = function() {
-      var cmap, code, glyf, glyphs, id, ids, loca, name, new2old, newIDs, nextGlyphID, old2new, oldID, oldIDs, tables, _ref, _ref2;
+      var cmap, code, glyf, glyphs, id, ids, loca, name, new2old, newIDs, nextGlyphID, old2new, oldID, oldIDs, tables, _ref, _ref1;
       cmap = CmapTable.encode(this.cmap(), 'unicode');
       glyphs = this.glyphsFor(this.glyphIDs());
       old2new = {
@@ -2878,7 +4952,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       }
       nextGlyphID = cmap.maxGlyphID;
       for (oldID in glyphs) {
-        if (!(oldID in old2new)) old2new[oldID] = nextGlyphID++;
+        if (!(oldID in old2new)) {
+          old2new[oldID] = nextGlyphID++;
+        }
       }
       new2old = utils.invert(old2new);
       newIDs = Object.keys(new2old).sort(function(a, b) {
@@ -2898,9 +4974,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       name = this.font.name.encode();
       this.postscriptName = name.postscriptName;
       this.cmap = {};
-      _ref2 = cmap.charMap;
-      for (code in _ref2) {
-        ids = _ref2[code];
+      _ref1 = cmap.charMap;
+      for (code in _ref1) {
+        ids = _ref1[code];
         this.cmap[code] = ids.old;
       }
       tables = {
@@ -2914,7 +4990,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         name: name.table,
         head: this.font.head.encode(loca)
       };
-      if (this.font.os2.exists) tables['OS/2'] = this.font.os2.raw();
+      if (this.font.os2.exists) {
+        tables['OS/2'] = this.font.os2.raw();
+      }
       return this.font.directory.encode(tables);
     };
 
@@ -2926,17 +5004,17 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"./tables/cmap":16,"./utils":27}],15:[function(_dereq_,module,exports){
+},{"./tables/cmap":25,"./utils":36}],24:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
   var Table;
 
   Table = (function() {
-
     function Table(file, tag) {
-      var info, _ref;
+      var info;
       this.file = file;
       this.tag = tag;
-      if ((_ref = this.tag) == null) {
+      if (this.tag == null) {
         this.tag = (this.constructor.name || this.constructor.toString().match(/function (.{1,})\(/)[1]).replace('Table', '').toLowerCase();
       }
       info = this.file.directory.tables[this.tag];
@@ -2952,7 +5030,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     Table.prototype.encode = function() {};
 
     Table.prototype.raw = function() {
-      if (!this.exists) return null;
+      if (!this.exists) {
+        return null;
+      }
       this.file.contents.pos = this.offset;
       return this.file.contents.read(this.length);
     };
@@ -2965,35 +5045,38 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{}],16:[function(_dereq_,module,exports){
+},{}],25:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var CmapEntry, CmapTable, Data, Table;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+  var CmapEntry, CmapTable, Data, Table,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Table = _dereq_('../table');
 
   Data = _dereq_('../../data');
 
-  CmapTable = (function() {
-
-    __extends(CmapTable, Table);
+  CmapTable = (function(_super) {
+    __extends(CmapTable, _super);
 
     function CmapTable() {
-      CmapTable.__super__.constructor.apply(this, arguments);
+      return CmapTable.__super__.constructor.apply(this, arguments);
     }
 
     CmapTable.prototype.parse = function(data) {
-      var entry, i, tableCount, _ref;
+      var entry, i, tableCount, _i;
       data.pos = this.offset;
       this.version = data.readUInt16();
       tableCount = data.readUInt16();
       this.tables = [];
       this.unicode = null;
-      for (i = 0; 0 <= tableCount ? i < tableCount : i > tableCount; 0 <= tableCount ? i++ : i--) {
+      for (i = _i = 0; 0 <= tableCount ? _i < tableCount : _i > tableCount; i = 0 <= tableCount ? ++_i : --_i) {
         entry = new CmapEntry(data, this.offset);
         this.tables.push(entry);
         if (entry.isUnicode) {
-          if ((_ref = this.unicode) == null) this.unicode = entry;
+          if (this.unicode == null) {
+            this.unicode = entry;
+          }
         }
       }
       return true;
@@ -3001,7 +5084,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     CmapTable.encode = function(charmap, encoding) {
       var result, table;
-      if (encoding == null) encoding = 'macroman';
+      if (encoding == null) {
+        encoding = 'macroman';
+      }
       result = CmapEntry.encode(charmap, encoding);
       table = new Data;
       table.writeUInt16(0);
@@ -3012,12 +5097,11 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     return CmapTable;
 
-  })();
+  })(Table);
 
   CmapEntry = (function() {
-
     function CmapEntry(data, offset) {
-      var code, count, endCode, glyphId, glyphIds, i, idDelta, idRangeOffset, index, segCount, segCountX2, start, startCode, tail, _len;
+      var code, count, endCode, glyphId, glyphIds, i, idDelta, idRangeOffset, index, segCount, segCountX2, start, startCode, tail, _i, _j, _k, _len;
       this.platformID = data.readUInt16();
       this.encodingID = data.readShort();
       this.offset = offset + data.readInt();
@@ -3029,7 +5113,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       this.codeMap = {};
       switch (this.format) {
         case 0:
-          for (i = 0; i < 256; i++) {
+          for (i = _i = 0; _i < 256; i = ++_i) {
             this.codeMap[i] = data.readByte();
           }
           break;
@@ -3038,57 +5122,59 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           segCount = segCountX2 / 2;
           data.pos += 6;
           endCode = (function() {
-            var _results;
+            var _j, _results;
             _results = [];
-            for (i = 0; 0 <= segCount ? i < segCount : i > segCount; 0 <= segCount ? i++ : i--) {
+            for (i = _j = 0; 0 <= segCount ? _j < segCount : _j > segCount; i = 0 <= segCount ? ++_j : --_j) {
               _results.push(data.readUInt16());
             }
             return _results;
           })();
           data.pos += 2;
           startCode = (function() {
-            var _results;
+            var _j, _results;
             _results = [];
-            for (i = 0; 0 <= segCount ? i < segCount : i > segCount; 0 <= segCount ? i++ : i--) {
+            for (i = _j = 0; 0 <= segCount ? _j < segCount : _j > segCount; i = 0 <= segCount ? ++_j : --_j) {
               _results.push(data.readUInt16());
             }
             return _results;
           })();
           idDelta = (function() {
-            var _results;
+            var _j, _results;
             _results = [];
-            for (i = 0; 0 <= segCount ? i < segCount : i > segCount; 0 <= segCount ? i++ : i--) {
+            for (i = _j = 0; 0 <= segCount ? _j < segCount : _j > segCount; i = 0 <= segCount ? ++_j : --_j) {
               _results.push(data.readUInt16());
             }
             return _results;
           })();
           idRangeOffset = (function() {
-            var _results;
+            var _j, _results;
             _results = [];
-            for (i = 0; 0 <= segCount ? i < segCount : i > segCount; 0 <= segCount ? i++ : i--) {
+            for (i = _j = 0; 0 <= segCount ? _j < segCount : _j > segCount; i = 0 <= segCount ? ++_j : --_j) {
               _results.push(data.readUInt16());
             }
             return _results;
           })();
           count = this.length - data.pos + this.offset;
           glyphIds = (function() {
-            var _results;
+            var _j, _results;
             _results = [];
-            for (i = 0; 0 <= count ? i < count : i > count; 0 <= count ? i++ : i--) {
+            for (i = _j = 0; 0 <= count ? _j < count : _j > count; i = 0 <= count ? ++_j : --_j) {
               _results.push(data.readUInt16());
             }
             return _results;
           })();
-          for (i = 0, _len = endCode.length; i < _len; i++) {
+          for (i = _j = 0, _len = endCode.length; _j < _len; i = ++_j) {
             tail = endCode[i];
             start = startCode[i];
-            for (code = start; start <= tail ? code <= tail : code >= tail; start <= tail ? code++ : code--) {
+            for (code = _k = start; start <= tail ? _k <= tail : _k >= tail; code = start <= tail ? ++_k : --_k) {
               if (idRangeOffset[i] === 0) {
                 glyphId = code + idDelta[i];
               } else {
                 index = idRangeOffset[i] / 2 + (code - start) - (segCount - i);
                 glyphId = glyphIds[index] || 0;
-                if (glyphId !== 0) glyphId += idDelta[i];
+                if (glyphId !== 0) {
+                  glyphId += idDelta[i];
+                }
               }
               this.codeMap[code] = glyphId & 0xFFFF;
             }
@@ -3097,7 +5183,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     }
 
     CmapEntry.encode = function(charmap, encoding) {
-      var charMap, code, codeMap, codes, delta, deltas, diff, endCode, endCodes, entrySelector, glyphIDs, i, id, indexes, last, map, nextID, offset, old, rangeOffsets, rangeShift, result, searchRange, segCount, segCountX2, startCode, startCodes, startGlyph, subtable, _i, _j, _k, _l, _len, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _m, _n, _name, _o, _ref, _ref2;
+      var charMap, code, codeMap, codes, delta, deltas, diff, endCode, endCodes, entrySelector, glyphIDs, i, id, indexes, last, map, nextID, offset, old, rangeOffsets, rangeShift, result, searchRange, segCount, segCountX2, startCode, startCodes, startGlyph, subtable, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _len7, _m, _n, _name, _o, _p, _q;
       subtable = new Data;
       codes = Object.keys(charmap).sort(function(a, b) {
         return a - b;
@@ -3106,9 +5192,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         case 'macroman':
           id = 0;
           indexes = (function() {
-            var _results;
+            var _i, _results;
             _results = [];
-            for (i = 0; i < 256; i++) {
+            for (i = _i = 0; _i < 256; i = ++_i) {
               _results.push(0);
             }
             return _results;
@@ -3119,7 +5205,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           codeMap = {};
           for (_i = 0, _len = codes.length; _i < _len; _i++) {
             code = codes[_i];
-            if ((_ref = map[_name = charmap[code]]) == null) map[_name] = ++id;
+            if (map[_name = charmap[code]] == null) {
+              map[_name] = ++id;
+            }
             codeMap[code] = {
               old: charmap[code],
               "new": map[charmap[code]]
@@ -3145,23 +5233,29 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           map = {};
           charMap = {};
           last = diff = null;
-          for (_j = 0, _len2 = codes.length; _j < _len2; _j++) {
+          for (_j = 0, _len1 = codes.length; _j < _len1; _j++) {
             code = codes[_j];
             old = charmap[code];
-            if ((_ref2 = map[old]) == null) map[old] = ++nextID;
+            if (map[old] == null) {
+              map[old] = ++nextID;
+            }
             charMap[code] = {
               old: old,
               "new": map[old]
             };
             delta = map[old] - code;
-            if (!(last != null) || delta !== diff) {
-              if (last) endCodes.push(last);
+            if ((last == null) || delta !== diff) {
+              if (last) {
+                endCodes.push(last);
+              }
               startCodes.push(code);
               diff = delta;
             }
             last = code;
           }
-          if (last) endCodes.push(last);
+          if (last) {
+            endCodes.push(last);
+          }
           endCodes.push(0xFFFF);
           startCodes.push(0xFFFF);
           segCount = startCodes.length;
@@ -3172,7 +5266,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           deltas = [];
           rangeOffsets = [];
           glyphIDs = [];
-          for (i = 0, _len3 = startCodes.length; i < _len3; i++) {
+          for (i = _k = 0, _len2 = startCodes.length; _k < _len2; i = ++_k) {
             startCode = startCodes[i];
             endCode = endCodes[i];
             if (startCode === 0xFFFF) {
@@ -3184,7 +5278,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
             if (startCode - startGlyph >= 0x8000) {
               deltas.push(0);
               rangeOffsets.push(2 * (glyphIDs.length + segCount - i));
-              for (code = startCode; startCode <= endCode ? code <= endCode : code >= endCode; startCode <= endCode ? code++ : code--) {
+              for (code = _l = startCode; startCode <= endCode ? _l <= endCode : _l >= endCode; code = startCode <= endCode ? ++_l : --_l) {
                 glyphIDs.push(charMap[code]["new"]);
               }
             } else {
@@ -3202,25 +5296,25 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           subtable.writeUInt16(searchRange);
           subtable.writeUInt16(entrySelector);
           subtable.writeUInt16(rangeShift);
-          for (_k = 0, _len4 = endCodes.length; _k < _len4; _k++) {
-            code = endCodes[_k];
+          for (_m = 0, _len3 = endCodes.length; _m < _len3; _m++) {
+            code = endCodes[_m];
             subtable.writeUInt16(code);
           }
           subtable.writeUInt16(0);
-          for (_l = 0, _len5 = startCodes.length; _l < _len5; _l++) {
-            code = startCodes[_l];
+          for (_n = 0, _len4 = startCodes.length; _n < _len4; _n++) {
+            code = startCodes[_n];
             subtable.writeUInt16(code);
           }
-          for (_m = 0, _len6 = deltas.length; _m < _len6; _m++) {
-            delta = deltas[_m];
+          for (_o = 0, _len5 = deltas.length; _o < _len5; _o++) {
+            delta = deltas[_o];
             subtable.writeUInt16(delta);
           }
-          for (_n = 0, _len7 = rangeOffsets.length; _n < _len7; _n++) {
-            offset = rangeOffsets[_n];
+          for (_p = 0, _len6 = rangeOffsets.length; _p < _len6; _p++) {
+            offset = rangeOffsets[_p];
             subtable.writeUInt16(offset);
           }
-          for (_o = 0, _len8 = glyphIDs.length; _o < _len8; _o++) {
-            id = glyphIDs[_o];
+          for (_q = 0, _len7 = glyphIDs.length; _q < _len7; _q++) {
+            id = glyphIDs[_q];
             subtable.writeUInt16(id);
           }
           return result = {
@@ -3239,21 +5333,23 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../../data":8,"../table":15}],17:[function(_dereq_,module,exports){
+},{"../../data":17,"../table":24}],26:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var CompoundGlyph, Data, GlyfTable, SimpleGlyph, Table;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; }, __slice = Array.prototype.slice;
+  var CompoundGlyph, Data, GlyfTable, SimpleGlyph, Table,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    __slice = [].slice;
 
   Table = _dereq_('../table');
 
   Data = _dereq_('../../data');
 
-  GlyfTable = (function() {
-
-    __extends(GlyfTable, Table);
+  GlyfTable = (function(_super) {
+    __extends(GlyfTable, _super);
 
     function GlyfTable() {
-      GlyfTable.__super__.constructor.apply(this, arguments);
+      return GlyfTable.__super__.constructor.apply(this, arguments);
     }
 
     GlyfTable.prototype.parse = function(data) {
@@ -3262,12 +5358,16 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     GlyfTable.prototype.glyphFor = function(id) {
       var data, index, length, loca, numberOfContours, raw, xMax, xMin, yMax, yMin;
-      if (id in this.cache) return this.cache[id];
+      if (id in this.cache) {
+        return this.cache[id];
+      }
       loca = this.file.loca;
       data = this.file.contents;
       index = loca.indexOf(id);
       length = loca.lengthOf(id);
-      if (length === 0) return this.cache[id] = null;
+      if (length === 0) {
+        return this.cache[id] = null;
+      }
       data.pos = this.offset + index;
       raw = new Data(data.read(length));
       numberOfContours = raw.readShort();
@@ -3291,7 +5391,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         id = mapping[_i];
         glyph = glyphs[id];
         offsets.push(table.length);
-        if (glyph) table = table.concat(glyph.encode(old2new));
+        if (glyph) {
+          table = table.concat(glyph.encode(old2new));
+        }
       }
       offsets.push(table.length);
       return {
@@ -3302,10 +5404,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     return GlyfTable;
 
-  })();
+  })(Table);
 
   SimpleGlyph = (function() {
-
     function SimpleGlyph(raw, numberOfContours, xMin, yMin, xMax, yMax) {
       this.raw = raw;
       this.numberOfContours = numberOfContours;
@@ -3354,7 +5455,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         flags = data.readShort();
         this.glyphOffsets.push(data.pos);
         this.glyphIDs.push(data.readShort());
-        if (!(flags & MORE_COMPONENTS)) break;
+        if (!(flags & MORE_COMPONENTS)) {
+          break;
+        }
         if (flags & ARG_1_AND_2_ARE_WORDS) {
           data.pos += 4;
         } else {
@@ -3371,10 +5474,10 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     }
 
     CompoundGlyph.prototype.encode = function(mapping) {
-      var i, id, result, _len, _ref;
+      var i, id, result, _i, _len, _ref;
       result = new Data(__slice.call(this.raw.data));
       _ref = this.glyphIDs;
-      for (i = 0, _len = _ref.length; i < _len; i++) {
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
         id = _ref[i];
         result.pos = this.glyphOffsets[i];
         result.writeShort(mapping[id]);
@@ -3390,21 +5493,22 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../../data":8,"../table":15}],18:[function(_dereq_,module,exports){
+},{"../../data":17,"../table":24}],27:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var Data, HeadTable, Table;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+  var Data, HeadTable, Table,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Table = _dereq_('../table');
 
   Data = _dereq_('../../data');
 
-  HeadTable = (function() {
-
-    __extends(HeadTable, Table);
+  HeadTable = (function(_super) {
+    __extends(HeadTable, _super);
 
     function HeadTable() {
-      HeadTable.__super__.constructor.apply(this, arguments);
+      return HeadTable.__super__.constructor.apply(this, arguments);
     }
 
     HeadTable.prototype.parse = function(data) {
@@ -3453,27 +5557,28 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     return HeadTable;
 
-  })();
+  })(Table);
 
   module.exports = HeadTable;
 
 }).call(this);
 
-},{"../../data":8,"../table":15}],19:[function(_dereq_,module,exports){
+},{"../../data":17,"../table":24}],28:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var Data, HheaTable, Table;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+  var Data, HheaTable, Table,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Table = _dereq_('../table');
 
   Data = _dereq_('../../data');
 
-  HheaTable = (function() {
-
-    __extends(HheaTable, Table);
+  HheaTable = (function(_super) {
+    __extends(HheaTable, _super);
 
     function HheaTable() {
-      HheaTable.__super__.constructor.apply(this, arguments);
+      return HheaTable.__super__.constructor.apply(this, arguments);
     }
 
     HheaTable.prototype.parse = function(data) {
@@ -3495,7 +5600,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     HheaTable.prototype.encode = function(ids) {
-      var i, table, _ref;
+      var i, table, _i, _ref;
       table = new Data;
       table.writeInt(this.version);
       table.writeShort(this.ascender);
@@ -3508,7 +5613,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       table.writeShort(this.caretSlopeRise);
       table.writeShort(this.caretSlopeRun);
       table.writeShort(this.caretOffset);
-      for (i = 0, _ref = 4 * 2; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      for (i = _i = 0, _ref = 4 * 2; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
         table.writeByte(0);
       }
       table.writeShort(this.metricDataFormat);
@@ -3518,34 +5623,35 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     return HheaTable;
 
-  })();
+  })(Table);
 
   module.exports = HheaTable;
 
 }).call(this);
 
-},{"../../data":8,"../table":15}],20:[function(_dereq_,module,exports){
+},{"../../data":17,"../table":24}],29:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var Data, HmtxTable, Table;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+  var Data, HmtxTable, Table,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Table = _dereq_('../table');
 
   Data = _dereq_('../../data');
 
-  HmtxTable = (function() {
-
-    __extends(HmtxTable, Table);
+  HmtxTable = (function(_super) {
+    __extends(HmtxTable, _super);
 
     function HmtxTable() {
-      HmtxTable.__super__.constructor.apply(this, arguments);
+      return HmtxTable.__super__.constructor.apply(this, arguments);
     }
 
     HmtxTable.prototype.parse = function(data) {
-      var i, last, lsbCount, m, _ref, _results;
+      var i, last, lsbCount, m, _i, _j, _ref, _results;
       data.pos = this.offset;
       this.metrics = [];
-      for (i = 0, _ref = this.file.hhea.numberOfMetrics; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      for (i = _i = 0, _ref = this.file.hhea.numberOfMetrics; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
         this.metrics.push({
           advance: data.readUInt16(),
           lsb: data.readInt16()
@@ -3553,26 +5659,26 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       }
       lsbCount = this.file.maxp.numGlyphs - this.file.hhea.numberOfMetrics;
       this.leftSideBearings = (function() {
-        var _results;
+        var _j, _results;
         _results = [];
-        for (i = 0; 0 <= lsbCount ? i < lsbCount : i > lsbCount; 0 <= lsbCount ? i++ : i--) {
+        for (i = _j = 0; 0 <= lsbCount ? _j < lsbCount : _j > lsbCount; i = 0 <= lsbCount ? ++_j : --_j) {
           _results.push(data.readInt16());
         }
         return _results;
       })();
       this.widths = (function() {
-        var _i, _len, _ref2, _results;
-        _ref2 = this.metrics;
+        var _j, _len, _ref1, _results;
+        _ref1 = this.metrics;
         _results = [];
-        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-          m = _ref2[_i];
+        for (_j = 0, _len = _ref1.length; _j < _len; _j++) {
+          m = _ref1[_j];
           _results.push(m.advance);
         }
         return _results;
       }).call(this);
       last = this.widths[this.widths.length - 1];
       _results = [];
-      for (i = 0; 0 <= lsbCount ? i < lsbCount : i > lsbCount; 0 <= lsbCount ? i++ : i--) {
+      for (i = _j = 0; 0 <= lsbCount ? _j < lsbCount : _j > lsbCount; i = 0 <= lsbCount ? ++_j : --_j) {
         _results.push(this.widths.push(last));
       }
       return _results;
@@ -3580,7 +5686,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     HmtxTable.prototype.forGlyph = function(id) {
       var metrics;
-      if (id in this.metrics) return this.metrics[id];
+      if (id in this.metrics) {
+        return this.metrics[id];
+      }
       return metrics = {
         advance: this.metrics[this.metrics.length - 1].advance,
         lsb: this.leftSideBearings[id - this.metrics.length]
@@ -3601,27 +5709,28 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     return HmtxTable;
 
-  })();
+  })(Table);
 
   module.exports = HmtxTable;
 
 }).call(this);
 
-},{"../../data":8,"../table":15}],21:[function(_dereq_,module,exports){
+},{"../../data":17,"../table":24}],30:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var Data, LocaTable, Table;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+  var Data, LocaTable, Table,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Table = _dereq_('../table');
 
   Data = _dereq_('../../data');
 
-  LocaTable = (function() {
-
-    __extends(LocaTable, Table);
+  LocaTable = (function(_super) {
+    __extends(LocaTable, _super);
 
     function LocaTable() {
-      LocaTable.__super__.constructor.apply(this, arguments);
+      return LocaTable.__super__.constructor.apply(this, arguments);
     }
 
     LocaTable.prototype.parse = function(data) {
@@ -3630,18 +5739,18 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       format = this.file.head.indexToLocFormat;
       if (format === 0) {
         return this.offsets = (function() {
-          var _ref, _results;
+          var _i, _ref, _results;
           _results = [];
-          for (i = 0, _ref = this.length; i < _ref; i += 2) {
+          for (i = _i = 0, _ref = this.length; _i < _ref; i = _i += 2) {
             _results.push(data.readUInt16() * 2);
           }
           return _results;
         }).call(this);
       } else {
         return this.offsets = (function() {
-          var _ref, _results;
+          var _i, _ref, _results;
           _results = [];
-          for (i = 0, _ref = this.length; i < _ref; i += 4) {
+          for (i = _i = 0, _ref = this.length; _i < _ref; i = _i += 4) {
             _results.push(data.readUInt32());
           }
           return _results;
@@ -3658,13 +5767,15 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     LocaTable.prototype.encode = function(offsets) {
-      var o, offset, ret, table, _i, _j, _k, _len, _len2, _len3, _ref;
+      var o, offset, ret, table, _i, _j, _k, _len, _len1, _len2, _ref;
       table = new Data;
       for (_i = 0, _len = offsets.length; _i < _len; _i++) {
         offset = offsets[_i];
-        if (!(offset > 0xFFFF)) continue;
+        if (!(offset > 0xFFFF)) {
+          continue;
+        }
         _ref = this.offsets;
-        for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
+        for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
           o = _ref[_j];
           table.writeUInt32(o);
         }
@@ -3673,7 +5784,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           table: table.data
         };
       }
-      for (_k = 0, _len3 = offsets.length; _k < _len3; _k++) {
+      for (_k = 0, _len2 = offsets.length; _k < _len2; _k++) {
         o = offsets[_k];
         table.writeUInt16(o / 2);
       }
@@ -3685,27 +5796,28 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     return LocaTable;
 
-  })();
+  })(Table);
 
   module.exports = LocaTable;
 
 }).call(this);
 
-},{"../../data":8,"../table":15}],22:[function(_dereq_,module,exports){
+},{"../../data":17,"../table":24}],31:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var Data, MaxpTable, Table;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+  var Data, MaxpTable, Table,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Table = _dereq_('../table');
 
   Data = _dereq_('../../data');
 
-  MaxpTable = (function() {
-
-    __extends(MaxpTable, Table);
+  MaxpTable = (function(_super) {
+    __extends(MaxpTable, _super);
 
     function MaxpTable() {
-      MaxpTable.__super__.constructor.apply(this, arguments);
+      return MaxpTable.__super__.constructor.apply(this, arguments);
     }
 
     MaxpTable.prototype.parse = function(data) {
@@ -3750,16 +5862,18 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     return MaxpTable;
 
-  })();
+  })(Table);
 
   module.exports = MaxpTable;
 
 }).call(this);
 
-},{"../../data":8,"../table":15}],23:[function(_dereq_,module,exports){
+},{"../../data":17,"../table":24}],32:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var Data, NameEntry, NameTable, Table, utils;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+  var Data, NameEntry, NameTable, Table, utils,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Table = _dereq_('../table');
 
@@ -3767,23 +5881,23 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
   utils = _dereq_('../utils');
 
-  NameTable = (function() {
+  NameTable = (function(_super) {
     var subsetTag;
 
-    __extends(NameTable, Table);
+    __extends(NameTable, _super);
 
     function NameTable() {
-      NameTable.__super__.constructor.apply(this, arguments);
+      return NameTable.__super__.constructor.apply(this, arguments);
     }
 
     NameTable.prototype.parse = function(data) {
-      var count, entries, entry, format, i, name, stringOffset, strings, text, _len, _name, _ref;
+      var count, entries, entry, format, i, name, stringOffset, strings, text, _i, _j, _len, _name;
       data.pos = this.offset;
       format = data.readShort();
       count = data.readShort();
       stringOffset = data.readShort();
       entries = [];
-      for (i = 0; 0 <= count ? i < count : i > count; 0 <= count ? i++ : i--) {
+      for (i = _i = 0; 0 <= count ? _i < count : _i > count; i = 0 <= count ? ++_i : --_i) {
         entries.push({
           platformID: data.readShort(),
           encodingID: data.readShort(),
@@ -3794,12 +5908,14 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         });
       }
       strings = {};
-      for (i = 0, _len = entries.length; i < _len; i++) {
+      for (i = _j = 0, _len = entries.length; _j < _len; i = ++_j) {
         entry = entries[i];
         data.pos = entry.offset;
         text = data.readString(entry.length);
         name = new NameEntry(text, entry);
-        if ((_ref = strings[_name = entry.nameID]) == null) strings[_name] = [];
+        if (strings[_name = entry.nameID] == null) {
+          strings[_name] = [];
+        }
         strings[entry.nameID].push(name);
       }
       this.strings = strings;
@@ -3844,7 +5960,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       strCount = 0;
       for (id in strings) {
         list = strings[id];
-        if (list != null) strCount += list.length;
+        if (list != null) {
+          strCount += list.length;
+        }
       }
       table = new Data;
       strTable = new Data;
@@ -3874,12 +5992,11 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     return NameTable;
 
-  })();
+  })(Table);
 
   module.exports = NameTable;
 
   NameEntry = (function() {
-
     function NameEntry(raw, entry) {
       this.raw = raw;
       this.length = raw.length;
@@ -3894,16 +6011,17 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../../data":8,"../table":15,"../utils":27}],24:[function(_dereq_,module,exports){
+},{"../../data":17,"../table":24,"../utils":36}],33:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var OS2Table, Table;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+  var OS2Table, Table,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Table = _dereq_('../table');
 
-  OS2Table = (function() {
-
-    __extends(OS2Table, Table);
+  OS2Table = (function(_super) {
+    __extends(OS2Table, _super);
 
     function OS2Table() {
       this.tag = 'OS/2';
@@ -3930,17 +6048,17 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       this.yStrikeoutPosition = data.readShort();
       this.familyClass = data.readShort();
       this.panose = (function() {
-        var _results;
+        var _i, _results;
         _results = [];
-        for (i = 0; i < 10; i++) {
+        for (i = _i = 0; _i < 10; i = ++_i) {
           _results.push(data.readByte());
         }
         return _results;
       })();
       this.charRange = (function() {
-        var _results;
+        var _i, _results;
         _results = [];
-        for (i = 0; i < 4; i++) {
+        for (i = _i = 0; _i < 4; i = ++_i) {
           _results.push(data.readInt());
         }
         return _results;
@@ -3956,9 +6074,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         this.winAscent = data.readShort();
         this.winDescent = data.readShort();
         this.codePageRange = (function() {
-          var _results;
+          var _i, _results;
           _results = [];
-          for (i = 0; i < 2; i++) {
+          for (i = _i = 0; _i < 2; i = ++_i) {
             _results.push(data.readInt());
           }
           return _results;
@@ -3979,32 +6097,34 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     return OS2Table;
 
-  })();
+  })(Table);
 
   module.exports = OS2Table;
 
 }).call(this);
 
-},{"../table":15}],25:[function(_dereq_,module,exports){
+},{"../table":24}],34:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var Data, PostTable, Table;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+  var Data, PostTable, Table,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Table = _dereq_('../table');
 
   Data = _dereq_('../../data');
 
-  PostTable = (function() {
+  PostTable = (function(_super) {
     var POSTSCRIPT_GLYPHS;
 
-    __extends(PostTable, Table);
+    __extends(PostTable, _super);
 
     function PostTable() {
-      PostTable.__super__.constructor.apply(this, arguments);
+      return PostTable.__super__.constructor.apply(this, arguments);
     }
 
     PostTable.prototype.parse = function(data) {
-      var i, length, numberOfGlyphs, _results;
+      var i, length, numberOfGlyphs, _i, _results;
       data.pos = this.offset;
       this.format = data.readInt();
       this.italicAngle = data.readInt();
@@ -4021,7 +6141,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         case 0x00020000:
           numberOfGlyphs = data.readUInt16();
           this.glyphNameIndex = [];
-          for (i = 0; 0 <= numberOfGlyphs ? i < numberOfGlyphs : i > numberOfGlyphs; 0 <= numberOfGlyphs ? i++ : i--) {
+          for (i = _i = 0; 0 <= numberOfGlyphs ? _i < numberOfGlyphs : _i > numberOfGlyphs; i = 0 <= numberOfGlyphs ? ++_i : --_i) {
             this.glyphNameIndex.push(data.readUInt16());
           }
           this.names = [];
@@ -4039,12 +6159,12 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           break;
         case 0x00040000:
           return this.map = (function() {
-            var _ref, _results2;
-            _results2 = [];
-            for (i = 0, _ref = this.file.maxp.numGlyphs; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-              _results2.push(data.readUInt32());
+            var _j, _ref, _results1;
+            _results1 = [];
+            for (i = _j = 0, _ref = this.file.maxp.numGlyphs; 0 <= _ref ? _j < _ref : _j > _ref; i = 0 <= _ref ? ++_j : --_j) {
+              _results1.push(data.readUInt32());
             }
-            return _results2;
+            return _results1;
           }).call(this);
       }
     };
@@ -4072,10 +6192,14 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     PostTable.prototype.encode = function(mapping) {
-      var id, index, indexes, position, post, raw, string, strings, table, _i, _j, _k, _len, _len2, _len3;
-      if (!this.exists) return null;
+      var id, index, indexes, position, post, raw, string, strings, table, _i, _j, _k, _len, _len1, _len2;
+      if (!this.exists) {
+        return null;
+      }
       raw = this.raw();
-      if (this.format === 0x00030000) return raw;
+      if (this.format === 0x00030000) {
+        return raw;
+      }
       table = new Data(raw.slice(0, 32));
       table.writeUInt32(0x00020000);
       table.pos = 32;
@@ -4093,11 +6217,11 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         }
       }
       table.writeUInt16(Object.keys(mapping).length);
-      for (_j = 0, _len2 = indexes.length; _j < _len2; _j++) {
+      for (_j = 0, _len1 = indexes.length; _j < _len1; _j++) {
         index = indexes[_j];
         table.writeUInt16(index);
       }
-      for (_k = 0, _len3 = strings.length; _k < _len3; _k++) {
+      for (_k = 0, _len2 = strings.length; _k < _len2; _k++) {
         string = strings[_k];
         table.writeByte(string.length);
         table.writeString(string);
@@ -4109,13 +6233,14 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     return PostTable;
 
-  })();
+  })(Table);
 
   module.exports = PostTable;
 
 }).call(this);
 
-},{"../../data":8,"../table":15}],26:[function(_dereq_,module,exports){
+},{"../../data":17,"../table":24}],35:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
   var CmapTable, DFont, Data, Directory, GlyfTable, HeadTable, HheaTable, HmtxTable, LocaTable, MaxpTable, NameTable, OS2Table, PostTable, TTFFont, fs;
 
@@ -4148,7 +6273,6 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
   GlyfTable = _dereq_('./tables/glyf');
 
   TTFFont = (function() {
-
     TTFFont.open = function(filename, name) {
       var contents;
       contents = fs.readFileSync(filename);
@@ -4162,22 +6286,26 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     function TTFFont(rawData, name) {
-      var data, i, numFonts, offset, offsets, version, _len;
+      var data, i, numFonts, offset, offsets, version, _i, _j, _len;
       this.rawData = rawData;
       data = this.contents = new Data(rawData);
       if (data.readString(4) === 'ttcf') {
-        if (!name) throw new Error("Must specify a font name for TTC files.");
+        if (!name) {
+          throw new Error("Must specify a font name for TTC files.");
+        }
         version = data.readInt();
         numFonts = data.readInt();
         offsets = [];
-        for (i = 0; 0 <= numFonts ? i < numFonts : i > numFonts; 0 <= numFonts ? i++ : i--) {
+        for (i = _i = 0; 0 <= numFonts ? _i < numFonts : _i > numFonts; i = 0 <= numFonts ? ++_i : --_i) {
           offsets[i] = data.readInt();
         }
-        for (i = 0, _len = offsets.length; i < _len; i++) {
+        for (i = _j = 0, _len = offsets.length; _j < _len; i = ++_j) {
           offset = offsets[i];
           data.pos = offset;
           this.parse();
-          if (this.name.postscriptName === name) return;
+          if (this.name.postscriptName === name) {
+            return;
+          }
         }
         throw new Error("Font " + name + " not found in TTC file.");
       } else {
@@ -4204,6 +6332,17 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       return this.bbox = [this.head.xMin, this.head.yMin, this.head.xMax, this.head.yMax];
     };
 
+    TTFFont.prototype.characterToGlyph = function(character) {
+      var _ref;
+      return ((_ref = this.cmap.unicode) != null ? _ref.codeMap[character] : void 0) || 0;
+    };
+
+    TTFFont.prototype.widthOfGlyph = function(glyph) {
+      var scale;
+      scale = 1000.0 / this.head.unitsPerEm;
+      return this.hmtx.forGlyph(glyph).advance * scale;
+    };
+
     return TTFFont;
 
   })();
@@ -4212,27 +6351,29 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../data":8,"./dfont":12,"./directory":13,"./tables/cmap":16,"./tables/glyf":17,"./tables/head":18,"./tables/hhea":19,"./tables/hmtx":20,"./tables/loca":21,"./tables/maxp":22,"./tables/name":23,"./tables/os2":24,"./tables/post":25,"fs":"x/K9gc"}],27:[function(_dereq_,module,exports){
+},{"../data":17,"./dfont":21,"./directory":22,"./tables/cmap":25,"./tables/glyf":26,"./tables/head":27,"./tables/hhea":28,"./tables/hmtx":29,"./tables/loca":30,"./tables/maxp":31,"./tables/name":32,"./tables/os2":33,"./tables/post":34,"fs":"x/K9gc"}],36:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 
-  /*
-  # An implementation of Ruby's string.succ method.
-  # By Devon Govett
-  #
-  # Returns the successor to str. The successor is calculated by incrementing characters starting 
-  # from the rightmost alphanumeric (or the rightmost character if there are no alphanumerics) in the
-  # string. Incrementing a digit always results in another digit, and incrementing a letter results in
-  # another letter of the same case.
-  #
-  # If the increment generates a carry, the character to the left of it is incremented. This 
-  # process repeats until there is no carry, adding an additional character if necessary.
-  #
-  # succ("abcd")      == "abce"
-  # succ("THX1138")   == "THX1139"
-  # succ("<<koala>>") == "<<koalb>>"
-  # succ("1999zzz")   == "2000aaa"
-  # succ("ZZZ9999")   == "AAAA0000"
-  */
+/*
+ * An implementation of Ruby's string.succ method.
+ * By Devon Govett
+ *
+ * Returns the successor to str. The successor is calculated by incrementing characters starting 
+ * from the rightmost alphanumeric (or the rightmost character if there are no alphanumerics) in the
+ * string. Incrementing a digit always results in another digit, and incrementing a letter results in
+ * another letter of the same case.
+ *
+ * If the increment generates a carry, the character to the left of it is incremented. This 
+ * process repeats until there is no carry, adding an additional character if necessary.
+ *
+ * succ("abcd")      == "abce"
+ * succ("THX1138")   == "THX1139"
+ * succ("<<koala>>") == "<<koalb>>"
+ * succ("1999zzz")   == "2000aaa"
+ * succ("ZZZ9999")   == "AAAA0000"
+ */
 
+(function() {
   exports.successorOf = function(input) {
     var added, alphabet, carry, i, index, isUpperCase, last, length, next, result;
     alphabet = 'abcdefghijklmnopqrstuvwxyz';
@@ -4249,7 +6390,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         } else {
           next = alphabet.charAt((index + 1) % length);
           isUpperCase = last === last.toUpperCase();
-          if (isUpperCase) next = next.toUpperCase();
+          if (isUpperCase) {
+            next = next.toUpperCase();
+          }
           carry = index + 1 >= length;
           if (carry && i === 0) {
             added = isUpperCase ? 'A' : 'a';
@@ -4260,14 +6403,18 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       } else {
         next = +last + 1;
         carry = next > 9;
-        if (carry) next = 0;
+        if (carry) {
+          next = 0;
+        }
         if (carry && i === 0) {
           result = '1' + next + result.slice(1);
           break;
         }
       }
       result = result.slice(0, i) + next + result.slice(i + 1);
-      if (!carry) break;
+      if (!carry) {
+        break;
+      }
     }
     return result;
   };
@@ -4282,39 +6429,51 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     return ret;
   };
 
-},{}],28:[function(_dereq_,module,exports){
+}).call(this);
+
+},{}],37:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var PDFGradient, PDFLinearGradient, PDFRadialGradient;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+  var PDFGradient, PDFLinearGradient, PDFRadialGradient,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   PDFGradient = (function() {
-
     function PDFGradient(doc) {
       this.doc = doc;
       this.stops = [];
       this.embedded = false;
       this.transform = [1, 0, 0, 1, 0, 0];
+      this._colorSpace = 'DeviceRGB';
     }
 
     PDFGradient.prototype.stop = function(pos, color, opacity) {
-      if (opacity == null) opacity = 1;
+      if (opacity == null) {
+        opacity = 1;
+      }
       opacity = Math.max(0, Math.min(1, opacity));
       this.stops.push([pos, this.doc._normalizeColor(color), opacity]);
       return this;
     };
 
     PDFGradient.prototype.embed = function() {
-      var bounds, dx, dy, encode, fn, form, grad, group, gstate, i, last, m, m0, m1, m11, m12, m2, m21, m22, m3, m4, m5, name, pattern, sMask, stop, stops, v, _i, _len, _ref, _ref2, _ref3;
-      if (this.embedded || this.stops.length === 0) return;
+      var bounds, dx, dy, encode, fn, form, grad, group, gstate, i, last, m, m0, m1, m11, m12, m2, m21, m22, m3, m4, m5, name, pattern, resources, sMask, shader, stop, stops, v, _i, _j, _len, _ref, _ref1, _ref2;
+      if (this.embedded || this.stops.length === 0) {
+        return;
+      }
       this.embedded = true;
       last = this.stops[this.stops.length - 1];
-      if (last[0] < 1) this.stops.push([1, last[1], last[2]]);
+      if (last[0] < 1) {
+        this.stops.push([1, last[1], last[2]]);
+      }
       bounds = [];
       encode = [];
       stops = [];
-      for (i = 0, _ref = this.stops.length - 1; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      for (i = _i = 0, _ref = this.stops.length - 1; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
         encode.push(0, 1);
-        if (i + 2 !== this.stops.length) bounds.push(this.stops[i + 1][0]);
+        if (i + 2 !== this.stops.length) {
+          bounds.push(this.stops[i + 1][0]);
+        }
         fn = this.doc.ref({
           FunctionType: 2,
           Domain: [0, 1],
@@ -4323,6 +6482,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           N: 1
         });
         stops.push(fn);
+        fn.end();
       }
       if (stops.length === 1) {
         fn = stops[0];
@@ -4334,67 +6494,75 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           Bounds: bounds,
           Encode: encode
         });
+        fn.end();
       }
       this.id = 'Sh' + (++this.doc._gradCount);
       m = this.doc._ctm.slice();
       m0 = m[0], m1 = m[1], m2 = m[2], m3 = m[3], m4 = m[4], m5 = m[5];
-      _ref2 = this.transform, m11 = _ref2[0], m12 = _ref2[1], m21 = _ref2[2], m22 = _ref2[3], dx = _ref2[4], dy = _ref2[5];
+      _ref1 = this.transform, m11 = _ref1[0], m12 = _ref1[1], m21 = _ref1[2], m22 = _ref1[3], dx = _ref1[4], dy = _ref1[5];
       m[0] = m0 * m11 + m2 * m12;
       m[1] = m1 * m11 + m3 * m12;
       m[2] = m0 * m21 + m2 * m22;
       m[3] = m1 * m21 + m3 * m22;
       m[4] = m0 * dx + m2 * dy + m4;
       m[5] = m1 * dx + m3 * dy + m5;
+      shader = this.shader(fn);
+      shader.end();
       pattern = this.doc.ref({
         Type: 'Pattern',
         PatternType: 2,
-        Shading: this.shader(fn),
+        Shading: shader,
         Matrix: (function() {
-          var _i, _len, _results;
+          var _j, _len, _results;
           _results = [];
-          for (_i = 0, _len = m.length; _i < _len; _i++) {
-            v = m[_i];
+          for (_j = 0, _len = m.length; _j < _len; _j++) {
+            v = m[_j];
             _results.push(+v.toFixed(5));
           }
           return _results;
         })()
       });
       this.doc.page.patterns[this.id] = pattern;
+      pattern.end();
       if (this.stops.some(function(stop) {
         return stop[2] < 1;
       })) {
         grad = this.opacityGradient();
-        _ref3 = this.stops;
-        for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
-          stop = _ref3[_i];
+        grad._colorSpace = 'DeviceGray';
+        _ref2 = this.stops;
+        for (_j = 0, _len = _ref2.length; _j < _len; _j++) {
+          stop = _ref2[_j];
           grad.stop(stop[0], [stop[2]]);
         }
         grad = grad.embed();
-        grad.data.Shading.data.ColorSpace = 'DeviceGray';
         group = this.doc.ref({
           Type: 'Group',
           S: 'Transparency',
           CS: 'DeviceGray'
         });
+        group.end();
+        resources = this.doc.ref({
+          ProcSet: ['PDF', 'Text', 'ImageB', 'ImageC', 'ImageI'],
+          Shading: {
+            Sh1: grad.data.Shading
+          }
+        });
+        resources.end();
         form = this.doc.ref({
           Type: 'XObject',
           Subtype: 'Form',
           FormType: 1,
           BBox: [0, 0, this.doc.page.width, this.doc.page.height],
           Group: group,
-          Resources: this.doc.ref({
-            ProcSet: ['PDF', 'Text', 'ImageB', 'ImageC', 'ImageI'],
-            Shading: {
-              Sh1: grad.data.Shading
-            }
-          })
+          Resources: resources
         });
-        form.add("/Sh1 sh");
+        form.end("/Sh1 sh");
         sMask = this.doc.ref({
           Type: 'Mask',
           S: 'Luminosity',
           G: form
         });
+        sMask.end();
         gstate = this.doc.ref({
           Type: 'ExtGState',
           SMask: sMask
@@ -4402,15 +6570,17 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         this.opacity_id = ++this.doc._opacityCount;
         name = "Gs" + this.opacity_id;
         this.doc.page.ext_gstates[name] = gstate;
+        gstate.end();
       }
       return pattern;
     };
 
     PDFGradient.prototype.apply = function(op) {
-      if (!this.embedded) this.embed();
+      if (!this.embedded) {
+        this.embed();
+      }
       this.doc.addContent("/" + this.id + " " + op);
       if (this.opacity_id) {
-        this.doc.save();
         this.doc.addContent("/Gs" + this.opacity_id + " gs");
         return this.doc._sMasked = true;
       }
@@ -4420,9 +6590,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
   })();
 
-  PDFLinearGradient = (function() {
-
-    __extends(PDFLinearGradient, PDFGradient);
+  PDFLinearGradient = (function(_super) {
+    __extends(PDFLinearGradient, _super);
 
     function PDFLinearGradient(doc, x1, y1, x2, y2) {
       this.doc = doc;
@@ -4436,7 +6605,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     PDFLinearGradient.prototype.shader = function(fn) {
       return this.doc.ref({
         ShadingType: 2,
-        ColorSpace: 'DeviceRGB',
+        ColorSpace: this._colorSpace,
         Coords: [this.x1, this.y1, this.x2, this.y2],
         Function: fn,
         Extend: [true, true]
@@ -4449,11 +6618,10 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     return PDFLinearGradient;
 
-  })();
+  })(PDFGradient);
 
-  PDFRadialGradient = (function() {
-
-    __extends(PDFRadialGradient, PDFGradient);
+  PDFRadialGradient = (function(_super) {
+    __extends(PDFRadialGradient, _super);
 
     function PDFRadialGradient(doc, x1, y1, r1, x2, y2, r2) {
       this.doc = doc;
@@ -4469,7 +6637,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     PDFRadialGradient.prototype.shader = function(fn) {
       return this.doc.ref({
         ShadingType: 3,
-        ColorSpace: 'DeviceRGB',
+        ColorSpace: this._colorSpace,
         Coords: [this.x1, this.y1, this.r1, this.x2, this.y2, this.r2],
         Function: fn,
         Extend: [true, true]
@@ -4482,7 +6650,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     return PDFRadialGradient;
 
-  })();
+  })(PDFGradient);
 
   module.exports = {
     PDFGradient: PDFGradient,
@@ -4492,15 +6660,16 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{}],29:[function(_dereq_,module,exports){
+},{}],38:[function(_dereq_,module,exports){
 (function (Buffer){
+// Generated by CoffeeScript 1.7.1
+
+/*
+PDFImage - embeds images in PDF documents
+By Devon Govett
+ */
+
 (function() {
-
-  /*
-  PDFImage - embeds images in PDF documents
-  By Devon Govett
-  */
-
   var Data, JPEG, PDFImage, PNG, fs;
 
   fs = _dereq_('fs');
@@ -4512,25 +6681,22 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
   PNG = _dereq_('./image/png');
 
   PDFImage = (function() {
-
     function PDFImage() {}
 
-    PDFImage.open = function(filenameOrBuffer) {
-      var data, firstByte;
-      if (typeof filenameOrBuffer === 'object' && filenameOrBuffer instanceof Buffer) {
-        this.contents = filenameOrBuffer;
+    PDFImage.open = function(src, label) {
+      var data;
+      if (Buffer.isBuffer(src)) {
+        data = src;
       } else {
-        this.contents = fs.readFileSync(filenameOrBuffer);
-        if (!this.contents) return;
+        data = fs.readFileSync(src);
+        if (!data) {
+          return;
+        }
       }
-      this.data = new Data(this.contents);
-      this.filter = null;
-      data = this.data;
-      firstByte = data.byteAt(0);
-      if (firstByte === 0xFF && data.byteAt(1) === 0xD8) {
-        return new JPEG(data);
-      } else if (firstByte === 0x89 && data.stringAt(1, 3) === "PNG") {
-        return new PNG(data);
+      if (data[0] === 0xff && data[1] === 0xd8) {
+        return new JPEG(data, label);
+      } else if (data[0] === 0x89 && data.toString('ascii', 1, 4) === 'PNG') {
+        return new PNG(data, label);
       } else {
         throw new Error('Unknown image format.');
       }
@@ -4545,37 +6711,45 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"./data":8,"./image/jpeg":30,"./image/png":31,"buffer":1,"fs":"x/K9gc"}],30:[function(_dereq_,module,exports){
-(function (process){
+},{"./data":17,"./image/jpeg":39,"./image/png":40,"buffer":1,"fs":"x/K9gc"}],39:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var Data, JPEG, fs, setImmediate;
-  var __hasProp = Object.prototype.hasOwnProperty, __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (__hasProp.call(this, i) && this[i] === item) return i; } return -1; };
+  var JPEG, fs,
+    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   fs = _dereq_('fs');
 
-  Data = '../data';
-
-  setImmediate = setImmediate != null ? setImmediate : process.nextTick;
-
   JPEG = (function() {
+    var MARKERS;
 
-    function JPEG(data) {
-      var channels, len, marker, markers;
+    MARKERS = [0xFFC0, 0xFFC1, 0xFFC2, 0xFFC3, 0xFFC5, 0xFFC6, 0xFFC7, 0xFFC8, 0xFFC9, 0xFFCA, 0xFFCB, 0xFFCC, 0xFFCD, 0xFFCE, 0xFFCF];
+
+    function JPEG(data, label) {
+      var channels, marker, pos;
       this.data = data;
-      len = data.length;
-      if (data.readUInt16() !== 0xFFD8) throw "SOI not found in JPEG";
-      markers = [0xFFC0, 0xFFC1, 0xFFC2, 0xFFC3, 0xFFC5, 0xFFC6, 0xFFC7, 0xFFC8, 0xFFC9, 0xFFCA, 0xFFCB, 0xFFCC, 0xFFCD, 0xFFCE, 0xFFCF];
-      while (data.pos < len) {
-        marker = data.readUInt16();
-        if (__indexOf.call(markers, marker) >= 0) break;
-        data.pos += data.readUInt16();
+      this.label = label;
+      if (data.readUInt16BE(0) !== 0xFFD8) {
+        throw "SOI not found in JPEG";
       }
-      if (__indexOf.call(markers, marker) < 0) throw "Invalid JPEG.";
-      data.pos += 2;
-      this.bits = data.readByte();
-      this.height = data.readShort();
-      this.width = data.readShort();
-      channels = data.readByte();
+      pos = 2;
+      while (pos < data.length) {
+        marker = data.readUInt16BE(pos);
+        pos += 2;
+        if (__indexOf.call(MARKERS, marker) >= 0) {
+          break;
+        }
+        pos += data.readUInt16BE(pos);
+      }
+      if (__indexOf.call(MARKERS, marker) < 0) {
+        throw "Invalid JPEG.";
+      }
+      pos += 2;
+      this.bits = data[pos++];
+      this.height = data.readUInt16BE(pos);
+      pos += 2;
+      this.width = data.readUInt16BE(pos);
+      pos += 2;
+      channels = data[pos++];
       this.colorSpace = (function() {
         switch (channels) {
           case 1:
@@ -4586,12 +6760,14 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
             return 'DeviceCMYK';
         }
       })();
-      this.imgData = this.data;
+      this.obj = null;
     }
 
-    JPEG.prototype.object = function(document, fn) {
-      var obj;
-      obj = document.ref({
+    JPEG.prototype.embed = function(document) {
+      if (this.obj) {
+        return;
+      }
+      this.obj = document.ref({
         Type: 'XObject',
         Subtype: 'Image',
         BitsPerComponent: this.bits,
@@ -4602,12 +6778,10 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         Filter: 'DCTDecode'
       });
       if (this.colorSpace === 'DeviceCMYK') {
-        obj.data['Decode'] = [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0];
+        this.obj.data['Decode'] = [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0];
       }
-      obj.add(this.data.data);
-      return setImmediate(function() {
-        return fn(obj);
-      });
+      this.obj.end(this.data);
+      return this.data = null;
     };
 
     return JPEG;
@@ -4618,44 +6792,33 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
-},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"fs":"x/K9gc"}],31:[function(_dereq_,module,exports){
-(function (process,Buffer){
+},{"fs":"x/K9gc"}],40:[function(_dereq_,module,exports){
+(function (Buffer){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var PNG, PNGImage, setImmediate, zlib;
+  var PNG, PNGImage, zlib;
 
   zlib = _dereq_('zlib');
 
   PNG = _dereq_('png-js');
 
-  setImmediate = setImmediate != null ? setImmediate : process.nextTick;
-
   PNGImage = (function() {
-
-    function PNGImage(data) {
-      this.image = new PNG(data.data);
+    function PNGImage(data, label) {
+      this.label = label;
+      this.image = new PNG(data);
       this.width = this.image.width;
       this.height = this.image.height;
       this.imgData = this.image.imgData;
+      this.obj = null;
     }
 
-    PNGImage.prototype.object = function(document, fn) {
-      var mask, obj, palette, rgb, sMask, val, x, _i, _len;
-      var _this = this;
-      if (!this.alphaChannel) {
-        if (this.image.transparency.indexed) {
-          this.loadIndexedAlphaChannel(function() {
-            return _this.object(document, fn);
-          });
-          return;
-        } else if (this.image.hasAlphaChannel) {
-          this.splitAlphaChannel(function() {
-            return _this.object(document, fn);
-          });
-          return;
-        }
+    PNGImage.prototype.embed = function(document) {
+      var mask, palette, params, rgb, val, x, _i, _len;
+      this.document = document;
+      if (this.obj) {
+        return;
       }
-      obj = document.ref({
+      this.obj = document.ref({
         Type: 'XObject',
         Subtype: 'Image',
         BitsPerComponent: this.image.bits,
@@ -4665,25 +6828,27 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         Filter: 'FlateDecode'
       });
       if (!this.image.hasAlphaChannel) {
-        obj.data['DecodeParms'] = document.ref({
+        params = document.ref({
           Predictor: 15,
           Colors: this.image.colors,
           BitsPerComponent: this.image.bits,
           Columns: this.width
         });
+        this.obj.data['DecodeParms'] = params;
+        params.end();
       }
       if (this.image.palette.length === 0) {
-        obj.data['ColorSpace'] = this.image.colorSpace;
+        this.obj.data['ColorSpace'] = this.image.colorSpace;
       } else {
         palette = document.ref({
           Length: this.image.palette.length
         });
-        palette.add(new Buffer(this.image.palette));
-        obj.data['ColorSpace'] = ['Indexed', 'DeviceRGB', (this.image.palette.length / 3) - 1, palette];
+        palette.end(this.image.palette);
+        this.obj.data['ColorSpace'] = ['Indexed', 'DeviceRGB', (this.image.palette.length / 3) - 1, palette];
       }
       if (this.image.transparency.grayscale) {
         val = this.image.transparency.greyscale;
-        obj.data['Mask'] = [val, val];
+        return this.obj.data['Mask'] = [val, val];
       } else if (this.image.transparency.rgb) {
         rgb = this.image.transparency.rgb;
         mask = [];
@@ -4691,10 +6856,20 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           x = rgb[_i];
           mask.push(x, x);
         }
-        obj.data['Mask'] = mask;
+        return this.obj.data['Mask'] = mask;
+      } else if (this.image.transparency.indexed) {
+        return this.loadIndexedAlphaChannel();
+      } else if (this.image.hasAlphaChannel) {
+        return this.splitAlphaChannel();
+      } else {
+        return this.finalize();
       }
+    };
+
+    PNGImage.prototype.finalize = function() {
+      var sMask;
       if (this.alphaChannel) {
-        sMask = document.ref({
+        sMask = this.document.ref({
           Type: 'XObject',
           Subtype: 'Image',
           Height: this.height,
@@ -4705,62 +6880,73 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           ColorSpace: 'DeviceGray',
           Decode: [0, 1]
         });
-        sMask.add(this.alphaChannel);
-        obj.data['SMask'] = sMask;
+        sMask.end(this.alphaChannel);
+        this.obj.data['SMask'] = sMask;
       }
-      obj.add(this.imgData);
-      return setImmediate(function() {
-        return fn(obj);
-      });
+      this.obj.end(this.imgData);
+      this.image = null;
+      return this.imgData = null;
     };
 
-    PNGImage.prototype.splitAlphaChannel = function(fn) {
-      var _this = this;
-      return this.image.decodePixels(function(pixels) {
-        var a, alphaChannel, colorByteSize, done, i, imgData, len, p, pixelCount;
-        colorByteSize = _this.image.colors * _this.image.bits / 8;
-        pixelCount = _this.width * _this.height;
-        imgData = new Buffer(pixelCount * colorByteSize);
-        alphaChannel = new Buffer(pixelCount);
-        i = p = a = 0;
-        len = pixels.length;
-        while (i < len) {
-          imgData[p++] = pixels[i++];
-          imgData[p++] = pixels[i++];
-          imgData[p++] = pixels[i++];
-          alphaChannel[a++] = pixels[i++];
-        }
-        done = 0;
-        zlib.deflate(imgData, function(err, imgData) {
-          _this.imgData = imgData;
-          if (err) throw err;
-          if (++done === 2) return fn();
-        });
-        return zlib.deflate(alphaChannel, function(err, alphaChannel) {
-          _this.alphaChannel = alphaChannel;
-          if (err) throw err;
-          if (++done === 2) return fn();
-        });
-      });
+    PNGImage.prototype.splitAlphaChannel = function() {
+      return this.image.decodePixels((function(_this) {
+        return function(pixels) {
+          var a, alphaChannel, colorByteSize, done, i, imgData, len, p, pixelCount;
+          colorByteSize = _this.image.colors * _this.image.bits / 8;
+          pixelCount = _this.width * _this.height;
+          imgData = new Buffer(pixelCount * colorByteSize);
+          alphaChannel = new Buffer(pixelCount);
+          i = p = a = 0;
+          len = pixels.length;
+          while (i < len) {
+            imgData[p++] = pixels[i++];
+            imgData[p++] = pixels[i++];
+            imgData[p++] = pixels[i++];
+            alphaChannel[a++] = pixels[i++];
+          }
+          done = 0;
+          zlib.deflate(imgData, function(err, imgData) {
+            _this.imgData = imgData;
+            if (err) {
+              throw err;
+            }
+            if (++done === 2) {
+              return _this.finalize();
+            }
+          });
+          return zlib.deflate(alphaChannel, function(err, alphaChannel) {
+            _this.alphaChannel = alphaChannel;
+            if (err) {
+              throw err;
+            }
+            if (++done === 2) {
+              return _this.finalize();
+            }
+          });
+        };
+      })(this));
     };
 
     PNGImage.prototype.loadIndexedAlphaChannel = function(fn) {
       var transparency;
-      var _this = this;
       transparency = this.image.transparency.indexed;
-      return this.image.decodePixels(function(pixels) {
-        var alphaChannel, i, j, _ref;
-        alphaChannel = new Buffer(_this.width * _this.height);
-        i = 0;
-        for (j = 0, _ref = pixels.length; j < _ref; j += 1) {
-          alphaChannel[i++] = transparency[pixels[j]];
-        }
-        return zlib.deflate(alphaChannel, function(err, alphaChannel) {
-          _this.alphaChannel = alphaChannel;
-          if (err) throw err;
-          return fn();
-        });
-      });
+      return this.image.decodePixels((function(_this) {
+        return function(pixels) {
+          var alphaChannel, i, j, _i, _ref;
+          alphaChannel = new Buffer(_this.width * _this.height);
+          i = 0;
+          for (j = _i = 0, _ref = pixels.length; _i < _ref; j = _i += 1) {
+            alphaChannel[i++] = transparency[pixels[j]];
+          }
+          return zlib.deflate(alphaChannel, function(err, alphaChannel) {
+            _this.alphaChannel = alphaChannel;
+            if (err) {
+              throw err;
+            }
+            return _this.finalize();
+          });
+        };
+      })(this));
     };
 
     return PNGImage;
@@ -4771,137 +6957,272 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"png-js":44,"zlib":6}],32:[function(_dereq_,module,exports){
+}).call(this,_dereq_("buffer").Buffer)
+},{"buffer":1,"png-js":55,"zlib":15}],41:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var EventEmitter, LineWrapper, WORD_RE;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  WORD_RE = /([^ ,\/!.?:;\-\n]*[ ,\/!.?:;\-]*)|\n/g;
+  var EventEmitter, LineBreaker, LineWrapper,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   EventEmitter = _dereq_('events').EventEmitter;
 
-  LineWrapper = (function() {
+  LineBreaker = _dereq_('linebreak');
 
-    __extends(LineWrapper, EventEmitter);
+  LineWrapper = (function(_super) {
+    __extends(LineWrapper, _super);
 
-    function LineWrapper(document) {
-      var _this = this;
+    function LineWrapper(document, options) {
+      var _ref;
       this.document = document;
-      this.on('firstLine', function(options) {
-        var indent;
-        indent = options.indent || 0;
-        _this.document.x += indent;
-        options.lineWidth -= indent;
-        return _this.once('line', function() {
-          _this.document.x -= indent;
-          return options.lineWidth += indent;
-        });
-      });
-      this.on('lastLine', function(options) {
-        var align;
-        align = options.align;
-        if (align === 'justify') options.align = 'left';
-        return _this.once('line', function() {
-          _this.document.y += options.paragraphGap || 0;
-          return options.align = align;
-        });
-      });
-    }
-
-    LineWrapper.prototype.wrap = function(paragraphs, options) {
-      var buffer, charSpacing, i, indent, len, nextY, spaceLeft, text, w, wc, wi, width, word, wordSpacing, wordWidths, words, _len, _len2, _ref, _ref2;
-      width = this.document.widthOfString.bind(this.document);
-      indent = options.indent || 0;
-      charSpacing = options.characterSpacing || 0;
-      wordSpacing = options.wordSpacing === 0;
+      this.indent = options.indent || 0;
+      this.charSpacing = options.characterSpacing || 0;
+      this.wordSpacing = options.wordSpacing === 0;
       this.columns = options.columns || 1;
       this.columnGap = (_ref = options.columnGap) != null ? _ref : 18;
       this.lineWidth = (options.width - (this.columnGap * (this.columns - 1))) / this.columns;
+      this.startX = this.document.x;
       this.startY = this.document.y;
       this.column = 1;
-      this.maxY = this.startY + options.height;
-      nextY = this.document.y + this.document.currentLineHeight(true);
-      if (this.document.y > this.maxY || nextY > this.maxY) this.nextSection();
+      this.ellipsis = options.ellipsis;
+      this.continuedX = 0;
+      if (options.height != null) {
+        this.height = options.height;
+        this.maxY = this.startY + options.height;
+      } else {
+        this.maxY = this.document.page.maxY();
+      }
+      this.on('firstLine', (function(_this) {
+        return function(options) {
+          var indent;
+          indent = _this.continuedX || _this.indent;
+          _this.document.x += indent;
+          _this.lineWidth -= indent;
+          return _this.once('line', function() {
+            _this.document.x -= indent;
+            _this.lineWidth += indent;
+            if (!options.continued) {
+              return _this.continuedX = 0;
+            }
+          });
+        };
+      })(this));
+      this.on('lastLine', (function(_this) {
+        return function(options) {
+          var align;
+          align = options.align;
+          if (align === 'justify') {
+            options.align = 'left';
+          }
+          _this.lastLine = true;
+          return _this.once('line', function() {
+            _this.document.y += options.paragraphGap || 0;
+            options.align = align;
+            return _this.lastLine = false;
+          });
+        };
+      })(this));
+    }
+
+    LineWrapper.prototype.wordWidth = function(word) {
+      return this.document.widthOfString(word, this) + this.charSpacing + this.wordSpacing;
+    };
+
+    LineWrapper.prototype.eachWord = function(text, fn) {
+      var bk, breaker, fbk, l, last, lbk, shouldContinue, w, word, wordWidths;
+      breaker = new LineBreaker(text);
+      last = null;
       wordWidths = {};
+      while (bk = breaker.nextBreak()) {
+        word = text.slice((last != null ? last.position : void 0) || 0, bk.position);
+        w = wordWidths[word] != null ? wordWidths[word] : wordWidths[word] = this.wordWidth(word);
+        if (w > this.lineWidth) {
+          lbk = last;
+          fbk = {};
+          while (word.length) {
+            l = word.length;
+            while (w > this.spaceLeft) {
+              w = this.wordWidth(word.slice(0, --l));
+            }
+            fbk.required = l < word.length;
+            shouldContinue = fn(word.slice(0, l), w, fbk, lbk);
+            lbk = {
+              required: false
+            };
+            word = word.slice(l);
+            w = this.wordWidth(word);
+            if (shouldContinue === false) {
+              break;
+            }
+          }
+        } else {
+          shouldContinue = fn(word, w, bk, last);
+        }
+        if (shouldContinue === false) {
+          break;
+        }
+        last = bk;
+      }
+    };
+
+    LineWrapper.prototype.wrap = function(text, options) {
+      var buffer, emitLine, lc, nextY, textWidth, wc, y;
+      if (options.indent != null) {
+        this.indent = options.indent;
+      }
+      if (options.characterSpacing != null) {
+        this.charSpacing = options.characterSpacing;
+      }
+      if (options.wordSpacing != null) {
+        this.wordSpacing = options.wordSpacing;
+      }
+      if (options.ellipsis != null) {
+        this.ellipsis = options.ellipsis;
+      }
+      nextY = this.document.y + this.document.currentLineHeight(true);
+      if (this.document.y > this.maxY || nextY > this.maxY) {
+        this.nextSection();
+      }
+      buffer = '';
+      textWidth = 0;
+      wc = 0;
+      lc = 0;
+      y = this.document.y;
+      emitLine = (function(_this) {
+        return function() {
+          options.textWidth = textWidth + _this.wordSpacing * (wc - 1);
+          options.wordCount = wc;
+          options.lineWidth = _this.lineWidth;
+          y = _this.document.y;
+          _this.emit('line', buffer, options, _this);
+          return lc++;
+        };
+      })(this);
       this.emit('sectionStart', options, this);
-      for (i = 0, _len = paragraphs.length; i < _len; i++) {
-        text = paragraphs[i];
-        this.emit('firstLine', options, this);
-        words = text.match(WORD_RE) || [text];
-        spaceLeft = this.lineWidth - indent;
-        options.lineWidth = spaceLeft;
-        len = words.length;
-        buffer = '';
-        wc = 0;
-        for (wi = 0, _len2 = words.length; wi < _len2; wi++) {
-          word = words[wi];
-          w = (_ref2 = wordWidths[word]) != null ? _ref2 : wordWidths[word] = width(word, options) + charSpacing + wordSpacing;
-          if (w > spaceLeft || word === '\n') {
-            options.textWidth = width(buffer.trim(), options) + wordSpacing * (wc - 1);
-            this.emit('line', buffer.trim(), options, this);
-            if (this.document.y > this.maxY) this.nextSection();
-            spaceLeft = this.lineWidth - w;
-            buffer = word === '\n' ? '' : word;
-            wc = 1;
-          } else {
-            spaceLeft -= w;
+      this.eachWord(text, (function(_this) {
+        return function(word, w, bk, last) {
+          var lh, shouldContinue;
+          if ((last == null) || last.required) {
+            _this.emit('firstLine', options, _this);
+            _this.spaceLeft = _this.lineWidth;
+          }
+          if (w <= _this.spaceLeft) {
             buffer += word;
+            textWidth += w;
             wc++;
           }
-        }
-        this.lastLine = true;
+          if (bk.required || w > _this.spaceLeft) {
+            if (bk.required) {
+              _this.emit('lastLine', options, _this);
+            }
+            lh = _this.document.currentLineHeight(true);
+            if ((_this.height != null) && _this.ellipsis && _this.document.y + lh * 2 > _this.maxY && _this.column >= _this.columns) {
+              if (_this.ellipsis === true) {
+                _this.ellipsis = '…';
+              }
+              buffer = buffer.trimRight();
+              textWidth = _this.wordWidth(buffer + _this.ellipsis);
+              while (textWidth > _this.lineWidth) {
+                buffer = buffer.slice(0, -1).trimRight();
+                textWidth = _this.wordWidth(buffer + _this.ellipsis);
+              }
+              buffer = buffer + _this.ellipsis;
+            }
+            emitLine();
+            if (_this.document.y + lh > _this.maxY) {
+              shouldContinue = _this.nextSection();
+              if (!shouldContinue) {
+                wc = 0;
+                buffer = '';
+                return false;
+              }
+            }
+            if (bk.required) {
+              if (w > _this.spaceLeft) {
+                buffer = word;
+                textWidth = w;
+                wc = 1;
+                emitLine();
+              }
+              _this.spaceLeft = _this.lineWidth;
+              buffer = '';
+              textWidth = 0;
+              return wc = 0;
+            } else {
+              _this.spaceLeft = _this.lineWidth - w;
+              buffer = word;
+              textWidth = w;
+              return wc = 1;
+            }
+          } else {
+            return _this.spaceLeft -= w;
+          }
+        };
+      })(this));
+      if (wc > 0) {
         this.emit('lastLine', options, this);
-        options.textWidth = width(buffer.trim(), options) + wordSpacing * (wc - 1);
-        this.emit('line', buffer.trim(), options, this);
-        nextY = this.document.y + this.document.currentLineHeight(true);
-        if (i < paragraphs.length - 1 && nextY > this.maxY) this.nextSection();
+        emitLine();
       }
-      return this.emit('sectionEnd', options, this);
+      this.emit('sectionEnd', options, this);
+      if (options.continued === true) {
+        if (lc > 1) {
+          this.continuedX = 0;
+        }
+        this.continuedX += options.textWidth;
+        return this.document.y = y;
+      } else {
+        return this.document.x = this.startX;
+      }
     };
 
     LineWrapper.prototype.nextSection = function(options) {
-      var x;
+      var _ref;
       this.emit('sectionEnd', options, this);
       if (++this.column > this.columns) {
-        x = this.document.x;
+        if (this.height != null) {
+          return false;
+        }
         this.document.addPage();
         this.column = 1;
         this.startY = this.document.page.margins.top;
         this.maxY = this.document.page.maxY();
-        this.document.x = x;
+        this.document.x = this.startX;
+        if (this.document._fillColor) {
+          (_ref = this.document).fillColor.apply(_ref, this.document._fillColor);
+        }
         this.emit('pageBreak', options, this);
       } else {
         this.document.x += this.lineWidth + this.columnGap;
         this.document.y = this.startY;
         this.emit('columnBreak', options, this);
       }
-      return this.emit('sectionStart', options, this);
+      this.emit('sectionStart', options, this);
+      return true;
     };
 
     return LineWrapper;
 
-  })();
+  })(EventEmitter);
 
   module.exports = LineWrapper;
 
 }).call(this);
 
-},{"events":4}],33:[function(_dereq_,module,exports){
+},{"events":4,"linebreak":53}],42:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
   var PDFObject;
-  var __slice = Array.prototype.slice;
 
   PDFObject = _dereq_('../object');
 
   module.exports = {
     annotate: function(x, y, w, h, options) {
-      var key, val, _ref;
+      var key, ref, val;
       options.Type = 'Annot';
       options.Rect = this._convertRect(x, y, w, h);
       options.Border = [0, 0, 0];
       if (options.Subtype !== 'Link') {
-        if ((_ref = options.C) == null) {
+        if (options.C == null) {
           options.C = this._normalizeColor(options.color || [0, 0, 0]);
         }
       }
@@ -4913,91 +7234,121 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         val = options[key];
         options[key[0].toUpperCase() + key.slice(1)] = val;
       }
-      this.page.annotations.push(this.ref(options));
+      ref = this.ref(options);
+      this.page.annotations.push(ref);
+      ref.end();
       return this;
     },
     note: function(x, y, w, h, contents, options) {
-      var _ref;
-      if (options == null) options = {};
+      if (options == null) {
+        options = {};
+      }
       options.Subtype = 'Text';
       options.Contents = PDFObject.s(contents);
       options.Name = 'Comment';
-      if ((_ref = options.color) == null) options.color = [243, 223, 92];
+      if (options.color == null) {
+        options.color = [243, 223, 92];
+      }
       return this.annotate(x, y, w, h, options);
     },
     link: function(x, y, w, h, url, options) {
-      if (options == null) options = {};
+      if (options == null) {
+        options = {};
+      }
       options.Subtype = 'Link';
       options.A = this.ref({
         S: 'URI',
         URI: PDFObject.s(url)
       });
+      options.A.end();
       return this.annotate(x, y, w, h, options);
     },
     _markup: function(x, y, w, h, options) {
       var x1, x2, y1, y2, _ref;
-      if (options == null) options = {};
+      if (options == null) {
+        options = {};
+      }
       _ref = this._convertRect(x, y, w, h), x1 = _ref[0], y1 = _ref[1], x2 = _ref[2], y2 = _ref[3];
       options.QuadPoints = [x1, y2, x2, y2, x1, y1, x2, y1];
       options.Contents = PDFObject.s('');
       return this.annotate(x, y, w, h, options);
     },
     highlight: function(x, y, w, h, options) {
-      var _ref;
-      if (options == null) options = {};
+      if (options == null) {
+        options = {};
+      }
       options.Subtype = 'Highlight';
-      if ((_ref = options.color) == null) options.color = [241, 238, 148];
+      if (options.color == null) {
+        options.color = [241, 238, 148];
+      }
       return this._markup(x, y, w, h, options);
     },
     underline: function(x, y, w, h, options) {
-      if (options == null) options = {};
+      if (options == null) {
+        options = {};
+      }
       options.Subtype = 'Underline';
       return this._markup(x, y, w, h, options);
     },
     strike: function(x, y, w, h, options) {
-      if (options == null) options = {};
+      if (options == null) {
+        options = {};
+      }
       options.Subtype = 'StrikeOut';
       return this._markup(x, y, w, h, options);
     },
     lineAnnotation: function(x1, y1, x2, y2, options) {
-      if (options == null) options = {};
+      if (options == null) {
+        options = {};
+      }
       options.Subtype = 'Line';
       options.Contents = PDFObject.s('');
       options.L = [x1, this.page.height - y1, x2, this.page.height - y2];
       return this.annotate(x1, y1, x2, y2, options);
     },
     rectAnnotation: function(x, y, w, h, options) {
-      if (options == null) options = {};
+      if (options == null) {
+        options = {};
+      }
       options.Subtype = 'Square';
       options.Contents = PDFObject.s('');
       return this.annotate(x, y, w, h, options);
     },
     ellipseAnnotation: function(x, y, w, h, options) {
-      if (options == null) options = {};
+      if (options == null) {
+        options = {};
+      }
       options.Subtype = 'Circle';
       options.Contents = PDFObject.s('');
       return this.annotate(x, y, w, h, options);
     },
     textAnnotation: function(x, y, w, h, text, options) {
-      if (options == null) options = {};
+      if (options == null) {
+        options = {};
+      }
       options.Subtype = 'FreeText';
       options.Contents = PDFObject.s(text);
       options.DA = PDFObject.s('');
       return this.annotate(x, y, w, h, options);
     },
-    _convertRect: function() {
-      var rect;
-      rect = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-      rect[1] = this.page.height - rect[1] - rect[3];
-      rect[2] += rect[0];
-      rect[3] += rect[1];
-      return rect;
+    _convertRect: function(x1, y1, w, h) {
+      var m0, m1, m2, m3, m4, m5, x2, y2, _ref;
+      y2 = y1;
+      y1 += h;
+      x2 = x1 + w;
+      _ref = this._ctm, m0 = _ref[0], m1 = _ref[1], m2 = _ref[2], m3 = _ref[3], m4 = _ref[4], m5 = _ref[5];
+      x1 = m0 * x1 + m2 * y1 + m4;
+      y1 = m1 * x1 + m3 * y1 + m5;
+      x2 = m0 * x2 + m2 * y2 + m4;
+      y2 = m1 * x2 + m3 * y2 + m5;
+      return [x1, y1, x2, y2];
     }
   };
 
 }).call(this);
 
-},{"../object":39}],34:[function(_dereq_,module,exports){
+},{"../object":48}],43:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
   var PDFGradient, PDFLinearGradient, PDFRadialGradient, namedColors, _ref;
 
@@ -5011,7 +7362,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     },
     _normalizeColor: function(color) {
       var hex, part;
-      if (color instanceof PDFGradient) return color;
+      if (color instanceof PDFGradient) {
+        return color;
+      }
       if (typeof color === 'string') {
         if (color.charAt(0) === '#') {
           if (color.length === 4) {
@@ -5052,15 +7405,19 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     _setColor: function(color, stroke) {
       var gstate, name, op, space;
       color = this._normalizeColor(color);
-      if (!color) return false;
+      if (!color) {
+        return false;
+      }
       if (this._sMasked) {
         gstate = this.ref({
           Type: 'ExtGState',
           SMask: 'None'
         });
+        gstate.end();
         name = "Gs" + (++this._opacityCount);
         this.page.ext_gstates[name] = gstate;
         this.addContent("/" + name + " gs");
+        this._sMasked = false;
       }
       op = stroke ? 'SCN' : 'scn';
       if (color instanceof PDFGradient) {
@@ -5081,14 +7438,25 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     },
     fillColor: function(color, opacity) {
       var set;
+      if (opacity == null) {
+        opacity = 1;
+      }
       set = this._setColor(color, false);
-      if (set && (opacity != null)) this.fillOpacity(opacity);
+      if (set) {
+        this.fillOpacity(opacity);
+      }
+      this._fillColor = [color, opacity];
       return this;
     },
     strokeColor: function(color, opacity) {
       var set;
+      if (opacity == null) {
+        opacity = 1;
+      }
       set = this._setColor(color, true);
-      if (set && (opacity != null)) this.strokeOpacity(opacity);
+      if (set) {
+        this.strokeOpacity(opacity);
+      }
       return this;
     },
     opacity: function(opacity) {
@@ -5104,20 +7472,31 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       return this;
     },
     _doOpacity: function(fillOpacity, strokeOpacity) {
-      var dictionary, id, key, name, _ref2;
-      if (!(fillOpacity || strokeOpacity)) return;
-      fillOpacity = Math.max(0, Math.min(1, fillOpacity));
-      strokeOpacity = Math.max(0, Math.min(1, strokeOpacity));
+      var dictionary, id, key, name, _ref1;
+      if (!((fillOpacity != null) || (strokeOpacity != null))) {
+        return;
+      }
+      if (fillOpacity != null) {
+        fillOpacity = Math.max(0, Math.min(1, fillOpacity));
+      }
+      if (strokeOpacity != null) {
+        strokeOpacity = Math.max(0, Math.min(1, strokeOpacity));
+      }
       key = "" + fillOpacity + "_" + strokeOpacity;
       if (this._opacityRegistry[key]) {
-        _ref2 = this._opacityRegistry[key], dictionary = _ref2[0], name = _ref2[1];
+        _ref1 = this._opacityRegistry[key], dictionary = _ref1[0], name = _ref1[1];
       } else {
         dictionary = {
           Type: 'ExtGState'
         };
-        if (fillOpacity) dictionary.ca = fillOpacity;
-        if (strokeOpacity) dictionary.CA = strokeOpacity;
+        if (fillOpacity != null) {
+          dictionary.ca = fillOpacity;
+        }
+        if (strokeOpacity != null) {
+          dictionary.CA = strokeOpacity;
+        }
         dictionary = this.ref(dictionary);
+        dictionary.end();
         id = ++this._opacityCount;
         name = "Gs" + id;
         this._opacityRegistry[key] = [dictionary, name];
@@ -5285,7 +7664,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../gradient":28}],35:[function(_dereq_,module,exports){
+},{"../gradient":37}],44:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
   var PDFFont;
 
@@ -5309,8 +7689,12 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       if (this._registeredFonts[filename]) {
         _ref = this._registeredFonts[filename], filename = _ref.filename, family = _ref.family;
       }
-      if (size != null) this.fontSize(size);
-      if (family == null) family = filename;
+      if (size != null) {
+        this.fontSize(size);
+      }
+      if (family == null) {
+        family = filename;
+      }
       if (this._fontFamilies[family]) {
         this._font = this._fontFamilies[family];
         return this;
@@ -5325,7 +7709,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       return this;
     },
     currentLineHeight: function(includeGap) {
-      if (includeGap == null) includeGap = false;
+      if (includeGap == null) {
+        includeGap = false;
+      }
       return this._font.lineHeight(this._fontSize, includeGap);
     },
     registerFont: function(name, path, family) {
@@ -5334,33 +7720,16 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         family: family
       };
       return this;
-    },
-    embedFonts: function(fn) {
-      var family, font, fonts, proceed;
-      var _this = this;
-      fonts = (function() {
-        var _ref, _results;
-        _ref = this._fontFamilies;
-        _results = [];
-        for (family in _ref) {
-          font = _ref[family];
-          _results.push(font);
-        }
-        return _results;
-      }).call(this);
-      return (proceed = function() {
-        if (fonts.length === 0) return fn();
-        return fonts.shift().embed(proceed);
-      })();
     }
   };
 
 }).call(this);
 
-},{"../font":10}],36:[function(_dereq_,module,exports){
+},{"../font":19}],45:[function(_dereq_,module,exports){
+(function (Buffer){
+// Generated by CoffeeScript 1.7.1
 (function() {
   var PDFImage;
-  var __hasProp = Object.prototype.hasOwnProperty, __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (__hasProp.call(this, i) && this[i] === item) return i; } return -1; };
 
   PDFImage = _dereq_('../image');
 
@@ -5370,23 +7739,26 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       return this._imageCount = 0;
     },
     image: function(src, x, y, options) {
-      var bh, bp, bw, h, hp, image, ip, label, pages, w, wp, _ref, _ref2, _ref3, _ref4, _ref5;
-      if (options == null) options = {};
+      var bh, bp, bw, h, hp, image, ip, w, wp, _base, _name, _ref, _ref1, _ref2;
+      if (options == null) {
+        options = {};
+      }
       if (typeof x === 'object') {
         options = x;
         x = null;
       }
       x = (_ref = x != null ? x : options.x) != null ? _ref : this.x;
-      y = (_ref2 = y != null ? y : options.y) != null ? _ref2 : this.y;
-      if (this._imageRegistry[src]) {
-        _ref3 = this._imageRegistry[src], image = _ref3[0], label = _ref3[1], pages = _ref3[2];
-        if (_ref4 = this.page, __indexOf.call(pages, _ref4) < 0) {
-          pages.push(this.page);
+      y = (_ref1 = y != null ? y : options.y) != null ? _ref1 : this.y;
+      image = this._imageRegistry[src];
+      if (!image) {
+        image = PDFImage.open(src, 'I' + (++this._imageCount));
+        image.embed(this);
+        if (!Buffer.isBuffer(src)) {
+          this._imageRegistry[src] = image;
         }
-      } else {
-        image = PDFImage.open(src);
-        label = "I" + (++this._imageCount);
-        this._imageRegistry[src] = [image, label, [this.page]];
+      }
+      if ((_base = this.page.xobjects)[_name = image.label] == null) {
+        _base[_name] = image.obj;
       }
       w = options.width || image.width;
       h = options.height || image.height;
@@ -5402,7 +7774,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         w = image.width * options.scale;
         h = image.height * options.scale;
       } else if (options.fit) {
-        _ref5 = options.fit, bw = _ref5[0], bh = _ref5[1];
+        _ref2 = options.fit, bw = _ref2[0], bh = _ref2[1];
         bp = bw / bh;
         ip = image.width / image.height;
         if (ip > bp) {
@@ -5418,54 +7790,24 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           x = x + bw - w;
         }
       }
-      if (this.y === y) this.y += h;
+      if (this.y === y) {
+        this.y += h;
+      }
       this.save();
       this.transform(w, 0, 0, -h, x, y + h);
-      this.addContent("/" + label + " Do");
+      this.addContent("/" + image.label + " Do");
       this.restore();
       return this;
-    },
-    embedImages: function(fn) {
-      var images, item, proceed, src;
-      var _this = this;
-      images = (function() {
-        var _ref, _results;
-        _ref = this._imageRegistry;
-        _results = [];
-        for (src in _ref) {
-          item = _ref[src];
-          _results.push(item);
-        }
-        return _results;
-      }).call(this);
-      return (proceed = function() {
-        var image, label, pages, _ref;
-        if (images.length) {
-          _ref = images.shift(), image = _ref[0], label = _ref[1], pages = _ref[2];
-          return image.object(_this, function(obj) {
-            var page, _base, _i, _len, _ref2;
-            for (_i = 0, _len = pages.length; _i < _len; _i++) {
-              page = pages[_i];
-              if ((_ref2 = (_base = page.xobjects)[label]) == null) {
-                _base[label] = obj;
-              }
-            }
-            return proceed();
-          });
-        } else {
-          return fn();
-        }
-      })();
     }
   };
 
 }).call(this);
 
-},{"../image":29}],37:[function(_dereq_,module,exports){
+}).call(this,_dereq_("buffer").Buffer)
+},{"../image":38,"buffer":1}],46:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var LineWrapper, WORD_RE;
-
-  WORD_RE = /([^ ,\/!.?:;\-\n]*[ ,\/!.?:;\-]*)|\n/g;
+  var LineWrapper;
 
   LineWrapper = _dereq_('../line_wrapper');
 
@@ -5485,36 +7827,74 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       return this;
     },
     moveDown: function(lines) {
-      if (lines == null) lines = 1;
+      if (lines == null) {
+        lines = 1;
+      }
       this.y += this.currentLineHeight(true) * lines + this._lineGap;
       return this;
     },
     moveUp: function(lines) {
-      if (lines == null) lines = 1;
+      if (lines == null) {
+        lines = 1;
+      }
       this.y -= this.currentLineHeight(true) * lines + this._lineGap;
       return this;
     },
-    text: function(text, x, y, options) {
-      var line, paragraphs, wrapper, _i, _len;
+    _text: function(text, x, y, options, lineCallback) {
+      var line, wrapper, _i, _len, _ref;
       options = this._initOptions(x, y, options);
       text = '' + text;
-      if (options.wordSpacing) text = text.replace(/\s{2,}/g, ' ');
-      paragraphs = text.split('\n');
+      if (options.wordSpacing) {
+        text = text.replace(/\s{2,}/g, ' ');
+      }
       if (options.width) {
-        wrapper = new LineWrapper(this);
-        wrapper.on('line', this._line.bind(this));
-        wrapper.wrap(paragraphs, options);
+        wrapper = this._wrapper;
+        if (!wrapper) {
+          wrapper = new LineWrapper(this, options);
+          wrapper.on('line', lineCallback);
+        }
+        this._wrapper = options.continued ? wrapper : null;
+        this._textOptions = options.continued ? options : null;
+        wrapper.wrap(text, options);
       } else {
-        for (_i = 0, _len = paragraphs.length; _i < _len; _i++) {
-          line = paragraphs[_i];
-          this._line(line, options);
+        _ref = text.split('\n');
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          line = _ref[_i];
+          lineCallback(line, options);
         }
       }
       return this;
     },
+    text: function(text, x, y, options) {
+      return this._text(text, x, y, options, this._line.bind(this));
+    },
+    widthOfString: function(string, options) {
+      if (options == null) {
+        options = {};
+      }
+      return this._font.widthOfString(string, this._fontSize) + (options.characterSpacing || 0) * (string.length - 1);
+    },
+    heightOfString: function(text, options) {
+      var height, lineGap, x, y;
+      if (options == null) {
+        options = {};
+      }
+      x = this.x, y = this.y;
+      options = this._initOptions(options);
+      options.height = Infinity;
+      lineGap = options.lineGap || this._lineGap || 0;
+      this._text(text, this.x, this.y, options, (function(_this) {
+        return function(line, options) {
+          return _this.y += _this.currentLineHeight(true) + lineGap;
+        };
+      })(this));
+      height = this.y - y;
+      this.x = x;
+      this.y = y;
+      return height;
+    },
     list: function(list, x, y, options, wrapper) {
       var flatten, i, indent, itemIndent, items, level, levels, r;
-      var _this = this;
       options = this._initOptions(x, y, options);
       r = Math.round((this._font.ascender / 1000 * this._fontSize) / 3);
       indent = options.textIndent || r * 5;
@@ -5523,9 +7903,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       items = [];
       levels = [];
       flatten = function(list) {
-        var i, item, _len, _results;
+        var i, item, _i, _len, _results;
         _results = [];
-        for (i = 0, _len = list.length; i < _len; i++) {
+        for (i = _i = 0, _len = list.length; _i < _len; i = ++_i) {
           item = list[i];
           if (Array.isArray(item)) {
             level++;
@@ -5539,41 +7919,51 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         return _results;
       };
       flatten(list);
-      wrapper = new LineWrapper(this);
+      wrapper = new LineWrapper(this, options);
       wrapper.on('line', this._line.bind(this));
       level = 1;
       i = 0;
-      wrapper.on('firstLine', function() {
-        var diff, l;
-        if ((l = levels[i++]) !== level) {
-          diff = itemIndent * (l - level);
-          _this.x += diff;
-          wrapper.lineWidth -= diff;
-          level = l;
-        }
-        _this.circle(_this.x - indent + r, _this.y + r + (r / 2), r);
-        return _this.fill();
-      });
-      wrapper.on('sectionStart', function() {
-        var pos;
-        pos = indent + itemIndent * (level - 1);
-        _this.x += pos;
-        return wrapper.lineWidth -= pos;
-      });
-      wrapper.on('sectionEnd', function() {
-        var pos;
-        pos = indent + itemIndent * (level - 1);
-        _this.x -= pos;
-        return wrapper.lineWidth += pos;
-      });
-      wrapper.wrap(items, options);
+      wrapper.on('firstLine', (function(_this) {
+        return function() {
+          var diff, l;
+          if ((l = levels[i++]) !== level) {
+            diff = itemIndent * (l - level);
+            _this.x += diff;
+            wrapper.lineWidth -= diff;
+            level = l;
+          }
+          _this.circle(_this.x - indent + r, _this.y + r + (r / 2), r);
+          return _this.fill();
+        };
+      })(this));
+      wrapper.on('sectionStart', (function(_this) {
+        return function() {
+          var pos;
+          pos = indent + itemIndent * (level - 1);
+          _this.x += pos;
+          return wrapper.lineWidth -= pos;
+        };
+      })(this));
+      wrapper.on('sectionEnd', (function(_this) {
+        return function() {
+          var pos;
+          pos = indent + itemIndent * (level - 1);
+          _this.x -= pos;
+          return wrapper.lineWidth += pos;
+        };
+      })(this));
+      wrapper.wrap(items.join('\n'), options);
       this.x -= indent;
       return this;
     },
     _initOptions: function(x, y, options) {
-      var margins, _ref, _ref2, _ref3;
-      if (x == null) x = {};
-      if (options == null) options = {};
+      var key, margins, val, _ref;
+      if (x == null) {
+        x = {};
+      }
+      if (options == null) {
+        options = {};
+      }
       if (typeof x === 'object') {
         options = x;
         x = null;
@@ -5587,40 +7977,54 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         }
         return opts;
       })();
-      if (x != null) this.x = x;
-      if (y != null) this.y = y;
+      if (this._textOptions) {
+        _ref = this._textOptions;
+        for (key in _ref) {
+          val = _ref[key];
+          if (key !== 'continued') {
+            if (options[key] == null) {
+              options[key] = val;
+            }
+          }
+        }
+      }
+      if (x != null) {
+        this.x = x;
+      }
+      if (y != null) {
+        this.y = y;
+      }
       if (options.lineBreak !== false) {
         margins = this.page.margins;
-        if ((_ref = options.width) == null) {
+        if (options.width == null) {
           options.width = this.page.width - this.x - margins.right;
-        }
-        if ((_ref2 = options.height) == null) {
-          options.height = this.page.height - this.y - margins.bottom;
         }
       }
       options.columns || (options.columns = 0);
-      if ((_ref3 = options.columnGap) == null) options.columnGap = 18;
+      if (options.columnGap == null) {
+        options.columnGap = 18;
+      }
       return options;
-    },
-    widthOfString: function(string, options) {
-      if (options == null) options = {};
-      return this._font.widthOfString(string, this._fontSize) + (options.characterSpacing || 0) * (string.length - 1);
     },
     _line: function(text, options, wrapper) {
       var lineGap;
-      if (options == null) options = {};
+      if (options == null) {
+        options = {};
+      }
       this._fragment(text, this.x, this.y, options);
       lineGap = options.lineGap || this._lineGap || 0;
-      if (!wrapper || (wrapper.lastLine && options.lineBreak === false)) {
+      if (!wrapper) {
         return this.x += this.widthOfString(text);
       } else {
         return this.y += this.currentLineHeight(true) + lineGap;
       }
     },
     _fragment: function(text, x, y, options) {
-      var align, characterSpacing, i, mode, spaceWidth, state, textWidth, wordSpacing, words, _base, _name, _ref;
+      var align, characterSpacing, commands, d, encoded, i, lineWidth, lineY, mode, renderedWidth, spaceWidth, state, textWidth, word, wordSpacing, words, _base, _i, _len, _name;
       text = '' + text;
-      if (text.length === 0) return;
+      if (text.length === 0) {
+        return;
+      }
       state = this._textState;
       align = options.align || 'left';
       wordSpacing = options.wordSpacing || 0;
@@ -5628,58 +8032,102 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       if (options.width) {
         switch (align) {
           case 'right':
-            x += options.lineWidth - options.textWidth;
+            textWidth = this.widthOfString(text.trimRight(), options);
+            x += options.lineWidth - textWidth;
             break;
           case 'center':
             x += options.lineWidth / 2 - options.textWidth / 2;
             break;
           case 'justify':
-            words = text.match(WORD_RE) || [text];
-            if (!words) break;
+            words = text.trim().split(/\s+/);
             textWidth = this.widthOfString(text.replace(/\s+/g, ''), options);
             spaceWidth = this.widthOfString(' ') + characterSpacing;
-            wordSpacing = (options.lineWidth - textWidth) / (words.length - 1) - spaceWidth;
+            wordSpacing = Math.max(0, (options.lineWidth - textWidth) / Math.max(1, words.length - 1) - spaceWidth);
         }
+      }
+      renderedWidth = options.textWidth + (wordSpacing * (options.wordCount - 1)) + (characterSpacing * (text.length - 1));
+      if (options.link) {
+        this.link(x, y, renderedWidth, this.currentLineHeight(), options.link);
+      }
+      if (options.underline || options.strike) {
+        this.save();
+        if (!options.stroke) {
+          this.strokeColor.apply(this, this._fillColor);
+        }
+        lineWidth = this._fontSize >= 20 ? 2 : 1;
+        this.lineWidth(lineWidth);
+        d = options.underline ? 1 : 2;
+        lineY = y + this.currentLineHeight() / d;
+        if (options.underline) {
+          lineY -= lineWidth;
+        }
+        this.moveTo(x, lineY);
+        this.lineTo(x + renderedWidth, lineY);
+        this.stroke();
+        this.restore();
       }
       this.save();
       this.transform(1, 0, 0, -1, 0, this.page.height);
       y = this.page.height - y - (this._font.ascender / 1000 * this._fontSize);
-      if ((_ref = (_base = this.page.fonts)[_name = this._font.id]) == null) {
+      if ((_base = this.page.fonts)[_name = this._font.id] == null) {
         _base[_name] = this._font.ref;
       }
       this._font.use(text);
-      text = this._font.encode(text);
-      text = ((function() {
-        var _ref2, _results;
-        _results = [];
-        for (i = 0, _ref2 = text.length; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
-          _results.push(text.charCodeAt(i).toString(16));
-        }
-        return _results;
-      })()).join('');
       this.addContent("BT");
       this.addContent("" + x + " " + y + " Td");
       this.addContent("/" + this._font.id + " " + this._fontSize + " Tf");
       mode = options.fill && options.stroke ? 2 : options.stroke ? 1 : 0;
-      if (mode !== state.mode) this.addContent("" + mode + " Tr");
-      if (wordSpacing !== state.wordSpacing) this.addContent(wordSpacing + ' Tw');
+      if (mode !== state.mode) {
+        this.addContent("" + mode + " Tr");
+      }
       if (characterSpacing !== state.characterSpacing) {
         this.addContent(characterSpacing + ' Tc');
       }
-      this.addContent("<" + text + "> Tj");
+      if (wordSpacing) {
+        words = text.trim().split(/\s+/);
+        wordSpacing += this.widthOfString(' ') + characterSpacing;
+        wordSpacing *= 1000 / this._fontSize;
+        commands = [];
+        for (_i = 0, _len = words.length; _i < _len; _i++) {
+          word = words[_i];
+          encoded = this._font.encode(word);
+          encoded = ((function() {
+            var _j, _ref, _results;
+            _results = [];
+            for (i = _j = 0, _ref = encoded.length; _j < _ref; i = _j += 1) {
+              _results.push(encoded.charCodeAt(i).toString(16));
+            }
+            return _results;
+          })()).join('');
+          commands.push("<" + encoded + "> " + (-wordSpacing));
+        }
+        this.addContent("[" + (commands.join(' ')) + "] TJ");
+      } else {
+        encoded = this._font.encode(text);
+        encoded = ((function() {
+          var _j, _ref, _results;
+          _results = [];
+          for (i = _j = 0, _ref = encoded.length; _j < _ref; i = _j += 1) {
+            _results.push(encoded.charCodeAt(i).toString(16));
+          }
+          return _results;
+        })()).join('');
+        this.addContent("<" + encoded + "> Tj");
+      }
       this.addContent("ET");
       this.restore();
       state.mode = mode;
-      return state.wordSpacing = wordSpacing;
+      return state.characterSpacing = characterSpacing;
     }
   };
 
 }).call(this);
 
-},{"../line_wrapper":32}],38:[function(_dereq_,module,exports){
+},{"../line_wrapper":41}],47:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
-  var KAPPA, SVGPath;
-  var __slice = Array.prototype.slice;
+  var KAPPA, SVGPath,
+    __slice = [].slice;
 
   SVGPath = _dereq_('../path');
 
@@ -5710,7 +8158,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       SQUARE: 2
     },
     lineCap: function(c) {
-      if (typeof c === 'string') c = this._CAP_STYLES[c.toUpperCase()];
+      if (typeof c === 'string') {
+        c = this._CAP_STYLES[c.toUpperCase()];
+      }
       return this.addContent("" + c + " J");
     },
     _JOIN_STYLES: {
@@ -5719,7 +8169,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       BEVEL: 2
     },
     lineJoin: function(j) {
-      if (typeof j === 'string') j = this._JOIN_STYLES[j.toUpperCase()];
+      if (typeof j === 'string') {
+        j = this._JOIN_STYLES[j.toUpperCase()];
+      }
       return this.addContent("" + j + " j");
     },
     miterLimit: function(m) {
@@ -5727,8 +8179,12 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     },
     dash: function(length, options) {
       var phase, space, _ref;
-      if (options == null) options = {};
-      if (length == null) return this;
+      if (options == null) {
+        options = {};
+      }
+      if (length == null) {
+        return this;
+      }
       space = (_ref = options.space) != null ? _ref : length;
       phase = options.phase || 0;
       return this.addContent("[" + length + " " + space + "] " + phase + " d");
@@ -5752,7 +8208,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       return this.addContent("" + x + " " + y + " " + w + " " + h + " re");
     },
     roundedRect: function(x, y, w, h, r) {
-      if (r == null) r = 0;
+      if (r == null) {
+        r = 0;
+      }
       this.moveTo(x + r, y);
       this.lineTo(x + w - r, y);
       this.quadraticCurveTo(x + w, y, x + w, y + r);
@@ -5764,16 +8222,24 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       return this.quadraticCurveTo(x, y, x + r, y);
     },
     ellipse: function(x, y, r1, r2) {
-      var l1, l2;
-      if (r2 == null) r2 = r1;
-      l1 = r1 * KAPPA;
-      l2 = r2 * KAPPA;
-      this.moveTo(x + r1, y);
-      this.bezierCurveTo(x + r1, y + l1, x + l2, y + r2, x, y + r2);
-      this.bezierCurveTo(x - l2, y + r2, x - r1, y + l1, x - r1, y);
-      this.bezierCurveTo(x - r1, y - l1, x - l2, y - r2, x, y - r2);
-      this.bezierCurveTo(x + l2, y - r2, x + r1, y - l1, x + r1, y);
-      return this.moveTo(x, y);
+      var ox, oy, xe, xm, ye, ym;
+      if (r2 == null) {
+        r2 = r1;
+      }
+      x -= r1;
+      y -= r2;
+      ox = r1 * KAPPA;
+      oy = r2 * KAPPA;
+      xe = x + r1 * 2;
+      ye = y + r2 * 2;
+      xm = x + r1;
+      ym = y + r2;
+      this.moveTo(x, ym);
+      this.bezierCurveTo(x, ym - oy, xm - ox, y, xm, y);
+      this.bezierCurveTo(xm + ox, y, xe, ym - oy, xe, ym);
+      this.bezierCurveTo(xe, ym + oy, xm + ox, ye, xm, ye);
+      this.bezierCurveTo(xm - ox, ye, x, ym + oy, x, ym);
+      return this.closePath();
     },
     circle: function(x, y, radius) {
       return this.ellipse(x, y, radius);
@@ -5793,7 +8259,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       return this;
     },
     _windingRule: function(rule) {
-      if (/even-?odd/.test(rule)) return '*';
+      if (/even-?odd/.test(rule)) {
+        return '*';
+      }
       return '';
     },
     fill: function(color, rule) {
@@ -5801,16 +8269,22 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         rule = color;
         color = null;
       }
-      if (color) this.fillColor(color);
+      if (color) {
+        this.fillColor(color);
+      }
       return this.addContent('f' + this._windingRule(rule));
     },
     stroke: function(color) {
-      if (color) this.strokeColor(color);
+      if (color) {
+        this.strokeColor(color);
+      }
       return this.addContent('S');
     },
     fillAndStroke: function(fillColor, strokeColor, rule) {
       var isFillRule;
-      if (strokeColor == null) strokeColor = fillColor;
+      if (strokeColor == null) {
+        strokeColor = fillColor;
+      }
       isFillRule = /(even-?odd)|(non-?zero)/;
       if (isFillRule.test(fillColor)) {
         rule = fillColor;
@@ -5856,7 +8330,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     },
     rotate: function(angle, options) {
       var cos, rad, sin, x, x1, y, y1, _ref;
-      if (options == null) options = {};
+      if (options == null) {
+        options = {};
+      }
       rad = angle * Math.PI / 180;
       cos = Math.cos(rad);
       sin = Math.sin(rad);
@@ -5872,8 +8348,12 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     },
     scale: function(xFactor, yFactor, options) {
       var x, y, _ref;
-      if (yFactor == null) yFactor = xFactor;
-      if (options == null) options = {};
+      if (yFactor == null) {
+        yFactor = xFactor;
+      }
+      if (options == null) {
+        options = {};
+      }
       if (arguments.length === 2) {
         yFactor = xFactor;
         options = yFactor;
@@ -5890,15 +8370,16 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{"../path":41}],39:[function(_dereq_,module,exports){
+},{"../path":50}],48:[function(_dereq_,module,exports){
 (function (Buffer){
+// Generated by CoffeeScript 1.7.1
+
+/*
+PDFObject - converts JavaScript types into their corrisponding PDF types.
+By Devon Govett
+ */
+
 (function() {
-
-  /*
-  PDFObject - converts JavaScript types into their corrisponding PDF types.
-  By Devon Govett
-  */
-
   var PDFObject, PDFReference;
 
   PDFObject = (function() {
@@ -5945,12 +8426,12 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     swapBytes = function(buff) {
-      var a, i, l, _ref;
+      var a, i, l, _i, _ref;
       l = buff.length;
       if (l & 0x01) {
         throw new Error("Buffer length must be even");
       } else {
-        for (i = 0, _ref = l - 1; i < _ref; i += 2) {
+        for (i = _i = 0, _ref = l - 1; _i < _ref; i = _i += 2) {
           a = buff[i];
           buff[i] = buff[i + 1];
           buff[i + 1] = a;
@@ -5960,7 +8441,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     PDFObject.s = function(string, swap) {
-      if (swap == null) swap = false;
+      if (swap == null) {
+        swap = false;
+      }
       string = string.replace(/\\/g, '\\\\\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
       if (swap) {
         string = swapBytes(new Buffer('\ufeff' + string, 'ucs-2')).toString('binary');
@@ -5984,14 +8467,15 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"./reference":42,"buffer":1}],40:[function(_dereq_,module,exports){
+},{"./reference":51,"buffer":1}],49:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
+
+/*
+PDFPage - represents a single page in the PDF document
+By Devon Govett
+ */
+
 (function() {
-
-  /*
-  PDFPage - represents a single page in the PDF document
-  By Devon Govett
-  */
-
   var PDFPage;
 
   PDFPage = (function() {
@@ -5999,9 +8483,10 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
     function PDFPage(document, options) {
       var dimensions;
-      var _this = this;
       this.document = document;
-      if (options == null) options = {};
+      if (options == null) {
+        options = {};
+      }
       this.size = options.size || 'letter';
       this.layout = options.layout || 'portrait';
       if (typeof options.margin === 'number') {
@@ -6018,47 +8503,57 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       this.width = dimensions[this.layout === 'portrait' ? 0 : 1];
       this.height = dimensions[this.layout === 'portrait' ? 1 : 0];
       this.content = this.document.ref();
-      this.dictionary = this.document.ref({
-        Type: 'Page',
-        Parent: this.document.store.pages,
-        MediaBox: [0, 0, this.width, this.height],
-        Contents: this.content
-      });
-      this.dictionary.data['Resources'] = this.document.ref({
+      this.resources = this.document.ref({
         ProcSet: ['PDF', 'Text', 'ImageB', 'ImageC', 'ImageI']
       });
-      this.resources = this.dictionary.data['Resources'].data;
       Object.defineProperties(this, {
         fonts: {
-          get: function() {
-            var _base, _ref;
-            return (_ref = (_base = _this.resources)['Font']) != null ? _ref : _base['Font'] = {};
-          }
+          get: (function(_this) {
+            return function() {
+              var _base;
+              return (_base = _this.resources.data).Font != null ? _base.Font : _base.Font = {};
+            };
+          })(this)
         },
         xobjects: {
-          get: function() {
-            var _base, _ref;
-            return (_ref = (_base = _this.resources)['XObject']) != null ? _ref : _base['XObject'] = {};
-          }
+          get: (function(_this) {
+            return function() {
+              var _base;
+              return (_base = _this.resources.data).XObject != null ? _base.XObject : _base.XObject = {};
+            };
+          })(this)
         },
         ext_gstates: {
-          get: function() {
-            var _base, _ref;
-            return (_ref = (_base = _this.resources)['ExtGState']) != null ? _ref : _base['ExtGState'] = {};
-          }
+          get: (function(_this) {
+            return function() {
+              var _base;
+              return (_base = _this.resources.data).ExtGState != null ? _base.ExtGState : _base.ExtGState = {};
+            };
+          })(this)
         },
         patterns: {
-          get: function() {
-            var _base, _ref;
-            return (_ref = (_base = _this.resources)['Pattern']) != null ? _ref : _base['Pattern'] = {};
-          }
+          get: (function(_this) {
+            return function() {
+              var _base;
+              return (_base = _this.resources.data).Pattern != null ? _base.Pattern : _base.Pattern = {};
+            };
+          })(this)
         },
         annotations: {
-          get: function() {
-            var _base, _ref;
-            return (_ref = (_base = _this.dictionary.data)['Annots']) != null ? _ref : _base['Annots'] = [];
-          }
+          get: (function(_this) {
+            return function() {
+              var _base;
+              return (_base = _this.dictionary.data).Annots != null ? _base.Annots : _base.Annots = [];
+            };
+          })(this)
         }
+      });
+      this.dictionary = this.document.ref({
+        Type: 'Page',
+        Parent: this.document._root.data.Pages,
+        MediaBox: [0, 0, this.width, this.height],
+        Contents: this.content,
+        Resources: this.resources
       });
     }
 
@@ -6066,8 +8561,14 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       return this.height - this.margins.bottom;
     };
 
-    PDFPage.prototype.finalize = function(fn) {
-      return this.content.finalize(this.document.compress, fn);
+    PDFPage.prototype.write = function(chunk) {
+      return this.content.write(chunk);
+    };
+
+    PDFPage.prototype.end = function() {
+      this.dictionary.end();
+      this.resources.end();
+      return this.content.end();
     };
 
     DEFAULT_MARGINS = {
@@ -6138,7 +8639,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{}],41:[function(_dereq_,module,exports){
+},{}],50:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
   var SVGPath;
 
@@ -6188,7 +8690,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         if (parameters[c] != null) {
           params = parameters[c];
           if (cmd) {
-            if (curArg.length > 0) args[args.length] = +curArg;
+            if (curArg.length > 0) {
+              args[args.length] = +curArg;
+            }
             ret[ret.length] = {
               cmd: cmd,
               args: args
@@ -6199,15 +8703,21 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           }
           cmd = c;
         } else if ((c === " " || c === ",") || (c === "-" && curArg.length > 0 && curArg[curArg.length - 1] !== 'e') || (c === "." && foundDecimal)) {
-          if (curArg.length === 0) continue;
+          if (curArg.length === 0) {
+            continue;
+          }
           if (args.length === params) {
             ret[ret.length] = {
               cmd: cmd,
               args: args
             };
             args = [+curArg];
-            if (cmd === "M") cmd = "L";
-            if (cmd === "m") cmd = "l";
+            if (cmd === "M") {
+              cmd = "L";
+            }
+            if (cmd === "m") {
+              cmd = "l";
+            }
           } else {
             args[args.length] = +curArg;
           }
@@ -6215,10 +8725,28 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
           curArg = c === '-' || c === '.' ? c : '';
         } else {
           curArg += c;
-          if (c === '.') foundDecimal = true;
+          if (c === '.') {
+            foundDecimal = true;
+          }
         }
       }
-      if (curArg.length > 0) args[args.length] = +curArg;
+      if (curArg.length > 0) {
+        if (args.length === params) {
+          ret[ret.length] = {
+            cmd: cmd,
+            args: args
+          };
+          args = [+curArg];
+          if (cmd === "M") {
+            cmd = "L";
+          }
+          if (cmd === "m") {
+            cmd = "l";
+          }
+        } else {
+          args[args.length] = +curArg;
+        }
+      }
       ret[ret.length] = {
         cmd: cmd,
         args: args
@@ -6229,9 +8757,9 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     cx = cy = px = py = sx = sy = 0;
 
     apply = function(commands, doc) {
-      var c, i, _len, _name;
+      var c, i, _i, _len, _name;
       cx = cy = px = py = sx = sy = 0;
-      for (i = 0, _len = commands.length; i < _len; i++) {
+      for (i = _i = 0, _len = commands.length; _i < _len; i = ++_i) {
         c = commands[i];
         if (typeof runners[_name = c.cmd] === "function") {
           runners[_name](doc, c.args);
@@ -6283,6 +8811,10 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
         return cy = a[3];
       },
       s: function(doc, a) {
+        if (px === null) {
+          px = cx;
+          py = cy;
+        }
         doc.bezierCurveTo(cx - (px - cx), cy - (py - cy), cx + a[0], cy + a[1], cx + a[2], cy + a[3]);
         px = cx + a[0];
         py = cy + a[1];
@@ -6399,7 +8931,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
     };
 
     arcToSegments = function(x, y, rx, ry, large, sweep, rotateX, ox, oy) {
-      var a00, a01, a10, a11, cos_th, d, i, pl, result, segments, sfactor, sfactor_sq, sin_th, th, th0, th1, th2, th3, th_arc, x0, x1, xc, y0, y1, yc;
+      var a00, a01, a10, a11, cos_th, d, i, pl, result, segments, sfactor, sfactor_sq, sin_th, th, th0, th1, th2, th3, th_arc, x0, x1, xc, y0, y1, yc, _i;
       th = rotateX * (Math.PI / 180);
       sin_th = Math.sin(th);
       cos_th = Math.cos(th);
@@ -6423,9 +8955,13 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       y1 = a10 * x + a11 * y;
       d = (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0);
       sfactor_sq = 1 / d - 0.25;
-      if (sfactor_sq < 0) sfactor_sq = 0;
+      if (sfactor_sq < 0) {
+        sfactor_sq = 0;
+      }
       sfactor = Math.sqrt(sfactor_sq);
-      if (sweep === large) sfactor = -sfactor;
+      if (sweep === large) {
+        sfactor = -sfactor;
+      }
       xc = 0.5 * (x0 + x1) - sfactor * (y1 - y0);
       yc = 0.5 * (y0 + y1) + sfactor * (x1 - x0);
       th0 = Math.atan2(y0 - yc, x0 - xc);
@@ -6438,7 +8974,7 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
       }
       segments = Math.ceil(Math.abs(th_arc / (Math.PI * 0.5 + 0.001)));
       result = [];
-      for (i = 0; 0 <= segments ? i < segments : i > segments; 0 <= segments ? i++ : i--) {
+      for (i = _i = 0; 0 <= segments ? _i < segments : _i > segments; i = 0 <= segments ? ++_i : --_i) {
         th2 = th0 + i * th_arc / segments;
         th3 = th0 + (i + 1) * th_arc / segments;
         result[i] = [xc, yc, th2, th3, rx, ry, sin_th, cos_th];
@@ -6471,87 +9007,106 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-},{}],42:[function(_dereq_,module,exports){
-(function (process,Buffer){
+},{}],51:[function(_dereq_,module,exports){
+(function (Buffer){
+// Generated by CoffeeScript 1.7.1
+
+/*
+PDFReference - represents a reference to another object in the PDF object heirarchy
+By Devon Govett
+ */
+
 (function() {
-
-  /*
-  PDFReference - represents a reference to another object in the PDF object heirarchy
-  By Devon Govett
-  */
-
-  var PDFObject, PDFReference, setImmediate, zlib;
+  var PDFObject, PDFReference, zlib,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   zlib = _dereq_('zlib');
 
-  setImmediate = setImmediate != null ? setImmediate : process.nextTick;
-
   PDFReference = (function() {
-
-    function PDFReference(id, data) {
+    function PDFReference(document, id, data) {
+      this.document = document;
       this.id = id;
       this.data = data != null ? data : {};
+      this.finalize = __bind(this.finalize, this);
       this.gen = 0;
-      this.stream = null;
-      this.finalizedStream = null;
+      this.deflate = null;
+      this.compress = this.document.compress && !this.data.Filter;
+      this.uncompressedLength = 0;
+      this.chunks = [];
     }
 
-    PDFReference.prototype.object = function(compress, fn) {
-      var out;
-      var _this = this;
-      if (this.finalizedStream == null) {
-        return this.finalize(compress, function() {
-          return _this.object(compress, fn);
-        });
-      }
-      out = ["" + this.id + " " + this.gen + " obj"];
-      out.push(PDFObject.convert(this.data));
-      if (this.stream) {
-        out.push("stream");
-        out.push(this.finalizedStream);
-        out.push("endstream");
-      }
-      out.push("endobj");
-      return fn(out.join('\n'));
+    PDFReference.prototype.initDeflate = function() {
+      this.data.Filter = 'FlateDecode';
+      return this.deflate = {
+        write: (function(_this) {
+          return function(chunk) {
+            _this.chunks.push(chunk);
+            return _this.data.Length += chunk.length;
+          };
+        })(this),
+        end: (function(_this) {
+          return function() {
+            return zlib.deflate(Buffer.concat(_this.chunks), function(err, data) {
+              if (err) {
+                throw err;
+              }
+              _this.chunks = [data];
+              _this.data.Length = data.length;
+              return _this.finalize();
+            });
+          };
+        })(this)
+      };
     };
 
-    PDFReference.prototype.add = function(s) {
-      var _ref;
-      if ((_ref = this.stream) == null) this.stream = [];
-      return this.stream.push(Buffer.isBuffer(s) ? s.toString('binary') : s);
-    };
-
-    PDFReference.prototype.finalize = function(compress, fn) {
-      var data, i;
-      var _this = this;
-      if (compress == null) compress = false;
-      if (this.stream) {
-        data = this.stream.join('\n');
-        if (compress && !this.data.Filter) {
-          data = new Buffer((function() {
-            var _ref, _results;
-            _results = [];
-            for (i = 0, _ref = data.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-              _results.push(data.charCodeAt(i));
-            }
-            return _results;
-          })());
-          return zlib.deflate(data, function(err, compressedData) {
-            if (err) throw err;
-            _this.finalizedStream = compressedData.toString('binary');
-            _this.data.Filter = 'FlateDecode';
-            _this.data.Length = _this.finalizedStream.length;
-            return fn();
-          });
-        } else {
-          this.finalizedStream = data;
-          this.data.Length = this.finalizedStream.length;
-          return setImmediate(fn);
+    PDFReference.prototype.write = function(chunk) {
+      var _base;
+      if (!Buffer.isBuffer(chunk)) {
+        chunk = new Buffer(chunk + '\n', 'binary');
+      }
+      this.uncompressedLength += chunk.length;
+      if ((_base = this.data).Length == null) {
+        _base.Length = 0;
+      }
+      if (this.compress) {
+        if (!this.deflate) {
+          this.initDeflate();
         }
+        return this.deflate.write(chunk);
       } else {
-        this.finalizedStream = '';
-        return setImmediate(fn);
+        this.chunks.push(chunk);
+        return this.data.Length += chunk.length;
       }
+    };
+
+    PDFReference.prototype.end = function(chunk) {
+      if (typeof chunk === 'string' || Buffer.isBuffer(chunk)) {
+        this.write(chunk);
+      }
+      if (this.deflate) {
+        return this.deflate.end();
+      } else {
+        return this.finalize();
+      }
+    };
+
+    PDFReference.prototype.finalize = function() {
+      var chunk, _i, _len, _ref;
+      this.offset = this.document._offset;
+      this.document._write("" + this.id + " " + this.gen + " obj");
+      this.document._write(PDFObject.convert(this.data));
+      if (this.chunks.length) {
+        this.document._write('stream');
+        _ref = this.chunks;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          chunk = _ref[_i];
+          this.document._write(chunk);
+        }
+        this.chunks.length = 0;
+        this.document._write('\nendstream');
+      }
+      this.document._write('endobj');
+      return this.document._refEnd(this);
     };
 
     PDFReference.prototype.toString = function() {
@@ -6568,60 +9123,298 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 
 }).call(this);
 
-}).call(this,_dereq_("/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),_dereq_("buffer").Buffer)
-},{"./object":39,"/Users/bartoszpampuch/Sources/github/pdfmake/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":5,"buffer":1,"zlib":6}],43:[function(_dereq_,module,exports){
+}).call(this,_dereq_("buffer").Buffer)
+},{"./object":48,"buffer":1,"zlib":15}],52:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
 (function() {
+  var AI, AL, B2, BA, BB, BK, CB, CJ, CL, CM, CP, CR, CharRange, EX, GL, H2, H3, HL, HY, ID, IN, IS, JL, JT, JV, LF, NL, NS, NU, OP, PO, PR, QU, RI, SA, SG, SP, SY, WJ, XX, ZW;
 
-  /*
-  PDFObjectStore - stores the object heirarchy for the PDF document
-  By Devon Govett
-  */
+  exports.OP = OP = 0;
 
-  var PDFObjectStore, PDFReference;
+  exports.CL = CL = 1;
 
-  PDFReference = _dereq_('./reference');
+  exports.CP = CP = 2;
 
-  PDFObjectStore = (function() {
+  exports.QU = QU = 3;
 
-    function PDFObjectStore() {
-      this.objects = {};
-      this.length = 0;
-      this.root = this.ref({
-        Type: 'Catalog',
-        Pages: this.ref({
-          Type: 'Pages',
-          Count: 0,
-          Kids: []
-        })
-      });
-      this.pages = this.root.data['Pages'];
+  exports.GL = GL = 4;
+
+  exports.NS = NS = 5;
+
+  exports.EX = EX = 6;
+
+  exports.SY = SY = 7;
+
+  exports.IS = IS = 8;
+
+  exports.PR = PR = 9;
+
+  exports.PO = PO = 10;
+
+  exports.NU = NU = 11;
+
+  exports.AL = AL = 12;
+
+  exports.HL = HL = 13;
+
+  exports.ID = ID = 14;
+
+  exports.IN = IN = 15;
+
+  exports.HY = HY = 16;
+
+  exports.BA = BA = 17;
+
+  exports.BB = BB = 18;
+
+  exports.B2 = B2 = 19;
+
+  exports.ZW = ZW = 20;
+
+  exports.CM = CM = 21;
+
+  exports.WJ = WJ = 22;
+
+  exports.H2 = H2 = 23;
+
+  exports.H3 = H3 = 24;
+
+  exports.JL = JL = 25;
+
+  exports.JV = JV = 26;
+
+  exports.JT = JT = 27;
+
+  exports.RI = RI = 28;
+
+  exports.AI = AI = 29;
+
+  exports.BK = BK = 30;
+
+  exports.CB = CB = 31;
+
+  exports.CJ = CJ = 32;
+
+  exports.CR = CR = 33;
+
+  exports.LF = LF = 34;
+
+  exports.NL = NL = 35;
+
+  exports.SA = SA = 36;
+
+  exports.SG = SG = 37;
+
+  exports.SP = SP = 38;
+
+  exports.XX = XX = 39;
+
+  CharRange = (function() {
+    function CharRange(start, end, _class) {
+      this.start = start;
+      this.end = end;
+      this["class"] = _class;
     }
 
-    PDFObjectStore.prototype.ref = function(data) {
-      return this.push(++this.length, data);
-    };
-
-    PDFObjectStore.prototype.push = function(id, data) {
-      var ref;
-      ref = new PDFReference(id, data);
-      this.objects[id] = ref;
-      return ref;
-    };
-
-    PDFObjectStore.prototype.addPage = function(page) {
-      this.pages.data['Kids'].push(page.dictionary);
-      return this.pages.data['Count']++;
-    };
-
-    return PDFObjectStore;
+    return CharRange;
 
   })();
 
-  module.exports = PDFObjectStore;
+  exports.characterClasses = [new CharRange(0x0000, 0x0008, CM), new CharRange(0x0009, 0x0009, BA), new CharRange(0x000A, 0x000A, LF), new CharRange(0x000B, 0x000C, BK), new CharRange(0x000D, 0x000D, CR), new CharRange(0x000E, 0x001F, CM), new CharRange(0x0020, 0x0020, SP), new CharRange(0x0021, 0x0021, EX), new CharRange(0x0022, 0x0022, QU), new CharRange(0x0023, 0x0023, AL), new CharRange(0x0024, 0x0024, PR), new CharRange(0x0025, 0x0025, PO), new CharRange(0x0026, 0x0026, AL), new CharRange(0x0027, 0x0027, QU), new CharRange(0x0028, 0x0028, OP), new CharRange(0x0029, 0x0029, CP), new CharRange(0x002A, 0x002A, AL), new CharRange(0x002B, 0x002B, PR), new CharRange(0x002C, 0x002C, IS), new CharRange(0x002D, 0x002D, HY), new CharRange(0x002E, 0x002E, IS), new CharRange(0x002F, 0x002F, SY), new CharRange(0x0030, 0x0039, NU), new CharRange(0x003A, 0x003B, IS), new CharRange(0x003C, 0x003E, AL), new CharRange(0x003F, 0x003F, EX), new CharRange(0x0040, 0x005A, AL), new CharRange(0x005B, 0x005B, OP), new CharRange(0x005C, 0x005C, PR), new CharRange(0x005D, 0x005D, CP), new CharRange(0x005E, 0x007A, AL), new CharRange(0x007B, 0x007B, OP), new CharRange(0x007C, 0x007C, BA), new CharRange(0x007D, 0x007D, CL), new CharRange(0x007E, 0x007E, AL), new CharRange(0x007F, 0x0084, CM), new CharRange(0x0085, 0x0085, NL), new CharRange(0x0086, 0x009F, CM), new CharRange(0x00A0, 0x00A0, GL), new CharRange(0x00A1, 0x00A1, OP), new CharRange(0x00A2, 0x00A2, PO), new CharRange(0x00A3, 0x00A5, PR), new CharRange(0x00A6, 0x00A6, AL), new CharRange(0x00A7, 0x00A8, AI), new CharRange(0x00A9, 0x00A9, AL), new CharRange(0x00AA, 0x00AA, AI), new CharRange(0x00AB, 0x00AB, QU), new CharRange(0x00AC, 0x00AC, AL), new CharRange(0x00AD, 0x00AD, BA), new CharRange(0x00AE, 0x00AF, AL), new CharRange(0x00B0, 0x00B0, PO), new CharRange(0x00B1, 0x00B1, PR), new CharRange(0x00B2, 0x00B3, AI), new CharRange(0x00B4, 0x00B4, BB), new CharRange(0x00B5, 0x00B5, AL), new CharRange(0x00B6, 0x00BA, AI), new CharRange(0x00BB, 0x00BB, QU), new CharRange(0x00BC, 0x00BE, AI), new CharRange(0x00BF, 0x00BF, OP), new CharRange(0x00C0, 0x00D6, AL), new CharRange(0x00D7, 0x00D7, AI), new CharRange(0x00D8, 0x00F6, AL), new CharRange(0x00F7, 0x00F7, AI), new CharRange(0x00F8, 0x02C6, AL), new CharRange(0x02C7, 0x02C7, AI), new CharRange(0x02C8, 0x02C8, BB), new CharRange(0x02C9, 0x02CB, AI), new CharRange(0x02CC, 0x02CC, BB), new CharRange(0x02CD, 0x02CD, AI), new CharRange(0x02CE, 0x02CF, AL), new CharRange(0x02D0, 0x02D0, AI), new CharRange(0x02D1, 0x02D7, AL), new CharRange(0x02D8, 0x02DB, AI), new CharRange(0x02DC, 0x02DC, AL), new CharRange(0x02DD, 0x02DD, AI), new CharRange(0x02DE, 0x02DE, AL), new CharRange(0x02DF, 0x02DF, BB), new CharRange(0x02E0, 0x02FF, AL), new CharRange(0x0300, 0x034E, CM), new CharRange(0x034F, 0x034F, GL), new CharRange(0x0350, 0x035B, CM), new CharRange(0x035C, 0x0362, GL), new CharRange(0x0363, 0x036F, CM), new CharRange(0x0370, 0x037D, AL), new CharRange(0x037E, 0x037E, IS), new CharRange(0x0384, 0x0482, AL), new CharRange(0x0483, 0x0489, CM), new CharRange(0x048A, 0x0587, AL), new CharRange(0x0589, 0x0589, IS), new CharRange(0x058A, 0x058A, BA), new CharRange(0x058F, 0x058F, PR), new CharRange(0x0591, 0x05BD, CM), new CharRange(0x05BE, 0x05BE, BA), new CharRange(0x05BF, 0x05BF, CM), new CharRange(0x05C0, 0x05C0, AL), new CharRange(0x05C1, 0x05C2, CM), new CharRange(0x05C3, 0x05C3, AL), new CharRange(0x05C4, 0x05C5, CM), new CharRange(0x05C6, 0x05C6, EX), new CharRange(0x05C7, 0x05C7, CM), new CharRange(0x05D0, 0x05F2, HL), new CharRange(0x05F3, 0x0608, AL), new CharRange(0x0609, 0x060B, PO), new CharRange(0x060C, 0x060D, IS), new CharRange(0x060E, 0x060F, AL), new CharRange(0x0610, 0x061A, CM), new CharRange(0x061B, 0x061F, EX), new CharRange(0x0620, 0x064A, AL), new CharRange(0x064B, 0x065F, CM), new CharRange(0x0660, 0x0669, NU), new CharRange(0x066A, 0x066A, PO), new CharRange(0x066B, 0x066C, NU), new CharRange(0x066D, 0x066F, AL), new CharRange(0x0670, 0x0670, CM), new CharRange(0x0671, 0x06D3, AL), new CharRange(0x06D4, 0x06D4, EX), new CharRange(0x06D5, 0x06D5, AL), new CharRange(0x06D6, 0x06DC, CM), new CharRange(0x06DD, 0x06DE, AL), new CharRange(0x06DF, 0x06E4, CM), new CharRange(0x06E5, 0x06E6, AL), new CharRange(0x06E7, 0x06E8, CM), new CharRange(0x06E9, 0x06E9, AL), new CharRange(0x06EA, 0x06ED, CM), new CharRange(0x06EE, 0x06EF, AL), new CharRange(0x06F0, 0x06F9, NU), new CharRange(0x06FA, 0x0710, AL), new CharRange(0x0711, 0x0711, CM), new CharRange(0x0712, 0x072F, AL), new CharRange(0x0730, 0x074A, CM), new CharRange(0x074D, 0x07A5, AL), new CharRange(0x07A6, 0x07B0, CM), new CharRange(0x07B1, 0x07B1, AL), new CharRange(0x07C0, 0x07C9, NU), new CharRange(0x07CA, 0x07EA, AL), new CharRange(0x07EB, 0x07F3, CM), new CharRange(0x07F4, 0x07F7, AL), new CharRange(0x07F8, 0x07F8, IS), new CharRange(0x07F9, 0x07F9, EX), new CharRange(0x07FA, 0x0815, AL), new CharRange(0x0816, 0x0819, CM), new CharRange(0x081A, 0x081A, AL), new CharRange(0x081B, 0x0823, CM), new CharRange(0x0824, 0x0824, AL), new CharRange(0x0825, 0x0827, CM), new CharRange(0x0828, 0x0828, AL), new CharRange(0x0829, 0x082D, CM), new CharRange(0x0830, 0x0858, AL), new CharRange(0x0859, 0x085B, CM), new CharRange(0x085E, 0x08AC, AL), new CharRange(0x08E4, 0x0903, CM), new CharRange(0x0904, 0x0939, AL), new CharRange(0x093A, 0x093C, CM), new CharRange(0x093D, 0x093D, AL), new CharRange(0x093E, 0x094F, CM), new CharRange(0x0950, 0x0950, AL), new CharRange(0x0951, 0x0957, CM), new CharRange(0x0958, 0x0961, AL), new CharRange(0x0962, 0x0963, CM), new CharRange(0x0964, 0x0965, BA), new CharRange(0x0966, 0x096F, NU), new CharRange(0x0970, 0x097F, AL), new CharRange(0x0981, 0x0983, CM), new CharRange(0x0985, 0x09B9, AL), new CharRange(0x09BC, 0x09BC, CM), new CharRange(0x09BD, 0x09BD, AL), new CharRange(0x09BE, 0x09CD, CM), new CharRange(0x09CE, 0x09CE, AL), new CharRange(0x09D7, 0x09D7, CM), new CharRange(0x09DC, 0x09E1, AL), new CharRange(0x09E2, 0x09E3, CM), new CharRange(0x09E6, 0x09EF, NU), new CharRange(0x09F0, 0x09F1, AL), new CharRange(0x09F2, 0x09F3, PO), new CharRange(0x09F4, 0x09F8, AL), new CharRange(0x09F9, 0x09F9, PO), new CharRange(0x09FA, 0x09FA, AL), new CharRange(0x09FB, 0x09FB, PR), new CharRange(0x0A01, 0x0A03, CM), new CharRange(0x0A05, 0x0A39, AL), new CharRange(0x0A3C, 0x0A51, CM), new CharRange(0x0A59, 0x0A5E, AL), new CharRange(0x0A66, 0x0A6F, NU), new CharRange(0x0A70, 0x0A71, CM), new CharRange(0x0A72, 0x0A74, AL), new CharRange(0x0A75, 0x0A83, CM), new CharRange(0x0A85, 0x0AB9, AL), new CharRange(0x0ABC, 0x0ABC, CM), new CharRange(0x0ABD, 0x0ABD, AL), new CharRange(0x0ABE, 0x0ACD, CM), new CharRange(0x0AD0, 0x0AE1, AL), new CharRange(0x0AE2, 0x0AE3, CM), new CharRange(0x0AE6, 0x0AEF, NU), new CharRange(0x0AF0, 0x0AF0, AL), new CharRange(0x0AF1, 0x0AF1, PR), new CharRange(0x0B01, 0x0B03, CM), new CharRange(0x0B05, 0x0B39, AL), new CharRange(0x0B3C, 0x0B3C, CM), new CharRange(0x0B3D, 0x0B3D, AL), new CharRange(0x0B3E, 0x0B57, CM), new CharRange(0x0B5C, 0x0B61, AL), new CharRange(0x0B62, 0x0B63, CM), new CharRange(0x0B66, 0x0B6F, NU), new CharRange(0x0B70, 0x0B77, AL), new CharRange(0x0B82, 0x0B82, CM), new CharRange(0x0B83, 0x0BB9, AL), new CharRange(0x0BBE, 0x0BCD, CM), new CharRange(0x0BD0, 0x0BD0, AL), new CharRange(0x0BD7, 0x0BD7, CM), new CharRange(0x0BE6, 0x0BEF, NU), new CharRange(0x0BF0, 0x0BF8, AL), new CharRange(0x0BF9, 0x0BF9, PR), new CharRange(0x0BFA, 0x0BFA, AL), new CharRange(0x0C01, 0x0C03, CM), new CharRange(0x0C05, 0x0C3D, AL), new CharRange(0x0C3E, 0x0C56, CM), new CharRange(0x0C58, 0x0C61, AL), new CharRange(0x0C62, 0x0C63, CM), new CharRange(0x0C66, 0x0C6F, NU), new CharRange(0x0C78, 0x0C7F, AL), new CharRange(0x0C82, 0x0C83, CM), new CharRange(0x0C85, 0x0CB9, AL), new CharRange(0x0CBC, 0x0CBC, CM), new CharRange(0x0CBD, 0x0CBD, AL), new CharRange(0x0CBE, 0x0CD6, CM), new CharRange(0x0CDE, 0x0CE1, AL), new CharRange(0x0CE2, 0x0CE3, CM), new CharRange(0x0CE6, 0x0CEF, NU), new CharRange(0x0CF1, 0x0CF2, AL), new CharRange(0x0D02, 0x0D03, CM), new CharRange(0x0D05, 0x0D3D, AL), new CharRange(0x0D3E, 0x0D4D, CM), new CharRange(0x0D4E, 0x0D4E, AL), new CharRange(0x0D57, 0x0D57, CM), new CharRange(0x0D60, 0x0D61, AL), new CharRange(0x0D62, 0x0D63, CM), new CharRange(0x0D66, 0x0D6F, NU), new CharRange(0x0D70, 0x0D75, AL), new CharRange(0x0D79, 0x0D79, PO), new CharRange(0x0D7A, 0x0D7F, AL), new CharRange(0x0D82, 0x0D83, CM), new CharRange(0x0D85, 0x0DC6, AL), new CharRange(0x0DCA, 0x0DF3, CM), new CharRange(0x0DF4, 0x0DF4, AL), new CharRange(0x0E01, 0x0E3A, SA), new CharRange(0x0E3F, 0x0E3F, PR), new CharRange(0x0E40, 0x0E4E, SA), new CharRange(0x0E4F, 0x0E4F, AL), new CharRange(0x0E50, 0x0E59, NU), new CharRange(0x0E5A, 0x0E5B, BA), new CharRange(0x0E81, 0x0ECD, SA), new CharRange(0x0ED0, 0x0ED9, NU), new CharRange(0x0EDC, 0x0EDF, SA), new CharRange(0x0F00, 0x0F00, AL), new CharRange(0x0F01, 0x0F04, BB), new CharRange(0x0F05, 0x0F05, AL), new CharRange(0x0F06, 0x0F07, BB), new CharRange(0x0F08, 0x0F08, GL), new CharRange(0x0F09, 0x0F0A, BB), new CharRange(0x0F0B, 0x0F0B, BA), new CharRange(0x0F0C, 0x0F0C, GL), new CharRange(0x0F0D, 0x0F11, EX), new CharRange(0x0F12, 0x0F12, GL), new CharRange(0x0F13, 0x0F13, AL), new CharRange(0x0F14, 0x0F14, EX), new CharRange(0x0F15, 0x0F17, AL), new CharRange(0x0F18, 0x0F19, CM), new CharRange(0x0F1A, 0x0F1F, AL), new CharRange(0x0F20, 0x0F29, NU), new CharRange(0x0F2A, 0x0F33, AL), new CharRange(0x0F34, 0x0F34, BA), new CharRange(0x0F35, 0x0F35, CM), new CharRange(0x0F36, 0x0F36, AL), new CharRange(0x0F37, 0x0F37, CM), new CharRange(0x0F38, 0x0F38, AL), new CharRange(0x0F39, 0x0F39, CM), new CharRange(0x0F3A, 0x0F3A, OP), new CharRange(0x0F3B, 0x0F3B, CL), new CharRange(0x0F3C, 0x0F3C, OP), new CharRange(0x0F3D, 0x0F3D, CL), new CharRange(0x0F3E, 0x0F3F, CM), new CharRange(0x0F40, 0x0F6C, AL), new CharRange(0x0F71, 0x0F7E, CM), new CharRange(0x0F7F, 0x0F7F, BA), new CharRange(0x0F80, 0x0F84, CM), new CharRange(0x0F85, 0x0F85, BA), new CharRange(0x0F86, 0x0F87, CM), new CharRange(0x0F88, 0x0F8C, AL), new CharRange(0x0F8D, 0x0FBC, CM), new CharRange(0x0FBE, 0x0FBF, BA), new CharRange(0x0FC0, 0x0FC5, AL), new CharRange(0x0FC6, 0x0FC6, CM), new CharRange(0x0FC7, 0x0FCF, AL), new CharRange(0x0FD0, 0x0FD1, BB), new CharRange(0x0FD2, 0x0FD2, BA), new CharRange(0x0FD3, 0x0FD3, BB), new CharRange(0x0FD4, 0x0FD8, AL), new CharRange(0x0FD9, 0x0FDA, GL), new CharRange(0x1000, 0x103F, SA), new CharRange(0x1040, 0x1049, NU), new CharRange(0x104A, 0x104B, BA), new CharRange(0x104C, 0x104F, AL), new CharRange(0x1050, 0x108F, SA), new CharRange(0x1090, 0x1099, NU), new CharRange(0x109A, 0x109F, SA), new CharRange(0x10A0, 0x10FF, AL), new CharRange(0x1100, 0x115F, JL), new CharRange(0x1160, 0x11A7, JV), new CharRange(0x11A8, 0x11FF, JT), new CharRange(0x1200, 0x135A, AL), new CharRange(0x135D, 0x135F, CM), new CharRange(0x1360, 0x1360, AL), new CharRange(0x1361, 0x1361, BA), new CharRange(0x1362, 0x13F4, AL), new CharRange(0x1400, 0x1400, BA), new CharRange(0x1401, 0x167F, AL), new CharRange(0x1680, 0x1680, BA), new CharRange(0x1681, 0x169A, AL), new CharRange(0x169B, 0x169B, OP), new CharRange(0x169C, 0x169C, CL), new CharRange(0x16A0, 0x16EA, AL), new CharRange(0x16EB, 0x16ED, BA), new CharRange(0x16EE, 0x1711, AL), new CharRange(0x1712, 0x1714, CM), new CharRange(0x1720, 0x1731, AL), new CharRange(0x1732, 0x1734, CM), new CharRange(0x1735, 0x1736, BA), new CharRange(0x1740, 0x1751, AL), new CharRange(0x1752, 0x1753, CM), new CharRange(0x1760, 0x1770, AL), new CharRange(0x1772, 0x1773, CM), new CharRange(0x1780, 0x17D3, SA), new CharRange(0x17D4, 0x17D5, BA), new CharRange(0x17D6, 0x17D6, NS), new CharRange(0x17D7, 0x17D7, SA), new CharRange(0x17D8, 0x17D8, BA), new CharRange(0x17D9, 0x17D9, AL), new CharRange(0x17DA, 0x17DA, BA), new CharRange(0x17DB, 0x17DB, PR), new CharRange(0x17DC, 0x17DD, SA), new CharRange(0x17E0, 0x17E9, NU), new CharRange(0x17F0, 0x1801, AL), new CharRange(0x1802, 0x1803, EX), new CharRange(0x1804, 0x1805, BA), new CharRange(0x1806, 0x1806, BB), new CharRange(0x1807, 0x1807, AL), new CharRange(0x1808, 0x1809, EX), new CharRange(0x180A, 0x180A, AL), new CharRange(0x180B, 0x180D, CM), new CharRange(0x180E, 0x180E, GL), new CharRange(0x1810, 0x1819, NU), new CharRange(0x1820, 0x18A8, AL), new CharRange(0x18A9, 0x18A9, CM), new CharRange(0x18AA, 0x191C, AL), new CharRange(0x1920, 0x193B, CM), new CharRange(0x1940, 0x1940, AL), new CharRange(0x1944, 0x1945, EX), new CharRange(0x1946, 0x194F, NU), new CharRange(0x1950, 0x19C9, SA), new CharRange(0x19D0, 0x19D9, NU), new CharRange(0x19DA, 0x19DF, SA), new CharRange(0x19E0, 0x1A16, AL), new CharRange(0x1A17, 0x1A1B, CM), new CharRange(0x1A1E, 0x1A1F, AL), new CharRange(0x1A20, 0x1A7C, SA), new CharRange(0x1A7F, 0x1A7F, CM), new CharRange(0x1A80, 0x1A99, NU), new CharRange(0x1AA0, 0x1AAD, SA), new CharRange(0x1B00, 0x1B04, CM), new CharRange(0x1B05, 0x1B33, AL), new CharRange(0x1B34, 0x1B44, CM), new CharRange(0x1B45, 0x1B4B, AL), new CharRange(0x1B50, 0x1B59, NU), new CharRange(0x1B5A, 0x1B5B, BA), new CharRange(0x1B5C, 0x1B5C, AL), new CharRange(0x1B5D, 0x1B60, BA), new CharRange(0x1B61, 0x1B6A, AL), new CharRange(0x1B6B, 0x1B73, CM), new CharRange(0x1B74, 0x1B7C, AL), new CharRange(0x1B80, 0x1B82, CM), new CharRange(0x1B83, 0x1BA0, AL), new CharRange(0x1BA1, 0x1BAD, CM), new CharRange(0x1BAE, 0x1BAF, AL), new CharRange(0x1BB0, 0x1BB9, NU), new CharRange(0x1BBA, 0x1BE5, AL), new CharRange(0x1BE6, 0x1BF3, CM), new CharRange(0x1BFC, 0x1C23, AL), new CharRange(0x1C24, 0x1C37, CM), new CharRange(0x1C3B, 0x1C3F, BA), new CharRange(0x1C40, 0x1C49, NU), new CharRange(0x1C4D, 0x1C4F, AL), new CharRange(0x1C50, 0x1C59, NU), new CharRange(0x1C5A, 0x1C7D, AL), new CharRange(0x1C7E, 0x1C7F, BA), new CharRange(0x1CC0, 0x1CC7, AL), new CharRange(0x1CD0, 0x1CD2, CM), new CharRange(0x1CD3, 0x1CD3, AL), new CharRange(0x1CD4, 0x1CE8, CM), new CharRange(0x1CE9, 0x1CEC, AL), new CharRange(0x1CED, 0x1CED, CM), new CharRange(0x1CEE, 0x1CF1, AL), new CharRange(0x1CF2, 0x1CF4, CM), new CharRange(0x1CF5, 0x1DBF, AL), new CharRange(0x1DC0, 0x1DFF, CM), new CharRange(0x1E00, 0x1FFC, AL), new CharRange(0x1FFD, 0x1FFD, BB), new CharRange(0x1FFE, 0x1FFE, AL), new CharRange(0x2000, 0x2006, BA), new CharRange(0x2007, 0x2007, GL), new CharRange(0x2008, 0x200A, BA), new CharRange(0x200B, 0x200B, ZW), new CharRange(0x200C, 0x200F, CM), new CharRange(0x2010, 0x2010, BA), new CharRange(0x2011, 0x2011, GL), new CharRange(0x2012, 0x2013, BA), new CharRange(0x2014, 0x2014, B2), new CharRange(0x2015, 0x2016, AI), new CharRange(0x2017, 0x2017, AL), new CharRange(0x2018, 0x2019, QU), new CharRange(0x201A, 0x201A, OP), new CharRange(0x201B, 0x201D, QU), new CharRange(0x201E, 0x201E, OP), new CharRange(0x201F, 0x201F, QU), new CharRange(0x2020, 0x2021, AI), new CharRange(0x2022, 0x2023, AL), new CharRange(0x2024, 0x2026, IN), new CharRange(0x2027, 0x2027, BA), new CharRange(0x2028, 0x2029, BK), new CharRange(0x202A, 0x202E, CM), new CharRange(0x202F, 0x202F, GL), new CharRange(0x2030, 0x2037, PO), new CharRange(0x2038, 0x2038, AL), new CharRange(0x2039, 0x203A, QU), new CharRange(0x203B, 0x203B, AI), new CharRange(0x203C, 0x203D, NS), new CharRange(0x203E, 0x2043, AL), new CharRange(0x2044, 0x2044, IS), new CharRange(0x2045, 0x2045, OP), new CharRange(0x2046, 0x2046, CL), new CharRange(0x2047, 0x2049, NS), new CharRange(0x204A, 0x2055, AL), new CharRange(0x2056, 0x2056, BA), new CharRange(0x2057, 0x2057, AL), new CharRange(0x2058, 0x205B, BA), new CharRange(0x205C, 0x205C, AL), new CharRange(0x205D, 0x205F, BA), new CharRange(0x2060, 0x2060, WJ), new CharRange(0x2061, 0x2064, AL), new CharRange(0x206A, 0x206F, CM), new CharRange(0x2070, 0x2071, AL), new CharRange(0x2074, 0x2074, AI), new CharRange(0x2075, 0x207C, AL), new CharRange(0x207D, 0x207D, OP), new CharRange(0x207E, 0x207E, CL), new CharRange(0x207F, 0x207F, AI), new CharRange(0x2080, 0x2080, AL), new CharRange(0x2081, 0x2084, AI), new CharRange(0x2085, 0x208C, AL), new CharRange(0x208D, 0x208D, OP), new CharRange(0x208E, 0x208E, CL), new CharRange(0x2090, 0x209C, AL), new CharRange(0x20A0, 0x20A6, PR), new CharRange(0x20A7, 0x20A7, PO), new CharRange(0x20A8, 0x20B5, PR), new CharRange(0x20B6, 0x20B6, PO), new CharRange(0x20B7, 0x20BA, PR), new CharRange(0x20D0, 0x20F0, CM), new CharRange(0x2100, 0x2102, AL), new CharRange(0x2103, 0x2103, PO), new CharRange(0x2104, 0x2104, AL), new CharRange(0x2105, 0x2105, AI), new CharRange(0x2106, 0x2108, AL), new CharRange(0x2109, 0x2109, PO), new CharRange(0x210A, 0x2112, AL), new CharRange(0x2113, 0x2113, AI), new CharRange(0x2114, 0x2115, AL), new CharRange(0x2116, 0x2116, PR), new CharRange(0x2117, 0x2120, AL), new CharRange(0x2121, 0x2122, AI), new CharRange(0x2123, 0x212A, AL), new CharRange(0x212B, 0x212B, AI), new CharRange(0x212C, 0x2153, AL), new CharRange(0x2154, 0x2155, AI), new CharRange(0x2156, 0x215A, AL), new CharRange(0x215B, 0x215B, AI), new CharRange(0x215C, 0x215D, AL), new CharRange(0x215E, 0x215E, AI), new CharRange(0x215F, 0x215F, AL), new CharRange(0x2160, 0x216B, AI), new CharRange(0x216C, 0x216F, AL), new CharRange(0x2170, 0x2179, AI), new CharRange(0x217A, 0x2188, AL), new CharRange(0x2189, 0x2199, AI), new CharRange(0x219A, 0x21D1, AL), new CharRange(0x21D2, 0x21D2, AI), new CharRange(0x21D3, 0x21D3, AL), new CharRange(0x21D4, 0x21D4, AI), new CharRange(0x21D5, 0x21FF, AL), new CharRange(0x2200, 0x2200, AI), new CharRange(0x2201, 0x2201, AL), new CharRange(0x2202, 0x2203, AI), new CharRange(0x2204, 0x2206, AL), new CharRange(0x2207, 0x2208, AI), new CharRange(0x2209, 0x220A, AL), new CharRange(0x220B, 0x220B, AI), new CharRange(0x220C, 0x220E, AL), new CharRange(0x220F, 0x220F, AI), new CharRange(0x2210, 0x2210, AL), new CharRange(0x2211, 0x2211, AI), new CharRange(0x2212, 0x2213, PR), new CharRange(0x2214, 0x2214, AL), new CharRange(0x2215, 0x2215, AI), new CharRange(0x2216, 0x2219, AL), new CharRange(0x221A, 0x221A, AI), new CharRange(0x221B, 0x221C, AL), new CharRange(0x221D, 0x2220, AI), new CharRange(0x2221, 0x2222, AL), new CharRange(0x2223, 0x2223, AI), new CharRange(0x2224, 0x2224, AL), new CharRange(0x2225, 0x2225, AI), new CharRange(0x2226, 0x2226, AL), new CharRange(0x2227, 0x222C, AI), new CharRange(0x222D, 0x222D, AL), new CharRange(0x222E, 0x222E, AI), new CharRange(0x222F, 0x2233, AL), new CharRange(0x2234, 0x2237, AI), new CharRange(0x2238, 0x223B, AL), new CharRange(0x223C, 0x223D, AI), new CharRange(0x223E, 0x2247, AL), new CharRange(0x2248, 0x2248, AI), new CharRange(0x2249, 0x224B, AL), new CharRange(0x224C, 0x224C, AI), new CharRange(0x224D, 0x2251, AL), new CharRange(0x2252, 0x2252, AI), new CharRange(0x2253, 0x225F, AL), new CharRange(0x2260, 0x2261, AI), new CharRange(0x2262, 0x2263, AL), new CharRange(0x2264, 0x2267, AI), new CharRange(0x2268, 0x2269, AL), new CharRange(0x226A, 0x226B, AI), new CharRange(0x226C, 0x226D, AL), new CharRange(0x226E, 0x226F, AI), new CharRange(0x2270, 0x2281, AL), new CharRange(0x2282, 0x2283, AI), new CharRange(0x2284, 0x2285, AL), new CharRange(0x2286, 0x2287, AI), new CharRange(0x2288, 0x2294, AL), new CharRange(0x2295, 0x2295, AI), new CharRange(0x2296, 0x2298, AL), new CharRange(0x2299, 0x2299, AI), new CharRange(0x229A, 0x22A4, AL), new CharRange(0x22A5, 0x22A5, AI), new CharRange(0x22A6, 0x22BE, AL), new CharRange(0x22BF, 0x22BF, AI), new CharRange(0x22C0, 0x2311, AL), new CharRange(0x2312, 0x2312, AI), new CharRange(0x2313, 0x2319, AL), new CharRange(0x231A, 0x231B, ID), new CharRange(0x231C, 0x2328, AL), new CharRange(0x2329, 0x2329, OP), new CharRange(0x232A, 0x232A, CL), new CharRange(0x232B, 0x23EF, AL), new CharRange(0x23F0, 0x23F3, ID), new CharRange(0x2400, 0x244A, AL), new CharRange(0x2460, 0x24FE, AI), new CharRange(0x24FF, 0x24FF, AL), new CharRange(0x2500, 0x254B, AI), new CharRange(0x254C, 0x254F, AL), new CharRange(0x2550, 0x2574, AI), new CharRange(0x2575, 0x257F, AL), new CharRange(0x2580, 0x258F, AI), new CharRange(0x2590, 0x2591, AL), new CharRange(0x2592, 0x2595, AI), new CharRange(0x2596, 0x259F, AL), new CharRange(0x25A0, 0x25A1, AI), new CharRange(0x25A2, 0x25A2, AL), new CharRange(0x25A3, 0x25A9, AI), new CharRange(0x25AA, 0x25B1, AL), new CharRange(0x25B2, 0x25B3, AI), new CharRange(0x25B4, 0x25B5, AL), new CharRange(0x25B6, 0x25B7, AI), new CharRange(0x25B8, 0x25BB, AL), new CharRange(0x25BC, 0x25BD, AI), new CharRange(0x25BE, 0x25BF, AL), new CharRange(0x25C0, 0x25C1, AI), new CharRange(0x25C2, 0x25C5, AL), new CharRange(0x25C6, 0x25C8, AI), new CharRange(0x25C9, 0x25CA, AL), new CharRange(0x25CB, 0x25CB, AI), new CharRange(0x25CC, 0x25CD, AL), new CharRange(0x25CE, 0x25D1, AI), new CharRange(0x25D2, 0x25E1, AL), new CharRange(0x25E2, 0x25E5, AI), new CharRange(0x25E6, 0x25EE, AL), new CharRange(0x25EF, 0x25EF, AI), new CharRange(0x25F0, 0x25FF, AL), new CharRange(0x2600, 0x2603, ID), new CharRange(0x2604, 0x2604, AL), new CharRange(0x2605, 0x2606, AI), new CharRange(0x2607, 0x2608, AL), new CharRange(0x2609, 0x2609, AI), new CharRange(0x260A, 0x260D, AL), new CharRange(0x260E, 0x260F, AI), new CharRange(0x2610, 0x2613, AL), new CharRange(0x2614, 0x2615, ID), new CharRange(0x2616, 0x2617, AI), new CharRange(0x2618, 0x2618, ID), new CharRange(0x2619, 0x2619, AL), new CharRange(0x261A, 0x261F, ID), new CharRange(0x2620, 0x2638, AL), new CharRange(0x2639, 0x263B, ID), new CharRange(0x263C, 0x263F, AL), new CharRange(0x2640, 0x2640, AI), new CharRange(0x2641, 0x2641, AL), new CharRange(0x2642, 0x2642, AI), new CharRange(0x2643, 0x265F, AL), new CharRange(0x2660, 0x2661, AI), new CharRange(0x2662, 0x2662, AL), new CharRange(0x2663, 0x2665, AI), new CharRange(0x2666, 0x2666, AL), new CharRange(0x2667, 0x2667, AI), new CharRange(0x2668, 0x2668, ID), new CharRange(0x2669, 0x266A, AI), new CharRange(0x266B, 0x266B, AL), new CharRange(0x266C, 0x266D, AI), new CharRange(0x266E, 0x266E, AL), new CharRange(0x266F, 0x266F, AI), new CharRange(0x2670, 0x267E, AL), new CharRange(0x267F, 0x267F, ID), new CharRange(0x2680, 0x269D, AL), new CharRange(0x269E, 0x269F, AI), new CharRange(0x26A0, 0x26BC, AL), new CharRange(0x26BD, 0x26C8, ID), new CharRange(0x26C9, 0x26CC, AI), new CharRange(0x26CD, 0x26CD, ID), new CharRange(0x26CE, 0x26CE, AL), new CharRange(0x26CF, 0x26D1, ID), new CharRange(0x26D2, 0x26D2, AI), new CharRange(0x26D3, 0x26D4, ID), new CharRange(0x26D5, 0x26D7, AI), new CharRange(0x26D8, 0x26D9, ID), new CharRange(0x26DA, 0x26DB, AI), new CharRange(0x26DC, 0x26DC, ID), new CharRange(0x26DD, 0x26DE, AI), new CharRange(0x26DF, 0x26E1, ID), new CharRange(0x26E2, 0x26E2, AL), new CharRange(0x26E3, 0x26E3, AI), new CharRange(0x26E4, 0x26E7, AL), new CharRange(0x26E8, 0x26E9, AI), new CharRange(0x26EA, 0x26EA, ID), new CharRange(0x26EB, 0x26F0, AI), new CharRange(0x26F1, 0x26F5, ID), new CharRange(0x26F6, 0x26F6, AI), new CharRange(0x26F7, 0x26FA, ID), new CharRange(0x26FB, 0x26FC, AI), new CharRange(0x26FD, 0x2704, ID), new CharRange(0x2705, 0x2707, AL), new CharRange(0x2708, 0x270D, ID), new CharRange(0x270E, 0x2756, AL), new CharRange(0x2757, 0x2757, AI), new CharRange(0x2758, 0x275A, AL), new CharRange(0x275B, 0x275E, QU), new CharRange(0x275F, 0x2761, AL), new CharRange(0x2762, 0x2763, EX), new CharRange(0x2764, 0x2767, AL), new CharRange(0x2768, 0x2768, OP), new CharRange(0x2769, 0x2769, CL), new CharRange(0x276A, 0x276A, OP), new CharRange(0x276B, 0x276B, CL), new CharRange(0x276C, 0x276C, OP), new CharRange(0x276D, 0x276D, CL), new CharRange(0x276E, 0x276E, OP), new CharRange(0x276F, 0x276F, CL), new CharRange(0x2770, 0x2770, OP), new CharRange(0x2771, 0x2771, CL), new CharRange(0x2772, 0x2772, OP), new CharRange(0x2773, 0x2773, CL), new CharRange(0x2774, 0x2774, OP), new CharRange(0x2775, 0x2775, CL), new CharRange(0x2776, 0x2793, AI), new CharRange(0x2794, 0x27C4, AL), new CharRange(0x27C5, 0x27C5, OP), new CharRange(0x27C6, 0x27C6, CL), new CharRange(0x27C7, 0x27E5, AL), new CharRange(0x27E6, 0x27E6, OP), new CharRange(0x27E7, 0x27E7, CL), new CharRange(0x27E8, 0x27E8, OP), new CharRange(0x27E9, 0x27E9, CL), new CharRange(0x27EA, 0x27EA, OP), new CharRange(0x27EB, 0x27EB, CL), new CharRange(0x27EC, 0x27EC, OP), new CharRange(0x27ED, 0x27ED, CL), new CharRange(0x27EE, 0x27EE, OP), new CharRange(0x27EF, 0x27EF, CL), new CharRange(0x27F0, 0x2982, AL), new CharRange(0x2983, 0x2983, OP), new CharRange(0x2984, 0x2984, CL), new CharRange(0x2985, 0x2985, OP), new CharRange(0x2986, 0x2986, CL), new CharRange(0x2987, 0x2987, OP), new CharRange(0x2988, 0x2988, CL), new CharRange(0x2989, 0x2989, OP), new CharRange(0x298A, 0x298A, CL), new CharRange(0x298B, 0x298B, OP), new CharRange(0x298C, 0x298C, CL), new CharRange(0x298D, 0x298D, OP), new CharRange(0x298E, 0x298E, CL), new CharRange(0x298F, 0x298F, OP), new CharRange(0x2990, 0x2990, CL), new CharRange(0x2991, 0x2991, OP), new CharRange(0x2992, 0x2992, CL), new CharRange(0x2993, 0x2993, OP), new CharRange(0x2994, 0x2994, CL), new CharRange(0x2995, 0x2995, OP), new CharRange(0x2996, 0x2996, CL), new CharRange(0x2997, 0x2997, OP), new CharRange(0x2998, 0x2998, CL), new CharRange(0x2999, 0x29D7, AL), new CharRange(0x29D8, 0x29D8, OP), new CharRange(0x29D9, 0x29D9, CL), new CharRange(0x29DA, 0x29DA, OP), new CharRange(0x29DB, 0x29DB, CL), new CharRange(0x29DC, 0x29FB, AL), new CharRange(0x29FC, 0x29FC, OP), new CharRange(0x29FD, 0x29FD, CL), new CharRange(0x29FE, 0x2B54, AL), new CharRange(0x2B55, 0x2B59, AI), new CharRange(0x2C00, 0x2CEE, AL), new CharRange(0x2CEF, 0x2CF1, CM), new CharRange(0x2CF2, 0x2CF3, AL), new CharRange(0x2CF9, 0x2CF9, EX), new CharRange(0x2CFA, 0x2CFC, BA), new CharRange(0x2CFD, 0x2CFD, AL), new CharRange(0x2CFE, 0x2CFE, EX), new CharRange(0x2CFF, 0x2CFF, BA), new CharRange(0x2D00, 0x2D6F, AL), new CharRange(0x2D70, 0x2D70, BA), new CharRange(0x2D7F, 0x2D7F, CM), new CharRange(0x2D80, 0x2DDE, AL), new CharRange(0x2DE0, 0x2DFF, CM), new CharRange(0x2E00, 0x2E0D, QU), new CharRange(0x2E0E, 0x2E15, BA), new CharRange(0x2E16, 0x2E16, AL), new CharRange(0x2E17, 0x2E17, BA), new CharRange(0x2E18, 0x2E18, OP), new CharRange(0x2E19, 0x2E19, BA), new CharRange(0x2E1A, 0x2E1B, AL), new CharRange(0x2E1C, 0x2E1D, QU), new CharRange(0x2E1E, 0x2E1F, AL), new CharRange(0x2E20, 0x2E21, QU), new CharRange(0x2E22, 0x2E22, OP), new CharRange(0x2E23, 0x2E23, CL), new CharRange(0x2E24, 0x2E24, OP), new CharRange(0x2E25, 0x2E25, CL), new CharRange(0x2E26, 0x2E26, OP), new CharRange(0x2E27, 0x2E27, CL), new CharRange(0x2E28, 0x2E28, OP), new CharRange(0x2E29, 0x2E29, CL), new CharRange(0x2E2A, 0x2E2D, BA), new CharRange(0x2E2E, 0x2E2E, EX), new CharRange(0x2E2F, 0x2E2F, AL), new CharRange(0x2E30, 0x2E31, BA), new CharRange(0x2E32, 0x2E32, AL), new CharRange(0x2E33, 0x2E34, BA), new CharRange(0x2E35, 0x2E39, AL), new CharRange(0x2E3A, 0x2E3B, B2), new CharRange(0x2E80, 0x3000, ID), new CharRange(0x3001, 0x3002, CL), new CharRange(0x3003, 0x3004, ID), new CharRange(0x3005, 0x3005, NS), new CharRange(0x3006, 0x3007, ID), new CharRange(0x3008, 0x3008, OP), new CharRange(0x3009, 0x3009, CL), new CharRange(0x300A, 0x300A, OP), new CharRange(0x300B, 0x300B, CL), new CharRange(0x300C, 0x300C, OP), new CharRange(0x300D, 0x300D, CL), new CharRange(0x300E, 0x300E, OP), new CharRange(0x300F, 0x300F, CL), new CharRange(0x3010, 0x3010, OP), new CharRange(0x3011, 0x3011, CL), new CharRange(0x3012, 0x3013, ID), new CharRange(0x3014, 0x3014, OP), new CharRange(0x3015, 0x3015, CL), new CharRange(0x3016, 0x3016, OP), new CharRange(0x3017, 0x3017, CL), new CharRange(0x3018, 0x3018, OP), new CharRange(0x3019, 0x3019, CL), new CharRange(0x301A, 0x301A, OP), new CharRange(0x301B, 0x301B, CL), new CharRange(0x301C, 0x301C, NS), new CharRange(0x301D, 0x301D, OP), new CharRange(0x301E, 0x301F, CL), new CharRange(0x3020, 0x3029, ID), new CharRange(0x302A, 0x302F, CM), new CharRange(0x3030, 0x303A, ID), new CharRange(0x303B, 0x303C, NS), new CharRange(0x303D, 0x303F, ID), new CharRange(0x3041, 0x3041, CJ), new CharRange(0x3042, 0x3042, ID), new CharRange(0x3043, 0x3043, CJ), new CharRange(0x3044, 0x3044, ID), new CharRange(0x3045, 0x3045, CJ), new CharRange(0x3046, 0x3046, ID), new CharRange(0x3047, 0x3047, CJ), new CharRange(0x3048, 0x3048, ID), new CharRange(0x3049, 0x3049, CJ), new CharRange(0x304A, 0x3062, ID), new CharRange(0x3063, 0x3063, CJ), new CharRange(0x3064, 0x3082, ID), new CharRange(0x3083, 0x3083, CJ), new CharRange(0x3084, 0x3084, ID), new CharRange(0x3085, 0x3085, CJ), new CharRange(0x3086, 0x3086, ID), new CharRange(0x3087, 0x3087, CJ), new CharRange(0x3088, 0x308D, ID), new CharRange(0x308E, 0x308E, CJ), new CharRange(0x308F, 0x3094, ID), new CharRange(0x3095, 0x3096, CJ), new CharRange(0x3099, 0x309A, CM), new CharRange(0x309B, 0x309E, NS), new CharRange(0x309F, 0x309F, ID), new CharRange(0x30A0, 0x30A0, NS), new CharRange(0x30A1, 0x30A1, CJ), new CharRange(0x30A2, 0x30A2, ID), new CharRange(0x30A3, 0x30A3, CJ), new CharRange(0x30A4, 0x30A4, ID), new CharRange(0x30A5, 0x30A5, CJ), new CharRange(0x30A6, 0x30A6, ID), new CharRange(0x30A7, 0x30A7, CJ), new CharRange(0x30A8, 0x30A8, ID), new CharRange(0x30A9, 0x30A9, CJ), new CharRange(0x30AA, 0x30C2, ID), new CharRange(0x30C3, 0x30C3, CJ), new CharRange(0x30C4, 0x30E2, ID), new CharRange(0x30E3, 0x30E3, CJ), new CharRange(0x30E4, 0x30E4, ID), new CharRange(0x30E5, 0x30E5, CJ), new CharRange(0x30E6, 0x30E6, ID), new CharRange(0x30E7, 0x30E7, CJ), new CharRange(0x30E8, 0x30ED, ID), new CharRange(0x30EE, 0x30EE, CJ), new CharRange(0x30EF, 0x30F4, ID), new CharRange(0x30F5, 0x30F6, CJ), new CharRange(0x30F7, 0x30FA, ID), new CharRange(0x30FB, 0x30FB, NS), new CharRange(0x30FC, 0x30FC, CJ), new CharRange(0x30FD, 0x30FE, NS), new CharRange(0x30FF, 0x31E3, ID), new CharRange(0x31F0, 0x31FF, CJ), new CharRange(0x3200, 0x3247, ID), new CharRange(0x3248, 0x324F, AI), new CharRange(0x3250, 0x4DBF, ID), new CharRange(0x4DC0, 0x4DFF, AL), new CharRange(0x4E00, 0xA014, ID), new CharRange(0xA015, 0xA015, NS), new CharRange(0xA016, 0xA4C6, ID), new CharRange(0xA4D0, 0xA4FD, AL), new CharRange(0xA4FE, 0xA4FF, BA), new CharRange(0xA500, 0xA60C, AL), new CharRange(0xA60D, 0xA60D, BA), new CharRange(0xA60E, 0xA60E, EX), new CharRange(0xA60F, 0xA60F, BA), new CharRange(0xA610, 0xA61F, AL), new CharRange(0xA620, 0xA629, NU), new CharRange(0xA62A, 0xA66E, AL), new CharRange(0xA66F, 0xA672, CM), new CharRange(0xA673, 0xA673, AL), new CharRange(0xA674, 0xA67D, CM), new CharRange(0xA67E, 0xA697, AL), new CharRange(0xA69F, 0xA69F, CM), new CharRange(0xA6A0, 0xA6EF, AL), new CharRange(0xA6F0, 0xA6F1, CM), new CharRange(0xA6F2, 0xA6F2, AL), new CharRange(0xA6F3, 0xA6F7, BA), new CharRange(0xA700, 0xA801, AL), new CharRange(0xA802, 0xA802, CM), new CharRange(0xA803, 0xA805, AL), new CharRange(0xA806, 0xA806, CM), new CharRange(0xA807, 0xA80A, AL), new CharRange(0xA80B, 0xA80B, CM), new CharRange(0xA80C, 0xA822, AL), new CharRange(0xA823, 0xA827, CM), new CharRange(0xA828, 0xA837, AL), new CharRange(0xA838, 0xA838, PO), new CharRange(0xA839, 0xA873, AL), new CharRange(0xA874, 0xA875, BB), new CharRange(0xA876, 0xA877, EX), new CharRange(0xA880, 0xA881, CM), new CharRange(0xA882, 0xA8B3, AL), new CharRange(0xA8B4, 0xA8C4, CM), new CharRange(0xA8CE, 0xA8CF, BA), new CharRange(0xA8D0, 0xA8D9, NU), new CharRange(0xA8E0, 0xA8F1, CM), new CharRange(0xA8F2, 0xA8FB, AL), new CharRange(0xA900, 0xA909, NU), new CharRange(0xA90A, 0xA925, AL), new CharRange(0xA926, 0xA92D, CM), new CharRange(0xA92E, 0xA92F, BA), new CharRange(0xA930, 0xA946, AL), new CharRange(0xA947, 0xA953, CM), new CharRange(0xA95F, 0xA95F, AL), new CharRange(0xA960, 0xA97C, JL), new CharRange(0xA980, 0xA983, CM), new CharRange(0xA984, 0xA9B2, AL), new CharRange(0xA9B3, 0xA9C0, CM), new CharRange(0xA9C1, 0xA9C6, AL), new CharRange(0xA9C7, 0xA9C9, BA), new CharRange(0xA9CA, 0xA9CF, AL), new CharRange(0xA9D0, 0xA9D9, NU), new CharRange(0xA9DE, 0xAA28, AL), new CharRange(0xAA29, 0xAA36, CM), new CharRange(0xAA40, 0xAA42, AL), new CharRange(0xAA43, 0xAA43, CM), new CharRange(0xAA44, 0xAA4B, AL), new CharRange(0xAA4C, 0xAA4D, CM), new CharRange(0xAA50, 0xAA59, NU), new CharRange(0xAA5C, 0xAA5C, AL), new CharRange(0xAA5D, 0xAA5F, BA), new CharRange(0xAA60, 0xAADF, SA), new CharRange(0xAAE0, 0xAAEA, AL), new CharRange(0xAAEB, 0xAAEF, CM), new CharRange(0xAAF0, 0xAAF1, BA), new CharRange(0xAAF2, 0xAAF4, AL), new CharRange(0xAAF5, 0xAAF6, CM), new CharRange(0xAB01, 0xABE2, AL), new CharRange(0xABE3, 0xABEA, CM), new CharRange(0xABEB, 0xABEB, BA), new CharRange(0xABEC, 0xABED, CM), new CharRange(0xABF0, 0xABF9, NU), new CharRange(0xAC00, 0xAC00, H2), new CharRange(0xAC01, 0xAC1B, H3), new CharRange(0xAC1C, 0xAC1C, H2), new CharRange(0xAC1D, 0xAC37, H3), new CharRange(0xAC38, 0xAC38, H2), new CharRange(0xAC39, 0xAC53, H3), new CharRange(0xAC54, 0xAC54, H2), new CharRange(0xAC55, 0xAC6F, H3), new CharRange(0xAC70, 0xAC70, H2), new CharRange(0xAC71, 0xAC8B, H3), new CharRange(0xAC8C, 0xAC8C, H2), new CharRange(0xAC8D, 0xACA7, H3), new CharRange(0xACA8, 0xACA8, H2), new CharRange(0xACA9, 0xACC3, H3), new CharRange(0xACC4, 0xACC4, H2), new CharRange(0xACC5, 0xACDF, H3), new CharRange(0xACE0, 0xACE0, H2), new CharRange(0xACE1, 0xACFB, H3), new CharRange(0xACFC, 0xACFC, H2), new CharRange(0xACFD, 0xAD17, H3), new CharRange(0xAD18, 0xAD18, H2), new CharRange(0xAD19, 0xAD33, H3), new CharRange(0xAD34, 0xAD34, H2), new CharRange(0xAD35, 0xAD4F, H3), new CharRange(0xAD50, 0xAD50, H2), new CharRange(0xAD51, 0xAD6B, H3), new CharRange(0xAD6C, 0xAD6C, H2), new CharRange(0xAD6D, 0xAD87, H3), new CharRange(0xAD88, 0xAD88, H2), new CharRange(0xAD89, 0xADA3, H3), new CharRange(0xADA4, 0xADA4, H2), new CharRange(0xADA5, 0xADBF, H3), new CharRange(0xADC0, 0xADC0, H2), new CharRange(0xADC1, 0xADDB, H3), new CharRange(0xADDC, 0xADDC, H2), new CharRange(0xADDD, 0xADF7, H3), new CharRange(0xADF8, 0xADF8, H2), new CharRange(0xADF9, 0xAE13, H3), new CharRange(0xAE14, 0xAE14, H2), new CharRange(0xAE15, 0xAE2F, H3), new CharRange(0xAE30, 0xAE30, H2), new CharRange(0xAE31, 0xAE4B, H3), new CharRange(0xAE4C, 0xAE4C, H2), new CharRange(0xAE4D, 0xAE67, H3), new CharRange(0xAE68, 0xAE68, H2), new CharRange(0xAE69, 0xAE83, H3), new CharRange(0xAE84, 0xAE84, H2), new CharRange(0xAE85, 0xAE9F, H3), new CharRange(0xAEA0, 0xAEA0, H2), new CharRange(0xAEA1, 0xAEBB, H3), new CharRange(0xAEBC, 0xAEBC, H2), new CharRange(0xAEBD, 0xAED7, H3), new CharRange(0xAED8, 0xAED8, H2), new CharRange(0xAED9, 0xAEF3, H3), new CharRange(0xAEF4, 0xAEF4, H2), new CharRange(0xAEF5, 0xAF0F, H3), new CharRange(0xAF10, 0xAF10, H2), new CharRange(0xAF11, 0xAF2B, H3), new CharRange(0xAF2C, 0xAF2C, H2), new CharRange(0xAF2D, 0xAF47, H3), new CharRange(0xAF48, 0xAF48, H2), new CharRange(0xAF49, 0xAF63, H3), new CharRange(0xAF64, 0xAF64, H2), new CharRange(0xAF65, 0xAF7F, H3), new CharRange(0xAF80, 0xAF80, H2), new CharRange(0xAF81, 0xAF9B, H3), new CharRange(0xAF9C, 0xAF9C, H2), new CharRange(0xAF9D, 0xAFB7, H3), new CharRange(0xAFB8, 0xAFB8, H2), new CharRange(0xAFB9, 0xAFD3, H3), new CharRange(0xAFD4, 0xAFD4, H2), new CharRange(0xAFD5, 0xAFEF, H3), new CharRange(0xAFF0, 0xAFF0, H2), new CharRange(0xAFF1, 0xB00B, H3), new CharRange(0xB00C, 0xB00C, H2), new CharRange(0xB00D, 0xB027, H3), new CharRange(0xB028, 0xB028, H2), new CharRange(0xB029, 0xB043, H3), new CharRange(0xB044, 0xB044, H2), new CharRange(0xB045, 0xB05F, H3), new CharRange(0xB060, 0xB060, H2), new CharRange(0xB061, 0xB07B, H3), new CharRange(0xB07C, 0xB07C, H2), new CharRange(0xB07D, 0xB097, H3), new CharRange(0xB098, 0xB098, H2), new CharRange(0xB099, 0xB0B3, H3), new CharRange(0xB0B4, 0xB0B4, H2), new CharRange(0xB0B5, 0xB0CF, H3), new CharRange(0xB0D0, 0xB0D0, H2), new CharRange(0xB0D1, 0xB0EB, H3), new CharRange(0xB0EC, 0xB0EC, H2), new CharRange(0xB0ED, 0xB107, H3), new CharRange(0xB108, 0xB108, H2), new CharRange(0xB109, 0xB123, H3), new CharRange(0xB124, 0xB124, H2), new CharRange(0xB125, 0xB13F, H3), new CharRange(0xB140, 0xB140, H2), new CharRange(0xB141, 0xB15B, H3), new CharRange(0xB15C, 0xB15C, H2), new CharRange(0xB15D, 0xB177, H3), new CharRange(0xB178, 0xB178, H2), new CharRange(0xB179, 0xB193, H3), new CharRange(0xB194, 0xB194, H2), new CharRange(0xB195, 0xB1AF, H3), new CharRange(0xB1B0, 0xB1B0, H2), new CharRange(0xB1B1, 0xB1CB, H3), new CharRange(0xB1CC, 0xB1CC, H2), new CharRange(0xB1CD, 0xB1E7, H3), new CharRange(0xB1E8, 0xB1E8, H2), new CharRange(0xB1E9, 0xB203, H3), new CharRange(0xB204, 0xB204, H2), new CharRange(0xB205, 0xB21F, H3), new CharRange(0xB220, 0xB220, H2), new CharRange(0xB221, 0xB23B, H3), new CharRange(0xB23C, 0xB23C, H2), new CharRange(0xB23D, 0xB257, H3), new CharRange(0xB258, 0xB258, H2), new CharRange(0xB259, 0xB273, H3), new CharRange(0xB274, 0xB274, H2), new CharRange(0xB275, 0xB28F, H3), new CharRange(0xB290, 0xB290, H2), new CharRange(0xB291, 0xB2AB, H3), new CharRange(0xB2AC, 0xB2AC, H2), new CharRange(0xB2AD, 0xB2C7, H3), new CharRange(0xB2C8, 0xB2C8, H2), new CharRange(0xB2C9, 0xB2E3, H3), new CharRange(0xB2E4, 0xB2E4, H2), new CharRange(0xB2E5, 0xB2FF, H3), new CharRange(0xB300, 0xB300, H2), new CharRange(0xB301, 0xB31B, H3), new CharRange(0xB31C, 0xB31C, H2), new CharRange(0xB31D, 0xB337, H3), new CharRange(0xB338, 0xB338, H2), new CharRange(0xB339, 0xB353, H3), new CharRange(0xB354, 0xB354, H2), new CharRange(0xB355, 0xB36F, H3), new CharRange(0xB370, 0xB370, H2), new CharRange(0xB371, 0xB38B, H3), new CharRange(0xB38C, 0xB38C, H2), new CharRange(0xB38D, 0xB3A7, H3), new CharRange(0xB3A8, 0xB3A8, H2), new CharRange(0xB3A9, 0xB3C3, H3), new CharRange(0xB3C4, 0xB3C4, H2), new CharRange(0xB3C5, 0xB3DF, H3), new CharRange(0xB3E0, 0xB3E0, H2), new CharRange(0xB3E1, 0xB3FB, H3), new CharRange(0xB3FC, 0xB3FC, H2), new CharRange(0xB3FD, 0xB417, H3), new CharRange(0xB418, 0xB418, H2), new CharRange(0xB419, 0xB433, H3), new CharRange(0xB434, 0xB434, H2), new CharRange(0xB435, 0xB44F, H3), new CharRange(0xB450, 0xB450, H2), new CharRange(0xB451, 0xB46B, H3), new CharRange(0xB46C, 0xB46C, H2), new CharRange(0xB46D, 0xB487, H3), new CharRange(0xB488, 0xB488, H2), new CharRange(0xB489, 0xB4A3, H3), new CharRange(0xB4A4, 0xB4A4, H2), new CharRange(0xB4A5, 0xB4BF, H3), new CharRange(0xB4C0, 0xB4C0, H2), new CharRange(0xB4C1, 0xB4DB, H3), new CharRange(0xB4DC, 0xB4DC, H2), new CharRange(0xB4DD, 0xB4F7, H3), new CharRange(0xB4F8, 0xB4F8, H2), new CharRange(0xB4F9, 0xB513, H3), new CharRange(0xB514, 0xB514, H2), new CharRange(0xB515, 0xB52F, H3), new CharRange(0xB530, 0xB530, H2), new CharRange(0xB531, 0xB54B, H3), new CharRange(0xB54C, 0xB54C, H2), new CharRange(0xB54D, 0xB567, H3), new CharRange(0xB568, 0xB568, H2), new CharRange(0xB569, 0xB583, H3), new CharRange(0xB584, 0xB584, H2), new CharRange(0xB585, 0xB59F, H3), new CharRange(0xB5A0, 0xB5A0, H2), new CharRange(0xB5A1, 0xB5BB, H3), new CharRange(0xB5BC, 0xB5BC, H2), new CharRange(0xB5BD, 0xB5D7, H3), new CharRange(0xB5D8, 0xB5D8, H2), new CharRange(0xB5D9, 0xB5F3, H3), new CharRange(0xB5F4, 0xB5F4, H2), new CharRange(0xB5F5, 0xB60F, H3), new CharRange(0xB610, 0xB610, H2), new CharRange(0xB611, 0xB62B, H3), new CharRange(0xB62C, 0xB62C, H2), new CharRange(0xB62D, 0xB647, H3), new CharRange(0xB648, 0xB648, H2), new CharRange(0xB649, 0xB663, H3), new CharRange(0xB664, 0xB664, H2), new CharRange(0xB665, 0xB67F, H3), new CharRange(0xB680, 0xB680, H2), new CharRange(0xB681, 0xB69B, H3), new CharRange(0xB69C, 0xB69C, H2), new CharRange(0xB69D, 0xB6B7, H3), new CharRange(0xB6B8, 0xB6B8, H2), new CharRange(0xB6B9, 0xB6D3, H3), new CharRange(0xB6D4, 0xB6D4, H2), new CharRange(0xB6D5, 0xB6EF, H3), new CharRange(0xB6F0, 0xB6F0, H2), new CharRange(0xB6F1, 0xB70B, H3), new CharRange(0xB70C, 0xB70C, H2), new CharRange(0xB70D, 0xB727, H3), new CharRange(0xB728, 0xB728, H2), new CharRange(0xB729, 0xB743, H3), new CharRange(0xB744, 0xB744, H2), new CharRange(0xB745, 0xB75F, H3), new CharRange(0xB760, 0xB760, H2), new CharRange(0xB761, 0xB77B, H3), new CharRange(0xB77C, 0xB77C, H2), new CharRange(0xB77D, 0xB797, H3), new CharRange(0xB798, 0xB798, H2), new CharRange(0xB799, 0xB7B3, H3), new CharRange(0xB7B4, 0xB7B4, H2), new CharRange(0xB7B5, 0xB7CF, H3), new CharRange(0xB7D0, 0xB7D0, H2), new CharRange(0xB7D1, 0xB7EB, H3), new CharRange(0xB7EC, 0xB7EC, H2), new CharRange(0xB7ED, 0xB807, H3), new CharRange(0xB808, 0xB808, H2), new CharRange(0xB809, 0xB823, H3), new CharRange(0xB824, 0xB824, H2), new CharRange(0xB825, 0xB83F, H3), new CharRange(0xB840, 0xB840, H2), new CharRange(0xB841, 0xB85B, H3), new CharRange(0xB85C, 0xB85C, H2), new CharRange(0xB85D, 0xB877, H3), new CharRange(0xB878, 0xB878, H2), new CharRange(0xB879, 0xB893, H3), new CharRange(0xB894, 0xB894, H2), new CharRange(0xB895, 0xB8AF, H3), new CharRange(0xB8B0, 0xB8B0, H2), new CharRange(0xB8B1, 0xB8CB, H3), new CharRange(0xB8CC, 0xB8CC, H2), new CharRange(0xB8CD, 0xB8E7, H3), new CharRange(0xB8E8, 0xB8E8, H2), new CharRange(0xB8E9, 0xB903, H3), new CharRange(0xB904, 0xB904, H2), new CharRange(0xB905, 0xB91F, H3), new CharRange(0xB920, 0xB920, H2), new CharRange(0xB921, 0xB93B, H3), new CharRange(0xB93C, 0xB93C, H2), new CharRange(0xB93D, 0xB957, H3), new CharRange(0xB958, 0xB958, H2), new CharRange(0xB959, 0xB973, H3), new CharRange(0xB974, 0xB974, H2), new CharRange(0xB975, 0xB98F, H3), new CharRange(0xB990, 0xB990, H2), new CharRange(0xB991, 0xB9AB, H3), new CharRange(0xB9AC, 0xB9AC, H2), new CharRange(0xB9AD, 0xB9C7, H3), new CharRange(0xB9C8, 0xB9C8, H2), new CharRange(0xB9C9, 0xB9E3, H3), new CharRange(0xB9E4, 0xB9E4, H2), new CharRange(0xB9E5, 0xB9FF, H3), new CharRange(0xBA00, 0xBA00, H2), new CharRange(0xBA01, 0xBA1B, H3), new CharRange(0xBA1C, 0xBA1C, H2), new CharRange(0xBA1D, 0xBA37, H3), new CharRange(0xBA38, 0xBA38, H2), new CharRange(0xBA39, 0xBA53, H3), new CharRange(0xBA54, 0xBA54, H2), new CharRange(0xBA55, 0xBA6F, H3), new CharRange(0xBA70, 0xBA70, H2), new CharRange(0xBA71, 0xBA8B, H3), new CharRange(0xBA8C, 0xBA8C, H2), new CharRange(0xBA8D, 0xBAA7, H3), new CharRange(0xBAA8, 0xBAA8, H2), new CharRange(0xBAA9, 0xBAC3, H3), new CharRange(0xBAC4, 0xBAC4, H2), new CharRange(0xBAC5, 0xBADF, H3), new CharRange(0xBAE0, 0xBAE0, H2), new CharRange(0xBAE1, 0xBAFB, H3), new CharRange(0xBAFC, 0xBAFC, H2), new CharRange(0xBAFD, 0xBB17, H3), new CharRange(0xBB18, 0xBB18, H2), new CharRange(0xBB19, 0xBB33, H3), new CharRange(0xBB34, 0xBB34, H2), new CharRange(0xBB35, 0xBB4F, H3), new CharRange(0xBB50, 0xBB50, H2), new CharRange(0xBB51, 0xBB6B, H3), new CharRange(0xBB6C, 0xBB6C, H2), new CharRange(0xBB6D, 0xBB87, H3), new CharRange(0xBB88, 0xBB88, H2), new CharRange(0xBB89, 0xBBA3, H3), new CharRange(0xBBA4, 0xBBA4, H2), new CharRange(0xBBA5, 0xBBBF, H3), new CharRange(0xBBC0, 0xBBC0, H2), new CharRange(0xBBC1, 0xBBDB, H3), new CharRange(0xBBDC, 0xBBDC, H2), new CharRange(0xBBDD, 0xBBF7, H3), new CharRange(0xBBF8, 0xBBF8, H2), new CharRange(0xBBF9, 0xBC13, H3), new CharRange(0xBC14, 0xBC14, H2), new CharRange(0xBC15, 0xBC2F, H3), new CharRange(0xBC30, 0xBC30, H2), new CharRange(0xBC31, 0xBC4B, H3), new CharRange(0xBC4C, 0xBC4C, H2), new CharRange(0xBC4D, 0xBC67, H3), new CharRange(0xBC68, 0xBC68, H2), new CharRange(0xBC69, 0xBC83, H3), new CharRange(0xBC84, 0xBC84, H2), new CharRange(0xBC85, 0xBC9F, H3), new CharRange(0xBCA0, 0xBCA0, H2), new CharRange(0xBCA1, 0xBCBB, H3), new CharRange(0xBCBC, 0xBCBC, H2), new CharRange(0xBCBD, 0xBCD7, H3), new CharRange(0xBCD8, 0xBCD8, H2), new CharRange(0xBCD9, 0xBCF3, H3), new CharRange(0xBCF4, 0xBCF4, H2), new CharRange(0xBCF5, 0xBD0F, H3), new CharRange(0xBD10, 0xBD10, H2), new CharRange(0xBD11, 0xBD2B, H3), new CharRange(0xBD2C, 0xBD2C, H2), new CharRange(0xBD2D, 0xBD47, H3), new CharRange(0xBD48, 0xBD48, H2), new CharRange(0xBD49, 0xBD63, H3), new CharRange(0xBD64, 0xBD64, H2), new CharRange(0xBD65, 0xBD7F, H3), new CharRange(0xBD80, 0xBD80, H2), new CharRange(0xBD81, 0xBD9B, H3), new CharRange(0xBD9C, 0xBD9C, H2), new CharRange(0xBD9D, 0xBDB7, H3), new CharRange(0xBDB8, 0xBDB8, H2), new CharRange(0xBDB9, 0xBDD3, H3), new CharRange(0xBDD4, 0xBDD4, H2), new CharRange(0xBDD5, 0xBDEF, H3), new CharRange(0xBDF0, 0xBDF0, H2), new CharRange(0xBDF1, 0xBE0B, H3), new CharRange(0xBE0C, 0xBE0C, H2), new CharRange(0xBE0D, 0xBE27, H3), new CharRange(0xBE28, 0xBE28, H2), new CharRange(0xBE29, 0xBE43, H3), new CharRange(0xBE44, 0xBE44, H2), new CharRange(0xBE45, 0xBE5F, H3), new CharRange(0xBE60, 0xBE60, H2), new CharRange(0xBE61, 0xBE7B, H3), new CharRange(0xBE7C, 0xBE7C, H2), new CharRange(0xBE7D, 0xBE97, H3), new CharRange(0xBE98, 0xBE98, H2), new CharRange(0xBE99, 0xBEB3, H3), new CharRange(0xBEB4, 0xBEB4, H2), new CharRange(0xBEB5, 0xBECF, H3), new CharRange(0xBED0, 0xBED0, H2), new CharRange(0xBED1, 0xBEEB, H3), new CharRange(0xBEEC, 0xBEEC, H2), new CharRange(0xBEED, 0xBF07, H3), new CharRange(0xBF08, 0xBF08, H2), new CharRange(0xBF09, 0xBF23, H3), new CharRange(0xBF24, 0xBF24, H2), new CharRange(0xBF25, 0xBF3F, H3), new CharRange(0xBF40, 0xBF40, H2), new CharRange(0xBF41, 0xBF5B, H3), new CharRange(0xBF5C, 0xBF5C, H2), new CharRange(0xBF5D, 0xBF77, H3), new CharRange(0xBF78, 0xBF78, H2), new CharRange(0xBF79, 0xBF93, H3), new CharRange(0xBF94, 0xBF94, H2), new CharRange(0xBF95, 0xBFAF, H3), new CharRange(0xBFB0, 0xBFB0, H2), new CharRange(0xBFB1, 0xBFCB, H3), new CharRange(0xBFCC, 0xBFCC, H2), new CharRange(0xBFCD, 0xBFE7, H3), new CharRange(0xBFE8, 0xBFE8, H2), new CharRange(0xBFE9, 0xC003, H3), new CharRange(0xC004, 0xC004, H2), new CharRange(0xC005, 0xC01F, H3), new CharRange(0xC020, 0xC020, H2), new CharRange(0xC021, 0xC03B, H3), new CharRange(0xC03C, 0xC03C, H2), new CharRange(0xC03D, 0xC057, H3), new CharRange(0xC058, 0xC058, H2), new CharRange(0xC059, 0xC073, H3), new CharRange(0xC074, 0xC074, H2), new CharRange(0xC075, 0xC08F, H3), new CharRange(0xC090, 0xC090, H2), new CharRange(0xC091, 0xC0AB, H3), new CharRange(0xC0AC, 0xC0AC, H2), new CharRange(0xC0AD, 0xC0C7, H3), new CharRange(0xC0C8, 0xC0C8, H2), new CharRange(0xC0C9, 0xC0E3, H3), new CharRange(0xC0E4, 0xC0E4, H2), new CharRange(0xC0E5, 0xC0FF, H3), new CharRange(0xC100, 0xC100, H2), new CharRange(0xC101, 0xC11B, H3), new CharRange(0xC11C, 0xC11C, H2), new CharRange(0xC11D, 0xC137, H3), new CharRange(0xC138, 0xC138, H2), new CharRange(0xC139, 0xC153, H3), new CharRange(0xC154, 0xC154, H2), new CharRange(0xC155, 0xC16F, H3), new CharRange(0xC170, 0xC170, H2), new CharRange(0xC171, 0xC18B, H3), new CharRange(0xC18C, 0xC18C, H2), new CharRange(0xC18D, 0xC1A7, H3), new CharRange(0xC1A8, 0xC1A8, H2), new CharRange(0xC1A9, 0xC1C3, H3), new CharRange(0xC1C4, 0xC1C4, H2), new CharRange(0xC1C5, 0xC1DF, H3), new CharRange(0xC1E0, 0xC1E0, H2), new CharRange(0xC1E1, 0xC1FB, H3), new CharRange(0xC1FC, 0xC1FC, H2), new CharRange(0xC1FD, 0xC217, H3), new CharRange(0xC218, 0xC218, H2), new CharRange(0xC219, 0xC233, H3), new CharRange(0xC234, 0xC234, H2), new CharRange(0xC235, 0xC24F, H3), new CharRange(0xC250, 0xC250, H2), new CharRange(0xC251, 0xC26B, H3), new CharRange(0xC26C, 0xC26C, H2), new CharRange(0xC26D, 0xC287, H3), new CharRange(0xC288, 0xC288, H2), new CharRange(0xC289, 0xC2A3, H3), new CharRange(0xC2A4, 0xC2A4, H2), new CharRange(0xC2A5, 0xC2BF, H3), new CharRange(0xC2C0, 0xC2C0, H2), new CharRange(0xC2C1, 0xC2DB, H3), new CharRange(0xC2DC, 0xC2DC, H2), new CharRange(0xC2DD, 0xC2F7, H3), new CharRange(0xC2F8, 0xC2F8, H2), new CharRange(0xC2F9, 0xC313, H3), new CharRange(0xC314, 0xC314, H2), new CharRange(0xC315, 0xC32F, H3), new CharRange(0xC330, 0xC330, H2), new CharRange(0xC331, 0xC34B, H3), new CharRange(0xC34C, 0xC34C, H2), new CharRange(0xC34D, 0xC367, H3), new CharRange(0xC368, 0xC368, H2), new CharRange(0xC369, 0xC383, H3), new CharRange(0xC384, 0xC384, H2), new CharRange(0xC385, 0xC39F, H3), new CharRange(0xC3A0, 0xC3A0, H2), new CharRange(0xC3A1, 0xC3BB, H3), new CharRange(0xC3BC, 0xC3BC, H2), new CharRange(0xC3BD, 0xC3D7, H3), new CharRange(0xC3D8, 0xC3D8, H2), new CharRange(0xC3D9, 0xC3F3, H3), new CharRange(0xC3F4, 0xC3F4, H2), new CharRange(0xC3F5, 0xC40F, H3), new CharRange(0xC410, 0xC410, H2), new CharRange(0xC411, 0xC42B, H3), new CharRange(0xC42C, 0xC42C, H2), new CharRange(0xC42D, 0xC447, H3), new CharRange(0xC448, 0xC448, H2), new CharRange(0xC449, 0xC463, H3), new CharRange(0xC464, 0xC464, H2), new CharRange(0xC465, 0xC47F, H3), new CharRange(0xC480, 0xC480, H2), new CharRange(0xC481, 0xC49B, H3), new CharRange(0xC49C, 0xC49C, H2), new CharRange(0xC49D, 0xC4B7, H3), new CharRange(0xC4B8, 0xC4B8, H2), new CharRange(0xC4B9, 0xC4D3, H3), new CharRange(0xC4D4, 0xC4D4, H2), new CharRange(0xC4D5, 0xC4EF, H3), new CharRange(0xC4F0, 0xC4F0, H2), new CharRange(0xC4F1, 0xC50B, H3), new CharRange(0xC50C, 0xC50C, H2), new CharRange(0xC50D, 0xC527, H3), new CharRange(0xC528, 0xC528, H2), new CharRange(0xC529, 0xC543, H3), new CharRange(0xC544, 0xC544, H2), new CharRange(0xC545, 0xC55F, H3), new CharRange(0xC560, 0xC560, H2), new CharRange(0xC561, 0xC57B, H3), new CharRange(0xC57C, 0xC57C, H2), new CharRange(0xC57D, 0xC597, H3), new CharRange(0xC598, 0xC598, H2), new CharRange(0xC599, 0xC5B3, H3), new CharRange(0xC5B4, 0xC5B4, H2), new CharRange(0xC5B5, 0xC5CF, H3), new CharRange(0xC5D0, 0xC5D0, H2), new CharRange(0xC5D1, 0xC5EB, H3), new CharRange(0xC5EC, 0xC5EC, H2), new CharRange(0xC5ED, 0xC607, H3), new CharRange(0xC608, 0xC608, H2), new CharRange(0xC609, 0xC623, H3), new CharRange(0xC624, 0xC624, H2), new CharRange(0xC625, 0xC63F, H3), new CharRange(0xC640, 0xC640, H2), new CharRange(0xC641, 0xC65B, H3), new CharRange(0xC65C, 0xC65C, H2), new CharRange(0xC65D, 0xC677, H3), new CharRange(0xC678, 0xC678, H2), new CharRange(0xC679, 0xC693, H3), new CharRange(0xC694, 0xC694, H2), new CharRange(0xC695, 0xC6AF, H3), new CharRange(0xC6B0, 0xC6B0, H2), new CharRange(0xC6B1, 0xC6CB, H3), new CharRange(0xC6CC, 0xC6CC, H2), new CharRange(0xC6CD, 0xC6E7, H3), new CharRange(0xC6E8, 0xC6E8, H2), new CharRange(0xC6E9, 0xC703, H3), new CharRange(0xC704, 0xC704, H2), new CharRange(0xC705, 0xC71F, H3), new CharRange(0xC720, 0xC720, H2), new CharRange(0xC721, 0xC73B, H3), new CharRange(0xC73C, 0xC73C, H2), new CharRange(0xC73D, 0xC757, H3), new CharRange(0xC758, 0xC758, H2), new CharRange(0xC759, 0xC773, H3), new CharRange(0xC774, 0xC774, H2), new CharRange(0xC775, 0xC78F, H3), new CharRange(0xC790, 0xC790, H2), new CharRange(0xC791, 0xC7AB, H3), new CharRange(0xC7AC, 0xC7AC, H2), new CharRange(0xC7AD, 0xC7C7, H3), new CharRange(0xC7C8, 0xC7C8, H2), new CharRange(0xC7C9, 0xC7E3, H3), new CharRange(0xC7E4, 0xC7E4, H2), new CharRange(0xC7E5, 0xC7FF, H3), new CharRange(0xC800, 0xC800, H2), new CharRange(0xC801, 0xC81B, H3), new CharRange(0xC81C, 0xC81C, H2), new CharRange(0xC81D, 0xC837, H3), new CharRange(0xC838, 0xC838, H2), new CharRange(0xC839, 0xC853, H3), new CharRange(0xC854, 0xC854, H2), new CharRange(0xC855, 0xC86F, H3), new CharRange(0xC870, 0xC870, H2), new CharRange(0xC871, 0xC88B, H3), new CharRange(0xC88C, 0xC88C, H2), new CharRange(0xC88D, 0xC8A7, H3), new CharRange(0xC8A8, 0xC8A8, H2), new CharRange(0xC8A9, 0xC8C3, H3), new CharRange(0xC8C4, 0xC8C4, H2), new CharRange(0xC8C5, 0xC8DF, H3), new CharRange(0xC8E0, 0xC8E0, H2), new CharRange(0xC8E1, 0xC8FB, H3), new CharRange(0xC8FC, 0xC8FC, H2), new CharRange(0xC8FD, 0xC917, H3), new CharRange(0xC918, 0xC918, H2), new CharRange(0xC919, 0xC933, H3), new CharRange(0xC934, 0xC934, H2), new CharRange(0xC935, 0xC94F, H3), new CharRange(0xC950, 0xC950, H2), new CharRange(0xC951, 0xC96B, H3), new CharRange(0xC96C, 0xC96C, H2), new CharRange(0xC96D, 0xC987, H3), new CharRange(0xC988, 0xC988, H2), new CharRange(0xC989, 0xC9A3, H3), new CharRange(0xC9A4, 0xC9A4, H2), new CharRange(0xC9A5, 0xC9BF, H3), new CharRange(0xC9C0, 0xC9C0, H2), new CharRange(0xC9C1, 0xC9DB, H3), new CharRange(0xC9DC, 0xC9DC, H2), new CharRange(0xC9DD, 0xC9F7, H3), new CharRange(0xC9F8, 0xC9F8, H2), new CharRange(0xC9F9, 0xCA13, H3), new CharRange(0xCA14, 0xCA14, H2), new CharRange(0xCA15, 0xCA2F, H3), new CharRange(0xCA30, 0xCA30, H2), new CharRange(0xCA31, 0xCA4B, H3), new CharRange(0xCA4C, 0xCA4C, H2), new CharRange(0xCA4D, 0xCA67, H3), new CharRange(0xCA68, 0xCA68, H2), new CharRange(0xCA69, 0xCA83, H3), new CharRange(0xCA84, 0xCA84, H2), new CharRange(0xCA85, 0xCA9F, H3), new CharRange(0xCAA0, 0xCAA0, H2), new CharRange(0xCAA1, 0xCABB, H3), new CharRange(0xCABC, 0xCABC, H2), new CharRange(0xCABD, 0xCAD7, H3), new CharRange(0xCAD8, 0xCAD8, H2), new CharRange(0xCAD9, 0xCAF3, H3), new CharRange(0xCAF4, 0xCAF4, H2), new CharRange(0xCAF5, 0xCB0F, H3), new CharRange(0xCB10, 0xCB10, H2), new CharRange(0xCB11, 0xCB2B, H3), new CharRange(0xCB2C, 0xCB2C, H2), new CharRange(0xCB2D, 0xCB47, H3), new CharRange(0xCB48, 0xCB48, H2), new CharRange(0xCB49, 0xCB63, H3), new CharRange(0xCB64, 0xCB64, H2), new CharRange(0xCB65, 0xCB7F, H3), new CharRange(0xCB80, 0xCB80, H2), new CharRange(0xCB81, 0xCB9B, H3), new CharRange(0xCB9C, 0xCB9C, H2), new CharRange(0xCB9D, 0xCBB7, H3), new CharRange(0xCBB8, 0xCBB8, H2), new CharRange(0xCBB9, 0xCBD3, H3), new CharRange(0xCBD4, 0xCBD4, H2), new CharRange(0xCBD5, 0xCBEF, H3), new CharRange(0xCBF0, 0xCBF0, H2), new CharRange(0xCBF1, 0xCC0B, H3), new CharRange(0xCC0C, 0xCC0C, H2), new CharRange(0xCC0D, 0xCC27, H3), new CharRange(0xCC28, 0xCC28, H2), new CharRange(0xCC29, 0xCC43, H3), new CharRange(0xCC44, 0xCC44, H2), new CharRange(0xCC45, 0xCC5F, H3), new CharRange(0xCC60, 0xCC60, H2), new CharRange(0xCC61, 0xCC7B, H3), new CharRange(0xCC7C, 0xCC7C, H2), new CharRange(0xCC7D, 0xCC97, H3), new CharRange(0xCC98, 0xCC98, H2), new CharRange(0xCC99, 0xCCB3, H3), new CharRange(0xCCB4, 0xCCB4, H2), new CharRange(0xCCB5, 0xCCCF, H3), new CharRange(0xCCD0, 0xCCD0, H2), new CharRange(0xCCD1, 0xCCEB, H3), new CharRange(0xCCEC, 0xCCEC, H2), new CharRange(0xCCED, 0xCD07, H3), new CharRange(0xCD08, 0xCD08, H2), new CharRange(0xCD09, 0xCD23, H3), new CharRange(0xCD24, 0xCD24, H2), new CharRange(0xCD25, 0xCD3F, H3), new CharRange(0xCD40, 0xCD40, H2), new CharRange(0xCD41, 0xCD5B, H3), new CharRange(0xCD5C, 0xCD5C, H2), new CharRange(0xCD5D, 0xCD77, H3), new CharRange(0xCD78, 0xCD78, H2), new CharRange(0xCD79, 0xCD93, H3), new CharRange(0xCD94, 0xCD94, H2), new CharRange(0xCD95, 0xCDAF, H3), new CharRange(0xCDB0, 0xCDB0, H2), new CharRange(0xCDB1, 0xCDCB, H3), new CharRange(0xCDCC, 0xCDCC, H2), new CharRange(0xCDCD, 0xCDE7, H3), new CharRange(0xCDE8, 0xCDE8, H2), new CharRange(0xCDE9, 0xCE03, H3), new CharRange(0xCE04, 0xCE04, H2), new CharRange(0xCE05, 0xCE1F, H3), new CharRange(0xCE20, 0xCE20, H2), new CharRange(0xCE21, 0xCE3B, H3), new CharRange(0xCE3C, 0xCE3C, H2), new CharRange(0xCE3D, 0xCE57, H3), new CharRange(0xCE58, 0xCE58, H2), new CharRange(0xCE59, 0xCE73, H3), new CharRange(0xCE74, 0xCE74, H2), new CharRange(0xCE75, 0xCE8F, H3), new CharRange(0xCE90, 0xCE90, H2), new CharRange(0xCE91, 0xCEAB, H3), new CharRange(0xCEAC, 0xCEAC, H2), new CharRange(0xCEAD, 0xCEC7, H3), new CharRange(0xCEC8, 0xCEC8, H2), new CharRange(0xCEC9, 0xCEE3, H3), new CharRange(0xCEE4, 0xCEE4, H2), new CharRange(0xCEE5, 0xCEFF, H3), new CharRange(0xCF00, 0xCF00, H2), new CharRange(0xCF01, 0xCF1B, H3), new CharRange(0xCF1C, 0xCF1C, H2), new CharRange(0xCF1D, 0xCF37, H3), new CharRange(0xCF38, 0xCF38, H2), new CharRange(0xCF39, 0xCF53, H3), new CharRange(0xCF54, 0xCF54, H2), new CharRange(0xCF55, 0xCF6F, H3), new CharRange(0xCF70, 0xCF70, H2), new CharRange(0xCF71, 0xCF8B, H3), new CharRange(0xCF8C, 0xCF8C, H2), new CharRange(0xCF8D, 0xCFA7, H3), new CharRange(0xCFA8, 0xCFA8, H2), new CharRange(0xCFA9, 0xCFC3, H3), new CharRange(0xCFC4, 0xCFC4, H2), new CharRange(0xCFC5, 0xCFDF, H3), new CharRange(0xCFE0, 0xCFE0, H2), new CharRange(0xCFE1, 0xCFFB, H3), new CharRange(0xCFFC, 0xCFFC, H2), new CharRange(0xCFFD, 0xD017, H3), new CharRange(0xD018, 0xD018, H2), new CharRange(0xD019, 0xD033, H3), new CharRange(0xD034, 0xD034, H2), new CharRange(0xD035, 0xD04F, H3), new CharRange(0xD050, 0xD050, H2), new CharRange(0xD051, 0xD06B, H3), new CharRange(0xD06C, 0xD06C, H2), new CharRange(0xD06D, 0xD087, H3), new CharRange(0xD088, 0xD088, H2), new CharRange(0xD089, 0xD0A3, H3), new CharRange(0xD0A4, 0xD0A4, H2), new CharRange(0xD0A5, 0xD0BF, H3), new CharRange(0xD0C0, 0xD0C0, H2), new CharRange(0xD0C1, 0xD0DB, H3), new CharRange(0xD0DC, 0xD0DC, H2), new CharRange(0xD0DD, 0xD0F7, H3), new CharRange(0xD0F8, 0xD0F8, H2), new CharRange(0xD0F9, 0xD113, H3), new CharRange(0xD114, 0xD114, H2), new CharRange(0xD115, 0xD12F, H3), new CharRange(0xD130, 0xD130, H2), new CharRange(0xD131, 0xD14B, H3), new CharRange(0xD14C, 0xD14C, H2), new CharRange(0xD14D, 0xD167, H3), new CharRange(0xD168, 0xD168, H2), new CharRange(0xD169, 0xD183, H3), new CharRange(0xD184, 0xD184, H2), new CharRange(0xD185, 0xD19F, H3), new CharRange(0xD1A0, 0xD1A0, H2), new CharRange(0xD1A1, 0xD1BB, H3), new CharRange(0xD1BC, 0xD1BC, H2), new CharRange(0xD1BD, 0xD1D7, H3), new CharRange(0xD1D8, 0xD1D8, H2), new CharRange(0xD1D9, 0xD1F3, H3), new CharRange(0xD1F4, 0xD1F4, H2), new CharRange(0xD1F5, 0xD20F, H3), new CharRange(0xD210, 0xD210, H2), new CharRange(0xD211, 0xD22B, H3), new CharRange(0xD22C, 0xD22C, H2), new CharRange(0xD22D, 0xD247, H3), new CharRange(0xD248, 0xD248, H2), new CharRange(0xD249, 0xD263, H3), new CharRange(0xD264, 0xD264, H2), new CharRange(0xD265, 0xD27F, H3), new CharRange(0xD280, 0xD280, H2), new CharRange(0xD281, 0xD29B, H3), new CharRange(0xD29C, 0xD29C, H2), new CharRange(0xD29D, 0xD2B7, H3), new CharRange(0xD2B8, 0xD2B8, H2), new CharRange(0xD2B9, 0xD2D3, H3), new CharRange(0xD2D4, 0xD2D4, H2), new CharRange(0xD2D5, 0xD2EF, H3), new CharRange(0xD2F0, 0xD2F0, H2), new CharRange(0xD2F1, 0xD30B, H3), new CharRange(0xD30C, 0xD30C, H2), new CharRange(0xD30D, 0xD327, H3), new CharRange(0xD328, 0xD328, H2), new CharRange(0xD329, 0xD343, H3), new CharRange(0xD344, 0xD344, H2), new CharRange(0xD345, 0xD35F, H3), new CharRange(0xD360, 0xD360, H2), new CharRange(0xD361, 0xD37B, H3), new CharRange(0xD37C, 0xD37C, H2), new CharRange(0xD37D, 0xD397, H3), new CharRange(0xD398, 0xD398, H2), new CharRange(0xD399, 0xD3B3, H3), new CharRange(0xD3B4, 0xD3B4, H2), new CharRange(0xD3B5, 0xD3CF, H3), new CharRange(0xD3D0, 0xD3D0, H2), new CharRange(0xD3D1, 0xD3EB, H3), new CharRange(0xD3EC, 0xD3EC, H2), new CharRange(0xD3ED, 0xD407, H3), new CharRange(0xD408, 0xD408, H2), new CharRange(0xD409, 0xD423, H3), new CharRange(0xD424, 0xD424, H2), new CharRange(0xD425, 0xD43F, H3), new CharRange(0xD440, 0xD440, H2), new CharRange(0xD441, 0xD45B, H3), new CharRange(0xD45C, 0xD45C, H2), new CharRange(0xD45D, 0xD477, H3), new CharRange(0xD478, 0xD478, H2), new CharRange(0xD479, 0xD493, H3), new CharRange(0xD494, 0xD494, H2), new CharRange(0xD495, 0xD4AF, H3), new CharRange(0xD4B0, 0xD4B0, H2), new CharRange(0xD4B1, 0xD4CB, H3), new CharRange(0xD4CC, 0xD4CC, H2), new CharRange(0xD4CD, 0xD4E7, H3), new CharRange(0xD4E8, 0xD4E8, H2), new CharRange(0xD4E9, 0xD503, H3), new CharRange(0xD504, 0xD504, H2), new CharRange(0xD505, 0xD51F, H3), new CharRange(0xD520, 0xD520, H2), new CharRange(0xD521, 0xD53B, H3), new CharRange(0xD53C, 0xD53C, H2), new CharRange(0xD53D, 0xD557, H3), new CharRange(0xD558, 0xD558, H2), new CharRange(0xD559, 0xD573, H3), new CharRange(0xD574, 0xD574, H2), new CharRange(0xD575, 0xD58F, H3), new CharRange(0xD590, 0xD590, H2), new CharRange(0xD591, 0xD5AB, H3), new CharRange(0xD5AC, 0xD5AC, H2), new CharRange(0xD5AD, 0xD5C7, H3), new CharRange(0xD5C8, 0xD5C8, H2), new CharRange(0xD5C9, 0xD5E3, H3), new CharRange(0xD5E4, 0xD5E4, H2), new CharRange(0xD5E5, 0xD5FF, H3), new CharRange(0xD600, 0xD600, H2), new CharRange(0xD601, 0xD61B, H3), new CharRange(0xD61C, 0xD61C, H2), new CharRange(0xD61D, 0xD637, H3), new CharRange(0xD638, 0xD638, H2), new CharRange(0xD639, 0xD653, H3), new CharRange(0xD654, 0xD654, H2), new CharRange(0xD655, 0xD66F, H3), new CharRange(0xD670, 0xD670, H2), new CharRange(0xD671, 0xD68B, H3), new CharRange(0xD68C, 0xD68C, H2), new CharRange(0xD68D, 0xD6A7, H3), new CharRange(0xD6A8, 0xD6A8, H2), new CharRange(0xD6A9, 0xD6C3, H3), new CharRange(0xD6C4, 0xD6C4, H2), new CharRange(0xD6C5, 0xD6DF, H3), new CharRange(0xD6E0, 0xD6E0, H2), new CharRange(0xD6E1, 0xD6FB, H3), new CharRange(0xD6FC, 0xD6FC, H2), new CharRange(0xD6FD, 0xD717, H3), new CharRange(0xD718, 0xD718, H2), new CharRange(0xD719, 0xD733, H3), new CharRange(0xD734, 0xD734, H2), new CharRange(0xD735, 0xD74F, H3), new CharRange(0xD750, 0xD750, H2), new CharRange(0xD751, 0xD76B, H3), new CharRange(0xD76C, 0xD76C, H2), new CharRange(0xD76D, 0xD787, H3), new CharRange(0xD788, 0xD788, H2), new CharRange(0xD789, 0xD7A3, H3), new CharRange(0xD7B0, 0xD7C6, JV), new CharRange(0xD7CB, 0xD7FB, JT), new CharRange(0xD800, 0xDFFF, SG), new CharRange(0xE000, 0xF8FF, XX), new CharRange(0xF900, 0xFAFF, ID), new CharRange(0xFB00, 0xFB17, AL), new CharRange(0xFB1D, 0xFB1D, HL), new CharRange(0xFB1E, 0xFB1E, CM), new CharRange(0xFB1F, 0xFB28, HL), new CharRange(0xFB29, 0xFB29, AL), new CharRange(0xFB2A, 0xFB4F, HL), new CharRange(0xFB50, 0xFD3D, AL), new CharRange(0xFD3E, 0xFD3E, OP), new CharRange(0xFD3F, 0xFD3F, CL), new CharRange(0xFD50, 0xFDFB, AL), new CharRange(0xFDFC, 0xFDFC, PO), new CharRange(0xFDFD, 0xFDFD, AL), new CharRange(0xFE00, 0xFE0F, CM), new CharRange(0xFE10, 0xFE10, IS), new CharRange(0xFE11, 0xFE12, CL), new CharRange(0xFE13, 0xFE14, IS), new CharRange(0xFE15, 0xFE16, EX), new CharRange(0xFE17, 0xFE17, OP), new CharRange(0xFE18, 0xFE18, CL), new CharRange(0xFE19, 0xFE19, IN), new CharRange(0xFE20, 0xFE26, CM), new CharRange(0xFE30, 0xFE34, ID), new CharRange(0xFE35, 0xFE35, OP), new CharRange(0xFE36, 0xFE36, CL), new CharRange(0xFE37, 0xFE37, OP), new CharRange(0xFE38, 0xFE38, CL), new CharRange(0xFE39, 0xFE39, OP), new CharRange(0xFE3A, 0xFE3A, CL), new CharRange(0xFE3B, 0xFE3B, OP), new CharRange(0xFE3C, 0xFE3C, CL), new CharRange(0xFE3D, 0xFE3D, OP), new CharRange(0xFE3E, 0xFE3E, CL), new CharRange(0xFE3F, 0xFE3F, OP), new CharRange(0xFE40, 0xFE40, CL), new CharRange(0xFE41, 0xFE41, OP), new CharRange(0xFE42, 0xFE42, CL), new CharRange(0xFE43, 0xFE43, OP), new CharRange(0xFE44, 0xFE44, CL), new CharRange(0xFE45, 0xFE46, ID), new CharRange(0xFE47, 0xFE47, OP), new CharRange(0xFE48, 0xFE48, CL), new CharRange(0xFE49, 0xFE4F, ID), new CharRange(0xFE50, 0xFE50, CL), new CharRange(0xFE51, 0xFE51, ID), new CharRange(0xFE52, 0xFE52, CL), new CharRange(0xFE54, 0xFE55, NS), new CharRange(0xFE56, 0xFE57, EX), new CharRange(0xFE58, 0xFE58, ID), new CharRange(0xFE59, 0xFE59, OP), new CharRange(0xFE5A, 0xFE5A, CL), new CharRange(0xFE5B, 0xFE5B, OP), new CharRange(0xFE5C, 0xFE5C, CL), new CharRange(0xFE5D, 0xFE5D, OP), new CharRange(0xFE5E, 0xFE5E, CL), new CharRange(0xFE5F, 0xFE68, ID), new CharRange(0xFE69, 0xFE69, PR), new CharRange(0xFE6A, 0xFE6A, PO), new CharRange(0xFE6B, 0xFE6B, ID), new CharRange(0xFE70, 0xFEFC, AL), new CharRange(0xFEFF, 0xFEFF, WJ), new CharRange(0xFF01, 0xFF01, EX), new CharRange(0xFF02, 0xFF03, ID), new CharRange(0xFF04, 0xFF04, PR), new CharRange(0xFF05, 0xFF05, PO), new CharRange(0xFF06, 0xFF07, ID), new CharRange(0xFF08, 0xFF08, OP), new CharRange(0xFF09, 0xFF09, CL), new CharRange(0xFF0A, 0xFF0B, ID), new CharRange(0xFF0C, 0xFF0C, CL), new CharRange(0xFF0D, 0xFF0D, ID), new CharRange(0xFF0E, 0xFF0E, CL), new CharRange(0xFF0F, 0xFF19, ID), new CharRange(0xFF1A, 0xFF1B, NS), new CharRange(0xFF1C, 0xFF1E, ID), new CharRange(0xFF1F, 0xFF1F, EX), new CharRange(0xFF20, 0xFF3A, ID), new CharRange(0xFF3B, 0xFF3B, OP), new CharRange(0xFF3C, 0xFF3C, ID), new CharRange(0xFF3D, 0xFF3D, CL), new CharRange(0xFF3E, 0xFF5A, ID), new CharRange(0xFF5B, 0xFF5B, OP), new CharRange(0xFF5C, 0xFF5C, ID), new CharRange(0xFF5D, 0xFF5D, CL), new CharRange(0xFF5E, 0xFF5E, ID), new CharRange(0xFF5F, 0xFF5F, OP), new CharRange(0xFF60, 0xFF61, CL), new CharRange(0xFF62, 0xFF62, OP), new CharRange(0xFF63, 0xFF64, CL), new CharRange(0xFF65, 0xFF65, NS), new CharRange(0xFF66, 0xFF66, AL), new CharRange(0xFF67, 0xFF70, CJ), new CharRange(0xFF71, 0xFF9D, AL), new CharRange(0xFF9E, 0xFF9F, NS), new CharRange(0xFFA0, 0xFFDC, AL), new CharRange(0xFFE0, 0xFFE0, PO), new CharRange(0xFFE1, 0xFFE1, PR), new CharRange(0xFFE2, 0xFFE4, ID), new CharRange(0xFFE5, 0xFFE6, PR), new CharRange(0xFFE8, 0xFFEE, AL), new CharRange(0xFFF9, 0xFFFB, CM), new CharRange(0xFFFC, 0xFFFC, CB), new CharRange(0xFFFD, 0xFFFD, AI), new CharRange(0x10000, 0x100FA, AL), new CharRange(0x10100, 0x10102, BA), new CharRange(0x10107, 0x101FC, AL), new CharRange(0x101FD, 0x101FD, CM), new CharRange(0x10280, 0x1039D, AL), new CharRange(0x1039F, 0x1039F, BA), new CharRange(0x103A0, 0x103CF, AL), new CharRange(0x103D0, 0x103D0, BA), new CharRange(0x103D1, 0x1049D, AL), new CharRange(0x104A0, 0x104A9, NU), new CharRange(0x10800, 0x10855, AL), new CharRange(0x10857, 0x10857, BA), new CharRange(0x10858, 0x1091B, AL), new CharRange(0x1091F, 0x1091F, BA), new CharRange(0x10920, 0x10A00, AL), new CharRange(0x10A01, 0x10A0F, CM), new CharRange(0x10A10, 0x10A33, AL), new CharRange(0x10A38, 0x10A3F, CM), new CharRange(0x10A40, 0x10A47, AL), new CharRange(0x10A50, 0x10A57, BA), new CharRange(0x10A58, 0x10B35, AL), new CharRange(0x10B39, 0x10B3F, BA), new CharRange(0x10B40, 0x10E7E, AL), new CharRange(0x11000, 0x11002, CM), new CharRange(0x11003, 0x11037, AL), new CharRange(0x11038, 0x11046, CM), new CharRange(0x11047, 0x11048, BA), new CharRange(0x11049, 0x11065, AL), new CharRange(0x11066, 0x1106F, NU), new CharRange(0x11080, 0x11082, CM), new CharRange(0x11083, 0x110AF, AL), new CharRange(0x110B0, 0x110BA, CM), new CharRange(0x110BB, 0x110BD, AL), new CharRange(0x110BE, 0x110C1, BA), new CharRange(0x110D0, 0x110E8, AL), new CharRange(0x110F0, 0x110F9, NU), new CharRange(0x11100, 0x11102, CM), new CharRange(0x11103, 0x11126, AL), new CharRange(0x11127, 0x11134, CM), new CharRange(0x11136, 0x1113F, NU), new CharRange(0x11140, 0x11143, BA), new CharRange(0x11180, 0x11182, CM), new CharRange(0x11183, 0x111B2, AL), new CharRange(0x111B3, 0x111C0, CM), new CharRange(0x111C1, 0x111C4, AL), new CharRange(0x111C5, 0x111C6, BA), new CharRange(0x111C7, 0x111C7, AL), new CharRange(0x111C8, 0x111C8, BA), new CharRange(0x111D0, 0x111D9, NU), new CharRange(0x11680, 0x116AA, AL), new CharRange(0x116AB, 0x116B7, CM), new CharRange(0x116C0, 0x116C9, NU), new CharRange(0x12000, 0x12462, AL), new CharRange(0x12470, 0x12473, BA), new CharRange(0x13000, 0x13257, AL), new CharRange(0x13258, 0x1325A, OP), new CharRange(0x1325B, 0x1325D, CL), new CharRange(0x1325E, 0x13281, AL), new CharRange(0x13282, 0x13282, CL), new CharRange(0x13283, 0x13285, AL), new CharRange(0x13286, 0x13286, OP), new CharRange(0x13287, 0x13287, CL), new CharRange(0x13288, 0x13288, OP), new CharRange(0x13289, 0x13289, CL), new CharRange(0x1328A, 0x13378, AL), new CharRange(0x13379, 0x13379, OP), new CharRange(0x1337A, 0x1337B, CL), new CharRange(0x1337C, 0x16F50, AL), new CharRange(0x16F51, 0x16F92, CM), new CharRange(0x16F93, 0x16F9F, AL), new CharRange(0x1B000, 0x1B001, ID), new CharRange(0x1D000, 0x1D164, AL), new CharRange(0x1D165, 0x1D169, CM), new CharRange(0x1D16A, 0x1D16C, AL), new CharRange(0x1D16D, 0x1D182, CM), new CharRange(0x1D183, 0x1D184, AL), new CharRange(0x1D185, 0x1D18B, CM), new CharRange(0x1D18C, 0x1D1A9, AL), new CharRange(0x1D1AA, 0x1D1AD, CM), new CharRange(0x1D1AE, 0x1D241, AL), new CharRange(0x1D242, 0x1D244, CM), new CharRange(0x1D245, 0x1D7CB, AL), new CharRange(0x1D7CE, 0x1D7FF, NU), new CharRange(0x1EE00, 0x1EEF1, AL), new CharRange(0x1F000, 0x1F0DF, ID), new CharRange(0x1F100, 0x1F12D, AI), new CharRange(0x1F12E, 0x1F12E, AL), new CharRange(0x1F130, 0x1F169, AI), new CharRange(0x1F16A, 0x1F16B, AL), new CharRange(0x1F170, 0x1F19A, AI), new CharRange(0x1F1E6, 0x1F1FF, RI), new CharRange(0x1F200, 0x1F3B4, ID), new CharRange(0x1F3B5, 0x1F3B6, AL), new CharRange(0x1F3B7, 0x1F3BB, ID), new CharRange(0x1F3BC, 0x1F3BC, AL), new CharRange(0x1F3BD, 0x1F49F, ID), new CharRange(0x1F4A0, 0x1F4A0, AL), new CharRange(0x1F4A1, 0x1F4A1, ID), new CharRange(0x1F4A2, 0x1F4A2, AL), new CharRange(0x1F4A3, 0x1F4A3, ID), new CharRange(0x1F4A4, 0x1F4A4, AL), new CharRange(0x1F4A5, 0x1F4AE, ID), new CharRange(0x1F4AF, 0x1F4AF, AL), new CharRange(0x1F4B0, 0x1F4B0, ID), new CharRange(0x1F4B1, 0x1F4B2, AL), new CharRange(0x1F4B3, 0x1F4FC, ID), new CharRange(0x1F500, 0x1F506, AL), new CharRange(0x1F507, 0x1F516, ID), new CharRange(0x1F517, 0x1F524, AL), new CharRange(0x1F525, 0x1F531, ID), new CharRange(0x1F532, 0x1F543, AL), new CharRange(0x1F550, 0x1F6C5, ID), new CharRange(0x1F700, 0x1F773, AL), new CharRange(0x20000, 0x3FFFD, ID), new CharRange(0xE0001, 0xE01EF, CM), new CharRange(0xF0000, 0x10FFFD, XX)];
 
 }).call(this);
 
-},{"./reference":42}],44:[function(_dereq_,module,exports){
+},{}],53:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
+(function() {
+  var AI, AL, BA, BK, CB, CI_BRK, CJ, CP_BRK, CR, DI_BRK, ID, IN_BRK, LF, LineBreaker, NL, NS, PR_BRK, SA, SG, SP, WJ, XX, characterClasses, pairTable, _ref, _ref1;
+
+  _ref = _dereq_('./classes'), BK = _ref.BK, CR = _ref.CR, LF = _ref.LF, NL = _ref.NL, CB = _ref.CB, BA = _ref.BA, SP = _ref.SP, WJ = _ref.WJ, SP = _ref.SP, BK = _ref.BK, LF = _ref.LF, NL = _ref.NL, AI = _ref.AI, AL = _ref.AL, SA = _ref.SA, SG = _ref.SG, XX = _ref.XX, CJ = _ref.CJ, ID = _ref.ID, NS = _ref.NS, characterClasses = _ref.characterClasses;
+
+  _ref1 = _dereq_('./pairs'), DI_BRK = _ref1.DI_BRK, IN_BRK = _ref1.IN_BRK, CI_BRK = _ref1.CI_BRK, CP_BRK = _ref1.CP_BRK, PR_BRK = _ref1.PR_BRK, pairTable = _ref1.pairTable;
+
+  LineBreaker = (function() {
+    var Break, getCharClass, mapClass, mapFirst;
+
+    function LineBreaker(string) {
+      this.string = string;
+      this.pos = 0;
+      this.lastPos = 0;
+      this.curClass = null;
+      this.nextClass = null;
+    }
+
+    LineBreaker.prototype.nextCodePoint = function() {
+      var code, next;
+      code = this.string.charCodeAt(this.pos++);
+      next = this.string.charCodeAt(this.pos);
+      if ((0xd800 <= code && code <= 0xdbff) && (0xdc00 <= next && next <= 0xdfff)) {
+        this.pos++;
+        return ((code - 0xd800) * 0x400) + (next - 0xdc00) + 0x10000;
+      }
+      return code;
+    };
+
+    getCharClass = function(char) {
+      var high, low, mid, range;
+      low = 0;
+      high = characterClasses.length;
+      while (low < high) {
+        mid = (low + high) >>> 1;
+        range = characterClasses[mid];
+        if (char > range.end) {
+          low = mid + 1;
+        } else if (char < range.start) {
+          high = mid;
+        } else {
+          return range["class"];
+        }
+      }
+      return XX;
+    };
+
+    mapClass = function(c) {
+      switch (c) {
+        case AI:
+          return AL;
+        case SA:
+        case SG:
+        case XX:
+          return AL;
+        case CJ:
+          return NS;
+        default:
+          return c;
+      }
+    };
+
+    mapFirst = function(c) {
+      switch (c) {
+        case LF:
+        case NL:
+          return BK;
+        case CB:
+          return BA;
+        case SP:
+          return WJ;
+        default:
+          return c;
+      }
+    };
+
+    LineBreaker.prototype.nextCharClass = function(first) {
+      if (first == null) {
+        first = false;
+      }
+      return mapClass(getCharClass(this.nextCodePoint()));
+    };
+
+    Break = (function() {
+      function Break(position, required) {
+        this.position = position;
+        this.required = required != null ? required : false;
+      }
+
+      return Break;
+
+    })();
+
+    LineBreaker.prototype.nextBreak = function() {
+      var cur, lastClass, shouldBreak;
+      if (this.curClass == null) {
+        this.curClass = mapFirst(this.nextCharClass());
+      }
+      while (this.pos < this.string.length) {
+        this.lastPos = this.pos;
+        lastClass = this.nextClass;
+        this.nextClass = this.nextCharClass();
+        if (this.curClass === BK || (this.curClass === CR && this.nextClass !== LF)) {
+          this.curClass = mapFirst(mapClass(this.nextClass));
+          return new Break(this.lastPos, true);
+        }
+        cur = (function() {
+          switch (this.nextClass) {
+            case SP:
+              return this.curClass;
+            case BK:
+            case LF:
+            case NL:
+              return BK;
+            case CR:
+              return CR;
+            case CB:
+              return BA;
+          }
+        }).call(this);
+        if (cur != null) {
+          this.curClass = cur;
+          if (this.nextClass === CB) {
+            return new Break(this.lastPos);
+          }
+          continue;
+        }
+        shouldBreak = false;
+        switch (pairTable[this.curClass][this.nextClass]) {
+          case DI_BRK:
+            shouldBreak = true;
+            break;
+          case IN_BRK:
+            shouldBreak = lastClass === SP;
+            break;
+          case CI_BRK:
+            shouldBreak = lastClass === SP;
+            if (!shouldBreak) {
+              continue;
+            }
+            break;
+          case CP_BRK:
+            if (lastClass !== SP) {
+              continue;
+            }
+        }
+        this.curClass = this.nextClass;
+        if (shouldBreak) {
+          return new Break(this.lastPos);
+        }
+      }
+      if (this.pos >= this.string.length) {
+        if (this.lastPos < this.string.length) {
+          this.lastPos = this.string.length;
+          return new Break(this.string.length);
+        } else {
+          return null;
+        }
+      }
+    };
+
+    return LineBreaker;
+
+  })();
+
+  module.exports = LineBreaker;
+
+}).call(this);
+
+},{"./classes":52,"./pairs":54}],54:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
+(function() {
+  var CI_BRK, CP_BRK, DI_BRK, IN_BRK, PR_BRK;
+
+  exports.DI_BRK = DI_BRK = 0;
+
+  exports.IN_BRK = IN_BRK = 1;
+
+  exports.CI_BRK = CI_BRK = 2;
+
+  exports.CP_BRK = CP_BRK = 3;
+
+  exports.PR_BRK = PR_BRK = 4;
+
+  exports.pairTable = [[PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, CP_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, CI_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, CI_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, DI_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, DI_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, CI_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, PR_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, CI_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK]];
+
+}).call(this);
+
+},{}],55:[function(_dereq_,module,exports){
 (function (Buffer){
 // Generated by CoffeeScript 1.4.0
 
@@ -6942,7 +9735,8 @@ function Cb(b){var a=new Buffer(b.length),c,d;c=0;for(d=b.length;c<d;++c)a[c]=b[
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"buffer":1,"fs":"x/K9gc","zlib":6}],45:[function(_dereq_,module,exports){
+},{"buffer":1,"fs":"x/K9gc","zlib":15}],56:[function(_dereq_,module,exports){
+(function (Buffer){
 /* jslint node: true */
 /* jslint browser: true */
 /* global saveAs */
@@ -6966,23 +9760,32 @@ function Document(docDefinition, fonts, vfs) {
 	this.vfs = vfs;
 }
 
-Document.prototype._createDoc = function(callback, options) {
+Document.prototype._createDoc = function(options, callback) {
 	var printer = new PdfPrinter(this.fonts);
 	printer.fs.bindFS(this.vfs);
 
-	printer.createPdfKitDocument(this.docDefinition, options).output(callback);
+	var doc = printer.createPdfKitDocument(this.docDefinition, options);
+	var chunks = [];
+	var result;
+
+	doc.on('data', function(chunk) {
+		chunks.push(chunk);
+	});
+	doc.on('end', function() {
+		result = Buffer.concat(chunks);
+		callback(result);
+	});
+	doc.end();
 };
 
 Document.prototype.open = function(message) {
 	// we have to open the window immediately and store the reference
 	// otherwise popup blockers will stop us
 	var win = window.open('', '_blank');
-	message = message || 'loading...';
-	win.location.href = 'data:text/html;,<html><head><meta charset="utf-8"></head><body><h1 style="opacity: 0.5">' + message.replace(/&/, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</h1></body></html>';
 
 	try {
-		this._createDoc(function(outDoc) {
-			win.location.href = 'data:application/pdf;base64,' + outDoc.toString('base64');
+		this.getDataUrl(function(result) {
+			win.location.href = result;
 		});
 	} catch(e) {
 		win.close();
@@ -6994,9 +9797,7 @@ Document.prototype.open = function(message) {
 Document.prototype.print = function(timeout) {
 	timeout = timeout || 2000;
 
-	this._createDoc(function(outDoc) {
-		var dataUrl = 'data:application/pdf;base64,' + outDoc.toString('base64');
-
+	this.getDataUrl(function(dataUrl) {
 		var iFrame = document.createElement('iframe');
 		iFrame.style.display = 'none';
 		iFrame.src = dataUrl;
@@ -7012,27 +9813,28 @@ Document.prototype.print = function(timeout) {
 
 Document.prototype.download = function(defaultFileName) {
 	defaultFileName = defaultFileName || 'file.pdf';
-	this._createDoc(function(outDoc) {
-		saveAs(new Blob([outDoc], {type: 'application/pdf'}), defaultFileName);
+	this.getBuffer(function(result) {
+		saveAs(new Blob([result], {type: 'application/pdf'}), defaultFileName);
 	});
 };
 
-Document.prototype.getBase64 = function(result) {
-	if (!result) throw 'getBase64 should be called with a callback argument';
-
-	this._createDoc(function(outDoc) {
-		result(outDoc.toString('base64'));
+Document.prototype.getBase64 = function(cb, options) {
+	if (!cb) throw 'getBase64 is an async method and needs a callback argument';
+	this._createDoc(options, function(buffer) {
+		cb(buffer.toString('base64'));
 	});
 };
 
-Document.prototype.getDataUrl = function(result) {
-	if (!result) throw 'getDataUrl should be called with a callback argument';
-	this._createDoc(function(outDoc) { result('data:application/pdf;base64,' + outDoc.toString('base64')); });
+Document.prototype.getDataUrl = function(cb, options) {
+	if (!cb) throw 'getDataUrl is an async method and needs a callback argument';
+	this._createDoc(options, function(buffer) {
+		cb('data:application/pdf;base64,' + buffer.toString('base64'));
+	});
 };
 
-Document.prototype.getBuffer = function(result) {
-	if (!result) throw 'getBuffer should be called with a callback argument';
-	this._createDoc(function(outDoc) { result(outDoc); });
+Document.prototype.getBuffer = function(cb, options) {
+	if (!cb) throw 'getBuffer is an async method and needs a callback argument';
+	this._createDoc(options, cb);
 };
 
 module.exports = {
@@ -7041,7 +9843,8 @@ module.exports = {
 	}
 };
 
-},{"../printer":57}],"fs":[function(_dereq_,module,exports){
+}).call(this,_dereq_("buffer").Buffer)
+},{"../printer":68,"buffer":1}],"fs":[function(_dereq_,module,exports){
 module.exports=_dereq_('x/K9gc');
 },{}],"x/K9gc":[function(_dereq_,module,exports){
 (function (Buffer,__dirname){
@@ -7089,7 +9892,7 @@ function fixFilename(filename) {
 module.exports = new VirtualFileSystem();
 
 }).call(this,_dereq_("buffer").Buffer,"/")
-},{"buffer":1}],48:[function(_dereq_,module,exports){
+},{"buffer":1}],59:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7221,7 +10024,7 @@ module.exports = {
 	isStarColumn: isStarColumn
 };
 
-},{}],49:[function(_dereq_,module,exports){
+},{}],60:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7650,7 +10453,7 @@ DocMeasure.prototype.measureCanvas = function(node) {
 
 module.exports = DocMeasure;
 
-},{"./columnCalculator":48,"./helpers":52,"./styleContextStack":59,"./textTools":61}],50:[function(_dereq_,module,exports){
+},{"./columnCalculator":59,"./helpers":63,"./styleContextStack":70,"./textTools":72}],61:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -7803,7 +10606,7 @@ DocumentContext.bottomMostContext = bottomMostContext;
 
 module.exports = DocumentContext;
 
-},{}],51:[function(_dereq_,module,exports){
+},{}],62:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8005,7 +10808,7 @@ ElementWriter.prototype.popContext = function() {
 
 module.exports = ElementWriter;
 
-},{"./documentContext":50,"./helpers":52,"./line":55}],52:[function(_dereq_,module,exports){
+},{"./documentContext":61,"./helpers":63,"./line":66}],63:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8069,8 +10872,8 @@ module.exports = {
 	isFunction: isFunction
 };
 
-},{}],53:[function(_dereq_,module,exports){
-var pdfKit = _dereq_('pdfkit');
+},{}],64:[function(_dereq_,module,exports){
+var pdfKit = _dereq_('pdfmake-pdfkit');
 
 function ImageMeasure(pdfDoc) {
 	this.pdfDoc = pdfDoc;
@@ -8080,11 +10883,12 @@ ImageMeasure.prototype.measureImage = function(src) {
 	var image, label;
 
 	if (!this.pdfDoc._imageRegistry[src]) {
-		image = pdfKit.PDFImage.open(src);
 		label = "I" + (++this.pdfDoc._imageCount);
-		this.pdfDoc._imageRegistry[src] = [image, label, []];
+		image = pdfKit.PDFImage.open(src, label);
+		image.embed(this.pdfDoc);
+		this.pdfDoc._imageRegistry[src] = image;
 	} else {
-		image = this.pdfDoc._imageRegistry[src][0];
+		image = this.pdfDoc._imageRegistry[src];
 	}
 
 	return { width: image.width, height: image.height };
@@ -8092,7 +10896,7 @@ ImageMeasure.prototype.measureImage = function(src) {
 
 module.exports = ImageMeasure;
 
-},{"pdfkit":9}],54:[function(_dereq_,module,exports){
+},{"pdfmake-pdfkit":18}],65:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8140,14 +10944,13 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, header, footer) {
 	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts);
 
-    docStructure = this.docMeasure.measureDocument(docStructure);
+  docStructure = this.docMeasure.measureDocument(docStructure);
 
-    this.writer = new PageElementWriter(
-        new DocumentContext(this.pageSize, this.pageMargins),
-        this.tracker);
+  this.writer = new PageElementWriter(
+    new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
-    this.processNode(docStructure);
-    this.addHeadersAndFooters(header, footer);
+  this.processNode(docStructure);
+  this.addHeadersAndFooters(header, footer);
 
 	return this.writer.context().pages;
 };
@@ -8181,19 +10984,19 @@ LayoutBuilder.prototype.processNode = function(node) {
   var self = this;
 
   applyMargins(function() {
-		if (node.stack) {
-			self.processVerticalContainer(node.stack);
-		} else if (node.columns) {
-			self.processColumns(node);
-		} else if (node.ul) {
-			self.processList(false, node.ul, node._gapSize);
-		} else if (node.ol) {
-			self.processList(true, node.ol, node._gapSize);
-		} else if (node.table) {
-			self.processTable(node);
-		} else if (node.text !== undefined) {
-			self.processLeaf(node);
-		} else if (node.image) {
+    if (node.stack) {
+      self.processVerticalContainer(node.stack);
+    } else if (node.columns) {
+      self.processColumns(node);
+    } else if (node.ul) {
+      self.processList(false, node.ul, node._gapSize);
+    } else if (node.ol) {
+      self.processList(true, node.ol, node._gapSize);
+    } else if (node.table) {
+      self.processTable(node);
+    } else if (node.text !== undefined) {
+      self.processLeaf(node);
+    } else if (node.image) {
       self.processImage(node);
     } else if (node.canvas) {
       self.processCanvas(node);
@@ -8436,7 +11239,7 @@ LayoutBuilder.prototype.processCanvas = function(node) {
 
 module.exports = LayoutBuilder;
 
-},{"./columnCalculator":48,"./docMeasure":49,"./documentContext":50,"./helpers":52,"./line":55,"./pageElementWriter":56,"./tableProcessor":60,"./traversalTracker":62}],55:[function(_dereq_,module,exports){
+},{"./columnCalculator":59,"./docMeasure":60,"./documentContext":61,"./helpers":63,"./line":66,"./pageElementWriter":67,"./tableProcessor":71,"./traversalTracker":73}],66:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8507,7 +11310,7 @@ Line.prototype.getHeight = function() {
 
 module.exports = Line;
 
-},{}],56:[function(_dereq_,module,exports){
+},{}],67:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -8655,13 +11458,14 @@ PageElementWriter.prototype.context = function() {
 
 module.exports = PageElementWriter;
 
-},{"./elementWriter":51}],57:[function(_dereq_,module,exports){
+},{"./elementWriter":62}],68:[function(_dereq_,module,exports){
 /* jslint node: true */
 /* global window */
 'use strict';
 
 var LayoutBuilder = _dereq_('./layoutBuilder');
-var PdfKit = _dereq_('pdfkit');
+var PdfKit = _dereq_('pdfmake-pdfkit');
+var PDFReference = PdfKit.PDFReference;
 var sizes = _dereq_('./standardPageSizes');
 var ImageMeasure = _dereq_('./imageMeasure');
 
@@ -8721,7 +11525,8 @@ function PdfPrinter(fontDescriptors) {
  *
  * var pdfDoc = printer.createPdfKitDocument(docDefinition);
  *
- * pdfDoc.write('sample.pdf');
+ * pdfDoc.pipe(fs.createWriteStream('sample.pdf'));
+ * pdfDoc.end();
  *
  * @return {Object} a pdfKit document object which can be saved or encode to data-url
  */
@@ -8754,15 +11559,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
 	if(options.autoPrint){
-		var PDFReference = this.pdfKitDoc.store.objects[2].constructor;
-		var jsRef = this.pdfKitDoc.ref({
-			S: 'JavaScript',
-			JS: new StringObject('this.print\\(true\\);')
-		});
-		var namesRef = this.pdfKitDoc.ref({
-			Names: [new StringObject('EmbeddedJS'), new PDFReference(jsRef.id)],
-		});
-		this.pdfKitDoc.store.objects[2].data.Names = { JavaScript: new PDFReference(namesRef.id) };
+        console.warn('no autoprint support, will be added in a couple of days');
 	}
 	return this.pdfKitDoc;
 };
@@ -9039,7 +11836,7 @@ module.exports = PdfPrinter;
 /* temporary browser extension */
 PdfPrinter.prototype.fs = _dereq_('fs');
 
-},{"./imageMeasure":53,"./layoutBuilder":54,"./standardPageSizes":58,"fs":"x/K9gc","pdfkit":9}],58:[function(_dereq_,module,exports){
+},{"./imageMeasure":64,"./layoutBuilder":65,"./standardPageSizes":69,"fs":"x/K9gc","pdfmake-pdfkit":18}],69:[function(_dereq_,module,exports){
 module.exports = {
 	'4A0': [4767.87, 6740.79],
 	'2A0': [3370.39, 4767.87],
@@ -9093,7 +11890,7 @@ module.exports = {
 	TABLOID: [792.00, 1224.00]
 };
 
-},{}],59:[function(_dereq_,module,exports){
+},{}],70:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -9256,7 +12053,7 @@ StyleContextStack.prototype.getProperty = function(property) {
 
 module.exports = StyleContextStack;
 
-},{}],60:[function(_dereq_,module,exports){
+},{}],71:[function(_dereq_,module,exports){
 var ColumnCalculator = _dereq_('./columnCalculator');
 
 function TableProcessor(tableNode) {
@@ -9280,6 +12077,7 @@ TableProcessor.prototype.beginTable = function(writer) {
 
   this.headerRows = tableNode.table.headerRows || 0;
   this.rowsWithoutPageBreak = this.headerRows + (tableNode.table.keepWithHeaderRows || 0);
+  this.dontBreakRows = tableNode.table.dontBreakRows || false;
 
   if (this.rowsWithoutPageBreak) {
     writer.beginUnbreakableBlock();
@@ -9318,6 +12116,9 @@ TableProcessor.prototype.beginTable = function(writer) {
 };
 
 TableProcessor.prototype.beginRow = function(rowIndex, writer) {
+    if(this.dontBreakRows) {
+        writer.beginUnbreakableBlock();
+    }
   this.rowTopY = writer.context().y;
   this.reservedAtBottom = this.layout.hLineWidth(rowIndex + 1, this.tableNode) + this.layout.paddingBottom(rowIndex, this.tableNode);
 
@@ -9467,6 +12268,10 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
       this.headerRepeatable = writer.currentBlockToRepeatable();
     }
 
+    if(this.dontBreakRows) {
+        writer.commitUnbreakableBlock();
+    }
+
     if(this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
       writer.commitUnbreakableBlock();
       writer.pushToRepeatables(this.headerRepeatable);
@@ -9499,7 +12304,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
 
 module.exports = TableProcessor;
 
-},{"./columnCalculator":48}],61:[function(_dereq_,module,exports){
+},{"./columnCalculator":59}],72:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -9749,7 +12554,7 @@ TextTools.prototype.measure = measure;
 
 module.exports = TextTools;
 
-},{}],62:[function(_dereq_,module,exports){
+},{}],73:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -9801,8 +12606,8 @@ TraversalTracker.prototype.auto = function(event, cb, innerBlock) {
 
 module.exports = TraversalTracker;
 
-},{}]},{},[45])
-(45)
+},{}]},{},[56])
+(56)
 });;/*! FileSaver.js
  *  A saveAs() FileSaver implementation.
  *  2014-01-24
