@@ -1,13 +1,13 @@
 {
   "name": "pdfmake",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/printer.js",
   "directories": {
     "test": "tests"
   },
   "dependencies": {
-    "pdfmake-pdfkit": "~0.5.2-b"
+    "pdfmake-pdfkit": "~0.5.2-d"
   },
   "devDependencies": {
     "grunt": "~0.4.2",

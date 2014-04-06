@@ -21,23 +21,32 @@ function Document(docDefinition, fonts, vfs) {
 	this.vfs = vfs;
 }
 
-Document.prototype._createDoc = function(callback, options) {
+Document.prototype._createDoc = function(options, callback) {
 	var printer = new PdfPrinter(this.fonts);
 	printer.fs.bindFS(this.vfs);
 
-	printer.createPdfKitDocument(this.docDefinition, options).output(callback);
+	var doc = printer.createPdfKitDocument(this.docDefinition, options);
+	var chunks = [];
+	var result;
+
+	doc.on('data', function(chunk) {
+		chunks.push(chunk);
+	});
+	doc.on('end', function() {
+		result = Buffer.concat(chunks);
+		callback(result);
+	});
+	doc.end();
 };
 
 Document.prototype.open = function(message) {
 	// we have to open the window immediately and store the reference
 	// otherwise popup blockers will stop us
 	var win = window.open('', '_blank');
-	message = message || 'loading...';
-	win.location.href = 'data:text/html;,<html><head><meta charset="utf-8"></head><body><h1 style="opacity: 0.5">' + message.replace(/&/, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</h1></body></html>';
 
 	try {
-		this._createDoc(function(outDoc) {
-			win.location.href = 'data:application/pdf;base64,' + outDoc.toString('base64');
+		this.getDataUrl(function(result) {
+			win.location.href = result;
 		});
 	} catch(e) {
 		win.close();
@@ -49,9 +58,7 @@ Document.prototype.open = function(message) {
 Document.prototype.print = function(timeout) {
 	timeout = timeout || 2000;
 
-	this._createDoc(function(outDoc) {
-		var dataUrl = 'data:application/pdf;base64,' + outDoc.toString('base64');
-
+	this.getDataUrl(function(dataUrl) {
 		var iFrame = document.createElement('iframe');
 		iFrame.style.display = 'none';
 		iFrame.src = dataUrl;
@@ -67,27 +74,28 @@ Document.prototype.print = function(timeout) {
 
 Document.prototype.download = function(defaultFileName) {
 	defaultFileName = defaultFileName || 'file.pdf';
-	this._createDoc(function(outDoc) {
-		saveAs(new Blob([outDoc], {type: 'application/pdf'}), defaultFileName);
+	this.getBuffer(function(result) {
+		saveAs(new Blob([result], {type: 'application/pdf'}), defaultFileName);
 	});
 };
 
-Document.prototype.getBase64 = function(result) {
-	if (!result) throw 'getBase64 should be called with a callback argument';
-
-	this._createDoc(function(outDoc) {
-		result(outDoc.toString('base64'));
+Document.prototype.getBase64 = function(cb, options) {
+	if (!cb) throw 'getBase64 is an async method and needs a callback argument';
+	this._createDoc(options, function(buffer) {
+		cb(buffer.toString('base64'));
 	});
 };
 
-Document.prototype.getDataUrl = function(result) {
-	if (!result) throw 'getDataUrl should be called with a callback argument';
-	this._createDoc(function(outDoc) { result('data:application/pdf;base64,' + outDoc.toString('base64')); });
+Document.prototype.getDataUrl = function(cb, options) {
+	if (!cb) throw 'getDataUrl is an async method and needs a callback argument';
+	this._createDoc(options, function(buffer) {
+		cb('data:application/pdf;base64,' + buffer.toString('base64'));
+	});
 };
 
-Document.prototype.getBuffer = function(result) {
-	if (!result) throw 'getBuffer should be called with a callback argument';
-	this._createDoc(function(outDoc) { result(outDoc); });
+Document.prototype.getBuffer = function(cb, options) {
+	if (!cb) throw 'getBuffer is an async method and needs a callback argument';
+	this._createDoc(options, cb);
 };
 
 module.exports = {

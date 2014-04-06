@@ -4,6 +4,7 @@
 
 var LayoutBuilder = require('./layoutBuilder');
 var PdfKit = require('pdfmake-pdfkit');
+var PDFReference = PdfKit.PDFReference;
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
 
@@ -97,15 +98,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
 	if(options.autoPrint){
-		var PDFReference = this.pdfKitDoc.store.objects[2].constructor;
-		var jsRef = this.pdfKitDoc.ref({
-			S: 'JavaScript',
-			JS: new StringObject('this.print\\(true\\);')
-		});
-		var namesRef = this.pdfKitDoc.ref({
-			Names: [new StringObject('EmbeddedJS'), new PDFReference(jsRef.id)],
-		});
-		this.pdfKitDoc.store.objects[2].data.Names = { JavaScript: new PDFReference(namesRef.id) };
+        console.warn('no autoprint support, will be added in a couple of days');
 	}
 	return this.pdfKitDoc;
 };
