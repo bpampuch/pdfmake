@@ -9,6 +9,7 @@ var fonts = {
 
 var PdfPrinter = require('../src/printer');
 var printer = new PdfPrinter(fonts);
+var fs = require('fs');
 
 
 var docDefinition = {
@@ -38,4 +39,5 @@ var docDefinition = {
 };
 
 var pdfDoc = printer.createPdfKitDocument(docDefinition);
-pdfDoc.write('pdfs/images.pdf');
+pdfDoc.pipe(fs.createWriteStream('pdfs/images.pdf'));
+pdfDoc.end();

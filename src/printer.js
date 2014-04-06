@@ -3,7 +3,7 @@
 'use strict';
 
 var LayoutBuilder = require('./layoutBuilder');
-var PdfKit = require('pdfkit');
+var PdfKit = require('pdfmake-pdfkit');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
 
@@ -63,7 +63,8 @@ function PdfPrinter(fontDescriptors) {
  *
  * var pdfDoc = printer.createPdfKitDocument(docDefinition);
  *
- * pdfDoc.write('sample.pdf');
+ * pdfDoc.pipe(fs.createWriteStream('sample.pdf'));
+ * pdfDoc.end();
  *
  * @return {Object} a pdfKit document object which can be saved or encode to data-url
  */

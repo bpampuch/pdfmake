@@ -86,19 +86,19 @@ LayoutBuilder.prototype.processNode = function(node) {
   var self = this;
 
   applyMargins(function() {
-		if (node.stack) {
-			self.processVerticalContainer(node.stack);
-		} else if (node.columns) {
-			self.processColumns(node);
-		} else if (node.ul) {
-			self.processList(false, node.ul, node._gapSize);
-		} else if (node.ol) {
-			self.processList(true, node.ol, node._gapSize);
-		} else if (node.table) {
-			self.processTable(node);
-		} else if (node.text !== undefined) {
-			self.processLeaf(node);
-		} else if (node.image) {
+    if (node.stack) {
+    	self.processVerticalContainer(node.stack);
+    } else if (node.columns) {
+    	self.processColumns(node);
+    } else if (node.ul) {
+    	self.processList(false, node.ul, node._gapSize);
+    } else if (node.ol) {
+    	self.processList(true, node.ol, node._gapSize);
+    } else if (node.table) {
+    	self.processTable(node);
+    } else if (node.text !== undefined) {
+    	self.processLeaf(node);
+    } else if (node.image) {
       self.processImage(node);
     } else if (node.canvas) {
       self.processCanvas(node);

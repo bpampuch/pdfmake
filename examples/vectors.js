@@ -9,6 +9,7 @@ var fonts = {
 
 var PdfPrinter = require('../src/printer');
 var printer = new PdfPrinter(fonts);
+var fs = require('fs');
 
 
 var docDefinition = {
@@ -69,7 +70,7 @@ var docDefinition = {
 					color: 'red',
 					fillOpacity: 0.5,
 					r1: 80, r2: 60
-				}, 
+				},
 				{
 					type: 'rect',
 					x: 150,
@@ -94,4 +95,5 @@ var docDefinition = {
 };
 
 var pdfDoc = printer.createPdfKitDocument(docDefinition);
-pdfDoc.write('pdfs/vectors.pdf');
+pdfDoc.pipe(fs.createWriteStream('pdfs/vectors.pdf'));
+pdfDoc.end();

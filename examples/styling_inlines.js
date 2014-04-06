@@ -9,13 +9,14 @@ var fonts = {
 
 var PdfPrinter = require('../src/printer');
 var printer = new PdfPrinter(fonts);
+var fs = require('fs');
 
 
 var docDefinition = {
 	content: [
-		{ 
-			text: 'This is a header (whole paragraph uses the same header style)\n\n', 
-			style: 'header' 
+		{
+			text: 'This is a header (whole paragraph uses the same header style)\n\n',
+			style: 'header'
 		},
 		{
 			text: [
@@ -61,4 +62,5 @@ var docDefinition = {
 };
 
 var pdfDoc = printer.createPdfKitDocument(docDefinition);
-pdfDoc.write('pdfs/styling_inlines.pdf');
+pdfDoc.pipe(fs.createWriteStream('pdfs/styling_inlines.pdf'));
+pdfDoc.end();
