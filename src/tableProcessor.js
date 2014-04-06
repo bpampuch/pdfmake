@@ -21,6 +21,7 @@ TableProcessor.prototype.beginTable = function(writer) {
 
   this.headerRows = tableNode.table.headerRows || 0;
   this.rowsWithoutPageBreak = this.headerRows + (tableNode.table.keepWithHeaderRows || 0);
+  this.dontBreakRows = tableNode.table.dontBreakRows || false;
 
   if (this.rowsWithoutPageBreak) {
     writer.beginUnbreakableBlock();
@@ -59,6 +60,9 @@ TableProcessor.prototype.beginTable = function(writer) {
 };
 
 TableProcessor.prototype.beginRow = function(rowIndex, writer) {
+    if(this.dontBreakRows) {
+        writer.beginUnbreakableBlock();
+    }
   this.rowTopY = writer.context().y;
   this.reservedAtBottom = this.layout.hLineWidth(rowIndex + 1, this.tableNode) + this.layout.paddingBottom(rowIndex, this.tableNode);
 
@@ -206,6 +210,10 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
 
     if(this.headerRows && rowIndex === this.headerRows - 1) {
       this.headerRepeatable = writer.currentBlockToRepeatable();
+    }
+
+    if(this.dontBreakRows) {
+        writer.commitUnbreakableBlock();
     }
 
     if(this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {

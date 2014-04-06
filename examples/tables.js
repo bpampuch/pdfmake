@@ -94,6 +94,7 @@ var docDefinition = {
 						style: 'tableExample',
 						table: {
 								headerRows: 1,
+								// dontBreakRows: true,
 								// keepWithHeaderRows: 1,
 								body: [
 										[{ text: 'Header 1', style: 'tableHeader' }, { text: 'Header 2', style: 'tableHeader' }, { text: 'Header 3', style: 'tableHeader' }],
