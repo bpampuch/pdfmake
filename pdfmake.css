@@ -24,7 +24,6 @@ h2 {
 }
 .keyDescription {
 	padding-bottom: 80px;
-	border-bottom: 1px solid #eee;
 }
 
 h4 {
@@ -179,11 +178,11 @@ h1 {
 }
 
 
-.features {
+.subpage {
 	margin-top: 50px;
 	margin-bottom: 100px;
 }
-.features h1 {
+.subpage h1 {
 	font-size: 48px;
 	color: #0074c1;
 }
@@ -193,10 +192,10 @@ h1 {
 		display: none;
 	}
 
-	.features {
+	.subpage {
 		margin-top: 40px;
 	}
-	.features h1 {
+	.subpage h1 {
 		font-size: 30px;
 		font-weight: 400;
 	}

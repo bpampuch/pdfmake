@@ -1,3 +1,407 @@
-<div class='container'>
-	<h1>To be provided soon</h1>
+<div class='container subpage'>
+<!-- 	<h1>Getting started</h1> -->
+	<h1>Install</h1>
+	<div ng-hide='showNodeVersion'>
+		<p>
+			This document will walk you through the basics of pdfmake and will
+			show you how to create PDF files in the browser
+			(<a ng-click='showNodeVersion = true'>switch to NodeJS version</a>)
+		</p>
+		<p>
+			To begin with the default configuration, you should include two files:
+			<ul>
+				<li><a href='https://raw.githubusercontent.com/bpampuch/pdfmake/master/build/pdfmake.min.js' download><strong>pdfmake.min.js</strong></a></li>
+				<li><a href='https://raw.githubusercontent.com/bpampuch/pdfmake/master/build/vfs_fonts.js' download><strong>vfs_fonts.js</strong></a> - default font definition (it contains Roboto, you can however <a href='#/docs/customFonts'>use custom fonts instead</a>)</li>
+			</ul>
+		</p>
+		<pre class='code'>
+ &lt;!doctype html&gt;
+ &lt;html lang='en'&gt;
+ &lt;head&gt;
+ 	&lt;meta charset='utf-8'&gt;
+ 	&lt;title&gt;my first pdfmake example&lt;/title&gt;
+ 	&lt;script src='build/pdfmake.min.js'&gt;&lt;/script&gt;
+ 	&lt;script src='build/vfs_fonts.js'&gt;&lt;/script&gt;
+ &lt;/head&gt;
+ &lt;body&gt;
+ (...)</pre>
+
+		<p>
+			You can download both files from <a href='https://github.com/bpampuch/pdfmake/tree/master/build'>github</a> or with bower:
+			<pre class='code'> bower install pdfmake</pre>
+		</p>
+
+		<p>In the latter case you'll find the files under <strong>bower_components/pdfmake/build/</strong></p>
+	</div>
+
+	<div ng-show='showNodeVersion'>
+		<strong>This is just a placeholder for the NodeJS GettingStarted (<a ng-click='showNodeVersion = false'>switch back to browser-based version</a>).</strong>
+		<br/><br/>
+		<strong>If you can't wait to start using server-side pdfmake, read the <a href='https://github.com/bpampuch/pdfmake/tree/master/examples'>examples</a></strong>
+		<br/><br/>
+
+		This document will walk you through the basics of pdfmake and will show you how to create PDF files under NodeJS (<a ng-click='showNodeVersion = false'>switch back to browser-based version</a>)
+		<br/><br/>
+		1. Install <strong>pdfmake</strong> with npm:
+		<pre class='code'> npm install pdfmake</pre>
+		<br/>
+		2. Create fonts directory and copy TTF fonts you'd like to use
+		TODO
+		<br/><br/>
+		3. TODO
+	</div>
+
+	<h1>Document definition object</h1>
+	<p>
+		<strong>pdfmake</strong> follows a declarative approach.
+	</p>
+	<p>
+		It basically means, you'll never have to calculate positions manually
+		or use commands like: <strong>writeText(text, x, y)</strong>
+		or <strong>moveDown</strong>, as you would with a lot of other
+		libraries.
+	</p>
+	<p>
+		The most fundamental concept to be mastered is the
+		document-definition-object which can be as simple as:
+	</p>
+	<pre class='code'> var docDefinition = { content: 'This is an sample PDF printed with pdfMake' };</pre>
+	<p>
+		or become pretty complex (having multi-level tables, images, lists, paragraphs, margins, styles etc...).
+	</p>
+	<p>
+		As soon as you have the document-definition-object, you're ready to create and open/print/download the PDF:
+	</p>
+<pre class='code'>
+ // open the PDF in a new window
+ pdfMake.createPdf(docDefinition).open();
+
+ // print the PDF (temporarily Chrome-only)
+ pdfMake.createPdf(docDefinition).print();
+
+ // download the PDF (temporarily Chrome-only)
+ pdfMake.createPdf(docDefinition).download();</pre>
+
+	<h2>Styling</h2>
+	<p><strong>pdfmake</strong> makes it possible to style any paragraph or its part:</p>
+<pre class='code'>
+ var docDefinition = {
+   content: [
+     // if you don't need styles, you can use a simple string to define a paragraph
+     'This is a standard paragraph, using default style',
+
+     // using a { text: '...' } object lets you set styling properties
+     { text: 'This paragraph will have a bigger font', fontSize: 15 },
+
+     // if you set the value of text to an array instead of a string, you'll be able
+     // to style any part individually
+     {
+       text: [
+         'This paragraph is defined as an array of elements to make it possible to ',
+         { text: 'restyle part of it and make it bigger ', fontSize: 15 },
+         'than the rest.'
+       ]
+     }
+   ]
+ };</pre>
+
+	<h2>Style dictionaries</h2>
+	<p>It's also possible to define a dictionary of reusable styles:</p>
+<pre class='code'>
+ var docDefinition = {
+   content: [
+     { text: 'This is a header', style: 'header' },
+     'No styling here, this is a standard paragraph',
+     { text: 'Another text', style: 'anotherStyle' },
+     { text: 'Multiple styles applied', style: [ 'header', 'anotherStyle' ] }
+   ],
+
+   styles: {
+     header: {
+       fontSize: 22,
+       bold: true
+     },
+     anotherStyle: {
+       italic: true,
+       alignment: 'right'
+     }
+   }
+ };</pre>
+
+	<p>
+		To have a deeper understanding of styling in pdfmake, style
+		inheritance and local-style-overrides check <a href='#'>this example</a> and
+		<a href='#'>the resulting PDF</a> or <a href='/playground.html'>open it in playground.</a>
+	</p>
+
+	<h2>Columns</h2>
+	<p>
+		By default paragraphs are rendered as a vertical stack of elements
+		(one below another).
+		It is possible however to divide available space into columns.
+	</p>
+<pre class='code'>
+var docDefinition = {
+  content: [
+    'This paragraph fills full width, as there are no columns. Next paragraph however consists of three columns',
+    {
+      columns: [
+        {
+          // auto-sized columns have their widths based on their content
+          width: 'auto',
+          text: 'First column'
+        },
+        {
+          // star-sized columns fill the remaining space
+          // if there's more than one star-column, available width is divided equally
+          width: '*',
+          text: 'Second column'
+        },
+        {
+          // fixed width
+          width: 100,
+          text: 'Third column'
+        }
+      ],
+      // optional space between columns
+      columnGap: 10
+    },
+    'This paragraph goes below all columns and has full width'
+  ]
+};</pre>
+
+	<p>
+		Column content is not limited to a simple text. It can actually
+		contain any valid pdfmake element.
+		See a <a href='#'>complete example</a> and <a href='#'>the resulting pdf</a>
+		or <a href='/playground.html'>open it in playground.</a>
+	</p>
+
+	<h2>Tables</h2>
+	<p>
+		Conceptually tables are similar to columns.
+		They can however have headers, borders and cells spanning over multiple columns/rows.
+	</p>
+<pre class='code'>
+var docDefinition = {
+  content: [
+    {
+      table: {
+        // headers are automatically repeated if the table spans over multiple pages
+        // you can declare how many rows should be treated as headers
+        headerRows: 1,
+        widths: [ '*', 'auto', 100, '*' ],
+
+        body: [
+          [ 'First', 'Second', 'Third', 'The last one' ],
+          [ 'Value 1', 'Value 2', 'Value 3', 'Value 4' ],
+          [ { text: 'Bold value', bold: true }, 'Val 2', 'Val 3', 'Val 4' ]
+        ]
+      }
+    }
+  ]
+};</pre>
+
+	<p>
+		All concepts related to tables are covered in
+		<a href='#'>this example</a> and <a href='#'>the resulting pdf</a>
+		You can also <a href='/playground.html'>open it in playground.</a>
+	</p>
+
+	<h2>Lists</h2>
+	<p>
+		<strong>pdfMake</strong> supports both numbered and bulleted lists:
+	</p>
+<pre class='code'>
+var docDefinition = {
+  content: [
+    'Bulleted list example:',
+    {
+      // to treat a paragraph as a bulleted list, set an array of items under the ul key
+      ul: [
+        'Item 1',
+        'Item 2',
+        'Item 3',
+        { text: 'Item 4', bold: true },
+      ]
+    },
+
+    'Numbered list example:',
+    {
+      // for numbered lists set the ol key
+      ol: [
+        'Item 1',
+        'Item 2',
+        'Item 3'
+      ]
+    }
+  ]
+};</pre>
+
+	<h2>Headers and footers</h2>
+	<p>
+		Page headers and footers in pdfmake can be: static or dynamic.
+	</p>
+	<p>
+		They have the same syntax:
+	</p>
+<pre class='code'>
+var docDefinition = {
+  header: 'simple text',
+
+  footer: {
+    columns: [
+      'Left part',
+      { text: 'Right part', alignment: 'right' }
+    ]
+  },
+
+  content: (...)
+};</pre>
+
+	<p>
+		For dynamically generated content (including page numbers and page
+		count) you can pass a function to the header or footer:
+	</p>
+<pre class='code'>
+var docDefinition = {
+  footer: function(currentPage, pageCount) { return currentPage.toString() + ' of ' + pageCount; },
+  header: function(currentPage, pageCount) {
+    // you can apply any logic and return any valid pdfmake element
+
+    return { text: 'simple text', alignment: (currentPage % 2) ? 'left' : 'right' };
+  },
+  (...)
+};</pre>
+
+	<h2>Margins</h2>
+	<p>
+		Any element in pdfMake can have a margin:
+	</p>
+<pre class='code'>
+(...)
+// margin: [left, top, right, bottom]
+{ text: 'sample', margin: [ 5, 2, 10, 20 ] },
+
+// margin: [horizontal, vertical]
+{ text: 'another text', margin: [5, 2] },
+
+// margin: equalLeftTopRightBottom
+{ text: 'last one', margin: 5 }
+(...)</pre>
+
+	<h2>Stack of paragraphs</h2>
+	<p>
+		You could have figured out by now (from the examples), that if you set the content key to an array, the document becomes a stack of paragraphs.
+	</p>
+
+	<p>
+		You'll quite often reuse this structure in a nested element, like in the following example:
+	</p>
+<pre class='code'>
+var docDefinition = {
+  content: [
+    'paragraph 1',
+    'paragraph 2',
+    {
+      columns: [
+        'first column is a simple text',
+        [
+          // second column consists of paragraphs
+          'paragraph A',
+          'paragraph B',
+          'these paragraphs will be rendered one below another inside the column'
+        ]
+      ]
+    }
+  ]
+};</pre>
+
+	<p>
+		The problem with an array is that you cannot add styling properties to it (to change fontSize for example).
+	</p>
+
+	<p>
+		The good news is - array is just a shortcut in pdfMake for { stack: [] }, so if you want to restyle the whole stack, you can do it using the expanded definition:
+	</p>
+<pre class='code'>
+var docDefinition = {
+  content: [
+    'paragraph 1',
+    'paragraph 2',
+    {
+      columns: [
+        'first column is a simple text',
+        {
+          stack: [
+            // second column consists of paragraphs
+            'paragraph A',
+            'paragraph B',
+            'these paragraphs will be rendered one below another inside the column'
+          ],
+          fontSize: 15
+        }
+      ]
+    }
+  ]
+};</pre>
+
+
+	<h2>Page dimensions, orientation and margins</h2>
+<pre class='code'>
+var docDefinition = {
+  // a string or [width, height]
+  pageSize: 'A5',
+
+  // by default we use portrait, you can change it to landscape if you wish
+  pageOrientation: 'landscape',
+
+  // [left, top, right, bottom] or [horizontal, vertical] or just a number for equal margins
+  pageMargins: [ 40, 60, 40, 60 ],
+};</pre>
+
+	<p>
+		If you set pageSize to a string, you can use one of the following values:
+		<ul>
+			<li>'4A0', '2A0', 'A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A10',</li>
+			<li>'B0', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10',</li>
+			<li>'C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 'C10',</li>
+			<li>'RA0', 'RA1', 'RA2', 'RA3', 'RA4',</li>
+			<li>'SRA0', 'SRA1', 'SRA2', 'SRA3', 'SRA4',</li>
+			<li>'EXECUTIVE', 'FOLIO', 'LEGAL', 'LETTER', 'TABLOID'</li>
+		</ul>
+	</p>
+
+	<h1>What's next?</h1>
+	If you really want to learn pdfMake, go ahead and check the:
+	<ul>
+		<li><a href='https://github.com/bpampuch/pdfmake/tree/master/examples'>examples folder</a></li>
+		<li><a href='http://pdfmake.org/playground.html'>playground,</a></li>
+		<li><a href='#'>documentation.</a></li>
+	</ul>
+
+	<h1>Coming soon</h1>
+	<p>
+		Hmmm... let me know what you need ;)
+	</p>
+	<p>
+		The goal is quite simple - make pdfmake useful for a looooooooot of people and help building responsive HTML5 apps with printing support.
+	</p>
+	<p>
+		There's one thing on the roadmap for v2 (no deadline however) - make the library hackable, so you can write plugins to:
+		<ul>
+			<li>extend document-definition-model (with things like { chart: ... }),</li>
+			<li>add syntax translators (like the provided [ ... ] -> { stack: [ ... ] },</li>
+			<li>build custom DSLs on top of document-definition-model (this is actually possible at the moment).</li>
+		</ul>
+	</p>
+
+	<h1>License</h1>
+	MIT
+
+	<hr/>
+	pdfmake is based on a truly amazing library pdfkit.org - credits to @devongovett
 </div>
+<script type="text/javascript" charset="utf-8">
+	$('.code').each(function(i, e) { hljs.highlightBlock(e); });
+</script>
