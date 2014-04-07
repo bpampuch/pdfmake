@@ -98,7 +98,20 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
 	if(options.autoPrint){
-        console.warn('no autoprint support, will be added in a couple of days');
+        var jsRef = this.pdfKitDoc.ref({
+			S: 'JavaScript',
+			JS: new StringObject('this.print\\(true\\);')
+		});
+		var namesRef = this.pdfKitDoc.ref({
+			Names: [new StringObject('EmbeddedJS'), new PdfKit.PDFReference(this.pdfKitDoc, jsRef.id)],
+		});
+
+		jsRef.end();
+		namesRef.end();
+
+		this.pdfKitDoc._root.data.Names = {
+			JavaScript: new PdfKit.PDFReference(this.pdfKitDoc, namesRef.id)
+		};
 	}
 	return this.pdfKitDoc;
 };
