@@ -22,6 +22,18 @@ h2 {
 	color: #0074c1;
 	font-size: 24px;
 }
+.keyDescription {
+	padding-bottom: 80px;
+	border-bottom: 1px solid #eee;
+}
+
+h4 {
+	opacity: 0.9;
+}
+.subtitle {
+	color: white;
+	margin-top: 30px;
+}
 .header, .playground {
 	background: #0074c1;
 	color: white;
@@ -80,6 +92,10 @@ h1 {
 	h2 {
 		font-size: 30px;
 
+	}
+
+	.subtitle {
+		margin-top: 90px;
 	}
 }
 .pdf {
@@ -162,6 +178,30 @@ h1 {
 	}
 }
 
+
+.features {
+	margin-top: 50px;
+	margin-bottom: 100px;
+}
+.features h1 {
+	font-size: 48px;
+	color: #0074c1;
+}
+
+@media(max-width: 767px) {
+	.banner {
+		display: none;
+	}
+
+	.features {
+		margin-top: 40px;
+	}
+	.features h1 {
+		font-size: 30px;
+		font-weight: 400;
+	}
+}
+
 @media(min-width: 1001px) {
 	.playground .container li {
 		display: inline-block;
@@ -211,4 +251,9 @@ h1 {
 
 .playground {
 	position: relative;
+}
+
+.banner small {
+	color: white;
+	opacity: 0.4;
 }

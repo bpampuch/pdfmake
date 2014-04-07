@@ -5,6 +5,9 @@ app.config(function($routeProvider) {
 		.when('/', {
 			templateUrl: 'mainPage.html',
 		})
+		.when('/features', {
+			templateUrl: 'features.html',
+		})
 		.when('/gettingstarted', {
 			templateUrl: 'gettingStarted.html',
 		})
