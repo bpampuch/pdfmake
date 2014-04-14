@@ -10037,11 +10037,13 @@ var pack = _dereq_('./helpers').pack;
 /**
 * @private
 */
-function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts) {
+function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts, images) {
 	this.textTools = new TextTools(fontProvider);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 	this.imageMeasure = imageMeasure;
 	this.tableLayouts = tableLayouts;
+	this.images = images;
+	this.autoImageIndex = 1;
 }
 
 /**
@@ -10130,7 +10132,19 @@ DocMeasure.prototype.measureNode = function(node) {
 	}
 };
 
+DocMeasure.prototype.convertIfBase64Image = function(node) {
+	if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) {
+		var label = '$$pdfmake$$' + this.autoImageIndex++;
+		this.images[label] = node.image;
+		node.image = label;
+}
+};
+
 DocMeasure.prototype.measureImage = function(node) {
+	if (this.images) {
+		this.convertIfBase64Image(node);
+	}
+
 	var imageSize = this.imageMeasure.measureImage(node.image);
 
 	if (node.fit) {
@@ -10873,18 +10887,21 @@ module.exports = {
 };
 
 },{}],64:[function(_dereq_,module,exports){
+(function (Buffer){
 var pdfKit = _dereq_('pdfmake-pdfkit');
 
-function ImageMeasure(pdfDoc) {
+function ImageMeasure(pdfDoc, imageDictionary) {
 	this.pdfDoc = pdfDoc;
+	this.imageDictionary = imageDictionary || {};
 }
 
 ImageMeasure.prototype.measureImage = function(src) {
 	var image, label;
+	var that = this;
 
 	if (!this.pdfDoc._imageRegistry[src]) {
 		label = "I" + (++this.pdfDoc._imageCount);
-		image = pdfKit.PDFImage.open(src, label);
+		image = pdfKit.PDFImage.open(realImageSrc(src), label);
 		image.embed(this.pdfDoc);
 		this.pdfDoc._imageRegistry[src] = image;
 	} else {
@@ -10892,11 +10909,25 @@ ImageMeasure.prototype.measureImage = function(src) {
 	}
 
 	return { width: image.width, height: image.height };
+
+	function realImageSrc(src) {
+		var img = that.imageDictionary[src];
+
+		if (!img) return src;
+
+		var index = img.indexOf('base64,');
+		if (index < 0) {
+			throw 'invalid image format, images dictionary should contain dataURL entries';
+		}
+
+		return new Buffer(img.substring(index + 7), 'base64');
+	}
 };
 
 module.exports = ImageMeasure;
 
-},{"pdfmake-pdfkit":18}],65:[function(_dereq_,module,exports){
+}).call(this,_dereq_("buffer").Buffer)
+},{"buffer":1,"pdfmake-pdfkit":18}],65:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -10941,8 +10972,8 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
  * @param {Object} defaultStyle default style definition
  * @return {Array} an array of pages
  */
-LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, header, footer) {
-	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts);
+LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, header, footer, images) {
+	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
 
   docStructure = this.docMeasure.measureDocument(docStructure);
 
@@ -11544,17 +11575,19 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	this.pdfKitDoc.info.Creator = 'pdfmake';
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
+  docDefinition.images = docDefinition.images || {};
+
 	var builder = new LayoutBuilder(
 		pageSize,
 		fixPageMargins(docDefinition.pageMargins || 40),
-        new ImageMeasure(this.pdfKitDoc));
+        new ImageMeasure(this.pdfKitDoc, docDefinition.images));
 
   registerDefaultTableLayouts(builder);
   if (options.tableLayouts) {
     builder.registerTableLayouts(options.tableLayouts);
   }
 
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.header, docDefinition.footer);
+	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.header, docDefinition.footer, docDefinition.images);
 
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
