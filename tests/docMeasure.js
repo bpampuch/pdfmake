@@ -371,5 +371,8 @@ describe('DocMeasure', function() {
 		it('should stretch image if both width and height are specified');
 		it('should scales image to fit whole picture in a rectangle if fit is specified');
 		it('should copy alignment from styleStack into image definition object');
+		it('should support dataUri images', function() {
+			
+		});
 	});
 });

@@ -10,11 +10,13 @@ var pack = require('./helpers').pack;
 /**
 * @private
 */
-function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts) {
+function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts, images) {
 	this.textTools = new TextTools(fontProvider);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 	this.imageMeasure = imageMeasure;
 	this.tableLayouts = tableLayouts;
+	this.images = images;
+	this.autoImageIndex = 1;
 }
 
 /**
@@ -103,7 +105,19 @@ DocMeasure.prototype.measureNode = function(node) {
 	}
 };
 
+DocMeasure.prototype.convertIfBase64Image = function(node) {
+	if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) {
+		var label = '$$pdfmake$$' + this.autoImageIndex++;
+		this.images[label] = node.image;
+		node.image = label;
+}
+};
+
 DocMeasure.prototype.measureImage = function(node) {
+	if (this.images) {
+		this.convertIfBase64Image(node);
+	}
+
 	var imageSize = this.imageMeasure.measureImage(node.image);
 
 	if (node.fit) {
