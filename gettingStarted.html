@@ -80,7 +80,7 @@
  pdfMake.createPdf(docDefinition).print();
 
  // download the PDF (temporarily Chrome-only)
- pdfMake.createPdf(docDefinition).download();</pre>
+ pdfMake.createPdf(docDefinition).download('optionalName.pdf');</pre>
 
 	<h2>Styling</h2>
 	<p><strong>pdfmake</strong> makes it possible to style any paragraph or its part:</p>
@@ -93,8 +93,8 @@
      // using a { text: '...' } object lets you set styling properties
      { text: 'This paragraph will have a bigger font', fontSize: 15 },
 
-     // if you set the value of text to an array instead of a string, you'll be able
-     // to style any part individually
+     // if you set pass an array instead of a string, you'll be able
+     // to style any fragment individually
      {
        text: [
          'This paragraph is defined as an array of elements to make it possible to ',
@@ -106,7 +106,7 @@
  };</pre>
 
 	<h2>Style dictionaries</h2>
-	<p>It's also possible to define a dictionary of reusable styles:</p>
+	<p>If you reuse the same styles across the document, you should probably leverage <span class='code'>styles</span> dictionary:</p>
 <pre class='code'>
  var docDefinition = {
    content: [
@@ -242,9 +242,6 @@ var docDefinition = {
 	<p>
 		Page headers and footers in pdfmake can be: static or dynamic.
 	</p>
-	<p>
-		They have the same syntax:
-	</p>
 <pre class='code'>
 var docDefinition = {
   header: 'simple text',
@@ -292,7 +289,7 @@ var docDefinition = {
 
 	<h2>Stack of paragraphs</h2>
 	<p>
-		You could have figured out by now (from the examples), that if you set the content key to an array, the document becomes a stack of paragraphs.
+		You could have figured out by now (from the above examples), that if you set the content key to an array, the document becomes a stack of paragraphs.
 	</p>
 
 	<p>
@@ -346,6 +343,53 @@ var docDefinition = {
   ]
 };</pre>
 
+	<h2>Images</h2>
+	<p>
+		This is simple. Just use the { image: '...' } node type.
+	<p>
+		JPEG and PNG formats are supported.
+	<p>
+<pre class='code'>
+var docDefinition = {
+  content: [
+    {
+      // you'll most often use dataURI images on the browser side
+      // if no width/height/fit is provided, the original size will be used
+      image: 'data:image/jpeg;base64,...encodedContent...'
+    },
+    {
+      // if you specify width, image will scale proportionally
+      image: 'data:image/jpeg;base64,...encodedContent...',
+      width: 150
+    },
+    {
+      // if you specify both width and height - image will be stretched
+      image: 'data:image/jpeg;base64,...encodedContent...',
+      width: 150,
+      height: 150
+    },
+    {
+      // you can also fit the image inside a rectangle
+      image: 'data:image/jpeg;base64,...encodedContent...',
+      fit: [100, 100]
+    },
+    {
+      // if you reuse the same image in multiple nodes,
+      // you should put it to to images dictionary and reference it by name
+      image: 'mySuperImage'
+    },
+    {
+      // under NodeJS (or in case you use virtual file system provided by pdfmake)
+      // you can also pass file names here
+      image: 'myImageDictionary/image1.jpg'
+    }
+  ],
+
+  images: {
+    mySuperImage: 'data:image/jpeg;base64,...content...'
+  }
+};
+</pre>
 
 	<h2>Page dimensions, orientation and margins</h2>
 <pre class='code'>
