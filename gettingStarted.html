@@ -391,6 +391,45 @@ var docDefinition = {
 };
 </pre>
 
+	<h2>Page breaks</h2>
+<p>
+	You can set pageBreak on any element to: 'after' or 'before' (depending on where you want the break to occur). 
+</p>
+<p>
+<a href="https://github.com/bpampuch/pdfmake/blob/master/examples/images.js">images</a> and <a href="https://github.com/bpampuch/pdfmake/blob/master/examples/tables.js">table</a> examples use this attribute:
+</p>
+
+<pre class='code'>
+(...)
+	'You can also fit the image inside a rectangle',
+	{
+		image: 'fonts/sampleImage.jpg',
+		fit: [100, 100],
+		pageBreak: 'after'
+	},
+(...)
+</pre>
+
+and
+<pre class='code'>
+(...)
+	{ text: 'noBorders:', fontSize: 14, bold: true, pageBreak: 'before', margin: [0, 0, 0, 8] },
+(...)
+</pre>
+
+</p>
+<pre class='code'>
+var docDefinition = {
+  // a string or [width, height]
+  pageSize: 'A5',
+
+  // by default we use portrait, you can change it to landscape if you wish
+  pageOrientation: 'landscape',
+
+  // [left, top, right, bottom] or [horizontal, vertical] or just a number for equal margins
+  pageMargins: [ 40, 60, 40, 60 ],
+};</pre>
+
 	<h2>Page dimensions, orientation and margins</h2>
 <pre class='code'>
 var docDefinition = {
