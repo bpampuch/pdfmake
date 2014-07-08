@@ -30,7 +30,10 @@ ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition) {
 
 	this.alignLine(line);
 
-	page.lines.push(line);
+    page.items.push({
+        type: 'line',
+        item: line
+    });
 	this.tracker.emit('lineAdded', line);
 
 	if (!dontUpdateContextPosition) context.moveDown(height);
@@ -85,7 +88,10 @@ ElementWriter.prototype.addImage = function(image) {
 
 	this.alignImage(image);
 
-	page.images.push(image);
+	page.items.push({
+        type: 'image',
+        item: image
+    });
 
 	context.moveDown(image._height);
 
@@ -117,8 +123,10 @@ ElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreConte
 
 	if (page) {
 		offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
-		page.vectors.push(vector);
-
+        page.items.push({
+            type: 'vector',
+            item: vector
+        });
 		return true;
 	}
 };
@@ -141,29 +149,42 @@ ElementWriter.prototype.addFragment = function(block, useBlockXOffset, useBlockY
 
 	if (block.height > ctx.availableHeight) return false;
 
-	block.lines.forEach(function(line) {
-		var l = cloneLine(line);
+	block.items.forEach(function(item) {
+        switch(item.type) {
+            case 'line':
+                var l = cloneLine(item.item);
 
-		l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
-		l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+                l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
+                l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
-		page.lines.push(l);
-	});
+                page.items.push({
+                    type: 'line',
+                    item: l
+                });
+                break;
+                
+            case 'vector':
+                var v = pack(item.item);
 
-	block.vectors.forEach(function(vector) {
-		var v = pack(vector);
+                offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+                page.items.push({
+                    type: 'vector',
+                    item: v
+                });
+                break;
+                
+            case 'image':
+                var img = pack(item.item);
 
-		offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
-		page.vectors.push(v);
-	});
+                img.x = (img.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
+                img.y = (img.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
-	block.images.forEach(function(image) {
-		var img = pack(image);
-
-		img.x = (img.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
-		img.y = (img.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
-
-		page.images.push(img);
+                page.items.push({
+                    type: 'image',
+                    item: img
+                });
+                break;
+        }
 	});
 
 	if (!dontUpdateContextPosition) ctx.moveDown(block.height);

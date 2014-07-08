@@ -114,7 +114,7 @@ DocumentContext.prototype.moveToPageTop = function() {
 };
 
 DocumentContext.prototype.addPage = function() {
-	var page = { lines: [], vectors: [], images: [] };
+	var page = { items: [] };
 	this.pages.push(page);
 	this.page = this.pages.length - 1;
 	this.moveToPageTop();
