@@ -42,7 +42,7 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
  * @param {Object} defaultStyle default style definition
  * @return {Array} an array of pages
  */
-LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, header, footer, images) {
+LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images) {
 	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
 
   docStructure = this.docMeasure.measureDocument(docStructure);
@@ -50,10 +50,29 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
   this.writer = new PageElementWriter(
     new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
+  this.addBackground(background);
   this.processNode(docStructure);
   this.addHeadersAndFooters(header, footer);
 
 	return this.writer.context().pages;
+};
+
+LayoutBuilder.prototype.addBackground = function(background) {
+  var pages = this.writer.context().pages;
+  
+  var backgroundGetter = isFunction(background) ? background : function() { return background; };
+
+  for(var i = 0, l = pages.length; i < l; i++) {
+    this.writer.context().page = i;
+
+    var pageBackground = backgroundGetter(i + 1, l);
+
+    if (pageBackground) {
+      this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageSize.height);
+      this.processNode(this.docMeasure.measureDocument(pageBackground));
+      this.writer.commitUnbreakableBlock(0, 0);
+    }
+  }
 };
 
 LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
