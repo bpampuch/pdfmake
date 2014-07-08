@@ -62,8 +62,8 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 1);
-			assert(pages[0].lines[0].y < pages[0].lines[1].y);
-			assert.equal(pages[0].lines[0].y + pages[0].lines[0].getHeight(), pages[0].lines[1].y);
+			assert(pages[0].items[0].item.y < pages[0].items[1].item.y);
+			assert.equal(pages[0].items[0].item.y + pages[0].items[0].item.getHeight(), pages[0].items[1].item.y);
 		});
 
 		it('should split lines with new-line character (bugfix)', function() {
@@ -75,7 +75,7 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 1);
-			assert(pages[0].lines.length, 3);
+			assert(pages[0].items.length, 3);
 		});
 
 		it.skip('should span text into lines if theres not enough horizontal space', function() {
@@ -87,7 +87,7 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].lines.length, 6);
+			assert.equal(pages[0].items.length, 6);
 		});
 
 		it('should add new pages when theres not enough space left on current page', function() {
@@ -99,8 +99,8 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 2);
-			assert.equal(pages[0].lines.length, 60);
-			assert.equal(pages[1].lines.length, 11);
+			assert.equal(pages[0].items.length, 60);
+			assert.equal(pages[1].items.length, 11);
 		});
 
 		it('should be able to add more than 1 page if there is not enough space', function() {
@@ -112,9 +112,9 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 3);
-			assert.equal(pages[0].lines.length, 60);
-			assert.equal(pages[1].lines.length, 60);
-			assert.equal(pages[2].lines.length, 21);
+			assert.equal(pages[0].items.length, 60);
+			assert.equal(pages[1].items.length, 60);
+			assert.equal(pages[2].items.length, 21);
 		});
 
 		it('should not assume there is enough space left if line boundary is exactly on the page boundary (bugfix)', function() {
@@ -152,8 +152,8 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 70 }});
 
-			assert.equal(pages[0].lines[0].getWidth(), 9*12);
-			assert.equal(pages[0].lines[1].getWidth(), 9*70);
+			assert.equal(pages[0].items[0].item.getWidth(), 9*12);
+			assert.equal(pages[0].items[1].item.getWidth(), 9*70);
 		});
 
 		it('should support arrays of inlines (as an alternative to simple strings)', function() {
@@ -171,7 +171,7 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 15 }});
 
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].lines.length, 2);
+			assert.equal(pages[0].items.length, 2);
 		});
 
 		it('should support inline styling and style overrides', function() {
@@ -191,9 +191,9 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 70 }});
 
-			assert.equal(pages[0].lines[0].getWidth(), 9*12);
-			assert.equal(pages[0].lines[1].getWidth(), 9*70);
-			assert.equal(pages[0].lines[2].getWidth(), 9*4);
+			assert.equal(pages[0].items[0].item.getWidth(), 9*12);
+			assert.equal(pages[0].items[1].item.getWidth(), 9*70);
+			assert.equal(pages[0].items[2].item.getWidth(), 9*4);
 		});
 
 		it('should support multiple styles (last property wins)', function() {
@@ -204,8 +204,8 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 70 }, small: { fontSize: 35 }});
 
-			assert.equal(pages[0].lines[0].getWidth(), 9*12);
-			assert.equal(pages[0].lines[1].getWidth(), 9*35);
+			assert.equal(pages[0].items[0].item.getWidth(), 9*12);
+			assert.equal(pages[0].items[1].item.getWidth(), 9*35);
 		});
 
 		it('should support style-overrides', function() {
@@ -216,8 +216,8 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 70 }});
 
-			assert.equal(pages[0].lines[0].getWidth(), 9*12);
-			assert.equal(pages[0].lines[1].getWidth(), 9*40);
+			assert.equal(pages[0].items[0].item.getWidth(), 9*12);
+			assert.equal(pages[0].items[1].item.getWidth(), 9*40);
 		});
 
 		it('style-overrides should take precedence over named styles', function() {
@@ -228,7 +228,7 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 70 }});
 
-			assert.equal(pages[0].lines[1].getWidth(), 9*40);
+			assert.equal(pages[0].items[1].item.getWidth(), 9*40);
 		});
 
 		it('should support default style', function() {
@@ -238,7 +238,7 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, { fontSize: 50 });
-			assert.equal(pages[0].lines[0].getWidth(), 4 * 50);
+			assert.equal(pages[0].items[0].item.getWidth(), 4 * 50);
 		});
 
 		it('should support columns', function() {
@@ -256,8 +256,8 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].lines[0].x, 40);
-			assert.equal(pages[0].lines[1].x, 200);
+			assert.equal(pages[0].items[0].item.x, 40);
+			assert.equal(pages[0].items[1].item.x, 200);
 		});
 
 		it('should support fixed column widths', function() {
@@ -282,10 +282,10 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert(pages[0].lines.length, 3);
-			assert.equal(pages[0].lines[0].x, 40);
-			assert.equal(pages[0].lines[1].x, 40 + 100);
-			assert.equal(pages[0].lines[2].x, 40 + 100 + 150);
+			assert(pages[0].items.length, 3);
+			assert.equal(pages[0].items[0].item.x, 40);
+			assert.equal(pages[0].items[1].item.x, 40 + 100);
+			assert.equal(pages[0].items[2].item.x, 40 + 100 + 150);
 		});
 
 		it('should support text-only column definitions', function() {
@@ -299,8 +299,8 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].lines[0].x, 40);
-			assert.equal(pages[0].lines[1].x, 200);
+			assert.equal(pages[0].items[0].item.x, 40);
+			assert.equal(pages[0].items[1].item.x, 200);
 		});
 
 		it('column descriptor should support named style inheritance', function() {
@@ -320,9 +320,9 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 20 }});
-			assert.equal(pages[0].lines.length, 2);
-			assert.equal(pages[0].lines[0].getWidth(), 8*20);
-			assert.equal(pages[0].lines[1].getWidth(), 8*20);
+			assert.equal(pages[0].items.length, 2);
+			assert.equal(pages[0].items[0].item.getWidth(), 8*20);
+			assert.equal(pages[0].items[1].item.getWidth(), 8*20);
 		});
 
 		it('column descriptor should support style overrides', function() {
@@ -342,8 +342,8 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 20 }});
-			assert.equal(pages[0].lines.length, 2);
-			assert.equal(pages[0].lines[0].getWidth(), 8*8);
+			assert.equal(pages[0].items.length, 2);
+			assert.equal(pages[0].items[0].item.getWidth(), 8*8);
 		});
 
 		it('should support column gap', function() {
@@ -360,9 +360,9 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].lines.length, 2);
-			assert.equal(pages[0].lines[0].x, 40);
-			assert.equal(pages[0].lines[1].x, 40 + 100 + 23);
+			assert.equal(pages[0].items.length, 2);
+			assert.equal(pages[0].items[0].item.x, 40);
+			assert.equal(pages[0].items[1].item.x, 40 + 100 + 23);
 		});
 
 		it('should support column gap inheritance', function() {
@@ -377,7 +377,7 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, { columnGap:25 });
-			assert.equal(pages[0].lines[1].x, 40 + 100 + 25);
+			assert.equal(pages[0].items[1].item.x, 40 + 100 + 25);
 		});
 
 		it('should support fixed column widths', function() {
@@ -402,10 +402,10 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert(pages[0].lines.length, 3);
-			assert.equal(pages[0].lines[0].x, 40);
-			assert.equal(pages[0].lines[1].x, 40 + 100);
-			assert.equal(pages[0].lines[2].x, 40 + 100 + 150);
+			assert(pages[0].items.length, 3);
+			assert.equal(pages[0].items[0].item.x, 40);
+			assert.equal(pages[0].items[1].item.x, 40 + 100);
+			assert.equal(pages[0].items[2].item.x, 40 + 100 + 150);
 		});
 
 		it('should support auto-width columns', function() {
@@ -430,10 +430,10 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert(pages[0].lines.length, 3);
-			assert.equal(pages[0].lines[0].x, 40);
-			assert.equal(pages[0].lines[1].x, 40 + 4 * 12);
-			assert.equal(pages[0].lines[2].x, 40 + 4 * 12 + 6 * 12);
+			assert(pages[0].items.length, 3);
+			assert.equal(pages[0].items[0].item.x, 40);
+			assert.equal(pages[0].items[1].item.x, 40 + 4 * 12);
+			assert.equal(pages[0].items[2].item.x, 40 + 4 * 12 + 6 * 12);
 		});
 
 		it('should support auto-width columns mixed with other types of columns', function() {
@@ -465,14 +465,14 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].lines.length, 5);
+			assert.equal(pages[0].items.length, 5);
 
 			var starWidth = (400-40-40-58-2*4*12)/2;
-			assert.equal(pages[0].lines[0].x, 40);
-			assert.equal(pages[0].lines[1].x, 40 + 4 * 12);
-			assert.equal(pages[0].lines[2].x, 40 + 4 * 12 + 58);
-			assert.equal(pages[0].lines[3].x, 40 + 4 * 12 + 58 + starWidth);
-			assert.equal(pages[0].lines[4].x, 40 + 4 * 12 + 58 + 2 * starWidth);
+			assert.equal(pages[0].items[0].item.x, 40);
+			assert.equal(pages[0].items[1].item.x, 40 + 4 * 12);
+			assert.equal(pages[0].items[2].item.x, 40 + 4 * 12 + 58);
+			assert.equal(pages[0].items[3].item.x, 40 + 4 * 12 + 58 + starWidth);
+			assert.equal(pages[0].items[4].item.x, 40 + 4 * 12 + 58 + 2 * starWidth);
 		});
 
 		it('should support star columns and divide available width equally between all star columns', function() {
@@ -499,10 +499,10 @@ describe('LayoutBuilder', function() {
 			var pageSpace = 400 - 40 - 40;
 			var starWidth = (pageSpace - 50)/2;
 
-			assert(pages[0].lines.length, 3);
-			assert.equal(pages[0].lines[0].x, 40);
-			assert.equal(pages[0].lines[1].x, 40 + starWidth);
-			assert.equal(pages[0].lines[2].x, 40 + starWidth + 50);
+			assert(pages[0].items.length, 3);
+			assert.equal(pages[0].items[0].item.x, 40);
+			assert.equal(pages[0].items[1].item.x, 40 + starWidth);
+			assert.equal(pages[0].items[2].item.x, 40 + starWidth + 50);
 		});
 
 		it('should pass column widths to inner elements', function() {
@@ -537,7 +537,7 @@ describe('LayoutBuilder', function() {
 
 			// ((pageWidth - margins - fixed_column_width) / 2_columns) / 2_subcolumns
 			var maxWidth = (400-40-40-50)/2/2;
-			assert.equal(pages[0].lines[0].maxWidth, maxWidth);
+			assert.equal(pages[0].items[0].item.maxWidth, maxWidth);
 		});
 
 		it('should support stack of paragraphs', function() {
@@ -552,9 +552,9 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages.length, 1);
-			assert(pages[0].lines[0].getHeight() > 0);
-			assert.equal(pages[0].lines.length, 2);
-			assert.equal(pages[0].lines[0].y + pages[0].lines[0].getHeight(), pages[0].lines[1].y);
+			assert(pages[0].items[0].item.getHeight() > 0);
+			assert.equal(pages[0].items.length, 2);
+			assert.equal(pages[0].items[0].item.y + pages[0].items[0].item.getHeight(), pages[0].items[1].item.y);
 		});
 
 		it('stack of paragraphs should inherit styles and overriden properties from column descriptors', function() {
@@ -587,19 +587,19 @@ describe('LayoutBuilder', function() {
 			});
 
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].lines.length, 5);
-			assert.equal(pages[0].lines[0].x, pages[0].lines[1].x);
-			assert.equal(pages[0].lines[1].x, pages[0].lines[2].x);
+			assert.equal(pages[0].items.length, 5);
+			assert.equal(pages[0].items[0].item.x, pages[0].items[1].item.x);
+			assert.equal(pages[0].items[1].item.x, pages[0].items[2].item.x);
 
-			assert.equal(pages[0].lines[0].y, pages[0].lines[3].y);
-			assert.equal(pages[0].lines[0].y, pages[0].lines[4].y);
+			assert.equal(pages[0].items[0].item.y, pages[0].items[3].item.y);
+			assert.equal(pages[0].items[0].item.y, pages[0].items[4].item.y);
 
-			assert.equal(pages[0].lines[0].inlines[0].width, 9 * 50 * 1.5);
-			assert.equal(pages[0].lines[1].inlines[0].width, 10 * 50 * 1.5);
+			assert.equal(pages[0].items[0].item.inlines[0].width, 9 * 50 * 1.5);
+			assert.equal(pages[0].items[1].item.inlines[0].width, 10 * 50 * 1.5);
 
-			assert.equal(pages[0].lines[2].inlines[0].width, 10 * 50);
-			assert.equal(pages[0].lines[3].inlines[0].width, 8 * 50);
-			assert.equal(pages[0].lines[4].inlines[0].width, 6 * 50);
+			assert.equal(pages[0].items[2].item.inlines[0].width, 10 * 50);
+			assert.equal(pages[0].items[3].item.inlines[0].width, 8 * 50);
+			assert.equal(pages[0].items[4].item.inlines[0].width, 6 * 50);
 		});
 
 		it('should support unordered lists', function() {
@@ -616,7 +616,7 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].lines.length, 4);
+			assert.equal(pages[0].items.length, 7);
 		});
 
 		it('unordered lists should have circles to the left of each element', function() {
@@ -633,11 +633,11 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].vectors.length, 3);
+			assert.equal(pages[0].items.length, 7);
 
-			for(var i = 0; i < 3; i++) {
-				var circle = pages[0].vectors[i];
-				var itemLine = pages[0].lines[i + 1];
+			for(var i = 1; i < 7; i += 2) {
+				var circle = pages[0].items[i + 1].item; // circle is added after line
+				var itemLine = pages[0].items[i].item;
 
 				assert(circle.x < itemLine.x);
 				assert(circle.y > itemLine.y && circle.y < itemLine.y + itemLine.getHeight());
@@ -666,7 +666,7 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			// without Math.toFixed an AssertionError occurs: 1.7999999999999998 == 1.8
-			assert.equal((pages[0].vectors[3].r1 / pages[0].vectors[0].r1).toFixed(1), (18 / 10).toFixed(1));
+			assert.equal((pages[0].items[7].item.r1 / pages[0].items[1].item.r1).toFixed(1), (18 / 10).toFixed(1));
 		});
 
 		it('unordered lists should support nested lists', function() {
@@ -688,16 +688,16 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].vectors.length, 2 + 3);
+			assert.equal(pages[0].items.length, 10);
 
 			// positioning
-			assert.equal(pages[0].lines[0].x, pages[0].lines[4].x);
-			assert.equal(pages[0].lines[1].x, pages[0].lines[2].x);
-			assert(pages[0].lines[0].x < pages[0].lines[1].x);
+			assert.equal(pages[0].items[0].item.x, pages[0].items[8].item.x);
+			assert.equal(pages[0].items[2].item.x, pages[0].items[4].item.x);
+			assert(pages[0].items[0].item.x < pages[0].items[2].item.x);
 
 			// circle positioning
-			var circle = pages[0].vectors[1];
-			var itemLine = pages[0].lines[1];
+			var circle = pages[0].items[3].item;
+			var itemLine = pages[0].items[2].item;
 			assert(circle.x < itemLine.x);
 			assert(circle.y > itemLine.y && circle.y < itemLine.y + itemLine.getHeight());
 		});
@@ -728,8 +728,8 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages.length, 2);
-			assert.equal(pages[0].vectors.length, 0);
-			assert.equal(pages[1].vectors.length, 1);
+			assert.equal(pages[0].items.length, 9);
+			assert.equal(pages[1].items.length, 3);
 		});
 
 		it('should support ordered lists', function() {
@@ -746,7 +746,7 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].lines.length, 4 + 3);
+			assert.equal(pages[0].items.length, 4 + 3);
 		});
 
 		it('numbers in ordered list should use list style, not item-level style (bugfix)', function() {
@@ -760,9 +760,9 @@ describe('LayoutBuilder', function() {
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].lines.length, 2);
-			assert.equal(pages[0].lines[0].inlines[0].fontSize, 15);
-			assert.equal(pages[0].lines[1].inlines[0].fontSize, 5);
+			assert.equal(pages[0].items.length, 2);
+			assert.equal(pages[0].items[0].item.inlines[0].fontSize, 15);
+			assert.equal(pages[0].items[1].item.inlines[0].fontSize, 5);
 		});
 
 		it('numbers in ordered lists should be positioned to the left of each item', function() {
@@ -779,12 +779,12 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].lines.length, 4 + 3);
+			assert.equal(pages[0].items.length, 4 + 3);
 
 
 			for(var i = 0; i < 3; i++) {
-				var itemLine = pages[0].lines[1 + 2 * i];
-				var numberLine = pages[0].lines[2 + 2 * i];
+				var itemLine = pages[0].items[1 + 2 * i].item;
+				var numberLine = pages[0].items[2 + 2 * i].item;
 
 				assert(numberLine.x < itemLine.x);
 				assert(numberLine.x + numberLine.getWidth() <= itemLine.x);
@@ -810,8 +810,8 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages.length, 1);
 
 			for(var i = 0; i < 3; i++) {
-				var paragraphLine = pages[0].lines[1 + 2 * i];
-				var numberLine = pages[0].lines[2 + 2 * i];
+				var paragraphLine = pages[0].items[1 + 2 * i].item;
+				var numberLine = pages[0].items[2 + 2 * i].item;
 
 				assert(numberLine.x < paragraphLine.x);
 				assert(numberLine.x + numberLine.getWidth() <= paragraphLine.x);
@@ -836,8 +836,8 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages.length, 1);
 
 			for(var i = 0; i < 3; i++) {
-				var paragraphLine = pages[0].lines[1 + 2 * i];
-				var numberLine = pages[0].lines[2 + 2 * i];
+				var paragraphLine = pages[0].items[1 + 2 * i].item;
+				var numberLine = pages[0].items[2 + 2 * i].item;
 
 				assert.equal(numberLine.y + numberLine.getAscenderHeight(), paragraphLine.y + paragraphLine.getAscenderHeight());
 			}
@@ -858,7 +858,7 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			for(var i = 0; i < 4; i++) {
-				var numberLine = pages[0].lines[1 + 2 * i];
+				var numberLine = pages[0].items[1 + 2 * i].item;
 
 				assert.equal(numberLine.inlines[0].text, (i + 1).toString() + '. ');
 			}
@@ -886,14 +886,14 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			// item 2
-			assert.equal(pages[0].lines[3].inlines[0].text, '2. ');
+			assert.equal(pages[0].items[3].item.inlines[0].text, '2. ');
 			// item 3
-			assert.equal(pages[0].lines[3 + 6].inlines[0].text, '3. ');
+			assert.equal(pages[0].items[3 + 6].item.inlines[0].text, '3. ');
 
 			// subitem 1
-			assert.equal(pages[0].lines[5].inlines[0].text, '1. ');
+			assert.equal(pages[0].items[5].item.inlines[0].text, '1. ');
 			// subitem 2
-			assert.equal(pages[0].lines[7].inlines[0].text, '2. ');
+			assert.equal(pages[0].items[7].item.inlines[0].text, '2. ');
 		});
 
 		it('ordered lists should not add an empty line below the number (bugfix)', function() {
@@ -908,9 +908,9 @@ describe('LayoutBuilder', function() {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
-			assert.equal(pages[0].lines[0].y, 40);
-			assert.equal(pages[0].lines[1].y, 40);
-			assert.equal(pages[0].lines[2].y, 40 + 12);
+			assert.equal(pages[0].items[0].item.y, 40);
+			assert.equal(pages[0].items[1].item.y, 40);
+			assert.equal(pages[0].items[2].item.y, 40 + 12);
 		});
 
 		it('should support tables with fixed widths', function() {
@@ -930,19 +930,19 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].lines.length, 6);
-			assert.equal(pages[0].lines[0].x, 40);
-			assert.equal(pages[0].lines[1].x, 40 + 30);
-			assert.equal(pages[0].lines[2].x, 40 + 30 + 50);
-			assert.equal(pages[0].lines[3].x, 40);
-			assert.equal(pages[0].lines[4].x, 40 + 30);
-			assert.equal(pages[0].lines[5].x, 40 + 30 + 50);
-			assert.equal(pages[0].lines[0].y, 40);
-			assert.equal(pages[0].lines[1].y, 40);
-			assert.equal(pages[0].lines[2].y, 40);
-			assert.equal(pages[0].lines[3].y, 40 + 12);
-			assert.equal(pages[0].lines[4].y, 40 + 12);
-			assert.equal(pages[0].lines[5].y, 40 + 12);
+			assert.equal(pages[0].items.length, 6);
+			assert.equal(pages[0].items[0].item.x, 40);
+			assert.equal(pages[0].items[1].item.x, 40 + 30);
+			assert.equal(pages[0].items[2].item.x, 40 + 30 + 50);
+			assert.equal(pages[0].items[3].item.x, 40);
+			assert.equal(pages[0].items[4].item.x, 40 + 30);
+			assert.equal(pages[0].items[5].item.x, 40 + 30 + 50);
+			assert.equal(pages[0].items[0].item.y, 40);
+			assert.equal(pages[0].items[1].item.y, 40);
+			assert.equal(pages[0].items[2].item.y, 40);
+			assert.equal(pages[0].items[3].item.y, 40 + 12);
+			assert.equal(pages[0].items[4].item.y, 40 + 12);
+			assert.equal(pages[0].items[5].item.y, 40 + 12);
 		});
 
 		it('should support tables with auto column widths', function() {
@@ -962,19 +962,19 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].lines.length, 6);
-			assert.equal(pages[0].lines[0].x, 40);
-			assert.equal(pages[0].lines[1].x, 40 + 3*12);
-			assert.equal(pages[0].lines[2].x, 40 + 6*12);
-			assert.equal(pages[0].lines[3].x, 40);
-			assert.equal(pages[0].lines[4].x, 40 + 3*12);
-			assert.equal(pages[0].lines[5].x, 40 + 6*12);
-			assert.equal(pages[0].lines[0].y, 40);
-			assert.equal(pages[0].lines[1].y, 40);
-			assert.equal(pages[0].lines[2].y, 40);
-			assert.equal(pages[0].lines[3].y, 40 + 12);
-			assert.equal(pages[0].lines[4].y, 40 + 12);
-			assert.equal(pages[0].lines[5].y, 40 + 12);
+			assert.equal(pages[0].items.length, 6);
+			assert.equal(pages[0].items[0].item.x, 40);
+			assert.equal(pages[0].items[1].item.x, 40 + 3*12);
+			assert.equal(pages[0].items[2].item.x, 40 + 6*12);
+			assert.equal(pages[0].items[3].item.x, 40);
+			assert.equal(pages[0].items[4].item.x, 40 + 3*12);
+			assert.equal(pages[0].items[5].item.x, 40 + 6*12);
+			assert.equal(pages[0].items[0].item.y, 40);
+			assert.equal(pages[0].items[1].item.y, 40);
+			assert.equal(pages[0].items[2].item.y, 40);
+			assert.equal(pages[0].items[3].item.y, 40 + 12);
+			assert.equal(pages[0].items[4].item.y, 40 + 12);
+			assert.equal(pages[0].items[5].item.y, 40 + 12);
 		});
 
 		it('should support tables spanning across pages', function() {
@@ -1013,7 +1013,7 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 2);
-			assert.equal(pages[1].lines.length, 6);
+			assert.equal(pages[1].items.length, 6);
 		});
 
 		it('should not split table headers', function() {
@@ -1040,8 +1040,8 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 2);
-			assert.equal(pages[0].lines.length, 59);
-			assert.equal(pages[1].lines.length, 9);
+			assert.equal(pages[0].items.length, 59);
+			assert.equal(pages[1].items.length, 9);
 		});
 
 		it('should not split multi-row headers', function() {
@@ -1070,8 +1070,8 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 2);
-			assert.equal(pages[0].lines.length, 59);
-			assert.equal(pages[1].lines.length, 9);
+			assert.equal(pages[0].items.length, 59);
+			assert.equal(pages[1].items.length, 9);
 		});
 
 		it('should repeat table headers', function() {
@@ -1094,9 +1094,9 @@ describe('LayoutBuilder', function() {
 
 			assert.equal(pages.length, 10);
 			pages.forEach(function(page){
-				assert.equal(page.lines[0].inlines[0].text, 'h1');
-				assert.equal(page.lines[0].y, 40);
-				assert.equal(page.lines[0].x, 40);
+				assert.equal(page.items[0].item.inlines[0].text, 'h1');
+				assert.equal(page.items[0].item.y, 40);
+				assert.equal(page.items[0].item.x, 40);
 			});
 		});
 
@@ -1122,9 +1122,9 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 2);
-			assert.equal(pages[0].lines[0].x, 40);
-			assert(pages[0].lines[4].x > 40);
-			assert.equal(pages[1].lines[0].x, 40);
+			assert.equal(pages[0].items[0].item.x, 40);
+			assert(pages[0].items[4].item.x > 40);
+			assert.equal(pages[1].items[0].item.x, 40);
 		});
 
 		it('should throw an exception if unrecognized structure is detected', function() {

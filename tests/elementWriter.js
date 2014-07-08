@@ -6,7 +6,7 @@ describe('ElementWriter', function() {
 	var ew, ctx, page;
 
 	beforeEach(function() {
-		page = { lines: [], vectors: [], images: [] };
+		page = { items: [] };
 		ctx = {
 			x: 10,
 			y: 20,
@@ -49,14 +49,14 @@ describe('ElementWriter', function() {
 
 			ew.addLine(line);
 
-			assert.equal(page.lines.length, 1);
+			assert.equal(page.items.length, 1);
 		});
 
 		it('should not add line and return false if there\'s not enough space', function() {
 			var line = buildLine(120);
 
 			assert(!ew.addLine(line));
-			assert.equal(page.lines.length, 0);
+			assert.equal(page.items.length, 0);
 		});
 
 		it('should set line.x and line.y to current context\'s values', function(){
@@ -102,7 +102,7 @@ describe('ElementWriter', function() {
 	describe('addVector', function() {
 		it('should add vectors to the current page', function() {
 			ew.addVector({ type: 'rect', x: 10, y: 10 });
-			assert.equal(page.vectors.length, 1);
+			assert.equal(page.items.length, 1);
 		});
 
 		it('should offset vectors to the current position', function() {
@@ -139,23 +139,31 @@ describe('ElementWriter', function() {
 
 		beforeEach(function() {
 			fragment = {
-				lines: [
-					buildLine(30, 'left', 10, 10),
-					buildLine(30, 'left', 10, 50)
-				],
-				vectors: [
-					{ type: 'rect', x: 10, y: 20 },
-					{ type: 'rect', x: 40, y: 60 },
-				],
-				images: []
+				items: [
+                    {
+                        type: 'line',
+                        item: buildLine(30, 'left', 10, 10)
+                    },
+					{
+                        type: 'line',
+                        item: buildLine(30, 'left', 10, 50)
+                    },
+                    {
+                        type: 'vector',
+                        item: { type: 'rect', x: 10, y: 20 }
+                    },
+                    {
+                        type: 'vector',
+                        item: { type: 'rect', x: 40, y: 60 }
+                    }
+				]
 			};
 		});
 
 		it('should add all fragment vectors and lines', function() {
 			ew.addFragment(fragment);
 
-			assert.equal(page.lines.length, 2);
-			assert.equal(page.vectors.length, 2);
+			assert.equal(page.items.length, 4);
 		});
 
 		it('should return false if fragment height is larger than available space', function(){
@@ -174,25 +182,25 @@ describe('ElementWriter', function() {
 		it('should offset lines and vectors', function() {
 			ew.addFragment(fragment);
 
-			assert.equal(page.lines[0].x, 20);
-			assert.equal(page.lines[0].y, 30);
-			assert.equal(page.lines[1].x, 20);
-			assert.equal(page.lines[1].y, 70);
+			assert.equal(page.items[0].item.x, 20);
+			assert.equal(page.items[0].item.y, 30);
+			assert.equal(page.items[1].item.x, 20);
+			assert.equal(page.items[1].item.y, 70);
 
-			assert.equal(page.vectors[0].x, 20);
-			assert.equal(page.vectors[0].y, 40);
-			assert.equal(page.vectors[1].x, 50);
-			assert.equal(page.vectors[1].y, 80);
+			assert.equal(page.items[2].item.x, 20);
+			assert.equal(page.items[2].item.y, 40);
+			assert.equal(page.items[3].item.x, 50);
+			assert.equal(page.items[3].item.y, 80);
 		});
 
 		it('should not modify original line/vector positions', function() {
 			ew.addFragment(fragment);
 
-			assert.equal(fragment.lines[0].x, 10);
-			assert.equal(fragment.lines[0].y, 10);
+			assert.equal(fragment.items[0].item.x, 10);
+			assert.equal(fragment.items[0].item.y, 10);
 
-			assert.equal(fragment.vectors[1].x, 40);
-			assert.equal(fragment.vectors[1].y, 60);
+			assert.equal(fragment.items[3].item.x, 40);
+			assert.equal(fragment.items[3].item.y, 60);
 		});
 	});
 });

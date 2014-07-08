@@ -36,13 +36,16 @@ describe('PageElementWriter', function() {
 	}
 
 	function createRepeatable(marker, height) {
-		var rep = { lines: [], vectors: [], images: [] };
+		var rep = { items: [] };
 		rep.height = height;
 
 		var repLine = buildLine(height);
 		repLine.marker = marker;
 
-		rep.lines.push(repLine);
+		rep.items.push({
+            type: 'line',
+            item: repLine
+        });
 		return rep;
 	}
 
@@ -62,8 +65,8 @@ describe('PageElementWriter', function() {
 			addOneTenthLines(11);
 
 			assert.equal(ctx.pages.length, 2);
-			assert.equal(ctx.pages[0].lines.length, 10);
-			assert.equal(ctx.pages[1].lines.length, 1);
+			assert.equal(ctx.pages[0].items.length, 10);
+			assert.equal(ctx.pages[1].items.length, 1);
 		});
 
 		it('should subtract line height from availableHeight when adding a line and update current y position', function() {
@@ -86,8 +89,8 @@ describe('PageElementWriter', function() {
 			pew.addLine(anotherLine);
 
 			assert.equal(ctx.pages.length, 2);
-			assert.equal(ctx.pages[1].lines[0].marker, 'rep');
-			assert.equal(ctx.pages[1].lines[1].marker, 'another');
+			assert.equal(ctx.pages[1].items[0].item.marker, 'rep');
+			assert.equal(ctx.pages[1].items[1].item.marker, 'another');
 		});
 	});
 
@@ -109,9 +112,9 @@ describe('PageElementWriter', function() {
 			var uCtx = pew.writer.context;
 
 			assert.equal(ctx.pages.length, 1);
-			assert.equal(ctx.pages[0].lines.length, 0);
+			assert.equal(ctx.pages[0].items.length, 0);
 			assert.equal(uCtx.pages.length, 1);
-			assert.equal(uCtx.pages[0].lines.length, 2);
+			assert.equal(uCtx.pages[0].items.length, 2);
 		});
 	});
 
@@ -123,9 +126,9 @@ describe('PageElementWriter', function() {
 			pew.commitUnbreakableBlock();
 
 			assert.equal(ctx.pages.length, 1);
-			assert.equal(ctx.pages[0].lines.length, 0);
+			assert.equal(ctx.pages[0].items.length, 0);
 			pew.commitUnbreakableBlock();
-			assert.equal(ctx.pages[0].lines.length, 1);
+			assert.equal(ctx.pages[0].items.length, 1);
 		});
 
 		it('should copy all elements to the current page if there\'s enough space for the whole block', function() {
@@ -135,10 +138,10 @@ describe('PageElementWriter', function() {
 			pew.addLine(buildLine(30));
 			pew.addLine(buildLine(30));
 
-			assert.equal(ctx.pages[0].lines.length, 1);
+			assert.equal(ctx.pages[0].items.length, 1);
 
 			pew.commitUnbreakableBlock();
-			assert.equal(ctx.pages[0].lines.length, 3);
+			assert.equal(ctx.pages[0].items.length, 3);
 		});
 
 		it('should add a new page and copy elements there if there\'s not enough space on the current page', function() {
@@ -151,8 +154,8 @@ describe('PageElementWriter', function() {
 			pew.commitUnbreakableBlock();
 
 			assert.equal(ctx.pages.length, 2);
-			assert.equal(ctx.pages[0].lines.length, 8);
-			assert.equal(ctx.pages[1].lines.length, 3);
+			assert.equal(ctx.pages[0].items.length, 8);
+			assert.equal(ctx.pages[1].items.length, 3);
 		});
 
 		it('should move elements to the top of the page if they are added to a new page', function() {
@@ -164,10 +167,10 @@ describe('PageElementWriter', function() {
 
 			pew.commitUnbreakableBlock();
 
-			assert.equal(ctx.pages[1].lines[0].x, 40);
-			assert.equal(ctx.pages[1].lines[0].y, 60);
-			assert.equal(ctx.pages[1].lines[1].x, 40);
-			assert.equal(ctx.pages[1].lines[1].y, 60 + ctx.pages[1].lines[0].getHeight());
+			assert.equal(ctx.pages[1].items[0].item.x, 40);
+			assert.equal(ctx.pages[1].items[0].item.y, 60);
+			assert.equal(ctx.pages[1].items[1].item.x, 40);
+			assert.equal(ctx.pages[1].items[1].item.y, 60 + ctx.pages[1].items[0].item.getHeight());
 		});
 
 		it('should add lines below any repeatable fragments if they exist and a new page is created', function() {
@@ -183,10 +186,10 @@ describe('PageElementWriter', function() {
 			pew.addLine(anotherLine);
 
 			assert.equal(ctx.pages.length, 2);
-			assert.equal(ctx.pages[1].lines[0].marker, 'rep');
-			assert.equal(ctx.pages[1].lines[1].marker, 'another');
-			assert.equal(ctx.pages[1].lines[1].x, 40);
-			assert.equal(ctx.pages[1].lines[1].y, 60 + 50);
+			assert.equal(ctx.pages[1].items[0].item.marker, 'rep');
+			assert.equal(ctx.pages[1].items[1].item.marker, 'another');
+			assert.equal(ctx.pages[1].items[1].item.x, 40);
+			assert.equal(ctx.pages[1].items[1].item.y, 60 + 50);
 		});
 
 		it('should make all further calls to addLine add lines again to the page when transaction finishes', function() {
@@ -195,7 +198,7 @@ describe('PageElementWriter', function() {
 			pew.addLine(buildLine(30));
 
 			assert.equal(ctx.pages.length, 1);
-			assert.equal(ctx.pages[0].lines.length, 1);
+			assert.equal(ctx.pages[0].items.length, 1);
 		});
 	});
 
@@ -207,10 +210,10 @@ describe('PageElementWriter', function() {
 			var rep = pew.currentBlockToRepeatable();
 			pew.pushToRepeatables(rep);
 
-			assert.equal(rep.lines.length, 2);
+			assert.equal(rep.items.length, 2);
 
 			pew.addLine(buildLine(30));
-			assert.equal(rep.lines.length, 2);
+			assert.equal(rep.items.length, 2);
 		});
 	});
 
@@ -222,7 +225,7 @@ describe('PageElementWriter', function() {
 			var uCtx = pew.writer.context;
 
 			addOneTenthLines(3);
-			uCtx.pages[0].lines.forEach(function(line) { line.marker = 'rep'; });
+			uCtx.pages[0].items.forEach(function(item) { item.item.marker = 'rep'; });
 			var rep = pew.currentBlockToRepeatable();
 			pew.pushToRepeatables(rep);
 			pew.commitUnbreakableBlock();
@@ -230,18 +233,18 @@ describe('PageElementWriter', function() {
 			addOneTenthLines(3);
 
 			assert.equal(ctx.pages.length, 2);
-			assert.equal(ctx.pages[0].lines.length, 10);
-			assert.equal(ctx.pages[0].lines[6].marker, 'rep');
-			assert.equal(ctx.pages[0].lines[7].marker, 'rep');
-			assert.equal(ctx.pages[0].lines[8].marker, 'rep');
-			assert(!ctx.pages[0].lines[9].marker);
+			assert.equal(ctx.pages[0].items.length, 10);
+			assert.equal(ctx.pages[0].items[6].item.marker, 'rep');
+			assert.equal(ctx.pages[0].items[7].item.marker, 'rep');
+			assert.equal(ctx.pages[0].items[8].item.marker, 'rep');
+			assert(!ctx.pages[0].items[9].item.marker);
 
-			assert.equal(ctx.pages[1].lines[0].marker, 'rep');
-			assert.equal(ctx.pages[1].lines[1].marker, 'rep');
-			assert.equal(ctx.pages[1].lines[2].marker, 'rep');
-			assert.equal(ctx.pages[1].lines[2].y, 60 + 2 * 68);
-			assert(!ctx.pages[1].lines[3].marker);
-			assert.equal(ctx.pages[1].lines[3].y, ctx.pages[1].lines[2].y + 68);
+			assert.equal(ctx.pages[1].items[0].item.marker, 'rep');
+			assert.equal(ctx.pages[1].items[1].item.marker, 'rep');
+			assert.equal(ctx.pages[1].items[2].item.marker, 'rep');
+			assert.equal(ctx.pages[1].items[2].item.y, 60 + 2 * 68);
+			assert(!ctx.pages[1].items[3].item.marker);
+			assert.equal(ctx.pages[1].items[3].item.y, ctx.pages[1].items[2].item.y + 68);
 		});
 
 		it('should add repeatable fragments in the same order they have been added to the repeatable fragments collection', function() {
@@ -251,13 +254,13 @@ describe('PageElementWriter', function() {
 			addOneTenthLines(2);
 
 			assert.equal(ctx.pages.length, 2);
-			assert.equal(ctx.pages[1].lines.length, 3);
-			assert.equal(ctx.pages[1].lines[0].marker, 'rep1');
-			assert.equal(ctx.pages[1].lines[0].y, 60);
-			assert.equal(ctx.pages[1].lines[1].marker, 'rep2');
-			assert.equal(ctx.pages[1].lines[1].y, 60 + 50);
-			assert(!ctx.pages[1].lines[2].marker);
-			assert.equal(ctx.pages[1].lines[2].y, 60 + 50 + 60);
+			assert.equal(ctx.pages[1].items.length, 3);
+			assert.equal(ctx.pages[1].items[0].item.marker, 'rep1');
+			assert.equal(ctx.pages[1].items[0].item.y, 60);
+			assert.equal(ctx.pages[1].items[1].item.marker, 'rep2');
+			assert.equal(ctx.pages[1].items[1].item.y, 60 + 50);
+			assert(!ctx.pages[1].items[2].item.marker);
+			assert.equal(ctx.pages[1].items[2].item.y, 60 + 50 + 60);
 		});
 	});
 });
