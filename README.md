@@ -19,6 +19,7 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) or
 * page headers and footers:
  * static or dynamic content,
  * access to current page number and page count,
+* background-layer
 * page dimensions and orientations,
 * margins,
 * custom page breaks,
@@ -267,6 +268,20 @@ var docDefinition = {
   (...)
 };
 ```
+
+#### Background-layer
+
+The background-layer will be added on every page.
+
+```js
+var docDefinition = {
+  background: 'simple text',
+
+  content: (...)
+};
+```
+
+It may contain any other object as well (images, tables, ...)
 
 #### Margins
 
