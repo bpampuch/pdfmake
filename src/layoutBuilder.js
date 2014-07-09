@@ -58,21 +58,12 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 };
 
 LayoutBuilder.prototype.addBackground = function(background) {
-  var pages = this.writer.context().pages;
-  
-  var backgroundGetter = isFunction(background) ? background : function() { return background; };
-
-  for(var i = 0, l = pages.length; i < l; i++) {
-    this.writer.context().page = i;
-
-    var pageBackground = backgroundGetter(i + 1, l);
-
-    if (pageBackground) {
+    if (background) {
       this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageSize.height);
-      this.processNode(this.docMeasure.measureDocument(pageBackground));
+      this.processNode(this.docMeasure.measureDocument(background));
       this.writer.commitUnbreakableBlock(0, 0);
+      this.writer.context().setDefaultPage();
     }
-  }
 };
 
 LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {

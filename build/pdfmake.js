@@ -17595,6 +17595,8 @@ function DocumentContext(pageSize, pageMargins) {
 
 	this.endingCell = null;
 
+    this.defaultPage = { items: [] };
+    
 	this.addPage();
 }
 
@@ -17689,8 +17691,8 @@ DocumentContext.prototype.moveToPageTop = function() {
 };
 
 DocumentContext.prototype.addPage = function() {
-	var page = { items: [] };
-	this.pages.push(page);
+	var page = this.getDefaultPage();
+    this.pages.push(page);
 	this.page = this.pages.length - 1;
 	this.moveToPageTop();
 
@@ -17701,6 +17703,15 @@ DocumentContext.prototype.getCurrentPage = function() {
 	if (this.page < 0 || this.page >= this.pages.length) return null;
 
 	return this.pages[this.page];
+};
+
+DocumentContext.prototype.setDefaultPage = function(defaultPage) {
+    // copy the items without deep-copying the object (which is not possible due to circular structures)
+    this.defaultPage = { items: (defaultPage || this.pages[this.page]).items.slice() };
+};
+
+DocumentContext.prototype.getDefaultPage = function() {
+    return { items: this.defaultPage.items.slice() };
 };
 
 function bottomMostContext(c1, c2) {
@@ -18114,21 +18125,12 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 };
 
 LayoutBuilder.prototype.addBackground = function(background) {
-  var pages = this.writer.context().pages;
-  
-  var backgroundGetter = isFunction(background) ? background : function() { return background; };
-
-  for(var i = 0, l = pages.length; i < l; i++) {
-    this.writer.context().page = i;
-
-    var pageBackground = backgroundGetter(i + 1, l);
-
-    if (pageBackground) {
+    if (background) {
       this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageSize.height);
-      this.processNode(this.docMeasure.measureDocument(pageBackground));
+      this.processNode(this.docMeasure.measureDocument(background));
       this.writer.commitUnbreakableBlock(0, 0);
+      this.writer.context().setDefaultPage();
     }
-  }
 };
 
 LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
@@ -18541,8 +18543,7 @@ PageElementWriter.prototype.moveToNextPage = function() {
 
 	if (nextPageIndex >= this.writer.context.pages.length) {
 		// create new Page
-		var page = { items: [] };
-		this.writer.context.pages.push(page);
+		this.writer.context.pages.push(this.writer.context.getDefaultPage());
 		this.writer.context.page = nextPageIndex;
 		this.writer.context.moveToPageTop();
 
