@@ -1,6 +1,8 @@
 /* jslint node: true */
 'use strict';
 
+var TraversalTracker = require('./traversalTracker');
+
 /**
 * Creates an instance of DocumentContext - a store for current x, y positions and available width/height.
 * It facilitates column divisions and vertical sync
@@ -21,6 +23,8 @@ function DocumentContext(pageSize, pageMargins) {
 	this.endingCell = null;
 
     this.defaultPage = { items: [] };
+    
+    this.tracker = new TraversalTracker();
     
 	this.addPage();
 }
@@ -121,6 +125,8 @@ DocumentContext.prototype.addPage = function() {
 	this.page = this.pages.length - 1;
 	this.moveToPageTop();
 
+    this.tracker.emit('pageAdded');
+    
 	return page;
 };
 
