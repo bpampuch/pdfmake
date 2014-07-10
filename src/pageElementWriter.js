@@ -52,8 +52,7 @@ PageElementWriter.prototype.moveToNextPage = function() {
 
 	if (nextPageIndex >= this.writer.context.pages.length) {
 		// create new Page
-		var page = { lines: [], vectors: [], images:[] };
-		this.writer.context.pages.push(page);
+		this.writer.context.pages.push(this.writer.context.getDefaultPage());
 		this.writer.context.page = nextPageIndex;
 		this.writer.context.moveToPageTop();
 
@@ -109,19 +108,11 @@ PageElementWriter.prototype.commitUnbreakableBlock = function(forcedX, forcedY) 
 
 PageElementWriter.prototype.currentBlockToRepeatable = function() {
 	var unbreakableContext = this.writer.context;
-	var rep = { lines: [], vectors: [], images: [] };
+	var rep = { items: [] };
 
-	unbreakableContext.pages[0].lines.forEach(function(line) {
-		rep.lines.push(line);
-	});
-
-	unbreakableContext.pages[0].vectors.forEach(function(vector) {
-		rep.vectors.push(vector);
-	});
-
-	unbreakableContext.pages[0].images.forEach(function(img) {
-		rep.images.push(img);
-	});
+    unbreakableContext.pages[0].items.forEach(function(item) {
+        rep.items.push(item);
+    });
 
 	rep.xOffset = this.originalX;
 

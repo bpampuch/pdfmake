@@ -20,6 +20,8 @@ function DocumentContext(pageSize, pageMargins) {
 
 	this.endingCell = null;
 
+    this.defaultPage = { items: [] };
+    
 	this.addPage();
 }
 
@@ -114,8 +116,8 @@ DocumentContext.prototype.moveToPageTop = function() {
 };
 
 DocumentContext.prototype.addPage = function() {
-	var page = { lines: [], vectors: [], images: [] };
-	this.pages.push(page);
+	var page = this.getDefaultPage();
+    this.pages.push(page);
 	this.page = this.pages.length - 1;
 	this.moveToPageTop();
 
@@ -126,6 +128,15 @@ DocumentContext.prototype.getCurrentPage = function() {
 	if (this.page < 0 || this.page >= this.pages.length) return null;
 
 	return this.pages[this.page];
+};
+
+DocumentContext.prototype.setDefaultPage = function(defaultPage) {
+    // copy the items without deep-copying the object (which is not possible due to circular structures)
+    this.defaultPage = { items: (defaultPage || this.pages[this.page]).items.slice() };
+};
+
+DocumentContext.prototype.getDefaultPage = function() {
+    return { items: this.defaultPage.items.slice() };
 };
 
 function bottomMostContext(c1, c2) {

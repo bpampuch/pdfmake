@@ -95,7 +95,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
     builder.registerTableLayouts(options.tableLayouts);
   }
 
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.header, docDefinition.footer, docDefinition.images);
+	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images);
 
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
@@ -209,17 +209,19 @@ function renderPages(pages, fontProvider, pdfKitDoc) {
 		setFontRefs(fontProvider, pdfKitDoc);
 
 		var page = pages[i];
-		for(var vi = 0, vl = page.vectors.length; vi < vl; vi++) {
-			var vector = page.vectors[vi];
-			renderVector(vector, pdfKitDoc);
-		}
-		for(var li = 0, ll = page.lines.length; li < ll; li++) {
-			var line = page.lines[li];
-			renderLine(line, line.x, line.y, pdfKitDoc);
-		}
-        for(var ii = 0, il = page.images.length; ii < il; ii++) {
-            var image = page.images[ii];
-            renderImage(image, image.x, image.y, pdfKitDoc);
+        for(var ii = 0, il = page.items.length; ii < il; ii++) {
+            var item = page.items[ii];
+            switch(item.type) {
+                case 'vector':
+                    renderVector(item.item, pdfKitDoc);
+                    break;
+                case 'line':
+                    renderLine(item.item, item.item.x, item.item.y, pdfKitDoc);
+                    break;
+                case 'image':
+                    renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
+                    break;
+            }
         }
 	}
 }
