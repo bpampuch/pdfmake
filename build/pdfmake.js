@@ -17576,6 +17576,8 @@ module.exports = DocMeasure;
 /* jslint node: true */
 'use strict';
 
+var TraversalTracker = _dereq_('./traversalTracker');
+
 /**
 * Creates an instance of DocumentContext - a store for current x, y positions and available width/height.
 * It facilitates column divisions and vertical sync
@@ -17596,6 +17598,8 @@ function DocumentContext(pageSize, pageMargins) {
 	this.endingCell = null;
 
     this.defaultPage = { items: [] };
+    
+    this.tracker = new TraversalTracker();
     
 	this.addPage();
 }
@@ -17696,6 +17700,8 @@ DocumentContext.prototype.addPage = function() {
 	this.page = this.pages.length - 1;
 	this.moveToPageTop();
 
+    this.tracker.emit('pageAdded');
+    
 	return page;
 };
 
@@ -17736,7 +17742,7 @@ DocumentContext.bottomMostContext = bottomMostContext;
 
 module.exports = DocumentContext;
 
-},{}],78:[function(_dereq_,module,exports){
+},{"./traversalTracker":89}],78:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -18117,6 +18123,11 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
   this.writer = new PageElementWriter(
     new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
+  var _this = this;
+  this.writer.context().tracker.startTracking('pageAdded', function() {
+      _this.addBackground(background);
+  });
+    
   this.addBackground(background);
   this.processNode(docStructure);
   this.addHeadersAndFooters(header, footer);
@@ -18125,11 +18136,14 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 };
 
 LayoutBuilder.prototype.addBackground = function(background) {
-    if (background) {
+    var backgroundGetter = isFunction(background) ? background : function() { return background; };
+    
+    var pageBackground = backgroundGetter(this.writer.context().page + 1);
+    
+    if (pageBackground) {
       this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageSize.height);
-      this.processNode(this.docMeasure.measureDocument(background));
+      this.processNode(this.docMeasure.measureDocument(pageBackground));
       this.writer.commitUnbreakableBlock(0, 0);
-      this.writer.context().setDefaultPage();
     }
 };
 
@@ -18543,9 +18557,7 @@ PageElementWriter.prototype.moveToNextPage = function() {
 
 	if (nextPageIndex >= this.writer.context.pages.length) {
 		// create new Page
-		this.writer.context.pages.push(this.writer.context.getDefaultPage());
-		this.writer.context.page = nextPageIndex;
-		this.writer.context.moveToPageTop();
+        this.writer.context.addPage();
 
 		// add repeatable fragments
 		this.repeatables.forEach(function(rep) {

@@ -281,7 +281,17 @@ var docDefinition = {
 };
 ```
 
-It may contain any other object as well (images, tables, ...)
+It may contain any other object as well (images, tables, ...) or be dynamically generated:
+
+```js
+var docDefinition = {
+  background: function(currentPage) {
+    return 'simple text on page ' + currentPage
+  },
+
+  content: (...)
+};
+```
 
 #### Margins
 
