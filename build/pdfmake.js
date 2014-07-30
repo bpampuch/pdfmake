@@ -8320,122 +8320,122 @@ function assert (test, message) {
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
-  'use strict';
+	'use strict';
 
   var Arr = (typeof Uint8Array !== 'undefined')
     ? Uint8Array
     : Array
 
-  var PLUS   = '+'.charCodeAt(0)
-  var SLASH  = '/'.charCodeAt(0)
-  var NUMBER = '0'.charCodeAt(0)
-  var LOWER  = 'a'.charCodeAt(0)
-  var UPPER  = 'A'.charCodeAt(0)
+	var PLUS   = '+'.charCodeAt(0)
+	var SLASH  = '/'.charCodeAt(0)
+	var NUMBER = '0'.charCodeAt(0)
+	var LOWER  = 'a'.charCodeAt(0)
+	var UPPER  = 'A'.charCodeAt(0)
 
-  function decode (elt) {
-    var code = elt.charCodeAt(0)
-    if (code === PLUS)
-      return 62 // '+'
-    if (code === SLASH)
-      return 63 // '/'
-    if (code < NUMBER)
-      return -1 //no match
-    if (code < NUMBER + 10)
-      return code - NUMBER + 26 + 26
-    if (code < UPPER + 26)
-      return code - UPPER
-    if (code < LOWER + 26)
-      return code - LOWER + 26
-  }
+	function decode (elt) {
+		var code = elt.charCodeAt(0)
+		if (code === PLUS)
+			return 62 // '+'
+		if (code === SLASH)
+			return 63 // '/'
+		if (code < NUMBER)
+			return -1 //no match
+		if (code < NUMBER + 10)
+			return code - NUMBER + 26 + 26
+		if (code < UPPER + 26)
+			return code - UPPER
+		if (code < LOWER + 26)
+			return code - LOWER + 26
+	}
 
-  function b64ToByteArray (b64) {
-    var i, j, l, tmp, placeHolders, arr
+	function b64ToByteArray (b64) {
+		var i, j, l, tmp, placeHolders, arr
 
-    if (b64.length % 4 > 0) {
-      throw new Error('Invalid string. Length must be a multiple of 4')
-    }
+		if (b64.length % 4 > 0) {
+			throw new Error('Invalid string. Length must be a multiple of 4')
+		}
 
-    // the number of equal signs (place holders)
-    // if there are two placeholders, than the two characters before it
-    // represent one byte
-    // if there is only one, then the three characters before it represent 2 bytes
-    // this is just a cheap hack to not do indexOf twice
-    var len = b64.length
-    placeHolders = '=' === b64.charAt(len - 2) ? 2 : '=' === b64.charAt(len - 1) ? 1 : 0
+		// the number of equal signs (place holders)
+		// if there are two placeholders, than the two characters before it
+		// represent one byte
+		// if there is only one, then the three characters before it represent 2 bytes
+		// this is just a cheap hack to not do indexOf twice
+		var len = b64.length
+		placeHolders = '=' === b64.charAt(len - 2) ? 2 : '=' === b64.charAt(len - 1) ? 1 : 0
 
-    // base64 is 4/3 + up to two characters of the original data
-    arr = new Arr(b64.length * 3 / 4 - placeHolders)
+		// base64 is 4/3 + up to two characters of the original data
+		arr = new Arr(b64.length * 3 / 4 - placeHolders)
 
-    // if there are placeholders, only get up to the last complete 4 chars
-    l = placeHolders > 0 ? b64.length - 4 : b64.length
+		// if there are placeholders, only get up to the last complete 4 chars
+		l = placeHolders > 0 ? b64.length - 4 : b64.length
 
-    var L = 0
+		var L = 0
 
-    function push (v) {
-      arr[L++] = v
-    }
+		function push (v) {
+			arr[L++] = v
+		}
 
-    for (i = 0, j = 0; i < l; i += 4, j += 3) {
-      tmp = (decode(b64.charAt(i)) << 18) | (decode(b64.charAt(i + 1)) << 12) | (decode(b64.charAt(i + 2)) << 6) | decode(b64.charAt(i + 3))
-      push((tmp & 0xFF0000) >> 16)
-      push((tmp & 0xFF00) >> 8)
-      push(tmp & 0xFF)
-    }
+		for (i = 0, j = 0; i < l; i += 4, j += 3) {
+			tmp = (decode(b64.charAt(i)) << 18) | (decode(b64.charAt(i + 1)) << 12) | (decode(b64.charAt(i + 2)) << 6) | decode(b64.charAt(i + 3))
+			push((tmp & 0xFF0000) >> 16)
+			push((tmp & 0xFF00) >> 8)
+			push(tmp & 0xFF)
+		}
 
-    if (placeHolders === 2) {
-      tmp = (decode(b64.charAt(i)) << 2) | (decode(b64.charAt(i + 1)) >> 4)
-      push(tmp & 0xFF)
-    } else if (placeHolders === 1) {
-      tmp = (decode(b64.charAt(i)) << 10) | (decode(b64.charAt(i + 1)) << 4) | (decode(b64.charAt(i + 2)) >> 2)
-      push((tmp >> 8) & 0xFF)
-      push(tmp & 0xFF)
-    }
+		if (placeHolders === 2) {
+			tmp = (decode(b64.charAt(i)) << 2) | (decode(b64.charAt(i + 1)) >> 4)
+			push(tmp & 0xFF)
+		} else if (placeHolders === 1) {
+			tmp = (decode(b64.charAt(i)) << 10) | (decode(b64.charAt(i + 1)) << 4) | (decode(b64.charAt(i + 2)) >> 2)
+			push((tmp >> 8) & 0xFF)
+			push(tmp & 0xFF)
+		}
 
-    return arr
-  }
+		return arr
+	}
 
-  function uint8ToBase64 (uint8) {
-    var i,
-      extraBytes = uint8.length % 3, // if we have 1 byte left, pad 2 bytes
-      output = "",
-      temp, length
+	function uint8ToBase64 (uint8) {
+		var i,
+			extraBytes = uint8.length % 3, // if we have 1 byte left, pad 2 bytes
+			output = "",
+			temp, length
 
-    function encode (num) {
-      return lookup.charAt(num)
-    }
+		function encode (num) {
+			return lookup.charAt(num)
+		}
 
-    function tripletToBase64 (num) {
-      return encode(num >> 18 & 0x3F) + encode(num >> 12 & 0x3F) + encode(num >> 6 & 0x3F) + encode(num & 0x3F)
-    }
+		function tripletToBase64 (num) {
+			return encode(num >> 18 & 0x3F) + encode(num >> 12 & 0x3F) + encode(num >> 6 & 0x3F) + encode(num & 0x3F)
+		}
 
-    // go through the array every three bytes, we'll deal with trailing stuff later
-    for (i = 0, length = uint8.length - extraBytes; i < length; i += 3) {
-      temp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2])
-      output += tripletToBase64(temp)
-    }
+		// go through the array every three bytes, we'll deal with trailing stuff later
+		for (i = 0, length = uint8.length - extraBytes; i < length; i += 3) {
+			temp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2])
+			output += tripletToBase64(temp)
+		}
 
-    // pad the end with zeros, but make sure to not forget the extra bytes
-    switch (extraBytes) {
-      case 1:
-        temp = uint8[uint8.length - 1]
-        output += encode(temp >> 2)
-        output += encode((temp << 4) & 0x3F)
-        output += '=='
-        break
-      case 2:
-        temp = (uint8[uint8.length - 2] << 8) + (uint8[uint8.length - 1])
-        output += encode(temp >> 10)
-        output += encode((temp >> 4) & 0x3F)
-        output += encode((temp << 2) & 0x3F)
-        output += '='
-        break
-    }
+		// pad the end with zeros, but make sure to not forget the extra bytes
+		switch (extraBytes) {
+			case 1:
+				temp = uint8[uint8.length - 1]
+				output += encode(temp >> 2)
+				output += encode((temp << 4) & 0x3F)
+				output += '=='
+				break
+			case 2:
+				temp = (uint8[uint8.length - 2] << 8) + (uint8[uint8.length - 1])
+				output += encode(temp >> 10)
+				output += encode((temp >> 4) & 0x3F)
+				output += encode((temp << 2) & 0x3F)
+				output += '='
+				break
+		}
 
-    return output
-  }
+		return output
+	}
 
-  exports.toByteArray = b64ToByteArray
-  exports.fromByteArray = uint8ToBase64
+	exports.toByteArray = b64ToByteArray
+	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
 },{}],19:[function(_dereq_,module,exports){
@@ -16914,69 +16914,69 @@ module.exports={"data":[1961,1969,1977,1985,2025,2033,2041,2049,2057,2065,2073,2
 var PdfPrinter = _dereq_('../printer');
 
 var defaultClientFonts = {
-  Roboto: {
-    normal: 'Roboto-Regular.ttf',
-    bold: 'Roboto-Medium.ttf',
-    italics: 'Roboto-Italic.ttf',
-    bolditalics: 'Roboto-Italic.ttf'
-  }
+	Roboto: {
+		normal: 'Roboto-Regular.ttf',
+		bold: 'Roboto-Medium.ttf',
+		italics: 'Roboto-Italic.ttf',
+		bolditalics: 'Roboto-Italic.ttf'
+	}
 };
 
 function Document(docDefinition, fonts, vfs) {
-  this.docDefinition = docDefinition;
-  this.fonts = fonts || defaultClientFonts;
-  this.vfs = vfs;
+	this.docDefinition = docDefinition;
+	this.fonts = fonts || defaultClientFonts;
+	this.vfs = vfs;
 }
 
 Document.prototype._createDoc = function(options, callback) {
-  var printer = new PdfPrinter(this.fonts);
-  printer.fs.bindFS(this.vfs);
+	var printer = new PdfPrinter(this.fonts);
+	printer.fs.bindFS(this.vfs);
 
-  var doc = printer.createPdfKitDocument(this.docDefinition, options);
-  var chunks = [];
-  var result;
+	var doc = printer.createPdfKitDocument(this.docDefinition, options);
+	var chunks = [];
+	var result;
 
-  doc.on('data', function(chunk) {
-    chunks.push(chunk);
-  });
-  doc.on('end', function() {
-    result = Buffer.concat(chunks);
-    callback(result);
-  });
-  doc.end();
+	doc.on('data', function(chunk) {
+		chunks.push(chunk);
+	});
+	doc.on('end', function() {
+		result = Buffer.concat(chunks);
+		callback(result);
+	});
+	doc.end();
 };
 
 Document.prototype.open = function(message) {
-  // we have to open the window immediately and store the reference
-  // otherwise popup blockers will stop us
-  var win = window.open('', '_blank');
+	// we have to open the window immediately and store the reference
+	// otherwise popup blockers will stop us
+	var win = window.open('', '_blank');
 
-  try {
-    this.getDataUrl(function(result) {
-      win.location.href = result;
-    });
-  } catch(e) {
-    win.close();
-    return false;
-  }
+	try {
+		this.getDataUrl(function(result) {
+			win.location.href = result;
+		});
+	} catch(e) {
+		win.close();
+		return false;
+	}
 };
 
 
 Document.prototype.print = function(timeout) {
-  timeout = timeout || 2000;
+	timeout = timeout || 2000;
 
-  this.getDataUrl(function(dataUrl) {
-    var iFrame = document.createElement('iframe');
-    iFrame.style.display = 'none';
-    iFrame.src = dataUrl;
-    iFrame.onload = function() {
-      setTimeout(function() {
-        document.body.removeChild(iFrame);
-      }, timeout);
-    };
+	this.getDataUrl(function(dataUrl) {
+		var iFrame = document.createElement('iframe');
+		iFrame.style.display = 'none';
+		iFrame.src = dataUrl;
+		iFrame.onload = function() {
+			setTimeout(function() {
+				document.body.removeChild(iFrame);
+			}, timeout);
+		};
 
-    document.body.appendChild(iFrame);
-  }, { autoPrint: true });
+		document.body.appendChild(iFrame);
+	}, { autoPrint: true });
 };
 
 Document.prototype.download = function(defaultFileName, cb) {
@@ -16988,28 +16988,28 @@ Document.prototype.download = function(defaultFileName, cb) {
 };
 
 Document.prototype.getBase64 = function(cb, options) {
-  if (!cb) throw 'getBase64 is an async method and needs a callback argument';
-  this._createDoc(options, function(buffer) {
-    cb(buffer.toString('base64'));
-  });
+	if (!cb) throw 'getBase64 is an async method and needs a callback argument';
+	this._createDoc(options, function(buffer) {
+		cb(buffer.toString('base64'));
+	});
 };
 
 Document.prototype.getDataUrl = function(cb, options) {
-  if (!cb) throw 'getDataUrl is an async method and needs a callback argument';
-  this._createDoc(options, function(buffer) {
-    cb('data:application/pdf;base64,' + buffer.toString('base64'));
-  });
+	if (!cb) throw 'getDataUrl is an async method and needs a callback argument';
+	this._createDoc(options, function(buffer) {
+		cb('data:application/pdf;base64,' + buffer.toString('base64'));
+	});
 };
 
 Document.prototype.getBuffer = function(cb, options) {
-  if (!cb) throw 'getBuffer is an async method and needs a callback argument';
-  this._createDoc(options, cb);
+	if (!cb) throw 'getBuffer is an async method and needs a callback argument';
+	this._createDoc(options, cb);
 };
 
 module.exports = {
-  createPdf: function(docDefinition) {
-    return new Document(docDefinition, window.pdfMake.fonts, window.pdfMake.vfs);
-  }
+	createPdf: function(docDefinition) {
+		return new Document(docDefinition, window.pdfMake.fonts, window.pdfMake.vfs);
+	}
 };
 
 }).call(this,_dereq_("buffer").Buffer)
@@ -17020,40 +17020,40 @@ module.exports = {
 
 // var b64 = require('./base64.js').base64DecToArr;
 function VirtualFileSystem() {
-  this.fileSystem = {};
-  this.baseSystem = {};
+	this.fileSystem = {};
+	this.baseSystem = {};
 }
 
 VirtualFileSystem.prototype.readFileSync = function(filename) {
-  filename = fixFilename(filename);
+	filename = fixFilename(filename);
 
-  var base64content = this.baseSystem[filename];
-  if (base64content) {
-    return new Buffer(base64content, 'base64');
-  }
+	var base64content = this.baseSystem[filename];
+	if (base64content) {
+		return new Buffer(base64content, 'base64');
+	}
 
-  return this.fileSystem[filename];
+	return this.fileSystem[filename];
 };
 
 VirtualFileSystem.prototype.writeFileSync = function(filename, content) {
-  this.fileSystem[fixFilename(filename)] = content;
+	this.fileSystem[fixFilename(filename)] = content;
 };
 
 VirtualFileSystem.prototype.bindFS = function(data) {
-  this.baseSystem = data;
+	this.baseSystem = data;
 };
 
 
 function fixFilename(filename) {
-  if (filename.indexOf(__dirname) === 0) {
-    filename = filename.substring(__dirname.length);
-  }
+	if (filename.indexOf(__dirname) === 0) {
+		filename = filename.substring(__dirname.length);
+	}
 
-  if (filename.indexOf('/') === 0) {
-    filename = filename.substring(1);
-  }
+	if (filename.indexOf('/') === 0) {
+		filename = filename.substring(1);
+	}
 
-  return filename;
+	return filename;
 }
 
 module.exports = new VirtualFileSystem();
@@ -17066,120 +17066,120 @@ module.exports=_dereq_('x/K9gc');
 'use strict';
 
 function buildColumnWidths(columns, availableWidth) {
-  var autoColumns = [],
-    autoMin = 0, autoMax = 0,
-    starColumns = [],
-    starMaxMin = 0,
-    starMaxMax = 0,
-    fixedColumns = [];
+	var autoColumns = [],
+		autoMin = 0, autoMax = 0,
+		starColumns = [],
+		starMaxMin = 0,
+		starMaxMax = 0,
+		fixedColumns = [];
 
-  columns.forEach(function(column) {
-    if (isAutoColumn(column)) {
-      autoColumns.push(column);
-      autoMin += column._minWidth;
-      autoMax += column._maxWidth;
-    } else if (isStarColumn(column)) {
-      starColumns.push(column);
-      starMaxMin = Math.max(starMaxMin, column._minWidth);
-      starMaxMax = Math.max(starMaxMax, column._maxWidth);
-    } else {
-      fixedColumns.push(column);
-    }
-  });
+	columns.forEach(function(column) {
+		if (isAutoColumn(column)) {
+			autoColumns.push(column);
+			autoMin += column._minWidth;
+			autoMax += column._maxWidth;
+		} else if (isStarColumn(column)) {
+			starColumns.push(column);
+			starMaxMin = Math.max(starMaxMin, column._minWidth);
+			starMaxMax = Math.max(starMaxMax, column._maxWidth);
+		} else {
+			fixedColumns.push(column);
+		}
+	});
 
-  fixedColumns.forEach(function(col) {
-    if (col.width < (col._minWidth) && col.elasticWidth) {
-      col._calcWidth = col._minWidth;
-    } else {
-      col._calcWidth = col.width;
-    }
+	fixedColumns.forEach(function(col) {
+		if (col.width < (col._minWidth) && col.elasticWidth) {
+			col._calcWidth = col._minWidth;
+		} else {
+			col._calcWidth = col.width;
+		}
 
-    availableWidth -= col._calcWidth;
-  });
+		availableWidth -= col._calcWidth;
+	});
 
-  // http://www.freesoft.org/CIE/RFC/1942/18.htm
-  // http://www.w3.org/TR/CSS2/tables.html#width-layout
-  // http://dev.w3.org/csswg/css3-tables-algorithms/Overview.src.htm
-  var minW = autoMin + starMaxMin * starColumns.length;
-  var maxW = autoMax + starMaxMax * starColumns.length;
-  if (minW >= availableWidth) {
-    // case 1 - there's no way to fit all columns within available width
-    // that's actually pretty bad situation with PDF as we have no horizontal scroll
-    // no easy workaround (unless we decide, in the future, to split single words)
-    // currently we simply use minWidths for all columns
-    autoColumns.forEach(function(col) {
-      col._calcWidth = col._minWidth;
-    });
+	// http://www.freesoft.org/CIE/RFC/1942/18.htm
+	// http://www.w3.org/TR/CSS2/tables.html#width-layout
+	// http://dev.w3.org/csswg/css3-tables-algorithms/Overview.src.htm
+	var minW = autoMin + starMaxMin * starColumns.length;
+	var maxW = autoMax + starMaxMax * starColumns.length;
+	if (minW >= availableWidth) {
+		// case 1 - there's no way to fit all columns within available width
+		// that's actually pretty bad situation with PDF as we have no horizontal scroll
+		// no easy workaround (unless we decide, in the future, to split single words)
+		// currently we simply use minWidths for all columns
+		autoColumns.forEach(function(col) {
+			col._calcWidth = col._minWidth;
+		});
 
-    starColumns.forEach(function(col) {
-      col._calcWidth = starMaxMin; // starMaxMin already contains padding
-    });
-  } else {
-    if (maxW < availableWidth) {
-      // case 2 - we can fit rest of the table within available space
-      autoColumns.forEach(function(col) {
-        col._calcWidth = col._maxWidth;
-        availableWidth -= col._calcWidth;
-      });
-    } else {
-      // maxW is too large, but minW fits within available width
-      var W = availableWidth - minW;
-      var D = maxW - minW;
+		starColumns.forEach(function(col) {
+			col._calcWidth = starMaxMin; // starMaxMin already contains padding
+		});
+	} else {
+		if (maxW < availableWidth) {
+			// case 2 - we can fit rest of the table within available space
+			autoColumns.forEach(function(col) {
+				col._calcWidth = col._maxWidth;
+				availableWidth -= col._calcWidth;
+			});
+		} else {
+			// maxW is too large, but minW fits within available width
+			var W = availableWidth - minW;
+			var D = maxW - minW;
 
-      autoColumns.forEach(function(col) {
-        var d = col._maxWidth - col._minWidth;
-        col._calcWidth = col._minWidth + d * W / D;
-        availableWidth -= col._calcWidth;
-      });
-    }
+			autoColumns.forEach(function(col) {
+				var d = col._maxWidth - col._minWidth;
+				col._calcWidth = col._minWidth + d * W / D;
+				availableWidth -= col._calcWidth;
+			});
+		}
 
-    if (starColumns.length > 0) {
-      var starSize = availableWidth / starColumns.length;
+		if (starColumns.length > 0) {
+			var starSize = availableWidth / starColumns.length;
 
-      starColumns.forEach(function(col) {
-        col._calcWidth = starSize;
-      });
-    }
-  }
+			starColumns.forEach(function(col) {
+				col._calcWidth = starSize;
+			});
+		}
+	}
 }
 
 function isAutoColumn(column) {
-  return column.width === 'auto';
+	return column.width === 'auto';
 }
 
 function isStarColumn(column) {
-  return column.width === null || column.width === undefined || column.width === '*' || column.width === 'star';
+	return column.width === null || column.width === undefined || column.width === '*' || column.width === 'star';
 }
 
 //TODO: refactor and reuse in measureTable
 function measureMinMax(columns) {
-  var result = { min: 0, max: 0 };
+	var result = { min: 0, max: 0 };
 
-  var maxStar = { min: 0, max: 0 };
-  var starCount = 0;
+	var maxStar = { min: 0, max: 0 };
+	var starCount = 0;
 
-  for(var i = 0, l = columns.length; i < l; i++) {
-    var c = columns[i];
+	for(var i = 0, l = columns.length; i < l; i++) {
+		var c = columns[i];
 
-    if (isStarColumn(c)) {
-      maxStar.min = Math.max(maxStar.min, c._minWidth);
-      maxStar.max = Math.max(maxStar.max, c._maxWidth);
-      starCount++;
-    } else if (isAutoColumn(c)) {
-      result.min += c._minWidth;
-      result.max += c._maxWidth;
-    } else {
-      result.min += ((c.width !== undefined && c.width) || c._minWidth);
-      result.max += ((c.width  !== undefined && c.width) || c._maxWidth);
-    }
-  }
+		if (isStarColumn(c)) {
+			maxStar.min = Math.max(maxStar.min, c._minWidth);
+			maxStar.max = Math.max(maxStar.max, c._maxWidth);
+			starCount++;
+		} else if (isAutoColumn(c)) {
+			result.min += c._minWidth;
+			result.max += c._maxWidth;
+		} else {
+			result.min += ((c.width !== undefined && c.width) || c._minWidth);
+			result.max += ((c.width  !== undefined && c.width) || c._maxWidth);
+		}
+	}
 
-  if (starCount) {
-    result.min += starCount * maxStar.min;
-    result.max += starCount * maxStar.max;
-  }
+	if (starCount) {
+		result.min += starCount * maxStar.min;
+		result.max += starCount * maxStar.max;
+	}
 
-  return result;
+	return result;
 }
 
 /**
@@ -17187,10 +17187,10 @@ function measureMinMax(columns) {
 * @private
 */
 module.exports = {
-  buildColumnWidths: buildColumnWidths,
-  measureMinMax: measureMinMax,
-  isAutoColumn: isAutoColumn,
-  isStarColumn: isStarColumn
+	buildColumnWidths: buildColumnWidths,
+	measureMinMax: measureMinMax,
+	isAutoColumn: isAutoColumn,
+	isStarColumn: isStarColumn
 };
 
 },{}],78:[function(_dereq_,module,exports){
@@ -17207,12 +17207,12 @@ var pack = _dereq_('./helpers').pack;
 * @private
 */
 function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts, images) {
-  this.textTools = new TextTools(fontProvider);
-  this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
-  this.imageMeasure = imageMeasure;
-  this.tableLayouts = tableLayouts;
-  this.images = images;
-  this.autoImageIndex = 1;
+	this.textTools = new TextTools(fontProvider);
+	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
+	this.imageMeasure = imageMeasure;
+	this.tableLayouts = tableLayouts;
+	this.images = images;
+	this.autoImageIndex = 1;
 }
 
 /**
@@ -17222,416 +17222,416 @@ function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, t
 * @return {Object}              document-measurement-object
 */
 DocMeasure.prototype.measureDocument = function(docStructure) {
-  return this.measureNode(docStructure);
+	return this.measureNode(docStructure);
 };
 
 DocMeasure.prototype.measureNode = function(node) {
-  // expand shortcuts
-  if (node instanceof Array) {
-    node = { stack: node };
-  } else if (typeof node == 'string' || node instanceof String) {
-    node = { text: node };
-  }
+	// expand shortcuts
+	if (node instanceof Array) {
+		node = { stack: node };
+	} else if (typeof node == 'string' || node instanceof String) {
+		node = { text: node };
+	}
 
-  var self = this;
+	var self = this;
 
-  return this.styleStack.auto(node, function() {
-    // TODO: refactor + rethink whether this is the proper way to handle margins
-    node._margin = getNodeMargin(node);
+	return this.styleStack.auto(node, function() {
+		// TODO: refactor + rethink whether this is the proper way to handle margins
+		node._margin = getNodeMargin(node);
 
-    if (node.columns) {
-      return extendMargins(self.measureColumns(node));
-    } else if (node.stack) {
-      return extendMargins(self.measureVerticalContainer(node));
-    } else if (node.ul) {
-      return extendMargins(self.measureList(false, node));
-    } else if (node.ol) {
-      return extendMargins(self.measureList(true, node));
-    } else if (node.table) {
-      return extendMargins(self.measureTable(node));
-    } else if (node.text !== undefined) {
-      return extendMargins(self.measureLeaf(node));
-    } else if (node.image) {
-      return extendMargins(self.measureImage(node));
-    } else if (node.canvas) {
-      return extendMargins(self.measureCanvas(node));
-    } else {
-      throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
-    }
-  });
+		if (node.columns) {
+			return extendMargins(self.measureColumns(node));
+		} else if (node.stack) {
+			return extendMargins(self.measureVerticalContainer(node));
+		} else if (node.ul) {
+			return extendMargins(self.measureList(false, node));
+		} else if (node.ol) {
+			return extendMargins(self.measureList(true, node));
+		} else if (node.table) {
+			return extendMargins(self.measureTable(node));
+		} else if (node.text !== undefined) {
+			return extendMargins(self.measureLeaf(node));
+		} else if (node.image) {
+			return extendMargins(self.measureImage(node));
+		} else if (node.canvas) {
+			return extendMargins(self.measureCanvas(node));
+		} else {
+			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+		}
+	});
 
-  function extendMargins(node) {
-    var margin = node._margin;
+	function extendMargins(node) {
+		var margin = node._margin;
 
-    if (margin) {
-      node._minWidth += margin[0] + margin[2];
-      node._maxWidth += margin[0] + margin[2];
-    }
+		if (margin) {
+			node._minWidth += margin[0] + margin[2];
+			node._maxWidth += margin[0] + margin[2];
+		}
 
-    return node;
-  }
+		return node;
+	}
 
-  function getNodeMargin() {
-    var margin = node.margin;
+	function getNodeMargin() {
+		var margin = node.margin;
 
-    if (!margin && node.style) {
-      var styleArray = (node.style instanceof Array) ? node.style : [ node.style ];
+		if (!margin && node.style) {
+			var styleArray = (node.style instanceof Array) ? node.style : [ node.style ];
 
-      for(var i = styleArray.length - 1; i >= 0; i--) {
-        var styleName = styleArray[i];
-        var style = self.styleStack.styleDictionary[node.style];
-        if (style && style.margin) {
-          margin = style.margin;
-          break;
-        }
-      }
-    }
+			for(var i = styleArray.length - 1; i >= 0; i--) {
+				var styleName = styleArray[i];
+				var style = self.styleStack.styleDictionary[node.style];
+				if (style && style.margin) {
+					margin = style.margin;
+					break;
+				}
+			}
+		}
 
-    if (!margin) return null;
+		if (!margin) return null;
 
-    if (typeof margin === 'number' || margin instanceof Number) {
-      margin = [ margin, margin, margin, margin ];
-    } else if (margin instanceof Array) {
-      if (margin.length === 2) {
-        margin = [ margin[0], margin[1], margin[0], margin[1] ];
-      }
-    }
+		if (typeof margin === 'number' || margin instanceof Number) {
+			margin = [ margin, margin, margin, margin ];
+		} else if (margin instanceof Array) {
+			if (margin.length === 2) {
+				margin = [ margin[0], margin[1], margin[0], margin[1] ];
+			}
+		}
 
-    return margin;
-  }
+		return margin;
+	}
 };
 
 DocMeasure.prototype.convertIfBase64Image = function(node) {
-  if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) {
-    var label = '$$pdfmake$$' + this.autoImageIndex++;
-    this.images[label] = node.image;
-    node.image = label;
+	if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) {
+		var label = '$$pdfmake$$' + this.autoImageIndex++;
+		this.images[label] = node.image;
+		node.image = label;
 }
 };
 
 DocMeasure.prototype.measureImage = function(node) {
-  if (this.images) {
-    this.convertIfBase64Image(node);
-  }
+	if (this.images) {
+		this.convertIfBase64Image(node);
+	}
 
-  var imageSize = this.imageMeasure.measureImage(node.image);
+	var imageSize = this.imageMeasure.measureImage(node.image);
 
-  if (node.fit) {
-    var factor = (imageSize.width / imageSize.height > node.fit[0] / node.fit[1]) ? node.fit[0] / imageSize.width : node.fit[1] / imageSize.height;
-    node._width = node._minWidth = node._maxWidth = imageSize.width * factor;
-    node._height = imageSize.height * factor;
-  } else {
-    node._width = node._minWidth = node._maxWidth = node.width || imageSize.width;
-    node._height = node.height || (imageSize.height * node._width / imageSize.width);
-  }
+	if (node.fit) {
+		var factor = (imageSize.width / imageSize.height > node.fit[0] / node.fit[1]) ? node.fit[0] / imageSize.width : node.fit[1] / imageSize.height;
+		node._width = node._minWidth = node._maxWidth = imageSize.width * factor;
+		node._height = imageSize.height * factor;
+	} else {
+		node._width = node._minWidth = node._maxWidth = node.width || imageSize.width;
+		node._height = node.height || (imageSize.height * node._width / imageSize.width);
+	}
 
-  node._alignment = this.styleStack.getProperty('alignment');
-  return node;
+	node._alignment = this.styleStack.getProperty('alignment');
+	return node;
 };
 
 DocMeasure.prototype.measureLeaf = function(node) {
-  var data = this.textTools.buildInlines(node.text, this.styleStack);
+	var data = this.textTools.buildInlines(node.text, this.styleStack);
 
-  node._inlines = data.items;
-  node._minWidth = data.minWidth;
-  node._maxWidth = data.maxWidth;
+	node._inlines = data.items;
+	node._minWidth = data.minWidth;
+	node._maxWidth = data.maxWidth;
 
-  return node;
+	return node;
 };
 
 DocMeasure.prototype.measureVerticalContainer = function(node) {
-  var items = node.stack;
+	var items = node.stack;
 
-  node._minWidth = 0;
-  node._maxWidth = 0;
+	node._minWidth = 0;
+	node._maxWidth = 0;
 
-  for(var i = 0, l = items.length; i < l; i++) {
-    items[i] = this.measureNode(items[i]);
+	for(var i = 0, l = items.length; i < l; i++) {
+		items[i] = this.measureNode(items[i]);
 
-    node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
-    node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth);
-  }
+		node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
+		node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth);
+	}
 
-  return node;
+	return node;
 };
 
 DocMeasure.prototype.gapSizeForList = function(isOrderedList, listItems) {
-  if (isOrderedList) {
-    var longestNo = (listItems.length).toString().replace(/./g, '9');
-    return this.textTools.sizeOfString(longestNo + '. ', this.styleStack);
-  } else {
-    return this.textTools.sizeOfString('9. ', this.styleStack);
-  }
+	if (isOrderedList) {
+		var longestNo = (listItems.length).toString().replace(/./g, '9');
+		return this.textTools.sizeOfString(longestNo + '. ', this.styleStack);
+	} else {
+		return this.textTools.sizeOfString('9. ', this.styleStack);
+	}
 };
 
 DocMeasure.prototype.buildMarker = function(isOrderedList, counter, styleStack, gapSize) {
-  var marker;
+	var marker;
 
-  if (isOrderedList) {
-    marker = { _inlines: this.textTools.buildInlines(counter, styleStack).items };
-  }
-  else {
-    // TODO: ascender-based calculations
-    var radius = gapSize.fontSize / 6;
+	if (isOrderedList) {
+		marker = { _inlines: this.textTools.buildInlines(counter, styleStack).items };
+	}
+	else {
+		// TODO: ascender-based calculations
+		var radius = gapSize.fontSize / 6;
 
-    marker = {
-      canvas: [ {
-        x: radius,
-        y: gapSize.height + gapSize.decender - gapSize.fontSize / 3,//0,// gapSize.fontSize * 2 / 3,
-        r1: radius,
-        r2: radius,
-        type: 'ellipse',
-        color: 'black'
-      } ]
-    };
-  }
+		marker = {
+			canvas: [ {
+				x: radius,
+				y: gapSize.height + gapSize.decender - gapSize.fontSize / 3,//0,// gapSize.fontSize * 2 / 3,
+				r1: radius,
+				r2: radius,
+				type: 'ellipse',
+				color: 'black'
+			} ]
+		};
+	}
 
-  marker._minWidth = marker._maxWidth = gapSize.width;
-  marker._minHeight = marker._maxHeight = gapSize.height;
+	marker._minWidth = marker._maxWidth = gapSize.width;
+	marker._minHeight = marker._maxHeight = gapSize.height;
 
-  return marker;
+	return marker;
 };
 
 DocMeasure.prototype.measureList = function(isOrdered, node) {
-  var style = this.styleStack.clone();
+	var style = this.styleStack.clone();
 
-  var items = isOrdered ? node.ol : node.ul;
-  node._gapSize = this.gapSizeForList(isOrdered, items);
-  node._minWidth = 0;
-  node._maxWidth = 0;
+	var items = isOrdered ? node.ol : node.ul;
+	node._gapSize = this.gapSizeForList(isOrdered, items);
+	node._minWidth = 0;
+	node._maxWidth = 0;
 
-  var counter = 1;
+	var counter = 1;
 
-  for(var i = 0, l = items.length; i < l; i++) {
-    var nextItem = items[i] = this.measureNode(items[i]);
+	for(var i = 0, l = items.length; i < l; i++) {
+		var nextItem = items[i] = this.measureNode(items[i]);
 
-    var marker = counter++ + '. ';
+		var marker = counter++ + '. ';
 
-    if (!nextItem.ol && !nextItem.ul) {
-      nextItem.listMarker = this.buildMarker(isOrdered, nextItem.counter || marker, style, node._gapSize);
-    }  // TODO: else - nested lists numbering
+		if (!nextItem.ol && !nextItem.ul) {
+			nextItem.listMarker = this.buildMarker(isOrdered, nextItem.counter || marker, style, node._gapSize);
+		}  // TODO: else - nested lists numbering
 
-    node._minWidth = Math.max(node._minWidth, items[i]._minWidth + node._gapSize.width);
-    node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth + node._gapSize.width);
-  }
+		node._minWidth = Math.max(node._minWidth, items[i]._minWidth + node._gapSize.width);
+		node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth + node._gapSize.width);
+	}
 
-  return node;
+	return node;
 };
 
 DocMeasure.prototype.measureColumns = function(node) {
-  var columns = node.columns;
-  node._gap = this.styleStack.getProperty('columnGap') || 0;
+	var columns = node.columns;
+	node._gap = this.styleStack.getProperty('columnGap') || 0;
 
-  for(var i = 0, l = columns.length; i < l; i++) {
-    columns[i] = this.measureNode(columns[i]);
-  }
+	for(var i = 0, l = columns.length; i < l; i++) {
+		columns[i] = this.measureNode(columns[i]);
+	}
 
-  var measures = ColumnCalculator.measureMinMax(columns);
+	var measures = ColumnCalculator.measureMinMax(columns);
 
-  node._minWidth = measures.min + node._gap * (columns.length - 1);
-  node._maxWidth = measures.max + node._gap * (columns.length - 1);
+	node._minWidth = measures.min + node._gap * (columns.length - 1);
+	node._maxWidth = measures.max + node._gap * (columns.length - 1);
 
-  return node;
+	return node;
 };
 
 DocMeasure.prototype.measureTable = function(node) {
-  extendTableWidths(node);
-  node._layout = getLayout(this.tableLayouts);
-  node._offsets = getOffsets(node._layout);
+	extendTableWidths(node);
+	node._layout = getLayout(this.tableLayouts);
+	node._offsets = getOffsets(node._layout);
 
-  var colSpans = [];
-  var col, row, cols, rows;
+	var colSpans = [];
+	var col, row, cols, rows;
 
-  for(col = 0, cols = node.table.body[0].length; col < cols; col++) {
-    var c = node.table.widths[col];
-    c._minWidth = 0;
-    c._maxWidth = 0;
+	for(col = 0, cols = node.table.body[0].length; col < cols; col++) {
+		var c = node.table.widths[col];
+		c._minWidth = 0;
+		c._maxWidth = 0;
 
-    for(row = 0, rows = node.table.body.length; row < rows; row++) {
-      var rowData = node.table.body[row];
-      var data = rowData[col];
-      if (!data._span) {
-        data = rowData[col] = this.measureNode(data);
+		for(row = 0, rows = node.table.body.length; row < rows; row++) {
+			var rowData = node.table.body[row];
+			var data = rowData[col];
+			if (!data._span) {
+				data = rowData[col] = this.measureNode(data);
 
-        if (data.colSpan && data.colSpan > 1) {
-          markSpans(rowData, col, data.colSpan);
-          colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
-        } else {
-          c._minWidth = Math.max(c._minWidth, data._minWidth);
-          c._maxWidth = Math.max(c._maxWidth, data._maxWidth);
-        }
-      }
+				if (data.colSpan && data.colSpan > 1) {
+					markSpans(rowData, col, data.colSpan);
+					colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
+				} else {
+					c._minWidth = Math.max(c._minWidth, data._minWidth);
+					c._maxWidth = Math.max(c._maxWidth, data._maxWidth);
+				}
+			}
 
-      if (data.rowSpan && data.rowSpan > 1) {
-        markVSpans(node.table, row, col, data.rowSpan);
-      }
-    }
-  }
+			if (data.rowSpan && data.rowSpan > 1) {
+				markVSpans(node.table, row, col, data.rowSpan);
+			}
+		}
+	}
 
-  extendWidthsForColSpans();
+	extendWidthsForColSpans();
 
-  var measures = ColumnCalculator.measureMinMax(node.table.widths);
+	var measures = ColumnCalculator.measureMinMax(node.table.widths);
 
-  node._minWidth = measures.min + node._offsets.total;
-  node._maxWidth = measures.max + node._offsets.total;
+	node._minWidth = measures.min + node._offsets.total;
+	node._maxWidth = measures.max + node._offsets.total;
 
-  return node;
+	return node;
 
-  function getLayout(tableLayouts) {
-    var layout = node.layout;
+	function getLayout(tableLayouts) {
+		var layout = node.layout;
 
-    if (typeof node.layout === 'string' || node instanceof String) {
-      layout = tableLayouts[layout];
-    }
+		if (typeof node.layout === 'string' || node instanceof String) {
+			layout = tableLayouts[layout];
+		}
 
-    var defaultLayout = {
-      hLineWidth: function(i, node) { return 1; }, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
-      vLineWidth: function(i, node) { return 1; },
-      hLineColor: function(i, node) { return 'black'; },
-      vLineColor: function(i, node) { return 'black'; },
-      paddingLeft: function(i, node) { return 4; }, //i && 4 || 0; },
-      paddingRight: function(i, node) { return 4; }, //(i < node.table.widths.length - 1) ? 4 : 0; },
-      paddingTop: function(i, node) { return 2; },
-      paddingBottom: function(i, node) { return 2; }
-    };
+		var defaultLayout = {
+			hLineWidth: function(i, node) { return 1; }, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
+			vLineWidth: function(i, node) { return 1; },
+			hLineColor: function(i, node) { return 'black'; },
+			vLineColor: function(i, node) { return 'black'; },
+			paddingLeft: function(i, node) { return 4; }, //i && 4 || 0; },
+			paddingRight: function(i, node) { return 4; }, //(i < node.table.widths.length - 1) ? 4 : 0; },
+			paddingTop: function(i, node) { return 2; },
+			paddingBottom: function(i, node) { return 2; }
+		};
 
-    return pack(defaultLayout, layout);
-  }
+		return pack(defaultLayout, layout);
+	}
 
-  function getOffsets(layout) {
-    var offsets = [];
-    var totalOffset = 0;
-    var prevRightPadding = 0;
+	function getOffsets(layout) {
+		var offsets = [];
+		var totalOffset = 0;
+		var prevRightPadding = 0;
 
-    for(var i = 0, l = node.table.widths.length; i < l; i++) {
-      var lOffset = prevRightPadding + layout.vLineWidth(i, node) + layout.paddingLeft(i, node);
-      offsets.push(lOffset);
-      totalOffset += lOffset;
-      prevRightPadding = layout.paddingRight(i, node);
-    }
+		for(var i = 0, l = node.table.widths.length; i < l; i++) {
+			var lOffset = prevRightPadding + layout.vLineWidth(i, node) + layout.paddingLeft(i, node);
+			offsets.push(lOffset);
+			totalOffset += lOffset;
+			prevRightPadding = layout.paddingRight(i, node);
+		}
 
-    totalOffset += prevRightPadding + layout.vLineWidth(node.table.widths.length, node);
+		totalOffset += prevRightPadding + layout.vLineWidth(node.table.widths.length, node);
 
-    return {
-      total: totalOffset,
-      offsets: offsets
-    };
-  }
+		return {
+			total: totalOffset,
+			offsets: offsets
+		};
+	}
 
-  function extendWidthsForColSpans() {
-    var q, j;
+	function extendWidthsForColSpans() {
+		var q, j;
 
-    for (var i = 0, l = colSpans.length; i < l; i++) {
-      var span = colSpans[i];
+		for (var i = 0, l = colSpans.length; i < l; i++) {
+			var span = colSpans[i];
 
-      var currentMinMax = getMinMax(span.col, span.span, node._offsets);
-      var minDifference = span.minWidth - currentMinMax.minWidth;
-      var maxDifference = span.maxWidth - currentMinMax.maxWidth;
+			var currentMinMax = getMinMax(span.col, span.span, node._offsets);
+			var minDifference = span.minWidth - currentMinMax.minWidth;
+			var maxDifference = span.maxWidth - currentMinMax.maxWidth;
 
-      if (minDifference > 0) {
-        q = minDifference / span.span;
+			if (minDifference > 0) {
+				q = minDifference / span.span;
 
-        for(j = 0; j < span.span; j++) {
-          node.table.widths[span.col + j]._minWidth += q;
-        }
-      }
+				for(j = 0; j < span.span; j++) {
+					node.table.widths[span.col + j]._minWidth += q;
+				}
+			}
 
-      if (maxDifference > 0) {
-        q = maxDifference / span.span;
+			if (maxDifference > 0) {
+				q = maxDifference / span.span;
 
-        for(j = 0; j < span.span; j++) {
-          node.table.widths[span.col + j]._maxWidth += q;
-        }
-      }
-    }
-  }
+				for(j = 0; j < span.span; j++) {
+					node.table.widths[span.col + j]._maxWidth += q;
+				}
+			}
+		}
+	}
 
-  function getMinMax(col, span, offsets) {
-    var result = { minWidth: 0, maxWidth: 0 };
+	function getMinMax(col, span, offsets) {
+		var result = { minWidth: 0, maxWidth: 0 };
 
-    for(var i = 0; i < span; i++) {
-      result.minWidth += node.table.widths[col + i]._minWidth + (i? offsets.offsets[col + i] : 0);
-      result.maxWidth += node.table.widths[col + i]._maxWidth + (i? offsets.offsets[col + i] : 0);
-    }
+		for(var i = 0; i < span; i++) {
+			result.minWidth += node.table.widths[col + i]._minWidth + (i? offsets.offsets[col + i] : 0);
+			result.maxWidth += node.table.widths[col + i]._maxWidth + (i? offsets.offsets[col + i] : 0);
+		}
 
-    return result;
-  }
+		return result;
+	}
 
-  function markSpans(rowData, col, span) {
-    for (var i = 1; i < span; i++) {
-      rowData[col + i] = {
-        _span: true,
-        _minWidth: 0,
-        _maxWidth: 0,
-        rowSpan: rowData[col].rowSpan
-      };
-    }
-  }
+	function markSpans(rowData, col, span) {
+		for (var i = 1; i < span; i++) {
+			rowData[col + i] = {
+				_span: true,
+				_minWidth: 0,
+				_maxWidth: 0,
+				rowSpan: rowData[col].rowSpan
+			};
+		}
+	}
 
-  function markVSpans(table, row, col, span) {
-    for (var i = 1; i < span; i++) {
-      table.body[row + i][col] = {
-        _span: true,
-        _minWidth: 0,
-        _maxWidth: 0,
-      };
-    }
-  }
+	function markVSpans(table, row, col, span) {
+		for (var i = 1; i < span; i++) {
+			table.body[row + i][col] = {
+				_span: true,
+				_minWidth: 0,
+				_maxWidth: 0,
+			};
+		}
+	}
 
-  function extendTableWidths(node) {
-    if (!node.table.widths) {
-      node.table.widths = 'auto';
-    }
+	function extendTableWidths(node) {
+		if (!node.table.widths) {
+			node.table.widths = 'auto';
+		}
 
-    if (typeof node.table.widths === 'string' || node.table.widths instanceof String) {
-      node.table.widths = [ node.table.widths ];
+		if (typeof node.table.widths === 'string' || node.table.widths instanceof String) {
+			node.table.widths = [ node.table.widths ];
 
-      while(node.table.widths.length < node.table.body[0].length) {
-        node.table.widths.push(node.table.widths[node.table.widths.length - 1]);
-      }
-    }
+			while(node.table.widths.length < node.table.body[0].length) {
+				node.table.widths.push(node.table.widths[node.table.widths.length - 1]);
+			}
+		}
 
-    for(var i = 0, l = node.table.widths.length; i < l; i++) {
-      var w = node.table.widths[i];
-      if (typeof w === 'number' || w instanceof Number || typeof w === 'string' || w instanceof String) {
-        node.table.widths[i] = { width: w };
-      }
-    }
-  }
+		for(var i = 0, l = node.table.widths.length; i < l; i++) {
+			var w = node.table.widths[i];
+			if (typeof w === 'number' || w instanceof Number || typeof w === 'string' || w instanceof String) {
+				node.table.widths[i] = { width: w };
+			}
+		}
+	}
 };
 
 DocMeasure.prototype.measureCanvas = function(node) {
-  var w = 0, h = 0;
+	var w = 0, h = 0;
 
-  for(var i = 0, l = node.canvas.length; i < l; i++) {
-    var vector = node.canvas[i];
+	for(var i = 0, l = node.canvas.length; i < l; i++) {
+		var vector = node.canvas[i];
 
-    switch(vector.type) {
-    case 'ellipse':
-      w = Math.max(w, vector.x + vector.r1);
-      h = Math.max(h, vector.y + vector.r2);
-      break;
-    case 'rect':
-      w = Math.max(w, vector.x + vector.w);
-      h = Math.max(h, vector.y + vector.h);
-      break;
-    case 'line':
-      w = Math.max(w, vector.x1, vector.x2);
-      h = Math.max(h, vector.y1, vector.y2);
-      break;
-    case 'polyline':
-      for(var i2 = 0, l2 = vector.points.length; i2 < l2; i2++) {
-        w = Math.max(w, vector.points[i2].x);
-        h = Math.max(h, vector.points[i2].y);
-      }
-      break;
-    }
-  }
+		switch(vector.type) {
+		case 'ellipse':
+			w = Math.max(w, vector.x + vector.r1);
+			h = Math.max(h, vector.y + vector.r2);
+			break;
+		case 'rect':
+			w = Math.max(w, vector.x + vector.w);
+			h = Math.max(h, vector.y + vector.h);
+			break;
+		case 'line':
+			w = Math.max(w, vector.x1, vector.x2);
+			h = Math.max(h, vector.y1, vector.y2);
+			break;
+		case 'polyline':
+			for(var i2 = 0, l2 = vector.points.length; i2 < l2; i2++) {
+				w = Math.max(w, vector.points[i2].x);
+				h = Math.max(h, vector.points[i2].y);
+			}
+			break;
+		}
+	}
 
-  node._minWidth = node._maxWidth = w;
-  node._minHeight = node._maxHeight = h;
+	node._minWidth = node._maxWidth = w;
+	node._minHeight = node._maxHeight = h;
 
-  return node;
+	return node;
 };
 
 module.exports = DocMeasure;
@@ -17647,132 +17647,132 @@ var TraversalTracker = _dereq_('./traversalTracker');
 * It facilitates column divisions and vertical sync
 */
 function DocumentContext(pageSize, pageMargins) {
-  this.pages = [];
+	this.pages = [];
 
-  this.pageSize = pageSize;
-  this.pageMargins = pageMargins;
+	this.pageSize = pageSize;
+	this.pageMargins = pageMargins;
 
-  this.x = pageMargins.left;
-  this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
-  this.availableHeight = 0;
-  this.page = -1;
+	this.x = pageMargins.left;
+	this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
+	this.availableHeight = 0;
+	this.page = -1;
 
-  this.snapshots = [];
+	this.snapshots = [];
 
-  this.endingCell = null;
+	this.endingCell = null;
 
     this.defaultPage = { items: [] };
     
     this.tracker = new TraversalTracker();
     
-  this.addPage();
+	this.addPage();
 }
 
 DocumentContext.prototype.beginColumnGroup = function() {
-  this.snapshots.push({
-    x: this.x,
-    y: this.y,
-    availableHeight: this.availableHeight,
-    availableWidth: this.availableWidth,
-    page: this.page,
-    bottomMost: { y: this.y, page: this.page },
-    endingCell: this.endingCell,
-    lastColumnWidth: this.lastColumnWidth
-  });
+	this.snapshots.push({
+		x: this.x,
+		y: this.y,
+		availableHeight: this.availableHeight,
+		availableWidth: this.availableWidth,
+		page: this.page,
+		bottomMost: { y: this.y, page: this.page },
+		endingCell: this.endingCell,
+		lastColumnWidth: this.lastColumnWidth
+	});
 
-  this.lastColumnWidth = 0;
+	this.lastColumnWidth = 0;
 };
 
 DocumentContext.prototype.beginColumn = function(width, offset, endingCell) {
-  var saved = this.snapshots[this.snapshots.length - 1];
+	var saved = this.snapshots[this.snapshots.length - 1];
 
-  this.calculateBottomMost(saved);
+	this.calculateBottomMost(saved);
 
   this.endingCell = endingCell;
-  this.page = saved.page;
-  this.x = this.x + this.lastColumnWidth + (offset || 0);
-  this.y = saved.y;
-  this.availableWidth = width;  //saved.availableWidth - offset;
-  this.availableHeight = saved.availableHeight;
+	this.page = saved.page;
+	this.x = this.x + this.lastColumnWidth + (offset || 0);
+	this.y = saved.y;
+	this.availableWidth = width;	//saved.availableWidth - offset;
+	this.availableHeight = saved.availableHeight;
 
-  this.lastColumnWidth = width;
+	this.lastColumnWidth = width;
 };
 
 DocumentContext.prototype.calculateBottomMost = function(destContext) {
-  if (this.endingCell) {
-    this.saveContextInEndingCell(this.endingCell);
-    this.endingCell = null;
-  } else {
-    destContext.bottomMost = bottomMostContext(this, destContext.bottomMost);
-  }
+	if (this.endingCell) {
+		this.saveContextInEndingCell(this.endingCell);
+		this.endingCell = null;
+	} else {
+		destContext.bottomMost = bottomMostContext(this, destContext.bottomMost);
+	}
 };
 
 DocumentContext.prototype.markEnding = function(endingCell) {
-  this.page = endingCell._columnEndingContext.page;
-  this.x = endingCell._columnEndingContext.x;
-  this.y = endingCell._columnEndingContext.y;
-  this.availableWidth = endingCell._columnEndingContext.availableWidth;
-  this.availableHeight = endingCell._columnEndingContext.availableHeight;
-  this.lastColumnWidth = endingCell._columnEndingContext.lastColumnWidth;
+	this.page = endingCell._columnEndingContext.page;
+	this.x = endingCell._columnEndingContext.x;
+	this.y = endingCell._columnEndingContext.y;
+	this.availableWidth = endingCell._columnEndingContext.availableWidth;
+	this.availableHeight = endingCell._columnEndingContext.availableHeight;
+	this.lastColumnWidth = endingCell._columnEndingContext.lastColumnWidth;
 };
 
 DocumentContext.prototype.saveContextInEndingCell = function(endingCell) {
-  endingCell._columnEndingContext = {
-    page: this.page,
-    x: this.x,
-    y: this.y,
-    availableHeight: this.availableHeight,
-    availableWidth: this.availableWidth,
-    lastColumnWidth: this.lastColumnWidth
-  };
+	endingCell._columnEndingContext = {
+		page: this.page,
+		x: this.x,
+		y: this.y,
+		availableHeight: this.availableHeight,
+		availableWidth: this.availableWidth,
+		lastColumnWidth: this.lastColumnWidth
+	};
 };
 
 DocumentContext.prototype.completeColumnGroup = function() {
-  var saved = this.snapshots.pop();
+	var saved = this.snapshots.pop();
 
-  this.calculateBottomMost(saved);
+	this.calculateBottomMost(saved);
 
-  this.endingCell = null;
-  this.x = saved.x;
-  this.y = saved.bottomMost.y;
-  this.page = saved.bottomMost.page;
-  this.availableWidth = saved.availableWidth;
-  this.availableHeight = saved.bottomMost.availableHeight;
-  this.lastColumnWidth = saved.lastColumnWidth;
+	this.endingCell = null;
+	this.x = saved.x;
+	this.y = saved.bottomMost.y;
+	this.page = saved.bottomMost.page;
+	this.availableWidth = saved.availableWidth;
+	this.availableHeight = saved.bottomMost.availableHeight;
+	this.lastColumnWidth = saved.lastColumnWidth;
 };
 
 DocumentContext.prototype.addMargin = function(left, right) {
-  this.x += left;
-  this.availableWidth -= left + (right || 0);
+	this.x += left;
+	this.availableWidth -= left + (right || 0);
 };
 
 DocumentContext.prototype.moveDown = function(offset) {
-  this.y += offset;
-  this.availableHeight -= offset;
+	this.y += offset;
+	this.availableHeight -= offset;
 
-  return this.availableHeight > 0;
+	return this.availableHeight > 0;
 };
 
 DocumentContext.prototype.moveToPageTop = function() {
-  this.y = this.pageMargins.top;
-  this.availableHeight = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+	this.y = this.pageMargins.top;
+	this.availableHeight = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
 };
 
 DocumentContext.prototype.addPage = function() {
-  var page = this.getDefaultPage();
+	var page = this.getDefaultPage();
     this.pages.push(page);
-  this.page = this.pages.length - 1;
-  this.moveToPageTop();
+	this.page = this.pages.length - 1;
+	this.moveToPageTop();
 
     this.tracker.emit('pageAdded');
     
-  return page;
+	return page;
 };
 
 DocumentContext.prototype.getCurrentPage = function() {
-  if (this.page < 0 || this.page >= this.pages.length) return null;
+	if (this.page < 0 || this.page >= this.pages.length) return null;
 
-  return this.pages[this.page];
+	return this.pages[this.page];
 };
 
 DocumentContext.prototype.setDefaultPage = function(defaultPage) {
@@ -17785,19 +17785,19 @@ DocumentContext.prototype.getDefaultPage = function() {
 };
 
 function bottomMostContext(c1, c2) {
-  var r;
+	var r;
 
-  if (c1.page > c2.page) r = c1;
-  else if (c2.page > c1.page) r = c2;
-  else r = (c1.y > c2.y) ? c1 : c2;
+	if (c1.page > c2.page) r = c1;
+	else if (c2.page > c1.page) r = c2;
+	else r = (c1.y > c2.y) ? c1 : c2;
 
-  return {
-    page: r.page,
-    x: r.x,
-    y: r.y,
-    availableHeight: r.availableHeight,
-    availableWidth: r.availableWidth
-  };
+	return {
+		page: r.page,
+		x: r.x,
+		y: r.y,
+		availableHeight: r.availableHeight,
+		availableWidth: r.availableWidth
+	};
 }
 
 /****TESTS**** (add a leading '/' to uncomment)
@@ -17820,145 +17820,145 @@ var DocumentContext = _dereq_('./documentContext');
 * elements to current page and sets their positions based on the context
 */
 function ElementWriter(context, tracker) {
-  this.context = context;
-  this.contextStack = [];
-  this.tracker = tracker || { emit: function() { } };
+	this.context = context;
+	this.contextStack = [];
+	this.tracker = tracker || { emit: function() { } };
 }
 
 ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition) {
-  var height = line.getHeight();
-  var context = this.context;
-  var page = context.getCurrentPage();
+	var height = line.getHeight();
+	var context = this.context;
+	var page = context.getCurrentPage();
 
-  if (context.availableHeight < height || !page) {
-    return false;
-  }
+	if (context.availableHeight < height || !page) {
+		return false;
+	}
 
-  line.x = context.x + (line.x || 0);
-  line.y = context.y + (line.y || 0);
+	line.x = context.x + (line.x || 0);
+	line.y = context.y + (line.y || 0);
 
-  this.alignLine(line);
+	this.alignLine(line);
 
     page.items.push({
         type: 'line',
         item: line
     });
-  this.tracker.emit('lineAdded', line);
+	this.tracker.emit('lineAdded', line);
 
-  if (!dontUpdateContextPosition) context.moveDown(height);
+	if (!dontUpdateContextPosition) context.moveDown(height);
 
-  return true;
+	return true;
 };
 
 ElementWriter.prototype.alignLine = function(line) {
-  var width = this.context.availableWidth;
-  var lineWidth = line.getWidth();
+	var width = this.context.availableWidth;
+	var lineWidth = line.getWidth();
 
-  var alignment = line.inlines && line.inlines.length > 0 && line.inlines[0].alignment;
+	var alignment = line.inlines && line.inlines.length > 0 && line.inlines[0].alignment;
 
-  var offset = 0;
-  switch(alignment) {
-    case 'right':
-      offset = width - lineWidth;
-      break;
-    case 'center':
-      offset = (width - lineWidth) / 2;
-      break;
-  }
+	var offset = 0;
+	switch(alignment) {
+		case 'right':
+			offset = width - lineWidth;
+			break;
+		case 'center':
+			offset = (width - lineWidth) / 2;
+			break;
+	}
 
-  if (offset) {
-    line.x = (line.x || 0) + offset;
-  }
+	if (offset) {
+		line.x = (line.x || 0) + offset;
+	}
 
-  if (alignment === 'justify' &&
-    !line.newLineForced &&
-    !line.lastLineInParagraph &&
-    line.inlines.length > 1) {
-    var additionalSpacing = (width - lineWidth) / (line.inlines.length - 1);
+	if (alignment === 'justify' &&
+		!line.newLineForced &&
+		!line.lastLineInParagraph &&
+		line.inlines.length > 1) {
+		var additionalSpacing = (width - lineWidth) / (line.inlines.length - 1);
 
-    for(var i = 1, l = line.inlines.length; i < l; i++) {
-      offset = i * additionalSpacing;
+		for(var i = 1, l = line.inlines.length; i < l; i++) {
+			offset = i * additionalSpacing;
 
-      line.inlines[i].x += offset;
-    }
-  }
+			line.inlines[i].x += offset;
+		}
+	}
 };
 
 ElementWriter.prototype.addImage = function(image) {
-  var context = this.context;
-  var page = context.getCurrentPage();
+	var context = this.context;
+	var page = context.getCurrentPage();
 
-  if (context.availableHeight < image._height || !page) {
-    return false;
-  }
+	if (context.availableHeight < image._height || !page) {
+		return false;
+	}
 
-  image.x = context.x + (image.x || 0);
-  image.y = context.y;
+	image.x = context.x + (image.x || 0);
+	image.y = context.y;
 
-  this.alignImage(image);
+	this.alignImage(image);
 
-  page.items.push({
+	page.items.push({
         type: 'image',
         item: image
     });
 
-  context.moveDown(image._height);
+	context.moveDown(image._height);
 
-  return true;
+	return true;
 };
 
 ElementWriter.prototype.alignImage = function(image) {
-  var width = this.context.availableWidth;
-  var imageWidth = image._minWidth;
-  var offset = 0;
+	var width = this.context.availableWidth;
+	var imageWidth = image._minWidth;
+	var offset = 0;
 
-  switch(image._alignment) {
-    case 'right':
-      offset = width - imageWidth;
-      break;
-    case 'center':
-      offset = (width - imageWidth) / 2;
-      break;
-  }
+	switch(image._alignment) {
+		case 'right':
+			offset = width - imageWidth;
+			break;
+		case 'center':
+			offset = (width - imageWidth) / 2;
+			break;
+	}
 
-  if (offset) {
-    image.x = (image.x || 0) + offset;
-  }
+	if (offset) {
+		image.x = (image.x || 0) + offset;
+	}
 };
 
 ElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY) {
-  var context = this.context;
-  var page = context.getCurrentPage();
+	var context = this.context;
+	var page = context.getCurrentPage();
 
-  if (page) {
-    offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
+	if (page) {
+		offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
         page.items.push({
             type: 'vector',
             item: vector
         });
-    return true;
-  }
+		return true;
+	}
 };
 
 function cloneLine(line) {
-  var result = new Line(line.maxWidth);
+	var result = new Line(line.maxWidth);
 
-  for(var key in line) {
-    if (line.hasOwnProperty(key)) {
-      result[key] = line[key];
-    }
-  }
+	for(var key in line) {
+		if (line.hasOwnProperty(key)) {
+			result[key] = line[key];
+		}
+	}
 
-  return result;
+	return result;
 }
 
 ElementWriter.prototype.addFragment = function(block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-  var ctx = this.context;
-  var page = ctx.getCurrentPage();
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
 
-  if (block.height > ctx.availableHeight) return false;
+	if (block.height > ctx.availableHeight) return false;
 
-  block.items.forEach(function(item) {
+	block.items.forEach(function(item) {
         switch(item.type) {
             case 'line':
                 var l = cloneLine(item.item);
@@ -17994,11 +17994,11 @@ ElementWriter.prototype.addFragment = function(block, useBlockXOffset, useBlockY
                 });
                 break;
         }
-  });
+	});
 
-  if (!dontUpdateContextPosition) ctx.moveDown(block.height);
+	if (!dontUpdateContextPosition) ctx.moveDown(block.height);
 
-  return true;
+	return true;
 };
 
 /**
@@ -18009,21 +18009,21 @@ ElementWriter.prototype.addFragment = function(block, useBlockXOffset, useBlockY
 * pushContext() - creates a new context for unbreakable blocks (with current availableWidth and full-page-height)
 */
 ElementWriter.prototype.pushContext = function(contextOrWidth, height) {
-  if (contextOrWidth === undefined) {
-    height = this.context.pageSize.height - this.context.pageMargins.top - this.context.pageMargins.bottom;
-    contextOrWidth = this.context.availableWidth;
-  }
+	if (contextOrWidth === undefined) {
+		height = this.context.pageSize.height - this.context.pageMargins.top - this.context.pageMargins.bottom;
+		contextOrWidth = this.context.availableWidth;
+	}
 
-  if (typeof contextOrWidth === 'number' || contextOrWidth instanceof Number) {
-    contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
-  }
+	if (typeof contextOrWidth === 'number' || contextOrWidth instanceof Number) {
+		contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
+	}
 
-  this.contextStack.push(this.context);
-  this.context = contextOrWidth;
+	this.contextStack.push(this.context);
+	this.context = contextOrWidth;
 };
 
 ElementWriter.prototype.popContext = function() {
-  this.context = this.contextStack.pop();
+	this.context = this.contextStack.pop();
 };
 
 
@@ -18034,63 +18034,63 @@ module.exports = ElementWriter;
 'use strict';
 
 function pack() {
-  var result = {};
+	var result = {};
 
-  for(var i = 0, l = arguments.length; i < l; i++) {
-    var obj = arguments[i];
+	for(var i = 0, l = arguments.length; i < l; i++) {
+		var obj = arguments[i];
 
-    if (obj) {
-      for(var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          result[key] = obj[key];
-        }
-      }
-    }
-  }
+		if (obj) {
+			for(var key in obj) {
+				if (obj.hasOwnProperty(key)) {
+					result[key] = obj[key];
+				}
+			}
+		}
+	}
 
-  return result;
+	return result;
 }
 
 function offsetVector(vector, x, y) {
-  switch(vector.type) {
-  case 'ellipse':
-  case 'rect':
-    vector.x += x;
-    vector.y += y;
-    break;
-  case 'line':
-    vector.x1 += x;
-    vector.x2 += x;
-    vector.y1 += y;
-    vector.y2 += y;
-    break;
-  case 'polyline':
-    for(var i = 0, l = vector.points.length; i < l; i++) {
-      vector.points[i].x += x;
-      vector.points[i].y += y;
-    }
-    break;
-  }
+	switch(vector.type) {
+	case 'ellipse':
+	case 'rect':
+		vector.x += x;
+		vector.y += y;
+		break;
+	case 'line':
+		vector.x1 += x;
+		vector.x2 += x;
+		vector.y1 += y;
+		vector.y2 += y;
+		break;
+	case 'polyline':
+		for(var i = 0, l = vector.points.length; i < l; i++) {
+			vector.points[i].x += x;
+			vector.points[i].y += y;
+		}
+		break;
+	}
 }
 
 function fontStringify(key, val) {
-  if (key === 'font') {
-    return 'font';
-  }
-  return val;
+	if (key === 'font') {
+		return 'font';
+	}
+	return val;
 }
 
 function isFunction(functionToCheck) {
-  var getType = {};
-  return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+	var getType = {};
+	return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
 }
 
 
 module.exports = {
-  pack: pack,
-  fontStringify: fontStringify,
-  offsetVector: offsetVector,
-  isFunction: isFunction
+	pack: pack,
+	fontStringify: fontStringify,
+	offsetVector: offsetVector,
+	isFunction: isFunction
 };
 
 },{}],82:[function(_dereq_,module,exports){
@@ -18098,37 +18098,37 @@ module.exports = {
 var pdfKit = _dereq_('pdfmake-pdfkit');
 
 function ImageMeasure(pdfDoc, imageDictionary) {
-  this.pdfDoc = pdfDoc;
-  this.imageDictionary = imageDictionary || {};
+	this.pdfDoc = pdfDoc;
+	this.imageDictionary = imageDictionary || {};
 }
 
 ImageMeasure.prototype.measureImage = function(src) {
-  var image, label;
-  var that = this;
+	var image, label;
+	var that = this;
 
-  if (!this.pdfDoc._imageRegistry[src]) {
-    label = "I" + (++this.pdfDoc._imageCount);
-    image = pdfKit.PDFImage.open(realImageSrc(src), label);
-    image.embed(this.pdfDoc);
-    this.pdfDoc._imageRegistry[src] = image;
-  } else {
-    image = this.pdfDoc._imageRegistry[src];
-  }
+	if (!this.pdfDoc._imageRegistry[src]) {
+		label = "I" + (++this.pdfDoc._imageCount);
+		image = pdfKit.PDFImage.open(realImageSrc(src), label);
+		image.embed(this.pdfDoc);
+		this.pdfDoc._imageRegistry[src] = image;
+	} else {
+		image = this.pdfDoc._imageRegistry[src];
+	}
 
-  return { width: image.width, height: image.height };
+	return { width: image.width, height: image.height };
 
-  function realImageSrc(src) {
-    var img = that.imageDictionary[src];
+	function realImageSrc(src) {
+		var img = that.imageDictionary[src];
 
-    if (!img) return src;
+		if (!img) return src;
 
-    var index = img.indexOf('base64,');
-    if (index < 0) {
-      throw 'invalid image format, images dictionary should contain dataURL entries';
-    }
+		var index = img.indexOf('base64,');
+		if (index < 0) {
+			throw 'invalid image format, images dictionary should contain dataURL entries';
+		}
 
-    return new Buffer(img.substring(index + 7), 'base64');
-  }
+		return new Buffer(img.substring(index + 7), 'base64');
+	}
 };
 
 module.exports = ImageMeasure;
@@ -18158,9 +18158,9 @@ var isFunction = _dereq_('./helpers').isFunction;
  * @param {Object} pageMargins - an object defining top, left, right and bottom margins
  */
 function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
-  this.pageSize = pageSize;
-  this.pageMargins = pageMargins;
-  this.tracker = new TraversalTracker();
+	this.pageSize = pageSize;
+	this.pageMargins = pageMargins;
+	this.tracker = new TraversalTracker();
     this.imageMeasure = imageMeasure;
     this.tableLayouts = {};
 }
@@ -18180,7 +18180,7 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
  * @return {Array} an array of pages
  */
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images) {
-  this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
+	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
 
   docStructure = this.docMeasure.measureDocument(docStructure);
 
@@ -18196,7 +18196,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
   this.processNode(docStructure);
   this.addHeadersAndFooters(header, footer);
 
-  return this.writer.context().pages;
+	return this.writer.context().pages;
 };
 
 LayoutBuilder.prototype.addBackground = function(background) {
@@ -18257,69 +18257,69 @@ LayoutBuilder.prototype.processNode = function(node) {
     } else if (node.canvas) {
       self.processCanvas(node);
     } else if (!node._span) {
-    throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
-    }
-  });
+		throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+		}
+	});
 
-  function applyMargins(callback) {
-    var margin = node._margin;
+	function applyMargins(callback) {
+		var margin = node._margin;
 
     if (node.pageBreak === 'before') {
         self.writer.moveToNextPage();
     }
 
-    if (margin) {
-      self.writer.context().moveDown(margin[1]);
-      self.writer.context().addMargin(margin[0], margin[2]);
-    }
+		if (margin) {
+			self.writer.context().moveDown(margin[1]);
+			self.writer.context().addMargin(margin[0], margin[2]);
+		}
 
-    callback();
+		callback();
 
-    if(margin) {
-      self.writer.context().addMargin(-margin[0], -margin[2]);
-      self.writer.context().moveDown(margin[3]);
-    }
+		if(margin) {
+			self.writer.context().addMargin(-margin[0], -margin[2]);
+			self.writer.context().moveDown(margin[3]);
+		}
 
     if (node.pageBreak === 'after') {
         self.writer.moveToNextPage();
     }
-  }
+	}
 };
 
 // vertical container
 LayoutBuilder.prototype.processVerticalContainer = function(items) {
-  var self = this;
-  items.forEach(function(item) {
-    self.processNode(item);
+	var self = this;
+	items.forEach(function(item) {
+		self.processNode(item);
 
-    //TODO: paragraph gap
-  });
+		//TODO: paragraph gap
+	});
 };
 
 // columns
 LayoutBuilder.prototype.processColumns = function(columnNode) {
-  var columns = columnNode.columns;
-  var availableWidth = this.writer.context().availableWidth;
-  var gaps = gapArray(columnNode._gap);
+	var columns = columnNode.columns;
+	var availableWidth = this.writer.context().availableWidth;
+	var gaps = gapArray(columnNode._gap);
 
-  if (gaps) availableWidth -= (gaps.length - 1) * columnNode._gap;
+	if (gaps) availableWidth -= (gaps.length - 1) * columnNode._gap;
 
-  ColumnCalculator.buildColumnWidths(columns, availableWidth);
-  this.processRow(columns, columns, gaps);
+	ColumnCalculator.buildColumnWidths(columns, availableWidth);
+	this.processRow(columns, columns, gaps);
 
 
-  function gapArray(gap) {
-    if (!gap) return null;
+	function gapArray(gap) {
+		if (!gap) return null;
 
-    var gaps = [];
-    gaps.push(0);
+		var gaps = [];
+		gaps.push(0);
 
-    for(var i = columns.length - 1; i > 0; i--) {
-      gaps.push(gap);
-    }
+		for(var i = columns.length - 1; i > 0; i--) {
+			gaps.push(gap);
+		}
 
-    return gaps;
-  }
+		return gaps;
+	}
 };
 
 LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, tableRow) {
@@ -18375,10 +18375,10 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
     pageDesc.y = Math.min(pageDesc.y, data.y);
   }
 
-  function colLeftOffset(i) {
-    if (gaps && gaps.length > i) return gaps[i];
-    return 0;
-  }
+	function colLeftOffset(i) {
+		if (gaps && gaps.length > i) return gaps[i];
+		return 0;
+	}
 
   function getEndingCell(column, columnIndex) {
     if (column.rowSpan && column.rowSpan > 1) {
@@ -18393,41 +18393,41 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
 
 // lists
 LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
-  var self = this;
+	var self = this;
 
-  this.writer.context().addMargin(gapSize.width);
+	this.writer.context().addMargin(gapSize.width);
 
-  var nextMarker;
-  this.tracker.auto('lineAdded', addMarkerToFirstLeaf, function() {
-    items.forEach(function(item) {
-      nextMarker = item.listMarker;
-      self.processNode(item);
-    });
-  });
+	var nextMarker;
+	this.tracker.auto('lineAdded', addMarkerToFirstLeaf, function() {
+		items.forEach(function(item) {
+			nextMarker = item.listMarker;
+			self.processNode(item);
+		});
+	});
 
-  this.writer.context().addMargin(-gapSize.width);
+	this.writer.context().addMargin(-gapSize.width);
 
-  function addMarkerToFirstLeaf(line) {
-    // I'm not very happy with the way list processing is implemented
-    // (both code and algorithm should be rethinked)
-    if (nextMarker) {
-      var marker = nextMarker;
-      nextMarker = null;
+	function addMarkerToFirstLeaf(line) {
+		// I'm not very happy with the way list processing is implemented
+		// (both code and algorithm should be rethinked)
+		if (nextMarker) {
+			var marker = nextMarker;
+			nextMarker = null;
 
-      if (marker.canvas) {
-        var vector = marker.canvas[0];
+			if (marker.canvas) {
+				var vector = marker.canvas[0];
 
-        offsetVector(vector, -marker._minWidth, 0);
-        self.writer.addVector(vector);
-      } else {
-        var markerLine = new Line(self.pageSize.width);
-        markerLine.addInline(marker._inlines[0]);
-        markerLine.x = -marker._minWidth;
-        markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
-        self.writer.addLine(markerLine, true);
-      }
-    }
-  }
+				offsetVector(vector, -marker._minWidth, 0);
+				self.writer.addVector(vector);
+			} else {
+				var markerLine = new Line(self.pageSize.width);
+				markerLine.addInline(marker._inlines[0]);
+				markerLine.x = -marker._minWidth;
+				markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
+				self.writer.addLine(markerLine, true);
+			}
+		}
+	}
 };
 
 // tables
@@ -18449,25 +18449,25 @@ LayoutBuilder.prototype.processTable = function(tableNode) {
 
 // leafs (texts)
 LayoutBuilder.prototype.processLeaf = function(node) {
-  var line = this.buildNextLine(node);
+	var line = this.buildNextLine(node);
 
-  while (line) {
-    this.writer.addLine(line);
-    line = this.buildNextLine(node);
-  }
+	while (line) {
+		this.writer.addLine(line);
+		line = this.buildNextLine(node);
+	}
 };
 
 LayoutBuilder.prototype.buildNextLine = function(textNode) {
-  if (!textNode._inlines || textNode._inlines.length === 0) return null;
+	if (!textNode._inlines || textNode._inlines.length === 0) return null;
 
-  var line = new Line(this.writer.context().availableWidth);
+	var line = new Line(this.writer.context().availableWidth);
 
-  while(textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
-    line.addInline(textNode._inlines.shift());
-  }
+	while(textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
+		line.addInline(textNode._inlines.shift());
+	}
 
-  line.lastLineInParagraph = textNode._inlines.length === 0;
-  return line;
+	line.lastLineInParagraph = textNode._inlines.length === 0;
+	return line;
 };
 
 // images
@@ -18476,20 +18476,20 @@ LayoutBuilder.prototype.processImage = function(node) {
 };
 
 LayoutBuilder.prototype.processCanvas = function(node) {
-  var height = node._minHeight;
+	var height = node._minHeight;
 
-  if (this.writer.context().availableHeight < height) {
-    // TODO: support for canvas larger than a page
-    // TODO: support for other overflow methods
+	if (this.writer.context().availableHeight < height) {
+		// TODO: support for canvas larger than a page
+		// TODO: support for other overflow methods
 
-    this.writer.moveToNextPage();
-  }
+		this.writer.moveToNextPage();
+	}
 
-  node.canvas.forEach(function(vector) {
-    this.writer.addVector(vector);
-  }, this);
+	node.canvas.forEach(function(vector) {
+		this.writer.addVector(vector);
+	}, this);
 
-  this.writer.context().moveDown(height);
+	this.writer.context().moveDown(height);
 };
 
 
@@ -18507,47 +18507,47 @@ module.exports = LayoutBuilder;
 * @param {Number} Maximum width this line can have
 */
 function Line(maxWidth) {
-  this.maxWidth = maxWidth;
-  this.leadingCut = 0;
-  this.trailingCut = 0;
-  this.inlineWidths = 0;
-  this.inlines = [];
+	this.maxWidth = maxWidth;
+	this.leadingCut = 0;
+	this.trailingCut = 0;
+	this.inlineWidths = 0;
+	this.inlines = [];
 }
 
 Line.prototype.getAscenderHeight = function() {
-  var y = 0;
+	var y = 0;
 
-  this.inlines.forEach(function(inline) {
-    y = Math.max(y, inline.font.ascender / 1000 * inline.fontSize);
-  });
-  return y;
+	this.inlines.forEach(function(inline) {
+		y = Math.max(y, inline.font.ascender / 1000 * inline.fontSize);
+	});
+	return y;
 };
 
 Line.prototype.hasEnoughSpaceForInline = function(inline) {
-  if (this.inlines.length === 0) return true;
-  if (this.newLineForced) return false;
+	if (this.inlines.length === 0) return true;
+	if (this.newLineForced) return false;
 
-  return this.inlineWidths + inline.width - this.leadingCut - (inline.trailingCut || 0) <= this.maxWidth;
+	return this.inlineWidths + inline.width - this.leadingCut - (inline.trailingCut || 0) <= this.maxWidth;
 };
 
 Line.prototype.addInline = function(inline) {
-  if (this.inlines.length === 0) {
-    this.leadingCut = inline.leadingCut || 0;
-  }
-  this.trailingCut = inline.trailingCut || 0;
+	if (this.inlines.length === 0) {
+		this.leadingCut = inline.leadingCut || 0;
+	}
+	this.trailingCut = inline.trailingCut || 0;
 
-  inline.x = this.inlineWidths - this.leadingCut;
+	inline.x = this.inlineWidths - this.leadingCut;
 
-  this.inlines.push(inline);
-  this.inlineWidths += inline.width;
+	this.inlines.push(inline);
+	this.inlineWidths += inline.width;
 
-  if (inline.lineEnd) {
-    this.newLineForced = true;
-  }
+	if (inline.lineEnd) {
+		this.newLineForced = true;
+	}
 };
 
 Line.prototype.getWidth = function() {
-  return this.inlineWidths - this.leadingCut - this.trailingCut;
+	return this.inlineWidths - this.leadingCut - this.trailingCut;
 };
 
 /**
@@ -18555,13 +18555,13 @@ Line.prototype.getWidth = function() {
 * @return {Number}
 */
 Line.prototype.getHeight = function() {
-  var max = 0;
+	var max = 0;
 
-  this.inlines.forEach(function(item) {
-    max = Math.max(max, item.height || 0);
-  });
+	this.inlines.forEach(function(item) {
+		max = Math.max(max, item.height || 0);
+	});
 
-  return max;
+	return max;
 };
 
 module.exports = Line;
@@ -18582,123 +18582,123 @@ var ElementWriter = _dereq_('./elementWriter');
 *                 whole block will be rendered on the same page)
 */
 function PageElementWriter(context, tracker) {
-  this.transactionLevel = 0;
-  this.repeatables = [];
+	this.transactionLevel = 0;
+	this.repeatables = [];
 
-  this.writer = new ElementWriter(context, tracker);
+	this.writer = new ElementWriter(context, tracker);
 }
 
 PageElementWriter.prototype.addLine = function(line, dontUpdateContextPosition) {
-  if (!this.writer.addLine(line, dontUpdateContextPosition)) {
-    this.moveToNextPage();
-    this.writer.addLine(line, dontUpdateContextPosition);
-  }
+	if (!this.writer.addLine(line, dontUpdateContextPosition)) {
+		this.moveToNextPage();
+		this.writer.addLine(line, dontUpdateContextPosition);
+	}
 };
 
 PageElementWriter.prototype.addImage = function(image) {
-  if(!this.writer.addImage(image)) {
-    this.moveToNextPage();
-    this.writer.addImage(image);
-  }
+	if(!this.writer.addImage(image)) {
+		this.moveToNextPage();
+		this.writer.addImage(image);
+	}
 };
 
 PageElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY) {
-  this.writer.addVector(vector, ignoreContextX, ignoreContextY);
+	this.writer.addVector(vector, ignoreContextX, ignoreContextY);
 };
 
 PageElementWriter.prototype.addFragment = function(fragment) {
-  if (!this.writer.addFragment(fragment)) {
-    this.moveToNextPage();
-    this.writer.addFragment(fragment);
-  }
+	if (!this.writer.addFragment(fragment)) {
+		this.moveToNextPage();
+		this.writer.addFragment(fragment);
+	}
 };
 
 PageElementWriter.prototype.moveToNextPage = function() {
-  var nextPageIndex = this.writer.context.page + 1;
+	var nextPageIndex = this.writer.context.page + 1;
 
-  var prevPage = this.writer.context.page;
-  var prevY = this.writer.context.y;
+	var prevPage = this.writer.context.page;
+	var prevY = this.writer.context.y;
 
-  if (nextPageIndex >= this.writer.context.pages.length) {
-    // create new Page
+	if (nextPageIndex >= this.writer.context.pages.length) {
+		// create new Page
         this.writer.context.addPage();
 
-    // add repeatable fragments
-    this.repeatables.forEach(function(rep) {
-      this.writer.addFragment(rep, true);
-    }, this);
-  } else {
-    this.writer.context.page = nextPageIndex;
-    this.writer.context.moveToPageTop();
+		// add repeatable fragments
+		this.repeatables.forEach(function(rep) {
+			this.writer.addFragment(rep, true);
+		}, this);
+	} else {
+		this.writer.context.page = nextPageIndex;
+		this.writer.context.moveToPageTop();
 
-    this.repeatables.forEach(function(rep) {
-      this.writer.context.moveDown(rep.height);
-    }, this);
-  }
+		this.repeatables.forEach(function(rep) {
+			this.writer.context.moveDown(rep.height);
+		}, this);
+	}
 
-  this.writer.tracker.emit('pageChanged', {
-    prevPage: prevPage,
-    prevY: prevY,
-    y: this.writer.context.y
-  });
+	this.writer.tracker.emit('pageChanged', {
+		prevPage: prevPage,
+		prevY: prevY,
+		y: this.writer.context.y
+	});
 };
 
 PageElementWriter.prototype.beginUnbreakableBlock = function(width, height) {
-  if (this.transactionLevel++ === 0) {
-    this.originalX = this.writer.context.x;
-    this.writer.pushContext(width, height);
-  }
+	if (this.transactionLevel++ === 0) {
+		this.originalX = this.writer.context.x;
+		this.writer.pushContext(width, height);
+	}
 };
 
 PageElementWriter.prototype.commitUnbreakableBlock = function(forcedX, forcedY) {
-  if (--this.transactionLevel === 0) {
-    var unbreakableContext = this.writer.context;
-    this.writer.popContext();
+	if (--this.transactionLevel === 0) {
+		var unbreakableContext = this.writer.context;
+		this.writer.popContext();
 
-    if(unbreakableContext.pages.length > 0) {
-      // no support for multi-page unbreakableBlocks
-      var fragment = unbreakableContext.pages[0];
-      fragment.xOffset = forcedX;
-      fragment.yOffset = forcedY;
+		if(unbreakableContext.pages.length > 0) {
+			// no support for multi-page unbreakableBlocks
+			var fragment = unbreakableContext.pages[0];
+			fragment.xOffset = forcedX;
+			fragment.yOffset = forcedY;
 
-      //TODO: vectors can influence height in some situations
-      fragment.height = unbreakableContext.y;
+			//TODO: vectors can influence height in some situations
+			fragment.height = unbreakableContext.y;
 
-      if (forcedX !== undefined || forcedY !== undefined) {
-        this.writer.addFragment(fragment, true, true, true);
-      } else {
-        this.addFragment(fragment);
-      }
-    }
-  }
+			if (forcedX !== undefined || forcedY !== undefined) {
+				this.writer.addFragment(fragment, true, true, true);
+			} else {
+				this.addFragment(fragment);
+			}
+		}
+	}
 };
 
 PageElementWriter.prototype.currentBlockToRepeatable = function() {
-  var unbreakableContext = this.writer.context;
-  var rep = { items: [] };
+	var unbreakableContext = this.writer.context;
+	var rep = { items: [] };
 
     unbreakableContext.pages[0].items.forEach(function(item) {
         rep.items.push(item);
     });
 
-  rep.xOffset = this.originalX;
+	rep.xOffset = this.originalX;
 
-  //TODO: vectors can influence height in some situations
-  rep.height = unbreakableContext.y;
+	//TODO: vectors can influence height in some situations
+	rep.height = unbreakableContext.y;
 
-  return rep;
+	return rep;
 };
 
 PageElementWriter.prototype.pushToRepeatables = function(rep) {
-  this.repeatables.push(rep);
+	this.repeatables.push(rep);
 };
 
 PageElementWriter.prototype.popFromRepeatables = function() {
-  this.repeatables.pop();
+	this.repeatables.pop();
 };
 
 PageElementWriter.prototype.context = function() {
-  return this.writer.context;
+	return this.writer.context;
 };
 
 module.exports = PageElementWriter;
@@ -18725,18 +18725,18 @@ var ImageMeasure = _dereq_('./imageMeasure');
  *
  * @example
  * var fontDescriptors = {
- *  Roboto: {
- *    normal: 'fonts/Roboto-Regular.ttf',
- *    bold: 'fonts/Roboto-Medium.ttf',
- *    italics: 'fonts/Roboto-Italic.ttf',
- *    bolditalics: 'fonts/Roboto-Italic.ttf'
- *  }
+ *	Roboto: {
+ *		normal: 'fonts/Roboto-Regular.ttf',
+ *		bold: 'fonts/Roboto-Medium.ttf',
+ *		italics: 'fonts/Roboto-Italic.ttf',
+ *		bolditalics: 'fonts/Roboto-Italic.ttf'
+ *	}
  * };
  *
  * var printer = new PdfPrinter(fontDescriptors);
  */
 function PdfPrinter(fontDescriptors) {
-  this.fontDescriptors = fontDescriptors;
+	this.fontDescriptors = fontDescriptors;
 }
 
 /**
@@ -18755,17 +18755,17 @@ function PdfPrinter(fontDescriptors) {
  * @example
  *
  * var docDefinition = {
- *  content: [
- *    'First paragraph',
- *    'Second paragraph, this time a little bit longer',
- *    { text: 'Third paragraph, slightly bigger font size', fontSize: 20 },
- *    { text: 'Another paragraph using a named style', style: 'header' },
- *    { text: ['playing with ', 'inlines' ] },
- *    { text: ['and ', { text: 'restyling ', bold: true }, 'them'] },
- *  ],
- *  styles: {
- *    header: { fontSize: 30, bold: true }
- *  }
+ *	content: [
+ *		'First paragraph',
+ *		'Second paragraph, this time a little bit longer',
+ *		{ text: 'Third paragraph, slightly bigger font size', fontSize: 20 },
+ *		{ text: 'Another paragraph using a named style', style: 'header' },
+ *		{ text: ['playing with ', 'inlines' ] },
+ *		{ text: ['and ', { text: 'restyling ', bold: true }, 'them'] },
+ *	],
+ *	styles: {
+ *		header: { fontSize: 30, bold: true }
+ *	}
  * }
  *
  * var pdfDoc = printer.createPdfKitDocument(docDefinition);
@@ -18776,24 +18776,24 @@ function PdfPrinter(fontDescriptors) {
  * @return {Object} a pdfKit document object which can be saved or encode to data-url
  */
 PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
-  options = options || {};
+	options = options || {};
 
-  var pageSize = pageSize2widthAndHeight(docDefinition.pageSize || 'a4');
+	var pageSize = pageSize2widthAndHeight(docDefinition.pageSize || 'a4');
 
   if(docDefinition.pageOrientation === 'landscape') {
     pageSize = { width: pageSize.height, height: pageSize.width };
   }
 
-  this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ]});
-  this.pdfKitDoc.info.Producer = 'pdfmake';
-  this.pdfKitDoc.info.Creator = 'pdfmake';
-  this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
+	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ]});
+	this.pdfKitDoc.info.Producer = 'pdfmake';
+	this.pdfKitDoc.info.Creator = 'pdfmake';
+	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
   docDefinition.images = docDefinition.images || {};
 
-  var builder = new LayoutBuilder(
-    pageSize,
-    fixPageMargins(docDefinition.pageMargins || 40),
+	var builder = new LayoutBuilder(
+		pageSize,
+		fixPageMargins(docDefinition.pageMargins || 40),
         new ImageMeasure(this.pdfKitDoc, docDefinition.images));
 
   registerDefaultTableLayouts(builder);
@@ -18801,27 +18801,27 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
     builder.registerTableLayouts(options.tableLayouts);
   }
 
-  var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images);
+	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images);
 
-  renderPages(pages, this.fontProvider, this.pdfKitDoc);
+	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
-  if(options.autoPrint){
+	if(options.autoPrint){
         var jsRef = this.pdfKitDoc.ref({
-      S: 'JavaScript',
-      JS: new StringObject('this.print\\(true\\);')
-    });
-    var namesRef = this.pdfKitDoc.ref({
-      Names: [new StringObject('EmbeddedJS'), new PdfKit.PDFReference(this.pdfKitDoc, jsRef.id)],
-    });
+			S: 'JavaScript',
+			JS: new StringObject('this.print\\(true\\);')
+		});
+		var namesRef = this.pdfKitDoc.ref({
+			Names: [new StringObject('EmbeddedJS'), new PdfKit.PDFReference(this.pdfKitDoc, jsRef.id)],
+		});
 
-    jsRef.end();
-    namesRef.end();
+		jsRef.end();
+		namesRef.end();
 
-    this.pdfKitDoc._root.data.Names = {
-      JavaScript: new PdfKit.PDFReference(this.pdfKitDoc, namesRef.id)
-    };
-  }
-  return this.pdfKitDoc;
+		this.pdfKitDoc._root.data.Names = {
+			JavaScript: new PdfKit.PDFReference(this.pdfKitDoc, namesRef.id)
+		};
+	}
+	return this.pdfKitDoc;
 };
 
 function fixPageMargins(margin) {
@@ -18900,21 +18900,21 @@ function pageSize2widthAndHeight(pageSize) {
 }
 
 function StringObject(str){
-  this.isString = true;
-  this.toString = function(){
-    return str;
-  };
+	this.isString = true;
+	this.toString = function(){
+		return str;
+	};
 }
 
 function renderPages(pages, fontProvider, pdfKitDoc) {
-  for(var i = 0, l = pages.length; i < l; i++) {
-    if (i > 0) {
-      pdfKitDoc.addPage();
-    }
+	for(var i = 0, l = pages.length; i < l; i++) {
+		if (i > 0) {
+			pdfKitDoc.addPage();
+		}
 
-    setFontRefs(fontProvider, pdfKitDoc);
+		setFontRefs(fontProvider, pdfKitDoc);
 
-    var page = pages[i];
+		var page = pages[i];
         for(var ii = 0, il = page.items.length; ii < il; ii++) {
             var item = page.items[ii];
             switch(item.type) {
@@ -18929,124 +18929,124 @@ function renderPages(pages, fontProvider, pdfKitDoc) {
                     break;
             }
         }
-  }
+	}
 }
 
 function setFontRefs(fontProvider, pdfKitDoc) {
-  for(var fontName in fontProvider.cache) {
-    var desc = fontProvider.cache[fontName];
+	for(var fontName in fontProvider.cache) {
+		var desc = fontProvider.cache[fontName];
 
-    for (var fontType in desc) {
-      var font = desc[fontType];
-      var _ref, _base, _name;
+		for (var fontType in desc) {
+			var font = desc[fontType];
+			var _ref, _base, _name;
 
-      if (!(_ref = (_base = pdfKitDoc.page.fonts)[_name = font.id])) {
-        _base[_name] = font.ref;
-      }
-    }
-  }
+			if (!(_ref = (_base = pdfKitDoc.page.fonts)[_name = font.id])) {
+				_base[_name] = font.ref;
+			}
+		}
+	}
 }
 
 function renderLine(line, x, y, pdfKitDoc) {
-  x = x || 0;
-  y = y || 0;
+	x = x || 0;
+	y = y || 0;
 
-  var ascenderHeight = line.getAscenderHeight();
-  var lineHeight = line.getHeight();
+	var ascenderHeight = line.getAscenderHeight();
+	var lineHeight = line.getHeight();
 
-  //TODO: line.optimizeInlines();
-  for(var i = 0, l = line.inlines.length; i < l; i++) {
-    var inline = line.inlines[i];
+	//TODO: line.optimizeInlines();
+	for(var i = 0, l = line.inlines.length; i < l; i++) {
+		var inline = line.inlines[i];
 
-    pdfKitDoc.fill(inline.color || 'black');
+		pdfKitDoc.fill(inline.color || 'black');
 
-    pdfKitDoc.save();
-    pdfKitDoc.transform(1, 0, 0, -1, 0, pdfKitDoc.page.height);
+		pdfKitDoc.save();
+		pdfKitDoc.transform(1, 0, 0, -1, 0, pdfKitDoc.page.height);
 
-    pdfKitDoc.addContent('BT');
-    var a = (inline.font.ascender / 1000 * inline.fontSize);
+		pdfKitDoc.addContent('BT');
+		var a = (inline.font.ascender / 1000 * inline.fontSize);
 
-    pdfKitDoc.addContent('' + (x + inline.x) + ' ' + (pdfKitDoc.page.height - y - ascenderHeight) + ' Td');
-    pdfKitDoc.addContent('/' + inline.font.id + ' ' + inline.fontSize + ' Tf');
+		pdfKitDoc.addContent('' + (x + inline.x) + ' ' + (pdfKitDoc.page.height - y - ascenderHeight) + ' Td');
+		pdfKitDoc.addContent('/' + inline.font.id + ' ' + inline.fontSize + ' Tf');
 
-    pdfKitDoc.addContent('<' + encode(inline.font, inline.text) + '> Tj');
+		pdfKitDoc.addContent('<' + encode(inline.font, inline.text) + '> Tj');
 
-    pdfKitDoc.addContent('ET');
-    pdfKitDoc.restore();
-  }
+		pdfKitDoc.addContent('ET');
+		pdfKitDoc.restore();
+	}
 }
 
 function encode(font, text) {
-  font.use(text);
+	font.use(text);
 
-  text = font.encode(text);
-  text = ((function() {
-    var _results = [];
+	text = font.encode(text);
+	text = ((function() {
+		var _results = [];
 
-    for (var i = 0, _ref2 = text.length; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
-      _results.push(text.charCodeAt(i).toString(16));
-    }
-    return _results;
-  })()).join('');
+		for (var i = 0, _ref2 = text.length; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
+			_results.push(text.charCodeAt(i).toString(16));
+		}
+		return _results;
+	})()).join('');
 
-  return text;
+	return text;
 }
 
 function renderVector(vector, pdfDoc) {
-  //TODO: pdf optimization (there's no need to write all properties everytime)
-  pdfDoc.lineWidth(vector.lineWidth || 1);
-  if (vector.dash) {
-    pdfDoc.dash(vector.dash.length, { space: vector.dash.space || vector.dash.length });
-  } else {
-    pdfDoc.undash();
-  }
-  pdfDoc.fillOpacity(vector.fillOpacity || 1);
-  pdfDoc.strokeOpacity(vector.strokeOpacity || 1);
-  pdfDoc.lineJoin(vector.lineJoin || 'miter');
+	//TODO: pdf optimization (there's no need to write all properties everytime)
+	pdfDoc.lineWidth(vector.lineWidth || 1);
+	if (vector.dash) {
+		pdfDoc.dash(vector.dash.length, { space: vector.dash.space || vector.dash.length });
+	} else {
+		pdfDoc.undash();
+	}
+	pdfDoc.fillOpacity(vector.fillOpacity || 1);
+	pdfDoc.strokeOpacity(vector.strokeOpacity || 1);
+	pdfDoc.lineJoin(vector.lineJoin || 'miter');
 
-  //TODO: clipping
+	//TODO: clipping
 
-  switch(vector.type) {
-    case 'ellipse':
-      pdfDoc.ellipse(vector.x, vector.y, vector.r1, vector.r2);
-      break;
-    case 'rect':
-      if (vector.r) {
-        pdfDoc.roundedRect(vector.x, vector.y, vector.w, vector.h, vector.r);
-      } else {
-        pdfDoc.rect(vector.x, vector.y, vector.w, vector.h);
-      }
-      break;
-    case 'line':
-      pdfDoc.moveTo(vector.x1, vector.y1);
-      pdfDoc.lineTo(vector.x2, vector.y2);
-      break;
-    case 'polyline':
-      if (vector.points.length === 0) break;
+	switch(vector.type) {
+		case 'ellipse':
+			pdfDoc.ellipse(vector.x, vector.y, vector.r1, vector.r2);
+			break;
+		case 'rect':
+			if (vector.r) {
+				pdfDoc.roundedRect(vector.x, vector.y, vector.w, vector.h, vector.r);
+			} else {
+				pdfDoc.rect(vector.x, vector.y, vector.w, vector.h);
+			}
+			break;
+		case 'line':
+			pdfDoc.moveTo(vector.x1, vector.y1);
+			pdfDoc.lineTo(vector.x2, vector.y2);
+			break;
+		case 'polyline':
+			if (vector.points.length === 0) break;
 
-      pdfDoc.moveTo(vector.points[0].x, vector.points[0].y);
-      for(var i = 1, l = vector.points.length; i < l; i++) {
-        pdfDoc.lineTo(vector.points[i].x, vector.points[i].y);
-      }
+			pdfDoc.moveTo(vector.points[0].x, vector.points[0].y);
+			for(var i = 1, l = vector.points.length; i < l; i++) {
+				pdfDoc.lineTo(vector.points[i].x, vector.points[i].y);
+			}
 
-      if (vector.points.length > 1) {
-        var p1 = vector.points[0];
-        var pn = vector.points[vector.points.length - 1];
+			if (vector.points.length > 1) {
+				var p1 = vector.points[0];
+				var pn = vector.points[vector.points.length - 1];
 
-        if (vector.closePath || p1.x === pn.x && p1.y === pn.y) {
-          pdfDoc.closePath();
-        }
-      }
-      break;
-  }
+				if (vector.closePath || p1.x === pn.x && p1.y === pn.y) {
+					pdfDoc.closePath();
+				}
+			}
+			break;
+	}
 
-  if (vector.color && vector.lineColor) {
-    pdfDoc.fillAndStroke(vector.color, vector.lineColor);
-  } else if (vector.color) {
-    pdfDoc.fill(vector.color);
-  } else {
-    pdfDoc.stroke(vector.lineColor || 'black');
-  }
+	if (vector.color && vector.lineColor) {
+		pdfDoc.fillAndStroke(vector.color, vector.lineColor);
+	} else if (vector.color) {
+		pdfDoc.fill(vector.color);
+	} else {
+		pdfDoc.stroke(vector.lineColor || 'black');
+	}
 }
 
 function renderImage(image, x, y, pdfKitDoc) {
@@ -19054,42 +19054,42 @@ function renderImage(image, x, y, pdfKitDoc) {
 }
 
 function FontProvider(fontDescriptors, pdfDoc) {
-  this.fonts = {};
-  this.pdfDoc = pdfDoc;
-  this.cache = {};
+	this.fonts = {};
+	this.pdfDoc = pdfDoc;
+	this.cache = {};
 
-  for(var font in fontDescriptors) {
-    if (fontDescriptors.hasOwnProperty(font)) {
-      var fontDef = fontDescriptors[font];
+	for(var font in fontDescriptors) {
+		if (fontDescriptors.hasOwnProperty(font)) {
+			var fontDef = fontDescriptors[font];
 
-      this.fonts[font] = {
-        normal: fontDef.normal,
-        bold: fontDef.bold,
-        italics: fontDef.italics,
-        bolditalics: fontDef.bolditalics
-      };
-    }
-  }
+			this.fonts[font] = {
+				normal: fontDef.normal,
+				bold: fontDef.bold,
+				italics: fontDef.italics,
+				bolditalics: fontDef.bolditalics
+			};
+		}
+	}
 }
 
 FontProvider.prototype.provideFont = function(familyName, bold, italics) {
-  if (!this.fonts[familyName]) return this.pdfDoc._font;
+	if (!this.fonts[familyName]) return this.pdfDoc._font;
 
-  var type = 'normal';
+	var type = 'normal';
 
-  if (bold && italics) type = 'bolditalics';
-  else if (bold) type = 'bold';
-  else if (italics) type = 'italics';
+	if (bold && italics) type = 'bolditalics';
+	else if (bold) type = 'bold';
+	else if (italics) type = 'italics';
 
-  if (!this.cache[familyName]) this.cache[familyName] = {};
+	if (!this.cache[familyName]) this.cache[familyName] = {};
 
-  var cached = this.cache[familyName] && this.cache[familyName][type];
+	var cached = this.cache[familyName] && this.cache[familyName][type];
 
-  if (cached) return cached;
+	if (cached) return cached;
 
-  var fontCache = (this.cache[familyName] = this.cache[familyName] || {});
-  fontCache[type] = this.pdfDoc.font(this.fonts[familyName][type])._font;
-  return fontCache[type];
+	var fontCache = (this.cache[familyName] = this.cache[familyName] || {});
+	fontCache[type] = this.pdfDoc.font(this.fonts[familyName][type])._font;
+	return fontCache[type];
 };
 
 module.exports = PdfPrinter;
@@ -19100,56 +19100,56 @@ PdfPrinter.prototype.fs = _dereq_('fs');
 
 },{"./imageMeasure":82,"./layoutBuilder":83,"./standardPageSizes":87,"fs":"x/K9gc","pdfmake-pdfkit":34}],87:[function(_dereq_,module,exports){
 module.exports = {
-  '4A0': [4767.87, 6740.79],
-  '2A0': [3370.39, 4767.87],
-  A0: [2383.94, 3370.39],
-  A1: [1683.78, 2383.94],
-  A2: [1190.55, 1683.78],
-  A3: [841.89, 1190.55],
-  A4: [595.28, 841.89],
-  A5: [419.53, 595.28],
-  A6: [297.64, 419.53],
-  A7: [209.76, 297.64],
-  A8: [147.40, 209.76],
-  A9: [104.88, 147.40],
-  A10: [73.70, 104.88],
-  B0: [2834.65, 4008.19],
-  B1: [2004.09, 2834.65],
-  B2: [1417.32, 2004.09],
-  B3: [1000.63, 1417.32],
-  B4: [708.66, 1000.63],
-  B5: [498.90, 708.66],
-  B6: [354.33, 498.90],
-  B7: [249.45, 354.33],
-  B8: [175.75, 249.45],
-  B9: [124.72, 175.75],
-  B10: [87.87, 124.72],
-  C0: [2599.37, 3676.54],
-  C1: [1836.85, 2599.37],
-  C2: [1298.27, 1836.85],
-  C3: [918.43, 1298.27],
-  C4: [649.13, 918.43],
-  C5: [459.21, 649.13],
-  C6: [323.15, 459.21],
-  C7: [229.61, 323.15],
-  C8: [161.57, 229.61],
-  C9: [113.39, 161.57],
-  C10: [79.37, 113.39],
-  RA0: [2437.80, 3458.27],
-  RA1: [1729.13, 2437.80],
-  RA2: [1218.90, 1729.13],
-  RA3: [864.57, 1218.90],
-  RA4: [609.45, 864.57],
-  SRA0: [2551.18, 3628.35],
-  SRA1: [1814.17, 2551.18],
-  SRA2: [1275.59, 1814.17],
-  SRA3: [907.09, 1275.59],
-  SRA4: [637.80, 907.09],
-  EXECUTIVE: [521.86, 756.00],
-  FOLIO: [612.00, 936.00],
-  LEGAL: [612.00, 1008.00],
-  LETTER: [612.00, 792.00],
-  TABLOID: [792.00, 1224.00]
+	'4A0': [4767.87, 6740.79],
+	'2A0': [3370.39, 4767.87],
+	A0: [2383.94, 3370.39],
+	A1: [1683.78, 2383.94],
+	A2: [1190.55, 1683.78],
+	A3: [841.89, 1190.55],
+	A4: [595.28, 841.89],
+	A5: [419.53, 595.28],
+	A6: [297.64, 419.53],
+	A7: [209.76, 297.64],
+	A8: [147.40, 209.76],
+	A9: [104.88, 147.40],
+	A10: [73.70, 104.88],
+	B0: [2834.65, 4008.19],
+	B1: [2004.09, 2834.65],
+	B2: [1417.32, 2004.09],
+	B3: [1000.63, 1417.32],
+	B4: [708.66, 1000.63],
+	B5: [498.90, 708.66],
+	B6: [354.33, 498.90],
+	B7: [249.45, 354.33],
+	B8: [175.75, 249.45],
+	B9: [124.72, 175.75],
+	B10: [87.87, 124.72],
+	C0: [2599.37, 3676.54],
+	C1: [1836.85, 2599.37],
+	C2: [1298.27, 1836.85],
+	C3: [918.43, 1298.27],
+	C4: [649.13, 918.43],
+	C5: [459.21, 649.13],
+	C6: [323.15, 459.21],
+	C7: [229.61, 323.15],
+	C8: [161.57, 229.61],
+	C9: [113.39, 161.57],
+	C10: [79.37, 113.39],
+	RA0: [2437.80, 3458.27],
+	RA1: [1729.13, 2437.80],
+	RA2: [1218.90, 1729.13],
+	RA3: [864.57, 1218.90],
+	RA4: [609.45, 864.57],
+	SRA0: [2551.18, 3628.35],
+	SRA1: [1814.17, 2551.18],
+	SRA2: [1275.59, 1814.17],
+	SRA3: [907.09, 1275.59],
+	SRA4: [637.80, 907.09],
+	EXECUTIVE: [521.86, 756.00],
+	FOLIO: [612.00, 936.00],
+	LEGAL: [612.00, 1008.00],
+	LETTER: [612.00, 792.00],
+	TABLOID: [792.00, 1224.00]
 };
 
 },{}],88:[function(_dereq_,module,exports){
@@ -19165,9 +19165,9 @@ module.exports = {
 * @param {Object} optional default style definition
 */
 function StyleContextStack (styleDictionary, defaultStyle) {
-  this.defaultStyle = defaultStyle || {};
-  this.styleDictionary = styleDictionary;
-  this.styleOverrides = [];
+	this.defaultStyle = defaultStyle || {};
+	this.styleDictionary = styleDictionary;
+	this.styleOverrides = [];
 }
 
 /**
@@ -19175,13 +19175,13 @@ function StyleContextStack (styleDictionary, defaultStyle) {
 * @return {StyleContextStack} current stack snapshot
 */
 StyleContextStack.prototype.clone = function() {
-  var stack = new StyleContextStack(this.styleDictionary, this.defaultStyle);
+	var stack = new StyleContextStack(this.styleDictionary, this.defaultStyle);
 
-  this.styleOverrides.forEach(function(item) {
-    stack.styleOverrides.push(item);
-  });
+	this.styleOverrides.forEach(function(item) {
+		stack.styleOverrides.push(item);
+	});
 
-  return stack;
+	return stack;
 };
 
 /**
@@ -19191,7 +19191,7 @@ StyleContextStack.prototype.clone = function() {
 *                                            a new dictionary defining overriding properties
 */
 StyleContextStack.prototype.push = function(styleNameOrOverride) {
-  this.styleOverrides.push(styleNameOrOverride);
+	this.styleOverrides.push(styleNameOrOverride);
 };
 
 /**
@@ -19201,11 +19201,11 @@ StyleContextStack.prototype.push = function(styleNameOrOverride) {
 *                           one element will be removed from the stack)
 */
 StyleContextStack.prototype.pop = function(howMany) {
-  howMany = howMany || 1;
+	howMany = howMany || 1;
 
-  while(howMany-- > 0) {
-    this.styleOverrides.pop();
-  }
+	while(howMany-- > 0) {
+		this.styleOverrides.pop();
+	}
 };
 
 /**
@@ -19217,51 +19217,51 @@ StyleContextStack.prototype.pop = function(howMany) {
 * @return the number of items pushed onto the stack
 */
 StyleContextStack.prototype.autopush = function(item) {
-  if (typeof item === 'string' || item instanceof String) return 0;
+	if (typeof item === 'string' || item instanceof String) return 0;
 
-  var styleNames = [];
+	var styleNames = [];
 
-  if (item.style) {
-    if (item.style instanceof Array) {
-      styleNames = item.style;
-    } else {
-      styleNames = [ item.style ];
-    }
-  }
+	if (item.style) {
+		if (item.style instanceof Array) {
+			styleNames = item.style;
+		} else {
+			styleNames = [ item.style ];
+		}
+	}
 
-  for(var i = 0, l = styleNames.length; i < l; i++) {
-    this.push(styleNames[i]);
-  }
+	for(var i = 0, l = styleNames.length; i < l; i++) {
+		this.push(styleNames[i]);
+	}
 
-  var styleOverrideObject = {};
-  var pushSOO = false;
+	var styleOverrideObject = {};
+	var pushSOO = false;
 
-  [
-    'font',
-    'fontSize',
-    'bold',
-    'italics',
-    'alignment',
-    'color',
-    'columnGap'
-    //'tableCellPadding'
-    // 'cellBorder',
-    // 'headerCellBorder',
-    // 'oddRowCellBorder',
-    // 'evenRowCellBorder',
-    // 'tableBorder'
-  ].forEach(function(key) {
-    if (item[key] !== undefined && item[key] !== null) {
-      styleOverrideObject[key] = item[key];
-      pushSOO = true;
-    }
-  });
+	[
+		'font',
+		'fontSize',
+		'bold',
+		'italics',
+		'alignment',
+		'color',
+		'columnGap'
+		//'tableCellPadding'
+		// 'cellBorder',
+		// 'headerCellBorder',
+		// 'oddRowCellBorder',
+		// 'evenRowCellBorder',
+		// 'tableBorder'
+	].forEach(function(key) {
+		if (item[key] !== undefined && item[key] !== null) {
+			styleOverrideObject[key] = item[key];
+			pushSOO = true;
+		}
+	});
 
-  if (pushSOO) {
-    this.push(styleOverrideObject);
-  }
+	if (pushSOO) {
+		this.push(styleOverrideObject);
+	}
 
-  return styleNames.length + (pushSOO ? 1 : 0);
+	return styleNames.length + (pushSOO ? 1 : 0);
 };
 
 /**
@@ -19273,14 +19273,14 @@ StyleContextStack.prototype.autopush = function(item) {
 * @return {Object} value returned by callback
 */
 StyleContextStack.prototype.auto = function(item, callback) {
-  var pushedItems = this.autopush(item);
-  var result = callback();
+	var pushedItems = this.autopush(item);
+	var result = callback();
 
-  if (pushedItems > 0) {
-    this.pop(pushedItems);
-  }
+	if (pushedItems > 0) {
+		this.pop(pushedItems);
+	}
 
-  return result;
+	return result;
 };
 
 /**
@@ -19290,27 +19290,27 @@ StyleContextStack.prototype.auto = function(item, callback) {
 * @return property value or null if not found
 */
 StyleContextStack.prototype.getProperty = function(property) {
-  if (this.styleOverrides) {
-    for(var i = this.styleOverrides.length - 1; i >= 0; i--) {
-      var item = this.styleOverrides[i];
+	if (this.styleOverrides) {
+		for(var i = this.styleOverrides.length - 1; i >= 0; i--) {
+			var item = this.styleOverrides[i];
 
-      if (typeof item == 'string' || item instanceof String) {
-        // named-style-override
+			if (typeof item == 'string' || item instanceof String) {
+				// named-style-override
 
-        var style = this.styleDictionary[item];
-        if (style && style[property] !== null && style[property] !== undefined) {
-          return style[property];
-        }
-      } else {
-        // style-overrides-object
-        if (item[property] !== undefined && item[property] !== null) {
-          return item[property];
-        }
-      }
-    }
-  }
+				var style = this.styleDictionary[item];
+				if (style && style[property] !== null && style[property] !== undefined) {
+					return style[property];
+				}
+			} else {
+				// style-overrides-object
+				if (item[property] !== undefined && item[property] !== null) {
+					return item[property];
+				}
+			}
+		}
+	}
 
-  return this.defaultStyle && this.defaultStyle[property];
+	return this.defaultStyle && this.defaultStyle[property];
 };
 
 module.exports = StyleContextStack;
@@ -19583,7 +19583,7 @@ var TRAILING = /(\s)+$/g;
 * @param {FontProvider} fontProvider
 */
 function TextTools(fontProvider) {
-  this.fontProvider = fontProvider;
+	this.fontProvider = fontProvider;
 }
 
 /**
@@ -19594,38 +19594,38 @@ function TextTools(fontProvider) {
 * @return {Array} an array of Lines
 */
 TextTools.prototype.buildInlines = function(textArray, styleContextStack) {
-  var measured = measure(this.fontProvider, textArray, styleContextStack);
+	var measured = measure(this.fontProvider, textArray, styleContextStack);
 
-  var minWidth = 0,
-    maxWidth = 0,
-    currentLineWidth;
+	var minWidth = 0,
+		maxWidth = 0,
+		currentLineWidth;
 
-  measured.forEach(function (inline) {
-    minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);
+	measured.forEach(function (inline) {
+		minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);
 
-    if (!currentLineWidth) {
-      currentLineWidth = { width: 0, leadingCut: inline.leadingCut, trailingCut: 0 };
-    }
+		if (!currentLineWidth) {
+			currentLineWidth = { width: 0, leadingCut: inline.leadingCut, trailingCut: 0 };
+		}
 
-    currentLineWidth.width += inline.width;
-    currentLineWidth.trailingCut = inline.trailingCut;
+		currentLineWidth.width += inline.width;
+		currentLineWidth.trailingCut = inline.trailingCut;
 
-    maxWidth = Math.max(maxWidth, getTrimmedWidth(currentLineWidth));
+		maxWidth = Math.max(maxWidth, getTrimmedWidth(currentLineWidth));
 
-    if (inline.lineEnd) {
-      currentLineWidth = null;
-    }
-  });
+		if (inline.lineEnd) {
+			currentLineWidth = null;
+		}
+	});
 
-  return {
-    items: measured,
-    minWidth: minWidth,
-    maxWidth: maxWidth
-  };
+	return {
+		items: measured,
+		minWidth: minWidth,
+		maxWidth: maxWidth
+	};
 
-  function getTrimmedWidth(item) {
-    return Math.max(0, item.width - item.leadingCut - item.trailingCut);
-  }
+	function getTrimmedWidth(item) {
+		return Math.max(0, item.width - item.leadingCut - item.trailingCut);
+	}
 };
 
 /**
@@ -19635,104 +19635,104 @@ TextTools.prototype.buildInlines = function(textArray, styleContextStack) {
 * @return {Object}                   size of the specified string
 */
 TextTools.prototype.sizeOfString = function(text, styleContextStack) {
-  text = text.replace('\t', '    ');
+	text = text.replace('\t', '    ');
 
-  //TODO: refactor - extract from measure
-  var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
-  var fontSize = getStyleProperty({}, styleContextStack, 'fontSize', 12);
-  var bold = getStyleProperty({}, styleContextStack, 'bold', false);
-  var italics = getStyleProperty({}, styleContextStack, 'italics', false);
+	//TODO: refactor - extract from measure
+	var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
+	var fontSize = getStyleProperty({}, styleContextStack, 'fontSize', 12);
+	var bold = getStyleProperty({}, styleContextStack, 'bold', false);
+	var italics = getStyleProperty({}, styleContextStack, 'italics', false);
 
-  var font = this.fontProvider.provideFont(fontName, bold, italics);
+	var font = this.fontProvider.provideFont(fontName, bold, italics);
 
-  return {
-    width: font.widthOfString(removeDiacritics(text), fontSize),
-    height: font.lineHeight(fontSize),
-    fontSize: fontSize,
-    ascender: font.ascender / 1000 * fontSize,
-    decender: font.decender / 1000 * fontSize
-  };
+	return {
+		width: font.widthOfString(removeDiacritics(text), fontSize),
+		height: font.lineHeight(fontSize),
+		fontSize: fontSize,
+		ascender: font.ascender / 1000 * fontSize,
+		decender: font.decender / 1000 * fontSize
+	};
 };
 
 function splitWords(text) {
-  var results = [];
-  text = text.replace('\t', '    ');
+	var results = [];
+	text = text.replace('\t', '    ');
 
-  var array = text.match(WORD_RE);
+	var array = text.match(WORD_RE);
 
-  // i < l - 1, because the last match is always an empty string
-  // other empty strings however are treated as new-lines
-  for(var i = 0, l = array.length; i < l - 1; i++) {
-    var item = array[i];
+	// i < l - 1, because the last match is always an empty string
+	// other empty strings however are treated as new-lines
+	for(var i = 0, l = array.length; i < l - 1; i++) {
+		var item = array[i];
 
-    var isNewLine = item.length === 0;
+		var isNewLine = item.length === 0;
 
-    if (!isNewLine) {
-      results.push({text: item});
-    }
-    else {
-      var shouldAddLine = (results.length === 0 || results[results.length - 1].lineEnd);
+		if (!isNewLine) {
+			results.push({text: item});
+		}
+		else {
+			var shouldAddLine = (results.length === 0 || results[results.length - 1].lineEnd);
 
-      if (shouldAddLine) {
-        results.push({ text: '', lineEnd: true });
-      }
-      else {
-        results[results.length - 1].lineEnd = true;
-      }
-    }
-  }
+			if (shouldAddLine) {
+				results.push({ text: '', lineEnd: true });
+			}
+			else {
+				results[results.length - 1].lineEnd = true;
+			}
+		}
+	}
 
-  return results;
+	return results;
 }
 
 function copyStyle(source, destination) {
-  destination = destination || {};
-  source = source || {}; //TODO: default style
+	destination = destination || {};
+	source = source || {}; //TODO: default style
 
-  for(var key in source) {
-    if (key != 'text' && source.hasOwnProperty(key)) {
-      destination[key] = source[key];
-    }
-  }
+	for(var key in source) {
+		if (key != 'text' && source.hasOwnProperty(key)) {
+			destination[key] = source[key];
+		}
+	}
 
-  return destination;
+	return destination;
 }
 
 function normalizeTextArray(array) {
-  var results = [];
+	var results = [];
 
-  if (typeof array == 'string' || array instanceof String) {
-    array = [ array ];
-  }
+	if (typeof array == 'string' || array instanceof String) {
+		array = [ array ];
+	}
 
-  for(var i = 0, l = array.length; i < l; i++) {
-    var item = array[i];
-    var style = null;
-    var words;
+	for(var i = 0, l = array.length; i < l; i++) {
+		var item = array[i];
+		var style = null;
+		var words;
 
-    if (typeof item == 'string' || item instanceof String) {
-      words = splitWords(item);
-    } else {
-      words = splitWords(item.text);
-      style = copyStyle(item);
-    }
+		if (typeof item == 'string' || item instanceof String) {
+			words = splitWords(item);
+		} else {
+			words = splitWords(item.text);
+			style = copyStyle(item);
+		}
 
-    for(var i2 = 0, l2 = words.length; i2 < l2; i2++) {
-      var result = {
-        text: words[i2].text
-      };
+		for(var i2 = 0, l2 = words.length; i2 < l2; i2++) {
+			var result = {
+				text: words[i2].text
+			};
 
-      if (words[i2].lineEnd) {
-        result.lineEnd = true;
-      }
+			if (words[i2].lineEnd) {
+				result.lineEnd = true;
+			}
 
-      copyStyle(style, result);
+			copyStyle(style, result);
 
-      results.push(result);
-    }
-  }
+			results.push(result);
+		}
+	}
 
-  return results;
+	return results;
 }
 
 //TODO: support for other languages (currently only polish is supported)
@@ -19740,71 +19740,71 @@ var diacriticsMap = { 'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 'Ł': 'L', 'Ń': 'N', 'Ó
 // '  << atom.io workaround
 
 function removeDiacritics(text) {
-  return text.replace(/[^A-Za-z0-9\[\] ]/g, function(a) {
-    return diacriticsMap[a] || a;
-  });
+	return text.replace(/[^A-Za-z0-9\[\] ]/g, function(a) {
+		return diacriticsMap[a] || a;
+	});
 }
 
 function getStyleProperty(item, styleContextStack, property, defaultValue) {
-  var value;
+	var value;
 
-  if (item[property] !== undefined && item[property] !== null) {
-    // item defines this property
-    return item[property];
-  }
+	if (item[property] !== undefined && item[property] !== null) {
+		// item defines this property
+		return item[property];
+	}
 
-  if (!styleContextStack) return defaultValue;
+	if (!styleContextStack) return defaultValue;
 
-  styleContextStack.auto(item, function() {
-    value = styleContextStack.getProperty(property);
-  });
+	styleContextStack.auto(item, function() {
+		value = styleContextStack.getProperty(property);
+	});
 
-  if (value !== null && value !== undefined) {
-    return value;
-  } else {
-    return defaultValue;
-  }
+	if (value !== null && value !== undefined) {
+		return value;
+	} else {
+		return defaultValue;
+	}
 }
 
 function measure(fontProvider, textArray, styleContextStack) {
-  var normalized = normalizeTextArray(textArray);
+	var normalized = normalizeTextArray(textArray);
 
-  normalized.forEach(function(item) {
-    var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
-    var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
-    var bold = getStyleProperty(item, styleContextStack, 'bold', false);
-    var italics = getStyleProperty(item, styleContextStack, 'italics', false);
-    var color = getStyleProperty(item, styleContextStack, 'color', 'black');
+	normalized.forEach(function(item) {
+		var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
+		var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
+		var bold = getStyleProperty(item, styleContextStack, 'bold', false);
+		var italics = getStyleProperty(item, styleContextStack, 'italics', false);
+		var color = getStyleProperty(item, styleContextStack, 'color', 'black');
 
-    var font = fontProvider.provideFont(fontName, bold, italics);
+		var font = fontProvider.provideFont(fontName, bold, italics);
 
-    // TODO: character spacing
-    item.width = font.widthOfString(removeDiacritics(item.text), fontSize);
-    item.height = font.lineHeight(fontSize);
+		// TODO: character spacing
+		item.width = font.widthOfString(removeDiacritics(item.text), fontSize);
+		item.height = font.lineHeight(fontSize);
 
-    var leadingSpaces = item.text.match(LEADING);
-    var trailingSpaces = item.text.match(TRAILING);
-    if (leadingSpaces) {
-      item.leadingCut = font.widthOfString(leadingSpaces[0], fontSize);
-    }
-    else {
-      item.leadingCut = 0;
-    }
+		var leadingSpaces = item.text.match(LEADING);
+		var trailingSpaces = item.text.match(TRAILING);
+		if (leadingSpaces) {
+			item.leadingCut = font.widthOfString(leadingSpaces[0], fontSize);
+		}
+		else {
+			item.leadingCut = 0;
+		}
 
-    if (trailingSpaces) {
-      item.trailingCut = font.widthOfString(trailingSpaces[0], fontSize);
-    }
-    else {
-      item.trailingCut = 0;
-    }
+		if (trailingSpaces) {
+			item.trailingCut = font.widthOfString(trailingSpaces[0], fontSize);
+		}
+		else {
+			item.trailingCut = 0;
+		}
 
-    item.alignment = getStyleProperty(item, styleContextStack, 'alignment', 'left');
-    item.font = font;
-    item.fontSize = fontSize;
-    item.color = color;
-  });
+		item.alignment = getStyleProperty(item, styleContextStack, 'alignment', 'left');
+		item.font = font;
+		item.fontSize = fontSize;
+		item.color = color;
+	});
 
-  return normalized;
+	return normalized;
 }
 
 /****TESTS**** (add a leading '/' to uncomment)
@@ -19826,44 +19826,44 @@ module.exports = TextTools;
 * @constructor
 */
 function TraversalTracker() {
-  this.events = {};
+	this.events = {};
 }
 
 TraversalTracker.prototype.startTracking = function(event, cb) {
-  var callbacks = (this.events[event] || (this.events[event] = []));
+	var callbacks = (this.events[event] || (this.events[event] = []));
 
-  if (callbacks.indexOf(cb) < 0) {
-    callbacks.push(cb);
-  }
+	if (callbacks.indexOf(cb) < 0) {
+		callbacks.push(cb);
+	}
 };
 
 TraversalTracker.prototype.stopTracking = function(event, cb) {
-  var callbacks = this.events[event];
+	var callbacks = this.events[event];
 
-  if (callbacks) {
-    var index = callbacks.indexOf(cb);
-    if (index >= 0) {
-      callbacks.splice(index, 1);
-    }
-  }
+	if (callbacks) {
+		var index = callbacks.indexOf(cb);
+		if (index >= 0) {
+			callbacks.splice(index, 1);
+		}
+	}
 };
 
 TraversalTracker.prototype.emit = function(event) {
-  var args = Array.prototype.slice.call(arguments, 1);
+	var args = Array.prototype.slice.call(arguments, 1);
 
-  var callbacks = this.events[event];
+	var callbacks = this.events[event];
 
-  if (callbacks) {
-    callbacks.forEach(function(cb) {
-      cb.apply(this, args);
-    });
-  }
+	if (callbacks) {
+		callbacks.forEach(function(cb) {
+			cb.apply(this, args);
+		});
+	}
 };
 
 TraversalTracker.prototype.auto = function(event, cb, innerBlock) {
-  this.startTracking(event, cb);
-  innerBlock();
-  this.stopTracking(event, cb);
+	this.startTracking(event, cb);
+	innerBlock();
+	this.stopTracking(event, cb);
 };
 
 module.exports = TraversalTracker;
@@ -19890,227 +19890,227 @@ var saveAs = saveAs
       navigator.msSaveOrOpenBlob && navigator.msSaveOrOpenBlob.bind(navigator))
   // Everyone else
   || (function(view) {
-  "use strict";
-  // IE <10 is explicitly unsupported
-  if (typeof navigator !== "undefined" &&
-      /MSIE [1-9]\./.test(navigator.userAgent)) {
-    return;
-  }
-  var
-      doc = view.document
-      // only get URL when necessary in case BlobBuilder.js hasn't overridden it yet
-    , get_URL = function() {
-      return view.URL || view.webkitURL || view;
-    }
-    , URL = view.URL || view.webkitURL || view
-    , save_link = doc.createElementNS("http://www.w3.org/1999/xhtml", "a")
-    , can_use_save_link = !view.externalHost && "download" in save_link
-    , click = function(node) {
-      var event = doc.createEvent("MouseEvents");
-      event.initMouseEvent(
-        "click", true, false, view, 0, 0, 0, 0, 0
-        , false, false, false, false, 0, null
-      );
-      node.dispatchEvent(event);
-    }
-    , webkit_req_fs = view.webkitRequestFileSystem
-    , req_fs = view.requestFileSystem || webkit_req_fs || view.mozRequestFileSystem
-    , throw_outside = function(ex) {
-      (view.setImmediate || view.setTimeout)(function() {
-        throw ex;
-      }, 0);
-    }
-    , force_saveable_type = "application/octet-stream"
-    , fs_min_size = 0
-    , deletion_queue = []
-    , process_deletion_queue = function() {
-      var i = deletion_queue.length;
-      while (i--) {
-        var file = deletion_queue[i];
-        if (typeof file === "string") { // file is an object URL
-          URL.revokeObjectURL(file);
-        } else { // file is a File
-          file.remove();
-        }
-      }
-      deletion_queue.length = 0; // clear queue
-    }
-    , dispatch = function(filesaver, event_types, event) {
-      event_types = [].concat(event_types);
-      var i = event_types.length;
-      while (i--) {
-        var listener = filesaver["on" + event_types[i]];
-        if (typeof listener === "function") {
-          try {
-            listener.call(filesaver, event || filesaver);
-          } catch (ex) {
-            throw_outside(ex);
-          }
-        }
-      }
-    }
-    , FileSaver = function(blob, name) {
-      // First try a.download, then web filesystem, then object URLs
-      var
-          filesaver = this
-        , type = blob.type
-        , blob_changed = false
-        , object_url
-        , target_view
-        , get_object_url = function() {
-          var object_url = get_URL().createObjectURL(blob);
-          deletion_queue.push(object_url);
-          return object_url;
-        }
-        , dispatch_all = function() {
-          dispatch(filesaver, "writestart progress write writeend".split(" "));
-        }
-        // on any filesys errors revert to saving with object URLs
-        , fs_error = function() {
-          // don't create more object URLs than needed
-          if (blob_changed || !object_url) {
-            object_url = get_object_url(blob);
-          }
-          if (target_view) {
-            target_view.location.href = object_url;
-          } else {
-            window.open(object_url, "_blank");
-          }
-          filesaver.readyState = filesaver.DONE;
-          dispatch_all();
-        }
-        , abortable = function(func) {
-          return function() {
-            if (filesaver.readyState !== filesaver.DONE) {
-              return func.apply(this, arguments);
-            }
-          };
-        }
-        , create_if_not_found = {create: true, exclusive: false}
-        , slice
-      ;
-      filesaver.readyState = filesaver.INIT;
-      if (!name) {
-        name = "download";
-      }
-      if (can_use_save_link) {
-        object_url = get_object_url(blob);
-        // FF for Android has a nasty garbage collection mechanism
-        // that turns all objects that are not pure javascript into 'deadObject'
-        // this means `doc` and `save_link` are unusable and need to be recreated
-        // `view` is usable though:
-        doc = view.document;
-        save_link = doc.createElementNS("http://www.w3.org/1999/xhtml", "a");
-        save_link.href = object_url;
-        save_link.download = name;
-        var event = doc.createEvent("MouseEvents");
-        event.initMouseEvent(
-          "click", true, false, view, 0, 0, 0, 0, 0
-          , false, false, false, false, 0, null
-        );
-        save_link.dispatchEvent(event);
-        filesaver.readyState = filesaver.DONE;
-        dispatch_all();
-        return;
-      }
-      // Object and web filesystem URLs have a problem saving in Google Chrome when
-      // viewed in a tab, so I force save with application/octet-stream
-      // http://code.google.com/p/chromium/issues/detail?id=91158
-      if (view.chrome && type && type !== force_saveable_type) {
-        slice = blob.slice || blob.webkitSlice;
-        blob = slice.call(blob, 0, blob.size, force_saveable_type);
-        blob_changed = true;
-      }
-      // Since I can't be sure that the guessed media type will trigger a download
-      // in WebKit, I append .download to the filename.
-      // https://bugs.webkit.org/show_bug.cgi?id=65440
-      if (webkit_req_fs && name !== "download") {
-        name += ".download";
-      }
-      if (type === force_saveable_type || webkit_req_fs) {
-        target_view = view;
-      }
-      if (!req_fs) {
-        fs_error();
-        return;
-      }
-      fs_min_size += blob.size;
-      req_fs(view.TEMPORARY, fs_min_size, abortable(function(fs) {
-        fs.root.getDirectory("saved", create_if_not_found, abortable(function(dir) {
-          var save = function() {
-            dir.getFile(name, create_if_not_found, abortable(function(file) {
-              file.createWriter(abortable(function(writer) {
-                writer.onwriteend = function(event) {
-                  target_view.location.href = file.toURL();
-                  deletion_queue.push(file);
-                  filesaver.readyState = filesaver.DONE;
-                  dispatch(filesaver, "writeend", event);
-                };
-                writer.onerror = function() {
-                  var error = writer.error;
-                  if (error.code !== error.ABORT_ERR) {
-                    fs_error();
-                  }
-                };
-                "writestart progress write abort".split(" ").forEach(function(event) {
-                  writer["on" + event] = filesaver["on" + event];
-                });
-                writer.write(blob);
-                filesaver.abort = function() {
-                  writer.abort();
-                  filesaver.readyState = filesaver.DONE;
-                };
-                filesaver.readyState = filesaver.WRITING;
-              }), fs_error);
-            }), fs_error);
-          };
-          dir.getFile(name, {create: false}, abortable(function(file) {
-            // delete file if it already exists
-            file.remove();
-            save();
-          }), abortable(function(ex) {
-            if (ex.code === ex.NOT_FOUND_ERR) {
-              save();
-            } else {
-              fs_error();
-            }
-          }));
-        }), fs_error);
-      }), fs_error);
-    }
-    , FS_proto = FileSaver.prototype
-    , saveAs = function(blob, name) {
-      return new FileSaver(blob, name);
-    }
-  ;
-  FS_proto.abort = function() {
-    var filesaver = this;
-    filesaver.readyState = filesaver.DONE;
-    dispatch(filesaver, "abort");
-  };
-  FS_proto.readyState = FS_proto.INIT = 0;
-  FS_proto.WRITING = 1;
-  FS_proto.DONE = 2;
+	"use strict";
+	// IE <10 is explicitly unsupported
+	if (typeof navigator !== "undefined" &&
+	    /MSIE [1-9]\./.test(navigator.userAgent)) {
+		return;
+	}
+	var
+		  doc = view.document
+		  // only get URL when necessary in case BlobBuilder.js hasn't overridden it yet
+		, get_URL = function() {
+			return view.URL || view.webkitURL || view;
+		}
+		, URL = view.URL || view.webkitURL || view
+		, save_link = doc.createElementNS("http://www.w3.org/1999/xhtml", "a")
+		, can_use_save_link = !view.externalHost && "download" in save_link
+		, click = function(node) {
+			var event = doc.createEvent("MouseEvents");
+			event.initMouseEvent(
+				"click", true, false, view, 0, 0, 0, 0, 0
+				, false, false, false, false, 0, null
+			);
+			node.dispatchEvent(event);
+		}
+		, webkit_req_fs = view.webkitRequestFileSystem
+		, req_fs = view.requestFileSystem || webkit_req_fs || view.mozRequestFileSystem
+		, throw_outside = function(ex) {
+			(view.setImmediate || view.setTimeout)(function() {
+				throw ex;
+			}, 0);
+		}
+		, force_saveable_type = "application/octet-stream"
+		, fs_min_size = 0
+		, deletion_queue = []
+		, process_deletion_queue = function() {
+			var i = deletion_queue.length;
+			while (i--) {
+				var file = deletion_queue[i];
+				if (typeof file === "string") { // file is an object URL
+					URL.revokeObjectURL(file);
+				} else { // file is a File
+					file.remove();
+				}
+			}
+			deletion_queue.length = 0; // clear queue
+		}
+		, dispatch = function(filesaver, event_types, event) {
+			event_types = [].concat(event_types);
+			var i = event_types.length;
+			while (i--) {
+				var listener = filesaver["on" + event_types[i]];
+				if (typeof listener === "function") {
+					try {
+						listener.call(filesaver, event || filesaver);
+					} catch (ex) {
+						throw_outside(ex);
+					}
+				}
+			}
+		}
+		, FileSaver = function(blob, name) {
+			// First try a.download, then web filesystem, then object URLs
+			var
+				  filesaver = this
+				, type = blob.type
+				, blob_changed = false
+				, object_url
+				, target_view
+				, get_object_url = function() {
+					var object_url = get_URL().createObjectURL(blob);
+					deletion_queue.push(object_url);
+					return object_url;
+				}
+				, dispatch_all = function() {
+					dispatch(filesaver, "writestart progress write writeend".split(" "));
+				}
+				// on any filesys errors revert to saving with object URLs
+				, fs_error = function() {
+					// don't create more object URLs than needed
+					if (blob_changed || !object_url) {
+						object_url = get_object_url(blob);
+					}
+					if (target_view) {
+						target_view.location.href = object_url;
+					} else {
+						window.open(object_url, "_blank");
+					}
+					filesaver.readyState = filesaver.DONE;
+					dispatch_all();
+				}
+				, abortable = function(func) {
+					return function() {
+						if (filesaver.readyState !== filesaver.DONE) {
+							return func.apply(this, arguments);
+						}
+					};
+				}
+				, create_if_not_found = {create: true, exclusive: false}
+				, slice
+			;
+			filesaver.readyState = filesaver.INIT;
+			if (!name) {
+				name = "download";
+			}
+			if (can_use_save_link) {
+				object_url = get_object_url(blob);
+				// FF for Android has a nasty garbage collection mechanism
+				// that turns all objects that are not pure javascript into 'deadObject'
+				// this means `doc` and `save_link` are unusable and need to be recreated
+				// `view` is usable though:
+				doc = view.document;
+				save_link = doc.createElementNS("http://www.w3.org/1999/xhtml", "a");
+				save_link.href = object_url;
+				save_link.download = name;
+				var event = doc.createEvent("MouseEvents");
+				event.initMouseEvent(
+					"click", true, false, view, 0, 0, 0, 0, 0
+					, false, false, false, false, 0, null
+				);
+				save_link.dispatchEvent(event);
+				filesaver.readyState = filesaver.DONE;
+				dispatch_all();
+				return;
+			}
+			// Object and web filesystem URLs have a problem saving in Google Chrome when
+			// viewed in a tab, so I force save with application/octet-stream
+			// http://code.google.com/p/chromium/issues/detail?id=91158
+			if (view.chrome && type && type !== force_saveable_type) {
+				slice = blob.slice || blob.webkitSlice;
+				blob = slice.call(blob, 0, blob.size, force_saveable_type);
+				blob_changed = true;
+			}
+			// Since I can't be sure that the guessed media type will trigger a download
+			// in WebKit, I append .download to the filename.
+			// https://bugs.webkit.org/show_bug.cgi?id=65440
+			if (webkit_req_fs && name !== "download") {
+				name += ".download";
+			}
+			if (type === force_saveable_type || webkit_req_fs) {
+				target_view = view;
+			}
+			if (!req_fs) {
+				fs_error();
+				return;
+			}
+			fs_min_size += blob.size;
+			req_fs(view.TEMPORARY, fs_min_size, abortable(function(fs) {
+				fs.root.getDirectory("saved", create_if_not_found, abortable(function(dir) {
+					var save = function() {
+						dir.getFile(name, create_if_not_found, abortable(function(file) {
+							file.createWriter(abortable(function(writer) {
+								writer.onwriteend = function(event) {
+									target_view.location.href = file.toURL();
+									deletion_queue.push(file);
+									filesaver.readyState = filesaver.DONE;
+									dispatch(filesaver, "writeend", event);
+								};
+								writer.onerror = function() {
+									var error = writer.error;
+									if (error.code !== error.ABORT_ERR) {
+										fs_error();
+									}
+								};
+								"writestart progress write abort".split(" ").forEach(function(event) {
+									writer["on" + event] = filesaver["on" + event];
+								});
+								writer.write(blob);
+								filesaver.abort = function() {
+									writer.abort();
+									filesaver.readyState = filesaver.DONE;
+								};
+								filesaver.readyState = filesaver.WRITING;
+							}), fs_error);
+						}), fs_error);
+					};
+					dir.getFile(name, {create: false}, abortable(function(file) {
+						// delete file if it already exists
+						file.remove();
+						save();
+					}), abortable(function(ex) {
+						if (ex.code === ex.NOT_FOUND_ERR) {
+							save();
+						} else {
+							fs_error();
+						}
+					}));
+				}), fs_error);
+			}), fs_error);
+		}
+		, FS_proto = FileSaver.prototype
+		, saveAs = function(blob, name) {
+			return new FileSaver(blob, name);
+		}
+	;
+	FS_proto.abort = function() {
+		var filesaver = this;
+		filesaver.readyState = filesaver.DONE;
+		dispatch(filesaver, "abort");
+	};
+	FS_proto.readyState = FS_proto.INIT = 0;
+	FS_proto.WRITING = 1;
+	FS_proto.DONE = 2;
 
-  FS_proto.error =
-  FS_proto.onwritestart =
-  FS_proto.onprogress =
-  FS_proto.onwrite =
-  FS_proto.onabort =
-  FS_proto.onerror =
-  FS_proto.onwriteend =
-    null;
+	FS_proto.error =
+	FS_proto.onwritestart =
+	FS_proto.onprogress =
+	FS_proto.onwrite =
+	FS_proto.onabort =
+	FS_proto.onerror =
+	FS_proto.onwriteend =
+		null;
 
-  view.addEventListener("unload", process_deletion_queue, false);
-  saveAs.unload = function() {
-    process_deletion_queue();
-    view.removeEventListener("unload", process_deletion_queue, false);
-  };
-  return saveAs;
+	view.addEventListener("unload", process_deletion_queue, false);
+	saveAs.unload = function() {
+		process_deletion_queue();
+		view.removeEventListener("unload", process_deletion_queue, false);
+	};
+	return saveAs;
 }(
-     typeof self !== "undefined" && self
-  || typeof window !== "undefined" && window
-  || this.content
+	   typeof self !== "undefined" && self
+	|| typeof window !== "undefined" && window
+	|| this.content
 ));
 // `self` is undefined in Firefox for Android content script context
 // while `this` is nsIContentFrameMessageManager
