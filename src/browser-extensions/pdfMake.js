@@ -73,11 +73,13 @@ Document.prototype.print = function(timeout) {
 };
 
 Document.prototype.download = function(defaultFileName, cb) {
-  defaultFileName = defaultFileName || 'file.pdf';
-  this.getBuffer(function(result) {
-    saveAs(new Blob([result], {type: 'application/pdf'}), defaultFileName);
-    cb();
-  });
+       defaultFileName = defaultFileName || 'file.pdf';
+       this.getBuffer(function(result) {
+               saveAs(new Blob([result], {type: 'application/pdf'}), defaultFileName);
+               if (typeof cb === "function") {
+                   cb();
+               }
+       });
 };
 
 Document.prototype.getBase64 = function(cb, options) {
