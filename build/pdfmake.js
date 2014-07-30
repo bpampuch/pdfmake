@@ -16962,27 +16962,29 @@ Document.prototype.open = function(message) {
 };
 
 
-Document.prototype.print = function(timeout) {
-	timeout = timeout || 2000;
+Document.prototype.print = function(cb, timeout) {
+  timeout = timeout || 2000;
 
-	this.getDataUrl(function(dataUrl) {
-		var iFrame = document.createElement('iframe');
-		iFrame.style.display = 'none';
-		iFrame.src = dataUrl;
-		iFrame.onload = function() {
-			setTimeout(function() {
-				document.body.removeChild(iFrame);
-			}, timeout);
-		};
+  this.getDataUrl(function(dataUrl) {
+    cb();
+    var iFrame = document.createElement('iframe');
+    iFrame.style.display = 'none';
+    iFrame.src = dataUrl;
+    iFrame.onload = function() {
+      setTimeout(function() {
+        document.body.removeChild(iFrame);
+      }, timeout);
+    };
 
-		document.body.appendChild(iFrame);
-	}, { autoPrint: true });
+    document.body.appendChild(iFrame);
+  }, { autoPrint: true });
 };
 
-Document.prototype.download = function(defaultFileName) {
+Document.prototype.download = function(defaultFileName, callback) {
 	defaultFileName = defaultFileName || 'file.pdf';
 	this.getBuffer(function(result) {
 		saveAs(new Blob([result], {type: 'application/pdf'}), defaultFileName);
+    callback();
 	});
 };
 
