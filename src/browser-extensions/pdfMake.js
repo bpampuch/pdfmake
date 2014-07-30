@@ -72,11 +72,12 @@ Document.prototype.print = function(timeout) {
 	}, { autoPrint: true });
 };
 
-Document.prototype.download = function(defaultFileName) {
-	defaultFileName = defaultFileName || 'file.pdf';
-	this.getBuffer(function(result) {
-		saveAs(new Blob([result], {type: 'application/pdf'}), defaultFileName);
-	});
+Document.prototype.download = function(defaultFileName, cb) {
+  defaultFileName = defaultFileName || 'file.pdf';
+  this.getBuffer(function(result) {
+    saveAs(new Blob([result], {type: 'application/pdf'}), defaultFileName);
+    cb();
+  });
 };
 
 Document.prototype.getBase64 = function(cb, options) {
