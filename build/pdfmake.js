@@ -16962,11 +16962,11 @@ Document.prototype.open = function(message) {
 };
 
 
-Document.prototype.print = function(cb, timeout) {
+Document.prototype.print = function(callback, timeout) {
   timeout = timeout || 2000;
 
   this.getDataUrl(function(dataUrl) {
-    cb();
+    callback();
     var iFrame = document.createElement('iframe');
     iFrame.style.display = 'none';
     iFrame.src = dataUrl;
