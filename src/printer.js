@@ -7,6 +7,7 @@ var PdfKit = require('pdfmake-pdfkit');
 var PDFReference = PdfKit.PDFReference;
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
+var textDecorator = require('./textDecorator');
 
 
 ////////////////////////////////////////
@@ -248,6 +249,8 @@ function renderLine(line, x, y, pdfKitDoc) {
 	var ascenderHeight = line.getAscenderHeight();
 	var lineHeight = line.getHeight();
 
+	textDecorator.drawBackground(line, x, y, pdfKitDoc);
+
 	//TODO: line.optimizeInlines();
 	for(var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
@@ -268,6 +271,9 @@ function renderLine(line, x, y, pdfKitDoc) {
 		pdfKitDoc.addContent('ET');
 		pdfKitDoc.restore();
 	}
+	
+	textDecorator.drawDecorations(line, x, y, pdfKitDoc);
+	
 }
 
 function encode(font, text) {

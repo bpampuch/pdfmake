@@ -206,6 +206,10 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var bold = getStyleProperty(item, styleContextStack, 'bold', false);
 		var italics = getStyleProperty(item, styleContextStack, 'italics', false);
 		var color = getStyleProperty(item, styleContextStack, 'color', 'black');
+		var decoration = getStyleProperty(item, styleContextStack, 'decoration', null);
+		var decorationColor = getStyleProperty(item, styleContextStack, 'decorationColor', null);
+		var decorationStyle = getStyleProperty(item, styleContextStack, 'decorationStyle', null);
+		var background = getStyleProperty(item, styleContextStack, 'background', null);
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -233,6 +237,10 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.font = font;
 		item.fontSize = fontSize;
 		item.color = color;
+		item.decoration = decoration;
+		item.decorationColor = decorationColor;
+		item.decorationStyle = decorationStyle;
+		item.background = background;
 	});
 
 	return normalized;
