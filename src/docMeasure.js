@@ -255,7 +255,11 @@ DocMeasure.prototype.measureTable = function(node) {
 			var rowData = node.table.body[row];
 			var data = rowData[col];
 			if (!data._span) {
-				data = rowData[col] = this.measureNode(data);
+				var _this = this;
+				data = rowData[col] = this.styleStack.auto(data, function() {
+				    data.fillColor = _this.styleStack.getProperty('fillColor');
+				    return _this.measureNode(data);
+				})
 
 				if (data.colSpan && data.colSpan > 1) {
 					markSpans(rowData, col, data.colSpan);
@@ -378,6 +382,7 @@ DocMeasure.prototype.measureTable = function(node) {
 				_span: true,
 				_minWidth: 0,
 				_maxWidth: 0,
+				fillColor: table.body[row][col].fillColor
 			};
 		}
 	}

@@ -178,6 +178,24 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
         var topOffset = this.layout.hLineWidth(rowIndex, this.tableNode);
         var bottomOffset = this.layout.hLineWidth(rowIndex + 1, this.tableNode);
         this.drawVerticalLine(xs[i].x, y1 - topOffset, y2 + bottomOffset, xs[i].index, writer);
+        if(i < l-1) {
+          var colIndex = xs[i].index;
+          var fillColor=  this.tableNode.table.body[rowIndex][colIndex].fillColor;
+          if(fillColor ) {
+          	var wBorder = this.layout.vLineWidth(colIndex, this.tableNode);
+          	var xf = xs[i].x+wBorder;
+          	var yf = y1 - topOffset;
+            writer.addVector({
+              type: 'rect',
+              x: xf,
+              y: yf,
+              w: xs[i+1].x-xf,
+              h: y2+bottomOffset-yf,
+              lineWidth: 0,
+              color: fillColor
+            }, false, true, 0);
+          }
+        }
       }
 
       if (willBreak) {
