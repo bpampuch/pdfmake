@@ -182,9 +182,9 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
           var colIndex = xs[i].index;
           var fillColor=  this.tableNode.table.body[rowIndex][colIndex].fillColor;
           if(fillColor ) {
-          	var wBorder = this.layout.vLineWidth(colIndex, this.tableNode);
-          	var xf = xs[i].x+wBorder;
-          	var yf = y1 - topOffset;
+            var wBorder = this.layout.vLineWidth(colIndex, this.tableNode);
+            var xf = xs[i].x+wBorder;
+            var yf = y1 - topOffset;
             writer.addVector({
               type: 'rect',
               x: xf,
