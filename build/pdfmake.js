@@ -360,604 +360,7 @@ var objectKeys = Object.keys || function (obj) {
   return keys;
 };
 
-},{"util/":3}],2:[function(_dereq_,module,exports){
-module.exports = function isBuffer(arg) {
-  return arg && typeof arg === 'object'
-    && typeof arg.copy === 'function'
-    && typeof arg.fill === 'function'
-    && typeof arg.readUInt8 === 'function';
-}
-},{}],3:[function(_dereq_,module,exports){
-(function (process,global){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-var formatRegExp = /%[sdj%]/g;
-exports.format = function(f) {
-  if (!isString(f)) {
-    var objects = [];
-    for (var i = 0; i < arguments.length; i++) {
-      objects.push(inspect(arguments[i]));
-    }
-    return objects.join(' ');
-  }
-
-  var i = 1;
-  var args = arguments;
-  var len = args.length;
-  var str = String(f).replace(formatRegExp, function(x) {
-    if (x === '%%') return '%';
-    if (i >= len) return x;
-    switch (x) {
-      case '%s': return String(args[i++]);
-      case '%d': return Number(args[i++]);
-      case '%j':
-        try {
-          return JSON.stringify(args[i++]);
-        } catch (_) {
-          return '[Circular]';
-        }
-      default:
-        return x;
-    }
-  });
-  for (var x = args[i]; i < len; x = args[++i]) {
-    if (isNull(x) || !isObject(x)) {
-      str += ' ' + x;
-    } else {
-      str += ' ' + inspect(x);
-    }
-  }
-  return str;
-};
-
-
-// Mark that a method should not be used.
-// Returns a modified function which warns once by default.
-// If --no-deprecation is set, then it is a no-op.
-exports.deprecate = function(fn, msg) {
-  // Allow for deprecating things in the process of starting up.
-  if (isUndefined(global.process)) {
-    return function() {
-      return exports.deprecate(fn, msg).apply(this, arguments);
-    };
-  }
-
-  if (process.noDeprecation === true) {
-    return fn;
-  }
-
-  var warned = false;
-  function deprecated() {
-    if (!warned) {
-      if (process.throwDeprecation) {
-        throw new Error(msg);
-      } else if (process.traceDeprecation) {
-        console.trace(msg);
-      } else {
-        console.error(msg);
-      }
-      warned = true;
-    }
-    return fn.apply(this, arguments);
-  }
-
-  return deprecated;
-};
-
-
-var debugs = {};
-var debugEnviron;
-exports.debuglog = function(set) {
-  if (isUndefined(debugEnviron))
-    debugEnviron = process.env.NODE_DEBUG || '';
-  set = set.toUpperCase();
-  if (!debugs[set]) {
-    if (new RegExp('\\b' + set + '\\b', 'i').test(debugEnviron)) {
-      var pid = process.pid;
-      debugs[set] = function() {
-        var msg = exports.format.apply(exports, arguments);
-        console.error('%s %d: %s', set, pid, msg);
-      };
-    } else {
-      debugs[set] = function() {};
-    }
-  }
-  return debugs[set];
-};
-
-
-/**
- * Echos the value of a value. Trys to print the value out
- * in the best way possible given the different types.
- *
- * @param {Object} obj The object to print out.
- * @param {Object} opts Optional options object that alters the output.
- */
-/* legacy: obj, showHidden, depth, colors*/
-function inspect(obj, opts) {
-  // default options
-  var ctx = {
-    seen: [],
-    stylize: stylizeNoColor
-  };
-  // legacy...
-  if (arguments.length >= 3) ctx.depth = arguments[2];
-  if (arguments.length >= 4) ctx.colors = arguments[3];
-  if (isBoolean(opts)) {
-    // legacy...
-    ctx.showHidden = opts;
-  } else if (opts) {
-    // got an "options" object
-    exports._extend(ctx, opts);
-  }
-  // set default options
-  if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
-  if (isUndefined(ctx.depth)) ctx.depth = 2;
-  if (isUndefined(ctx.colors)) ctx.colors = false;
-  if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
-  if (ctx.colors) ctx.stylize = stylizeWithColor;
-  return formatValue(ctx, obj, ctx.depth);
-}
-exports.inspect = inspect;
-
-
-// http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
-inspect.colors = {
-  'bold' : [1, 22],
-  'italic' : [3, 23],
-  'underline' : [4, 24],
-  'inverse' : [7, 27],
-  'white' : [37, 39],
-  'grey' : [90, 39],
-  'black' : [30, 39],
-  'blue' : [34, 39],
-  'cyan' : [36, 39],
-  'green' : [32, 39],
-  'magenta' : [35, 39],
-  'red' : [31, 39],
-  'yellow' : [33, 39]
-};
-
-// Don't use 'blue' not visible on cmd.exe
-inspect.styles = {
-  'special': 'cyan',
-  'number': 'yellow',
-  'boolean': 'yellow',
-  'undefined': 'grey',
-  'null': 'bold',
-  'string': 'green',
-  'date': 'magenta',
-  // "name": intentionally not styling
-  'regexp': 'red'
-};
-
-
-function stylizeWithColor(str, styleType) {
-  var style = inspect.styles[styleType];
-
-  if (style) {
-    return '\u001b[' + inspect.colors[style][0] + 'm' + str +
-           '\u001b[' + inspect.colors[style][1] + 'm';
-  } else {
-    return str;
-  }
-}
-
-
-function stylizeNoColor(str, styleType) {
-  return str;
-}
-
-
-function arrayToHash(array) {
-  var hash = {};
-
-  array.forEach(function(val, idx) {
-    hash[val] = true;
-  });
-
-  return hash;
-}
-
-
-function formatValue(ctx, value, recurseTimes) {
-  // Provide a hook for user-specified inspect functions.
-  // Check that value is an object with an inspect function on it
-  if (ctx.customInspect &&
-      value &&
-      isFunction(value.inspect) &&
-      // Filter out the util module, it's inspect function is special
-      value.inspect !== exports.inspect &&
-      // Also filter out any prototype objects using the circular check.
-      !(value.constructor && value.constructor.prototype === value)) {
-    var ret = value.inspect(recurseTimes, ctx);
-    if (!isString(ret)) {
-      ret = formatValue(ctx, ret, recurseTimes);
-    }
-    return ret;
-  }
-
-  // Primitive types cannot have properties
-  var primitive = formatPrimitive(ctx, value);
-  if (primitive) {
-    return primitive;
-  }
-
-  // Look up the keys of the object.
-  var keys = Object.keys(value);
-  var visibleKeys = arrayToHash(keys);
-
-  if (ctx.showHidden) {
-    keys = Object.getOwnPropertyNames(value);
-  }
-
-  // IE doesn't make error fields non-enumerable
-  // http://msdn.microsoft.com/en-us/library/ie/dww52sbt(v=vs.94).aspx
-  if (isError(value)
-      && (keys.indexOf('message') >= 0 || keys.indexOf('description') >= 0)) {
-    return formatError(value);
-  }
-
-  // Some type of object without properties can be shortcutted.
-  if (keys.length === 0) {
-    if (isFunction(value)) {
-      var name = value.name ? ': ' + value.name : '';
-      return ctx.stylize('[Function' + name + ']', 'special');
-    }
-    if (isRegExp(value)) {
-      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
-    }
-    if (isDate(value)) {
-      return ctx.stylize(Date.prototype.toString.call(value), 'date');
-    }
-    if (isError(value)) {
-      return formatError(value);
-    }
-  }
-
-  var base = '', array = false, braces = ['{', '}'];
-
-  // Make Array say that they are Array
-  if (isArray(value)) {
-    array = true;
-    braces = ['[', ']'];
-  }
-
-  // Make functions say that they are functions
-  if (isFunction(value)) {
-    var n = value.name ? ': ' + value.name : '';
-    base = ' [Function' + n + ']';
-  }
-
-  // Make RegExps say that they are RegExps
-  if (isRegExp(value)) {
-    base = ' ' + RegExp.prototype.toString.call(value);
-  }
-
-  // Make dates with properties first say the date
-  if (isDate(value)) {
-    base = ' ' + Date.prototype.toUTCString.call(value);
-  }
-
-  // Make error with message first say the error
-  if (isError(value)) {
-    base = ' ' + formatError(value);
-  }
-
-  if (keys.length === 0 && (!array || value.length == 0)) {
-    return braces[0] + base + braces[1];
-  }
-
-  if (recurseTimes < 0) {
-    if (isRegExp(value)) {
-      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
-    } else {
-      return ctx.stylize('[Object]', 'special');
-    }
-  }
-
-  ctx.seen.push(value);
-
-  var output;
-  if (array) {
-    output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
-  } else {
-    output = keys.map(function(key) {
-      return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
-    });
-  }
-
-  ctx.seen.pop();
-
-  return reduceToSingleString(output, base, braces);
-}
-
-
-function formatPrimitive(ctx, value) {
-  if (isUndefined(value))
-    return ctx.stylize('undefined', 'undefined');
-  if (isString(value)) {
-    var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
-                                             .replace(/'/g, "\\'")
-                                             .replace(/\\"/g, '"') + '\'';
-    return ctx.stylize(simple, 'string');
-  }
-  if (isNumber(value))
-    return ctx.stylize('' + value, 'number');
-  if (isBoolean(value))
-    return ctx.stylize('' + value, 'boolean');
-  // For some reason typeof null is "object", so special case here.
-  if (isNull(value))
-    return ctx.stylize('null', 'null');
-}
-
-
-function formatError(value) {
-  return '[' + Error.prototype.toString.call(value) + ']';
-}
-
-
-function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
-  var output = [];
-  for (var i = 0, l = value.length; i < l; ++i) {
-    if (hasOwnProperty(value, String(i))) {
-      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
-          String(i), true));
-    } else {
-      output.push('');
-    }
-  }
-  keys.forEach(function(key) {
-    if (!key.match(/^\d+$/)) {
-      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
-          key, true));
-    }
-  });
-  return output;
-}
-
-
-function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
-  var name, str, desc;
-  desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
-  if (desc.get) {
-    if (desc.set) {
-      str = ctx.stylize('[Getter/Setter]', 'special');
-    } else {
-      str = ctx.stylize('[Getter]', 'special');
-    }
-  } else {
-    if (desc.set) {
-      str = ctx.stylize('[Setter]', 'special');
-    }
-  }
-  if (!hasOwnProperty(visibleKeys, key)) {
-    name = '[' + key + ']';
-  }
-  if (!str) {
-    if (ctx.seen.indexOf(desc.value) < 0) {
-      if (isNull(recurseTimes)) {
-        str = formatValue(ctx, desc.value, null);
-      } else {
-        str = formatValue(ctx, desc.value, recurseTimes - 1);
-      }
-      if (str.indexOf('\n') > -1) {
-        if (array) {
-          str = str.split('\n').map(function(line) {
-            return '  ' + line;
-          }).join('\n').substr(2);
-        } else {
-          str = '\n' + str.split('\n').map(function(line) {
-            return '   ' + line;
-          }).join('\n');
-        }
-      }
-    } else {
-      str = ctx.stylize('[Circular]', 'special');
-    }
-  }
-  if (isUndefined(name)) {
-    if (array && key.match(/^\d+$/)) {
-      return str;
-    }
-    name = JSON.stringify('' + key);
-    if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
-      name = name.substr(1, name.length - 2);
-      name = ctx.stylize(name, 'name');
-    } else {
-      name = name.replace(/'/g, "\\'")
-                 .replace(/\\"/g, '"')
-                 .replace(/(^"|"$)/g, "'");
-      name = ctx.stylize(name, 'string');
-    }
-  }
-
-  return name + ': ' + str;
-}
-
-
-function reduceToSingleString(output, base, braces) {
-  var numLinesEst = 0;
-  var length = output.reduce(function(prev, cur) {
-    numLinesEst++;
-    if (cur.indexOf('\n') >= 0) numLinesEst++;
-    return prev + cur.replace(/\u001b\[\d\d?m/g, '').length + 1;
-  }, 0);
-
-  if (length > 60) {
-    return braces[0] +
-           (base === '' ? '' : base + '\n ') +
-           ' ' +
-           output.join(',\n  ') +
-           ' ' +
-           braces[1];
-  }
-
-  return braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
-}
-
-
-// NOTE: These type checking functions intentionally don't use `instanceof`
-// because it is fragile and can be easily faked with `Object.create()`.
-function isArray(ar) {
-  return Array.isArray(ar);
-}
-exports.isArray = isArray;
-
-function isBoolean(arg) {
-  return typeof arg === 'boolean';
-}
-exports.isBoolean = isBoolean;
-
-function isNull(arg) {
-  return arg === null;
-}
-exports.isNull = isNull;
-
-function isNullOrUndefined(arg) {
-  return arg == null;
-}
-exports.isNullOrUndefined = isNullOrUndefined;
-
-function isNumber(arg) {
-  return typeof arg === 'number';
-}
-exports.isNumber = isNumber;
-
-function isString(arg) {
-  return typeof arg === 'string';
-}
-exports.isString = isString;
-
-function isSymbol(arg) {
-  return typeof arg === 'symbol';
-}
-exports.isSymbol = isSymbol;
-
-function isUndefined(arg) {
-  return arg === void 0;
-}
-exports.isUndefined = isUndefined;
-
-function isRegExp(re) {
-  return isObject(re) && objectToString(re) === '[object RegExp]';
-}
-exports.isRegExp = isRegExp;
-
-function isObject(arg) {
-  return typeof arg === 'object' && arg !== null;
-}
-exports.isObject = isObject;
-
-function isDate(d) {
-  return isObject(d) && objectToString(d) === '[object Date]';
-}
-exports.isDate = isDate;
-
-function isError(e) {
-  return isObject(e) &&
-      (objectToString(e) === '[object Error]' || e instanceof Error);
-}
-exports.isError = isError;
-
-function isFunction(arg) {
-  return typeof arg === 'function';
-}
-exports.isFunction = isFunction;
-
-function isPrimitive(arg) {
-  return arg === null ||
-         typeof arg === 'boolean' ||
-         typeof arg === 'number' ||
-         typeof arg === 'string' ||
-         typeof arg === 'symbol' ||  // ES6 symbol
-         typeof arg === 'undefined';
-}
-exports.isPrimitive = isPrimitive;
-
-exports.isBuffer = _dereq_('./support/isBuffer');
-
-function objectToString(o) {
-  return Object.prototype.toString.call(o);
-}
-
-
-function pad(n) {
-  return n < 10 ? '0' + n.toString(10) : n.toString(10);
-}
-
-
-var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
-              'Oct', 'Nov', 'Dec'];
-
-// 26 Feb 16:19:34
-function timestamp() {
-  var d = new Date();
-  var time = [pad(d.getHours()),
-              pad(d.getMinutes()),
-              pad(d.getSeconds())].join(':');
-  return [d.getDate(), months[d.getMonth()], time].join(' ');
-}
-
-
-// log is just a thin wrapper to console.log that prepends a timestamp
-exports.log = function() {
-  console.log('%s - %s', timestamp(), exports.format.apply(exports, arguments));
-};
-
-
-/**
- * Inherit the prototype methods from one constructor into another.
- *
- * The Function.prototype.inherits from lang.js rewritten as a standalone
- * function (not on Function.prototype). NOTE: If this file is to be loaded
- * during bootstrapping this function needs to be rewritten using some native
- * functions as prototype setup using normal JavaScript does not work as
- * expected during bootstrapping (see mirror.js in r114903).
- *
- * @param {function} ctor Constructor function which needs to inherit the
- *     prototype.
- * @param {function} superCtor Constructor function to inherit prototype from.
- */
-exports.inherits = _dereq_('inherits');
-
-exports._extend = function(origin, add) {
-  // Don't do anything if add isn't an object
-  if (!add || !isObject(add)) return origin;
-
-  var keys = Object.keys(add);
-  var i = keys.length;
-  while (i--) {
-    origin[keys[i]] = add[keys[i]];
-  }
-  return origin;
-};
-
-function hasOwnProperty(obj, prop) {
-  return Object.prototype.hasOwnProperty.call(obj, prop);
-}
-
-}).call(this,_dereq_("+NscNm"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"+NscNm":22,"./support/isBuffer":2,"inherits":21}],4:[function(_dereq_,module,exports){
+},{"util/":30}],2:[function(_dereq_,module,exports){
 'use strict';
 
 
@@ -1060,7 +463,7 @@ exports.setTyped = function (on) {
 };
 
 exports.setTyped(TYPED_OK);
-},{}],5:[function(_dereq_,module,exports){
+},{}],3:[function(_dereq_,module,exports){
 'use strict';
 
 // Note: adler32 takes 12% for level 0 and 2% for level 6.
@@ -1093,7 +496,7 @@ function adler32(adler, buf, len, pos) {
 
 
 module.exports = adler32;
-},{}],6:[function(_dereq_,module,exports){
+},{}],4:[function(_dereq_,module,exports){
 module.exports = {
 
   /* Allowed flush values; see deflate() and inflate() below for details */
@@ -1141,7 +544,7 @@ module.exports = {
   Z_DEFLATED:               8
   //Z_NULL:                 null // Use -1 or null inline, depending on var type
 };
-},{}],7:[function(_dereq_,module,exports){
+},{}],5:[function(_dereq_,module,exports){
 'use strict';
 
 // Note: we can't get significant speed boost here.
@@ -1183,7 +586,7 @@ function crc32(crc, buf, len, pos) {
 
 
 module.exports = crc32;
-},{}],8:[function(_dereq_,module,exports){
+},{}],6:[function(_dereq_,module,exports){
 'use strict';
 
 var utils   = _dereq_('../utils/common');
@@ -2949,7 +2352,7 @@ exports.deflatePending = deflatePending;
 exports.deflatePrime = deflatePrime;
 exports.deflateTune = deflateTune;
 */
-},{"../utils/common":4,"./adler32":5,"./crc32":7,"./messages":12,"./trees":13}],9:[function(_dereq_,module,exports){
+},{"../utils/common":2,"./adler32":3,"./crc32":5,"./messages":10,"./trees":11}],7:[function(_dereq_,module,exports){
 'use strict';
 
 // See state defs from inflate.js
@@ -3276,7 +2679,7 @@ module.exports = function inflate_fast(strm, start) {
   return;
 };
 
-},{}],10:[function(_dereq_,module,exports){
+},{}],8:[function(_dereq_,module,exports){
 'use strict';
 
 
@@ -4780,7 +4183,7 @@ exports.inflateSync = inflateSync;
 exports.inflateSyncPoint = inflateSyncPoint;
 exports.inflateUndermine = inflateUndermine;
 */
-},{"../utils/common":4,"./adler32":5,"./crc32":7,"./inffast":9,"./inftrees":11}],11:[function(_dereq_,module,exports){
+},{"../utils/common":2,"./adler32":3,"./crc32":5,"./inffast":7,"./inftrees":9}],9:[function(_dereq_,module,exports){
 'use strict';
 
 
@@ -5050,7 +4453,7 @@ module.exports = function inflate_table(type, lens, lens_index, codes, table, ta
 
     /* go to next symbol, update count, len */
     sym++;
-    if (--(count[len]) === 0) {
+    if (--count[len] === 0) {
       if (len === max) { break; }
       len = lens[lens_index + work[sym]];
     }
@@ -5107,7 +4510,7 @@ module.exports = function inflate_table(type, lens, lens_index, codes, table, ta
   return 0;
 };
 
-},{"../utils/common":4}],12:[function(_dereq_,module,exports){
+},{"../utils/common":2}],10:[function(_dereq_,module,exports){
 'use strict';
 
 module.exports = {
@@ -5121,7 +4524,7 @@ module.exports = {
   '-5':   'buffer error',        /* Z_BUF_ERROR     (-5) */
   '-6':   'incompatible version' /* Z_VERSION_ERROR (-6) */
 };
-},{}],13:[function(_dereq_,module,exports){
+},{}],11:[function(_dereq_,module,exports){
 'use strict';
 
 
@@ -6321,7 +5724,7 @@ exports._tr_stored_block = _tr_stored_block;
 exports._tr_flush_block  = _tr_flush_block;
 exports._tr_tally = _tr_tally;
 exports._tr_align = _tr_align;
-},{"../utils/common":4}],14:[function(_dereq_,module,exports){
+},{"../utils/common":2}],12:[function(_dereq_,module,exports){
 'use strict';
 
 
@@ -6351,7 +5754,7 @@ function ZStream() {
 }
 
 module.exports = ZStream;
-},{}],15:[function(_dereq_,module,exports){
+},{}],13:[function(_dereq_,module,exports){
 (function (process,Buffer){
 var msg = _dereq_('pako/lib/zlib/messages');
 var zstream = _dereq_('pako/lib/zlib/zstream');
@@ -6590,8 +5993,8 @@ Zlib.prototype._error = function(status) {
 
 exports.Zlib = Zlib;
 
-}).call(this,_dereq_("+NscNm"),_dereq_("buffer").Buffer)
-},{"+NscNm":22,"buffer":17,"pako/lib/zlib/constants":6,"pako/lib/zlib/deflate.js":8,"pako/lib/zlib/inflate.js":10,"pako/lib/zlib/messages":12,"pako/lib/zlib/zstream":14}],16:[function(_dereq_,module,exports){
+}).call(this,_dereq_("JkpR2F"),_dereq_("buffer").Buffer)
+},{"JkpR2F":20,"buffer":15,"pako/lib/zlib/constants":4,"pako/lib/zlib/deflate.js":6,"pako/lib/zlib/inflate.js":8,"pako/lib/zlib/messages":10,"pako/lib/zlib/zstream":12}],14:[function(_dereq_,module,exports){
 (function (process,Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -7204,8 +6607,8 @@ util.inherits(DeflateRaw, Zlib);
 util.inherits(InflateRaw, Zlib);
 util.inherits(Unzip, Zlib);
 
-}).call(this,_dereq_("+NscNm"),_dereq_("buffer").Buffer)
-},{"+NscNm":22,"./binding":15,"_stream_transform":28,"assert":1,"buffer":17,"util":32}],17:[function(_dereq_,module,exports){
+}).call(this,_dereq_("JkpR2F"),_dereq_("buffer").Buffer)
+},{"./binding":13,"JkpR2F":20,"_stream_transform":26,"assert":1,"buffer":15,"util":30}],15:[function(_dereq_,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -8316,7 +7719,7 @@ function assert (test, message) {
   if (!test) throw new Error(message || 'Failed assertion')
 }
 
-},{"base64-js":18,"ieee754":19}],18:[function(_dereq_,module,exports){
+},{"base64-js":16,"ieee754":17}],16:[function(_dereq_,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -8438,7 +7841,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],19:[function(_dereq_,module,exports){
+},{}],17:[function(_dereq_,module,exports){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -8524,7 +7927,7 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],20:[function(_dereq_,module,exports){
+},{}],18:[function(_dereq_,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -8584,10 +7987,8 @@ EventEmitter.prototype.emit = function(type) {
       er = arguments[1];
       if (er instanceof Error) {
         throw er; // Unhandled 'error' event
-      } else {
-        throw TypeError('Uncaught, unspecified "error" event.');
       }
-      return false;
+      throw TypeError('Uncaught, unspecified "error" event.');
     }
   }
 
@@ -8829,7 +8230,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],21:[function(_dereq_,module,exports){
+},{}],19:[function(_dereq_,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -8854,7 +8255,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],22:[function(_dereq_,module,exports){
+},{}],20:[function(_dereq_,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -8919,7 +8320,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],23:[function(_dereq_,module,exports){
+},{}],21:[function(_dereq_,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -8993,7 +8394,7 @@ function onend() {
   });
 }
 
-},{"./readable.js":27,"./writable.js":29,"inherits":21,"process/browser.js":25}],24:[function(_dereq_,module,exports){
+},{"./readable.js":25,"./writable.js":27,"inherits":19,"process/browser.js":23}],22:[function(_dereq_,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -9122,7 +8523,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"./duplex.js":23,"./passthrough.js":26,"./readable.js":27,"./transform.js":28,"./writable.js":29,"events":20,"inherits":21}],25:[function(_dereq_,module,exports){
+},{"./duplex.js":21,"./passthrough.js":24,"./readable.js":25,"./transform.js":26,"./writable.js":27,"events":18,"inherits":19}],23:[function(_dereq_,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -9177,7 +8578,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],26:[function(_dereq_,module,exports){
+},{}],24:[function(_dereq_,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -9220,7 +8621,7 @@ PassThrough.prototype._transform = function(chunk, encoding, cb) {
   cb(null, chunk);
 };
 
-},{"./transform.js":28,"inherits":21}],27:[function(_dereq_,module,exports){
+},{"./transform.js":26,"inherits":19}],25:[function(_dereq_,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -10156,8 +9557,8 @@ function indexOf (xs, x) {
   return -1;
 }
 
-}).call(this,_dereq_("+NscNm"))
-},{"+NscNm":22,"./index.js":24,"buffer":17,"events":20,"inherits":21,"process/browser.js":25,"string_decoder":30}],28:[function(_dereq_,module,exports){
+}).call(this,_dereq_("JkpR2F"))
+},{"./index.js":22,"JkpR2F":20,"buffer":15,"events":18,"inherits":19,"process/browser.js":23,"string_decoder":28}],26:[function(_dereq_,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -10363,7 +9764,7 @@ function done(stream, er) {
   return stream.push(null);
 }
 
-},{"./duplex.js":23,"inherits":21}],29:[function(_dereq_,module,exports){
+},{"./duplex.js":21,"inherits":19}],27:[function(_dereq_,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -10751,7 +10152,7 @@ function endWritable(stream, state, cb) {
   state.ended = true;
 }
 
-},{"./index.js":24,"buffer":17,"inherits":21,"process/browser.js":25}],30:[function(_dereq_,module,exports){
+},{"./index.js":22,"buffer":15,"inherits":19,"process/browser.js":23}],28:[function(_dereq_,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -10944,11 +10345,604 @@ function base64DetectIncompleteChar(buffer) {
   return incomplete;
 }
 
-},{"buffer":17}],31:[function(_dereq_,module,exports){
-module.exports=_dereq_(2)
-},{}],32:[function(_dereq_,module,exports){
-module.exports=_dereq_(3)
-},{"+NscNm":22,"./support/isBuffer":31,"inherits":21}],33:[function(_dereq_,module,exports){
+},{"buffer":15}],29:[function(_dereq_,module,exports){
+module.exports = function isBuffer(arg) {
+  return arg && typeof arg === 'object'
+    && typeof arg.copy === 'function'
+    && typeof arg.fill === 'function'
+    && typeof arg.readUInt8 === 'function';
+}
+},{}],30:[function(_dereq_,module,exports){
+(function (process,global){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+var formatRegExp = /%[sdj%]/g;
+exports.format = function(f) {
+  if (!isString(f)) {
+    var objects = [];
+    for (var i = 0; i < arguments.length; i++) {
+      objects.push(inspect(arguments[i]));
+    }
+    return objects.join(' ');
+  }
+
+  var i = 1;
+  var args = arguments;
+  var len = args.length;
+  var str = String(f).replace(formatRegExp, function(x) {
+    if (x === '%%') return '%';
+    if (i >= len) return x;
+    switch (x) {
+      case '%s': return String(args[i++]);
+      case '%d': return Number(args[i++]);
+      case '%j':
+        try {
+          return JSON.stringify(args[i++]);
+        } catch (_) {
+          return '[Circular]';
+        }
+      default:
+        return x;
+    }
+  });
+  for (var x = args[i]; i < len; x = args[++i]) {
+    if (isNull(x) || !isObject(x)) {
+      str += ' ' + x;
+    } else {
+      str += ' ' + inspect(x);
+    }
+  }
+  return str;
+};
+
+
+// Mark that a method should not be used.
+// Returns a modified function which warns once by default.
+// If --no-deprecation is set, then it is a no-op.
+exports.deprecate = function(fn, msg) {
+  // Allow for deprecating things in the process of starting up.
+  if (isUndefined(global.process)) {
+    return function() {
+      return exports.deprecate(fn, msg).apply(this, arguments);
+    };
+  }
+
+  if (process.noDeprecation === true) {
+    return fn;
+  }
+
+  var warned = false;
+  function deprecated() {
+    if (!warned) {
+      if (process.throwDeprecation) {
+        throw new Error(msg);
+      } else if (process.traceDeprecation) {
+        console.trace(msg);
+      } else {
+        console.error(msg);
+      }
+      warned = true;
+    }
+    return fn.apply(this, arguments);
+  }
+
+  return deprecated;
+};
+
+
+var debugs = {};
+var debugEnviron;
+exports.debuglog = function(set) {
+  if (isUndefined(debugEnviron))
+    debugEnviron = process.env.NODE_DEBUG || '';
+  set = set.toUpperCase();
+  if (!debugs[set]) {
+    if (new RegExp('\\b' + set + '\\b', 'i').test(debugEnviron)) {
+      var pid = process.pid;
+      debugs[set] = function() {
+        var msg = exports.format.apply(exports, arguments);
+        console.error('%s %d: %s', set, pid, msg);
+      };
+    } else {
+      debugs[set] = function() {};
+    }
+  }
+  return debugs[set];
+};
+
+
+/**
+ * Echos the value of a value. Trys to print the value out
+ * in the best way possible given the different types.
+ *
+ * @param {Object} obj The object to print out.
+ * @param {Object} opts Optional options object that alters the output.
+ */
+/* legacy: obj, showHidden, depth, colors*/
+function inspect(obj, opts) {
+  // default options
+  var ctx = {
+    seen: [],
+    stylize: stylizeNoColor
+  };
+  // legacy...
+  if (arguments.length >= 3) ctx.depth = arguments[2];
+  if (arguments.length >= 4) ctx.colors = arguments[3];
+  if (isBoolean(opts)) {
+    // legacy...
+    ctx.showHidden = opts;
+  } else if (opts) {
+    // got an "options" object
+    exports._extend(ctx, opts);
+  }
+  // set default options
+  if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
+  if (isUndefined(ctx.depth)) ctx.depth = 2;
+  if (isUndefined(ctx.colors)) ctx.colors = false;
+  if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
+  if (ctx.colors) ctx.stylize = stylizeWithColor;
+  return formatValue(ctx, obj, ctx.depth);
+}
+exports.inspect = inspect;
+
+
+// http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
+inspect.colors = {
+  'bold' : [1, 22],
+  'italic' : [3, 23],
+  'underline' : [4, 24],
+  'inverse' : [7, 27],
+  'white' : [37, 39],
+  'grey' : [90, 39],
+  'black' : [30, 39],
+  'blue' : [34, 39],
+  'cyan' : [36, 39],
+  'green' : [32, 39],
+  'magenta' : [35, 39],
+  'red' : [31, 39],
+  'yellow' : [33, 39]
+};
+
+// Don't use 'blue' not visible on cmd.exe
+inspect.styles = {
+  'special': 'cyan',
+  'number': 'yellow',
+  'boolean': 'yellow',
+  'undefined': 'grey',
+  'null': 'bold',
+  'string': 'green',
+  'date': 'magenta',
+  // "name": intentionally not styling
+  'regexp': 'red'
+};
+
+
+function stylizeWithColor(str, styleType) {
+  var style = inspect.styles[styleType];
+
+  if (style) {
+    return '\u001b[' + inspect.colors[style][0] + 'm' + str +
+           '\u001b[' + inspect.colors[style][1] + 'm';
+  } else {
+    return str;
+  }
+}
+
+
+function stylizeNoColor(str, styleType) {
+  return str;
+}
+
+
+function arrayToHash(array) {
+  var hash = {};
+
+  array.forEach(function(val, idx) {
+    hash[val] = true;
+  });
+
+  return hash;
+}
+
+
+function formatValue(ctx, value, recurseTimes) {
+  // Provide a hook for user-specified inspect functions.
+  // Check that value is an object with an inspect function on it
+  if (ctx.customInspect &&
+      value &&
+      isFunction(value.inspect) &&
+      // Filter out the util module, it's inspect function is special
+      value.inspect !== exports.inspect &&
+      // Also filter out any prototype objects using the circular check.
+      !(value.constructor && value.constructor.prototype === value)) {
+    var ret = value.inspect(recurseTimes, ctx);
+    if (!isString(ret)) {
+      ret = formatValue(ctx, ret, recurseTimes);
+    }
+    return ret;
+  }
+
+  // Primitive types cannot have properties
+  var primitive = formatPrimitive(ctx, value);
+  if (primitive) {
+    return primitive;
+  }
+
+  // Look up the keys of the object.
+  var keys = Object.keys(value);
+  var visibleKeys = arrayToHash(keys);
+
+  if (ctx.showHidden) {
+    keys = Object.getOwnPropertyNames(value);
+  }
+
+  // IE doesn't make error fields non-enumerable
+  // http://msdn.microsoft.com/en-us/library/ie/dww52sbt(v=vs.94).aspx
+  if (isError(value)
+      && (keys.indexOf('message') >= 0 || keys.indexOf('description') >= 0)) {
+    return formatError(value);
+  }
+
+  // Some type of object without properties can be shortcutted.
+  if (keys.length === 0) {
+    if (isFunction(value)) {
+      var name = value.name ? ': ' + value.name : '';
+      return ctx.stylize('[Function' + name + ']', 'special');
+    }
+    if (isRegExp(value)) {
+      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
+    }
+    if (isDate(value)) {
+      return ctx.stylize(Date.prototype.toString.call(value), 'date');
+    }
+    if (isError(value)) {
+      return formatError(value);
+    }
+  }
+
+  var base = '', array = false, braces = ['{', '}'];
+
+  // Make Array say that they are Array
+  if (isArray(value)) {
+    array = true;
+    braces = ['[', ']'];
+  }
+
+  // Make functions say that they are functions
+  if (isFunction(value)) {
+    var n = value.name ? ': ' + value.name : '';
+    base = ' [Function' + n + ']';
+  }
+
+  // Make RegExps say that they are RegExps
+  if (isRegExp(value)) {
+    base = ' ' + RegExp.prototype.toString.call(value);
+  }
+
+  // Make dates with properties first say the date
+  if (isDate(value)) {
+    base = ' ' + Date.prototype.toUTCString.call(value);
+  }
+
+  // Make error with message first say the error
+  if (isError(value)) {
+    base = ' ' + formatError(value);
+  }
+
+  if (keys.length === 0 && (!array || value.length == 0)) {
+    return braces[0] + base + braces[1];
+  }
+
+  if (recurseTimes < 0) {
+    if (isRegExp(value)) {
+      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
+    } else {
+      return ctx.stylize('[Object]', 'special');
+    }
+  }
+
+  ctx.seen.push(value);
+
+  var output;
+  if (array) {
+    output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
+  } else {
+    output = keys.map(function(key) {
+      return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
+    });
+  }
+
+  ctx.seen.pop();
+
+  return reduceToSingleString(output, base, braces);
+}
+
+
+function formatPrimitive(ctx, value) {
+  if (isUndefined(value))
+    return ctx.stylize('undefined', 'undefined');
+  if (isString(value)) {
+    var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
+                                             .replace(/'/g, "\\'")
+                                             .replace(/\\"/g, '"') + '\'';
+    return ctx.stylize(simple, 'string');
+  }
+  if (isNumber(value))
+    return ctx.stylize('' + value, 'number');
+  if (isBoolean(value))
+    return ctx.stylize('' + value, 'boolean');
+  // For some reason typeof null is "object", so special case here.
+  if (isNull(value))
+    return ctx.stylize('null', 'null');
+}
+
+
+function formatError(value) {
+  return '[' + Error.prototype.toString.call(value) + ']';
+}
+
+
+function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
+  var output = [];
+  for (var i = 0, l = value.length; i < l; ++i) {
+    if (hasOwnProperty(value, String(i))) {
+      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
+          String(i), true));
+    } else {
+      output.push('');
+    }
+  }
+  keys.forEach(function(key) {
+    if (!key.match(/^\d+$/)) {
+      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
+          key, true));
+    }
+  });
+  return output;
+}
+
+
+function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
+  var name, str, desc;
+  desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
+  if (desc.get) {
+    if (desc.set) {
+      str = ctx.stylize('[Getter/Setter]', 'special');
+    } else {
+      str = ctx.stylize('[Getter]', 'special');
+    }
+  } else {
+    if (desc.set) {
+      str = ctx.stylize('[Setter]', 'special');
+    }
+  }
+  if (!hasOwnProperty(visibleKeys, key)) {
+    name = '[' + key + ']';
+  }
+  if (!str) {
+    if (ctx.seen.indexOf(desc.value) < 0) {
+      if (isNull(recurseTimes)) {
+        str = formatValue(ctx, desc.value, null);
+      } else {
+        str = formatValue(ctx, desc.value, recurseTimes - 1);
+      }
+      if (str.indexOf('\n') > -1) {
+        if (array) {
+          str = str.split('\n').map(function(line) {
+            return '  ' + line;
+          }).join('\n').substr(2);
+        } else {
+          str = '\n' + str.split('\n').map(function(line) {
+            return '   ' + line;
+          }).join('\n');
+        }
+      }
+    } else {
+      str = ctx.stylize('[Circular]', 'special');
+    }
+  }
+  if (isUndefined(name)) {
+    if (array && key.match(/^\d+$/)) {
+      return str;
+    }
+    name = JSON.stringify('' + key);
+    if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
+      name = name.substr(1, name.length - 2);
+      name = ctx.stylize(name, 'name');
+    } else {
+      name = name.replace(/'/g, "\\'")
+                 .replace(/\\"/g, '"')
+                 .replace(/(^"|"$)/g, "'");
+      name = ctx.stylize(name, 'string');
+    }
+  }
+
+  return name + ': ' + str;
+}
+
+
+function reduceToSingleString(output, base, braces) {
+  var numLinesEst = 0;
+  var length = output.reduce(function(prev, cur) {
+    numLinesEst++;
+    if (cur.indexOf('\n') >= 0) numLinesEst++;
+    return prev + cur.replace(/\u001b\[\d\d?m/g, '').length + 1;
+  }, 0);
+
+  if (length > 60) {
+    return braces[0] +
+           (base === '' ? '' : base + '\n ') +
+           ' ' +
+           output.join(',\n  ') +
+           ' ' +
+           braces[1];
+  }
+
+  return braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
+}
+
+
+// NOTE: These type checking functions intentionally don't use `instanceof`
+// because it is fragile and can be easily faked with `Object.create()`.
+function isArray(ar) {
+  return Array.isArray(ar);
+}
+exports.isArray = isArray;
+
+function isBoolean(arg) {
+  return typeof arg === 'boolean';
+}
+exports.isBoolean = isBoolean;
+
+function isNull(arg) {
+  return arg === null;
+}
+exports.isNull = isNull;
+
+function isNullOrUndefined(arg) {
+  return arg == null;
+}
+exports.isNullOrUndefined = isNullOrUndefined;
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+exports.isNumber = isNumber;
+
+function isString(arg) {
+  return typeof arg === 'string';
+}
+exports.isString = isString;
+
+function isSymbol(arg) {
+  return typeof arg === 'symbol';
+}
+exports.isSymbol = isSymbol;
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
+exports.isUndefined = isUndefined;
+
+function isRegExp(re) {
+  return isObject(re) && objectToString(re) === '[object RegExp]';
+}
+exports.isRegExp = isRegExp;
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+exports.isObject = isObject;
+
+function isDate(d) {
+  return isObject(d) && objectToString(d) === '[object Date]';
+}
+exports.isDate = isDate;
+
+function isError(e) {
+  return isObject(e) &&
+      (objectToString(e) === '[object Error]' || e instanceof Error);
+}
+exports.isError = isError;
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+exports.isFunction = isFunction;
+
+function isPrimitive(arg) {
+  return arg === null ||
+         typeof arg === 'boolean' ||
+         typeof arg === 'number' ||
+         typeof arg === 'string' ||
+         typeof arg === 'symbol' ||  // ES6 symbol
+         typeof arg === 'undefined';
+}
+exports.isPrimitive = isPrimitive;
+
+exports.isBuffer = _dereq_('./support/isBuffer');
+
+function objectToString(o) {
+  return Object.prototype.toString.call(o);
+}
+
+
+function pad(n) {
+  return n < 10 ? '0' + n.toString(10) : n.toString(10);
+}
+
+
+var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+              'Oct', 'Nov', 'Dec'];
+
+// 26 Feb 16:19:34
+function timestamp() {
+  var d = new Date();
+  var time = [pad(d.getHours()),
+              pad(d.getMinutes()),
+              pad(d.getSeconds())].join(':');
+  return [d.getDate(), months[d.getMonth()], time].join(' ');
+}
+
+
+// log is just a thin wrapper to console.log that prepends a timestamp
+exports.log = function() {
+  console.log('%s - %s', timestamp(), exports.format.apply(exports, arguments));
+};
+
+
+/**
+ * Inherit the prototype methods from one constructor into another.
+ *
+ * The Function.prototype.inherits from lang.js rewritten as a standalone
+ * function (not on Function.prototype). NOTE: If this file is to be loaded
+ * during bootstrapping this function needs to be rewritten using some native
+ * functions as prototype setup using normal JavaScript does not work as
+ * expected during bootstrapping (see mirror.js in r114903).
+ *
+ * @param {function} ctor Constructor function which needs to inherit the
+ *     prototype.
+ * @param {function} superCtor Constructor function to inherit prototype from.
+ */
+exports.inherits = _dereq_('inherits');
+
+exports._extend = function(origin, add) {
+  // Don't do anything if add isn't an object
+  if (!add || !isObject(add)) return origin;
+
+  var keys = Object.keys(add);
+  var i = keys.length;
+  while (i--) {
+    origin[keys[i]] = add[keys[i]];
+  }
+  return origin;
+};
+
+function hasOwnProperty(obj, prop) {
+  return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
+}).call(this,_dereq_("JkpR2F"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./support/isBuffer":29,"JkpR2F":20,"inherits":19}],31:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var Data;
@@ -11142,7 +11136,7 @@ module.exports=_dereq_(3)
 
 }).call(this);
 
-},{}],34:[function(_dereq_,module,exports){
+},{}],32:[function(_dereq_,module,exports){
 (function (Buffer){
 // Generated by CoffeeScript 1.7.1
 
@@ -11366,7 +11360,7 @@ By Devon Govett
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"./image":54,"./mixins/annotations.js":58,"./mixins/color.js":59,"./mixins/fonts.js":60,"./mixins/images.js":61,"./mixins/text.js":62,"./mixins/vector.js":63,"./object":64,"./page":65,"./reference":67,"buffer":17,"fs":"Dh6W75","stream":24}],35:[function(_dereq_,module,exports){
+},{"./image":52,"./mixins/annotations.js":56,"./mixins/color.js":57,"./mixins/fonts.js":58,"./mixins/images.js":59,"./mixins/text.js":60,"./mixins/vector.js":61,"./object":62,"./page":63,"./reference":65,"buffer":15,"fs":"x/K9gc","stream":22}],33:[function(_dereq_,module,exports){
 (function (__dirname){
 // Generated by CoffeeScript 1.7.1
 
@@ -11605,8 +11599,8 @@ By Devon Govett
 
 }).call(this);
 
-}).call(this,"/..\\..\\node_modules\\pdfmake-pdfkit\\js")
-},{"./font/afm":36,"./font/subset":39,"./font/ttf":51,"zlib":16}],36:[function(_dereq_,module,exports){
+}).call(this,"/../../node_modules/pdfmake-pdfkit/js")
+},{"./font/afm":34,"./font/subset":37,"./font/ttf":49,"zlib":14}],34:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var AFMFont, fs;
@@ -11746,7 +11740,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"fs":"Dh6W75"}],37:[function(_dereq_,module,exports){
+},{"fs":"x/K9gc"}],35:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var DFont, Data, Directory, NameTable, fs;
@@ -11855,7 +11849,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../data":33,"./directory":38,"./tables/name":48,"fs":"Dh6W75"}],38:[function(_dereq_,module,exports){
+},{"../data":31,"./directory":36,"./tables/name":46,"fs":"x/K9gc"}],36:[function(_dereq_,module,exports){
 (function (Buffer){
 // Generated by CoffeeScript 1.7.1
 (function() {
@@ -11950,7 +11944,7 @@ By Devon Govett
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"../data":33,"buffer":17}],39:[function(_dereq_,module,exports){
+},{"../data":31,"buffer":15}],37:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var CmapTable, Subset, utils,
@@ -12109,7 +12103,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"./tables/cmap":41,"./utils":52}],40:[function(_dereq_,module,exports){
+},{"./tables/cmap":39,"./utils":50}],38:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var Table;
@@ -12150,7 +12144,7 @@ By Devon Govett
 
 }).call(this);
 
-},{}],41:[function(_dereq_,module,exports){
+},{}],39:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var CmapEntry, CmapTable, Data, Table,
@@ -12438,7 +12432,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../../data":33,"../table":40}],42:[function(_dereq_,module,exports){
+},{"../../data":31,"../table":38}],40:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var CompoundGlyph, Data, GlyfTable, SimpleGlyph, Table,
@@ -12598,7 +12592,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../../data":33,"../table":40}],43:[function(_dereq_,module,exports){
+},{"../../data":31,"../table":38}],41:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var Data, HeadTable, Table,
@@ -12668,7 +12662,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../../data":33,"../table":40}],44:[function(_dereq_,module,exports){
+},{"../../data":31,"../table":38}],42:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var Data, HheaTable, Table,
@@ -12734,7 +12728,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../../data":33,"../table":40}],45:[function(_dereq_,module,exports){
+},{"../../data":31,"../table":38}],43:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var Data, HmtxTable, Table,
@@ -12820,7 +12814,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../../data":33,"../table":40}],46:[function(_dereq_,module,exports){
+},{"../../data":31,"../table":38}],44:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var Data, LocaTable, Table,
@@ -12907,7 +12901,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../../data":33,"../table":40}],47:[function(_dereq_,module,exports){
+},{"../../data":31,"../table":38}],45:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var Data, MaxpTable, Table,
@@ -12973,7 +12967,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../../data":33,"../table":40}],48:[function(_dereq_,module,exports){
+},{"../../data":31,"../table":38}],46:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var Data, NameEntry, NameTable, Table, utils,
@@ -13116,7 +13110,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../../data":33,"../table":40,"../utils":52}],49:[function(_dereq_,module,exports){
+},{"../../data":31,"../table":38,"../utils":50}],47:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var OS2Table, Table,
@@ -13208,7 +13202,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../table":40}],50:[function(_dereq_,module,exports){
+},{"../table":38}],48:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var Data, PostTable, Table,
@@ -13344,7 +13338,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../../data":33,"../table":40}],51:[function(_dereq_,module,exports){
+},{"../../data":31,"../table":38}],49:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var CmapTable, DFont, Data, Directory, GlyfTable, HeadTable, HheaTable, HmtxTable, LocaTable, MaxpTable, NameTable, OS2Table, PostTable, TTFFont, fs;
@@ -13456,7 +13450,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../data":33,"./dfont":37,"./directory":38,"./tables/cmap":41,"./tables/glyf":42,"./tables/head":43,"./tables/hhea":44,"./tables/hmtx":45,"./tables/loca":46,"./tables/maxp":47,"./tables/name":48,"./tables/os2":49,"./tables/post":50,"fs":"Dh6W75"}],52:[function(_dereq_,module,exports){
+},{"../data":31,"./dfont":35,"./directory":36,"./tables/cmap":39,"./tables/glyf":40,"./tables/head":41,"./tables/hhea":42,"./tables/hmtx":43,"./tables/loca":44,"./tables/maxp":45,"./tables/name":46,"./tables/os2":47,"./tables/post":48,"fs":"x/K9gc"}],50:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 
 /*
@@ -13536,7 +13530,7 @@ By Devon Govett
 
 }).call(this);
 
-},{}],53:[function(_dereq_,module,exports){
+},{}],51:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var PDFGradient, PDFLinearGradient, PDFRadialGradient,
@@ -13765,7 +13759,7 @@ By Devon Govett
 
 }).call(this);
 
-},{}],54:[function(_dereq_,module,exports){
+},{}],52:[function(_dereq_,module,exports){
 (function (Buffer){
 // Generated by CoffeeScript 1.7.1
 
@@ -13816,7 +13810,7 @@ By Devon Govett
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"./data":33,"./image/jpeg":55,"./image/png":56,"buffer":17,"fs":"Dh6W75"}],55:[function(_dereq_,module,exports){
+},{"./data":31,"./image/jpeg":53,"./image/png":54,"buffer":15,"fs":"x/K9gc"}],53:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var JPEG, fs,
@@ -13897,7 +13891,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"fs":"Dh6W75"}],56:[function(_dereq_,module,exports){
+},{"fs":"x/K9gc"}],54:[function(_dereq_,module,exports){
 (function (Buffer){
 // Generated by CoffeeScript 1.7.1
 (function() {
@@ -14063,7 +14057,7 @@ By Devon Govett
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"buffer":17,"png-js":71,"zlib":16}],57:[function(_dereq_,module,exports){
+},{"buffer":15,"png-js":71,"zlib":14}],55:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var EventEmitter, LineBreaker, LineWrapper,
@@ -14313,7 +14307,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"events":20,"linebreak":69}],58:[function(_dereq_,module,exports){
+},{"events":18,"linebreak":69}],56:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var PDFObject;
@@ -14452,7 +14446,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../object":64}],59:[function(_dereq_,module,exports){
+},{"../object":62}],57:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var PDFGradient, PDFLinearGradient, PDFRadialGradient, namedColors, _ref;
@@ -14769,7 +14763,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../gradient":53}],60:[function(_dereq_,module,exports){
+},{"../gradient":51}],58:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var PDFFont;
@@ -14830,7 +14824,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../font":35}],61:[function(_dereq_,module,exports){
+},{"../font":33}],59:[function(_dereq_,module,exports){
 (function (Buffer){
 // Generated by CoffeeScript 1.7.1
 (function() {
@@ -14909,7 +14903,7 @@ By Devon Govett
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"../image":54,"buffer":17}],62:[function(_dereq_,module,exports){
+},{"../image":52,"buffer":15}],60:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var LineWrapper;
@@ -15228,7 +15222,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../line_wrapper":57}],63:[function(_dereq_,module,exports){
+},{"../line_wrapper":55}],61:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var KAPPA, SVGPath,
@@ -15475,7 +15469,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"../path":66}],64:[function(_dereq_,module,exports){
+},{"../path":64}],62:[function(_dereq_,module,exports){
 (function (Buffer){
 // Generated by CoffeeScript 1.7.1
 
@@ -15572,7 +15566,7 @@ By Devon Govett
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"./reference":67,"buffer":17}],65:[function(_dereq_,module,exports){
+},{"./reference":65,"buffer":15}],63:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 
 /*
@@ -15744,7 +15738,7 @@ By Devon Govett
 
 }).call(this);
 
-},{}],66:[function(_dereq_,module,exports){
+},{}],64:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var SVGPath;
@@ -16112,7 +16106,7 @@ By Devon Govett
 
 }).call(this);
 
-},{}],67:[function(_dereq_,module,exports){
+},{}],65:[function(_dereq_,module,exports){
 (function (Buffer){
 // Generated by CoffeeScript 1.7.1
 
@@ -16229,10 +16223,100 @@ By Devon Govett
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"./object":64,"buffer":17,"zlib":16}],68:[function(_dereq_,module,exports){
+},{"./object":62,"buffer":15,"zlib":14}],66:[function(_dereq_,module,exports){
+// Generated by CoffeeScript 1.7.1
+var UnicodeTrie,
+  __slice = [].slice;
+
+UnicodeTrie = (function() {
+  var DATA_BLOCK_LENGTH, DATA_GRANULARITY, DATA_MASK, INDEX_1_OFFSET, INDEX_2_BLOCK_LENGTH, INDEX_2_BMP_LENGTH, INDEX_2_MASK, INDEX_SHIFT, LSCP_INDEX_2_LENGTH, LSCP_INDEX_2_OFFSET, OMITTED_BMP_INDEX_1_LENGTH, SHIFT_1, SHIFT_1_2, SHIFT_2, UTF8_2B_INDEX_2_LENGTH, UTF8_2B_INDEX_2_OFFSET;
+
+  SHIFT_1 = 6 + 5;
+
+  SHIFT_2 = 5;
+
+  SHIFT_1_2 = SHIFT_1 - SHIFT_2;
+
+  OMITTED_BMP_INDEX_1_LENGTH = 0x10000 >> SHIFT_1;
+
+  INDEX_2_BLOCK_LENGTH = 1 << SHIFT_1_2;
+
+  INDEX_2_MASK = INDEX_2_BLOCK_LENGTH - 1;
+
+  INDEX_SHIFT = 2;
+
+  DATA_BLOCK_LENGTH = 1 << SHIFT_2;
+
+  DATA_MASK = DATA_BLOCK_LENGTH - 1;
+
+  LSCP_INDEX_2_OFFSET = 0x10000 >> SHIFT_2;
+
+  LSCP_INDEX_2_LENGTH = 0x400 >> SHIFT_2;
+
+  INDEX_2_BMP_LENGTH = LSCP_INDEX_2_OFFSET + LSCP_INDEX_2_LENGTH;
+
+  UTF8_2B_INDEX_2_OFFSET = INDEX_2_BMP_LENGTH;
+
+  UTF8_2B_INDEX_2_LENGTH = 0x800 >> 6;
+
+  INDEX_1_OFFSET = UTF8_2B_INDEX_2_OFFSET + UTF8_2B_INDEX_2_LENGTH;
+
+  DATA_GRANULARITY = 1 << INDEX_SHIFT;
+
+  function UnicodeTrie(json) {
+    var _ref, _ref1;
+    if (json == null) {
+      json = {};
+    }
+    this.data = json.data || [];
+    this.highStart = (_ref = json.highStart) != null ? _ref : 0;
+    this.errorValue = (_ref1 = json.errorValue) != null ? _ref1 : -1;
+  }
+
+  UnicodeTrie.prototype.get = function(codePoint) {
+    var index;
+    if (codePoint < 0 || codePoint > 0x10ffff) {
+      return this.errorValue;
+    }
+    if (codePoint < 0xd800 || (codePoint > 0xdbff && codePoint <= 0xffff)) {
+      index = (this.data[codePoint >> SHIFT_2] << INDEX_SHIFT) + (codePoint & DATA_MASK);
+      return this.data[index];
+    }
+    if (codePoint <= 0xffff) {
+      index = (this.data[LSCP_INDEX_2_OFFSET + ((codePoint - 0xd800) >> SHIFT_2)] << INDEX_SHIFT) + (codePoint & DATA_MASK);
+      return this.data[index];
+    }
+    if (codePoint < this.highStart) {
+      index = this.data[(INDEX_1_OFFSET - OMITTED_BMP_INDEX_1_LENGTH) + (codePoint >> SHIFT_1)];
+      index = this.data[index + ((codePoint >> SHIFT_2) & INDEX_2_MASK)];
+      index = (index << INDEX_SHIFT) + (codePoint & DATA_MASK);
+      return this.data[index];
+    }
+    return this.data[this.data.length - DATA_GRANULARITY];
+  };
+
+  UnicodeTrie.prototype.toJSON = function() {
+    var res;
+    res = {
+      data: __slice.call(this.data),
+      highStart: this.highStart,
+      errorValue: this.errorValue
+    };
+    return res;
+  };
+
+  return UnicodeTrie;
+
+})();
+
+module.exports = UnicodeTrie;
+
+},{}],67:[function(_dereq_,module,exports){
+module.exports={"data":[1961,1969,1977,1985,2025,2033,2041,2049,2057,2065,2073,2081,2089,2097,2105,2113,2121,2129,2137,2145,2153,2161,2169,2177,2185,2193,2201,2209,2217,2225,2233,2241,2249,2257,2265,2273,2281,2289,2297,2305,2313,2321,2329,2337,2345,2353,2361,2369,2377,2385,2393,2401,2409,2417,2425,2433,2441,2449,2457,2465,2473,2481,2489,2497,2505,2513,2521,2529,2529,2537,2009,2545,2553,2561,2569,2577,2585,2593,2601,2609,2617,2625,2633,2641,2649,2657,2665,2673,2681,2689,2697,2705,2713,2721,2729,2737,2745,2753,2761,2769,2777,2785,2793,2801,2809,2817,2825,2833,2841,2849,2857,2865,2873,2881,2889,2009,2897,2905,2913,2009,2921,2929,2937,2945,2953,2961,2969,2009,2977,2977,2985,2993,3001,3009,3009,3009,3017,3017,3017,3025,3025,3033,3041,3041,3049,3049,3049,3049,3049,3049,3049,3049,3049,3049,3057,3065,3073,3073,3073,3081,3089,3097,3097,3097,3097,3097,3097,3097,3097,3097,3097,3097,3097,3097,3097,3097,3097,3097,3097,3097,3105,3113,3113,3121,3129,3137,3145,3153,3161,3161,3169,3177,3185,3193,3193,3193,3193,3201,3209,3209,3217,3225,3233,3241,3241,3241,3249,3257,3265,3273,3273,3281,3289,3297,2009,2009,3305,3313,3321,3329,3337,3345,3353,3361,3369,3377,3385,3393,2009,2009,3401,3409,3417,3417,3417,3417,3417,3417,3425,3425,3433,3433,3433,3433,3433,3433,3433,3433,3433,3433,3433,3433,3433,3433,3433,3441,3449,3457,3465,3473,3481,3489,3497,3505,3513,3521,3529,3537,3545,3553,3561,3569,3577,3585,3593,3601,3609,3617,3625,3625,3633,3641,3649,3649,3649,3649,3649,3657,3665,3665,3673,3681,3681,3681,3681,3689,3697,3697,3705,3713,3721,3729,3737,3745,3753,3761,3769,3777,3785,3793,3801,3809,3817,3825,3833,3841,3849,3857,3865,3873,3881,3881,3881,3881,3881,3881,3881,3881,3881,3881,3881,3881,3889,3897,3905,3913,3921,3921,3921,3921,3921,3921,3921,3921,3921,3921,3929,2009,2009,2009,2009,2009,3937,3937,3937,3937,3937,3937,3937,3945,3953,3953,3953,3961,3969,3969,3977,3985,3993,4001,2009,2009,4009,4009,4009,4009,4009,4009,4009,4009,4009,4009,4009,4009,4017,4025,4033,4041,4049,4057,4065,4073,4081,4081,4081,4081,4081,4081,4081,4089,4097,4097,4105,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4113,4121,4121,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4129,4137,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4145,4153,4161,4169,4169,4169,4169,4169,4169,4169,4169,4177,4185,4193,4201,4209,4217,4217,4225,4233,4233,4233,4233,4233,4233,4233,4233,4241,4249,4257,4265,4273,4281,4289,4297,4305,4313,4321,4329,4337,4345,4353,4361,4361,4369,4377,4385,4385,4385,4385,4393,4401,4409,4409,4409,4409,4409,4409,4417,4425,4433,4441,4449,4457,4465,4473,4481,4489,4497,4505,4513,4521,4529,4537,4545,4553,4561,4569,4577,4585,4593,4601,4609,4617,4625,4633,4641,4649,4657,4665,4673,4681,4689,4697,4705,4713,4721,4729,4737,4745,4753,4761,4769,4777,4785,4793,4801,4809,4817,4825,4833,4841,4849,4857,4865,4873,4881,4889,4897,4905,4913,4921,4929,4937,4945,4953,4961,4969,4977,4985,4993,5001,5009,5017,5025,5033,5041,5049,5057,5065,5073,5081,5089,5097,5105,5113,5121,5129,5137,5145,5153,5161,5169,5177,5185,5193,5201,5209,5217,5225,5233,5241,5249,5257,5265,5273,5281,5289,5297,5305,5313,5321,5329,5337,5345,5353,5361,5369,5377,5385,5393,5401,5409,5417,5425,5433,5441,5449,5457,5465,5473,5481,5489,5497,5505,5513,5521,5529,5537,5545,5553,5561,5569,5577,5585,5593,5601,5609,5617,5625,5633,5641,5649,5657,5665,5673,5681,5689,5697,5705,5713,5721,5729,5737,5745,5753,5761,5769,5777,5785,5793,5801,5809,5817,5825,5833,5841,5849,5857,5865,5873,5881,5889,5897,5905,5913,5921,5929,5937,5945,5953,5961,5969,5977,5985,5993,6001,6009,6017,6025,6033,6041,6049,6057,6065,6073,6081,6089,6097,6105,6113,6121,6129,6137,6145,6153,6161,6169,6177,6185,6193,6201,6209,6217,6225,6233,6241,6249,6257,6265,6273,6281,6289,6297,6305,6313,6321,6329,6337,6345,6353,6361,6369,6377,6385,6393,6401,6409,6417,6425,6433,6441,6449,6457,6465,6473,6481,6489,6497,6505,6513,6521,6529,6537,6545,6553,6561,6569,6577,6585,6593,6601,6609,6617,6625,6633,6641,6649,6657,6665,6673,6681,6689,6697,6705,6713,6721,6729,6737,6745,6753,6761,6769,6777,6785,6793,6801,6809,6817,6825,6833,6841,6849,6857,6865,6873,6881,6889,6897,6905,6913,6921,6929,6937,6945,6953,6961,6969,6977,6985,6993,7001,7009,7017,7025,7033,7041,7049,7057,7065,7073,7081,7089,7097,7105,7113,7121,7129,7137,7145,7153,7161,7169,7177,7185,7193,7201,7209,7217,7225,7233,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,7249,7249,7249,7249,7249,7249,7249,7249,7249,7249,7249,7249,7249,7249,7249,7249,7257,7265,7273,7281,7281,7281,7281,7281,7281,7281,7281,7281,7281,7281,7281,7281,7281,7289,7297,7305,7305,7305,7305,7313,7321,7329,7337,7345,7353,7353,7353,7361,7369,7377,7385,7393,7401,7409,7417,7425,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7241,7972,7972,8100,8164,8228,8292,8356,8420,8484,8548,8612,8676,8740,8804,8868,8932,8996,9060,9124,9188,9252,9316,9380,9444,9508,9572,9636,9700,9764,9828,9892,9956,2593,2657,2721,2529,2785,2529,2849,2913,2977,3041,3105,3169,3233,3297,2529,2529,2529,2529,2529,2529,2529,2529,3361,2529,2529,2529,3425,2529,2529,3489,3553,2529,3617,3681,3745,3809,3873,3937,4001,4065,4129,4193,4257,4321,4385,4449,4513,4577,4641,4705,4769,4833,4897,4961,5025,5089,5153,5217,5281,5345,5409,5473,5537,5601,5665,5729,5793,5857,5921,5985,6049,6113,6177,6241,6305,6369,6433,6497,6561,6625,6689,6753,6817,6881,6945,7009,7073,7137,7201,7265,7329,7393,7457,7521,7585,7649,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,2529,7713,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,7433,7433,7433,7433,7433,7433,7433,7441,7449,7457,7457,7457,7457,7457,7457,7465,2009,2009,2009,2009,7473,7473,7473,7473,7473,7473,7473,7473,7481,7489,7497,7505,7505,7505,7505,7505,7513,7521,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,7529,7529,7537,7545,7545,7545,7545,7545,7553,7561,7561,7561,7561,7561,7561,7561,7569,7577,7585,7593,7593,7593,7593,7593,7593,7601,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7609,7617,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,7625,7633,7641,7649,7657,7665,7673,7681,7689,7697,7705,2009,7713,7721,7729,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,7737,7745,7753,2009,2009,2009,2009,2009,2009,2009,2009,2009,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7761,7769,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,7777,7777,7777,7777,7777,7777,7777,7777,7777,7777,7777,7777,7777,7777,7777,7777,7777,7777,7785,7793,7801,7809,7809,7809,7809,7809,7809,7817,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7825,7833,7841,7849,2009,2009,2009,7857,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,7865,7865,7865,7865,7865,7865,7865,7865,7865,7865,7865,7873,7881,7889,7897,7897,7897,7897,7905,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7913,7921,7929,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,7937,7937,7937,7937,7937,7937,7937,7945,2009,2009,2009,2009,2009,2009,2009,2009,7953,7953,7953,7953,7953,7953,7953,2009,7961,7969,7977,7985,7993,2009,2009,8001,8009,8009,8009,8009,8009,8009,8009,8009,8009,8009,8009,8009,8009,8017,8025,8025,8025,8025,8025,8025,8025,8033,8041,8049,8057,8065,8073,8081,8081,8081,8081,8081,8081,8081,8081,8081,8081,8081,8089,2009,8097,8097,8097,8105,2009,2009,2009,2009,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8113,8121,8129,8137,8137,8137,8137,8137,8137,8137,8137,8137,8137,8137,8137,8137,8137,8145,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,2009,67496,67496,67496,21,21,21,21,21,21,21,21,21,17,34,30,30,33,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,38,6,3,12,9,10,12,3,0,2,12,9,8,16,8,7,11,11,11,11,11,11,11,11,11,11,8,8,12,12,12,6,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,0,9,2,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,0,17,1,12,21,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,21,21,21,21,21,35,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,4,0,10,9,9,9,12,29,29,12,29,3,12,17,12,12,10,9,29,29,18,12,29,29,29,29,29,3,29,29,29,0,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,18,29,29,29,18,29,12,12,29,12,12,12,12,12,12,12,29,29,29,29,12,29,12,18,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,4,21,21,21,21,21,21,21,21,21,21,21,21,4,4,4,4,4,4,4,21,21,21,21,21,21,21,21,21,21,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,8,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,8,17,39,39,39,39,9,39,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,17,21,12,21,21,12,21,21,6,21,39,39,39,39,39,39,39,39,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,10,10,10,8,8,12,12,21,21,21,21,21,21,21,21,21,21,21,6,6,6,6,6,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,11,11,11,11,11,11,11,11,11,11,10,11,11,12,12,12,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,6,12,21,21,21,21,21,21,21,12,12,21,21,21,21,21,21,12,12,21,21,12,21,21,21,21,12,12,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,12,39,39,39,39,39,39,39,39,39,39,39,39,39,39,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,12,12,12,12,8,6,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,12,21,21,21,21,21,21,21,21,21,12,21,21,21,12,21,21,21,21,21,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,21,21,21,21,21,21,21,12,12,12,12,12,12,12,12,12,12,21,21,17,17,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,21,21,21,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,21,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,39,39,39,39,39,39,39,39,21,39,39,39,39,12,12,12,12,12,12,21,21,39,39,11,11,11,11,11,11,11,11,11,11,12,12,10,10,12,12,12,12,12,10,12,9,39,39,39,39,39,21,21,21,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,39,39,39,39,39,12,12,12,12,12,12,39,39,39,39,39,39,39,11,11,11,11,11,11,11,11,11,11,21,21,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,21,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,39,39,11,11,11,11,11,11,11,11,11,11,12,9,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,21,21,21,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,21,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,39,39,12,12,12,12,12,12,21,21,39,39,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,39,39,39,39,39,39,39,39,39,39,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,12,39,39,39,39,39,39,21,39,39,39,39,39,39,39,39,39,39,39,39,39,39,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,12,9,12,39,39,39,39,39,39,21,21,21,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,12,12,12,12,12,12,12,12,12,12,21,21,39,39,11,11,11,11,11,11,11,11,11,11,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,39,39,21,21,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,21,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,39,39,39,39,39,12,12,12,12,21,21,39,39,11,11,11,11,11,11,11,11,11,11,39,12,12,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,21,21,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,39,39,39,39,39,39,39,39,21,39,39,39,39,39,39,39,39,12,12,21,21,39,39,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,39,39,39,10,12,12,12,12,12,12,39,39,21,21,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,39,39,39,39,39,39,39,39,39,39,39,39,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,39,39,39,39,9,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,12,11,11,11,11,11,11,11,11,11,11,17,17,39,39,39,39,39,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,39,39,11,11,11,11,11,11,11,11,11,11,39,39,36,36,36,36,12,18,18,18,18,12,18,18,4,18,18,17,4,6,6,6,6,6,4,12,6,12,12,12,21,21,12,12,12,12,12,12,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,12,12,17,21,12,21,12,21,0,1,0,1,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,21,21,21,21,21,21,21,21,21,21,21,21,21,21,17,21,21,21,21,21,17,21,21,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,17,17,12,12,12,12,12,12,21,12,12,12,12,12,12,12,12,12,18,18,17,18,12,12,12,12,12,4,4,39,39,39,39,39,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,11,11,11,11,11,11,11,11,11,11,17,17,12,12,12,12,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,11,11,11,11,11,11,11,11,11,11,36,36,36,36,36,36,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,21,21,21,12,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,39,39,39,39,39,39,39,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,0,1,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,17,17,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,39,39,39,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,17,17,39,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,39,39,39,39,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,21,21,39,39,39,39,39,39,39,39,39,39,39,39,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,17,17,5,36,17,12,17,9,36,36,39,39,11,11,11,11,11,11,11,11,11,11,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,6,6,17,17,18,12,6,6,12,21,21,21,4,39,11,11,11,11,11,11,11,11,11,11,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,39,39,12,39,39,39,6,6,11,11,11,11,11,11,11,11,11,11,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,39,39,39,39,39,39,11,11,11,11,11,11,11,11,11,11,36,36,36,36,36,36,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,39,39,12,12,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,39,39,21,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,39,39,39,39,39,39,36,36,36,36,36,36,36,36,36,36,36,36,36,36,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,21,21,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,12,12,12,12,12,12,39,39,39,39,11,11,11,11,11,11,11,11,11,11,17,17,12,17,17,17,17,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,12,12,12,12,12,12,12,12,12,39,39,39,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,12,12,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,39,17,17,17,17,17,11,11,11,11,11,11,11,11,11,11,39,39,39,12,12,12,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,17,17,12,12,12,12,12,12,12,12,39,39,39,39,39,39,39,39,21,21,21,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,12,12,12,21,12,12,12,12,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,18,12,39,17,17,17,17,17,17,17,4,17,17,17,20,21,21,21,21,17,4,17,17,19,29,29,12,3,3,0,3,3,3,0,3,29,29,12,12,15,15,15,17,30,30,21,21,21,21,21,4,10,10,10,10,10,10,10,10,12,3,3,29,5,5,12,12,12,12,12,12,8,0,1,5,5,5,12,12,12,12,12,12,12,12,12,12,12,12,17,12,17,17,17,17,12,17,17,17,22,12,12,12,12,39,39,39,39,39,21,21,21,21,21,21,12,12,39,39,29,12,12,12,12,12,12,12,12,0,1,29,12,29,29,29,29,12,12,12,12,12,12,12,12,0,1,39,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,9,9,9,9,9,9,9,10,9,9,9,9,9,9,9,9,9,9,9,9,9,9,10,9,9,9,9,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,12,12,12,10,12,29,12,12,12,10,12,12,12,12,12,12,12,12,12,29,12,12,9,12,12,12,12,12,12,12,12,12,12,29,29,12,12,12,12,12,12,12,12,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,29,12,12,12,12,12,29,12,12,29,12,29,29,29,29,29,29,29,29,29,29,29,29,12,12,12,12,29,29,29,29,29,29,29,29,29,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,12,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,12,29,29,12,12,12,29,29,12,12,29,12,12,12,29,12,29,9,9,12,29,12,12,12,12,29,12,12,29,29,29,29,12,12,29,12,29,12,29,29,29,29,29,29,12,29,12,12,12,12,12,29,29,29,29,12,12,12,12,29,29,12,12,12,12,12,12,12,12,12,12,29,12,12,12,29,12,12,12,12,12,29,12,12,12,12,12,12,12,12,12,12,12,12,12,29,29,12,12,29,29,29,29,12,12,29,29,12,12,29,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,29,12,12,29,29,12,12,12,12,12,12,12,12,12,12,12,12,12,29,12,12,12,29,12,12,12,12,12,12,12,12,12,12,12,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,12,12,12,12,12,12,12,14,14,12,12,12,12,12,12,12,12,12,12,12,12,12,0,1,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,14,14,14,14,39,39,39,39,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,12,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,12,12,12,12,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,12,12,12,12,12,12,12,12,12,12,12,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,12,12,29,29,29,29,12,12,12,12,12,12,12,12,12,12,29,29,12,29,29,29,29,29,29,29,12,12,12,12,12,12,12,12,29,29,12,12,29,29,12,12,12,12,29,29,12,12,29,29,12,12,12,12,29,29,29,12,12,29,12,12,29,29,29,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,29,29,29,12,12,12,12,12,12,12,12,12,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,14,14,14,14,12,29,29,12,12,29,12,12,12,12,29,29,12,12,12,12,14,14,29,29,14,12,14,14,14,14,14,14,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,14,14,14,12,12,12,12,29,12,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,29,12,29,29,29,12,29,14,29,29,12,29,29,12,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,14,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,14,14,14,14,14,14,14,14,14,14,14,14,29,29,29,29,14,12,14,14,14,29,14,14,29,29,29,14,14,29,29,14,29,29,14,14,14,12,29,12,12,12,12,29,29,14,29,29,29,29,29,29,14,14,14,14,14,29,14,14,14,14,29,29,14,14,14,14,14,14,14,14,12,12,12,14,14,14,14,14,14,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,12,12,12,3,3,3,3,12,12,12,6,6,12,12,12,12,0,1,0,1,0,1,0,1,0,1,0,1,0,1,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,0,1,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,0,1,0,1,0,1,0,1,0,1,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,0,1,0,1,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,0,1,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,29,29,29,29,29,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,12,12,39,39,39,39,39,6,17,17,17,12,6,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,17,39,39,39,39,39,39,39,39,39,39,39,39,39,39,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,3,3,3,3,3,3,3,3,3,3,3,3,3,3,17,17,17,17,17,17,17,17,12,17,0,17,12,12,3,3,12,12,3,3,0,1,0,1,0,1,0,1,17,17,17,17,6,12,17,17,12,17,17,12,12,12,12,12,19,19,39,39,39,39,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,1,1,14,14,5,14,14,0,1,0,1,0,1,0,1,0,1,14,14,0,1,0,1,0,1,0,1,5,0,1,1,14,14,14,14,14,14,14,14,14,14,21,21,21,21,21,21,14,14,14,14,14,14,14,14,14,14,14,5,5,14,14,14,39,32,14,32,14,32,14,32,14,32,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,32,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,32,14,32,14,32,14,14,14,14,14,14,32,14,14,14,14,14,14,32,32,39,39,21,21,5,5,5,5,14,5,32,14,32,14,32,14,32,14,32,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,32,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,32,14,32,14,32,14,14,14,14,14,14,32,14,14,14,14,14,14,32,32,14,14,14,14,5,32,5,5,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,39,39,39,39,39,39,39,39,39,39,39,39,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,29,29,29,29,29,29,29,29,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,5,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,39,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,17,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,17,6,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,12,21,21,21,21,21,21,21,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,39,39,39,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,12,17,17,17,17,17,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,12,12,12,21,12,12,12,12,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,10,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,18,18,6,6,39,39,39,39,39,39,39,39,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,39,39,39,39,39,39,39,17,17,11,11,11,11,11,11,11,11,11,11,39,39,39,39,39,39,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,12,12,12,12,12,12,12,12,12,39,39,39,39,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,17,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,39,39,39,39,39,39,39,39,39,12,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,39,39,39,21,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,12,12,12,12,12,17,17,17,12,12,12,12,12,12,11,11,11,11,11,11,11,11,11,11,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,39,39,39,39,39,39,39,12,12,12,21,12,12,12,12,12,12,12,12,21,21,39,39,11,11,11,11,11,11,11,11,11,11,39,39,12,17,17,17,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,17,17,12,12,12,21,21,39,39,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,17,21,21,39,39,11,11,11,11,11,11,11,11,11,11,39,39,39,39,39,39,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,23,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,39,39,39,39,39,39,39,39,39,39,39,39,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,39,39,39,39,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,39,39,39,39,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,39,13,21,13,13,13,13,13,13,13,13,13,13,12,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,0,1,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,10,12,39,39,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,8,1,1,8,8,6,6,0,1,15,39,39,39,39,39,39,21,21,21,21,21,21,21,39,39,39,39,39,39,39,39,39,14,14,14,14,14,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,14,14,0,1,14,14,14,14,14,14,14,1,14,1,39,5,5,6,6,14,0,1,0,1,0,1,14,14,14,14,14,14,14,14,14,14,9,10,14,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,22,39,6,14,14,9,10,14,14,0,1,14,14,1,14,1,14,14,14,14,14,14,14,14,14,14,14,5,5,14,14,14,6,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,0,14,1,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,0,14,1,14,0,1,1,0,1,1,5,12,32,32,32,32,32,32,32,32,32,32,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,5,5,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,10,9,14,14,14,9,9,39,12,12,12,12,12,12,12,39,39,39,39,39,39,39,39,39,39,21,21,21,31,29,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,39,17,17,17,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,11,11,11,11,11,11,11,11,11,11,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,21,21,21,21,21,21,21,21,12,12,12,12,12,12,12,12,39,39,39,39,39,39,39,39,17,17,17,17,17,17,17,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,17,17,17,17,17,17,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,17,17,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,11,11,11,11,11,11,11,11,11,11,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,12,12,12,17,17,17,17,39,39,39,39,39,39,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,39,39,39,11,11,11,11,11,11,11,11,11,11,39,39,39,39,39,39,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,11,11,11,11,11,11,11,11,11,11,17,17,17,17,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,12,12,12,17,17,12,17,39,39,39,39,39,39,39,11,11,11,11,11,11,11,11,11,11,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,39,39,39,39,39,39,11,11,11,11,11,11,11,11,11,11,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,39,39,39,39,39,39,39,39,39,17,17,17,17,39,39,39,39,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,0,0,0,1,1,1,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,1,12,12,12,0,1,0,1,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,0,1,1,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,14,14,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,21,12,12,12,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,12,12,21,21,21,21,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,21,21,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,39,39,39,39,39,39,39,39,39,39,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,12,39,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,12,12,39,39,39,39,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,39,39,39,39,39,39,39,39,39,39,39,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,12,12,14,14,14,14,14,12,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,12,14,12,14,12,14,14,14,14,14,14,14,14,14,14,12,14,12,12,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,39,39,39,12,12,12,12,12,12,12,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,12,12,12,12,12,12,12,12,12,12,12,12,12,12,14,14,14,14,14,14,14,14,14,14,14,14,14,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,39,39,39,39,39,39,39,39,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,39,39,39,39,39,39,39,39,39,39,39,39,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,39,39,39,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39,39],"highStart":919552,"errorValue":0}
+},{}],68:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
-  var AI, AL, B2, BA, BB, BK, CB, CJ, CL, CM, CP, CR, CharRange, EX, GL, H2, H3, HL, HY, ID, IN, IS, JL, JT, JV, LF, NL, NS, NU, OP, PO, PR, QU, RI, SA, SG, SP, SY, WJ, XX, ZW;
+  var AI, AL, B2, BA, BB, BK, CB, CJ, CL, CM, CP, CR, EX, GL, H2, H3, HL, HY, ID, IN, IS, JL, JT, JV, LF, NL, NS, NU, OP, PO, PR, QU, RI, SA, SG, SP, SY, WJ, XX, ZW;
 
   exports.OP = OP = 0;
 
@@ -16314,32 +16398,23 @@ By Devon Govett
 
   exports.XX = XX = 39;
 
-  CharRange = (function() {
-    function CharRange(start, end, _class) {
-      this.start = start;
-      this.end = end;
-      this["class"] = _class;
-    }
-
-    return CharRange;
-
-  })();
-
-  exports.characterClasses = [new CharRange(0x0000, 0x0008, CM), new CharRange(0x0009, 0x0009, BA), new CharRange(0x000A, 0x000A, LF), new CharRange(0x000B, 0x000C, BK), new CharRange(0x000D, 0x000D, CR), new CharRange(0x000E, 0x001F, CM), new CharRange(0x0020, 0x0020, SP), new CharRange(0x0021, 0x0021, EX), new CharRange(0x0022, 0x0022, QU), new CharRange(0x0023, 0x0023, AL), new CharRange(0x0024, 0x0024, PR), new CharRange(0x0025, 0x0025, PO), new CharRange(0x0026, 0x0026, AL), new CharRange(0x0027, 0x0027, QU), new CharRange(0x0028, 0x0028, OP), new CharRange(0x0029, 0x0029, CP), new CharRange(0x002A, 0x002A, AL), new CharRange(0x002B, 0x002B, PR), new CharRange(0x002C, 0x002C, IS), new CharRange(0x002D, 0x002D, HY), new CharRange(0x002E, 0x002E, IS), new CharRange(0x002F, 0x002F, SY), new CharRange(0x0030, 0x0039, NU), new CharRange(0x003A, 0x003B, IS), new CharRange(0x003C, 0x003E, AL), new CharRange(0x003F, 0x003F, EX), new CharRange(0x0040, 0x005A, AL), new CharRange(0x005B, 0x005B, OP), new CharRange(0x005C, 0x005C, PR), new CharRange(0x005D, 0x005D, CP), new CharRange(0x005E, 0x007A, AL), new CharRange(0x007B, 0x007B, OP), new CharRange(0x007C, 0x007C, BA), new CharRange(0x007D, 0x007D, CL), new CharRange(0x007E, 0x007E, AL), new CharRange(0x007F, 0x0084, CM), new CharRange(0x0085, 0x0085, NL), new CharRange(0x0086, 0x009F, CM), new CharRange(0x00A0, 0x00A0, GL), new CharRange(0x00A1, 0x00A1, OP), new CharRange(0x00A2, 0x00A2, PO), new CharRange(0x00A3, 0x00A5, PR), new CharRange(0x00A6, 0x00A6, AL), new CharRange(0x00A7, 0x00A8, AI), new CharRange(0x00A9, 0x00A9, AL), new CharRange(0x00AA, 0x00AA, AI), new CharRange(0x00AB, 0x00AB, QU), new CharRange(0x00AC, 0x00AC, AL), new CharRange(0x00AD, 0x00AD, BA), new CharRange(0x00AE, 0x00AF, AL), new CharRange(0x00B0, 0x00B0, PO), new CharRange(0x00B1, 0x00B1, PR), new CharRange(0x00B2, 0x00B3, AI), new CharRange(0x00B4, 0x00B4, BB), new CharRange(0x00B5, 0x00B5, AL), new CharRange(0x00B6, 0x00BA, AI), new CharRange(0x00BB, 0x00BB, QU), new CharRange(0x00BC, 0x00BE, AI), new CharRange(0x00BF, 0x00BF, OP), new CharRange(0x00C0, 0x00D6, AL), new CharRange(0x00D7, 0x00D7, AI), new CharRange(0x00D8, 0x00F6, AL), new CharRange(0x00F7, 0x00F7, AI), new CharRange(0x00F8, 0x02C6, AL), new CharRange(0x02C7, 0x02C7, AI), new CharRange(0x02C8, 0x02C8, BB), new CharRange(0x02C9, 0x02CB, AI), new CharRange(0x02CC, 0x02CC, BB), new CharRange(0x02CD, 0x02CD, AI), new CharRange(0x02CE, 0x02CF, AL), new CharRange(0x02D0, 0x02D0, AI), new CharRange(0x02D1, 0x02D7, AL), new CharRange(0x02D8, 0x02DB, AI), new CharRange(0x02DC, 0x02DC, AL), new CharRange(0x02DD, 0x02DD, AI), new CharRange(0x02DE, 0x02DE, AL), new CharRange(0x02DF, 0x02DF, BB), new CharRange(0x02E0, 0x02FF, AL), new CharRange(0x0300, 0x034E, CM), new CharRange(0x034F, 0x034F, GL), new CharRange(0x0350, 0x035B, CM), new CharRange(0x035C, 0x0362, GL), new CharRange(0x0363, 0x036F, CM), new CharRange(0x0370, 0x037D, AL), new CharRange(0x037E, 0x037E, IS), new CharRange(0x0384, 0x0482, AL), new CharRange(0x0483, 0x0489, CM), new CharRange(0x048A, 0x0587, AL), new CharRange(0x0589, 0x0589, IS), new CharRange(0x058A, 0x058A, BA), new CharRange(0x058F, 0x058F, PR), new CharRange(0x0591, 0x05BD, CM), new CharRange(0x05BE, 0x05BE, BA), new CharRange(0x05BF, 0x05BF, CM), new CharRange(0x05C0, 0x05C0, AL), new CharRange(0x05C1, 0x05C2, CM), new CharRange(0x05C3, 0x05C3, AL), new CharRange(0x05C4, 0x05C5, CM), new CharRange(0x05C6, 0x05C6, EX), new CharRange(0x05C7, 0x05C7, CM), new CharRange(0x05D0, 0x05F2, HL), new CharRange(0x05F3, 0x0608, AL), new CharRange(0x0609, 0x060B, PO), new CharRange(0x060C, 0x060D, IS), new CharRange(0x060E, 0x060F, AL), new CharRange(0x0610, 0x061A, CM), new CharRange(0x061B, 0x061F, EX), new CharRange(0x0620, 0x064A, AL), new CharRange(0x064B, 0x065F, CM), new CharRange(0x0660, 0x0669, NU), new CharRange(0x066A, 0x066A, PO), new CharRange(0x066B, 0x066C, NU), new CharRange(0x066D, 0x066F, AL), new CharRange(0x0670, 0x0670, CM), new CharRange(0x0671, 0x06D3, AL), new CharRange(0x06D4, 0x06D4, EX), new CharRange(0x06D5, 0x06D5, AL), new CharRange(0x06D6, 0x06DC, CM), new CharRange(0x06DD, 0x06DE, AL), new CharRange(0x06DF, 0x06E4, CM), new CharRange(0x06E5, 0x06E6, AL), new CharRange(0x06E7, 0x06E8, CM), new CharRange(0x06E9, 0x06E9, AL), new CharRange(0x06EA, 0x06ED, CM), new CharRange(0x06EE, 0x06EF, AL), new CharRange(0x06F0, 0x06F9, NU), new CharRange(0x06FA, 0x0710, AL), new CharRange(0x0711, 0x0711, CM), new CharRange(0x0712, 0x072F, AL), new CharRange(0x0730, 0x074A, CM), new CharRange(0x074D, 0x07A5, AL), new CharRange(0x07A6, 0x07B0, CM), new CharRange(0x07B1, 0x07B1, AL), new CharRange(0x07C0, 0x07C9, NU), new CharRange(0x07CA, 0x07EA, AL), new CharRange(0x07EB, 0x07F3, CM), new CharRange(0x07F4, 0x07F7, AL), new CharRange(0x07F8, 0x07F8, IS), new CharRange(0x07F9, 0x07F9, EX), new CharRange(0x07FA, 0x0815, AL), new CharRange(0x0816, 0x0819, CM), new CharRange(0x081A, 0x081A, AL), new CharRange(0x081B, 0x0823, CM), new CharRange(0x0824, 0x0824, AL), new CharRange(0x0825, 0x0827, CM), new CharRange(0x0828, 0x0828, AL), new CharRange(0x0829, 0x082D, CM), new CharRange(0x0830, 0x0858, AL), new CharRange(0x0859, 0x085B, CM), new CharRange(0x085E, 0x08AC, AL), new CharRange(0x08E4, 0x0903, CM), new CharRange(0x0904, 0x0939, AL), new CharRange(0x093A, 0x093C, CM), new CharRange(0x093D, 0x093D, AL), new CharRange(0x093E, 0x094F, CM), new CharRange(0x0950, 0x0950, AL), new CharRange(0x0951, 0x0957, CM), new CharRange(0x0958, 0x0961, AL), new CharRange(0x0962, 0x0963, CM), new CharRange(0x0964, 0x0965, BA), new CharRange(0x0966, 0x096F, NU), new CharRange(0x0970, 0x097F, AL), new CharRange(0x0981, 0x0983, CM), new CharRange(0x0985, 0x09B9, AL), new CharRange(0x09BC, 0x09BC, CM), new CharRange(0x09BD, 0x09BD, AL), new CharRange(0x09BE, 0x09CD, CM), new CharRange(0x09CE, 0x09CE, AL), new CharRange(0x09D7, 0x09D7, CM), new CharRange(0x09DC, 0x09E1, AL), new CharRange(0x09E2, 0x09E3, CM), new CharRange(0x09E6, 0x09EF, NU), new CharRange(0x09F0, 0x09F1, AL), new CharRange(0x09F2, 0x09F3, PO), new CharRange(0x09F4, 0x09F8, AL), new CharRange(0x09F9, 0x09F9, PO), new CharRange(0x09FA, 0x09FA, AL), new CharRange(0x09FB, 0x09FB, PR), new CharRange(0x0A01, 0x0A03, CM), new CharRange(0x0A05, 0x0A39, AL), new CharRange(0x0A3C, 0x0A51, CM), new CharRange(0x0A59, 0x0A5E, AL), new CharRange(0x0A66, 0x0A6F, NU), new CharRange(0x0A70, 0x0A71, CM), new CharRange(0x0A72, 0x0A74, AL), new CharRange(0x0A75, 0x0A83, CM), new CharRange(0x0A85, 0x0AB9, AL), new CharRange(0x0ABC, 0x0ABC, CM), new CharRange(0x0ABD, 0x0ABD, AL), new CharRange(0x0ABE, 0x0ACD, CM), new CharRange(0x0AD0, 0x0AE1, AL), new CharRange(0x0AE2, 0x0AE3, CM), new CharRange(0x0AE6, 0x0AEF, NU), new CharRange(0x0AF0, 0x0AF0, AL), new CharRange(0x0AF1, 0x0AF1, PR), new CharRange(0x0B01, 0x0B03, CM), new CharRange(0x0B05, 0x0B39, AL), new CharRange(0x0B3C, 0x0B3C, CM), new CharRange(0x0B3D, 0x0B3D, AL), new CharRange(0x0B3E, 0x0B57, CM), new CharRange(0x0B5C, 0x0B61, AL), new CharRange(0x0B62, 0x0B63, CM), new CharRange(0x0B66, 0x0B6F, NU), new CharRange(0x0B70, 0x0B77, AL), new CharRange(0x0B82, 0x0B82, CM), new CharRange(0x0B83, 0x0BB9, AL), new CharRange(0x0BBE, 0x0BCD, CM), new CharRange(0x0BD0, 0x0BD0, AL), new CharRange(0x0BD7, 0x0BD7, CM), new CharRange(0x0BE6, 0x0BEF, NU), new CharRange(0x0BF0, 0x0BF8, AL), new CharRange(0x0BF9, 0x0BF9, PR), new CharRange(0x0BFA, 0x0BFA, AL), new CharRange(0x0C01, 0x0C03, CM), new CharRange(0x0C05, 0x0C3D, AL), new CharRange(0x0C3E, 0x0C56, CM), new CharRange(0x0C58, 0x0C61, AL), new CharRange(0x0C62, 0x0C63, CM), new CharRange(0x0C66, 0x0C6F, NU), new CharRange(0x0C78, 0x0C7F, AL), new CharRange(0x0C82, 0x0C83, CM), new CharRange(0x0C85, 0x0CB9, AL), new CharRange(0x0CBC, 0x0CBC, CM), new CharRange(0x0CBD, 0x0CBD, AL), new CharRange(0x0CBE, 0x0CD6, CM), new CharRange(0x0CDE, 0x0CE1, AL), new CharRange(0x0CE2, 0x0CE3, CM), new CharRange(0x0CE6, 0x0CEF, NU), new CharRange(0x0CF1, 0x0CF2, AL), new CharRange(0x0D02, 0x0D03, CM), new CharRange(0x0D05, 0x0D3D, AL), new CharRange(0x0D3E, 0x0D4D, CM), new CharRange(0x0D4E, 0x0D4E, AL), new CharRange(0x0D57, 0x0D57, CM), new CharRange(0x0D60, 0x0D61, AL), new CharRange(0x0D62, 0x0D63, CM), new CharRange(0x0D66, 0x0D6F, NU), new CharRange(0x0D70, 0x0D75, AL), new CharRange(0x0D79, 0x0D79, PO), new CharRange(0x0D7A, 0x0D7F, AL), new CharRange(0x0D82, 0x0D83, CM), new CharRange(0x0D85, 0x0DC6, AL), new CharRange(0x0DCA, 0x0DF3, CM), new CharRange(0x0DF4, 0x0DF4, AL), new CharRange(0x0E01, 0x0E3A, SA), new CharRange(0x0E3F, 0x0E3F, PR), new CharRange(0x0E40, 0x0E4E, SA), new CharRange(0x0E4F, 0x0E4F, AL), new CharRange(0x0E50, 0x0E59, NU), new CharRange(0x0E5A, 0x0E5B, BA), new CharRange(0x0E81, 0x0ECD, SA), new CharRange(0x0ED0, 0x0ED9, NU), new CharRange(0x0EDC, 0x0EDF, SA), new CharRange(0x0F00, 0x0F00, AL), new CharRange(0x0F01, 0x0F04, BB), new CharRange(0x0F05, 0x0F05, AL), new CharRange(0x0F06, 0x0F07, BB), new CharRange(0x0F08, 0x0F08, GL), new CharRange(0x0F09, 0x0F0A, BB), new CharRange(0x0F0B, 0x0F0B, BA), new CharRange(0x0F0C, 0x0F0C, GL), new CharRange(0x0F0D, 0x0F11, EX), new CharRange(0x0F12, 0x0F12, GL), new CharRange(0x0F13, 0x0F13, AL), new CharRange(0x0F14, 0x0F14, EX), new CharRange(0x0F15, 0x0F17, AL), new CharRange(0x0F18, 0x0F19, CM), new CharRange(0x0F1A, 0x0F1F, AL), new CharRange(0x0F20, 0x0F29, NU), new CharRange(0x0F2A, 0x0F33, AL), new CharRange(0x0F34, 0x0F34, BA), new CharRange(0x0F35, 0x0F35, CM), new CharRange(0x0F36, 0x0F36, AL), new CharRange(0x0F37, 0x0F37, CM), new CharRange(0x0F38, 0x0F38, AL), new CharRange(0x0F39, 0x0F39, CM), new CharRange(0x0F3A, 0x0F3A, OP), new CharRange(0x0F3B, 0x0F3B, CL), new CharRange(0x0F3C, 0x0F3C, OP), new CharRange(0x0F3D, 0x0F3D, CL), new CharRange(0x0F3E, 0x0F3F, CM), new CharRange(0x0F40, 0x0F6C, AL), new CharRange(0x0F71, 0x0F7E, CM), new CharRange(0x0F7F, 0x0F7F, BA), new CharRange(0x0F80, 0x0F84, CM), new CharRange(0x0F85, 0x0F85, BA), new CharRange(0x0F86, 0x0F87, CM), new CharRange(0x0F88, 0x0F8C, AL), new CharRange(0x0F8D, 0x0FBC, CM), new CharRange(0x0FBE, 0x0FBF, BA), new CharRange(0x0FC0, 0x0FC5, AL), new CharRange(0x0FC6, 0x0FC6, CM), new CharRange(0x0FC7, 0x0FCF, AL), new CharRange(0x0FD0, 0x0FD1, BB), new CharRange(0x0FD2, 0x0FD2, BA), new CharRange(0x0FD3, 0x0FD3, BB), new CharRange(0x0FD4, 0x0FD8, AL), new CharRange(0x0FD9, 0x0FDA, GL), new CharRange(0x1000, 0x103F, SA), new CharRange(0x1040, 0x1049, NU), new CharRange(0x104A, 0x104B, BA), new CharRange(0x104C, 0x104F, AL), new CharRange(0x1050, 0x108F, SA), new CharRange(0x1090, 0x1099, NU), new CharRange(0x109A, 0x109F, SA), new CharRange(0x10A0, 0x10FF, AL), new CharRange(0x1100, 0x115F, JL), new CharRange(0x1160, 0x11A7, JV), new CharRange(0x11A8, 0x11FF, JT), new CharRange(0x1200, 0x135A, AL), new CharRange(0x135D, 0x135F, CM), new CharRange(0x1360, 0x1360, AL), new CharRange(0x1361, 0x1361, BA), new CharRange(0x1362, 0x13F4, AL), new CharRange(0x1400, 0x1400, BA), new CharRange(0x1401, 0x167F, AL), new CharRange(0x1680, 0x1680, BA), new CharRange(0x1681, 0x169A, AL), new CharRange(0x169B, 0x169B, OP), new CharRange(0x169C, 0x169C, CL), new CharRange(0x16A0, 0x16EA, AL), new CharRange(0x16EB, 0x16ED, BA), new CharRange(0x16EE, 0x1711, AL), new CharRange(0x1712, 0x1714, CM), new CharRange(0x1720, 0x1731, AL), new CharRange(0x1732, 0x1734, CM), new CharRange(0x1735, 0x1736, BA), new CharRange(0x1740, 0x1751, AL), new CharRange(0x1752, 0x1753, CM), new CharRange(0x1760, 0x1770, AL), new CharRange(0x1772, 0x1773, CM), new CharRange(0x1780, 0x17D3, SA), new CharRange(0x17D4, 0x17D5, BA), new CharRange(0x17D6, 0x17D6, NS), new CharRange(0x17D7, 0x17D7, SA), new CharRange(0x17D8, 0x17D8, BA), new CharRange(0x17D9, 0x17D9, AL), new CharRange(0x17DA, 0x17DA, BA), new CharRange(0x17DB, 0x17DB, PR), new CharRange(0x17DC, 0x17DD, SA), new CharRange(0x17E0, 0x17E9, NU), new CharRange(0x17F0, 0x1801, AL), new CharRange(0x1802, 0x1803, EX), new CharRange(0x1804, 0x1805, BA), new CharRange(0x1806, 0x1806, BB), new CharRange(0x1807, 0x1807, AL), new CharRange(0x1808, 0x1809, EX), new CharRange(0x180A, 0x180A, AL), new CharRange(0x180B, 0x180D, CM), new CharRange(0x180E, 0x180E, GL), new CharRange(0x1810, 0x1819, NU), new CharRange(0x1820, 0x18A8, AL), new CharRange(0x18A9, 0x18A9, CM), new CharRange(0x18AA, 0x191C, AL), new CharRange(0x1920, 0x193B, CM), new CharRange(0x1940, 0x1940, AL), new CharRange(0x1944, 0x1945, EX), new CharRange(0x1946, 0x194F, NU), new CharRange(0x1950, 0x19C9, SA), new CharRange(0x19D0, 0x19D9, NU), new CharRange(0x19DA, 0x19DF, SA), new CharRange(0x19E0, 0x1A16, AL), new CharRange(0x1A17, 0x1A1B, CM), new CharRange(0x1A1E, 0x1A1F, AL), new CharRange(0x1A20, 0x1A7C, SA), new CharRange(0x1A7F, 0x1A7F, CM), new CharRange(0x1A80, 0x1A99, NU), new CharRange(0x1AA0, 0x1AAD, SA), new CharRange(0x1B00, 0x1B04, CM), new CharRange(0x1B05, 0x1B33, AL), new CharRange(0x1B34, 0x1B44, CM), new CharRange(0x1B45, 0x1B4B, AL), new CharRange(0x1B50, 0x1B59, NU), new CharRange(0x1B5A, 0x1B5B, BA), new CharRange(0x1B5C, 0x1B5C, AL), new CharRange(0x1B5D, 0x1B60, BA), new CharRange(0x1B61, 0x1B6A, AL), new CharRange(0x1B6B, 0x1B73, CM), new CharRange(0x1B74, 0x1B7C, AL), new CharRange(0x1B80, 0x1B82, CM), new CharRange(0x1B83, 0x1BA0, AL), new CharRange(0x1BA1, 0x1BAD, CM), new CharRange(0x1BAE, 0x1BAF, AL), new CharRange(0x1BB0, 0x1BB9, NU), new CharRange(0x1BBA, 0x1BE5, AL), new CharRange(0x1BE6, 0x1BF3, CM), new CharRange(0x1BFC, 0x1C23, AL), new CharRange(0x1C24, 0x1C37, CM), new CharRange(0x1C3B, 0x1C3F, BA), new CharRange(0x1C40, 0x1C49, NU), new CharRange(0x1C4D, 0x1C4F, AL), new CharRange(0x1C50, 0x1C59, NU), new CharRange(0x1C5A, 0x1C7D, AL), new CharRange(0x1C7E, 0x1C7F, BA), new CharRange(0x1CC0, 0x1CC7, AL), new CharRange(0x1CD0, 0x1CD2, CM), new CharRange(0x1CD3, 0x1CD3, AL), new CharRange(0x1CD4, 0x1CE8, CM), new CharRange(0x1CE9, 0x1CEC, AL), new CharRange(0x1CED, 0x1CED, CM), new CharRange(0x1CEE, 0x1CF1, AL), new CharRange(0x1CF2, 0x1CF4, CM), new CharRange(0x1CF5, 0x1DBF, AL), new CharRange(0x1DC0, 0x1DFF, CM), new CharRange(0x1E00, 0x1FFC, AL), new CharRange(0x1FFD, 0x1FFD, BB), new CharRange(0x1FFE, 0x1FFE, AL), new CharRange(0x2000, 0x2006, BA), new CharRange(0x2007, 0x2007, GL), new CharRange(0x2008, 0x200A, BA), new CharRange(0x200B, 0x200B, ZW), new CharRange(0x200C, 0x200F, CM), new CharRange(0x2010, 0x2010, BA), new CharRange(0x2011, 0x2011, GL), new CharRange(0x2012, 0x2013, BA), new CharRange(0x2014, 0x2014, B2), new CharRange(0x2015, 0x2016, AI), new CharRange(0x2017, 0x2017, AL), new CharRange(0x2018, 0x2019, QU), new CharRange(0x201A, 0x201A, OP), new CharRange(0x201B, 0x201D, QU), new CharRange(0x201E, 0x201E, OP), new CharRange(0x201F, 0x201F, QU), new CharRange(0x2020, 0x2021, AI), new CharRange(0x2022, 0x2023, AL), new CharRange(0x2024, 0x2026, IN), new CharRange(0x2027, 0x2027, BA), new CharRange(0x2028, 0x2029, BK), new CharRange(0x202A, 0x202E, CM), new CharRange(0x202F, 0x202F, GL), new CharRange(0x2030, 0x2037, PO), new CharRange(0x2038, 0x2038, AL), new CharRange(0x2039, 0x203A, QU), new CharRange(0x203B, 0x203B, AI), new CharRange(0x203C, 0x203D, NS), new CharRange(0x203E, 0x2043, AL), new CharRange(0x2044, 0x2044, IS), new CharRange(0x2045, 0x2045, OP), new CharRange(0x2046, 0x2046, CL), new CharRange(0x2047, 0x2049, NS), new CharRange(0x204A, 0x2055, AL), new CharRange(0x2056, 0x2056, BA), new CharRange(0x2057, 0x2057, AL), new CharRange(0x2058, 0x205B, BA), new CharRange(0x205C, 0x205C, AL), new CharRange(0x205D, 0x205F, BA), new CharRange(0x2060, 0x2060, WJ), new CharRange(0x2061, 0x2064, AL), new CharRange(0x206A, 0x206F, CM), new CharRange(0x2070, 0x2071, AL), new CharRange(0x2074, 0x2074, AI), new CharRange(0x2075, 0x207C, AL), new CharRange(0x207D, 0x207D, OP), new CharRange(0x207E, 0x207E, CL), new CharRange(0x207F, 0x207F, AI), new CharRange(0x2080, 0x2080, AL), new CharRange(0x2081, 0x2084, AI), new CharRange(0x2085, 0x208C, AL), new CharRange(0x208D, 0x208D, OP), new CharRange(0x208E, 0x208E, CL), new CharRange(0x2090, 0x209C, AL), new CharRange(0x20A0, 0x20A6, PR), new CharRange(0x20A7, 0x20A7, PO), new CharRange(0x20A8, 0x20B5, PR), new CharRange(0x20B6, 0x20B6, PO), new CharRange(0x20B7, 0x20BA, PR), new CharRange(0x20D0, 0x20F0, CM), new CharRange(0x2100, 0x2102, AL), new CharRange(0x2103, 0x2103, PO), new CharRange(0x2104, 0x2104, AL), new CharRange(0x2105, 0x2105, AI), new CharRange(0x2106, 0x2108, AL), new CharRange(0x2109, 0x2109, PO), new CharRange(0x210A, 0x2112, AL), new CharRange(0x2113, 0x2113, AI), new CharRange(0x2114, 0x2115, AL), new CharRange(0x2116, 0x2116, PR), new CharRange(0x2117, 0x2120, AL), new CharRange(0x2121, 0x2122, AI), new CharRange(0x2123, 0x212A, AL), new CharRange(0x212B, 0x212B, AI), new CharRange(0x212C, 0x2153, AL), new CharRange(0x2154, 0x2155, AI), new CharRange(0x2156, 0x215A, AL), new CharRange(0x215B, 0x215B, AI), new CharRange(0x215C, 0x215D, AL), new CharRange(0x215E, 0x215E, AI), new CharRange(0x215F, 0x215F, AL), new CharRange(0x2160, 0x216B, AI), new CharRange(0x216C, 0x216F, AL), new CharRange(0x2170, 0x2179, AI), new CharRange(0x217A, 0x2188, AL), new CharRange(0x2189, 0x2199, AI), new CharRange(0x219A, 0x21D1, AL), new CharRange(0x21D2, 0x21D2, AI), new CharRange(0x21D3, 0x21D3, AL), new CharRange(0x21D4, 0x21D4, AI), new CharRange(0x21D5, 0x21FF, AL), new CharRange(0x2200, 0x2200, AI), new CharRange(0x2201, 0x2201, AL), new CharRange(0x2202, 0x2203, AI), new CharRange(0x2204, 0x2206, AL), new CharRange(0x2207, 0x2208, AI), new CharRange(0x2209, 0x220A, AL), new CharRange(0x220B, 0x220B, AI), new CharRange(0x220C, 0x220E, AL), new CharRange(0x220F, 0x220F, AI), new CharRange(0x2210, 0x2210, AL), new CharRange(0x2211, 0x2211, AI), new CharRange(0x2212, 0x2213, PR), new CharRange(0x2214, 0x2214, AL), new CharRange(0x2215, 0x2215, AI), new CharRange(0x2216, 0x2219, AL), new CharRange(0x221A, 0x221A, AI), new CharRange(0x221B, 0x221C, AL), new CharRange(0x221D, 0x2220, AI), new CharRange(0x2221, 0x2222, AL), new CharRange(0x2223, 0x2223, AI), new CharRange(0x2224, 0x2224, AL), new CharRange(0x2225, 0x2225, AI), new CharRange(0x2226, 0x2226, AL), new CharRange(0x2227, 0x222C, AI), new CharRange(0x222D, 0x222D, AL), new CharRange(0x222E, 0x222E, AI), new CharRange(0x222F, 0x2233, AL), new CharRange(0x2234, 0x2237, AI), new CharRange(0x2238, 0x223B, AL), new CharRange(0x223C, 0x223D, AI), new CharRange(0x223E, 0x2247, AL), new CharRange(0x2248, 0x2248, AI), new CharRange(0x2249, 0x224B, AL), new CharRange(0x224C, 0x224C, AI), new CharRange(0x224D, 0x2251, AL), new CharRange(0x2252, 0x2252, AI), new CharRange(0x2253, 0x225F, AL), new CharRange(0x2260, 0x2261, AI), new CharRange(0x2262, 0x2263, AL), new CharRange(0x2264, 0x2267, AI), new CharRange(0x2268, 0x2269, AL), new CharRange(0x226A, 0x226B, AI), new CharRange(0x226C, 0x226D, AL), new CharRange(0x226E, 0x226F, AI), new CharRange(0x2270, 0x2281, AL), new CharRange(0x2282, 0x2283, AI), new CharRange(0x2284, 0x2285, AL), new CharRange(0x2286, 0x2287, AI), new CharRange(0x2288, 0x2294, AL), new CharRange(0x2295, 0x2295, AI), new CharRange(0x2296, 0x2298, AL), new CharRange(0x2299, 0x2299, AI), new CharRange(0x229A, 0x22A4, AL), new CharRange(0x22A5, 0x22A5, AI), new CharRange(0x22A6, 0x22BE, AL), new CharRange(0x22BF, 0x22BF, AI), new CharRange(0x22C0, 0x2311, AL), new CharRange(0x2312, 0x2312, AI), new CharRange(0x2313, 0x2319, AL), new CharRange(0x231A, 0x231B, ID), new CharRange(0x231C, 0x2328, AL), new CharRange(0x2329, 0x2329, OP), new CharRange(0x232A, 0x232A, CL), new CharRange(0x232B, 0x23EF, AL), new CharRange(0x23F0, 0x23F3, ID), new CharRange(0x2400, 0x244A, AL), new CharRange(0x2460, 0x24FE, AI), new CharRange(0x24FF, 0x24FF, AL), new CharRange(0x2500, 0x254B, AI), new CharRange(0x254C, 0x254F, AL), new CharRange(0x2550, 0x2574, AI), new CharRange(0x2575, 0x257F, AL), new CharRange(0x2580, 0x258F, AI), new CharRange(0x2590, 0x2591, AL), new CharRange(0x2592, 0x2595, AI), new CharRange(0x2596, 0x259F, AL), new CharRange(0x25A0, 0x25A1, AI), new CharRange(0x25A2, 0x25A2, AL), new CharRange(0x25A3, 0x25A9, AI), new CharRange(0x25AA, 0x25B1, AL), new CharRange(0x25B2, 0x25B3, AI), new CharRange(0x25B4, 0x25B5, AL), new CharRange(0x25B6, 0x25B7, AI), new CharRange(0x25B8, 0x25BB, AL), new CharRange(0x25BC, 0x25BD, AI), new CharRange(0x25BE, 0x25BF, AL), new CharRange(0x25C0, 0x25C1, AI), new CharRange(0x25C2, 0x25C5, AL), new CharRange(0x25C6, 0x25C8, AI), new CharRange(0x25C9, 0x25CA, AL), new CharRange(0x25CB, 0x25CB, AI), new CharRange(0x25CC, 0x25CD, AL), new CharRange(0x25CE, 0x25D1, AI), new CharRange(0x25D2, 0x25E1, AL), new CharRange(0x25E2, 0x25E5, AI), new CharRange(0x25E6, 0x25EE, AL), new CharRange(0x25EF, 0x25EF, AI), new CharRange(0x25F0, 0x25FF, AL), new CharRange(0x2600, 0x2603, ID), new CharRange(0x2604, 0x2604, AL), new CharRange(0x2605, 0x2606, AI), new CharRange(0x2607, 0x2608, AL), new CharRange(0x2609, 0x2609, AI), new CharRange(0x260A, 0x260D, AL), new CharRange(0x260E, 0x260F, AI), new CharRange(0x2610, 0x2613, AL), new CharRange(0x2614, 0x2615, ID), new CharRange(0x2616, 0x2617, AI), new CharRange(0x2618, 0x2618, ID), new CharRange(0x2619, 0x2619, AL), new CharRange(0x261A, 0x261F, ID), new CharRange(0x2620, 0x2638, AL), new CharRange(0x2639, 0x263B, ID), new CharRange(0x263C, 0x263F, AL), new CharRange(0x2640, 0x2640, AI), new CharRange(0x2641, 0x2641, AL), new CharRange(0x2642, 0x2642, AI), new CharRange(0x2643, 0x265F, AL), new CharRange(0x2660, 0x2661, AI), new CharRange(0x2662, 0x2662, AL), new CharRange(0x2663, 0x2665, AI), new CharRange(0x2666, 0x2666, AL), new CharRange(0x2667, 0x2667, AI), new CharRange(0x2668, 0x2668, ID), new CharRange(0x2669, 0x266A, AI), new CharRange(0x266B, 0x266B, AL), new CharRange(0x266C, 0x266D, AI), new CharRange(0x266E, 0x266E, AL), new CharRange(0x266F, 0x266F, AI), new CharRange(0x2670, 0x267E, AL), new CharRange(0x267F, 0x267F, ID), new CharRange(0x2680, 0x269D, AL), new CharRange(0x269E, 0x269F, AI), new CharRange(0x26A0, 0x26BC, AL), new CharRange(0x26BD, 0x26C8, ID), new CharRange(0x26C9, 0x26CC, AI), new CharRange(0x26CD, 0x26CD, ID), new CharRange(0x26CE, 0x26CE, AL), new CharRange(0x26CF, 0x26D1, ID), new CharRange(0x26D2, 0x26D2, AI), new CharRange(0x26D3, 0x26D4, ID), new CharRange(0x26D5, 0x26D7, AI), new CharRange(0x26D8, 0x26D9, ID), new CharRange(0x26DA, 0x26DB, AI), new CharRange(0x26DC, 0x26DC, ID), new CharRange(0x26DD, 0x26DE, AI), new CharRange(0x26DF, 0x26E1, ID), new CharRange(0x26E2, 0x26E2, AL), new CharRange(0x26E3, 0x26E3, AI), new CharRange(0x26E4, 0x26E7, AL), new CharRange(0x26E8, 0x26E9, AI), new CharRange(0x26EA, 0x26EA, ID), new CharRange(0x26EB, 0x26F0, AI), new CharRange(0x26F1, 0x26F5, ID), new CharRange(0x26F6, 0x26F6, AI), new CharRange(0x26F7, 0x26FA, ID), new CharRange(0x26FB, 0x26FC, AI), new CharRange(0x26FD, 0x2704, ID), new CharRange(0x2705, 0x2707, AL), new CharRange(0x2708, 0x270D, ID), new CharRange(0x270E, 0x2756, AL), new CharRange(0x2757, 0x2757, AI), new CharRange(0x2758, 0x275A, AL), new CharRange(0x275B, 0x275E, QU), new CharRange(0x275F, 0x2761, AL), new CharRange(0x2762, 0x2763, EX), new CharRange(0x2764, 0x2767, AL), new CharRange(0x2768, 0x2768, OP), new CharRange(0x2769, 0x2769, CL), new CharRange(0x276A, 0x276A, OP), new CharRange(0x276B, 0x276B, CL), new CharRange(0x276C, 0x276C, OP), new CharRange(0x276D, 0x276D, CL), new CharRange(0x276E, 0x276E, OP), new CharRange(0x276F, 0x276F, CL), new CharRange(0x2770, 0x2770, OP), new CharRange(0x2771, 0x2771, CL), new CharRange(0x2772, 0x2772, OP), new CharRange(0x2773, 0x2773, CL), new CharRange(0x2774, 0x2774, OP), new CharRange(0x2775, 0x2775, CL), new CharRange(0x2776, 0x2793, AI), new CharRange(0x2794, 0x27C4, AL), new CharRange(0x27C5, 0x27C5, OP), new CharRange(0x27C6, 0x27C6, CL), new CharRange(0x27C7, 0x27E5, AL), new CharRange(0x27E6, 0x27E6, OP), new CharRange(0x27E7, 0x27E7, CL), new CharRange(0x27E8, 0x27E8, OP), new CharRange(0x27E9, 0x27E9, CL), new CharRange(0x27EA, 0x27EA, OP), new CharRange(0x27EB, 0x27EB, CL), new CharRange(0x27EC, 0x27EC, OP), new CharRange(0x27ED, 0x27ED, CL), new CharRange(0x27EE, 0x27EE, OP), new CharRange(0x27EF, 0x27EF, CL), new CharRange(0x27F0, 0x2982, AL), new CharRange(0x2983, 0x2983, OP), new CharRange(0x2984, 0x2984, CL), new CharRange(0x2985, 0x2985, OP), new CharRange(0x2986, 0x2986, CL), new CharRange(0x2987, 0x2987, OP), new CharRange(0x2988, 0x2988, CL), new CharRange(0x2989, 0x2989, OP), new CharRange(0x298A, 0x298A, CL), new CharRange(0x298B, 0x298B, OP), new CharRange(0x298C, 0x298C, CL), new CharRange(0x298D, 0x298D, OP), new CharRange(0x298E, 0x298E, CL), new CharRange(0x298F, 0x298F, OP), new CharRange(0x2990, 0x2990, CL), new CharRange(0x2991, 0x2991, OP), new CharRange(0x2992, 0x2992, CL), new CharRange(0x2993, 0x2993, OP), new CharRange(0x2994, 0x2994, CL), new CharRange(0x2995, 0x2995, OP), new CharRange(0x2996, 0x2996, CL), new CharRange(0x2997, 0x2997, OP), new CharRange(0x2998, 0x2998, CL), new CharRange(0x2999, 0x29D7, AL), new CharRange(0x29D8, 0x29D8, OP), new CharRange(0x29D9, 0x29D9, CL), new CharRange(0x29DA, 0x29DA, OP), new CharRange(0x29DB, 0x29DB, CL), new CharRange(0x29DC, 0x29FB, AL), new CharRange(0x29FC, 0x29FC, OP), new CharRange(0x29FD, 0x29FD, CL), new CharRange(0x29FE, 0x2B54, AL), new CharRange(0x2B55, 0x2B59, AI), new CharRange(0x2C00, 0x2CEE, AL), new CharRange(0x2CEF, 0x2CF1, CM), new CharRange(0x2CF2, 0x2CF3, AL), new CharRange(0x2CF9, 0x2CF9, EX), new CharRange(0x2CFA, 0x2CFC, BA), new CharRange(0x2CFD, 0x2CFD, AL), new CharRange(0x2CFE, 0x2CFE, EX), new CharRange(0x2CFF, 0x2CFF, BA), new CharRange(0x2D00, 0x2D6F, AL), new CharRange(0x2D70, 0x2D70, BA), new CharRange(0x2D7F, 0x2D7F, CM), new CharRange(0x2D80, 0x2DDE, AL), new CharRange(0x2DE0, 0x2DFF, CM), new CharRange(0x2E00, 0x2E0D, QU), new CharRange(0x2E0E, 0x2E15, BA), new CharRange(0x2E16, 0x2E16, AL), new CharRange(0x2E17, 0x2E17, BA), new CharRange(0x2E18, 0x2E18, OP), new CharRange(0x2E19, 0x2E19, BA), new CharRange(0x2E1A, 0x2E1B, AL), new CharRange(0x2E1C, 0x2E1D, QU), new CharRange(0x2E1E, 0x2E1F, AL), new CharRange(0x2E20, 0x2E21, QU), new CharRange(0x2E22, 0x2E22, OP), new CharRange(0x2E23, 0x2E23, CL), new CharRange(0x2E24, 0x2E24, OP), new CharRange(0x2E25, 0x2E25, CL), new CharRange(0x2E26, 0x2E26, OP), new CharRange(0x2E27, 0x2E27, CL), new CharRange(0x2E28, 0x2E28, OP), new CharRange(0x2E29, 0x2E29, CL), new CharRange(0x2E2A, 0x2E2D, BA), new CharRange(0x2E2E, 0x2E2E, EX), new CharRange(0x2E2F, 0x2E2F, AL), new CharRange(0x2E30, 0x2E31, BA), new CharRange(0x2E32, 0x2E32, AL), new CharRange(0x2E33, 0x2E34, BA), new CharRange(0x2E35, 0x2E39, AL), new CharRange(0x2E3A, 0x2E3B, B2), new CharRange(0x2E80, 0x3000, ID), new CharRange(0x3001, 0x3002, CL), new CharRange(0x3003, 0x3004, ID), new CharRange(0x3005, 0x3005, NS), new CharRange(0x3006, 0x3007, ID), new CharRange(0x3008, 0x3008, OP), new CharRange(0x3009, 0x3009, CL), new CharRange(0x300A, 0x300A, OP), new CharRange(0x300B, 0x300B, CL), new CharRange(0x300C, 0x300C, OP), new CharRange(0x300D, 0x300D, CL), new CharRange(0x300E, 0x300E, OP), new CharRange(0x300F, 0x300F, CL), new CharRange(0x3010, 0x3010, OP), new CharRange(0x3011, 0x3011, CL), new CharRange(0x3012, 0x3013, ID), new CharRange(0x3014, 0x3014, OP), new CharRange(0x3015, 0x3015, CL), new CharRange(0x3016, 0x3016, OP), new CharRange(0x3017, 0x3017, CL), new CharRange(0x3018, 0x3018, OP), new CharRange(0x3019, 0x3019, CL), new CharRange(0x301A, 0x301A, OP), new CharRange(0x301B, 0x301B, CL), new CharRange(0x301C, 0x301C, NS), new CharRange(0x301D, 0x301D, OP), new CharRange(0x301E, 0x301F, CL), new CharRange(0x3020, 0x3029, ID), new CharRange(0x302A, 0x302F, CM), new CharRange(0x3030, 0x303A, ID), new CharRange(0x303B, 0x303C, NS), new CharRange(0x303D, 0x303F, ID), new CharRange(0x3041, 0x3041, CJ), new CharRange(0x3042, 0x3042, ID), new CharRange(0x3043, 0x3043, CJ), new CharRange(0x3044, 0x3044, ID), new CharRange(0x3045, 0x3045, CJ), new CharRange(0x3046, 0x3046, ID), new CharRange(0x3047, 0x3047, CJ), new CharRange(0x3048, 0x3048, ID), new CharRange(0x3049, 0x3049, CJ), new CharRange(0x304A, 0x3062, ID), new CharRange(0x3063, 0x3063, CJ), new CharRange(0x3064, 0x3082, ID), new CharRange(0x3083, 0x3083, CJ), new CharRange(0x3084, 0x3084, ID), new CharRange(0x3085, 0x3085, CJ), new CharRange(0x3086, 0x3086, ID), new CharRange(0x3087, 0x3087, CJ), new CharRange(0x3088, 0x308D, ID), new CharRange(0x308E, 0x308E, CJ), new CharRange(0x308F, 0x3094, ID), new CharRange(0x3095, 0x3096, CJ), new CharRange(0x3099, 0x309A, CM), new CharRange(0x309B, 0x309E, NS), new CharRange(0x309F, 0x309F, ID), new CharRange(0x30A0, 0x30A0, NS), new CharRange(0x30A1, 0x30A1, CJ), new CharRange(0x30A2, 0x30A2, ID), new CharRange(0x30A3, 0x30A3, CJ), new CharRange(0x30A4, 0x30A4, ID), new CharRange(0x30A5, 0x30A5, CJ), new CharRange(0x30A6, 0x30A6, ID), new CharRange(0x30A7, 0x30A7, CJ), new CharRange(0x30A8, 0x30A8, ID), new CharRange(0x30A9, 0x30A9, CJ), new CharRange(0x30AA, 0x30C2, ID), new CharRange(0x30C3, 0x30C3, CJ), new CharRange(0x30C4, 0x30E2, ID), new CharRange(0x30E3, 0x30E3, CJ), new CharRange(0x30E4, 0x30E4, ID), new CharRange(0x30E5, 0x30E5, CJ), new CharRange(0x30E6, 0x30E6, ID), new CharRange(0x30E7, 0x30E7, CJ), new CharRange(0x30E8, 0x30ED, ID), new CharRange(0x30EE, 0x30EE, CJ), new CharRange(0x30EF, 0x30F4, ID), new CharRange(0x30F5, 0x30F6, CJ), new CharRange(0x30F7, 0x30FA, ID), new CharRange(0x30FB, 0x30FB, NS), new CharRange(0x30FC, 0x30FC, CJ), new CharRange(0x30FD, 0x30FE, NS), new CharRange(0x30FF, 0x31E3, ID), new CharRange(0x31F0, 0x31FF, CJ), new CharRange(0x3200, 0x3247, ID), new CharRange(0x3248, 0x324F, AI), new CharRange(0x3250, 0x4DBF, ID), new CharRange(0x4DC0, 0x4DFF, AL), new CharRange(0x4E00, 0xA014, ID), new CharRange(0xA015, 0xA015, NS), new CharRange(0xA016, 0xA4C6, ID), new CharRange(0xA4D0, 0xA4FD, AL), new CharRange(0xA4FE, 0xA4FF, BA), new CharRange(0xA500, 0xA60C, AL), new CharRange(0xA60D, 0xA60D, BA), new CharRange(0xA60E, 0xA60E, EX), new CharRange(0xA60F, 0xA60F, BA), new CharRange(0xA610, 0xA61F, AL), new CharRange(0xA620, 0xA629, NU), new CharRange(0xA62A, 0xA66E, AL), new CharRange(0xA66F, 0xA672, CM), new CharRange(0xA673, 0xA673, AL), new CharRange(0xA674, 0xA67D, CM), new CharRange(0xA67E, 0xA697, AL), new CharRange(0xA69F, 0xA69F, CM), new CharRange(0xA6A0, 0xA6EF, AL), new CharRange(0xA6F0, 0xA6F1, CM), new CharRange(0xA6F2, 0xA6F2, AL), new CharRange(0xA6F3, 0xA6F7, BA), new CharRange(0xA700, 0xA801, AL), new CharRange(0xA802, 0xA802, CM), new CharRange(0xA803, 0xA805, AL), new CharRange(0xA806, 0xA806, CM), new CharRange(0xA807, 0xA80A, AL), new CharRange(0xA80B, 0xA80B, CM), new CharRange(0xA80C, 0xA822, AL), new CharRange(0xA823, 0xA827, CM), new CharRange(0xA828, 0xA837, AL), new CharRange(0xA838, 0xA838, PO), new CharRange(0xA839, 0xA873, AL), new CharRange(0xA874, 0xA875, BB), new CharRange(0xA876, 0xA877, EX), new CharRange(0xA880, 0xA881, CM), new CharRange(0xA882, 0xA8B3, AL), new CharRange(0xA8B4, 0xA8C4, CM), new CharRange(0xA8CE, 0xA8CF, BA), new CharRange(0xA8D0, 0xA8D9, NU), new CharRange(0xA8E0, 0xA8F1, CM), new CharRange(0xA8F2, 0xA8FB, AL), new CharRange(0xA900, 0xA909, NU), new CharRange(0xA90A, 0xA925, AL), new CharRange(0xA926, 0xA92D, CM), new CharRange(0xA92E, 0xA92F, BA), new CharRange(0xA930, 0xA946, AL), new CharRange(0xA947, 0xA953, CM), new CharRange(0xA95F, 0xA95F, AL), new CharRange(0xA960, 0xA97C, JL), new CharRange(0xA980, 0xA983, CM), new CharRange(0xA984, 0xA9B2, AL), new CharRange(0xA9B3, 0xA9C0, CM), new CharRange(0xA9C1, 0xA9C6, AL), new CharRange(0xA9C7, 0xA9C9, BA), new CharRange(0xA9CA, 0xA9CF, AL), new CharRange(0xA9D0, 0xA9D9, NU), new CharRange(0xA9DE, 0xAA28, AL), new CharRange(0xAA29, 0xAA36, CM), new CharRange(0xAA40, 0xAA42, AL), new CharRange(0xAA43, 0xAA43, CM), new CharRange(0xAA44, 0xAA4B, AL), new CharRange(0xAA4C, 0xAA4D, CM), new CharRange(0xAA50, 0xAA59, NU), new CharRange(0xAA5C, 0xAA5C, AL), new CharRange(0xAA5D, 0xAA5F, BA), new CharRange(0xAA60, 0xAADF, SA), new CharRange(0xAAE0, 0xAAEA, AL), new CharRange(0xAAEB, 0xAAEF, CM), new CharRange(0xAAF0, 0xAAF1, BA), new CharRange(0xAAF2, 0xAAF4, AL), new CharRange(0xAAF5, 0xAAF6, CM), new CharRange(0xAB01, 0xABE2, AL), new CharRange(0xABE3, 0xABEA, CM), new CharRange(0xABEB, 0xABEB, BA), new CharRange(0xABEC, 0xABED, CM), new CharRange(0xABF0, 0xABF9, NU), new CharRange(0xAC00, 0xAC00, H2), new CharRange(0xAC01, 0xAC1B, H3), new CharRange(0xAC1C, 0xAC1C, H2), new CharRange(0xAC1D, 0xAC37, H3), new CharRange(0xAC38, 0xAC38, H2), new CharRange(0xAC39, 0xAC53, H3), new CharRange(0xAC54, 0xAC54, H2), new CharRange(0xAC55, 0xAC6F, H3), new CharRange(0xAC70, 0xAC70, H2), new CharRange(0xAC71, 0xAC8B, H3), new CharRange(0xAC8C, 0xAC8C, H2), new CharRange(0xAC8D, 0xACA7, H3), new CharRange(0xACA8, 0xACA8, H2), new CharRange(0xACA9, 0xACC3, H3), new CharRange(0xACC4, 0xACC4, H2), new CharRange(0xACC5, 0xACDF, H3), new CharRange(0xACE0, 0xACE0, H2), new CharRange(0xACE1, 0xACFB, H3), new CharRange(0xACFC, 0xACFC, H2), new CharRange(0xACFD, 0xAD17, H3), new CharRange(0xAD18, 0xAD18, H2), new CharRange(0xAD19, 0xAD33, H3), new CharRange(0xAD34, 0xAD34, H2), new CharRange(0xAD35, 0xAD4F, H3), new CharRange(0xAD50, 0xAD50, H2), new CharRange(0xAD51, 0xAD6B, H3), new CharRange(0xAD6C, 0xAD6C, H2), new CharRange(0xAD6D, 0xAD87, H3), new CharRange(0xAD88, 0xAD88, H2), new CharRange(0xAD89, 0xADA3, H3), new CharRange(0xADA4, 0xADA4, H2), new CharRange(0xADA5, 0xADBF, H3), new CharRange(0xADC0, 0xADC0, H2), new CharRange(0xADC1, 0xADDB, H3), new CharRange(0xADDC, 0xADDC, H2), new CharRange(0xADDD, 0xADF7, H3), new CharRange(0xADF8, 0xADF8, H2), new CharRange(0xADF9, 0xAE13, H3), new CharRange(0xAE14, 0xAE14, H2), new CharRange(0xAE15, 0xAE2F, H3), new CharRange(0xAE30, 0xAE30, H2), new CharRange(0xAE31, 0xAE4B, H3), new CharRange(0xAE4C, 0xAE4C, H2), new CharRange(0xAE4D, 0xAE67, H3), new CharRange(0xAE68, 0xAE68, H2), new CharRange(0xAE69, 0xAE83, H3), new CharRange(0xAE84, 0xAE84, H2), new CharRange(0xAE85, 0xAE9F, H3), new CharRange(0xAEA0, 0xAEA0, H2), new CharRange(0xAEA1, 0xAEBB, H3), new CharRange(0xAEBC, 0xAEBC, H2), new CharRange(0xAEBD, 0xAED7, H3), new CharRange(0xAED8, 0xAED8, H2), new CharRange(0xAED9, 0xAEF3, H3), new CharRange(0xAEF4, 0xAEF4, H2), new CharRange(0xAEF5, 0xAF0F, H3), new CharRange(0xAF10, 0xAF10, H2), new CharRange(0xAF11, 0xAF2B, H3), new CharRange(0xAF2C, 0xAF2C, H2), new CharRange(0xAF2D, 0xAF47, H3), new CharRange(0xAF48, 0xAF48, H2), new CharRange(0xAF49, 0xAF63, H3), new CharRange(0xAF64, 0xAF64, H2), new CharRange(0xAF65, 0xAF7F, H3), new CharRange(0xAF80, 0xAF80, H2), new CharRange(0xAF81, 0xAF9B, H3), new CharRange(0xAF9C, 0xAF9C, H2), new CharRange(0xAF9D, 0xAFB7, H3), new CharRange(0xAFB8, 0xAFB8, H2), new CharRange(0xAFB9, 0xAFD3, H3), new CharRange(0xAFD4, 0xAFD4, H2), new CharRange(0xAFD5, 0xAFEF, H3), new CharRange(0xAFF0, 0xAFF0, H2), new CharRange(0xAFF1, 0xB00B, H3), new CharRange(0xB00C, 0xB00C, H2), new CharRange(0xB00D, 0xB027, H3), new CharRange(0xB028, 0xB028, H2), new CharRange(0xB029, 0xB043, H3), new CharRange(0xB044, 0xB044, H2), new CharRange(0xB045, 0xB05F, H3), new CharRange(0xB060, 0xB060, H2), new CharRange(0xB061, 0xB07B, H3), new CharRange(0xB07C, 0xB07C, H2), new CharRange(0xB07D, 0xB097, H3), new CharRange(0xB098, 0xB098, H2), new CharRange(0xB099, 0xB0B3, H3), new CharRange(0xB0B4, 0xB0B4, H2), new CharRange(0xB0B5, 0xB0CF, H3), new CharRange(0xB0D0, 0xB0D0, H2), new CharRange(0xB0D1, 0xB0EB, H3), new CharRange(0xB0EC, 0xB0EC, H2), new CharRange(0xB0ED, 0xB107, H3), new CharRange(0xB108, 0xB108, H2), new CharRange(0xB109, 0xB123, H3), new CharRange(0xB124, 0xB124, H2), new CharRange(0xB125, 0xB13F, H3), new CharRange(0xB140, 0xB140, H2), new CharRange(0xB141, 0xB15B, H3), new CharRange(0xB15C, 0xB15C, H2), new CharRange(0xB15D, 0xB177, H3), new CharRange(0xB178, 0xB178, H2), new CharRange(0xB179, 0xB193, H3), new CharRange(0xB194, 0xB194, H2), new CharRange(0xB195, 0xB1AF, H3), new CharRange(0xB1B0, 0xB1B0, H2), new CharRange(0xB1B1, 0xB1CB, H3), new CharRange(0xB1CC, 0xB1CC, H2), new CharRange(0xB1CD, 0xB1E7, H3), new CharRange(0xB1E8, 0xB1E8, H2), new CharRange(0xB1E9, 0xB203, H3), new CharRange(0xB204, 0xB204, H2), new CharRange(0xB205, 0xB21F, H3), new CharRange(0xB220, 0xB220, H2), new CharRange(0xB221, 0xB23B, H3), new CharRange(0xB23C, 0xB23C, H2), new CharRange(0xB23D, 0xB257, H3), new CharRange(0xB258, 0xB258, H2), new CharRange(0xB259, 0xB273, H3), new CharRange(0xB274, 0xB274, H2), new CharRange(0xB275, 0xB28F, H3), new CharRange(0xB290, 0xB290, H2), new CharRange(0xB291, 0xB2AB, H3), new CharRange(0xB2AC, 0xB2AC, H2), new CharRange(0xB2AD, 0xB2C7, H3), new CharRange(0xB2C8, 0xB2C8, H2), new CharRange(0xB2C9, 0xB2E3, H3), new CharRange(0xB2E4, 0xB2E4, H2), new CharRange(0xB2E5, 0xB2FF, H3), new CharRange(0xB300, 0xB300, H2), new CharRange(0xB301, 0xB31B, H3), new CharRange(0xB31C, 0xB31C, H2), new CharRange(0xB31D, 0xB337, H3), new CharRange(0xB338, 0xB338, H2), new CharRange(0xB339, 0xB353, H3), new CharRange(0xB354, 0xB354, H2), new CharRange(0xB355, 0xB36F, H3), new CharRange(0xB370, 0xB370, H2), new CharRange(0xB371, 0xB38B, H3), new CharRange(0xB38C, 0xB38C, H2), new CharRange(0xB38D, 0xB3A7, H3), new CharRange(0xB3A8, 0xB3A8, H2), new CharRange(0xB3A9, 0xB3C3, H3), new CharRange(0xB3C4, 0xB3C4, H2), new CharRange(0xB3C5, 0xB3DF, H3), new CharRange(0xB3E0, 0xB3E0, H2), new CharRange(0xB3E1, 0xB3FB, H3), new CharRange(0xB3FC, 0xB3FC, H2), new CharRange(0xB3FD, 0xB417, H3), new CharRange(0xB418, 0xB418, H2), new CharRange(0xB419, 0xB433, H3), new CharRange(0xB434, 0xB434, H2), new CharRange(0xB435, 0xB44F, H3), new CharRange(0xB450, 0xB450, H2), new CharRange(0xB451, 0xB46B, H3), new CharRange(0xB46C, 0xB46C, H2), new CharRange(0xB46D, 0xB487, H3), new CharRange(0xB488, 0xB488, H2), new CharRange(0xB489, 0xB4A3, H3), new CharRange(0xB4A4, 0xB4A4, H2), new CharRange(0xB4A5, 0xB4BF, H3), new CharRange(0xB4C0, 0xB4C0, H2), new CharRange(0xB4C1, 0xB4DB, H3), new CharRange(0xB4DC, 0xB4DC, H2), new CharRange(0xB4DD, 0xB4F7, H3), new CharRange(0xB4F8, 0xB4F8, H2), new CharRange(0xB4F9, 0xB513, H3), new CharRange(0xB514, 0xB514, H2), new CharRange(0xB515, 0xB52F, H3), new CharRange(0xB530, 0xB530, H2), new CharRange(0xB531, 0xB54B, H3), new CharRange(0xB54C, 0xB54C, H2), new CharRange(0xB54D, 0xB567, H3), new CharRange(0xB568, 0xB568, H2), new CharRange(0xB569, 0xB583, H3), new CharRange(0xB584, 0xB584, H2), new CharRange(0xB585, 0xB59F, H3), new CharRange(0xB5A0, 0xB5A0, H2), new CharRange(0xB5A1, 0xB5BB, H3), new CharRange(0xB5BC, 0xB5BC, H2), new CharRange(0xB5BD, 0xB5D7, H3), new CharRange(0xB5D8, 0xB5D8, H2), new CharRange(0xB5D9, 0xB5F3, H3), new CharRange(0xB5F4, 0xB5F4, H2), new CharRange(0xB5F5, 0xB60F, H3), new CharRange(0xB610, 0xB610, H2), new CharRange(0xB611, 0xB62B, H3), new CharRange(0xB62C, 0xB62C, H2), new CharRange(0xB62D, 0xB647, H3), new CharRange(0xB648, 0xB648, H2), new CharRange(0xB649, 0xB663, H3), new CharRange(0xB664, 0xB664, H2), new CharRange(0xB665, 0xB67F, H3), new CharRange(0xB680, 0xB680, H2), new CharRange(0xB681, 0xB69B, H3), new CharRange(0xB69C, 0xB69C, H2), new CharRange(0xB69D, 0xB6B7, H3), new CharRange(0xB6B8, 0xB6B8, H2), new CharRange(0xB6B9, 0xB6D3, H3), new CharRange(0xB6D4, 0xB6D4, H2), new CharRange(0xB6D5, 0xB6EF, H3), new CharRange(0xB6F0, 0xB6F0, H2), new CharRange(0xB6F1, 0xB70B, H3), new CharRange(0xB70C, 0xB70C, H2), new CharRange(0xB70D, 0xB727, H3), new CharRange(0xB728, 0xB728, H2), new CharRange(0xB729, 0xB743, H3), new CharRange(0xB744, 0xB744, H2), new CharRange(0xB745, 0xB75F, H3), new CharRange(0xB760, 0xB760, H2), new CharRange(0xB761, 0xB77B, H3), new CharRange(0xB77C, 0xB77C, H2), new CharRange(0xB77D, 0xB797, H3), new CharRange(0xB798, 0xB798, H2), new CharRange(0xB799, 0xB7B3, H3), new CharRange(0xB7B4, 0xB7B4, H2), new CharRange(0xB7B5, 0xB7CF, H3), new CharRange(0xB7D0, 0xB7D0, H2), new CharRange(0xB7D1, 0xB7EB, H3), new CharRange(0xB7EC, 0xB7EC, H2), new CharRange(0xB7ED, 0xB807, H3), new CharRange(0xB808, 0xB808, H2), new CharRange(0xB809, 0xB823, H3), new CharRange(0xB824, 0xB824, H2), new CharRange(0xB825, 0xB83F, H3), new CharRange(0xB840, 0xB840, H2), new CharRange(0xB841, 0xB85B, H3), new CharRange(0xB85C, 0xB85C, H2), new CharRange(0xB85D, 0xB877, H3), new CharRange(0xB878, 0xB878, H2), new CharRange(0xB879, 0xB893, H3), new CharRange(0xB894, 0xB894, H2), new CharRange(0xB895, 0xB8AF, H3), new CharRange(0xB8B0, 0xB8B0, H2), new CharRange(0xB8B1, 0xB8CB, H3), new CharRange(0xB8CC, 0xB8CC, H2), new CharRange(0xB8CD, 0xB8E7, H3), new CharRange(0xB8E8, 0xB8E8, H2), new CharRange(0xB8E9, 0xB903, H3), new CharRange(0xB904, 0xB904, H2), new CharRange(0xB905, 0xB91F, H3), new CharRange(0xB920, 0xB920, H2), new CharRange(0xB921, 0xB93B, H3), new CharRange(0xB93C, 0xB93C, H2), new CharRange(0xB93D, 0xB957, H3), new CharRange(0xB958, 0xB958, H2), new CharRange(0xB959, 0xB973, H3), new CharRange(0xB974, 0xB974, H2), new CharRange(0xB975, 0xB98F, H3), new CharRange(0xB990, 0xB990, H2), new CharRange(0xB991, 0xB9AB, H3), new CharRange(0xB9AC, 0xB9AC, H2), new CharRange(0xB9AD, 0xB9C7, H3), new CharRange(0xB9C8, 0xB9C8, H2), new CharRange(0xB9C9, 0xB9E3, H3), new CharRange(0xB9E4, 0xB9E4, H2), new CharRange(0xB9E5, 0xB9FF, H3), new CharRange(0xBA00, 0xBA00, H2), new CharRange(0xBA01, 0xBA1B, H3), new CharRange(0xBA1C, 0xBA1C, H2), new CharRange(0xBA1D, 0xBA37, H3), new CharRange(0xBA38, 0xBA38, H2), new CharRange(0xBA39, 0xBA53, H3), new CharRange(0xBA54, 0xBA54, H2), new CharRange(0xBA55, 0xBA6F, H3), new CharRange(0xBA70, 0xBA70, H2), new CharRange(0xBA71, 0xBA8B, H3), new CharRange(0xBA8C, 0xBA8C, H2), new CharRange(0xBA8D, 0xBAA7, H3), new CharRange(0xBAA8, 0xBAA8, H2), new CharRange(0xBAA9, 0xBAC3, H3), new CharRange(0xBAC4, 0xBAC4, H2), new CharRange(0xBAC5, 0xBADF, H3), new CharRange(0xBAE0, 0xBAE0, H2), new CharRange(0xBAE1, 0xBAFB, H3), new CharRange(0xBAFC, 0xBAFC, H2), new CharRange(0xBAFD, 0xBB17, H3), new CharRange(0xBB18, 0xBB18, H2), new CharRange(0xBB19, 0xBB33, H3), new CharRange(0xBB34, 0xBB34, H2), new CharRange(0xBB35, 0xBB4F, H3), new CharRange(0xBB50, 0xBB50, H2), new CharRange(0xBB51, 0xBB6B, H3), new CharRange(0xBB6C, 0xBB6C, H2), new CharRange(0xBB6D, 0xBB87, H3), new CharRange(0xBB88, 0xBB88, H2), new CharRange(0xBB89, 0xBBA3, H3), new CharRange(0xBBA4, 0xBBA4, H2), new CharRange(0xBBA5, 0xBBBF, H3), new CharRange(0xBBC0, 0xBBC0, H2), new CharRange(0xBBC1, 0xBBDB, H3), new CharRange(0xBBDC, 0xBBDC, H2), new CharRange(0xBBDD, 0xBBF7, H3), new CharRange(0xBBF8, 0xBBF8, H2), new CharRange(0xBBF9, 0xBC13, H3), new CharRange(0xBC14, 0xBC14, H2), new CharRange(0xBC15, 0xBC2F, H3), new CharRange(0xBC30, 0xBC30, H2), new CharRange(0xBC31, 0xBC4B, H3), new CharRange(0xBC4C, 0xBC4C, H2), new CharRange(0xBC4D, 0xBC67, H3), new CharRange(0xBC68, 0xBC68, H2), new CharRange(0xBC69, 0xBC83, H3), new CharRange(0xBC84, 0xBC84, H2), new CharRange(0xBC85, 0xBC9F, H3), new CharRange(0xBCA0, 0xBCA0, H2), new CharRange(0xBCA1, 0xBCBB, H3), new CharRange(0xBCBC, 0xBCBC, H2), new CharRange(0xBCBD, 0xBCD7, H3), new CharRange(0xBCD8, 0xBCD8, H2), new CharRange(0xBCD9, 0xBCF3, H3), new CharRange(0xBCF4, 0xBCF4, H2), new CharRange(0xBCF5, 0xBD0F, H3), new CharRange(0xBD10, 0xBD10, H2), new CharRange(0xBD11, 0xBD2B, H3), new CharRange(0xBD2C, 0xBD2C, H2), new CharRange(0xBD2D, 0xBD47, H3), new CharRange(0xBD48, 0xBD48, H2), new CharRange(0xBD49, 0xBD63, H3), new CharRange(0xBD64, 0xBD64, H2), new CharRange(0xBD65, 0xBD7F, H3), new CharRange(0xBD80, 0xBD80, H2), new CharRange(0xBD81, 0xBD9B, H3), new CharRange(0xBD9C, 0xBD9C, H2), new CharRange(0xBD9D, 0xBDB7, H3), new CharRange(0xBDB8, 0xBDB8, H2), new CharRange(0xBDB9, 0xBDD3, H3), new CharRange(0xBDD4, 0xBDD4, H2), new CharRange(0xBDD5, 0xBDEF, H3), new CharRange(0xBDF0, 0xBDF0, H2), new CharRange(0xBDF1, 0xBE0B, H3), new CharRange(0xBE0C, 0xBE0C, H2), new CharRange(0xBE0D, 0xBE27, H3), new CharRange(0xBE28, 0xBE28, H2), new CharRange(0xBE29, 0xBE43, H3), new CharRange(0xBE44, 0xBE44, H2), new CharRange(0xBE45, 0xBE5F, H3), new CharRange(0xBE60, 0xBE60, H2), new CharRange(0xBE61, 0xBE7B, H3), new CharRange(0xBE7C, 0xBE7C, H2), new CharRange(0xBE7D, 0xBE97, H3), new CharRange(0xBE98, 0xBE98, H2), new CharRange(0xBE99, 0xBEB3, H3), new CharRange(0xBEB4, 0xBEB4, H2), new CharRange(0xBEB5, 0xBECF, H3), new CharRange(0xBED0, 0xBED0, H2), new CharRange(0xBED1, 0xBEEB, H3), new CharRange(0xBEEC, 0xBEEC, H2), new CharRange(0xBEED, 0xBF07, H3), new CharRange(0xBF08, 0xBF08, H2), new CharRange(0xBF09, 0xBF23, H3), new CharRange(0xBF24, 0xBF24, H2), new CharRange(0xBF25, 0xBF3F, H3), new CharRange(0xBF40, 0xBF40, H2), new CharRange(0xBF41, 0xBF5B, H3), new CharRange(0xBF5C, 0xBF5C, H2), new CharRange(0xBF5D, 0xBF77, H3), new CharRange(0xBF78, 0xBF78, H2), new CharRange(0xBF79, 0xBF93, H3), new CharRange(0xBF94, 0xBF94, H2), new CharRange(0xBF95, 0xBFAF, H3), new CharRange(0xBFB0, 0xBFB0, H2), new CharRange(0xBFB1, 0xBFCB, H3), new CharRange(0xBFCC, 0xBFCC, H2), new CharRange(0xBFCD, 0xBFE7, H3), new CharRange(0xBFE8, 0xBFE8, H2), new CharRange(0xBFE9, 0xC003, H3), new CharRange(0xC004, 0xC004, H2), new CharRange(0xC005, 0xC01F, H3), new CharRange(0xC020, 0xC020, H2), new CharRange(0xC021, 0xC03B, H3), new CharRange(0xC03C, 0xC03C, H2), new CharRange(0xC03D, 0xC057, H3), new CharRange(0xC058, 0xC058, H2), new CharRange(0xC059, 0xC073, H3), new CharRange(0xC074, 0xC074, H2), new CharRange(0xC075, 0xC08F, H3), new CharRange(0xC090, 0xC090, H2), new CharRange(0xC091, 0xC0AB, H3), new CharRange(0xC0AC, 0xC0AC, H2), new CharRange(0xC0AD, 0xC0C7, H3), new CharRange(0xC0C8, 0xC0C8, H2), new CharRange(0xC0C9, 0xC0E3, H3), new CharRange(0xC0E4, 0xC0E4, H2), new CharRange(0xC0E5, 0xC0FF, H3), new CharRange(0xC100, 0xC100, H2), new CharRange(0xC101, 0xC11B, H3), new CharRange(0xC11C, 0xC11C, H2), new CharRange(0xC11D, 0xC137, H3), new CharRange(0xC138, 0xC138, H2), new CharRange(0xC139, 0xC153, H3), new CharRange(0xC154, 0xC154, H2), new CharRange(0xC155, 0xC16F, H3), new CharRange(0xC170, 0xC170, H2), new CharRange(0xC171, 0xC18B, H3), new CharRange(0xC18C, 0xC18C, H2), new CharRange(0xC18D, 0xC1A7, H3), new CharRange(0xC1A8, 0xC1A8, H2), new CharRange(0xC1A9, 0xC1C3, H3), new CharRange(0xC1C4, 0xC1C4, H2), new CharRange(0xC1C5, 0xC1DF, H3), new CharRange(0xC1E0, 0xC1E0, H2), new CharRange(0xC1E1, 0xC1FB, H3), new CharRange(0xC1FC, 0xC1FC, H2), new CharRange(0xC1FD, 0xC217, H3), new CharRange(0xC218, 0xC218, H2), new CharRange(0xC219, 0xC233, H3), new CharRange(0xC234, 0xC234, H2), new CharRange(0xC235, 0xC24F, H3), new CharRange(0xC250, 0xC250, H2), new CharRange(0xC251, 0xC26B, H3), new CharRange(0xC26C, 0xC26C, H2), new CharRange(0xC26D, 0xC287, H3), new CharRange(0xC288, 0xC288, H2), new CharRange(0xC289, 0xC2A3, H3), new CharRange(0xC2A4, 0xC2A4, H2), new CharRange(0xC2A5, 0xC2BF, H3), new CharRange(0xC2C0, 0xC2C0, H2), new CharRange(0xC2C1, 0xC2DB, H3), new CharRange(0xC2DC, 0xC2DC, H2), new CharRange(0xC2DD, 0xC2F7, H3), new CharRange(0xC2F8, 0xC2F8, H2), new CharRange(0xC2F9, 0xC313, H3), new CharRange(0xC314, 0xC314, H2), new CharRange(0xC315, 0xC32F, H3), new CharRange(0xC330, 0xC330, H2), new CharRange(0xC331, 0xC34B, H3), new CharRange(0xC34C, 0xC34C, H2), new CharRange(0xC34D, 0xC367, H3), new CharRange(0xC368, 0xC368, H2), new CharRange(0xC369, 0xC383, H3), new CharRange(0xC384, 0xC384, H2), new CharRange(0xC385, 0xC39F, H3), new CharRange(0xC3A0, 0xC3A0, H2), new CharRange(0xC3A1, 0xC3BB, H3), new CharRange(0xC3BC, 0xC3BC, H2), new CharRange(0xC3BD, 0xC3D7, H3), new CharRange(0xC3D8, 0xC3D8, H2), new CharRange(0xC3D9, 0xC3F3, H3), new CharRange(0xC3F4, 0xC3F4, H2), new CharRange(0xC3F5, 0xC40F, H3), new CharRange(0xC410, 0xC410, H2), new CharRange(0xC411, 0xC42B, H3), new CharRange(0xC42C, 0xC42C, H2), new CharRange(0xC42D, 0xC447, H3), new CharRange(0xC448, 0xC448, H2), new CharRange(0xC449, 0xC463, H3), new CharRange(0xC464, 0xC464, H2), new CharRange(0xC465, 0xC47F, H3), new CharRange(0xC480, 0xC480, H2), new CharRange(0xC481, 0xC49B, H3), new CharRange(0xC49C, 0xC49C, H2), new CharRange(0xC49D, 0xC4B7, H3), new CharRange(0xC4B8, 0xC4B8, H2), new CharRange(0xC4B9, 0xC4D3, H3), new CharRange(0xC4D4, 0xC4D4, H2), new CharRange(0xC4D5, 0xC4EF, H3), new CharRange(0xC4F0, 0xC4F0, H2), new CharRange(0xC4F1, 0xC50B, H3), new CharRange(0xC50C, 0xC50C, H2), new CharRange(0xC50D, 0xC527, H3), new CharRange(0xC528, 0xC528, H2), new CharRange(0xC529, 0xC543, H3), new CharRange(0xC544, 0xC544, H2), new CharRange(0xC545, 0xC55F, H3), new CharRange(0xC560, 0xC560, H2), new CharRange(0xC561, 0xC57B, H3), new CharRange(0xC57C, 0xC57C, H2), new CharRange(0xC57D, 0xC597, H3), new CharRange(0xC598, 0xC598, H2), new CharRange(0xC599, 0xC5B3, H3), new CharRange(0xC5B4, 0xC5B4, H2), new CharRange(0xC5B5, 0xC5CF, H3), new CharRange(0xC5D0, 0xC5D0, H2), new CharRange(0xC5D1, 0xC5EB, H3), new CharRange(0xC5EC, 0xC5EC, H2), new CharRange(0xC5ED, 0xC607, H3), new CharRange(0xC608, 0xC608, H2), new CharRange(0xC609, 0xC623, H3), new CharRange(0xC624, 0xC624, H2), new CharRange(0xC625, 0xC63F, H3), new CharRange(0xC640, 0xC640, H2), new CharRange(0xC641, 0xC65B, H3), new CharRange(0xC65C, 0xC65C, H2), new CharRange(0xC65D, 0xC677, H3), new CharRange(0xC678, 0xC678, H2), new CharRange(0xC679, 0xC693, H3), new CharRange(0xC694, 0xC694, H2), new CharRange(0xC695, 0xC6AF, H3), new CharRange(0xC6B0, 0xC6B0, H2), new CharRange(0xC6B1, 0xC6CB, H3), new CharRange(0xC6CC, 0xC6CC, H2), new CharRange(0xC6CD, 0xC6E7, H3), new CharRange(0xC6E8, 0xC6E8, H2), new CharRange(0xC6E9, 0xC703, H3), new CharRange(0xC704, 0xC704, H2), new CharRange(0xC705, 0xC71F, H3), new CharRange(0xC720, 0xC720, H2), new CharRange(0xC721, 0xC73B, H3), new CharRange(0xC73C, 0xC73C, H2), new CharRange(0xC73D, 0xC757, H3), new CharRange(0xC758, 0xC758, H2), new CharRange(0xC759, 0xC773, H3), new CharRange(0xC774, 0xC774, H2), new CharRange(0xC775, 0xC78F, H3), new CharRange(0xC790, 0xC790, H2), new CharRange(0xC791, 0xC7AB, H3), new CharRange(0xC7AC, 0xC7AC, H2), new CharRange(0xC7AD, 0xC7C7, H3), new CharRange(0xC7C8, 0xC7C8, H2), new CharRange(0xC7C9, 0xC7E3, H3), new CharRange(0xC7E4, 0xC7E4, H2), new CharRange(0xC7E5, 0xC7FF, H3), new CharRange(0xC800, 0xC800, H2), new CharRange(0xC801, 0xC81B, H3), new CharRange(0xC81C, 0xC81C, H2), new CharRange(0xC81D, 0xC837, H3), new CharRange(0xC838, 0xC838, H2), new CharRange(0xC839, 0xC853, H3), new CharRange(0xC854, 0xC854, H2), new CharRange(0xC855, 0xC86F, H3), new CharRange(0xC870, 0xC870, H2), new CharRange(0xC871, 0xC88B, H3), new CharRange(0xC88C, 0xC88C, H2), new CharRange(0xC88D, 0xC8A7, H3), new CharRange(0xC8A8, 0xC8A8, H2), new CharRange(0xC8A9, 0xC8C3, H3), new CharRange(0xC8C4, 0xC8C4, H2), new CharRange(0xC8C5, 0xC8DF, H3), new CharRange(0xC8E0, 0xC8E0, H2), new CharRange(0xC8E1, 0xC8FB, H3), new CharRange(0xC8FC, 0xC8FC, H2), new CharRange(0xC8FD, 0xC917, H3), new CharRange(0xC918, 0xC918, H2), new CharRange(0xC919, 0xC933, H3), new CharRange(0xC934, 0xC934, H2), new CharRange(0xC935, 0xC94F, H3), new CharRange(0xC950, 0xC950, H2), new CharRange(0xC951, 0xC96B, H3), new CharRange(0xC96C, 0xC96C, H2), new CharRange(0xC96D, 0xC987, H3), new CharRange(0xC988, 0xC988, H2), new CharRange(0xC989, 0xC9A3, H3), new CharRange(0xC9A4, 0xC9A4, H2), new CharRange(0xC9A5, 0xC9BF, H3), new CharRange(0xC9C0, 0xC9C0, H2), new CharRange(0xC9C1, 0xC9DB, H3), new CharRange(0xC9DC, 0xC9DC, H2), new CharRange(0xC9DD, 0xC9F7, H3), new CharRange(0xC9F8, 0xC9F8, H2), new CharRange(0xC9F9, 0xCA13, H3), new CharRange(0xCA14, 0xCA14, H2), new CharRange(0xCA15, 0xCA2F, H3), new CharRange(0xCA30, 0xCA30, H2), new CharRange(0xCA31, 0xCA4B, H3), new CharRange(0xCA4C, 0xCA4C, H2), new CharRange(0xCA4D, 0xCA67, H3), new CharRange(0xCA68, 0xCA68, H2), new CharRange(0xCA69, 0xCA83, H3), new CharRange(0xCA84, 0xCA84, H2), new CharRange(0xCA85, 0xCA9F, H3), new CharRange(0xCAA0, 0xCAA0, H2), new CharRange(0xCAA1, 0xCABB, H3), new CharRange(0xCABC, 0xCABC, H2), new CharRange(0xCABD, 0xCAD7, H3), new CharRange(0xCAD8, 0xCAD8, H2), new CharRange(0xCAD9, 0xCAF3, H3), new CharRange(0xCAF4, 0xCAF4, H2), new CharRange(0xCAF5, 0xCB0F, H3), new CharRange(0xCB10, 0xCB10, H2), new CharRange(0xCB11, 0xCB2B, H3), new CharRange(0xCB2C, 0xCB2C, H2), new CharRange(0xCB2D, 0xCB47, H3), new CharRange(0xCB48, 0xCB48, H2), new CharRange(0xCB49, 0xCB63, H3), new CharRange(0xCB64, 0xCB64, H2), new CharRange(0xCB65, 0xCB7F, H3), new CharRange(0xCB80, 0xCB80, H2), new CharRange(0xCB81, 0xCB9B, H3), new CharRange(0xCB9C, 0xCB9C, H2), new CharRange(0xCB9D, 0xCBB7, H3), new CharRange(0xCBB8, 0xCBB8, H2), new CharRange(0xCBB9, 0xCBD3, H3), new CharRange(0xCBD4, 0xCBD4, H2), new CharRange(0xCBD5, 0xCBEF, H3), new CharRange(0xCBF0, 0xCBF0, H2), new CharRange(0xCBF1, 0xCC0B, H3), new CharRange(0xCC0C, 0xCC0C, H2), new CharRange(0xCC0D, 0xCC27, H3), new CharRange(0xCC28, 0xCC28, H2), new CharRange(0xCC29, 0xCC43, H3), new CharRange(0xCC44, 0xCC44, H2), new CharRange(0xCC45, 0xCC5F, H3), new CharRange(0xCC60, 0xCC60, H2), new CharRange(0xCC61, 0xCC7B, H3), new CharRange(0xCC7C, 0xCC7C, H2), new CharRange(0xCC7D, 0xCC97, H3), new CharRange(0xCC98, 0xCC98, H2), new CharRange(0xCC99, 0xCCB3, H3), new CharRange(0xCCB4, 0xCCB4, H2), new CharRange(0xCCB5, 0xCCCF, H3), new CharRange(0xCCD0, 0xCCD0, H2), new CharRange(0xCCD1, 0xCCEB, H3), new CharRange(0xCCEC, 0xCCEC, H2), new CharRange(0xCCED, 0xCD07, H3), new CharRange(0xCD08, 0xCD08, H2), new CharRange(0xCD09, 0xCD23, H3), new CharRange(0xCD24, 0xCD24, H2), new CharRange(0xCD25, 0xCD3F, H3), new CharRange(0xCD40, 0xCD40, H2), new CharRange(0xCD41, 0xCD5B, H3), new CharRange(0xCD5C, 0xCD5C, H2), new CharRange(0xCD5D, 0xCD77, H3), new CharRange(0xCD78, 0xCD78, H2), new CharRange(0xCD79, 0xCD93, H3), new CharRange(0xCD94, 0xCD94, H2), new CharRange(0xCD95, 0xCDAF, H3), new CharRange(0xCDB0, 0xCDB0, H2), new CharRange(0xCDB1, 0xCDCB, H3), new CharRange(0xCDCC, 0xCDCC, H2), new CharRange(0xCDCD, 0xCDE7, H3), new CharRange(0xCDE8, 0xCDE8, H2), new CharRange(0xCDE9, 0xCE03, H3), new CharRange(0xCE04, 0xCE04, H2), new CharRange(0xCE05, 0xCE1F, H3), new CharRange(0xCE20, 0xCE20, H2), new CharRange(0xCE21, 0xCE3B, H3), new CharRange(0xCE3C, 0xCE3C, H2), new CharRange(0xCE3D, 0xCE57, H3), new CharRange(0xCE58, 0xCE58, H2), new CharRange(0xCE59, 0xCE73, H3), new CharRange(0xCE74, 0xCE74, H2), new CharRange(0xCE75, 0xCE8F, H3), new CharRange(0xCE90, 0xCE90, H2), new CharRange(0xCE91, 0xCEAB, H3), new CharRange(0xCEAC, 0xCEAC, H2), new CharRange(0xCEAD, 0xCEC7, H3), new CharRange(0xCEC8, 0xCEC8, H2), new CharRange(0xCEC9, 0xCEE3, H3), new CharRange(0xCEE4, 0xCEE4, H2), new CharRange(0xCEE5, 0xCEFF, H3), new CharRange(0xCF00, 0xCF00, H2), new CharRange(0xCF01, 0xCF1B, H3), new CharRange(0xCF1C, 0xCF1C, H2), new CharRange(0xCF1D, 0xCF37, H3), new CharRange(0xCF38, 0xCF38, H2), new CharRange(0xCF39, 0xCF53, H3), new CharRange(0xCF54, 0xCF54, H2), new CharRange(0xCF55, 0xCF6F, H3), new CharRange(0xCF70, 0xCF70, H2), new CharRange(0xCF71, 0xCF8B, H3), new CharRange(0xCF8C, 0xCF8C, H2), new CharRange(0xCF8D, 0xCFA7, H3), new CharRange(0xCFA8, 0xCFA8, H2), new CharRange(0xCFA9, 0xCFC3, H3), new CharRange(0xCFC4, 0xCFC4, H2), new CharRange(0xCFC5, 0xCFDF, H3), new CharRange(0xCFE0, 0xCFE0, H2), new CharRange(0xCFE1, 0xCFFB, H3), new CharRange(0xCFFC, 0xCFFC, H2), new CharRange(0xCFFD, 0xD017, H3), new CharRange(0xD018, 0xD018, H2), new CharRange(0xD019, 0xD033, H3), new CharRange(0xD034, 0xD034, H2), new CharRange(0xD035, 0xD04F, H3), new CharRange(0xD050, 0xD050, H2), new CharRange(0xD051, 0xD06B, H3), new CharRange(0xD06C, 0xD06C, H2), new CharRange(0xD06D, 0xD087, H3), new CharRange(0xD088, 0xD088, H2), new CharRange(0xD089, 0xD0A3, H3), new CharRange(0xD0A4, 0xD0A4, H2), new CharRange(0xD0A5, 0xD0BF, H3), new CharRange(0xD0C0, 0xD0C0, H2), new CharRange(0xD0C1, 0xD0DB, H3), new CharRange(0xD0DC, 0xD0DC, H2), new CharRange(0xD0DD, 0xD0F7, H3), new CharRange(0xD0F8, 0xD0F8, H2), new CharRange(0xD0F9, 0xD113, H3), new CharRange(0xD114, 0xD114, H2), new CharRange(0xD115, 0xD12F, H3), new CharRange(0xD130, 0xD130, H2), new CharRange(0xD131, 0xD14B, H3), new CharRange(0xD14C, 0xD14C, H2), new CharRange(0xD14D, 0xD167, H3), new CharRange(0xD168, 0xD168, H2), new CharRange(0xD169, 0xD183, H3), new CharRange(0xD184, 0xD184, H2), new CharRange(0xD185, 0xD19F, H3), new CharRange(0xD1A0, 0xD1A0, H2), new CharRange(0xD1A1, 0xD1BB, H3), new CharRange(0xD1BC, 0xD1BC, H2), new CharRange(0xD1BD, 0xD1D7, H3), new CharRange(0xD1D8, 0xD1D8, H2), new CharRange(0xD1D9, 0xD1F3, H3), new CharRange(0xD1F4, 0xD1F4, H2), new CharRange(0xD1F5, 0xD20F, H3), new CharRange(0xD210, 0xD210, H2), new CharRange(0xD211, 0xD22B, H3), new CharRange(0xD22C, 0xD22C, H2), new CharRange(0xD22D, 0xD247, H3), new CharRange(0xD248, 0xD248, H2), new CharRange(0xD249, 0xD263, H3), new CharRange(0xD264, 0xD264, H2), new CharRange(0xD265, 0xD27F, H3), new CharRange(0xD280, 0xD280, H2), new CharRange(0xD281, 0xD29B, H3), new CharRange(0xD29C, 0xD29C, H2), new CharRange(0xD29D, 0xD2B7, H3), new CharRange(0xD2B8, 0xD2B8, H2), new CharRange(0xD2B9, 0xD2D3, H3), new CharRange(0xD2D4, 0xD2D4, H2), new CharRange(0xD2D5, 0xD2EF, H3), new CharRange(0xD2F0, 0xD2F0, H2), new CharRange(0xD2F1, 0xD30B, H3), new CharRange(0xD30C, 0xD30C, H2), new CharRange(0xD30D, 0xD327, H3), new CharRange(0xD328, 0xD328, H2), new CharRange(0xD329, 0xD343, H3), new CharRange(0xD344, 0xD344, H2), new CharRange(0xD345, 0xD35F, H3), new CharRange(0xD360, 0xD360, H2), new CharRange(0xD361, 0xD37B, H3), new CharRange(0xD37C, 0xD37C, H2), new CharRange(0xD37D, 0xD397, H3), new CharRange(0xD398, 0xD398, H2), new CharRange(0xD399, 0xD3B3, H3), new CharRange(0xD3B4, 0xD3B4, H2), new CharRange(0xD3B5, 0xD3CF, H3), new CharRange(0xD3D0, 0xD3D0, H2), new CharRange(0xD3D1, 0xD3EB, H3), new CharRange(0xD3EC, 0xD3EC, H2), new CharRange(0xD3ED, 0xD407, H3), new CharRange(0xD408, 0xD408, H2), new CharRange(0xD409, 0xD423, H3), new CharRange(0xD424, 0xD424, H2), new CharRange(0xD425, 0xD43F, H3), new CharRange(0xD440, 0xD440, H2), new CharRange(0xD441, 0xD45B, H3), new CharRange(0xD45C, 0xD45C, H2), new CharRange(0xD45D, 0xD477, H3), new CharRange(0xD478, 0xD478, H2), new CharRange(0xD479, 0xD493, H3), new CharRange(0xD494, 0xD494, H2), new CharRange(0xD495, 0xD4AF, H3), new CharRange(0xD4B0, 0xD4B0, H2), new CharRange(0xD4B1, 0xD4CB, H3), new CharRange(0xD4CC, 0xD4CC, H2), new CharRange(0xD4CD, 0xD4E7, H3), new CharRange(0xD4E8, 0xD4E8, H2), new CharRange(0xD4E9, 0xD503, H3), new CharRange(0xD504, 0xD504, H2), new CharRange(0xD505, 0xD51F, H3), new CharRange(0xD520, 0xD520, H2), new CharRange(0xD521, 0xD53B, H3), new CharRange(0xD53C, 0xD53C, H2), new CharRange(0xD53D, 0xD557, H3), new CharRange(0xD558, 0xD558, H2), new CharRange(0xD559, 0xD573, H3), new CharRange(0xD574, 0xD574, H2), new CharRange(0xD575, 0xD58F, H3), new CharRange(0xD590, 0xD590, H2), new CharRange(0xD591, 0xD5AB, H3), new CharRange(0xD5AC, 0xD5AC, H2), new CharRange(0xD5AD, 0xD5C7, H3), new CharRange(0xD5C8, 0xD5C8, H2), new CharRange(0xD5C9, 0xD5E3, H3), new CharRange(0xD5E4, 0xD5E4, H2), new CharRange(0xD5E5, 0xD5FF, H3), new CharRange(0xD600, 0xD600, H2), new CharRange(0xD601, 0xD61B, H3), new CharRange(0xD61C, 0xD61C, H2), new CharRange(0xD61D, 0xD637, H3), new CharRange(0xD638, 0xD638, H2), new CharRange(0xD639, 0xD653, H3), new CharRange(0xD654, 0xD654, H2), new CharRange(0xD655, 0xD66F, H3), new CharRange(0xD670, 0xD670, H2), new CharRange(0xD671, 0xD68B, H3), new CharRange(0xD68C, 0xD68C, H2), new CharRange(0xD68D, 0xD6A7, H3), new CharRange(0xD6A8, 0xD6A8, H2), new CharRange(0xD6A9, 0xD6C3, H3), new CharRange(0xD6C4, 0xD6C4, H2), new CharRange(0xD6C5, 0xD6DF, H3), new CharRange(0xD6E0, 0xD6E0, H2), new CharRange(0xD6E1, 0xD6FB, H3), new CharRange(0xD6FC, 0xD6FC, H2), new CharRange(0xD6FD, 0xD717, H3), new CharRange(0xD718, 0xD718, H2), new CharRange(0xD719, 0xD733, H3), new CharRange(0xD734, 0xD734, H2), new CharRange(0xD735, 0xD74F, H3), new CharRange(0xD750, 0xD750, H2), new CharRange(0xD751, 0xD76B, H3), new CharRange(0xD76C, 0xD76C, H2), new CharRange(0xD76D, 0xD787, H3), new CharRange(0xD788, 0xD788, H2), new CharRange(0xD789, 0xD7A3, H3), new CharRange(0xD7B0, 0xD7C6, JV), new CharRange(0xD7CB, 0xD7FB, JT), new CharRange(0xD800, 0xDFFF, SG), new CharRange(0xE000, 0xF8FF, XX), new CharRange(0xF900, 0xFAFF, ID), new CharRange(0xFB00, 0xFB17, AL), new CharRange(0xFB1D, 0xFB1D, HL), new CharRange(0xFB1E, 0xFB1E, CM), new CharRange(0xFB1F, 0xFB28, HL), new CharRange(0xFB29, 0xFB29, AL), new CharRange(0xFB2A, 0xFB4F, HL), new CharRange(0xFB50, 0xFD3D, AL), new CharRange(0xFD3E, 0xFD3E, OP), new CharRange(0xFD3F, 0xFD3F, CL), new CharRange(0xFD50, 0xFDFB, AL), new CharRange(0xFDFC, 0xFDFC, PO), new CharRange(0xFDFD, 0xFDFD, AL), new CharRange(0xFE00, 0xFE0F, CM), new CharRange(0xFE10, 0xFE10, IS), new CharRange(0xFE11, 0xFE12, CL), new CharRange(0xFE13, 0xFE14, IS), new CharRange(0xFE15, 0xFE16, EX), new CharRange(0xFE17, 0xFE17, OP), new CharRange(0xFE18, 0xFE18, CL), new CharRange(0xFE19, 0xFE19, IN), new CharRange(0xFE20, 0xFE26, CM), new CharRange(0xFE30, 0xFE34, ID), new CharRange(0xFE35, 0xFE35, OP), new CharRange(0xFE36, 0xFE36, CL), new CharRange(0xFE37, 0xFE37, OP), new CharRange(0xFE38, 0xFE38, CL), new CharRange(0xFE39, 0xFE39, OP), new CharRange(0xFE3A, 0xFE3A, CL), new CharRange(0xFE3B, 0xFE3B, OP), new CharRange(0xFE3C, 0xFE3C, CL), new CharRange(0xFE3D, 0xFE3D, OP), new CharRange(0xFE3E, 0xFE3E, CL), new CharRange(0xFE3F, 0xFE3F, OP), new CharRange(0xFE40, 0xFE40, CL), new CharRange(0xFE41, 0xFE41, OP), new CharRange(0xFE42, 0xFE42, CL), new CharRange(0xFE43, 0xFE43, OP), new CharRange(0xFE44, 0xFE44, CL), new CharRange(0xFE45, 0xFE46, ID), new CharRange(0xFE47, 0xFE47, OP), new CharRange(0xFE48, 0xFE48, CL), new CharRange(0xFE49, 0xFE4F, ID), new CharRange(0xFE50, 0xFE50, CL), new CharRange(0xFE51, 0xFE51, ID), new CharRange(0xFE52, 0xFE52, CL), new CharRange(0xFE54, 0xFE55, NS), new CharRange(0xFE56, 0xFE57, EX), new CharRange(0xFE58, 0xFE58, ID), new CharRange(0xFE59, 0xFE59, OP), new CharRange(0xFE5A, 0xFE5A, CL), new CharRange(0xFE5B, 0xFE5B, OP), new CharRange(0xFE5C, 0xFE5C, CL), new CharRange(0xFE5D, 0xFE5D, OP), new CharRange(0xFE5E, 0xFE5E, CL), new CharRange(0xFE5F, 0xFE68, ID), new CharRange(0xFE69, 0xFE69, PR), new CharRange(0xFE6A, 0xFE6A, PO), new CharRange(0xFE6B, 0xFE6B, ID), new CharRange(0xFE70, 0xFEFC, AL), new CharRange(0xFEFF, 0xFEFF, WJ), new CharRange(0xFF01, 0xFF01, EX), new CharRange(0xFF02, 0xFF03, ID), new CharRange(0xFF04, 0xFF04, PR), new CharRange(0xFF05, 0xFF05, PO), new CharRange(0xFF06, 0xFF07, ID), new CharRange(0xFF08, 0xFF08, OP), new CharRange(0xFF09, 0xFF09, CL), new CharRange(0xFF0A, 0xFF0B, ID), new CharRange(0xFF0C, 0xFF0C, CL), new CharRange(0xFF0D, 0xFF0D, ID), new CharRange(0xFF0E, 0xFF0E, CL), new CharRange(0xFF0F, 0xFF19, ID), new CharRange(0xFF1A, 0xFF1B, NS), new CharRange(0xFF1C, 0xFF1E, ID), new CharRange(0xFF1F, 0xFF1F, EX), new CharRange(0xFF20, 0xFF3A, ID), new CharRange(0xFF3B, 0xFF3B, OP), new CharRange(0xFF3C, 0xFF3C, ID), new CharRange(0xFF3D, 0xFF3D, CL), new CharRange(0xFF3E, 0xFF5A, ID), new CharRange(0xFF5B, 0xFF5B, OP), new CharRange(0xFF5C, 0xFF5C, ID), new CharRange(0xFF5D, 0xFF5D, CL), new CharRange(0xFF5E, 0xFF5E, ID), new CharRange(0xFF5F, 0xFF5F, OP), new CharRange(0xFF60, 0xFF61, CL), new CharRange(0xFF62, 0xFF62, OP), new CharRange(0xFF63, 0xFF64, CL), new CharRange(0xFF65, 0xFF65, NS), new CharRange(0xFF66, 0xFF66, AL), new CharRange(0xFF67, 0xFF70, CJ), new CharRange(0xFF71, 0xFF9D, AL), new CharRange(0xFF9E, 0xFF9F, NS), new CharRange(0xFFA0, 0xFFDC, AL), new CharRange(0xFFE0, 0xFFE0, PO), new CharRange(0xFFE1, 0xFFE1, PR), new CharRange(0xFFE2, 0xFFE4, ID), new CharRange(0xFFE5, 0xFFE6, PR), new CharRange(0xFFE8, 0xFFEE, AL), new CharRange(0xFFF9, 0xFFFB, CM), new CharRange(0xFFFC, 0xFFFC, CB), new CharRange(0xFFFD, 0xFFFD, AI), new CharRange(0x10000, 0x100FA, AL), new CharRange(0x10100, 0x10102, BA), new CharRange(0x10107, 0x101FC, AL), new CharRange(0x101FD, 0x101FD, CM), new CharRange(0x10280, 0x1039D, AL), new CharRange(0x1039F, 0x1039F, BA), new CharRange(0x103A0, 0x103CF, AL), new CharRange(0x103D0, 0x103D0, BA), new CharRange(0x103D1, 0x1049D, AL), new CharRange(0x104A0, 0x104A9, NU), new CharRange(0x10800, 0x10855, AL), new CharRange(0x10857, 0x10857, BA), new CharRange(0x10858, 0x1091B, AL), new CharRange(0x1091F, 0x1091F, BA), new CharRange(0x10920, 0x10A00, AL), new CharRange(0x10A01, 0x10A0F, CM), new CharRange(0x10A10, 0x10A33, AL), new CharRange(0x10A38, 0x10A3F, CM), new CharRange(0x10A40, 0x10A47, AL), new CharRange(0x10A50, 0x10A57, BA), new CharRange(0x10A58, 0x10B35, AL), new CharRange(0x10B39, 0x10B3F, BA), new CharRange(0x10B40, 0x10E7E, AL), new CharRange(0x11000, 0x11002, CM), new CharRange(0x11003, 0x11037, AL), new CharRange(0x11038, 0x11046, CM), new CharRange(0x11047, 0x11048, BA), new CharRange(0x11049, 0x11065, AL), new CharRange(0x11066, 0x1106F, NU), new CharRange(0x11080, 0x11082, CM), new CharRange(0x11083, 0x110AF, AL), new CharRange(0x110B0, 0x110BA, CM), new CharRange(0x110BB, 0x110BD, AL), new CharRange(0x110BE, 0x110C1, BA), new CharRange(0x110D0, 0x110E8, AL), new CharRange(0x110F0, 0x110F9, NU), new CharRange(0x11100, 0x11102, CM), new CharRange(0x11103, 0x11126, AL), new CharRange(0x11127, 0x11134, CM), new CharRange(0x11136, 0x1113F, NU), new CharRange(0x11140, 0x11143, BA), new CharRange(0x11180, 0x11182, CM), new CharRange(0x11183, 0x111B2, AL), new CharRange(0x111B3, 0x111C0, CM), new CharRange(0x111C1, 0x111C4, AL), new CharRange(0x111C5, 0x111C6, BA), new CharRange(0x111C7, 0x111C7, AL), new CharRange(0x111C8, 0x111C8, BA), new CharRange(0x111D0, 0x111D9, NU), new CharRange(0x11680, 0x116AA, AL), new CharRange(0x116AB, 0x116B7, CM), new CharRange(0x116C0, 0x116C9, NU), new CharRange(0x12000, 0x12462, AL), new CharRange(0x12470, 0x12473, BA), new CharRange(0x13000, 0x13257, AL), new CharRange(0x13258, 0x1325A, OP), new CharRange(0x1325B, 0x1325D, CL), new CharRange(0x1325E, 0x13281, AL), new CharRange(0x13282, 0x13282, CL), new CharRange(0x13283, 0x13285, AL), new CharRange(0x13286, 0x13286, OP), new CharRange(0x13287, 0x13287, CL), new CharRange(0x13288, 0x13288, OP), new CharRange(0x13289, 0x13289, CL), new CharRange(0x1328A, 0x13378, AL), new CharRange(0x13379, 0x13379, OP), new CharRange(0x1337A, 0x1337B, CL), new CharRange(0x1337C, 0x16F50, AL), new CharRange(0x16F51, 0x16F92, CM), new CharRange(0x16F93, 0x16F9F, AL), new CharRange(0x1B000, 0x1B001, ID), new CharRange(0x1D000, 0x1D164, AL), new CharRange(0x1D165, 0x1D169, CM), new CharRange(0x1D16A, 0x1D16C, AL), new CharRange(0x1D16D, 0x1D182, CM), new CharRange(0x1D183, 0x1D184, AL), new CharRange(0x1D185, 0x1D18B, CM), new CharRange(0x1D18C, 0x1D1A9, AL), new CharRange(0x1D1AA, 0x1D1AD, CM), new CharRange(0x1D1AE, 0x1D241, AL), new CharRange(0x1D242, 0x1D244, CM), new CharRange(0x1D245, 0x1D7CB, AL), new CharRange(0x1D7CE, 0x1D7FF, NU), new CharRange(0x1EE00, 0x1EEF1, AL), new CharRange(0x1F000, 0x1F0DF, ID), new CharRange(0x1F100, 0x1F12D, AI), new CharRange(0x1F12E, 0x1F12E, AL), new CharRange(0x1F130, 0x1F169, AI), new CharRange(0x1F16A, 0x1F16B, AL), new CharRange(0x1F170, 0x1F19A, AI), new CharRange(0x1F1E6, 0x1F1FF, RI), new CharRange(0x1F200, 0x1F3B4, ID), new CharRange(0x1F3B5, 0x1F3B6, AL), new CharRange(0x1F3B7, 0x1F3BB, ID), new CharRange(0x1F3BC, 0x1F3BC, AL), new CharRange(0x1F3BD, 0x1F49F, ID), new CharRange(0x1F4A0, 0x1F4A0, AL), new CharRange(0x1F4A1, 0x1F4A1, ID), new CharRange(0x1F4A2, 0x1F4A2, AL), new CharRange(0x1F4A3, 0x1F4A3, ID), new CharRange(0x1F4A4, 0x1F4A4, AL), new CharRange(0x1F4A5, 0x1F4AE, ID), new CharRange(0x1F4AF, 0x1F4AF, AL), new CharRange(0x1F4B0, 0x1F4B0, ID), new CharRange(0x1F4B1, 0x1F4B2, AL), new CharRange(0x1F4B3, 0x1F4FC, ID), new CharRange(0x1F500, 0x1F506, AL), new CharRange(0x1F507, 0x1F516, ID), new CharRange(0x1F517, 0x1F524, AL), new CharRange(0x1F525, 0x1F531, ID), new CharRange(0x1F532, 0x1F543, AL), new CharRange(0x1F550, 0x1F6C5, ID), new CharRange(0x1F700, 0x1F773, AL), new CharRange(0x20000, 0x3FFFD, ID), new CharRange(0xE0001, 0xE01EF, CM), new CharRange(0xF0000, 0x10FFFD, XX)];
-
 }).call(this);
 
 },{}],69:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
-  var AI, AL, BA, BK, CB, CI_BRK, CJ, CP_BRK, CR, DI_BRK, ID, IN_BRK, LF, LineBreaker, NL, NS, PR_BRK, SA, SG, SP, WJ, XX, characterClasses, pairTable, _ref, _ref1;
+  var AI, AL, BA, BK, CB, CI_BRK, CJ, CP_BRK, CR, DI_BRK, ID, IN_BRK, LF, LineBreaker, NL, NS, PR_BRK, SA, SG, SP, UnicodeTrie, WJ, XX, characterClasses, classTrie, pairTable, _ref, _ref1;
+
+  UnicodeTrie = _dereq_('unicode-trie');
+
+  classTrie = new UnicodeTrie(_dereq_('./class_trie.json'));
 
   _ref = _dereq_('./classes'), BK = _ref.BK, CR = _ref.CR, LF = _ref.LF, NL = _ref.NL, CB = _ref.CB, BA = _ref.BA, SP = _ref.SP, WJ = _ref.WJ, SP = _ref.SP, BK = _ref.BK, LF = _ref.LF, NL = _ref.NL, AI = _ref.AI, AL = _ref.AL, SA = _ref.SA, SG = _ref.SG, XX = _ref.XX, CJ = _ref.CJ, ID = _ref.ID, NS = _ref.NS, characterClasses = _ref.characterClasses;
 
   _ref1 = _dereq_('./pairs'), DI_BRK = _ref1.DI_BRK, IN_BRK = _ref1.IN_BRK, CI_BRK = _ref1.CI_BRK, CP_BRK = _ref1.CP_BRK, PR_BRK = _ref1.PR_BRK, pairTable = _ref1.pairTable;
 
   LineBreaker = (function() {
-    var Break, getCharClass, mapClass, mapFirst;
+    var Break, mapClass, mapFirst;
 
     function LineBreaker(string) {
       this.string = string;
@@ -16358,24 +16433,6 @@ By Devon Govett
         return ((code - 0xd800) * 0x400) + (next - 0xdc00) + 0x10000;
       }
       return code;
-    };
-
-    getCharClass = function(char) {
-      var high, low, mid, range;
-      low = 0;
-      high = characterClasses.length;
-      while (low < high) {
-        mid = (low + high) >>> 1;
-        range = characterClasses[mid];
-        if (char > range.end) {
-          low = mid + 1;
-        } else if (char < range.start) {
-          high = mid;
-        } else {
-          return range["class"];
-        }
-      }
-      return XX;
     };
 
     mapClass = function(c) {
@@ -16411,7 +16468,7 @@ By Devon Govett
       if (first == null) {
         first = false;
       }
-      return mapClass(getCharClass(this.nextCodePoint()));
+      return mapClass(classTrie.get(this.nextCodePoint()));
     };
 
     Break = (function() {
@@ -16500,7 +16557,7 @@ By Devon Govett
 
 }).call(this);
 
-},{"./classes":68,"./pairs":70}],70:[function(_dereq_,module,exports){
+},{"./class_trie.json":67,"./classes":68,"./pairs":70,"unicode-trie":66}],70:[function(_dereq_,module,exports){
 // Generated by CoffeeScript 1.7.1
 (function() {
   var CI_BRK, CP_BRK, DI_BRK, IN_BRK, PR_BRK;
@@ -16840,7 +16897,7 @@ By Devon Govett
 }).call(this);
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"buffer":17,"fs":"Dh6W75","zlib":16}],72:[function(_dereq_,module,exports){
+},{"buffer":15,"fs":"x/K9gc","zlib":14}],72:[function(_dereq_,module,exports){
 (function (Buffer){
 /* jslint node: true */
 /* jslint browser: true */
@@ -16949,9 +17006,7 @@ module.exports = {
 };
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"../printer":84,"buffer":17}],"fs":[function(_dereq_,module,exports){
-module.exports=_dereq_('Dh6W75');
-},{}],"Dh6W75":[function(_dereq_,module,exports){
+},{"../printer":84,"buffer":15}],"x/K9gc":[function(_dereq_,module,exports){
 (function (Buffer,__dirname){
 /* jslint node: true */
 'use strict';
@@ -16997,7 +17052,9 @@ function fixFilename(filename) {
 module.exports = new VirtualFileSystem();
 
 }).call(this,_dereq_("buffer").Buffer,"/")
-},{"buffer":17}],75:[function(_dereq_,module,exports){
+},{"buffer":15}],"fs":[function(_dereq_,module,exports){
+module.exports=_dereq_('x/K9gc');
+},{}],75:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -17892,7 +17949,7 @@ ElementWriter.prototype.addFragment = function(block, useBlockXOffset, useBlockY
 	var ctx = this.context;
 	var page = ctx.getCurrentPage();
 
-	if (block.height > ctx.availableHeight) return false;
+	if (!useBlockXOffset && block.height > ctx.availableHeight) return false;
 
 	block.items.forEach(function(item) {
         switch(item.type) {
@@ -18070,7 +18127,7 @@ ImageMeasure.prototype.measureImage = function(src) {
 module.exports = ImageMeasure;
 
 }).call(this,_dereq_("buffer").Buffer)
-},{"buffer":17,"pdfmake-pdfkit":34}],81:[function(_dereq_,module,exports){
+},{"buffer":15,"pdfmake-pdfkit":32}],81:[function(_dereq_,module,exports){
 /* jslint node: true */
 'use strict';
 
@@ -19034,7 +19091,7 @@ module.exports = PdfPrinter;
 /* temporary browser extension */
 PdfPrinter.prototype.fs = _dereq_('fs');
 
-},{"./imageMeasure":80,"./layoutBuilder":81,"./standardPageSizes":85,"fs":"Dh6W75","pdfmake-pdfkit":34}],85:[function(_dereq_,module,exports){
+},{"./imageMeasure":80,"./layoutBuilder":81,"./standardPageSizes":85,"fs":"x/K9gc","pdfmake-pdfkit":32}],85:[function(_dereq_,module,exports){
 module.exports = {
 	'4A0': [4767.87, 6740.79],
 	'2A0': [3370.39, 4767.87],
