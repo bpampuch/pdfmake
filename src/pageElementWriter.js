@@ -37,10 +37,10 @@ PageElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreC
 	this.writer.addVector(vector, ignoreContextX, ignoreContextY);
 };
 
-PageElementWriter.prototype.addFragment = function(fragment) {
-	if (!this.writer.addFragment(fragment)) {
+PageElementWriter.prototype.addFragment = function(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
+	if (!this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition)) {
 		this.moveToNextPage();
-		this.writer.addFragment(fragment);
+		this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition);
 	}
 };
 

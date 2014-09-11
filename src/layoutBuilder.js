@@ -74,28 +74,50 @@ LayoutBuilder.prototype.addBackground = function(background) {
     }
 };
 
-LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
+LayoutBuilder.prototype.addStaticRepeatable = function(node, x, y, width, height) {
   var pages = this.writer.context().pages;
-  var headerGetter = isFunction(header) ? header : function() { return header; };
-  var footerGetter = isFunction(footer) ? footer : function() { return footer; };
+  this.writer.context().page = 0;
+  
+  this.writer.beginUnbreakableBlock(width, height);
+  this.processNode(this.docMeasure.measureDocument(node));
+  var repeatable = this.writer.currentBlockToRepeatable();
+  repeatable.xOffset = x;
+  repeatable.yOffset = y;
+  this.writer.commitUnbreakableBlock(x, y);
+  
+  for(var i = 1, l = pages.length; i < l; i++) {
+    this.writer.context().page = i;
+    this.writer.addFragment(repeatable, true, true, true);
+  }
+};
 
+LayoutBuilder.prototype.addDynamicRepeatable = function(nodeGetter, x, y, width, height) {
+  var pages = this.writer.context().pages;
+  
   for(var i = 0, l = pages.length; i < l; i++) {
     this.writer.context().page = i;
 
-    var pageHeader = headerGetter(i + 1, l);
-    var pageFooter = footerGetter(i + 1, l);
+    var node = nodeGetter(i + 1, l);
 
-    if (pageHeader) {
-      this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageMargins.top);
-      this.processNode(this.docMeasure.measureDocument(pageHeader));
-      this.writer.commitUnbreakableBlock(0, 0);
+    if (node) {
+      this.writer.beginUnbreakableBlock(width, height);
+      this.processNode(this.docMeasure.measureDocument(node));
+      this.writer.commitUnbreakableBlock(x, y);
     }
+  }
+};
 
-    if (pageFooter) {
-      this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageMargins.bottom);
-      this.processNode(this.docMeasure.measureDocument(pageFooter));
-      this.writer.commitUnbreakableBlock(0, this.pageSize.height - this.pageMargins.bottom);
-    }
+LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
+  if(isFunction(header)) {
+    this.addDynamicRepeatable(header, 0, 0, this.pageSize.width, this.pageMargins.top);
+  } else if(header) {
+    this.addStaticRepeatable(header, 0, 0, this.pageSize.width, this.pageMargins.top);
+  }
+  
+  if(isFunction(footer)) {
+    this.addDynamicRepeatable(footer, 0, this.pageSize.height - this.pageMargins.bottom, this.pageSize.width, this.pageMargins.bottom);
+  } else if(footer) {
+    this.addStaticRepeatable(footer, 0, this.pageSize.height - this.pageMargins.bottom, this.pageSize.width, this.pageMargins.bottom);
   }
 };
 
