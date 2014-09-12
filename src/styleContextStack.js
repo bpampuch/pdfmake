@@ -88,7 +88,8 @@ StyleContextStack.prototype.autopush = function(item) {
 		'italics',
 		'alignment',
 		'color',
-		'columnGap'
+		'columnGap',
+		'fillColor'
 		//'tableCellPadding'
 		// 'cellBorder',
 		// 'headerCellBorder',

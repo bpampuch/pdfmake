@@ -19,22 +19,22 @@ function PageElementWriter(context, tracker) {
 	this.writer = new ElementWriter(context, tracker);
 }
 
-PageElementWriter.prototype.addLine = function(line, dontUpdateContextPosition) {
-	if (!this.writer.addLine(line, dontUpdateContextPosition)) {
+PageElementWriter.prototype.addLine = function(line, dontUpdateContextPosition, index) {
+	if (!this.writer.addLine(line, dontUpdateContextPosition, index)) {
 		this.moveToNextPage();
-		this.writer.addLine(line, dontUpdateContextPosition);
+		this.writer.addLine(line, dontUpdateContextPosition, index);
 	}
 };
 
-PageElementWriter.prototype.addImage = function(image) {
-	if(!this.writer.addImage(image)) {
+PageElementWriter.prototype.addImage = function(image, index) {
+	if(!this.writer.addImage(image, index)) {
 		this.moveToNextPage();
-		this.writer.addImage(image);
+		this.writer.addImage(image, index);
 	}
 };
 
-PageElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY) {
-	this.writer.addVector(vector, ignoreContextX, ignoreContextY);
+PageElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY, index) {
+	this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
 };
 
 PageElementWriter.prototype.addFragment = function(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
