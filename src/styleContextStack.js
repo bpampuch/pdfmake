@@ -89,7 +89,7 @@ StyleContextStack.prototype.autopush = function(item) {
 		'alignment',
 		'color',
 		'columnGap',
-		'fillColor'
+		'fillColor',
 		'decoration',
 		'decorationStyle',
 		'decorationColor',
