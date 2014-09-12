@@ -90,6 +90,10 @@ StyleContextStack.prototype.autopush = function(item) {
 		'color',
 		'columnGap',
 		'fillColor'
+		'decoration',
+		'decorationStyle',
+		'decorationColor',
+		'background'
 		//'tableCellPadding'
 		// 'cellBorder',
 		// 'headerCellBorder',
