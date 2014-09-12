@@ -147,7 +147,7 @@ ElementWriter.prototype.addFragment = function(block, useBlockXOffset, useBlockY
 	var ctx = this.context;
 	var page = ctx.getCurrentPage();
 
-	if (block.height > ctx.availableHeight) return false;
+	if (!useBlockXOffset && block.height > ctx.availableHeight) return false;
 
 	block.items.forEach(function(item) {
         switch(item.type) {
