@@ -135,6 +135,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
     var self = this;
 
     writer.context().moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
+    writer.context().availableHeight += this.reservedAtBottom;
 
     var endingPage = writer.context().page;
     var endingY = writer.context().y;
@@ -239,8 +240,6 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
       writer.pushToRepeatables(this.headerRepeatable);
       this.headerRepeatable = null;
     }
-
-    writer.context().availableHeight += this.reservedAtBottom;
 
     function getLineXs() {
       var result = [];
