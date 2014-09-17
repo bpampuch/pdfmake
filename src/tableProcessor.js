@@ -65,9 +65,9 @@ TableProcessor.prototype.onRowBreak = function(rowIndex, writer) {
     //console.log('moving by : ', topLineWidth, rowPaddingTop);
     var offset = self.rowPaddingTop + (!self.headerRows ? self.topLineWidth : 0);
     writer.context().moveDown(offset);  
-  }
+  };
   
-}
+};
 
 TableProcessor.prototype.beginRow = function(rowIndex, writer) {
   this.topLineWidth = this.layout.hLineWidth(rowIndex, this.tableNode);
@@ -257,7 +257,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
         function() {
           writer.commitUnbreakableBlock();
         }
-      )
+      );
     }
 
     if(this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
