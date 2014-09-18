@@ -217,7 +217,8 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
 
       if (willBreak) {
         this.drawHorizontalLine(rowIndex + 1, writer, y2);
-      } else if(rowBreakWithoutHeader) {
+      }
+      if(rowBreakWithoutHeader) {
         this.drawHorizontalLine(rowIndex, writer, y1);
       }
     }
