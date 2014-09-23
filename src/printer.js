@@ -9,7 +9,6 @@ var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
 var textDecorator = require('./textDecorator');
 
-
 ////////////////////////////////////////
 // PdfPrinter
 
@@ -96,7 +95,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
     builder.registerTableLayouts(options.tableLayouts);
   }
 
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images);
+	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark);
 
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
@@ -224,6 +223,9 @@ function renderPages(pages, fontProvider, pdfKitDoc) {
                     break;
             }
         }
+        if(page.watermark){
+			renderWatermark(page, pdfKitDoc, fontProvider);
+        }
 	}
 }
 
@@ -274,6 +276,26 @@ function renderLine(line, x, y, pdfKitDoc) {
 	
 	textDecorator.drawDecorations(line, x, y, pdfKitDoc);
 	
+}
+
+function renderWatermark(page, pdfKitDoc, fontProvider){
+	var watermark = page.watermark;
+
+	pdfKitDoc.fill('black');
+	pdfKitDoc.opacity(0.6);
+
+	pdfKitDoc.save();
+	pdfKitDoc.transform(1, 0, 0, -1, 0, pdfKitDoc.page.height);
+
+	var angle = Math.atan2(pdfKitDoc.page.height, pdfKitDoc.page.width) * 180/Math.PI;
+	pdfKitDoc.rotate(angle, {origin: [pdfKitDoc.page.width/2, pdfKitDoc.page.height/2]});
+
+	pdfKitDoc.addContent('BT');
+	pdfKitDoc.addContent('' + (pdfKitDoc.page.width/2 - watermark.size.size.width/2) + ' ' + (pdfKitDoc.page.height/2 - watermark.size.size.height/4) + ' Td');
+	pdfKitDoc.addContent('/' + watermark.font.id + ' ' + watermark.size.fontSize + ' Tf');
+	pdfKitDoc.addContent('<' + encode(watermark.font, watermark.text) + '> Tj');
+	pdfKitDoc.addContent('ET');
+	pdfKitDoc.restore();
 }
 
 function encode(font, text) {
