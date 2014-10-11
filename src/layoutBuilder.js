@@ -12,6 +12,8 @@ var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 var fontStringify = require('./helpers').fontStringify;
 var isFunction = require('./helpers').isFunction;
+var TextTools = require('./textTools');
+var StyleContextStack = require('./styleContextStack');
 
 /**
  * Creates an instance of LayoutBuilder - layout engine which turns document-definition-object
@@ -42,7 +44,7 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
  * @param {Object} defaultStyle default style definition
  * @return {Array} an array of pages
  */
-LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images) {
+LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark) {
 	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
 
   docStructure = this.docMeasure.measureDocument(docStructure);
@@ -58,6 +60,9 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
   this.addBackground(background);
   this.processNode(docStructure);
   this.addHeadersAndFooters(header, footer);
+  /* jshint eqnull:true */
+  if(watermark != null)
+    this.addWatermark(watermark, fontProvider);
 
 	return this.writer.context().pages;
 };
@@ -118,6 +123,57 @@ LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
     this.addDynamicRepeatable(footer, 0, this.pageSize.height - this.pageMargins.bottom, this.pageSize.width, this.pageMargins.bottom);
   } else if(footer) {
     this.addStaticRepeatable(footer, 0, this.pageSize.height - this.pageMargins.bottom, this.pageSize.width, this.pageMargins.bottom);
+  }
+};
+
+LayoutBuilder.prototype.addWatermark = function(watermark, fontProvider){
+  var defaultFont = Object.getOwnPropertyNames(fontProvider.fonts)[0]; // TODO allow selection of other font
+  var watermarkObject = {
+    text: watermark,
+    font: fontProvider.provideFont(fontProvider[defaultFont], false, false),
+    size: getSize(this.pageSize, watermark, fontProvider)
+  };
+
+  var pages = this.writer.context().pages;
+  for(var i = 0, l = pages.length; i < l; i++) {
+    pages[i].watermark = watermarkObject;
+  }
+
+  function getSize(pageSize, watermark, fontProvider){
+    var width = pageSize.width;
+    var height = pageSize.height;
+    var targetWidth = Math.sqrt(width*width + height*height)*0.8; /* page diagnoal * sample factor */
+    var textTools = new TextTools(fontProvider);
+    var styleContextStack = new StyleContextStack();
+    var size;
+
+    /**
+     * Binary search the best font size.
+     * Initial bounds [0, 1000]
+     * Break when range < 1
+     */
+    var a = 0;
+    var b = 1000;
+    var c = (a+b)/2;
+    while(Math.abs(a - b) > 1){
+      styleContextStack.push({
+        fontSize: c
+      });
+      size = textTools.sizeOfString(watermark, styleContextStack);
+      if(size.width > targetWidth){
+        b = c;
+        c = (a+b)/2;
+      }
+      else if(size.width < targetWidth){
+        a = c;
+        c = (a+b)/2;
+      }
+      styleContextStack.pop();
+    }
+    /*
+      End binary search
+     */
+    return {size: size, fontSize: c};
   }
 };
 
