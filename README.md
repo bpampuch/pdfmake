@@ -414,7 +414,7 @@ var docDefinition = {
 
 ```js
 var docDefinition = {
-  // a string or [width, height]
+  // a string or { width: number, height: number }
   pageSize: 'A5',
 
   // by default we use portrait, you can change it to landscape if you wish
