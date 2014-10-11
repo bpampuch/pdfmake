@@ -15,7 +15,7 @@ var ElementWriter = require('./elementWriter');
 function PageElementWriter(context, tracker) {
 	this.transactionLevel = 0;
 	this.repeatables = [];
-
+	this.tracker = tracker;
 	this.writer = new ElementWriter(context, tracker);
 }
 
