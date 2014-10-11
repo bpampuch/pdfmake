@@ -271,6 +271,31 @@ var docDefinition = {
   (...)
 };</pre>
 
+	<h2>Background-layer</h2>
+	<p>
+		The background-layer will be added on every page.
+	</p>
+<pre class='code'>
+(...)
+var docDefinition = {
+  background: 'simple text',
+  content: (...)
+};
+</pre>
+<p>
+	It may contain any other object as well (images, tables, ...) or be dynamically generated:
+</p>
+<pre class='code'>
+(...)
+var docDefinition = {
+  background: function(currentPage) {
+    return 'simple text on page ' + currentPage
+  },
+
+  content: (...)
+};
+</pre>
+
 	<h2>Margins</h2>
 	<p>
 		Any element in pdfMake can have a margin:
