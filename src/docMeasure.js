@@ -83,7 +83,7 @@ DocMeasure.prototype.measureNode = function(node) {
 
 			for(var i = styleArray.length - 1; i >= 0; i--) {
 				var styleName = styleArray[i];
-				var style = self.styleStack.styleDictionary[node.style];
+				var style = self.styleStack.styleDictionary[styleName];
 				if (style && style.margin) {
 					margin = style.margin;
 					break;

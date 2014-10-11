@@ -107,7 +107,10 @@ module.exports = function(grunt) {
 					sourceMap: true,
 					compress: {
 						drop_console: true
-					}
+					},
+					mangle: {
+        				except: ['HeadTable', 'NameTable', 'CmapTable', 'HheaTable', 'MaxpTable', 'HmtxTable', 'PostTable', 'OS2Table', 'LocaTable', 'GlyfTable']
+      				}
 				},
 				files: {
 					'build/pdfmake.min.js': ['build/pdfmake.js']

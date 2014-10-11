@@ -55,21 +55,22 @@ Document.prototype.open = function(message) {
 };
 
 
-Document.prototype.print = function(timeout) {
-	timeout = timeout || 2000;
+Document.prototype.print = function() {
+  this.getDataUrl(function(dataUrl) {
+    var iFrame = document.createElement('iframe');
+    iFrame.style.position = 'absolute';
+    iFrame.style.left = '-99999px';
+    iFrame.src = dataUrl;
+    iFrame.onload = function() {
+      function removeIFrame(){
+        document.body.removeChild(iFrame);
+        document.removeEventListener('click', removeIFrame);
+      }
+      document.addEventListener('click', removeIFrame, false);
+    };
 
-	this.getDataUrl(function(dataUrl) {
-		var iFrame = document.createElement('iframe');
-		iFrame.style.display = 'none';
-		iFrame.src = dataUrl;
-		iFrame.onload = function() {
-			setTimeout(function() {
-				document.body.removeChild(iFrame);
-			}, timeout);
-		};
-
-		document.body.appendChild(iFrame);
-	}, { autoPrint: true });
+    document.body.appendChild(iFrame);
+  }, { autoPrint: true });
 };
 
 Document.prototype.download = function(defaultFileName) {
