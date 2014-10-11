@@ -86,14 +86,27 @@ PageElementWriter.prototype.commitUnbreakableBlock = function(forcedX, forcedY) 
 		var unbreakableContext = this.writer.context;
 		this.writer.popContext();
 
-		if(unbreakableContext.pages.length > 0) {
+		var nbPages = unbreakableContext.pages.length;
+		if(nbPages > 0) {
 			// no support for multi-page unbreakableBlocks
 			var fragment = unbreakableContext.pages[0];
 			fragment.xOffset = forcedX;
 			fragment.yOffset = forcedY;
 
 			//TODO: vectors can influence height in some situations
-			fragment.height = unbreakableContext.y;
+			if(nbPages > 1) {
+				// on out-of-context blocs (headers, footers, background) height should be the whole DocumentContext height
+				if (forcedX !== undefined || forcedY !== undefined) {
+					fragment.height = unbreakableContext.pageSize.height - unbreakableContext.pageMargins.top - unbreakableContext.pageMargins.bottom;
+				} else {
+					fragment.height = this.writer.context.pageSize.height - this.writer.context.pageMargins.top - this.writer.context.pageMargins.bottom;
+					for (var i = 0, l = this.repeatables.length; i < l; i++) {
+						fragment.height -= this.repeatables[i].height;
+					}
+				}
+			} else {
+				fragment.height = unbreakableContext.y;	
+			}
 
 			if (forcedX !== undefined || forcedY !== undefined) {
 				this.writer.addFragment(fragment, true, true, true);
