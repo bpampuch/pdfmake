@@ -284,7 +284,9 @@ DocMeasure.prototype.measureTable = function(node) {
 
 	function measureCb(_this, data) {
 		return function() {
-			data.fillColor = _this.styleStack.getProperty('fillColor');
+			if (data !== null && typeof data === 'object') {
+				data.fillColor = _this.styleStack.getProperty('fillColor');
+			}
 			return _this.measureNode(data);
 		};
 	}
