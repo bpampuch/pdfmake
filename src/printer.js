@@ -3,8 +3,8 @@
 'use strict';
 
 var LayoutBuilder = require('./layoutBuilder');
-var PdfKit = require('pdfmake-pdfkit');
-var PDFReference = PdfKit.PDFReference;
+var PdfKit = require('pdfkit');
+var PDFReference = require('../node_modules/pdfkit/js/reference');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
 var textDecorator = require('./textDecorator');
@@ -78,7 +78,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
     pageSize = { width: pageSize.height, height: pageSize.width };
   }
 
-	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ]});
+	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ], compress: false});
 	this.pdfKitDoc.info.Producer = 'pdfmake';
 	this.pdfKitDoc.info.Creator = 'pdfmake';
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
@@ -209,23 +209,23 @@ function renderPages(pages, fontProvider, pdfKitDoc) {
 		setFontRefs(fontProvider, pdfKitDoc);
 
 		var page = pages[i];
-        for(var ii = 0, il = page.items.length; ii < il; ii++) {
-            var item = page.items[ii];
-            switch(item.type) {
-                case 'vector':
-                    renderVector(item.item, pdfKitDoc);
-                    break;
-                case 'line':
-                    renderLine(item.item, item.item.x, item.item.y, pdfKitDoc);
-                    break;
-                case 'image':
-                    renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
-                    break;
-            }
-        }
-        if(page.watermark){
+    for(var ii = 0, il = page.items.length; ii < il; ii++) {
+        var item = page.items[ii];
+        switch(item.type) {
+          case 'vector':
+              renderVector(item.item, pdfKitDoc);
+              break;
+          case 'line':
+              renderLine(item.item, item.item.x, item.item.y, pdfKitDoc);
+              break;
+          case 'image':
+              renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
+              break;
+				}
+    }
+    if(page.watermark){
 			renderWatermark(page, pdfKitDoc, fontProvider);
-        }
+		}
 	}
 }
 
@@ -238,7 +238,7 @@ function setFontRefs(fontProvider, pdfKitDoc) {
 			var _ref, _base, _name;
 
 			if (!(_ref = (_base = pdfKitDoc.page.fonts)[_name = font.id])) {
-				_base[_name] = font.ref;
+				_base[_name] = font.ref();
 			}
 		}
 	}
@@ -273,9 +273,9 @@ function renderLine(line, x, y, pdfKitDoc) {
 		pdfKitDoc.addContent('ET');
 		pdfKitDoc.restore();
 	}
-	
+
 	textDecorator.drawDecorations(line, x, y, pdfKitDoc);
-	
+
 }
 
 function renderWatermark(page, pdfKitDoc, fontProvider){

@@ -1,4 +1,5 @@
-var pdfKit = require('pdfmake-pdfkit');
+var pdfKit = require('pdfkit');
+var PDFImage = require('../node_modules/pdfkit/js/image');
 
 function ImageMeasure(pdfDoc, imageDictionary) {
 	this.pdfDoc = pdfDoc;
@@ -11,7 +12,7 @@ ImageMeasure.prototype.measureImage = function(src) {
 
 	if (!this.pdfDoc._imageRegistry[src]) {
 		label = "I" + (++this.pdfDoc._imageCount);
-		image = pdfKit.PDFImage.open(realImageSrc(src), label);
+		image = PDFImage.open(realImageSrc(src), label);
 		image.embed(this.pdfDoc);
 		this.pdfDoc._imageRegistry[src] = image;
 	} else {
