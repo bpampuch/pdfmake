@@ -105,14 +105,14 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 			JS: new StringObject('this.print\\(true\\);')
 		});
 		var namesRef = this.pdfKitDoc.ref({
-			Names: [new StringObject('EmbeddedJS'), new PdfKit.PDFReference(this.pdfKitDoc, jsRef.id)],
+			Names: [new StringObject('EmbeddedJS'), new PDFReference(this.pdfKitDoc, jsRef.id)],
 		});
 
 		jsRef.end();
 		namesRef.end();
 
 		this.pdfKitDoc._root.data.Names = {
-			JavaScript: new PdfKit.PDFReference(this.pdfKitDoc, namesRef.id)
+			JavaScript: new PDFReference(this.pdfKitDoc, namesRef.id)
 		};
 	}
 	return this.pdfKitDoc;
