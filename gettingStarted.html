@@ -3,15 +3,13 @@
 	<h1>Install</h1>
 	<div ng-hide='showNodeVersion'>
 		<p>
-			This document will walk you through the basics of pdfmake and will
-			show you how to create PDF files in the browser
-			(<a ng-click='showNodeVersion = true'>switch to NodeJS version</a>)
+			This document will walk you through the basics of pdfmake and will show you how to create PDF files in the browser. If you're interested in server-side printing check the examples folder.
 		</p>
 		<p>
 			To begin with the default configuration, you should include two files:
 			<ul>
 				<li><a href='https://raw.githubusercontent.com/bpampuch/pdfmake/master/build/pdfmake.min.js' download><strong>pdfmake.min.js</strong></a></li>
-				<li><a href='https://raw.githubusercontent.com/bpampuch/pdfmake/master/build/vfs_fonts.js' download><strong>vfs_fonts.js</strong></a> - default font definition (it contains Roboto, you can however <a href='#/docs/customFonts'>use custom fonts instead</a>)</li>
+				<li><a href='https://raw.githubusercontent.com/bpampuch/pdfmake/master/build/vfs_fonts.js' download><strong>vfs_fonts.js</strong></a> - default font definition (it contains Roboto, you can however <a href='https://github.com/bpampuch/pdfmake/wiki/Custom-Fonts---client-side'>use custom fonts instead</a>)</li>
 			</ul>
 		</p>
 		<pre class='code'>
@@ -130,8 +128,8 @@
 
 	<p>
 		To have a deeper understanding of styling in pdfmake, style
-		inheritance and local-style-overrides check <a href='#'>this example</a> and
-		<a href='#'>the resulting PDF</a> or <a href='/playground.html'>open it in playground.</a>
+		inheritance and local-style-overrides check STYLES1, STYLES2 and STYLES3
+		<a href='/playground.html'>in playground.</a>
 	</p>
 
 	<h2>Columns</h2>
@@ -173,8 +171,7 @@ var docDefinition = {
 	<p>
 		Column content is not limited to a simple text. It can actually
 		contain any valid pdfmake element.
-		See a <a href='#'>complete example</a> and <a href='#'>the resulting pdf</a>
-		or <a href='/playground.html'>open it in playground.</a>
+		Make sure to look at the COLUMNS examples <a href='/playground.html'>in playground.</a>
 	</p>
 
 	<h2>Tables</h2>
@@ -203,9 +200,8 @@ var docDefinition = {
 };</pre>
 
 	<p>
-		All concepts related to tables are covered in
-		<a href='#'>this example</a> and <a href='#'>the resulting pdf</a>
-		You can also <a href='/playground.html'>open it in playground.</a>
+		All concepts related to tables are explained in TABLES example
+		<a href='/playground.html'> in playground.</a>
 	</p>
 
 	<h2>Lists</h2>
@@ -418,7 +414,7 @@ var docDefinition = {
 
 	<h2>Page breaks</h2>
 <p>
-	You can set pageBreak on any element to: 'after' or 'before' (depending on where you want the break to occur). 
+	You can set pageBreak on any element to: 'after' or 'before' (depending on where you want the break to occur).
 </p>
 <p>
 <a href="https://github.com/bpampuch/pdfmake/blob/master/examples/images.js">images</a> and <a href="https://github.com/bpampuch/pdfmake/blob/master/examples/tables.js">table</a> examples use this attribute:
@@ -467,14 +463,6 @@ var docDefinition = {
 		</ul>
 	</p>
 
-	<h1>What's next?</h1>
-	If you really want to learn pdfMake, go ahead and check the:
-	<ul>
-		<li><a href='https://github.com/bpampuch/pdfmake/tree/master/examples'>examples folder</a></li>
-		<li><a href='http://pdfmake.org/playground.html'>playground,</a></li>
-		<li><a href='#'>documentation.</a></li>
-	</ul>
-
 	<h1>Coming soon</h1>
 	<p>
 		Hmmm... let me know what you need ;)
@@ -496,6 +484,8 @@ var docDefinition = {
 
 	<hr/>
 	pdfmake is based on a truly amazing library pdfkit.org - credits to @devongovett
+
+	big thanks to @yelouafi for making this library even better
 </div>
 <script type="text/javascript" charset="utf-8">
 	$('.code').each(function(i, e) { hljs.highlightBlock(e); });
