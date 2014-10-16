@@ -21,7 +21,7 @@ module.exports = function(grunt) {
 			},
 			// updates pdfkit for client-side-support
 			fixPdfKit: {
-				src: ['node_modules/pdfmake-pdfkit/js/document.js', 'node_modules/pdfmake-pdfkit/js/mixins/fonts.js', 'node_modules/pdfmake-pdfkit/js/font/table.js'],
+				src: ['node_modules/pdfkit/js/document.js', 'node_modules/pdfkit/js/mixins/fonts.js', 'node_modules/pdfkit/js/font/table.js', 'node_modules/pdfkit/package.json'],
 				overwrite: true,
 				replacements: [{
 					from: /^(\s*mixin = function\()(name)(\) {.*)$/mg,
@@ -34,6 +34,10 @@ module.exports = function(grunt) {
 					to: '$1, require(\'./mixins/$2.js\')$3'
 				}, {
 					from: 'return this.font(\'Helvetica\');',
+					to: ''
+				},
+				{
+					from: /"browserify": {[^}]*},/mg,
 					to: ''
 				},
 				/* IE workaround for no constructor.name */
