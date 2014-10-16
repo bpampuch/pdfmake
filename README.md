@@ -451,3 +451,6 @@ MIT
 -------
 
 pdfmake is based on a truly amazing library pdfkit.org - credits to @devongovett
+
+big thanks to @yelouafi for making this library even better
+
