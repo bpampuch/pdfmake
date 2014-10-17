@@ -6,6 +6,7 @@ var StyleContextStack = require('./styleContextStack');
 var ColumnCalculator = require('./columnCalculator');
 var fontStringify = require('./helpers').fontStringify;
 var pack = require('./helpers').pack;
+var qrEncoder = require('./qrEncoder.js');
 
 /**
 * @private
@@ -59,6 +60,8 @@ DocMeasure.prototype.measureNode = function(node) {
 			return extendMargins(self.measureImage(node));
 		} else if (node.canvas) {
 			return extendMargins(self.measureCanvas(node));
+		} else if (node.qr) {
+			return extendMargins(self.measureQr(node));
 		} else {
 			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
@@ -446,6 +449,12 @@ DocMeasure.prototype.measureCanvas = function(node) {
 	node._minWidth = node._maxWidth = w;
 	node._minHeight = node._maxHeight = h;
 
+	return node;
+};
+
+DocMeasure.prototype.measureQr = function(node) {
+	node = qrEncoder.measure(node);
+	node._alignment = this.styleStack.getProperty('alignment');
 	return node;
 };
 

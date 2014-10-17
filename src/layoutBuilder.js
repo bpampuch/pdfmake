@@ -197,7 +197,9 @@ LayoutBuilder.prototype.processNode = function(node) {
       self.processImage(node);
     } else if (node.canvas) {
       self.processCanvas(node);
-    } else if (!node._span) {
+    } else if (node.qr) {
+      self.processQr(node);
+    }else if (!node._span) {
 		throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
 	});
@@ -431,6 +433,10 @@ LayoutBuilder.prototype.processCanvas = function(node) {
 	}, this);
 
 	this.writer.context().moveDown(height);
+};
+
+LayoutBuilder.prototype.processQr = function(node) {
+	this.writer.addQr(node);
 };
 
 
