@@ -41,7 +41,7 @@ var docDefinition = {
     { qr: longText },
     '\n',
     header('same long text with fit = 100 and alignment = right'),
-    { qr: { value: longText, fit: 90 }, alignment: 'right' },
+    { qr: longText, fit: 150, alignment: 'right' },
   ]
 }
 

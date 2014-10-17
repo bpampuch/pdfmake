@@ -6,7 +6,7 @@ var StyleContextStack = require('./styleContextStack');
 var ColumnCalculator = require('./columnCalculator');
 var fontStringify = require('./helpers').fontStringify;
 var pack = require('./helpers').pack;
-var qrEncoder = require('./qrEncoder.js');
+var qrEncoder = require('./qrEnc.js');
 
 /**
 * @private
