@@ -17,23 +17,32 @@ var PdfPrinter = require('../src/printer');
 var printer = new PdfPrinter(fonts);
 var fs = require('fs');
 
-var ct = [];
-var lorem = '{"uqr":1,"tp":1,"cid":"4907740","iref":"2333","idt":"20141031","ddt":"20141031","due":"11250","vat":"2250","pt":"BG","acc":"999 9999"} ';
+var greeting = 'Can you see me';
+var url = 'http://pdfmake.org';
+var longText = 'The amount of data that can be stored in the QR code symbol depends on the datatype (mode, or input character set), version (1, …, 40, indicating the overall dimensions of the symbol), and error correction level. The maximum storage capacities occur for 40-L symbols (version 40, error correction level L):'
 
 
-ct.push({ qr: lorem });
+function header(text) {
+  return { text: text, margins: [ 0,0,0, 8 ] }
+}
 
-ct.push('\n')
-ct.push({ text: '{ fit:80 } : '+lorem, fontSize: 12 })
-ct.push('\n')
-ct.push({ qr: { value: lorem, fit: 90 }, alignment: 'right' });
-
-
-
-
-  
 var docDefinition = {
-    content: ct
+  pageMargins: [10, 10, 10, 10],
+  content: [
+    header(greeting),
+    { qr: greeting },
+    '\n',
+    
+    header(url),
+    { qr: url },
+    '\n',
+    
+    header('A very long text (' + longText.length + ' chars)'),
+    { qr: longText },
+    '\n',
+    header('same long text with fit = 100 and alignment = right'),
+    { qr: { value: longText, fit: 90 }, alignment: 'right' },
+  ]
 }
 
 var pdfDoc = printer.createPdfKitDocument(docDefinition);
