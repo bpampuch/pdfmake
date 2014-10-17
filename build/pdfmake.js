@@ -19404,12 +19404,7 @@ PdfPrinter.prototype.fs = _dereq_('fs');
 // (c) 2010 tz@execpc.com  
 // Licensed under the GPL Version 3 license.  
 
-
-
-  // Private constants
-  // -----------------
-
-  // Alignment pattern.
+// Alignment pattern.
   var ALIGNMENT_DELTA = [
     0,  11, 15, 19, 23, 27, 31,
     16, 18, 20, 22, 24, 26, 28, 20, 22, 24, 24, 26, 28, 28, 22, 24, 24,
@@ -19534,6 +19529,7 @@ PdfPrinter.prototype.fs = _dereq_('fs');
 
   // Run lengths for badness.
   var badBuffer = [];
+  
   // Data block.
   var dataBlock;
   // ECC data blocks and tables.
@@ -19548,12 +19544,23 @@ PdfPrinter.prototype.fs = _dereq_('fs');
   var frameMask = [];
   // Generator polynomial.
   var polynomial = [];
+  
   // Data input buffer.
   var stringBuffer = [];
   // Version for the data.
   var version;
   // Data width is based on `version`.
   var width;
+
+  // Private functions
+  // -----------------
+
+  // Normalize the `data` that is provided to the main API.
+  function normalizeData(data) {
+    if (typeof data === 'string') data = { value: data };
+    return data || {};
+  }
+
 
   // Set bit to indicate cell in frame is immutable (symmetric around diagonal).
   function setMask(x, y) {
@@ -19724,8 +19731,9 @@ PdfPrinter.prototype.fs = _dereq_('fs');
 
           for (r3x = 0, x = 0; x < width; x++, r3x++) {
             if (r3x === 3) r3x = 0;
-
-            if ( (!( (x & y & 1)) + (!( !r3x | !r3y ) )) && (!isMasked(x, y))) {
+            
+            var tmp = ((x & y & 1) + !(!r3x | !r3y));
+            if ( !tmp && !isMasked(x, y) ) {
               frameBuffer[x + y * width] ^= 1;
             }
           }
@@ -20275,6 +20283,7 @@ PdfPrinter.prototype.fs = _dereq_('fs');
     return frameBuffer;
   }
 
+
   // Generate the QR code using the data provided and render it on to a `<canvas>` element.  
 // If no `<canvas>` element is specified in the argument provided a new one will be created and
 // used.  
@@ -20294,7 +20303,7 @@ function buildCanvas(data) {
     var frame = generateFrame(data.value);
     
     // Determine the unit size.
-    var ptSize = data.fit ? data.fit/width : 5;
+    var ptSize = Math.floor( data.fit ? data.fit/width : 5 );
     
     var size = ptSize * width;
     canvas.push({
