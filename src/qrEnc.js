@@ -1,3 +1,6 @@
+/* jslint node: true */
+'use strict';
+/*jshint -W004 */
 /* qr.js -- QR code generator in Javascript (revision 2011-01-19)
  * Written by Kang Seonghoon <public+qrjs@mearie.org>.
  *
@@ -172,7 +175,7 @@ var ndatabits = function(ver, ecclevel) {
 	var v = VERSIONS[ver];
 	nbits -= 8 * v[0][ecclevel] * v[1][ecclevel]; // ecc bits
 	return nbits;
-}
+};
 
 // returns the number of bits required for the length of data.
 // (cf. Table 3 in JIS X 0510:2004 p. 16)
@@ -290,7 +293,7 @@ var encode = function(ver, mode, data, maxbuflen) {
 			pack(data[i], 8);
 		}
 		break;
-	};
+	}
 
 	// final bits. it is possible that adding terminator causes the buffer
 	// to overflow, but then the buffer truncated to the maximum size will
@@ -426,7 +429,7 @@ var makebasematrix = function(ver) {
 	// alignment patterns
 	var aligns = v[2], m = aligns.length;
 	for (var i = 0; i < m; ++i) {
-		var minj = (i==0 || i==m-1 ? 1 : 0), maxj = (i==0 ? m-1 : m);
+		var minj = (i===0 || i===m-1 ? 1 : 0), maxj = (i===0 ? m-1 : m);
 		for (var j = minj; j < maxj; ++j) {
 			blit(aligns[i], aligns[j], 5, 5, [0x1f, 0x11, 0x15, 0x11, 0x1f]);
 		}
@@ -483,7 +486,7 @@ var maskdata = function(matrix, reserved, mask) {
 		}
 	}
 	return matrix;
-}
+};
 
 // puts the format information.
 var putformatinfo = function(matrix, reserved, ecclevel, mask) {
@@ -722,7 +725,7 @@ function buildCanvas(data, options) {
     return {
         canvas: canvas,
         size: size
-    }
+    };
 		
 }
 
