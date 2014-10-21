@@ -106,11 +106,35 @@ ElementWriter.prototype.addImage = function(image, index) {
 	return true;
 };
 
+ElementWriter.prototype.addQr = function(qr, index) {
+	var context = this.context;
+	var page = context.getCurrentPage();
+
+	if (context.availableHeight < qr._height || !page) {
+		return false;
+	}
+
+	qr.x = context.x + (qr.x || 0);
+	qr.y = context.y;
+	
+	this.alignImage(qr);
+	
+	for (var i=0, l=qr._canvas.length; i < l; i++) {
+		var vector = qr._canvas[i];
+		vector.x += qr.x;
+		vector.y += qr.y;
+		this.addVector(vector, true, true, index);
+	}
+
+	context.moveDown(qr._height);
+
+	return true;
+};
+
 ElementWriter.prototype.alignImage = function(image) {
 	var width = this.context.availableWidth;
 	var imageWidth = image._minWidth;
 	var offset = 0;
-
 	switch(image._alignment) {
 		case 'right':
 			offset = width - imageWidth;

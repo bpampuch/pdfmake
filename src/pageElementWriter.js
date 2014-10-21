@@ -33,6 +33,13 @@ PageElementWriter.prototype.addImage = function(image, index) {
 	}
 };
 
+PageElementWriter.prototype.addQr = function(qr, index) {
+	if(!this.writer.addQr(qr, index)) {
+		this.moveToNextPage();
+		this.writer.addQr(qr, index);
+	}
+};
+
 PageElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY, index) {
 	this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
 };
