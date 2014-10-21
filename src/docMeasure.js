@@ -83,7 +83,7 @@ DocMeasure.prototype.measureNode = function(node) {
 
 			for(var i = styleArray.length - 1; i >= 0; i--) {
 				var styleName = styleArray[i];
-				var style = self.styleStack.styleDictionary[node.style];
+				var style = self.styleStack.styleDictionary[styleName];
 				if (style && style.margin) {
 					margin = style.margin;
 					break;
@@ -255,7 +255,8 @@ DocMeasure.prototype.measureTable = function(node) {
 			var rowData = node.table.body[row];
 			var data = rowData[col];
 			if (!data._span) {
-				data = rowData[col] = this.measureNode(data);
+				var _this = this;
+				data = rowData[col] = this.styleStack.auto(data, measureCb(this, data));
 
 				if (data.colSpan && data.colSpan > 1) {
 					markSpans(rowData, col, data.colSpan);
@@ -280,6 +281,15 @@ DocMeasure.prototype.measureTable = function(node) {
 	node._maxWidth = measures.max + node._offsets.total;
 
 	return node;
+
+	function measureCb(_this, data) {
+		return function() {
+			if (data !== null && typeof data === 'object') {
+				data.fillColor = _this.styleStack.getProperty('fillColor');
+			}
+			return _this.measureNode(data);
+		};
+	}
 
 	function getLayout(tableLayouts) {
 		var layout = node.layout;
@@ -378,6 +388,7 @@ DocMeasure.prototype.measureTable = function(node) {
 				_span: true,
 				_minWidth: 0,
 				_maxWidth: 0,
+				fillColor: table.body[row][col].fillColor
 			};
 		}
 	}

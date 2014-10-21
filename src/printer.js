@@ -3,11 +3,11 @@
 'use strict';
 
 var LayoutBuilder = require('./layoutBuilder');
-var PdfKit = require('pdfmake-pdfkit');
-var PDFReference = PdfKit.PDFReference;
+var PdfKit = require('pdfkit');
+var PDFReference = require('../node_modules/pdfkit/js/reference');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
-
+var textDecorator = require('./textDecorator');
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -78,7 +78,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
     pageSize = { width: pageSize.height, height: pageSize.width };
   }
 
-	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ]});
+	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ], compress: false});
 	this.pdfKitDoc.info.Producer = 'pdfmake';
 	this.pdfKitDoc.info.Creator = 'pdfmake';
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
@@ -95,7 +95,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
     builder.registerTableLayouts(options.tableLayouts);
   }
 
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images);
+	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark);
 
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
@@ -105,14 +105,14 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 			JS: new StringObject('this.print\\(true\\);')
 		});
 		var namesRef = this.pdfKitDoc.ref({
-			Names: [new StringObject('EmbeddedJS'), new PdfKit.PDFReference(this.pdfKitDoc, jsRef.id)],
+			Names: [new StringObject('EmbeddedJS'), new PDFReference(this.pdfKitDoc, jsRef.id)],
 		});
 
 		jsRef.end();
 		namesRef.end();
 
 		this.pdfKitDoc._root.data.Names = {
-			JavaScript: new PdfKit.PDFReference(this.pdfKitDoc, namesRef.id)
+			JavaScript: new PDFReference(this.pdfKitDoc, namesRef.id)
 		};
 	}
 	return this.pdfKitDoc;
@@ -209,20 +209,23 @@ function renderPages(pages, fontProvider, pdfKitDoc) {
 		setFontRefs(fontProvider, pdfKitDoc);
 
 		var page = pages[i];
-        for(var ii = 0, il = page.items.length; ii < il; ii++) {
-            var item = page.items[ii];
-            switch(item.type) {
-                case 'vector':
-                    renderVector(item.item, pdfKitDoc);
-                    break;
-                case 'line':
-                    renderLine(item.item, item.item.x, item.item.y, pdfKitDoc);
-                    break;
-                case 'image':
-                    renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
-                    break;
-            }
-        }
+    for(var ii = 0, il = page.items.length; ii < il; ii++) {
+        var item = page.items[ii];
+        switch(item.type) {
+          case 'vector':
+              renderVector(item.item, pdfKitDoc);
+              break;
+          case 'line':
+              renderLine(item.item, item.item.x, item.item.y, pdfKitDoc);
+              break;
+          case 'image':
+              renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
+              break;
+				}
+    }
+    if(page.watermark){
+			renderWatermark(page, pdfKitDoc, fontProvider);
+		}
 	}
 }
 
@@ -235,7 +238,7 @@ function setFontRefs(fontProvider, pdfKitDoc) {
 			var _ref, _base, _name;
 
 			if (!(_ref = (_base = pdfKitDoc.page.fonts)[_name = font.id])) {
-				_base[_name] = font.ref;
+				_base[_name] = font.ref();
 			}
 		}
 	}
@@ -247,6 +250,8 @@ function renderLine(line, x, y, pdfKitDoc) {
 
 	var ascenderHeight = line.getAscenderHeight();
 	var lineHeight = line.getHeight();
+
+	textDecorator.drawBackground(line, x, y, pdfKitDoc);
 
 	//TODO: line.optimizeInlines();
 	for(var i = 0, l = line.inlines.length; i < l; i++) {
@@ -268,6 +273,29 @@ function renderLine(line, x, y, pdfKitDoc) {
 		pdfKitDoc.addContent('ET');
 		pdfKitDoc.restore();
 	}
+
+	textDecorator.drawDecorations(line, x, y, pdfKitDoc);
+
+}
+
+function renderWatermark(page, pdfKitDoc, fontProvider){
+	var watermark = page.watermark;
+
+	pdfKitDoc.fill('black');
+	pdfKitDoc.opacity(0.6);
+
+	pdfKitDoc.save();
+	pdfKitDoc.transform(1, 0, 0, -1, 0, pdfKitDoc.page.height);
+
+	var angle = Math.atan2(pdfKitDoc.page.height, pdfKitDoc.page.width) * 180/Math.PI;
+	pdfKitDoc.rotate(angle, {origin: [pdfKitDoc.page.width/2, pdfKitDoc.page.height/2]});
+
+	pdfKitDoc.addContent('BT');
+	pdfKitDoc.addContent('' + (pdfKitDoc.page.width/2 - watermark.size.size.width/2) + ' ' + (pdfKitDoc.page.height/2 - watermark.size.size.height/4) + ' Td');
+	pdfKitDoc.addContent('/' + watermark.font.id + ' ' + watermark.size.fontSize + ' Tf');
+	pdfKitDoc.addContent('<' + encode(watermark.font, watermark.text) + '> Tj');
+	pdfKitDoc.addContent('ET');
+	pdfKitDoc.restore();
 }
 
 function encode(font, text) {

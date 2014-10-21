@@ -16,7 +16,15 @@ function ElementWriter(context, tracker) {
 	this.tracker = tracker || { emit: function() { } };
 }
 
-ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition) {
+function addPageItem(page, item, index) {
+	if(index === null || index === undefined || index < 0 || index > page.items.length) {
+		page.items.push(item);
+	} else {
+		page.items.splice(index, 0, item);
+	}
+}
+
+ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition, index) {
 	var height = line.getHeight();
 	var context = this.context;
 	var page = context.getCurrentPage();
@@ -30,10 +38,10 @@ ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition) {
 
 	this.alignLine(line);
 
-    page.items.push({
+    addPageItem(page, {
         type: 'line',
         item: line
-    });
+    }, index);
 	this.tracker.emit('lineAdded', line);
 
 	if (!dontUpdateContextPosition) context.moveDown(height);
@@ -75,7 +83,7 @@ ElementWriter.prototype.alignLine = function(line) {
 	}
 };
 
-ElementWriter.prototype.addImage = function(image) {
+ElementWriter.prototype.addImage = function(image, index) {
 	var context = this.context;
 	var page = context.getCurrentPage();
 
@@ -88,10 +96,10 @@ ElementWriter.prototype.addImage = function(image) {
 
 	this.alignImage(image);
 
-	page.items.push({
+	addPageItem(page, {
         type: 'image',
         item: image
-    });
+    }, index);
 
 	context.moveDown(image._height);
 
@@ -117,16 +125,16 @@ ElementWriter.prototype.alignImage = function(image) {
 	}
 };
 
-ElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY) {
+ElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY, index) {
 	var context = this.context;
 	var page = context.getCurrentPage();
 
 	if (page) {
 		offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
-        page.items.push({
+        addPageItem(page, {
             type: 'vector',
             item: vector
-        });
+        }, index);
 		return true;
 	}
 };
@@ -147,7 +155,7 @@ ElementWriter.prototype.addFragment = function(block, useBlockXOffset, useBlockY
 	var ctx = this.context;
 	var page = ctx.getCurrentPage();
 
-	if (block.height > ctx.availableHeight) return false;
+	if (!useBlockXOffset && block.height > ctx.availableHeight) return false;
 
 	block.items.forEach(function(item) {
         switch(item.type) {

@@ -15,32 +15,32 @@ var ElementWriter = require('./elementWriter');
 function PageElementWriter(context, tracker) {
 	this.transactionLevel = 0;
 	this.repeatables = [];
-
+	this.tracker = tracker;
 	this.writer = new ElementWriter(context, tracker);
 }
 
-PageElementWriter.prototype.addLine = function(line, dontUpdateContextPosition) {
-	if (!this.writer.addLine(line, dontUpdateContextPosition)) {
+PageElementWriter.prototype.addLine = function(line, dontUpdateContextPosition, index) {
+	if (!this.writer.addLine(line, dontUpdateContextPosition, index)) {
 		this.moveToNextPage();
-		this.writer.addLine(line, dontUpdateContextPosition);
+		this.writer.addLine(line, dontUpdateContextPosition, index);
 	}
 };
 
-PageElementWriter.prototype.addImage = function(image) {
-	if(!this.writer.addImage(image)) {
+PageElementWriter.prototype.addImage = function(image, index) {
+	if(!this.writer.addImage(image, index)) {
 		this.moveToNextPage();
-		this.writer.addImage(image);
+		this.writer.addImage(image, index);
 	}
 };
 
-PageElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY) {
-	this.writer.addVector(vector, ignoreContextX, ignoreContextY);
+PageElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY, index) {
+	this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
 };
 
-PageElementWriter.prototype.addFragment = function(fragment) {
-	if (!this.writer.addFragment(fragment)) {
+PageElementWriter.prototype.addFragment = function(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
+	if (!this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition)) {
 		this.moveToNextPage();
-		this.writer.addFragment(fragment);
+		this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition);
 	}
 };
 
@@ -86,14 +86,27 @@ PageElementWriter.prototype.commitUnbreakableBlock = function(forcedX, forcedY) 
 		var unbreakableContext = this.writer.context;
 		this.writer.popContext();
 
-		if(unbreakableContext.pages.length > 0) {
+		var nbPages = unbreakableContext.pages.length;
+		if(nbPages > 0) {
 			// no support for multi-page unbreakableBlocks
 			var fragment = unbreakableContext.pages[0];
 			fragment.xOffset = forcedX;
 			fragment.yOffset = forcedY;
 
 			//TODO: vectors can influence height in some situations
-			fragment.height = unbreakableContext.y;
+			if(nbPages > 1) {
+				// on out-of-context blocs (headers, footers, background) height should be the whole DocumentContext height
+				if (forcedX !== undefined || forcedY !== undefined) {
+					fragment.height = unbreakableContext.pageSize.height - unbreakableContext.pageMargins.top - unbreakableContext.pageMargins.bottom;
+				} else {
+					fragment.height = this.writer.context.pageSize.height - this.writer.context.pageMargins.top - this.writer.context.pageMargins.bottom;
+					for (var i = 0, l = this.repeatables.length; i < l; i++) {
+						fragment.height -= this.repeatables[i].height;
+					}
+				}
+			} else {
+				fragment.height = unbreakableContext.y;	
+			}
 
 			if (forcedX !== undefined || forcedY !== undefined) {
 				this.writer.addFragment(fragment, true, true, true);
