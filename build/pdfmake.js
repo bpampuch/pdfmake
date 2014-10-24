@@ -17044,35 +17044,22 @@ Document.prototype._createDoc = function(options, callback) {
 	});
 	doc.end();
 };
-
 Document.prototype.open = function(DestinationName) {
 	var win;
-	//is set?
-	if (DestinationName) {
-		//first occurrence only
-		win = document.getElementsByName(DestinationName)[0];
-		//is a Iframe or a Frame ?
-		if ( win.tagName !== "IFRAME" && win.tagName !== "FRAME" ){
-			alert("the Destination name Element is not a Iframe or a Frame");
-			return false;
-		} else {
-			this.getDataUrl(function(result) {
-				win.src = result;
-			});
-		}
-	} else {
+	//is empty?
+	if (!DestinationName) {
+		DestinationName = "_blank";
+	} 
 	// we have to open the window immediately and store the reference
-	// otherwise popup blockers will stop us
-		win = window.open('', '_blank');
-
-		try {
-			this.getDataUrl(function(result) {
-				win.location.href = result;
-			});
-		} catch(e) {
-			win.close();
-			return false;
-		}
+	// otherwise popup blockers will stop us		
+	try {
+		win = window.open('', DestinationName);
+		this.getDataUrl(function(result) {
+			win.location.href = result;
+		});
+	} catch(e) {
+		win.close();
+		return false;
 	}
 };
 
