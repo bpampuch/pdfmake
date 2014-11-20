@@ -1,6 +1,5 @@
 /* jslint node: true */
 /* jslint browser: true */
-/* global saveAs */
 /* global BlobBuilder */
 'use strict';
 
