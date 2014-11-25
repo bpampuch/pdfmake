@@ -1,10 +1,10 @@
 /* jslint node: true */
 /* jslint browser: true */
-/* global saveAs */
 /* global BlobBuilder */
 'use strict';
 
 var PdfPrinter = require('../printer');
+var saveAs = require('../../libs/fileSaver');
 
 var defaultClientFonts = {
 	Roboto: {
@@ -73,14 +73,12 @@ Document.prototype.print = function() {
   }, { autoPrint: true });
 };
 
-Document.prototype.download = function(defaultFileName) {
-	defaultFileName = defaultFileName || 'file.pdf';
-	this.getBuffer(function(result) {
-		saveAs(new Blob([result], {type: 'application/pdf'}), defaultFileName);
-	});
-};
-
 Document.prototype.download = function(defaultFileName, cb) {
+   if(typeof defaultFileName === "function") {
+      cb = defaultFileName;
+      defaultFileName = null;
+   }
+
    defaultFileName = defaultFileName || 'file.pdf';
    this.getBuffer(function(result) {
        saveAs(new Blob([result], {type: 'application/pdf'}), defaultFileName);
