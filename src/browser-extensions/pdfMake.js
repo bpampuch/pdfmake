@@ -80,6 +80,16 @@ Document.prototype.download = function(defaultFileName) {
 	});
 };
 
+Document.prototype.download = function(defaultFileName, cb) {
+   defaultFileName = defaultFileName || 'file.pdf';
+   this.getBuffer(function(result) {
+       saveAs(new Blob([result], {type: 'application/pdf'}), defaultFileName);
+       if (typeof cb === "function") {
+           cb();
+       }
+   });
+};
+
 Document.prototype.getBase64 = function(cb, options) {
 	if (!cb) throw 'getBase64 is an async method and needs a callback argument';
 	this._createDoc(options, function(buffer) {
