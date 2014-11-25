@@ -17055,13 +17055,16 @@ Document.prototype._createDoc = function(options, callback) {
 	});
 	doc.end();
 };
-
-Document.prototype.open = function(message) {
+Document.prototype.open = function(DestinationName) {
+	var win;
+	//is empty?
+	if (!DestinationName) {
+		DestinationName = "_blank";
+	} 
 	// we have to open the window immediately and store the reference
-	// otherwise popup blockers will stop us
-	var win = window.open('', '_blank');
-
+	// otherwise popup blockers will stop us		
 	try {
+		win = window.open('', DestinationName);
 		this.getDataUrl(function(result) {
 			win.location.href = result;
 		});
@@ -17070,7 +17073,6 @@ Document.prototype.open = function(message) {
 		return false;
 	}
 };
-
 
 Document.prototype.print = function() {
   this.getDataUrl(function(dataUrl) {
