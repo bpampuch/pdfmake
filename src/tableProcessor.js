@@ -117,7 +117,7 @@ TableProcessor.prototype.drawHorizontalLine = function(lineIndex, writer, overri
             y1: y,
             y2: y,
             lineWidth: lineWidth,
-            lineColor: this.layout.hLineColor(lineIndex, this.tableNode)
+            lineColor: typeof this.layout.hLineColor === 'function' ? this.layout.hLineColor(lineIndex, this.tableNode) : this.layout.hLineColor
           }, false, overrideY);
           currentLine = null;
         }
@@ -130,8 +130,7 @@ TableProcessor.prototype.drawHorizontalLine = function(lineIndex, writer, overri
 
 TableProcessor.prototype.drawVerticalLine = function(x, y0, y1, vLineIndex, writer) {
   var width = this.layout.vLineWidth(vLineIndex, this.tableNode);
-  if (width === 0) return;
-
+  if (width === 0) return;  
   writer.addVector({
     type: 'line',
     x1: x + width/2,
@@ -139,7 +138,7 @@ TableProcessor.prototype.drawVerticalLine = function(x, y0, y1, vLineIndex, writ
     y1: y0,
     y2: y1,
     lineWidth: width,
-    lineColor: this.layout.vLineColor(vLineIndex, this.tableNode)
+    lineColor: typeof this.layout.vlineColor === 'function' ? this.layout.vLineColor(vLineIndex, this.tableNode) : this.layout.vLineColor
   }, false, true);
 };
 
