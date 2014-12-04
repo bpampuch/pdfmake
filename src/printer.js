@@ -410,7 +410,7 @@ FontProvider.prototype.provideFont = function(familyName, bold, italics) {
 	if (cached) return cached;
 
 	var fontCache = (this.cache[familyName] = this.cache[familyName] || {});
-	fontCache[type] = this.pdfDoc.font(this.fonts[familyName][type])._font;
+	fontCache[type] = this.pdfDoc.font(this.fonts[familyName][type], familyName)._font;
 	return fontCache[type];
 };
 
