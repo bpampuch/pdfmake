@@ -7,7 +7,8 @@ function buildColumnWidths(columns, availableWidth) {
 		starColumns = [],
 		starMaxMin = 0,
 		starMaxMax = 0,
-		fixedColumns = [];
+		fixedColumns = [],
+		initial_availableWidth = availableWidth;
 
 	columns.forEach(function(column) {
 		if (isAutoColumn(column)) {
@@ -24,6 +25,10 @@ function buildColumnWidths(columns, availableWidth) {
 	});
 
 	fixedColumns.forEach(function(col) {
+		// width specified as %
+		if (typeof col.width === 'string' && /\d+%/.test(col.width) ) {
+			col.width = parseFloat(col.width)*initial_availableWidth/100;
+		}
 		if (col.width < (col._minWidth) && col.elasticWidth) {
 			col._calcWidth = col._minWidth;
 		} else {

@@ -161,6 +161,11 @@ var docDefinition = {
           // fixed width
           width: 100,
           text: 'Third column'
+        },
+        {
+          // % width
+          width: '20%',
+          text: 'Fourth column'
         }
       ],
       // optional space between columns
@@ -453,4 +458,3 @@ MIT
 pdfmake is based on a truly amazing library pdfkit.org - credits to @devongovett
 
 big thanks to @yelouafi for making this library even better
-
