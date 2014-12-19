@@ -124,7 +124,13 @@ module.exports = function(grunt) {
 
 	grunt.registerTask('test', [ 'replace:exposeTestMethods', 'jshint', 'mochacov', 'replace:hideTestMethods' ]);
 
-	grunt.registerTask('buildFonts', [ 'dump_dir' ]);
+	grunt.registerTask('fixVfsFonts', 'Adds semicolon to the end of vfs_fonts.js', function () {
+	      var file = grunt.file.read('build/vfs_fonts.js');
+	      file += ";";
+	      grunt.file.write('build/vfs_fonts.js', file);
+  	});
+
+	grunt.registerTask('buildFonts', [ 'dump_dir', 'fixVfsFonts' ]);
 	grunt.registerTask('build', [ 'replace:fixPdfKit', 'browserify', 'uglify', 'buildFonts' ]);
 
 	grunt.registerTask('default', [ 'test', 'build' ]);
