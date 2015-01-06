@@ -41,7 +41,7 @@ describe('DocMeasure', function() {
 					called = true;
 					return { items: [ 'abc' ], minWidth: 1, maxWidth: 10 };
 				}
-			}
+			};
 
 			var result = dm.measureLeaf(node);
 			assert(called);
@@ -172,7 +172,7 @@ describe('DocMeasure', function() {
 					vLineWidth: function() { return 0; },
 					hLineWidth: function() { return 0; },
 					paddingLeft: function() { return 0; },
-					paddingRight: function() { return 0; },
+					paddingRight: function() { return 0; }
 				}
 			};
 		});
@@ -373,6 +373,58 @@ describe('DocMeasure', function() {
 		it('should copy alignment from styleStack into image definition object');
 		it('should support dataUri images', function() {
 			
+		});
+	});
+
+	describe('measureDocument', function () {
+		it('should treat margin in styling properties with higher priority', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {'marginStyle': {margin: 10}}, {});
+			var result = docMeasure.measureDocument({text: 'test', style:'marginStyle', margin:[5,5,5,5]});
+			assert.deepEqual(result._margin, [5, 5, 5, 5]);
+		});
+
+		it('should apply margins defined in the styles', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {'topLevel': {margin: [123, 3, 5, 6]}}, {});
+			var result = docMeasure.measureDocument({text: 'test', style: 'topLevel'});
+			assert.deepEqual(result._margin, [123, 3, 5, 6]);
+		});
+
+		it('should apply sublevel styles not to parent', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {'topLevel': {margin: [123, 3, 5, 6]}, 'subLevel': {margin: 5}}, {});
+			var result = docMeasure.measureDocument({ul: ['one', 'two', {text: 'three', style:'subLevel'}], style: 'topLevel'});
+			console.log('resul', result);
+			assert.deepEqual(result._margin, [123, 3, 5, 6]);
+			assert.equal(result.ul[0]._margin, null);
+			assert.equal(result.ul[1]._margin, null);
+			assert.deepEqual(result.ul[2]._margin, [5, 5, 5, 5]);
+		});
+
+		it('should process marginLeft property if defined', function () {
+			var result = docMeasure.measureDocument({text: 'some text', marginLeft:5});
+				assert.deepEqual(result._margin, [5, 0, 0, 0]);
+		});
+
+		it('should process marginRight property if defined', function () {
+			var result = docMeasure.measureDocument({text: 'some text', marginRight:5});
+			assert.deepEqual(result._margin, [0, 0, 5, 0]);
+		});
+
+		it('should process multiple single margin properties if defined', function () {
+			var result = docMeasure.measureDocument({text: 'some text', marginRight:5, marginTop:10, marginBottom:2});
+			assert.deepEqual(result._margin, [0, 10, 5, 2]);
+		});
+
+		it('should treat margin property with higher priority than single margin properties', function () {
+			var result = docMeasure.measureDocument({text: 'some text', marginRight:5, marginTop:10, marginBottom:2, margin:12});
+			assert.deepEqual(result._margin, [12, 12, 12, 12]);
+		});
+
+		it('should override only left margin if marginLeft is defined', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {'topLevel': {margin: [123, 3, 5, 6]}, 'subLevel': {marginLeft: 5}}, {});
+			var result = docMeasure.measureDocument({ul: ['one', 'two', {text: 'three', style:'subLevel'}], style: 'topLevel'});
+			console.log('resul', result);
+			assert.deepEqual(result._margin, [123, 3, 5, 6]);
+			assert.deepEqual(result.ul[2]._margin, [5, 0, 0, 0]);
 		});
 	});
 });

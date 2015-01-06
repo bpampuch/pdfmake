@@ -81,17 +81,39 @@ DocMeasure.prototype.measureNode = function(node) {
 	function getNodeMargin() {
 		var margin = node.margin;
 
-		if (!margin && node.style) {
-			var styleArray = (node.style instanceof Array) ? node.style : [ node.style ];
+		function processSingleMargins(node){
+			if (node.marginLeft || node.marginTop || node.marginRight || node.marginBottom) {
+				return [
+					node.marginLeft || 0,
+					node.marginTop || 0,
+					node.marginRight || 0,
+					node.marginBottom || 0
+				];
+			}
+		}
 
-			for(var i = styleArray.length - 1; i >= 0; i--) {
+		function getStyleMargin(styleArray) {
+			for (var i = styleArray.length - 1; i >= 0; i--) {
 				var styleName = styleArray[i];
 				var style = self.styleStack.styleDictionary[styleName];
+
 				if (style && style.margin) {
-					margin = style.margin;
-					break;
+					return style.margin;
+				}
+
+				if(style){
+					return processSingleMargins(style);
 				}
 			}
+		}
+
+		if (!margin) {
+			margin = processSingleMargins(node);
+		}
+
+		if (!margin && node.style) {
+			var styleArray = (node.style instanceof Array) ? node.style : [ node.style ];
+			margin = getStyleMargin(styleArray);
 		}
 
 		if (!margin) return null;
