@@ -372,7 +372,7 @@ describe('DocMeasure', function() {
 		it('should scales image to fit whole picture in a rectangle if fit is specified');
 		it('should copy alignment from styleStack into image definition object');
 		it('should support dataUri images', function() {
-			
+
 		});
 	});
 
@@ -392,11 +392,20 @@ describe('DocMeasure', function() {
 		it('should apply sublevel styles not to parent', function () {
 			docMeasure = new DocMeasure(sampleTestProvider, {'topLevel': {margin: [123, 3, 5, 6]}, 'subLevel': {margin: 5}}, {});
 			var result = docMeasure.measureDocument({ul: ['one', 'two', {text: 'three', style:'subLevel'}], style: 'topLevel'});
-			console.log('resul', result);
 			assert.deepEqual(result._margin, [123, 3, 5, 6]);
 			assert.equal(result.ul[0]._margin, null);
 			assert.equal(result.ul[1]._margin, null);
 			assert.deepEqual(result.ul[2]._margin, [5, 5, 5, 5]);
+		});
+
+		it('should apply subsublevel styles not to parent', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {'topLevel': {margin: [123, 3, 5, 6]}, 'subLevel': {margin: 5}, 'subsubLevel': {margin: 25}}, {});
+			var result = docMeasure.measureDocument({ul: ['one', 'two', {text: 'three', style:'subLevel'}, {ol: [{text:'three A', style:'subsubLevel'}]}], style: 'topLevel'});
+			assert.deepEqual(result._margin, [123, 3, 5, 6]);
+			assert.equal(result.ul[0]._margin, null);
+			assert.equal(result.ul[1]._margin, null);
+			assert.deepEqual(result.ul[2]._margin, [5, 5, 5, 5]);
+			assert.deepEqual(result.ul[3].ol[0]._margin, [25, 25, 25, 25]);
 		});
 
 		it('should process marginLeft property if defined', function () {
@@ -419,10 +428,21 @@ describe('DocMeasure', function() {
 			assert.deepEqual(result._margin, [12, 12, 12, 12]);
 		});
 
+		it('should combine all single margins defined in style dict ', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {'style1': {marginLeft: 5}, 'style2': {marginTop: 10}}, {});
+			var result = docMeasure.measureDocument({text: 'some text', style:['style1', 'style2']});
+			assert.deepEqual(result._margin, [5, 10, 0, 0]);
+		});
+
+		it('should combine the single margin defined in style dict and the object itself', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {'style1': {marginLeft: 5}}, {});
+			var result = docMeasure.measureDocument({text: 'some text', style:['style1'], marginRight: 15});
+			assert.deepEqual(result._margin, [5, 0, 15, 0]);
+		});
+
 		it('should override only left margin if marginLeft is defined', function () {
 			docMeasure = new DocMeasure(sampleTestProvider, {'topLevel': {margin: [123, 3, 5, 6]}, 'subLevel': {marginLeft: 5}}, {});
 			var result = docMeasure.measureDocument({ul: ['one', 'two', {text: 'three', style:'subLevel'}], style: 'topLevel'});
-			console.log('resul', result);
 			assert.deepEqual(result._margin, [123, 3, 5, 6]);
 			assert.deepEqual(result.ul[2]._margin, [5, 0, 0, 0]);
 		});

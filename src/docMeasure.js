@@ -79,54 +79,70 @@ DocMeasure.prototype.measureNode = function(node) {
 	}
 
 	function getNodeMargin() {
-		var margin = node.margin;
 
-		function processSingleMargins(node){
+		function processSingleMargins(node, currentMargin){
 			if (node.marginLeft || node.marginTop || node.marginRight || node.marginBottom) {
 				return [
-					node.marginLeft || 0,
-					node.marginTop || 0,
-					node.marginRight || 0,
-					node.marginBottom || 0
+					node.marginLeft || currentMargin[0] || 0,
+					node.marginTop || currentMargin[1] || 0,
+					node.marginRight || currentMargin[2]  || 0,
+					node.marginBottom || currentMargin[3]  || 0
 				];
 			}
+			return currentMargin;
 		}
 
-		function getStyleMargin(styleArray) {
+		function flattenStyleArray(styleArray){
+			var flattenedStyles = {};
 			for (var i = styleArray.length - 1; i >= 0; i--) {
 				var styleName = styleArray[i];
 				var style = self.styleStack.styleDictionary[styleName];
-
-				if (style && style.margin) {
-					return style.margin;
-				}
-
-				if(style){
-					return processSingleMargins(style);
+				for(var key in style){
+					if(style.hasOwnProperty(key)){
+						flattenedStyles[key] = style[key];
+					}
 				}
 			}
+			return flattenedStyles;
 		}
 
-		if (!margin) {
-			margin = processSingleMargins(node);
+		function convertMargin(margin) {
+			if (typeof margin === 'number' || margin instanceof Number) {
+				margin = [ margin, margin, margin, margin ];
+			} else if (margin instanceof Array) {
+				if (margin.length === 2) {
+					margin = [ margin[0], margin[1], margin[0], margin[1] ];
+				}
+			}
+			return margin;
 		}
 
-		if (!margin && node.style) {
-			var styleArray = (node.style instanceof Array) ? node.style : [ node.style ];
-			margin = getStyleMargin(styleArray);
-		}
+		var margin = [undefined, undefined, undefined, undefined];
 
-		if (!margin) return null;
+		if(node.style) {
+			var styleArray = (node.style instanceof Array) ? node.style : [node.style];
+			var flattenedStyleArray = flattenStyleArray(styleArray);
 
-		if (typeof margin === 'number' || margin instanceof Number) {
-			margin = [ margin, margin, margin, margin ];
-		} else if (margin instanceof Array) {
-			if (margin.length === 2) {
-				margin = [ margin[0], margin[1], margin[0], margin[1] ];
+			if(flattenedStyleArray) {
+				margin = processSingleMargins(flattenedStyleArray, margin);
+			}
+
+			if(flattenedStyleArray.margin){
+				margin = convertMargin(flattenedStyleArray.margin);
 			}
 		}
+		
+		margin = processSingleMargins(node, margin);
 
-		return margin;
+		if(node.margin){
+			margin = convertMargin(node.margin);
+		}
+
+		if(margin[0] === undefined && margin[1] === undefined && margin[2] === undefined && margin[3] === undefined) {
+			return null;
+		} else {
+			return margin;
+		}
 	}
 };
 
