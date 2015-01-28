@@ -9,7 +9,7 @@ var Pdfkit = require('pdfkit');
 
 describe('Printer', function () {
 
-  var SHORT_SIDE = 100, LONG_SIDE = 200;
+  var SHORT_SIDE = 1000, LONG_SIDE = 2000;
   var fontDescriptors, printer;
 
   beforeEach(function() {
@@ -98,6 +98,39 @@ describe('Printer', function () {
     assert.equal(Pdfkit.prototype.addPage.secondCall.args[0].size[1], LONG_SIDE);
     assert.equal(Pdfkit.prototype.addPage.thirdCall.args[0].size[0], SHORT_SIDE);
     assert.equal(Pdfkit.prototype.addPage.thirdCall.args[0].size[1], LONG_SIDE);
+  });
+
+
+  it('should not switch width and height for pdfkit if page orientation changes from landscape to landscape', function () {
+    printer = new Printer(fontDescriptors);
+    var docDefinition = {
+      pageOrientation: 'portrait',
+      pageSize: { width: SHORT_SIDE, height: LONG_SIDE },
+      content: [
+        {
+          text: 'Page 1'
+        },
+        {
+          text: 'Page 2',
+          pageOrientation: 'landscape'
+        },
+        {
+          text: 'Page 3 landscape again',
+          pageOrientation: 'landscape'
+        }
+      ]
+    };
+    printer.createPdfKitDocument(docDefinition);
+
+    console.log('mysterious fourth call arguments', Pdfkit.prototype.addPage.lastCall.args);
+    assert.equal(Pdfkit.prototype.addPage.callCount, 3);
+
+
+    assert(Pdfkit.prototype.addPage.firstCall.calledWith(undefined));
+    assert.equal(Pdfkit.prototype.addPage.secondCall.args[0].size[0], LONG_SIDE);
+    assert.equal(Pdfkit.prototype.addPage.secondCall.args[0].size[1], SHORT_SIDE);
+    assert.equal(Pdfkit.prototype.addPage.thirdCall.args[0].size[0], LONG_SIDE);
+    assert.equal(Pdfkit.prototype.addPage.thirdCall.args[0].size[1], SHORT_SIDE);
   });
 
 });

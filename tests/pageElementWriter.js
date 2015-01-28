@@ -279,12 +279,25 @@ describe('PageElementWriter', function() {
 
 		it('should switch width and height if page changes from landscape to portrait', function() {
 			ctx.pageOrientation = 'landscape';
+			ctx.pageSize.width = DOCUMENT_WIDTH;
+			ctx.pageSize.height = DOCUMENT_HEIGHT;
 			addOneTenthLines(6);
 			pew.moveToNextPage('portrait');
 
 			assert.equal(ctx.pages.length, 2);
-			assert.equal(ctx.pageSize.width, DOCUMENT_WIDTH);
-			assert.equal(ctx.pageSize.height, DOCUMENT_HEIGHT);
+			assert.equal(ctx.pageSize.width, DOCUMENT_HEIGHT);
+			assert.equal(ctx.pageSize.height, DOCUMENT_WIDTH);
+		});
+
+		it('should not switch width and height if page changes from landscape to landscape', function() {
+			ctx.pageOrientation = undefined;
+			addOneTenthLines(6);
+			pew.moveToNextPage('landscape');
+			pew.moveToNextPage('landscape');
+
+			assert.equal(ctx.pages.length, 3);
+			assert.equal(ctx.pageSize.width, DOCUMENT_HEIGHT);
+			assert.equal(ctx.pageSize.height, DOCUMENT_WIDTH);
 		});
 	});
 });

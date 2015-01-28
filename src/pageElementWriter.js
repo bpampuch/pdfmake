@@ -59,12 +59,14 @@ PageElementWriter.prototype.moveToNextPage = function(pageOrientation) {
 
 	if (nextPageIndex >= this.writer.context.pages.length) {
 
-		var previousPageOrientation = this.pageOrientation === undefined || this.pageOrientation == 'portrait' ? 'portrait' : 'landscape';
+		var ctxPageOrientation = this.writer.context.pageOrientation;
+    var previousPageOrientation = ctxPageOrientation === undefined || ctxPageOrientation === 'portrait' ? 'portrait' : 'landscape';
 
 		if(pageOrientation !== undefined && pageOrientation !== previousPageOrientation) {
 			var width = this.writer.context.pageSize.width;
 			this.writer.context.pageSize.width = this.writer.context.pageSize.height;
 			this.writer.context.pageSize.height = width;
+			this.writer.context.pageOrientation = pageOrientation;
 		}
 
 		// create new Page

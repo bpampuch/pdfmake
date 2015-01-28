@@ -1172,6 +1172,30 @@ describe('LayoutBuilder', function() {
 		});
 
 
+		it('should support changing the page orientation to landscape consecutively', function () {
+			var desc = [
+				{
+					text: 'Page 1, document orientation or default portrait'
+				},
+				{
+					text: 'Page 2, landscape',
+					pageOrientation: 'landscape'
+				},
+				{
+					text: 'Page 3, landscape again',
+					pageOrientation: 'landscape'
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 3);
+			assert.equal(pages[0].pageOrientation, undefined);
+			assert.equal(pages[1].pageOrientation, 'landscape');
+			assert.equal(pages[2].pageOrientation, 'landscape');
+		});
+
+
 		it('should support images');
 		it('should align image properly');
 		it('should break pages if image cannot fit on current page');
