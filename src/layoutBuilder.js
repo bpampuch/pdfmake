@@ -208,10 +208,12 @@ LayoutBuilder.prototype.processNode = function(node) {
 		var margin = node._margin;
 
     if (node.pageBreak === 'before') {
-        self.writer.moveToNextPage();
+      self.writer.moveToNextPage();
     }
-
-		if (margin) {
+    if (node.pageOrientation) {
+      self.writer.moveToNextPage(node.pageOrientation);
+    }
+    if (margin) {
 			self.writer.context().moveDown(margin[1]);
 			self.writer.context().addMargin(margin[0], margin[2]);
 		}
@@ -224,8 +226,9 @@ LayoutBuilder.prototype.processNode = function(node) {
 		}
 
     if (node.pageBreak === 'after') {
-        self.writer.moveToNextPage();
+      self.writer.moveToNextPage();
     }
+
 	}
 };
 

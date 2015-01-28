@@ -51,15 +51,25 @@ PageElementWriter.prototype.addFragment = function(fragment, useBlockXOffset, us
 	}
 };
 
-PageElementWriter.prototype.moveToNextPage = function() {
+PageElementWriter.prototype.moveToNextPage = function(pageOrientation) {
 	var nextPageIndex = this.writer.context.page + 1;
 
 	var prevPage = this.writer.context.page;
 	var prevY = this.writer.context.y;
 
 	if (nextPageIndex >= this.writer.context.pages.length) {
+
+		var previousPageOrientation = this.pageOrientation === undefined || this.pageOrientation == 'portrait' ? 'portrait' : 'landscape';
+
+		if(pageOrientation !== undefined && pageOrientation !== previousPageOrientation) {
+			var width = this.writer.context.pageSize.width;
+			this.writer.context.pageSize.width = this.writer.context.pageSize.height;
+			this.writer.context.pageSize.height = width;
+		}
+
 		// create new Page
-        this.writer.context.addPage();
+    var newPage = this.writer.context.addPage();
+		newPage.pageOrientation = pageOrientation;
 
 		// add repeatable fragments
 		this.repeatables.forEach(function(rep) {

@@ -117,15 +117,16 @@ DocumentContext.prototype.moveDown = function(offset) {
 DocumentContext.prototype.moveToPageTop = function() {
 	this.y = this.pageMargins.top;
 	this.availableHeight = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+	this.availableWidth = this.pageSize.width - this.pageMargins.left - this.pageMargins.right;
 };
 
 DocumentContext.prototype.addPage = function() {
 	var page = this.getDefaultPage();
-    this.pages.push(page);
+	this.pages.push(page);
 	this.page = this.pages.length - 1;
 	this.moveToPageTop();
 
-    this.tracker.emit('pageAdded');
+	this.tracker.emit('pageAdded');
     
 	return page;
 };

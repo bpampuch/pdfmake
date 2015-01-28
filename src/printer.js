@@ -200,10 +200,21 @@ function StringObject(str){
 	};
 }
 
+function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
+	var previousPageOrientation = pdfKitDoc.options.size[0] > pdfKitDoc.options.size[1] ? 'landscape' : 'portrait';
+
+	if(currentPage.pageOrientation !== undefined && currentPage.pageOrientation !== previousPageOrientation) {
+		var width = pdfKitDoc.options.size[0];
+		var height = pdfKitDoc.options.size[1];
+		pdfKitDoc.options.size = [height, width];
+	}
+}
+
 function renderPages(pages, fontProvider, pdfKitDoc) {
-	for(var i = 0, l = pages.length; i < l; i++) {
+	for (var i = 0; i < pages.length; i++) {
 		if (i > 0) {
-			pdfKitDoc.addPage();
+			updatePageOrientationInOptions(pages[i], pdfKitDoc);
+			pdfKitDoc.addPage(pdfKitDoc.options);
 		}
 
 		setFontRefs(fontProvider, pdfKitDoc);

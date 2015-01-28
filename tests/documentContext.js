@@ -232,7 +232,7 @@ describe('DocumentContext', function() {
 			assert.equal(page, pc.pages[pc.pages.length - 1]);
 		});
 
-		it('should set y and availableHeight to initial values', function() {
+		it('should set y, availableHeight and availableWidth to initial values', function() {
 			pc.y = 123;
 			pc.availableHeight = 123;
 
@@ -240,6 +240,7 @@ describe('DocumentContext', function() {
 
 			assert.equal(pc.y, 60);
 			assert.equal(pc.availableHeight, 800 - 60 - 60);
+			assert.equal(pc.availableWidth, 400 - 40 - 40);
 		});
 	});
 
