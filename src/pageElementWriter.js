@@ -79,7 +79,7 @@ PageElementWriter.prototype.moveToNextPage = function(pageOrientation) {
 		}, this);
 	} else {
 		this.writer.context.page = nextPageIndex;
-		this.writer.context.moveToPageTop();
+		this.writer.context.initializePage();
 
 		this.repeatables.forEach(function(rep) {
 			this.writer.context.moveDown(rep.height);

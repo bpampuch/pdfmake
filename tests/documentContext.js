@@ -232,16 +232,28 @@ describe('DocumentContext', function() {
 			assert.equal(page, pc.pages[pc.pages.length - 1]);
 		});
 
-		it('should set y, availableHeight and availableWidth to initial values', function() {
+		it('should set y, availableHeight and availableWidth on page to initial values', function() {
 			pc.y = 123;
 			pc.availableHeight = 123;
 
-			pc.moveToPageTop();
+			pc.initializePage();
 
 			assert.equal(pc.y, 60);
 			assert.equal(pc.availableHeight, 800 - 60 - 60);
 			assert.equal(pc.availableWidth, 400 - 40 - 40);
 		});
+
+    it('should keep column width when in column group, but set page width', function() {
+      pc.beginColumnGroup();
+      pc.beginColumn(100, 0, {});
+      pc.initializePage();
+
+      assert.equal(pc.availableWidth, 100);
+
+      pc.completeColumnGroup();
+
+      assert.equal(pc.availableWidth, 400 - 40 - 40);
+    });
 	});
 
 	describe('bottomMostContext', function() {

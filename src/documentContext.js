@@ -114,17 +114,25 @@ DocumentContext.prototype.moveDown = function(offset) {
 	return this.availableHeight > 0;
 };
 
-DocumentContext.prototype.moveToPageTop = function() {
+DocumentContext.prototype.initializePage = function() {
 	this.y = this.pageMargins.top;
 	this.availableHeight = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-	this.availableWidth = this.pageSize.width - this.pageMargins.left - this.pageMargins.right;
+	this.pageSnapshot().availableWidth = this.pageSize.width - this.pageMargins.left - this.pageMargins.right;
+};
+
+DocumentContext.prototype.pageSnapshot = function(){
+  if(this.snapshots[0]){
+    return this.snapshots[0];
+  } else {
+    return this;
+  }
 };
 
 DocumentContext.prototype.addPage = function() {
 	var page = this.getDefaultPage();
 	this.pages.push(page);
 	this.page = this.pages.length - 1;
-	this.moveToPageTop();
+	this.initializePage();
 
 	this.tracker.emit('pageAdded');
     
