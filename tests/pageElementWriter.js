@@ -1,11 +1,11 @@
 var assert = require('assert');
+var sinon = require('sinon');
 
 var DocumentContext = require('../src/documentContext');
 var PageElementWriter = require('../src/pageElementWriter');
 
 describe('PageElementWriter', function() {
-	var pew;
-	var ctx;
+	var pew, ctx, tracker;
 
 	var DOCUMENT_WIDTH = 600;
 	var DOCUMENT_HEIGHT = 1100;
@@ -64,7 +64,8 @@ describe('PageElementWriter', function() {
 	}
 	beforeEach(function() {
 		ctx = new DocumentContext({ width: DOCUMENT_WIDTH, height: DOCUMENT_HEIGHT }, MARGINS);
-		pew = new PageElementWriter(ctx);
+		tracker = { emit: sinon.spy() };
+		pew = new PageElementWriter(ctx, tracker);
 	});
 
 	describe('addLine', function() {
@@ -260,6 +261,27 @@ describe('PageElementWriter', function() {
 			assert.equal(ctx.pages[1].items[3].item.y, ctx.pages[1].items[2].item.y + AVAILABLE_HEIGHT/10);
 		});
 
+		it('should reserve space for repeatable fragment to the top when reusing page', function() {
+			addOneTenthLines(6);
+
+			pew.beginUnbreakableBlock();
+			var uCtx = pew.writer.context;
+
+			addOneTenthLines(3);
+			uCtx.pages[0].items.forEach(function(item) { item.item.marker = 'rep'; });
+			var rep = pew.currentBlockToRepeatable();
+			pew.pushToRepeatables(rep);
+			pew.commitUnbreakableBlock();
+
+			ctx.pages.push({items: []});
+
+			addOneTenthLines(2);
+
+			assert.equal(ctx.pages.length, 2);
+
+			assert.equal(ctx.pages[1].items[0].item.y, MARGINS.top + 3 * AVAILABLE_HEIGHT/10);
+		});
+
 		it('should add repeatable fragments in the same order they have been added to the repeatable fragments collection', function() {
 			addOneTenthLines(9);
 			pew.repeatables.push(createRepeatable('rep1', 50));
@@ -309,6 +331,34 @@ describe('PageElementWriter', function() {
 			assert.equal(ctx.pages.length, 3);
 			assert.equal(ctx.pageSize.width, DOCUMENT_HEIGHT);
 			assert.equal(ctx.pageSize.height, DOCUMENT_WIDTH);
+		});
+
+		it('should create new page', function () {
+			addOneTenthLines(1);
+			pew.moveToNextPage();
+
+			assert.equal(ctx.pages.length, 2);
+			assert.equal(ctx.y, MARGINS.top);
+			assert.equal(ctx.availableHeight, AVAILABLE_HEIGHT);
+			assert.equal(ctx.availableWidth, AVAILABLE_WIDTH);
+			assert.equal(tracker.emit.callCount, 2); // move to first page to write a line, and then move to next page
+			assert.deepEqual(tracker.emit.getCall(1).args, ['pageChanged', {prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top}]);
+		});
+
+		it('should use existing page', function () {
+			addOneTenthLines(1);
+			ctx.pages.push({});
+			ctx.availableWidth = 'garbage';
+			ctx.availableHeight = 'garbage';
+
+			pew.moveToNextPage();
+
+			assert.equal(ctx.page, 1);
+			assert.equal(ctx.y, MARGINS.top);
+			assert.equal(ctx.availableHeight, AVAILABLE_HEIGHT);
+			assert.equal(ctx.availableWidth, AVAILABLE_WIDTH);
+			assert.equal(tracker.emit.callCount, 2);
+			assert.deepEqual(tracker.emit.getCall(1).args, ['pageChanged', {prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top}]);
 		});
 	});
 });

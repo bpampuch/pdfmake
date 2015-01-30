@@ -3,7 +3,7 @@ var assert = require('assert');
 var ElementWriter = require('../src/elementWriter');
 
 describe('ElementWriter', function() {
-	var ew, ctx, page;
+	var ew, ctx, page, tracker;
 
 	beforeEach(function() {
 		page = { items: [] };
@@ -18,7 +18,8 @@ describe('ElementWriter', function() {
 				ctx.availableHeight -= offset;
 			}
 		};
-		ew = new ElementWriter(ctx);
+		tracker = {emit: function() {}};
+		ew = new ElementWriter(ctx, tracker);
 
 	});
 
