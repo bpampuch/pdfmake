@@ -57,7 +57,8 @@ PageElementWriter.prototype.moveToNextPage = function(pageOrientation) {
 	var prevPage = this.writer.context.page;
 	var prevY = this.writer.context.y;
 
-	if (nextPageIndex >= this.writer.context.pages.length) {
+	var newPageNeeded = nextPageIndex >= this.writer.context.pages.length;
+  if (newPageNeeded) {
 
 		var ctxPageOrientation = this.writer.context.pageOrientation;
     var previousPageOrientation = ctxPageOrientation === undefined || ctxPageOrientation === 'portrait' ? 'portrait' : 'landscape';
@@ -124,7 +125,7 @@ PageElementWriter.prototype.commitUnbreakableBlock = function(forcedX, forcedY) 
 					}
 				}
 			} else {
-				fragment.height = unbreakableContext.y;	
+				fragment.height = unbreakableContext.y;
 			}
 
 			if (forcedX !== undefined || forcedY !== undefined) {

@@ -7,8 +7,19 @@ describe('PageElementWriter', function() {
 	var pew;
 	var ctx;
 
-	var DOCUMENT_WIDTH = 400;
-	var DOCUMENT_HEIGHT = 800;
+	var DOCUMENT_WIDTH = 600;
+	var DOCUMENT_HEIGHT = 1100;
+
+
+	var MARGINS = {
+		left: 40,
+		right: 60,
+		top: 30,
+		bottom: 70
+	};
+
+	AVAILABLE_HEIGHT = 1000;
+	AVAILABLE_WIDTH = 500;
 
 	function buildLine(height, alignment, x, y) {
 		return {
@@ -33,7 +44,7 @@ describe('PageElementWriter', function() {
 
 	function addOneTenthLines(count) {
 		for(var i = 0; i < count; i++) {
-			var line = buildLine((800-60-60)/10);
+			var line = buildLine(AVAILABLE_HEIGHT/10);
 			pew.addLine(line);
 		}
 	}
@@ -52,7 +63,7 @@ describe('PageElementWriter', function() {
 		return rep;
 	}
 	beforeEach(function() {
-		ctx = new DocumentContext({ width: DOCUMENT_WIDTH, height: DOCUMENT_HEIGHT }, { left: 40, right: 40, top: 60, bottom: 60 });
+		ctx = new DocumentContext({ width: DOCUMENT_WIDTH, height: DOCUMENT_HEIGHT }, MARGINS);
 		pew = new PageElementWriter(ctx);
 	});
 
@@ -74,8 +85,8 @@ describe('PageElementWriter', function() {
 		it('should subtract line height from availableHeight when adding a line and update current y position', function() {
 			pew.addLine(buildLine(40));
 
-			assert.equal(ctx.y, 60 + 40);
-			assert.equal(ctx.availableHeight, 800 - 60 - 60 - 40);
+			assert.equal(ctx.y, MARGINS.top + 40);
+			assert.equal(ctx.availableHeight, AVAILABLE_HEIGHT - 40);
 		});
 
 		it('should add repeatable fragments if they exist and a new page is created before adding the line', function() {
@@ -169,10 +180,10 @@ describe('PageElementWriter', function() {
 
 			pew.commitUnbreakableBlock();
 
-			assert.equal(ctx.pages[1].items[0].item.x, 40);
-			assert.equal(ctx.pages[1].items[0].item.y, 60);
-			assert.equal(ctx.pages[1].items[1].item.x, 40);
-			assert.equal(ctx.pages[1].items[1].item.y, 60 + ctx.pages[1].items[0].item.getHeight());
+			assert.equal(ctx.pages[1].items[0].item.x, MARGINS.left);
+			assert.equal(ctx.pages[1].items[0].item.y, MARGINS.top);
+			assert.equal(ctx.pages[1].items[1].item.x, MARGINS.left);
+			assert.equal(ctx.pages[1].items[1].item.y, MARGINS.top + AVAILABLE_HEIGHT/10);
 		});
 
 		it('should add lines below any repeatable fragments if they exist and a new page is created', function() {
@@ -190,8 +201,8 @@ describe('PageElementWriter', function() {
 			assert.equal(ctx.pages.length, 2);
 			assert.equal(ctx.pages[1].items[0].item.marker, 'rep');
 			assert.equal(ctx.pages[1].items[1].item.marker, 'another');
-			assert.equal(ctx.pages[1].items[1].item.x, 40);
-			assert.equal(ctx.pages[1].items[1].item.y, 60 + 50);
+			assert.equal(ctx.pages[1].items[1].item.x, MARGINS.left);
+			assert.equal(ctx.pages[1].items[1].item.y, MARGINS.top + 50);
 		});
 
 		it('should make all further calls to addLine add lines again to the page when transaction finishes', function() {
@@ -244,9 +255,9 @@ describe('PageElementWriter', function() {
 			assert.equal(ctx.pages[1].items[0].item.marker, 'rep');
 			assert.equal(ctx.pages[1].items[1].item.marker, 'rep');
 			assert.equal(ctx.pages[1].items[2].item.marker, 'rep');
-			assert.equal(ctx.pages[1].items[2].item.y, 60 + 2 * 68);
+			assert.equal(ctx.pages[1].items[2].item.y, MARGINS.top + 2 * AVAILABLE_HEIGHT/10);
 			assert(!ctx.pages[1].items[3].item.marker);
-			assert.equal(ctx.pages[1].items[3].item.y, ctx.pages[1].items[2].item.y + 68);
+			assert.equal(ctx.pages[1].items[3].item.y, ctx.pages[1].items[2].item.y + AVAILABLE_HEIGHT/10);
 		});
 
 		it('should add repeatable fragments in the same order they have been added to the repeatable fragments collection', function() {
@@ -258,11 +269,11 @@ describe('PageElementWriter', function() {
 			assert.equal(ctx.pages.length, 2);
 			assert.equal(ctx.pages[1].items.length, 3);
 			assert.equal(ctx.pages[1].items[0].item.marker, 'rep1');
-			assert.equal(ctx.pages[1].items[0].item.y, 60);
+			assert.equal(ctx.pages[1].items[0].item.y, MARGINS.top);
 			assert.equal(ctx.pages[1].items[1].item.marker, 'rep2');
-			assert.equal(ctx.pages[1].items[1].item.y, 60 + 50);
+			assert.equal(ctx.pages[1].items[1].item.y, MARGINS.top + 50);
 			assert(!ctx.pages[1].items[2].item.marker);
-			assert.equal(ctx.pages[1].items[2].item.y, 60 + 50 + 60);
+			assert.equal(ctx.pages[1].items[2].item.y, MARGINS.top + 50 + 60);
 		});
 
 		it('should switch width and height if page changes from portrait to landscape', function() {
