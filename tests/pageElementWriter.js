@@ -5,10 +5,11 @@ var DocumentContext = require('../src/documentContext');
 var PageElementWriter = require('../src/pageElementWriter');
 
 describe('PageElementWriter', function() {
-	var pew, ctx, tracker;
+	var pew, ctx, tracker, pageSize;
 
 	var DOCUMENT_WIDTH = 600;
 	var DOCUMENT_HEIGHT = 1100;
+	var DOCUMENT_ORIENTATION = 'portrait';
 
 
 	var MARGINS = {
@@ -63,7 +64,8 @@ describe('PageElementWriter', function() {
 		return rep;
 	}
 	beforeEach(function() {
-		ctx = new DocumentContext({ width: DOCUMENT_WIDTH, height: DOCUMENT_HEIGHT }, MARGINS);
+		pageSize = {width: DOCUMENT_WIDTH, height: DOCUMENT_HEIGHT, orientation: DOCUMENT_ORIENTATION};
+    ctx = new DocumentContext(pageSize, MARGINS);
 		tracker = { emit: sinon.spy() };
 		pew = new PageElementWriter(ctx, tracker);
 	});
@@ -273,7 +275,8 @@ describe('PageElementWriter', function() {
 			pew.pushToRepeatables(rep);
 			pew.commitUnbreakableBlock();
 
-			ctx.pages.push({items: []});
+
+      ctx.pages.push({items: [], pageSize: pageSize});
 
 			addOneTenthLines(2);
 
@@ -300,26 +303,30 @@ describe('PageElementWriter', function() {
 
 		it('should switch width and height if page changes from portrait to landscape', function() {
 			addOneTenthLines(6);
-			assert.equal(ctx.pageSize.width, DOCUMENT_WIDTH);
-			assert.equal(ctx.pageSize.height, DOCUMENT_HEIGHT);
+			assert.equal(ctx.getCurrentPage().pageSize.width, DOCUMENT_WIDTH);
+			assert.equal(ctx.getCurrentPage().pageSize.height, DOCUMENT_HEIGHT);
+			assert.equal(ctx.getCurrentPage().pageSize.orientation, DOCUMENT_ORIENTATION);
 
 			pew.moveToNextPage('landscape');
 
 			assert.equal(ctx.pages.length, 2);
-			assert.equal(ctx.pageSize.width, DOCUMENT_HEIGHT);
-			assert.equal(ctx.pageSize.height, DOCUMENT_WIDTH);
+			assert.equal(ctx.getCurrentPage().pageSize.width, DOCUMENT_HEIGHT);
+			assert.equal(ctx.getCurrentPage().pageSize.height, DOCUMENT_WIDTH);
+			assert.equal(ctx.getCurrentPage().pageSize.orientation, 'landscape');
 		});
 
 		it('should switch width and height if page changes from landscape to portrait', function() {
-			ctx.pageOrientation = 'landscape';
-			ctx.pageSize.width = DOCUMENT_WIDTH;
-			ctx.pageSize.height = DOCUMENT_HEIGHT;
+			ctx.getCurrentPage().pageSize.orientation = 'landscape';
+			ctx.getCurrentPage().pageSize.width = DOCUMENT_WIDTH;
+			ctx.getCurrentPage().pageSize.height = DOCUMENT_HEIGHT;
+			
 			addOneTenthLines(6);
 			pew.moveToNextPage('portrait');
 
 			assert.equal(ctx.pages.length, 2);
-			assert.equal(ctx.pageSize.width, DOCUMENT_HEIGHT);
-			assert.equal(ctx.pageSize.height, DOCUMENT_WIDTH);
+			assert.equal(ctx.getCurrentPage().pageSize.width, DOCUMENT_HEIGHT);
+			assert.equal(ctx.getCurrentPage().pageSize.height, DOCUMENT_WIDTH);
+			assert.equal(ctx.getCurrentPage().pageSize.orientation, 'portrait');
 		});
 
 		it('should not switch width and height if page changes from landscape to landscape', function() {
@@ -329,8 +336,9 @@ describe('PageElementWriter', function() {
 			pew.moveToNextPage('landscape');
 
 			assert.equal(ctx.pages.length, 3);
-			assert.equal(ctx.pageSize.width, DOCUMENT_HEIGHT);
-			assert.equal(ctx.pageSize.height, DOCUMENT_WIDTH);
+			assert.equal(ctx.getCurrentPage().pageSize.width, DOCUMENT_HEIGHT);
+			assert.equal(ctx.getCurrentPage().pageSize.height, DOCUMENT_WIDTH);
+			assert.equal(ctx.getCurrentPage().pageSize.orientation, 'landscape');
 		});
 
 		it('should create new page', function () {
@@ -347,7 +355,7 @@ describe('PageElementWriter', function() {
 
 		it('should use existing page', function () {
 			addOneTenthLines(1);
-			ctx.pages.push({});
+			ctx.pages.push({items: [], pageSize: pageSize});
 			ctx.availableWidth = 'garbage';
 			ctx.availableHeight = 'garbage';
 

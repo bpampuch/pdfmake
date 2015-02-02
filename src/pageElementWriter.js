@@ -52,45 +52,23 @@ PageElementWriter.prototype.addFragment = function(fragment, useBlockXOffset, us
 };
 
 PageElementWriter.prototype.moveToNextPage = function(pageOrientation) {
-	var nextPageIndex = this.writer.context.page + 1;
-
-	var prevPage = this.writer.context.page;
-	var prevY = this.writer.context.y;
-
-	var newPageNeeded = nextPageIndex >= this.writer.context.pages.length;
-  if (newPageNeeded) {
-
-		var ctxPageOrientation = this.writer.context.pageOrientation;
-    var previousPageOrientation = ctxPageOrientation === undefined || ctxPageOrientation === 'portrait' ? 'portrait' : 'landscape';
-
-		if(pageOrientation !== undefined && pageOrientation !== previousPageOrientation) {
-			var width = this.writer.context.pageSize.width;
-			this.writer.context.pageSize.width = this.writer.context.pageSize.height;
-			this.writer.context.pageSize.height = width;
-			this.writer.context.pageOrientation = pageOrientation;
-		}
-
-		// create new Page
-    var newPage = this.writer.context.addPage();
-		newPage.pageOrientation = pageOrientation;
-
-		// add repeatable fragments
+	
+	var nextPage = this.writer.context.moveToNextPage(pageOrientation);
+	
+  if (nextPage.newPageCreated) {
 		this.repeatables.forEach(function(rep) {
 			this.writer.addFragment(rep, true);
 		}, this);
 	} else {
-		this.writer.context.page = nextPageIndex;
-		this.writer.context.initializePage();
-
 		this.repeatables.forEach(function(rep) {
 			this.writer.context.moveDown(rep.height);
 		}, this);
 	}
 
 	this.writer.tracker.emit('pageChanged', {
-		prevPage: prevPage,
-		prevY: prevY,
-		y: this.writer.context.y
+		prevPage: nextPage.prevPage,
+		prevY: nextPage.prevY,
+		y: nextPage.y
 	});
 };
 

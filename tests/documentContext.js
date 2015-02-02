@@ -220,14 +220,22 @@ describe('DocumentContext', function() {
 	});
 
 	describe('addPage', function() {
+		
+		var pageSize;
+		
+		beforeEach(function(){
+			pageSize = {width: 200, height: 400, orientation: 'landscape'};
+		});
+		
 		it('should add a new page', function() {
-			pc.addPage();
+			
+      pc.addPage(pageSize);
 
 			assert.equal(pc.pages.length, 2);
 		});
 
 		it('should return added page', function() {
-			var page = pc.addPage();
+			var page = pc.addPage(pageSize);
 
 			assert.equal(page, pc.pages[pc.pages.length - 1]);
 		});

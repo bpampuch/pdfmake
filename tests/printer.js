@@ -41,8 +41,7 @@ describe('Printer', function () {
     assert(Pdfkit.prototype.addPage.callCount === 2);
 
     assert(Pdfkit.prototype.addPage.firstCall.calledWith(undefined));
-    assert.equal(Pdfkit.prototype.addPage.secondCall.args[0].size[0], LONG_SIDE);
-    assert.equal(Pdfkit.prototype.addPage.secondCall.args[0].size[1], SHORT_SIDE);
+    assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
   });
 
   it('should pass switched width and height to pdfkit if page orientation changes from portrait to landscape', function () {
@@ -65,8 +64,7 @@ describe('Printer', function () {
     assert(Pdfkit.prototype.addPage.callCount === 2);
 
     assert(Pdfkit.prototype.addPage.firstCall.calledWith(undefined));
-    assert.equal(Pdfkit.prototype.addPage.secondCall.args[0].size[0], LONG_SIDE);
-    assert.equal(Pdfkit.prototype.addPage.secondCall.args[0].size[1], SHORT_SIDE);
+    assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
   });
 
   it('should pass switched width and height to pdfkit if page orientation changes from landscape to portrait', function () {
@@ -94,10 +92,8 @@ describe('Printer', function () {
     assert(Pdfkit.prototype.addPage.callCount === 3);
 
     assert(Pdfkit.prototype.addPage.firstCall.calledWith(undefined));
-    assert.equal(Pdfkit.prototype.addPage.secondCall.args[0].size[0], SHORT_SIDE);
-    assert.equal(Pdfkit.prototype.addPage.secondCall.args[0].size[1], LONG_SIDE);
-    assert.equal(Pdfkit.prototype.addPage.thirdCall.args[0].size[0], SHORT_SIDE);
-    assert.equal(Pdfkit.prototype.addPage.thirdCall.args[0].size[1], LONG_SIDE);
+    assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
+    assert.deepEqual(Pdfkit.prototype.addPage.thirdCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
   });
 
 
@@ -127,10 +123,8 @@ describe('Printer', function () {
 
 
     assert(Pdfkit.prototype.addPage.firstCall.calledWith(undefined));
-    assert.equal(Pdfkit.prototype.addPage.secondCall.args[0].size[0], LONG_SIDE);
-    assert.equal(Pdfkit.prototype.addPage.secondCall.args[0].size[1], SHORT_SIDE);
-    assert.equal(Pdfkit.prototype.addPage.thirdCall.args[0].size[0], LONG_SIDE);
-    assert.equal(Pdfkit.prototype.addPage.thirdCall.args[0].size[1], SHORT_SIDE);
+    assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
+    assert.deepEqual(Pdfkit.prototype.addPage.thirdCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
   });
 
 });

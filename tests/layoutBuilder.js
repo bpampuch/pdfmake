@@ -46,7 +46,7 @@ describe('LayoutBuilder', function() {
 	var builder;
 
 	beforeEach(function() {
-		builder = new LayoutBuilder({ width: 400, height: 800 }, { left: 40, right: 40, top: 40, bottom: 40 });
+		builder = new LayoutBuilder({ width: 400, height: 800, orientation: 'portrait' }, { left: 40, right: 40, top: 40, bottom: 40 });
 		builder.pages = [];
 		builder.context = [ { page: -1, availableWidth: 320, availableHeight: 0 }];
 		builder.styleStack = new StyleContextStack();
@@ -1136,7 +1136,6 @@ describe('LayoutBuilder', function() {
 		});
 
 		it('should support a switch of page orientation within a document', function () {
-			var defaultDocumentOrientation = undefined;
 			var desc = [
 				{
 					text: 'Page 1, document orientation or default portrait'
@@ -1149,8 +1148,8 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 2);
-			assert.equal(pages[0].pageOrientation, defaultDocumentOrientation);
-			assert.equal(pages[1].pageOrientation, 'landscape');
+			assert.equal(pages[0].pageSize.orientation, 'portrait');
+			assert.equal(pages[1].pageSize.orientation, 'landscape');
 		});
 
 		it('should support combinations of page breaks and page orientation changes', function () {
@@ -1167,8 +1166,8 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 3);
-			assert.equal(pages[1].pageOrientation, undefined);
-			assert.equal(pages[2].pageOrientation, 'landscape');
+			assert.equal(pages[1].pageSize.orientation, 'portrait');
+			assert.equal(pages[2].pageSize.orientation, 'landscape');
 		});
 
 
@@ -1190,9 +1189,9 @@ describe('LayoutBuilder', function() {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
 			assert.equal(pages.length, 3);
-			assert.equal(pages[0].pageOrientation, undefined);
-			assert.equal(pages[1].pageOrientation, 'landscape');
-			assert.equal(pages[2].pageOrientation, 'landscape');
+			assert.equal(pages[0].pageSize.orientation, 'portrait');
+			assert.equal(pages[1].pageSize.orientation, 'landscape');
+			assert.equal(pages[2].pageSize.orientation, 'landscape');
 		});
 
 
@@ -1304,7 +1303,7 @@ describe('LayoutBuilder', function() {
 		}
 
 		beforeEach(function() {
-			var pageSize = { width: 400, height: 800 };
+			var pageSize = { width: 400, height: 800, orientation: 'portrait' };
 			var pageMargins = { left: 40, top: 40, bottom: 40, right: 40};
 
 			builder2 = new LayoutBuilder(pageSize, pageMargins, {});
