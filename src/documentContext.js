@@ -125,8 +125,10 @@ DocumentContext.prototype.pageSnapshot = function(){
   }
 };
 
-function pageOrientation(pageOrientationString){
-	if(pageOrientationString === 'landscape'){
+function pageOrientation(pageOrientationString, currentPageOrientation){
+	if(pageOrientationString === undefined) {
+		return currentPageOrientation;
+	} else if(pageOrientationString === 'landscape'){
 		return 'landscape';
 	} else {
 		return 'portrait';
@@ -135,7 +137,7 @@ function pageOrientation(pageOrientationString){
 
 var getPageSize = function (currentPage, newPageOrientation) {
 	
-	newPageOrientation = pageOrientation(newPageOrientation);
+	newPageOrientation = pageOrientation(newPageOrientation, currentPage.pageSize.orientation);
 	
 	if(newPageOrientation !== currentPage.pageSize.orientation) {
 		return {
