@@ -81,7 +81,7 @@ LayoutBuilder.prototype.addBackground = function(background) {
 };
 
 LayoutBuilder.prototype.addStaticRepeatable = function(node, sizeFunction) {
-  this.addDynamicRepeatable(function() {return node}, sizeFunction);
+  this.addDynamicRepeatable(function() {return node;}, sizeFunction);
 };
 
 LayoutBuilder.prototype.addDynamicRepeatable = function(nodeGetter, sizeFunction) {
@@ -118,7 +118,7 @@ LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
       y: pageSize.height - pageMargins.bottom,
       width: pageSize.width,
       height: pageMargins.bottom
-    }
+    };
   };
   
   if(isFunction(header)) {
