@@ -20,10 +20,12 @@ function PageElementWriter(context, tracker) {
 }
 
 PageElementWriter.prototype.addLine = function(line, dontUpdateContextPosition, index) {
-	if (!this.writer.addLine(line, dontUpdateContextPosition, index)) {
+  var position = this.writer.addLine(line, dontUpdateContextPosition, index);
+  if (!position) {
 		this.moveToNextPage();
-		this.writer.addLine(line, dontUpdateContextPosition, index);
+		position = this.writer.addLine(line, dontUpdateContextPosition, index);
 	}
+  return position;
 };
 
 PageElementWriter.prototype.addImage = function(image, index) {

@@ -27,7 +27,8 @@ function addPageItem(page, item, index) {
 ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition, index) {
 	var height = line.getHeight();
 	var context = this.context;
-	var page = context.getCurrentPage();
+	var page = context.getCurrentPage(),
+      position = context.getCurrentPosition();
 
 	if (context.availableHeight < height || !page) {
 		return false;
@@ -46,7 +47,7 @@ ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition, inde
 
 	if (!dontUpdateContextPosition) context.moveDown(height);
 
-	return true;
+	return position;
 };
 
 ElementWriter.prototype.alignLine = function(line) {

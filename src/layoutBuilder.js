@@ -1,6 +1,7 @@
 /* jslint node: true */
 'use strict';
 
+var _ = require('lodash');
 var TraversalTracker = require('./traversalTracker');
 var DocMeasure = require('./docMeasure');
 var DocumentContext = require('./documentContext');
@@ -44,9 +45,52 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
  * @param {Object} defaultStyle default style definition
  * @return {Array} an array of pages
  */
-LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark) {
-	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
+LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
 
+  function addPageBreaksIfNecessary(linearNodeList) {
+    _.each(linearNodeList, function(node) {
+      var nodeInfo = _.pick(node, ['id', 'text']);
+      nodeInfo.startPosition = _.first(node.positions);
+      nodeInfo.pageNumbers = _.chain(node.positions).map('pageNumber').uniq().value();
+
+      node.nodeInfo = nodeInfo;
+    });
+
+    return _.any(linearNodeList, function (node, index, followingNodeList) {
+
+      if (_.isUndefined(node.stack) && _.isUndefined(node.pageOrientation) && node.pageBreak !== 'before') {
+        var pageNumber = _.first(node.nodeInfo.pageNumbers);
+        var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
+          return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
+        }).value();
+        if (pageBreakBeforeFct(node.nodeInfo, _.map(followingNodesOnPage, 'nodeInfo'))) {
+          node.pageBreak = 'before';
+          return true;
+        }
+      }
+    });
+  }
+
+  if(!isFunction(pageBreakBeforeFct)){
+    pageBreakBeforeFct = function(){
+      return false;
+    };
+  }
+
+  this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
+
+  var result, reLayout = false;
+  do {
+    result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+    reLayout = addPageBreaksIfNecessary(result.linearNodeList);
+  } while (reLayout);
+
+	return result.pages;
+};
+
+LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
+
+  this.linearNodeList = [];
   docStructure = this.docMeasure.measureDocument(docStructure);
 
   this.writer = new PageElementWriter(
@@ -54,9 +98,9 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
   var _this = this;
   this.writer.context().tracker.startTracking('pageAdded', function() {
-      _this.addBackground(background);
+    _this.addBackground(background);
   });
-    
+
   this.addBackground(background);
   this.processNode(docStructure);
   this.addHeadersAndFooters(header, footer);
@@ -64,8 +108,9 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
   if(watermark != null)
     this.addWatermark(watermark, fontProvider);
 
-	return this.writer.context().pages;
+  return {pages: this.writer.context().pages, linearNodeList: this.linearNodeList};
 };
+
 
 LayoutBuilder.prototype.addBackground = function(background) {
     var backgroundGetter = isFunction(background) ? background : function() { return background; };
@@ -179,6 +224,9 @@ LayoutBuilder.prototype.addWatermark = function(watermark, fontProvider){
 
 LayoutBuilder.prototype.processNode = function(node) {
   var self = this;
+
+  this.linearNodeList.push(node);
+  node.positions = [];
 
   applyMargins(function() {
     if (node.stack) {
@@ -395,7 +443,8 @@ LayoutBuilder.prototype.processLeaf = function(node) {
 	var line = this.buildNextLine(node);
 
 	while (line) {
-		this.writer.addLine(line);
+		var positions = this.writer.addLine(line);
+    node.positions.push(positions);
 		line = this.buildNextLine(node);
 	}
 };

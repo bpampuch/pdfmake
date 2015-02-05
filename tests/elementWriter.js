@@ -3,9 +3,10 @@ var assert = require('assert');
 var ElementWriter = require('../src/elementWriter');
 
 describe('ElementWriter', function() {
-	var ew, ctx, page;
+	var ew, ctx, page, fakePosition;
 
 	beforeEach(function() {
+    fakePosition = {fake: 'position'};
 		page = { items: [] };
 		ctx = {
 			x: 10,
@@ -13,6 +14,7 @@ describe('ElementWriter', function() {
 			availableWidth: 100,
 			availableHeight: 100,
 			getCurrentPage: function() { return page; },
+			getCurrentPosition: function() { return fakePosition; },
 			moveDown: function(offset) {
 				ctx.y += offset;
 				ctx.availableHeight -= offset;
@@ -47,9 +49,10 @@ describe('ElementWriter', function() {
 		it('should add lines to the current page if there\'s enough space', function() {
 			var line = buildLine(20);
 
-			ew.addLine(line);
+			var position = ew.addLine(line)
 
 			assert.equal(page.items.length, 1);
+			assert.equal(position, fakePosition);
 		});
 
 		it('should not add line and return false if there\'s not enough space', function() {

@@ -1,4 +1,6 @@
 var assert = require('assert');
+var sinon = require('sinon');
+var _ = require('lodash');
 
 var Line = require('../src/line');
 var LayoutBuilder = require('../src/layoutBuilder');
@@ -1157,9 +1159,6 @@ describe('LayoutBuilder', function() {
 			it.skip('should support vector winding rules');
 			it.skip('should support colors');
 
-			it.skip('should support custom page breaks');
-			it.skip('should support custom page breaks inside nested elements');
-
 			it.skip('should support table styling');
 			it.skip('should support subtables');
 
@@ -1249,6 +1248,7 @@ describe('LayoutBuilder', function() {
 
 			builder2 = new LayoutBuilder(pageSize, pageMargins, {});
 			builder2.writer = new PageElementWriter(new DocumentContext(pageSize, pageMargins, true), builder2.tracker);
+      builder2.linearNodeList = [];
 		});
 
 		it('should return an empty array if no page breaks occur', function() {
@@ -1301,4 +1301,94 @@ describe('LayoutBuilder', function() {
 			assert.equal(result[1].prevY, 40 + (92 - 60) * 12);
 		});
 	});
+
+  describe('dynamic page break control', function () {
+
+    var docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction;
+
+
+    beforeEach(function(){
+      fontProvider = sampleTestProvider;
+    });
+
+    it('should create a pageBreak before', function(){
+
+      docStructure = [
+        {text: 'Text 1', id: 'text1'},
+        {text: 'Text 2', id: 'text2'}
+      ];
+      pageBreakBeforeFunction = function(node, otherNodesOnPage){
+        return node.id === 'text1';
+      };
+
+
+      var pages = builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+
+      assert.equal(pages.length, 2);
+    });
+
+    it('should not check for page break if a page break is already specified', function(){
+
+      docStructure = [
+        {text: 'Text 1', id: 'text1'},
+        {text: 'Text 2', id: 'text2', pageBreak: 'before'},
+        {text: 'Text 3', id: 'text3', pageOrientation: 'landscape'},
+        {text: 'Text 4', id: 'text4', pageOrientation: 'portrait'}
+      ];
+      pageBreakBeforeFunction = sinon.spy();
+
+
+      builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+
+      assert(pageBreakBeforeFunction.calledOnce);
+      assert.deepEqual(_.pick(pageBreakBeforeFunction.getCall(0).args[0], ['id', 'text']), {id: 'text1', text: 'Text 1'});
+    });
+
+    it('should provide the list of following nodes on the same page', function () {
+      docStructure = [
+        {text: 'Text 1 (Page 1)', id: 'text1'},
+        {text: 'Text 2 (Page 1)', id: 'text2'},
+        {text: 'Text 3 (Page 1)', id: 'text3'},
+        {text: 'Text 4 (Page 2)', id: 'text4', pageBreak: 'before'}
+      ];
+
+      pageBreakBeforeFunction = sinon.spy();
+
+
+      builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+
+      assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(0).args[1], 'id'), ['text2','text3']);
+    });
+
+    it('should provide the position of the node', function () {
+      docStructure = [
+        {text: 'Text 1 (Page 1)', id: 'text1'}
+      ];
+
+      pageBreakBeforeFunction = sinon.spy();
+
+
+      builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+
+      assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].startPosition, {pageNumber:1,left:40,top:40,verticalRatio:0,horizontalRatio:0});
+    });
+
+    it('should provide all page numbers of the node', function () {
+      var eightyLineBreaks = new Array(80).join("\n");
+      docStructure = [
+        {text: 'Text 1 (Page 1)', id: 'text1'},
+        {text: 'Text 2 (Page 1 & 2)' + eightyLineBreaks, id: 'text2'},
+        {text: 'Text 3 (Page 2)', id: 'text3'}
+      ];
+
+      pageBreakBeforeFunction = sinon.spy();
+
+
+      builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+
+      assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].pageNumbers, [1]);
+      assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageNumbers, [1, 2]);
+      assert.deepEqual(pageBreakBeforeFunction.getCall(2).args[0].pageNumbers, [2]);
+    });
+  });
 });
