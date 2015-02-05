@@ -138,7 +138,7 @@ TableProcessor.prototype.drawVerticalLine = function(x, y0, y1, vLineIndex, writ
     y1: y0,
     y2: y1,
     lineWidth: width,
-    lineColor: typeof this.layout.vlineColor === 'function' ? this.layout.vLineColor(vLineIndex, this.tableNode) : this.layout.vLineColor
+    lineColor: typeof this.layout.vLineColor === 'function' ? this.layout.vLineColor(vLineIndex, this.tableNode) : this.layout.vLineColor
   }, false, true);
 };
 
