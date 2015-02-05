@@ -55,7 +55,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
   function addPageBreaksIfNecessary(linearNodeList) {
     _.each(linearNodeList, function(node) {
-      var nodeInfo = _.pick(node, ['id', 'headlineLevel', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns']);
+      var nodeInfo = _.pick(node, ['id', 'headlineLevel', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns', 'style', 'pageOrientation']);
       nodeInfo.startPosition = _.first(node.positions);
       nodeInfo.pageNumbers = _.chain(node.positions).map('pageNumber').uniq().value();
 
@@ -64,7 +64,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
     return _.any(linearNodeList, function (node, index, followingNodeList) {
 
-      if (_.isUndefined(node.stack) && _.isUndefined(node.pageOrientation) && node.pageBreak !== 'before') {
+      if (_.isUndefined(node.stack) && node.pageBreak !== 'before') {
         var pageNumber = _.first(node.nodeInfo.pageNumbers);
         var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
           return _.contains(node0.nodeInfo.pageNumbers, pageNumber);

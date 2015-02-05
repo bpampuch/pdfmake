@@ -1318,6 +1318,7 @@ describe('LayoutBuilder', function() {
 
     beforeEach(function(){
       fontProvider = sampleTestProvider;
+      styleDictionary = {};
     });
 
     it('should create a pageBreak before', function(){
@@ -1340,9 +1341,7 @@ describe('LayoutBuilder', function() {
 
       docStructure = [
         {text: 'Text 1', id: 'text1'},
-        {text: 'Text 2', id: 'text2', pageBreak: 'before'},
-        {text: 'Text 3', id: 'text3', pageOrientation: 'landscape'},
-        {text: 'Text 4', id: 'text4', pageOrientation: 'portrait'}
+        {text: 'Text 2', id: 'text2', pageBreak: 'before'}
       ];
       pageBreakBeforeFunction = sinon.spy();
 
@@ -1391,6 +1390,19 @@ describe('LayoutBuilder', function() {
       builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
       assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].startPosition, {pageNumber:1,left:40,top:40,verticalRatio:0,horizontalRatio:0});
+    });
+
+    it('should provide the pageOrientation of the node', function () {
+      docStructure = [
+        {text: 'Text 1 (Page 1)', id: 'text1', pageOrientation: 'landscape', style: 'super-text'}
+      ];
+
+      pageBreakBeforeFunction = sinon.spy();
+
+      builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+
+      assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].pageOrientation, 'landscape');
+      assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].style, 'super-text');
     });
 
     it('should work with all specified elements', function () {
