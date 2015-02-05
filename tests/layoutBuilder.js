@@ -1369,6 +1369,18 @@ describe('LayoutBuilder', function() {
       assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(0).args[1], 'id'), ['text2','text3']);
     });
 
+    it('should provide the headlineLevel of the node', function () {
+      docStructure = [
+        {text: 'Text 1 (Page 1)', id: 'text1', headlineLevel: 6}
+      ];
+
+      pageBreakBeforeFunction = sinon.spy();
+
+      builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+
+      assert.equal(pageBreakBeforeFunction.getCall(0).args[0].headlineLevel, 6);
+    });
+
     it('should provide the position of the node', function () {
       docStructure = [
         {text: 'Text 1 (Page 1)', id: 'text1'}
@@ -1461,5 +1473,6 @@ describe('LayoutBuilder', function() {
       assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageNumbers, [1, 2]);
       assert.deepEqual(pageBreakBeforeFunction.getCall(2).args[0].pageNumbers, [2]);
     });
+
   });
 });

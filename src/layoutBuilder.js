@@ -55,7 +55,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
   function addPageBreaksIfNecessary(linearNodeList) {
     _.each(linearNodeList, function(node) {
-      var nodeInfo = _.pick(node, ['id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns']);
+      var nodeInfo = _.pick(node, ['id', 'headlineLevel', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns']);
       nodeInfo.startPosition = _.first(node.positions);
       nodeInfo.pageNumbers = _.chain(node.positions).map('pageNumber').uniq().value();
 
