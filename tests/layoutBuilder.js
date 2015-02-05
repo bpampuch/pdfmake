@@ -47,8 +47,17 @@ var emptyTableLayout = {
 describe('LayoutBuilder', function() {
 	var builder;
 
+    var imageMeasure = {
+      measureImage: function(){
+        return {
+          width: 1,
+          height: 1
+        }
+      }
+    };
+
 	beforeEach(function() {
-		builder = new LayoutBuilder({ width: 400, height: 800 }, { left: 40, right: 40, top: 40, bottom: 40 });
+		builder = new LayoutBuilder({ width: 400, height: 800 }, { left: 40, right: 40, top: 40, bottom: 40 }, imageMeasure);
 		builder.pages = [];
 		builder.context = [ { page: -1, availableWidth: 320, availableHeight: 0 }];
 		builder.styleStack = new StyleContextStack();
@@ -1256,49 +1265,49 @@ describe('LayoutBuilder', function() {
 
 			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
-			assert(result instanceof Array);
-			assert.equal(result.length, 0);
+			assert(result.pageBreaks instanceof Array);
+			assert.equal(result.pageBreaks.length, 0);
 		});
 
 		it('on page break should return an entry with ending/starting positions', function() {
 			var doc = createTable(0, 1, 10, 5);
 			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
-			assert(result instanceof Array);
-			assert.equal(result.length, 1);
-			assert.equal(result[0].prevPage, 0);
-			assert.equal(result[0].prevY, 40 + 12 * 5);
+			assert(result.pageBreaks instanceof Array);
+			assert.equal(result.pageBreaks.length, 1);
+			assert.equal(result.pageBreaks[0].prevPage, 0);
+			assert.equal(result.pageBreaks[0].prevY, 40 + 12 * 5);
 		});
 
 		it('on multi-pass page break (columns or table columns) should treat bottom-most page-break as the ending position ', function() {
 			var doc = createTable(0, 1, 10, 5, 7);
 			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
-			assert.equal(result[0].prevY, 40 + 12 * 7);
+			assert.equal(result.pageBreaks[0].prevY, 40 + 12 * 7);
 		});
 
 		it('on multiple page breaks (more than 2 pages), should return all entries with ending/starting positions', function() {
 			var doc = createTable(0, 1, 100, 90);
 			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
-			assert(result instanceof Array);
-			assert.equal(result.length, 2);
-			assert.equal(result[0].prevPage, 0);
-			assert.equal(result[0].prevY, 40 + 60 * 12);
-			assert.equal(result[1].prevPage, 1);
-			assert.equal(result[1].prevY, 40 + (90 - 60) * 12);
+			assert(result.pageBreaks instanceof Array);
+			assert.equal(result.pageBreaks.length, 2);
+			assert.equal(result.pageBreaks[0].prevPage, 0);
+			assert.equal(result.pageBreaks[0].prevY, 40 + 60 * 12);
+			assert.equal(result.pageBreaks[1].prevPage, 1);
+			assert.equal(result.pageBreaks[1].prevY, 40 + (90 - 60) * 12);
 		});
 
 		it('on multiple and multi-pass page breaks should calculate bottom-most endings for every page', function() {
 			var doc = createTable(0, 1, 100, 90, 92);
 			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
-			assert(result instanceof Array);
-			assert.equal(result.length, 2);
-			assert.equal(result[0].prevPage, 0);
-			assert.equal(result[0].prevY, 40 + 60 * 12);
-			assert.equal(result[1].prevPage, 1);
-			assert.equal(result[1].prevY, 40 + (92 - 60) * 12);
+			assert(result.pageBreaks instanceof Array);
+			assert.equal(result.pageBreaks.length, 2);
+			assert.equal(result.pageBreaks[0].prevPage, 0);
+			assert.equal(result.pageBreaks[0].prevY, 40 + 60 * 12);
+			assert.equal(result.pageBreaks[1].prevPage, 1);
+			assert.equal(result.pageBreaks[1].prevY, 40 + (92 - 60) * 12);
 		});
 	});
 
@@ -1367,10 +1376,73 @@ describe('LayoutBuilder', function() {
 
       pageBreakBeforeFunction = sinon.spy();
 
-
       builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
       assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].startPosition, {pageNumber:1,left:40,top:40,verticalRatio:0,horizontalRatio:0});
+    });
+
+    it('should work with all specified elements', function () {
+
+      docStructure = [
+        {text: 'Text 1 (Page 1)', id: 'text'},
+        {
+          id: 'table',
+          table: {
+            body: [
+              [{
+                text: 'Column 1 (Page 1)'
+              }]
+            ]
+          }
+        },
+        {id: 'ul', ul: [{text: 'ul Item', id: 'ul-item'}]},
+        {id: 'ol', ol: [{text: 'ol Item', id: 'ol-item'}]},
+        {id: 'image', image: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD//gATQ3JlYXRlZCB3aXRoIEdJTVD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wgARCAABAAEDAREAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACP/EABQBAQAAAAAAAAAAAAAAAAAAAAX/2gAMAwEAAhADEAAAATY4f//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAQUCf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8Bf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8Bf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEABj8Cf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8hf//aAAwDAQACAAMAAAAQn//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8Qf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8Qf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8Qf//Z'},
+        {id: 'qr', qr: 'http://www.thoughtworks.com/join'},
+        {id: 'canvas', canvas: [ { type: 'rect', x: 0, y: 0, w: 10, h: 10 } ]},
+        {id: 'columns', columns: [{text: 'column item', id:'column-item'}]}
+
+      ];
+
+      pageBreakBeforeFunction = sinon.spy();
+
+      builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+
+      function validateCalled(callIndex, nodeType, id) {
+        var nodeInfo = pageBreakBeforeFunction.getCall(callIndex).args[0];
+        assert.equal(nodeInfo.id, id);
+        assert(!_.isEmpty(nodeInfo[nodeType]), 'node type accessor ' + nodeType + ' not defined');
+        assert(_.isObject(nodeInfo.startPosition), 'start position is not an object but ' + _.toString(nodeInfo.startPosition));
+        assert(_.isArray(nodeInfo.pageNumbers), 'page numbers is not an array but ' + _.toString(nodeInfo.pageNumbers));
+      }
+
+      var textIndex = 0;
+      validateCalled(textIndex, 'text', 'text');
+
+      var tableIndex = textIndex + 1;
+      validateCalled(1, 'table', 'table');
+
+      var ulIndex = tableIndex + 2;
+      validateCalled(ulIndex, 'ul', 'ul');
+      validateCalled(ulIndex + 1, 'text', 'ul-item');
+
+      var olIndex = ulIndex + 2;
+      validateCalled(olIndex, 'ol', 'ol');
+      validateCalled(olIndex + 1, 'text', 'ol-item');
+
+      var imageIndex = olIndex + 2;
+      validateCalled(imageIndex, 'image', 'image');
+
+      var qrIndex = imageIndex + 1;
+      validateCalled(qrIndex, 'qr', 'qr');
+
+      var canvasIndex = qrIndex + 1;
+      validateCalled(canvasIndex, 'canvas', 'canvas');
+
+      var columnIndex = canvasIndex + 1;
+      validateCalled(columnIndex, 'columns', 'columns');
+      validateCalled(columnIndex + 1, 'text', 'column-item');
+
     });
 
     it('should provide all page numbers of the node', function () {
@@ -1382,7 +1454,6 @@ describe('LayoutBuilder', function() {
       ];
 
       pageBreakBeforeFunction = sinon.spy();
-
 
       builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 

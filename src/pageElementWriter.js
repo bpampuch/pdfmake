@@ -19,31 +19,35 @@ function PageElementWriter(context, tracker) {
 	this.writer = new ElementWriter(context, tracker);
 }
 
-PageElementWriter.prototype.addLine = function(line, dontUpdateContextPosition, index) {
-  var position = this.writer.addLine(line, dontUpdateContextPosition, index);
+function fitOnPage(self, addFct){
+  var position = addFct(self);
   if (!position) {
-		this.moveToNextPage();
-		position = this.writer.addLine(line, dontUpdateContextPosition, index);
-	}
+    self.moveToNextPage();
+    position = addFct(self);
+  }
   return position;
+}
+
+PageElementWriter.prototype.addLine = function(line, dontUpdateContextPosition, index) {
+  return fitOnPage(this, function(self){
+    return self.writer.addLine(line, dontUpdateContextPosition, index);
+  });
 };
 
 PageElementWriter.prototype.addImage = function(image, index) {
-	if(!this.writer.addImage(image, index)) {
-		this.moveToNextPage();
-		this.writer.addImage(image, index);
-	}
+  return fitOnPage(this, function(self){
+    return self.writer.addImage(image, index);
+  });
 };
 
 PageElementWriter.prototype.addQr = function(qr, index) {
-	if(!this.writer.addQr(qr, index)) {
-		this.moveToNextPage();
-		this.writer.addQr(qr, index);
-	}
+  return fitOnPage(this, function(self){
+		return self.writer.addQr(qr, index);
+	});
 };
 
 PageElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY, index) {
-	this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
+	return this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
 };
 
 PageElementWriter.prototype.addFragment = function(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {

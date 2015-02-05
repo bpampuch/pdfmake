@@ -16,6 +16,12 @@ var isFunction = require('./helpers').isFunction;
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
 
+function addAll(target, otherArray){
+  _.each(otherArray, function(item){
+    target.push(item);
+  });
+}
+
 /**
  * Creates an instance of LayoutBuilder - layout engine which turns document-definition-object
  * into a set of pages, lines, inlines and vectors ready to be rendered into a PDF
@@ -49,7 +55,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
   function addPageBreaksIfNecessary(linearNodeList) {
     _.each(linearNodeList, function(node) {
-      var nodeInfo = _.pick(node, ['id', 'text']);
+      var nodeInfo = _.pick(node, ['id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns']);
       nodeInfo.startPosition = _.first(node.positions);
       nodeInfo.pageNumbers = _.chain(node.positions).map('pageNumber').uniq().value();
 
@@ -234,9 +240,9 @@ LayoutBuilder.prototype.processNode = function(node) {
     } else if (node.columns) {
       self.processColumns(node);
     } else if (node.ul) {
-      self.processList(false, node.ul, node._gapSize);
+      self.processList(false, node);
     } else if (node.ol) {
-      self.processList(true, node.ol, node._gapSize);
+      self.processList(true, node);
     } else if (node.table) {
       self.processTable(node);
     } else if (node.text !== undefined) {
@@ -296,7 +302,8 @@ LayoutBuilder.prototype.processColumns = function(columnNode) {
 	if (gaps) availableWidth -= (gaps.length - 1) * columnNode._gap;
 
 	ColumnCalculator.buildColumnWidths(columns, availableWidth);
-	this.processRow(columns, columns, gaps);
+	var result = this.processRow(columns, columns, gaps);
+    addAll(columnNode.positions, result.positions);
 
 
 	function gapArray(gap) {
@@ -315,7 +322,7 @@ LayoutBuilder.prototype.processColumns = function(columnNode) {
 
 LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, tableRow) {
   var self = this;
-  var pageBreaks = [];
+  var pageBreaks = [], positions = [];
 
   this.tracker.auto('pageChanged', storePageBreakData, function() {
     widths = widths || columns;
@@ -336,6 +343,7 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
       self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
       if (!column._span) {
         self.processNode(column);
+        addAll(positions, column.positions);
       } else if (column._columnEndingContext) {
         // row-span ending
         self.writer.context().markEnding(column);
@@ -345,7 +353,7 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
     self.writer.context().completeColumnGroup();
   });
 
-  return pageBreaks;
+  return {pageBreaks: pageBreaks, positions: positions};
 
   function storePageBreakData(data) {
     var pageDesc;
@@ -383,8 +391,10 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
 };
 
 // lists
-LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
-	var self = this;
+LayoutBuilder.prototype.processList = function(orderedList, node) {
+	var self = this,
+      items = orderedList ? node.ol : node.ul,
+      gapSize = node._gapSize;
 
 	this.writer.context().addMargin(gapSize.width);
 
@@ -393,6 +403,7 @@ LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
 		items.forEach(function(item) {
 			nextMarker = item.listMarker;
 			self.processNode(item);
+            addAll(node.positions, item.positions);
 		});
 	});
 
@@ -430,9 +441,10 @@ LayoutBuilder.prototype.processTable = function(tableNode) {
   for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
     processor.beginRow(i, this.writer);
 
-    var pageBreaks = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i);
+    var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i);
+    addAll(tableNode.positions, result.positions);
 
-    processor.endRow(i, this.writer, pageBreaks);
+    processor.endRow(i, this.writer, result.pageBreaks);
   }
 
   processor.endTable(this.writer);
@@ -464,7 +476,8 @@ LayoutBuilder.prototype.buildNextLine = function(textNode) {
 
 // images
 LayoutBuilder.prototype.processImage = function(node) {
-    this.writer.addImage(node);
+    var position = this.writer.addImage(node);
+    node.positions.push(position);
 };
 
 LayoutBuilder.prototype.processCanvas = function(node) {
@@ -478,14 +491,16 @@ LayoutBuilder.prototype.processCanvas = function(node) {
 	}
 
 	node.canvas.forEach(function(vector) {
-		this.writer.addVector(vector);
+		var position = this.writer.addVector(vector);
+        node.positions.push(position);
 	}, this);
 
 	this.writer.context().moveDown(height);
 };
 
 LayoutBuilder.prototype.processQr = function(node) {
-	this.writer.addQr(node);
+	var position = this.writer.addQr(node);
+    node.positions.push(position);
 };
 
 

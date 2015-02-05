@@ -86,7 +86,8 @@ ElementWriter.prototype.alignLine = function(line) {
 
 ElementWriter.prototype.addImage = function(image, index) {
 	var context = this.context;
-	var page = context.getCurrentPage();
+	var page = context.getCurrentPage(),
+      position = context.getCurrentPosition();
 
 	if (context.availableHeight < image._height || !page) {
 		return false;
@@ -104,12 +105,13 @@ ElementWriter.prototype.addImage = function(image, index) {
 
 	context.moveDown(image._height);
 
-	return true;
+	return position;
 };
 
 ElementWriter.prototype.addQr = function(qr, index) {
 	var context = this.context;
-	var page = context.getCurrentPage();
+	var page = context.getCurrentPage(),
+      position = context.getCurrentPosition();
 
 	if (context.availableHeight < qr._height || !page) {
 		return false;
@@ -129,7 +131,7 @@ ElementWriter.prototype.addQr = function(qr, index) {
 
 	context.moveDown(qr._height);
 
-	return true;
+	return position;
 };
 
 ElementWriter.prototype.alignImage = function(image) {
@@ -152,7 +154,8 @@ ElementWriter.prototype.alignImage = function(image) {
 
 ElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY, index) {
 	var context = this.context;
-	var page = context.getCurrentPage();
+	var page = context.getCurrentPage(),
+      position = context.getCurrentPosition();
 
 	if (page) {
 		offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
@@ -160,7 +163,7 @@ ElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreConte
             type: 'vector',
             item: vector
         }, index);
-		return true;
+		return position;
 	}
 };
 
