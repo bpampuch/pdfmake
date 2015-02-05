@@ -73,56 +73,64 @@ LayoutBuilder.prototype.addBackground = function(background) {
     var pageBackground = backgroundGetter(this.writer.context().page + 1);
     
     if (pageBackground) {
-      this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageSize.height);
+      var pageSize = this.writer.context().getCurrentPage().pageSize;
+      this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
       this.processNode(this.docMeasure.measureDocument(pageBackground));
       this.writer.commitUnbreakableBlock(0, 0);
     }
 };
 
-LayoutBuilder.prototype.addStaticRepeatable = function(node, x, y, width, height) {
-  var pages = this.writer.context().pages;
-  this.writer.context().page = 0;
-  
-  this.writer.beginUnbreakableBlock(width, height);
-  this.processNode(this.docMeasure.measureDocument(node));
-  var repeatable = this.writer.currentBlockToRepeatable();
-  repeatable.xOffset = x;
-  repeatable.yOffset = y;
-  this.writer.commitUnbreakableBlock(x, y);
-  
-  for(var i = 1, l = pages.length; i < l; i++) {
-    this.writer.context().page = i;
-    this.writer.addFragment(repeatable, true, true, true);
-  }
+LayoutBuilder.prototype.addStaticRepeatable = function(node, sizeFunction) {
+  this.addDynamicRepeatable(function() {return node;}, sizeFunction);
 };
 
-LayoutBuilder.prototype.addDynamicRepeatable = function(nodeGetter, x, y, width, height) {
+LayoutBuilder.prototype.addDynamicRepeatable = function(nodeGetter, sizeFunction) {
   var pages = this.writer.context().pages;
   
-  for(var i = 0, l = pages.length; i < l; i++) {
-    this.writer.context().page = i;
+  for(var pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
+    this.writer.context().page = pageIndex;
 
-    var node = nodeGetter(i + 1, l);
+
+    var node = nodeGetter(pageIndex + 1, l);
 
     if (node) {
-      this.writer.beginUnbreakableBlock(width, height);
+      var sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
+      this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
       this.processNode(this.docMeasure.measureDocument(node));
-      this.writer.commitUnbreakableBlock(x, y);
+      this.writer.commitUnbreakableBlock(sizes.x, sizes.y);
     }
   }
 };
 
 LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
+  var headerSizeFct = function(pageSize, pageMargins){
+    return {
+      x: 0,
+      y: 0,
+      width: pageSize.width,
+      height: pageMargins.top
+    };
+  };
+  
+  var footerSizeFct = function (pageSize, pageMargins) {
+    return {
+      x: 0,
+      y: pageSize.height - pageMargins.bottom,
+      width: pageSize.width,
+      height: pageMargins.bottom
+    };
+  };
+  
   if(isFunction(header)) {
-    this.addDynamicRepeatable(header, 0, 0, this.pageSize.width, this.pageMargins.top);
+    this.addDynamicRepeatable(header, headerSizeFct);
   } else if(header) {
-    this.addStaticRepeatable(header, 0, 0, this.pageSize.width, this.pageMargins.top);
+    this.addStaticRepeatable(header, headerSizeFct);
   }
   
   if(isFunction(footer)) {
-    this.addDynamicRepeatable(footer, 0, this.pageSize.height - this.pageMargins.bottom, this.pageSize.width, this.pageMargins.bottom);
+    this.addDynamicRepeatable(footer, footerSizeFct);
   } else if(footer) {
-    this.addStaticRepeatable(footer, 0, this.pageSize.height - this.pageMargins.bottom, this.pageSize.width, this.pageMargins.bottom);
+    this.addStaticRepeatable(footer, 0, headerSizeFct());
   }
 };
 
@@ -208,10 +216,9 @@ LayoutBuilder.prototype.processNode = function(node) {
 		var margin = node._margin;
 
     if (node.pageBreak === 'before') {
-        self.writer.moveToNextPage();
+      self.writer.moveToNextPage(node.pageOrientation);
     }
-
-		if (margin) {
+    if (margin) {
 			self.writer.context().moveDown(margin[1]);
 			self.writer.context().addMargin(margin[0], margin[2]);
 		}
@@ -224,8 +231,9 @@ LayoutBuilder.prototype.processNode = function(node) {
 		}
 
     if (node.pageBreak === 'after') {
-        self.writer.moveToNextPage();
+      self.writer.moveToNextPage(node.pageOrientation);
     }
+
 	}
 };
 

@@ -46,7 +46,7 @@ describe('LayoutBuilder', function() {
 	var builder;
 
 	beforeEach(function() {
-		builder = new LayoutBuilder({ width: 400, height: 800 }, { left: 40, right: 40, top: 40, bottom: 40 });
+		builder = new LayoutBuilder({ width: 400, height: 800, orientation: 'portrait' }, { left: 40, right: 40, top: 40, bottom: 40 });
 		builder.pages = [];
 		builder.context = [ { page: -1, availableWidth: 320, availableHeight: 0 }];
 		builder.styleStack = new StyleContextStack();
@@ -1135,6 +1135,50 @@ describe('LayoutBuilder', function() {
 			);
 		});
 
+		it('should support a switch of page orientation within a document', function () {
+			var desc = [
+				{
+					text: 'Page 1, document orientation or default portrait'
+				},
+				{
+					text: 'Page 2, landscape',
+          pageBreak: 'before',
+					pageOrientation: 'landscape'
+				}];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 2);
+			assert.equal(pages[0].pageSize.orientation, 'portrait');
+			assert.equal(pages[1].pageSize.orientation, 'landscape');
+		});
+
+		it('should support changing the page orientation to landscape consecutively', function () {
+			var desc = [
+				{
+					text: 'Page 1, document orientation or default portrait'
+				},
+				{
+					text: 'Page 2, landscape',
+          pageBreak: 'before',
+					pageOrientation: 'landscape'
+				},
+				{
+					text: 'Page 3, landscape again',
+          pageBreak: 'after',
+					pageOrientation: 'landscape'
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 3);
+			assert.equal(pages[0].pageSize.orientation, 'portrait');
+			assert.equal(pages[1].pageSize.orientation, 'landscape');
+			assert.equal(pages[2].pageSize.orientation, 'landscape');
+		});
+
+
 		it('should support images');
 		it('should align image properly');
 		it('should break pages if image cannot fit on current page');
@@ -1168,7 +1212,6 @@ describe('LayoutBuilder', function() {
 			it.skip('should support current page number');
 			it.skip('should support images');
 			it.skip('should support image scaling');
-			it.skip('should support various page orientations');
 			it.skip('should support various page sizes');
 
 			// DOING
@@ -1244,7 +1287,7 @@ describe('LayoutBuilder', function() {
 		}
 
 		beforeEach(function() {
-			var pageSize = { width: 400, height: 800 };
+			var pageSize = { width: 400, height: 800, orientation: 'portrait' };
 			var pageMargins = { left: 40, top: 40, bottom: 40, right: 40};
 
 			builder2 = new LayoutBuilder(pageSize, pageMargins, {});

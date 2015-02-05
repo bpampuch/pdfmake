@@ -10,7 +10,6 @@ var TraversalTracker = require('./traversalTracker');
 function DocumentContext(pageSize, pageMargins) {
 	this.pages = [];
 
-	this.pageSize = pageSize;
 	this.pageMargins = pageMargins;
 
 	this.x = pageMargins.left;
@@ -21,12 +20,10 @@ function DocumentContext(pageSize, pageMargins) {
 	this.snapshots = [];
 
 	this.endingCell = null;
-
-    this.defaultPage = { items: [] };
     
-    this.tracker = new TraversalTracker();
+  this.tracker = new TraversalTracker();
     
-	this.addPage();
+	this.addPage(pageSize);
 }
 
 DocumentContext.prototype.beginColumnGroup = function() {
@@ -114,18 +111,81 @@ DocumentContext.prototype.moveDown = function(offset) {
 	return this.availableHeight > 0;
 };
 
-DocumentContext.prototype.moveToPageTop = function() {
+DocumentContext.prototype.initializePage = function() {
 	this.y = this.pageMargins.top;
-	this.availableHeight = this.pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+	this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+	this.pageSnapshot().availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
 };
 
-DocumentContext.prototype.addPage = function() {
-	var page = this.getDefaultPage();
-    this.pages.push(page);
-	this.page = this.pages.length - 1;
-	this.moveToPageTop();
+DocumentContext.prototype.pageSnapshot = function(){
+  if(this.snapshots[0]){
+    return this.snapshots[0];
+  } else {
+    return this;
+  }
+};
 
-    this.tracker.emit('pageAdded');
+function pageOrientation(pageOrientationString, currentPageOrientation){
+	if(pageOrientationString === undefined) {
+		return currentPageOrientation;
+	} else if(pageOrientationString === 'landscape'){
+		return 'landscape';
+	} else {
+		return 'portrait';
+	}
+}
+
+var getPageSize = function (currentPage, newPageOrientation) {
+	
+	newPageOrientation = pageOrientation(newPageOrientation, currentPage.pageSize.orientation);
+	
+	if(newPageOrientation !== currentPage.pageSize.orientation) {
+		return {
+			orientation: newPageOrientation,
+			width: currentPage.pageSize.height,
+			height: currentPage.pageSize.width
+		};
+	} else {
+		return {
+			orientation: currentPage.pageSize.orientation,
+			width: currentPage.pageSize.width,
+			height: currentPage.pageSize.height
+		};
+	}
+	
+};
+
+
+DocumentContext.prototype.moveToNextPage = function(pageOrientation) {
+	var nextPageIndex = this.page + 1;
+
+	var prevPage = this.page;
+	var prevY = this.y;
+
+	var createNewPage = nextPageIndex >= this.pages.length;
+	if (createNewPage) {
+		this.addPage(getPageSize(this.getCurrentPage(), pageOrientation));
+	} else {
+		this.page = nextPageIndex;
+		this.initializePage();
+	}
+
+  return {
+		newPageCreated: createNewPage,
+		prevPage: prevPage,
+		prevY: prevY,
+		y: this.y
+	};
+};
+
+
+DocumentContext.prototype.addPage = function(pageSize) {
+	var page = { items: [], pageSize: pageSize };
+	this.pages.push(page);
+	this.page = this.pages.length - 1;
+	this.initializePage();
+
+	this.tracker.emit('pageAdded');
     
 	return page;
 };
@@ -134,15 +194,6 @@ DocumentContext.prototype.getCurrentPage = function() {
 	if (this.page < 0 || this.page >= this.pages.length) return null;
 
 	return this.pages[this.page];
-};
-
-DocumentContext.prototype.setDefaultPage = function(defaultPage) {
-    // copy the items without deep-copying the object (which is not possible due to circular structures)
-    this.defaultPage = { items: (defaultPage || this.pages[this.page]).items.slice() };
-};
-
-DocumentContext.prototype.getDefaultPage = function() {
-    return { items: this.defaultPage.items.slice() };
 };
 
 function bottomMostContext(c1, c2) {

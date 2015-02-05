@@ -75,8 +75,9 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	var pageSize = pageSize2widthAndHeight(docDefinition.pageSize || 'a4');
 
   if(docDefinition.pageOrientation === 'landscape') {
-    pageSize = { width: pageSize.height, height: pageSize.width };
+    pageSize = { width: pageSize.height, height: pageSize.width};
   }
+	pageSize.orientation = docDefinition.pageOrientation === 'landscape' ? docDefinition.pageOrientation : 'portrait';
 
 	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ], compress: false});
 	this.pdfKitDoc.info.Producer = 'pdfmake';
@@ -200,10 +201,21 @@ function StringObject(str){
 	};
 }
 
+function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
+	var previousPageOrientation = pdfKitDoc.options.size[0] > pdfKitDoc.options.size[1] ? 'landscape' : 'portrait';
+
+	if(currentPage.pageSize.orientation !== previousPageOrientation) {
+		var width = pdfKitDoc.options.size[0];
+		var height = pdfKitDoc.options.size[1];
+		pdfKitDoc.options.size = [height, width];
+	}
+}
+
 function renderPages(pages, fontProvider, pdfKitDoc) {
-	for(var i = 0, l = pages.length; i < l; i++) {
+	for (var i = 0; i < pages.length; i++) {
 		if (i > 0) {
-			pdfKitDoc.addPage();
+			updatePageOrientationInOptions(pages[i], pdfKitDoc);
+			pdfKitDoc.addPage(pdfKitDoc.options);
 		}
 
 		setFontRefs(fontProvider, pdfKitDoc);
