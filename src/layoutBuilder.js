@@ -216,9 +216,6 @@ LayoutBuilder.prototype.processNode = function(node) {
 		var margin = node._margin;
 
     if (node.pageBreak === 'before') {
-      self.writer.moveToNextPage();
-    }
-    if (node.pageOrientation) {
       self.writer.moveToNextPage(node.pageOrientation);
     }
     if (margin) {
@@ -234,7 +231,7 @@ LayoutBuilder.prototype.processNode = function(node) {
 		}
 
     if (node.pageBreak === 'after') {
-      self.writer.moveToNextPage();
+      self.writer.moveToNextPage(node.pageOrientation);
     }
 
 	}

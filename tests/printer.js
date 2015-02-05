@@ -32,6 +32,7 @@ describe('Printer', function () {
         },
         {
           text: 'Page 2',
+          pageBreak: 'before',
           pageOrientation: 'landscape'
         }
       ]
@@ -55,6 +56,7 @@ describe('Printer', function () {
         },
         {
           text: 'Page 2',
+          pageBreak: 'before',
           pageOrientation: 'landscape'
         }
       ]
@@ -79,6 +81,7 @@ describe('Printer', function () {
         },
         {
           text: 'Page 2',
+          pageBreak: 'before',
           pageOrientation: 'portrait'
         },
         {
@@ -108,11 +111,13 @@ describe('Printer', function () {
         },
         {
           text: 'Page 2',
+          pageBreak: 'before',
           pageOrientation: 'landscape'
         },
         {
           text: 'Page 3 landscape again',
-          pageOrientation: 'landscape'
+          pageOrientation: 'landscape',
+          pageBreak: 'after'
         }
       ]
     };

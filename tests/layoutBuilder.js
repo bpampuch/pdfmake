@@ -1142,6 +1142,7 @@ describe('LayoutBuilder', function() {
 				},
 				{
 					text: 'Page 2, landscape',
+          pageBreak: 'before',
 					pageOrientation: 'landscape'
 				}];
 
@@ -1152,25 +1153,6 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[1].pageSize.orientation, 'landscape');
 		});
 
-		it('should support combinations of page breaks and page orientation changes', function () {
-			var desc = [
-				{
-					text: 'Page 1, document orientation or default portrait'
-				},
-				{
-					pageBreak: 'before',
-					text: 'Page 3, landscape',
-					pageOrientation: 'landscape'
-				}];
-
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 3);
-			assert.equal(pages[1].pageSize.orientation, 'portrait');
-			assert.equal(pages[2].pageSize.orientation, 'landscape');
-		});
-
-
 		it('should support changing the page orientation to landscape consecutively', function () {
 			var desc = [
 				{
@@ -1178,10 +1160,12 @@ describe('LayoutBuilder', function() {
 				},
 				{
 					text: 'Page 2, landscape',
+          pageBreak: 'before',
 					pageOrientation: 'landscape'
 				},
 				{
 					text: 'Page 3, landscape again',
+          pageBreak: 'after',
 					pageOrientation: 'landscape'
 				}
 			];
