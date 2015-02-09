@@ -81,6 +81,7 @@ TextTools.prototype.sizeOfString = function(text, styleContextStack) {
 		width: font.widthOfString(removeDiacritics(text), fontSize),
 		height: font.lineHeight(fontSize) * lineHeight,
 		fontSize: fontSize,
+		lineHeight: lineHeight,
 		ascender: font.ascender / 1000 * fontSize,
 		decender: font.decender / 1000 * fontSize
 	};
