@@ -53,11 +53,12 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
  */
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
 
-  function addPageBreaksIfNecessary(linearNodeList) {
+  function addPageBreaksIfNecessary(linearNodeList, pages) {
     _.each(linearNodeList, function(node) {
       var nodeInfo = _.pick(node, ['id', 'headlineLevel', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns', 'style', 'pageOrientation']);
       nodeInfo.startPosition = _.first(node.positions);
       nodeInfo.pageNumbers = _.chain(node.positions).map('pageNumber').uniq().value();
+      nodeInfo.pages = pages.length;
 
       node.nodeInfo = nodeInfo;
     });
@@ -88,7 +89,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
   var result, reLayout = false;
   do {
     result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
-    reLayout = addPageBreaksIfNecessary(result.linearNodeList);
+    reLayout = addPageBreaksIfNecessary(result.linearNodeList, result.pages);
   } while (reLayout);
 
 	return result.pages;

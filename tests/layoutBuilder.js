@@ -1368,6 +1368,22 @@ describe('LayoutBuilder', function() {
       assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(0).args[1], 'id'), ['text2','text3']);
     });
 
+    it('should provide the pages of the node', function () {
+      docStructure = [
+        {text: 'Text 1 (Page 1)', id: 'text1'},
+        {text: 'Text 2 (Page 1)', id: 'text2'},
+        {text: 'Text 3 (Page 1)', id: 'text3'},
+        {text: 'Text 4 (Page 2)', id: 'text4', pageBreak: 'before'}
+      ];
+
+      pageBreakBeforeFunction = sinon.spy();
+
+
+      builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+
+      assert.equal(pageBreakBeforeFunction.getCall(0).args[0].pages, 2);
+    });
+
     it('should provide the headlineLevel of the node', function () {
       docStructure = [
         {text: 'Text 1 (Page 1)', id: 'text1', headlineLevel: 6}
