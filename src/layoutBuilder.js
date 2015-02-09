@@ -93,11 +93,18 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
   this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
 
-  var result, reLayout = false;
-  do {
+  var result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+
+  function resetXYs() {
+    _.each(result.linearNodeList, function (node) {
+      node.resetXY();
+    });
+  }
+
+  while(addPageBreaksIfNecessary(result.linearNodeList, result.pages)){
+    resetXYs();
     result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
-    reLayout = addPageBreaksIfNecessary(result.linearNodeList, result.pages);
-  } while (reLayout);
+  }
 
 	return result.pages;
 };
@@ -236,11 +243,20 @@ LayoutBuilder.prototype.addWatermark = function(watermark, fontProvider){
   }
 };
 
+function decorateNode(node){
+  var x = node.x, y = node.y;
+  node.positions = [];
+  node.resetXY = function(){
+    node.x = x;
+    node.y = y;
+  };
+}
+
 LayoutBuilder.prototype.processNode = function(node) {
   var self = this;
 
   this.linearNodeList.push(node);
-  node.positions = [];
+  decorateNode(node);
 
   applyMargins(function() {
     if (node.stack) {
