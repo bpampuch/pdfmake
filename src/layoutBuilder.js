@@ -70,7 +70,10 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
         var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
           return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
         }).value();
-        if (pageBreakBeforeFct(node.nodeInfo, _.map(followingNodesOnPage, 'nodeInfo'))) {
+        var previousNodesOnPage = _.chain(followingNodeList).take(index).filter(function (node0) {
+          return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
+        }).value();
+        if (pageBreakBeforeFct(node.nodeInfo, _.map(followingNodesOnPage, 'nodeInfo'), _.map(previousNodesOnPage, 'nodeInfo'))) {
           node.pageBreak = 'before';
           return true;
         }
