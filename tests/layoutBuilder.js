@@ -1440,6 +1440,7 @@ describe('LayoutBuilder', function() {
     it('should work with all specified elements', function () {
 
       docStructure = [
+        {text: '', id: 'not-called-because-empty'},
         {text: 'Text 1 (Page 1)', id: 'text'},
         {
           id: 'table',
