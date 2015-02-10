@@ -28,7 +28,7 @@ ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition, inde
 	var height = line.getHeight();
 	var context = this.context;
 	var page = context.getCurrentPage(),
-      position = context.getCurrentPosition();
+      position = this.getCurrentPositionOnPage();
 
 	if (context.availableHeight < height || !page) {
 		return false;
@@ -87,7 +87,7 @@ ElementWriter.prototype.alignLine = function(line) {
 ElementWriter.prototype.addImage = function(image, index) {
 	var context = this.context;
 	var page = context.getCurrentPage(),
-      position = context.getCurrentPosition();
+      position = this.getCurrentPositionOnPage();
 
 	if (context.availableHeight < image._height || !page) {
 		return false;
@@ -111,7 +111,7 @@ ElementWriter.prototype.addImage = function(image, index) {
 ElementWriter.prototype.addQr = function(qr, index) {
 	var context = this.context;
 	var page = context.getCurrentPage(),
-      position = context.getCurrentPosition();
+      position = this.getCurrentPositionOnPage();
 
 	if (context.availableHeight < qr._height || !page) {
 		return false;
@@ -155,7 +155,7 @@ ElementWriter.prototype.alignImage = function(image) {
 ElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY, index) {
 	var context = this.context;
 	var page = context.getCurrentPage(),
-      position = context.getCurrentPosition();
+      position = this.getCurrentPositionOnPage();
 
 	if (page) {
 		offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
@@ -251,6 +251,10 @@ ElementWriter.prototype.pushContext = function(contextOrWidth, height) {
 
 ElementWriter.prototype.popContext = function() {
 	this.context = this.contextStack.pop();
+};
+
+ElementWriter.prototype.getCurrentPositionOnPage = function(){
+	return (this.contextStack[0] || this.context).getCurrentPosition();
 };
 
 

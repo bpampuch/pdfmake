@@ -71,12 +71,15 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
       if (node.pageBreak !== 'before') {
         var pageNumber = _.first(node.nodeInfo.pageNumbers);
-        var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
+
+				var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
           return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
         }).value();
+
         var previousNodesOnPage = _.chain(followingNodeList).take(index).filter(function (node0) {
           return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
         }).value();
+
         if (pageBreakBeforeFct(node.nodeInfo, _.map(followingNodesOnPage, 'nodeInfo'), _.map(previousNodesOnPage, 'nodeInfo'))) {
           node.pageBreak = 'before';
           return true;
@@ -93,16 +96,16 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
   this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
 
-  var result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
 
-  function resetXYs() {
+  function resetXYs(result) {
     _.each(result.linearNodeList, function (node) {
       node.resetXY();
     });
   }
 
+  var result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
   while(addPageBreaksIfNecessary(result.linearNodeList, result.pages)){
-    resetXYs();
+    resetXYs(result);
     result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
   }
 

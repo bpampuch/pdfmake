@@ -55,6 +55,17 @@ describe('ElementWriter', function() {
 			assert.equal(position, fakePosition);
 		});
 
+		it('should return position on page', function() {
+			var line = buildLine(20);
+
+			ew.pushContext(50,50);
+			ew.pushContext(20,30);
+			ew.pushContext(11,40);
+			var position = ew.addLine(line);
+
+			assert.equal(position, fakePosition);
+		});
+
 		it('should not add line and return false if there\'s not enough space', function() {
 			var line = buildLine(120);
 
