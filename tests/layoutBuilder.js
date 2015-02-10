@@ -1339,17 +1339,21 @@ describe('LayoutBuilder', function() {
 
     it('should not check for page break if a page break is already specified', function(){
 
-      docStructure = [
-        {text: 'Text 1', id: 'text1'},
-        {text: 'Text 2', id: 'text2', pageBreak: 'before'}
-      ];
+      docStructure = {
+				stack: [
+					{text: 'Text 1', id: 'text1'},
+					{text: 'Text 2', id: 'text2', pageBreak: 'before'}
+				],
+				id: 'stack'
+			};
       pageBreakBeforeFunction = sinon.spy();
 
 
       builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
-      assert(pageBreakBeforeFunction.calledOnce);
-      assert.deepEqual(_.pick(pageBreakBeforeFunction.getCall(0).args[0], ['id', 'text']), {id: 'text1', text: 'Text 1'});
+      assert(pageBreakBeforeFunction.calledTwice);
+      assert.equal(pageBreakBeforeFunction.getCall(0).args[0].id, 'stack');
+      assert.deepEqual(_.pick(pageBreakBeforeFunction.getCall(1).args[0], ['id', 'text']), {id: 'text1', text: 'Text 1'});
     });
 
     it('should provide the list of following nodes on the same page', function () {
@@ -1365,23 +1369,26 @@ describe('LayoutBuilder', function() {
 
       builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
-      assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(0).args[1], 'id'), ['text2','text3']);
+      assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(1).args[1], 'id'), ['text2','text3']);
     });
 
     it('should provide the list of previous nodes on the same page', function () {
-      docStructure = [
-        {text: 'Text 1 (Page 1)', id: 'text1', pageBreak: 'after'},
-        {text: 'Text 2 (Page 1)', id: 'text2'},
-        {text: 'Text 3 (Page 1)', id: 'text3'},
-        {text: 'Text 4 (Page 1)', id: 'text4'}
-      ];
+			docStructure = {
+				stack: [
+					{text: 'Text 1 (Page 1)', id: 'text1', pageBreak: 'after'},
+					{text: 'Text 2 (Page 1)', id: 'text2'},
+					{text: 'Text 3 (Page 1)', id: 'text3'},
+					{text: 'Text 4 (Page 1)', id: 'text4'}
+				],
+				id: 'stack'
+			};
 
       pageBreakBeforeFunction = sinon.spy();
 
 
       builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
-      assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(3).args[2], 'id'), ['text2','text3']);
+      assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(4).args[2], 'id'), ['stack', 'text2','text3']);
     });
 
     it('should provide the pages of the node', function () {
@@ -1409,7 +1416,7 @@ describe('LayoutBuilder', function() {
 
       builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
-      assert.equal(pageBreakBeforeFunction.getCall(0).args[0].headlineLevel, 6);
+      assert.equal(pageBreakBeforeFunction.getCall(1).args[0].headlineLevel, 6);
     });
 
     it('should provide the position of the node', function () {
@@ -1433,8 +1440,8 @@ describe('LayoutBuilder', function() {
 
       builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
-      assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].pageOrientation, 'landscape');
-      assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].style, 'super-text');
+      assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageOrientation, 'landscape');
+      assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].style, 'super-text');
     });
 
     it('should work with all specified elements', function () {
@@ -1473,11 +1480,11 @@ describe('LayoutBuilder', function() {
         assert(_.isArray(nodeInfo.pageNumbers), 'page numbers is not an array but ' + _.toString(nodeInfo.pageNumbers));
       }
 
-      var textIndex = 0;
+      var textIndex = 1;
       validateCalled(textIndex, 'text', 'text');
 
       var tableIndex = textIndex + 1;
-      validateCalled(1, 'table', 'table');
+      validateCalled(tableIndex, 'table', 'table');
 
       var ulIndex = tableIndex + 2;
       validateCalled(ulIndex, 'ul', 'ul');
@@ -1514,9 +1521,9 @@ describe('LayoutBuilder', function() {
 
       builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
-      assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].pageNumbers, [1]);
-      assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageNumbers, [1, 2]);
-      assert.deepEqual(pageBreakBeforeFunction.getCall(2).args[0].pageNumbers, [2]);
+      assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageNumbers, [1]);
+      assert.deepEqual(pageBreakBeforeFunction.getCall(2).args[0].pageNumbers, [1, 2]);
+      assert.deepEqual(pageBreakBeforeFunction.getCall(3).args[0].pageNumbers, [2]);
     });
 
   });

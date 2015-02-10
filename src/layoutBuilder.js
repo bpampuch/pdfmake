@@ -69,7 +69,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
     return _.any(linearNodeList, function (node, index, followingNodeList) {
 
-      if (_.isUndefined(node.stack) && node.pageBreak !== 'before') {
+      if (node.pageBreak !== 'before') {
         var pageNumber = _.first(node.nodeInfo.pageNumbers);
         var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
           return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
@@ -135,9 +135,9 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 
 LayoutBuilder.prototype.addBackground = function(background) {
     var backgroundGetter = isFunction(background) ? background : function() { return background; };
-    
+
     var pageBackground = backgroundGetter(this.writer.context().page + 1);
-    
+
     if (pageBackground) {
       this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageSize.height);
       this.processNode(this.docMeasure.measureDocument(pageBackground));
@@ -155,7 +155,7 @@ LayoutBuilder.prototype.addStaticRepeatable = function(node, x, y, width, height
   repeatable.xOffset = x;
   repeatable.yOffset = y;
   this.writer.commitUnbreakableBlock(x, y);
-  
+
   for(var i = 1, l = pages.length; i < l; i++) {
     this.writer.context().page = i;
     this.writer.addFragment(repeatable, true, true, true);
@@ -164,7 +164,7 @@ LayoutBuilder.prototype.addStaticRepeatable = function(node, x, y, width, height
 
 LayoutBuilder.prototype.addDynamicRepeatable = function(nodeGetter, x, y, width, height) {
   var pages = this.writer.context().pages;
-  
+
   for(var i = 0, l = pages.length; i < l; i++) {
     this.writer.context().page = i;
 
@@ -184,7 +184,7 @@ LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
   } else if(header) {
     this.addStaticRepeatable(header, 0, 0, this.pageSize.width, this.pageMargins.top);
   }
-  
+
   if(isFunction(footer)) {
     this.addDynamicRepeatable(footer, 0, this.pageSize.height - this.pageMargins.bottom, this.pageSize.width, this.pageMargins.bottom);
   } else if(footer) {
@@ -260,7 +260,7 @@ LayoutBuilder.prototype.processNode = function(node) {
 
   applyMargins(function() {
     if (node.stack) {
-      self.processVerticalContainer(node.stack);
+      self.processVerticalContainer(node);
     } else if (node.columns) {
       self.processColumns(node);
     } else if (node.ul) {
@@ -308,10 +308,11 @@ LayoutBuilder.prototype.processNode = function(node) {
 };
 
 // vertical container
-LayoutBuilder.prototype.processVerticalContainer = function(items) {
+LayoutBuilder.prototype.processVerticalContainer = function(node) {
 	var self = this;
-	items.forEach(function(item) {
+	node.stack.forEach(function(item) {
 		self.processNode(item);
+		addAll(node.positions, item.positions);
 
 		//TODO: paragraph gap
 	});
