@@ -63,6 +63,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
       nodeInfo.startPosition = _.first(node.positions);
       nodeInfo.pageNumbers = _.chain(node.positions).map('pageNumber').uniq().value();
       nodeInfo.pages = pages.length;
+      nodeInfo.stack = _.isArray(node.stack);
 
       node.nodeInfo = nodeInfo;
     });
