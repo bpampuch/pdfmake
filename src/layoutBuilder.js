@@ -219,7 +219,7 @@ LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
   if(isFunction(footer)) {
     this.addDynamicRepeatable(footer, footerSizeFct);
   } else if(footer) {
-    this.addStaticRepeatable(footer, 0, headerSizeFct());
+    this.addStaticRepeatable(footer, headerSizeFct);
   }
 };
 
