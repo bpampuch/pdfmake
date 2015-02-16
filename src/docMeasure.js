@@ -218,11 +218,10 @@ DocMeasure.prototype.buildMarker = function(isOrderedList, counter, styleStack, 
 	else {
 		// TODO: ascender-based calculations
 		var radius = gapSize.fontSize / 6;
-
 		marker = {
 			canvas: [ {
 				x: radius,
-				y: gapSize.height + gapSize.decender - gapSize.fontSize / 3,//0,// gapSize.fontSize * 2 / 3,
+				y: (gapSize.height / gapSize.lineHeight) + gapSize.decender - gapSize.fontSize / 3,//0,// gapSize.fontSize * 2 / 3,
 				r1: radius,
 				r2: radius,
 				type: 'ellipse',

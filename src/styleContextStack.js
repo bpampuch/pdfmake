@@ -93,7 +93,8 @@ StyleContextStack.prototype.autopush = function(item) {
 		'decoration',
 		'decorationStyle',
 		'decorationColor',
-		'background'
+		'background',
+		'lineHeight'
 		//'tableCellPadding'
 		// 'cellBorder',
 		// 'headerCellBorder',
