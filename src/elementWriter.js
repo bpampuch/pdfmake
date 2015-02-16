@@ -13,7 +13,7 @@ var DocumentContext = require('./documentContext');
 function ElementWriter(context, tracker) {
 	this.context = context;
 	this.contextStack = [];
-	this.tracker = tracker || { emit: function() { } };
+	this.tracker = tracker;
 }
 
 function addPageItem(page, item, index) {
@@ -116,9 +116,9 @@ ElementWriter.prototype.addQr = function(qr, index) {
 
 	qr.x = context.x + (qr.x || 0);
 	qr.y = context.y;
-	
+
 	this.alignImage(qr);
-	
+
 	for (var i=0, l=qr._canvas.length; i < l; i++) {
 		var vector = qr._canvas[i];
 		vector.x += qr.x;
@@ -194,7 +194,7 @@ ElementWriter.prototype.addFragment = function(block, useBlockXOffset, useBlockY
                     item: l
                 });
                 break;
-                
+
             case 'vector':
                 var v = pack(item.item);
 
@@ -204,7 +204,7 @@ ElementWriter.prototype.addFragment = function(block, useBlockXOffset, useBlockY
                     item: v
                 });
                 break;
-                
+
             case 'image':
                 var img = pack(item.item);
 
@@ -233,7 +233,7 @@ ElementWriter.prototype.addFragment = function(block, useBlockXOffset, useBlockY
 */
 ElementWriter.prototype.pushContext = function(contextOrWidth, height) {
 	if (contextOrWidth === undefined) {
-		height = this.context.pageSize.height - this.context.pageMargins.top - this.context.pageMargins.bottom;
+		height = this.context.getCurrentPage().height - this.context.pageMargins.top - this.context.pageMargins.bottom;
 		contextOrWidth = this.context.availableWidth;
 	}
 
