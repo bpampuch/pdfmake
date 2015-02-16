@@ -201,6 +201,7 @@ function StringObject(str){
 }
 
 function renderPages(pages, fontProvider, pdfKitDoc) {
+  pdfKitDoc._pdfMakePages = pages;
 	for(var i = 0, l = pages.length; i < l; i++) {
 		if (i > 0) {
 			pdfKitDoc.addPage();
