@@ -1415,6 +1415,25 @@ describe('LayoutBuilder', function() {
       assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(1).args[1], 'id'), ['text2','text3']);
     });
 
+    it('should provide the list of nodes on the next page', function () {
+      docStructure = {
+        stack: [
+          {text: 'Text 1 (Page 1)', id: 'text1', pageBreak: 'after'},
+          {text: 'Text 2 (Page 1)', id: 'text2'},
+          {text: 'Text 3 (Page 1)', id: 'text3'},
+          {text: 'Text 4 (Page 1)', id: 'text4'}
+        ],
+        id: 'stack'
+      };
+
+      pageBreakBeforeFunction = sinon.spy();
+
+
+      builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+
+      assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(0).args[2], 'id'), ['text2','text3', 'text4']);
+    });
+
     it('should provide the list of previous nodes on the same page', function () {
 			docStructure = {
 				stack: [
@@ -1431,7 +1450,7 @@ describe('LayoutBuilder', function() {
 
       builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
-      assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(4).args[2], 'id'), ['stack', 'text2','text3']);
+      assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(4).args[3], 'id'), ['stack', 'text2','text3']);
     });
 
     it('should provide the pages of the node', function () {
