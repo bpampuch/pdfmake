@@ -77,11 +77,18 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
           return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
         }).value();
 
+        var nodesOnNextPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
+          return _.contains(node0.nodeInfo.pageNumbers, pageNumber + 1);
+        }).value();
+
         var previousNodesOnPage = _.chain(followingNodeList).take(index).filter(function (node0) {
           return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
         }).value();
 
-        if (pageBreakBeforeFct(node.nodeInfo, _.map(followingNodesOnPage, 'nodeInfo'), _.map(previousNodesOnPage, 'nodeInfo'))) {
+        if (pageBreakBeforeFct(node.nodeInfo,
+          _.map(followingNodesOnPage, 'nodeInfo'),
+          _.map(nodesOnNextPage, 'nodeInfo'),
+          _.map(previousNodesOnPage, 'nodeInfo'))) {
           node.pageBreak = 'before';
           return true;
         }
