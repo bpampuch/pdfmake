@@ -197,27 +197,18 @@ DocumentContext.prototype.getCurrentPage = function() {
 };
 
 DocumentContext.prototype.getCurrentPosition = function() {
-  var pageSize = this.getCurrentPage().pageSize || this.pageSize;
+  var pageSize = this.getCurrentPage().pageSize;
   var innerHeight = pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
   var innerWidth = pageSize.width - this.pageMargins.left - this.pageMargins.right;
 
   return {
     pageNumber: this.page + 1,
+    pageOrientation: pageSize.orientation,
     left: this.x,
     top: this.y,
     verticalRatio: ((this.y - this.pageMargins.top) / innerHeight),
     horizontalRatio: ((this.x - this.pageMargins.left) / innerWidth)
   };
-};
-
-
-DocumentContext.prototype.setDefaultPage = function(defaultPage) {
-    // copy the items without deep-copying the object (which is not possible due to circular structures)
-    this.defaultPage = { items: (defaultPage || this.pages[this.page]).items.slice() };
-};
-
-DocumentContext.prototype.getDefaultPage = function() {
-    return { items: this.defaultPage.items.slice() };
 };
 
 function bottomMostContext(c1, c2) {
