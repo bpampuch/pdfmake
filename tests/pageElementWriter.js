@@ -44,10 +44,12 @@ describe('PageElementWriter', function() {
 	}
 
 	function addOneTenthLines(count) {
+    var lastPosition;
 		for(var i = 0; i < count; i++) {
 			var line = buildLine(AVAILABLE_HEIGHT/10);
-			pew.addLine(line);
+			lastPosition = pew.addLine(line);
 		}
+    return lastPosition;
 	}
 
 	function createRepeatable(marker, height) {
@@ -72,17 +74,19 @@ describe('PageElementWriter', function() {
 
 	describe('addLine', function() {
 		it('should add new lines if there\'s enough space left', function() {
-			addOneTenthLines(10);
+			var position = addOneTenthLines(10);
 
 			assert.equal(ctx.pages.length, 1);
+			assert.deepEqual(position, {pageNumber:1,left:MARGINS.left, top: (9/10 * AVAILABLE_HEIGHT) + MARGINS.top, verticalRatio: 0.9, horizontalRatio: 0});
 		});
 
 		it('should add new pages if there\'s not enough space left', function() {
-			addOneTenthLines(11);
+			var position = addOneTenthLines(11);
 
 			assert.equal(ctx.pages.length, 2);
 			assert.equal(ctx.pages[0].items.length, 10);
 			assert.equal(ctx.pages[1].items.length, 1);
+      assert.deepEqual(position, {pageNumber:2,left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0});
 		});
 
 		it('should subtract line height from availableHeight when adding a line and update current y position', function() {

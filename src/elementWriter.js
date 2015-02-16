@@ -27,7 +27,8 @@ function addPageItem(page, item, index) {
 ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition, index) {
 	var height = line.getHeight();
 	var context = this.context;
-	var page = context.getCurrentPage();
+	var page = context.getCurrentPage(),
+      position = this.getCurrentPositionOnPage();
 
 	if (context.availableHeight < height || !page) {
 		return false;
@@ -46,7 +47,7 @@ ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition, inde
 
 	if (!dontUpdateContextPosition) context.moveDown(height);
 
-	return true;
+	return position;
 };
 
 ElementWriter.prototype.alignLine = function(line) {
@@ -85,7 +86,8 @@ ElementWriter.prototype.alignLine = function(line) {
 
 ElementWriter.prototype.addImage = function(image, index) {
 	var context = this.context;
-	var page = context.getCurrentPage();
+	var page = context.getCurrentPage(),
+      position = this.getCurrentPositionOnPage();
 
 	if (context.availableHeight < image._height || !page) {
 		return false;
@@ -103,12 +105,13 @@ ElementWriter.prototype.addImage = function(image, index) {
 
 	context.moveDown(image._height);
 
-	return true;
+	return position;
 };
 
 ElementWriter.prototype.addQr = function(qr, index) {
 	var context = this.context;
-	var page = context.getCurrentPage();
+	var page = context.getCurrentPage(),
+      position = this.getCurrentPositionOnPage();
 
 	if (context.availableHeight < qr._height || !page) {
 		return false;
@@ -128,7 +131,7 @@ ElementWriter.prototype.addQr = function(qr, index) {
 
 	context.moveDown(qr._height);
 
-	return true;
+	return position;
 };
 
 ElementWriter.prototype.alignImage = function(image) {
@@ -151,7 +154,8 @@ ElementWriter.prototype.alignImage = function(image) {
 
 ElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreContextY, index) {
 	var context = this.context;
-	var page = context.getCurrentPage();
+	var page = context.getCurrentPage(),
+      position = this.getCurrentPositionOnPage();
 
 	if (page) {
 		offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
@@ -159,7 +163,7 @@ ElementWriter.prototype.addVector = function(vector, ignoreContextX, ignoreConte
             type: 'vector',
             item: vector
         }, index);
-		return true;
+		return position;
 	}
 };
 
@@ -247,6 +251,10 @@ ElementWriter.prototype.pushContext = function(contextOrWidth, height) {
 
 ElementWriter.prototype.popContext = function() {
 	this.context = this.contextStack.pop();
+};
+
+ElementWriter.prototype.getCurrentPositionOnPage = function(){
+	return (this.contextStack[0] || this.context).getCurrentPosition();
 };
 
 
