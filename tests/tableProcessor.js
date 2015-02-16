@@ -1,15 +1,13 @@
 /* jslint node: true */
 'use strict';
 var assert = require('assert');
-
+var _ = require('lodash');
+var sinon = require('sinon');
 var TableProcessor = require('../src/tableProcessor');
 
 describe('TableProcessor', function () {
 
-  function noop(){}
-
   var defaultLayout, contextFake, writerFake;
-
 
   beforeEach(function(){
     defaultLayout = {
@@ -40,7 +38,7 @@ describe('TableProcessor', function () {
     };
 
     contextFake = {
-      moveDown: noop
+      moveDown: _.noop
     };
 
     writerFake = {
@@ -52,12 +50,12 @@ describe('TableProcessor', function () {
         addVectorCallCount ++;
       },
       tracker: {
-        startTracking: noop,
-        stopTracking: noop
+        startTracking: _.noop,
+        stopTracking: _.noop
       }
     };
 
-  })
+  });
 
 
   it('should use the line colors function (regression #161)', function () {
@@ -122,5 +120,76 @@ describe('TableProcessor', function () {
     assert.equal(addVectorCallCount, 4)
   });
 
+  describe('header with nested table (issue #199)', function () {
+    it('should not remove the repeatable of the outer table when nested table ends', function () {
 
+      var fakeTableNode = function() {
+        return {
+          table: {
+            widths: ['*']
+          },
+          _offsets: {
+            total: 56472
+          },
+          _layout: {
+            paddingLeft: _.noop,
+            paddingRight: _.noop,
+            paddingBottom: _.noop,
+            paddingTop: _.noop,
+            vLineWidth: _.noop,
+            hLineWidth: _.noop
+          }
+        }
+      };
+
+      var header = {};
+
+      var nestedTableNode = fakeTableNode();
+      nestedTableNode.table.body = [['nested table cell']];
+
+      var tableNode = fakeTableNode();
+      tableNode.table.body = [
+            ['Header'],
+            [nestedTableNode]
+          ];
+      tableNode.table.headerRows = 1;
+
+      var fakeWriter = {
+        context: function() {
+          return {
+            availableWidth: 56473,
+            moveDown: _.noop
+          }
+        },
+        repeatables: [],
+        tracker: {
+          stopTracking: _.noop
+        },
+        addVector: _.noop,
+        popFromRepeatables: sinon.spy(),
+        pushToRepeatables: function(repeatable) {
+          assert.equal(repeatable, header);
+        },
+        beginUnbreakableBlock: _.noop,
+        currentBlockToRepeatable: function() {
+          return header;
+        },
+        commitUnbreakableBlock: _.noop
+      };
+
+      var pageBreaks = [];
+      var tableProcessor = new TableProcessor(tableNode);
+      tableProcessor.beginTable(fakeWriter);
+      tableProcessor.endRow(0, fakeWriter, pageBreaks);
+
+      var nestedTableProcessor = new TableProcessor(nestedTableNode);
+      nestedTableProcessor.beginTable(fakeWriter);
+      nestedTableProcessor.endRow(0, fakeWriter, pageBreaks);
+      nestedTableProcessor.endTable(fakeWriter);
+      assert.equal(fakeWriter.popFromRepeatables.callCount, 0);
+
+      tableProcessor.endTable(fakeWriter);
+      assert.equal(fakeWriter.popFromRepeatables.callCount, 1);
+    });
+  });
 });

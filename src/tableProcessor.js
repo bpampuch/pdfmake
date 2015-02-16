@@ -18,6 +18,7 @@ TableProcessor.prototype.beginTable = function(writer) {
 
   this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
   this.rowSpanData = prepareRowSpanData();
+  this.cleanUpRepeatables = false;
 
   this.headerRows = tableNode.table.headerRows || 0;
   this.rowsWithoutPageBreak = this.headerRows + (tableNode.table.keepWithHeaderRows || 0);
@@ -143,7 +144,9 @@ TableProcessor.prototype.drawVerticalLine = function(x, y0, y1, vLineIndex, writ
 };
 
 TableProcessor.prototype.endTable = function(writer) {
-  writer.popFromRepeatables();
+  if (this.cleanUpRepeatables) {
+    writer.popFromRepeatables();
+  }
 };
 
 TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
@@ -264,6 +267,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
     if(this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
       writer.commitUnbreakableBlock();
       writer.pushToRepeatables(this.headerRepeatable);
+      this.cleanUpRepeatables = true;
       this.headerRepeatable = null;
     }
 
