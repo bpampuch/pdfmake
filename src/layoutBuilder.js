@@ -1,6 +1,7 @@
 /* jslint node: true */
 'use strict';
 
+var _ = require('lodash');
 var TraversalTracker = require('./traversalTracker');
 var DocMeasure = require('./docMeasure');
 var DocumentContext = require('./documentContext');
@@ -14,6 +15,12 @@ var fontStringify = require('./helpers').fontStringify;
 var isFunction = require('./helpers').isFunction;
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
+
+function addAll(target, otherArray){
+  _.each(otherArray, function(item){
+    target.push(item);
+  });
+}
 
 /**
  * Creates an instance of LayoutBuilder - layout engine which turns document-definition-object
@@ -44,9 +51,78 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
  * @param {Object} defaultStyle default style definition
  * @return {Array} an array of pages
  */
-LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark) {
-	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
+LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
 
+  function addPageBreaksIfNecessary(linearNodeList, pages) {
+    linearNodeList = _.reject(linearNodeList, function(node){
+      return _.isEmpty(node.positions);
+    });
+
+    _.each(linearNodeList, function(node) {
+      var nodeInfo = _.pick(node, ['id', 'headlineLevel', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns', 'style', 'pageOrientation']);
+      nodeInfo.startPosition = _.first(node.positions);
+      nodeInfo.pageNumbers = _.chain(node.positions).map('pageNumber').uniq().value();
+      nodeInfo.pages = pages.length;
+      nodeInfo.stack = _.isArray(node.stack);
+
+      node.nodeInfo = nodeInfo;
+    });
+
+    return _.any(linearNodeList, function (node, index, followingNodeList) {
+
+      if (node.pageBreak !== 'before') {
+        var pageNumber = _.first(node.nodeInfo.pageNumbers);
+
+				var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
+          return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
+        }).value();
+
+        var nodesOnNextPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
+          return _.contains(node0.nodeInfo.pageNumbers, pageNumber + 1);
+        }).value();
+
+        var previousNodesOnPage = _.chain(followingNodeList).take(index).filter(function (node0) {
+          return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
+        }).value();
+
+        if (pageBreakBeforeFct(node.nodeInfo,
+          _.map(followingNodesOnPage, 'nodeInfo'),
+          _.map(nodesOnNextPage, 'nodeInfo'),
+          _.map(previousNodesOnPage, 'nodeInfo'))) {
+          node.pageBreak = 'before';
+          return true;
+        }
+      }
+    });
+  }
+
+  if(!isFunction(pageBreakBeforeFct)){
+    pageBreakBeforeFct = function(){
+      return false;
+    };
+  }
+
+  this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
+
+
+  function resetXYs(result) {
+    _.each(result.linearNodeList, function (node) {
+      node.resetXY();
+    });
+  }
+
+  var result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+  while(addPageBreaksIfNecessary(result.linearNodeList, result.pages)){
+    resetXYs(result);
+    result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+  }
+
+	return result.pages;
+};
+
+LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
+
+  this.linearNodeList = [];
   docStructure = this.docMeasure.measureDocument(docStructure);
 
   this.writer = new PageElementWriter(
@@ -54,9 +130,9 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
   var _this = this;
   this.writer.context().tracker.startTracking('pageAdded', function() {
-      _this.addBackground(background);
+    _this.addBackground(background);
   });
-    
+
   this.addBackground(background);
   this.processNode(docStructure);
   this.addHeadersAndFooters(header, footer);
@@ -64,8 +140,9 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
   if(watermark != null)
     this.addWatermark(watermark, fontProvider);
 
-	return this.writer.context().pages;
+  return {pages: this.writer.context().pages, linearNodeList: this.linearNodeList};
 };
+
 
 LayoutBuilder.prototype.addBackground = function(background) {
     var backgroundGetter = isFunction(background) ? background : function() { return background; };
@@ -73,7 +150,8 @@ LayoutBuilder.prototype.addBackground = function(background) {
     var pageBackground = backgroundGetter(this.writer.context().page + 1);
     
     if (pageBackground) {
-      this.writer.beginUnbreakableBlock(this.pageSize.width, this.pageSize.height);
+      var pageSize = this.writer.context().getCurrentPage().pageSize;
+      this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
       this.processNode(this.docMeasure.measureDocument(pageBackground));
       this.writer.commitUnbreakableBlock(0, 0);
     }
@@ -89,40 +167,59 @@ LayoutBuilder.prototype.addStaticRepeatable = function(node, x, y, width, height
   repeatable.xOffset = x;
   repeatable.yOffset = y;
   this.writer.commitUnbreakableBlock(x, y);
-  
+
   for(var i = 1, l = pages.length; i < l; i++) {
     this.writer.context().page = i;
     this.writer.addFragment(repeatable, true, true, true);
   }
 };
 
-LayoutBuilder.prototype.addDynamicRepeatable = function(nodeGetter, x, y, width, height) {
+LayoutBuilder.prototype.addDynamicRepeatable = function(nodeGetter, sizeFunction) {
   var pages = this.writer.context().pages;
-  
-  for(var i = 0, l = pages.length; i < l; i++) {
-    this.writer.context().page = i;
 
-    var node = nodeGetter(i + 1, l);
+  for(var pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
+    this.writer.context().page = pageIndex;
+
+    var node = nodeGetter(pageIndex + 1, l);
 
     if (node) {
-      this.writer.beginUnbreakableBlock(width, height);
+      var sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
+      this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
       this.processNode(this.docMeasure.measureDocument(node));
-      this.writer.commitUnbreakableBlock(x, y);
+      this.writer.commitUnbreakableBlock(sizes.x, sizes.y);
     }
   }
 };
 
 LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
-  if(isFunction(header)) {
-    this.addDynamicRepeatable(header, 0, 0, this.pageSize.width, this.pageMargins.top);
-  } else if(header) {
-    this.addStaticRepeatable(header, 0, 0, this.pageSize.width, this.pageMargins.top);
-  }
+  var headerSizeFct = function(pageSize, pageMargins){
+    return {
+      x: 0,
+      y: 0,
+      width: pageSize.width,
+      height: pageMargins.top
+    };
+  };
   
+  var footerSizeFct = function (pageSize, pageMargins) {
+    return {
+      x: 0,
+      y: pageSize.height - pageMargins.bottom,
+      width: pageSize.width,
+      height: pageMargins.bottom
+    };
+  };
+  
+  if(isFunction(header)) {
+    this.addDynamicRepeatable(header, headerSizeFct);
+  } else if(header) {
+    this.addStaticRepeatable(header, headerSizeFct);
+  }
+
   if(isFunction(footer)) {
-    this.addDynamicRepeatable(footer, 0, this.pageSize.height - this.pageMargins.bottom, this.pageSize.width, this.pageMargins.bottom);
+    this.addDynamicRepeatable(footer, footerSizeFct);
   } else if(footer) {
-    this.addStaticRepeatable(footer, 0, this.pageSize.height - this.pageMargins.bottom, this.pageSize.width, this.pageMargins.bottom);
+    this.addStaticRepeatable(footer, headerSizeFct);
   }
 };
 
@@ -177,18 +274,30 @@ LayoutBuilder.prototype.addWatermark = function(watermark, fontProvider){
   }
 };
 
+function decorateNode(node){
+  var x = node.x, y = node.y;
+  node.positions = [];
+  node.resetXY = function(){
+    node.x = x;
+    node.y = y;
+  };
+}
+
 LayoutBuilder.prototype.processNode = function(node) {
   var self = this;
 
+  this.linearNodeList.push(node);
+  decorateNode(node);
+
   applyMargins(function() {
     if (node.stack) {
-      self.processVerticalContainer(node.stack);
+      self.processVerticalContainer(node);
     } else if (node.columns) {
       self.processColumns(node);
     } else if (node.ul) {
-      self.processList(false, node.ul, node._gapSize);
+      self.processList(false, node);
     } else if (node.ol) {
-      self.processList(true, node.ol, node._gapSize);
+      self.processList(true, node);
     } else if (node.table) {
       self.processTable(node);
     } else if (node.text !== undefined) {
@@ -208,7 +317,7 @@ LayoutBuilder.prototype.processNode = function(node) {
 		var margin = node._margin;
 
     if (node.pageBreak === 'before') {
-        self.writer.moveToNextPage();
+        self.writer.moveToNextPage(node.pageOrientation);
     }
 
 		if (margin) {
@@ -224,16 +333,17 @@ LayoutBuilder.prototype.processNode = function(node) {
 		}
 
     if (node.pageBreak === 'after') {
-        self.writer.moveToNextPage();
+        self.writer.moveToNextPage(node.pageOrientation);
     }
 	}
 };
 
 // vertical container
-LayoutBuilder.prototype.processVerticalContainer = function(items) {
+LayoutBuilder.prototype.processVerticalContainer = function(node) {
 	var self = this;
-	items.forEach(function(item) {
+	node.stack.forEach(function(item) {
 		self.processNode(item);
+		addAll(node.positions, item.positions);
 
 		//TODO: paragraph gap
 	});
@@ -248,7 +358,8 @@ LayoutBuilder.prototype.processColumns = function(columnNode) {
 	if (gaps) availableWidth -= (gaps.length - 1) * columnNode._gap;
 
 	ColumnCalculator.buildColumnWidths(columns, availableWidth);
-	this.processRow(columns, columns, gaps);
+	var result = this.processRow(columns, columns, gaps);
+    addAll(columnNode.positions, result.positions);
 
 
 	function gapArray(gap) {
@@ -267,7 +378,7 @@ LayoutBuilder.prototype.processColumns = function(columnNode) {
 
 LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, tableRow) {
   var self = this;
-  var pageBreaks = [];
+  var pageBreaks = [], positions = [];
 
   this.tracker.auto('pageChanged', storePageBreakData, function() {
     widths = widths || columns;
@@ -288,6 +399,7 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
       self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
       if (!column._span) {
         self.processNode(column);
+        addAll(positions, column.positions);
       } else if (column._columnEndingContext) {
         // row-span ending
         self.writer.context().markEnding(column);
@@ -297,7 +409,7 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
     self.writer.context().completeColumnGroup();
   });
 
-  return pageBreaks;
+  return {pageBreaks: pageBreaks, positions: positions};
 
   function storePageBreakData(data) {
     var pageDesc;
@@ -335,8 +447,10 @@ LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, 
 };
 
 // lists
-LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
-	var self = this;
+LayoutBuilder.prototype.processList = function(orderedList, node) {
+	var self = this,
+      items = orderedList ? node.ol : node.ul,
+      gapSize = node._gapSize;
 
 	this.writer.context().addMargin(gapSize.width);
 
@@ -345,6 +459,7 @@ LayoutBuilder.prototype.processList = function(orderedList, items, gapSize) {
 		items.forEach(function(item) {
 			nextMarker = item.listMarker;
 			self.processNode(item);
+            addAll(node.positions, item.positions);
 		});
 	});
 
@@ -382,9 +497,10 @@ LayoutBuilder.prototype.processTable = function(tableNode) {
   for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
     processor.beginRow(i, this.writer);
 
-    var pageBreaks = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i);
+    var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i);
+    addAll(tableNode.positions, result.positions);
 
-    processor.endRow(i, this.writer, pageBreaks);
+    processor.endRow(i, this.writer, result.pageBreaks);
   }
 
   processor.endTable(this.writer);
@@ -395,7 +511,8 @@ LayoutBuilder.prototype.processLeaf = function(node) {
 	var line = this.buildNextLine(node);
 
 	while (line) {
-		this.writer.addLine(line);
+		var positions = this.writer.addLine(line);
+    node.positions.push(positions);
 		line = this.buildNextLine(node);
 	}
 };
@@ -415,7 +532,8 @@ LayoutBuilder.prototype.buildNextLine = function(textNode) {
 
 // images
 LayoutBuilder.prototype.processImage = function(node) {
-    this.writer.addImage(node);
+    var position = this.writer.addImage(node);
+    node.positions.push(position);
 };
 
 LayoutBuilder.prototype.processCanvas = function(node) {
@@ -429,14 +547,16 @@ LayoutBuilder.prototype.processCanvas = function(node) {
 	}
 
 	node.canvas.forEach(function(vector) {
-		this.writer.addVector(vector);
+		var position = this.writer.addVector(vector);
+        node.positions.push(position);
 	}, this);
 
 	this.writer.context().moveDown(height);
 };
 
 LayoutBuilder.prototype.processQr = function(node) {
-	this.writer.addQr(node);
+	var position = this.writer.addQr(node);
+    node.positions.push(position);
 };
 
 

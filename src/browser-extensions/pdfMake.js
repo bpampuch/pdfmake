@@ -34,9 +34,16 @@ Document.prototype._createDoc = function(options, callback) {
 	});
 	doc.on('end', function() {
 		result = Buffer.concat(chunks);
-		callback(result);
+		callback(result, doc._pdfMakePages);
 	});
 	doc.end();
+};
+
+Document.prototype._getPages = function(options, cb){
+  if (!cb) throw 'getBuffer is an async method and needs a callback argument';
+  this._createDoc(options, function(ignoreBuffer, pages){
+    cb(pages);
+  });
 };
 
 Document.prototype.open = function(message) {
@@ -104,7 +111,9 @@ Document.prototype.getDataUrl = function(cb, options) {
 
 Document.prototype.getBuffer = function(cb, options) {
 	if (!cb) throw 'getBuffer is an async method and needs a callback argument';
-	this._createDoc(options, cb);
+	this._createDoc(options, function(buffer){
+    cb(buffer);
+  });
 };
 
 module.exports = {

@@ -4,7 +4,7 @@
 
 var LayoutBuilder = require('./layoutBuilder');
 var PdfKit = require('pdfkit');
-var PDFReference = require('../node_modules/pdfkit/js/reference');
+var PDFReference = require('pdfkit/js/reference');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
 var textDecorator = require('./textDecorator');
@@ -75,8 +75,9 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	var pageSize = pageSize2widthAndHeight(docDefinition.pageSize || 'a4');
 
   if(docDefinition.pageOrientation === 'landscape') {
-    pageSize = { width: pageSize.height, height: pageSize.width };
+    pageSize = { width: pageSize.height, height: pageSize.width};
   }
+	pageSize.orientation = docDefinition.pageOrientation === 'landscape' ? docDefinition.pageOrientation : 'portrait';
 
 	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ], compress: false});
 	this.pdfKitDoc.info.Producer = 'pdfmake';
@@ -95,7 +96,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
     builder.registerTableLayouts(options.tableLayouts);
   }
 
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark);
+	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
 
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
@@ -200,10 +201,22 @@ function StringObject(str){
 	};
 }
 
+function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
+	var previousPageOrientation = pdfKitDoc.options.size[0] > pdfKitDoc.options.size[1] ? 'landscape' : 'portrait';
+
+	if(currentPage.pageSize.orientation !== previousPageOrientation) {
+		var width = pdfKitDoc.options.size[0];
+		var height = pdfKitDoc.options.size[1];
+		pdfKitDoc.options.size = [height, width];
+	}
+}
+
 function renderPages(pages, fontProvider, pdfKitDoc) {
-	for(var i = 0, l = pages.length; i < l; i++) {
+  pdfKitDoc._pdfMakePages = pages;
+	for (var i = 0; i < pages.length; i++) {
 		if (i > 0) {
-			pdfKitDoc.addPage();
+			updatePageOrientationInOptions(pages[i], pdfKitDoc);
+			pdfKitDoc.addPage(pdfKitDoc.options);
 		}
 
 		setFontRefs(fontProvider, pdfKitDoc);
@@ -410,7 +423,7 @@ FontProvider.prototype.provideFont = function(familyName, bold, italics) {
 	if (cached) return cached;
 
 	var fontCache = (this.cache[familyName] = this.cache[familyName] || {});
-	fontCache[type] = this.pdfDoc.font(this.fonts[familyName][type], familyName)._font;
+	fontCache[type] = this.pdfDoc.font(this.fonts[familyName][type], familyName + ' (' + type + ')')._font;
 	return fontCache[type];
 };
 

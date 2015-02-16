@@ -1,5 +1,5 @@
 var pdfKit = require('pdfkit');
-var PDFImage = require('../node_modules/pdfkit/js/image');
+var PDFImage = require('pdfkit/js/image');
 
 function ImageMeasure(pdfDoc, imageDictionary) {
 	this.pdfDoc = pdfDoc;
