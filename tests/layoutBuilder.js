@@ -1471,7 +1471,7 @@ describe('LayoutBuilder', function() {
 
       builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
-      assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].startPosition, {pageNumber:1,left:40,top:40,verticalRatio:0,horizontalRatio:0});
+      assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].startPosition, {pageNumber:1,left:40,top:40,verticalRatio:0,horizontalRatio:0, pageOrientation: 'portrait'});
     });
 
     it('should provide the pageOrientation of the node', function () {
