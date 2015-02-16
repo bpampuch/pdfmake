@@ -438,6 +438,19 @@ If you set ```pageSize``` to a string, you can use one of the following values:
 * 'SRA0', 'SRA1', 'SRA2', 'SRA3', 'SRA4',
 * 'EXECUTIVE', 'FOLIO', 'LEGAL', 'LETTER', 'TABLOID'
 
+To change page orientation within a document, add a page break with the new page orientation.
+
+```js
+{
+  pageOrientation: 'portrait',
+  content: [
+    {text: 'Text on Portrait'},
+    {text: 'Text on Landscape', pageOrientation: 'landscape', pageBreak: 'before'},
+    {text: 'Text on Landscape 2', pageOrientation: 'portrait', pageBreak: 'after'},
+    {text: 'Text on Portrait 2'},
+  ]
+}
+```
 
 ## Coming soon
 Hmmm... let me know what you need ;)
