@@ -65,9 +65,9 @@ TableProcessor.prototype.onRowBreak = function(rowIndex, writer) {
   return function() {
     //console.log('moving by : ', topLineWidth, rowPaddingTop);
     var offset = self.rowPaddingTop + (!self.headerRows ? self.topLineWidth : 0);
-    writer.context().moveDown(offset);  
+    writer.context().moveDown(offset);
   };
-  
+
 };
 
 TableProcessor.prototype.beginRow = function(rowIndex, writer) {
@@ -75,7 +75,7 @@ TableProcessor.prototype.beginRow = function(rowIndex, writer) {
   this.rowPaddingTop = this.layout.paddingTop(rowIndex, this.tableNode);
   this.bottomLineWidth = this.layout.hLineWidth(rowIndex+1, this.tableNode);
   this.rowPaddingBottom = this.layout.paddingBottom(rowIndex, this.tableNode);
-  
+
   this.rowCallback = this.onRowBreak(rowIndex, writer);
   writer.tracker.startTracking('pageChanged', this.rowCallback );
     if(this.dontBreakRows) {
@@ -131,7 +131,7 @@ TableProcessor.prototype.drawHorizontalLine = function(lineIndex, writer, overri
 
 TableProcessor.prototype.drawVerticalLine = function(x, y0, y1, vLineIndex, writer) {
   var width = this.layout.vLineWidth(vLineIndex, this.tableNode);
-  if (width === 0) return;  
+  if (width === 0) return;
   writer.addVector({
     type: 'line',
     x1: x + width/2,
@@ -188,6 +188,11 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
       var hzLineOffset =  rowBreakWithoutHeader ? 0 : this.topLineWidth;
       var y1 = ys[yi].y0;
       var y2 = ys[yi].y1;
+
+			if(willBreak) {
+				y2 = y2 + this.rowPaddingBottom;
+			}
+
       if (writer.context().page != ys[yi].page) {
         writer.context().page = ys[yi].page;
 
@@ -254,7 +259,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
     }
 
     if(this.dontBreakRows) {
-      writer.tracker.auto('pageChanged', 
+      writer.tracker.auto('pageChanged',
         function() {
           self.drawHorizontalLine(rowIndex, writer);
         },
