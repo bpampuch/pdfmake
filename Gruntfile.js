@@ -52,9 +52,13 @@ module.exports = function(grunt) {
 			test: {
 				options: {
 					reporter: '<%= (grunt.option("cc") ? "html-cov" : "spec") %>',
-				},
-				src: ['tests/**/*.js'],
-			}
+				}
+			},
+      options: {
+        files: 'tests',
+        recursive: true,
+        'check-leaks': true
+      }
 		},
 
 		jsdoc: {

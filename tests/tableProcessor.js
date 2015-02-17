@@ -117,7 +117,7 @@ describe('TableProcessor', function () {
     processor.beginRow(0, writerFake);
     processor.endRow(0, writerFake, []);
 
-    assert.equal(addVectorCallCount, 4)
+    assert.equal(addVectorCallCount, 4);
   });
 
   describe('header with nested table (issue #199)', function () {

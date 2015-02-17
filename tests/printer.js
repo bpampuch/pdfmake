@@ -123,7 +123,6 @@ describe('Printer', function () {
     };
     printer.createPdfKitDocument(docDefinition);
 
-    console.log('mysterious fourth call arguments', Pdfkit.prototype.addPage.lastCall.args);
     assert.equal(Pdfkit.prototype.addPage.callCount, 3);
 
 

@@ -150,7 +150,7 @@ TableProcessor.prototype.endTable = function(writer) {
 };
 
 TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
-    var i;
+    var l, i;
     var self = this;
     writer.tracker.stopTracking('pageChanged', this.rowCallback);
     writer.context().moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
