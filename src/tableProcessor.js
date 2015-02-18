@@ -223,10 +223,10 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
         }
       }
 
-      if (willBreak) {
+      if (willBreak && this.layout.hLineWhenBroken !== false) {
         this.drawHorizontalLine(rowIndex + 1, writer, y2);
       }
-      if(rowBreakWithoutHeader) {
+      if(rowBreakWithoutHeader && this.layout.hLineWhenBroken !== false) {
         this.drawHorizontalLine(rowIndex, writer, y1);
       }
     }
