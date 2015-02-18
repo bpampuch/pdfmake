@@ -57,7 +57,7 @@ Document.prototype.open = function(message) {
 		});
 	} catch(e) {
 		win.close();
-		return false;
+		throw e;
 	}
 };
 
