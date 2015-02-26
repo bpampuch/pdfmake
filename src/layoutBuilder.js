@@ -69,8 +69,8 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
     });
 
     return _.any(linearNodeList, function (node, index, followingNodeList) {
-
-      if (node.pageBreak !== 'before') {
+      if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
+        node.pageBreakCalculated = true;
         var pageNumber = _.first(node.nodeInfo.pageNumbers);
 
 				var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
