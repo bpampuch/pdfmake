@@ -204,6 +204,8 @@ DocumentContext.prototype.getCurrentPosition = function() {
   return {
     pageNumber: this.page + 1,
     pageOrientation: pageSize.orientation,
+    pageInnerHeight: innerHeight,
+    pageInnerWidth: innerWidth,
     left: this.x,
     top: this.y,
     verticalRatio: ((this.y - this.pageMargins.top) / innerHeight),
