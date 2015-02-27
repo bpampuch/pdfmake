@@ -281,9 +281,21 @@ LayoutBuilder.prototype.addWatermark = function(watermark, fontProvider){
 function decorateNode(node){
   var x = node.x, y = node.y;
   node.positions = [];
+
+  _.each(node.canvas, function(vector){
+    var x = vector.x, y = vector.y;
+    vector.resetXY = function(){
+      vector.x = x;
+      vector.y = y;
+    };
+  });
+
   node.resetXY = function(){
     node.x = x;
     node.y = y;
+    _.each(node.canvas, function(vector){
+      vector.resetXY();
+    });
   };
 }
 
