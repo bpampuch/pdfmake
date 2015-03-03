@@ -128,7 +128,7 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-dump-dir');
 	grunt.loadNpmTasks('grunt-contrib-concat');
 
-	grunt.registerTask('test', [ 'replace:exposeTestMethods', 'jshint', 'mochacov', 'replace:hideTestMethods' ]);
+	grunt.registerTask('test', [ 'replace:fixPdfKit', 'replace:exposeTestMethods', 'jshint', 'mochacov', 'replace:hideTestMethods' ]);
 
 	grunt.registerTask('fixVfsFonts', 'Adds semicolon to the end of vfs_fonts.js', function () {
 	      var file = grunt.file.read('build/vfs_fonts.js');
