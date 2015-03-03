@@ -1,50 +1,4 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.pdfMake = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"./src/browser-extensions/virtual-fs.js":[function(require,module,exports){
-(function (Buffer,__dirname){
-/* jslint node: true */
-'use strict';
-
-// var b64 = require('./base64.js').base64DecToArr;
-function VirtualFileSystem() {
-	this.fileSystem = {};
-	this.baseSystem = {};
-}
-
-VirtualFileSystem.prototype.readFileSync = function(filename) {
-	filename = fixFilename(filename);
-
-	var base64content = this.baseSystem[filename];
-	if (base64content) {
-		return new Buffer(base64content, 'base64');
-	}
-
-	return this.fileSystem[filename];
-};
-
-VirtualFileSystem.prototype.writeFileSync = function(filename, content) {
-	this.fileSystem[fixFilename(filename)] = content;
-};
-
-VirtualFileSystem.prototype.bindFS = function(data) {
-	this.baseSystem = data;
-};
-
-
-function fixFilename(filename) {
-	if (filename.indexOf(__dirname) === 0) {
-		filename = filename.substring(__dirname.length);
-	}
-
-	if (filename.indexOf('/') === 0) {
-		filename = filename.substring(1);
-	}
-
-	return filename;
-}
-
-module.exports = new VirtualFileSystem();
-
-}).call(this,require("buffer").Buffer,"/src/browser-extensions")
-},{"buffer":17}],1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.pdfMake = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /* FileSaver.js
  * A saveAs() FileSaver implementation.
  * 2014-08-29
@@ -32939,6 +32893,52 @@ TraversalTracker.prototype.auto = function(event, cb, innerBlock) {
 module.exports = TraversalTracker;
 
 },{}],"fs":[function(require,module,exports){
-arguments[4][3][0].apply(exports,arguments)
-},{"dup":3}]},{},[82])("fs")
+(function (Buffer,__dirname){
+/* jslint node: true */
+'use strict';
+
+// var b64 = require('./base64.js').base64DecToArr;
+function VirtualFileSystem() {
+	this.fileSystem = {};
+	this.baseSystem = {};
+}
+
+VirtualFileSystem.prototype.readFileSync = function(filename) {
+	filename = fixFilename(filename);
+
+	var base64content = this.baseSystem[filename];
+	if (base64content) {
+		return new Buffer(base64content, 'base64');
+	}
+
+	return this.fileSystem[filename];
+};
+
+VirtualFileSystem.prototype.writeFileSync = function(filename, content) {
+	this.fileSystem[fixFilename(filename)] = content;
+};
+
+VirtualFileSystem.prototype.bindFS = function(data) {
+	this.baseSystem = data;
+};
+
+
+function fixFilename(filename) {
+	if (filename.indexOf(__dirname) === 0) {
+		filename = filename.substring(__dirname.length);
+	}
+
+	if (filename.indexOf('/') === 0) {
+		filename = filename.substring(1);
+	}
+
+	return filename;
+}
+
+module.exports = new VirtualFileSystem();
+
+}).call(this,require("buffer").Buffer,"/src/browser-extensions")
+},{"buffer":17}],"pdfMake":[function(require,module,exports){
+arguments[4][82][0].apply(exports,arguments)
+},{"../../libs/fileSaver":1,"../printer":92,"buffer":17,"dup":82}]},{},[82])("pdfMake")
 });
