@@ -415,7 +415,7 @@ describe('Integration Test', function () {
 			assert.equal(pages.length, 1);
 			assert.equal(lines.length, 3);
 
-      var bulletSpacing = fontProvider.fontWrappers['Roboto'].normal.widthOfString(DEFAULT_BULLET_SPACER, 12);
+      var bulletSpacing = getWidthOfString(DEFAULT_BULLET_SPACER);
 
       assert.deepEqual(_.map(_.map(lines, 'item'), 'x'), [
 				startX,
@@ -567,7 +567,7 @@ describe('Integration Test', function () {
       assert.deepEqual(getColumnText(lines, {cell:  0}), 'C1');
       assert.deepEqual(getColumnText(lines, {cell:  1}), 'Column 2');
 
-			var autoWidth = fontProvider.fontWrappers['Roboto'].normal.widthOfString('Column 2', 12);
+			var autoWidth = getWidthOfString('Column 2');
 			assert.equal(lines[1].item.maxWidth, autoWidth)
 		});
 
