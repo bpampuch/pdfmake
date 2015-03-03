@@ -53,6 +53,9 @@ describe('Integration Test', function () {
 
   }
 
+	function getWidthOfString(inlines) {
+		return fontProvider.fontWrappers['Roboto'].normal.widthOfString(inlines, 12);
+	}
 
   function getInlineTexts(pages, options) {
     return _.map(pages[options.page].items[options.item].item.inlines, 'text');
@@ -632,10 +635,6 @@ describe('Integration Test', function () {
 			}
 		}
 
-		function getBulletSpacing(inlines) {
-			return fontProvider.fontWrappers['Roboto'].normal.widthOfString(inlines, 12);
-		}
-
 		it('renders a ordered list', function () {
 			var dd = {
 				content: {
@@ -656,7 +655,7 @@ describe('Integration Test', function () {
 			assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '1. ');
 
 			assert.equal(item1.bullet.x, MARGINS.left);
-			assert.equal(item1.content.x, MARGINS.left + getBulletSpacing('1. '));
+			assert.equal(item1.content.x, MARGINS.left + getWidthOfString('1. '));
 			assert.equal(item1.bullet.y, MARGINS.top);
 			assert.equal(item1.content.y, MARGINS.top);
 
@@ -665,7 +664,7 @@ describe('Integration Test', function () {
 			assert.equal(_.map(item2.bullet.inlines, 'text').join(''), '2. ');
 
 			assert.equal(item2.bullet.x, MARGINS.left);
-			assert.equal(item2.content.x, MARGINS.left + getBulletSpacing('2. '));
+			assert.equal(item2.content.x, MARGINS.left + getWidthOfString('2. '));
 			assert.equal(item2.bullet.y, MARGINS.top + LINE_HEIGHT);
 			assert.equal(item2.content.y, MARGINS.top + LINE_HEIGHT);
 
@@ -674,7 +673,7 @@ describe('Integration Test', function () {
 			assert.equal(_.map(item3.bullet.inlines, 'text').join(''), '3. ');
 
 			assert.equal(item3.bullet.x, MARGINS.left);
-			assert.equal(item3.content.x, MARGINS.left + getBulletSpacing('3. '));
+			assert.equal(item3.content.x, MARGINS.left + getWidthOfString('3. '));
 			assert.equal(item3.bullet.y, MARGINS.top + LINE_HEIGHT * 2);
 			assert.equal(item3.content.y, MARGINS.top + LINE_HEIGHT * 2);
 
@@ -682,7 +681,7 @@ describe('Integration Test', function () {
 			assert.equal(_.map(item4.content.inlines, 'text').join(''), 'forage whatever.');
 			assert.equal(item4.bullet, undefined);
 
-      assert.equal(item4.content.x, MARGINS.left + getBulletSpacing(DEFAULT_BULLET_SPACER));
+      assert.equal(item4.content.x, MARGINS.left + getWidthOfString(DEFAULT_BULLET_SPACER));
 			assert.equal(item4.content.y, MARGINS.top + LINE_HEIGHT * 3);
 		});
 
@@ -713,14 +712,14 @@ describe('Integration Test', function () {
 			assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '1. ');
 
 			assert.equal(item1.bullet.x, MARGINS.left);
-			assert.equal(item1.content.x, MARGINS.left + getBulletSpacing('10. '));
+			assert.equal(item1.content.x, MARGINS.left + getWidthOfString('10. '));
 
 			var item10 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 10});
 			assert.equal(_.map(item10.content.inlines, 'text').join(''), 'item 10');
 			assert.equal(_.map(item10.bullet.inlines, 'text').join(''), '10. ');
 
 			assert.equal(item10.bullet.x, MARGINS.left);
-			assert.equal(item10.content.x, MARGINS.left + getBulletSpacing('10. '));
+			assert.equal(item10.content.x, MARGINS.left + getWidthOfString('10. '));
 		});
 
 		it('renders a unordered list', function () {
@@ -746,7 +745,7 @@ describe('Integration Test', function () {
 			assert.equal(item1.bullet.type, 'ellipse');
 
       assert.equal(item1.bullet.x, bulletMargin);
-			assert.equal(item1.content.x, MARGINS.left + getBulletSpacing(DEFAULT_BULLET_SPACER));
+			assert.equal(item1.content.x, MARGINS.left + getWidthOfString(DEFAULT_BULLET_SPACER));
 			assert.equal(item1.content.y, MARGINS.top);
 
 			var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
@@ -754,21 +753,21 @@ describe('Integration Test', function () {
 			assert.equal(item2.bullet.type, 'ellipse');
 
 			assert.equal(item2.bullet.x, bulletMargin);
-			assert.equal(item2.content.x, MARGINS.left + getBulletSpacing(DEFAULT_BULLET_SPACER));
+			assert.equal(item2.content.x, MARGINS.left + getWidthOfString(DEFAULT_BULLET_SPACER));
 
 			var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
 			assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3 - Paleo American Apparel ');
 			assert.equal(item3.bullet.type, 'ellipse');
 
 			assert.equal(item3.bullet.x, bulletMargin);
-			assert.equal(item3.content.x, MARGINS.left + getBulletSpacing(DEFAULT_BULLET_SPACER));
+			assert.equal(item3.content.x, MARGINS.left + getWidthOfString(DEFAULT_BULLET_SPACER));
 			assert.equal(item3.content.y, MARGINS.top + LINE_HEIGHT * 2);
 
 			var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
 			assert.equal(_.map(item4.content.inlines, 'text').join(''), 'forage whatever.');
 			assert.equal(item4.bullet, undefined);
 
-			assert.equal(item4.content.x, MARGINS.left + getBulletSpacing(DEFAULT_BULLET_SPACER));
+			assert.equal(item4.content.x, MARGINS.left + getWidthOfString(DEFAULT_BULLET_SPACER));
 			assert.equal(item4.content.y, MARGINS.top + LINE_HEIGHT * 3);
 		});
 
@@ -801,13 +800,13 @@ describe('Integration Test', function () {
 			assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
 
 			assert.equal(item1.bullet.x, bulletMargin);
-			assert.equal(item1.content.x, MARGINS.left + getBulletSpacing(DEFAULT_BULLET_SPACER));
+			assert.equal(item1.content.x, MARGINS.left + getWidthOfString(DEFAULT_BULLET_SPACER));
 
 			var item10 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 10});
 			assert.equal(_.map(item10.content.inlines, 'text').join(''), 'item 10');
 
 			assert.equal(item10.bullet.x, bulletMargin);
-			assert.equal(item10.content.x, MARGINS.left + getBulletSpacing(DEFAULT_BULLET_SPACER));
+			assert.equal(item10.content.x, MARGINS.left + getWidthOfString(DEFAULT_BULLET_SPACER));
 		});
 
 		it('renders nested lists', function () {
@@ -833,13 +832,13 @@ describe('Integration Test', function () {
 			assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '1. ');
 
 			assert.equal(item1.bullet.x, MARGINS.left);
-			assert.equal(item1.content.x, MARGINS.left + getBulletSpacing('1. '));
+			assert.equal(item1.content.x, MARGINS.left + getWidthOfString('1. '));
 
 			var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
 			assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
 			assert.equal(_.map(item2.bullet.inlines, 'text').join(''), '2. ');
 
-			var item2BulletSpacing = MARGINS.left + getBulletSpacing('2. ');
+			var item2BulletSpacing = MARGINS.left + getWidthOfString('2. ');
 			assert.equal(item2.bullet.x, MARGINS.left);
 			assert.equal(item2.content.x, item2BulletSpacing);
 
@@ -848,7 +847,7 @@ describe('Integration Test', function () {
 			assert.equal(_.map(subItem1.bullet.inlines, 'text').join(''), '1. ');
 
       assert.equal(subItem1.bullet.x, item2BulletSpacing);
-			assert.equal(subItem1.content.x, item2BulletSpacing + getBulletSpacing('1. '));
+			assert.equal(subItem1.content.x, item2BulletSpacing + getWidthOfString('1. '));
 			assert.equal(subItem1.content.y, MARGINS.top + LINE_HEIGHT * 2);
 
 			var subItem2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
@@ -856,13 +855,13 @@ describe('Integration Test', function () {
 			assert.equal(_.map(subItem2.bullet.inlines, 'text').join(''), '2. ');
 
 			assert.equal(subItem2.bullet.x, item2BulletSpacing);
-			assert.equal(subItem2.content.x, item2BulletSpacing + getBulletSpacing('2. '));
+			assert.equal(subItem2.content.x, item2BulletSpacing + getWidthOfString('2. '));
 
 			var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
 			assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
 			assert.equal(_.map(item3.bullet.inlines, 'text').join(''), '3. ');
 
-			var item3BulletSpacing = MARGINS.left + getBulletSpacing('3. ');
+			var item3BulletSpacing = MARGINS.left + getWidthOfString('3. ');
 			assert.equal(item3.bullet.x, MARGINS.left);
 			assert.equal(item3.content.x, item3BulletSpacing);
 			assert.equal(item3.content.y, MARGINS.top + LINE_HEIGHT * 4);
@@ -952,6 +951,125 @@ describe('Integration Test', function () {
       assert.equal(_.map(backgroundPage2.inlines, 'text').join(''), 'Background paragraph on page 2');
 			assert.equal(backgroundPage2.x, 0);
 			assert.equal(backgroundPage2.y, 0);
+		});
+	});
+
+	describe('alignment', function () {
+		it('renders text right aligned', function () {
+
+			var dd = {
+				content: [
+					{
+						text: 'Left aligned before',
+						alignment: 'left'
+					},
+					{
+						text: 'Right aligned',
+						alignment: 'right'
+					},
+					{
+						text: 'Left aligned after',
+						alignment: 'left'
+					}
+				]
+			};
+
+			var pages = renderPages('A6', dd);
+
+			assert.equal(pages.length, 1);
+
+			var itemLeftBefore = pages[0].items[0].item;
+      assert.equal(itemLeftBefore.x, MARGINS.left);
+      assert.equal(itemLeftBefore.y, MARGINS.top);
+
+			var itemRight = pages[0].items[1].item;
+      assert.equal(itemRight.x, sizes.A6[0] - MARGINS.right - getWidthOfString('Right aligned'));
+      assert.equal(itemRight.y, MARGINS.top + LINE_HEIGHT);
+
+			var itemLeftAfter = pages[0].items[2].item;
+			assert.equal(itemLeftAfter.x, MARGINS.left);
+			assert.equal(itemLeftAfter.y, MARGINS.top + LINE_HEIGHT * 2);
+		});
+
+		it('renders text center aligned', function () {
+
+			var dd = {
+				content: [
+					{
+						text: 'Left aligned before',
+						alignment: 'left'
+					},
+					{
+						text: 'Right aligned',
+						alignment: 'center'
+					},
+					{
+						text: 'Left aligned after',
+						alignment: 'left'
+					}
+				]
+			};
+
+			var pages = renderPages('A6', dd);
+
+			assert.equal(pages.length, 1);
+
+			var itemLeftBefore = pages[0].items[0].item;
+			assert.equal(itemLeftBefore.x, MARGINS.left);
+			assert.equal(itemLeftBefore.y, MARGINS.top);
+
+			var itemCenter = pages[0].items[1].item;
+			assert.equal(itemCenter.x, sizes.A6[0] / 2 - getWidthOfString('Right aligned') / 2);
+			assert.equal(itemCenter.y, MARGINS.top + LINE_HEIGHT);
+
+			var itemLeftAfter = pages[0].items[2].item;
+			assert.equal(itemLeftAfter.x, MARGINS.left);
+			assert.equal(itemLeftAfter.y, MARGINS.top + LINE_HEIGHT * 2);
+		});
+
+		it('renders text justify aligned', function () {
+
+			var dd = {
+				content: [
+					{
+						text: 'Left aligned before',
+						alignment: 'left'
+					},
+					{
+						text: 'I\'m not sure yet if this is the_desired_behavior. I find it a better.',
+						alignment: 'justify'
+					},
+					{
+						text: 'Left aligned after',
+						alignment: 'left'
+					}
+				]
+			};
+
+			var pages = renderPages('A6', dd);
+
+			assert.equal(pages.length, 1);
+
+			var itemLeftBefore = pages[0].items[0].item;
+			assert.equal(itemLeftBefore.x, MARGINS.left);
+			assert.equal(itemLeftBefore.y, MARGINS.top);
+
+			var itemJustify1 = pages[0].items[1].item;
+			assert.equal(itemJustify1.x, MARGINS.left);
+			assert.equal(itemJustify1.y, MARGINS.top + LINE_HEIGHT);
+
+			var availablePageWidth = sizes.A6[0] - MARGINS.left - MARGINS.right;
+			var endOfLastItem = itemJustify1.inlines[itemJustify1.inlines.length - 1].x + getWidthOfString('is');
+			assert.equal(endOfLastItem, availablePageWidth);
+
+			var itemJustify2 = pages[0].items[2].item;
+			assert.equal(itemJustify2.x, MARGINS.left);
+			assert.equal(itemJustify2.y, MARGINS.top + LINE_HEIGHT * 2);
+			assert.equal(itemJustify2.inlineWidths, getWidthOfString('the_desired_behavior. I find it a better.'));
+
+			var itemLeftAfter = pages[0].items[3].item;
+			assert.equal(itemLeftAfter.x, MARGINS.left);
+			assert.equal(itemLeftAfter.y, MARGINS.top + LINE_HEIGHT * 3);
 		});
 	});
 });
