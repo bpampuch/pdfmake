@@ -72,7 +72,6 @@ FontWrapper.prototype.encode = function(text){
 
 
   var characterFitInFontWithIndex = function (charCatalogue) {
-
     return _.uniq(charCatalogue.concat(charTypesInInline)).length <= self.MAX_CHAR_TYPES;
   };
 

@@ -49,8 +49,7 @@ describe('Integration Test', function () {
       docDefinition.images,
       docDefinition.watermark,
       docDefinition.pageBreakBefore
-    )
-
+    );
   }
 
 	function getWidthOfString(inlines) {
@@ -79,6 +78,34 @@ describe('Integration Test', function () {
       assert.deepEqual(getInlineTexts(pages, {page: 0, item: 2}), ['three ', 'lines ', 'because ', 'it ', 'is ']);
       assert.deepEqual(getInlineTexts(pages, {page: 0, item: 3}), ['longer']);
     });
+
+		it('renders text with margin', function () {
+			var customMargin = 10;
+			var anotherCustomMargin = 13;
+      var dd = {
+				content: [
+					{	text: 'has margin',	margin: customMargin },
+					{ text: 'has only top/bottom margin', margin: [0, customMargin] },
+					{ text: 'has single set margin', margin: [anotherCustomMargin, anotherCustomMargin, anotherCustomMargin, anotherCustomMargin] },
+					{ text: 'has only right margin', alignment: 'right', marginRight: 20 }
+				]
+			};
+
+			var pages = renderPages('A5', dd);
+
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].items[0].item.x, MARGINS.left + customMargin);
+			assert.equal(pages[0].items[0].item.y, MARGINS.top + customMargin);
+
+			assert.equal(pages[0].items[1].item.x, MARGINS.left);
+			assert.equal(pages[0].items[1].item.y, MARGINS.top + customMargin * 3 + LINE_HEIGHT);
+
+			assert.equal(pages[0].items[2].item.x, MARGINS.left + anotherCustomMargin);
+			assert.equal(pages[0].items[2].item.y.toFixed(3), MARGINS.top + customMargin * 4 + anotherCustomMargin + LINE_HEIGHT * 2);
+
+			assert.equal(pages[0].items[3].item.x, sizes.A5[0] - MARGINS.right - 20 - getWidthOfString('has only right margin'));
+			assert.equal(pages[0].items[3].item.y.toFixed(3), MARGINS.top + customMargin * 4 + anotherCustomMargin * 2 + LINE_HEIGHT * 3);
+		});
   });
 
   describe('columns simple', function(){
@@ -1072,4 +1099,6 @@ describe('Integration Test', function () {
 			assert.equal(itemLeftAfter.y, MARGINS.top + LINE_HEIGHT * 3);
 		});
 	});
+
+
 });
