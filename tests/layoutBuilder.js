@@ -1288,9 +1288,9 @@ describe('LayoutBuilder', function() {
 				tableNode.table.body.push([stack1, stack2]);
 			}
 
+			new DocMeasure(sampleTestProvider, {}, {}, {}).measureDocument(tableNode);
 			ColumnCalculator.buildColumnWidths(tableNode.table.widths, 320);
 
-			new DocMeasure(sampleTestProvider, {}, {}, {}).measureDocument(tableNode);
 			return tableNode;
 		}
 

@@ -126,7 +126,10 @@ describe('TableProcessor', function () {
       var fakeTableNode = function() {
         return {
           table: {
-            widths: ['*']
+            // since extendTableWidths is not called from out tests
+            // we can't use the doc-definition syntax for widths
+            // so instead of '*' we 
+            widths: [ { width: '*' } ]
           },
           _offsets: {
             total: 56472

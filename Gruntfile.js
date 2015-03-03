@@ -78,8 +78,10 @@ module.exports = function(grunt) {
 		browserify: {
 			build: {
 				options: {
-					standalone: 'pdfMake',
-					alias: './src/browser-extensions/virtual-fs.js:fs'
+					browserifyOptions: {
+						standalone: 'pdfMake',
+						alias: './src/browser-extensions/virtual-fs.js:fs'
+					}
 				},
 				files: {
 					'build/pdfmake.js': ['./src/browser-extensions/pdfMake.js']
