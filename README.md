@@ -29,8 +29,6 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html)
 
 ## Getting Started
 
-*warning! links to the documentation do NOT work yet*
-
 This document will walk you through the basics of pdfmake and will show you how to create PDF files in the browser. If you're interested in server-side printing check the examples folder.
 
 To begin with the default configuration, you should include two files:
