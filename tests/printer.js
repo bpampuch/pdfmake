@@ -131,4 +131,50 @@ describe('Printer', function () {
     assert.deepEqual(Pdfkit.prototype.addPage.thirdCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
   });
 
+	it('should print bullet vectors as ellipses', function () {
+		printer = new Printer(fontDescriptors);
+		var docDefinition = {
+			pageOrientation: 'portrait',
+			pageSize: { width: SHORT_SIDE, height: LONG_SIDE },
+			content: [
+				{
+					"stack": [
+						{
+							"ul": [
+								{ "text": "item1" },
+								{ "text": "item2" }
+							]
+						}
+					]
+				}
+			]
+		};
+		Pdfkit.prototype.ellipse = sinon.spy(Pdfkit.prototype.ellipse);
+
+		printer.createPdfKitDocument(docDefinition);
+
+		function assertEllipse(ellipseCallArgs) {
+			var firstEllipse = {
+				x: ellipseCallArgs[0],
+				y: ellipseCallArgs[1],
+				r1: ellipseCallArgs[2],
+				r2: ellipseCallArgs[3]
+			};
+			assert(firstEllipse.x !== undefined);
+			assert(! isNaN(firstEllipse.x));
+			assert(firstEllipse.y !== undefined);
+			assert(! isNaN(firstEllipse.y));
+			assert(firstEllipse.r1 !== undefined);
+			assert(! isNaN(firstEllipse.r1));
+			assert(firstEllipse.r2 !== undefined);
+			assert(! isNaN(firstEllipse.r2));
+		}
+
+		assert.equal(Pdfkit.prototype.ellipse.callCount, 2);
+
+		assertEllipse(Pdfkit.prototype.ellipse.firstCall.args);
+		assertEllipse(Pdfkit.prototype.ellipse.secondCall.args);
+
+	});
+
 });

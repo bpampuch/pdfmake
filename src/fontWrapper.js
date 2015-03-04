@@ -16,6 +16,10 @@ function FontWrapper(pdfkitDoc, path, fontName){
     var font = this.getFont(0);
     return font.ascender;
   });
+  this.__defineGetter__('decender', function(){
+    var font = this.getFont(0);
+    return font.decender;
+  });
 
 }
 // private
