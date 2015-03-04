@@ -20,9 +20,9 @@ function DocumentContext(pageSize, pageMargins) {
 	this.snapshots = [];
 
 	this.endingCell = null;
-    
+
   this.tracker = new TraversalTracker();
-    
+
 	this.addPage(pageSize);
 }
 
@@ -125,6 +125,42 @@ DocumentContext.prototype.pageSnapshot = function(){
   }
 };
 
+DocumentContext.prototype.moveTo = function(x,y) {
+	if(x !== undefined && x !== null) {
+		this.x = x;
+		this.availableWidth = this.getCurrentPage().pageSize.width - this.x - this.pageMargins.right;
+	}
+	if(y !== undefined && y !== null){
+		this.y = y;
+		this.availableHeight = this.getCurrentPage().pageSize.height - this.y - this.pageMargins.bottom;
+	}
+};
+
+DocumentContext.prototype.beginDetachedBlock = function() {
+	this.snapshots.push({
+		x: this.x,
+		y: this.y,
+		availableHeight: this.availableHeight,
+		availableWidth: this.availableWidth,
+		page: this.page,
+		bottomMost: { y: this.y, page: this.page },
+		endingCell: this.endingCell,
+		lastColumnWidth: this.lastColumnWidth
+	});
+};
+
+DocumentContext.prototype.endDetachedBlock = function() {
+	var saved = this.snapshots.pop();
+
+	this.endingCell = null;
+	this.x = saved.x;
+	this.y = saved.bottomMost.y;
+	this.page = saved.bottomMost.page;
+	this.availableWidth = saved.availableWidth;
+	this.availableHeight = saved.bottomMost.availableHeight;
+	this.lastColumnWidth = saved.lastColumnWidth;
+};
+
 function pageOrientation(pageOrientationString, currentPageOrientation){
 	if(pageOrientationString === undefined) {
 		return currentPageOrientation;
@@ -136,9 +172,9 @@ function pageOrientation(pageOrientationString, currentPageOrientation){
 }
 
 var getPageSize = function (currentPage, newPageOrientation) {
-	
+
 	newPageOrientation = pageOrientation(newPageOrientation, currentPage.pageSize.orientation);
-	
+
 	if(newPageOrientation !== currentPage.pageSize.orientation) {
 		return {
 			orientation: newPageOrientation,
@@ -152,7 +188,7 @@ var getPageSize = function (currentPage, newPageOrientation) {
 			height: currentPage.pageSize.height
 		};
 	}
-	
+
 };
 
 
@@ -186,7 +222,7 @@ DocumentContext.prototype.addPage = function(pageSize) {
 	this.initializePage();
 
 	this.tracker.emit('pageAdded');
-    
+
 	return page;
 };
 

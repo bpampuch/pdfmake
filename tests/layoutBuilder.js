@@ -1189,6 +1189,28 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[2].pageSize.orientation, 'landscape');
 		});
 
+		it('should use the absolutePosition attribute to position in absolute coordinates', function() {
+			var desc = [
+				{
+					columns: [
+						{
+							text: 'text 1',
+							absolutePosition: {x:123, y:200}
+						},
+						{
+							text: 'text 2',
+							absolutePosition: {x:0, y:0}
+						}
+					]
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			assert.equal(pages[0].items[0].item.x, 123);
+			assert.equal(pages[0].items[0].item.y, 200);
+			assert.equal(pages[0].items[1].item.x, 0);
+			assert.equal(pages[0].items[1].item.y, 0);
+		});
 
 		it('should support images');
 		it('should align image properly');
