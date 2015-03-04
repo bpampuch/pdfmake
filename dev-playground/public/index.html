@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang='en' ng-app='pdfmake'>
+<head>
+	<meta charset='utf-8'>
+	<link rel='stylesheet' href='//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css'>
+	<!--<link rel='stylesheet' href='pdfjs/viewer.css'>-->
+	<link rel='stylesheet' href='pdfmake.css'>
+	<link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
+</head>
+<body ng-controller='PlaygroundController'>
+
+<header id='top' class='navbar navbar-default' role='navigation'>
+	<div class='container'>
+		<div class='navbar-header'>
+			<button type='button' class='navbar-toggle' data-toggle='collapse' data-target='.navbar-collapse'>
+				<span class='sr-only'>Toggle navigation</span>
+				<span class='icon-bar'></span>
+				<span class='icon-bar'></span>
+				<span class='icon-bar'></span>
+			</button>
+			<a class='navbar-brand' href='index.html#'>pdf<span style='font-weight: 600'>make</span></a>
+		</div>
+		<nav class='navbar-collapse collapse' role='navigation' style='height: 1px;'>
+			<ul class='nav navbar-nav navbar-right'>
+			</ul>
+		</nav>
+	</div>
+</header>
+
+<div class='playground'>
+	<div class='container'>
+
+		<ul id='exampleList'>
+			<li ng-repeat='e in examples' ng-click='e.activate()'>{{e.name}}</li>
+		</ul>
+	</div>
+</div>
+
+<div class='playgroundBody'>
+	<div class='notEnoughSpace'>
+		<div class='container'>
+			<h1>Playground does not make too much sense when horizontal resolution is below 300px</h1>
+		</div>
+	</div>
+	<div class='content'>
+		<div id='editor'></div>
+		<iframe id='pdfV'></iframe>
+
+	</div>
+</div>
+
+
+<script type="text/javascript" charset="utf-8">
+	function PlaygroundController($scope, $http) {
+		$scope.examples = [];
+
+		var editor = ace.edit('editor');
+		setupEditor(editor);
+		var names = ['basics', 'styles1', 'styles2', 'styles3', 'columns', 'tables', 'lists', 'margin', 'images' ];
+
+		var i = 0;
+		['basics', 'named-styles', 'inline-styling', 'style-overrides', 'columns', 'tables', 'lists', 'margins', 'images'].forEach(function(example) {
+			$scope.examples.push({
+				name: names[i++],
+				activate: function() {
+					$http.get('samples/' + example).success(function(data) {
+						editor.getSession().setValue('// playground requires you to assign document definition to a variable called dd\n\nvar dd = {\n' + data.replace(/(^)/gm, '\t') + '\n}');
+					});
+				}
+			});
+		});
+
+		var old = localStorage.pdfMakeDD;
+
+		if (!old) {
+			$scope.examples[0].activate();
+		} else {
+			editor.getSession().setValue(old);
+		}
+
+		var timer;
+
+		function setupEditor() {
+			var lastGen, lastChanged;
+
+			editor.setTheme('ace/theme/monokai');
+			editor.getSession().setMode('ace/mode/javascript');
+
+			editor.getSession().on('change', function(e) {
+				if (timer) {
+					clearTimeout(timer);
+				}
+				lastChanged = new Date();
+
+				localStorage.pdfMakeDD = editor.getSession().getValue();
+
+				timer = setTimeout(function() {
+					if (!lastGen || lastGen < lastChanged) {
+						generate();
+					};
+				}, 300);
+			});
+
+			function generate() {
+				lastGen = new Date();
+
+				eval(editor.getSession().getValue());
+
+				$http.post('/pdf', dd).
+					success(function(data, status, headers, config) {
+
+						document.getElementById('pdfV').src = data;
+					}).
+					error(function(data, status, headers, config) {
+						console.log('ERROR', data);
+					});
+			}
+		}
+	};
+</script>
+
+<script src='https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js'></script>
+<script src='//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js'></script>
+<script src='//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.10/angular.min.js'></script>
+<script src='//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.10/angular-route.min.js'></script>
+
+<script type="text/javascript" src="playground.js"></script>
+
+<!--<script type="text/javascript" charset="utf-8" src='ace-builds/src-min/ace.js'></script>-->
+<script type="text/javascript" charset="utf-8" src='ace.js'></script>
+
+</body>
+</html>
