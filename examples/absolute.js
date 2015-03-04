@@ -18,33 +18,32 @@ var docDefinition = {
 			image: 'bee',
 			width: 50,
 			height: 50,
-			pos : { x :100,y :100 }
+			absolutePosition : { x :100,y :100 }
 		},
 		{
 			image: 'bee',
 			width: 50,
 			height: 50,
-			pos : { x :150,y :150 }
+			absolutePosition : { x :150,y :150 }
 		},
 		{
 			image: 'bee',
 			width: 50,
 			height: 50,
-			pos : { x :200,y :200 }
+			absolutePosition : { x :200,y :200 }
 		},
 		{
 			image: 'bee',
 			width: 50,
 			height: 50,
-			pos : { x :250,y :150 }
+			absolutePosition : { x :250,y :150 }
 		},
 		{
 			image: 'bee',
 			width: 50,
 			height: 50,
-			pos : { x :300,y :100 }
+			absolutePosition : { x :300,y :100 }
 		},
-
 
 		{
 			text: 'You can put images at any position',
@@ -54,23 +53,23 @@ var docDefinition = {
 
 		{
 			text: 'As',
-			pos : { x :100,y :100 }
+			absolutePosition : { x :100,y :100 }
 		},
 		{
 			text: 'well',
-			pos : { x :150,y :150 }
+			absolutePosition : { x :150,y :150 }
 		},
 		{
 			text: 'as',
-			pos : { x :200,y :200 }
+			absolutePosition : { x :200,y :200 }
 		},
 		{
 			text: 'text',
-			pos : { x :250,y :150 }
+			absolutePosition : { x :250,y :150 }
 		},
 		{
 			text: '!!!',
-			pos : { x :300,y :100 },
+			absolutePosition : { x :300,y :100 },
 			pageBreak: 'after'
 		},
 
@@ -81,10 +80,10 @@ var docDefinition = {
 			image: 'bee',
 			width: 100,
 			height: 100,
-			pos : { x :100,y :100 }
+			absolutePosition : { x :100,y :100 }
 		},
 		{
-				pos : { x :100,y :100 },
+				absolutePosition : { x :100,y :100 },
 				style: 'tableExample',
 				table: {
 						body: [
