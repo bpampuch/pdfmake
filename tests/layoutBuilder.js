@@ -1189,17 +1189,17 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[2].pageSize.orientation, 'landscape');
 		});
 
-		it('should use the pos attribute to position in absolute coordinates', function() {
+		it('should use the absolutePosition attribute to position in absolute coordinates', function() {
 			var desc = [
 				{
 					columns: [
 						{
 							text: 'text 1',
-							pos: {x:123, y:200}
+							absolutePosition: {x:123, y:200}
 						},
 						{
 							text: 'text 2',
-							pos: {x:0, y:0}
+							absolutePosition: {x:0, y:0}
 						}
 					]
 				}

@@ -29465,11 +29465,11 @@ DocumentContext.prototype.pageSnapshot = function(){
 };
 
 DocumentContext.prototype.moveTo = function(x,y) {
-	if(x !== undefined || x !== null) {
+	if(x !== undefined && x !== null) {
 		this.x = x;
 		this.availableWidth = this.getCurrentPage().pageSize.width - this.x - this.pageMargins.right;
 	}
-	if(y !== undefined || y !== null){
+	if(y !== undefined && y !== null){
 		this.y = y;
 		this.availableHeight = this.getCurrentPage().pageSize.height - this.y - this.pageMargins.bottom;
 	}
@@ -30270,7 +30270,7 @@ LayoutBuilder.prototype.processNode = function(node) {
   decorateNode(node);
 
   applyMargins(function() {
-    var absPosition = node.pos;
+    var absPosition = node.absolutePosition;
     if(absPosition){
       self.writer.context().beginDetachedBlock();
       self.writer.context().moveTo(absPosition.x || 0, absPosition.y || 0);

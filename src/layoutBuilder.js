@@ -290,7 +290,7 @@ LayoutBuilder.prototype.processNode = function(node) {
   decorateNode(node);
 
   applyMargins(function() {
-    var absPosition = node.pos;
+    var absPosition = node.absolutePosition;
     if(absPosition){
       self.writer.context().beginDetachedBlock();
       self.writer.context().moveTo(absPosition.x || 0, absPosition.y || 0);
