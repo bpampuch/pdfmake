@@ -146,9 +146,9 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 
 LayoutBuilder.prototype.addBackground = function(background) {
     var backgroundGetter = isFunction(background) ? background : function() { return background; };
-    
+
     var pageBackground = backgroundGetter(this.writer.context().page + 1);
-    
+
     if (pageBackground) {
       var pageSize = this.writer.context().getCurrentPage().pageSize;
       this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
@@ -160,7 +160,7 @@ LayoutBuilder.prototype.addBackground = function(background) {
 LayoutBuilder.prototype.addStaticRepeatable = function(node, x, y, width, height) {
   var pages = this.writer.context().pages;
   this.writer.context().page = 0;
-  
+
   this.writer.beginUnbreakableBlock(width, height);
   this.processNode(this.docMeasure.measureDocument(node));
   var repeatable = this.writer.currentBlockToRepeatable();
@@ -200,7 +200,7 @@ LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
       height: pageMargins.top
     };
   };
-  
+
   var footerSizeFct = function (pageSize, pageMargins) {
     return {
       x: 0,
@@ -209,7 +209,7 @@ LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
       height: pageMargins.bottom
     };
   };
-  
+
   if(isFunction(header)) {
     this.addDynamicRepeatable(header, headerSizeFct);
   } else if(header) {
@@ -290,6 +290,12 @@ LayoutBuilder.prototype.processNode = function(node) {
   decorateNode(node);
 
   applyMargins(function() {
+    var absPosition = node.pos;
+    if(absPosition){
+      self.writer.context().beginDetachedBlock();
+      self.writer.context().moveTo(absPosition.x || 0, absPosition.y || 0);
+    }
+
     if (node.stack) {
       self.processVerticalContainer(node);
     } else if (node.columns) {
@@ -311,6 +317,10 @@ LayoutBuilder.prototype.processNode = function(node) {
     }else if (!node._span) {
 		throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
+
+    if(absPosition){
+      self.writer.context().endDetachedBlock();
+    }
 	});
 
 	function applyMargins(callback) {
@@ -558,6 +568,5 @@ LayoutBuilder.prototype.processQr = function(node) {
 	var position = this.writer.addQr(node);
     node.positions.push(position);
 };
-
 
 module.exports = LayoutBuilder;

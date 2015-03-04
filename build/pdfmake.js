@@ -29359,9 +29359,9 @@ function DocumentContext(pageSize, pageMargins) {
 	this.snapshots = [];
 
 	this.endingCell = null;
-    
+
   this.tracker = new TraversalTracker();
-    
+
 	this.addPage(pageSize);
 }
 
@@ -29464,6 +29464,42 @@ DocumentContext.prototype.pageSnapshot = function(){
   }
 };
 
+DocumentContext.prototype.moveTo = function(x,y) {
+	if(x !== undefined || x !== null) {
+		this.x = x;
+		this.availableWidth = this.getCurrentPage().pageSize.width - this.x - this.pageMargins.right;
+	}
+	if(y !== undefined || y !== null){
+		this.y = y;
+		this.availableHeight = this.getCurrentPage().pageSize.height - this.y - this.pageMargins.bottom;
+	}
+};
+
+DocumentContext.prototype.beginDetachedBlock = function() {
+	this.snapshots.push({
+		x: this.x,
+		y: this.y,
+		availableHeight: this.availableHeight,
+		availableWidth: this.availableWidth,
+		page: this.page,
+		bottomMost: { y: this.y, page: this.page },
+		endingCell: this.endingCell,
+		lastColumnWidth: this.lastColumnWidth
+	});
+};
+
+DocumentContext.prototype.endDetachedBlock = function() {
+	var saved = this.snapshots.pop();
+
+	this.endingCell = null;
+	this.x = saved.x;
+	this.y = saved.bottomMost.y;
+	this.page = saved.bottomMost.page;
+	this.availableWidth = saved.availableWidth;
+	this.availableHeight = saved.bottomMost.availableHeight;
+	this.lastColumnWidth = saved.lastColumnWidth;
+};
+
 function pageOrientation(pageOrientationString, currentPageOrientation){
 	if(pageOrientationString === undefined) {
 		return currentPageOrientation;
@@ -29475,9 +29511,9 @@ function pageOrientation(pageOrientationString, currentPageOrientation){
 }
 
 var getPageSize = function (currentPage, newPageOrientation) {
-	
+
 	newPageOrientation = pageOrientation(newPageOrientation, currentPage.pageSize.orientation);
-	
+
 	if(newPageOrientation !== currentPage.pageSize.orientation) {
 		return {
 			orientation: newPageOrientation,
@@ -29491,7 +29527,7 @@ var getPageSize = function (currentPage, newPageOrientation) {
 			height: currentPage.pageSize.height
 		};
 	}
-	
+
 };
 
 
@@ -29525,7 +29561,7 @@ DocumentContext.prototype.addPage = function(pageSize) {
 	this.initializePage();
 
 	this.tracker.emit('pageAdded');
-    
+
 	return page;
 };
 
@@ -30090,9 +30126,9 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 
 LayoutBuilder.prototype.addBackground = function(background) {
     var backgroundGetter = isFunction(background) ? background : function() { return background; };
-    
+
     var pageBackground = backgroundGetter(this.writer.context().page + 1);
-    
+
     if (pageBackground) {
       var pageSize = this.writer.context().getCurrentPage().pageSize;
       this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
@@ -30104,7 +30140,7 @@ LayoutBuilder.prototype.addBackground = function(background) {
 LayoutBuilder.prototype.addStaticRepeatable = function(node, x, y, width, height) {
   var pages = this.writer.context().pages;
   this.writer.context().page = 0;
-  
+
   this.writer.beginUnbreakableBlock(width, height);
   this.processNode(this.docMeasure.measureDocument(node));
   var repeatable = this.writer.currentBlockToRepeatable();
@@ -30144,7 +30180,7 @@ LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
       height: pageMargins.top
     };
   };
-  
+
   var footerSizeFct = function (pageSize, pageMargins) {
     return {
       x: 0,
@@ -30153,7 +30189,7 @@ LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
       height: pageMargins.bottom
     };
   };
-  
+
   if(isFunction(header)) {
     this.addDynamicRepeatable(header, headerSizeFct);
   } else if(header) {
@@ -30234,6 +30270,12 @@ LayoutBuilder.prototype.processNode = function(node) {
   decorateNode(node);
 
   applyMargins(function() {
+    var absPosition = node.pos;
+    if(absPosition){
+      self.writer.context().beginDetachedBlock();
+      self.writer.context().moveTo(absPosition.x || 0, absPosition.y || 0);
+    }
+
     if (node.stack) {
       self.processVerticalContainer(node);
     } else if (node.columns) {
@@ -30255,6 +30297,10 @@ LayoutBuilder.prototype.processNode = function(node) {
     }else if (!node._span) {
 		throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
+
+    if(absPosition){
+      self.writer.context().endDetachedBlock();
+    }
 	});
 
 	function applyMargins(callback) {
@@ -30502,7 +30548,6 @@ LayoutBuilder.prototype.processQr = function(node) {
 	var position = this.writer.addQr(node);
     node.positions.push(position);
 };
-
 
 module.exports = LayoutBuilder;
 
@@ -32938,7 +32983,5 @@ function fixFilename(filename) {
 module.exports = new VirtualFileSystem();
 
 }).call(this,require("buffer").Buffer,"/src/browser-extensions")
-},{"buffer":17}],"pdfMake":[function(require,module,exports){
-arguments[4][82][0].apply(exports,arguments)
-},{"../../libs/fileSaver":1,"../printer":92,"buffer":17,"dup":82}]},{},[82])("pdfMake")
+},{"buffer":17}]},{},[82])("fs")
 });
