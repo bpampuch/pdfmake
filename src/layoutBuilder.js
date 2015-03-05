@@ -161,21 +161,8 @@ LayoutBuilder.prototype.addBackground = function(background) {
     }
 };
 
-LayoutBuilder.prototype.addStaticRepeatable = function(node, x, y, width, height) {
-  var pages = this.writer.context().pages;
-  this.writer.context().page = 0;
-
-  this.writer.beginUnbreakableBlock(width, height);
-  this.processNode(this.docMeasure.measureDocument(node));
-  var repeatable = this.writer.currentBlockToRepeatable();
-  repeatable.xOffset = x;
-  repeatable.yOffset = y;
-  this.writer.commitUnbreakableBlock(x, y);
-
-  for(var i = 1, l = pages.length; i < l; i++) {
-    this.writer.context().page = i;
-    this.writer.addFragment(repeatable, true, true, true);
-  }
+LayoutBuilder.prototype.addStaticRepeatable = function(headerOrFooter, sizeFunction) {
+  this.addDynamicRepeatable(function() { return headerOrFooter; }, sizeFunction);
 };
 
 LayoutBuilder.prototype.addDynamicRepeatable = function(nodeGetter, sizeFunction) {
@@ -223,7 +210,7 @@ LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
   if(isFunction(footer)) {
     this.addDynamicRepeatable(footer, footerSizeFct);
   } else if(footer) {
-    this.addStaticRepeatable(footer, headerSizeFct);
+    this.addStaticRepeatable(footer, footerSizeFct);
   }
 };
 
