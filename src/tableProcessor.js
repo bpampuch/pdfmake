@@ -260,6 +260,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
         },
         function() {
           writer.commitUnbreakableBlock();
+          self.drawHorizontalLine(rowIndex, writer);
         }
       );
     }
