@@ -236,7 +236,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
 
         // fix colSpans
         if (row[i].colSpan && row[i].colSpan > 1) {
-          for(var j = 1; j < row[i].colSpan; j++) {
+          for(var j = 1; j < row[i].rowSpan; j++) {
             this.tableNode.table.body[rowIndex + j][i]._colSpan = row[i].colSpan;
           }
         }
