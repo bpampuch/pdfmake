@@ -143,7 +143,6 @@ DocumentContext.prototype.beginDetachedBlock = function() {
 		availableHeight: this.availableHeight,
 		availableWidth: this.availableWidth,
 		page: this.page,
-		bottomMost: { y: this.y, page: this.page },
 		endingCell: this.endingCell,
 		lastColumnWidth: this.lastColumnWidth
 	});
@@ -152,12 +151,12 @@ DocumentContext.prototype.beginDetachedBlock = function() {
 DocumentContext.prototype.endDetachedBlock = function() {
 	var saved = this.snapshots.pop();
 
-	this.endingCell = null;
 	this.x = saved.x;
-	this.y = saved.bottomMost.y;
-	this.page = saved.bottomMost.page;
+	this.y = saved.y;
 	this.availableWidth = saved.availableWidth;
-	this.availableHeight = saved.bottomMost.availableHeight;
+	this.availableHeight = saved.availableHeight;
+	this.page = saved.page;
+	this.endingCell = saved.endingCell;
 	this.lastColumnWidth = saved.lastColumnWidth;
 };
 
