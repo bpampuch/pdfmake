@@ -124,7 +124,7 @@ var docDefinition = {
       bold: true
     },
     anotherStyle: {
-      italic: true,
+      italics: true,
       alignment: 'right'
     }
   }
