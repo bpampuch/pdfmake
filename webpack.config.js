@@ -1,7 +1,7 @@
 var path = require('path');
 
 module.exports = {
-  entry: './src/browser-extensions/pdfMake.js',
+  entry: './src/browser-extensions/global.js',
   output: {
     path: path.join(__dirname, './build'),
     filename: 'pdfmake.js'
@@ -13,7 +13,8 @@ module.exports = {
   },
   module: {
     loaders: [
-      { test: /\.json$/, loader: 'json' }
+      { test: /\.json$/, loader: 'json' },
+      { test: /browser-extensions\/pdfMake.js$/, loader: 'expose?pdfMake' }
     ]
   }
 };
