@@ -20,6 +20,9 @@
   "ignore": [
     "**/.*",
     "Gruntfile.js",
+    "dev-playground",
+    "gulpfile.js",
+    "webpack.config.js",
     "README.md",
     "bootstrap",
     "bower.json",
