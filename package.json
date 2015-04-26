@@ -24,9 +24,12 @@
     "grunt-mocha-cov": "~0.2.1",
     "grunt-text-replace": "~0.4.0",
     "gulp": "^3.8.11",
+    "gulp-webpack": "^1.4.0",
     "json-loader": "^0.5.1",
     "pdfkit": "^0.7.1",
-    "sinon": "~1.12.2"
+    "sinon": "~1.12.2",
+    "string-replace-webpack-plugin": "0.0.1",
+    "webpack": "^1.8.9"
   },
   "scripts": {
     "test": "grunt build test"
