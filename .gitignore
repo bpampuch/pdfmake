@@ -6,3 +6,4 @@ doc
 *.iml
 *.ipr
 *.iws
+test-env

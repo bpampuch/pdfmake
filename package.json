@@ -1,6 +1,6 @@
 {
   "name": "pdfmake",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/printer.js",
   "directories": {
@@ -13,17 +13,14 @@
   },
   "devDependencies": {
     "expose-loader": "^0.6.0",
-    "grunt": "~0.4.5",
-    "grunt-browserify": "~3.5.0",
-    "grunt-cli": "~0.1.13",
-    "grunt-contrib-concat": "~0.5.1",
-    "grunt-contrib-jshint": "~0.11.0",
-    "grunt-contrib-uglify": "~0.8.0",
-    "grunt-dump-dir": "~0.1.2",
-    "grunt-jsdoc": "~0.5.8",
-    "grunt-mocha-cov": "~0.2.1",
-    "grunt-text-replace": "~0.4.0",
     "gulp": "^3.8.11",
+    "gulp-jshint": "^1.10.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-replace": "^0.5.3",
+    "gulp-sourcemaps": "^1.5.2",
+    "gulp-spawn-mocha": "^2.0.1",
+    "gulp-uglify": "^1.2.0",
+    "gulp-util": "^3.0.4",
     "gulp-webpack": "^1.4.0",
     "json-loader": "^0.5.1",
     "pdfkit": "^0.7.1",
@@ -32,7 +29,7 @@
     "webpack": "^1.8.9"
   },
   "scripts": {
-    "test": "grunt build test"
+    "test": "gulp"
   },
   "repository": {
     "type": "git",

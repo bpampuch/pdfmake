@@ -1,3 +1,6 @@
+/* jslint node: true */
+'use strict';
+
 var pdfKit = require('pdfkit');
 var PDFImage = require('pdfkit/js/image');
 
@@ -11,7 +14,7 @@ ImageMeasure.prototype.measureImage = function(src) {
 	var that = this;
 
 	if (!this.pdfDoc._imageRegistry[src]) {
-		label = "I" + (++this.pdfDoc._imageCount);
+		label = 'I' + (++this.pdfDoc._imageCount);
 		image = PDFImage.open(realImageSrc(src), label);
 		image.embed(this.pdfDoc);
 		this.pdfDoc._imageRegistry[src] = image;

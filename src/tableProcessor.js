@@ -1,3 +1,6 @@
+/* jslint node: true */
+'use strict';
+
 var ColumnCalculator = require('./columnCalculator');
 
 function TableProcessor(tableNode) {
