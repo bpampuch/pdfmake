@@ -82,7 +82,7 @@ FontWrapper.prototype.encode = function(text){
     self.charCatalogue[index] = [];
   }
 
-	var font = this.getFont(index);
+	var font = self.getFont(index);
 	font.use(text);
 
   _.each(charTypesInInline, function(charCode){
