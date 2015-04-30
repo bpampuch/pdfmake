@@ -377,9 +377,76 @@ LayoutBuilder.prototype.processTable = function(tableNode) {
 
   processor.beginTable(this.writer);
 
+  /**
+   * Intia
+   */
   for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
     processor.beginRow(i, this.writer);
 
+    var heights = [],
+        maxHeight = 0,
+        verticalAlign = false;
+
+
+    for(var t = 0; t < tableNode.table.body[i].length; t++)
+    {
+      verticalAlign |= tableNode.table.body[i][t].verticalAlign
+
+    }
+    if (verticalAlign)
+    {
+      for(var j = 0, lj = tableNode.table.body[i].length; j < lj; j++)
+      {
+        var cell = tableNode.table.body[i][j],
+            height = 0,
+            width = tableNode.table.widths[j]._calcWidth,
+            line = new Line(width);
+
+        for( var x = 0; x < cell._inlines.length; x ++){
+          var il = cell._inlines[x];
+          if(line.hasEnoughSpaceForInline(il)){
+            line.addInline(il);
+          }
+          else
+          {
+            height += line.getHeight();
+            line = new Line(width);
+            line.addInline(il);
+          }
+        }
+        height += line.getHeight();
+
+        if(cell._margin){
+          height += cell._margin[1];
+          height += cell._margin[3];
+        }
+
+        maxHeight = Math.max(maxHeight, height);
+        heights.push(height);
+      }
+
+      for(var k = 0; k < tableNode.table.body[i].length; k++)
+      {
+        var cell2 = tableNode.table.body[i][k];
+
+        if(cell2.verticalAlign) {
+          var margin = (maxHeight - heights[k]) / 2;
+          if(cell2._margin) {
+            cell2._margin[1] = margin + cell2._margin[1];
+            cell2._margin[3] = margin + cell2._margin[3];
+          }
+          else {
+            cell2._margin = [0, margin, 0, margin]
+          }
+        }
+      }
+    }
+
+
+
+    /**
+     * /Intia
+     */
     var pageBreaks = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i);
 
     processor.endRow(i, this.writer, pageBreaks);
