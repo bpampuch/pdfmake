@@ -54,6 +54,11 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
 
   function addPageBreaksIfNecessary(linearNodeList, pages) {
+
+		if(!isFunction(pageBreakBeforeFct)){
+			return false;
+		}
+
     linearNodeList = _.reject(linearNodeList, function(node){
       return _.isEmpty(node.positions);
     });
@@ -98,12 +103,6 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
         }
       }
     });
-  }
-
-  if(!isFunction(pageBreakBeforeFct)){
-    pageBreakBeforeFct = function(){
-      return false;
-    };
   }
 
   this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
