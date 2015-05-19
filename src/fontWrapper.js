@@ -12,13 +12,17 @@ function FontWrapper(pdfkitDoc, path, fontName){
 	this.charCatalogue = [];
 	this.name = fontName;
 
-  this.__defineGetter__('ascender', function(){
-    var font = this.getFont(0);
-    return font.ascender;
+  Object.defineProperty(this, 'ascender', {
+    get: function () {
+      var font = this.getFont(0);
+      return font.ascender;
+    }
   });
-  this.__defineGetter__('decender', function(){
-    var font = this.getFont(0);
-    return font.decender;
+  Object.defineProperty(this, 'decender', {
+    get: function () {
+      var font = this.getFont(0);
+      return font.decender;
+    }
   });
 
 }
