@@ -87,8 +87,24 @@ Document.prototype.download = function(defaultFileName, cb) {
    }
 
    defaultFileName = defaultFileName || 'file.pdf';
-   this.getBuffer(function(result) {
-       saveAs(new Blob([result], {type: 'application/pdf'}), defaultFileName);
+   this.getBuffer(function (result) {
+       var blob;
+       try {
+           blob = new Blob([result], { type: 'application/pdf' });
+       }
+       catch (e) {
+           // Old browser which can't handle it without making it an byte array (ie10) 
+           if (e.name == "InvalidStateError") {
+               var byteArray = new Uint8Array(result);
+               blob = new Blob([byteArray.buffer], { type: 'application/pdf' });
+           }
+       }
+       if (blob) {
+           saveAs(blob, defaultFileName);
+       }
+       else {
+           throw 'Could not generate blob';
+       }
        if (typeof cb === "function") {
            cb();
        }
