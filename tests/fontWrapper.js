@@ -5,7 +5,7 @@ var FontWrapper = require('../src/fontWrapper');
 var PdfKit = require('pdfkit');
 
 describe('FontWrapper', function() {
-	var fontWrapper, pdfDoc;
+	var fontWrapper, pdfDoc, fontId, fontCount;
 
 
   function getEncodedUnicodes(index, pdfDoc){
@@ -14,16 +14,25 @@ describe('FontWrapper', function() {
 
 	beforeEach(function() {
 		pdfDoc = new PdfKit({ size: [ 595.28, 841.89 ], compress: false});
-		fontWrapper = new FontWrapper(pdfDoc, 'examples/fonts/Roboto-Italic.ttf', 'Roboto (bolditalic)')
+		fontWrapper = new FontWrapper(pdfDoc, 'examples/fonts/Roboto-Italic.ttf', 'Roboto (bolditalic)');
+		if(pdfDoc._font){ // Helvetica loaded by default
+			fontId = function(count){
+				return 'F' + (1 + count);
+			};
+			fontCount = function(count){
+				return (1 + count);
+			};
+		} else { // Helvetica not loaded by default
+			fontId = function(count){
+				return 'F' + count;
+			};
+			fontCount = function(count){
+				return count;
+			};
+		}
 	});
 
 	describe('encoding', function() {
-
-		it('has Helvetica as F1 from pdfkit by default', function () {
-			assert.equal(pdfDoc._font.id, 'F1');
-			assert.equal(pdfDoc._font.name, 'Helvetica');
-			assert.equal(pdfDoc._fontCount, 1);
-		});
 
 		it('encodes text', function () {
 			var encoded = fontWrapper.encode('Anna ');
@@ -31,8 +40,8 @@ describe('FontWrapper', function() {
       // A  n  n  a
       // 21 22 22 23 24
 			assert.equal(encoded.encodedText, '2122222324');
-			assert.equal(encoded.fontId, 'F2');
-			assert.equal(pdfDoc._fontCount, 2);
+			assert.equal(encoded.fontId, fontId(1));
+			assert.equal(pdfDoc._fontCount, fontCount(1));
       var encodedUnicodes = getEncodedUnicodes(0, pdfDoc);
       assert.equal(encodedUnicodes['A'.charCodeAt(0)], 33);
 			assert.equal(encodedUnicodes['n'.charCodeAt(0)], 34);
@@ -50,8 +59,8 @@ describe('FontWrapper', function() {
       // n  a     n  a     A  A  A  !
       // 22 23 24 22 23 24 21 21 21 25
       assert.equal(encoded.encodedText, '22232422232421212125');
-      assert.equal(encoded.fontId, 'F2');
-      assert.equal(pdfDoc._fontCount, 2);
+			assert.equal(encoded.fontId, fontId(1));
+			assert.equal(pdfDoc._fontCount, fontCount(1));
       var encodedUnicodes = getEncodedUnicodes(0, pdfDoc);
       assert.equal(encodedUnicodes['A'.charCodeAt(0)], 33);
       assert.equal(encodedUnicodes['n'.charCodeAt(0)], 34);
@@ -68,8 +77,8 @@ describe('FontWrapper', function() {
       // c  a  n  n  o  t
       // 21 22 23 23 24 25
       assert.equal(encoded.encodedText, '212223232425');
-      assert.equal(encoded.fontId, 'F3');
-      assert.equal(pdfDoc._fontCount, 3);
+			assert.equal(encoded.fontId, fontId(2));
+			assert.equal(pdfDoc._fontCount, fontCount(2));
       var encodedUnicodes = getEncodedUnicodes(1, pdfDoc);
       assert.equal(encodedUnicodes['c'.charCodeAt(0)], 33);
       assert.equal(encodedUnicodes['a'.charCodeAt(0)], 34);
@@ -85,8 +94,8 @@ describe('FontWrapper', function() {
       var text2 = _.times(47, String.fromCharCode).join(''); // does not include a-z, includes 0-9 & A-Z
       fontWrapper.encode(text2);
 
-      assert.equal(pdfDoc._font.id, 'F2');
-      assert.equal(pdfDoc._fontCount, 2);
+			assert.equal(pdfDoc._font.id, fontId(1));
+			assert.equal(pdfDoc._fontCount, fontCount(1));
       assert.equal(pdfDoc._font.name, 'Roboto-Italic');
     });
 
@@ -106,8 +115,8 @@ describe('FontWrapper', function() {
       // T  h  i  s     c  a  n     w  o  r  k  .
       // 26 27 28 29 2a 21 22 23 2a 2b 24 2c 2d 2e
       assert.equal(encoded.encodedText, '262728292a2122232a2b242c2d2e');
-      assert.equal(encoded.fontId, 'F2');
-      assert.equal(pdfDoc._fontCount, 3);
+			assert.equal(encoded.fontId, fontId(1));
+			assert.equal(pdfDoc._fontCount, fontCount(2));
       var encodedUnicodes = getEncodedUnicodes(0, pdfDoc);
       assert.equal(encodedUnicodes['T'.charCodeAt(0)], 38);
       assert.equal(encodedUnicodes['h'.charCodeAt(0)], 39);
