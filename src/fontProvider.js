@@ -32,8 +32,10 @@ function FontProvider(fontDescriptors, pdfDoc) {
 }
 
 FontProvider.prototype.provideFont = function(familyName, bold, italics) {
-  if (!this.fonts[familyName]) return this.pdfDoc._font;
 	var type = typeName(bold, italics);
+  if (!this.fonts[familyName] || !this.fonts[familyName][type]) {
+		throw new Error('Font \''+ familyName + '\' in style \''+type+ '\' is not defined in the font section of the document definition.');
+	}
 
   this.fontWrappers[familyName] = this.fontWrappers[familyName] || {};
 
