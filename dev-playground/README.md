@@ -4,7 +4,7 @@ Start from pdfmake ROOT directory with nodemon if you want server to restart wit
 
 ```
 cd dev-playground
-node install
+npm install
 cd ..
 nodemon ./dev-playground/server.js
 ```
