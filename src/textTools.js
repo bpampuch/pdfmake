@@ -18,11 +18,12 @@ function TextTools(fontProvider) {
 }
 
 /**
-* Converts an array of strings (or inline-definition-objects) into a set of inlines
+ * Converts an array of strings (or inline-definition-objects) into a collection
+ * of inlines and calculated minWidth/maxWidth.
 * and their min/max widths
 * @param  {Object} textArray - an array of inline-definition-objects (or strings)
-* @param  {Number} maxWidth - max width a single Line should have
-* @return {Array} an array of Lines
+* @param  {Object} styleContextStack current style stack
+* @return {Object}                   collection of inlines, minWidth, maxWidth
 */
 TextTools.prototype.buildInlines = function(textArray, styleContextStack) {
 	var measured = measure(this.fontProvider, textArray, styleContextStack);
