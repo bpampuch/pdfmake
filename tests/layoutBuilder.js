@@ -101,6 +101,16 @@ describe('LayoutBuilder', function() {
 			assert.equal(pages[0].items.length, 6);
 		});
 
+		it('should respect maxHeight', function() {
+			var desc = [{
+        text: 'another paragraph, this time a little bit longer though, we want to force this line to be broken into several lines',
+        maxHeight: 15
+      }];
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].items.length, 1);
+    });
+
 		it('should add new pages when theres not enough space left on current page', function() {
 			var desc = [
 				'first paragraph',
