@@ -269,10 +269,14 @@ function decorateNode(node){
   node.positions = [];
 
   _.each(node.canvas, function(vector){
-    var x = vector.x, y = vector.y;
+    var x = vector.x, y = vector.y, x1 = vector.x1, y1 = vector.y1, x2 = vector.x2, y2 = vector.y2;
     vector.resetXY = function(){
       vector.x = x;
       vector.y = y;
+			vector.x1 = x1;
+			vector.y1 = y1;
+			vector.x2 = x2;
+			vector.y2 = y2;
     };
   });
 
