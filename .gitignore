@@ -2,3 +2,8 @@ npm-debug.log
 node_modules
 doc
 .DS_Store
+.idea
+*.iml
+*.ipr
+*.iws
+test-env

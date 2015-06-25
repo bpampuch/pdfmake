@@ -1,3 +1,6 @@
+/* jslint node: true */
+'use strict';
+
 var ColumnCalculator = require('./columnCalculator');
 
 function TableProcessor(tableNode) {
@@ -18,6 +21,7 @@ TableProcessor.prototype.beginTable = function(writer) {
 
   this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
   this.rowSpanData = prepareRowSpanData();
+  this.cleanUpRepeatables = false;
 
   this.headerRows = tableNode.table.headerRows || 0;
   this.rowsWithoutPageBreak = this.headerRows + (tableNode.table.keepWithHeaderRows || 0);
@@ -64,9 +68,9 @@ TableProcessor.prototype.onRowBreak = function(rowIndex, writer) {
   return function() {
     //console.log('moving by : ', topLineWidth, rowPaddingTop);
     var offset = self.rowPaddingTop + (!self.headerRows ? self.topLineWidth : 0);
-    writer.context().moveDown(offset);  
+    writer.context().moveDown(offset);
   };
-  
+
 };
 
 TableProcessor.prototype.beginRow = function(rowIndex, writer) {
@@ -74,7 +78,7 @@ TableProcessor.prototype.beginRow = function(rowIndex, writer) {
   this.rowPaddingTop = this.layout.paddingTop(rowIndex, this.tableNode);
   this.bottomLineWidth = this.layout.hLineWidth(rowIndex+1, this.tableNode);
   this.rowPaddingBottom = this.layout.paddingBottom(rowIndex, this.tableNode);
-  
+
   this.rowCallback = this.onRowBreak(rowIndex, writer);
   writer.tracker.startTracking('pageChanged', this.rowCallback );
     if(this.dontBreakRows) {
@@ -117,7 +121,7 @@ TableProcessor.prototype.drawHorizontalLine = function(lineIndex, writer, overri
             y1: y,
             y2: y,
             lineWidth: lineWidth,
-            lineColor: this.layout.hLineColor(lineIndex, this.tableNode)
+            lineColor: typeof this.layout.hLineColor === 'function' ? this.layout.hLineColor(lineIndex, this.tableNode) : this.layout.hLineColor
           }, false, overrideY);
           currentLine = null;
         }
@@ -131,7 +135,6 @@ TableProcessor.prototype.drawHorizontalLine = function(lineIndex, writer, overri
 TableProcessor.prototype.drawVerticalLine = function(x, y0, y1, vLineIndex, writer) {
   var width = this.layout.vLineWidth(vLineIndex, this.tableNode);
   if (width === 0) return;
-
   writer.addVector({
     type: 'line',
     x1: x + width/2,
@@ -139,16 +142,18 @@ TableProcessor.prototype.drawVerticalLine = function(x, y0, y1, vLineIndex, writ
     y1: y0,
     y2: y1,
     lineWidth: width,
-    lineColor: this.layout.vLineColor(vLineIndex, this.tableNode)
+    lineColor: typeof this.layout.vLineColor === 'function' ? this.layout.vLineColor(vLineIndex, this.tableNode) : this.layout.vLineColor
   }, false, true);
 };
 
 TableProcessor.prototype.endTable = function(writer) {
-  writer.popFromRepeatables();
+  if (this.cleanUpRepeatables) {
+    writer.popFromRepeatables();
+  }
 };
 
 TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
-    var i;
+    var l, i;
     var self = this;
     writer.tracker.stopTracking('pageChanged', this.rowCallback);
     writer.context().moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
@@ -186,6 +191,11 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
       var hzLineOffset =  rowBreakWithoutHeader ? 0 : this.topLineWidth;
       var y1 = ys[yi].y0;
       var y2 = ys[yi].y1;
+
+			if(willBreak) {
+				y2 = y2 + this.rowPaddingBottom;
+			}
+
       if (writer.context().page != ys[yi].page) {
         writer.context().page = ys[yi].page;
 
@@ -216,10 +226,10 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
         }
       }
 
-      if (willBreak) {
+      if (willBreak && this.layout.hLineWhenBroken !== false) {
         this.drawHorizontalLine(rowIndex + 1, writer, y2);
       }
-      if(rowBreakWithoutHeader) {
+      if(rowBreakWithoutHeader && this.layout.hLineWhenBroken !== false) {
         this.drawHorizontalLine(rowIndex, writer, y1);
       }
     }
@@ -234,7 +244,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
 
         // fix colSpans
         if (row[i].colSpan && row[i].colSpan > 1) {
-          for(var j = 1; j < row[i].colSpan; j++) {
+          for(var j = 1; j < row[i].rowSpan; j++) {
             this.tableNode.table.body[rowIndex + j][i]._colSpan = row[i].colSpan;
           }
         }
@@ -252,12 +262,13 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
     }
 
     if(this.dontBreakRows) {
-      writer.tracker.auto('pageChanged', 
+      writer.tracker.auto('pageChanged',
         function() {
           self.drawHorizontalLine(rowIndex, writer);
         },
         function() {
           writer.commitUnbreakableBlock();
+          self.drawHorizontalLine(rowIndex, writer);
         }
       );
     }
@@ -265,6 +276,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
     if(this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
       writer.commitUnbreakableBlock();
       writer.pushToRepeatables(this.headerRepeatable);
+      this.cleanUpRepeatables = true;
       this.headerRepeatable = null;
     }
 

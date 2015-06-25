@@ -18,11 +18,12 @@ function TextTools(fontProvider) {
 }
 
 /**
-* Converts an array of strings (or inline-definition-objects) into a set of inlines
+ * Converts an array of strings (or inline-definition-objects) into a collection
+ * of inlines and calculated minWidth/maxWidth.
 * and their min/max widths
 * @param  {Object} textArray - an array of inline-definition-objects (or strings)
-* @param  {Number} maxWidth - max width a single Line should have
-* @return {Array} an array of Lines
+* @param  {Object} styleContextStack current style stack
+* @return {Object}                   collection of inlines, minWidth, maxWidth
 */
 TextTools.prototype.buildInlines = function(textArray, styleContextStack) {
 	var measured = measure(this.fontProvider, textArray, styleContextStack);
@@ -73,13 +74,15 @@ TextTools.prototype.sizeOfString = function(text, styleContextStack) {
 	var fontSize = getStyleProperty({}, styleContextStack, 'fontSize', 12);
 	var bold = getStyleProperty({}, styleContextStack, 'bold', false);
 	var italics = getStyleProperty({}, styleContextStack, 'italics', false);
+	var lineHeight = getStyleProperty({}, styleContextStack, 'lineHeight', 1);
 
 	var font = this.fontProvider.provideFont(fontName, bold, italics);
 
 	return {
 		width: font.widthOfString(removeDiacritics(text), fontSize),
-		height: font.lineHeight(fontSize),
+		height: font.lineHeight(fontSize) * lineHeight,
 		fontSize: fontSize,
+		lineHeight: lineHeight,
 		ascender: font.ascender / 1000 * fontSize,
 		decender: font.decender / 1000 * fontSize
 	};
@@ -210,12 +213,13 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var decorationColor = getStyleProperty(item, styleContextStack, 'decorationColor', null);
 		var decorationStyle = getStyleProperty(item, styleContextStack, 'decorationStyle', null);
 		var background = getStyleProperty(item, styleContextStack, 'background', null);
+		var lineHeight = getStyleProperty(item, styleContextStack, 'lineHeight', 1);
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
 		// TODO: character spacing
 		item.width = font.widthOfString(removeDiacritics(item.text), fontSize);
-		item.height = font.lineHeight(fontSize);
+		item.height = font.lineHeight(fontSize) * lineHeight;
 
 		var leadingSpaces = item.text.match(LEADING);
 		var trailingSpaces = item.text.match(TRAILING);

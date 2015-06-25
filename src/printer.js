@@ -2,12 +2,15 @@
 /* global window */
 'use strict';
 
+var _ = require('lodash');
+var FontProvider = require('./fontProvider');
 var LayoutBuilder = require('./layoutBuilder');
 var PdfKit = require('pdfkit');
-var PDFReference = require('../node_modules/pdfkit/js/reference');
+var PDFReference = require('pdfkit/js/reference');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
 var textDecorator = require('./textDecorator');
+var FontProvider = require('./fontProvider');
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -75,8 +78,9 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	var pageSize = pageSize2widthAndHeight(docDefinition.pageSize || 'a4');
 
   if(docDefinition.pageOrientation === 'landscape') {
-    pageSize = { width: pageSize.height, height: pageSize.width };
+    pageSize = { width: pageSize.height, height: pageSize.width};
   }
+	pageSize.orientation = docDefinition.pageOrientation === 'landscape' ? docDefinition.pageOrientation : 'portrait';
 
 	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ], compress: false});
 	this.pdfKitDoc.info.Producer = 'pdfmake';
@@ -95,25 +99,18 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
     builder.registerTableLayouts(options.tableLayouts);
   }
 
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark);
+	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
 
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
 	if(options.autoPrint){
-        var jsRef = this.pdfKitDoc.ref({
-			S: 'JavaScript',
-			JS: new StringObject('this.print\\(true\\);')
-		});
-		var namesRef = this.pdfKitDoc.ref({
-			Names: [new StringObject('EmbeddedJS'), new PDFReference(this.pdfKitDoc, jsRef.id)],
-		});
-
-		jsRef.end();
-		namesRef.end();
-
-		this.pdfKitDoc._root.data.Names = {
-			JavaScript: new PDFReference(this.pdfKitDoc, namesRef.id)
-		};
+    var printActionRef = this.pdfKitDoc.ref({
+      Type: 'Action',
+      S: 'Named',
+      N: 'Print'
+    });
+    this.pdfKitDoc._root.data.OpenAction = printActionRef;
+    printActionRef.end();
 	}
 	return this.pdfKitDoc;
 };
@@ -200,13 +197,23 @@ function StringObject(str){
 	};
 }
 
-function renderPages(pages, fontProvider, pdfKitDoc) {
-	for(var i = 0, l = pages.length; i < l; i++) {
-		if (i > 0) {
-			pdfKitDoc.addPage();
-		}
+function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
+	var previousPageOrientation = pdfKitDoc.options.size[0] > pdfKitDoc.options.size[1] ? 'landscape' : 'portrait';
 
-		setFontRefs(fontProvider, pdfKitDoc);
+	if(currentPage.pageSize.orientation !== previousPageOrientation) {
+		var width = pdfKitDoc.options.size[0];
+		var height = pdfKitDoc.options.size[1];
+		pdfKitDoc.options.size = [height, width];
+	}
+}
+
+function renderPages(pages, fontProvider, pdfKitDoc) {
+  pdfKitDoc._pdfMakePages = pages;
+	for (var i = 0; i < pages.length; i++) {
+		if (i > 0) {
+			updatePageOrientationInOptions(pages[i], pdfKitDoc);
+			pdfKitDoc.addPage(pdfKitDoc.options);
+		}
 
 		var page = pages[i];
     for(var ii = 0, il = page.items.length; ii < il; ii++) {
@@ -224,24 +231,11 @@ function renderPages(pages, fontProvider, pdfKitDoc) {
 				}
     }
     if(page.watermark){
-			renderWatermark(page, pdfKitDoc, fontProvider);
-		}
+      renderWatermark(page, pdfKitDoc);
 	}
-}
 
-function setFontRefs(fontProvider, pdfKitDoc) {
-	for(var fontName in fontProvider.cache) {
-		var desc = fontProvider.cache[fontName];
-
-		for (var fontType in desc) {
-			var font = desc[fontType];
-			var _ref, _base, _name;
-
-			if (!(_ref = (_base = pdfKitDoc.page.fonts)[_name = font.id])) {
-				_base[_name] = font.ref();
-			}
-		}
-	}
+    fontProvider.setFontRefsToPdfDoc();
+  }
 }
 
 function renderLine(line, x, y, pdfKitDoc) {
@@ -249,7 +243,6 @@ function renderLine(line, x, y, pdfKitDoc) {
 	y = y || 0;
 
 	var ascenderHeight = line.getAscenderHeight();
-	var lineHeight = line.getHeight();
 
 	textDecorator.drawBackground(line, x, y, pdfKitDoc);
 
@@ -262,13 +255,14 @@ function renderLine(line, x, y, pdfKitDoc) {
 		pdfKitDoc.save();
 		pdfKitDoc.transform(1, 0, 0, -1, 0, pdfKitDoc.page.height);
 
+
+    var encoded = inline.font.encode(inline.text);
 		pdfKitDoc.addContent('BT');
-		var a = (inline.font.ascender / 1000 * inline.fontSize);
 
 		pdfKitDoc.addContent('' + (x + inline.x) + ' ' + (pdfKitDoc.page.height - y - ascenderHeight) + ' Td');
-		pdfKitDoc.addContent('/' + inline.font.id + ' ' + inline.fontSize + ' Tf');
+		pdfKitDoc.addContent('/' + encoded.fontId + ' ' + inline.fontSize + ' Tf');
 
-		pdfKitDoc.addContent('<' + encode(inline.font, inline.text) + '> Tj');
+        pdfKitDoc.addContent('<' + encoded.encodedText + '> Tj');
 
 		pdfKitDoc.addContent('ET');
 		pdfKitDoc.restore();
@@ -278,7 +272,7 @@ function renderLine(line, x, y, pdfKitDoc) {
 
 }
 
-function renderWatermark(page, pdfKitDoc, fontProvider){
+function renderWatermark(page, pdfKitDoc){
 	var watermark = page.watermark;
 
 	pdfKitDoc.fill('black');
@@ -290,28 +284,13 @@ function renderWatermark(page, pdfKitDoc, fontProvider){
 	var angle = Math.atan2(pdfKitDoc.page.height, pdfKitDoc.page.width) * 180/Math.PI;
 	pdfKitDoc.rotate(angle, {origin: [pdfKitDoc.page.width/2, pdfKitDoc.page.height/2]});
 
+  var encoded = watermark.font.encode(watermark.text);
 	pdfKitDoc.addContent('BT');
 	pdfKitDoc.addContent('' + (pdfKitDoc.page.width/2 - watermark.size.size.width/2) + ' ' + (pdfKitDoc.page.height/2 - watermark.size.size.height/4) + ' Td');
-	pdfKitDoc.addContent('/' + watermark.font.id + ' ' + watermark.size.fontSize + ' Tf');
-	pdfKitDoc.addContent('<' + encode(watermark.font, watermark.text) + '> Tj');
+	pdfKitDoc.addContent('/' + encoded.fontId + ' ' + watermark.size.fontSize + ' Tf');
+	pdfKitDoc.addContent('<' + encoded.encodedText + '> Tj');
 	pdfKitDoc.addContent('ET');
 	pdfKitDoc.restore();
-}
-
-function encode(font, text) {
-	font.use(text);
-
-	text = font.encode(text);
-	text = ((function() {
-		var _results = [];
-
-		for (var i = 0, _ref2 = text.length; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
-			_results.push(text.charCodeAt(i).toString(16));
-		}
-		return _results;
-	})()).join('');
-
-	return text;
 }
 
 function renderVector(vector, pdfDoc) {
@@ -374,45 +353,6 @@ function renderVector(vector, pdfDoc) {
 function renderImage(image, x, y, pdfKitDoc) {
     pdfKitDoc.image(image.image, image.x, image.y, { width: image._width, height: image._height });
 }
-
-function FontProvider(fontDescriptors, pdfDoc) {
-	this.fonts = {};
-	this.pdfDoc = pdfDoc;
-	this.cache = {};
-
-	for(var font in fontDescriptors) {
-		if (fontDescriptors.hasOwnProperty(font)) {
-			var fontDef = fontDescriptors[font];
-
-			this.fonts[font] = {
-				normal: fontDef.normal,
-				bold: fontDef.bold,
-				italics: fontDef.italics,
-				bolditalics: fontDef.bolditalics
-			};
-		}
-	}
-}
-
-FontProvider.prototype.provideFont = function(familyName, bold, italics) {
-	if (!this.fonts[familyName]) return this.pdfDoc._font;
-
-	var type = 'normal';
-
-	if (bold && italics) type = 'bolditalics';
-	else if (bold) type = 'bold';
-	else if (italics) type = 'italics';
-
-	if (!this.cache[familyName]) this.cache[familyName] = {};
-
-	var cached = this.cache[familyName] && this.cache[familyName][type];
-
-	if (cached) return cached;
-
-	var fontCache = (this.cache[familyName] = this.cache[familyName] || {});
-	fontCache[type] = this.pdfDoc.font(this.fonts[familyName][type])._font;
-	return fontCache[type];
-};
 
 module.exports = PdfPrinter;
 

@@ -1,11 +1,26 @@
 var assert = require('assert');
+var sinon = require('sinon');
 
 var DocumentContext = require('../src/documentContext');
 var PageElementWriter = require('../src/pageElementWriter');
 
 describe('PageElementWriter', function() {
-	var pew;
-	var ctx;
+	var pew, ctx, tracker, pageSize;
+
+	var DOCUMENT_WIDTH = 600;
+	var DOCUMENT_HEIGHT = 1100;
+	var DOCUMENT_ORIENTATION = 'portrait';
+
+
+	var MARGINS = {
+		left: 40,
+		right: 60,
+		top: 30,
+		bottom: 70
+	};
+
+	AVAILABLE_HEIGHT = 1000;
+	AVAILABLE_WIDTH = 500;
 
 	function buildLine(height, alignment, x, y) {
 		return {
@@ -29,10 +44,12 @@ describe('PageElementWriter', function() {
 	}
 
 	function addOneTenthLines(count) {
+    var lastPosition;
 		for(var i = 0; i < count; i++) {
-			var line = buildLine((800-60-60)/10);
-			pew.addLine(line);
+			var line = buildLine(AVAILABLE_HEIGHT/10);
+			lastPosition = pew.addLine(line);
 		}
+    return lastPosition;
 	}
 
 	function createRepeatable(marker, height) {
@@ -48,32 +65,35 @@ describe('PageElementWriter', function() {
         });
 		return rep;
 	}
-
 	beforeEach(function() {
-		ctx = new DocumentContext({ width: 400, height: 800 }, { left: 40, right: 40, top: 60, bottom: 60 });
-		pew = new PageElementWriter(ctx);
+		pageSize = {width: DOCUMENT_WIDTH, height: DOCUMENT_HEIGHT, orientation: DOCUMENT_ORIENTATION};
+    ctx = new DocumentContext(pageSize, MARGINS);
+		tracker = { emit: sinon.spy() };
+		pew = new PageElementWriter(ctx, tracker);
 	});
 
 	describe('addLine', function() {
 		it('should add new lines if there\'s enough space left', function() {
-			addOneTenthLines(10);
+			var position = addOneTenthLines(10);
 
 			assert.equal(ctx.pages.length, 1);
+			assert.deepEqual(position, {pageNumber:1,left:MARGINS.left, top: (9/10 * AVAILABLE_HEIGHT) + MARGINS.top, verticalRatio: 0.9, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight:1000, pageInnerWidth:500});
 		});
 
 		it('should add new pages if there\'s not enough space left', function() {
-			addOneTenthLines(11);
+			var position = addOneTenthLines(11);
 
 			assert.equal(ctx.pages.length, 2);
 			assert.equal(ctx.pages[0].items.length, 10);
 			assert.equal(ctx.pages[1].items.length, 1);
+      assert.deepEqual(position, {pageNumber:2,left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight:1000, pageInnerWidth:500});
 		});
 
 		it('should subtract line height from availableHeight when adding a line and update current y position', function() {
 			pew.addLine(buildLine(40));
 
-			assert.equal(ctx.y, 60 + 40);
-			assert.equal(ctx.availableHeight, 800 - 60 - 60 - 40);
+			assert.equal(ctx.y, MARGINS.top + 40);
+			assert.equal(ctx.availableHeight, AVAILABLE_HEIGHT - 40);
 		});
 
 		it('should add repeatable fragments if they exist and a new page is created before adding the line', function() {
@@ -167,10 +187,10 @@ describe('PageElementWriter', function() {
 
 			pew.commitUnbreakableBlock();
 
-			assert.equal(ctx.pages[1].items[0].item.x, 40);
-			assert.equal(ctx.pages[1].items[0].item.y, 60);
-			assert.equal(ctx.pages[1].items[1].item.x, 40);
-			assert.equal(ctx.pages[1].items[1].item.y, 60 + ctx.pages[1].items[0].item.getHeight());
+			assert.equal(ctx.pages[1].items[0].item.x, MARGINS.left);
+			assert.equal(ctx.pages[1].items[0].item.y, MARGINS.top);
+			assert.equal(ctx.pages[1].items[1].item.x, MARGINS.left);
+			assert.equal(ctx.pages[1].items[1].item.y, MARGINS.top + AVAILABLE_HEIGHT/10);
 		});
 
 		it('should add lines below any repeatable fragments if they exist and a new page is created', function() {
@@ -188,8 +208,8 @@ describe('PageElementWriter', function() {
 			assert.equal(ctx.pages.length, 2);
 			assert.equal(ctx.pages[1].items[0].item.marker, 'rep');
 			assert.equal(ctx.pages[1].items[1].item.marker, 'another');
-			assert.equal(ctx.pages[1].items[1].item.x, 40);
-			assert.equal(ctx.pages[1].items[1].item.y, 60 + 50);
+			assert.equal(ctx.pages[1].items[1].item.x, MARGINS.left);
+			assert.equal(ctx.pages[1].items[1].item.y, MARGINS.top + 50);
 		});
 
 		it('should make all further calls to addLine add lines again to the page when transaction finishes', function() {
@@ -242,9 +262,31 @@ describe('PageElementWriter', function() {
 			assert.equal(ctx.pages[1].items[0].item.marker, 'rep');
 			assert.equal(ctx.pages[1].items[1].item.marker, 'rep');
 			assert.equal(ctx.pages[1].items[2].item.marker, 'rep');
-			assert.equal(ctx.pages[1].items[2].item.y, 60 + 2 * 68);
+			assert.equal(ctx.pages[1].items[2].item.y, MARGINS.top + 2 * AVAILABLE_HEIGHT/10);
 			assert(!ctx.pages[1].items[3].item.marker);
-			assert.equal(ctx.pages[1].items[3].item.y, ctx.pages[1].items[2].item.y + 68);
+			assert.equal(ctx.pages[1].items[3].item.y, ctx.pages[1].items[2].item.y + AVAILABLE_HEIGHT/10);
+		});
+
+		it('should reserve space for repeatable fragment to the top when reusing page', function() {
+			addOneTenthLines(6);
+
+			pew.beginUnbreakableBlock();
+			var uCtx = pew.writer.context;
+
+			addOneTenthLines(3);
+			uCtx.pages[0].items.forEach(function(item) { item.item.marker = 'rep'; });
+			var rep = pew.currentBlockToRepeatable();
+			pew.pushToRepeatables(rep);
+			pew.commitUnbreakableBlock();
+
+
+      ctx.pages.push({items: [], pageSize: pageSize});
+
+			addOneTenthLines(2);
+
+			assert.equal(ctx.pages.length, 2);
+
+			assert.equal(ctx.pages[1].items[0].item.y, MARGINS.top + 3 * AVAILABLE_HEIGHT/10);
 		});
 
 		it('should add repeatable fragments in the same order they have been added to the repeatable fragments collection', function() {
@@ -256,11 +298,79 @@ describe('PageElementWriter', function() {
 			assert.equal(ctx.pages.length, 2);
 			assert.equal(ctx.pages[1].items.length, 3);
 			assert.equal(ctx.pages[1].items[0].item.marker, 'rep1');
-			assert.equal(ctx.pages[1].items[0].item.y, 60);
+			assert.equal(ctx.pages[1].items[0].item.y, MARGINS.top);
 			assert.equal(ctx.pages[1].items[1].item.marker, 'rep2');
-			assert.equal(ctx.pages[1].items[1].item.y, 60 + 50);
+			assert.equal(ctx.pages[1].items[1].item.y, MARGINS.top + 50);
 			assert(!ctx.pages[1].items[2].item.marker);
-			assert.equal(ctx.pages[1].items[2].item.y, 60 + 50 + 60);
+			assert.equal(ctx.pages[1].items[2].item.y, MARGINS.top + 50 + 60);
+		});
+
+		it('should switch width and height if page changes from portrait to landscape', function() {
+			addOneTenthLines(6);
+			assert.equal(ctx.getCurrentPage().pageSize.width, DOCUMENT_WIDTH);
+			assert.equal(ctx.getCurrentPage().pageSize.height, DOCUMENT_HEIGHT);
+			assert.equal(ctx.getCurrentPage().pageSize.orientation, DOCUMENT_ORIENTATION);
+
+			pew.moveToNextPage('landscape');
+
+			assert.equal(ctx.pages.length, 2);
+			assert.equal(ctx.getCurrentPage().pageSize.width, DOCUMENT_HEIGHT);
+			assert.equal(ctx.getCurrentPage().pageSize.height, DOCUMENT_WIDTH);
+			assert.equal(ctx.getCurrentPage().pageSize.orientation, 'landscape');
+		});
+
+		it('should switch width and height if page changes from landscape to portrait', function() {
+			ctx.getCurrentPage().pageSize.orientation = 'landscape';
+			ctx.getCurrentPage().pageSize.width = DOCUMENT_WIDTH;
+			ctx.getCurrentPage().pageSize.height = DOCUMENT_HEIGHT;
+			
+			addOneTenthLines(6);
+			pew.moveToNextPage('portrait');
+
+			assert.equal(ctx.pages.length, 2);
+			assert.equal(ctx.getCurrentPage().pageSize.width, DOCUMENT_HEIGHT);
+			assert.equal(ctx.getCurrentPage().pageSize.height, DOCUMENT_WIDTH);
+			assert.equal(ctx.getCurrentPage().pageSize.orientation, 'portrait');
+		});
+
+		it('should not switch width and height if page changes from landscape to landscape', function() {
+			ctx.pageOrientation = undefined;
+			addOneTenthLines(6);
+			pew.moveToNextPage('landscape');
+			pew.moveToNextPage('landscape');
+
+			assert.equal(ctx.pages.length, 3);
+			assert.equal(ctx.getCurrentPage().pageSize.width, DOCUMENT_HEIGHT);
+			assert.equal(ctx.getCurrentPage().pageSize.height, DOCUMENT_WIDTH);
+			assert.equal(ctx.getCurrentPage().pageSize.orientation, 'landscape');
+		});
+
+		it('should create new page', function () {
+			addOneTenthLines(1);
+			pew.moveToNextPage();
+
+			assert.equal(ctx.pages.length, 2);
+			assert.equal(ctx.y, MARGINS.top);
+			assert.equal(ctx.availableHeight, AVAILABLE_HEIGHT);
+			assert.equal(ctx.availableWidth, AVAILABLE_WIDTH);
+			assert.equal(tracker.emit.callCount, 2); // move to first page to write a line, and then move to next page
+			assert.deepEqual(tracker.emit.getCall(1).args, ['pageChanged', {prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top}]);
+		});
+
+		it('should use existing page', function () {
+			addOneTenthLines(1);
+			ctx.pages.push({items: [], pageSize: pageSize});
+			ctx.availableWidth = 'garbage';
+			ctx.availableHeight = 'garbage';
+
+			pew.moveToNextPage();
+
+			assert.equal(ctx.page, 1);
+			assert.equal(ctx.y, MARGINS.top);
+			assert.equal(ctx.availableHeight, AVAILABLE_HEIGHT);
+			assert.equal(ctx.availableWidth, AVAILABLE_WIDTH);
+			assert.equal(tracker.emit.callCount, 2);
+			assert.deepEqual(tracker.emit.getCall(1).args, ['pageChanged', {prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top}]);
 		});
 	});
 });

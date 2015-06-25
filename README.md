@@ -3,7 +3,7 @@ pdfmake [![Build Status](https://travis-ci.org/bpampuch/pdfmake.png?branch=maste
 
 Client/server side PDF printing in pure JavaScript
 
-Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) or soon... [read the docs](http://pdfmake.org/index.html#/docs)
+Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html)
 
 ### Features
 
@@ -29,14 +29,12 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) or
 
 ## Getting Started
 
-*warning! links to the documentation do NOT work yet*
-
-This document will walk you through the basics of pdfmake and will show you how to create PDF files in the browser. If you're interested in server-side printing, read [getting started with pdfMake under NodeJS](NodeGettingStarted).
+This document will walk you through the basics of pdfmake and will show you how to create PDF files in the browser. If you're interested in server-side printing check the examples folder.
 
 To begin with the default configuration, you should include two files:
 
 * **pdfmake.min.js**,
-* **vfs_fonts.js** - default font definition (it contains Roboto, you can however [use custom fonts instead](CustomFonts))
+* **vfs_fonts.js** - default font definition (it contains Roboto, you can however [use custom fonts instead](https://github.com/bpampuch/pdfmake/wiki/Custom-Fonts---client-side))
 
 ```html
 <!doctype html>
@@ -126,7 +124,7 @@ var docDefinition = {
       bold: true
     },
     anotherStyle: {
-      italic: true,
+      italics: true,
       alignment: 'right'
     }
   }
@@ -134,7 +132,7 @@ var docDefinition = {
 
 ```
 
-To have a deeper understanding of styling in pdfmake, style inheritance and local-style-overrides check [this example](TODO) and [the resulting PDF](TODO) or [open it in playground](TODO).
+To have a deeper understanding of styling in pdfmake, style inheritance and local-style-overrides check STYLES1, STYLES2 and STYLES3 examples in playground.
 
 #### Columns
 
@@ -161,6 +159,11 @@ var docDefinition = {
           // fixed width
           width: 100,
           text: 'Third column'
+        },
+        {
+          // % width
+          width: '20%',
+          text: 'Fourth column'
         }
       ],
       // optional space between columns
@@ -172,7 +175,7 @@ var docDefinition = {
 
 ```
 
-Column content is not limited to a simple text. It can actually contain any valid pdfmake element. See a [complete example](TODO) and [the resulting pdf](TODO) or [open it in playground](TODO)
+Column content is not limited to a simple text. It can actually contain any valid pdfmake element. Make sure to look at the COLUMNS example in playground.
 
 #### Tables
 
@@ -201,7 +204,7 @@ var docDefinition = {
 
 
 
-All concepts related to tables are covered by [this example](TODO) and [the resulting PDF](TODO). You can also [open it in playground](TODO).
+All concepts related to tables are covered by TABLES example in playground.
 
 #### Lists
 
@@ -433,14 +436,19 @@ If you set ```pageSize``` to a string, you can use one of the following values:
 * 'SRA0', 'SRA1', 'SRA2', 'SRA3', 'SRA4',
 * 'EXECUTIVE', 'FOLIO', 'LEGAL', 'LETTER', 'TABLOID'
 
-## Does the above description cover everything?
+To change page orientation within a document, add a page break with the new page orientation.
 
-Not at all.
-
-If you really want to learn pdfMake, go ahead and check the:
-* [examples folder](https://github.com/bpampuch/pdfmake/tree/master/examples),
-* [playground](http://pdfmake.org/playground.html),
-* [documentation](http://pdfmake.org/index.html#/docs).
+```js
+{
+  pageOrientation: 'portrait',
+  content: [
+    {text: 'Text on Portrait'},
+    {text: 'Text on Landscape', pageOrientation: 'landscape', pageBreak: 'before'},
+    {text: 'Text on Landscape 2', pageOrientation: 'portrait', pageBreak: 'after'},
+    {text: 'Text on Portrait 2'},
+  ]
+}
+```
 
 ## Coming soon
 Hmmm... let me know what you need ;)
@@ -459,3 +467,5 @@ MIT
 -------
 
 pdfmake is based on a truly amazing library pdfkit.org - credits to @devongovett
+
+big thanks to @yelouafi for making this library even better

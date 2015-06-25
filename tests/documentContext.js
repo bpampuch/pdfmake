@@ -6,7 +6,7 @@ describe('DocumentContext', function() {
 	var pc;
 
 	beforeEach(function() {
-		pc = new DocumentContext({ width: 400, height: 800 }, { left: 40, right: 40, top: 60, bottom: 60 });
+		pc = new DocumentContext({ width: 400, height: 800, orientation: 'portrait' }, { left: 40, right: 40, top: 60, bottom: 60 });
 		// pc.addPage();
 	});
 
@@ -219,28 +219,74 @@ describe('DocumentContext', function() {
 		});
 	});
 
+	describe('moveToNext page', function(){
+
+		it('should add new page in portrait', function () {
+			pc.moveToNextPage();
+
+			assert.equal(pc.pages[0].pageSize.orientation, 'portrait');
+			assert.equal(pc.pages[1].pageSize.orientation, 'portrait');
+		});
+
+		it('should add a new page in the same orientation as the previous one', function () {
+			pc.moveToNextPage('landscape');
+			pc.moveToNextPage();
+			pc.moveToNextPage('portrait');
+			pc.moveToNextPage();
+
+			assert.equal(pc.pages[0].pageSize.orientation, 'portrait');
+			assert.equal(pc.pages[1].pageSize.orientation, 'landscape');
+			assert.equal(pc.pages[2].pageSize.orientation, 'landscape');
+			assert.equal(pc.pages[3].pageSize.orientation, 'portrait');
+			assert.equal(pc.pages[4].pageSize.orientation, 'portrait');
+		});
+		
+	});
+	
 	describe('addPage', function() {
+		
+		var pageSize;
+		
+		beforeEach(function(){
+			pageSize = {width: 200, height: 400, orientation: 'landscape'};
+		});
+		
 		it('should add a new page', function() {
-			pc.addPage();
+			
+      pc.addPage(pageSize);
 
 			assert.equal(pc.pages.length, 2);
 		});
+		
 
 		it('should return added page', function() {
-			var page = pc.addPage();
+			var page = pc.addPage(pageSize);
 
 			assert.equal(page, pc.pages[pc.pages.length - 1]);
 		});
 
-		it('should set y and availableHeight to initial values', function() {
+		it('should set y, availableHeight and availableWidth on page to initial values', function() {
 			pc.y = 123;
 			pc.availableHeight = 123;
 
-			pc.moveToPageTop();
+			pc.initializePage();
 
 			assert.equal(pc.y, 60);
 			assert.equal(pc.availableHeight, 800 - 60 - 60);
+			assert.equal(pc.availableWidth, 400 - 40 - 40);
 		});
+
+    it('should keep column width when in column group, but set page width', function() {
+      pc.beginColumnGroup();
+      pc.beginColumn(100, 0, {});
+      pc.initializePage();
+
+      assert.equal(pc.availableWidth, 100);
+
+      pc.completeColumnGroup();
+
+      assert.equal(pc.availableWidth, 400 - 40 - 40);
+    });
 	});
 
 	describe('bottomMostContext', function() {
