@@ -49,6 +49,10 @@ TextTools.prototype.buildInlines = function(textArray, styleContextStack) {
 		}
 	});
 
+	if (getStyleProperty({}, styleContextStack, 'noWrap', false)) {
+		minWidth = maxWidth;
+	}
+
 	return {
 		items: measured,
 		minWidth: minWidth,
@@ -88,12 +92,16 @@ TextTools.prototype.sizeOfString = function(text, styleContextStack) {
 	};
 };
 
-function splitWords(text) {
+function splitWords(text, noWrap) {
 	var results = [];
 	text = text.replace('\t', '    ');
 
-	var array = text.match(WORD_RE);
-
+	var array;
+	if (noWrap) {
+		array = [ text, "" ];
+	} else {
+		array = text.match(WORD_RE);
+	}
 	// i < l - 1, because the last match is always an empty string
 	// other empty strings however are treated as new-lines
 	for(var i = 0, l = array.length; i < l - 1; i++) {
@@ -115,7 +123,6 @@ function splitWords(text) {
 			}
 		}
 	}
-
 	return results;
 }
 
@@ -147,7 +154,7 @@ function normalizeTextArray(array) {
 		if (typeof item == 'string' || item instanceof String) {
 			words = splitWords(item);
 		} else {
-			words = splitWords(item.text);
+			words = splitWords(item.text, item.noWrap);
 			style = copyStyle(item);
 		}
 

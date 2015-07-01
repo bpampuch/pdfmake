@@ -72,6 +72,24 @@ content: [
 							]
 					}
 			},
+			{
+					style: 'tableExample',
+					table: {
+							widths: ['*', 'auto'],
+							body: [
+									[ 'This is a star-sized column. The next column over, an auto-sized column, will wrap to accomodate all the text in this cell.', 'I am auto sized.'],
+							]
+					}
+			},
+			{
+					style: 'tableExample',
+					table: {
+							widths: ['*', 'auto'],
+							body: [
+									[ 'This is a star-sized column. The next column over, an auto-sized column, will not wrap to accomodate all the text in this cell, because it has been given the noWrap style.', { text: 'I am auto sized.', noWrap: true } ],
+							]
+					}
+			},
 			{ text: 'Headers', style: 'subheader' },
 			'You can declare how many rows should be treated as a header. Headers are automatically repeated on the following pages',
 			{ text: [ 'It is also possible to set keepWithHeaderRows to make sure there will be no page-break between the header and these rows. Take a look at the document-definition and play with it. If you set it to one, the following table will automatically start on the next page, since there\'s not enough space for the first row to be rendered here' ], color: 'gray', italics: true },
