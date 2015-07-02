@@ -37,6 +37,12 @@ DocMeasure.prototype.measureNode = function(node) {
 	} else if (typeof node == 'string' || node instanceof String) {
 		node = { text: node };
 	}
+	
+	// Deal with empty nodes to prevent crash in getNodeMargin
+	if (Object.keys(node).length === 0) {
+		// A warning could be logged: console.warn('pdfmake: Empty node, ignoring it');
+		node = { text: '' };
+	}
 
 	var self = this;
 
