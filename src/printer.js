@@ -242,6 +242,7 @@ function renderLine(line, x, y, pdfKitDoc) {
 	x = x || 0;
 	y = y || 0;
 
+	var lineHeight = line.getHeight();
 	var ascenderHeight = line.getAscenderHeight();
 
 	textDecorator.drawBackground(line, x, y, pdfKitDoc);
@@ -265,6 +266,11 @@ function renderLine(line, x, y, pdfKitDoc) {
         pdfKitDoc.addContent('<' + encoded.encodedText + '> Tj');
 
 		pdfKitDoc.addContent('ET');
+
+		if (inline.link) {
+			pdfKitDoc.link(x + inline.x, pdfKitDoc.page.height - y - lineHeight, inline.width, lineHeight, inline.link);
+		}
+
 		pdfKitDoc.restore();
 	}
 
