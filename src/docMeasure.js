@@ -175,7 +175,13 @@ DocMeasure.prototype.measureImage = function(node) {
 };
 
 DocMeasure.prototype.measureLeaf = function(node) {
-	var data = this.textTools.buildInlines(node.text, this.styleStack);
+
+	// Make sure style properties of the node itself are considered when building inlines.
+	// We could also just pass [node] to buildInlines, but that fails for bullet points.
+	var styleStack = this.styleStack.clone();
+	styleStack.push(node);
+
+	var data = this.textTools.buildInlines(node.text, styleStack);
 
 	node._inlines = data.items;
 	node._minWidth = data.minWidth;

@@ -54,6 +54,20 @@ describe('TextTools', function() {
 		' Nowak Dodatkowe informacje:'
 	];
 
+	var mixedTextArrayWithoutNewLinesNoWrapLongest = [
+		'Imię: ',
+		'Jan   ',
+		'   Nazwisko:',
+		{ text: ' Nowak Dodatkowe informacje:', noWrap: true }
+	];
+
+	var mixedTextArrayWithoutNewLinesNoWrapShortest = [
+		'Imię: ',
+		{ text: 'Jan   ', noWrap: true },
+		'   Nazwisko:',
+		' Nowak Dodatkowe informacje:'
+	];
+
 	var plainTextArrayWithoutNewLinesWhichRequiresTrimming = [
 		'                          Imię: ',
 		'Jan   ',
@@ -87,7 +101,7 @@ describe('TextTools', function() {
 		bold: false,
 		font: 'Helvetica'
 	});
-
+	var styleStackNoWrap = new StyleContextStack({}, { noWrap: true });
 
 	describe('splitWords', function() {
 		it('should do basic splitting', function() {
@@ -286,6 +300,25 @@ describe('TextTools', function() {
 			var inlines = textTools.buildInlines(textArrayWithNewLinesWhichRequiresTrimming);
 			assert.equal(inlines.maxWidth, 21 * 12);
 		});
+
+		it('should set min width to max when nowrap style is specified', function(){
+			var inlines = textTools.buildInlines(plainTextArrayWithoutNewLines,styleStackNoWrap);
+			assert.equal(inlines.minWidth, 52 * 12);
+			assert.equal(inlines.maxWidth, 52 * 12);
+		});
+
+		it('should set min width to longest when nowrap style is specified on longest segment', function(){
+			var inlines = textTools.buildInlines(mixedTextArrayWithoutNewLinesNoWrapLongest);
+			assert.equal(inlines.minWidth, 27 * 12);
+			assert.equal(inlines.maxWidth, 52 * 12);
+		});
+
+		it('should set widths to normal when nowrap style is specified on shortest segment', function(){
+			var inlines = textTools.buildInlines(mixedTextArrayWithoutNewLinesNoWrapShortest);
+			assert.equal(inlines.minWidth, 11 * 12);
+			assert.equal(inlines.maxWidth, 52 * 12);
+		});
+
 	});
 
 	describe('sizeOfString', function() {
