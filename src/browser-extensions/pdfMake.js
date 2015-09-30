@@ -4,7 +4,7 @@
 'use strict';
 
 var PdfPrinter = require('../printer');
-var saveAs = require('../../libs/fileSaver');
+var saveAs = require('../../libs/FileSaver.js/FileSaver');
 
 var defaultClientFonts = {
 	Roboto: {
