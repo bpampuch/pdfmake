@@ -26,6 +26,7 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html)
 * font embedding,
 * support for complex, multi-level (nested) structures,
 * helper methods for opening/printing/downloading the generated PDF.
+* setting of PDF metadata (e.g. author, subject)
 
 ## Getting Started
 
@@ -447,6 +448,24 @@ To change page orientation within a document, add a page break with the new page
     {text: 'Text on Landscape 2', pageOrientation: 'portrait', pageBreak: 'after'},
     {text: 'Text on Portrait 2'},
   ]
+}
+```
+
+#### Document Metadata
+
+(From PdfKit Guide)
+PDF documents can have various metadata associated with them, such as the title, or author
+of the document. You can add that information by adding it to the document definition
+
+```js
+var docDefinition = {
+  info: {
+	title: 'awesome Document',
+	author: 'john doe',
+	subject: 'subject of document',
+	keywords: 'keywords for document',
+  },
+  content:  'This is an sample PDF printed with pdfMake' 
 }
 ```
 

@@ -52,6 +52,12 @@ function PdfPrinter(fontDescriptors) {
  * @example
  *
  * var docDefinition = {
+ * 	info: {
+ *		title: 'awesome Document',
+ *		author: 'john doe',
+ *		subject: 'subject of document',
+ *		keywords: 'keywords for document',
+ * 	},
  *	content: [
  *		'First paragraph',
  *		'Second paragraph, this time a little bit longer',
@@ -85,6 +91,18 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ], compress: false});
 	this.pdfKitDoc.info.Producer = 'pdfmake';
 	this.pdfKitDoc.info.Creator = 'pdfmake';
+	
+	// pdf kit maintains the uppercase fieldnames from pdf spec
+	// to keep the pdfmake api consistent, the info field are defined lowercase
+	if(docDefinition.info){
+		var info = docDefinition.info;
+		// check for falsey an set null, so that pdfkit always get either null or value
+		this.pdfKitDoc.info.Title = docDefinition.info.title ? docDefinition.info.title : null;
+		this.pdfKitDoc.info.Author = docDefinition.info.author ? docDefinition.info.author : null;
+		this.pdfKitDoc.info.Subject = docDefinition.info.subject ? docDefinition.info.subject : null;
+		this.pdfKitDoc.info.Keywords = docDefinition.info.keywords ? docDefinition.info.keywords : null;
+	}
+	
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
   docDefinition.images = docDefinition.images || {};
