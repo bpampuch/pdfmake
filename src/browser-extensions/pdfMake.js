@@ -47,18 +47,46 @@ Document.prototype._getPages = function(options, cb){
   });
 };
 
-Document.prototype.open = function(message) {
-	// we have to open the window immediately and store the reference
-	// otherwise popup blockers will stop us
-	var win = window.open('', '_blank');
-
-	try {
-		this.getDataUrl(function(result) {
-			win.location.href = result;
+Document.prototype.open = function(confs) {
+	var win,
+		DestinationName = false,
+		callback = false;
+    //is empty?
+    if (typeof (confs) === "object") {
+        DestinationName = confs.DestinationName;
+        callback = confs.callback;
+    }
+	if (DestinationName) {
+		//first occurrence only
+		win = document.getElementsByName(DestinationName)[0];
+		//if a iframe or a frame?
+		if (win.tagName !== "IFRAME" && win.tagName !== "FRAME") {
+			alert("the Destination name Element is not a Iframe or a Frame");
+			return false;
+		}
+		this.getDataUrl(function (result) {
+			win.src = result;
+			//if got a callback
+			if (typeof (callback) === "function") {
+				callback(result);
+			}
 		});
-	} catch(e) {
-		win.close();
-		throw e;
+	} else {
+	// we have to open the window immediately and store the reference
+	// otherwise popup blockers will stop us		
+		win = window.open('', '_blank');
+		try {
+			this.getDataUrl(function (result) {
+				win.location.href = result;
+				//if got a callback
+				if (typeof (callback) === "function") {
+					callback(result);
+				}
+			});
+		} catch (e) {
+			win.close();
+			return false;
+		}
 	}
 };
 
