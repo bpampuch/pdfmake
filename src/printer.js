@@ -195,7 +195,8 @@ var defaultLayout = {
   paddingLeft: function(i, node) { return 4; }, //i && 4 || 0; },
   paddingRight: function(i, node) { return 4; }, //(i < node.table.widths.length - 1) ? 4 : 0; },
   paddingTop: function(i, node) { return 2; },
-  paddingBottom: function(i, node) { return 2; }
+  paddingBottom: function(i, node) { return 2; },
+  defaultBorder: true
 };
 
 function pageSize2widthAndHeight(pageSize) {
