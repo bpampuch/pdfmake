@@ -303,7 +303,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
         if(i < l-1) {
           var fillColor = body[rowIndex][colIndex].fillColor;
           if(fillColor ) {
-            var wBorder = this.layout.vLineWidth(colIndex, this.tableNode);
+            var wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
             var xf = xs[i].x+wBorder;
             var yf = y1 - hzLineOffset;
             writer.addVector({
