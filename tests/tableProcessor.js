@@ -86,7 +86,7 @@ describe('TableProcessor', function () {
     processor.beginRow(0, writerFake);
     processor.endRow(0, writerFake, []);
 
-    assert.equal(addVectorCallCount, 4)
+    assert.equal(addVectorCallCount, 3)
   });
 
   it('should use the line colors constants (regression #161)', function () {
@@ -117,7 +117,7 @@ describe('TableProcessor', function () {
     processor.beginRow(0, writerFake);
     processor.endRow(0, writerFake, []);
 
-    assert.equal(addVectorCallCount, 4);
+    assert.equal(addVectorCallCount, 3);
   });
 
   describe('header with nested table (issue #199)', function () {
