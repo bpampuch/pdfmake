@@ -34,7 +34,8 @@ describe('TableProcessor', function () {
       },
       paddingBottom: function (i, node) {
         return 2;
-      }
+      },
+      defaultBorder: true
     };
 
     contextFake = {
