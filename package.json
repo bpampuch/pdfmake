@@ -8,8 +8,7 @@
   },
   "dependencies": {
     "pdfkit": "~0.7.1",
-    "lodash": "^3.1.0",
-    "lodash-node": "^3.1.0"
+    "lodash": "^3.1.0"
   },
   "devDependencies": {
     "expose-loader": "^0.6.0",
@@ -21,11 +20,11 @@
     "gulp-spawn-mocha": "^2.0.1",
     "gulp-uglify": "^1.2.0",
     "gulp-util": "^3.0.4",
-    "gulp-webpack": "^1.4.0",
     "json-loader": "^0.5.1",
     "sinon": "~1.12.2",
     "string-replace-webpack-plugin": "0.0.1",
-    "webpack": "^1.8.9"
+    "webpack": "^1.8.9",
+    "webpack-stream": "^3.1.0"
   },
   "scripts": {
     "test": "gulp"
