@@ -51,11 +51,28 @@ Document.prototype.open = function(message) {
 	// we have to open the window immediately and store the reference
 	// otherwise popup blockers will stop us
 	var win = window.open('', '_blank');
-
+	
 	try {
-		this.getDataUrl(function(result) {
-			win.location.href = result;
-		});
+		this.getBuffer(function (result) {
+			var blob;
+			try {
+				blob = new Blob([result], { type: 'application/pdf' });
+			} catch (e) {
+				// Old browser which can't handle it without making it an byte array (ie10) 
+				if (e.name == "InvalidStateError") {
+					var byteArray = new Uint8Array(result);
+					blob = new Blob([byteArray.buffer], { type: 'application/pdf' });
+				}
+			}
+			
+			if (blob) {
+				var urlCreator = window.URL || window.webkitURL;
+				var pdfUrl = urlCreator.createObjectURL( blob );
+				win.location.href = pdfUrl;
+			} else {
+				throw 'Could not generate blob';
+			}
+		},  { autoPrint: false });
 	} catch(e) {
 		win.close();
 		throw e;
@@ -64,21 +81,38 @@ Document.prototype.open = function(message) {
 
 
 Document.prototype.print = function() {
-  this.getDataUrl(function(dataUrl) {
-    var iFrame = document.createElement('iframe');
-    iFrame.style.position = 'absolute';
-    iFrame.style.left = '-99999px';
-    iFrame.src = dataUrl;
-    iFrame.onload = function() {
-      function removeIFrame(){
-        document.body.removeChild(iFrame);
-        document.removeEventListener('click', removeIFrame);
-      }
-      document.addEventListener('click', removeIFrame, false);
-    };
-
-    document.body.appendChild(iFrame);
-  }, { autoPrint: true });
+  this.getBuffer(function (result) {
+		var blob;
+		try {
+			blob = new Blob([result], { type: 'application/pdf' });
+		} catch (e) {
+			// Old browser which can't handle it without making it an byte array (ie10) 
+			if (e.name == "InvalidStateError") {
+				var byteArray = new Uint8Array(result);
+				blob = new Blob([byteArray.buffer], { type: 'application/pdf' });
+			}
+		}
+		
+		if (blob) {
+			var urlCreator = window.URL || window.webkitURL;
+			var pdfUrl = urlCreator.createObjectURL( blob );
+			var iFrame = document.createElement('iframe');
+			iFrame.style.position = 'absolute';
+			iFrame.style.left = '-99999px';
+			iFrame.src = pdfUrl;
+			iFrame.onload = function() {
+				function removeIFrame(){
+					document.body.removeChild(iFrame);
+					document.removeEventListener('click', removeIFrame);
+				}
+				document.addEventListener('click', removeIFrame, false);
+			};
+			
+			document.body.appendChild(iFrame);   
+		} else {
+			throw 'Could not generate blob';
+		}
+	},  { autoPrint: true });
 };
 
 Document.prototype.download = function(defaultFileName, cb) {
