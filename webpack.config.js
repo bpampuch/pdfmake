@@ -6,7 +6,8 @@ module.exports = {
   entry: './src/browser-extensions/pdfMake.js',
   output: {
     path: path.join(__dirname, './build'),
-    filename: 'pdfmake.js'
+    filename: 'pdfmake.js',
+    libraryTarget: 'umd'
   },
   resolve: {
     alias: {
@@ -17,7 +18,7 @@ module.exports = {
     loaders: [
       { test: /\.json$/, loader: 'json' },
       { test: /browser-extensions\/pdfMake.js$/, loader: 'expose?pdfMake' },
-      { test: /pdfkit\/js\/mixins\/fonts.js$/, loader: StringReplacePlugin.replace({
+      { test: /pdfkit[\/\\]js[\/\\]mixins[\/\\]fonts.js$/, loader: StringReplacePlugin.replace({
         replacements: [
           {
             pattern: 'return this.font(\'Helvetica\');',
