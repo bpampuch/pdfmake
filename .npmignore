@@ -3,6 +3,4 @@ docs/
 examples/
 tests/
 src/browser-extensions/
-build/
 .DS_Store
-
