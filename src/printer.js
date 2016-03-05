@@ -91,18 +91,20 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ], compress: false});
 	this.pdfKitDoc.info.Producer = 'pdfmake';
 	this.pdfKitDoc.info.Creator = 'pdfmake';
-	
+
 	// pdf kit maintains the uppercase fieldnames from pdf spec
 	// to keep the pdfmake api consistent, the info field are defined lowercase
 	if(docDefinition.info){
 		var info = docDefinition.info;
 		// check for falsey an set null, so that pdfkit always get either null or value
-		this.pdfKitDoc.info.Title = docDefinition.info.title ? docDefinition.info.title : null;
-		this.pdfKitDoc.info.Author = docDefinition.info.author ? docDefinition.info.author : null;
-		this.pdfKitDoc.info.Subject = docDefinition.info.subject ? docDefinition.info.subject : null;
-		this.pdfKitDoc.info.Keywords = docDefinition.info.keywords ? docDefinition.info.keywords : null;
+		this.pdfKitDoc.info.Title = info.title ? info.title : null;
+		this.pdfKitDoc.info.Author = info.author ? info.author : null;
+		this.pdfKitDoc.info.Subject = info.subject ? info.subject : null;
+		this.pdfKitDoc.info.Keywords = info.keywords ? info.keywords : null;
+		this.pdfKitDoc.info.Producer = info.producer ? info.producer : 'pdfmake';
+		this.pdfKitDoc.info.Creator = info.creator ? info.creator : 'pdfmake';
 	}
-	
+
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
   docDefinition.images = docDefinition.images || {};
@@ -116,6 +118,9 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
   if (options.tableLayouts) {
     builder.registerTableLayouts(options.tableLayouts);
   }
+	if (docDefinition.tableLayouts) {
+		builder.registerTableLayouts(docDefinition.tableLayouts);
+	}
 
 	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
 
