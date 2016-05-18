@@ -12,6 +12,8 @@ var ImageMeasure = require('./imageMeasure');
 var textDecorator = require('./textDecorator');
 var FontProvider = require('./fontProvider');
 
+_.noConflict();
+
 ////////////////////////////////////////
 // PdfPrinter
 
