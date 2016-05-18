@@ -85,14 +85,14 @@ DocumentContext.prototype.saveContextInEndingCell = function (endingCell) {
 	};
 };
 
-DocumentContext.prototype.completeColumnGroup = function () {
+DocumentContext.prototype.completeColumnGroup = function (height) {
 	var saved = this.snapshots.pop();
 
 	this.calculateBottomMost(saved);
 
 	this.endingCell = null;
 	this.x = saved.x;
-	this.y = saved.bottomMost.y;
+	this.y = height && (saved.y + height) || saved.bottomMost.y;
 	this.page = saved.bottomMost.page;
 	this.availableWidth = saved.availableWidth;
 	this.availableHeight = saved.bottomMost.availableHeight;

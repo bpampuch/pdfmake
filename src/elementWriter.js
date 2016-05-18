@@ -243,6 +243,25 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 	return true;
 };
 
+ElementWriter.prototype.beginClip = function (width, height) {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	page.items.push({
+		type: 'beginClip',
+		item: { x: ctx.x, y: ctx.y, width: width, height: height }
+	});
+	return true;
+};
+
+ElementWriter.prototype.endClip = function () {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	page.items.push({
+		type: 'endClip'
+	});
+	return true;
+};
+
 /**
  * Pushes the provided context onto the stack or creates a new one
  *
