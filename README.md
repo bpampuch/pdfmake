@@ -55,7 +55,7 @@ You can get both files using bower:
 bower install pdfmake
 ```
 
-or copy them directly from the build directory from the repository.
+or copy them directly from the build directory from the repository. Otherwise you can always [build it from sources](#building-from-sources).
 
 ### Document-definition-object
 
@@ -467,6 +467,16 @@ var docDefinition = {
   },
   content:  'This is an sample PDF printed with pdfMake' 
 }
+```
+
+## Building from sources
+
+```
+git clone https://github.com/bpampuch/pdfmake.git
+cd pdfmake
+npm install
+git submodule update --init  libs/FileSaver.js
+gulp build
 ```
 
 ## Coming soon
