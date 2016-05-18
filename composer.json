@@ -1,0 +1,25 @@
+{
+  "name": "bpampuch/pdfmake",
+  "type": "library",
+  "description": "Client/server side PDF printing in pure JavaScript",
+  "keywords": ["pdfmake", "pdf", "javascript"],
+  "homepage": "https://github.com/bpampuch/pdfmake",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Bartek Pampuch",
+      "email": "bpampuch@pdfmake.org",
+      "homepage": "http://pdfmake.org",
+      "role": "Developer"
+    },
+    {
+      "name": "Thiago Pereira Rosa",
+      "email": "thiagor@engineer.com",
+      "homepage": "http://coderi.com.br",
+      "role": "Contributor"
+    }
+  ],
+  "support": {
+    "issues": "https://github.com/bpampuch/pdfmake/issues"
+  }
+}
