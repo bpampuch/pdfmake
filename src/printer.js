@@ -141,7 +141,7 @@ function fixPageMargins(margin) {
 
     if (typeof margin === 'number' || margin instanceof Number) {
         margin = { left: margin, right: margin, top: margin, bottom: margin };
-    } else if (margin instanceof Array) {
+    } else if (Array.isArray(margin)) {
         if (margin.length === 2) {
             margin = { left: margin[0], top: margin[1], right: margin[0], bottom: margin[1] };
         } else if (margin.length === 4) {

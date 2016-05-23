@@ -67,7 +67,7 @@ StyleContextStack.prototype.autopush = function(item) {
 	var styleNames = [];
 
 	if (item.style) {
-		if (item.style instanceof Array) {
+		if (Array.isArray(item.style)) {
 			styleNames = item.style;
 		} else {
 			styleNames = [ item.style ];

@@ -32,7 +32,7 @@ DocMeasure.prototype.measureDocument = function(docStructure) {
 
 DocMeasure.prototype.measureNode = function(node) {
 	// expand shortcuts
-	if (node instanceof Array) {
+	if (Array.isArray(node)) {
 		node = { stack: node };
 	} else if (typeof node == 'string' || node instanceof String) {
 		node = { text: node };
@@ -115,7 +115,7 @@ DocMeasure.prototype.measureNode = function(node) {
 		function convertMargin(margin) {
 			if (typeof margin === 'number' || margin instanceof Number) {
 				margin = [ margin, margin, margin, margin ];
-			} else if (margin instanceof Array) {
+			} else if (Array.isArray(margin)) {
 				if (margin.length === 2) {
 					margin = [ margin[0], margin[1], margin[0], margin[1] ];
 				}
@@ -126,7 +126,7 @@ DocMeasure.prototype.measureNode = function(node) {
 		var margin = [undefined, undefined, undefined, undefined];
 
 		if(node.style) {
-			var styleArray = (node.style instanceof Array) ? node.style : [node.style];
+			var styleArray = (Array.isArray(node.style)) ? node.style : [node.style];
 			var flattenedStyleArray = flattenStyleArray(styleArray);
 
 			if(flattenedStyleArray) {
