@@ -94,7 +94,7 @@ TextTools.prototype.sizeOfString = function(text, styleContextStack) {
 
 function splitWords(text, noWrap) {
 	var results = [];
-	text = text.replace('\t', '    ');
+	text = text.toString().replace('\t', '    ');
 
 	var array;
 	if (noWrap) {
