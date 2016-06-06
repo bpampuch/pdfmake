@@ -1,7 +1,7 @@
 // initial version, doesn't bundle vfs_fonts yet
 
 var gulp = require('gulp');
-var webpack = require('gulp-webpack');
+var webpack = require('webpack-stream');
 var gutil = require('gulp-util');
 var uglify = require('gulp-uglify');
 var rename = require('gulp-rename');
