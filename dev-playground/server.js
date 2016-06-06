@@ -9,7 +9,7 @@ var pdfMakePrinter = require('../src/printer');
 
 var app = express();
 
-var rootDir = path.resolve(path.dirname(module.uri));
+var rootDir = path.resolve(path.dirname('.'));
 
 app.use(express.static(rootDir + '/dev-playground/public/'));
 app.use(bodyParser.json());
