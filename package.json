@@ -1,6 +1,6 @@
 {
   "name": "pdfmake-node",
-  "version": "0.1.22",
+  "version": "0.1.23",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/printer.js",
   "directories": {
