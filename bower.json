@@ -7,8 +7,7 @@
 	],
 	"description": "Client/server side PDF printing in pure JavaScript",
 	"main": [
-		"build/pdfmake.js",
-		"build/vfs_fonts.js"
+		"build/pdfmake.js"
 	],
 	"moduleType": [
 		"globals"
