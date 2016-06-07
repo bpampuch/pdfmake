@@ -25,8 +25,9 @@ function Document(docDefinition, fonts, vfs) {
 function canCreatePdf() {
 	// Ensure the browser provides the level of support needed
 	if ( ! Object.keys ) {
-		return;
+		return false;
 	}
+	return true;
 }
 
 Document.prototype._createDoc = function(options, callback) {
