@@ -6,15 +6,15 @@
   "homepage": "http://pdfmake.github.io",
   "license": "MIT",
   "authors": [
-    {
-      "name": "Bartek Pampuch",
-      "email": "bpampuch@pdfmake.org",
-      "role": "Developer"
-    },
 		{
       "name": "Vasiliy Solovey",
       "email": "miltador@yandex.ua",
       "homepage": "http://miltador.com",
+      "role": "Developer"
+    },
+    {
+      "name": "Bartek Pampuch",
+      "email": "bpampuch@pdfmake.org",
       "role": "Developer"
     },
     {
