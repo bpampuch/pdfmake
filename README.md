@@ -3,7 +3,7 @@ pdfmake [![Build Status](https://travis-ci.org/bpampuch/pdfmake.png?branch=maste
 
 Client/server side PDF printing in pure JavaScript
 
-Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html)
+Check out [the playground](http://pdfmake.github.io/playground.html)
 
 ### Features
 
@@ -35,7 +35,7 @@ This document will walk you through the basics of pdfmake and will show you how 
 To begin with the default configuration, you should include two files:
 
 * **pdfmake.min.js**,
-* **vfs_fonts.js** - default font definition (it contains Roboto, you can however [use custom fonts instead](https://github.com/bpampuch/pdfmake/wiki/Custom-Fonts---client-side))
+* **vfs_fonts.js** - default font definition (it contains Roboto, you can however [use custom fonts instead](https://github.com/pdfmake/pdfmake/wiki/Custom-Fonts---client-side))
 
 ```html
 <!doctype html>
@@ -465,14 +465,14 @@ var docDefinition = {
 	subject: 'subject of document',
 	keywords: 'keywords for document',
   },
-  content:  'This is an sample PDF printed with pdfMake' 
+  content:  'This is an sample PDF printed with pdfMake'
 }
 ```
 
 ## Building from sources
 
 ```
-git clone https://github.com/bpampuch/pdfmake.git
+git clone https://github.com/pdfmake/pdfmake.git
 cd pdfmake
 npm install
 git submodule update --init  libs/FileSaver.js
