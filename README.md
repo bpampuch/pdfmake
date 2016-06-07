@@ -1,4 +1,4 @@
-pdfmake [![Build Status](https://travis-ci.org/pdfmake/pdfmake.svg?branch=master)](https://travis-ci.org/pdfmake/pdfmake) [![NPM version](https://badge.fury.io/js/pdfmake-node.png)](http://badge.fury.io/js/pdfmake-node) [![Bower version](https://badge.fury.io/bo/pdfmake-dist.png)](http://badge.fury.io/bo/pdfmake-dist) [![Packagist version](https://img.shields.io/packagist/v/pdfmake/pdfmake.svg?maxAge=2592000)](https://packagist.org/packages/pdfmake/pdfmake)
+pdfmake [![Build Status](https://img.shields.io/travis/pdfmake/pdfmake.svg?maxAge=2592000)](https://travis-ci.org/pdfmake/pdfmake) [![NPM version](https://img.shields.io/npm/v/pdfmake-node.svg?maxAge=2592000)](https://www.npmjs.com/package/pdfmake-node) ![Bower version](https://img.shields.io/bower/v/pdfmake-dist.svg?maxAge=2592000) [![Packagist version](https://img.shields.io/packagist/v/pdfmake/pdfmake.svg?maxAge=2592000)](https://packagist.org/packages/pdfmake/pdfmake)
 =======
 
 Client/server side PDF printing in pure JavaScript
