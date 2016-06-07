@@ -1,66 +1,66 @@
 {
-	"name": "pdfmake-node",
-	"version": "0.1.20",
-	"description": "Client/server side PDF printing in pure JavaScript",
-	"main": "src/printer.js",
-	"directories": {
-		"test": "tests"
-	},
-	"dependencies": {
-		"pdfkit": "~0.7.1",
-		"lodash": "^4.13.1"
-	},
-	"devDependencies": {
-		"expose-loader": "^0.6.0",
-		"grunt": "^0.4.5",
-		"grunt-browserify": "^4.0.1",
-		"grunt-contrib-concat": "^1.0.0",
-		"grunt-contrib-jshint": "^1.0.0",
-		"grunt-contrib-uglify": "^0.11.1",
-		"grunt-dump-dir": "^0.1.2",
-		"grunt-jsdoc": "^1.1.0",
-		"grunt-mocha-cov": "^0.4.0",
-		"grunt-text-replace": "^0.4.0",
-		"gulp": "^3.8.11",
-		"gulp-jshint": "^1.10.0",
-		"gulp-rename": "^1.2.2",
-		"gulp-replace": "^0.5.3",
-		"gulp-sourcemaps": "^1.5.2",
-		"gulp-spawn-mocha": "^2.0.1",
-		"gulp-uglify": "^1.2.0",
-		"gulp-util": "^3.0.4",
-		"json-loader": "^0.5.1",
-		"sinon": "~1.12.2",
-		"string-replace-webpack-plugin": "0.0.1",
-		"webpack": "^1.8.9",
-		"webpack-stream": "^3.1.0"
-	},
-	"scripts": {
-		"test": "gulp"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git://github.com/pdfmake/pdfmake.git"
-	},
-	"keywords": [
-		"pdf",
-		"javascript",
-		"printing",
-		"layout"
-	],
-	"author": "Vasiliy Solovey <miltador@yandex.ua>",
-	"license": "MIT",
-	"bugs": {
-		"url": "https://github.com/pdfmake/pdfmake/issues"
-	},
-	"homepage": "http://pdfmake.github.io",
-	"config": {
-		"blanket": {
-			"pattern": "src",
-			"data-cover-never": [
-				"node_modules",
-				"tests"
-			]
-		}
-	}
+  "name": "pdfmake-node",
+  "version": "0.1.21",
+  "description": "Client/server side PDF printing in pure JavaScript",
+  "main": "src/printer.js",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "pdfkit": "~0.7.1",
+    "lodash": "^4.13.1"
+  },
+  "devDependencies": {
+    "expose-loader": "^0.6.0",
+    "grunt": "^0.4.5",
+    "grunt-browserify": "^4.0.1",
+    "grunt-contrib-concat": "^1.0.0",
+    "grunt-contrib-jshint": "^1.0.0",
+    "grunt-contrib-uglify": "^0.11.1",
+    "grunt-dump-dir": "^0.1.2",
+    "grunt-jsdoc": "^1.1.0",
+    "grunt-mocha-cov": "^0.4.0",
+    "grunt-text-replace": "^0.4.0",
+    "gulp": "^3.8.11",
+    "gulp-jshint": "^1.10.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-replace": "^0.5.3",
+    "gulp-sourcemaps": "^1.5.2",
+    "gulp-spawn-mocha": "^2.0.1",
+    "gulp-uglify": "^1.2.0",
+    "gulp-util": "^3.0.4",
+    "json-loader": "^0.5.1",
+    "sinon": "~1.12.2",
+    "string-replace-webpack-plugin": "0.0.1",
+    "webpack": "^1.8.9",
+    "webpack-stream": "^3.1.0"
+  },
+  "scripts": {
+    "test": "gulp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/pdfmake/pdfmake.git"
+  },
+  "keywords": [
+    "pdf",
+    "javascript",
+    "printing",
+    "layout"
+  ],
+  "author": "Vasiliy Solovey <miltador@yandex.ua>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pdfmake/pdfmake/issues"
+  },
+  "homepage": "http://pdfmake.github.io",
+  "config": {
+    "blanket": {
+      "pattern": "src",
+      "data-cover-never": [
+        "node_modules",
+        "tests"
+      ]
+    }
+  }
 }
