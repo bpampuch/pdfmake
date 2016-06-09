@@ -475,6 +475,7 @@ var docDefinition = {
 git clone https://github.com/bpampuch/pdfmake.git
 cd pdfmake
 npm install
+npm install gulp-cli
 git submodule update --init  libs/FileSaver.js
 gulp build
 ```
