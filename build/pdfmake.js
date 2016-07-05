@@ -2117,10 +2117,10 @@
 	  }
 		pageSize.orientation = docDefinition.pageOrientation === 'landscape' ? docDefinition.pageOrientation : 'portrait';
 
-		this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ], compress: false});
+		this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ], compress: true });
 		this.pdfKitDoc.info.Producer = 'pdfmake';
 		this.pdfKitDoc.info.Creator = 'pdfmake';
-		
+
 		// pdf kit maintains the uppercase fieldnames from pdf spec
 		// to keep the pdfmake api consistent, the info field are defined lowercase
 		if(docDefinition.info){
@@ -2132,7 +2132,7 @@
 			this.pdfKitDoc.info.Keywords = docDefinition.info.keywords ? docDefinition.info.keywords : null;
 			this.pdfKitDoc.info.CreationDate = docDefinition.info.creationDate ? docDefinition.info.creationDate : null;
 		}
-		
+
 		this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
 	  docDefinition.images = docDefinition.images || {};
