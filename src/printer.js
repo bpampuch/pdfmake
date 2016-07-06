@@ -90,7 +90,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
   }
 	pageSize.orientation = docDefinition.pageOrientation === 'landscape' ? docDefinition.pageOrientation : 'portrait';
 
-	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ], compress: true });
+	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ], compress: false });
 	this.pdfKitDoc.info.Producer = 'pdfmake';
 	this.pdfKitDoc.info.Creator = 'pdfmake';
 
