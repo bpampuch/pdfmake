@@ -77,21 +77,21 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
       node.nodeInfo = nodeInfo;
     });
 
-    return _.any(linearNodeList, function (node, index, followingNodeList) {
+    return _.some(linearNodeList, function (node, index, followingNodeList) {
       if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
         node.pageBreakCalculated = true;
         var pageNumber = _.first(node.nodeInfo.pageNumbers);
 
 				var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
-          return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
+          return _.includes(node0.nodeInfo.pageNumbers, pageNumber);
         }).value();
 
         var nodesOnNextPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
-          return _.contains(node0.nodeInfo.pageNumbers, pageNumber + 1);
+          return _.includes(node0.nodeInfo.pageNumbers, pageNumber + 1);
         }).value();
 
         var previousNodesOnPage = _.chain(followingNodeList).take(index).filter(function (node0) {
-          return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
+          return _.includes(node0.nodeInfo.pageNumbers, pageNumber);
         }).value();
 
         if (pageBreakBeforeFct(node.nodeInfo,
