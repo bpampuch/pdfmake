@@ -7,7 +7,7 @@
     "test": "tests"
   },
   "dependencies": {
-    "pdfkit": "~0.7.1",
+    "pdfkit": "^0.8.0",
     "lodash": "^3.1.0",
     "lodash-node": "^3.1.0"
   },

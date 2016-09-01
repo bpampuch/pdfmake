@@ -54,7 +54,7 @@ describe('Integration test: basics', function () {
 		assert.equal(pages[0].items[2].item.y.toFixed(3), testHelper.MARGINS.top + customMargin * 4 + anotherCustomMargin + testHelper.LINE_HEIGHT * 2);
 
 		assert.equal(pages[0].items[3].item.x, sizes.A5[0] - testHelper.MARGINS.right - 20 - testHelper.getWidthOfString('has only right margin'));
-		assert.equal(pages[0].items[3].item.y.toFixed(3), testHelper.MARGINS.top + customMargin * 4 + anotherCustomMargin * 2 + testHelper.LINE_HEIGHT * 3);
+		assert.equal(pages[0].items[3].item.y.toFixed(3), (testHelper.MARGINS.top + customMargin * 4 + anotherCustomMargin * 2 + testHelper.LINE_HEIGHT * 3).toFixed(3));
 	});
 
 });
