@@ -277,11 +277,12 @@ function renderLine(line, x, y, pdfKitDoc) {
 		pdfKitDoc.save();
 		pdfKitDoc.transform(1, 0, 0, -1, 0, pdfKitDoc.page.height);
 
+		var inlineY = inline.y ? (pdfKitDoc.page.height - y - ascenderHeight) - inline.y : (pdfKitDoc.page.height - y - ascenderHeight);
 
-    var encoded = inline.font.encode(inline.text);
+    	var encoded = inline.font.encode(inline.text);
 		pdfKitDoc.addContent('BT');
 
-		pdfKitDoc.addContent('' + (x + inline.x) + ' ' + (pdfKitDoc.page.height - y - ascenderHeight) + ' Td');
+		pdfKitDoc.addContent('' + (x + inline.x) + ' ' + inlineY + ' Td');
 		pdfKitDoc.addContent('/' + encoded.fontId + ' ' + inline.fontSize + ' Tf');
 
         pdfKitDoc.addContent('<' + encoded.encodedText + '> Tj');
