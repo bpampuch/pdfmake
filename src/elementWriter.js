@@ -37,6 +37,21 @@ ElementWriter.prototype.addLine = function(line, dontUpdateContextPosition, inde
 	line.x = context.x + (line.x || 0);
 	line.y = context.y + (line.y || 0);
 
+	for(var i = 1, l = line.inlines.length; i < l; i++) {
+		if (line.inlines[i].marginBottom) {
+			line.inlines[i].y = line.inlines[i].y ? line.inlines[i].y - line.inlines[i].marginBottom : 0 - line.inlines[i].marginBottom;
+		}
+		if (line.inlines[i].marginTop) {
+			line.inlines[i].y = line.inlines[i].y ? line.inlines[i].y + line.inlines[i].marginTop : line.inlines[i].marginTop;
+		}
+		if (line.inlines[i].marginLeft) {
+			line.inlines[i].x = line.inlines[i].x ? line.inlines[i].x - line.inlines[i].marginLeft : 0 - line.inlines[i].marginLeft;
+		}
+		if (line.inlines[i].marginRight) {
+			line.inlines[i].x = line.inlines[i].x ? line.inlines[i].x + line.inlines[i].marginRight : line.inlines[i].marginRight;
+		}
+	}
+
 	this.alignLine(line);
 
     addPageItem(page, {

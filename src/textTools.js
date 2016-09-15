@@ -222,6 +222,10 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var background = getStyleProperty(item, styleContextStack, 'background', null);
 		var lineHeight = getStyleProperty(item, styleContextStack, 'lineHeight', 1);
 		var link = getStyleProperty(item, styleContextStack, 'link', null);
+		var marginTop = getStyleProperty(item, styleContextStack, 'marginTop', null);
+		var marginBottom = getStyleProperty(item, styleContextStack, 'marginBottom', null);
+		var marginRight = getStyleProperty(item, styleContextStack, 'marginRight', null);
+		var marginLeft = getStyleProperty(item, styleContextStack, 'marginLeft', null);
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -254,6 +258,10 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.decorationStyle = decorationStyle;
 		item.background = background;
 		item.link = link;
+		item.marginTop = marginTop;
+		item.marginBottom = marginBottom;
+		item.marginRight = marginRight;
+		item.marginLeft = marginLeft;
 	});
 
 	return normalized;
