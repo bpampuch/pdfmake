@@ -52,7 +52,7 @@ To begin with the default configuration, you should include two files:
 
 You can get both files using bower:
 ```
-bower install pdfmake
+bower install pdfmake-dist
 ```
 
 or copy them directly from the build directory from the repository. Otherwise you can always [build it from sources](#building-from-sources).
