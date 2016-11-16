@@ -10,7 +10,6 @@ var PDFReference = require('pdfkit/js/reference');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
 var textDecorator = require('./textDecorator');
-var FontProvider = require('./fontProvider');
 
 _.noConflict();
 
