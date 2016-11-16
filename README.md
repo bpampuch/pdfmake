@@ -80,6 +80,18 @@ pdfMake.createPdf(docDefinition).open();
 
 // download the PDF
 pdfMake.createPdf(docDefinition).download();
+
+// or, put the PDF into your own page
+
+const pdfDocGenerator=pdfMake.createPdf(docDefinition);
+pdfDocGenerator.getDataUrl((dataUrl)=>{
+	const targetElement=document.querySelector('#iframeContainer');
+	const iframe=document.createElement('iframe');
+	iframe.src=dataUrl;
+	targetElement.appendChild(iframe);
+});
+
+
 ```
 
 #### Styling
@@ -465,7 +477,7 @@ var docDefinition = {
 	subject: 'subject of document',
 	keywords: 'keywords for document',
   },
-  content:  'This is an sample PDF printed with pdfMake' 
+  content:  'This is an sample PDF printed with pdfMake'
 }
 ```
 
