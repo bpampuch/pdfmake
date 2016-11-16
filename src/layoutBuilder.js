@@ -217,7 +217,7 @@ LayoutBuilder.prototype.addWatermark = function(watermark, fontProvider){
   var defaultFont = Object.getOwnPropertyNames(fontProvider.fonts)[0]; // TODO allow selection of other font
   var watermarkObject = {
     text: watermark,
-    font: fontProvider.provideFont(fontProvider[defaultFont], false, false),
+    font: fontProvider.provideFont(defaultFont, false, false),
     size: getSize(this.pageSize, watermark, fontProvider)
   };
 

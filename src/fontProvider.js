@@ -2,7 +2,6 @@
 'use strict';
 
 var _ = require('lodash');
-var FontWrapper = require('./fontWrapper');
 
 _.noConflict();
 
@@ -17,7 +16,7 @@ function typeName(bold, italics){
 function FontProvider(fontDescriptors, pdfDoc) {
 	this.fonts = {};
 	this.pdfDoc = pdfDoc;
-	this.fontWrappers = {};
+	this.fontCache = {};
 
 	for(var font in fontDescriptors) {
 		if (fontDescriptors.hasOwnProperty(font)) {
@@ -39,27 +38,13 @@ FontProvider.prototype.provideFont = function(familyName, bold, italics) {
 		throw new Error('Font \''+ familyName + '\' in style \''+type+ '\' is not defined in the font section of the document definition.');
 	}
 
-  this.fontWrappers[familyName] = this.fontWrappers[familyName] || {};
+  this.fontCache[familyName] = this.fontCache[familyName] || {};
 
-  if (!this.fontWrappers[familyName][type]) {
-		this.fontWrappers[familyName][type] = new FontWrapper(this.pdfDoc, this.fonts[familyName][type], familyName + '(' + type + ')');
+  if (!this.fontCache[familyName][type]) {
+    this.fontCache[familyName][type] = this.pdfDoc.font(this.fonts[familyName][type])._font;
 	}
 
-  return this.fontWrappers[familyName][type];
-};
-
-FontProvider.prototype.setFontRefsToPdfDoc = function(){
-  var self = this;
-
-  _.each(self.fontWrappers, function(fontFamily) {
-    _.each(fontFamily, function(fontWrapper){
-      _.each(fontWrapper.pdfFonts, function(font){
-        if (!self.pdfDoc.page.fonts[font.id]) {
-          self.pdfDoc.page.fonts[font.id] = font.ref();
-        }
-      });
-    });
-  });
+  return this.fontCache[familyName][type];
 };
 
 module.exports = FontProvider;

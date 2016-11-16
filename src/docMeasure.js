@@ -233,7 +233,7 @@ DocMeasure.prototype.buildMarker = function(isOrderedList, counter, styleStack, 
 		marker = {
 			canvas: [ {
 				x: radius,
-				y: (gapSize.height / gapSize.lineHeight) + gapSize.decender - gapSize.fontSize / 3,//0,// gapSize.fontSize * 2 / 3,
+				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
 				r1: radius,
 				r2: radius,
 				type: 'ellipse',

@@ -88,7 +88,7 @@ TextTools.prototype.sizeOfString = function(text, styleContextStack) {
 		fontSize: fontSize,
 		lineHeight: lineHeight,
 		ascender: font.ascender / 1000 * fontSize,
-		decender: font.decender / 1000 * fontSize
+		descender: font.descender / 1000 * fontSize
 	};
 };
 
