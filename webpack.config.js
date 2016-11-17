@@ -16,8 +16,8 @@ module.exports = {
   module: {
     loaders: [
       { test: /\.json$/, loader: 'json' },
-      { test: /browser-extensions\/pdfMake.js$/, loader: 'expose?pdfMake' },
-      { test: /pdfkit\/js\/mixins\/fonts.js$/, loader: StringReplacePlugin.replace({
+      { test: /pdfMake.js$/, loader: 'expose?pdfMake', include: [ path.join(__dirname, './src/browser-extensions')] },
+      { test: /pdfkit[\/\\]js[\/\\]mixins[\/\\]fonts.js$/, loader: StringReplacePlugin.replace({
         replacements: [
           {
             pattern: 'return this.font(\'Helvetica\');',

@@ -10,7 +10,8 @@ var PDFReference = require('pdfkit/js/reference');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
 var textDecorator = require('./textDecorator');
-var FontProvider = require('./fontProvider');
+
+_.noConflict();
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -101,6 +102,7 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 		this.pdfKitDoc.info.Author = docDefinition.info.author ? docDefinition.info.author : null;
 		this.pdfKitDoc.info.Subject = docDefinition.info.subject ? docDefinition.info.subject : null;
 		this.pdfKitDoc.info.Keywords = docDefinition.info.keywords ? docDefinition.info.keywords : null;
+		this.pdfKitDoc.info.CreationDate = docDefinition.info.creationDate ? docDefinition.info.creationDate : null;
 	}
 	
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
@@ -250,71 +252,52 @@ function renderPages(pages, fontProvider, pdfKitDoc) {
     }
     if(page.watermark){
       renderWatermark(page, pdfKitDoc);
-	}
-
-    fontProvider.setFontRefsToPdfDoc();
+    }
   }
 }
 
 function renderLine(line, x, y, pdfKitDoc) {
-	x = x || 0;
-	y = y || 0;
+  x = x || 0;
+  y = y || 0;
 
-	var lineHeight = line.getHeight();
-	var ascenderHeight = line.getAscenderHeight();
+  textDecorator.drawBackground(line, x, y, pdfKitDoc);
 
-	textDecorator.drawBackground(line, x, y, pdfKitDoc);
+  //TODO: line.optimizeInlines();
+  for(var i = 0, l = line.inlines.length; i < l; i++) {
+  	var inline = line.inlines[i];
 
-	//TODO: line.optimizeInlines();
-	for(var i = 0, l = line.inlines.length; i < l; i++) {
-		var inline = line.inlines[i];
+  	pdfKitDoc.fill(inline.color || 'black');
 
-		pdfKitDoc.fill(inline.color || 'black');
+    pdfKitDoc._font = inline.font;
+    pdfKitDoc.fontSize(inline.fontSize);
+    pdfKitDoc.text(inline.text, x + inline.x, y, {
+      lineBreak: false,
+      link: inline.link
+    });
+  }
 
-		pdfKitDoc.save();
-		pdfKitDoc.transform(1, 0, 0, -1, 0, pdfKitDoc.page.height);
-
-
-    var encoded = inline.font.encode(inline.text);
-		pdfKitDoc.addContent('BT');
-
-		pdfKitDoc.addContent('' + (x + inline.x) + ' ' + (pdfKitDoc.page.height - y - ascenderHeight) + ' Td');
-		pdfKitDoc.addContent('/' + encoded.fontId + ' ' + inline.fontSize + ' Tf');
-
-        pdfKitDoc.addContent('<' + encoded.encodedText + '> Tj');
-
-		pdfKitDoc.addContent('ET');
-
-		if (inline.link) {
-			pdfKitDoc.link(x + inline.x, pdfKitDoc.page.height - y - lineHeight, inline.width, lineHeight, inline.link);
-		}
-
-		pdfKitDoc.restore();
-	}
-
-	textDecorator.drawDecorations(line, x, y, pdfKitDoc);
-
+  textDecorator.drawDecorations(line, x, y, pdfKitDoc);
 }
 
 function renderWatermark(page, pdfKitDoc){
-	var watermark = page.watermark;
+  var watermark = page.watermark;
 
-	pdfKitDoc.fill(watermark.color);
-	pdfKitDoc.opacity(watermark.opacity);
+  pdfKitDoc.fill(watermark.color);
+  pdfKitDoc.opacity(watermark.opacity);
 
-	pdfKitDoc.save();
-	pdfKitDoc.transform(1, 0, 0, -1, 0, pdfKitDoc.page.height);
+  pdfKitDoc.save();
 
-	var angle = Math.atan2(pdfKitDoc.page.height, pdfKitDoc.page.width) * 180/Math.PI;
-	pdfKitDoc.rotate(angle, {origin: [pdfKitDoc.page.width/2, pdfKitDoc.page.height/2]});
+  var angle = Math.atan2(pdfKitDoc.page.height, pdfKitDoc.page.width) * -180/Math.PI;
+  pdfKitDoc.rotate(angle, {origin: [pdfKitDoc.page.width/2, pdfKitDoc.page.height/2]});
 
-  var encoded = watermark.font.encode(watermark.text);
-	pdfKitDoc.addContent('BT');
-	pdfKitDoc.addContent('' + (pdfKitDoc.page.width/2 - watermark.size.size.width/2) + ' ' + (pdfKitDoc.page.height/2 - watermark.size.size.height/4) + ' Td');
-	pdfKitDoc.addContent('/' + encoded.fontId + ' ' + watermark.size.fontSize + ' Tf');
-	pdfKitDoc.addContent('<' + encoded.encodedText + '> Tj');
-	pdfKitDoc.addContent('ET');
-	pdfKitDoc.restore();
+  var x = pdfKitDoc.page.width / 2 - watermark.size.size.width / 2;
+  var y = pdfKitDoc.page.height / 2 - watermark.size.size.height / 4;
+
+  pdfKitDoc._font = watermark.font;
+  pdfKitDoc.fontSize(watermark.size.fontSize);
+  pdfKitDoc.text(watermark.text, x, y, {lineBreak: false});
+
+  pdfKitDoc.restore();
 }
 
 function renderVector(vector, pdfDoc) {

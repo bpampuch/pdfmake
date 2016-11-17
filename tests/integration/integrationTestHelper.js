@@ -8,7 +8,7 @@ var ImageMeasure = require('../../src/imageMeasure');
 
 function IntegrationTestHelper() {
 	this.MARGINS = {top: 40, left: 40, right: 40, bottom: 40};
-	this.LINE_HEIGHT = 14.064;
+	this.LINE_HEIGHT = 14.0625;
 	this.DEFAULT_BULLET_SPACER = '9. ';
 }
 
@@ -52,7 +52,7 @@ IntegrationTestHelper.prototype.getInlineTexts = function(pages, options) {
 };
 
 IntegrationTestHelper.prototype.getWidthOfString = function(inlines) {
-	return this.fontProvider.fontWrappers['Roboto'].normal.widthOfString(inlines, 12);
+	return this.fontProvider.fontCache['Roboto'].normal.widthOfString(inlines, 12);
 };
 
 
