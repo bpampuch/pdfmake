@@ -1,5 +1,13 @@
 language: node_js
 node_js:
-  - 0.12
-before_script:
-  - npm install -g grunt-cli
+	- 6
+	- node
+
+os:
+  - linux
+	- osx
+
+cache:
+  yarn: true
+  directories:
+    - node_modules
