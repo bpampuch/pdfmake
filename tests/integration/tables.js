@@ -13,7 +13,7 @@ describe('Integration test: tables', function () {
 	}
 
 	function getCells(pages, options) {
-		return _.select(pages[options.pageNumber].items, {type: 'line'});
+		return _.filter(pages[options.pageNumber].items, {type: 'line'});
 	}
 
 	var TABLE_PADDING_X = 4;
