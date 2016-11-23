@@ -1,11 +1,12 @@
 language: node_js
 node_js:
-	- 6
-	- node
+  - 6
+  - node
 
 os:
   - linux
-	- osx
+
+sudo: false
 
 cache:
   yarn: true
