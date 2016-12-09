@@ -34,6 +34,8 @@
     "json-loader": "^0.5.1",
     "sinon": "~1.12.2",
     "string-replace-webpack-plugin": "0.0.1",
+    "transform-loader": "^0.2.3",
+    "brfs": "^1.4.0",
     "webpack": "^1.8.9"
   },
   "scripts": {
