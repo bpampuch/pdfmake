@@ -233,7 +233,7 @@ DocMeasure.prototype.buildMarker = function(isOrderedList, counter, styleStack, 
 		marker = {
 			canvas: [ {
 				x: radius,
-				y: (gapSize.height / gapSize.lineHeight) + gapSize.decender - gapSize.fontSize / 3,//0,// gapSize.fontSize * 2 / 3,
+				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
 				r1: radius,
 				r2: radius,
 				type: 'ellipse',
@@ -306,6 +306,10 @@ DocMeasure.prototype.measureTable = function(node) {
 		for(row = 0, rows = node.table.body.length; row < rows; row++) {
 			var rowData = node.table.body[row];
 			var data = rowData[col];
+			if(data === undefined){
+				console.error('Malformed table row ', rowData, 'in node ', node);
+				throw 'Malformed table row, a cell is undefined.';
+			}
 			if (!data._span) {
 				var _this = this;
 				data = rowData[col] = this.styleStack.auto(data, measureCb(this, data));
