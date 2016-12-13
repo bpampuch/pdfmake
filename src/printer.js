@@ -282,8 +282,8 @@ function renderLine(line, x, y, pdfKitDoc) {
 function renderWatermark(page, pdfKitDoc){
   var watermark = page.watermark;
 
-  pdfKitDoc.fill('black');
-  pdfKitDoc.opacity(0.6);
+  pdfKitDoc.fill(watermark.color);
+  pdfKitDoc.opacity(watermark.opacity);
 
   pdfKitDoc.save();
 
