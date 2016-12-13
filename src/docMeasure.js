@@ -298,7 +298,11 @@ DocMeasure.prototype.measureTable = function(node) {
 	var colSpans = [];
 	var col, row, cols, rows;
 
-	for(col = 0, cols = node.table.body[0].length; col < cols; col++) {
+	var maxColLength = 0;
+	for(row = 0, rows = node.table.body.length; row < rows; row++)
+		maxColLength = Math.max(maxColLength, node.table.body[row].length);
+
+	for(col = 0; col < maxColLength; col++) {
 		var c = node.table.widths[col];
 		c._minWidth = 0;
 		c._maxWidth = 0;
