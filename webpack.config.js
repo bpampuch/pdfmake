@@ -21,7 +21,7 @@ module.exports = {
         replacements: [
           {
             pattern: 'return this.font(\'Helvetica\');',
-            replacement: ''
+            replacement: function () { return ''; }
           }
         ]})
       }
