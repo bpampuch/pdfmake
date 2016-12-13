@@ -3,12 +3,12 @@
 
 function buildColumnWidths(columns, availableWidth) {
 	var autoColumns = [],
-					autoMin = 0, autoMax = 0,
-					starColumns = [],
-					starMaxMin = 0,
-					starMaxMax = 0,
-					fixedColumns = [],
-					initial_availableWidth = availableWidth;
+		autoMin = 0, autoMax = 0,
+		starColumns = [],
+		starMaxMin = 0,
+		starMaxMax = 0,
+		fixedColumns = [],
+		initial_availableWidth = availableWidth;
 
 	columns.forEach(function (column) {
 		if (isAutoColumn(column)) {
