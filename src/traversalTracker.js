@@ -2,15 +2,15 @@
 'use strict';
 
 /**
-* Creates an instance of TraversalTracker
-*
-* @constructor
-*/
+ * Creates an instance of TraversalTracker
+ *
+ * @constructor
+ */
 function TraversalTracker() {
 	this.events = {};
 }
 
-TraversalTracker.prototype.startTracking = function(event, cb) {
+TraversalTracker.prototype.startTracking = function (event, cb) {
 	var callbacks = (this.events[event] || (this.events[event] = []));
 
 	if (callbacks.indexOf(cb) < 0) {
@@ -18,7 +18,7 @@ TraversalTracker.prototype.startTracking = function(event, cb) {
 	}
 };
 
-TraversalTracker.prototype.stopTracking = function(event, cb) {
+TraversalTracker.prototype.stopTracking = function (event, cb) {
 	var callbacks = this.events[event];
 
 	if (callbacks) {
@@ -29,19 +29,19 @@ TraversalTracker.prototype.stopTracking = function(event, cb) {
 	}
 };
 
-TraversalTracker.prototype.emit = function(event) {
+TraversalTracker.prototype.emit = function (event) {
 	var args = Array.prototype.slice.call(arguments, 1);
 
 	var callbacks = this.events[event];
 
 	if (callbacks) {
-		callbacks.forEach(function(cb) {
+		callbacks.forEach(function (cb) {
 			cb.apply(this, args);
 		});
 	}
 };
 
-TraversalTracker.prototype.auto = function(event, cb, innerBlock) {
+TraversalTracker.prototype.auto = function (event, cb, innerBlock) {
 	this.startTracking(event, cb);
 	innerBlock();
 	this.stopTracking(event, cb);

@@ -3,14 +3,14 @@
 
 function buildColumnWidths(columns, availableWidth) {
 	var autoColumns = [],
-		autoMin = 0, autoMax = 0,
-		starColumns = [],
-		starMaxMin = 0,
-		starMaxMax = 0,
-		fixedColumns = [],
-		initial_availableWidth = availableWidth;
+					autoMin = 0, autoMax = 0,
+					starColumns = [],
+					starMaxMin = 0,
+					starMaxMax = 0,
+					fixedColumns = [],
+					initial_availableWidth = availableWidth;
 
-	columns.forEach(function(column) {
+	columns.forEach(function (column) {
 		if (isAutoColumn(column)) {
 			autoColumns.push(column);
 			autoMin += column._minWidth;
@@ -24,10 +24,10 @@ function buildColumnWidths(columns, availableWidth) {
 		}
 	});
 
-	fixedColumns.forEach(function(col) {
+	fixedColumns.forEach(function (col) {
 		// width specified as %
-		if (typeof col.width === 'string' && /\d+%/.test(col.width) ) {
-			col.width = parseFloat(col.width)*initial_availableWidth/100;
+		if (typeof col.width === 'string' && /\d+%/.test(col.width)) {
+			col.width = parseFloat(col.width) * initial_availableWidth / 100;
 		}
 		if (col.width < (col._minWidth) && col.elasticWidth) {
 			col._calcWidth = col._minWidth;
@@ -48,17 +48,17 @@ function buildColumnWidths(columns, availableWidth) {
 		// that's actually pretty bad situation with PDF as we have no horizontal scroll
 		// no easy workaround (unless we decide, in the future, to split single words)
 		// currently we simply use minWidths for all columns
-		autoColumns.forEach(function(col) {
+		autoColumns.forEach(function (col) {
 			col._calcWidth = col._minWidth;
 		});
 
-		starColumns.forEach(function(col) {
+		starColumns.forEach(function (col) {
 			col._calcWidth = starMaxMin; // starMaxMin already contains padding
 		});
 	} else {
 		if (maxW < availableWidth) {
 			// case 2 - we can fit rest of the table within available space
-			autoColumns.forEach(function(col) {
+			autoColumns.forEach(function (col) {
 				col._calcWidth = col._maxWidth;
 				availableWidth -= col._calcWidth;
 			});
@@ -67,7 +67,7 @@ function buildColumnWidths(columns, availableWidth) {
 			var W = availableWidth - minW;
 			var D = maxW - minW;
 
-			autoColumns.forEach(function(col) {
+			autoColumns.forEach(function (col) {
 				var d = col._maxWidth - col._minWidth;
 				col._calcWidth = col._minWidth + d * W / D;
 				availableWidth -= col._calcWidth;
@@ -77,7 +77,7 @@ function buildColumnWidths(columns, availableWidth) {
 		if (starColumns.length > 0) {
 			var starSize = availableWidth / starColumns.length;
 
-			starColumns.forEach(function(col) {
+			starColumns.forEach(function (col) {
 				col._calcWidth = starSize;
 			});
 		}
@@ -94,12 +94,12 @@ function isStarColumn(column) {
 
 //TODO: refactor and reuse in measureTable
 function measureMinMax(columns) {
-	var result = { min: 0, max: 0 };
+	var result = {min: 0, max: 0};
 
-	var maxStar = { min: 0, max: 0 };
+	var maxStar = {min: 0, max: 0};
 	var starCount = 0;
 
-	for(var i = 0, l = columns.length; i < l; i++) {
+	for (var i = 0, l = columns.length; i < l; i++) {
 		var c = columns[i];
 
 		if (isStarColumn(c)) {
@@ -111,7 +111,7 @@ function measureMinMax(columns) {
 			result.max += c._maxWidth;
 		} else {
 			result.min += ((c.width !== undefined && c.width) || c._minWidth);
-			result.max += ((c.width  !== undefined && c.width) || c._maxWidth);
+			result.max += ((c.width !== undefined && c.width) || c._maxWidth);
 		}
 	}
 
@@ -124,9 +124,9 @@ function measureMinMax(columns) {
 }
 
 /**
-* Calculates column widths
-* @private
-*/
+ * Calculates column widths
+ * @private
+ */
 module.exports = {
 	buildColumnWidths: buildColumnWidths,
 	measureMinMax: measureMinMax,

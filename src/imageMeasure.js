@@ -9,7 +9,7 @@ function ImageMeasure(pdfDoc, imageDictionary) {
 	this.imageDictionary = imageDictionary || {};
 }
 
-ImageMeasure.prototype.measureImage = function(src) {
+ImageMeasure.prototype.measureImage = function (src) {
 	var image, label;
 	var that = this;
 
@@ -17,8 +17,7 @@ ImageMeasure.prototype.measureImage = function(src) {
 		label = 'I' + (++this.pdfDoc._imageCount);
 		try {
 			image = PDFImage.open(realImageSrc(src), label);
-		}
-		catch ( error) {
+		} catch (error) {
 			throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
 
 		}
@@ -28,12 +27,13 @@ ImageMeasure.prototype.measureImage = function(src) {
 		image = this.pdfDoc._imageRegistry[src];
 	}
 
-	return { width: image.width, height: image.height };
+	return {width: image.width, height: image.height};
 
 	function realImageSrc(src) {
 		var img = that.imageDictionary[src];
 
-		if (!img) return src;
+		if (!img)
+			return src;
 
 		var index = img.indexOf('base64,');
 		if (index < 0) {

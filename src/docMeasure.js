@@ -9,8 +9,8 @@ var pack = require('./helpers').pack;
 var qrEncoder = require('./qrEnc.js');
 
 /**
-* @private
-*/
+ * @private
+ */
 function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts, images) {
 	this.textTools = new TextTools(fontProvider);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
@@ -21,32 +21,32 @@ function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, t
 }
 
 /**
-* Measures all nodes and sets min/max-width properties required for the second
-* layout-pass.
-* @param  {Object} docStructure document-definition-object
-* @return {Object}              document-measurement-object
-*/
-DocMeasure.prototype.measureDocument = function(docStructure) {
+ * Measures all nodes and sets min/max-width properties required for the second
+ * layout-pass.
+ * @param  {Object} docStructure document-definition-object
+ * @return {Object}              document-measurement-object
+ */
+DocMeasure.prototype.measureDocument = function (docStructure) {
 	return this.measureNode(docStructure);
 };
 
-DocMeasure.prototype.measureNode = function(node) {
+DocMeasure.prototype.measureNode = function (node) {
 	// expand shortcuts
 	if (Array.isArray(node)) {
-		node = { stack: node };
+		node = {stack: node};
 	} else if (typeof node == 'string' || node instanceof String) {
-		node = { text: node };
+		node = {text: node};
 	}
-	
+
 	// Deal with empty nodes to prevent crash in getNodeMargin
 	if (Object.keys(node).length === 0) {
 		// A warning could be logged: console.warn('pdfmake: Empty node, ignoring it');
-		node = { text: '' };
+		node = {text: ''};
 	}
 
 	var self = this;
 
-	return this.styleStack.auto(node, function() {
+	return this.styleStack.auto(node, function () {
 		// TODO: refactor + rethink whether this is the proper way to handle margins
 		node._margin = getNodeMargin(node);
 
@@ -86,25 +86,25 @@ DocMeasure.prototype.measureNode = function(node) {
 
 	function getNodeMargin() {
 
-		function processSingleMargins(node, currentMargin){
+		function processSingleMargins(node, currentMargin) {
 			if (node.marginLeft || node.marginTop || node.marginRight || node.marginBottom) {
 				return [
 					node.marginLeft || currentMargin[0] || 0,
 					node.marginTop || currentMargin[1] || 0,
-					node.marginRight || currentMargin[2]  || 0,
-					node.marginBottom || currentMargin[3]  || 0
+					node.marginRight || currentMargin[2] || 0,
+					node.marginBottom || currentMargin[3] || 0
 				];
 			}
 			return currentMargin;
 		}
 
-		function flattenStyleArray(styleArray){
+		function flattenStyleArray(styleArray) {
 			var flattenedStyles = {};
 			for (var i = styleArray.length - 1; i >= 0; i--) {
 				var styleName = styleArray[i];
 				var style = self.styleStack.styleDictionary[styleName];
-				for(var key in style){
-					if(style.hasOwnProperty(key)){
+				for (var key in style) {
+					if (style.hasOwnProperty(key)) {
 						flattenedStyles[key] = style[key];
 					}
 				}
@@ -114,10 +114,10 @@ DocMeasure.prototype.measureNode = function(node) {
 
 		function convertMargin(margin) {
 			if (typeof margin === 'number' || margin instanceof Number) {
-				margin = [ margin, margin, margin, margin ];
+				margin = [margin, margin, margin, margin];
 			} else if (Array.isArray(margin)) {
 				if (margin.length === 2) {
-					margin = [ margin[0], margin[1], margin[0], margin[1] ];
+					margin = [margin[0], margin[1], margin[0], margin[1]];
 				}
 			}
 			return margin;
@@ -125,26 +125,26 @@ DocMeasure.prototype.measureNode = function(node) {
 
 		var margin = [undefined, undefined, undefined, undefined];
 
-		if(node.style) {
+		if (node.style) {
 			var styleArray = (Array.isArray(node.style)) ? node.style : [node.style];
 			var flattenedStyleArray = flattenStyleArray(styleArray);
 
-			if(flattenedStyleArray) {
+			if (flattenedStyleArray) {
 				margin = processSingleMargins(flattenedStyleArray, margin);
 			}
 
-			if(flattenedStyleArray.margin){
+			if (flattenedStyleArray.margin) {
 				margin = convertMargin(flattenedStyleArray.margin);
 			}
 		}
-		
+
 		margin = processSingleMargins(node, margin);
 
-		if(node.margin){
+		if (node.margin) {
 			margin = convertMargin(node.margin);
 		}
 
-		if(margin[0] === undefined && margin[1] === undefined && margin[2] === undefined && margin[3] === undefined) {
+		if (margin[0] === undefined && margin[1] === undefined && margin[2] === undefined && margin[3] === undefined) {
 			return null;
 		} else {
 			return margin;
@@ -152,15 +152,15 @@ DocMeasure.prototype.measureNode = function(node) {
 	}
 };
 
-DocMeasure.prototype.convertIfBase64Image = function(node) {
+DocMeasure.prototype.convertIfBase64Image = function (node) {
 	if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) {
 		var label = '$$pdfmake$$' + this.autoImageIndex++;
 		this.images[label] = node.image;
 		node.image = label;
-}
+	}
 };
 
-DocMeasure.prototype.measureImage = function(node) {
+DocMeasure.prototype.measureImage = function (node) {
 	if (this.images) {
 		this.convertIfBase64Image(node);
 	}
@@ -180,7 +180,7 @@ DocMeasure.prototype.measureImage = function(node) {
 	return node;
 };
 
-DocMeasure.prototype.measureLeaf = function(node) {
+DocMeasure.prototype.measureLeaf = function (node) {
 
 	// Make sure style properties of the node itself are considered when building inlines.
 	// We could also just pass [node] to buildInlines, but that fails for bullet points.
@@ -196,13 +196,13 @@ DocMeasure.prototype.measureLeaf = function(node) {
 	return node;
 };
 
-DocMeasure.prototype.measureVerticalContainer = function(node) {
+DocMeasure.prototype.measureVerticalContainer = function (node) {
 	var items = node.stack;
 
 	node._minWidth = 0;
 	node._maxWidth = 0;
 
-	for(var i = 0, l = items.length; i < l; i++) {
+	for (var i = 0, l = items.length; i < l; i++) {
 		items[i] = this.measureNode(items[i]);
 
 		node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
@@ -212,7 +212,7 @@ DocMeasure.prototype.measureVerticalContainer = function(node) {
 	return node;
 };
 
-DocMeasure.prototype.gapSizeForList = function(isOrderedList, listItems) {
+DocMeasure.prototype.gapSizeForList = function (isOrderedList, listItems) {
 	if (isOrderedList) {
 		var longestNo = (listItems.length).toString().replace(/./g, '9');
 		return this.textTools.sizeOfString(longestNo + '. ', this.styleStack);
@@ -221,24 +221,23 @@ DocMeasure.prototype.gapSizeForList = function(isOrderedList, listItems) {
 	}
 };
 
-DocMeasure.prototype.buildMarker = function(isOrderedList, counter, styleStack, gapSize) {
+DocMeasure.prototype.buildMarker = function (isOrderedList, counter, styleStack, gapSize) {
 	var marker;
 
 	if (isOrderedList) {
-		marker = { _inlines: this.textTools.buildInlines(counter, styleStack).items };
-	}
-	else {
+		marker = {_inlines: this.textTools.buildInlines(counter, styleStack).items};
+	} else {
 		// TODO: ascender-based calculations
 		var radius = gapSize.fontSize / 6;
 		marker = {
-			canvas: [ {
-				x: radius,
-				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
-				r1: radius,
-				r2: radius,
-				type: 'ellipse',
-				color: 'black'
-			} ]
+			canvas: [{
+					x: radius,
+					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+					r1: radius,
+					r2: radius,
+					type: 'ellipse',
+					color: 'black'
+				}]
 		};
 	}
 
@@ -248,7 +247,7 @@ DocMeasure.prototype.buildMarker = function(isOrderedList, counter, styleStack, 
 	return marker;
 };
 
-DocMeasure.prototype.measureList = function(isOrdered, node) {
+DocMeasure.prototype.measureList = function (isOrdered, node) {
 	var style = this.styleStack.clone();
 
 	var items = isOrdered ? node.ol : node.ul;
@@ -258,7 +257,7 @@ DocMeasure.prototype.measureList = function(isOrdered, node) {
 
 	var counter = 1;
 
-	for(var i = 0, l = items.length; i < l; i++) {
+	for (var i = 0, l = items.length; i < l; i++) {
 		var nextItem = items[i] = this.measureNode(items[i]);
 
 		var marker = counter++ + '. ';
@@ -274,11 +273,11 @@ DocMeasure.prototype.measureList = function(isOrdered, node) {
 	return node;
 };
 
-DocMeasure.prototype.measureColumns = function(node) {
+DocMeasure.prototype.measureColumns = function (node) {
 	var columns = node.columns;
 	node._gap = this.styleStack.getProperty('columnGap') || 0;
 
-	for(var i = 0, l = columns.length; i < l; i++) {
+	for (var i = 0, l = columns.length; i < l; i++) {
 		columns[i] = this.measureNode(columns[i]);
 	}
 
@@ -290,7 +289,7 @@ DocMeasure.prototype.measureColumns = function(node) {
 	return node;
 };
 
-DocMeasure.prototype.measureTable = function(node) {
+DocMeasure.prototype.measureTable = function (node) {
 	extendTableWidths(node);
 	node._layout = getLayout(this.tableLayouts);
 	node._offsets = getOffsets(node._layout);
@@ -298,15 +297,15 @@ DocMeasure.prototype.measureTable = function(node) {
 	var colSpans = [];
 	var col, row, cols, rows;
 
-	for(col = 0, cols = node.table.body[0].length; col < cols; col++) {
+	for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
 		var c = node.table.widths[col];
 		c._minWidth = 0;
 		c._maxWidth = 0;
 
-		for(row = 0, rows = node.table.body.length; row < rows; row++) {
+		for (row = 0, rows = node.table.body.length; row < rows; row++) {
 			var rowData = node.table.body[row];
 			var data = rowData[col];
-			if(data === undefined){
+			if (data === undefined) {
 				console.error('Malformed table row ', rowData, 'in node ', node);
 				throw 'Malformed table row, a cell is undefined.';
 			}
@@ -316,7 +315,7 @@ DocMeasure.prototype.measureTable = function(node) {
 
 				if (data.colSpan && data.colSpan > 1) {
 					markSpans(rowData, col, data.colSpan);
-					colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
+					colSpans.push({col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth});
 				} else {
 					c._minWidth = Math.max(c._minWidth, data._minWidth);
 					c._maxWidth = Math.max(c._maxWidth, data._maxWidth);
@@ -339,7 +338,7 @@ DocMeasure.prototype.measureTable = function(node) {
 	return node;
 
 	function measureCb(_this, data) {
-		return function() {
+		return function () {
 			if (data !== null && typeof data === 'object') {
 				data.fillColor = _this.styleStack.getProperty('fillColor');
 			}
@@ -355,14 +354,30 @@ DocMeasure.prototype.measureTable = function(node) {
 		}
 
 		var defaultLayout = {
-			hLineWidth: function(i, node) { return 1; }, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
-			vLineWidth: function(i, node) { return 1; },
-			hLineColor: function(i, node) { return 'black'; },
-			vLineColor: function(i, node) { return 'black'; },
-			paddingLeft: function(i, node) { return 4; }, //i && 4 || 0; },
-			paddingRight: function(i, node) { return 4; }, //(i < node.table.widths.length - 1) ? 4 : 0; },
-			paddingTop: function(i, node) { return 2; },
-			paddingBottom: function(i, node) { return 2; },
+			hLineWidth: function (i, node) {
+				return 1;
+			}, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
+			vLineWidth: function (i, node) {
+				return 1;
+			},
+			hLineColor: function (i, node) {
+				return 'black';
+			},
+			vLineColor: function (i, node) {
+				return 'black';
+			},
+			paddingLeft: function (i, node) {
+				return 4;
+			}, //i && 4 || 0; },
+			paddingRight: function (i, node) {
+				return 4;
+			}, //(i < node.table.widths.length - 1) ? 4 : 0; },
+			paddingTop: function (i, node) {
+				return 2;
+			},
+			paddingBottom: function (i, node) {
+				return 2;
+			},
 			defaultBorder: true
 		};
 
@@ -374,7 +389,7 @@ DocMeasure.prototype.measureTable = function(node) {
 		var totalOffset = 0;
 		var prevRightPadding = 0;
 
-		for(var i = 0, l = node.table.widths.length; i < l; i++) {
+		for (var i = 0, l = node.table.widths.length; i < l; i++) {
 			var lOffset = prevRightPadding + layout.vLineWidth(i, node) + layout.paddingLeft(i, node);
 			offsets.push(lOffset);
 			totalOffset += lOffset;
@@ -402,7 +417,7 @@ DocMeasure.prototype.measureTable = function(node) {
 			if (minDifference > 0) {
 				q = minDifference / span.span;
 
-				for(j = 0; j < span.span; j++) {
+				for (j = 0; j < span.span; j++) {
 					node.table.widths[span.col + j]._minWidth += q;
 				}
 			}
@@ -410,7 +425,7 @@ DocMeasure.prototype.measureTable = function(node) {
 			if (maxDifference > 0) {
 				q = maxDifference / span.span;
 
-				for(j = 0; j < span.span; j++) {
+				for (j = 0; j < span.span; j++) {
 					node.table.widths[span.col + j]._maxWidth += q;
 				}
 			}
@@ -418,11 +433,11 @@ DocMeasure.prototype.measureTable = function(node) {
 	}
 
 	function getMinMax(col, span, offsets) {
-		var result = { minWidth: 0, maxWidth: 0 };
+		var result = {minWidth: 0, maxWidth: 0};
 
-		for(var i = 0; i < span; i++) {
-			result.minWidth += node.table.widths[col + i]._minWidth + (i? offsets.offsets[col + i] : 0);
-			result.maxWidth += node.table.widths[col + i]._maxWidth + (i? offsets.offsets[col + i] : 0);
+		for (var i = 0; i < span; i++) {
+			result.minWidth += node.table.widths[col + i]._minWidth + (i ? offsets.offsets[col + i] : 0);
+			result.maxWidth += node.table.widths[col + i]._maxWidth + (i ? offsets.offsets[col + i] : 0);
 		}
 
 		return result;
@@ -456,47 +471,47 @@ DocMeasure.prototype.measureTable = function(node) {
 		}
 
 		if (typeof node.table.widths === 'string' || node.table.widths instanceof String) {
-			node.table.widths = [ node.table.widths ];
+			node.table.widths = [node.table.widths];
 
-			while(node.table.widths.length < node.table.body[0].length) {
+			while (node.table.widths.length < node.table.body[0].length) {
 				node.table.widths.push(node.table.widths[node.table.widths.length - 1]);
 			}
 		}
 
-		for(var i = 0, l = node.table.widths.length; i < l; i++) {
+		for (var i = 0, l = node.table.widths.length; i < l; i++) {
 			var w = node.table.widths[i];
 			if (typeof w === 'number' || w instanceof Number || typeof w === 'string' || w instanceof String) {
-				node.table.widths[i] = { width: w };
+				node.table.widths[i] = {width: w};
 			}
 		}
 	}
 };
 
-DocMeasure.prototype.measureCanvas = function(node) {
+DocMeasure.prototype.measureCanvas = function (node) {
 	var w = 0, h = 0;
 
-	for(var i = 0, l = node.canvas.length; i < l; i++) {
+	for (var i = 0, l = node.canvas.length; i < l; i++) {
 		var vector = node.canvas[i];
 
-		switch(vector.type) {
-		case 'ellipse':
-			w = Math.max(w, vector.x + vector.r1);
-			h = Math.max(h, vector.y + vector.r2);
-			break;
-		case 'rect':
-			w = Math.max(w, vector.x + vector.w);
-			h = Math.max(h, vector.y + vector.h);
-			break;
-		case 'line':
-			w = Math.max(w, vector.x1, vector.x2);
-			h = Math.max(h, vector.y1, vector.y2);
-			break;
-		case 'polyline':
-			for(var i2 = 0, l2 = vector.points.length; i2 < l2; i2++) {
-				w = Math.max(w, vector.points[i2].x);
-				h = Math.max(h, vector.points[i2].y);
-			}
-			break;
+		switch (vector.type) {
+			case 'ellipse':
+				w = Math.max(w, vector.x + vector.r1);
+				h = Math.max(h, vector.y + vector.r2);
+				break;
+			case 'rect':
+				w = Math.max(w, vector.x + vector.w);
+				h = Math.max(h, vector.y + vector.h);
+				break;
+			case 'line':
+				w = Math.max(w, vector.x1, vector.x2);
+				h = Math.max(h, vector.y1, vector.y2);
+				break;
+			case 'polyline':
+				for (var i2 = 0, l2 = vector.points.length; i2 < l2; i2++) {
+					w = Math.max(w, vector.points[i2].x);
+					h = Math.max(h, vector.points[i2].y);
+				}
+				break;
 		}
 	}
 
@@ -506,7 +521,7 @@ DocMeasure.prototype.measureCanvas = function(node) {
 	return node;
 };
 
-DocMeasure.prototype.measureQr = function(node) {
+DocMeasure.prototype.measureQr = function (node) {
 	node = qrEncoder.measure(node);
 	node._alignment = this.styleStack.getProperty('alignment');
 	return node;

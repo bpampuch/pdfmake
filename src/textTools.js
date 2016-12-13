@@ -8,11 +8,11 @@ var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;
 
 /**
-* Creates an instance of TextTools - text measurement utility
-*
-* @constructor
-* @param {FontProvider} fontProvider
-*/
+ * Creates an instance of TextTools - text measurement utility
+ *
+ * @constructor
+ * @param {FontProvider} fontProvider
+ */
 function TextTools(fontProvider) {
 	this.fontProvider = fontProvider;
 }
@@ -20,23 +20,23 @@ function TextTools(fontProvider) {
 /**
  * Converts an array of strings (or inline-definition-objects) into a collection
  * of inlines and calculated minWidth/maxWidth.
-* and their min/max widths
-* @param  {Object} textArray - an array of inline-definition-objects (or strings)
-* @param  {Object} styleContextStack current style stack
-* @return {Object}                   collection of inlines, minWidth, maxWidth
-*/
-TextTools.prototype.buildInlines = function(textArray, styleContextStack) {
+ * and their min/max widths
+ * @param  {Object} textArray - an array of inline-definition-objects (or strings)
+ * @param  {Object} styleContextStack current style stack
+ * @return {Object}                   collection of inlines, minWidth, maxWidth
+ */
+TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
 	var measured = measure(this.fontProvider, textArray, styleContextStack);
 
 	var minWidth = 0,
-		maxWidth = 0,
-		currentLineWidth;
+					maxWidth = 0,
+					currentLineWidth;
 
 	measured.forEach(function (inline) {
 		minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);
 
 		if (!currentLineWidth) {
-			currentLineWidth = { width: 0, leadingCut: inline.leadingCut, trailingCut: 0 };
+			currentLineWidth = {width: 0, leadingCut: inline.leadingCut, trailingCut: 0};
 		}
 
 		currentLineWidth.width += inline.width;
@@ -65,12 +65,12 @@ TextTools.prototype.buildInlines = function(textArray, styleContextStack) {
 };
 
 /**
-* Returns size of the specified string (without breaking it) using the current style
-* @param  {String} text              text to be measured
-* @param  {Object} styleContextStack current style stack
-* @return {Object}                   size of the specified string
-*/
-TextTools.prototype.sizeOfString = function(text, styleContextStack) {
+ * Returns size of the specified string (without breaking it) using the current style
+ * @param  {String} text              text to be measured
+ * @param  {Object} styleContextStack current style stack
+ * @return {Object}                   size of the specified string
+ */
+TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	text = text ? text.replace('\t', '    ') : '';
 
 	//TODO: refactor - extract from measure
@@ -98,27 +98,25 @@ function splitWords(text, noWrap) {
 
 	var array;
 	if (noWrap) {
-		array = [ text, "" ];
+		array = [text, ""];
 	} else {
 		array = text.match(WORD_RE);
 	}
 	// i < l - 1, because the last match is always an empty string
 	// other empty strings however are treated as new-lines
-	for(var i = 0, l = array.length; i < l - 1; i++) {
+	for (var i = 0, l = array.length; i < l - 1; i++) {
 		var item = array[i];
 
 		var isNewLine = item.length === 0;
 
 		if (!isNewLine) {
 			results.push({text: item});
-		}
-		else {
+		} else {
 			var shouldAddLine = (results.length === 0 || results[results.length - 1].lineEnd);
 
 			if (shouldAddLine) {
-				results.push({ text: '', lineEnd: true });
-			}
-			else {
+				results.push({text: '', lineEnd: true});
+			} else {
 				results[results.length - 1].lineEnd = true;
 			}
 		}
@@ -130,7 +128,7 @@ function copyStyle(source, destination) {
 	destination = destination || {};
 	source = source || {}; //TODO: default style
 
-	for(var key in source) {
+	for (var key in source) {
 		if (key != 'text' && source.hasOwnProperty(key)) {
 			destination[key] = source[key];
 		}
@@ -143,10 +141,10 @@ function normalizeTextArray(array) {
 	var results = [];
 
 	if (typeof array == 'string' || array instanceof String) {
-		array = [ array ];
+		array = [array];
 	}
 
-	for(var i = 0, l = array.length; i < l; i++) {
+	for (var i = 0, l = array.length; i < l; i++) {
 		var item = array[i];
 		var style = null;
 		var words;
@@ -158,7 +156,7 @@ function normalizeTextArray(array) {
 			style = copyStyle(item);
 		}
 
-		for(var i2 = 0, l2 = words.length; i2 < l2; i2++) {
+		for (var i2 = 0, l2 = words.length; i2 < l2; i2++) {
 			var result = {
 				text: words[i2].text
 			};
@@ -177,11 +175,11 @@ function normalizeTextArray(array) {
 }
 
 //TODO: support for other languages (currently only polish is supported)
-var diacriticsMap = { 'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 'Ł': 'L', 'Ń': 'N', 'Ó': 'O', 'Ś': 'S', 'Ź': 'Z', 'Ż': 'Z', 'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z' };
+var diacriticsMap = {'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 'Ł': 'L', 'Ń': 'N', 'Ó': 'O', 'Ś': 'S', 'Ź': 'Z', 'Ż': 'Z', 'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z'};
 // '  << atom.io workaround
 
 function removeDiacritics(text) {
-	return text.replace(/[^A-Za-z0-9\[\] ]/g, function(a) {
+	return text.replace(/[^A-Za-z0-9\[\] ]/g, function (a) {
 		return diacriticsMap[a] || a;
 	});
 }
@@ -194,9 +192,11 @@ function getStyleProperty(item, styleContextStack, property, defaultValue) {
 		return item[property];
 	}
 
-	if (!styleContextStack) return defaultValue;
+	if (!styleContextStack) {
+		return defaultValue;
+	}
 
-	styleContextStack.auto(item, function() {
+	styleContextStack.auto(item, function () {
 		value = styleContextStack.getProperty(property);
 	});
 
@@ -210,7 +210,7 @@ function getStyleProperty(item, styleContextStack, property, defaultValue) {
 function measure(fontProvider, textArray, styleContextStack) {
 	var normalized = normalizeTextArray(textArray);
 
-	normalized.forEach(function(item) {
+	normalized.forEach(function (item) {
 		var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
 		var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
 		var bold = getStyleProperty(item, styleContextStack, 'bold', false);
@@ -233,15 +233,13 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var trailingSpaces = item.text.match(TRAILING);
 		if (leadingSpaces) {
 			item.leadingCut = font.widthOfString(leadingSpaces[0], fontSize);
-		}
-		else {
+		} else {
 			item.leadingCut = 0;
 		}
 
 		if (trailingSpaces) {
 			item.trailingCut = font.widthOfString(trailingSpaces[0], fontSize);
-		}
-		else {
+		} else {
 			item.trailingCut = 0;
 		}
 
@@ -260,10 +258,10 @@ function measure(fontProvider, textArray, styleContextStack) {
 }
 
 /****TESTS**** (add a leading '/' to uncomment)
-TextTools.prototype.splitWords = splitWords;
-TextTools.prototype.normalizeTextArray = normalizeTextArray;
-TextTools.prototype.measure = measure;
-// */
+ TextTools.prototype.splitWords = splitWords;
+ TextTools.prototype.normalizeTextArray = normalizeTextArray;
+ TextTools.prototype.measure = measure;
+ // */
 
 
 module.exports = TextTools;
