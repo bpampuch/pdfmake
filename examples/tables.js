@@ -215,7 +215,200 @@ var docDefinition = {
                             // paddingTop: function(i, node) { return 2; },
                             // paddingBottom: function(i, node) { return 2; }
 						}
-				}
+				},
+			{ text: 'Optional border', fontSize: 14, bold: true, pageBreak: 'before', margin: [0, 0, 0, 8] },
+			'Each cell contains an optional border property: an array of 4 booleans for left border, top border, right border, bottom border.',
+			{
+					style: 'tableExample',
+					table: {
+							body: [
+									[
+											{
+													border: [false, true, false, false],
+													fillColor: '#eeeeee',
+													text: 'border:\n[false, true, false, false]'
+											},
+											{
+													border: [false, false, false, false],
+													fillColor: '#dddddd',
+													text: 'border:\n[false, false, false, false]'
+											},
+											{
+													border: [true, true, true, true],
+													fillColor: '#eeeeee',
+													text: 'border:\n[true, true, true, true]'
+											}
+									],
+									[
+											{
+													rowSpan: 3,
+													border: [true, true, true, true],
+													fillColor: '#eeeeff',
+													text: 'rowSpan: 3\n\nborder:\n[true, true, true, true]'
+											},
+											{
+													border: undefined,
+													fillColor: '#eeeeee',
+													text: 'border:\nundefined'
+											},
+											{
+													border: [true, false, false, false],
+													fillColor: '#dddddd',
+													text: 'border:\n[true, false, false, false]'
+											}
+									],
+									[
+											'',
+											{
+													colSpan: 2,
+													border: [true, true, true, true],
+													fillColor: '#eeffee',
+													text: 'colSpan: 2\n\nborder:\n[true, true, true, true]'
+											},
+											''
+									],
+									[
+											'',
+											{
+													border: undefined,
+													fillColor: '#eeeeee',
+													text: 'border:\nundefined'
+											},
+											{
+													border: [false, false, true, true],
+													fillColor: '#dddddd',
+													text: 'border:\n[false, false, true, true]'
+											}
+									]
+							]
+					},
+					layout: {
+							defaultBorder: false,
+					}
+			},
+			'For every cell without a border property, whether it has all borders or not is determined by layout.defaultBorder, which is false in the table above and true (by default) in the table below.',
+			{
+					style: 'tableExample',
+					table: {
+							body: [
+								[
+										{
+												border: [false, false, false, false],
+												fillColor: '#eeeeee',
+												text: 'border:\n[false, false, false, false]'
+										},
+										{
+												fillColor: '#dddddd',
+												text: 'border:\nundefined'
+										},
+										{
+												fillColor: '#eeeeee',
+												text: 'border:\nundefined'
+										},
+								],
+								[
+									{
+											fillColor: '#dddddd',
+											text: 'border:\nundefined'
+									},
+									{
+											fillColor: '#eeeeee',
+											text: 'border:\nundefined'
+									},
+									{
+											border: [true, true, false, false],
+											fillColor: '#dddddd',
+											text: 'border:\n[true, true, false, false]'
+									},
+								]
+							]
+					}
+			},
+			'And some other examples with rowSpan/colSpan...',
+			{
+					style: 'tableExample',
+					table: {
+							body: [
+									[
+											'',
+											'column 1',
+											'column 2',
+											'column 3'
+									],
+									[
+											'row 1',
+											{
+													rowSpan: 3,
+													colSpan: 3,
+													border: [true, true, true, true],
+													fillColor: '#cccccc',
+													text: 'rowSpan: 3\ncolSpan: 3\n\nborder:\n[true, true, true, true]'
+											},
+											'',
+											''
+									],
+									[
+											'row 2',
+											'',
+											'',
+											''
+									],
+									[
+											'row 3',
+											'',
+											'',
+											''
+									]
+							]
+					},
+					layout: {
+							defaultBorder: false,
+					}
+			},
+			{
+					style: 'tableExample',
+					table: {
+							body: [
+									[
+											{
+													colSpan: 3,
+													text: 'colSpan: 3\n\nborder:\n[false, false, false, false]',
+													fillColor: '#eeeeee',
+													border: [false, false, false, false]
+											},
+											'',
+											''
+									],
+									[
+											'border:\nundefined',
+											'border:\nundefined',
+											'border:\nundefined'
+									]
+							]
+					}
+			},
+			{
+					style: 'tableExample',
+					table: {
+							body: [
+									[
+											{rowSpan: 3, text: 'rowSpan: 3\n\nborder:\n[false, false, false, false]', fillColor: '#eeeeee', border: [false, false, false, false]},
+											'border:\nundefined',
+											'border:\nundefined'
+									],
+									[
+											'',
+											'border:\nundefined',
+											'border:\nundefined'
+									],
+									[
+											'',
+											'border:\nundefined',
+											'border:\nundefined'
+									]
+							]
+					}
+			}
 	],
 	styles: {
 		header: {

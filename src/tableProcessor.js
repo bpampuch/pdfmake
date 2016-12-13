@@ -31,6 +31,9 @@ TableProcessor.prototype.beginTable = function(writer) {
     writer.beginUnbreakableBlock();
   }
 
+  // update the border properties of all cells before drawing any lines
+  prepareCellBorders(this.tableNode.table.body);
+
   this.drawHorizontalLine(0, writer);
 
   function getTableInnerContentWidth() {
@@ -60,6 +63,57 @@ TableProcessor.prototype.beginTable = function(writer) {
     }
 
     return rsd;
+  }
+
+  // Iterate through all cells. If the current cell is the start of a
+  // rowSpan/colSpan, update the border property of the cells on its
+  // bottom/right accordingly. This is needed since each iteration of the
+  // line-drawing loops draws lines for a single cell, not for an entire
+  // rowSpan/colSpan.
+  function prepareCellBorders(body) {
+    for (var rowIndex = 0; rowIndex < body.length; rowIndex++) {
+      var row = body[rowIndex];
+
+      for (var colIndex = 0; colIndex < row.length; colIndex++) {
+        var cell = row[colIndex];
+
+        if (cell.border) {
+          var rowSpan = cell.rowSpan || 1;
+          var colSpan = cell.colSpan || 1;
+
+          for (var rowOffset = 0; rowOffset < rowSpan; rowOffset++) {
+            // set left border
+            if (cell.border[0] !== undefined && rowOffset > 0) {
+              setBorder(rowIndex + rowOffset, colIndex, 0, cell.border[0]);
+            }
+
+            // set right border
+            if (cell.border[2] !== undefined) {
+              setBorder(rowIndex + rowOffset, colIndex + colSpan - 1, 2, cell.border[2]);
+            }
+          }
+
+          for (var colOffset = 0; colOffset < colSpan; colOffset++) {
+            // set top border
+            if (cell.border[1] !== undefined && colOffset > 0) {
+              setBorder(rowIndex, colIndex + colOffset, 1, cell.border[1]);
+            }
+
+            // set bottom border
+            if (cell.border[3] !== undefined) {
+              setBorder(rowIndex + rowSpan - 1, colIndex + colOffset, 3, cell.border[3]);
+            }
+          }
+        }
+      }
+    }
+
+    // helper function to set the border for a given cell
+    function setBorder(rowIndex, colIndex, borderIndex, borderValue) {
+      var cell = body[rowIndex][colIndex];
+      cell.border = cell.border || {};
+      cell.border[borderIndex] = borderValue;
+    }
   }
 };
 
@@ -97,10 +151,31 @@ TableProcessor.prototype.drawHorizontalLine = function(lineIndex, writer, overri
   if (lineWidth) {
     var offset = lineWidth / 2;
     var currentLine = null;
+    var body = this.tableNode.table.body;
 
     for(var i = 0, l = this.rowSpanData.length; i < l; i++) {
       var data = this.rowSpanData[i];
       var shouldDrawLine = !data.rowSpan;
+
+      // draw only if the current cell requires a top border or the cell in the
+      // row above requires a bottom border
+      if (shouldDrawLine && i < l - 1) {
+        var topBorder = false, bottomBorder = false;
+
+        // the current cell
+        if (lineIndex < body.length) {
+          var cell = body[lineIndex][i];
+          topBorder = cell.border ? cell.border[1] : this.layout.defaultBorder;
+        }
+
+        // the cell in the row above
+        if (lineIndex > 0) {
+          var cellAbove = body[lineIndex - 1][i];
+          bottomBorder = cellAbove.border ? cellAbove.border[3] : this.layout.defaultBorder;
+        }
+
+        shouldDrawLine = topBorder || bottomBorder;
+      }
 
       if (!currentLine && shouldDrawLine) {
         currentLine = { left: data.left, width: 0 };
@@ -113,7 +188,7 @@ TableProcessor.prototype.drawHorizontalLine = function(lineIndex, writer, overri
       var y = (overrideY || 0) + offset;
 
       if (!shouldDrawLine || i === l - 1) {
-        if (currentLine) {
+        if (currentLine && currentLine.width) {
           writer.addVector({
             type: 'line',
             x1: currentLine.left,
@@ -167,6 +242,7 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
     var ys = [];
 
     var hasBreaks = pageBreaks && pageBreaks.length > 0;
+    var body = this.tableNode.table.body;
 
     ys.push({
       y0: this.rowTopY,
@@ -205,12 +281,29 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
       }
 
       for(i = 0, l = xs.length; i < l; i++) {
-        this.drawVerticalLine(xs[i].x, y1 - hzLineOffset, y2 + this.bottomLineWidth, xs[i].index, writer);
+        var leftBorder = false, rightBorder = false;
+        var colIndex = xs[i].index;
+
+        // the current cell
+        if (colIndex < body[rowIndex].length) {
+          var cell = body[rowIndex][colIndex];
+          leftBorder = cell.border ? cell.border[0] : this.layout.defaultBorder
+        }
+
+        // the cell from before column
+        if (colIndex > 0) {
+          var cell = body[rowIndex][colIndex - 1];
+          rightBorder = cell.border ? cell.border[2] : this.layout.defaultBorder
+        }
+
+        if (leftBorder || rightBorder) {
+          this.drawVerticalLine(xs[i].x, y1 - hzLineOffset, y2 + this.bottomLineWidth, xs[i].index, writer);
+        }
+
         if(i < l-1) {
-          var colIndex = xs[i].index;
-          var fillColor=  this.tableNode.table.body[rowIndex][colIndex].fillColor;
+          var fillColor = body[rowIndex][colIndex].fillColor;
           if(fillColor ) {
-            var wBorder = this.layout.vLineWidth(colIndex, this.tableNode);
+            var wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
             var xf = xs[i].x+wBorder;
             var yf = y1 - hzLineOffset;
             writer.addVector({
