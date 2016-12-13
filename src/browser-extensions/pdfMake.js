@@ -3,14 +3,6 @@
 /* global BlobBuilder */
 'use strict';
 
-function canCreatePdf() {
-	// Ensure the browser provides the level of support needed
-	if (!Object.keys) {
-		return false;
-	}
-	return true;
-}
-
 var PdfPrinter = require('../printer');
 var FileSaver = require('../../libs/FileSaver.js/FileSaver');
 var saveAs = FileSaver.saveAs;
@@ -28,6 +20,14 @@ function Document(docDefinition, fonts, vfs) {
 	this.docDefinition = docDefinition;
 	this.fonts = fonts || defaultClientFonts;
 	this.vfs = vfs;
+}
+
+function canCreatePdf() {
+	// Ensure the browser provides the level of support needed
+	if (!Object.keys) {
+		return false;
+	}
+	return true;
 }
 
 Document.prototype._createDoc = function(options, callback) {
