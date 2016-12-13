@@ -29,6 +29,7 @@
     "node_modules",
     "package.json",
     "src",
-    "tests"
+    "tests",
+    "yarn.lock"
   ]
 }
