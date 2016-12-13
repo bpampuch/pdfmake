@@ -24,7 +24,19 @@ module.exports = {
             replacement: function () { return ''; }
           }
         ]})
+      },
+      { test: /fontkit[\/\\]index.js$/, loader: StringReplacePlugin.replace({
+        replacements: [
+          {
+            pattern: /fs\./g,
+            replacement: function () { return 'require(\'fs\').'; }
+          }
+        ]})
       }
+    ],
+    postLoaders: [
+      { test: /fontkit[\/\\]/, loader: "transform?brfs" },
+      { test: /unicode-properties[\/\\]/, loader: "transform?brfs" }
     ]
   },
   plugins: [
