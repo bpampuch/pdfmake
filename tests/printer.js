@@ -15,7 +15,7 @@ describe('Printer', function () {
   beforeEach(function() {
     fontDescriptors = {
       Roboto: {
-        normal: 'examples/fonts/Roboto-Regular.ttf'
+        normal: 'tests/fonts/Roboto-Regular.ttf'
       }
     };
     Pdfkit.prototype.addPage = sinon.spy(Pdfkit.prototype.addPage);
@@ -41,7 +41,7 @@ describe('Printer', function () {
 
     assert(Pdfkit.prototype.addPage.callCount === 2);
 
-    assert(Pdfkit.prototype.addPage.firstCall.calledWith(undefined));
+    assert.equal(Pdfkit.prototype.addPage.firstCall.args[0], undefined);
     assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
   });
 
@@ -65,7 +65,7 @@ describe('Printer', function () {
 
     assert(Pdfkit.prototype.addPage.callCount === 2);
 
-    assert(Pdfkit.prototype.addPage.firstCall.calledWith(undefined));
+    assert.equal(Pdfkit.prototype.addPage.firstCall.args[0], undefined);
     assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
   });
 
@@ -94,7 +94,7 @@ describe('Printer', function () {
 
     assert(Pdfkit.prototype.addPage.callCount === 3);
 
-    assert(Pdfkit.prototype.addPage.firstCall.calledWith(undefined));
+    assert.equal(Pdfkit.prototype.addPage.firstCall.args[0], undefined);
     assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
     assert.deepEqual(Pdfkit.prototype.addPage.thirdCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
   });
@@ -126,7 +126,7 @@ describe('Printer', function () {
     assert.equal(Pdfkit.prototype.addPage.callCount, 3);
 
 
-    assert(Pdfkit.prototype.addPage.firstCall.calledWith(undefined));
+    assert.equal(Pdfkit.prototype.addPage.firstCall.args[0], undefined);
     assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
     assert.deepEqual(Pdfkit.prototype.addPage.thirdCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
   });

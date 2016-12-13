@@ -1,7 +1,7 @@
 // initial version, doesn't bundle vfs_fonts yet
 
 var gulp = require('gulp');
-var webpack = require('gulp-webpack');
+var webpack = require('webpack-stream');
 var gutil = require('gulp-util');
 var uglify = require('gulp-uglify');
 var rename = require('gulp-rename');
@@ -9,6 +9,8 @@ var sourcemaps = require('gulp-sourcemaps');
 var replace = require('gulp-replace');
 var mocha = require('gulp-spawn-mocha');
 var jshint = require('gulp-jshint');
+var DEBUG = process.env.NODE_ENV === 'debug',
+  		 CI = process.env.CI === 'true';
 
 var uglifyOptions = {
 	preserveComments: 'some',
@@ -43,8 +45,8 @@ function reportWebPackErrors(err, stats) {
 gulp.task('test', ['prepareTestEnv'], function(cb) {
 	return gulp.src(['test-env/tests/**/*.js'])
 		.pipe(mocha({
-			reporter: 'spec',
-			'check-leaks': true
+			debugBrk: DEBUG,
+			R: CI ? 'spec' : 'nyan'
 		}));
 });
 
