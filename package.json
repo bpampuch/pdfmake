@@ -7,27 +7,38 @@
     "test": "tests"
   },
   "dependencies": {
-    "pdfkit": "~0.7.1",
-    "lodash": "^3.1.0",
-    "lodash-node": "^3.1.0"
+    "pdfkit": "^0.8.0",
+    "lodash": "^4.17.2"
   },
   "devDependencies": {
-    "expose-loader": "^0.6.0",
-    "gulp": "^3.8.11",
-    "gulp-jshint": "^1.10.0",
+    "expose-loader": "^0.7.1",
+    "grunt": "^1.0.1",
+    "grunt-browserify": "^5.0.0",
+    "grunt-contrib-concat": "^1.0.1",
+    "grunt-contrib-jshint": "^1.0.0",
+    "grunt-contrib-uglify": "^2.0.0",
+    "grunt-dump-dir": "^0.1.2",
+    "grunt-jsdoc": "^2.1.0",
+    "grunt-mocha-cov": "^0.4.0",
+    "grunt-text-replace": "^0.4.0",
+    "gulp": "^3.9.1",
+    "gulp-jshint": "^2.0.4",
     "gulp-rename": "^1.2.2",
-    "gulp-replace": "^0.5.3",
-    "gulp-sourcemaps": "^1.5.2",
-    "gulp-spawn-mocha": "^2.0.1",
-    "gulp-uglify": "^1.2.0",
-    "gulp-util": "^3.0.4",
-    "gulp-webpack": "^1.4.0",
-    "json-loader": "^0.5.1",
-    "sinon": "~1.12.2",
-    "string-replace-webpack-plugin": "0.0.1",
-    "webpack": "^1.8.9"
+    "gulp-replace": "^0.5.4",
+    "gulp-sourcemaps": "^1.9.1",
+    "gulp-spawn-mocha": "^3.1.0",
+    "gulp-uglify": "^2.0.0",
+    "gulp-util": "^3.0.7",
+    "json-loader": "^0.5.4",
+    "sinon": "^1.17.6",
+    "string-replace-webpack-plugin": "^0.0.4",
+    "transform-loader": "^0.2.3",
+    "brfs": "^1.4.0",    
+    "webpack": "^1.13.3",
+		"webpack-stream": "^3.2.0"
   },
   "scripts": {
+    "build": "gulp build",
     "test": "gulp"
   },
   "repository": {
@@ -45,7 +56,7 @@
   "bugs": {
     "url": "https://github.com/bpampuch/pdfmake/issues"
   },
-  "homepage": "https://bpampuch.github.io/pdfmake",
+  "homepage": "http://pdfmake.org",
   "config": {
     "blanket": {
       "pattern": "src",

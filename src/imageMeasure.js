@@ -15,7 +15,13 @@ ImageMeasure.prototype.measureImage = function(src) {
 
 	if (!this.pdfDoc._imageRegistry[src]) {
 		label = 'I' + (++this.pdfDoc._imageCount);
-		image = PDFImage.open(realImageSrc(src), label);
+		try {
+			image = PDFImage.open(realImageSrc(src), label);
+		}
+		catch ( error) {
+			throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
+
+		}
 		image.embed(this.pdfDoc);
 		this.pdfDoc._imageRegistry[src] = image;
 	} else {
@@ -31,7 +37,7 @@ ImageMeasure.prototype.measureImage = function(src) {
 
 		var index = img.indexOf('base64,');
 		if (index < 0) {
-			throw 'invalid image format, images dictionary should contain dataURL entries';
+			return that.imageDictionary[src];
 		}
 
 		return new Buffer(img.substring(index + 7), 'base64');

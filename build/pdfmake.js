@@ -1665,7 +1665,7 @@
 	      }
 
 	      // valid surrogate pair
-	      codePoint = leadSurrogate - 0xD800 << 10 | codePoint - 0xDC00 | 0x10000
+	      codePoint = (leadSurrogate - 0xD800 << 10 | codePoint - 0xDC00) + 0x10000
 	    } else if (leadSurrogate) {
 	      // valid bmp char, but last char was a lead
 	      if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
@@ -2021,6 +2021,8 @@
 	var ImageMeasure = __webpack_require__(103);
 	var textDecorator = __webpack_require__(104);
 	var FontProvider = __webpack_require__(9);
+
+	_.noConflict();
 
 	////////////////////////////////////////
 	// PdfPrinter
@@ -14779,6 +14781,8 @@
 	var _ = __webpack_require__(7);
 	var FontWrapper = __webpack_require__(10);
 
+	_.noConflict();
+
 	function typeName(bold, italics){
 		var type = 'normal';
 		if (bold && italics) type = 'bolditalics';
@@ -14846,6 +14850,8 @@
 	'use strict';
 
 	var _ = __webpack_require__(7);
+
+	_.noConflict();
 
 	function FontWrapper(pdfkitDoc, path, fontName){
 		this.MAX_CHAR_TYPES = 92;
@@ -20426,8 +20432,12 @@
 
 	// NOTE: These type checking functions intentionally don't use `instanceof`
 	// because it is fragile and can be easily faked with `Object.create()`.
-	function isArray(ar) {
-	  return Array.isArray(ar);
+
+	function isArray(arg) {
+	  if (Array.isArray) {
+	    return Array.isArray(arg);
+	  }
+	  return objectToString(arg) === '[object Array]';
 	}
 	exports.isArray = isArray;
 
@@ -20467,7 +20477,7 @@
 	exports.isUndefined = isUndefined;
 
 	function isRegExp(re) {
-	  return isObject(re) && objectToString(re) === '[object RegExp]';
+	  return objectToString(re) === '[object RegExp]';
 	}
 	exports.isRegExp = isRegExp;
 
@@ -20477,13 +20487,12 @@
 	exports.isObject = isObject;
 
 	function isDate(d) {
-	  return isObject(d) && objectToString(d) === '[object Date]';
+	  return objectToString(d) === '[object Date]';
 	}
 	exports.isDate = isDate;
 
 	function isError(e) {
-	  return isObject(e) &&
-	      (objectToString(e) === '[object Error]' || e instanceof Error);
+	  return (objectToString(e) === '[object Error]' || e instanceof Error);
 	}
 	exports.isError = isError;
 
@@ -20502,14 +20511,12 @@
 	}
 	exports.isPrimitive = isPrimitive;
 
-	function isBuffer(arg) {
-	  return Buffer.isBuffer(arg);
-	}
-	exports.isBuffer = isBuffer;
+	exports.isBuffer = Buffer.isBuffer;
 
 	function objectToString(o) {
 	  return Object.prototype.toString.call(o);
 	}
+
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },

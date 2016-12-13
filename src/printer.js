@@ -10,7 +10,8 @@ var PDFReference = require('pdfkit/js/reference');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
 var textDecorator = require('./textDecorator');
-var FontProvider = require('./fontProvider');
+
+_.noConflict();
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -88,10 +89,10 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
   }
 	pageSize.orientation = docDefinition.pageOrientation === 'landscape' ? docDefinition.pageOrientation : 'portrait';
 
-	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ], compress: false});
+	this.pdfKitDoc = new PdfKit({ size: [ pageSize.width, pageSize.height ], compress: false });
 	this.pdfKitDoc.info.Producer = 'pdfmake';
 	this.pdfKitDoc.info.Creator = 'pdfmake';
-	
+
 	// pdf kit maintains the uppercase fieldnames from pdf spec
 	// to keep the pdfmake api consistent, the info field are defined lowercase
 	if(docDefinition.info){
@@ -101,8 +102,9 @@ PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 		this.pdfKitDoc.info.Author = docDefinition.info.author ? docDefinition.info.author : null;
 		this.pdfKitDoc.info.Subject = docDefinition.info.subject ? docDefinition.info.subject : null;
 		this.pdfKitDoc.info.Keywords = docDefinition.info.keywords ? docDefinition.info.keywords : null;
+		this.pdfKitDoc.info.CreationDate = docDefinition.info.creationDate ? docDefinition.info.creationDate : null;
 	}
-	
+
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
   docDefinition.images = docDefinition.images || {};
@@ -138,7 +140,7 @@ function fixPageMargins(margin) {
 
     if (typeof margin === 'number' || margin instanceof Number) {
         margin = { left: margin, right: margin, top: margin, bottom: margin };
-    } else if (margin instanceof Array) {
+    } else if (Array.isArray(margin)) {
         if (margin.length === 2) {
             margin = { left: margin[0], top: margin[1], right: margin[0], bottom: margin[1] };
         } else if (margin.length === 4) {
@@ -251,71 +253,52 @@ function renderPages(pages, fontProvider, pdfKitDoc) {
     }
     if(page.watermark){
       renderWatermark(page, pdfKitDoc);
-	}
-
-    fontProvider.setFontRefsToPdfDoc();
+    }
   }
 }
 
 function renderLine(line, x, y, pdfKitDoc) {
-	x = x || 0;
-	y = y || 0;
+  x = x || 0;
+  y = y || 0;
 
-	var lineHeight = line.getHeight();
-	var ascenderHeight = line.getAscenderHeight();
+  textDecorator.drawBackground(line, x, y, pdfKitDoc);
 
-	textDecorator.drawBackground(line, x, y, pdfKitDoc);
+  //TODO: line.optimizeInlines();
+  for(var i = 0, l = line.inlines.length; i < l; i++) {
+  	var inline = line.inlines[i];
 
-	//TODO: line.optimizeInlines();
-	for(var i = 0, l = line.inlines.length; i < l; i++) {
-		var inline = line.inlines[i];
+  	pdfKitDoc.fill(inline.color || 'black');
 
-		pdfKitDoc.fill(inline.color || 'black');
+    pdfKitDoc._font = inline.font;
+    pdfKitDoc.fontSize(inline.fontSize);
+    pdfKitDoc.text(inline.text, x + inline.x, y, {
+      lineBreak: false,
+      link: inline.link
+    });
+  }
 
-		pdfKitDoc.save();
-		pdfKitDoc.transform(1, 0, 0, -1, 0, pdfKitDoc.page.height);
-
-
-    var encoded = inline.font.encode(inline.text);
-		pdfKitDoc.addContent('BT');
-
-		pdfKitDoc.addContent('' + (x + inline.x) + ' ' + (pdfKitDoc.page.height - y - ascenderHeight) + ' Td');
-		pdfKitDoc.addContent('/' + encoded.fontId + ' ' + inline.fontSize + ' Tf');
-
-        pdfKitDoc.addContent('<' + encoded.encodedText + '> Tj');
-
-		pdfKitDoc.addContent('ET');
-
-		if (inline.link) {
-			pdfKitDoc.link(x + inline.x, pdfKitDoc.page.height - y - lineHeight, inline.width, lineHeight, inline.link);
-		}
-
-		pdfKitDoc.restore();
-	}
-
-	textDecorator.drawDecorations(line, x, y, pdfKitDoc);
-
+  textDecorator.drawDecorations(line, x, y, pdfKitDoc);
 }
 
 function renderWatermark(page, pdfKitDoc){
-	var watermark = page.watermark;
+  var watermark = page.watermark;
 
-	pdfKitDoc.fill('black');
-	pdfKitDoc.opacity(0.6);
+  pdfKitDoc.fill(watermark.color);
+  pdfKitDoc.opacity(watermark.opacity);
 
-	pdfKitDoc.save();
-	pdfKitDoc.transform(1, 0, 0, -1, 0, pdfKitDoc.page.height);
+  pdfKitDoc.save();
 
-	var angle = Math.atan2(pdfKitDoc.page.height, pdfKitDoc.page.width) * 180/Math.PI;
-	pdfKitDoc.rotate(angle, {origin: [pdfKitDoc.page.width/2, pdfKitDoc.page.height/2]});
+  var angle = Math.atan2(pdfKitDoc.page.height, pdfKitDoc.page.width) * -180/Math.PI;
+  pdfKitDoc.rotate(angle, {origin: [pdfKitDoc.page.width/2, pdfKitDoc.page.height/2]});
 
-  var encoded = watermark.font.encode(watermark.text);
-	pdfKitDoc.addContent('BT');
-	pdfKitDoc.addContent('' + (pdfKitDoc.page.width/2 - watermark.size.size.width/2) + ' ' + (pdfKitDoc.page.height/2 - watermark.size.size.height/4) + ' Td');
-	pdfKitDoc.addContent('/' + encoded.fontId + ' ' + watermark.size.fontSize + ' Tf');
-	pdfKitDoc.addContent('<' + encoded.encodedText + '> Tj');
-	pdfKitDoc.addContent('ET');
-	pdfKitDoc.restore();
+  var x = pdfKitDoc.page.width / 2 - watermark.size.size.width / 2;
+  var y = pdfKitDoc.page.height / 2 - watermark.size.size.height / 4;
+
+  pdfKitDoc._font = watermark.font;
+  pdfKitDoc.fontSize(watermark.size.fontSize);
+  pdfKitDoc.text(watermark.text, x, y, {lineBreak: false});
+
+  pdfKitDoc.restore();
 }
 
 function renderVector(vector, pdfDoc) {

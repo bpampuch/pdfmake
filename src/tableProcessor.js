@@ -357,11 +357,12 @@ TableProcessor.prototype.endRow = function(rowIndex, writer, pageBreaks) {
     if(this.dontBreakRows) {
       writer.tracker.auto('pageChanged',
         function() {
-          self.drawHorizontalLine(rowIndex, writer);
+          if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
+						self.drawHorizontalLine(rowIndex, writer);
+					}
         },
         function() {
           writer.commitUnbreakableBlock();
-          self.drawHorizontalLine(rowIndex, writer);
         }
       );
     }

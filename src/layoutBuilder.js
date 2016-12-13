@@ -77,21 +77,21 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
       node.nodeInfo = nodeInfo;
     });
 
-    return _.any(linearNodeList, function (node, index, followingNodeList) {
+    return _.some(linearNodeList, function (node, index, followingNodeList) {
       if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
         node.pageBreakCalculated = true;
         var pageNumber = _.first(node.nodeInfo.pageNumbers);
 
 				var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
-          return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
+          return _.includes(node0.nodeInfo.pageNumbers, pageNumber);
         }).value();
 
         var nodesOnNextPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
-          return _.contains(node0.nodeInfo.pageNumbers, pageNumber + 1);
+          return _.includes(node0.nodeInfo.pageNumbers, pageNumber + 1);
         }).value();
 
         var previousNodesOnPage = _.chain(followingNodeList).take(index).filter(function (node0) {
-          return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
+          return _.includes(node0.nodeInfo.pageNumbers, pageNumber);
         }).value();
 
         if (pageBreakBeforeFct(node.nodeInfo,
@@ -141,7 +141,7 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
   this.addHeadersAndFooters(header, footer);
   /* jshint eqnull:true */
   if(watermark != null)
-    this.addWatermark(watermark, fontProvider);
+    this.addWatermark(watermark, fontProvider, defaultStyle);
 
   return {pages: this.writer.context().pages, linearNodeList: this.linearNodeList};
 };
@@ -213,12 +213,27 @@ LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
   }
 };
 
-LayoutBuilder.prototype.addWatermark = function(watermark, fontProvider){
-  var defaultFont = Object.getOwnPropertyNames(fontProvider.fonts)[0]; // TODO allow selection of other font
+LayoutBuilder.prototype.addWatermark = function(watermark, fontProvider, defaultStyle) {
+  if (typeof watermark === 'string') {
+    watermark = {'text': watermark};
+  }
+  
+  if (!watermark.text) { // empty watermark text
+    return;
+  }
+  
+  watermark.font = watermark.font || defaultStyle.font || 'Roboto';
+  watermark.color = watermark.color || 'black';
+  watermark.opacity = watermark.opacity || 0.6;
+  watermark.bold = watermark.bold || false;
+  watermark.italics = watermark.italics || false;
+
   var watermarkObject = {
-    text: watermark,
-    font: fontProvider.provideFont(fontProvider[defaultFont], false, false),
-    size: getSize(this.pageSize, watermark, fontProvider)
+    text: watermark.text,
+    font: fontProvider.provideFont(watermark.font, watermark.bold, watermark.italics),
+    size: getSize(this.pageSize, watermark, fontProvider),
+    color: watermark.color,
+    opacity: watermark.opacity
   };
 
   var pages = this.writer.context().pages;
@@ -229,9 +244,9 @@ LayoutBuilder.prototype.addWatermark = function(watermark, fontProvider){
   function getSize(pageSize, watermark, fontProvider){
     var width = pageSize.width;
     var height = pageSize.height;
-    var targetWidth = Math.sqrt(width*width + height*height)*0.8; /* page diagnoal * sample factor */
+    var targetWidth = Math.sqrt(width*width + height*height)*0.8; /* page diagonal * sample factor */
     var textTools = new TextTools(fontProvider);
-    var styleContextStack = new StyleContextStack();
+    var styleContextStack = new StyleContextStack(null, {font: watermark.font, bold: watermark.bold, italics: watermark.italics});
     var size;
 
     /**
@@ -246,7 +261,7 @@ LayoutBuilder.prototype.addWatermark = function(watermark, fontProvider){
       styleContextStack.push({
         fontSize: c
       });
-      size = textTools.sizeOfString(watermark, styleContextStack);
+      size = textTools.sizeOfString(watermark.text, styleContextStack);
       if(size.width > targetWidth){
         b = c;
         c = (a+b)/2;

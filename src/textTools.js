@@ -71,7 +71,7 @@ TextTools.prototype.buildInlines = function(textArray, styleContextStack) {
 * @return {Object}                   size of the specified string
 */
 TextTools.prototype.sizeOfString = function(text, styleContextStack) {
-	text = text.replace('\t', '    ');
+	text = text ? text.replace('\t', '    ') : '';
 
 	//TODO: refactor - extract from measure
 	var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
@@ -88,13 +88,13 @@ TextTools.prototype.sizeOfString = function(text, styleContextStack) {
 		fontSize: fontSize,
 		lineHeight: lineHeight,
 		ascender: font.ascender / 1000 * fontSize,
-		decender: font.decender / 1000 * fontSize
+		descender: font.descender / 1000 * fontSize
 	};
 };
 
 function splitWords(text, noWrap) {
 	var results = [];
-	text = text.replace('\t', '    ');
+	text = text ? text.toString().replace('\t', '    ') : '';
 
 	var array;
 	if (noWrap) {
@@ -221,6 +221,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var decorationStyle = getStyleProperty(item, styleContextStack, 'decorationStyle', null);
 		var background = getStyleProperty(item, styleContextStack, 'background', null);
 		var lineHeight = getStyleProperty(item, styleContextStack, 'lineHeight', 1);
+		var link = getStyleProperty(item, styleContextStack, 'link', null);
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -252,6 +253,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.decorationColor = decorationColor;
 		item.decorationStyle = decorationStyle;
 		item.background = background;
+		item.link = link;
 	});
 
 	return normalized;

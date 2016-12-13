@@ -1,4 +1,4 @@
-pdfmake [![Build Status](https://travis-ci.org/bpampuch/pdfmake.png?branch=master)](https://travis-ci.org/bpampuch/pdfmake) [![NPM version](https://badge.fury.io/js/pdfmake.png)](http://badge.fury.io/js/pdfmake) [![Bower version](https://badge.fury.io/bo/pdfmake.png)](http://badge.fury.io/bo/pdfmake)
+pdfmake [![Build Status](https://travis-ci.org/bpampuch/pdfmake.png?branch=master)](https://travis-ci.org/bpampuch/pdfmake) [![NPM version](https://badge.fury.io/js/pdfmake.png)](http://badge.fury.io/js/pdfmake) [![Bower version](https://badge.fury.io/bo/pdfmake.png)](http://badge.fury.io/bo/pdfmake) [![Latest Version](https://img.shields.io/packagist/v/bpampuch/pdfmake.svg)](https://packagist.org/packages/bpampuch/pdfmake)
 =======
 
 Client/server side PDF printing in pure JavaScript
@@ -55,7 +55,7 @@ You can get both files using bower:
 bower install pdfmake
 ```
 
-or copy them directly from the build directory from the repository.
+or copy them directly from the build directory from the repository. Otherwise you can always [build it from sources](#building-from-sources).
 
 ### Document-definition-object
 
@@ -80,6 +80,18 @@ pdfMake.createPdf(docDefinition).open();
 
 // download the PDF
 pdfMake.createPdf(docDefinition).download();
+
+// or, put the PDF into your own page
+
+const pdfDocGenerator=pdfMake.createPdf(docDefinition);
+pdfDocGenerator.getDataUrl((dataUrl)=>{
+	const targetElement=document.querySelector('#iframeContainer');
+	const iframe=document.createElement('iframe');
+	iframe.src=dataUrl;
+	targetElement.appendChild(iframe);
+});
+
+
 ```
 
 #### Styling
@@ -465,8 +477,18 @@ var docDefinition = {
 	subject: 'subject of document',
 	keywords: 'keywords for document',
   },
-  content:  'This is an sample PDF printed with pdfMake' 
+  content:  'This is an sample PDF printed with pdfMake'
 }
+```
+
+## Building from sources
+
+```
+git clone https://github.com/bpampuch/pdfmake.git
+cd pdfmake
+npm install # or: yarn
+git submodule update --init  libs/FileSaver.js
+npm run build # or: yarn run build
 ```
 
 ## Coming soon

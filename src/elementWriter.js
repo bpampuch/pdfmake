@@ -93,7 +93,11 @@ ElementWriter.prototype.addImage = function(image, index) {
 		return false;
 	}
 
-	image.x = context.x + (image.x || 0);
+	if (image._x === undefined) {
+		image._x = image.x || 0;
+	}
+
+	image.x = context.x + image._x;
 	image.y = context.y;
 
 	this.alignImage(image);
