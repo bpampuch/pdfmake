@@ -33,6 +33,14 @@ module.exports = {
             replacement: function () { return 'require(\'fs\').'; }
           }
         ]})
+      },
+      { test: /readable-stream[\/\\]/, loader: StringReplacePlugin.replace({
+        replacements: [
+          {
+            pattern: 'stream.read()',
+            replacement: function () { return 'stream.read(9007199254740991)'; }
+          }
+        ]})
       }
     ],
     postLoaders: [
