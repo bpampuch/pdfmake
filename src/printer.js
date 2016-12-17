@@ -98,11 +98,11 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	if (docDefinition.info) {
 		var info = docDefinition.info;
 		// check for falsey an set null, so that pdfkit always get either null or value
-		this.pdfKitDoc.info.Title = docDefinition.info.title ? docDefinition.info.title : null;
-		this.pdfKitDoc.info.Author = docDefinition.info.author ? docDefinition.info.author : null;
-		this.pdfKitDoc.info.Subject = docDefinition.info.subject ? docDefinition.info.subject : null;
-		this.pdfKitDoc.info.Keywords = docDefinition.info.keywords ? docDefinition.info.keywords : null;
-		this.pdfKitDoc.info.CreationDate = docDefinition.info.creationDate ? docDefinition.info.creationDate : null;
+		this.pdfKitDoc.info.Title = info.title ? info.title : null;
+		this.pdfKitDoc.info.Author = info.author ? info.author : null;
+		this.pdfKitDoc.info.Subject = info.subject ? info.subject : null;
+		this.pdfKitDoc.info.Keywords = info.keywords ? info.keywords : null;
+		this.pdfKitDoc.info.CreationDate = info.creationDate ? info.creationDate : null;
 	}
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);

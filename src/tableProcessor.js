@@ -289,13 +289,13 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			// the current cell
 			if (colIndex < body[rowIndex].length) {
 				var cell = body[rowIndex][colIndex];
-				leftBorder = cell.border ? cell.border[0] : this.layout.defaultBorder
+				leftBorder = cell.border ? cell.border[0] : this.layout.defaultBorder;
 			}
 
 			// the cell from before column
 			if (colIndex > 0) {
 				var cell = body[rowIndex][colIndex - 1];
-				rightBorder = cell.border ? cell.border[2] : this.layout.defaultBorder
+				rightBorder = cell.border ? cell.border[2] : this.layout.defaultBorder;
 			}
 
 			if (leftBorder || rightBorder) {
