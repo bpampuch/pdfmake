@@ -1,7 +1,6 @@
 /* jslint node: true */
 'use strict';
 
-// var b64 = require('./base64.js').base64DecToArr;
 function VirtualFileSystem() {
 	this.fileSystem = {};
 	this.baseSystem = {};
