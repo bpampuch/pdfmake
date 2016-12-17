@@ -71,7 +71,7 @@ TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
  * @return {Object}                   size of the specified string
  */
 TextTools.prototype.sizeOfString = function (text, styleContextStack) {
-	text = text ? text.replace('\t', '    ') : '';
+	text = text ? text.toString().replace('\t', '    ') : '';
 
 	//TODO: refactor - extract from measure
 	var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
