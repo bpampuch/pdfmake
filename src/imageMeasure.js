@@ -1,7 +1,6 @@
 /* jslint node: true */
 'use strict';
 
-var pdfKit = require('pdfkit');
 var PDFImage = require('pdfkit/js/image');
 
 function ImageMeasure(pdfDoc, imageDictionary) {

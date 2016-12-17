@@ -6,7 +6,6 @@ var _ = require('lodash');
 var FontProvider = require('./fontProvider');
 var LayoutBuilder = require('./layoutBuilder');
 var PdfKit = require('pdfkit');
-var PDFReference = require('pdfkit/js/reference');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
 var textDecorator = require('./textDecorator');
