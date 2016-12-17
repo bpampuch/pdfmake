@@ -62,7 +62,7 @@ gulp.task('copy-src-with-exposed-test-methods', function () {
 
 gulp.task('copy-tests', function () {
 	return gulp.src('tests/**/*.*', {base: './'})
-		.pipe(gulp.dest('test-env'))
+		.pipe(gulp.dest('test-env'));
 });
 
 gulp.task('lint', function () {
