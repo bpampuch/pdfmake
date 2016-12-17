@@ -98,7 +98,7 @@ function splitWords(text, noWrap) {
 
 	var array;
 	if (noWrap) {
-		array = [text, ""];
+		array = [text, ''];
 	} else {
 		array = text.match(WORD_RE);
 	}

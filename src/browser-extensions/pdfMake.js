@@ -69,7 +69,7 @@ Document.prototype.open = function (message) {
 				blob = new Blob([result], {type: 'application/pdf'});
 			} catch (e) {
 				// Old browser which can't handle it without making it an byte array (ie10)
-				if (e.name == "InvalidStateError") {
+				if (e.name == 'InvalidStateError') {
 					var byteArray = new Uint8Array(result);
 					blob = new Blob([byteArray.buffer], {type: 'application/pdf'});
 				}
@@ -102,7 +102,7 @@ Document.prototype.print = function () {
 				blob = new Blob([result], {type: 'application/pdf'});
 			} catch (e) {
 				// Old browser which can't handle it without making it an byte array (ie10)
-				if (e.name == "InvalidStateError") {
+				if (e.name == 'InvalidStateError') {
 					var byteArray = new Uint8Array(result);
 					blob = new Blob([byteArray.buffer], {type: 'application/pdf'});
 				}
@@ -123,7 +123,7 @@ Document.prototype.print = function () {
 };
 
 Document.prototype.download = function (defaultFileName, cb) {
-	if (typeof defaultFileName === "function") {
+	if (typeof defaultFileName === 'function') {
 		cb = defaultFileName;
 		defaultFileName = null;
 	}
@@ -135,7 +135,7 @@ Document.prototype.download = function (defaultFileName, cb) {
 			blob = new Blob([result], {type: 'application/pdf'});
 		} catch (e) {
 			// Old browser which can't handle it without making it an byte array (ie10)
-			if (e.name == "InvalidStateError") {
+			if (e.name == 'InvalidStateError') {
 				var byteArray = new Uint8Array(result);
 				blob = new Blob([byteArray.buffer], {type: 'application/pdf'});
 			}
@@ -145,7 +145,7 @@ Document.prototype.download = function (defaultFileName, cb) {
 		} else {
 			throw 'Could not generate blob';
 		}
-		if (typeof cb === "function") {
+		if (typeof cb === 'function') {
 			cb();
 		}
 	});
