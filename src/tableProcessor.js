@@ -209,8 +209,9 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 
 TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineIndex, writer) {
 	var width = this.layout.vLineWidth(vLineIndex, this.tableNode);
-	if (width === 0)
+	if (width === 0) {
 		return;
+	}
 	writer.addVector({
 		type: 'line',
 		x1: x + width / 2,

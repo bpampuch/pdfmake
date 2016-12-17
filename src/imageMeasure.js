@@ -32,8 +32,9 @@ ImageMeasure.prototype.measureImage = function (src) {
 	function realImageSrc(src) {
 		var img = that.imageDictionary[src];
 
-		if (!img)
+		if (!img) {
 			return src;
+		}
 
 		var index = img.indexOf('base64,');
 		if (index < 0) {

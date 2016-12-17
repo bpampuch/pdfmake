@@ -140,8 +140,9 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 	this.processNode(docStructure);
 	this.addHeadersAndFooters(header, footer);
 	/* jshint eqnull:true */
-	if (watermark != null)
+	if (watermark != null) {
 		this.addWatermark(watermark, fontProvider, defaultStyle);
+	}
 
 	return {pages: this.writer.context().pages, linearNodeList: this.linearNodeList};
 };
@@ -389,8 +390,9 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 	var availableWidth = this.writer.context().availableWidth;
 	var gaps = gapArray(columnNode._gap);
 
-	if (gaps)
+	if (gaps) {
 		availableWidth -= (gaps.length - 1) * columnNode._gap;
+	}
 
 	ColumnCalculator.buildColumnWidths(columns, availableWidth);
 	var result = this.processRow(columns, columns, gaps);
@@ -398,8 +400,9 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 
 
 	function gapArray(gap) {
-		if (!gap)
+		if (!gap) {
 			return null;
+		}
 
 		var gaps = [];
 		gaps.push(0);
@@ -467,16 +470,18 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 	}
 
 	function colLeftOffset(i) {
-		if (gaps && gaps.length > i)
+		if (gaps && gaps.length > i) {
 			return gaps[i];
+		}
 		return 0;
 	}
 
 	function getEndingCell(column, columnIndex) {
 		if (column.rowSpan && column.rowSpan > 1) {
 			var endingRow = tableRow + column.rowSpan - 1;
-			if (endingRow >= tableBody.length)
+			if (endingRow >= tableBody.length) {
 				throw 'Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count';
+			}
 			return tableBody[endingRow][columnIndex];
 		}
 
@@ -561,8 +566,9 @@ LayoutBuilder.prototype.processLeaf = function (node) {
 };
 
 LayoutBuilder.prototype.buildNextLine = function (textNode) {
-	if (!textNode._inlines || textNode._inlines.length === 0)
+	if (!textNode._inlines || textNode._inlines.length === 0) {
 		return null;
+	}
 
 	var line = new Line(this.writer.context().availableWidth);
 

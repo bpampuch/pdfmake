@@ -226,8 +226,9 @@ DocumentContext.prototype.addPage = function (pageSize) {
 };
 
 DocumentContext.prototype.getCurrentPage = function () {
-	if (this.page < 0 || this.page >= this.pages.length)
+	if (this.page < 0 || this.page >= this.pages.length) {
 		return null;
+	}
 
 	return this.pages[this.page];
 };
@@ -252,12 +253,13 @@ DocumentContext.prototype.getCurrentPosition = function () {
 function bottomMostContext(c1, c2) {
 	var r;
 
-	if (c1.page > c2.page)
+	if (c1.page > c2.page) {
 		r = c1;
-	else if (c2.page > c1.page)
+	} else if (c2.page > c1.page) {
 		r = c2;
-	else
+	} else {
 		r = (c1.y > c2.y) ? c1 : c2;
+	}
 
 	return {
 		page: r.page,

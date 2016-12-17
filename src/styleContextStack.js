@@ -62,8 +62,9 @@ StyleContextStack.prototype.pop = function (howMany) {
  * @return the number of items pushed onto the stack
  */
 StyleContextStack.prototype.autopush = function (item) {
-	if (typeof item === 'string' || item instanceof String)
+	if (typeof item === 'string' || item instanceof String) {
 		return 0;
+	}
 
 	var styleNames = [];
 

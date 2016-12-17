@@ -26,10 +26,12 @@ Line.prototype.getAscenderHeight = function () {
 };
 
 Line.prototype.hasEnoughSpaceForInline = function (inline) {
-	if (this.inlines.length === 0)
+	if (this.inlines.length === 0) {
 		return true;
-	if (this.newLineForced)
+	}
+	if (this.newLineForced) {
 		return false;
+	}
 
 	return this.inlineWidths + inline.width - this.leadingCut - (inline.trailingCut || 0) <= this.maxWidth;
 };

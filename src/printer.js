@@ -136,8 +136,9 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 };
 
 function fixPageMargins(margin) {
-	if (!margin)
+	if (!margin) {
 		return null;
+	}
 
 	if (typeof margin === 'number' || margin instanceof Number) {
 		margin = {left: margin, right: margin, top: margin, bottom: margin};
@@ -171,8 +172,9 @@ function registerDefaultTableLayouts(layoutBuilder) {
 		},
 		headerLineOnly: {
 			hLineWidth: function (i, node) {
-				if (i === 0 || i === node.table.body.length)
+				if (i === 0 || i === node.table.body.length) {
 					return 0;
+				}
 				return (i === node.table.headerRows) ? 2 : 0;
 			},
 			vLineWidth: function (i) {
@@ -187,8 +189,9 @@ function registerDefaultTableLayouts(layoutBuilder) {
 		},
 		lightHorizontalLines: {
 			hLineWidth: function (i, node) {
-				if (i === 0 || i === node.table.body.length)
+				if (i === 0 || i === node.table.body.length) {
 					return 0;
+				}
 				return (i === node.table.headerRows) ? 2 : 1;
 			},
 			vLineWidth: function (i) {
@@ -238,8 +241,9 @@ var defaultLayout = {
 function pageSize2widthAndHeight(pageSize) {
 	if (typeof pageSize == 'string' || pageSize instanceof String) {
 		var size = sizes[pageSize.toUpperCase()];
-		if (!size)
+		if (!size) {
 			throw ('Page size ' + pageSize + ' not recognized');
+		}
 		return {width: size[0], height: size[1]};
 	}
 
@@ -366,8 +370,9 @@ function renderVector(vector, pdfDoc) {
 			pdfDoc.lineTo(vector.x2, vector.y2);
 			break;
 		case 'polyline':
-			if (vector.points.length === 0)
+			if (vector.points.length === 0) {
 				break;
+			}
 
 			pdfDoc.moveTo(vector.points[0].x, vector.points[0].y);
 			for (var i = 1, l = vector.points.length; i < l; i++) {
