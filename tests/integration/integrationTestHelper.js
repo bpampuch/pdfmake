@@ -12,7 +12,7 @@ function IntegrationTestHelper() {
 	this.DEFAULT_BULLET_SPACER = '9. ';
 }
 
-IntegrationTestHelper.prototype.renderPages = function(sizeName, docDefinition) {
+IntegrationTestHelper.prototype.renderPages = function (sizeName, docDefinition) {
 	var size = sizes[sizeName];
 	docDefinition.images = docDefinition.images || {};
 	var fontDescriptors = {
@@ -28,30 +28,30 @@ IntegrationTestHelper.prototype.renderPages = function(sizeName, docDefinition) 
 
 	var pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], compress: false});
 	var builder = new LayoutBuilder(
-		pageSize,
-		{left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom},
-		new ImageMeasure(pdfKitDoc, docDefinition.images)
-	);
+					pageSize,
+					{left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom},
+					new ImageMeasure(pdfKitDoc, docDefinition.images)
+					);
 	this.fontProvider = new FontProvider(fontDescriptors, pdfKitDoc);
 
 	return builder.layoutDocument(
-		docDefinition.content,
-		this.fontProvider, docDefinition.styles || {},
-		docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'},
-		docDefinition.background,
-		docDefinition.header,
-		docDefinition.footer,
-		docDefinition.images,
-		docDefinition.watermark,
-		docDefinition.pageBreakBefore
-	);
+					docDefinition.content,
+					this.fontProvider, docDefinition.styles || {},
+					docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'},
+					docDefinition.background,
+					docDefinition.header,
+					docDefinition.footer,
+					docDefinition.images,
+					docDefinition.watermark,
+					docDefinition.pageBreakBefore
+					);
 };
 
-IntegrationTestHelper.prototype.getInlineTexts = function(pages, options) {
+IntegrationTestHelper.prototype.getInlineTexts = function (pages, options) {
 	return _.map(pages[options.page].items[options.item].item.inlines, 'text');
 };
 
-IntegrationTestHelper.prototype.getWidthOfString = function(inlines) {
+IntegrationTestHelper.prototype.getWidthOfString = function (inlines) {
 	return this.fontProvider.fontCache['Roboto'].normal.widthOfString(inlines, 12);
 };
 

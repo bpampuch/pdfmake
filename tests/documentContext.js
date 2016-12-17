@@ -2,23 +2,23 @@ var assert = require('assert');
 
 var DocumentContext = require('../src/documentContext');
 
-describe('DocumentContext', function() {
+describe('DocumentContext', function () {
 	var pc;
 
-	beforeEach(function() {
-		pc = new DocumentContext({ width: 400, height: 800, orientation: 'portrait' }, { left: 40, right: 40, top: 60, bottom: 60 });
+	beforeEach(function () {
+		pc = new DocumentContext({width: 400, height: 800, orientation: 'portrait'}, {left: 40, right: 40, top: 60, bottom: 60});
 		// pc.addPage();
 	});
 
-	it('should set initial values based on pageSize and pageMargins', function() {
+	it('should set initial values based on pageSize and pageMargins', function () {
 		assert.equal(pc.x, 40);
 		assert.equal(pc.y, 60);
 		assert.equal(pc.availableWidth, 400 - 40 - 40);
 		assert.equal(pc.availableHeight, 800 - 60 - 60);
 	});
 
-	describe('beginColumnGroup', function() {
-		it('should save current settings', function() {
+	describe('beginColumnGroup', function () {
+		it('should save current settings', function () {
 			pc.beginColumnGroup();
 			pc.x = 80;
 			pc.page = 3;
@@ -29,8 +29,8 @@ describe('DocumentContext', function() {
 		});
 	});
 
-	describe('beginColumn', function() {
-		it('should set y, page and availableHeight back to the values stored in beginColumnGroup', function() {
+	describe('beginColumn', function () {
+		it('should set y, page and availableHeight back to the values stored in beginColumnGroup', function () {
 			pc.beginColumnGroup();
 			pc.y = 150;
 			pc.page = 5;
@@ -43,14 +43,14 @@ describe('DocumentContext', function() {
 			assert.equal(pc.availableHeight, 800 - 60 - 60);
 		});
 
-		it('should add offset to current x', function() {
+		it('should add offset to current x', function () {
 			pc.beginColumnGroup();
 			pc.beginColumn(50, 30);
 
 			assert.equal(pc.x, 40 + 30);
 		});
 
-		it('should add previous column widths to x when starting a new column', function() {
+		it('should add previous column widths to x when starting a new column', function () {
 			pc.beginColumnGroup();
 			pc.beginColumn(30);
 			assert.equal(pc.x, 40);
@@ -58,14 +58,14 @@ describe('DocumentContext', function() {
 			assert.equal(pc.x, 40 + 30);
 		});
 
-		it('should set availableWidth to the specified column width', function() {
+		it('should set availableWidth to the specified column width', function () {
 			pc.beginColumnGroup();
 			pc.beginColumn(30);
 
 			assert.equal(pc.availableWidth, 30);
 		});
 
-		it('should save context in endingCell if provided', function() {
+		it('should save context in endingCell if provided', function () {
 			var endingCell = {};
 			pc.beginColumnGroup();
 			pc.beginColumn(30, 0, endingCell);
@@ -80,8 +80,8 @@ describe('DocumentContext', function() {
 		});
 	});
 
-	describe('completeColumnGroup', function() {
-		it('should set x to the value stored in beginColumnGroup', function(){
+	describe('completeColumnGroup', function () {
+		it('should set x to the value stored in beginColumnGroup', function () {
 			pc.beginColumnGroup();
 			pc.x = 150;
 			pc.completeColumnGroup();
@@ -89,7 +89,7 @@ describe('DocumentContext', function() {
 			assert.equal(pc.x, 40);
 		});
 
-		it('should set page to the value pointing to the end of the longest column', function() {
+		it('should set page to the value pointing to the end of the longest column', function () {
 			pc.beginColumnGroup();
 			pc.beginColumn(30);
 			pc.page = 3;
@@ -102,7 +102,7 @@ describe('DocumentContext', function() {
 			assert.equal(pc.page, 7);
 		});
 
-		it('should skip non-ending-cells (spanning over multiple rows) during vsync', function() {
+		it('should skip non-ending-cells (spanning over multiple rows) during vsync', function () {
 			var endingCell = {};
 
 			pc.beginColumnGroup();
@@ -119,7 +119,7 @@ describe('DocumentContext', function() {
 			assert.equal(pc.y, 100);
 		});
 
-		it('non-ending-cells (spanning over multiple rows) should also work with nested columns', function() {
+		it('non-ending-cells (spanning over multiple rows) should also work with nested columns', function () {
 			var endingCell = {};
 			var endingCell2 = {};
 
@@ -133,32 +133,32 @@ describe('DocumentContext', function() {
 			// column3 contains a nested table
 			pc.beginColumn(100);
 
-				pc.beginColumnGroup();
-				pc.beginColumn(20);
-				pc.y = 100;
-				pc.beginColumn(20);
-				pc.y = 120;
-				// col3.3 spans over 2 rows
-				pc.beginColumn(40, 0, endingCell2);
-				pc.y = 180;
-				pc.completeColumnGroup();
+			pc.beginColumnGroup();
+			pc.beginColumn(20);
+			pc.y = 100;
+			pc.beginColumn(20);
+			pc.y = 120;
+			// col3.3 spans over 2 rows
+			pc.beginColumn(40, 0, endingCell2);
+			pc.y = 180;
+			pc.completeColumnGroup();
 
-				//// bottom of all non-spanned columns
-				assert.equal(pc.y, 120);
+			//// bottom of all non-spanned columns
+			assert.equal(pc.y, 120);
 
-				// second row (of nested table)
-				pc.beginColumnGroup();
-				pc.beginColumn(20);
-				pc.y = 10;
-				pc.beginColumn(20);
-				pc.y = 20;
-				// col3.3 spans over 2 rows
-				pc.beginColumn(40, 0);
-				pc.markEnding(endingCell2);
-				pc.completeColumnGroup();
+			// second row (of nested table)
+			pc.beginColumnGroup();
+			pc.beginColumn(20);
+			pc.y = 10;
+			pc.beginColumn(20);
+			pc.y = 20;
+			// col3.3 spans over 2 rows
+			pc.beginColumn(40, 0);
+			pc.markEnding(endingCell2);
+			pc.completeColumnGroup();
 
-				//// spanned column was large enough to influence bottom
-				assert.equal(pc.y, 180);
+			//// spanned column was large enough to influence bottom
+			assert.equal(pc.y, 180);
 			pc.completeColumnGroup();
 
 			//// bottom of all non-spanned columns
@@ -177,8 +177,8 @@ describe('DocumentContext', function() {
 		});
 	});
 
-	describe('addMargin', function() {
-		it('should change both x and availableWidth', function() {
+	describe('addMargin', function () {
+		it('should change both x and availableWidth', function () {
 			var x = pc.x;
 			var aWidth = pc.availableWidth;
 
@@ -188,7 +188,7 @@ describe('DocumentContext', function() {
 			assert.equal(pc.availableWidth, aWidth - 10);
 		});
 
-		it('should support left and right margins', function() {
+		it('should support left and right margins', function () {
 			var x = pc.x;
 			var aWidth = pc.availableWidth;
 
@@ -199,8 +199,8 @@ describe('DocumentContext', function() {
 		});
 	});
 
-	describe('moveDown', function() {
-		it('should change both y and availableHeight', function() {
+	describe('moveDown', function () {
+		it('should change both y and availableHeight', function () {
 			var y = pc.y;
 			var ah = pc.availableHeight;
 
@@ -210,16 +210,16 @@ describe('DocumentContext', function() {
 			assert.equal(pc.availableHeight, ah - 123);
 		});
 
-		it('should return true if there is still some space left on the page', function() {
+		it('should return true if there is still some space left on the page', function () {
 			assert(pc.moveDown(123));
 		});
 
-		it('should return false if there\'s no space left after the operation', function() {
+		it('should return false if there\'s no space left after the operation', function () {
 			assert(!pc.moveDown(1200));
 		});
 	});
 
-	describe('moveToNext page', function(){
+	describe('moveToNext page', function () {
 
 		it('should add new page in portrait', function () {
 			pc.moveToNextPage();
@@ -240,32 +240,32 @@ describe('DocumentContext', function() {
 			assert.equal(pc.pages[3].pageSize.orientation, 'portrait');
 			assert.equal(pc.pages[4].pageSize.orientation, 'portrait');
 		});
-		
+
 	});
-	
-	describe('addPage', function() {
-		
+
+	describe('addPage', function () {
+
 		var pageSize;
-		
-		beforeEach(function(){
+
+		beforeEach(function () {
 			pageSize = {width: 200, height: 400, orientation: 'landscape'};
 		});
-		
-		it('should add a new page', function() {
-			
-      pc.addPage(pageSize);
+
+		it('should add a new page', function () {
+
+			pc.addPage(pageSize);
 
 			assert.equal(pc.pages.length, 2);
 		});
-		
 
-		it('should return added page', function() {
+
+		it('should return added page', function () {
 			var page = pc.addPage(pageSize);
 
 			assert.equal(page, pc.pages[pc.pages.length - 1]);
 		});
 
-		it('should set y, availableHeight and availableWidth on page to initial values', function() {
+		it('should set y, availableHeight and availableWidth on page to initial values', function () {
 			pc.y = 123;
 			pc.availableHeight = 123;
 
@@ -276,34 +276,34 @@ describe('DocumentContext', function() {
 			assert.equal(pc.availableWidth, 400 - 40 - 40);
 		});
 
-    it('should keep column width when in column group, but set page width', function() {
-      pc.beginColumnGroup();
-      pc.beginColumn(100, 0, {});
-      pc.initializePage();
+		it('should keep column width when in column group, but set page width', function () {
+			pc.beginColumnGroup();
+			pc.beginColumn(100, 0, {});
+			pc.initializePage();
 
-      assert.equal(pc.availableWidth, 100);
+			assert.equal(pc.availableWidth, 100);
 
-      pc.completeColumnGroup();
+			pc.completeColumnGroup();
 
-      assert.equal(pc.availableWidth, 400 - 40 - 40);
-    });
+			assert.equal(pc.availableWidth, 400 - 40 - 40);
+		});
 	});
 
-	describe('bottomMostContext', function() {
-		it('should return context with larger page if pages are different', function() {
-			var result = DocumentContext.bottomMostContext({ page: 2, y: 10 }, { page: 3, y: 5 });
+	describe('bottomMostContext', function () {
+		it('should return context with larger page if pages are different', function () {
+			var result = DocumentContext.bottomMostContext({page: 2, y: 10}, {page: 3, y: 5});
 			assert.equal(result.page, 3);
 			assert.equal(result.y, 5);
 		});
 
-		it('should return context with larger y if both contexts have the same page', function() {
-			var result = DocumentContext.bottomMostContext({ page: 3, y: 100 }, { page: 3, y: 50 });
+		it('should return context with larger y if both contexts have the same page', function () {
+			var result = DocumentContext.bottomMostContext({page: 3, y: 100}, {page: 3, y: 50});
 			assert.equal(result.page, 3);
 			assert.equal(result.y, 100);
 		});
 	});
 
-	it('should support nesting', function(){
+	it('should support nesting', function () {
 		pc.beginColumnGroup();
 		pc.beginColumn(50)
 		pc.y = 200;
