@@ -47,6 +47,17 @@ module.exports = {
 							}
 						}
 					]})
+			},
+			/* hack for IE 10 */
+			{test: /brotli[\/\\]dec[\/\\]/, loader: StringReplacePlugin.replace({
+					replacements: [
+						{
+							pattern: /const /g,
+							replacement: function () {
+								return 'var ';
+							}
+						}
+					]})
 			}
 		],
 		postLoaders: [
