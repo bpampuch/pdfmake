@@ -178,11 +178,11 @@ describe('DocMeasure', function () {
 					headerLines: 1,
 					widths: ['*', 150, 'auto', 'auto'],
 					body:
-									[
-										['Header 1', 'H2', 'Header\nwith\nlines', {text: 'last', fontSize: 20}],
-										['Column 1', 'Column 2', 'Column 3', 'Column 4'],
-										['A text in the first column', 'Text in the second one', 'Other things go here', 'or here']
-									]
+						[
+							['Header 1', 'H2', 'Header\nwith\nlines', {text: 'last', fontSize: 20}],
+							['Column 1', 'Column 2', 'Column 3', 'Column 4'],
+							['A text in the first column', 'Text in the second one', 'Other things go here', 'or here']
+						]
 				},
 				layout: {
 					vLineWidth: function () {
@@ -246,11 +246,11 @@ describe('DocMeasure', function () {
 					headerLines: 1,
 					widths: 'auto',
 					body:
-									[
-										['Header 1', 'H2', 'Header\nwith\nlines', {text: 'last', fontSize: 20}],
-										['Column 1', 'Column 2', 'Column 3', 'Column 4'],
-										['A text in the first column', 'Text in the second one', 'Other things go here', 'or here']
-									]
+						[
+							['Header 1', 'H2', 'Header\nwith\nlines', {text: 'last', fontSize: 20}],
+							['Column 1', 'Column 2', 'Column 3', 'Column 4'],
+							['A text in the first column', 'Text in the second one', 'Other things go here', 'or here']
+						]
 				}
 			};
 

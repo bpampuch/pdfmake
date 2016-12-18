@@ -95,9 +95,9 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 				}).value();
 
 				if (pageBreakBeforeFct(node.nodeInfo,
-								_.map(followingNodesOnPage, 'nodeInfo'),
-								_.map(nodesOnNextPage, 'nodeInfo'),
-								_.map(previousNodesOnPage, 'nodeInfo'))) {
+					_.map(followingNodesOnPage, 'nodeInfo'),
+					_.map(nodesOnNextPage, 'nodeInfo'),
+					_.map(previousNodesOnPage, 'nodeInfo'))) {
 					node.pageBreak = 'before';
 					return true;
 				}
@@ -129,7 +129,7 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 	docStructure = this.docMeasure.measureDocument(docStructure);
 
 	this.writer = new PageElementWriter(
-					new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
+		new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
 	var _this = this;
 	this.writer.context().tracker.startTracking('pageAdded', function () {
@@ -492,8 +492,8 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 // lists
 LayoutBuilder.prototype.processList = function (orderedList, node) {
 	var self = this,
-					items = orderedList ? node.ol : node.ul,
-					gapSize = node._gapSize;
+		items = orderedList ? node.ol : node.ul,
+		gapSize = node._gapSize;
 
 	this.writer.context().addMargin(gapSize.width);
 

@@ -28,23 +28,23 @@ IntegrationTestHelper.prototype.renderPages = function (sizeName, docDefinition)
 
 	var pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], compress: false});
 	var builder = new LayoutBuilder(
-					pageSize,
-					{left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom},
-					new ImageMeasure(pdfKitDoc, docDefinition.images)
-					);
+		pageSize,
+		{left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom},
+		new ImageMeasure(pdfKitDoc, docDefinition.images)
+		);
 	this.fontProvider = new FontProvider(fontDescriptors, pdfKitDoc);
 
 	return builder.layoutDocument(
-					docDefinition.content,
-					this.fontProvider, docDefinition.styles || {},
-					docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'},
-					docDefinition.background,
-					docDefinition.header,
-					docDefinition.footer,
-					docDefinition.images,
-					docDefinition.watermark,
-					docDefinition.pageBreakBefore
-					);
+		docDefinition.content,
+		this.fontProvider, docDefinition.styles || {},
+		docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'},
+		docDefinition.background,
+		docDefinition.header,
+		docDefinition.footer,
+		docDefinition.images,
+		docDefinition.watermark,
+		docDefinition.pageBreakBefore
+		);
 };
 
 IntegrationTestHelper.prototype.getInlineTexts = function (pages, options) {

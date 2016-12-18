@@ -17,8 +17,8 @@ function groupDecorations(line) {
 		for (var ii = 0, ll = decoration.length; ii < ll; ii++) {
 			var deco = decoration[ii];
 			if (!curGroup || deco !== curGroup.decoration ||
-							style !== curGroup.decorationStyle || color !== curGroup.decorationColor ||
-							deco === 'lineThrough') {
+				style !== curGroup.decorationStyle || color !== curGroup.decorationColor ||
+				deco === 'lineThrough') {
 
 				curGroup = {
 					line: line,
@@ -54,12 +54,12 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 		return sum;
 	}
 	var firstInline = group.inlines[0],
-					biggerInline = maxInline(),
-					totalWidth = width(),
-					lineAscent = group.line.getAscenderHeight(),
-					ascent = biggerInline.font.ascender / 1000 * biggerInline.fontSize,
-					height = biggerInline.height,
-					descent = height - ascent;
+		biggerInline = maxInline(),
+		totalWidth = width(),
+		lineAscent = group.line.getAscenderHeight(),
+		ascent = biggerInline.font.ascender / 1000 * biggerInline.fontSize,
+		height = biggerInline.height,
+		descent = height - ascent;
 
 	var lw = 0.5 + Math.floor(Math.max(biggerInline.fontSize - 8, 0) / 2) * 0.12;
 
@@ -81,8 +81,8 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 	if (group.decorationStyle === 'double') {
 		var gap = Math.max(0.5, lw * 2);
 		pdfKitDoc.fillColor(group.decorationColor)
-						.rect(x + firstInline.x, y - lw / 2, totalWidth, lw / 2).fill()
-						.rect(x + firstInline.x, y + gap - lw / 2, totalWidth, lw / 2).fill();
+			.rect(x + firstInline.x, y - lw / 2, totalWidth, lw / 2).fill()
+			.rect(x + firstInline.x, y + gap - lw / 2, totalWidth, lw / 2).fill();
 	} else if (group.decorationStyle === 'dashed') {
 		var nbDashes = Math.ceil(totalWidth / (3.96 + 2.84));
 		var rdx = x + firstInline.x;
@@ -110,15 +110,15 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 		pdfKitDoc.moveTo(rwx, y);
 		for (var iii = 0; iii < nbWaves; iii++) {
 			pdfKitDoc.bezierCurveTo(rwx + sh, y - sv, rwx + sh * 2, y - sv, rwx + sh * 3, y)
-							.bezierCurveTo(rwx + sh * 4, y + sv, rwx + sh * 5, y + sv, rwx + sh * 6, y);
+				.bezierCurveTo(rwx + sh * 4, y + sv, rwx + sh * 5, y + sv, rwx + sh * 6, y);
 			rwx += sh * 6;
 		}
 		pdfKitDoc.stroke(group.decorationColor);
 
 	} else {
 		pdfKitDoc.fillColor(group.decorationColor)
-						.rect(x + firstInline.x, y - lw / 2, totalWidth, lw)
-						.fill();
+			.rect(x + firstInline.x, y - lw / 2, totalWidth, lw)
+			.fill();
 	}
 	pdfKitDoc.restore();
 }
@@ -136,8 +136,8 @@ function drawBackground(line, x, y, pdfKitDoc) {
 		var inline = line.inlines[i];
 		if (inline.background) {
 			pdfKitDoc.fillColor(inline.background)
-							.rect(x + inline.x, y, inline.width, height)
-							.fill();
+				.rect(x + inline.x, y, inline.width, height)
+				.fill();
 		}
 	}
 }

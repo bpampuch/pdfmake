@@ -358,14 +358,14 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 
 	if (this.dontBreakRows) {
 		writer.tracker.auto('pageChanged',
-						function () {
-							if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
-								self.drawHorizontalLine(rowIndex, writer);
-							}
-						},
-						function () {
-							writer.commitUnbreakableBlock();
-						}
+			function () {
+				if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
+					self.drawHorizontalLine(rowIndex, writer);
+				}
+			},
+			function () {
+				writer.commitUnbreakableBlock();
+			}
 		);
 	}
 

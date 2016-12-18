@@ -28,7 +28,7 @@ ElementWriter.prototype.addLine = function (line, dontUpdateContextPosition, ind
 	var height = line.getHeight();
 	var context = this.context;
 	var page = context.getCurrentPage(),
-					position = this.getCurrentPositionOnPage();
+		position = this.getCurrentPositionOnPage();
 
 	if (context.availableHeight < height || !page) {
 		return false;
@@ -73,9 +73,9 @@ ElementWriter.prototype.alignLine = function (line) {
 	}
 
 	if (alignment === 'justify' &&
-					!line.newLineForced &&
-					!line.lastLineInParagraph &&
-					line.inlines.length > 1) {
+		!line.newLineForced &&
+		!line.lastLineInParagraph &&
+		line.inlines.length > 1) {
 		var additionalSpacing = (width - lineWidth) / (line.inlines.length - 1);
 
 		for (var i = 1, l = line.inlines.length; i < l; i++) {
@@ -89,7 +89,7 @@ ElementWriter.prototype.alignLine = function (line) {
 ElementWriter.prototype.addImage = function (image, index) {
 	var context = this.context;
 	var page = context.getCurrentPage(),
-					position = this.getCurrentPositionOnPage();
+		position = this.getCurrentPositionOnPage();
 
 	if (context.availableHeight < image._height || !page) {
 		return false;
@@ -117,7 +117,7 @@ ElementWriter.prototype.addImage = function (image, index) {
 ElementWriter.prototype.addQr = function (qr, index) {
 	var context = this.context;
 	var page = context.getCurrentPage(),
-					position = this.getCurrentPositionOnPage();
+		position = this.getCurrentPositionOnPage();
 
 	if (context.availableHeight < qr._height || !page) {
 		return false;
@@ -161,7 +161,7 @@ ElementWriter.prototype.alignImage = function (image) {
 ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index) {
 	var context = this.context;
 	var page = context.getCurrentPage(),
-					position = this.getCurrentPositionOnPage();
+		position = this.getCurrentPositionOnPage();
 
 	if (page) {
 		offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);

@@ -26,7 +26,7 @@ describe('Integration test: columns', function () {
 		var pages = testHelper.renderPages('A5', dd);
 
 		var columnCount = 2,
-						columnSpacing = (sizes.A5[0] + dd.defaultStyle.columnGap) / columnCount;
+			columnSpacing = (sizes.A5[0] + dd.defaultStyle.columnGap) / columnCount;
 
 		assert.equal(pages.length, 1);
 		assert.equal(pages[0].items.length, 4);
@@ -57,7 +57,7 @@ describe('Integration test: columns', function () {
 		var pages = testHelper.renderPages('A5', dd);
 
 		var columnCount = 3,
-						columnSpacing = (sizes.A5[0] - (testHelper.MARGINS.left + testHelper.MARGINS.right) + dd.defaultStyle.columnGap) / columnCount;
+			columnSpacing = (sizes.A5[0] - (testHelper.MARGINS.left + testHelper.MARGINS.right) + dd.defaultStyle.columnGap) / columnCount;
 
 
 		assert.equal(pages.length, 1);
@@ -93,9 +93,9 @@ describe('Integration test: columns', function () {
 		var pages = testHelper.renderPages('A5', dd);
 
 		var leftColumnSpacing = testHelper.MARGINS.left,
-						definedWidth = dd.content[0].columns[0].width,
-						rightColumnSpacing = testHelper.MARGINS.left + definedWidth + dd.defaultStyle.columnGap,
-						starWidth = sizes.A5[0] - (testHelper.MARGINS.left + testHelper.MARGINS.right) - dd.defaultStyle.columnGap - definedWidth;
+			definedWidth = dd.content[0].columns[0].width,
+			rightColumnSpacing = testHelper.MARGINS.left + definedWidth + dd.defaultStyle.columnGap,
+			starWidth = sizes.A5[0] - (testHelper.MARGINS.left + testHelper.MARGINS.right) - dd.defaultStyle.columnGap - definedWidth;
 
 
 		assert.equal(pages.length, 1);
@@ -150,11 +150,11 @@ describe('Integration test: columns', function () {
 		var items = _.map(pages[0].items, 'item');
 
 		var definedWidth = dd.content[0].columns[2].width,
-						autoColumnSpacing = testHelper.MARGINS.left,
-						fixedColumnSpacing = sizes.A5[0] - testHelper.MARGINS.right - definedWidth,
-						autoWidth = _.chain(items).take(2).map('maxWidth').max().value(),
-						starWidth = sizes.A5[0] - (testHelper.MARGINS.left + testHelper.MARGINS.right) - 2 * dd.defaultStyle.columnGap - definedWidth - autoWidth,
-						starColumnSpacing = autoColumnSpacing + autoWidth + dd.defaultStyle.columnGap;
+			autoColumnSpacing = testHelper.MARGINS.left,
+			fixedColumnSpacing = sizes.A5[0] - testHelper.MARGINS.right - definedWidth,
+			autoWidth = _.chain(items).take(2).map('maxWidth').max().value(),
+			starWidth = sizes.A5[0] - (testHelper.MARGINS.left + testHelper.MARGINS.right) - 2 * dd.defaultStyle.columnGap - definedWidth - autoWidth,
+			starColumnSpacing = autoColumnSpacing + autoWidth + dd.defaultStyle.columnGap;
 
 
 		assert.equal(pages.length, 1);
@@ -209,8 +209,8 @@ describe('Integration test: columns', function () {
 		var items = _.map(pages[0].items, 'item');
 
 		var autoWidth = _.chain(items).take(2).map('maxWidth').max().value(),
-						leftColumnSpacing = testHelper.MARGINS.left,
-						rightColumnSpacing = leftColumnSpacing + autoWidth + dd.defaultStyle.columnGap;
+			leftColumnSpacing = testHelper.MARGINS.left,
+			rightColumnSpacing = leftColumnSpacing + autoWidth + dd.defaultStyle.columnGap;
 
 		assert.equal(pages.length, 1);
 		assert.equal(pages[0].items.length, 2);
@@ -250,9 +250,9 @@ describe('Integration test: columns', function () {
 
 		var gap = dd.defaultStyle.columnGap;
 		var loremIpsumWidth = _.chain(items).takeRight(3).map('maxWidth').max().value(),
-						definedWidth = dd.content[0].columns[0].width,
-						leftColumnSpacing = testHelper.MARGINS.left,
-						rightColumnSpacing = leftColumnSpacing + definedWidth + gap;
+			definedWidth = dd.content[0].columns[0].width,
+			leftColumnSpacing = testHelper.MARGINS.left,
+			rightColumnSpacing = leftColumnSpacing + definedWidth + gap;
 
 		assert.equal(pages.length, 1);
 		assert.equal(pages[0].items.length, 5);

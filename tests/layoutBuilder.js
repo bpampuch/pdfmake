@@ -1166,9 +1166,9 @@ describe('LayoutBuilder', function () {
 
 		it('should throw an exception if unrecognized structure is detected', function () {
 			assert.throws(
-							function () {
-								builder.layoutDocument([{ol: ['item', {abc: 'test'}]}], sampleTestProvider);
-							}
+				function () {
+					builder.layoutDocument([{ol: ['item', {abc: 'test'}]}], sampleTestProvider);
+				}
 			);
 		});
 

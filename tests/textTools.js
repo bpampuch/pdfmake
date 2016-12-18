@@ -96,11 +96,11 @@ describe('TextTools', function () {
 			fontSize: 8
 		}
 	},
-					{
-						fontSize: 15,
-						bold: false,
-						font: 'Helvetica'
-					});
+		{
+			fontSize: 15,
+			bold: false,
+			font: 'Helvetica'
+		});
 	var styleStackNoWrap = new StyleContextStack({}, {noWrap: true});
 
 	describe('splitWords', function () {

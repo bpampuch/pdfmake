@@ -29,8 +29,8 @@ TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
 	var measured = measure(this.fontProvider, textArray, styleContextStack);
 
 	var minWidth = 0,
-					maxWidth = 0,
-					currentLineWidth;
+		maxWidth = 0,
+		currentLineWidth;
 
 	measured.forEach(function (inline) {
 		minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);

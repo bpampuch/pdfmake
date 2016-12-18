@@ -26,24 +26,24 @@ describe('StyleContextStack', function () {
 		stackWithDefaultStyle = new StyleContextStack({}, defaultStyle);
 
 		fullStack = new StyleContextStack(
-						{
-							header: {
-								fontSize: 150,
-								font: 'Roboto'
-							},
-							small: {
-								fontSize: 8
-							},
-							samplebold: {
-								bold: true,
-							}
+			{
+				header: {
+					fontSize: 150,
+					font: 'Roboto'
+				},
+				small: {
+					fontSize: 8
+				},
+				samplebold: {
+					bold: true,
+				}
 
-						},
-						{
-							fontSize: 12,
-							bold: false,
-							font: 'Helvetica'
-						});
+			},
+			{
+				fontSize: 12,
+				bold: false,
+				font: 'Helvetica'
+			});
 	});
 
 	describe('getProperty', function () {

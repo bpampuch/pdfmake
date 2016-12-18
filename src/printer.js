@@ -109,9 +109,9 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	docDefinition.images = docDefinition.images || {};
 
 	var builder = new LayoutBuilder(
-					pageSize,
-					fixPageMargins(docDefinition.pageMargins || 40),
-					new ImageMeasure(this.pdfKitDoc, docDefinition.images));
+		pageSize,
+		fixPageMargins(docDefinition.pageMargins || 40),
+		new ImageMeasure(this.pdfKitDoc, docDefinition.images));
 
 	registerDefaultTableLayouts(builder);
 	if (options.tableLayouts) {

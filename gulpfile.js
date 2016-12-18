@@ -10,7 +10,7 @@ var replace = require('gulp-replace');
 var mocha = require('gulp-spawn-mocha');
 var jshint = require('gulp-jshint');
 var DEBUG = process.env.NODE_ENV === 'debug',
-  		 CI = process.env.CI === 'true';
+	CI = process.env.CI === 'true';
 
 var uglifyOptions = {
 	preserveComments: 'some',

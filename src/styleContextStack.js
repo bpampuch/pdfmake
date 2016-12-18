@@ -98,12 +98,12 @@ StyleContextStack.prototype.autopush = function (item) {
 		'background',
 		'lineHeight',
 		'noWrap'
-						//'tableCellPadding'
-						// 'cellBorder',
-						// 'headerCellBorder',
-						// 'oddRowCellBorder',
-						// 'evenRowCellBorder',
-						// 'tableBorder'
+			//'tableCellPadding'
+			// 'cellBorder',
+			// 'headerCellBorder',
+			// 'oddRowCellBorder',
+			// 'evenRowCellBorder',
+			// 'tableBorder'
 	].forEach(function (key) {
 		if (item[key] !== undefined && item[key] !== null) {
 			styleOverrideObject[key] = item[key];
