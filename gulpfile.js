@@ -1,5 +1,3 @@
-// initial version, doesn't bundle vfs_fonts yet
-
 var gulp = require('gulp');
 var webpack = require('webpack-stream');
 var gutil = require('gulp-util');
@@ -9,6 +7,8 @@ var sourcemaps = require('gulp-sourcemaps');
 var replace = require('gulp-replace');
 var mocha = require('gulp-spawn-mocha');
 var jshint = require('gulp-jshint');
+var each = require('gulp-each');
+var fc2json = require('gulp-file-contents-to-json');
 var DEBUG = process.env.NODE_ENV === 'debug',
 	CI = process.env.CI === 'true';
 
@@ -69,4 +69,18 @@ gulp.task('lint', function () {
 	return gulp.src(['./src/**/*.js'])
 		.pipe(jshint())
 		.pipe(jshint.reporter());
+});
+
+gulp.task('buildFonts', function () {
+	return gulp.src(['./examples/fonts/*.*'])
+		.pipe(each(function (content, file, callback) {
+			var newContent = new Buffer(content).toString('base64');
+			callback(null, newContent);
+		}, 'buffer'))
+		.pipe(fc2json('vfs_fonts.js'))
+		.pipe(each(function (content, file, callback) {
+			var newContent = 'window.pdfMake = window.pdfMake || {}; window.pdfMake.vfs = ' + content + ';';
+			callback(null, newContent);
+		}, 'buffer'))
+		.pipe(gulp.dest('build'));
 });

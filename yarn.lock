@@ -1521,6 +1521,20 @@ grunt@^1.0.1:
     path-is-absolute "~1.0.0"
     rimraf "~2.2.8"
 
+gulp-each@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/gulp-each/-/gulp-each-0.2.0.tgz#fd80e95410f7ec5f62a2338543a75cad2a245246"
+  dependencies:
+    event-stream "^3.3.1"
+
+gulp-file-contents-to-json@^0.2.1:
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/gulp-file-contents-to-json/-/gulp-file-contents-to-json-0.2.1.tgz#c8c18a051d1d0bf83319884cdbac47ab5ad305e2"
+  dependencies:
+    gulp-util "~3.0.1"
+    nconf "~0.6.9"
+    through2 "~0.6.1"
+
 gulp-jshint@^2.0.4:
   version "2.0.4"
   resolved "https://registry.yarnpkg.com/gulp-jshint/-/gulp-jshint-2.0.4.tgz#f382b18564b1072def0c9aaf753c146dadb4f0e8"
