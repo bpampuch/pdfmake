@@ -363,6 +363,17 @@ function renderVector(vector, pdfDoc) {
 			} else {
 				pdfDoc.rect(vector.x, vector.y, vector.w, vector.h);
 			}
+
+			if (vector.linearGradient) {
+				var gradient = pdfDoc.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
+				var step = 1 / (vector.linearGradient.length - 1);
+
+				for (var i = 0; i < vector.linearGradient.length; i++) {
+					gradient.stop(i * step, vector.linearGradient[i]);
+				}
+
+				vector.color = gradient;
+			}
 			break;
 		case 'line':
 			pdfDoc.moveTo(vector.x1, vector.y1);
