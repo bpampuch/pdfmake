@@ -321,6 +321,12 @@ LayoutBuilder.prototype.processNode = function (node) {
 			self.writer.context().moveTo(absPosition.x || 0, absPosition.y || 0);
 		}
 
+		var relPosition = node.relativePosition;
+		if(relPosition){
+			self.writer.context().beginDetachedBlock();
+			self.writer.context().moveTo((relPosition.x || 0) + self.writer.context().x, (relPosition.y || 0) + self.writer.context().y);
+		}
+
 		if (node.stack) {
 			self.processVerticalContainer(node);
 		} else if (node.columns) {
@@ -343,7 +349,7 @@ LayoutBuilder.prototype.processNode = function (node) {
 			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
 
-		if (absPosition) {
+		if (absPosition || relPosition) {
 			self.writer.context().endDetachedBlock();
 		}
 	});
