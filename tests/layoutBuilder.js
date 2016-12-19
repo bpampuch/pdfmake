@@ -1402,6 +1402,27 @@ describe('LayoutBuilder', function () {
 		});
 	});
 
+	describe('dynamic header/footer', function () {
+		var docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction;
+
+		beforeEach(function () {
+			fontProvider = sampleTestProvider;
+			styleDictionary = {};
+		});
+
+		it('should provide the page size', function () {
+			docStructure = ['Text'];
+			header = sinon.spy();
+			footer = sinon.spy();
+
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+
+			var pageSize = {width: 400, height: 800, orientation: 'portrait'};
+			assert.deepEqual(header.getCall(0).args[2], pageSize);
+			assert.deepEqual(footer.getCall(0).args[2], pageSize);
+		});
+	});
+
 	describe('dynamic page break control', function () {
 
 		var docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction;
@@ -1635,6 +1656,5 @@ describe('LayoutBuilder', function () {
 			assert.deepEqual(pageBreakBeforeFunction.getCall(2).args[0].pageNumbers, [1, 2]);
 			assert.deepEqual(pageBreakBeforeFunction.getCall(3).args[0].pageNumbers, [2]);
 		});
-
 	});
 });
