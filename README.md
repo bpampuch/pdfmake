@@ -271,15 +271,18 @@ var docDefinition = {
 };
 ```
 
-For dynamically generated content (including page numbers and page count) you can pass a function to the header or footer:
+For dynamically generated content (including page numbers, page count and page size) you can pass a function to the header or footer:
 
 ```js
 var docDefinition = {
   footer: function(currentPage, pageCount) { return currentPage.toString() + ' of ' + pageCount; },
-  header: function(currentPage, pageCount) {
+  header: function(currentPage, pageCount, pageSize) {
     // you can apply any logic and return any valid pdfmake element
 
-    return { text: 'simple text', alignment: (currentPage % 2) ? 'left' : 'right' };
+    return [
+      { text: 'simple text', alignment: (currentPage % 2) ? 'left' : 'right' },
+      { canvas: [ { type: 'rect', x: 170, y: 32, w: pageSize.width - 170, h: 40 } ] }
+    ]
   },
   (...)
 };
