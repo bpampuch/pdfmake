@@ -77,6 +77,21 @@ var docDefinition = {
 					y: 200,
 					w: 150,
 					h: 50,
+				},
+				{
+					type: 'rect',
+					x: 10, y: 200, w: 100, h: 10,
+					linearGradient: ['red', 'blue']
+				},
+				{
+					type: 'rect',
+					x: 10, y: 215, w: 100, h: 10,
+					linearGradient: ['red', 'green', 'blue']
+				},
+				{
+					type: 'rect',
+					x: 10, y: 230, w: 100, h: 10,
+					linearGradient: ['red', 'yellow', 'green', 'blue']
 				}
 			]
 		},
