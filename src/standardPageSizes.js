@@ -1,3 +1,6 @@
+/* jslint node: true */
+'use strict';
+
 module.exports = {
 	'4A0': [4767.87, 6740.79],
 	'2A0': [3370.39, 4767.87],
