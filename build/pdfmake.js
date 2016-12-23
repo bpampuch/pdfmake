@@ -132,7 +132,7 @@ return /******/ (function(modules) { // webpackBootstrap
 					blob = new Blob([result], {type: 'application/pdf'});
 				} catch (e) {
 					// Old browser which can't handle it without making it an byte array (ie10)
-					if (e.name == "InvalidStateError") {
+					if (e.name == 'InvalidStateError') {
 						var byteArray = new Uint8Array(result);
 						blob = new Blob([byteArray.buffer], {type: 'application/pdf'});
 					}
@@ -165,7 +165,7 @@ return /******/ (function(modules) { // webpackBootstrap
 					blob = new Blob([result], {type: 'application/pdf'});
 				} catch (e) {
 					// Old browser which can't handle it without making it an byte array (ie10)
-					if (e.name == "InvalidStateError") {
+					if (e.name == 'InvalidStateError') {
 						var byteArray = new Uint8Array(result);
 						blob = new Blob([byteArray.buffer], {type: 'application/pdf'});
 					}
@@ -186,7 +186,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	Document.prototype.download = function (defaultFileName, cb) {
-		if (typeof defaultFileName === "function") {
+		if (typeof defaultFileName === 'function') {
 			cb = defaultFileName;
 			defaultFileName = null;
 		}
@@ -198,7 +198,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				blob = new Blob([result], {type: 'application/pdf'});
 			} catch (e) {
 				// Old browser which can't handle it without making it an byte array (ie10)
-				if (e.name == "InvalidStateError") {
+				if (e.name == 'InvalidStateError') {
 					var byteArray = new Uint8Array(result);
 					blob = new Blob([byteArray.buffer], {type: 'application/pdf'});
 				}
@@ -208,7 +208,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			} else {
 				throw 'Could not generate blob';
 			}
-			if (typeof cb === "function") {
+			if (typeof cb === 'function') {
 				cb();
 			}
 		});
@@ -2282,7 +2282,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	var FontProvider = __webpack_require__(9);
 	var LayoutBuilder = __webpack_require__(10);
 	var PdfKit = __webpack_require__(23);
-	var PDFReference = __webpack_require__(49);
 	var sizes = __webpack_require__(269);
 	var ImageMeasure = __webpack_require__(270);
 	var textDecorator = __webpack_require__(271);
@@ -2365,7 +2364,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 		pageSize.orientation = docDefinition.pageOrientation === 'landscape' ? docDefinition.pageOrientation : 'portrait';
 
-		this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], compress: false});
+		this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], compress: docDefinition.compress || true});
 		this.pdfKitDoc.info.Producer = 'pdfmake';
 		this.pdfKitDoc.info.Creator = 'pdfmake';
 
@@ -2374,11 +2373,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (docDefinition.info) {
 			var info = docDefinition.info;
 			// check for falsey an set null, so that pdfkit always get either null or value
-			this.pdfKitDoc.info.Title = docDefinition.info.title ? docDefinition.info.title : null;
-			this.pdfKitDoc.info.Author = docDefinition.info.author ? docDefinition.info.author : null;
-			this.pdfKitDoc.info.Subject = docDefinition.info.subject ? docDefinition.info.subject : null;
-			this.pdfKitDoc.info.Keywords = docDefinition.info.keywords ? docDefinition.info.keywords : null;
-			this.pdfKitDoc.info.CreationDate = docDefinition.info.creationDate ? docDefinition.info.creationDate : null;
+			this.pdfKitDoc.info.Title = info.title ? info.title : null;
+			this.pdfKitDoc.info.Author = info.author ? info.author : null;
+			this.pdfKitDoc.info.Subject = info.subject ? info.subject : null;
+			this.pdfKitDoc.info.Keywords = info.keywords ? info.keywords : null;
+			this.pdfKitDoc.info.CreationDate = info.creationDate ? info.creationDate : null;
 		}
 
 		this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
@@ -2386,9 +2385,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		docDefinition.images = docDefinition.images || {};
 
 		var builder = new LayoutBuilder(
-						pageSize,
-						fixPageMargins(docDefinition.pageMargins || 40),
-						new ImageMeasure(this.pdfKitDoc, docDefinition.images));
+			pageSize,
+			fixPageMargins(docDefinition.pageMargins || 40),
+			new ImageMeasure(this.pdfKitDoc, docDefinition.images));
 
 		registerDefaultTableLayouts(builder);
 		if (options.tableLayouts) {
@@ -2412,8 +2411,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	function fixPageMargins(margin) {
-		if (!margin)
+		if (!margin) {
 			return null;
+		}
 
 		if (typeof margin === 'number' || margin instanceof Number) {
 			margin = {left: margin, right: margin, top: margin, bottom: margin};
@@ -2447,8 +2447,9 @@ return /******/ (function(modules) { // webpackBootstrap
 			},
 			headerLineOnly: {
 				hLineWidth: function (i, node) {
-					if (i === 0 || i === node.table.body.length)
+					if (i === 0 || i === node.table.body.length) {
 						return 0;
+					}
 					return (i === node.table.headerRows) ? 2 : 0;
 				},
 				vLineWidth: function (i) {
@@ -2463,8 +2464,9 @@ return /******/ (function(modules) { // webpackBootstrap
 			},
 			lightHorizontalLines: {
 				hLineWidth: function (i, node) {
-					if (i === 0 || i === node.table.body.length)
+					if (i === 0 || i === node.table.body.length) {
 						return 0;
+					}
 					return (i === node.table.headerRows) ? 2 : 1;
 				},
 				vLineWidth: function (i) {
@@ -2514,8 +2516,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	function pageSize2widthAndHeight(pageSize) {
 		if (typeof pageSize == 'string' || pageSize instanceof String) {
 			var size = sizes[pageSize.toUpperCase()];
-			if (!size)
+			if (!size) {
 				throw ('Page size ' + pageSize + ' not recognized');
+			}
 			return {width: size[0], height: size[1]};
 		}
 
@@ -2642,8 +2645,9 @@ return /******/ (function(modules) { // webpackBootstrap
 				pdfDoc.lineTo(vector.x2, vector.y2);
 				break;
 			case 'polyline':
-				if (vector.points.length === 0)
+				if (vector.points.length === 0) {
 					break;
+				}
 
 				pdfDoc.moveTo(vector.points[0].x, vector.points[0].y);
 				for (var i = 1, l = vector.points.length; i < l; i++) {
@@ -19930,9 +19934,9 @@ return /******/ (function(modules) { // webpackBootstrap
 					}).value();
 
 					if (pageBreakBeforeFct(node.nodeInfo,
-									_.map(followingNodesOnPage, 'nodeInfo'),
-									_.map(nodesOnNextPage, 'nodeInfo'),
-									_.map(previousNodesOnPage, 'nodeInfo'))) {
+						_.map(followingNodesOnPage, 'nodeInfo'),
+						_.map(nodesOnNextPage, 'nodeInfo'),
+						_.map(previousNodesOnPage, 'nodeInfo'))) {
 						node.pageBreak = 'before';
 						return true;
 					}
@@ -19964,7 +19968,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
 		this.writer = new PageElementWriter(
-						new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
+			new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
 		var _this = this;
 		this.writer.context().tracker.startTracking('pageAdded', function () {
@@ -19975,8 +19979,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		this.processNode(docStructure);
 		this.addHeadersAndFooters(header, footer);
 		/* jshint eqnull:true */
-		if (watermark != null)
+		if (watermark != null) {
 			this.addWatermark(watermark, fontProvider, defaultStyle);
+		}
 
 		return {pages: this.writer.context().pages, linearNodeList: this.linearNodeList};
 	};
@@ -20009,7 +20014,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		for (var pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
 			this.writer.context().page = pageIndex;
 
-			var node = nodeGetter(pageIndex + 1, l);
+			var node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
 
 			if (node) {
 				var sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
@@ -20224,8 +20229,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		var availableWidth = this.writer.context().availableWidth;
 		var gaps = gapArray(columnNode._gap);
 
-		if (gaps)
+		if (gaps) {
 			availableWidth -= (gaps.length - 1) * columnNode._gap;
+		}
 
 		ColumnCalculator.buildColumnWidths(columns, availableWidth);
 		var result = this.processRow(columns, columns, gaps);
@@ -20233,8 +20239,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 		function gapArray(gap) {
-			if (!gap)
+			if (!gap) {
 				return null;
+			}
 
 			var gaps = [];
 			gaps.push(0);
@@ -20302,16 +20309,18 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 
 		function colLeftOffset(i) {
-			if (gaps && gaps.length > i)
+			if (gaps && gaps.length > i) {
 				return gaps[i];
+			}
 			return 0;
 		}
 
 		function getEndingCell(column, columnIndex) {
 			if (column.rowSpan && column.rowSpan > 1) {
 				var endingRow = tableRow + column.rowSpan - 1;
-				if (endingRow >= tableBody.length)
+				if (endingRow >= tableBody.length) {
 					throw 'Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count';
+				}
 				return tableBody[endingRow][columnIndex];
 			}
 
@@ -20322,8 +20331,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	// lists
 	LayoutBuilder.prototype.processList = function (orderedList, node) {
 		var self = this,
-						items = orderedList ? node.ol : node.ul,
-						gapSize = node._gapSize;
+			items = orderedList ? node.ol : node.ul,
+			gapSize = node._gapSize;
 
 		this.writer.context().addMargin(gapSize.width);
 
@@ -20396,8 +20405,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	LayoutBuilder.prototype.buildNextLine = function (textNode) {
-		if (!textNode._inlines || textNode._inlines.length === 0)
+		if (!textNode._inlines || textNode._inlines.length === 0) {
 			return null;
+		}
 
 		var line = new Line(this.writer.context().availableWidth);
 
@@ -21069,8 +21079,8 @@ return /******/ (function(modules) { // webpackBootstrap
 		var measured = measure(this.fontProvider, textArray, styleContextStack);
 
 		var minWidth = 0,
-						maxWidth = 0,
-						currentLineWidth;
+			maxWidth = 0,
+			currentLineWidth;
 
 		measured.forEach(function (inline) {
 			minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);
@@ -21111,7 +21121,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {Object}                   size of the specified string
 	 */
 	TextTools.prototype.sizeOfString = function (text, styleContextStack) {
-		text = text ? text.replace('\t', '    ') : '';
+		text = text ? text.toString().replace('\t', '    ') : '';
 
 		//TODO: refactor - extract from measure
 		var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
@@ -21138,7 +21148,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		var array;
 		if (noWrap) {
-			array = [text, ""];
+			array = [text, ''];
 		} else {
 			array = text.match(WORD_RE);
 		}
@@ -21375,8 +21385,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return the number of items pushed onto the stack
 	 */
 	StyleContextStack.prototype.autopush = function (item) {
-		if (typeof item === 'string' || item instanceof String)
+		if (typeof item === 'string' || item instanceof String) {
 			return 0;
+		}
 
 		var styleNames = [];
 
@@ -21410,12 +21421,12 @@ return /******/ (function(modules) { // webpackBootstrap
 			'background',
 			'lineHeight',
 			'noWrap'
-							//'tableCellPadding'
-							// 'cellBorder',
-							// 'headerCellBorder',
-							// 'oddRowCellBorder',
-							// 'evenRowCellBorder',
-							// 'tableBorder'
+				//'tableCellPadding'
+				// 'cellBorder',
+				// 'headerCellBorder',
+				// 'oddRowCellBorder',
+				// 'evenRowCellBorder',
+				// 'tableBorder'
 		].forEach(function (key) {
 			if (item[key] !== undefined && item[key] !== null) {
 				styleOverrideObject[key] = item[key];
@@ -22669,8 +22680,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	DocumentContext.prototype.getCurrentPage = function () {
-		if (this.page < 0 || this.page >= this.pages.length)
+		if (this.page < 0 || this.page >= this.pages.length) {
 			return null;
+		}
 
 		return this.pages[this.page];
 	};
@@ -22695,12 +22707,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	function bottomMostContext(c1, c2) {
 		var r;
 
-		if (c1.page > c2.page)
+		if (c1.page > c2.page) {
 			r = c1;
-		else if (c2.page > c1.page)
+		} else if (c2.page > c1.page) {
 			r = c2;
-		else
+		} else {
 			r = (c1.y > c2.y) ? c1 : c2;
+		}
 
 		return {
 			page: r.page,
@@ -22910,7 +22923,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		var height = line.getHeight();
 		var context = this.context;
 		var page = context.getCurrentPage(),
-						position = this.getCurrentPositionOnPage();
+			position = this.getCurrentPositionOnPage();
 
 		if (context.availableHeight < height || !page) {
 			return false;
@@ -22955,9 +22968,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 
 		if (alignment === 'justify' &&
-						!line.newLineForced &&
-						!line.lastLineInParagraph &&
-						line.inlines.length > 1) {
+			!line.newLineForced &&
+			!line.lastLineInParagraph &&
+			line.inlines.length > 1) {
 			var additionalSpacing = (width - lineWidth) / (line.inlines.length - 1);
 
 			for (var i = 1, l = line.inlines.length; i < l; i++) {
@@ -22971,7 +22984,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	ElementWriter.prototype.addImage = function (image, index) {
 		var context = this.context;
 		var page = context.getCurrentPage(),
-						position = this.getCurrentPositionOnPage();
+			position = this.getCurrentPositionOnPage();
 
 		if (context.availableHeight < image._height || !page) {
 			return false;
@@ -22999,7 +23012,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	ElementWriter.prototype.addQr = function (qr, index) {
 		var context = this.context;
 		var page = context.getCurrentPage(),
-						position = this.getCurrentPositionOnPage();
+			position = this.getCurrentPositionOnPage();
 
 		if (context.availableHeight < qr._height || !page) {
 			return false;
@@ -23043,7 +23056,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index) {
 		var context = this.context;
 		var page = context.getCurrentPage(),
-						position = this.getCurrentPositionOnPage();
+			position = this.getCurrentPositionOnPage();
 
 		if (page) {
 			offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
@@ -23185,10 +23198,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	Line.prototype.hasEnoughSpaceForInline = function (inline) {
-		if (this.inlines.length === 0)
+		if (this.inlines.length === 0) {
 			return true;
-		if (this.newLineForced)
+		}
+		if (this.newLineForced) {
 			return false;
+		}
 
 		return this.inlineWidths + inline.width - this.leadingCut - (inline.trailingCut || 0) <= this.maxWidth;
 	};
@@ -23445,8 +23460,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineIndex, writer) {
 		var width = this.layout.vLineWidth(vLineIndex, this.tableNode);
-		if (width === 0)
+		if (width === 0) {
 			return;
+		}
 		writer.addVector({
 			type: 'line',
 			x1: x + width / 2,
@@ -23524,13 +23540,13 @@ return /******/ (function(modules) { // webpackBootstrap
 				// the current cell
 				if (colIndex < body[rowIndex].length) {
 					var cell = body[rowIndex][colIndex];
-					leftBorder = cell.border ? cell.border[0] : this.layout.defaultBorder
+					leftBorder = cell.border ? cell.border[0] : this.layout.defaultBorder;
 				}
 
 				// the cell from before column
 				if (colIndex > 0) {
 					var cell = body[rowIndex][colIndex - 1];
-					rightBorder = cell.border ? cell.border[2] : this.layout.defaultBorder
+					rightBorder = cell.border ? cell.border[2] : this.layout.defaultBorder;
 				}
 
 				if (leftBorder || rightBorder) {
@@ -23593,14 +23609,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		if (this.dontBreakRows) {
 			writer.tracker.auto('pageChanged',
-							function () {
-								if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
-									self.drawHorizontalLine(rowIndex, writer);
-								}
-							},
-							function () {
-								writer.commitUnbreakableBlock();
-							}
+				function () {
+					if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
+						self.drawHorizontalLine(rowIndex, writer);
+					}
+				},
+				function () {
+					writer.commitUnbreakableBlock();
+				}
 			);
 		}
 
@@ -27316,7 +27332,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */(function(Buffer, __dirname) {/* jslint node: true */
 	'use strict';
 
-	// var b64 = require('./base64.js').base64DecToArr;
 	function VirtualFileSystem() {
 		this.fileSystem = {};
 		this.baseSystem = {};
@@ -64945,35 +64960,35 @@ return /******/ (function(modules) { // webpackBootstrap
 	var Prefix = __webpack_require__(250);
 	var Transform = __webpack_require__(251);
 
-	const kDefaultCodeLength = 8;
-	const kCodeLengthRepeatCode = 16;
-	const kNumLiteralCodes = 256;
-	const kNumInsertAndCopyCodes = 704;
-	const kNumBlockLengthCodes = 26;
-	const kLiteralContextBits = 6;
-	const kDistanceContextBits = 2;
+	var kDefaultCodeLength = 8;
+	var kCodeLengthRepeatCode = 16;
+	var kNumLiteralCodes = 256;
+	var kNumInsertAndCopyCodes = 704;
+	var kNumBlockLengthCodes = 26;
+	var kLiteralContextBits = 6;
+	var kDistanceContextBits = 2;
 
-	const HUFFMAN_TABLE_BITS = 8;
-	const HUFFMAN_TABLE_MASK = 0xff;
+	var HUFFMAN_TABLE_BITS = 8;
+	var HUFFMAN_TABLE_MASK = 0xff;
 	/* Maximum possible Huffman table size for an alphabet size of 704, max code
 	 * length 15 and root table bits 8. */
-	const HUFFMAN_MAX_TABLE_SIZE = 1080;
+	var HUFFMAN_MAX_TABLE_SIZE = 1080;
 
-	const CODE_LENGTH_CODES = 18;
-	const kCodeLengthCodeOrder = new Uint8Array([
+	var CODE_LENGTH_CODES = 18;
+	var kCodeLengthCodeOrder = new Uint8Array([
 	  1, 2, 3, 4, 0, 5, 17, 6, 16, 7, 8, 9, 10, 11, 12, 13, 14, 15,
 	]);
 
-	const NUM_DISTANCE_SHORT_CODES = 16;
-	const kDistanceShortCodeIndexOffset = new Uint8Array([
+	var NUM_DISTANCE_SHORT_CODES = 16;
+	var kDistanceShortCodeIndexOffset = new Uint8Array([
 	  3, 2, 1, 0, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2
 	]);
 
-	const kDistanceShortCodeValueOffset = new Int8Array([
+	var kDistanceShortCodeValueOffset = new Int8Array([
 	  0, 0, 0, 0, -1, 1, -2, 2, -3, 3, -1, 1, -2, 2, -3, 3
 	]);
 
-	const kMaxHuffmanTableSize = new Uint16Array([
+	var kMaxHuffmanTableSize = new Uint16Array([
 	  256, 402, 436, 468, 500, 534, 566, 598, 630, 662, 694, 726, 758, 790, 822,
 	  854, 886, 920, 952, 984, 1016, 1048, 1080
 	]);
@@ -65540,7 +65555,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	       - always doing two 8-byte copies for fast backward copying
 	       - transforms
 	       - flushing the input ringbuffer when decoding uncompressed blocks */
-	  const kRingBufferWriteAheadSlack = 128 + BrotliBitReader.READ_SIZE;
+	  var kRingBufferWriteAheadSlack = 128 + BrotliBitReader.READ_SIZE;
 
 	  br = new BrotliBitReader(input);
 
@@ -65921,11 +65936,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	   Bit reading helpers
 	*/
 
-	const BROTLI_READ_SIZE = 4096;
-	const BROTLI_IBUF_SIZE =  (2 * BROTLI_READ_SIZE + 32);
-	const BROTLI_IBUF_MASK =  (2 * BROTLI_READ_SIZE - 1);
+	var BROTLI_READ_SIZE = 4096;
+	var BROTLI_IBUF_SIZE =  (2 * BROTLI_READ_SIZE + 32);
+	var BROTLI_IBUF_MASK =  (2 * BROTLI_READ_SIZE - 1);
 
-	const kBitMask = new Uint32Array([
+	var kBitMask = new Uint32Array([
 	  0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047, 4095, 8191, 16383, 32767,
 	  65535, 131071, 262143, 524287, 1048575, 2097151, 4194303, 8388607, 16777215
 	]);
@@ -66111,7 +66126,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.HuffmanCode = HuffmanCode;
 
-	const MAX_LENGTH = 15;
+	var MAX_LENGTH = 15;
 
 	/* Returns reverse(reverse(key, len) + 1, len), where reverse(key, len) is the
 	   bit-wise reversal of the len least significant bits of key. */
@@ -66339,10 +66354,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	   where offset1 and offset2 are dependent on the context mode.
 	*/
 
-	const CONTEXT_LSB6         = 0;
-	const CONTEXT_MSB6         = 1;
-	const CONTEXT_UTF8         = 2;
-	const CONTEXT_SIGNED       = 3;
+	var CONTEXT_LSB6         = 0;
+	var CONTEXT_MSB6         = 1;
+	var CONTEXT_UTF8         = 2;
+	var CONTEXT_SIGNED       = 3;
 
 	/* Common context lookup table for all context modes. */
 	exports.lookup = new Uint8Array([
@@ -66574,27 +66589,27 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var BrotliDictionary = __webpack_require__(245);
 
-	const kIdentity       = 0;
-	const kOmitLast1      = 1;
-	const kOmitLast2      = 2;
-	const kOmitLast3      = 3;
-	const kOmitLast4      = 4;
-	const kOmitLast5      = 5;
-	const kOmitLast6      = 6;
-	const kOmitLast7      = 7;
-	const kOmitLast8      = 8;
-	const kOmitLast9      = 9;
-	const kUppercaseFirst = 10;
-	const kUppercaseAll   = 11;
-	const kOmitFirst1     = 12;
-	const kOmitFirst2     = 13;
-	const kOmitFirst3     = 14;
-	const kOmitFirst4     = 15;
-	const kOmitFirst5     = 16;
-	const kOmitFirst6     = 17;
-	const kOmitFirst7     = 18;
-	const kOmitFirst8     = 19;
-	const kOmitFirst9     = 20;
+	var kIdentity       = 0;
+	var kOmitLast1      = 1;
+	var kOmitLast2      = 2;
+	var kOmitLast3      = 3;
+	var kOmitLast4      = 4;
+	var kOmitLast5      = 5;
+	var kOmitLast6      = 6;
+	var kOmitLast7      = 7;
+	var kOmitLast8      = 8;
+	var kOmitLast9      = 9;
+	var kUppercaseFirst = 10;
+	var kUppercaseAll   = 11;
+	var kOmitFirst1     = 12;
+	var kOmitFirst2     = 13;
+	var kOmitFirst3     = 14;
+	var kOmitFirst4     = 15;
+	var kOmitFirst5     = 16;
+	var kOmitFirst6     = 17;
+	var kOmitFirst7     = 18;
+	var kOmitFirst8     = 19;
+	var kOmitFirst9     = 20;
 
 	function Transform(prefix, transform, suffix) {
 	  this.prefix = new Uint8Array(prefix.length);
@@ -102015,7 +102030,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */(function(Buffer) {/* jslint node: true */
 	'use strict';
 
-	var pdfKit = __webpack_require__(23);
 	var PDFImage = __webpack_require__(263);
 
 	function ImageMeasure(pdfDoc, imageDictionary) {
@@ -102046,8 +102060,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		function realImageSrc(src) {
 			var img = that.imageDictionary[src];
 
-			if (!img)
+			if (!img) {
 				return src;
+			}
 
 			var index = img.indexOf('base64,');
 			if (index < 0) {
@@ -102085,8 +102100,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			for (var ii = 0, ll = decoration.length; ii < ll; ii++) {
 				var deco = decoration[ii];
 				if (!curGroup || deco !== curGroup.decoration ||
-								style !== curGroup.decorationStyle || color !== curGroup.decorationColor ||
-								deco === 'lineThrough') {
+					style !== curGroup.decorationStyle || color !== curGroup.decorationColor ||
+					deco === 'lineThrough') {
 
 					curGroup = {
 						line: line,
@@ -102122,12 +102137,12 @@ return /******/ (function(modules) { // webpackBootstrap
 			return sum;
 		}
 		var firstInline = group.inlines[0],
-						biggerInline = maxInline(),
-						totalWidth = width(),
-						lineAscent = group.line.getAscenderHeight(),
-						ascent = biggerInline.font.ascender / 1000 * biggerInline.fontSize,
-						height = biggerInline.height,
-						descent = height - ascent;
+			biggerInline = maxInline(),
+			totalWidth = width(),
+			lineAscent = group.line.getAscenderHeight(),
+			ascent = biggerInline.font.ascender / 1000 * biggerInline.fontSize,
+			height = biggerInline.height,
+			descent = height - ascent;
 
 		var lw = 0.5 + Math.floor(Math.max(biggerInline.fontSize - 8, 0) / 2) * 0.12;
 
@@ -102149,8 +102164,8 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (group.decorationStyle === 'double') {
 			var gap = Math.max(0.5, lw * 2);
 			pdfKitDoc.fillColor(group.decorationColor)
-							.rect(x + firstInline.x, y - lw / 2, totalWidth, lw / 2).fill()
-							.rect(x + firstInline.x, y + gap - lw / 2, totalWidth, lw / 2).fill();
+				.rect(x + firstInline.x, y - lw / 2, totalWidth, lw / 2).fill()
+				.rect(x + firstInline.x, y + gap - lw / 2, totalWidth, lw / 2).fill();
 		} else if (group.decorationStyle === 'dashed') {
 			var nbDashes = Math.ceil(totalWidth / (3.96 + 2.84));
 			var rdx = x + firstInline.x;
@@ -102178,15 +102193,15 @@ return /******/ (function(modules) { // webpackBootstrap
 			pdfKitDoc.moveTo(rwx, y);
 			for (var iii = 0; iii < nbWaves; iii++) {
 				pdfKitDoc.bezierCurveTo(rwx + sh, y - sv, rwx + sh * 2, y - sv, rwx + sh * 3, y)
-								.bezierCurveTo(rwx + sh * 4, y + sv, rwx + sh * 5, y + sv, rwx + sh * 6, y);
+					.bezierCurveTo(rwx + sh * 4, y + sv, rwx + sh * 5, y + sv, rwx + sh * 6, y);
 				rwx += sh * 6;
 			}
 			pdfKitDoc.stroke(group.decorationColor);
 
 		} else {
 			pdfKitDoc.fillColor(group.decorationColor)
-							.rect(x + firstInline.x, y - lw / 2, totalWidth, lw)
-							.fill();
+				.rect(x + firstInline.x, y - lw / 2, totalWidth, lw)
+				.fill();
 		}
 		pdfKitDoc.restore();
 	}
@@ -102204,8 +102219,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			var inline = line.inlines[i];
 			if (inline.background) {
 				pdfKitDoc.fillColor(inline.background)
-								.rect(x + inline.x, y, inline.width, height)
-								.fill();
+					.rect(x + inline.x, y, inline.width, height)
+					.fill();
 			}
 		}
 	}
