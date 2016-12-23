@@ -17,8 +17,10 @@ ImageMeasure.prototype.measureImage = function (src) {
 		try {
 			image = PDFImage.open(realImageSrc(src), label);
 		} catch (error) {
+			image = null;
+		}
+		if (image === null) {
 			throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
-
 		}
 		image.embed(this.pdfDoc);
 		this.pdfDoc._imageRegistry[src] = image;
