@@ -1,15 +1,15 @@
 var path = require("path");
 
 function mp(relFontPath) {
-    return path.resolve(__dirname, relFontPath)
+	return path.resolve(__dirname, relFontPath)
 }
 
 var fonts = {
 	Roboto: {
 		normal: mp('./fonts/Roboto-Regular.ttf'),
-		bold:  mp('./fonts/Roboto-Medium.ttf'),
-		italics:  mp('./fonts/Roboto-Italic.ttf'),
-		bolditalics:  mp('./fonts/Roboto-Italic.ttf')
+		bold: mp('./fonts/Roboto-Medium.ttf'),
+		italics: mp('./fonts/Roboto-Italic.ttf'),
+		bolditalics: mp('./fonts/Roboto-Italic.ttf')
 	}
 };
 
@@ -23,26 +23,26 @@ var longText = 'The amount of data that can be stored in the QR code symbol depe
 
 
 function header(text) {
-  return { text: text, margins: [ 0,0,0, 8 ] }
+	return {text: text, margins: [0, 0, 0, 8]}
 }
 
 var docDefinition = {
-  pageMargins: [10, 10, 10, 10],
-  content: [
-    header(greeting),
-    { qr: greeting },
-    '\n',
-    
-    header(url),
-    { qr: url },
-    '\n',
-    
-    header('A very long text (' + longText.length + ' chars)'),
-    { qr: longText },
-    '\n',
-    header('same long text with fit = 100 and alignment = right'),
-    { qr: longText, fit: 150, alignment: 'right' },
-  ]
+	pageMargins: [10, 10, 10, 10],
+	content: [
+		header(greeting),
+		{qr: greeting},
+		'\n',
+
+		header(url),
+		{qr: url},
+		'\n',
+
+		header('A very long text (' + longText.length + ' chars)'),
+		{qr: longText},
+		'\n',
+		header('same long text with fit = 100 and alignment = right'),
+		{qr: longText, fit: 150, alignment: 'right'},
+	]
 }
 
 var pdfDoc = printer.createPdfKitDocument(docDefinition);

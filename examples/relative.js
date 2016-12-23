@@ -27,12 +27,12 @@ buildXAxis();
 buildYAxis();
 
 var documentDefinition = {content: [
-	{text: 'We sometimes don\'t know the absolute position of text', margin: [10, 0, 0, 50]},
-	{columns: [
-		{width: '50%', text: 'horizontal position is not known either'},
-		{width: '50%', stack: chart}
-	]}
-]};
+		{text: 'We sometimes don\'t know the absolute position of text', margin: [10, 0, 0, 50]},
+		{columns: [
+				{width: '50%', text: 'horizontal position is not known either'},
+				{width: '50%', stack: chart}
+			]}
+	]};
 
 var pdfDoc = printer.createPdfKitDocument(documentDefinition);
 pdfDoc.pipe(fs.createWriteStream('pdfs/relative.pdf'));
@@ -49,7 +49,7 @@ function buildXAxis() {
 
 	chartLines.push(horizontalLine(left + yAxisWidth - 1, top + height - xAxisHeight, width - yAxisWidth + 1));
 
-	xTicks.forEach(function(tick) {
+	xTicks.forEach(function (tick) {
 		chartLines.push(verticalLine(left + yAxisWidth + tick.x - 0.5, top + height - xAxisHeight, tickSize));
 		chartText.push({text: tick.t, fontSize: 8, relativePosition: {x: left + yAxisWidth + tick.x - 9, y: top + height - xAxisHeight + tickSize + 2}});
 	});
@@ -66,7 +66,7 @@ function buildYAxis() {
 
 	chartLines.push(verticalLine(left + yAxisWidth - 0.5, top - 0.5, height - xAxisHeight));
 
-	yTicks.forEach(function(tick) {
+	yTicks.forEach(function (tick) {
 		chartLines.push(horizontalLine(left + yAxisWidth - tickSize - 1, top + tick.y, tickSize));
 		chartText.push({text: tick.t, fontSize: 8, relativePosition: {x: left + yAxisWidth - tickSize - 8, y: top + tick.y - 5}});
 	});

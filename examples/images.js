@@ -57,4 +57,4 @@ var now = new Date();
 var pdfDoc = printer.createPdfKitDocument(docDefinition);
 pdfDoc.pipe(fs.createWriteStream('pdfs/images.pdf'));
 pdfDoc.end();
-console.log(new Date()-now);
+console.log(new Date() - now);
