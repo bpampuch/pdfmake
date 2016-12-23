@@ -322,7 +322,7 @@ LayoutBuilder.prototype.processNode = function (node) {
 		}
 
 		var relPosition = node.relativePosition;
-		if(relPosition){
+		if (relPosition) {
 			self.writer.context().beginDetachedBlock();
 			self.writer.context().moveTo((relPosition.x || 0) + self.writer.context().x, (relPosition.y || 0) + self.writer.context().y);
 		}
