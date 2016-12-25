@@ -299,17 +299,22 @@ function renderLine(line, x, y, pdfKitDoc) {
 	x = x || 0;
 	y = y || 0;
 
+	var lineHeight = line.getHeight();
+	var ascenderHeight = line.getAscenderHeight();
+	var descent = lineHeight - ascenderHeight;
+
 	textDecorator.drawBackground(line, x, y, pdfKitDoc);
 
 	//TODO: line.optimizeInlines();
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
+		var shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
 
 		pdfKitDoc.fill(inline.color || 'black');
 
 		pdfKitDoc._font = inline.font;
 		pdfKitDoc.fontSize(inline.fontSize);
-		pdfKitDoc.text(inline.text, x + inline.x, y, {
+		pdfKitDoc.text(inline.text, x + inline.x, y + shiftToBaseline, {
 			lineBreak: false,
 			textWidth: inline.width,
 			wordCount: 1,
