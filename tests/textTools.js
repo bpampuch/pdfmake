@@ -106,7 +106,7 @@ describe('TextTools', function () {
 	describe('splitWords', function () {
 		it('should do basic splitting', function () {
 			var result = textTools.splitWords(sampleText);
-			assert.equal(result.length, 9);
+			assert.equal(result.length, 8);
 		});
 
 		it('should not set lineEnd on inlines if there are no new-lines', function () {
@@ -119,7 +119,7 @@ describe('TextTools', function () {
 
 		it('should split into lines if there are new-line chars', function () {
 			var result = textTools.splitWords(sampleText2);
-			assert.equal(result.length, 15);
+			assert.equal(result.length, 14);
 		});
 
 		it('should split properly when adjacent newlines appear', function () {
@@ -142,6 +142,16 @@ describe('TextTools', function () {
 			assert.equal(result[0].text, 'A    ');
 			assert.equal(result[1].text, 'test');
 		});
+
+		it('should split basic Chinese text', function () {
+			var result = textTools.splitWords('起来！不愿做奴隶的人们！');
+			assert.equal(result.length, 10);
+		});
+
+		it('should split Chinese text into lines if there are new-line chars', function () {
+			var result = textTools.splitWords('中华民族到了最危险的时候，\n每个人被迫着发出最后的吼声。\n起来！起来！起来！');
+			assert.equal(result.length, 31);
+		});
 	});
 
 	describe('normalizeTextArray', function () {
@@ -157,22 +167,22 @@ describe('TextTools', function () {
 
 		it('should support an array of plain strings', function () {
 			var result = textTools.normalizeTextArray(plainTextArray);
-			assert.equal(result.length, 8);
+			assert.equal(result.length, 7);
 		});
 
 		it('should support an array of plain strings with new-lines', function () {
 			var result = textTools.normalizeTextArray(plainTextArray);
-			assert.equal(result[5].lineEnd, true);
+			assert.equal(result[4].lineEnd, true);
 		});
 
 		it('should support arrays with style definition', function () {
 			var result = textTools.normalizeTextArray(mixedTextArray);
-			assert.equal(result.length, 8);
+			assert.equal(result.length, 7);
 		});
 
 		it('should keep style definitions after splitting new-lines', function () {
 			var result = textTools.normalizeTextArray(mixedTextArray);
-			[0, 2, 3, 4, 5, 6, 7].forEach(function (i) {
+			[0, 2, 3, 4, 5, 6].forEach(function (i) {
 				assert.equal(result[i].bold, true);
 			});
 
@@ -181,9 +191,9 @@ describe('TextTools', function () {
 
 		it('should keep unknown style fields after splitting new-lines', function () {
 			var result = textTools.normalizeTextArray(mixedTextArrayWithUnknownStyleDefinitions);
-			assert.equal(result.length, 8);
+			assert.equal(result.length, 7);
+			assert.equal(result[5].unknownStyle, 123);
 			assert.equal(result[6].unknownStyle, 123);
-			assert.equal(result[7].unknownStyle, 123);
 		});
 	});
 
@@ -217,8 +227,8 @@ describe('TextTools', function () {
 
 		it('should set leading and trailing cuts to 0 if texts cannot be trimmed', function () {
 			var result = textTools.measure(sampleTestProvider, plainTextArray);
-			assert.equal(result[5].trailingCut, 0);
-			assert.equal(result[5].leadingCut, 0);
+			assert.equal(result[6].trailingCut, 0);
+			assert.equal(result[6].leadingCut, 0);
 		});
 
 		// styling

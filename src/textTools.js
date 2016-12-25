@@ -1,8 +1,7 @@
 /* jslint node: true */
 'use strict';
 
-var WORD_RE = /([^ ,\/!.?:;\-\n]*[ ,\/!.?:;\-]*)|\n/g;
-// /\S*\s*/g to be considered (I'm not sure however - we shouldn't split 'aaa !!!!')
+var LineBreaker = require('linebreak');
 
 var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;
@@ -96,31 +95,28 @@ function splitWords(text, noWrap) {
 	var results = [];
 	text = text ? text.toString().replace('\t', '    ') : '';
 
-	var array;
 	if (noWrap) {
-		array = [text, ''];
-	} else {
-		array = text.match(WORD_RE);
+		results.push({text: text});
+		return results;
 	}
-	// i < l - 1, because the last match is always an empty string
-	// other empty strings however are treated as new-lines
-	for (var i = 0, l = array.length; i < l - 1; i++) {
-		var item = array[i];
 
-		var isNewLine = item.length === 0;
+	var breaker = new LineBreaker(text);
+	var last = 0;
+	var bk;
 
-		if (!isNewLine) {
-			results.push({text: item});
+	while (bk = breaker.nextBreak()) {
+		var word = text.slice(last, bk.position);
+
+		if (bk.required || word.match(/\r?\n$|\r$/)) { // new line
+			word = word.replace(/\r?\n$|\r$/, '');
+			results.push({text: word, lineEnd: true});
 		} else {
-			var shouldAddLine = (results.length === 0 || results[results.length - 1].lineEnd);
-
-			if (shouldAddLine) {
-				results.push({text: '', lineEnd: true});
-			} else {
-				results[results.length - 1].lineEnd = true;
-			}
+			results.push({text: word});
 		}
+
+		last = bk.position;
 	}
+
 	return results;
 }
 
