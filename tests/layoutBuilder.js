@@ -68,7 +68,7 @@ describe('LayoutBuilder', function () {
 			return {
 				width: 1,
 				height: 1
-			}
+			};
 		}
 	};
 

@@ -13,7 +13,7 @@ describe('Integration test: background', function () {
 			background: function (page) {
 				return [
 					'Background paragraph on page ' + page
-				]
+				];
 			},
 			content: [
 				'First page',

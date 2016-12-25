@@ -232,7 +232,7 @@ describe('TextTools', function () {
 			var result = textTools.measure(sampleTestProvider, 'Imię', styleStack);
 			assert.equal(result[0].width, 4 * 150);
 			styleStack.pop();
-		})
+		});
 
 		it('should support style overrides at text definition level', function () {
 			var result = textTools.measure(sampleTestProvider, [{text: 'Imię', fontSize: 20}], styleStack);
