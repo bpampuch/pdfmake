@@ -311,6 +311,8 @@ function renderLine(line, x, y, pdfKitDoc) {
 		pdfKitDoc.fontSize(inline.fontSize);
 		pdfKitDoc.text(inline.text, x + inline.x, y, {
 			lineBreak: false,
+			textWidth: inline.width,
+			wordCount: 1,
 			link: inline.link
 		});
 	}
