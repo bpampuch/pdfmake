@@ -48,6 +48,7 @@ function PdfPrinter(fontDescriptors) {
  * @param {Number} docDefinition.pageSize.width width
  * @param {Number} docDefinition.pageSize.height height
  * @param {Object} [docDefinition.pageMargins] page margins (pdfkit units)
+ * @param {Number} docDefinition.maxPagesNumber maximum number of pages to render
  *
  * @example
  *
@@ -119,7 +120,11 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	}
 
 	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
-
+	var maxNumberPages = docDefinition.maxPagesNumber || -1;
+	if (typeof maxNumberPages === 'number' && maxNumberPages > -1) {
+		pages = pages.slice(0, maxNumberPages);
+	}
+	
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
 	if (options.autoPrint) {
