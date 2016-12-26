@@ -418,6 +418,9 @@ function renderVector(vector, pdfDoc) {
 
 function renderImage(image, x, y, pdfKitDoc) {
 	pdfKitDoc.image(image.image, image.x, image.y, {width: image._width, height: image._height});
+	if (image.link) {
+		pdfKitDoc.link(image.x, image.y, image._width, image._height, image.link);
+	}
 }
 
 module.exports = PdfPrinter;
