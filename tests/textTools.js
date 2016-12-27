@@ -143,6 +143,11 @@ describe('TextTools', function () {
 			assert.equal(result[1].text, 'test');
 		});
 
+		it('should split ZERO WIDTH SPACE character', function () {
+			var result = textTools.splitWords('first line\u200Bsecond line\u200Bthird line');
+			assert.equal(result.length, 6);
+		});
+
 		it('should split basic Chinese text', function () {
 			var result = textTools.splitWords('起来！不愿做奴隶的人们！');
 			assert.equal(result.length, 10);
