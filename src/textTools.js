@@ -136,8 +136,8 @@ function copyStyle(source, destination) {
 function normalizeTextArray(array) {
 	var results = [];
 
-	if (typeof array == 'string' || array instanceof String) {
-		array = [array];
+	if (typeof array === 'string' || array instanceof String || typeof array === 'number') {
+		array = [array.toString()];
 	}
 
 	for (var i = 0, l = array.length; i < l; i++) {
@@ -145,8 +145,8 @@ function normalizeTextArray(array) {
 		var style = null;
 		var words;
 
-		if (typeof item == 'string' || item instanceof String) {
-			words = splitWords(item);
+		if (typeof item === 'string' || item instanceof String || typeof array === 'number') {
+			words = splitWords(item.toString());
 		} else {
 			words = splitWords(item.text, item.noWrap);
 			style = copyStyle(item);
