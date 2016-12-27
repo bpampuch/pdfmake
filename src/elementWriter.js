@@ -123,7 +123,11 @@ ElementWriter.prototype.addQr = function (qr, index) {
 		return false;
 	}
 
-	qr.x = context.x + (qr.x || 0);
+	if (qr._x === undefined) {
+		qr._x = qr.x || 0;
+	}
+
+	qr.x = context.x + qr._x;
 	qr.y = context.y;
 
 	this.alignImage(qr);
