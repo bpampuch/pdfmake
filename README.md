@@ -50,7 +50,12 @@ To begin with the default configuration, you should include two files:
 ...
 ```
 
-You can get both files using bower:
+You can get both files using npm:
+```
+npm install pdfmake
+```
+
+or bower:
 ```
 bower install pdfmake
 ```
