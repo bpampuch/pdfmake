@@ -1,7 +1,6 @@
-.git*
 docs/
 examples/
 tests/
 src/browser-extensions/
-.DS_Store
+test-env/
 yarn.lock
