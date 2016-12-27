@@ -757,8 +757,8 @@ function buildCanvas(data, options) {
 			if (matrix[i][j]) {
 				canvas.push({
 					type: 'rect',
-					x: modSize * i,
-					y: modSize * j,
+					x: modSize * j,
+					y: modSize * i,
 					w: modSize,
 					h: modSize,
 					lineWidth: 0,
