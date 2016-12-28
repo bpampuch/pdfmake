@@ -1,6 +1,10 @@
+.git*
 docs/
 examples/
 tests/
 src/browser-extensions/
 test-env/
 yarn.lock
+composer.json
+bower.json
+.travis.yml
