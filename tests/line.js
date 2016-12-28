@@ -164,5 +164,5 @@ describe('Line', function () {
 
 		it('should take into account baseline offsets', function () {
 		});
-	})
+	});
 });

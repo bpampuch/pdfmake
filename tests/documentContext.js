@@ -97,7 +97,7 @@ describe('DocumentContext', function () {
 			pc.beginColumn(30);
 			pc.page = 3;
 			pc.beginColumn(30);
-			pc.page = 7
+			pc.page = 7;
 			pc.beginColumn(30);
 			pc.page = 4;
 			pc.completeColumnGroup();
@@ -308,7 +308,7 @@ describe('DocumentContext', function () {
 
 	it('should support nesting', function () {
 		pc.beginColumnGroup();
-		pc.beginColumn(50)
+		pc.beginColumn(50);
 		pc.y = 200;
 		pc.beginColumn(40);
 		pc.y = 150;

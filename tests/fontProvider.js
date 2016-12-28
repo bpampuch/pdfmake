@@ -1,7 +1,7 @@
 /* jslint node: true */
 'use strict';
 
-var assert = require('assert')
+var assert = require('assert');
 var _ = require('lodash');
 
 var FontProvider = require('../src/fontProvider');

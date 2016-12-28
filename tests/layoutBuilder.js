@@ -652,7 +652,7 @@ describe('LayoutBuilder', function () {
 						'item 3'
 					]
 				}
-			]
+			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages.length, 1);
@@ -669,7 +669,7 @@ describe('LayoutBuilder', function () {
 						'item 3'
 					]
 				}
-			]
+			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages.length, 1);

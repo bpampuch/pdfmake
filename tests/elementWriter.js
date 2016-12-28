@@ -61,7 +61,7 @@ describe('ElementWriter', function () {
 		it('should add lines to the current page if there\'s enough space', function () {
 			var line = buildLine(20);
 
-			var position = ew.addLine(line)
+			var position = ew.addLine(line);
 
 			assert.equal(page.items.length, 1);
 			assert.equal(position, fakePosition);
