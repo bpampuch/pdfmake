@@ -23,13 +23,14 @@
     "gulpfile.js",
     "webpack.config.js",
     "README.md",
-    "bootstrap",
     "bower.json",
     "examples",
     "node_modules",
     "package.json",
     "src",
     "tests",
-    "yarn.lock"
+    "yarn.lock",
+    "composer.json",
+    ".travis.yml"
   ]
 }
