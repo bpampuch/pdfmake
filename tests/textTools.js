@@ -125,7 +125,7 @@ describe('TextTools', function () {
 
 			result.forEach(function (item) {
 				assert.notEqual(item.lineEnd, true);
-			})
+			});
 		});
 
 		it('should split into lines if there are new-line chars', function () {

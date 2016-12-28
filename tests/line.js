@@ -69,9 +69,9 @@ describe('Line', function () {
 		it('should set trailingCut everytime inline is added', function () {
 			var line = new Line(100);
 			line.addInline({width: 30, trailingCut: 20});
-			assert.equal(line.trailingCut, 20)
+			assert.equal(line.trailingCut, 20);
 			line.addInline({width: 30, trailingCut: 22});
-			assert.equal(line.trailingCut, 22)
+			assert.equal(line.trailingCut, 22);
 		});
 
 		it('should set x to 0 for first inline if there is no left-trimming (leadingCut)', function () {
@@ -87,9 +87,9 @@ describe('Line', function () {
 			line.addInline({width: 40, leadingCut: 0, trailingCut: 0});
 			line.addInline({width: 10, leadingCut: 0, trailingCut: 0});
 
-			assert.equal(line.inlines[0].x, 0)
-			assert.equal(line.inlines[1].x, 40)
-			assert.equal(line.inlines[2].x, 80)
+			assert.equal(line.inlines[0].x, 0);
+			assert.equal(line.inlines[1].x, 40);
+			assert.equal(line.inlines[2].x, 80);
 		});
 
 		it('should set x to -leadingCut for first inline when its left-trimmed', function () {

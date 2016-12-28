@@ -81,18 +81,18 @@ describe('TableProcessor', function () {
 
 		var processor = new TableProcessor(tableNode);
 		defaultLayout.vLineColor = function () {
-			return 'nice shiny color'
+			return 'nice shiny color';
 		};
 		defaultLayout.hLineColor = function () {
-			return 'nice shiny color'
+			return 'nice shiny color';
 		};
 		processor.layout = defaultLayout;
-		processor.rowSpanData = [{left: 0, rowSpan: 0}, {left: 0, rowSpan: 0}]
+		processor.rowSpanData = [{left: 0, rowSpan: 0}, {left: 0, rowSpan: 0}];
 
 		processor.beginRow(0, writerFake);
 		processor.endRow(0, writerFake, []);
 
-		assert.equal(addVectorCallCount, 3)
+		assert.equal(addVectorCallCount, 3);
 	});
 
 	it('should use the line colors constants (regression #161)', function () {
@@ -118,7 +118,7 @@ describe('TableProcessor', function () {
 		defaultLayout.vLineColor = 'nice shiny color';
 		defaultLayout.hLineColor = 'nice shiny color';
 		processor.layout = defaultLayout;
-		processor.rowSpanData = [{left: 0, rowSpan: 0}, {left: 0, rowSpan: 0}]
+		processor.rowSpanData = [{left: 0, rowSpan: 0}, {left: 0, rowSpan: 0}];
 
 		processor.beginRow(0, writerFake);
 		processor.endRow(0, writerFake, []);
