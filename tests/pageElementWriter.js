@@ -22,8 +22,8 @@ describe('PageElementWriter', function () {
 		bottom: 70
 	};
 
-	AVAILABLE_HEIGHT = 1000;
-	AVAILABLE_WIDTH = 500;
+	var AVAILABLE_HEIGHT = 1000;
+	var AVAILABLE_WIDTH = 500;
 
 	function buildLine(height, alignment, x, y) {
 		return {
