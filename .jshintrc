@@ -10,5 +10,6 @@
   "smarttabs": true,
   "trailing": true,
   "undef": true,
-  "unused": true
+  "unused": true,
+  "mocha": true
 }
