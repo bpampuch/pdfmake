@@ -396,8 +396,8 @@ describe('DocMeasure', function () {
 			assert.equal(tableNode.table.body[rows - 3][0]._maxWidth, 0);
 			assert.equal(tableNode.table.body[rows - 2][0]._minWidth, 0);
 			assert.equal(tableNode.table.body[rows - 2][0]._maxWidth, 0);
-			assert(tableNode.table.body[rows - 1][0]._minWidth != 0);
-			assert(tableNode.table.body[rows - 1][0]._maxWidth != 0);
+			assert(tableNode.table.body[rows - 1][0]._minWidth !== 0);
+			assert(tableNode.table.body[rows - 1][0]._maxWidth !== 0);
 		});
 	});
 
