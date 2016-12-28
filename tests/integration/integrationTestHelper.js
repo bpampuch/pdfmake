@@ -1,3 +1,6 @@
+/* jslint node: true */
+'use strict';
+
 var _ = require('lodash');
 
 var sizes = require('../../src/standardPageSizes');

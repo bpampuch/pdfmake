@@ -1,5 +1,6 @@
 /* jslint node: true */
 'use strict';
+
 var assert = require('assert');
 var _ = require('lodash');
 var sinon = require('sinon');
@@ -147,7 +148,7 @@ describe('TableProcessor', function () {
 						vLineWidth: _.noop,
 						hLineWidth: _.noop
 					}
-				}
+				};
 			};
 
 			var header = {};
@@ -167,7 +168,7 @@ describe('TableProcessor', function () {
 					return {
 						availableWidth: 56473,
 						moveDown: _.noop
-					}
+					};
 				},
 				repeatables: [],
 				tracker: {

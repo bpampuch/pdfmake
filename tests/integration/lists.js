@@ -1,3 +1,6 @@
+/* jslint node: true */
+'use strict';
+
 var assert = require('assert');
 var _ = require('lodash');
 var sizes = require('../../src/standardPageSizes');
@@ -17,7 +20,7 @@ describe('Integration test: lists', function () {
 		return {
 			bullet: bullet && bullet.item,
 			content: content && content.item
-		}
+		};
 	}
 
 	it('renders a ordered list', function () {

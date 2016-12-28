@@ -1,3 +1,6 @@
+/* jslint node: true */
+'use strict';
+
 var assert = require('assert');
 var sinon = require('sinon');
 var _ = require('lodash');
@@ -29,7 +32,7 @@ var sampleTestProvider = {
 			},
 			ascender: 150,
 			descender: -50
-		}
+		};
 	}
 };
 

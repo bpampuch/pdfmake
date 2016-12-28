@@ -1,3 +1,6 @@
+/* jslint node: true */
+'use strict';
+
 var assert = require('assert');
 
 var DocMeasure = require('../src/docMeasure');
@@ -12,7 +15,7 @@ var sampleTestProvider = {
 			lineHeight: function (size) {
 				return size;
 			}
-		}
+		};
 	}
 };
 

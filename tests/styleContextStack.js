@@ -1,3 +1,6 @@
+/* jslint node: true */
+'use strict';
+
 var assert = require('assert');
 
 var StyleContextStack = require('../src/styleContextStack');
@@ -11,7 +14,7 @@ var sampleTestProvider = {
 			lineHeight: function (size) {
 				return size;
 			}
-		}
+		};
 	}
 };
 

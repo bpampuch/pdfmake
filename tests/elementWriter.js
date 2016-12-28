@@ -1,3 +1,6 @@
+/* jslint node: true */
+'use strict';
+
 var assert = require('assert');
 
 var ElementWriter = require('../src/elementWriter');
