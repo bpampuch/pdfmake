@@ -93,7 +93,7 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 
 function splitWords(text, noWrap) {
 	var results = [];
-	text = text ? text.toString().replace('\t', '    ') : '';
+	text = text.replace('\t', '    ');
 
 	if (noWrap) {
 		results.push({text: text});
@@ -136,8 +136,8 @@ function copyStyle(source, destination) {
 function normalizeTextArray(array) {
 	var results = [];
 
-	if (typeof array === 'string' || array instanceof String || typeof array === 'number') {
-		array = [array.toString()];
+	if (!Array.isArray(array)) {
+		array = [array];
 	}
 
 	for (var i = 0, l = array.length; i < l; i++) {
@@ -145,11 +145,11 @@ function normalizeTextArray(array) {
 		var style = null;
 		var words;
 
-		if (typeof item === 'string' || item instanceof String || typeof array === 'number') {
-			words = splitWords(item.toString());
-		} else {
-			words = splitWords(item.text, item.noWrap);
+		if (item !== null && (typeof item === 'object' || item instanceof Object)) {
+			words = splitWords(normalizeString(item.text), item.noWrap);
 			style = copyStyle(item);
+		} else {
+			words = splitWords(normalizeString(item));
 		}
 
 		for (var i2 = 0, l2 = words.length; i2 < l2; i2++) {
@@ -168,6 +168,18 @@ function normalizeTextArray(array) {
 	}
 
 	return results;
+}
+
+function normalizeString(value) {
+	if (value === undefined || value === null) {
+		return '';
+	} else if (typeof value === 'number') {
+		return value.toString();
+	} else if (typeof value === 'string' || value instanceof String) {
+		return value;
+	} else {
+		return value.toString();
+	}
 }
 
 //TODO: support for other languages (currently only polish is supported)

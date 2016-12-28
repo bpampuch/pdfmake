@@ -87,6 +87,14 @@ describe('TextTools', function () {
 		'         text having two lines       '
 	];
 
+	var mixedTextArrayWithVariousTypes = [
+		{text: ''},
+		{text: null},
+		{text: 2016},
+		{text: true},
+		{text: false}
+	];
+
 	var styleStack = new StyleContextStack({
 		header: {
 			fontSize: 150,
@@ -200,6 +208,15 @@ describe('TextTools', function () {
 			assert.equal(result[5].unknownStyle, 123);
 			assert.equal(result[6].unknownStyle, 123);
 		});
+
+		it('should support cast to text', function () {
+			var result = textTools.normalizeTextArray(mixedTextArrayWithVariousTypes);
+			assert.equal(result.length, 3);
+			assert.equal(result[0].text, '2016');
+			assert.equal(result[1].text, 'true');
+			assert.equal(result[2].text, 'false');
+		});
+
 	});
 
 	describe('measure', function () {
