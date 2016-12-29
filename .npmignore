@@ -2,7 +2,6 @@
 docs/
 examples/
 tests/
-src/browser-extensions/
 test-env/
 yarn.lock
 composer.json
