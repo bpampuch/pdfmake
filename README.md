@@ -86,17 +86,28 @@ pdfMake.createPdf(docDefinition).print();
 // download the PDF
 pdfMake.createPdf(docDefinition).download();
 
-// or, put the PDF into your own page
-
-const pdfDocGenerator=pdfMake.createPdf(docDefinition);
-pdfDocGenerator.getDataUrl((dataUrl)=>{
-	const targetElement=document.querySelector('#iframeContainer');
-	const iframe=document.createElement('iframe');
-	iframe.src=dataUrl;
+// put the PDF into your own page as URL data
+const pdfDocGenerator = pdfMake.createPdf(docDefinition);
+pdfDocGenerator.getDataUrl((dataUrl) => {
+	const targetElement = document.querySelector('#iframeContainer');
+	const iframe = document.createElement('iframe');
+	iframe.src = dataUrl;
 	targetElement.appendChild(iframe);
 });
 
+// get the PDF as base64 data
+var pdfDocGenerator = pdfMake.createPdf(docDefinition);
+const pdfDocGenerator = pdfMake.createPdf(docDefinition);
+pdfDocGenerator.getBase64((data) => {
+	alert(data);
+});
 
+// or get the PDF as buffer
+var pdfDocGenerator = pdfMake.createPdf(docDefinition);
+const pdfDocGenerator = pdfMake.createPdf(docDefinition);
+pdfDocGenerator.getBuffer((buffer) => {
+	// ...
+});
 ```
 
 #### Styling
