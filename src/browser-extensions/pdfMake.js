@@ -155,18 +155,18 @@ Document.prototype.getBase64 = function (cb, options) {
 	if (!cb) {
 		throw 'getBase64 is an async method and needs a callback argument';
 	}
-	this._createDoc(options, function (buffer) {
+	this.getBuffer(function (buffer) {
 		cb(buffer.toString('base64'));
-	});
+	}, options);
 };
 
 Document.prototype.getDataUrl = function (cb, options) {
 	if (!cb) {
 		throw 'getDataUrl is an async method and needs a callback argument';
 	}
-	this._createDoc(options, function (buffer) {
+	this.getBuffer(function (buffer) {
 		cb('data:application/pdf;base64,' + buffer.toString('base64'));
-	});
+	}, options);
 };
 
 Document.prototype.getBuffer = function (cb, options) {
