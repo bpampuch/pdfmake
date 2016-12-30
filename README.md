@@ -96,14 +96,12 @@ pdfDocGenerator.getDataUrl((dataUrl) => {
 });
 
 // get the PDF as base64 data
-var pdfDocGenerator = pdfMake.createPdf(docDefinition);
 const pdfDocGenerator = pdfMake.createPdf(docDefinition);
 pdfDocGenerator.getBase64((data) => {
 	alert(data);
 });
 
 // or get the PDF as buffer
-var pdfDocGenerator = pdfMake.createPdf(docDefinition);
 const pdfDocGenerator = pdfMake.createPdf(docDefinition);
 pdfDocGenerator.getBuffer((buffer) => {
 	// ...
