@@ -17,7 +17,6 @@ ImageMeasure.prototype.measureImage = function (src) {
 		try {
 			image = PDFImage.open(realImageSrc(src), label);
 		} catch (error) {
-			console.error(error);
 			image = null;
 		}
 		if (image === null) {
