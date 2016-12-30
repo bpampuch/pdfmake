@@ -45,7 +45,11 @@ FontProvider.prototype.provideFont = function (familyName, bold, italics) {
 	this.fontCache[familyName] = this.fontCache[familyName] || {};
 
 	if (!this.fontCache[familyName][type]) {
-		this.fontCache[familyName][type] = this.pdfDoc.font(this.fonts[familyName][type])._font;
+		var def = this.fonts[familyName][type];
+		if (!Array.isArray(def)) {
+			def = [def];
+		}
+		this.fontCache[familyName][type] = this.pdfDoc.font.apply(this.pdfDoc, def)._font;
 	}
 
 	return this.fontCache[familyName][type];
