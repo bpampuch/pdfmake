@@ -13,8 +13,6 @@ var DEBUG = process.env.NODE_ENV === 'debug',
 	CI = process.env.CI === 'true';
 
 var uglifyOptions = {
-	preserveComments: 'some',
-	// source_map: 'pdfmake.min.js.map',
 	compress: {
 		drop_console: true
 	},
