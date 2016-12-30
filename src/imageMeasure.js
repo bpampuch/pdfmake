@@ -19,7 +19,7 @@ ImageMeasure.prototype.measureImage = function (src) {
 		} catch (error) {
 			image = null;
 		}
-		if (image === null) {
+		if (image === null || image === undefined) {
 			throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
 		}
 		image.embed(this.pdfDoc);
