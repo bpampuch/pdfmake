@@ -61,9 +61,9 @@ module.exports = {
 			}
 		],
 		postLoaders: [
-			{test: /fontkit[\/\\]/, loader: "transform?brfs"},
-			{test: /unicode-properties[\/\\]/, loader: "transform?brfs"},
-			{test: /linebreak[\/\\]/, loader: "transform?brfs"}
+			{test: /fontkit[\/\\]index.js$/, loader: "transform?brfs"},
+			{test: /unicode-properties[\/\\]index.js$/, loader: "transform?brfs"},
+			{test: /linebreak[\/\\]src[\/\\]linebreaker.js/, loader: "transform?brfs"}
 		]
 	},
 	plugins: [
