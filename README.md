@@ -212,6 +212,7 @@ Conceptually tables are similar to columns. They can however have headers, borde
 var docDefinition = {
   content: [
     {
+      layout: 'lightHorizontalLines', // optional
       table: {
         // headers are automatically repeated if the table spans over multiple pages
         // you can declare how many rows should be treated as headers
@@ -229,7 +230,36 @@ var docDefinition = {
 };
 ```
 
+##### Own table layouts
 
+Own table layouts must be defined before calling `pdfMake.createPdf(docDefinition)`.
+```
+pdfMake.tableLayouts = {
+  exampleLayout: {
+    hLineWidth: function (i, node) {
+      if (i === 0 || i === node.table.body.length) {
+        return 0;
+      }
+      return (i === node.table.headerRows) ? 2 : 1;
+    },
+    vLineWidth: function (i) {
+      return 0;
+    },
+    hLineColor: function (i) {
+      return i === 1 ? 'black' : '#aaa';
+    },
+    paddingLeft: function (i) {
+      return i === 0 ? 0 : 8;
+    },
+    paddingRight: function (i, node) {
+      return (i === node.table.widths.length - 1) ? 0 : 8;
+    }
+  }
+};
+
+// download the PDF
+pdfMake.createPdf(docDefinition).download();
+```
 
 All concepts related to tables are covered by TABLES example in playground.
 

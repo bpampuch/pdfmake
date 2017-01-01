@@ -16,8 +16,9 @@ var defaultClientFonts = {
 	}
 };
 
-function Document(docDefinition, fonts, vfs) {
+function Document(docDefinition, tableLayouts, fonts, vfs) {
 	this.docDefinition = docDefinition;
+	this.tableLayouts = tableLayouts || null;
 	this.fonts = fonts || defaultClientFonts;
 	this.vfs = vfs;
 }
@@ -31,6 +32,11 @@ function canCreatePdf() {
 }
 
 Document.prototype._createDoc = function (options, callback) {
+	options = options || {};
+	if (this.tableLayouts) {
+		options.tableLayouts = this.tableLayouts;
+	}
+
 	var printer = new PdfPrinter(this.fonts);
 	printer.fs.bindFS(this.vfs);
 
@@ -183,6 +189,6 @@ module.exports = {
 		if (!canCreatePdf()) {
 			throw 'Your browser does not provide the level of support needed';
 		}
-		return new Document(docDefinition, window.pdfMake.fonts, window.pdfMake.vfs);
+		return new Document(docDefinition, window.pdfMake.tableLayouts, window.pdfMake.fonts, window.pdfMake.vfs);
 	}
 };
