@@ -233,7 +233,7 @@ var docDefinition = {
 ##### Own table layouts
 
 Own table layouts must be defined before calling `pdfMake.createPdf(docDefinition)`.
-```
+```js
 pdfMake.tableLayouts = {
   exampleLayout: {
     hLineWidth: function (i, node) {
