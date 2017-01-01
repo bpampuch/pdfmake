@@ -180,10 +180,9 @@ Document.prototype.getBuffer = function (cb, options) {
 
 module.exports = {
 	createPdf: function (docDefinition) {
-		if (canCreatePdf()) {
-			return new Document(docDefinition, window.pdfMake.fonts, window.pdfMake.vfs);
-		} else {
+		if (!canCreatePdf()) {
 			throw 'Your browser does not provide the level of support needed';
 		}
+		return new Document(docDefinition, window.pdfMake.fonts, window.pdfMake.vfs);
 	}
 };
