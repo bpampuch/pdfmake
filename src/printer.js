@@ -26,7 +26,7 @@ _.noConflict();
  *		normal: 'fonts/Roboto-Regular.ttf',
  *		bold: 'fonts/Roboto-Medium.ttf',
  *		italics: 'fonts/Roboto-Italic.ttf',
- *		bolditalics: 'fonts/Roboto-Italic.ttf'
+ *		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
  *	}
  * };
  *
@@ -124,7 +124,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	if (typeof maxNumberPages === 'number' && maxNumberPages > -1) {
 		pages = pages.slice(0, maxNumberPages);
 	}
-	
+
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
 	if (options.autoPrint) {
