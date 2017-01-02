@@ -9,7 +9,7 @@ var fonts = {
 		normal: mp('./fonts/Roboto-Regular.ttf'),
 		bold: mp('./fonts/Roboto-Medium.ttf'),
 		italics: mp('./fonts/Roboto-Italic.ttf'),
-		bolditalics: mp('./fonts/Roboto-Italic.ttf')
+		bolditalics: mp('./fonts/Roboto-MediumItalic.ttf')
 	}
 };
 

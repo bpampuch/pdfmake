@@ -22,7 +22,7 @@ function createPdfBinary(pdfDoc, callback) {
       normal: 'examples/fonts/Roboto-Regular.ttf',
       bold: 'examples/fonts/Roboto-Medium.ttf',
       italics: 'examples/fonts/Roboto-Italic.ttf',
-      bolditalics: 'examples/fonts/Roboto-Italic.ttf'
+      bolditalics: 'examples/fonts/Roboto-MediumItalic.ttf'
     }
   };
 
