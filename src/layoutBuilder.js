@@ -144,11 +144,11 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			};
 
 			var tocIndexPosition =_.findIndex(docStructure, function(item) { 
-				return item.tocMarker; 
+				return item.toc !== undefined; 
 			});
 
 			if (tocIndexPosition > 0) {
-				body[0][0].text = docStructure[tocIndexPosition].text;
+				body[0][0].text = docStructure[tocIndexPosition].toc.title;
 				docStructure[tocIndexPosition] = toc;
 			} else {
 				docStructure.push(toc);
@@ -372,9 +372,9 @@ LayoutBuilder.prototype.processNode = function (node) {
 			self.processList(true, node);
 		} else if (node.table) {
 			self.processTable(node);
-		} else if (node.text !== undefined) {
+		} else if (node.text !== undefined || node.toc) {
 			self.processLeaf(node);
-			if (node.positions.length > 0 && node.toc != undefined && node.toc) {
+			if (node.positions.length > 0 && node.toc === undefined && node.tocItem !== undefined && node.tocItem) {
 				self.tracker.emit('toc', { text: node.text, pageNumber: node.positions[0].pageNumber});
 			}
 		} else if (node.image) {

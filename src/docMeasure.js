@@ -60,7 +60,7 @@ DocMeasure.prototype.measureNode = function (node) {
 			return extendMargins(self.measureList(true, node));
 		} else if (node.table) {
 			return extendMargins(self.measureTable(node));
-		} else if (node.text !== undefined) {
+		} else if (node.text !== undefined || node.toc !== undefined) {
 			return extendMargins(self.measureLeaf(node));
 		} else if (node.image) {
 			return extendMargins(self.measureImage(node));
