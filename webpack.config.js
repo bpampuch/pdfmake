@@ -38,6 +38,20 @@ module.exports = {
 						}
 					]})
 			},
+
+			/* temporary bugfix for fontkit version 1.5.2 - issue https://github.com/devongovett/fontkit/issues/65 */
+			{test: /fontkit[\/\\]index.js$/, loader: StringReplacePlugin.replace({
+					replacements: [
+						{
+							pattern: 'if (i < classDef.classValueArray.length) {',
+							replacement: function () {
+								return 'if (i > -1 && i < classDef.classValueArray.length) {';
+							}
+						}
+					]})
+			},
+			/* *** */
+
 			{test: /readable-stream[\/\\]/, loader: StringReplacePlugin.replace({
 					replacements: [
 						{
