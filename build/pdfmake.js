@@ -67,7 +67,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	'use strict';
 
 	var PdfPrinter = __webpack_require__(6);
-	var FileSaver = __webpack_require__(271);
+	var FileSaver = __webpack_require__(298);
 	var saveAs = FileSaver.saveAs;
 
 	var defaultClientFonts = {
@@ -75,12 +75,13 @@ return /******/ (function(modules) { // webpackBootstrap
 			normal: 'Roboto-Regular.ttf',
 			bold: 'Roboto-Medium.ttf',
 			italics: 'Roboto-Italic.ttf',
-			bolditalics: 'Roboto-Italic.ttf'
+			bolditalics: 'Roboto-MediumItalic.ttf'
 		}
 	};
 
-	function Document(docDefinition, fonts, vfs) {
+	function Document(docDefinition, tableLayouts, fonts, vfs) {
 		this.docDefinition = docDefinition;
+		this.tableLayouts = tableLayouts || null;
 		this.fonts = fonts || defaultClientFonts;
 		this.vfs = vfs;
 	}
@@ -94,6 +95,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	Document.prototype._createDoc = function (options, callback) {
+		options = options || {};
+		if (this.tableLayouts) {
+			options.tableLayouts = this.tableLayouts;
+		}
+
 		var printer = new PdfPrinter(this.fonts);
 		printer.fs.bindFS(this.vfs);
 
@@ -218,18 +224,18 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (!cb) {
 			throw 'getBase64 is an async method and needs a callback argument';
 		}
-		this._createDoc(options, function (buffer) {
+		this.getBuffer(function (buffer) {
 			cb(buffer.toString('base64'));
-		});
+		}, options);
 	};
 
 	Document.prototype.getDataUrl = function (cb, options) {
 		if (!cb) {
 			throw 'getDataUrl is an async method and needs a callback argument';
 		}
-		this._createDoc(options, function (buffer) {
+		this.getBuffer(function (buffer) {
 			cb('data:application/pdf;base64,' + buffer.toString('base64'));
-		});
+		}, options);
 	};
 
 	Document.prototype.getBuffer = function (cb, options) {
@@ -243,11 +249,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	module.exports = {
 		createPdf: function (docDefinition) {
-			if (canCreatePdf()) {
-				return new Document(docDefinition, window.pdfMake.fonts, window.pdfMake.vfs);
-			} else {
+			if (!canCreatePdf()) {
 				throw 'Your browser does not provide the level of support needed';
 			}
+			return new Document(docDefinition, window.pdfMake.tableLayouts, window.pdfMake.fonts, window.pdfMake.vfs);
 		}
 	};
 
@@ -2282,9 +2287,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	var FontProvider = __webpack_require__(9);
 	var LayoutBuilder = __webpack_require__(10);
 	var PdfKit = __webpack_require__(29);
-	var sizes = __webpack_require__(268);
-	var ImageMeasure = __webpack_require__(269);
-	var textDecorator = __webpack_require__(270);
+	var sizes = __webpack_require__(295);
+	var ImageMeasure = __webpack_require__(296);
+	var textDecorator = __webpack_require__(297);
 
 	_.noConflict();
 
@@ -2302,7 +2307,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *		normal: 'fonts/Roboto-Regular.ttf',
 	 *		bold: 'fonts/Roboto-Medium.ttf',
 	 *		italics: 'fonts/Roboto-Italic.ttf',
-	 *		bolditalics: 'fonts/Roboto-Italic.ttf'
+	 *		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
 	 *	}
 	 * };
 	 *
@@ -2400,7 +2405,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (typeof maxNumberPages === 'number' && maxNumberPages > -1) {
 			pages = pages.slice(0, maxNumberPages);
 		}
-		
+
 		renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
 		if (options.autoPrint) {
@@ -2729,7 +2734,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var undefined;
 
 	  /** Used as the semantic version number. */
-	  var VERSION = '4.17.3';
+	  var VERSION = '4.17.4';
 
 	  /** Used as the size to enable large array optimizations. */
 	  var LARGE_ARRAY_SIZE = 200;
@@ -8349,8 +8354,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	     * @param {string} key The key of the property to inspect.
 	     * @returns {*} Returns the uncloned value or `undefined` to defer cloning to `_.cloneDeep`.
 	     */
-	    function customOmitClone(value, key) {
-	      return (key !== undefined && isPlainObject(value)) ? undefined : value;
+	    function customOmitClone(value) {
+	      return isPlainObject(value) ? undefined : value;
 	    }
 
 	    /**
@@ -19869,7 +19874,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		this.fontCache[familyName] = this.fontCache[familyName] || {};
 
 		if (!this.fontCache[familyName][type]) {
-			this.fontCache[familyName][type] = this.pdfDoc.font(this.fonts[familyName][type])._font;
+			var def = this.fonts[familyName][type];
+			if (!Array.isArray(def)) {
+				def = [def];
+			}
+			this.fontCache[familyName][type] = this.pdfDoc.font.apply(this.pdfDoc, def)._font;
 		}
 
 		return this.fontCache[familyName][type];
@@ -20599,8 +20608,12 @@ return /******/ (function(modules) { // webpackBootstrap
 		// expand shortcuts
 		if (Array.isArray(node)) {
 			node = {stack: node};
-		} else if (typeof node == 'string' || node instanceof String) {
+		} else if (typeof node === 'string' || node instanceof String) {
 			node = {text: node};
+		} else if (typeof node === 'number' || typeof node === 'boolean') {
+			node = {text: node.toString()};
+		} else if (node === null) {
+			node = {text: ''};
 		}
 
 		// Deal with empty nodes to prevent crash in getNodeMargin
@@ -20873,6 +20886,9 @@ return /******/ (function(modules) { // webpackBootstrap
 				if (data === undefined) {
 					console.error('Malformed table row ', rowData, 'in node ', node);
 					throw 'Malformed table row, a cell is undefined.';
+				}
+				if (data === null) { // transform to object
+					data = '';
 				}
 				if (!data._span) {
 					var _this = this;
@@ -24744,11 +24760,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    mixin(__webpack_require__(78));
 
-	    mixin(__webpack_require__(259));
+	    mixin(__webpack_require__(286));
 
-	    mixin(__webpack_require__(261));
+	    mixin(__webpack_require__(288));
 
-	    mixin(__webpack_require__(267));
+	    mixin(__webpack_require__(294));
 
 	    PDFDocument.prototype.addPage = function(options) {
 	      var pages;
@@ -35679,6 +35695,50 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 72 */
 /***/ function(module, exports, __webpack_require__) {
 
+	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
+
+	// compare and isBuffer taken from https://github.com/feross/buffer/blob/680e9e5e488f22aac27599a57dc844a6315928dd/index.js
+	// original notice:
+
+	/*!
+	 * The buffer module from node.js, for the browser.
+	 *
+	 * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+	 * @license  MIT
+	 */
+	function compare(a, b) {
+	  if (a === b) {
+	    return 0;
+	  }
+
+	  var x = a.length;
+	  var y = b.length;
+
+	  for (var i = 0, len = Math.min(x, y); i < len; ++i) {
+	    if (a[i] !== b[i]) {
+	      x = a[i];
+	      y = b[i];
+	      break;
+	    }
+	  }
+
+	  if (x < y) {
+	    return -1;
+	  }
+	  if (y < x) {
+	    return 1;
+	  }
+	  return 0;
+	}
+	function isBuffer(b) {
+	  if (global.Buffer && typeof global.Buffer.isBuffer === 'function') {
+	    return global.Buffer.isBuffer(b);
+	  }
+	  return !!(b != null && b._isBuffer);
+	}
+
+	// based on node assert, original notice:
+
 	// http://wiki.commonjs.org/wiki/Unit_Testing/1.0
 	//
 	// THIS IS NOT TESTED NOR LIKELY TO WORK OUTSIDE V8!
@@ -35703,14 +35763,36 @@ return /******/ (function(modules) { // webpackBootstrap
 	// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 	// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-	// when used in node, this will actually load the util module we depend on
-	// versus loading the builtin util module as happens otherwise
-	// this is a bug in node module loading as far as I am concerned
 	var util = __webpack_require__(69);
-
-	var pSlice = Array.prototype.slice;
 	var hasOwn = Object.prototype.hasOwnProperty;
-
+	var pSlice = Array.prototype.slice;
+	var functionsHaveNames = (function () {
+	  return function foo() {}.name === 'foo';
+	}());
+	function pToString (obj) {
+	  return Object.prototype.toString.call(obj);
+	}
+	function isView(arrbuf) {
+	  if (isBuffer(arrbuf)) {
+	    return false;
+	  }
+	  if (typeof global.ArrayBuffer !== 'function') {
+	    return false;
+	  }
+	  if (typeof ArrayBuffer.isView === 'function') {
+	    return ArrayBuffer.isView(arrbuf);
+	  }
+	  if (!arrbuf) {
+	    return false;
+	  }
+	  if (arrbuf instanceof DataView) {
+	    return true;
+	  }
+	  if (arrbuf.buffer && arrbuf.buffer instanceof ArrayBuffer) {
+	    return true;
+	  }
+	  return false;
+	}
 	// 1. The assert module provides functions that throw
 	// AssertionError's when particular conditions are not met. The
 	// assert module must conform to the following interface.
@@ -35722,6 +35804,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	//                             actual: actual,
 	//                             expected: expected })
 
+	var regex = /\s*function\s+([^\(\s]*)\s*/;
+	// based on https://github.com/ljharb/function.prototype.name/blob/adeeeec8bfcc6068b187d7d9fb3d5bb1d3a30899/implementation.js
+	function getName(func) {
+	  if (!util.isFunction(func)) {
+	    return;
+	  }
+	  if (functionsHaveNames) {
+	    return func.name;
+	  }
+	  var str = func.toString();
+	  var match = str.match(regex);
+	  return match && match[1];
+	}
 	assert.AssertionError = function AssertionError(options) {
 	  this.name = 'AssertionError';
 	  this.actual = options.actual;
@@ -35735,18 +35830,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.generatedMessage = true;
 	  }
 	  var stackStartFunction = options.stackStartFunction || fail;
-
 	  if (Error.captureStackTrace) {
 	    Error.captureStackTrace(this, stackStartFunction);
-	  }
-	  else {
+	  } else {
 	    // non v8 browsers so we can have a stacktrace
 	    var err = new Error();
 	    if (err.stack) {
 	      var out = err.stack;
 
 	      // try to strip useless frames
-	      var fn_name = stackStartFunction.name;
+	      var fn_name = getName(stackStartFunction);
 	      var idx = out.indexOf('\n' + fn_name);
 	      if (idx >= 0) {
 	        // once we have located the function frame
@@ -35763,31 +35856,25 @@ return /******/ (function(modules) { // webpackBootstrap
 	// assert.AssertionError instanceof Error
 	util.inherits(assert.AssertionError, Error);
 
-	function replacer(key, value) {
-	  if (util.isUndefined(value)) {
-	    return '' + value;
-	  }
-	  if (util.isNumber(value) && !isFinite(value)) {
-	    return value.toString();
-	  }
-	  if (util.isFunction(value) || util.isRegExp(value)) {
-	    return value.toString();
-	  }
-	  return value;
-	}
-
 	function truncate(s, n) {
-	  if (util.isString(s)) {
+	  if (typeof s === 'string') {
 	    return s.length < n ? s : s.slice(0, n);
 	  } else {
 	    return s;
 	  }
 	}
-
+	function inspect(something) {
+	  if (functionsHaveNames || !util.isFunction(something)) {
+	    return util.inspect(something);
+	  }
+	  var rawname = getName(something);
+	  var name = rawname ? ': ' + rawname : '';
+	  return '[Function' +  name + ']';
+	}
 	function getMessage(self) {
-	  return truncate(JSON.stringify(self.actual, replacer), 128) + ' ' +
+	  return truncate(inspect(self.actual), 128) + ' ' +
 	         self.operator + ' ' +
-	         truncate(JSON.stringify(self.expected, replacer), 128);
+	         truncate(inspect(self.expected), 128);
 	}
 
 	// At present only the three keys mentioned above are used and
@@ -35847,24 +35934,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	// assert.deepEqual(actual, expected, message_opt);
 
 	assert.deepEqual = function deepEqual(actual, expected, message) {
-	  if (!_deepEqual(actual, expected)) {
+	  if (!_deepEqual(actual, expected, false)) {
 	    fail(actual, expected, message, 'deepEqual', assert.deepEqual);
 	  }
 	};
 
-	function _deepEqual(actual, expected) {
+	assert.deepStrictEqual = function deepStrictEqual(actual, expected, message) {
+	  if (!_deepEqual(actual, expected, true)) {
+	    fail(actual, expected, message, 'deepStrictEqual', assert.deepStrictEqual);
+	  }
+	};
+
+	function _deepEqual(actual, expected, strict, memos) {
 	  // 7.1. All identical values are equivalent, as determined by ===.
 	  if (actual === expected) {
 	    return true;
-
-	  } else if (util.isBuffer(actual) && util.isBuffer(expected)) {
-	    if (actual.length != expected.length) return false;
-
-	    for (var i = 0; i < actual.length; i++) {
-	      if (actual[i] !== expected[i]) return false;
-	    }
-
-	    return true;
+	  } else if (isBuffer(actual) && isBuffer(expected)) {
+	    return compare(actual, expected) === 0;
 
 	  // 7.2. If the expected value is a Date object, the actual value is
 	  // equivalent if it is also a Date object that refers to the same time.
@@ -35883,8 +35969,22 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  // 7.4. Other pairs that do not both pass typeof value == 'object',
 	  // equivalence is determined by ==.
-	  } else if (!util.isObject(actual) && !util.isObject(expected)) {
-	    return actual == expected;
+	  } else if ((actual === null || typeof actual !== 'object') &&
+	             (expected === null || typeof expected !== 'object')) {
+	    return strict ? actual === expected : actual == expected;
+
+	  // If both values are instances of typed arrays, wrap their underlying
+	  // ArrayBuffers in a Buffer each to increase performance
+	  // This optimization requires the arrays to have the same type as checked by
+	  // Object.prototype.toString (aka pToString). Never perform binary
+	  // comparisons for Float*Arrays, though, since e.g. +0 === -0 but their
+	  // bit patterns are not identical.
+	  } else if (isView(actual) && isView(expected) &&
+	             pToString(actual) === pToString(expected) &&
+	             !(actual instanceof Float32Array ||
+	               actual instanceof Float64Array)) {
+	    return compare(new Uint8Array(actual.buffer),
+	                   new Uint8Array(expected.buffer)) === 0;
 
 	  // 7.5 For all other Object pairs, including Array objects, equivalence is
 	  // determined by having the same number of owned properties (as verified
@@ -35892,8 +35992,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	  // (although not necessarily the same order), equivalent values for every
 	  // corresponding key, and an identical 'prototype' property. Note: this
 	  // accounts for both named and indexed properties on Arrays.
+	  } else if (isBuffer(actual) !== isBuffer(expected)) {
+	    return false;
 	  } else {
-	    return objEquiv(actual, expected);
+	    memos = memos || {actual: [], expected: []};
+
+	    var actualIndex = memos.actual.indexOf(actual);
+	    if (actualIndex !== -1) {
+	      if (actualIndex === memos.expected.indexOf(expected)) {
+	        return true;
+	      }
+	    }
+
+	    memos.actual.push(actual);
+	    memos.expected.push(expected);
+
+	    return objEquiv(actual, expected, strict, memos);
 	  }
 	}
 
@@ -35901,44 +36015,44 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return Object.prototype.toString.call(object) == '[object Arguments]';
 	}
 
-	function objEquiv(a, b) {
-	  if (util.isNullOrUndefined(a) || util.isNullOrUndefined(b))
+	function objEquiv(a, b, strict, actualVisitedObjects) {
+	  if (a === null || a === undefined || b === null || b === undefined)
 	    return false;
-	  // an identical 'prototype' property.
-	  if (a.prototype !== b.prototype) return false;
 	  // if one is a primitive, the other must be same
-	  if (util.isPrimitive(a) || util.isPrimitive(b)) {
+	  if (util.isPrimitive(a) || util.isPrimitive(b))
 	    return a === b;
-	  }
-	  var aIsArgs = isArguments(a),
-	      bIsArgs = isArguments(b);
+	  if (strict && Object.getPrototypeOf(a) !== Object.getPrototypeOf(b))
+	    return false;
+	  var aIsArgs = isArguments(a);
+	  var bIsArgs = isArguments(b);
 	  if ((aIsArgs && !bIsArgs) || (!aIsArgs && bIsArgs))
 	    return false;
 	  if (aIsArgs) {
 	    a = pSlice.call(a);
 	    b = pSlice.call(b);
-	    return _deepEqual(a, b);
+	    return _deepEqual(a, b, strict);
 	  }
-	  var ka = objectKeys(a),
-	      kb = objectKeys(b),
-	      key, i;
+	  var ka = objectKeys(a);
+	  var kb = objectKeys(b);
+	  var key, i;
 	  // having the same number of owned properties (keys incorporates
 	  // hasOwnProperty)
-	  if (ka.length != kb.length)
+	  if (ka.length !== kb.length)
 	    return false;
 	  //the same set of keys (although not necessarily the same order),
 	  ka.sort();
 	  kb.sort();
 	  //~~~cheap key test
 	  for (i = ka.length - 1; i >= 0; i--) {
-	    if (ka[i] != kb[i])
+	    if (ka[i] !== kb[i])
 	      return false;
 	  }
 	  //equivalent values for every corresponding key, and
 	  //~~~possibly expensive deep test
 	  for (i = ka.length - 1; i >= 0; i--) {
 	    key = ka[i];
-	    if (!_deepEqual(a[key], b[key])) return false;
+	    if (!_deepEqual(a[key], b[key], strict, actualVisitedObjects))
+	      return false;
 	  }
 	  return true;
 	}
@@ -35947,10 +36061,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	// assert.notDeepEqual(actual, expected, message_opt);
 
 	assert.notDeepEqual = function notDeepEqual(actual, expected, message) {
-	  if (_deepEqual(actual, expected)) {
+	  if (_deepEqual(actual, expected, false)) {
 	    fail(actual, expected, message, 'notDeepEqual', assert.notDeepEqual);
 	  }
 	};
+
+	assert.notDeepStrictEqual = notDeepStrictEqual;
+	function notDeepStrictEqual(actual, expected, message) {
+	  if (_deepEqual(actual, expected, true)) {
+	    fail(actual, expected, message, 'notDeepStrictEqual', notDeepStrictEqual);
+	  }
+	}
+
 
 	// 9. The strict equality assertion tests strict equality, as determined by ===.
 	// assert.strictEqual(actual, expected, message_opt);
@@ -35977,28 +36099,46 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  if (Object.prototype.toString.call(expected) == '[object RegExp]') {
 	    return expected.test(actual);
-	  } else if (actual instanceof expected) {
-	    return true;
-	  } else if (expected.call({}, actual) === true) {
-	    return true;
 	  }
 
-	  return false;
+	  try {
+	    if (actual instanceof expected) {
+	      return true;
+	    }
+	  } catch (e) {
+	    // Ignore.  The instanceof check doesn't work for arrow functions.
+	  }
+
+	  if (Error.isPrototypeOf(expected)) {
+	    return false;
+	  }
+
+	  return expected.call({}, actual) === true;
+	}
+
+	function _tryBlock(block) {
+	  var error;
+	  try {
+	    block();
+	  } catch (e) {
+	    error = e;
+	  }
+	  return error;
 	}
 
 	function _throws(shouldThrow, block, expected, message) {
 	  var actual;
 
-	  if (util.isString(expected)) {
+	  if (typeof block !== 'function') {
+	    throw new TypeError('"block" argument must be a function');
+	  }
+
+	  if (typeof expected === 'string') {
 	    message = expected;
 	    expected = null;
 	  }
 
-	  try {
-	    block();
-	  } catch (e) {
-	    actual = e;
-	  }
+	  actual = _tryBlock(block);
 
 	  message = (expected && expected.name ? ' (' + expected.name + ').' : '.') +
 	            (message ? ' ' + message : '.');
@@ -36007,7 +36147,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    fail(actual, expected, 'Missing expected exception' + message);
 	  }
 
-	  if (!shouldThrow && expectedException(actual, expected)) {
+	  var userProvidedMessage = typeof message === 'string';
+	  var isUnwantedException = !shouldThrow && util.isError(actual);
+	  var isUnexpectedException = !shouldThrow && actual && !expected;
+
+	  if ((isUnwantedException &&
+	      userProvidedMessage &&
+	      expectedException(actual, expected)) ||
+	      isUnexpectedException) {
 	    fail(actual, expected, 'Got unwanted exception' + message);
 	  }
 
@@ -36021,15 +36168,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	// assert.throws(block, Error_opt, message_opt);
 
 	assert.throws = function(block, /*optional*/error, /*optional*/message) {
-	  _throws.apply(this, [true].concat(pSlice.call(arguments)));
+	  _throws(true, block, error, message);
 	};
 
 	// EXTENSION! This is annoying to write outside this module.
-	assert.doesNotThrow = function(block, /*optional*/message) {
-	  _throws.apply(this, [false].concat(pSlice.call(arguments)));
+	assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
+	  _throws(false, block, error, message);
 	};
 
-	assert.ifError = function(err) { if (err) {throw err;}};
+	assert.ifError = function(err) { if (err) throw err; };
 
 	var objectKeys = Object.keys || function (obj) {
 	  var keys = [];
@@ -36039,6 +36186,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return keys;
 	};
 
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
 /* 73 */
@@ -37549,9 +37697,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  module.exports = PDFFont;
 
-	  StandardFont = __webpack_require__(256);
+	  StandardFont = __webpack_require__(283);
 
-	  EmbeddedFont = __webpack_require__(258);
+	  EmbeddedFont = __webpack_require__(285);
 
 	}).call(this);
 
@@ -37574,21 +37722,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _Object$defineProperty = _interopDefault(__webpack_require__(202));
 	var _classCallCheck = _interopDefault(__webpack_require__(205));
 	var _createClass = _interopDefault(__webpack_require__(206));
-	var _Object$getPrototypeOf = _interopDefault(__webpack_require__(207));
-	var _possibleConstructorReturn = _interopDefault(__webpack_require__(210));
-	var _inherits = _interopDefault(__webpack_require__(211));
+	var _Map = _interopDefault(__webpack_require__(207));
+	var _Object$getPrototypeOf = _interopDefault(__webpack_require__(224));
+	var _possibleConstructorReturn = _interopDefault(__webpack_require__(227));
+	var _inherits = _interopDefault(__webpack_require__(228));
 	var restructure_src_utils = __webpack_require__(107);
-	var _Object$defineProperties = _interopDefault(__webpack_require__(219));
-	var isEqual = _interopDefault(__webpack_require__(222));
-	var _get = _interopDefault(__webpack_require__(225));
-	var _Object$assign = _interopDefault(__webpack_require__(226));
-	var _toConsumableArray = _interopDefault(__webpack_require__(230));
-	var unicode = _interopDefault(__webpack_require__(238));
-	var _slicedToArray = _interopDefault(__webpack_require__(240));
+	var _Object$defineProperties = _interopDefault(__webpack_require__(236));
+	var isEqual = _interopDefault(__webpack_require__(239));
+	var _get = _interopDefault(__webpack_require__(242));
+	var _Object$assign = _interopDefault(__webpack_require__(243));
+	var _toConsumableArray = _interopDefault(__webpack_require__(247));
+	var _String$fromCodePoint = _interopDefault(__webpack_require__(253));
+	var _slicedToArray = _interopDefault(__webpack_require__(256));
+	var _Array$from = _interopDefault(__webpack_require__(248));
+	var _Set = _interopDefault(__webpack_require__(260));
+	var unicode = _interopDefault(__webpack_require__(264));
 	var UnicodeTrie = _interopDefault(__webpack_require__(15));
-	var cloneDeep = _interopDefault(__webpack_require__(244));
+	var StateMachine = _interopDefault(__webpack_require__(266));
+	var cloneDeep = _interopDefault(__webpack_require__(271));
 	var inflate = _interopDefault(__webpack_require__(16));
-	var brotli = _interopDefault(__webpack_require__(245));
+	var brotli = _interopDefault(__webpack_require__(272));
 
 
 
@@ -37645,17 +37798,52 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	/**
-	 * This decorator caches the results of a getter such that
+	 * This decorator caches the results of a getter or method such that
 	 * the results are lazily computed once, and then cached.
 	 * @private
 	 */
 	function cache(target, key, descriptor) {
-	  var get = descriptor.get;
-	  descriptor.get = function () {
-	    var value = get.call(this);
-	    _Object$defineProperty(this, key, { value: value });
-	    return value;
-	  };
+	  if (descriptor.get) {
+	    (function () {
+	      var get = descriptor.get;
+	      descriptor.get = function () {
+	        var value = get.call(this);
+	        _Object$defineProperty(this, key, { value: value });
+	        return value;
+	      };
+	    })();
+	  } else if (typeof descriptor.value === 'function') {
+	    var _ret2 = function () {
+	      var fn = descriptor.value;
+
+	      return {
+	        v: {
+	          get: function get() {
+	            var cache = new _Map();
+	            function memoized() {
+	              for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+	                args[_key] = arguments[_key];
+	              }
+
+	              var key = args.length > 0 ? args[0] : 'value';
+	              if (cache.has(key)) {
+	                return cache.get(key);
+	              }
+
+	              var result = fn.apply(this, args);
+	              cache.set(key, result);
+	              return result;
+	            };
+
+	            _Object$defineProperty(this, key, { value: memoized });
+	            return memoized;
+	          }
+	        }
+	      };
+	    }();
+
+	    if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+	  }
 	}
 
 	var SubHeader = new r.Struct({
@@ -37862,6 +38050,165 @@ return /******/ (function(modules) { // webpackBootstrap
 	  maxComponentDepth: r.uint16 // Maximum levels of recursion; 1 for simple components
 	});
 
+	/**
+	 * Gets an encoding name from platform, encoding, and language ids.
+	 * Returned encoding names can be used in iconv-lite to decode text.
+	 */
+	function getEncoding(platformID, encodingID) {
+	  var languageID = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+
+	  if (platformID === 1 && MAC_LANGUAGE_ENCODINGS[languageID]) {
+	    return MAC_LANGUAGE_ENCODINGS[languageID];
+	  }
+
+	  return ENCODINGS[platformID][encodingID];
+	}
+
+	// Map of platform ids to encoding ids.
+	var ENCODINGS = [
+	// unicode
+	['utf16be', 'utf16be', 'utf16be', 'utf16be', 'utf16be', 'utf16be'],
+
+	// macintosh
+	// Mappings available at http://unicode.org/Public/MAPPINGS/VENDORS/APPLE/
+	// 0	Roman                 17	Malayalam
+	// 1	Japanese	            18	Sinhalese
+	// 2	Traditional Chinese	  19	Burmese
+	// 3	Korean	              20	Khmer
+	// 4	Arabic	              21	Thai
+	// 5	Hebrew	              22	Laotian
+	// 6	Greek	                23	Georgian
+	// 7	Russian	              24	Armenian
+	// 8	RSymbol	              25	Simplified Chinese
+	// 9	Devanagari	          26	Tibetan
+	// 10	Gurmukhi	            27	Mongolian
+	// 11	Gujarati	            28	Geez
+	// 12	Oriya	                29	Slavic
+	// 13	Bengali	              30	Vietnamese
+	// 14	Tamil	                31	Sindhi
+	// 15	Telugu	              32	(Uninterpreted)
+	// 16	Kannada
+	['macroman', 'shift-jis', 'big5', 'euc-kr', 'iso-8859-6', 'iso-8859-8', 'macgreek', 'maccyrillic', 'symbol', 'Devanagari', 'Gurmukhi', 'Gujarati', 'Oriya', 'Bengali', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Sinhalese', 'Burmese', 'Khmer', 'macthai', 'Laotian', 'Georgian', 'Armenian', 'gb-2312-80', 'Tibetan', 'Mongolian', 'Geez', 'maccenteuro', 'Vietnamese', 'Sindhi'],
+
+	// ISO (deprecated)
+	['ascii'],
+
+	// windows
+	// Docs here: http://msdn.microsoft.com/en-us/library/system.text.encoding(v=vs.110).aspx
+	['symbol', 'utf16be', 'shift-jis', 'gb18030', 'big5', 'wansung', 'johab', null, null, null, 'utf16be']];
+
+	// Overrides for Mac scripts by language id.
+	// See http://unicode.org/Public/MAPPINGS/VENDORS/APPLE/Readme.txt
+	var MAC_LANGUAGE_ENCODINGS = {
+	  15: 'maciceland',
+	  17: 'macturkish',
+	  18: 'maccroatian',
+	  24: 'maccenteuro',
+	  25: 'maccenteuro',
+	  26: 'maccenteuro',
+	  27: 'maccenteuro',
+	  28: 'maccenteuro',
+	  30: 'maciceland',
+	  37: 'macromania',
+	  38: 'maccenteuro',
+	  39: 'maccenteuro',
+	  40: 'maccenteuro',
+	  143: 'macinuit', // Unsupported by iconv-lite
+	  146: 'macgaelic' // Unsupported by iconv-lite
+	};
+
+	// Map of platform ids to BCP-47 language codes.
+	var LANGUAGES = [
+	// unicode
+	[], { // macintosh
+	  0: 'en', 30: 'fo', 60: 'ks', 90: 'rw',
+	  1: 'fr', 31: 'fa', 61: 'ku', 91: 'rn',
+	  2: 'de', 32: 'ru', 62: 'sd', 92: 'ny',
+	  3: 'it', 33: 'zh', 63: 'bo', 93: 'mg',
+	  4: 'nl', 34: 'nl-BE', 64: 'ne', 94: 'eo',
+	  5: 'sv', 35: 'ga', 65: 'sa', 128: 'cy',
+	  6: 'es', 36: 'sq', 66: 'mr', 129: 'eu',
+	  7: 'da', 37: 'ro', 67: 'bn', 130: 'ca',
+	  8: 'pt', 38: 'cz', 68: 'as', 131: 'la',
+	  9: 'no', 39: 'sk', 69: 'gu', 132: 'qu',
+	  10: 'he', 40: 'si', 70: 'pa', 133: 'gn',
+	  11: 'ja', 41: 'yi', 71: 'or', 134: 'ay',
+	  12: 'ar', 42: 'sr', 72: 'ml', 135: 'tt',
+	  13: 'fi', 43: 'mk', 73: 'kn', 136: 'ug',
+	  14: 'el', 44: 'bg', 74: 'ta', 137: 'dz',
+	  15: 'is', 45: 'uk', 75: 'te', 138: 'jv',
+	  16: 'mt', 46: 'be', 76: 'si', 139: 'su',
+	  17: 'tr', 47: 'uz', 77: 'my', 140: 'gl',
+	  18: 'hr', 48: 'kk', 78: 'km', 141: 'af',
+	  19: 'zh-Hant', 49: 'az-Cyrl', 79: 'lo', 142: 'br',
+	  20: 'ur', 50: 'az-Arab', 80: 'vi', 143: 'iu',
+	  21: 'hi', 51: 'hy', 81: 'id', 144: 'gd',
+	  22: 'th', 52: 'ka', 82: 'tl', 145: 'gv',
+	  23: 'ko', 53: 'mo', 83: 'ms', 146: 'ga',
+	  24: 'lt', 54: 'ky', 84: 'ms-Arab', 147: 'to',
+	  25: 'pl', 55: 'tg', 85: 'am', 148: 'el-polyton',
+	  26: 'hu', 56: 'tk', 86: 'ti', 149: 'kl',
+	  27: 'es', 57: 'mn-CN', 87: 'om', 150: 'az',
+	  28: 'lv', 58: 'mn', 88: 'so', 151: 'nn',
+	  29: 'se', 59: 'ps', 89: 'sw'
+	},
+
+	// ISO (deprecated)
+	[], { // windows                                        
+	  0x0436: 'af', 0x4009: 'en-IN', 0x0487: 'rw', 0x0432: 'tn',
+	  0x041C: 'sq', 0x1809: 'en-IE', 0x0441: 'sw', 0x045B: 'si',
+	  0x0484: 'gsw', 0x2009: 'en-JM', 0x0457: 'kok', 0x041B: 'sk',
+	  0x045E: 'am', 0x4409: 'en-MY', 0x0412: 'ko', 0x0424: 'sl',
+	  0x1401: 'ar-DZ', 0x1409: 'en-NZ', 0x0440: 'ky', 0x2C0A: 'es-AR',
+	  0x3C01: 'ar-BH', 0x3409: 'en-PH', 0x0454: 'lo', 0x400A: 'es-BO',
+	  0x0C01: 'ar', 0x4809: 'en-SG', 0x0426: 'lv', 0x340A: 'es-CL',
+	  0x0801: 'ar-IQ', 0x1C09: 'en-ZA', 0x0427: 'lt', 0x240A: 'es-CO',
+	  0x2C01: 'ar-JO', 0x2C09: 'en-TT', 0x082E: 'dsb', 0x140A: 'es-CR',
+	  0x3401: 'ar-KW', 0x0809: 'en-GB', 0x046E: 'lb', 0x1C0A: 'es-DO',
+	  0x3001: 'ar-LB', 0x0409: 'en', 0x042F: 'mk', 0x300A: 'es-EC',
+	  0x1001: 'ar-LY', 0x3009: 'en-ZW', 0x083E: 'ms-BN', 0x440A: 'es-SV',
+	  0x1801: 'ary', 0x0425: 'et', 0x043E: 'ms', 0x100A: 'es-GT',
+	  0x2001: 'ar-OM', 0x0438: 'fo', 0x044C: 'ml', 0x480A: 'es-HN',
+	  0x4001: 'ar-QA', 0x0464: 'fil', 0x043A: 'mt', 0x080A: 'es-MX',
+	  0x0401: 'ar-SA', 0x040B: 'fi', 0x0481: 'mi', 0x4C0A: 'es-NI',
+	  0x2801: 'ar-SY', 0x080C: 'fr-BE', 0x047A: 'arn', 0x180A: 'es-PA',
+	  0x1C01: 'aeb', 0x0C0C: 'fr-CA', 0x044E: 'mr', 0x3C0A: 'es-PY',
+	  0x3801: 'ar-AE', 0x040C: 'fr', 0x047C: 'moh', 0x280A: 'es-PE',
+	  0x2401: 'ar-YE', 0x140C: 'fr-LU', 0x0450: 'mn', 0x500A: 'es-PR',
+	  0x042B: 'hy', 0x180C: 'fr-MC', 0x0850: 'mn-CN', 0x0C0A: 'es',
+	  0x044D: 'as', 0x100C: 'fr-CH', 0x0461: 'ne', 0x040A: 'es',
+	  0x082C: 'az-Cyrl', 0x0462: 'fy', 0x0414: 'nb', 0x540A: 'es-US',
+	  0x042C: 'az', 0x0456: 'gl', 0x0814: 'nn', 0x380A: 'es-UY',
+	  0x046D: 'ba', 0x0437: 'ka', 0x0482: 'oc', 0x200A: 'es-VE',
+	  0x042D: 'eu', 0x0C07: 'de-AT', 0x0448: 'or', 0x081D: 'sv-FI',
+	  0x0423: 'be', 0x0407: 'de', 0x0463: 'ps', 0x041D: 'sv',
+	  0x0845: 'bn', 0x1407: 'de-LI', 0x0415: 'pl', 0x045A: 'syr',
+	  0x0445: 'bn-IN', 0x1007: 'de-LU', 0x0416: 'pt', 0x0428: 'tg',
+	  0x201A: 'bs-Cyrl', 0x0807: 'de-CH', 0x0816: 'pt-PT', 0x085F: 'tzm',
+	  0x141A: 'bs', 0x0408: 'el', 0x0446: 'pa', 0x0449: 'ta',
+	  0x047E: 'br', 0x046F: 'kl', 0x046B: 'qu-BO', 0x0444: 'tt',
+	  0x0402: 'bg', 0x0447: 'gu', 0x086B: 'qu-EC', 0x044A: 'te',
+	  0x0403: 'ca', 0x0468: 'ha', 0x0C6B: 'qu', 0x041E: 'th',
+	  0x0C04: 'zh-HK', 0x040D: 'he', 0x0418: 'ro', 0x0451: 'bo',
+	  0x1404: 'zh-MO', 0x0439: 'hi', 0x0417: 'rm', 0x041F: 'tr',
+	  0x0804: 'zh', 0x040E: 'hu', 0x0419: 'ru', 0x0442: 'tk',
+	  0x1004: 'zh-SG', 0x040F: 'is', 0x243B: 'smn', 0x0480: 'ug',
+	  0x0404: 'zh-TW', 0x0470: 'ig', 0x103B: 'smj-NO', 0x0422: 'uk',
+	  0x0483: 'co', 0x0421: 'id', 0x143B: 'smj', 0x042E: 'hsb',
+	  0x041A: 'hr', 0x045D: 'iu', 0x0C3B: 'se-FI', 0x0420: 'ur',
+	  0x101A: 'hr-BA', 0x085D: 'iu-Latn', 0x043B: 'se', 0x0843: 'uz-Cyrl',
+	  0x0405: 'cs', 0x083C: 'ga', 0x083B: 'se-SE', 0x0443: 'uz',
+	  0x0406: 'da', 0x0434: 'xh', 0x203B: 'sms', 0x042A: 'vi',
+	  0x048C: 'prs', 0x0435: 'zu', 0x183B: 'sma-NO', 0x0452: 'cy',
+	  0x0465: 'dv', 0x0410: 'it', 0x1C3B: 'sms', 0x0488: 'wo',
+	  0x0813: 'nl-BE', 0x0810: 'it-CH', 0x044F: 'sa', 0x0485: 'sah',
+	  0x0413: 'nl', 0x0411: 'ja', 0x1C1A: 'sr-Cyrl-BA', 0x0478: 'ii',
+	  0x0C09: 'en-AU', 0x044B: 'kn', 0x0C1A: 'sr', 0x046A: 'yo',
+	  0x2809: 'en-BZ', 0x043F: 'kk', 0x181A: 'sr-Latn-BA',
+	  0x1009: 'en-CA', 0x0453: 'km', 0x081A: 'sr-Latn',
+	  0x2409: 'en-029', 0x0486: 'quc', 0x046C: 'nso'
+	}];
+
 	var NameRecord = new r.Struct({
 	  platformID: r.uint16,
 	  encodingID: r.uint16,
@@ -37869,7 +38216,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  nameID: r.uint16,
 	  length: r.uint16,
 	  string: new r.Pointer(r.uint16, new r.String('length', function (t) {
-	    return ENCODINGS[t.platformID][t.encodingID];
+	    return getEncoding(t.platformID, t.encodingID, t.languageID);
 	  }), { type: 'parent', relativeTo: 'parent.stringOffset', allowNull: false })
 	});
 
@@ -37897,209 +38244,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	'trademark', 'manufacturer', 'designer', 'description', 'vendorURL', 'designerURL', 'license', 'licenseURL', null, // reserved
 	'preferredFamily', 'preferredSubfamily', 'compatibleFull', 'sampleText', 'postscriptCIDFontName', 'wwsFamilyName', 'wwsSubfamilyName'];
 
-	var ENCODINGS = [
-	// unicode
-	['utf16be', 'utf16be', 'utf16be', 'utf16be', 'utf16be', 'utf16be'],
-
-	// macintosh
-	// Mappings available at http://unicode.org/Public/MAPPINGS/VENDORS/APPLE/
-	// 0	  Roman                 17	Malayalam
-	// 1	  Japanese	            18	Sinhalese
-	// 2	  Traditional Chinese	  19	Burmese
-	// 3	  Korean	              20	Khmer
-	// 4	  Arabic	              21	Thai
-	// 5	  Hebrew	              22	Laotian
-	// 6	  Greek	                23	Georgian
-	// 7	  Russian	              24	Armenian
-	// 8	  RSymbol	              25	Simplified Chinese
-	// 9	  Devanagari	          26	Tibetan
-	// 10	Gurmukhi	            27	Mongolian
-	// 11	Gujarati	            28	Geez
-	// 12	Oriya	                29	Slavic
-	// 13	Bengali	              30	Vietnamese
-	// 14	Tamil	                31	Sindhi
-	// 15	Telugu	              32	(Uninterpreted)
-	// 16	Kannada
-	['macroman', 'shift-jis', 'big5', 'euc-kr', 'iso-8859-6', 'iso-8859-8', 'macgreek', 'maccyrillic', 'symbol', 'Devanagari', 'Gurmukhi', 'Gujarati', 'Oriya', 'Bengali', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Sinhalese', 'Burmese', 'Khmer', 'macthai', 'Laotian', 'Georgian', 'Armenian', 'gb-2312-80', 'Tibetan', 'Mongolian', 'Geez', 'maccyrillic', 'Vietnamese', 'Sindhi'],
-
-	// ISO (deprecated)
-	['ascii'],
-
-	// windows
-	// Docs here: http://msdn.microsoft.com/en-us/library/system.text.encoding(v=vs.110).aspx
-	['symbol', 'utf16be', 'shift-jis', 'gb18030', 'big5', 'wansung', 'johab', null, null, null, 'ucs-4']];
-
-	var LANGUAGES = [
-	// unicode
-	[], { // macintosh
-	  0: "English", 59: "Pashto",
-	  1: "French", 60: "Kurdish",
-	  2: "German", 61: "Kashmiri",
-	  3: "Italian", 62: "Sindhi",
-	  4: "Dutch", 63: "Tibetan",
-	  5: "Swedish", 64: "Nepali",
-	  6: "Spanish", 65: "Sanskrit",
-	  7: "Danish", 66: "Marathi",
-	  8: "Portuguese", 67: "Bengali",
-	  9: "Norwegian", 68: "Assamese",
-	  10: "Hebrew", 69: "Gujarati",
-	  11: "Japanese", 70: "Punjabi",
-	  12: "Arabic", 71: "Oriya",
-	  13: "Finnish", 72: "Malayalam",
-	  14: "Greek", 73: "Kannada",
-	  15: "Icelandic", 74: "Tamil",
-	  16: "Maltese", 75: "Telugu",
-	  17: "Turkish", 76: "Sinhalese",
-	  18: "Croatian", 77: "Burmese",
-	  19: "Chinese (Traditional)", 78: "Khmer",
-	  20: "Urdu", 79: "Lao",
-	  21: "Hindi", 80: "Vietnamese",
-	  22: "Thai", 81: "Indonesian",
-	  23: "Korean", 82: "Tagalong",
-	  24: "Lithuanian", 83: "Malay (Roman script)",
-	  25: "Polish", 84: "Malay (Arabic script)",
-	  26: "Hungarian", 85: "Amharic",
-	  27: "Estonian", 86: "Tigrinya",
-	  28: "Latvian", 87: "Galla",
-	  29: "Sami", 88: "Somali",
-	  30: "Faroese", 89: "Swahili",
-	  31: "Farsi/Persian", 90: "Kinyarwanda/Ruanda",
-	  32: "Russian", 91: "Rundi",
-	  33: "Chinese (Simplified)", 92: "Nyanja/Chewa",
-	  34: "Flemish", 93: "Malagasy",
-	  35: "Irish Gaelic", 94: "Esperanto",
-	  36: "Albanian", 128: "Welsh",
-	  37: "Romanian", 129: "Basque",
-	  38: "Czech", 130: "Catalan",
-	  39: "Slovak", 131: "Latin",
-	  40: "Slovenian", 132: "Quenchua",
-	  41: "Yiddish", 133: "Guarani",
-	  42: "Serbian", 134: "Aymara",
-	  43: "Macedonian", 135: "Tatar",
-	  44: "Bulgarian", 136: "Uighur",
-	  45: "Ukrainian", 137: "Dzongkha",
-	  46: "Byelorussian", 138: "Javanese (Roman script)",
-	  47: "Uzbek", 139: "Sundanese (Roman script)",
-	  48: "Kazakh", 140: "Galician",
-	  49: "Azerbaijani (Cyrillic script)", 141: "Afrikaans",
-	  50: "Azerbaijani (Arabic script)", 142: "Breton",
-	  51: "Armenian", 143: "Inuktitut",
-	  52: "Georgian", 144: "Scottish Gaelic",
-	  53: "Moldavian", 145: "Manx Gaelic",
-	  54: "Kirghiz", 146: "Irish Gaelic (with dot above)",
-	  55: "Tajiki", 147: "Tongan",
-	  56: "Turkmen", 148: "Greek (polytonic)",
-	  57: "Mongolian (Mongolian script)", 149: "Greenlandic",
-	  58: "Mongolian (Cyrillic script)", 150: "Azerbaijani (Roman script)"
-	},
-
-	// ISO (deprecated)
-	[], { // windows
-	  0x0436: "Afrikaans", 0x0453: "Khmer",
-	  0x041C: "Albanian", 0x0486: "K'iche",
-	  0x0484: "Alsatian", 0x0487: "Kinyarwanda",
-	  0x045E: "Amharic", 0x0441: "Kiswahili",
-	  0x1401: "Arabic", 0x0457: "Konkani",
-	  0x3C01: "Arabic", 0x0412: "Korean",
-	  0x0C01: "Arabic", 0x0440: "Kyrgyz",
-	  0x0801: "Arabic", 0x0454: "Lao",
-	  0x2C01: "Arabic", 0x0426: "Latvian",
-	  0x3401: "Arabic", 0x0427: "Lithuanian",
-	  0x3001: "Arabic", 0x082E: "Lower Sorbian",
-	  0x1001: "Arabic", 0x046E: "Luxembourgish",
-	  0x1801: "Arabic", 0x042F: "Macedonian (FYROM)",
-	  0x2001: "Arabic", 0x083E: "Malay",
-	  0x4001: "Arabic", 0x043E: "Malay",
-	  0x0401: "Arabic", 0x044C: "Malayalam",
-	  0x2801: "Arabic", 0x043A: "Maltese",
-	  0x1C01: "Arabic", 0x0481: "Maori",
-	  0x3801: "Arabic", 0x047A: "Mapudungun",
-	  0x2401: "Arabic", 0x044E: "Marathi",
-	  0x042B: "Armenian", 0x047C: "Mohawk",
-	  0x044D: "Assamese", 0x0450: "Mongolian (Cyrillic)",
-	  0x082C: "Azeri (Cyrillic)", 0x0850: "Mongolian (Traditional)",
-	  0x042C: "Azeri (Latin)", 0x0461: "Nepali",
-	  0x046D: "Bashkir", 0x0414: "Norwegian (Bokmal)",
-	  0x042D: "Basque", 0x0814: "Norwegian (Nynorsk)",
-	  0x0423: "Belarusian", 0x0482: "Occitan",
-	  0x0845: "Bengali", 0x0448: "Odia (formerly Oriya)",
-	  0x0445: "Bengali", 0x0463: "Pashto",
-	  0x201A: "Bosnian (Cyrillic)", 0x0415: "Polish",
-	  0x141A: "Bosnian (Latin)", 0x0416: "Portuguese",
-	  0x047E: "Breton", 0x0816: "Portuguese",
-	  0x0402: "Bulgarian", 0x0446: "Punjabi",
-	  0x0403: "Catalan", 0x046B: "Quechua",
-	  0x0C04: "Chinese", 0x086B: "Quechua",
-	  0x1404: "Chinese", 0x0C6B: "Quechua",
-	  0x0804: "Chinese", 0x0418: "Romanian",
-	  0x1004: "Chinese", 0x0417: "Romansh",
-	  0x0404: "Chinese", 0x0419: "Russian",
-	  0x0483: "Corsican", 0x243B: "Sami (Inari)",
-	  0x041A: "Croatian", 0x103B: "Sami (Lule)",
-	  0x101A: "Croatian (Latin)", 0x143B: "Sami (Lule)",
-	  0x0405: "Czech", 0x0C3B: "Sami (Northern)",
-	  0x0406: "Danish", 0x043B: "Sami (Northern)",
-	  0x048C: "Dari", 0x083B: "Sami (Northern)",
-	  0x0465: "Divehi", 0x203B: "Sami (Skolt)",
-	  0x0813: "Dutch", 0x183B: "Sami (Southern)",
-	  0x0413: "Dutch", 0x1C3B: "Sami (Southern)",
-	  0x0C09: "English", 0x044F: "Sanskrit",
-	  0x2809: "English", 0x1C1A: "Serbian (Cyrillic)",
-	  0x1009: "English", 0x0C1A: "Serbian (Cyrillic)",
-	  0x2409: "English", 0x181A: "Serbian (Latin)",
-	  0x4009: "English", 0x081A: "Serbian (Latin)",
-	  0x1809: "English", 0x046C: "Sesotho sa Leboa",
-	  0x2009: "English", 0x0432: "Setswana",
-	  0x4409: "English", 0x045B: "Sinhala",
-	  0x1409: "English", 0x041B: "Slovak",
-	  0x3409: "English", 0x0424: "Slovenian",
-	  0x4809: "English", 0x2C0A: "Spanish",
-	  0x1C09: "English", 0x400A: "Spanish",
-	  0x2C09: "English", 0x340A: "Spanish",
-	  0x0809: "English", 0x240A: "Spanish",
-	  0x0409: "English", 0x140A: "Spanish",
-	  0x3009: "English", 0x1C0A: "Spanish",
-	  0x0425: "Estonian", 0x300A: "Spanish",
-	  0x0438: "Faroese", 0x440A: "Spanish",
-	  0x0464: "Filipino", 0x100A: "Spanish",
-	  0x040B: "Finnish", 0x480A: "Spanish",
-	  0x080C: "French", 0x080A: "Spanish",
-	  0x0C0C: "French", 0x4C0A: "Spanish",
-	  0x040C: "French", 0x180A: "Spanish",
-	  0x140c: "French", 0x3C0A: "Spanish",
-	  0x180C: "French", 0x280A: "Spanish",
-	  0x100C: "French", 0x500A: "Spanish",
-	  0x0462: "Frisian", 0x0C0A: "Spanish (Modern Sort)",
-	  0x0456: "Galician", 0x040A: "Spanish (Traditional Sort)",
-	  0x0437: "Georgian", 0x540A: "Spanish",
-	  0x0C07: "German", 0x380A: "Spanish",
-	  0x0407: "German", 0x200A: "Spanish",
-	  0x1407: "German", 0x081D: "Sweden",
-	  0x1007: "German", 0x041D: "Swedish",
-	  0x0807: "German", 0x045A: "Syriac",
-	  0x0408: "Greek", 0x0428: "Tajik (Cyrillic)",
-	  0x046F: "Greenlandic", 0x085F: "Tamazight (Latin)",
-	  0x0447: "Gujarati", 0x0449: "Tamil",
-	  0x0468: "Hausa (Latin)", 0x0444: "Tatar",
-	  0x040D: "Hebrew", 0x044A: "Telugu",
-	  0x0439: "Hindi", 0x041E: "Thai",
-	  0x040E: "Hungarian", 0x0451: "Tibetan",
-	  0x040F: "Icelandic", 0x041F: "Turkish",
-	  0x0470: "Igbo", 0x0442: "Turkmen",
-	  0x0421: "Indonesian", 0x0480: "Uighur",
-	  0x045D: "Inuktitut", 0x0422: "Ukrainian",
-	  0x085D: "Inuktitut (Latin)", 0x042E: "Upper Sorbian",
-	  0x083C: "Irish", 0x0420: "Urdu",
-	  0x0434: "isiXhosa", 0x0843: "Uzbek (Cyrillic)",
-	  0x0435: "isiZulu", 0x0443: "Uzbek (Latin)",
-	  0x0410: "Italian", 0x042A: "Vietnamese",
-	  0x0810: "Italian", 0x0452: "Welsh",
-	  0x0411: "Japanese", 0x0488: "Wolof",
-	  0x044B: "Kannada", 0x0485: "Yakut",
-	  0x043F: "Kazakh", 0x0478: "Yi",
-	  0x046A: "Yoruba"
-	}];
-
 	NameTable.process = function (stream) {
 	  var records = {};
 	  var _iteratorNormalCompletion = true;
@@ -38121,25 +38265,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	        language = record.platformID + '-' + record.languageID;
 	      }
 
-	      // check for reserved nameIDs
-	      // if (20 <= record.nameID && record.nameID <= 255) {
-	      //   throw new Error(`Reserved nameID ${record.nameID}`);
-	      // }
-
 	      // if the nameID is >= 256, it is a font feature record (AAT)
-	      if (record.nameID >= 256) {
-	        if (records.fontFeatures == null) {
-	          records.fontFeatures = {};
-	        }
-	        var feature = records.fontFeatures[language] != null ? records.fontFeatures[language] : records.fontFeatures[language] = {};
-	        feature[record.nameID] = record.string;
-	      } else {
-	        var key = NAMES[record.nameID] || record.nameID;
-	        if (records[key] == null) {
-	          records[key] = {};
-	        }
-	        records[key][language] = record.string;
+	      var key = record.nameID >= 256 ? 'fontFeatures' : NAMES[record.nameID] || record.nameID;
+	      if (records[key] == null) {
+	        records[key] = {};
 	      }
+
+	      var obj = records[key];
+	      if (record.nameID >= 256) {
+	        obj = obj[record.nameID] || (obj[record.nameID] = {});
+	      }
+
+	      obj[language] = record.string;
 	    }
 	  } catch (err) {
 	    _didIteratorError = true;
@@ -38173,8 +38310,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      encodingID: 1,
 	      languageID: 0x409,
 	      nameID: NAMES.indexOf(key),
-	      length: Buffer.byteLength(val.English, 'utf16le'),
-	      string: val.English
+	      length: Buffer.byteLength(val.en, 'utf16le'),
+	      string: val.en
 	    });
 
 	    if (key === 'postscriptName') {
@@ -38183,15 +38320,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	        encodingID: 0,
 	        languageID: 0,
 	        nameID: NAMES.indexOf(key),
-	        length: val.English.length,
-	        string: val.English
+	        length: val.en.length,
+	        string: val.en
 	      });
 	    }
 	  }
 
 	  this.records = records;
 	  this.count = records.length;
-	  this.stringOffset = module.exports.size(this, null, false);
+	  this.stringOffset = NameTable.size(this, null, false);
 	};
 
 	var OS2 = new r.VersionedStruct(r.uint16, {
@@ -38706,7 +38843,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var CFFDict = function () {
 	  function CFFDict() {
-	    var ops = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
+	    var ops = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
 
 	    _classCallCheck(this, CFFDict);
 
@@ -38835,7 +38972,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'size',
 	    value: function size(dict, parent) {
-	      var includePointers = arguments.length <= 2 || arguments[2] === undefined ? true : arguments[2];
+	      var includePointers = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
 
 	      var ctx = {
 	        parent: parent,
@@ -38999,7 +39136,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  _inherits(CFFPointer, _r$Pointer);
 
 	  function CFFPointer(type) {
-	    var options = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+	    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
 	    _classCallCheck(this, CFFPointer);
 
@@ -39328,7 +39465,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'string',
 	    value: function string(sid) {
-	      if (sid <= standardStrings.length) {
+	      if (sid < standardStrings.length) {
 	        return standardStrings[sid];
 	      }
 
@@ -39358,9 +39495,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	      switch (charset.version) {
 	        case 0:
 	          return this.string(charset.glyphs[gid]);
-	          break;
 
-	        case 1:case 2:
+	        case 1:
+	        case 2:
 	          for (var i = 0; i < charset.ranges.length; i++) {
 	            var range = charset.ranges[i];
 	            if (range.offset <= gid && gid <= range.offset + range.nLeft) {
@@ -40043,7 +40180,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var ValueRecord = function () {
 	  function ValueRecord() {
-	    var key = arguments.length <= 0 || arguments[0] === undefined ? 'valueFormat' : arguments[0];
+	    var key = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'valueFormat';
 
 	    _classCallCheck(this, ValueRecord);
 
@@ -40667,7 +40804,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}(r.Array);
 
 	var LookupTable = function LookupTable() {
-	  var ValueType = arguments.length <= 0 || arguments[0] === undefined ? r.uint16 : arguments[0];
+	  var ValueType = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : r.uint16;
 
 	  // Helper class that makes internal structures invisible to pointers
 	  var Shadow = function () {
@@ -40760,8 +40897,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	function StateTable() {
-	  var entryData = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
-	  var lookupType = arguments.length <= 1 || arguments[1] === undefined ? r.uint16 : arguments[1];
+	  var entryData = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+	  var lookupType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : r.uint16;
 
 	  var entry = _Object$assign({
 	    newState: r.uint16,
@@ -40785,8 +40922,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	// This is the old version of the StateTable structure
 	function StateTable1() {
-	  var entryData = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
-	  var lookupType = arguments.length <= 1 || arguments[1] === undefined ? r.uint16 : arguments[1];
+	  var entryData = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+	  var lookupType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : r.uint16;
 
 	  var ClassLookupTable = new r.Struct({
 	    version: function version() {
@@ -40853,8 +40990,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	var Setting = new r.Struct({
 	  setting: r.uint16,
 	  nameIndex: r.int16,
-	  name: function name() {
-	    return this.parent.parent.parent.name.records.fontFeatures.English[this.nameIndex];
+	  name: function name(t) {
+	    return t.parent.parent.parent.name.records.fontFeatures[t.nameIndex];
 	  }
 	});
 
@@ -40865,8 +41002,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  featureFlags: new r.Bitfield(r.uint8, [null, null, null, null, null, null, 'hasDefault', 'exclusive']),
 	  defaultSetting: r.uint8,
 	  nameIndex: r.int16,
-	  name: function name() {
-	    return this.parent.parent.name.records.fontFeatures.English[this.nameIndex];
+	  name: function name(t) {
+	    return t.parent.parent.name.records.fontFeatures[t.nameIndex];
 	  }
 	});
 
@@ -40878,11 +41015,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  featureNames: new r.Array(FeatureName, 'featureNameCount')
 	});
 
-	function getName() {
-	  var features = this.parent.parent.name.records.fontFeatures;
-	  return features && features.English && features.English[this.nameID];
-	}
-
 	var Axis$1 = new r.Struct({
 	  axisTag: new r.String(4),
 	  minValue: r.fixed32,
@@ -40890,12 +41022,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	  maxValue: r.fixed32,
 	  flags: r.uint16,
 	  nameID: r.uint16,
-	  name: getName
+	  name: function name(t) {
+	    return t.parent.parent.name.records.fontFeatures[t.nameID];
+	  }
 	});
 
 	var Instance = new r.Struct({
 	  nameID: r.uint16,
-	  name: getName,
+	  name: function name(t) {
+	    return t.parent.parent.name.records.fontFeatures[t.nameID];
+	  },
 	  flags: r.uint16,
 	  coord: new r.Array(r.fixed32, function (t) {
 	    return t.parent.axisCount;
@@ -41247,79 +41383,201 @@ return /******/ (function(modules) { // webpackBootstrap
 	  this.rangeShift = this.numTables * 16 - this.searchRange;
 	};
 
-	var CmapProcessor = function () {
+	function binarySearch(arr, cmp) {
+	  var min = 0;
+	  var max = arr.length - 1;
+	  while (min <= max) {
+	    var mid = min + max >> 1;
+	    var res = cmp(arr[mid]);
+
+	    if (res < 0) {
+	      max = mid - 1;
+	    } else if (res > 0) {
+	      min = mid + 1;
+	    } else {
+	      return mid;
+	    }
+	  }
+
+	  return -1;
+	}
+
+	function range(index, end) {
+	  var range = [];
+	  while (index < end) {
+	    range.push(index++);
+	  }
+	  return range;
+	}
+
+	var _class$1;
+	function _applyDecoratedDescriptor$1(target, property, decorators, descriptor, context) {
+	  var desc = {};
+	  Object['ke' + 'ys'](descriptor).forEach(function (key) {
+	    desc[key] = descriptor[key];
+	  });
+	  desc.enumerable = !!desc.enumerable;
+	  desc.configurable = !!desc.configurable;
+
+	  if ('value' in desc || desc.initializer) {
+	    desc.writable = true;
+	  }
+
+	  desc = decorators.slice().reverse().reduce(function (desc, decorator) {
+	    return decorator(target, property, desc) || desc;
+	  }, desc);
+
+	  if (context && desc.initializer !== void 0) {
+	    desc.value = desc.initializer ? desc.initializer.call(context) : void 0;
+	    desc.initializer = undefined;
+	  }
+
+	  if (desc.initializer === void 0) {
+	    Object['define' + 'Property'](target, property, desc);
+	    desc = null;
+	  }
+
+	  return desc;
+	}
+
+	// iconv-lite is an optional dependency.
+	try {
+	  var iconv = __webpack_require__(84);
+	} catch (err) {}
+
+	var CmapProcessor = (_class$1 = function () {
 	  function CmapProcessor(cmapTable) {
 	    _classCallCheck(this, CmapProcessor);
 
-	    this._characterSet = null;
+	    // Attempt to find a Unicode cmap first
+	    this.encoding = null;
+	    this.cmap = this.findSubtable(cmapTable, [
+	    // 32-bit subtables
+	    [3, 10], [0, 6], [0, 4],
 
-	    // find the unicode cmap
-	    // check for a 32-bit cmap first
-	    var _iteratorNormalCompletion = true;
-	    var _didIteratorError = false;
-	    var _iteratorError = undefined;
+	    // 16-bit subtables
+	    [3, 1], [0, 3], [0, 2], [0, 1], [0, 0], [3, 0]]);
 
-	    try {
-	      for (var _iterator = _getIterator(cmapTable.tables), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	        var cmap = _step.value;
+	    // If not unicode cmap was found, and iconv-lite is installed,
+	    // take the first table with a supported encoding.
+	    if (!this.cmap && iconv) {
+	      var _iteratorNormalCompletion = true;
+	      var _didIteratorError = false;
+	      var _iteratorError = undefined;
 
-	        // unicode or windows platform
-	        if (cmap.platformID === 0 && (cmap.encodingID === 4 || cmap.encodingID === 6) || cmap.platformID === 3 && cmap.encodingID === 10) {
-	          this.cmap = cmap.table;
-	          return;
-	        }
-	      }
-
-	      // try "old" 16-bit cmap
-	    } catch (err) {
-	      _didIteratorError = true;
-	      _iteratorError = err;
-	    } finally {
 	      try {
-	        if (!_iteratorNormalCompletion && _iterator.return) {
-	          _iterator.return();
+	        for (var _iterator = _getIterator(cmapTable.tables), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	          var cmap = _step.value;
+
+	          var encoding = getEncoding(cmap.platformID, cmap.encodingID, cmap.table.language - 1);
+	          if (iconv.encodingExists(encoding)) {
+	            this.cmap = cmap.table;
+	            this.encoding = encoding;
+	          }
 	        }
+	      } catch (err) {
+	        _didIteratorError = true;
+	        _iteratorError = err;
 	      } finally {
-	        if (_didIteratorError) {
-	          throw _iteratorError;
+	        try {
+	          if (!_iteratorNormalCompletion && _iterator.return) {
+	            _iterator.return();
+	          }
+	        } finally {
+	          if (_didIteratorError) {
+	            throw _iteratorError;
+	          }
 	        }
 	      }
 	    }
 
-	    var _iteratorNormalCompletion2 = true;
-	    var _didIteratorError2 = false;
-	    var _iteratorError2 = undefined;
-
-	    try {
-	      for (var _iterator2 = _getIterator(cmapTable.tables), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	        var _cmap = _step2.value;
-
-	        if (_cmap.platformID === 0 || _cmap.platformID === 3 && _cmap.encodingID === 1) {
-	          this.cmap = _cmap.table;
-	          return;
-	        }
-	      }
-	    } catch (err) {
-	      _didIteratorError2 = true;
-	      _iteratorError2 = err;
-	    } finally {
-	      try {
-	        if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	          _iterator2.return();
-	        }
-	      } finally {
-	        if (_didIteratorError2) {
-	          throw _iteratorError2;
-	        }
-	      }
+	    if (!this.cmap) {
+	      throw new Error("Could not find a supported cmap table");
 	    }
 
-	    throw new Error("Could not find a unicode cmap");
+	    this.uvs = this.findSubtable(cmapTable, [[0, 5]]);
+	    if (this.uvs && this.uvs.version !== 14) {
+	      this.uvs = null;
+	    }
 	  }
 
 	  _createClass(CmapProcessor, [{
+	    key: 'findSubtable',
+	    value: function findSubtable(cmapTable, pairs) {
+	      var _iteratorNormalCompletion2 = true;
+	      var _didIteratorError2 = false;
+	      var _iteratorError2 = undefined;
+
+	      try {
+	        for (var _iterator2 = _getIterator(pairs), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	          var _step2$value = _slicedToArray(_step2.value, 2),
+	              platformID = _step2$value[0],
+	              encodingID = _step2$value[1];
+
+	          var _iteratorNormalCompletion3 = true;
+	          var _didIteratorError3 = false;
+	          var _iteratorError3 = undefined;
+
+	          try {
+	            for (var _iterator3 = _getIterator(cmapTable.tables), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+	              var cmap = _step3.value;
+
+	              if (cmap.platformID === platformID && cmap.encodingID === encodingID) {
+	                return cmap.table;
+	              }
+	            }
+	          } catch (err) {
+	            _didIteratorError3 = true;
+	            _iteratorError3 = err;
+	          } finally {
+	            try {
+	              if (!_iteratorNormalCompletion3 && _iterator3.return) {
+	                _iterator3.return();
+	              }
+	            } finally {
+	              if (_didIteratorError3) {
+	                throw _iteratorError3;
+	              }
+	            }
+	          }
+	        }
+	      } catch (err) {
+	        _didIteratorError2 = true;
+	        _iteratorError2 = err;
+	      } finally {
+	        try {
+	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	            _iterator2.return();
+	          }
+	        } finally {
+	          if (_didIteratorError2) {
+	            throw _iteratorError2;
+	          }
+	        }
+	      }
+
+	      return null;
+	    }
+	  }, {
 	    key: 'lookup',
-	    value: function lookup(codepoint) {
+	    value: function lookup(codepoint, variationSelector) {
+	      // If there is no Unicode cmap in this font, we need to re-encode
+	      // the codepoint in the encoding that the cmap supports.
+	      if (this.encoding) {
+	        var buf = iconv.encode(_String$fromCodePoint(codepoint), this.encoding);
+	        codepoint = 0;
+	        for (var i = 0; i < buf.length; i++) {
+	          codepoint = codepoint << 8 | buf[i];
+	        }
+
+	        // Otherwise, try to get a Unicode variation selector for this codepoint if one is provided.
+	      } else if (variationSelector) {
+	        var gid = this.getVariationSelector(codepoint, variationSelector);
+	        if (gid) {
+	          return gid;
+	        }
+	      }
+
 	      var cmap = this.cmap;
 	      switch (cmap.version) {
 	        case 0:
@@ -41338,19 +41596,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	                min = mid + 1;
 	              } else {
 	                var rangeOffset = cmap.idRangeOffset.get(mid);
-	                var gid = void 0;
+	                var _gid = void 0;
 
 	                if (rangeOffset === 0) {
-	                  gid = codepoint + cmap.idDelta.get(mid);
+	                  _gid = codepoint + cmap.idDelta.get(mid);
 	                } else {
 	                  var index = rangeOffset / 2 + (codepoint - cmap.startCode.get(mid)) - (cmap.segCount - mid);
-	                  gid = cmap.glyphIndexArray.get(index) || 0;
-	                  if (gid !== 0) {
-	                    gid += cmap.idDelta.get(mid);
+	                  _gid = cmap.glyphIndexArray.get(index) || 0;
+	                  if (_gid !== 0) {
+	                    _gid += cmap.idDelta.get(mid);
 	                  }
 	                }
 
-	                return gid & 0xffff;
+	                return _gid & 0xffff;
 	              }
 	            }
 
@@ -41397,16 +41655,42 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 	    }
 	  }, {
-	    key: 'getCharacterSet',
-	    value: function getCharacterSet() {
-	      if (this._characterSet) {
-	        return this._characterSet;
+	    key: 'getVariationSelector',
+	    value: function getVariationSelector(codepoint, variationSelector) {
+	      if (!this.uvs) {
+	        return 0;
 	      }
 
+	      var selectors = this.uvs.varSelectors.toArray();
+	      var i = binarySearch(selectors, function (x) {
+	        return variationSelector - x.varSelector;
+	      });
+	      var sel = selectors[i];
+
+	      if (i !== -1 && sel.defaultUVS) {
+	        i = binarySearch(sel.defaultUVS, function (x) {
+	          return codepoint < x.startUnicodeValue ? -1 : codepoint > x.startUnicodeValue + x.additionalCount ? +1 : 0;
+	        });
+	      }
+
+	      if (i !== -1 && sel.nonDefaultUVS) {
+	        i = binarySearch(sel.nonDefaultUVS, function (x) {
+	          return codepoint - x.unicodeValue;
+	        });
+	        if (i !== -1) {
+	          return sel.nonDefaultUVS[i].glyphID;
+	        }
+	      }
+
+	      return 0;
+	    }
+	  }, {
+	    key: 'getCharacterSet',
+	    value: function getCharacterSet() {
 	      var cmap = this.cmap;
 	      switch (cmap.version) {
 	        case 0:
-	          return this._characterSet = range(0, cmap.codeMap.length);
+	          return range(0, cmap.codeMap.length);
 
 	        case 4:
 	          {
@@ -41418,7 +41702,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	              res.push.apply(res, _toConsumableArray(range(start, tail)));
 	            }
 
-	            return this._characterSet = res;
+	            return res;
 	          }
 
 	        case 8:
@@ -41426,38 +41710,38 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        case 6:
 	        case 10:
-	          return this._characterSet = range(cmap.firstCode, cmap.firstCode + cmap.glyphIndices.length);
+	          return range(cmap.firstCode, cmap.firstCode + cmap.glyphIndices.length);
 
 	        case 12:
 	        case 13:
 	          {
 	            var _res = [];
-	            var _iteratorNormalCompletion3 = true;
-	            var _didIteratorError3 = false;
-	            var _iteratorError3 = undefined;
+	            var _iteratorNormalCompletion4 = true;
+	            var _didIteratorError4 = false;
+	            var _iteratorError4 = undefined;
 
 	            try {
-	              for (var _iterator3 = _getIterator(cmap.groups.toArray()), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	                var group = _step3.value;
+	              for (var _iterator4 = _getIterator(cmap.groups.toArray()), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+	                var group = _step4.value;
 
 	                _res.push.apply(_res, _toConsumableArray(range(group.startCharCode, group.endCharCode + 1)));
 	              }
 	            } catch (err) {
-	              _didIteratorError3 = true;
-	              _iteratorError3 = err;
+	              _didIteratorError4 = true;
+	              _iteratorError4 = err;
 	            } finally {
 	              try {
-	                if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	                  _iterator3.return();
+	                if (!_iteratorNormalCompletion4 && _iterator4.return) {
+	                  _iterator4.return();
 	                }
 	              } finally {
-	                if (_didIteratorError3) {
-	                  throw _iteratorError3;
+	                if (_didIteratorError4) {
+	                  throw _iteratorError4;
 	                }
 	              }
 	            }
 
-	            return this._characterSet = _res;
+	            return _res;
 	          }
 
 	        case 14:
@@ -41467,18 +41751,127 @@ return /******/ (function(modules) { // webpackBootstrap
 	          throw new Error('Unknown cmap format ' + cmap.version);
 	      }
 	    }
+	  }, {
+	    key: 'codePointsForGlyph',
+	    value: function codePointsForGlyph(gid) {
+	      var cmap = this.cmap;
+	      switch (cmap.version) {
+	        case 0:
+	          {
+	            var res = [];
+	            for (var i = 0; i < 256; i++) {
+	              if (cmap.codeMap.get(i) === gid) {
+	                res.push(i);
+	              }
+	            }
+
+	            return res;
+	          }
+
+	        case 4:
+	          {
+	            var _res2 = [];
+	            for (var _i = 0; _i < cmap.segCount; _i++) {
+	              var end = cmap.endCode.get(_i);
+	              var start = cmap.startCode.get(_i);
+	              var rangeOffset = cmap.idRangeOffset.get(_i);
+	              var delta = cmap.idDelta.get(_i);
+
+	              for (var c = start; c <= end; c++) {
+	                var g = 0;
+	                if (rangeOffset === 0) {
+	                  g = c + delta;
+	                } else {
+	                  var index = rangeOffset / 2 + (c - start) - (cmap.segCount - _i);
+	                  g = cmap.glyphIndexArray.get(index) || 0;
+	                  if (g !== 0) {
+	                    g += delta;
+	                  }
+	                }
+
+	                if (g === gid) {
+	                  _res2.push(c);
+	                }
+	              }
+	            }
+
+	            return _res2;
+	          }
+
+	        case 12:
+	          {
+	            var _res3 = [];
+	            var _iteratorNormalCompletion5 = true;
+	            var _didIteratorError5 = false;
+	            var _iteratorError5 = undefined;
+
+	            try {
+	              for (var _iterator5 = _getIterator(cmap.groups.toArray()), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+	                var group = _step5.value;
+
+	                if (gid >= group.glyphID && gid <= group.glyphID + (group.endCharCode - group.startCharCode)) {
+	                  _res3.push(group.startCharCode + (gid - group.glyphID));
+	                }
+	              }
+	            } catch (err) {
+	              _didIteratorError5 = true;
+	              _iteratorError5 = err;
+	            } finally {
+	              try {
+	                if (!_iteratorNormalCompletion5 && _iterator5.return) {
+	                  _iterator5.return();
+	                }
+	              } finally {
+	                if (_didIteratorError5) {
+	                  throw _iteratorError5;
+	                }
+	              }
+	            }
+
+	            return _res3;
+	          }
+
+	        case 13:
+	          {
+	            var _res4 = [];
+	            var _iteratorNormalCompletion6 = true;
+	            var _didIteratorError6 = false;
+	            var _iteratorError6 = undefined;
+
+	            try {
+	              for (var _iterator6 = _getIterator(cmap.groups.toArray()), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+	                var _group = _step6.value;
+
+	                if (gid === _group.glyphID) {
+	                  _res4.push.apply(_res4, _toConsumableArray(range(_group.startCharCode, _group.endCharCode + 1)));
+	                }
+	              }
+	            } catch (err) {
+	              _didIteratorError6 = true;
+	              _iteratorError6 = err;
+	            } finally {
+	              try {
+	                if (!_iteratorNormalCompletion6 && _iterator6.return) {
+	                  _iterator6.return();
+	                }
+	              } finally {
+	                if (_didIteratorError6) {
+	                  throw _iteratorError6;
+	                }
+	              }
+	            }
+
+	            return _res4;
+	          }
+
+	        default:
+	          throw new Error('Unknown cmap format ' + cmap.version);
+	      }
+	    }
 	  }]);
 
 	  return CmapProcessor;
-	}();
-
-	function range(index, end) {
-	  var range = [];
-	  while (index < end) {
-	    range.push(index++);
-	  }
-	  return range;
-	}
+	}(), (_applyDecoratedDescriptor$1(_class$1.prototype, 'getCharacterSet', [cache], _Object$getOwnPropertyDescriptor(_class$1.prototype, 'getCharacterSet'), _class$1.prototype), _applyDecoratedDescriptor$1(_class$1.prototype, 'codePointsForGlyph', [cache], _Object$getOwnPropertyDescriptor(_class$1.prototype, 'codePointsForGlyph'), _class$1.prototype)), _class$1);
 
 	var KernProcessor = function () {
 	  function KernProcessor(font) {
@@ -41904,10 +42297,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 	var BBox = function () {
 	  function BBox() {
-	    var minX = arguments.length <= 0 || arguments[0] === undefined ? Infinity : arguments[0];
-	    var minY = arguments.length <= 1 || arguments[1] === undefined ? Infinity : arguments[1];
-	    var maxX = arguments.length <= 2 || arguments[2] === undefined ? -Infinity : arguments[2];
-	    var maxY = arguments.length <= 3 || arguments[3] === undefined ? -Infinity : arguments[3];
+	    var minX = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : Infinity;
+	    var minY = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : Infinity;
+	    var maxX = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : -Infinity;
+	    var maxY = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : -Infinity;
 
 	    _classCallCheck(this, BBox);
 
@@ -42119,10 +42512,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * Represents positioning information for a glyph in a GlyphRun.
 	 */
 	var GlyphPosition = function GlyphPosition() {
-	  var xAdvance = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
-	  var yAdvance = arguments.length <= 1 || arguments[1] === undefined ? 0 : arguments[1];
-	  var xOffset = arguments.length <= 2 || arguments[2] === undefined ? 0 : arguments[2];
-	  var yOffset = arguments.length <= 3 || arguments[3] === undefined ? 0 : arguments[3];
+	  var xAdvance = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+	  var yAdvance = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+	  var xOffset = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+	  var yOffset = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
 
 	  _classCallCheck(this, GlyphPosition);
 
@@ -42824,8 +43217,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	// salt: feature 'stylisticAlternatives', 'stylisticAltOne' # hmm, which one to choose
 
 	// Add cv01-cv99 features
-	for (var i$1 = 1; i$1 <= 99; i$1++) {
-	  OTMapping['cv' + ('00' + i$1).slice(-2)] = [features.characterAlternatives.code, i$1];
+	for (var i = 1; i <= 99; i++) {
+	  OTMapping['cv' + ('00' + i).slice(-2)] = [features.characterAlternatives.code, i];
 	}
 
 	// create inverse mapping
@@ -42860,10 +43253,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	// Maps strings in a [featureType, featureSetting]
 	// to their equivalent number codes
 	function mapFeatureStrings(f) {
-	  var _f = _slicedToArray(f, 2);
-
-	  var type = _f[0];
-	  var setting = _f[1];
+	  var _f = _slicedToArray(f, 2),
+	      type = _f[0],
+	      setting = _f[1];
 
 	  if (isNaN(type)) {
 	    var typeCode = features[type] && features[type].code;
@@ -42910,7 +43302,37 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return _Object$keys(res);
 	}
 
-	var AATLookupTable = function () {
+	var _class$3;
+	function _applyDecoratedDescriptor$3(target, property, decorators, descriptor, context) {
+	  var desc = {};
+	  Object['ke' + 'ys'](descriptor).forEach(function (key) {
+	    desc[key] = descriptor[key];
+	  });
+	  desc.enumerable = !!desc.enumerable;
+	  desc.configurable = !!desc.configurable;
+
+	  if ('value' in desc || desc.initializer) {
+	    desc.writable = true;
+	  }
+
+	  desc = decorators.slice().reverse().reduce(function (desc, decorator) {
+	    return decorator(target, property, desc) || desc;
+	  }, desc);
+
+	  if (context && desc.initializer !== void 0) {
+	    desc.value = desc.initializer ? desc.initializer.call(context) : void 0;
+	    desc.initializer = undefined;
+	  }
+
+	  if (desc.initializer === void 0) {
+	    Object['define' + 'Property'](target, property, desc);
+	    desc = null;
+	  }
+
+	  return desc;
+	}
+
+	var AATLookupTable = (_class$3 = function () {
 	  function AATLookupTable(table) {
 	    _classCallCheck(this, AATLookupTable);
 
@@ -42918,7 +43340,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 
 	  _createClass(AATLookupTable, [{
-	    key: "lookup",
+	    key: 'lookup',
 	    value: function lookup(glyph) {
 	      switch (this.table.version) {
 	        case 0:
@@ -42988,13 +43410,109 @@ return /******/ (function(modules) { // webpackBootstrap
 	          return this.table.values[glyph - this.table.firstGlyph];
 
 	        default:
-	          throw new Error("Unknown lookup table format: " + this.table.version);
+	          throw new Error('Unknown lookup table format: ' + this.table.version);
 	      }
+	    }
+	  }, {
+	    key: 'glyphsForValue',
+	    value: function glyphsForValue(classValue) {
+	      var res = [];
+
+	      switch (this.table.version) {
+	        case 2: // segment format
+	        case 4:
+	          {
+	            var _iteratorNormalCompletion = true;
+	            var _didIteratorError = false;
+	            var _iteratorError = undefined;
+
+	            try {
+	              for (var _iterator = _getIterator(this.table.segments), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	                var segment = _step.value;
+
+	                if (this.table.version === 2 && segment.value === classValue) {
+	                  res.push.apply(res, _toConsumableArray(range(segment.firstGlyph, segment.lastGlyph + 1)));
+	                } else {
+	                  for (var index = 0; index < segment.values.length; index++) {
+	                    if (segment.values[index] === classValue) {
+	                      res.push(segment.firstGlyph + index);
+	                    }
+	                  }
+	                }
+	              }
+	            } catch (err) {
+	              _didIteratorError = true;
+	              _iteratorError = err;
+	            } finally {
+	              try {
+	                if (!_iteratorNormalCompletion && _iterator.return) {
+	                  _iterator.return();
+	                }
+	              } finally {
+	                if (_didIteratorError) {
+	                  throw _iteratorError;
+	                }
+	              }
+	            }
+
+	            break;
+	          }
+
+	        case 6:
+	          {
+	            // lookup single
+	            var _iteratorNormalCompletion2 = true;
+	            var _didIteratorError2 = false;
+	            var _iteratorError2 = undefined;
+
+	            try {
+	              for (var _iterator2 = _getIterator(this.table.segments), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	                var _segment = _step2.value;
+
+	                if (_segment.value === classValue) {
+	                  res.push(_segment.glyph);
+	                }
+	              }
+	            } catch (err) {
+	              _didIteratorError2 = true;
+	              _iteratorError2 = err;
+	            } finally {
+	              try {
+	                if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	                  _iterator2.return();
+	                }
+	              } finally {
+	                if (_didIteratorError2) {
+	                  throw _iteratorError2;
+	                }
+	              }
+	            }
+
+	            break;
+	          }
+
+	        case 8:
+	          {
+	            // lookup trimmed
+	            for (var i = 0; i < this.table.values.length; i++) {
+	              if (this.table.values[i] === classValue) {
+	                res.push(this.table.firstGlyph + i);
+	              }
+	            }
+
+	            break;
+	          }
+
+	        default:
+	          throw new Error('Unknown lookup table format: ' + this.table.version);
+	      }
+
+	      return res;
 	    }
 	  }]);
 
 	  return AATLookupTable;
-	}();
+	}(), (_applyDecoratedDescriptor$3(_class$3.prototype, 'glyphsForValue', [cache], _Object$getOwnPropertyDescriptor(_class$3.prototype, 'glyphsForValue'), _class$3.prototype)), _class$3);
 
 	var START_OF_TEXT_STATE = 0;
 	var END_OF_TEXT_CLASS = 0;
@@ -43054,10 +43572,107 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      return glyphs;
 	    }
+
+	    /**
+	     * Performs a depth-first traversal of the glyph strings
+	     * represented by the state machine.
+	     */
+
+	  }, {
+	    key: 'traverse',
+	    value: function traverse(opts) {
+	      var state = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+	      var visited = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : new _Set();
+
+	      if (visited.has(state)) {
+	        return;
+	      }
+
+	      visited.add(state);
+
+	      var _stateTable = this.stateTable,
+	          nClasses = _stateTable.nClasses,
+	          stateArray = _stateTable.stateArray,
+	          entryTable = _stateTable.entryTable;
+
+	      var row = stateArray.getItem(state);
+
+	      // Skip predefined classes
+	      for (var classCode = 4; classCode < nClasses; classCode++) {
+	        var entryIndex = row[classCode];
+	        var entry = entryTable.getItem(entryIndex);
+
+	        // Try all glyphs in the class
+	        var _iteratorNormalCompletion = true;
+	        var _didIteratorError = false;
+	        var _iteratorError = undefined;
+
+	        try {
+	          for (var _iterator = _getIterator(this.lookupTable.glyphsForValue(classCode)), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	            var glyph = _step.value;
+
+	            if (opts.enter) {
+	              opts.enter(glyph, entry);
+	            }
+
+	            if (entry.newState !== 0) {
+	              this.traverse(opts, entry.newState, visited);
+	            }
+
+	            if (opts.exit) {
+	              opts.exit(glyph, entry);
+	            }
+	          }
+	        } catch (err) {
+	          _didIteratorError = true;
+	          _iteratorError = err;
+	        } finally {
+	          try {
+	            if (!_iteratorNormalCompletion && _iterator.return) {
+	              _iterator.return();
+	            }
+	          } finally {
+	            if (_didIteratorError) {
+	              throw _iteratorError;
+	            }
+	          }
+	        }
+	      }
+	    }
 	  }]);
 
 	  return AATStateMachine;
 	}();
+
+	var _class$2;
+	function _applyDecoratedDescriptor$2(target, property, decorators, descriptor, context) {
+	  var desc = {};
+	  Object['ke' + 'ys'](descriptor).forEach(function (key) {
+	    desc[key] = descriptor[key];
+	  });
+	  desc.enumerable = !!desc.enumerable;
+	  desc.configurable = !!desc.configurable;
+
+	  if ('value' in desc || desc.initializer) {
+	    desc.writable = true;
+	  }
+
+	  desc = decorators.slice().reverse().reduce(function (desc, decorator) {
+	    return decorator(target, property, desc) || desc;
+	  }, desc);
+
+	  if (context && desc.initializer !== void 0) {
+	    desc.value = desc.initializer ? desc.initializer.call(context) : void 0;
+	    desc.initializer = undefined;
+	  }
+
+	  if (desc.initializer === void 0) {
+	    Object['define' + 'Property'](target, property, desc);
+	    desc = null;
+	  }
+
+	  return desc;
+	}
 
 	// indic replacement flags
 	var MARK_FIRST = 0x8000;
@@ -43082,7 +43697,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var CURRENT_INSERT_COUNT = 0x03E0;
 	var MARKED_INSERT_COUNT = 0x001F;
 
-	var AATMorxProcessor = function () {
+	var AATMorxProcessor = (_class$2 = function () {
 	  function AATMorxProcessor(font) {
 	    _classCallCheck(this, AATMorxProcessor);
 
@@ -43093,6 +43708,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.processGlyphInsertion = this.processGlyphInsertion.bind(this);
 	    this.font = font;
 	    this.morx = font.morx;
+	    this.inputCache = null;
 	  }
 
 	  // Processes an array of glyphs and applies the specified features
@@ -43102,7 +43718,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  _createClass(AATMorxProcessor, [{
 	    key: 'process',
 	    value: function process(glyphs) {
-	      var features = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+	      var features = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 	      var _iteratorNormalCompletion = true;
 	      var _didIteratorError = false;
 	      var _iteratorError = undefined;
@@ -43214,11 +43830,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	      this.lastGlyph = null;
 	      this.markedIndex = null;
 
-	      var stateMachine = new AATStateMachine(this.subtable.table.stateTable);
+	      var stateMachine = this.getStateMachine(subtable);
 	      var process = this.getProcessor();
 
 	      var reverse = !!(this.subtable.coverage & REVERSE_DIRECTION);
 	      return stateMachine.process(this.glyphs, reverse, process);
+	    }
+	  }, {
+	    key: 'getStateMachine',
+	    value: function getStateMachine(subtable) {
+	      return new AATStateMachine(subtable.table.stateTable);
 	    }
 	  }, {
 	    key: 'getProcessor',
@@ -43434,14 +44055,154 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      return features;
 	    }
+	  }, {
+	    key: 'generateInputs',
+	    value: function generateInputs(gid) {
+	      if (!this.inputCache) {
+	        this.generateInputCache();
+	      }
+
+	      return this.inputCache[gid] || [];
+	    }
+	  }, {
+	    key: 'generateInputCache',
+	    value: function generateInputCache() {
+	      this.inputCache = {};
+
+	      var _iteratorNormalCompletion6 = true;
+	      var _didIteratorError6 = false;
+	      var _iteratorError6 = undefined;
+
+	      try {
+	        for (var _iterator6 = _getIterator(this.morx.chains), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+	          var chain = _step6.value;
+
+	          var flags = chain.defaultFlags;
+
+	          var _iteratorNormalCompletion7 = true;
+	          var _didIteratorError7 = false;
+	          var _iteratorError7 = undefined;
+
+	          try {
+	            for (var _iterator7 = _getIterator(chain.subtables), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+	              var subtable = _step7.value;
+
+	              if (subtable.subFeatureFlags & flags) {
+	                this.generateInputsForSubtable(subtable);
+	              }
+	            }
+	          } catch (err) {
+	            _didIteratorError7 = true;
+	            _iteratorError7 = err;
+	          } finally {
+	            try {
+	              if (!_iteratorNormalCompletion7 && _iterator7.return) {
+	                _iterator7.return();
+	              }
+	            } finally {
+	              if (_didIteratorError7) {
+	                throw _iteratorError7;
+	              }
+	            }
+	          }
+	        }
+	      } catch (err) {
+	        _didIteratorError6 = true;
+	        _iteratorError6 = err;
+	      } finally {
+	        try {
+	          if (!_iteratorNormalCompletion6 && _iterator6.return) {
+	            _iterator6.return();
+	          }
+	        } finally {
+	          if (_didIteratorError6) {
+	            throw _iteratorError6;
+	          }
+	        }
+	      }
+	    }
+	  }, {
+	    key: 'generateInputsForSubtable',
+	    value: function generateInputsForSubtable(subtable) {
+	      var _this = this;
+
+	      // Currently, only supporting ligature subtables.
+	      if (subtable.type !== 2) {
+	        return;
+	      }
+
+	      var reverse = !!(subtable.coverage & REVERSE_DIRECTION);
+	      if (reverse) {
+	        throw new Error('Reverse subtable, not supported.');
+	      }
+
+	      this.subtable = subtable;
+	      this.ligatureStack = [];
+
+	      var stateMachine = this.getStateMachine(subtable);
+	      var process = this.getProcessor();
+
+	      var input = [];
+	      var stack = [];
+	      this.glyphs = [];
+
+	      stateMachine.traverse({
+	        enter: function enter(glyph, entry) {
+	          var glyphs = _this.glyphs;
+	          stack.push({
+	            glyphs: glyphs.slice(),
+	            ligatureStack: _this.ligatureStack.slice()
+	          });
+
+	          // Add glyph to input and glyphs to process.
+	          var g = _this.font.getGlyph(glyph);
+	          input.push(g);
+	          glyphs.push(input[input.length - 1]);
+
+	          // Process ligature substitution
+	          process(glyphs[glyphs.length - 1], entry, glyphs.length - 1);
+
+	          // Add input to result if only one matching (non-deleted) glyph remains.
+	          var count = 0;
+	          var found = 0;
+	          for (var i = 0; i < glyphs.length && count <= 1; i++) {
+	            if (glyphs[i].id !== 0xffff) {
+	              count++;
+	              found = glyphs[i].id;
+	            }
+	          }
+
+	          if (count === 1) {
+	            var result = input.map(function (g) {
+	              return g.id;
+	            });
+	            var _cache = _this.inputCache[found];
+	            if (_cache) {
+	              _cache.push(result);
+	            } else {
+	              _this.inputCache[found] = [result];
+	            }
+	          }
+	        },
+
+	        exit: function exit() {
+	          var _stack$pop = stack.pop();
+
+	          _this.glyphs = _stack$pop.glyphs;
+	          _this.ligatureStack = _stack$pop.ligatureStack;
+
+	          input.pop();
+	        }
+	      });
+	    }
 	  }]);
 
 	  return AATMorxProcessor;
-	}();
+	}(), (_applyDecoratedDescriptor$2(_class$2.prototype, 'getStateMachine', [cache], _Object$getOwnPropertyDescriptor(_class$2.prototype, 'getStateMachine'), _class$2.prototype)), _class$2);
 
 	function swap(glyphs, rangeA, rangeB) {
-	  var reverseA = arguments.length <= 3 || arguments[3] === undefined ? false : arguments[3];
-	  var reverseB = arguments.length <= 4 || arguments[4] === undefined ? false : arguments[4];
+	  var reverseA = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
+	  var reverseB = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
 
 	  var end = glyphs.splice(rangeB[0] - (rangeB[1] - 1), rangeB[1]);
 	  if (reverseB) {
@@ -43533,6 +44294,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function AATLayoutEngine(font) {
 	    _classCallCheck(this, AATLayoutEngine);
 
+	    this.font = font;
 	    this.morxProcessor = new AATMorxProcessor(font);
 	  }
 
@@ -43553,6 +44315,74 @@ return /******/ (function(modules) { // webpackBootstrap
 	    key: 'getAvailableFeatures',
 	    value: function getAvailableFeatures(script, language) {
 	      return mapAATToOT(this.morxProcessor.getSupportedFeatures());
+	    }
+	  }, {
+	    key: 'stringsForGlyph',
+	    value: function stringsForGlyph(gid) {
+	      var glyphStrings = this.morxProcessor.generateInputs(gid);
+	      var result = new _Set();
+
+	      var _iteratorNormalCompletion = true;
+	      var _didIteratorError = false;
+	      var _iteratorError = undefined;
+
+	      try {
+	        for (var _iterator = _getIterator(glyphStrings), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	          var glyphs = _step.value;
+
+	          this._addStrings(glyphs, 0, result, '');
+	        }
+	      } catch (err) {
+	        _didIteratorError = true;
+	        _iteratorError = err;
+	      } finally {
+	        try {
+	          if (!_iteratorNormalCompletion && _iterator.return) {
+	            _iterator.return();
+	          }
+	        } finally {
+	          if (_didIteratorError) {
+	            throw _iteratorError;
+	          }
+	        }
+	      }
+
+	      return result;
+	    }
+	  }, {
+	    key: '_addStrings',
+	    value: function _addStrings(glyphs, index, strings, string) {
+	      var codePoints = this.font._cmapProcessor.codePointsForGlyph(glyphs[index]);
+
+	      var _iteratorNormalCompletion2 = true;
+	      var _didIteratorError2 = false;
+	      var _iteratorError2 = undefined;
+
+	      try {
+	        for (var _iterator2 = _getIterator(codePoints), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	          var codePoint = _step2.value;
+
+	          var s = string + _String$fromCodePoint(codePoint);
+	          if (index < glyphs.length - 1) {
+	            this._addStrings(glyphs, index + 1, strings, s);
+	          } else {
+	            strings.add(s);
+	          }
+	        }
+	      } catch (err) {
+	        _didIteratorError2 = true;
+	        _iteratorError2 = err;
+	      } finally {
+	        try {
+	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	            _iterator2.return();
+	          }
+	        } finally {
+	          if (_didIteratorError2) {
+	            throw _iteratorError2;
+	          }
+	        }
+	      }
 	    }
 	  }]);
 
@@ -43661,7 +44491,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'add',
 	    value: function add(arg) {
-	      var global = arguments.length <= 1 || arguments[1] === undefined ? true : arguments[1];
+	      var global = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
 
 	      if (this.stages.length === 0) {
 	        this.stages.push([]);
@@ -43755,7 +44585,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	          var stage = _step4.value;
 
 	          if (typeof stage === 'function') {
-	            stage(glyphs, positions);
+	            if (!positions) {
+	              stage(this.font, glyphs, positions);
+	            }
 	          } else if (stage.length > 0) {
 	            processor.applyFeatures(stage, glyphs, positions);
 	          }
@@ -43780,6 +44612,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return ShapingPlan;
 	}();
 
+	var _class$4;
+	var _temp;
 	var COMMON_FEATURES = ['ccmp', 'locl', 'rlig', 'mark', 'mkmk'];
 	var FRACTIONAL_FEATURES = ['frac', 'numr', 'dnom'];
 	var HORIZONTAL_FEATURES = ['calt', 'clig', 'liga', 'rclt', 'curs', 'kern'];
@@ -43788,7 +44622,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  rtl: ['rtla', 'rtlm']
 	};
 
-	var DefaultShaper = function () {
+	var DefaultShaper = (_temp = _class$4 = function () {
 	  function DefaultShaper() {
 	    _classCallCheck(this, DefaultShaper);
 	  }
@@ -43862,7 +44696,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }]);
 
 	  return DefaultShaper;
-	}();
+	}(), _class$4.zeroMarkWidths = 'AFTER_GPOS', _temp);
 
 	var trie = new UnicodeTrie(Buffer("AAEQAAAAAAAAADGgAZUBav7t2CtPA0EUBeDZB00pin9AJZIEgyUEj0QhweDAgQOJxCBRBElQSBwSicLgkOAwnNKZ5GaY2c7uzj4o5yZfZrrbefbuIx2nSq3CGmzAWH/+K+UO7MIe7MMhHMMpnMMFXMIVXIt2t3CnP088iPqjqNN8e4Ij7Rle4LUH82rLm6i/92A+RERERERERERNmfz/89GDeRARERERzbN8ceps2Iwt9H0C9/AJ6yOlDkbTczcot5VSm8Pm1vcFWfb7+BKOLTuOd2UlTX4wGP85Eg953lWPFbnuN7PkjtLmalOWbNenkHOSa7T3KmR9MVTZ2zZkVj1kHa68MueVKH0R4zqQ44WEXLM8VjcWHP0PtKLfPzQnMtGn3W4QYf6qxFxceVI394r2xnV+1rih0fV1Vzf3fO1n3evL5J78ruvZ5ptX2Rwy92Tfb1wlEqut3U+sZ3HXOeJ7/zDrbyuP6+Zz0fqa6Nv3vhY7Yu1xWnGevmsvsUpTT/RYIe8waUH/rvHMWKFzLfN8L+rTfp645mfX7ftlnfDtYxN59w0=","base64"));
 	var FEATURES = ['isol', 'fina', 'fin2', 'fin3', 'medi', 'med2', 'init'];
@@ -44003,399 +44837,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return ShapingClasses.Non_Joining;
 	}
 
-	var GlyphInfo = function GlyphInfo(id) {
-	  var codePoints = arguments.length <= 1 || arguments[1] === undefined ? [] : arguments[1];
-	  var features = arguments.length <= 2 || arguments[2] === undefined ? [] : arguments[2];
-
-	  _classCallCheck(this, GlyphInfo);
-
-	  this.id = id;
-	  this.codePoints = codePoints;
-
-	  // TODO: get this info from GDEF if available
-	  this.isMark = this.codePoints.every(unicode.isMark);
-	  this.isLigature = this.codePoints.length > 1;
-
-	  this.features = {};
-	  if (Array.isArray(features)) {
-	    for (var i = 0; i < features.length; i++) {
-	      var feature = features[i];
-	      this.features[feature] = true;
-	    }
-	  } else if ((typeof features === 'undefined' ? 'undefined' : _typeof(features)) === 'object') {
-	    _Object$assign(this.features, features);
-	  }
-
-	  this.ligatureID = null;
-	  this.ligatureComponent = null;
-	  this.cursiveAttachment = null;
-	  this.markAttachment = null;
-	};
-
-	/**
-	 * This is a shaper for the Hangul script, used by the Korean language.
-	 * It does the following:
-	 *   - decompose if unsupported by the font:
-	 *     <LV>   -> <L,V>
-	 *     <LVT>  -> <L,V,T>
-	 *     <LV,T> -> <L,V,T>
-	 *
-	 *   - compose if supported by the font:
-	 *     <L,V>   -> <LV>
-	 *     <L,V,T> -> <LVT>
-	 *     <LV,T>  -> <LVT>
-	 *
-	 *   - reorder tone marks (S is any valid syllable):
-	 *     <S, M> -> <M, S>
-	 *
-	 *   - apply ljmo, vjmo, and tjmo OpenType features to decomposed Jamo sequences.
-	 *
-	 * This logic is based on the following documents:
-	 *   - http://www.microsoft.com/typography/OpenTypeDev/hangul/intro.htm
-	 *   - http://ktug.org/~nomos/harfbuzz-hangul/hangulshaper.pdf
-	 */
-
-	var HangulShaper = function (_DefaultShaper) {
-	  _inherits(HangulShaper, _DefaultShaper);
-
-	  function HangulShaper() {
-	    _classCallCheck(this, HangulShaper);
-
-	    return _possibleConstructorReturn(this, (HangulShaper.__proto__ || _Object$getPrototypeOf(HangulShaper)).apply(this, arguments));
-	  }
-
-	  _createClass(HangulShaper, null, [{
-	    key: 'planFeatures',
-	    value: function planFeatures(plan) {
-	      plan.add(['ljmo', 'vjmo', 'tjmo'], false);
-	    }
-	  }, {
-	    key: 'assignFeatures',
-	    value: function assignFeatures(plan, glyphs) {
-	      var state = 0;
-	      var i = 0;
-	      while (i < glyphs.length) {
-	        var action = void 0;
-	        var glyph = glyphs[i];
-	        var code = glyph.codePoints[0];
-	        var type = getType(code);
-
-	        var _STATE_TABLE$state$ty = _slicedToArray(STATE_TABLE$1[state][type], 2);
-
-	        action = _STATE_TABLE$state$ty[0];
-	        state = _STATE_TABLE$state$ty[1];
-
-
-	        switch (action) {
-	          case DECOMPOSE:
-	            // Decompose the composed syllable if it is not supported by the font.
-	            if (!plan.font.hasGlyphForCodePoint(code)) {
-	              i = decompose(glyphs, i, plan.font);
-	            }
-	            break;
-
-	          case COMPOSE:
-	            // Found a decomposed syllable. Try to compose if supported by the font.
-	            i = compose(glyphs, i, plan.font);
-	            break;
-
-	          case TONE_MARK:
-	            // Got a valid syllable, followed by a tone mark. Move the tone mark to the beginning of the syllable.
-	            reorderToneMark(glyphs, i, plan.font);
-	            break;
-
-	          case INVALID:
-	            // Tone mark has no valid syllable to attach to, so insert a dotted circle
-	            i = insertDottedCircle(glyphs, i, plan.font);
-	            break;
-	        }
-
-	        i++;
-	      }
-	    }
-	  }]);
-
-	  return HangulShaper;
-	}(DefaultShaper);
-
-	var HANGUL_BASE = 0xac00;
-	var HANGUL_END = 0xd7a4;
-	var HANGUL_COUNT = HANGUL_END - HANGUL_BASE + 1;
-	var L_BASE = 0x1100; // lead
-	var V_BASE = 0x1161; // vowel
-	var T_BASE = 0x11a7; // trail
-	var L_COUNT = 19;
-	var V_COUNT = 21;
-	var T_COUNT = 28;
-	var L_END = L_BASE + L_COUNT - 1;
-	var V_END = V_BASE + V_COUNT - 1;
-	var T_END = T_BASE + T_COUNT - 1;
-	var DOTTED_CIRCLE = 0x25cc;
-
-	var isL = function isL(code) {
-	  return 0x1100 <= code && code <= 0x115f || 0xa960 <= code && code <= 0xa97c;
-	};
-	var isV = function isV(code) {
-	  return 0x1160 <= code && code <= 0x11a7 || 0xd7b0 <= code && code <= 0xd7c6;
-	};
-	var isT = function isT(code) {
-	  return 0x11a8 <= code && code <= 0x11ff || 0xd7cb <= code && code <= 0xd7fb;
-	};
-	var isTone = function isTone(code) {
-	  return 0x302e <= code && code <= 0x302f;
-	};
-	var isLVT = function isLVT(code) {
-	  return HANGUL_BASE <= code && code <= HANGUL_END;
-	};
-	var isLV = function isLV(code) {
-	  return code - HANGUL_BASE < HANGUL_COUNT && (code - HANGUL_BASE) % T_COUNT === 0;
-	};
-	var isCombiningL = function isCombiningL(code) {
-	  return L_BASE <= code && code <= L_END;
-	};
-	var isCombiningV = function isCombiningV(code) {
-	  return V_BASE <= code && code <= V_END;
-	};
-	var isCombiningT = function isCombiningT(code) {
-	  return T_BASE + 1 && 1 <= code && code <= T_END;
-	};
-
-	// Character categories
-	var X = 0; // Other character
-	var L = 1; // Leading consonant
-	var V = 2; // Medial vowel
-	var T = 3; // Trailing consonant
-	var LV = 4; // Composed <LV> syllable
-	var LVT = 5; // Composed <LVT> syllable
-	var M = 6; // Tone mark
-
-	// This function classifies a character using the above categories.
-	function getType(code) {
-	  if (isL(code)) {
-	    return L;
-	  }
-	  if (isV(code)) {
-	    return V;
-	  }
-	  if (isT(code)) {
-	    return T;
-	  }
-	  if (isLV(code)) {
-	    return LV;
-	  }
-	  if (isLVT(code)) {
-	    return LVT;
-	  }
-	  if (isTone(code)) {
-	    return M;
-	  }
-	  return X;
-	}
-
-	// State machine actions
-	var NO_ACTION = 0;
-	var DECOMPOSE = 1;
-	var COMPOSE = 2;
-	var TONE_MARK = 4;
-	var INVALID = 5;
-
-	// Build a state machine that accepts valid syllables, and applies actions along the way.
-	// The logic this is implementing is documented at the top of the file.
-	var STATE_TABLE$1 = [
-	//       X                 L                 V                T                  LV                LVT               M
-	// State 0: start state
-	[[NO_ACTION, 0], [NO_ACTION, 1], [NO_ACTION, 0], [NO_ACTION, 0], [DECOMPOSE, 2], [DECOMPOSE, 3], [INVALID, 0]],
-
-	// State 1: <L>
-	[[NO_ACTION, 0], [NO_ACTION, 1], [COMPOSE, 2], [NO_ACTION, 0], [DECOMPOSE, 2], [DECOMPOSE, 3], [INVALID, 0]],
-
-	// State 2: <L,V> or <LV>
-	[[NO_ACTION, 0], [NO_ACTION, 1], [NO_ACTION, 0], [COMPOSE, 3], [DECOMPOSE, 2], [DECOMPOSE, 3], [TONE_MARK, 0]],
-
-	// State 3: <L,V,T> or <LVT>
-	[[NO_ACTION, 0], [NO_ACTION, 1], [NO_ACTION, 0], [NO_ACTION, 0], [DECOMPOSE, 2], [DECOMPOSE, 3], [TONE_MARK, 0]]];
-
-	function getGlyph(font, code, features) {
-	  return new GlyphInfo(font.glyphForCodePoint(code).id, [code], _Object$keys(features));
-	}
-
-	function decompose(glyphs, i, font) {
-	  var glyph = glyphs[i];
-	  var code = glyph.codePoints[0];
-
-	  var s = code - HANGUL_BASE;
-	  var t = T_BASE + s % T_COUNT;
-	  s = s / T_COUNT | 0;
-	  var l = L_BASE + s / V_COUNT | 0;
-	  var v = V_BASE + s % V_COUNT;
-
-	  // Don't decompose if all of the components are not available
-	  if (!font.hasGlyphForCodePoint(l) || !font.hasGlyphForCodePoint(v) || t !== T_BASE && !font.hasGlyphForCodePoint(t)) {
-	    return i;
-	  }
-
-	  // Replace the current glyph with decomposed L, V, and T glyphs,
-	  // and apply the proper OpenType features to each component.
-	  var ljmo = getGlyph(font, l, glyph.features);
-	  ljmo.features.ljmo = true;
-
-	  var vjmo = getGlyph(font, v, glyph.features);
-	  vjmo.features.vjmo = true;
-
-	  var insert = [ljmo, vjmo];
-
-	  if (t > T_BASE) {
-	    var tjmo = getGlyph(font, t, glyph.features);
-	    tjmo.features.tjmo = true;
-	    insert.push(tjmo);
-	  }
-
-	  glyphs.splice.apply(glyphs, [i, 1].concat(insert));
-	  return i + insert.length - 1;
-	}
-
-	function compose(glyphs, i, font) {
-	  var glyph = glyphs[i];
-	  var code = glyphs[i].codePoints[0];
-	  var type = getType(code);
-
-	  var prev = glyphs[i - 1].codePoints[0];
-	  var prevType = getType(prev);
-
-	  // Figure out what type of syllable we're dealing with
-	  var lv = void 0,
-	      ljmo = void 0,
-	      vjmo = void 0,
-	      tjmo = void 0;
-	  if (prevType === LV && type === T) {
-	    // <LV,T>
-	    lv = prev;
-	    tjmo = glyph;
-	  } else {
-	    if (type === V) {
-	      // <L,V>
-	      ljmo = glyphs[i - 1];
-	      vjmo = glyph;
-	    } else {
-	      // <L,V,T>
-	      ljmo = glyphs[i - 2];
-	      vjmo = glyphs[i - 1];
-	      tjmo = glyph;
-	    }
-
-	    var l = ljmo.codePoints[0];
-	    var v = vjmo.codePoints[0];
-
-	    // Make sure L and V are combining characters
-	    if (isCombiningL(l) && isCombiningV(v)) {
-	      lv = HANGUL_BASE + ((l - L_BASE) * V_COUNT + (v - V_BASE)) * T_COUNT;
-	    }
-	  }
-
-	  var t = tjmo && tjmo.codePoints[0] || T_BASE;
-	  if (lv != null && (t === T_BASE || isCombiningT(t))) {
-	    var s = lv + (t - T_BASE);
-
-	    // Replace with a composed glyph if supported by the font,
-	    // otherwise apply the proper OpenType features to each component.
-	    if (font.hasGlyphForCodePoint(s)) {
-	      var del = prevType === V ? 3 : 2;
-	      glyphs.splice(i - del + 1, del, getGlyph(font, s, glyph.features));
-	      return i - del + 1;
-	    }
-	  }
-
-	  // Didn't compose (either a non-combining component or unsupported by font).
-	  if (ljmo) {
-	    ljmo.features.ljmo = true;
-	  }
-	  if (vjmo) {
-	    vjmo.features.vjmo = true;
-	  }
-	  if (tjmo) {
-	    tjmo.features.tjmo = true;
-	  }
-
-	  if (prevType === LV) {
-	    // Sequence was originally <L,V>, which got combined earlier.
-	    // Either the T was non-combining, or the LVT glyph wasn't supported.
-	    // Decompose the glyph again and apply OT features.
-	    decompose(glyphs, i - 1, font);
-	    return i + 1;
-	  }
-
-	  return i;
-	}
-
-	function getLength(code) {
-	  switch (getType(code)) {
-	    case LV:
-	    case LVT:
-	      return 1;
-	    case V:
-	      return 2;
-	    case T:
-	      return 3;
-	  }
-	}
-
-	function reorderToneMark(glyphs, i, font) {
-	  var glyph = glyphs[i];
-	  var code = glyphs[i].codePoints[0];
-
-	  // Move tone mark to the beginning of the previous syllable, unless it is zero width
-	  if (font.glyphForCodePoint(code).advanceWidth === 0) {
-	    return;
-	  }
-
-	  var prev = glyphs[i - 1].codePoints[0];
-	  var len = getLength(prev);
-
-	  glyphs.splice(i, 1);
-	  return glyphs.splice(i - len, 0, glyph);
-	}
-
-	function insertDottedCircle(glyphs, i, font) {
-	  var glyph = glyphs[i];
-	  var code = glyphs[i].codePoints[0];
-
-	  if (font.hasGlyphForCodePoint(DOTTED_CIRCLE)) {
-	    var dottedCircle = getGlyph(font, DOTTED_CIRCLE, glyph.features);
-
-	    // If the tone mark is zero width, insert the dotted circle before, otherwise after
-	    var idx = font.glyphForCodePoint(code).advanceWidth === 0 ? i : i + 1;
-	    glyphs.splice(idx, 0, dottedCircle);
-	    i++;
-	  }
-
-	  return i;
-	}
-
-	var SHAPERS = {
-	  arab: ArabicShaper, // Arabic
-	  mong: ArabicShaper, // Mongolian
-	  syrc: ArabicShaper, // Syriac
-	  'nko ': ArabicShaper, // N'Ko
-	  phag: ArabicShaper, // Phags Pa
-	  mand: ArabicShaper, // Mandaic
-	  mani: ArabicShaper, // Manichaean
-	  phlp: ArabicShaper, // Psalter Pahlavi
-
-	  hang: HangulShaper, // Hangul
-
-	  latn: DefaultShaper, // Latin
-	  DFLT: DefaultShaper // Default
-	};
-
-	function choose(script) {
-	  var shaper = SHAPERS[script];
-	  if (shaper) {
-	    return shaper;
-	  }
-
-	  return DefaultShaper;
-	}
-
 	var GlyphIterator = function () {
 	  function GlyphIterator(glyphs, flags) {
 	    _classCallCheck(this, GlyphIterator);
@@ -44407,7 +44848,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  _createClass(GlyphIterator, [{
 	    key: "reset",
 	    value: function reset() {
-	      var flags = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+	      var flags = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
 	      this.flags = flags;
 	      this.index = 0;
@@ -44444,7 +44885,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: "peek",
 	    value: function peek() {
-	      var count = arguments.length <= 0 || arguments[0] === undefined ? 1 : arguments[0];
+	      var count = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
 
 	      var idx = this.index;
 	      var res = this.increment(count);
@@ -44454,7 +44895,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: "peekIndex",
 	    value: function peekIndex() {
-	      var count = arguments.length <= 0 || arguments[0] === undefined ? 1 : arguments[0];
+	      var count = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
 
 	      var idx = this.index;
 	      this.increment(count);
@@ -44465,7 +44906,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: "increment",
 	    value: function increment() {
-	      var count = arguments.length <= 0 || arguments[0] === undefined ? 1 : arguments[0];
+	      var count = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
 
 	      var dir = count < 0 ? -1 : 1;
 	      count = Math.abs(count);
@@ -44671,7 +45112,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'lookupsForFeatures',
 	    value: function lookupsForFeatures() {
-	      var userFeatures = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
+	      var userFeatures = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
 	      var exclude = arguments[1];
 
 	      var lookups = [];
@@ -44760,15 +45201,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      try {
 	        for (var _iterator7 = _getIterator(lookups), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-	          var _step7$value = _step7.value;
-	          var feature = _step7$value.feature;
-	          var lookup = _step7$value.lookup;
+	          var _step7$value = _step7.value,
+	              feature = _step7$value.feature,
+	              lookup = _step7$value.lookup;
 
 	          this.glyphIterator.reset(lookup.flags);
 
 	          while (this.glyphIterator.index < glyphs.length) {
 	            if (!(feature in this.glyphIterator.cur.features)) {
-	              this.glyphIterator.index++;
+	              this.glyphIterator.next();
 	              continue;
 	            }
 
@@ -44800,7 +45241,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	              }
 	            }
 
-	            this.glyphIterator.index++;
+	            this.glyphIterator.next();
 	          }
 	        }
 	      } catch (err) {
@@ -44836,7 +45277,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        for (var _iterator9 = _getIterator(lookupRecords), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
 	          var lookupRecord = _step9.value;
 
-	          this.glyphIterator.index = glyphIndex + lookupRecord.sequenceIndex;
+	          this.glyphIterator.index = glyphIndex;
+	          this.glyphIterator.increment(lookupRecord.sequenceIndex);
 
 	          var lookup = this.table.lookupList.get(lookupRecord.lookupListIndex);
 	          var _iteratorNormalCompletion10 = true;
@@ -44880,6 +45322,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 
 	      this.glyphIterator.index = glyphIndex;
+	      return true;
 	    }
 	  }, {
 	    key: 'coverageIndex',
@@ -44977,17 +45420,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	      switch (classDef.version) {
 	        case 1:
 	          // Class array
-	          var glyphID = classDef.startGlyph;
+	          var i = glyph - classDef.startGlyph;
+	          if (i > -1 && i < classDef.classValueArray.length) {
+	            return classDef.classValueArray[i];
+	          }
+
+	          break;
+
+	        case 2:
 	          var _iteratorNormalCompletion12 = true;
 	          var _didIteratorError12 = false;
 	          var _iteratorError12 = undefined;
 
 	          try {
-	            for (var _iterator12 = _getIterator(classDef.classValueArray), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-	              var classID = _step12.value;
+	            for (var _iterator12 = _getIterator(classDef.classRangeRecord), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+	              var range = _step12.value;
 
-	              if (glyph === glyphID++) {
-	                return classID;
+	              if (range.start <= glyph && glyph <= range.end) {
+	                return range.class;
 	              }
 	            }
 	          } catch (err) {
@@ -45006,18 +45456,40 @@ return /******/ (function(modules) { // webpackBootstrap
 	          }
 
 	          break;
+	      }
 
-	        case 2:
+	      return 0;
+	    }
+	  }, {
+	    key: 'classSequenceMatches',
+	    value: function classSequenceMatches(sequenceIndex, sequence, classDef) {
+	      var _this2 = this;
+
+	      return this.match(sequenceIndex, sequence, function (classID, glyph) {
+	        return classID === _this2.getClassID(glyph, classDef);
+	      });
+	    }
+	  }, {
+	    key: 'applyContext',
+	    value: function applyContext(table) {
+	      switch (table.version) {
+	        case 1:
+	          var index = this.coverageIndex(table.coverage);
+	          if (index === -1) {
+	            return false;
+	          }
+
+	          var set = table.ruleSets[index];
 	          var _iteratorNormalCompletion13 = true;
 	          var _didIteratorError13 = false;
 	          var _iteratorError13 = undefined;
 
 	          try {
-	            for (var _iterator13 = _getIterator(classDef.classRangeRecord), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-	              var range = _step13.value;
+	            for (var _iterator13 = _getIterator(set), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+	              var rule = _step13.value;
 
-	              if (range.start <= glyph && glyph <= range.end) {
-	                return range.class;
+	              if (this.sequenceMatches(1, rule.input)) {
+	                return this.applyLookupList(rule.lookupRecords);
 	              }
 	            }
 	          } catch (err) {
@@ -45036,40 +45508,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	          }
 
 	          break;
-	      }
 
-	      return -1;
-	    }
-	  }, {
-	    key: 'classSequenceMatches',
-	    value: function classSequenceMatches(sequenceIndex, sequence, classDef) {
-	      var _this2 = this;
-
-	      return this.match(sequenceIndex, sequence, function (classID, glyph) {
-	        return classID === _this2.getClassID(glyph, classDef);
-	      });
-	    }
-	  }, {
-	    key: 'applyContext',
-	    value: function applyContext(table) {
-	      switch (table.version) {
-	        case 1:
-	          var index = this.coverageIndex(table.coverage);
-	          if (index === -1) {
-	            return;
+	        case 2:
+	          if (this.coverageIndex(table.coverage) === -1) {
+	            return false;
 	          }
 
-	          var set = table.ruleSets[index];
+	          index = this.getClassID(this.glyphIterator.cur.id, table.classDef);
+	          if (index === -1) {
+	            return false;
+	          }
+
+	          set = table.classSet[index];
 	          var _iteratorNormalCompletion14 = true;
 	          var _didIteratorError14 = false;
 	          var _iteratorError14 = undefined;
 
 	          try {
 	            for (var _iterator14 = _getIterator(set), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-	              var rule = _step14.value;
+	              var _rule = _step14.value;
 
-	              if (this.sequenceMatches(1, rule.input)) {
-	                return this.applyLookupList(rule.lookupRecords);
+	              if (this.classSequenceMatches(1, _rule.classes, table.classDef)) {
+	                return this.applyLookupList(_rule.lookupRecords);
 	              }
 	            }
 	          } catch (err) {
@@ -45089,27 +45549,37 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	          break;
 
-	        case 2:
-	          if (this.coverageIndex(table.coverage) === -1) {
-	            return;
+	        case 3:
+	          if (this.coverageSequenceMatches(0, table.coverages)) {
+	            return this.applyLookupList(table.lookupRecords);
 	          }
 
-	          index = this.getClassID(this.glyphIterator.cur.id, table.classDef);
+	          break;
+	      }
+
+	      return false;
+	    }
+	  }, {
+	    key: 'applyChainingContext',
+	    value: function applyChainingContext(table) {
+	      switch (table.version) {
+	        case 1:
+	          var index = this.coverageIndex(table.coverage);
 	          if (index === -1) {
-	            return;
+	            return false;
 	          }
 
-	          set = table.classSet[index];
+	          var set = table.chainRuleSets[index];
 	          var _iteratorNormalCompletion15 = true;
 	          var _didIteratorError15 = false;
 	          var _iteratorError15 = undefined;
 
 	          try {
 	            for (var _iterator15 = _getIterator(set), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
-	              var _rule = _step15.value;
+	              var rule = _step15.value;
 
-	              if (this.classSequenceMatches(1, _rule.classes, table.classDef)) {
-	                return this.applyLookupList(_rule.lookupRecords);
+	              if (this.sequenceMatches(-rule.backtrack.length, rule.backtrack) && this.sequenceMatches(1, rule.input) && this.sequenceMatches(1 + rule.input.length, rule.lookahead)) {
+	                return this.applyLookupList(rule.lookupRecords);
 	              }
 	            }
 	          } catch (err) {
@@ -45129,35 +45599,27 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	          break;
 
-	        case 3:
-	          if (this.coverageSequenceMatches(0, table.coverages)) {
-	            return this.applyLookupList(table.lookupRecords);
+	        case 2:
+	          if (this.coverageIndex(table.coverage) === -1) {
+	            return false;
 	          }
 
-	          break;
-	      }
-	    }
-	  }, {
-	    key: 'applyChainingContext',
-	    value: function applyChainingContext(table) {
-	      switch (table.version) {
-	        case 1:
-	          var index = this.coverageIndex(table.coverage);
-	          if (index === -1) {
-	            return;
+	          index = this.getClassID(this.glyphIterator.cur.id, table.inputClassDef);
+	          var rules = table.chainClassSet[index];
+	          if (!rules) {
+	            return false;
 	          }
 
-	          var set = table.chainRuleSets[index];
 	          var _iteratorNormalCompletion16 = true;
 	          var _didIteratorError16 = false;
 	          var _iteratorError16 = undefined;
 
 	          try {
-	            for (var _iterator16 = _getIterator(set), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
-	              var rule = _step16.value;
+	            for (var _iterator16 = _getIterator(rules), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+	              var _rule2 = _step16.value;
 
-	              if (this.sequenceMatches(-rule.backtrack.length, rule.backtrack) && this.sequenceMatches(1, rule.input) && this.sequenceMatches(1 + rule.input.length, rule.lookahead)) {
-	                return this.applyLookupList(rule.lookupRecords);
+	              if (this.classSequenceMatches(-_rule2.backtrack.length, _rule2.backtrack, table.backtrackClassDef) && this.classSequenceMatches(1, _rule2.input, table.inputClassDef) && this.classSequenceMatches(1 + _rule2.input.length, _rule2.lookahead, table.lookaheadClassDef)) {
+	                return this.applyLookupList(_rule2.lookupRecords);
 	              }
 	            }
 	          } catch (err) {
@@ -45177,46 +45639,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	          break;
 
-	        case 2:
-	          if (this.coverageIndex(table.coverage) === -1) {
-	            return;
-	          }
-
-	          index = this.getClassID(this.glyphIterator.cur.id, table.inputClassDef);
-	          if (index === -1) {
-	            return;
-	          }
-
-	          var rules = table.chainClassSet[index];
-	          var _iteratorNormalCompletion17 = true;
-	          var _didIteratorError17 = false;
-	          var _iteratorError17 = undefined;
-
-	          try {
-	            for (var _iterator17 = _getIterator(rules), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
-	              var _rule2 = _step17.value;
-
-	              if (this.classSequenceMatches(-_rule2.backtrack.length, _rule2.backtrack, table.backtrackClassDef) && this.classSequenceMatches(1, _rule2.input, table.inputClassDef) && this.classSequenceMatches(1 + _rule2.input.length, _rule2.lookahead, table.lookaheadClassDef)) {
-	                return this.applyLookupList(_rule2.lookupRecords);
-	              }
-	            }
-	          } catch (err) {
-	            _didIteratorError17 = true;
-	            _iteratorError17 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion17 && _iterator17.return) {
-	                _iterator17.return();
-	              }
-	            } finally {
-	              if (_didIteratorError17) {
-	                throw _iteratorError17;
-	              }
-	            }
-	          }
-
-	          break;
-
 	        case 3:
 	          if (this.coverageSequenceMatches(-table.backtrackGlyphCount, table.backtrackCoverage) && this.coverageSequenceMatches(0, table.inputCoverage) && this.coverageSequenceMatches(table.inputGlyphCount, table.lookaheadCoverage)) {
 	            return this.applyLookupList(table.lookupRecords);
@@ -45224,11 +45646,776 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	          break;
 	      }
+
+	      return false;
 	    }
 	  }]);
 
 	  return OTProcessor;
 	}();
+
+	var GlyphInfo = function () {
+	  function GlyphInfo(font, id) {
+	    var codePoints = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+	    var features = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
+
+	    _classCallCheck(this, GlyphInfo);
+
+	    this._font = font;
+	    this.codePoints = codePoints;
+	    this.id = id;
+
+	    this.features = {};
+	    if (Array.isArray(features)) {
+	      for (var i = 0; i < features.length; i++) {
+	        var feature = features[i];
+	        this.features[feature] = true;
+	      }
+	    } else if ((typeof features === 'undefined' ? 'undefined' : _typeof(features)) === 'object') {
+	      _Object$assign(this.features, features);
+	    }
+
+	    this.ligatureID = null;
+	    this.ligatureComponent = null;
+	    this.ligated = false;
+	    this.cursiveAttachment = null;
+	    this.markAttachment = null;
+	    this.shaperInfo = null;
+	    this.substituted = false;
+	  }
+
+	  _createClass(GlyphInfo, [{
+	    key: 'id',
+	    get: function get() {
+	      return this._id;
+	    },
+	    set: function set(id) {
+	      this._id = id;
+	      this.substituted = true;
+
+	      if (this._font.GDEF) {
+	        // TODO: clean this up
+	        var classID = OTProcessor.prototype.getClassID(id, this._font.GDEF.glyphClassDef);
+	        this.isMark = classID === 3;
+	        this.isLigature = classID === 2;
+	      } else {
+	        this.isMark = this.codePoints.every(unicode.isMark);
+	        this.isLigature = this.codePoints.length > 1;
+	      }
+	    }
+	  }]);
+
+	  return GlyphInfo;
+	}();
+
+	var _class$5;
+	var _temp$1;
+	/**
+	 * This is a shaper for the Hangul script, used by the Korean language.
+	 * It does the following:
+	 *   - decompose if unsupported by the font:
+	 *     <LV>   -> <L,V>
+	 *     <LVT>  -> <L,V,T>
+	 *     <LV,T> -> <L,V,T>
+	 *
+	 *   - compose if supported by the font:
+	 *     <L,V>   -> <LV>
+	 *     <L,V,T> -> <LVT>
+	 *     <LV,T>  -> <LVT>
+	 *
+	 *   - reorder tone marks (S is any valid syllable):
+	 *     <S, M> -> <M, S>
+	 *
+	 *   - apply ljmo, vjmo, and tjmo OpenType features to decomposed Jamo sequences.
+	 *
+	 * This logic is based on the following documents:
+	 *   - http://www.microsoft.com/typography/OpenTypeDev/hangul/intro.htm
+	 *   - http://ktug.org/~nomos/harfbuzz-hangul/hangulshaper.pdf
+	 */
+	var HangulShaper = (_temp$1 = _class$5 = function (_DefaultShaper) {
+	  _inherits(HangulShaper, _DefaultShaper);
+
+	  function HangulShaper() {
+	    _classCallCheck(this, HangulShaper);
+
+	    return _possibleConstructorReturn(this, (HangulShaper.__proto__ || _Object$getPrototypeOf(HangulShaper)).apply(this, arguments));
+	  }
+
+	  _createClass(HangulShaper, null, [{
+	    key: 'planFeatures',
+	    value: function planFeatures(plan) {
+	      plan.add(['ljmo', 'vjmo', 'tjmo'], false);
+	    }
+	  }, {
+	    key: 'assignFeatures',
+	    value: function assignFeatures(plan, glyphs) {
+	      var state = 0;
+	      var i = 0;
+	      while (i < glyphs.length) {
+	        var action = void 0;
+	        var glyph = glyphs[i];
+	        var code = glyph.codePoints[0];
+	        var type = getType(code);
+
+	        var _STATE_TABLE$state$ty = _slicedToArray(STATE_TABLE$1[state][type], 2);
+
+	        action = _STATE_TABLE$state$ty[0];
+	        state = _STATE_TABLE$state$ty[1];
+
+
+	        switch (action) {
+	          case DECOMPOSE:
+	            // Decompose the composed syllable if it is not supported by the font.
+	            if (!plan.font.hasGlyphForCodePoint(code)) {
+	              i = decompose(glyphs, i, plan.font);
+	            }
+	            break;
+
+	          case COMPOSE:
+	            // Found a decomposed syllable. Try to compose if supported by the font.
+	            i = compose(glyphs, i, plan.font);
+	            break;
+
+	          case TONE_MARK:
+	            // Got a valid syllable, followed by a tone mark. Move the tone mark to the beginning of the syllable.
+	            reorderToneMark(glyphs, i, plan.font);
+	            break;
+
+	          case INVALID:
+	            // Tone mark has no valid syllable to attach to, so insert a dotted circle
+	            i = insertDottedCircle(glyphs, i, plan.font);
+	            break;
+	        }
+
+	        i++;
+	      }
+	    }
+	  }]);
+
+	  return HangulShaper;
+	}(DefaultShaper), _class$5.zeroMarkWidths = 'NONE', _temp$1);
+	var HANGUL_BASE = 0xac00;
+	var HANGUL_END = 0xd7a4;
+	var HANGUL_COUNT = HANGUL_END - HANGUL_BASE + 1;
+	var L_BASE = 0x1100; // lead
+	var V_BASE = 0x1161; // vowel
+	var T_BASE = 0x11a7; // trail
+	var L_COUNT = 19;
+	var V_COUNT = 21;
+	var T_COUNT = 28;
+	var L_END = L_BASE + L_COUNT - 1;
+	var V_END = V_BASE + V_COUNT - 1;
+	var T_END = T_BASE + T_COUNT - 1;
+	var DOTTED_CIRCLE = 0x25cc;
+
+	var isL = function isL(code) {
+	  return 0x1100 <= code && code <= 0x115f || 0xa960 <= code && code <= 0xa97c;
+	};
+	var isV = function isV(code) {
+	  return 0x1160 <= code && code <= 0x11a7 || 0xd7b0 <= code && code <= 0xd7c6;
+	};
+	var isT = function isT(code) {
+	  return 0x11a8 <= code && code <= 0x11ff || 0xd7cb <= code && code <= 0xd7fb;
+	};
+	var isTone = function isTone(code) {
+	  return 0x302e <= code && code <= 0x302f;
+	};
+	var isLVT = function isLVT(code) {
+	  return HANGUL_BASE <= code && code <= HANGUL_END;
+	};
+	var isLV = function isLV(code) {
+	  return code - HANGUL_BASE < HANGUL_COUNT && (code - HANGUL_BASE) % T_COUNT === 0;
+	};
+	var isCombiningL = function isCombiningL(code) {
+	  return L_BASE <= code && code <= L_END;
+	};
+	var isCombiningV = function isCombiningV(code) {
+	  return V_BASE <= code && code <= V_END;
+	};
+	var isCombiningT = function isCombiningT(code) {
+	  return T_BASE + 1 && 1 <= code && code <= T_END;
+	};
+
+	// Character categories
+	var X = 0; // Other character
+	var L = 1; // Leading consonant
+	var V = 2; // Medial vowel
+	var T = 3; // Trailing consonant
+	var LV = 4; // Composed <LV> syllable
+	var LVT = 5; // Composed <LVT> syllable
+	var M = 6; // Tone mark
+
+	// This function classifies a character using the above categories.
+	function getType(code) {
+	  if (isL(code)) {
+	    return L;
+	  }
+	  if (isV(code)) {
+	    return V;
+	  }
+	  if (isT(code)) {
+	    return T;
+	  }
+	  if (isLV(code)) {
+	    return LV;
+	  }
+	  if (isLVT(code)) {
+	    return LVT;
+	  }
+	  if (isTone(code)) {
+	    return M;
+	  }
+	  return X;
+	}
+
+	// State machine actions
+	var NO_ACTION = 0;
+	var DECOMPOSE = 1;
+	var COMPOSE = 2;
+	var TONE_MARK = 4;
+	var INVALID = 5;
+
+	// Build a state machine that accepts valid syllables, and applies actions along the way.
+	// The logic this is implementing is documented at the top of the file.
+	var STATE_TABLE$1 = [
+	//       X                 L                 V                T                  LV                LVT               M
+	// State 0: start state
+	[[NO_ACTION, 0], [NO_ACTION, 1], [NO_ACTION, 0], [NO_ACTION, 0], [DECOMPOSE, 2], [DECOMPOSE, 3], [INVALID, 0]],
+
+	// State 1: <L>
+	[[NO_ACTION, 0], [NO_ACTION, 1], [COMPOSE, 2], [NO_ACTION, 0], [DECOMPOSE, 2], [DECOMPOSE, 3], [INVALID, 0]],
+
+	// State 2: <L,V> or <LV>
+	[[NO_ACTION, 0], [NO_ACTION, 1], [NO_ACTION, 0], [COMPOSE, 3], [DECOMPOSE, 2], [DECOMPOSE, 3], [TONE_MARK, 0]],
+
+	// State 3: <L,V,T> or <LVT>
+	[[NO_ACTION, 0], [NO_ACTION, 1], [NO_ACTION, 0], [NO_ACTION, 0], [DECOMPOSE, 2], [DECOMPOSE, 3], [TONE_MARK, 0]]];
+
+	function getGlyph(font, code, features) {
+	  return new GlyphInfo(font, font.glyphForCodePoint(code).id, [code], features);
+	}
+
+	function decompose(glyphs, i, font) {
+	  var glyph = glyphs[i];
+	  var code = glyph.codePoints[0];
+
+	  var s = code - HANGUL_BASE;
+	  var t = T_BASE + s % T_COUNT;
+	  s = s / T_COUNT | 0;
+	  var l = L_BASE + s / V_COUNT | 0;
+	  var v = V_BASE + s % V_COUNT;
+
+	  // Don't decompose if all of the components are not available
+	  if (!font.hasGlyphForCodePoint(l) || !font.hasGlyphForCodePoint(v) || t !== T_BASE && !font.hasGlyphForCodePoint(t)) {
+	    return i;
+	  }
+
+	  // Replace the current glyph with decomposed L, V, and T glyphs,
+	  // and apply the proper OpenType features to each component.
+	  var ljmo = getGlyph(font, l, glyph.features);
+	  ljmo.features.ljmo = true;
+
+	  var vjmo = getGlyph(font, v, glyph.features);
+	  vjmo.features.vjmo = true;
+
+	  var insert = [ljmo, vjmo];
+
+	  if (t > T_BASE) {
+	    var tjmo = getGlyph(font, t, glyph.features);
+	    tjmo.features.tjmo = true;
+	    insert.push(tjmo);
+	  }
+
+	  glyphs.splice.apply(glyphs, [i, 1].concat(insert));
+	  return i + insert.length - 1;
+	}
+
+	function compose(glyphs, i, font) {
+	  var glyph = glyphs[i];
+	  var code = glyphs[i].codePoints[0];
+	  var type = getType(code);
+
+	  var prev = glyphs[i - 1].codePoints[0];
+	  var prevType = getType(prev);
+
+	  // Figure out what type of syllable we're dealing with
+	  var lv = void 0,
+	      ljmo = void 0,
+	      vjmo = void 0,
+	      tjmo = void 0;
+	  if (prevType === LV && type === T) {
+	    // <LV,T>
+	    lv = prev;
+	    tjmo = glyph;
+	  } else {
+	    if (type === V) {
+	      // <L,V>
+	      ljmo = glyphs[i - 1];
+	      vjmo = glyph;
+	    } else {
+	      // <L,V,T>
+	      ljmo = glyphs[i - 2];
+	      vjmo = glyphs[i - 1];
+	      tjmo = glyph;
+	    }
+
+	    var l = ljmo.codePoints[0];
+	    var v = vjmo.codePoints[0];
+
+	    // Make sure L and V are combining characters
+	    if (isCombiningL(l) && isCombiningV(v)) {
+	      lv = HANGUL_BASE + ((l - L_BASE) * V_COUNT + (v - V_BASE)) * T_COUNT;
+	    }
+	  }
+
+	  var t = tjmo && tjmo.codePoints[0] || T_BASE;
+	  if (lv != null && (t === T_BASE || isCombiningT(t))) {
+	    var s = lv + (t - T_BASE);
+
+	    // Replace with a composed glyph if supported by the font,
+	    // otherwise apply the proper OpenType features to each component.
+	    if (font.hasGlyphForCodePoint(s)) {
+	      var del = prevType === V ? 3 : 2;
+	      glyphs.splice(i - del + 1, del, getGlyph(font, s, glyph.features));
+	      return i - del + 1;
+	    }
+	  }
+
+	  // Didn't compose (either a non-combining component or unsupported by font).
+	  if (ljmo) {
+	    ljmo.features.ljmo = true;
+	  }
+	  if (vjmo) {
+	    vjmo.features.vjmo = true;
+	  }
+	  if (tjmo) {
+	    tjmo.features.tjmo = true;
+	  }
+
+	  if (prevType === LV) {
+	    // Sequence was originally <L,V>, which got combined earlier.
+	    // Either the T was non-combining, or the LVT glyph wasn't supported.
+	    // Decompose the glyph again and apply OT features.
+	    decompose(glyphs, i - 1, font);
+	    return i + 1;
+	  }
+
+	  return i;
+	}
+
+	function getLength(code) {
+	  switch (getType(code)) {
+	    case LV:
+	    case LVT:
+	      return 1;
+	    case V:
+	      return 2;
+	    case T:
+	      return 3;
+	  }
+	}
+
+	function reorderToneMark(glyphs, i, font) {
+	  var glyph = glyphs[i];
+	  var code = glyphs[i].codePoints[0];
+
+	  // Move tone mark to the beginning of the previous syllable, unless it is zero width
+	  if (font.glyphForCodePoint(code).advanceWidth === 0) {
+	    return;
+	  }
+
+	  var prev = glyphs[i - 1].codePoints[0];
+	  var len = getLength(prev);
+
+	  glyphs.splice(i, 1);
+	  return glyphs.splice(i - len, 0, glyph);
+	}
+
+	function insertDottedCircle(glyphs, i, font) {
+	  var glyph = glyphs[i];
+	  var code = glyphs[i].codePoints[0];
+
+	  if (font.hasGlyphForCodePoint(DOTTED_CIRCLE)) {
+	    var dottedCircle = getGlyph(font, DOTTED_CIRCLE, glyph.features);
+
+	    // If the tone mark is zero width, insert the dotted circle before, otherwise after
+	    var idx = font.glyphForCodePoint(code).advanceWidth === 0 ? i : i + 1;
+	    glyphs.splice(idx, 0, dottedCircle);
+	    i++;
+	  }
+
+	  return i;
+	}
+
+	var categories$1 = ["O", "IND", "S", "GB", "B", "FM", "CGJ", "VMAbv", "VMPst", "VAbv", "VPst", "CMBlw", "VPre", "VBlw", "H", "VMBlw", "CMAbv", "MBlw", "CS", "R", "SUB", "MPst", "MPre", "FAbv", "FPst", "FBlw", "SMAbv", "SMBlw", "VMPre", "ZWNJ", "ZWJ", "WJ", "VS", "N", "HN", "MAbv"];
+	var decompositions$1 = { "2507": [2503, 2494], "2508": [2503, 2519], "2888": [2887, 2902], "2891": [2887, 2878], "2892": [2887, 2903], "3018": [3014, 3006], "3019": [3015, 3006], "3020": [3014, 3031], "3144": [3142, 3158], "3264": [3263, 3285], "3271": [3270, 3285], "3272": [3270, 3286], "3274": [3270, 3266], "3275": [3270, 3266, 3285], "3402": [3398, 3390], "3403": [3399, 3390], "3404": [3398, 3415], "3546": [3545, 3530], "3548": [3545, 3535], "3549": [3545, 3535, 3530], "3550": [3545, 3551], "3635": [3661, 3634], "3763": [3789, 3762], "3955": [3953, 3954], "3957": [3953, 3956], "3958": [4018, 3968], "3959": [4018, 3953, 3968], "3960": [4019, 3968], "3961": [4019, 3953, 3968], "3969": [3953, 3968], "6971": [6970, 6965], "6973": [6972, 6965], "6976": [6974, 6965], "6977": [6975, 6965], "6979": [6978, 6965], "69934": [69937, 69927], "69935": [69938, 69927], "70475": [70471, 70462], "70476": [70471, 70487], "70843": [70841, 70842], "70844": [70841, 70832], "70846": [70841, 70845], "71098": [71096, 71087], "71099": [71097, 71087] };
+	var stateTable = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [2, 2, 3, 4, 4, 5, 0, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0, 17, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 2, 0, 23, 0, 24], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 27, 0, 0, 0, 0, 26, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 0, 0, 0, 34, 40, 41, 42, 43, 0, 0, 44, 0, 0, 0, 38, 0, 0, 45], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 0, 12, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 0, 9, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 16, 0, 0, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 24], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 11, 12, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 0, 9, 0, 0, 12, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 0, 7, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0, 0, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 24], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 11, 12, 0, 14, 0, 0, 0, 0, 0, 11, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 4, 4, 5, 0, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0, 0, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 24], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 11, 12, 0, 14, 0, 16, 0, 0, 0, 11, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 24], [0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 47, 0, 48, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 11, 12, 0, 14, 0, 16, 0, 0, 0, 11, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 27, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 0, 0, 0, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 0, 0, 35, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 0, 32, 0, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 33, 34, 35, 36, 37, 0, 39, 0, 0, 0, 34, 40, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 45], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 0, 34, 35, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 0, 32, 0, 0, 35, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 49, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 49, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 0, 30, 0, 0, 0, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 0, 0, 0, 34, 40, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 45], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 0, 34, 35, 0, 37, 0, 0, 0, 0, 0, 34, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 0, 34, 35, 0, 37, 0, 39, 0, 0, 0, 34, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 45], [0, 0, 0, 0, 0, 28, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 0, 0, 0, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 0, 34, 35, 0, 37, 0, 39, 0, 0, 0, 34, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 50, 11, 12, 13, 14, 50, 16, 0, 0, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 0, 51, 0, 0, 24], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 48, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 53, 34, 35, 36, 37, 53, 39, 0, 0, 0, 34, 40, 41, 42, 43, 0, 0, 44, 0, 0, 0, 54, 0, 0, 45], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 50, 11, 12, 13, 14, 0, 16, 0, 0, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 24], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 50, 11, 12, 13, 14, 50, 16, 0, 0, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 24], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 47, 0, 48, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 53, 34, 35, 36, 37, 0, 39, 0, 0, 0, 34, 40, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 45], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 53, 34, 35, 36, 37, 53, 39, 0, 0, 0, 34, 40, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 45]];
+	var accepting = [false, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
+	var tags = [[], ["broken_cluster"], ["independent_cluster"], ["symbol_cluster"], ["standard_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["numeral_cluster"], ["broken_cluster"], ["independent_cluster"], ["symbol_cluster"], ["symbol_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["virama_terminated_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["broken_cluster"], ["numeral_cluster"], ["number_joiner_terminated_cluster"], ["standard_cluster"], ["broken_cluster"], ["broken_cluster"], ["numeral_cluster"], ["standard_cluster"], ["standard_cluster"]];
+	var useData = {
+		categories: categories$1,
+		decompositions: decompositions$1,
+		stateTable: stateTable,
+		accepting: accepting,
+		tags: tags
+	};
+
+	var _class$6;
+	var _temp$2;
+	var categories = useData.categories;
+	var decompositions = useData.decompositions;
+	var trie$1 = new UnicodeTrie(Buffer("AAIAAAAAAAAAAKnQAVEMrvPtnH+oHUcVx+fd99799W5e8mx+9NkYm7YUI2KtimkVDG3FWgVTFY1Fqa2VJirYB0IaUFLBaKGJViXir6oxKCSBoi0UTKtg2yA26h+milYNtMH+0WK1VQyvtBS/487hnncyMzuzu7N7n7kHPszu7OzMmTNzdmdmfzzfUmpiUqkemAMbwSZwKbjcxM1XEL4VvB28G3zAk+56cLMlfgdYADvBbvBF8GWwH9xl+CFLfwj8BPwU/MKS38/AMfA86v9ro9ucQcdR+CjCP4CT4EnwDPg3eAFMTik1A+bAPNgINoFLwGawZSpLfzXCrWAb+AjYDm4BO8FusAfsA/vBXeAgOALuNfv3g4fAcXACPAaeAE+B58Bp8NJUpnN7WqlZsHY629+A8GLwWvAG8BZwJXinOf5ehB8EN4AdYGE6q7dmF9uugs8hvz0V58nZK/L+Kva/BX4ADoN7prP6HgUPgkfA73L0eQzHnwBPgX+Y80+DF8FUW6lBO4tbjXA9uAi8pj3sS2/E9mawBVwNtoJt5pzrTXgzwk+B7awP7sT+7nY6WxFfQBlfAl8H3wU/Anezcu/D9s/BMRN3HOEJ8EdwMkC/J5HmmXZmq2fBIjgEVEepbieLX4Fw0MnSrzRxmrVsm7MB8ReDV4vjr3ekJy7rZGVPMb196Xm6oug83oRyt4CrwDVgK9gGPtzxn3uTOD6YPDPNJ5Hm0+AznazffJ7Z4KSnXncg3VfAN8EBhx42/z/UGdbrx52sr9yH8AFTrt5+2GzfnWPbKuw7ZszZyNh/xowZM2bMmDFjxsQyZ5lPNs3h9nBNYHuAfr9ic9ffiHnsJzznU91/j3P+2snWYf6G8O/gn+A0eMnEt7vQp5ulX4NwHmwEm7rZ8UsRXg6uMPvXIHwPuK7rLl+nu9FzfMyYMWPGpGVuslmarv+YMWPSkNq/d2D8uNDNngvdivA2y3jy9m72bF9v3ymOf2MExp8fG2TsAcfA2wJYBJetWBq3i+0fwPafwLmzSl0LFmZNPMLHZ4fpnsX2AdjgcXB+T6kPge+AG7D/vXYW/tLsc9r9M+MkVyLNR1m6g9g+ZfYvmMExcHCm+ftP0+T5y/e17Uw/PYLwHnC0m80TH+zG30/3mjSDnPS2/B4pUJ4rX3n+b5H3o92l6UjfvZ7y/oJzToGnu8O66XTPYf8/Jr8XWL6TPXf9bPnHtmVs+89AnxVgDVgPLgKvAg+Y/F6H7c1gC7jKHH8XeJ/x15vAjt4wvwVs7wKfBXvAPvA18G1wsJevj36f5gjS3etIq+ft9+PYQ73h/nFsn2D7f+5l75bo/VPYftpTblFb2/Jo2pdjfL0uXOX/qxfnp8vZVk2Xv9hbmu+LxvYt3A/7/WZsPoptPkr9bdCv1ya+d4TuMO8Tre5n4XkILwSbzP4l/WHazX1//r2O/z7cFHnvSYW8R/Vm02ZXIHxHze1Xdf9bbn7p0z2kDroNr2X9WL+7937sX9fP+v9h9n6jTrfI3jG9EfsfN3G35PR/G4uRfY3eMTwdkFa/C3hrf2kcfy/xYTOmprrfZsLbEe7rDPW/U9Rrv9k/ahmTL0cWWxP/YxRkgtES+zwNhZPs+FQgMj/liEsto2HxsZBQX2pZoLZqWc5riXDaQBLSt1L3hcnE+Vct7aYVKCEhbXk2+b7NZ84mmXAwCiL14Ne85S62MYPcXi5StM/YxlJF2lfabznZsC6/C807xvZV+yFve9d1KY//d3HNO8pKUXuTDh0Gpp7B852q6QFMgdWM2dfbAxOuEPQEfcEsO5fquJLZrMfyCtWP0heZF6oSdiH9u4aQvJRIJ/eL6BBynItLp5D2JRkY5L5u3xAf6lviXHWSZcfaKO/+5zvO/c9Xtq8uRXSObd+8bS0zJrS1rxTyX7k/a0nrk5D+mHeOC90uq1Q216X57lykfqHt62uTGJ2rat+i/kttyq/RSi29PlclZf2Xxq55ZeSV34T96d5X5PqZJ9I3ZX2lnkXt3xL1Kyrav/LutbZ6uGxuS6ss6V3pXOXY4kP7EBfyJT7+4TJQS9uf74f6n+3+6ZIi9bCtieatFfCxUMx4KMYfy/pzrB30vm88q9SZ11K+n9eeNN612UFKWX8uI9TmRca7TbWvKy2JvF6naF+b/0uRupZp35cZikhZvyniY2R/CbdB3vXynIC6hbRBHf4l1xps6w4x/lVEtxRtGZMuRA8uNh/jfYV8kdpsBUszcODrD7E2JT2KrB3V6XMhbdNjcXItxzaOJWkpf976/I5glQn1sbLP86U9FQvz4l0S28/lcWUJbbrE2l+Z/TlHvi4/kvZXLMyrmy1PW7x8hl6UFgvlmNM1Jq3aJ3Se0yJcpdwS6mOp/ZgLX5N1rdFKaIzH9ztquMbqq+/qCFRk+hRoyZvrTHuO8fNd/djmEzZJ3TdisN1bNQNl7y96DV/3mVkTtwasVdk1ai6ybGlDek8nT1fXc4M5tVSPvhqOsWQeXQs8L1n3IradU8OxCeVjK7dr7Dpl0cMHnUvt18TzfVsfb/pZY56fV2GnVPVIYaOi9xcZJ8cmKcu3wcuPsVHV5cdKFfZXNZefp5sWft+wzR1cczKCxh99NRx76HvwOpWNv6YZtAajt6WPyPswtVVs/VOJ7xpYx3VR31er7gMxNuV9Q443CDlW43KuYSXblsybfKYt58trfez7A1X7Tdm+V7TcoudL+LpVGf2khN63U5OyD5Af0NoUv06l7Jc0Rte+so4xL9Ayy3Rz+SufY5Jf267xcm7J4dd3kumIOrmk7Pl549bUY1puI91Gdb8Tpu+9tjmhXFdwtfVsTv5SQvXKW0cK4eXgPBO6iJ07NNVOHH7/tF1jyJdnWbrU/Uau3VNI156QZ2ZaZFu76i6vQXy9YJ2H9QZ97aF3p1xlx1yfuYRcd0Kl7NyaX190+pUOKI0tvus5j7/nSWKLo3FER8R3LHEx8gqwge1POgi1l1yfirV3zHpISHxs3vLeFXOellcG1DFGbGP00PPkeKEOaXIsqhzbruOh9Qk5L08nW2grJ0avsvWocv0zRh/fGCG0TV35hB4v0rds5Vddjm/sFCKx+aXSt2yalPZsolxXW46CDnXp0YQ0rdso9OUYPSYT6+yzuxxzlrVfFfavQ/LKqsP+dbVzE/0qRb8pKin6V9U6Fnn24pqHufLMWy90nV+0DkXmcrb0Uq+6pU7/qcs/67SHTeTaaBk9ipyXQvLqW1U7uPKpux/ESlP9umydR8H3UjzHoXxj0/J1Yr5ubHsPrWOJqxK+hk5r+EVtH3pe1XWIXa+1vQ9YJ/oZre1bGReh3xKWeX7BxfYstwh5errGJi59be8482cSsfUPQT4Xlc9K+XMmatcY0fo2+SxYQs/4XO8M03Ng/TxujYH+FRELSdH+6mtveu8itb1Cy7C9X8GfsVOcfN86RHg56wJ0ob5qOz/E/rIdq7YhF34/0cfoeWKVftJjIbWDbDfXeXR/prBOKWJ/3dd43+sr+32TvgEIEZ6/7Zt5/l7ghMm77u+ey4gcz5xfktA5vE9C5vy2Y3lpXeX40tHcLMX42qZHS/ltZluXiSlDxillt3VdIvufbc0j75wy5aWaOxWRUZmfl5nDSh3LzoWbXJOg8uumKkndp1PnH2IPfe+U33z7vjWhdPQuWMh4raqxWMh9X89RZtSZ7/JpyXs3NWQcETN3CZHU/lmVnstZB1+ZfM5A/1VJ2V9t8wTXN1S+f27mzaulbCxJHePwC1Tz/0K1/VdPvtOsba+vL7ZxM1/jakJ/V9/yfdtNx+i7bhVRRll/rrK+sk3qLt/3T0afH+tzz1HDfxzZ/HlGDduK1y/GL21zvKptQGWFSpVlFm0z+ZxD/vdAt9EqQ971NkRHW7qytog53+cfVfeFGLStfddfYka5x6dl+yi//4z6/559aUn4/+/k2pv8BqfM/0qVCnu+If2OJPRZUcyzJF/5RQm5xtM9ln+LRN+8U9+iMQS1Veg9q2z/TlV3Ett3/rLOIXOookidy/5X3GYD+S8a1z2e0vH695T9vhEqdbY//0dU3jWZ2rYq/cvCRT8r08/NLlT5/zySdSurv1ybLiup5tAp5+NNzfPJ5r61warapajItfTQNeK610/rWEMPyb+uOo/ierRNbGU01Z+rqneIPWNsT9t1rD+OYr8rm0eKvp/Ch1P4Yepyy+hWVD/f+VWXX5X+TZdfZZ+KLb9J+S8=","base64"));
+	var stateMachine = new StateMachine(useData);
+
+	/**
+	 * This shaper is an implementation of the Universal Shaping Engine, which
+	 * uses Unicode data to shape a number of scripts without a dedicated shaping engine.
+	 * See https://www.microsoft.com/typography/OpenTypeDev/USE/intro.htm.
+	 */
+	var UniversalShaper = (_temp$2 = _class$6 = function (_DefaultShaper) {
+	  _inherits(UniversalShaper, _DefaultShaper);
+
+	  function UniversalShaper() {
+	    _classCallCheck(this, UniversalShaper);
+
+	    return _possibleConstructorReturn(this, (UniversalShaper.__proto__ || _Object$getPrototypeOf(UniversalShaper)).apply(this, arguments));
+	  }
+
+	  _createClass(UniversalShaper, null, [{
+	    key: 'planFeatures',
+	    value: function planFeatures(plan) {
+	      plan.addStage(setupSyllables);
+
+	      // Default glyph pre-processing group
+	      plan.addStage(['locl', 'ccmp', 'nukt', 'akhn']);
+
+	      // Reordering group
+	      plan.addStage(clearSubstitutionFlags);
+	      plan.addStage(['rphf'], false);
+	      plan.addStage(recordRphf);
+	      plan.addStage(clearSubstitutionFlags);
+	      plan.addStage(['pref']);
+	      plan.addStage(recordPref);
+
+	      // Orthographic unit shaping group
+	      plan.addStage(['rkrf', 'abvf', 'blwf', 'half', 'pstf', 'vatu', 'cjct']);
+	      plan.addStage(reorder);
+
+	      // Topographical features
+	      // Scripts that need this are handled by the Arabic shaper, not implemented here for now.
+	      // plan.addStage(['isol', 'init', 'medi', 'fina', 'med2', 'fin2', 'fin3'], false);
+
+	      // Standard topographic presentation and positional feature application
+	      plan.addStage(['abvs', 'blws', 'pres', 'psts', 'dist', 'abvm', 'blwm']);
+	    }
+	  }, {
+	    key: 'assignFeatures',
+	    value: function assignFeatures(plan, glyphs) {
+	      var _loop = function _loop(i) {
+	        var codepoint = glyphs[i].codePoints[0];
+	        if (decompositions[codepoint]) {
+	          var decomposed = decompositions[codepoint].map(function (c) {
+	            var g = plan.font.glyphForCodePoint(c);
+	            return new GlyphInfo(plan.font, g.id, [c], glyphs[i].features);
+	          });
+
+	          glyphs.splice.apply(glyphs, [i, 1].concat(_toConsumableArray(decomposed)));
+	        }
+	      };
+
+	      // Decompose split vowels
+	      // TODO: do this in a more general unicode normalizer
+	      for (var i = glyphs.length - 1; i >= 0; i--) {
+	        _loop(i);
+	      }
+	    }
+	  }]);
+
+	  return UniversalShaper;
+	}(DefaultShaper), _class$6.zeroMarkWidths = 'BEFORE_GPOS', _temp$2);
+	function useCategory(glyph) {
+	  return trie$1.get(glyph.codePoints[0]);
+	}
+
+	var USEInfo = function USEInfo(category, syllableType, syllable) {
+	  _classCallCheck(this, USEInfo);
+
+	  this.category = category;
+	  this.syllableType = syllableType;
+	  this.syllable = syllable;
+	};
+
+	function setupSyllables(font, glyphs) {
+	  var syllable = 0;
+	  var _iteratorNormalCompletion = true;
+	  var _didIteratorError = false;
+	  var _iteratorError = undefined;
+
+	  try {
+	    for (var _iterator = _getIterator(stateMachine.match(glyphs.map(useCategory))), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	      var _step$value = _slicedToArray(_step.value, 3),
+	          start = _step$value[0],
+	          end = _step$value[1],
+	          tags = _step$value[2];
+
+	      ++syllable;
+
+	      // Create shaper info
+	      for (var i = start; i <= end; i++) {
+	        glyphs[i].shaperInfo = new USEInfo(categories[useCategory(glyphs[i])], tags[0], syllable);
+	      }
+
+	      // Assign rphf feature
+	      var limit = glyphs[start].shaperInfo.category === 'R' ? 1 : Math.min(3, end - start);
+	      for (var _i = start; _i < start + limit; _i++) {
+	        glyphs[_i].features.rphf = true;
+	      }
+	    }
+	  } catch (err) {
+	    _didIteratorError = true;
+	    _iteratorError = err;
+	  } finally {
+	    try {
+	      if (!_iteratorNormalCompletion && _iterator.return) {
+	        _iterator.return();
+	      }
+	    } finally {
+	      if (_didIteratorError) {
+	        throw _iteratorError;
+	      }
+	    }
+	  }
+	}
+
+	function clearSubstitutionFlags(font, glyphs) {
+	  var _iteratorNormalCompletion2 = true;
+	  var _didIteratorError2 = false;
+	  var _iteratorError2 = undefined;
+
+	  try {
+	    for (var _iterator2 = _getIterator(glyphs), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	      var glyph = _step2.value;
+
+	      glyph.substituted = false;
+	    }
+	  } catch (err) {
+	    _didIteratorError2 = true;
+	    _iteratorError2 = err;
+	  } finally {
+	    try {
+	      if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	        _iterator2.return();
+	      }
+	    } finally {
+	      if (_didIteratorError2) {
+	        throw _iteratorError2;
+	      }
+	    }
+	  }
+	}
+
+	function recordRphf(font, glyphs) {
+	  var _iteratorNormalCompletion3 = true;
+	  var _didIteratorError3 = false;
+	  var _iteratorError3 = undefined;
+
+	  try {
+	    for (var _iterator3 = _getIterator(glyphs), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+	      var glyph = _step3.value;
+
+	      if (glyph.substituted && glyph.features.rphf) {
+	        // Mark a substituted repha.
+	        glyph.shaperInfo.category = 'R';
+	      }
+	    }
+	  } catch (err) {
+	    _didIteratorError3 = true;
+	    _iteratorError3 = err;
+	  } finally {
+	    try {
+	      if (!_iteratorNormalCompletion3 && _iterator3.return) {
+	        _iterator3.return();
+	      }
+	    } finally {
+	      if (_didIteratorError3) {
+	        throw _iteratorError3;
+	      }
+	    }
+	  }
+	}
+
+	function recordPref(font, glyphs) {
+	  var _iteratorNormalCompletion4 = true;
+	  var _didIteratorError4 = false;
+	  var _iteratorError4 = undefined;
+
+	  try {
+	    for (var _iterator4 = _getIterator(glyphs), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+	      var glyph = _step4.value;
+
+	      if (glyph.substituted) {
+	        // Mark a substituted pref as VPre, as they behave the same way.
+	        glyph.shaperInfo.category = 'VPre';
+	      }
+	    }
+	  } catch (err) {
+	    _didIteratorError4 = true;
+	    _iteratorError4 = err;
+	  } finally {
+	    try {
+	      if (!_iteratorNormalCompletion4 && _iterator4.return) {
+	        _iterator4.return();
+	      }
+	    } finally {
+	      if (_didIteratorError4) {
+	        throw _iteratorError4;
+	      }
+	    }
+	  }
+	}
+
+	function reorder(font, glyphs) {
+	  var dottedCircle = font.glyphForCodePoint(0x25cc).id;
+
+	  for (var start = 0, end = nextSyllable(glyphs, 0); start < glyphs.length; start = end, end = nextSyllable(glyphs, start)) {
+	    var i = void 0,
+	        j = void 0;
+	    var info = glyphs[start].shaperInfo;
+	    var type = info.syllableType;
+
+	    // Only a few syllable types need reordering.
+	    if (type !== 'virama_terminated_cluster' && type !== 'standard_cluster' && type !== 'broken_cluster') {
+	      continue;
+	    }
+
+	    // Insert a dotted circle glyph in broken clusters.
+	    if (type === 'broken_cluster' && dottedCircle) {
+	      var g = new GlyphInfo(font, dottedCircle, [0x25cc]);
+	      g.shaperInfo = info;
+
+	      // Insert after possible Repha.
+	      for (i = start; i < end && glyphs[i].shaperInfo.category === 'R'; i++) {}
+	      glyphs.splice(++i, 0, g);
+	      end++;
+	    }
+
+	    // Move things forward.
+	    if (info.category === 'R' && end - start > 1) {
+	      // Got a repha. Reorder it to after first base, before first halant.
+	      for (i = start + 1; i < end; i++) {
+	        info = glyphs[i].shaperInfo;
+	        if (isBase(info) || isHalant(glyphs[i])) {
+	          // If we hit a halant, move before it; otherwise it's a base: move to it's
+	          // place, and shift things in between backward.
+	          if (isHalant(glyphs[i])) {
+	            i--;
+	          }
+
+	          glyphs.splice.apply(glyphs, [start, 0].concat(_toConsumableArray(glyphs.splice(start + 1, i - start)), [glyphs[i]]));
+	          break;
+	        }
+	      }
+	    }
+
+	    // Move things back.
+	    for (i = start, j = end; i < end; i++) {
+	      info = glyphs[i].shaperInfo;
+	      if (isBase(info) || isHalant(glyphs[i])) {
+	        // If we hit a halant, move after it; otherwise it's a base: move to it's
+	        // place, and shift things in between backward.
+	        j = isHalant(glyphs[i]) ? i + 1 : i;
+	      } else if ((info.category === 'VPre' || info.category === 'VMPre') && j < i) {
+	        glyphs.splice.apply(glyphs, [j, 1, glyphs[i]].concat(_toConsumableArray(glyphs.splice(j, i - j))));
+	      }
+	    }
+	  }
+	}
+
+	function nextSyllable(glyphs, start) {
+	  if (start >= glyphs.length) return start;
+	  var syllable = glyphs[start].shaperInfo.syllable;
+	  while (++start < glyphs.length && glyphs[start].shaperInfo.syllable === syllable) {}
+	  return start;
+	}
+
+	function isHalant(glyph) {
+	  return glyph.shaperInfo.category === 'H' && !glyph.isLigated;
+	}
+
+	function isBase(info) {
+	  return info.category === 'B' || info.category === 'GB';
+	}
+
+	var SHAPERS = {
+	  arab: ArabicShaper, // Arabic
+	  mong: ArabicShaper, // Mongolian
+	  syrc: ArabicShaper, // Syriac
+	  'nko ': ArabicShaper, // N'Ko
+	  phag: ArabicShaper, // Phags Pa
+	  mand: ArabicShaper, // Mandaic
+	  mani: ArabicShaper, // Manichaean
+	  phlp: ArabicShaper, // Psalter Pahlavi
+
+	  hang: HangulShaper, // Hangul
+
+	  bali: UniversalShaper, // Balinese
+	  batk: UniversalShaper, // Batak
+	  brah: UniversalShaper, // Brahmi
+	  bugi: UniversalShaper, // Buginese
+	  buhd: UniversalShaper, // Buhid
+	  cakm: UniversalShaper, // Chakma
+	  cham: UniversalShaper, // Cham
+	  dupl: UniversalShaper, // Duployan
+	  egyp: UniversalShaper, // Egyptian Hieroglyphs
+	  gran: UniversalShaper, // Grantha
+	  hano: UniversalShaper, // Hanunoo
+	  java: UniversalShaper, // Javanese
+	  kthi: UniversalShaper, // Kaithi
+	  kali: UniversalShaper, // Kayah Li
+	  khar: UniversalShaper, // Kharoshthi
+	  khoj: UniversalShaper, // Khojki
+	  sind: UniversalShaper, // Khudawadi
+	  lepc: UniversalShaper, // Lepcha
+	  limb: UniversalShaper, // Limbu
+	  mahj: UniversalShaper, // Mahajani
+	  // mand: UniversalShaper, // Mandaic
+	  // mani: UniversalShaper, // Manichaean
+	  mtei: UniversalShaper, // Meitei Mayek
+	  modi: UniversalShaper, // Modi
+	  // mong: UniversalShaper, // Mongolian
+	  // 'nko ': UniversalShaper, // N’Ko
+	  hmng: UniversalShaper, // Pahawh Hmong
+	  // phag: UniversalShaper, // Phags-pa
+	  // phlp: UniversalShaper, // Psalter Pahlavi
+	  rjng: UniversalShaper, // Rejang
+	  saur: UniversalShaper, // Saurashtra
+	  shrd: UniversalShaper, // Sharada
+	  sidd: UniversalShaper, // Siddham
+	  sinh: UniversalShaper, // Sinhala
+	  sund: UniversalShaper, // Sundanese
+	  sylo: UniversalShaper, // Syloti Nagri
+	  tglg: UniversalShaper, // Tagalog
+	  tagb: UniversalShaper, // Tagbanwa
+	  tale: UniversalShaper, // Tai Le
+	  lana: UniversalShaper, // Tai Tham
+	  tavt: UniversalShaper, // Tai Viet
+	  takr: UniversalShaper, // Takri
+	  tibt: UniversalShaper, // Tibetan
+	  tfng: UniversalShaper, // Tifinagh
+	  tirh: UniversalShaper, // Tirhuta
+
+	  latn: DefaultShaper, // Latin
+	  DFLT: DefaultShaper // Default
+	};
+
+	function choose(script) {
+	  var shaper = SHAPERS[script];
+	  if (shaper) {
+	    return shaper;
+	  }
+
+	  return DefaultShaper;
+	}
 
 	var GSUBProcessor = function (_OTProcessor) {
 	  _inherits(GSUBProcessor, _OTProcessor);
@@ -45277,10 +46464,17 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	                var sequence = table.sequences.get(_index);
 	                _this2.glyphIterator.cur.id = sequence[0];
+	                _this2.glyphIterator.cur.ligatureComponent = 0;
 
 	                var features = _this2.glyphIterator.cur.features;
-	                var replacement = sequence.slice(1).map(function (gid) {
-	                  return new GlyphInfo(gid, undefined, features);
+	                var curGlyph = _this2.glyphIterator.cur;
+	                var replacement = sequence.slice(1).map(function (gid, i) {
+	                  var glyph = new GlyphInfo(_this2.font, gid, undefined, features);
+	                  glyph.shaperInfo = curGlyph.shaperInfo;
+	                  glyph.isLigated = curGlyph.isLigated;
+	                  glyph.ligatureComponent = i + 1;
+	                  glyph.substituted = true;
+	                  return glyph;
 	                });
 
 	                (_glyphs = _this2.glyphs).splice.apply(_glyphs, [_this2.glyphIterator.index + 1, 0].concat(_toConsumableArray(replacement)));
@@ -45360,8 +46554,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	                  }
 	                }
 
-	                var ligatureGlyph = new GlyphInfo(ligature.glyph, characters);
-	                ligatureGlyph.features = curGlyph.features;
+	                var ligatureGlyph = new GlyphInfo(this.font, ligature.glyph, characters, curGlyph.features);
+	                ligatureGlyph.shaperInfo = curGlyph.shaperInfo;
+	                ligatureGlyph.isLigated = true;
+	                ligatureGlyph.substituted = true;
 
 	                // From Harfbuzz:
 	                // - If it *is* a mark ligature, we don't allocate a new ligature id, and leave
@@ -45387,7 +46583,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	                //   the new ligature with a component value of 2.
 	                //
 	                //   This in fact happened to a font...  See https://bugzilla.gnome.org/show_bug.cgi?id=437633
-	                ligatureGlyph.ligatureID = ligatureGlyph.isMark ? 0 : this.ligatureID++;
+	                var isMarkLigature = curGlyph.isMark;
+	                for (var i = 0; i < matched.length && isMarkLigature; i++) {
+	                  isMarkLigature = this.glyphs[matched[i]].isMark;
+	                }
+
+	                ligatureGlyph.ligatureID = isMarkLigature ? null : this.ligatureID++;
 
 	                var lastLigID = curGlyph.ligatureID;
 	                var lastNumComps = curGlyph.codePoints.length;
@@ -45405,7 +46606,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    var matchIndex = _step3.value;
 
 	                    // Don't assign new ligature components for mark ligatures (see above)
-	                    if (ligatureGlyph.isMark) {
+	                    if (isMarkLigature) {
 	                      idx = matchIndex;
 	                    } else {
 	                      while (idx < matchIndex) {
@@ -45438,11 +46639,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	                  }
 	                }
 
-	                if (lastLigID && !ligatureGlyph.isMark) {
-	                  for (var i = idx; i < this.glyphs.length; i++) {
-	                    if (this.glyphs[i].ligatureID === lastLigID) {
-	                      var ligatureComponent = curComps - lastNumComps + Math.min(this.glyphs[i].ligatureComponent || 1, lastNumComps);
-	                      this.glyphs[i].ligatureComponent = ligatureComponent;
+	                if (lastLigID && !isMarkLigature) {
+	                  for (var _i = idx; _i < this.glyphs.length; _i++) {
+	                    if (this.glyphs[_i].ligatureID === lastLigID) {
+	                      var ligatureComponent = curComps - lastNumComps + Math.min(this.glyphs[_i].ligatureComponent || 1, lastNumComps);
+	                      this.glyphs[_i].ligatureComponent = ligatureComponent;
 	                    } else {
 	                      break;
 	                    }
@@ -45450,8 +46651,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	                }
 
 	                // Delete the matched glyphs, and replace the current glyph with the ligature glyph
-	                for (var _i = matched.length - 1; _i >= 0; _i--) {
-	                  this.glyphs.splice(matched[_i], 1);
+	                for (var _i2 = matched.length - 1; _i2 >= 0; _i2--) {
+	                  this.glyphs.splice(matched[_i2], 1);
 	                }
 
 	                this.glyphs[this.glyphIterator.index] = ligatureGlyph;
@@ -45477,18 +46678,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        case 5:
 	          // Contextual Substitution
-	          this.applyContext(table);
-	          return false;
+	          return this.applyContext(table);
 
 	        case 6:
 	          // Chaining Contextual Substitution
-	          this.applyChainingContext(table);
-	          return false;
+	          return this.applyChainingContext(table);
 
 	        case 7:
 	          // Extension Substitution
-	          this.applyLookup(table.lookupType, table.extension);
-	          return false;
+	          return this.applyLookup(table.lookupType, table.extension);
 
 	        default:
 	          throw new Error('GSUB lookupType ' + lookupType + ' is not supported');
@@ -45783,18 +46981,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        case 7:
 	          // Contextual positioning
-	          this.applyContext(table);
-	          return false;
+	          return this.applyContext(table);
 
 	        case 8:
 	          // Chaining contextual positioning
-	          this.applyChainingContext(table);
-	          return false;
+	          return this.applyChainingContext(table);
 
 	        case 9:
 	          // Extension positioning
-	          this.applyLookup(table.lookupType, table.extension);
-	          return false;
+	          return this.applyLookup(table.lookupType, table.extension);
 
 	        default:
 	          throw new Error('Unsupported GPOS table: ' + lookupType);
@@ -45811,7 +47006,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      markPos.xOffset = baseCoords.x - markCoords.x;
 	      markPos.yOffset = baseCoords.y - markCoords.y;
-	      return this.glyphIterator.cur.markAttachment = baseGlyphIndex;
+	      this.glyphIterator.cur.markAttachment = baseGlyphIndex;
 	    }
 	  }, {
 	    key: 'getAnchor',
@@ -45831,7 +47026,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this.fixCursiveAttachment(i);
 	      }
 
-	      this.fixMarkAttachment(i);
+	      this.fixMarkAttachment();
 	    }
 	  }, {
 	    key: 'fixCursiveAttachment',
@@ -45851,7 +47046,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: function fixMarkAttachment() {
 	      for (var i = 0; i < this.glyphs.length; i++) {
 	        var glyph = this.glyphs[i];
-	        if (glyph.markAttachment) {
+	        if (glyph.markAttachment != null) {
 	          var j = glyph.markAttachment;
 
 	          this.positions[i].xOffset += this.positions[j].xOffset;
@@ -45893,29 +47088,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	  _createClass(OTLayoutEngine, [{
 	    key: 'setup',
 	    value: function setup(glyphs, features, script, language) {
+	      var _this = this;
+
 	      // Map glyphs to GlyphInfo objects so data can be passed between
 	      // GSUB and GPOS without mutating the real (shared) Glyph objects.
 	      this.glyphInfos = glyphs.map(function (glyph) {
-	        return new GlyphInfo(glyph.id, [].concat(_toConsumableArray(glyph.codePoints)));
+	        return new GlyphInfo(_this.font, glyph.id, [].concat(_toConsumableArray(glyph.codePoints)));
 	      });
 
 	      // Choose a shaper based on the script, and setup a shaping plan.
 	      // This determines which features to apply to which glyphs.
-	      var shaper = choose(script);
+	      this.shaper = choose(script);
 	      this.plan = new ShapingPlan(this.font, script, language);
-	      return shaper.plan(this.plan, this.glyphInfos, features);
+	      return this.shaper.plan(this.plan, this.glyphInfos, features);
 	    }
 	  }, {
 	    key: 'substitute',
 	    value: function substitute(glyphs) {
-	      var _this = this;
+	      var _this2 = this;
 
 	      if (this.GSUBProcessor) {
 	        this.plan.process(this.GSUBProcessor, this.glyphInfos);
 
 	        // Map glyph infos back to normal Glyph objects
 	        glyphs = this.glyphInfos.map(function (glyphInfo) {
-	          return _this.font.getGlyph(glyphInfo.id, glyphInfo.codePoints);
+	          return _this2.font.getGlyph(glyphInfo.id, glyphInfo.codePoints);
 	        });
 	      }
 
@@ -45924,8 +47121,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'position',
 	    value: function position(glyphs, positions) {
+	      if (this.shaper.zeroMarkWidths === 'BEFORE_GPOS') {
+	        this.zeroMarkAdvances(positions);
+	      }
+
 	      if (this.GPOSProcessor) {
 	        this.plan.process(this.GPOSProcessor, this.glyphInfos, positions);
+	      }
+
+	      if (this.shaper.zeroMarkWidths === 'AFTER_GPOS') {
+	        this.zeroMarkAdvances(positions);
 	      }
 
 	      // Reverse the glyphs and positions if the script is right-to-left
@@ -45937,10 +47142,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return this.GPOSProcessor && this.GPOSProcessor.features;
 	    }
 	  }, {
+	    key: 'zeroMarkAdvances',
+	    value: function zeroMarkAdvances(positions) {
+	      for (var i = 0; i < this.glyphInfos.length; i++) {
+	        if (this.glyphInfos[i].isMark) {
+	          positions[i].xAdvance = 0;
+	          positions[i].yAdvance = 0;
+	        }
+	      }
+	    }
+	  }, {
 	    key: 'cleanup',
 	    value: function cleanup() {
 	      this.glyphInfos = null;
 	      this.plan = null;
+	      this.shaper = null;
 	    }
 	  }, {
 	    key: 'getAvailableFeatures',
@@ -45984,7 +47200,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  _createClass(LayoutEngine, [{
 	    key: 'layout',
 	    value: function layout(string) {
-	      var features = arguments.length <= 1 || arguments[1] === undefined ? [] : arguments[1];
+	      var features = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
 	      var script = arguments[2];
 	      var language = arguments[3];
 
@@ -46117,6 +47333,66 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 
 	      return features;
+	    }
+	  }, {
+	    key: 'stringsForGlyph',
+	    value: function stringsForGlyph(gid) {
+	      var result = new _Set();
+
+	      var codePoints = this.font._cmapProcessor.codePointsForGlyph(gid);
+	      var _iteratorNormalCompletion2 = true;
+	      var _didIteratorError2 = false;
+	      var _iteratorError2 = undefined;
+
+	      try {
+	        for (var _iterator2 = _getIterator(codePoints), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	          var codePoint = _step2.value;
+
+	          result.add(_String$fromCodePoint(codePoint));
+	        }
+	      } catch (err) {
+	        _didIteratorError2 = true;
+	        _iteratorError2 = err;
+	      } finally {
+	        try {
+	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	            _iterator2.return();
+	          }
+	        } finally {
+	          if (_didIteratorError2) {
+	            throw _iteratorError2;
+	          }
+	        }
+	      }
+
+	      if (this.engine && this.engine.stringsForGlyph) {
+	        var _iteratorNormalCompletion3 = true;
+	        var _didIteratorError3 = false;
+	        var _iteratorError3 = undefined;
+
+	        try {
+	          for (var _iterator3 = _getIterator(this.engine.stringsForGlyph(gid)), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+	            var string = _step3.value;
+
+	            result.add(string);
+	          }
+	        } catch (err) {
+	          _didIteratorError3 = true;
+	          _iteratorError3 = err;
+	        } finally {
+	          try {
+	            if (!_iteratorNormalCompletion3 && _iterator3.return) {
+	              _iterator3.return();
+	            }
+	          } finally {
+	            if (_didIteratorError3) {
+	              throw _iteratorError3;
+	            }
+	          }
+	        }
+	      }
+
+	      return _Array$from(result);
 	    }
 	  }]);
 
@@ -46259,10 +47535,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	          switch (c.command) {
 	            case 'moveTo':
 	            case 'lineTo':
-	              var _c$args = _slicedToArray(c.args, 2);
-
-	              var x = _c$args[0];
-	              var y = _c$args[1];
+	              var _c$args = _slicedToArray(c.args, 2),
+	                  x = _c$args[0],
+	                  y = _c$args[1];
 
 	              bbox.addPoint(x, y);
 	              cx = x;
@@ -46273,26 +47548,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	            case 'bezierCurveTo':
 	              if (c.command === 'quadraticCurveTo') {
 	                // http://fontforge.org/bezier.html
-	                var _c$args2 = _slicedToArray(c.args, 4);
-
-	                var qp1x = _c$args2[0];
-	                var qp1y = _c$args2[1];
-	                var p3x = _c$args2[2];
-	                var p3y = _c$args2[3];
+	                var _c$args2 = _slicedToArray(c.args, 4),
+	                    qp1x = _c$args2[0],
+	                    qp1y = _c$args2[1],
+	                    p3x = _c$args2[2],
+	                    p3y = _c$args2[3];
 
 	                var cp1x = cx + 2 / 3 * (qp1x - cx); // CP1 = QP0 + 2/3 * (QP1-QP0)
 	                var cp1y = cy + 2 / 3 * (qp1y - cy);
 	                var cp2x = p3x + 2 / 3 * (qp1x - p3x); // CP2 = QP2 + 2/3 * (QP1-QP2)
 	                var cp2y = p3y + 2 / 3 * (qp1y - p3y);
 	              } else {
-	                var _c$args3 = _slicedToArray(c.args, 6);
-
-	                var cp1x = _c$args3[0];
-	                var cp1y = _c$args3[1];
-	                var cp2x = _c$args3[2];
-	                var cp2y = _c$args3[3];
-	                var p3x = _c$args3[4];
-	                var p3y = _c$args3[5];
+	                var _c$args3 = _slicedToArray(c.args, 6),
+	                    cp1x = _c$args3[0],
+	                    cp1y = _c$args3[1],
+	                    cp2x = _c$args3[2],
+	                    cp2y = _c$args3[3],
+	                    p3x = _c$args3[4],
+	                    p3y = _c$args3[5];
 	              }
 
 	              // http://blog.hackers-cafe.net/2009/06/how-to-calculate-bezier-curves-bounding.html
@@ -46303,10 +47576,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	              var p2 = [cp2x, cp2y];
 	              var p3 = [p3x, p3y];
 
-	              for (var _i2 = 0; _i2 <= 1; _i2++) {
-	                var b = 6 * p0[_i2] - 12 * p1[_i2] + 6 * p2[_i2];
-	                var a = -3 * p0[_i2] + 9 * p1[_i2] - 9 * p2[_i2] + 3 * p3[_i2];
-	                c = 3 * p1[_i2] - 3 * p0[_i2];
+	              for (var i = 0; i <= 1; i++) {
+	                var b = 6 * p0[i] - 12 * p1[i] + 6 * p2[i];
+	                var a = -3 * p0[i] + 9 * p1[i] - 9 * p2[i] + 3 * p3[i];
+	                c = 3 * p1[i] - 3 * p0[i];
 
 	                if (a === 0) {
 	                  if (b === 0) {
@@ -46315,9 +47588,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	                  var t = -c / b;
 	                  if (0 < t && t < 1) {
-	                    if (_i2 === 0) {
+	                    if (i === 0) {
 	                      bbox.addPoint(f(t), bbox.maxY);
-	                    } else if (_i2 === 1) {
+	                    } else if (i === 1) {
 	                      bbox.addPoint(bbox.maxX, f(t));
 	                    }
 	                  }
@@ -46332,18 +47605,18 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	                var t1 = (-b + Math.sqrt(b2ac)) / (2 * a);
 	                if (0 < t1 && t1 < 1) {
-	                  if (_i2 === 0) {
+	                  if (i === 0) {
 	                    bbox.addPoint(f(t1), bbox.maxY);
-	                  } else if (_i2 === 1) {
+	                  } else if (i === 1) {
 	                    bbox.addPoint(bbox.maxX, f(t1));
 	                  }
 	                }
 
 	                var t2 = (-b - Math.sqrt(b2ac)) / (2 * a);
 	                if (0 < t2 && t2 < 1) {
-	                  if (_i2 === 0) {
+	                  if (i === 0) {
 	                    bbox.addPoint(f(t2), bbox.maxY);
-	                  } else if (_i2 === 1) {
+	                  } else if (i === 1) {
 	                    bbox.addPoint(bbox.maxX, f(t2));
 	                  }
 	                }
@@ -46379,7 +47652,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _arr = ['moveTo', 'lineTo', 'quadraticCurveTo', 'bezierCurveTo', 'closePath'];
 
 	var _loop = function _loop() {
-	  var command = _arr[_i3];
+	  var command = _arr[_i2];
 	  Path.prototype[command] = function () {
 	    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
 	      args[_key] = arguments[_key];
@@ -46395,14 +47668,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	};
 
-	for (var _i3 = 0; _i3 < _arr.length; _i3++) {
+	for (var _i2 = 0; _i2 < _arr.length; _i2++) {
 	  _loop();
 	}
 
 	var StandardNames = ['.notdef', '.null', 'nonmarkingreturn', 'space', 'exclam', 'quotedbl', 'numbersign', 'dollar', 'percent', 'ampersand', 'quotesingle', 'parenleft', 'parenright', 'asterisk', 'plus', 'comma', 'hyphen', 'period', 'slash', 'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'colon', 'semicolon', 'less', 'equal', 'greater', 'question', 'at', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'bracketleft', 'backslash', 'bracketright', 'asciicircum', 'underscore', 'grave', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'braceleft', 'bar', 'braceright', 'asciitilde', 'Adieresis', 'Aring', 'Ccedilla', 'Eacute', 'Ntilde', 'Odieresis', 'Udieresis', 'aacute', 'agrave', 'acircumflex', 'adieresis', 'atilde', 'aring', 'ccedilla', 'eacute', 'egrave', 'ecircumflex', 'edieresis', 'iacute', 'igrave', 'icircumflex', 'idieresis', 'ntilde', 'oacute', 'ograve', 'ocircumflex', 'odieresis', 'otilde', 'uacute', 'ugrave', 'ucircumflex', 'udieresis', 'dagger', 'degree', 'cent', 'sterling', 'section', 'bullet', 'paragraph', 'germandbls', 'registered', 'copyright', 'trademark', 'acute', 'dieresis', 'notequal', 'AE', 'Oslash', 'infinity', 'plusminus', 'lessequal', 'greaterequal', 'yen', 'mu', 'partialdiff', 'summation', 'product', 'pi', 'integral', 'ordfeminine', 'ordmasculine', 'Omega', 'ae', 'oslash', 'questiondown', 'exclamdown', 'logicalnot', 'radical', 'florin', 'approxequal', 'Delta', 'guillemotleft', 'guillemotright', 'ellipsis', 'nonbreakingspace', 'Agrave', 'Atilde', 'Otilde', 'OE', 'oe', 'endash', 'emdash', 'quotedblleft', 'quotedblright', 'quoteleft', 'quoteright', 'divide', 'lozenge', 'ydieresis', 'Ydieresis', 'fraction', 'currency', 'guilsinglleft', 'guilsinglright', 'fi', 'fl', 'daggerdbl', 'periodcentered', 'quotesinglbase', 'quotedblbase', 'perthousand', 'Acircumflex', 'Ecircumflex', 'Aacute', 'Edieresis', 'Egrave', 'Iacute', 'Icircumflex', 'Idieresis', 'Igrave', 'Oacute', 'Ocircumflex', 'apple', 'Ograve', 'Uacute', 'Ucircumflex', 'Ugrave', 'dotlessi', 'circumflex', 'tilde', 'macron', 'breve', 'dotaccent', 'ring', 'cedilla', 'hungarumlaut', 'ogonek', 'caron', 'Lslash', 'lslash', 'Scaron', 'scaron', 'Zcaron', 'zcaron', 'brokenbar', 'Eth', 'eth', 'Yacute', 'yacute', 'Thorn', 'thorn', 'minus', 'multiply', 'onesuperior', 'twosuperior', 'threesuperior', 'onehalf', 'onequarter', 'threequarters', 'franc', 'Gbreve', 'gbreve', 'Idotaccent', 'Scedilla', 'scedilla', 'Cacute', 'cacute', 'Ccaron', 'ccaron', 'dcroat'];
 
-	var _class$1;
-	function _applyDecoratedDescriptor$1(target, property, decorators, descriptor, context) {
+	var _class$7;
+	function _applyDecoratedDescriptor$4(target, property, decorators, descriptor, context) {
 	  var desc = {};
 	  Object['ke' + 'ys'](descriptor).forEach(function (key) {
 	    desc[key] = descriptor[key];
@@ -46439,7 +47712,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * There are several subclasses of the base Glyph class internally that may be returned depending
 	 * on the font format, but they all inherit from this class.
 	 */
-	var Glyph = (_class$1 = function () {
+	var Glyph = (_class$7 = function () {
 	  function Glyph(id, codePoints, font) {
 	    _classCallCheck(this, Glyph);
 
@@ -46500,18 +47773,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return this._metrics;
 	      }
 
-	      var _getTableMetrics2 = this._getTableMetrics(this._font.hmtx);
-
-	      var advanceWidth = _getTableMetrics2.advance;
-	      var leftBearing = _getTableMetrics2.bearing;
+	      var _getTableMetrics2 = this._getTableMetrics(this._font.hmtx),
+	          advanceWidth = _getTableMetrics2.advance,
+	          leftBearing = _getTableMetrics2.bearing;
 
 	      // For vertical metrics, use vmtx if available, or fall back to global data from OS/2 or hhea
 
-	      if (this._font.vmtx) {
-	        var _getTableMetrics3 = this._getTableMetrics(this._font.vmtx);
 
-	        var advanceHeight = _getTableMetrics3.advance;
-	        var topBearing = _getTableMetrics3.bearing;
+	      if (this._font.vmtx) {
+	        var _getTableMetrics3 = this._getTableMetrics(this._font.vmtx),
+	            advanceHeight = _getTableMetrics3.advance,
+	            topBearing = _getTableMetrics3.bearing;
 	      } else {
 	        var os2 = void 0;
 	        if (typeof cbox === 'undefined' || cbox === null) {
@@ -46662,7 +47934,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }]);
 
 	  return Glyph;
-	}(), (_applyDecoratedDescriptor$1(_class$1.prototype, 'cbox', [cache], _Object$getOwnPropertyDescriptor(_class$1.prototype, 'cbox'), _class$1.prototype), _applyDecoratedDescriptor$1(_class$1.prototype, 'bbox', [cache], _Object$getOwnPropertyDescriptor(_class$1.prototype, 'bbox'), _class$1.prototype), _applyDecoratedDescriptor$1(_class$1.prototype, 'path', [cache], _Object$getOwnPropertyDescriptor(_class$1.prototype, 'path'), _class$1.prototype), _applyDecoratedDescriptor$1(_class$1.prototype, 'advanceWidth', [cache], _Object$getOwnPropertyDescriptor(_class$1.prototype, 'advanceWidth'), _class$1.prototype), _applyDecoratedDescriptor$1(_class$1.prototype, 'advanceHeight', [cache], _Object$getOwnPropertyDescriptor(_class$1.prototype, 'advanceHeight'), _class$1.prototype), _applyDecoratedDescriptor$1(_class$1.prototype, 'name', [cache], _Object$getOwnPropertyDescriptor(_class$1.prototype, 'name'), _class$1.prototype)), _class$1);
+	}(), (_applyDecoratedDescriptor$4(_class$7.prototype, 'cbox', [cache], _Object$getOwnPropertyDescriptor(_class$7.prototype, 'cbox'), _class$7.prototype), _applyDecoratedDescriptor$4(_class$7.prototype, 'bbox', [cache], _Object$getOwnPropertyDescriptor(_class$7.prototype, 'bbox'), _class$7.prototype), _applyDecoratedDescriptor$4(_class$7.prototype, 'path', [cache], _Object$getOwnPropertyDescriptor(_class$7.prototype, 'path'), _class$7.prototype), _applyDecoratedDescriptor$4(_class$7.prototype, 'advanceWidth', [cache], _Object$getOwnPropertyDescriptor(_class$7.prototype, 'advanceWidth'), _class$7.prototype), _applyDecoratedDescriptor$4(_class$7.prototype, 'advanceHeight', [cache], _Object$getOwnPropertyDescriptor(_class$7.prototype, 'advanceHeight'), _class$7.prototype), _applyDecoratedDescriptor$4(_class$7.prototype, 'name', [cache], _Object$getOwnPropertyDescriptor(_class$7.prototype, 'name'), _class$7.prototype)), _class$7);
 
 	// The header for both simple and composite glyphs
 	var GlyfHeader = new r.Struct({
@@ -46691,8 +47963,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	// Represents a point in a simple glyph
 	var Point = function () {
 	  function Point(onCurve, endContour) {
-	    var x = arguments.length <= 2 || arguments[2] === undefined ? 0 : arguments[2];
-	    var y = arguments.length <= 3 || arguments[3] === undefined ? 0 : arguments[3];
+	    var x = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+	    var y = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
 
 	    _classCallCheck(this, Point);
 
@@ -46721,7 +47993,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  this.dx = dx;
 	  this.dy = dy;
 	  this.pos = 0;
-	  this.scale = this.xScale = this.yScale = this.scale01 = this.scale10 = null;
+	  this.scaleX = this.scaleY = 1;
+	  this.scale01 = this.scale10 = 0;
 	};
 
 	/**
@@ -46815,7 +48088,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      glyph.points = [];
 
 	      var endPtsOfContours = new r.Array(r.uint16, glyph.numberOfContours).decode(stream);
-	      var instructions = new r.Array(r.uint8, r.uint16).decode(stream);
+	      glyph.instructions = new r.Array(r.uint8, r.uint16).decode(stream);
 
 	      var flags = [];
 	      var numCoords = endPtsOfContours[endPtsOfContours.length - 1] + 1;
@@ -46864,7 +48137,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: '_decodeComposite',
 	    value: function _decodeComposite(glyph, stream) {
-	      var offset = arguments.length <= 2 || arguments[2] === undefined ? 0 : arguments[2];
+	      var offset = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
 
 	      // this is a composite glyph
 	      glyph.components = [];
@@ -46889,8 +48162,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        var component = new Component(glyphID, dx, dy);
 	        component.pos = gPos;
-	        component.scaleX = component.scaleY = 1;
-	        component.scale01 = component.scale10 = 0;
 
 	        if (flags & WE_HAVE_A_SCALE) {
 	          // fixed number with 14 bits of fraction
@@ -46937,11 +48208,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this._metrics = Glyph.prototype._getMetrics.call(this, cbox);
 	      }
 
-	      var _metrics = this._metrics;
-	      var advanceWidth = _metrics.advanceWidth;
-	      var advanceHeight = _metrics.advanceHeight;
-	      var leftBearing = _metrics.leftBearing;
-	      var topBearing = _metrics.topBearing;
+	      var _metrics = this._metrics,
+	          advanceWidth = _metrics.advanceWidth,
+	          advanceHeight = _metrics.advanceHeight,
+	          leftBearing = _metrics.leftBearing,
+	          topBearing = _metrics.topBearing;
 
 
 	      return [new Point(false, true, glyph.xMin - leftBearing, 0), new Point(false, true, glyph.xMin - leftBearing + advanceWidth, 0), new Point(false, true, 0, glyph.yMax + topBearing), new Point(false, true, 0, glyph.yMax + topBearing + advanceHeight)];
@@ -47010,8 +48281,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          }
 	        }
 	      } else {
-	        var _glyph = glyph;
-	        var points = _glyph.points;
+	        var points = glyph.points || [];
 	      }
 
 	      // Recompute and cache metrics if we performed variation processing
@@ -47173,6 +48443,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          y = 0;
 	      var usedGsubrs = void 0;
 	      var usedSubrs = void 0;
+	      var open = false;
 
 	      this._usedGsubrs = usedGsubrs = {};
 	      this._usedSubrs = usedSubrs = {};
@@ -47184,7 +48455,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var subrs = privateDict.Subrs || [];
 	      var subrsBias = this.bias(subrs);
 
-	      var parseStems = function parseStems() {
+	      function parseStems() {
 	        if (stack.length % 2 !== 0) {
 	          if (width === null) {
 	            width = stack.shift() + privateDict.nominalWidthX;
@@ -47193,15 +48464,27 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        nStems += stack.length >> 1;
 	        return stack.length = 0;
-	      };
+	      }
+
+	      function moveTo(x, y) {
+	        if (open) {
+	          path.closePath();
+	        }
+
+	        path.moveTo(x, y);
+	        open = true;
+	      }
 
 	      var parse = function parse() {
 	        while (stream.pos < end) {
 	          var op = stream.readUInt8();
 	          if (op < 32) {
 	            switch (op) {
-	              case 1:case 3:case 18:case 23:
-	                // hstem, vstem, hstemhm, vstemhm
+	              case 1: // hstem
+	              case 3: // vstem
+	              case 18: // hstemhm
+	              case 23:
+	                // vstemhm
 	                parseStems();
 	                break;
 
@@ -47214,7 +48497,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                }
 
 	                y += stack.shift();
-	                path.moveTo(x, y);
+	                moveTo(x, y);
 	                break;
 
 	              case 5:
@@ -47226,8 +48509,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	                }
 	                break;
 
-	              case 6:case 7:
-	                // hlineto, vlineto
+	              case 6: // hlineto
+	              case 7:
+	                // vlineto
 	                var phase = op === 6;
 	                while (stack.length >= 1) {
 	                  if (phase) {
@@ -47273,7 +48557,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	              case 11:
 	                // return
 	                return;
-	                break;
 
 	              case 14:
 	                // endchar
@@ -47284,10 +48567,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	                }
 
 	                path.closePath();
+	                open = false;
 	                break;
 
-	              case 19:case 20:
-	                // hintmask, cntrmask
+	              case 19: // hintmask
+	              case 20:
+	                // cntrmask
 	                parseStems();
 	                stream.pos += nStems + 7 >> 3;
 	                break;
@@ -47303,7 +48588,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	                x += stack.shift();
 	                y += stack.shift();
-	                path.moveTo(x, y);
+	                moveTo(x, y);
 	                break;
 
 	              case 22:
@@ -47315,7 +48600,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                }
 
 	                x += stack.shift();
-	                path.moveTo(x, y);
+	                moveTo(x, y);
 	                break;
 
 	              case 24:
@@ -47407,8 +48692,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	                }
 	                break;
 
-	              case 30:case 31:
-	                // vhcurveto, hvcurveto
+	              case 30: // vhcurveto
+	              case 31:
+	                // hvcurveto
 	                phase = op === 31;
 	                while (stack.length >= 4) {
 	                  if (phase) {
@@ -47573,8 +48859,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    if (j >= 0) {
 	                      while (j > 0) {
 	                        var t = stack[n - 1];
-	                        for (var _i = n - 2; _i >= 0; _i--) {
-	                          stack[_i + 1] = stack[_i];
+	                        for (var i = n - 2; i >= 0; i--) {
+	                          stack[i + 1] = stack[i];
 	                        }
 
 	                        stack[0] = t;
@@ -47583,8 +48869,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    } else {
 	                      while (j < 0) {
 	                        var t = stack[0];
-	                        for (var _i2 = 0; _i2 <= n; _i2++) {
-	                          stack[_i2] = stack[_i2 + 1];
+	                        for (var _i = 0; _i <= n; _i++) {
+	                          stack[_i] = stack[_i + 1];
 	                        }
 
 	                        stack[n - 1] = t;
@@ -47617,9 +48903,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	                  case 35:
 	                    // flex
 	                    var pts = [];
-	                    var iterable2 = [0, 1, 2, 3, 4, 5];
-	                    for (var j1 = 0; j1 < iterable2.length; j1++) {
-	                      i = iterable2[j1];
+
+	                    for (var _i2 = 0; _i2 <= 5; _i2++) {
 	                      x += stack.shift();
 	                      y += stack.shift();
 	                      pts.push(x, y);
@@ -47657,9 +48942,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    var starty = y;
 
 	                    pts = [];
-	                    var iterable3 = [0, 1, 2, 3, 4];
-	                    for (var k1 = 0; k1 < iterable3.length; k1++) {
-	                      i = iterable3[k1];
+	                    for (var _i3 = 0; _i3 <= 4; _i3++) {
 	                      x += stack.shift();
 	                      y += stack.shift();
 	                      pts.push(x, y);
@@ -47831,9 +49114,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      try {
 	        for (var _iterator = _getIterator(this.layers), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var _step$value = _step.value;
-	          var glyph = _step$value.glyph;
-	          var color = _step$value.color;
+	          var _step$value = _step.value,
+	              glyph = _step$value.glyph,
+	              color = _step$value.color;
 
 	          ctx.fillColor([color.red, color.green, color.blue], color.alpha / 255 * 100);
 	          glyph.render(ctx, size);
@@ -48006,8 +49289,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var here = stream.pos;
 	        stream.pos = offsetToData;
 	        var sharedPoints = this.decodePoints();
+	        offsetToData = stream.pos;
 	        stream.pos = here;
 	      }
+
+	      var origPoints = glyphPoints.map(function (pt) {
+	        return pt.copy();
+	      });
 
 	      tupleCount &= TUPLE_COUNT_MASK;
 	      for (var i = 0; i < tupleCount; i++) {
@@ -48047,9 +49335,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 
 	        var here = stream.pos;
+	        stream.pos = offsetToData;
 
 	        if (tupleIndex & PRIVATE_POINT_NUMBERS) {
-	          stream.pos = offsetToData;
 	          var points = this.decodePoints();
 	        } else {
 	          var points = sharedPoints;
@@ -48068,7 +49356,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	            point.y += Math.round(yDeltas[_i] * factor);
 	          }
 	        } else {
-	          var origPoints = glyphPoints.slice();
+	          var outPoints = origPoints.map(function (pt) {
+	            return pt.copy();
+	          });
 	          var hasDelta = glyphPoints.map(function () {
 	            return false;
 	          });
@@ -48076,29 +49366,33 @@ return /******/ (function(modules) { // webpackBootstrap
 	          for (var _i2 = 0; _i2 < points.length; _i2++) {
 	            var idx = points[_i2];
 	            if (idx < glyphPoints.length) {
-	              var point = glyphPoints[idx];
-	              origPoints[idx] = point.copy();
+	              var _point = outPoints[idx];
 	              hasDelta[idx] = true;
 
-	              point.x += Math.round(xDeltas[_i2] * factor);
-	              point.y += Math.round(yDeltas[_i2] * factor);
+	              _point.x += Math.round(xDeltas[_i2] * factor);
+	              _point.y += Math.round(yDeltas[_i2] * factor);
 	            }
 	          }
 
-	          this.interpolateMissingDeltas(glyphPoints, origPoints, hasDelta);
+	          this.interpolateMissingDeltas(outPoints, origPoints, hasDelta);
+
+	          for (var _i3 = 0; _i3 < glyphPoints.length; _i3++) {
+	            var deltaX = outPoints[_i3].x - origPoints[_i3].x;
+	            var deltaY = outPoints[_i3].y - origPoints[_i3].y;
+
+	            glyphPoints[_i3].x += deltaX;
+	            glyphPoints[_i3].y += deltaY;
+	          }
 	        }
 
 	        offsetToData += tupleDataSize;
 	        stream.pos = here;
 	      }
-
-	      return;
 	    }
 	  }, {
 	    key: 'decodePoints',
 	    value: function decodePoints() {
 	      var stream = this.font.stream;
-
 	      var count = stream.readUInt8();
 
 	      if (count & POINTS_ARE_WORDS) {
@@ -48107,17 +49401,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      var points = new Uint16Array(count);
 	      var i = 0;
+	      var point = 0;
 	      while (i < count) {
 	        var run = stream.readUInt8();
 	        var runCount = (run & POINT_RUN_COUNT_MASK) + 1;
-	        if (i + runCount > count) {
-	          throw new Error('Bad point run length');
-	        }
-
 	        var fn = run & POINTS_ARE_WORDS ? stream.readUInt16 : stream.readUInt8;
 
-	        var point = 0;
-	        for (var j = 0; j < runCount; j++) {
+	        for (var j = 0; j < runCount && i < count; j++) {
 	          point += fn.call(stream);
 	          points[i++] = point;
 	        }
@@ -48129,22 +49419,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	    key: 'decodeDeltas',
 	    value: function decodeDeltas(count) {
 	      var stream = this.font.stream;
-
 	      var i = 0;
 	      var deltas = new Int16Array(count);
 
 	      while (i < count) {
 	        var run = stream.readUInt8();
 	        var runCount = (run & DELTA_RUN_COUNT_MASK) + 1;
-	        if (i + runCount > count) {
-	          throw new Error('Bad delta run length');
-	        }
 
 	        if (run & DELTAS_ARE_ZERO) {
 	          i += runCount;
 	        } else {
 	          var fn = run & DELTAS_ARE_WORDS ? stream.readInt16BE : stream.readInt8;
-	          for (var j = 0; j < runCount; j++) {
+	          for (var j = 0; j < runCount && i < count; j++) {
 	            deltas[i++] = fn.call(stream);
 	          }
 	        }
@@ -48163,18 +49449,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	      for (var i = 0; i < gvar.axisCount; i++) {
 	        if (tupleCoords[i] === 0) {
 	          continue;
-	        } else if (normalized[i] === 0) {
+	        }
+
+	        if (normalized[i] === 0) {
 	          return 0;
-	        } else if (normalized[i] < 0 && tupleCoords[i] > 0 || normalized[i] > 0 && tupleCoords[i] < 0) {
-	          return 0;
-	        } else if ((tupleIndex & INTERMEDIATE_TUPLE) === 0) {
-	          factor *= Math.abs(normalized[i]);
-	        } else if (normalized[i] < startCoords[i] || normalized[i] > endCoords[i]) {
-	          return 0;
-	        } else if (normalized[i] < tupleCoords[i]) {
-	          factor = factor * (normalized[i] - startCoords[i]) / (tupleCoords[i] - startCoords[i]);
+	        }
+
+	        if ((tupleIndex & INTERMEDIATE_TUPLE) === 0) {
+	          if (normalized[i] < Math.min(0, tupleCoords[i]) || normalized[i] > Math.max(0, tupleCoords[i])) {
+	            return 0;
+	          }
+
+	          factor = factor * normalized[i] / tupleCoords[i];
 	        } else {
-	          factor = factor * (endCoords[i] - normalized[i]) / (endCoords[i] - tupleCoords[i]);
+	          if (normalized[i] < startCoords[i] || normalized[i] > endCoords[i]) {
+	            return 0;
+	          } else if (normalized[i] < tupleCoords[i]) {
+	            factor = factor * (normalized[i] - startCoords[i]) / (tupleCoords[i] - startCoords[i]);
+	          } else {
+	            factor = factor * (endCoords[i] - normalized[i]) / (endCoords[i] - tupleCoords[i]);
+	          }
 	        }
 	      }
 
@@ -48240,8 +49534,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        point = endPoint + 1;
 	      }
-
-	      return;
 	    }
 	  }, {
 	    key: 'deltaInterpolate',
@@ -48280,8 +49572,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	          outPoints[_p][k] = out;
 	        }
 	      }
-
-	      return;
 	    }
 	  }, {
 	    key: 'deltaShift',
@@ -48299,8 +49589,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	          outPoints[p].y += deltaY;
 	        }
 	      }
-
-	      return;
 	    }
 	  }]);
 
@@ -48352,19 +49640,205 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return Subset;
 	}();
 
+	// Flags for simple glyphs
+	var ON_CURVE$1 = 1 << 0;
+	var X_SHORT_VECTOR$1 = 1 << 1;
+	var Y_SHORT_VECTOR$1 = 1 << 2;
+	var REPEAT$1 = 1 << 3;
+	var SAME_X$1 = 1 << 4;
+	var SAME_Y$1 = 1 << 5;
+
+	var Point$1 = function () {
+	  function Point() {
+	    _classCallCheck(this, Point);
+	  }
+
+	  _createClass(Point, null, [{
+	    key: 'size',
+	    value: function size(val) {
+	      return val >= 0 && val <= 255 ? 1 : 2;
+	    }
+	  }, {
+	    key: 'encode',
+	    value: function encode(stream, value) {
+	      if (value >= 0 && value <= 255) {
+	        stream.writeUInt8(value);
+	      } else {
+	        stream.writeInt16BE(value);
+	      }
+	    }
+	  }]);
+
+	  return Point;
+	}();
+
+	var Glyf = new r.Struct({
+	  numberOfContours: r.int16, // if negative, this is a composite glyph
+	  xMin: r.int16,
+	  yMin: r.int16,
+	  xMax: r.int16,
+	  yMax: r.int16,
+	  endPtsOfContours: new r.Array(r.uint16, 'numberOfContours'),
+	  instructions: new r.Array(r.uint8, r.uint16),
+	  flags: new r.Array(r.uint8, 0),
+	  xPoints: new r.Array(Point$1, 0),
+	  yPoints: new r.Array(Point$1, 0)
+	});
+
+	/**
+	 * Encodes TrueType glyph outlines
+	 */
+
+	var TTFGlyphEncoder = function () {
+	  function TTFGlyphEncoder() {
+	    _classCallCheck(this, TTFGlyphEncoder);
+	  }
+
+	  _createClass(TTFGlyphEncoder, [{
+	    key: 'encodeSimple',
+	    value: function encodeSimple(path) {
+	      var instructions = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+
+	      var endPtsOfContours = [];
+	      var xPoints = [];
+	      var yPoints = [];
+	      var flags = [];
+	      var same = 0;
+	      var lastX = 0,
+	          lastY = 0,
+	          lastFlag = 0;
+	      var pointCount = 0;
+
+	      for (var i = 0; i < path.commands.length; i++) {
+	        var c = path.commands[i];
+
+	        for (var j = 0; j < c.args.length; j += 2) {
+	          var x = c.args[j];
+	          var y = c.args[j + 1];
+	          var flag = 0;
+
+	          // If the ending point of a quadratic curve is the midpoint
+	          // between the control point and the control point of the next
+	          // quadratic curve, we can omit the ending point.
+	          if (c.command === 'quadraticCurveTo' && j === 2) {
+	            var next = path.commands[i + 1];
+	            if (next && next.command === 'quadraticCurveTo') {
+	              var midX = (lastX + next.args[0]) / 2;
+	              var midY = (lastY + next.args[1]) / 2;
+
+	              if (x === midX && y === midY) {
+	                continue;
+	              }
+	            }
+	          }
+
+	          // All points except control points are on curve.
+	          if (!(c.command === 'quadraticCurveTo' && j === 0)) {
+	            flag |= ON_CURVE$1;
+	          }
+
+	          flag = this._encodePoint(x, lastX, xPoints, flag, X_SHORT_VECTOR$1, SAME_X$1);
+	          flag = this._encodePoint(y, lastY, yPoints, flag, Y_SHORT_VECTOR$1, SAME_Y$1);
+
+	          if (flag === lastFlag && same < 255) {
+	            flags[flags.length - 1] |= REPEAT$1;
+	            same++;
+	          } else {
+	            if (same > 0) {
+	              flags.push(same);
+	              same = 0;
+	            }
+
+	            flags.push(flag);
+	            lastFlag = flag;
+	          }
+
+	          lastX = x;
+	          lastY = y;
+	          pointCount++;
+	        }
+
+	        if (c.command === 'closePath') {
+	          endPtsOfContours.push(pointCount - 1);
+	        }
+	      }
+
+	      // Close the path if the last command didn't already
+	      if (path.commands.length > 1 && path.commands[path.commands.length - 1].command !== 'closePath') {
+	        endPtsOfContours.push(pointCount - 1);
+	      }
+
+	      var bbox = path.bbox;
+	      var glyf = {
+	        numberOfContours: endPtsOfContours.length,
+	        xMin: bbox.minX,
+	        yMin: bbox.minY,
+	        xMax: bbox.maxX,
+	        yMax: bbox.maxY,
+	        endPtsOfContours: endPtsOfContours,
+	        instructions: instructions,
+	        flags: flags,
+	        xPoints: xPoints,
+	        yPoints: yPoints
+	      };
+
+	      var size = Glyf.size(glyf);
+	      var tail = 4 - size % 4;
+
+	      var stream = new r.EncodeStream(size + tail);
+	      Glyf.encode(stream, glyf);
+
+	      // Align to 4-byte length
+	      if (tail !== 0) {
+	        stream.fill(0, tail);
+	      }
+
+	      return stream.buffer;
+	    }
+	  }, {
+	    key: '_encodePoint',
+	    value: function _encodePoint(value, last, points, flag, shortFlag, sameFlag) {
+	      var diff = value - last;
+
+	      if (value === last) {
+	        flag |= sameFlag;
+	      } else {
+	        if (-255 <= diff && diff <= 255) {
+	          flag |= shortFlag;
+	          if (diff < 0) {
+	            diff = -diff;
+	          } else {
+	            flag |= sameFlag;
+	          }
+	        }
+
+	        points.push(diff);
+	      }
+
+	      return flag;
+	    }
+	  }]);
+
+	  return TTFGlyphEncoder;
+	}();
+
 	var TTFSubset = function (_Subset) {
 	  _inherits(TTFSubset, _Subset);
 
-	  function TTFSubset() {
+	  function TTFSubset(font) {
 	    _classCallCheck(this, TTFSubset);
 
-	    return _possibleConstructorReturn(this, (TTFSubset.__proto__ || _Object$getPrototypeOf(TTFSubset)).apply(this, arguments));
+	    var _this = _possibleConstructorReturn(this, (TTFSubset.__proto__ || _Object$getPrototypeOf(TTFSubset)).call(this, font));
+
+	    _this.glyphEncoder = new TTFGlyphEncoder();
+	    return _this;
 	  }
 
 	  _createClass(TTFSubset, [{
 	    key: '_addGlyph',
 	    value: function _addGlyph(gid) {
-	      var glyf = this.font.getGlyph(gid)._decode();
+	      var glyph = this.font.getGlyph(gid);
+	      var glyf = glyph._decode();
 
 	      // get the offset to the glyph from the loca table
 	      var curOffset = this.font.loca.offsets[gid];
@@ -48403,19 +49877,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	            }
 	          }
 	        }
+	      } else if (glyf && this.font._variationProcessor) {
+	        // If this is a TrueType variation glyph, re-encode the path
+	        buffer = this.glyphEncoder.encodeSimple(glyph.path, glyf.instructions);
 	      }
 
 	      this.glyf.push(buffer);
 	      this.loca.offsets.push(this.offset);
 
-	      if (gid < this.font.hmtx.metrics.length) {
-	        this.hmtx.metrics.push(this.font.hmtx.metrics.get(gid));
-	      } else {
-	        this.hmtx.metrics.push({
-	          advance: this.font.hmtx.metrics.get(this.font.hmtx.metrics.length - 1).advance,
-	          bearing: this.font.hmtx.bearings.get(gid - this.font.hmtx.metrics.length)
-	        });
-	      }
+	      this.hmtx.metrics.push({
+	        advance: glyph.advanceWidth,
+	        bearing: glyph._getMetrics().leftBearing
+	      });
 
 	      this.offset += buffer.length;
 	      return this.glyf.length - 1;
@@ -48791,7 +50264,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }]);
 
 	  function TTFFont(stream) {
-	    var variationCoords = arguments.length <= 1 || arguments[1] === undefined ? null : arguments[1];
+	    var variationCoords = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
 	    _classCallCheck(this, TTFFont);
 
@@ -48871,10 +50344,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    /**
 	     * Gets a string from the font's `name` table
+	     * `lang` is a BCP-47 language code.
 	     * @return {string}
 	     */
 	    value: function getName(key) {
-	      var lang = arguments.length <= 1 || arguments[1] === undefined ? 'English' : arguments[1];
+	      var lang = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'en';
 
 	      var record = this.name.records[key];
 	      if (record) {
@@ -48930,22 +50404,43 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'glyphsForString',
 	    value: function glyphsForString(string) {
-	      // Map character codes to glyph ids
 	      var glyphs = [];
 	      var len = string.length;
 	      var idx = 0;
+	      var last = -1;
+	      var state = -1;
 
-	      while (idx < len) {
-	        var code = string.charCodeAt(idx++);
-	        if (0xd800 <= code && code <= 0xdbff && idx < len) {
-	          var next = string.charCodeAt(idx);
-	          if (0xdc00 <= next && next <= 0xdfff) {
-	            idx++;
-	            code = ((code & 0x3FF) << 10) + (next & 0x3FF) + 0x10000;
+	      while (idx <= len) {
+	        var code = 0;
+	        var nextState = 0;
+
+	        if (idx < len) {
+	          // Decode the next codepoint from UTF 16
+	          code = string.charCodeAt(idx++);
+	          if (0xd800 <= code && code <= 0xdbff && idx < len) {
+	            var next = string.charCodeAt(idx);
+	            if (0xdc00 <= next && next <= 0xdfff) {
+	              idx++;
+	              code = ((code & 0x3ff) << 10) + (next & 0x3ff) + 0x10000;
+	            }
 	          }
+
+	          // Compute the next state: 1 if the next codepoint is a variation selector, 0 otherwise.
+	          nextState = 0xfe00 <= code && code <= 0xfe0f || 0xe0100 <= code && code <= 0xe01ef ? 1 : 0;
+	        } else {
+	          idx++;
 	        }
 
-	        glyphs.push(this.glyphForCodePoint(code));
+	        if (state === 0 && nextState === 1) {
+	          // Variation selector following normal codepoint.
+	          glyphs.push(this.getGlyph(this._cmapProcessor.lookup(last, code), [last, code]));
+	        } else if (state === 0 && nextState === 0) {
+	          // Normal codepoint following normal codepoint.
+	          glyphs.push(this.glyphForCodePoint(last));
+	        }
+
+	        last = code;
+	        state = nextState;
 	      }
 
 	      return glyphs;
@@ -48968,6 +50463,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 
 	    /**
+	     * Returns an array of strings that map to the given glyph id.
+	     * @param {number} gid - glyph id
+	     */
+
+	  }, {
+	    key: 'stringsForGlyph',
+	    value: function stringsForGlyph(gid) {
+	      return this._layoutEngine.stringsForGlyph(gid);
+	    }
+
+	    /**
 	     * An array of all [OpenType feature tags](https://www.microsoft.com/typography/otspec/featuretags.htm)
 	     * (or mapped AAT tags) supported by the font.
 	     * The features parameter is an array of OpenType feature tags to be applied in addition to the default set.
@@ -48979,7 +50485,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: '_getBaseGlyph',
 	    value: function _getBaseGlyph(glyph) {
-	      var characters = arguments.length <= 1 || arguments[1] === undefined ? [] : arguments[1];
+	      var characters = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
 
 	      if (!this._glyphs[glyph]) {
 	        if (this.directory.tables.glyf) {
@@ -49005,7 +50511,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'getGlyph',
 	    value: function getGlyph(glyph) {
-	      var characters = arguments.length <= 1 || arguments[1] === undefined ? [] : arguments[1];
+	      var characters = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
 
 	      if (!this._glyphs[glyph]) {
 	        if (this.directory.tables.sbix) {
@@ -49070,8 +50576,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      // normalize the coordinates
 	      var coords = this.fvar.axis.map(function (axis, i) {
-	        if (axis.axisTag in settings) {
-	          return Math.max(axis.minValue, Math.min(axis.maxValue, settings[axis.axisTag]));
+	        var axisTag = axis.axisTag.trim();
+	        if (axisTag in settings) {
+	          return Math.max(axis.minValue, Math.min(axis.maxValue, settings[axisTag]));
 	        } else {
 	          return axis.defaultValue;
 	        }
@@ -49316,8 +50823,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        for (var _iterator = _getIterator(this.fvar.axis), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
 	          var axis = _step.value;
 
-	          res[axis.axisTag] = {
-	            name: axis.name,
+	          res[axis.axisTag.trim()] = {
+	            name: axis.name.en,
 	            min: axis.minValue,
 	            default: axis.defaultValue,
 	            max: axis.maxValue
@@ -49368,10 +50875,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	          var settings = {};
 	          for (var i = 0; i < this.fvar.axis.length; i++) {
 	            var axis = this.fvar.axis[i];
-	            settings[axis.axisTag] = instance.coord[i];
+	            settings[axis.axisTag.trim()] = instance.coord[i];
 	          }
 
-	          res[instance.name] = settings;
+	          res[instance.name.en] = settings;
 	        }
 	      } catch (err) {
 	        _didIteratorError2 = true;
@@ -49652,7 +51159,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: '_getBaseGlyph',
 	    value: function _getBaseGlyph(glyph) {
-	      var characters = arguments.length <= 1 || arguments[1] === undefined ? [] : arguments[1];
+	      var characters = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
 
 	      if (!this._glyphs[glyph]) {
 	        if (this.directory.tables.glyf && this.directory.tables.glyf.transformed) {
@@ -50170,8 +51677,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	fontkit.registerFormat(DFont);
 
 	module.exports = fontkit;
-	//# sourceMappingURL=index.js.map
-
+	
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer, __webpack_require__(34)))
 
 /***/ },
@@ -64237,11 +65743,479 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 208 */
 /***/ function(module, exports, __webpack_require__) {
 
+	__webpack_require__(199);
+	__webpack_require__(173);
+	__webpack_require__(147);
 	__webpack_require__(209);
-	module.exports = __webpack_require__(139).Object.getPrototypeOf;
+	__webpack_require__(221);
+	module.exports = __webpack_require__(139).Map;
 
 /***/ },
 /* 209 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	var strong = __webpack_require__(210);
+
+	// 23.1 Map Objects
+	module.exports = __webpack_require__(217)('Map', function(get){
+	  return function Map(){ return get(this, arguments.length > 0 ? arguments[0] : undefined); };
+	}, {
+	  // 23.1.3.6 Map.prototype.get(key)
+	  get: function get(key){
+	    var entry = strong.getEntry(this, key);
+	    return entry && entry.v;
+	  },
+	  // 23.1.3.9 Map.prototype.set(key, value)
+	  set: function set(key, value){
+	    return strong.def(this, key === 0 ? 0 : key, value);
+	  }
+	}, strong, true);
+
+/***/ },
+/* 210 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	var dP          = __webpack_require__(143).f
+	  , create      = __webpack_require__(156)
+	  , redefineAll = __webpack_require__(211)
+	  , ctx         = __webpack_require__(140)
+	  , anInstance  = __webpack_require__(212)
+	  , defined     = __webpack_require__(125)
+	  , forOf       = __webpack_require__(213)
+	  , $iterDefine = __webpack_require__(152)
+	  , step        = __webpack_require__(150)
+	  , setSpecies  = __webpack_require__(216)
+	  , DESCRIPTORS = __webpack_require__(133)
+	  , fastKey     = __webpack_require__(181).fastKey
+	  , SIZE        = DESCRIPTORS ? '_s' : 'size';
+
+	var getEntry = function(that, key){
+	  // fast case
+	  var index = fastKey(key), entry;
+	  if(index !== 'F')return that._i[index];
+	  // frozen object case
+	  for(entry = that._f; entry; entry = entry.n){
+	    if(entry.k == key)return entry;
+	  }
+	};
+
+	module.exports = {
+	  getConstructor: function(wrapper, NAME, IS_MAP, ADDER){
+	    var C = wrapper(function(that, iterable){
+	      anInstance(that, C, NAME, '_i');
+	      that._i = create(null); // index
+	      that._f = undefined;    // first entry
+	      that._l = undefined;    // last entry
+	      that[SIZE] = 0;         // size
+	      if(iterable != undefined)forOf(iterable, IS_MAP, that[ADDER], that);
+	    });
+	    redefineAll(C.prototype, {
+	      // 23.1.3.1 Map.prototype.clear()
+	      // 23.2.3.2 Set.prototype.clear()
+	      clear: function clear(){
+	        for(var that = this, data = that._i, entry = that._f; entry; entry = entry.n){
+	          entry.r = true;
+	          if(entry.p)entry.p = entry.p.n = undefined;
+	          delete data[entry.i];
+	        }
+	        that._f = that._l = undefined;
+	        that[SIZE] = 0;
+	      },
+	      // 23.1.3.3 Map.prototype.delete(key)
+	      // 23.2.3.4 Set.prototype.delete(value)
+	      'delete': function(key){
+	        var that  = this
+	          , entry = getEntry(that, key);
+	        if(entry){
+	          var next = entry.n
+	            , prev = entry.p;
+	          delete that._i[entry.i];
+	          entry.r = true;
+	          if(prev)prev.n = next;
+	          if(next)next.p = prev;
+	          if(that._f == entry)that._f = next;
+	          if(that._l == entry)that._l = prev;
+	          that[SIZE]--;
+	        } return !!entry;
+	      },
+	      // 23.2.3.6 Set.prototype.forEach(callbackfn, thisArg = undefined)
+	      // 23.1.3.5 Map.prototype.forEach(callbackfn, thisArg = undefined)
+	      forEach: function forEach(callbackfn /*, that = undefined */){
+	        anInstance(this, C, 'forEach');
+	        var f = ctx(callbackfn, arguments.length > 1 ? arguments[1] : undefined, 3)
+	          , entry;
+	        while(entry = entry ? entry.n : this._f){
+	          f(entry.v, entry.k, this);
+	          // revert to the last existing entry
+	          while(entry && entry.r)entry = entry.p;
+	        }
+	      },
+	      // 23.1.3.7 Map.prototype.has(key)
+	      // 23.2.3.7 Set.prototype.has(value)
+	      has: function has(key){
+	        return !!getEntry(this, key);
+	      }
+	    });
+	    if(DESCRIPTORS)dP(C.prototype, 'size', {
+	      get: function(){
+	        return defined(this[SIZE]);
+	      }
+	    });
+	    return C;
+	  },
+	  def: function(that, key, value){
+	    var entry = getEntry(that, key)
+	      , prev, index;
+	    // change existing entry
+	    if(entry){
+	      entry.v = value;
+	    // create new entry
+	    } else {
+	      that._l = entry = {
+	        i: index = fastKey(key, true), // <- index
+	        k: key,                        // <- key
+	        v: value,                      // <- value
+	        p: prev = that._l,             // <- previous entry
+	        n: undefined,                  // <- next entry
+	        r: false                       // <- removed
+	      };
+	      if(!that._f)that._f = entry;
+	      if(prev)prev.n = entry;
+	      that[SIZE]++;
+	      // add to index
+	      if(index !== 'F')that._i[index] = entry;
+	    } return that;
+	  },
+	  getEntry: getEntry,
+	  setStrong: function(C, NAME, IS_MAP){
+	    // add .keys, .values, .entries, [@@iterator]
+	    // 23.1.3.4, 23.1.3.8, 23.1.3.11, 23.1.3.12, 23.2.3.5, 23.2.3.8, 23.2.3.10, 23.2.3.11
+	    $iterDefine(C, NAME, function(iterated, kind){
+	      this._t = iterated;  // target
+	      this._k = kind;      // kind
+	      this._l = undefined; // previous
+	    }, function(){
+	      var that  = this
+	        , kind  = that._k
+	        , entry = that._l;
+	      // revert to the last existing entry
+	      while(entry && entry.r)entry = entry.p;
+	      // get next entry
+	      if(!that._t || !(that._l = entry = entry ? entry.n : that._t._f)){
+	        // or finish the iteration
+	        that._t = undefined;
+	        return step(1);
+	      }
+	      // return step by kind
+	      if(kind == 'keys'  )return step(0, entry.k);
+	      if(kind == 'values')return step(0, entry.v);
+	      return step(0, [entry.k, entry.v]);
+	    }, IS_MAP ? 'entries' : 'values' , !IS_MAP, true);
+
+	    // add [@@species], 23.1.2.2, 23.2.2.2
+	    setSpecies(NAME);
+	  }
+	};
+
+/***/ },
+/* 211 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var hide = __webpack_require__(142);
+	module.exports = function(target, src, safe){
+	  for(var key in src){
+	    if(safe && target[key])target[key] = src[key];
+	    else hide(target, key, src[key]);
+	  } return target;
+	};
+
+/***/ },
+/* 212 */
+/***/ function(module, exports) {
+
+	module.exports = function(it, Constructor, name, forbiddenField){
+	  if(!(it instanceof Constructor) || (forbiddenField !== undefined && forbiddenField in it)){
+	    throw TypeError(name + ': incorrect invocation!');
+	  } return it;
+	};
+
+/***/ },
+/* 213 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var ctx         = __webpack_require__(140)
+	  , call        = __webpack_require__(214)
+	  , isArrayIter = __webpack_require__(215)
+	  , anObject    = __webpack_require__(144)
+	  , toLength    = __webpack_require__(161)
+	  , getIterFn   = __webpack_require__(176)
+	  , BREAK       = {}
+	  , RETURN      = {};
+	var exports = module.exports = function(iterable, entries, fn, that, ITERATOR){
+	  var iterFn = ITERATOR ? function(){ return iterable; } : getIterFn(iterable)
+	    , f      = ctx(fn, that, entries ? 2 : 1)
+	    , index  = 0
+	    , length, step, iterator, result;
+	  if(typeof iterFn != 'function')throw TypeError(iterable + ' is not iterable!');
+	  // fast case for arrays with default iterator
+	  if(isArrayIter(iterFn))for(length = toLength(iterable.length); length > index; index++){
+	    result = entries ? f(anObject(step = iterable[index])[0], step[1]) : f(iterable[index]);
+	    if(result === BREAK || result === RETURN)return result;
+	  } else for(iterator = iterFn.call(iterable); !(step = iterator.next()).done; ){
+	    result = call(iterator, f, step.value, entries);
+	    if(result === BREAK || result === RETURN)return result;
+	  }
+	};
+	exports.BREAK  = BREAK;
+	exports.RETURN = RETURN;
+
+/***/ },
+/* 214 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// call something on iterator step with safe closing on error
+	var anObject = __webpack_require__(144);
+	module.exports = function(iterator, fn, value, entries){
+	  try {
+	    return entries ? fn(anObject(value)[0], value[1]) : fn(value);
+	  // 7.4.6 IteratorClose(iterator, completion)
+	  } catch(e){
+	    var ret = iterator['return'];
+	    if(ret !== undefined)anObject(ret.call(iterator));
+	    throw e;
+	  }
+	};
+
+/***/ },
+/* 215 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// check on default Array iterator
+	var Iterators  = __webpack_require__(151)
+	  , ITERATOR   = __webpack_require__(170)('iterator')
+	  , ArrayProto = Array.prototype;
+
+	module.exports = function(it){
+	  return it !== undefined && (Iterators.Array === it || ArrayProto[ITERATOR] === it);
+	};
+
+/***/ },
+/* 216 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	var global      = __webpack_require__(136)
+	  , core        = __webpack_require__(139)
+	  , dP          = __webpack_require__(143)
+	  , DESCRIPTORS = __webpack_require__(133)
+	  , SPECIES     = __webpack_require__(170)('species');
+
+	module.exports = function(KEY){
+	  var C = typeof core[KEY] == 'function' ? core[KEY] : global[KEY];
+	  if(DESCRIPTORS && C && !C[SPECIES])dP.f(C, SPECIES, {
+	    configurable: true,
+	    get: function(){ return this; }
+	  });
+	};
+
+/***/ },
+/* 217 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	var global         = __webpack_require__(136)
+	  , $export        = __webpack_require__(138)
+	  , meta           = __webpack_require__(181)
+	  , fails          = __webpack_require__(134)
+	  , hide           = __webpack_require__(142)
+	  , redefineAll    = __webpack_require__(211)
+	  , forOf          = __webpack_require__(213)
+	  , anInstance     = __webpack_require__(212)
+	  , isObject       = __webpack_require__(130)
+	  , setToStringTag = __webpack_require__(169)
+	  , dP             = __webpack_require__(143).f
+	  , each           = __webpack_require__(218)(0)
+	  , DESCRIPTORS    = __webpack_require__(133);
+
+	module.exports = function(NAME, wrapper, methods, common, IS_MAP, IS_WEAK){
+	  var Base  = global[NAME]
+	    , C     = Base
+	    , ADDER = IS_MAP ? 'set' : 'add'
+	    , proto = C && C.prototype
+	    , O     = {};
+	  if(!DESCRIPTORS || typeof C != 'function' || !(IS_WEAK || proto.forEach && !fails(function(){
+	    new C().entries().next();
+	  }))){
+	    // create collection constructor
+	    C = common.getConstructor(wrapper, NAME, IS_MAP, ADDER);
+	    redefineAll(C.prototype, methods);
+	    meta.NEED = true;
+	  } else {
+	    C = wrapper(function(target, iterable){
+	      anInstance(target, C, NAME, '_c');
+	      target._c = new Base;
+	      if(iterable != undefined)forOf(iterable, IS_MAP, target[ADDER], target);
+	    });
+	    each('add,clear,delete,forEach,get,has,set,keys,values,entries,toJSON'.split(','),function(KEY){
+	      var IS_ADDER = KEY == 'add' || KEY == 'set';
+	      if(KEY in proto && !(IS_WEAK && KEY == 'clear'))hide(C.prototype, KEY, function(a, b){
+	        anInstance(this, C, KEY);
+	        if(!IS_ADDER && IS_WEAK && !isObject(a))return KEY == 'get' ? undefined : false;
+	        var result = this._c[KEY](a === 0 ? 0 : a, b);
+	        return IS_ADDER ? this : result;
+	      });
+	    });
+	    if('size' in proto)dP(C.prototype, 'size', {
+	      get: function(){
+	        return this._c.size;
+	      }
+	    });
+	  }
+
+	  setToStringTag(C, NAME);
+
+	  O[NAME] = C;
+	  $export($export.G + $export.W + $export.F, O);
+
+	  if(!IS_WEAK)common.setStrong(C, NAME, IS_MAP);
+
+	  return C;
+	};
+
+/***/ },
+/* 218 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// 0 -> Array#forEach
+	// 1 -> Array#map
+	// 2 -> Array#filter
+	// 3 -> Array#some
+	// 4 -> Array#every
+	// 5 -> Array#find
+	// 6 -> Array#findIndex
+	var ctx      = __webpack_require__(140)
+	  , IObject  = __webpack_require__(123)
+	  , toObject = __webpack_require__(172)
+	  , toLength = __webpack_require__(161)
+	  , asc      = __webpack_require__(219);
+	module.exports = function(TYPE, $create){
+	  var IS_MAP        = TYPE == 1
+	    , IS_FILTER     = TYPE == 2
+	    , IS_SOME       = TYPE == 3
+	    , IS_EVERY      = TYPE == 4
+	    , IS_FIND_INDEX = TYPE == 6
+	    , NO_HOLES      = TYPE == 5 || IS_FIND_INDEX
+	    , create        = $create || asc;
+	  return function($this, callbackfn, that){
+	    var O      = toObject($this)
+	      , self   = IObject(O)
+	      , f      = ctx(callbackfn, that, 3)
+	      , length = toLength(self.length)
+	      , index  = 0
+	      , result = IS_MAP ? create($this, length) : IS_FILTER ? create($this, 0) : undefined
+	      , val, res;
+	    for(;length > index; index++)if(NO_HOLES || index in self){
+	      val = self[index];
+	      res = f(val, index, O);
+	      if(TYPE){
+	        if(IS_MAP)result[index] = res;            // map
+	        else if(res)switch(TYPE){
+	          case 3: return true;                    // some
+	          case 5: return val;                     // find
+	          case 6: return index;                   // findIndex
+	          case 2: result.push(val);               // filter
+	        } else if(IS_EVERY)return false;          // every
+	      }
+	    }
+	    return IS_FIND_INDEX ? -1 : IS_SOME || IS_EVERY ? IS_EVERY : result;
+	  };
+	};
+
+/***/ },
+/* 219 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// 9.4.2.3 ArraySpeciesCreate(originalArray, length)
+	var speciesConstructor = __webpack_require__(220);
+
+	module.exports = function(original, length){
+	  return new (speciesConstructor(original))(length);
+	};
+
+/***/ },
+/* 220 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isObject = __webpack_require__(130)
+	  , isArray  = __webpack_require__(196)
+	  , SPECIES  = __webpack_require__(170)('species');
+
+	module.exports = function(original){
+	  var C;
+	  if(isArray(original)){
+	    C = original.constructor;
+	    // cross-realm fallback
+	    if(typeof C == 'function' && (C === Array || isArray(C.prototype)))C = undefined;
+	    if(isObject(C)){
+	      C = C[SPECIES];
+	      if(C === null)C = undefined;
+	    }
+	  } return C === undefined ? Array : C;
+	};
+
+/***/ },
+/* 221 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// https://github.com/DavidBruant/Map-Set.prototype.toJSON
+	var $export  = __webpack_require__(138);
+
+	$export($export.P + $export.R, 'Map', {toJSON: __webpack_require__(222)('Map')});
+
+/***/ },
+/* 222 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// https://github.com/DavidBruant/Map-Set.prototype.toJSON
+	var classof = __webpack_require__(177)
+	  , from    = __webpack_require__(223);
+	module.exports = function(NAME){
+	  return function toJSON(){
+	    if(classof(this) != NAME)throw TypeError(NAME + "#toJSON isn't generic");
+	    return from(this);
+	  };
+	};
+
+/***/ },
+/* 223 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var forOf = __webpack_require__(213);
+
+	module.exports = function(iter, ITERATOR){
+	  var result = [];
+	  forOf(iter, false, result.push, result, ITERATOR);
+	  return result;
+	};
+
+
+/***/ },
+/* 224 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = { "default": __webpack_require__(225), __esModule: true };
+
+/***/ },
+/* 225 */
+/***/ function(module, exports, __webpack_require__) {
+
+	__webpack_require__(226);
+	module.exports = __webpack_require__(139).Object.getPrototypeOf;
+
+/***/ },
+/* 226 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// 19.1.2.9 Object.getPrototypeOf(O)
@@ -64255,7 +66229,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 
 /***/ },
-/* 210 */
+/* 227 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -64277,18 +66251,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 211 */
+/* 228 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	exports.__esModule = true;
 
-	var _setPrototypeOf = __webpack_require__(212);
+	var _setPrototypeOf = __webpack_require__(229);
 
 	var _setPrototypeOf2 = _interopRequireDefault(_setPrototypeOf);
 
-	var _create = __webpack_require__(216);
+	var _create = __webpack_require__(233);
 
 	var _create2 = _interopRequireDefault(_create);
 
@@ -64315,28 +66289,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 212 */
+/* 229 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(213), __esModule: true };
+	module.exports = { "default": __webpack_require__(230), __esModule: true };
 
 /***/ },
-/* 213 */
+/* 230 */
 /***/ function(module, exports, __webpack_require__) {
 
-	__webpack_require__(214);
+	__webpack_require__(231);
 	module.exports = __webpack_require__(139).Object.setPrototypeOf;
 
 /***/ },
-/* 214 */
+/* 231 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// 19.1.3.19 Object.setPrototypeOf(O, proto)
 	var $export = __webpack_require__(138);
-	$export($export.S, 'Object', {setPrototypeOf: __webpack_require__(215).set});
+	$export($export.S, 'Object', {setPrototypeOf: __webpack_require__(232).set});
 
 /***/ },
-/* 215 */
+/* 232 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Works with __proto__ only. Old v8 can't work with null proto objects.
@@ -64366,23 +66340,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 216 */
+/* 233 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(217), __esModule: true };
+	module.exports = { "default": __webpack_require__(234), __esModule: true };
 
 /***/ },
-/* 217 */
+/* 234 */
 /***/ function(module, exports, __webpack_require__) {
 
-	__webpack_require__(218);
+	__webpack_require__(235);
 	var $Object = __webpack_require__(139).Object;
 	module.exports = function create(P, D){
 	  return $Object.create(P, D);
 	};
 
 /***/ },
-/* 218 */
+/* 235 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var $export = __webpack_require__(138)
@@ -64390,23 +66364,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	$export($export.S, 'Object', {create: __webpack_require__(156)});
 
 /***/ },
-/* 219 */
+/* 236 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(220), __esModule: true };
+	module.exports = { "default": __webpack_require__(237), __esModule: true };
 
 /***/ },
-/* 220 */
+/* 237 */
 /***/ function(module, exports, __webpack_require__) {
 
-	__webpack_require__(221);
+	__webpack_require__(238);
 	var $Object = __webpack_require__(139).Object;
 	module.exports = function defineProperties(T, D){
 	  return $Object.defineProperties(T, D);
 	};
 
 /***/ },
-/* 221 */
+/* 238 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var $export = __webpack_require__(138);
@@ -64414,12 +66388,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	$export($export.S + $export.F * !__webpack_require__(133), 'Object', {defineProperties: __webpack_require__(157)});
 
 /***/ },
-/* 222 */
+/* 239 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var pSlice = Array.prototype.slice;
-	var objectKeys = __webpack_require__(223);
-	var isArguments = __webpack_require__(224);
+	var objectKeys = __webpack_require__(240);
+	var isArguments = __webpack_require__(241);
 
 	var deepEqual = module.exports = function (actual, expected, opts) {
 	  if (!opts) opts = {};
@@ -64514,7 +66488,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 223 */
+/* 240 */
 /***/ function(module, exports) {
 
 	exports = module.exports = typeof Object.keys === 'function'
@@ -64529,7 +66503,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 224 */
+/* 241 */
 /***/ function(module, exports) {
 
 	var supportsArgumentsClass = (function(){
@@ -64555,14 +66529,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 225 */
+/* 242 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	exports.__esModule = true;
 
-	var _getPrototypeOf = __webpack_require__(207);
+	var _getPrototypeOf = __webpack_require__(224);
 
 	var _getPrototypeOf2 = _interopRequireDefault(_getPrototypeOf);
 
@@ -64598,29 +66572,29 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 226 */
+/* 243 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(227), __esModule: true };
+	module.exports = { "default": __webpack_require__(244), __esModule: true };
 
 /***/ },
-/* 227 */
+/* 244 */
 /***/ function(module, exports, __webpack_require__) {
 
-	__webpack_require__(228);
+	__webpack_require__(245);
 	module.exports = __webpack_require__(139).Object.assign;
 
 /***/ },
-/* 228 */
+/* 245 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// 19.1.3.1 Object.assign(target, source)
 	var $export = __webpack_require__(138);
 
-	$export($export.S + $export.F, 'Object', {assign: __webpack_require__(229)});
+	$export($export.S + $export.F, 'Object', {assign: __webpack_require__(246)});
 
 /***/ },
-/* 229 */
+/* 246 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -64658,14 +66632,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	} : $assign;
 
 /***/ },
-/* 230 */
+/* 247 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	exports.__esModule = true;
 
-	var _from = __webpack_require__(231);
+	var _from = __webpack_require__(248);
 
 	var _from2 = _interopRequireDefault(_from);
 
@@ -64684,34 +66658,34 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 231 */
+/* 248 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(232), __esModule: true };
+	module.exports = { "default": __webpack_require__(249), __esModule: true };
 
 /***/ },
-/* 232 */
+/* 249 */
 /***/ function(module, exports, __webpack_require__) {
 
 	__webpack_require__(173);
-	__webpack_require__(233);
+	__webpack_require__(250);
 	module.exports = __webpack_require__(139).Array.from;
 
 /***/ },
-/* 233 */
+/* 250 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	var ctx            = __webpack_require__(140)
 	  , $export        = __webpack_require__(138)
 	  , toObject       = __webpack_require__(172)
-	  , call           = __webpack_require__(234)
-	  , isArrayIter    = __webpack_require__(235)
+	  , call           = __webpack_require__(214)
+	  , isArrayIter    = __webpack_require__(215)
 	  , toLength       = __webpack_require__(161)
-	  , createProperty = __webpack_require__(236)
+	  , createProperty = __webpack_require__(251)
 	  , getIterFn      = __webpack_require__(176);
 
-	$export($export.S + $export.F * !__webpack_require__(237)(function(iter){ Array.from(iter); }), 'Array', {
+	$export($export.S + $export.F * !__webpack_require__(252)(function(iter){ Array.from(iter); }), 'Array', {
 	  // 22.1.2.1 Array.from(arrayLike, mapfn = undefined, thisArg = undefined)
 	  from: function from(arrayLike/*, mapfn = undefined, thisArg = undefined*/){
 	    var O       = toObject(arrayLike)
@@ -64741,37 +66715,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 234 */
-/***/ function(module, exports, __webpack_require__) {
-
-	// call something on iterator step with safe closing on error
-	var anObject = __webpack_require__(144);
-	module.exports = function(iterator, fn, value, entries){
-	  try {
-	    return entries ? fn(anObject(value)[0], value[1]) : fn(value);
-	  // 7.4.6 IteratorClose(iterator, completion)
-	  } catch(e){
-	    var ret = iterator['return'];
-	    if(ret !== undefined)anObject(ret.call(iterator));
-	    throw e;
-	  }
-	};
-
-/***/ },
-/* 235 */
-/***/ function(module, exports, __webpack_require__) {
-
-	// check on default Array iterator
-	var Iterators  = __webpack_require__(151)
-	  , ITERATOR   = __webpack_require__(170)('iterator')
-	  , ArrayProto = Array.prototype;
-
-	module.exports = function(it){
-	  return it !== undefined && (Iterators.Array === it || ArrayProto[ITERATOR] === it);
-	};
-
-/***/ },
-/* 236 */
+/* 251 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -64784,7 +66728,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 237 */
+/* 252 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var ITERATOR     = __webpack_require__(170)('iterator')
@@ -64810,7 +66754,175 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 238 */
+/* 253 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = { "default": __webpack_require__(254), __esModule: true };
+
+/***/ },
+/* 254 */
+/***/ function(module, exports, __webpack_require__) {
+
+	__webpack_require__(255);
+	module.exports = __webpack_require__(139).String.fromCodePoint;
+
+/***/ },
+/* 255 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var $export        = __webpack_require__(138)
+	  , toIndex        = __webpack_require__(163)
+	  , fromCharCode   = String.fromCharCode
+	  , $fromCodePoint = String.fromCodePoint;
+
+	// length should be 1, old FF problem
+	$export($export.S + $export.F * (!!$fromCodePoint && $fromCodePoint.length != 1), 'String', {
+	  // 21.1.2.2 String.fromCodePoint(...codePoints)
+	  fromCodePoint: function fromCodePoint(x){ // eslint-disable-line no-unused-vars
+	    var res  = []
+	      , aLen = arguments.length
+	      , i    = 0
+	      , code;
+	    while(aLen > i){
+	      code = +arguments[i++];
+	      if(toIndex(code, 0x10ffff) !== code)throw RangeError(code + ' is not a valid code point');
+	      res.push(code < 0x10000
+	        ? fromCharCode(code)
+	        : fromCharCode(((code -= 0x10000) >> 10) + 0xd800, code % 0x400 + 0xdc00)
+	      );
+	    } return res.join('');
+	  }
+	});
+
+/***/ },
+/* 256 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	exports.__esModule = true;
+
+	var _isIterable2 = __webpack_require__(257);
+
+	var _isIterable3 = _interopRequireDefault(_isIterable2);
+
+	var _getIterator2 = __webpack_require__(145);
+
+	var _getIterator3 = _interopRequireDefault(_getIterator2);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	exports.default = function () {
+	  function sliceIterator(arr, i) {
+	    var _arr = [];
+	    var _n = true;
+	    var _d = false;
+	    var _e = undefined;
+
+	    try {
+	      for (var _i = (0, _getIterator3.default)(arr), _s; !(_n = (_s = _i.next()).done); _n = true) {
+	        _arr.push(_s.value);
+
+	        if (i && _arr.length === i) break;
+	      }
+	    } catch (err) {
+	      _d = true;
+	      _e = err;
+	    } finally {
+	      try {
+	        if (!_n && _i["return"]) _i["return"]();
+	      } finally {
+	        if (_d) throw _e;
+	      }
+	    }
+
+	    return _arr;
+	  }
+
+	  return function (arr, i) {
+	    if (Array.isArray(arr)) {
+	      return arr;
+	    } else if ((0, _isIterable3.default)(Object(arr))) {
+	      return sliceIterator(arr, i);
+	    } else {
+	      throw new TypeError("Invalid attempt to destructure non-iterable instance");
+	    }
+	  };
+	}();
+
+/***/ },
+/* 257 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = { "default": __webpack_require__(258), __esModule: true };
+
+/***/ },
+/* 258 */
+/***/ function(module, exports, __webpack_require__) {
+
+	__webpack_require__(147);
+	__webpack_require__(173);
+	module.exports = __webpack_require__(259);
+
+/***/ },
+/* 259 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var classof   = __webpack_require__(177)
+	  , ITERATOR  = __webpack_require__(170)('iterator')
+	  , Iterators = __webpack_require__(151);
+	module.exports = __webpack_require__(139).isIterable = function(it){
+	  var O = Object(it);
+	  return O[ITERATOR] !== undefined
+	    || '@@iterator' in O
+	    || Iterators.hasOwnProperty(classof(O));
+	};
+
+/***/ },
+/* 260 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = { "default": __webpack_require__(261), __esModule: true };
+
+/***/ },
+/* 261 */
+/***/ function(module, exports, __webpack_require__) {
+
+	__webpack_require__(199);
+	__webpack_require__(173);
+	__webpack_require__(147);
+	__webpack_require__(262);
+	__webpack_require__(263);
+	module.exports = __webpack_require__(139).Set;
+
+/***/ },
+/* 262 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	var strong = __webpack_require__(210);
+
+	// 23.2 Set Objects
+	module.exports = __webpack_require__(217)('Set', function(get){
+	  return function Set(){ return get(this, arguments.length > 0 ? arguments[0] : undefined); };
+	}, {
+	  // 23.2.3.1 Set.prototype.add(value)
+	  add: function add(value){
+	    return strong.def(this, value = value === 0 ? 0 : value, value);
+	  }
+	}, strong);
+
+/***/ },
+/* 263 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// https://github.com/DavidBruant/Map-Set.prototype.toJSON
+	var $export  = __webpack_require__(138);
+
+	$export($export.P + $export.R, 'Set', {toJSON: __webpack_require__(222)('Set')});
+
+/***/ },
+/* 264 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.9.1
@@ -64818,7 +66930,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	UnicodeTrie = __webpack_require__(15);
 
-	data = __webpack_require__(239);
+	data = __webpack_require__(265);
 
 
 
@@ -64959,7 +67071,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 239 */
+/* 265 */
 /***/ function(module, exports) {
 
 	module.exports = {
@@ -65196,91 +67308,967 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 240 */
+/* 266 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+	var _slicedToArray = _interopDefault(__webpack_require__(256));
+	var _getIterator = _interopDefault(__webpack_require__(145));
+	var _defineProperty = _interopDefault(__webpack_require__(267));
+	var _regeneratorRuntime = _interopDefault(__webpack_require__(268));
+	var _Symbol$iterator = _interopDefault(__webpack_require__(186));
+	var _classCallCheck = _interopDefault(__webpack_require__(205));
+	var _createClass = _interopDefault(__webpack_require__(206));
+
+	var INITIAL_STATE = 1;
+	var FAIL_STATE = 0;
+
+	/**
+	 * A StateMachine represents a deterministic finite automaton.
+	 * It can perform matches over a sequence of values, similar to a regular expression.
+	 */
+
+	var StateMachine = function () {
+	  function StateMachine(dfa) {
+	    _classCallCheck(this, StateMachine);
+
+	    this.stateTable = dfa.stateTable;
+	    this.accepting = dfa.accepting;
+	    this.tags = dfa.tags;
+	  }
+
+	  /**
+	   * Returns an iterable object that yields pattern matches over the input sequence.
+	   * Matches are of the form [startIndex, endIndex, tags].
+	   */
+
+
+	  _createClass(StateMachine, [{
+	    key: 'match',
+	    value: function match(str) {
+	      var self = this;
+	      return _defineProperty({}, _Symbol$iterator, _regeneratorRuntime.mark(function _callee() {
+	        var state, startRun, lastAccepting, lastState, p, c;
+	        return _regeneratorRuntime.wrap(function _callee$(_context) {
+	          while (1) {
+	            switch (_context.prev = _context.next) {
+	              case 0:
+	                state = INITIAL_STATE;
+	                startRun = null;
+	                lastAccepting = null;
+	                lastState = null;
+	                p = 0;
+
+	              case 5:
+	                if (!(p < str.length)) {
+	                  _context.next = 21;
+	                  break;
+	                }
+
+	                c = str[p];
+
+
+	                lastState = state;
+	                state = self.stateTable[state][c];
+
+	                if (!(state === FAIL_STATE)) {
+	                  _context.next = 15;
+	                  break;
+	                }
+
+	                if (!(startRun != null && lastAccepting != null && lastAccepting >= startRun)) {
+	                  _context.next = 13;
+	                  break;
+	                }
+
+	                _context.next = 13;
+	                return [startRun, lastAccepting, self.tags[lastState]];
+
+	              case 13:
+
+	                // reset the state as if we started over from the initial state
+	                state = self.stateTable[INITIAL_STATE][c];
+	                startRun = null;
+
+	              case 15:
+
+	                // start a run if not in the failure state
+	                if (state !== FAIL_STATE && startRun == null) {
+	                  startRun = p;
+	                }
+
+	                // if accepting, mark the potential match end
+	                if (self.accepting[state]) {
+	                  lastAccepting = p;
+	                }
+
+	                // reset the state to the initial state if we get into the failure state
+	                if (state === FAIL_STATE) {
+	                  state = INITIAL_STATE;
+	                }
+
+	              case 18:
+	                p++;
+	                _context.next = 5;
+	                break;
+
+	              case 21:
+	                if (!(startRun != null && lastAccepting != null && lastAccepting >= startRun)) {
+	                  _context.next = 24;
+	                  break;
+	                }
+
+	                _context.next = 24;
+	                return [startRun, lastAccepting, self.tags[state]];
+
+	              case 24:
+	              case 'end':
+	                return _context.stop();
+	            }
+	          }
+	        }, _callee, this);
+	      }));
+	    }
+
+	    /**
+	     * For each match over the input sequence, action functions matching
+	     * the tag definitions in the input pattern are called with the startIndex,
+	     * endIndex, and sub-match sequence.
+	     */
+
+	  }, {
+	    key: 'apply',
+	    value: function apply(str, actions) {
+	      var _iteratorNormalCompletion = true;
+	      var _didIteratorError = false;
+	      var _iteratorError = undefined;
+
+	      try {
+	        for (var _iterator = _getIterator(this.match(str)), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	          var _step$value = _slicedToArray(_step.value, 3);
+
+	          var start = _step$value[0];
+	          var end = _step$value[1];
+	          var tags = _step$value[2];
+	          var _iteratorNormalCompletion2 = true;
+	          var _didIteratorError2 = false;
+	          var _iteratorError2 = undefined;
+
+	          try {
+	            for (var _iterator2 = _getIterator(tags), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	              var tag = _step2.value;
+
+	              if (typeof actions[tag] === 'function') {
+	                actions[tag](start, end, str.slice(start, end + 1));
+	              }
+	            }
+	          } catch (err) {
+	            _didIteratorError2 = true;
+	            _iteratorError2 = err;
+	          } finally {
+	            try {
+	              if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	                _iterator2.return();
+	              }
+	            } finally {
+	              if (_didIteratorError2) {
+	                throw _iteratorError2;
+	              }
+	            }
+	          }
+	        }
+	      } catch (err) {
+	        _didIteratorError = true;
+	        _iteratorError = err;
+	      } finally {
+	        try {
+	          if (!_iteratorNormalCompletion && _iterator.return) {
+	            _iterator.return();
+	          }
+	        } finally {
+	          if (_didIteratorError) {
+	            throw _iteratorError;
+	          }
+	        }
+	      }
+	    }
+	  }]);
+
+	  return StateMachine;
+	}();
+
+	module.exports = StateMachine;
+	
+
+/***/ },
+/* 267 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	exports.__esModule = true;
 
-	var _isIterable2 = __webpack_require__(241);
+	var _defineProperty = __webpack_require__(202);
 
-	var _isIterable3 = _interopRequireDefault(_isIterable2);
-
-	var _getIterator2 = __webpack_require__(145);
-
-	var _getIterator3 = _interopRequireDefault(_getIterator2);
+	var _defineProperty2 = _interopRequireDefault(_defineProperty);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	exports.default = function () {
-	  function sliceIterator(arr, i) {
-	    var _arr = [];
-	    var _n = true;
-	    var _d = false;
-	    var _e = undefined;
-
-	    try {
-	      for (var _i = (0, _getIterator3.default)(arr), _s; !(_n = (_s = _i.next()).done); _n = true) {
-	        _arr.push(_s.value);
-
-	        if (i && _arr.length === i) break;
-	      }
-	    } catch (err) {
-	      _d = true;
-	      _e = err;
-	    } finally {
-	      try {
-	        if (!_n && _i["return"]) _i["return"]();
-	      } finally {
-	        if (_d) throw _e;
-	      }
-	    }
-
-	    return _arr;
+	exports.default = function (obj, key, value) {
+	  if (key in obj) {
+	    (0, _defineProperty2.default)(obj, key, {
+	      value: value,
+	      enumerable: true,
+	      configurable: true,
+	      writable: true
+	    });
+	  } else {
+	    obj[key] = value;
 	  }
 
-	  return function (arr, i) {
-	    if (Array.isArray(arr)) {
-	      return arr;
-	    } else if ((0, _isIterable3.default)(Object(arr))) {
-	      return sliceIterator(arr, i);
-	    } else {
-	      throw new TypeError("Invalid attempt to destructure non-iterable instance");
-	    }
-	  };
-	}();
-
-/***/ },
-/* 241 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(242), __esModule: true };
-
-/***/ },
-/* 242 */
-/***/ function(module, exports, __webpack_require__) {
-
-	__webpack_require__(147);
-	__webpack_require__(173);
-	module.exports = __webpack_require__(243);
-
-/***/ },
-/* 243 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var classof   = __webpack_require__(177)
-	  , ITERATOR  = __webpack_require__(170)('iterator')
-	  , Iterators = __webpack_require__(151);
-	module.exports = __webpack_require__(139).isIterable = function(it){
-	  var O = Object(it);
-	  return O[ITERATOR] !== undefined
-	    || '@@iterator' in O
-	    || Iterators.hasOwnProperty(classof(O));
+	  return obj;
 	};
 
 /***/ },
-/* 244 */
+/* 268 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = __webpack_require__(269);
+
+
+/***/ },
+/* 269 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(global) {// This method of obtaining a reference to the global object needs to be
+	// kept identical to the way it is obtained in runtime.js
+	var g =
+	  typeof global === "object" ? global :
+	  typeof window === "object" ? window :
+	  typeof self === "object" ? self : this;
+
+	// Use `getOwnPropertyNames` because not all browsers support calling
+	// `hasOwnProperty` on the global `self` object in a worker. See #183.
+	var hadRuntime = g.regeneratorRuntime &&
+	  Object.getOwnPropertyNames(g).indexOf("regeneratorRuntime") >= 0;
+
+	// Save the old regeneratorRuntime in case it needs to be restored later.
+	var oldRuntime = hadRuntime && g.regeneratorRuntime;
+
+	// Force reevalutation of runtime.js.
+	g.regeneratorRuntime = undefined;
+
+	module.exports = __webpack_require__(270);
+
+	if (hadRuntime) {
+	  // Restore the original runtime.
+	  g.regeneratorRuntime = oldRuntime;
+	} else {
+	  // Remove the global property added by runtime.js.
+	  try {
+	    delete g.regeneratorRuntime;
+	  } catch(e) {
+	    g.regeneratorRuntime = undefined;
+	  }
+	}
+
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
+
+/***/ },
+/* 270 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(global, process) {/**
+	 * Copyright (c) 2014, Facebook, Inc.
+	 * All rights reserved.
+	 *
+	 * This source code is licensed under the BSD-style license found in the
+	 * https://raw.github.com/facebook/regenerator/master/LICENSE file. An
+	 * additional grant of patent rights can be found in the PATENTS file in
+	 * the same directory.
+	 */
+
+	!(function(global) {
+	  "use strict";
+
+	  var Op = Object.prototype;
+	  var hasOwn = Op.hasOwnProperty;
+	  var undefined; // More compressible than void 0.
+	  var $Symbol = typeof Symbol === "function" ? Symbol : {};
+	  var iteratorSymbol = $Symbol.iterator || "@@iterator";
+	  var toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag";
+
+	  var inModule = typeof module === "object";
+	  var runtime = global.regeneratorRuntime;
+	  if (runtime) {
+	    if (inModule) {
+	      // If regeneratorRuntime is defined globally and we're in a module,
+	      // make the exports object identical to regeneratorRuntime.
+	      module.exports = runtime;
+	    }
+	    // Don't bother evaluating the rest of this file if the runtime was
+	    // already defined globally.
+	    return;
+	  }
+
+	  // Define the runtime globally (as expected by generated code) as either
+	  // module.exports (if we're in a module) or a new, empty object.
+	  runtime = global.regeneratorRuntime = inModule ? module.exports : {};
+
+	  function wrap(innerFn, outerFn, self, tryLocsList) {
+	    // If outerFn provided and outerFn.prototype is a Generator, then outerFn.prototype instanceof Generator.
+	    var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator;
+	    var generator = Object.create(protoGenerator.prototype);
+	    var context = new Context(tryLocsList || []);
+
+	    // The ._invoke method unifies the implementations of the .next,
+	    // .throw, and .return methods.
+	    generator._invoke = makeInvokeMethod(innerFn, self, context);
+
+	    return generator;
+	  }
+	  runtime.wrap = wrap;
+
+	  // Try/catch helper to minimize deoptimizations. Returns a completion
+	  // record like context.tryEntries[i].completion. This interface could
+	  // have been (and was previously) designed to take a closure to be
+	  // invoked without arguments, but in all the cases we care about we
+	  // already have an existing method we want to call, so there's no need
+	  // to create a new function object. We can even get away with assuming
+	  // the method takes exactly one argument, since that happens to be true
+	  // in every case, so we don't have to touch the arguments object. The
+	  // only additional allocation required is the completion record, which
+	  // has a stable shape and so hopefully should be cheap to allocate.
+	  function tryCatch(fn, obj, arg) {
+	    try {
+	      return { type: "normal", arg: fn.call(obj, arg) };
+	    } catch (err) {
+	      return { type: "throw", arg: err };
+	    }
+	  }
+
+	  var GenStateSuspendedStart = "suspendedStart";
+	  var GenStateSuspendedYield = "suspendedYield";
+	  var GenStateExecuting = "executing";
+	  var GenStateCompleted = "completed";
+
+	  // Returning this object from the innerFn has the same effect as
+	  // breaking out of the dispatch switch statement.
+	  var ContinueSentinel = {};
+
+	  // Dummy constructor functions that we use as the .constructor and
+	  // .constructor.prototype properties for functions that return Generator
+	  // objects. For full spec compliance, you may wish to configure your
+	  // minifier not to mangle the names of these two functions.
+	  function Generator() {}
+	  function GeneratorFunction() {}
+	  function GeneratorFunctionPrototype() {}
+
+	  // This is a polyfill for %IteratorPrototype% for environments that
+	  // don't natively support it.
+	  var IteratorPrototype = {};
+	  IteratorPrototype[iteratorSymbol] = function () {
+	    return this;
+	  };
+
+	  var getProto = Object.getPrototypeOf;
+	  var NativeIteratorPrototype = getProto && getProto(getProto(values([])));
+	  if (NativeIteratorPrototype &&
+	      NativeIteratorPrototype !== Op &&
+	      hasOwn.call(NativeIteratorPrototype, iteratorSymbol)) {
+	    // This environment has a native %IteratorPrototype%; use it instead
+	    // of the polyfill.
+	    IteratorPrototype = NativeIteratorPrototype;
+	  }
+
+	  var Gp = GeneratorFunctionPrototype.prototype =
+	    Generator.prototype = Object.create(IteratorPrototype);
+	  GeneratorFunction.prototype = Gp.constructor = GeneratorFunctionPrototype;
+	  GeneratorFunctionPrototype.constructor = GeneratorFunction;
+	  GeneratorFunctionPrototype[toStringTagSymbol] =
+	    GeneratorFunction.displayName = "GeneratorFunction";
+
+	  // Helper for defining the .next, .throw, and .return methods of the
+	  // Iterator interface in terms of a single ._invoke method.
+	  function defineIteratorMethods(prototype) {
+	    ["next", "throw", "return"].forEach(function(method) {
+	      prototype[method] = function(arg) {
+	        return this._invoke(method, arg);
+	      };
+	    });
+	  }
+
+	  runtime.isGeneratorFunction = function(genFun) {
+	    var ctor = typeof genFun === "function" && genFun.constructor;
+	    return ctor
+	      ? ctor === GeneratorFunction ||
+	        // For the native GeneratorFunction constructor, the best we can
+	        // do is to check its .name property.
+	        (ctor.displayName || ctor.name) === "GeneratorFunction"
+	      : false;
+	  };
+
+	  runtime.mark = function(genFun) {
+	    if (Object.setPrototypeOf) {
+	      Object.setPrototypeOf(genFun, GeneratorFunctionPrototype);
+	    } else {
+	      genFun.__proto__ = GeneratorFunctionPrototype;
+	      if (!(toStringTagSymbol in genFun)) {
+	        genFun[toStringTagSymbol] = "GeneratorFunction";
+	      }
+	    }
+	    genFun.prototype = Object.create(Gp);
+	    return genFun;
+	  };
+
+	  // Within the body of any async function, `await x` is transformed to
+	  // `yield regeneratorRuntime.awrap(x)`, so that the runtime can test
+	  // `hasOwn.call(value, "__await")` to determine if the yielded value is
+	  // meant to be awaited.
+	  runtime.awrap = function(arg) {
+	    return { __await: arg };
+	  };
+
+	  function AsyncIterator(generator) {
+	    function invoke(method, arg, resolve, reject) {
+	      var record = tryCatch(generator[method], generator, arg);
+	      if (record.type === "throw") {
+	        reject(record.arg);
+	      } else {
+	        var result = record.arg;
+	        var value = result.value;
+	        if (value &&
+	            typeof value === "object" &&
+	            hasOwn.call(value, "__await")) {
+	          return Promise.resolve(value.__await).then(function(value) {
+	            invoke("next", value, resolve, reject);
+	          }, function(err) {
+	            invoke("throw", err, resolve, reject);
+	          });
+	        }
+
+	        return Promise.resolve(value).then(function(unwrapped) {
+	          // When a yielded Promise is resolved, its final value becomes
+	          // the .value of the Promise<{value,done}> result for the
+	          // current iteration. If the Promise is rejected, however, the
+	          // result for this iteration will be rejected with the same
+	          // reason. Note that rejections of yielded Promises are not
+	          // thrown back into the generator function, as is the case
+	          // when an awaited Promise is rejected. This difference in
+	          // behavior between yield and await is important, because it
+	          // allows the consumer to decide what to do with the yielded
+	          // rejection (swallow it and continue, manually .throw it back
+	          // into the generator, abandon iteration, whatever). With
+	          // await, by contrast, there is no opportunity to examine the
+	          // rejection reason outside the generator function, so the
+	          // only option is to throw it from the await expression, and
+	          // let the generator function handle the exception.
+	          result.value = unwrapped;
+	          resolve(result);
+	        }, reject);
+	      }
+	    }
+
+	    if (typeof process === "object" && process.domain) {
+	      invoke = process.domain.bind(invoke);
+	    }
+
+	    var previousPromise;
+
+	    function enqueue(method, arg) {
+	      function callInvokeWithMethodAndArg() {
+	        return new Promise(function(resolve, reject) {
+	          invoke(method, arg, resolve, reject);
+	        });
+	      }
+
+	      return previousPromise =
+	        // If enqueue has been called before, then we want to wait until
+	        // all previous Promises have been resolved before calling invoke,
+	        // so that results are always delivered in the correct order. If
+	        // enqueue has not been called before, then it is important to
+	        // call invoke immediately, without waiting on a callback to fire,
+	        // so that the async generator function has the opportunity to do
+	        // any necessary setup in a predictable way. This predictability
+	        // is why the Promise constructor synchronously invokes its
+	        // executor callback, and why async functions synchronously
+	        // execute code before the first await. Since we implement simple
+	        // async functions in terms of async generators, it is especially
+	        // important to get this right, even though it requires care.
+	        previousPromise ? previousPromise.then(
+	          callInvokeWithMethodAndArg,
+	          // Avoid propagating failures to Promises returned by later
+	          // invocations of the iterator.
+	          callInvokeWithMethodAndArg
+	        ) : callInvokeWithMethodAndArg();
+	    }
+
+	    // Define the unified helper method that is used to implement .next,
+	    // .throw, and .return (see defineIteratorMethods).
+	    this._invoke = enqueue;
+	  }
+
+	  defineIteratorMethods(AsyncIterator.prototype);
+	  runtime.AsyncIterator = AsyncIterator;
+
+	  // Note that simple async functions are implemented on top of
+	  // AsyncIterator objects; they just return a Promise for the value of
+	  // the final result produced by the iterator.
+	  runtime.async = function(innerFn, outerFn, self, tryLocsList) {
+	    var iter = new AsyncIterator(
+	      wrap(innerFn, outerFn, self, tryLocsList)
+	    );
+
+	    return runtime.isGeneratorFunction(outerFn)
+	      ? iter // If outerFn is a generator, return the full iterator.
+	      : iter.next().then(function(result) {
+	          return result.done ? result.value : iter.next();
+	        });
+	  };
+
+	  function makeInvokeMethod(innerFn, self, context) {
+	    var state = GenStateSuspendedStart;
+
+	    return function invoke(method, arg) {
+	      if (state === GenStateExecuting) {
+	        throw new Error("Generator is already running");
+	      }
+
+	      if (state === GenStateCompleted) {
+	        if (method === "throw") {
+	          throw arg;
+	        }
+
+	        // Be forgiving, per 25.3.3.3.3 of the spec:
+	        // https://people.mozilla.org/~jorendorff/es6-draft.html#sec-generatorresume
+	        return doneResult();
+	      }
+
+	      while (true) {
+	        var delegate = context.delegate;
+	        if (delegate) {
+	          if (method === "return" ||
+	              (method === "throw" && delegate.iterator[method] === undefined)) {
+	            // A return or throw (when the delegate iterator has no throw
+	            // method) always terminates the yield* loop.
+	            context.delegate = null;
+
+	            // If the delegate iterator has a return method, give it a
+	            // chance to clean up.
+	            var returnMethod = delegate.iterator["return"];
+	            if (returnMethod) {
+	              var record = tryCatch(returnMethod, delegate.iterator, arg);
+	              if (record.type === "throw") {
+	                // If the return method threw an exception, let that
+	                // exception prevail over the original return or throw.
+	                method = "throw";
+	                arg = record.arg;
+	                continue;
+	              }
+	            }
+
+	            if (method === "return") {
+	              // Continue with the outer return, now that the delegate
+	              // iterator has been terminated.
+	              continue;
+	            }
+	          }
+
+	          var record = tryCatch(
+	            delegate.iterator[method],
+	            delegate.iterator,
+	            arg
+	          );
+
+	          if (record.type === "throw") {
+	            context.delegate = null;
+
+	            // Like returning generator.throw(uncaught), but without the
+	            // overhead of an extra function call.
+	            method = "throw";
+	            arg = record.arg;
+	            continue;
+	          }
+
+	          // Delegate generator ran and handled its own exceptions so
+	          // regardless of what the method was, we continue as if it is
+	          // "next" with an undefined arg.
+	          method = "next";
+	          arg = undefined;
+
+	          var info = record.arg;
+	          if (info.done) {
+	            context[delegate.resultName] = info.value;
+	            context.next = delegate.nextLoc;
+	          } else {
+	            state = GenStateSuspendedYield;
+	            return info;
+	          }
+
+	          context.delegate = null;
+	        }
+
+	        if (method === "next") {
+	          // Setting context._sent for legacy support of Babel's
+	          // function.sent implementation.
+	          context.sent = context._sent = arg;
+
+	        } else if (method === "throw") {
+	          if (state === GenStateSuspendedStart) {
+	            state = GenStateCompleted;
+	            throw arg;
+	          }
+
+	          if (context.dispatchException(arg)) {
+	            // If the dispatched exception was caught by a catch block,
+	            // then let that catch block handle the exception normally.
+	            method = "next";
+	            arg = undefined;
+	          }
+
+	        } else if (method === "return") {
+	          context.abrupt("return", arg);
+	        }
+
+	        state = GenStateExecuting;
+
+	        var record = tryCatch(innerFn, self, context);
+	        if (record.type === "normal") {
+	          // If an exception is thrown from innerFn, we leave state ===
+	          // GenStateExecuting and loop back for another invocation.
+	          state = context.done
+	            ? GenStateCompleted
+	            : GenStateSuspendedYield;
+
+	          var info = {
+	            value: record.arg,
+	            done: context.done
+	          };
+
+	          if (record.arg === ContinueSentinel) {
+	            if (context.delegate && method === "next") {
+	              // Deliberately forget the last sent value so that we don't
+	              // accidentally pass it on to the delegate.
+	              arg = undefined;
+	            }
+	          } else {
+	            return info;
+	          }
+
+	        } else if (record.type === "throw") {
+	          state = GenStateCompleted;
+	          // Dispatch the exception by looping back around to the
+	          // context.dispatchException(arg) call above.
+	          method = "throw";
+	          arg = record.arg;
+	        }
+	      }
+	    };
+	  }
+
+	  // Define Generator.prototype.{next,throw,return} in terms of the
+	  // unified ._invoke helper method.
+	  defineIteratorMethods(Gp);
+
+	  Gp[toStringTagSymbol] = "Generator";
+
+	  Gp.toString = function() {
+	    return "[object Generator]";
+	  };
+
+	  function pushTryEntry(locs) {
+	    var entry = { tryLoc: locs[0] };
+
+	    if (1 in locs) {
+	      entry.catchLoc = locs[1];
+	    }
+
+	    if (2 in locs) {
+	      entry.finallyLoc = locs[2];
+	      entry.afterLoc = locs[3];
+	    }
+
+	    this.tryEntries.push(entry);
+	  }
+
+	  function resetTryEntry(entry) {
+	    var record = entry.completion || {};
+	    record.type = "normal";
+	    delete record.arg;
+	    entry.completion = record;
+	  }
+
+	  function Context(tryLocsList) {
+	    // The root entry object (effectively a try statement without a catch
+	    // or a finally block) gives us a place to store values thrown from
+	    // locations where there is no enclosing try statement.
+	    this.tryEntries = [{ tryLoc: "root" }];
+	    tryLocsList.forEach(pushTryEntry, this);
+	    this.reset(true);
+	  }
+
+	  runtime.keys = function(object) {
+	    var keys = [];
+	    for (var key in object) {
+	      keys.push(key);
+	    }
+	    keys.reverse();
+
+	    // Rather than returning an object with a next method, we keep
+	    // things simple and return the next function itself.
+	    return function next() {
+	      while (keys.length) {
+	        var key = keys.pop();
+	        if (key in object) {
+	          next.value = key;
+	          next.done = false;
+	          return next;
+	        }
+	      }
+
+	      // To avoid creating an additional object, we just hang the .value
+	      // and .done properties off the next function object itself. This
+	      // also ensures that the minifier will not anonymize the function.
+	      next.done = true;
+	      return next;
+	    };
+	  };
+
+	  function values(iterable) {
+	    if (iterable) {
+	      var iteratorMethod = iterable[iteratorSymbol];
+	      if (iteratorMethod) {
+	        return iteratorMethod.call(iterable);
+	      }
+
+	      if (typeof iterable.next === "function") {
+	        return iterable;
+	      }
+
+	      if (!isNaN(iterable.length)) {
+	        var i = -1, next = function next() {
+	          while (++i < iterable.length) {
+	            if (hasOwn.call(iterable, i)) {
+	              next.value = iterable[i];
+	              next.done = false;
+	              return next;
+	            }
+	          }
+
+	          next.value = undefined;
+	          next.done = true;
+
+	          return next;
+	        };
+
+	        return next.next = next;
+	      }
+	    }
+
+	    // Return an iterator with no values.
+	    return { next: doneResult };
+	  }
+	  runtime.values = values;
+
+	  function doneResult() {
+	    return { value: undefined, done: true };
+	  }
+
+	  Context.prototype = {
+	    constructor: Context,
+
+	    reset: function(skipTempReset) {
+	      this.prev = 0;
+	      this.next = 0;
+	      // Resetting context._sent for legacy support of Babel's
+	      // function.sent implementation.
+	      this.sent = this._sent = undefined;
+	      this.done = false;
+	      this.delegate = null;
+
+	      this.tryEntries.forEach(resetTryEntry);
+
+	      if (!skipTempReset) {
+	        for (var name in this) {
+	          // Not sure about the optimal order of these conditions:
+	          if (name.charAt(0) === "t" &&
+	              hasOwn.call(this, name) &&
+	              !isNaN(+name.slice(1))) {
+	            this[name] = undefined;
+	          }
+	        }
+	      }
+	    },
+
+	    stop: function() {
+	      this.done = true;
+
+	      var rootEntry = this.tryEntries[0];
+	      var rootRecord = rootEntry.completion;
+	      if (rootRecord.type === "throw") {
+	        throw rootRecord.arg;
+	      }
+
+	      return this.rval;
+	    },
+
+	    dispatchException: function(exception) {
+	      if (this.done) {
+	        throw exception;
+	      }
+
+	      var context = this;
+	      function handle(loc, caught) {
+	        record.type = "throw";
+	        record.arg = exception;
+	        context.next = loc;
+	        return !!caught;
+	      }
+
+	      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+	        var entry = this.tryEntries[i];
+	        var record = entry.completion;
+
+	        if (entry.tryLoc === "root") {
+	          // Exception thrown outside of any try block that could handle
+	          // it, so set the completion value of the entire function to
+	          // throw the exception.
+	          return handle("end");
+	        }
+
+	        if (entry.tryLoc <= this.prev) {
+	          var hasCatch = hasOwn.call(entry, "catchLoc");
+	          var hasFinally = hasOwn.call(entry, "finallyLoc");
+
+	          if (hasCatch && hasFinally) {
+	            if (this.prev < entry.catchLoc) {
+	              return handle(entry.catchLoc, true);
+	            } else if (this.prev < entry.finallyLoc) {
+	              return handle(entry.finallyLoc);
+	            }
+
+	          } else if (hasCatch) {
+	            if (this.prev < entry.catchLoc) {
+	              return handle(entry.catchLoc, true);
+	            }
+
+	          } else if (hasFinally) {
+	            if (this.prev < entry.finallyLoc) {
+	              return handle(entry.finallyLoc);
+	            }
+
+	          } else {
+	            throw new Error("try statement without catch or finally");
+	          }
+	        }
+	      }
+	    },
+
+	    abrupt: function(type, arg) {
+	      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+	        var entry = this.tryEntries[i];
+	        if (entry.tryLoc <= this.prev &&
+	            hasOwn.call(entry, "finallyLoc") &&
+	            this.prev < entry.finallyLoc) {
+	          var finallyEntry = entry;
+	          break;
+	        }
+	      }
+
+	      if (finallyEntry &&
+	          (type === "break" ||
+	           type === "continue") &&
+	          finallyEntry.tryLoc <= arg &&
+	          arg <= finallyEntry.finallyLoc) {
+	        // Ignore the finally entry if control is not jumping to a
+	        // location outside the try/catch block.
+	        finallyEntry = null;
+	      }
+
+	      var record = finallyEntry ? finallyEntry.completion : {};
+	      record.type = type;
+	      record.arg = arg;
+
+	      if (finallyEntry) {
+	        this.next = finallyEntry.finallyLoc;
+	      } else {
+	        this.complete(record);
+	      }
+
+	      return ContinueSentinel;
+	    },
+
+	    complete: function(record, afterLoc) {
+	      if (record.type === "throw") {
+	        throw record.arg;
+	      }
+
+	      if (record.type === "break" ||
+	          record.type === "continue") {
+	        this.next = record.arg;
+	      } else if (record.type === "return") {
+	        this.rval = record.arg;
+	        this.next = "end";
+	      } else if (record.type === "normal" && afterLoc) {
+	        this.next = afterLoc;
+	      }
+	    },
+
+	    finish: function(finallyLoc) {
+	      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+	        var entry = this.tryEntries[i];
+	        if (entry.finallyLoc === finallyLoc) {
+	          this.complete(entry.completion, entry.afterLoc);
+	          resetTryEntry(entry);
+	          return ContinueSentinel;
+	        }
+	      }
+	    },
+
+	    "catch": function(tryLoc) {
+	      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+	        var entry = this.tryEntries[i];
+	        if (entry.tryLoc === tryLoc) {
+	          var record = entry.completion;
+	          if (record.type === "throw") {
+	            var thrown = record.arg;
+	            resetTryEntry(entry);
+	          }
+	          return thrown;
+	        }
+	      }
+
+	      // The context.catch method must only be called with a location
+	      // argument that corresponds to a known catch block.
+	      throw new Error("illegal catch attempt");
+	    },
+
+	    delegateYield: function(iterable, resultName, nextLoc) {
+	      this.delegate = {
+	        iterator: values(iterable),
+	        resultName: resultName,
+	        nextLoc: nextLoc
+	      };
+
+	      return ContinueSentinel;
+	    }
+	  };
+	})(
+	  // Among the various tricks for obtaining a reference to the global
+	  // object, this seems to be the most reliable technique that does not
+	  // use indirect eval (which violates Content Security Policy).
+	  typeof global === "object" ? global :
+	  typeof window === "object" ? window :
+	  typeof self === "object" ? self : this
+	);
+
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(34)))
+
+/***/ },
+/* 271 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {var clone = (function() {
@@ -65447,14 +68435,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 245 */
+/* 272 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(246).BrotliDecompressBuffer;
+	module.exports = __webpack_require__(273).BrotliDecompressBuffer;
 
 
 /***/ },
-/* 246 */
+/* 273 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -65472,15 +68460,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	   limitations under the License.
 	*/
 
-	var BrotliInput = __webpack_require__(247).BrotliInput;
-	var BrotliOutput = __webpack_require__(247).BrotliOutput;
-	var BrotliBitReader = __webpack_require__(248);
-	var BrotliDictionary = __webpack_require__(249);
-	var HuffmanCode = __webpack_require__(252).HuffmanCode;
-	var BrotliBuildHuffmanTable = __webpack_require__(252).BrotliBuildHuffmanTable;
-	var Context = __webpack_require__(253);
-	var Prefix = __webpack_require__(254);
-	var Transform = __webpack_require__(255);
+	var BrotliInput = __webpack_require__(274).BrotliInput;
+	var BrotliOutput = __webpack_require__(274).BrotliOutput;
+	var BrotliBitReader = __webpack_require__(275);
+	var BrotliDictionary = __webpack_require__(276);
+	var HuffmanCode = __webpack_require__(279).HuffmanCode;
+	var BrotliBuildHuffmanTable = __webpack_require__(279).BrotliBuildHuffmanTable;
+	var Context = __webpack_require__(280);
+	var Prefix = __webpack_require__(281);
+	var Transform = __webpack_require__(282);
 
 	var kDefaultCodeLength = 8;
 	var kCodeLengthRepeatCode = 16;
@@ -66398,7 +69386,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 247 */
+/* 274 */
 /***/ function(module, exports) {
 
 	function BrotliInput(buffer) {
@@ -66438,7 +69426,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 248 */
+/* 275 */
 /***/ function(module, exports) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -66568,7 +69556,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 249 */
+/* 276 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -66588,7 +69576,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	   Collection of static dictionary words.
 	*/
 
-	var data = __webpack_require__(250);
+	var data = __webpack_require__(277);
 	exports.init = function() {
 	  exports.dictionary = data.init();
 	};
@@ -66610,7 +69598,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 250 */
+/* 277 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var base64 = __webpack_require__(3);
@@ -66624,21 +69612,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * it's own dictionary. 😜
 	 */
 	exports.init = function() {
-	  var BrotliDecompressBuffer = __webpack_require__(246).BrotliDecompressBuffer;
-	  var compressed = base64.toByteArray(__webpack_require__(251));
+	  var BrotliDecompressBuffer = __webpack_require__(273).BrotliDecompressBuffer;
+	  var compressed = base64.toByteArray(__webpack_require__(278));
 	  return BrotliDecompressBuffer(compressed);
 	};
 
 
 /***/ },
-/* 251 */
+/* 278 */
 /***/ function(module, exports) {
 
 	module.exports="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";
 
 
 /***/ },
-/* 252 */
+/* 279 */
 /***/ function(module, exports) {
 
 	function HuffmanCode(bits, value) {
@@ -66767,7 +69755,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 253 */
+/* 280 */
 /***/ function(module, exports) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -67023,7 +70011,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 254 */
+/* 281 */
 /***/ function(module, exports) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -67089,7 +70077,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 255 */
+/* 282 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -67109,7 +70097,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	   Transformations on dictionary words.
 	*/
 
-	var BrotliDictionary = __webpack_require__(249);
+	var BrotliDictionary = __webpack_require__(276);
 
 	var kIdentity       = 0;
 	var kOmitLast1      = 1;
@@ -67342,7 +70330,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 256 */
+/* 283 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(__dirname) {// Generated by CoffeeScript 1.10.0
@@ -67351,7 +70339,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
 	    hasProp = {}.hasOwnProperty;
 
-	  AFMFont = __webpack_require__(257);
+	  AFMFont = __webpack_require__(284);
 
 	  PDFFont = __webpack_require__(79);
 
@@ -67473,7 +70461,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, "/"))
 
 /***/ },
-/* 257 */
+/* 284 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.10.0
@@ -67649,7 +70637,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 258 */
+/* 285 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.10.0
@@ -67835,14 +70823,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 259 */
+/* 286 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.10.0
 	(function() {
 	  var LineWrapper;
 
-	  LineWrapper = __webpack_require__(260);
+	  LineWrapper = __webpack_require__(287);
 
 	  module.exports = {
 	    initText: function() {
@@ -68176,7 +71164,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 260 */
+/* 287 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.10.0
@@ -68435,14 +71423,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 261 */
+/* 288 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.10.0
 	(function() {
 	  var PDFImage;
 
-	  PDFImage = __webpack_require__(262);
+	  PDFImage = __webpack_require__(289);
 
 	  module.exports = {
 	    initImages: function() {
@@ -68524,7 +71512,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 262 */
+/* 289 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.10.0
@@ -68539,11 +71527,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  fs = __webpack_require__(53);
 
-	  Data = __webpack_require__(263);
+	  Data = __webpack_require__(290);
 
-	  JPEG = __webpack_require__(264);
+	  JPEG = __webpack_require__(291);
 
-	  PNG = __webpack_require__(265);
+	  PNG = __webpack_require__(292);
 
 	  PDFImage = (function() {
 	    function PDFImage() {}
@@ -68584,7 +71572,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 263 */
+/* 290 */
 /***/ function(module, exports) {
 
 	// Generated by CoffeeScript 1.10.0
@@ -68782,7 +71770,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 264 */
+/* 291 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.10.0
@@ -68866,7 +71854,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 265 */
+/* 292 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.10.0
@@ -68875,7 +71863,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  zlib = __webpack_require__(56);
 
-	  PNG = __webpack_require__(266);
+	  PNG = __webpack_require__(293);
 
 	  PNGImage = (function() {
 	    function PNGImage(data, label) {
@@ -69031,7 +72019,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 266 */
+/* 293 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.4.0
@@ -69355,7 +72343,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 267 */
+/* 294 */
 /***/ function(module, exports) {
 
 	// Generated by CoffeeScript 1.10.0
@@ -69494,7 +72482,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 268 */
+/* 295 */
 /***/ function(module, exports) {
 
 	/* jslint node: true */
@@ -69555,13 +72543,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 269 */
+/* 296 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {/* jslint node: true */
 	'use strict';
 
-	var PDFImage = __webpack_require__(262);
+	var PDFImage = __webpack_require__(289);
 
 	function ImageMeasure(pdfDoc, imageDictionary) {
 		this.pdfDoc = pdfDoc;
@@ -69579,7 +72567,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			} catch (error) {
 				image = null;
 			}
-			if (image === null) {
+			if (image === null || image === undefined) {
 				throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
 			}
 			image.embed(this.pdfDoc);
@@ -69611,7 +72599,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 270 */
+/* 297 */
 /***/ function(module, exports) {
 
 	/* jslint node: true */
@@ -69764,7 +72752,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 271 */
+/* 298 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* FileSaver.js
@@ -69950,7 +72938,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	if (typeof module !== "undefined" && module.exports) {
 	  module.exports.saveAs = saveAs;
-	} else if (("function" !== "undefined" && __webpack_require__(272) !== null) && (__webpack_require__(273) !== null)) {
+	} else if (("function" !== "undefined" && __webpack_require__(299) !== null) && (__webpack_require__(300) !== null)) {
 	  !(__WEBPACK_AMD_DEFINE_RESULT__ = function() {
 	    return saveAs;
 	  }.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
@@ -69958,14 +72946,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 272 */
+/* 299 */
 /***/ function(module, exports) {
 
 	module.exports = function() { throw new Error("define cannot be used indirect"); };
 
 
 /***/ },
-/* 273 */
+/* 300 */
 /***/ function(module, exports) {
 
 	/* WEBPACK VAR INJECTION */(function(__webpack_amd_options__) {module.exports = __webpack_amd_options__;
