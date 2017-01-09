@@ -130,12 +130,22 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		pages = pages.slice(0, maxNumberPages);
 	}
 
-	renderPages(pages, this.fontProvider, this.pdfKitDoc);
-
 	//if pageSize.height is set to Infinity, calculate the actual height of the page that
 	// was laid out using the height of each of the items in the page.
-	var pageHeight = pageSize.height === Infinity ? calculatePageHeight(pages, docDefinition.pageMargins) : pageSize.height;
-	this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
+	if (pageSize.height === Infinity) {
+		var calculatedHeight = calculatePageHeight(pages, docDefinition.pageMargins);
+		docDefinition.pageSize.height = calculatedHeight;
+		var PdfPrinter = require('../src/printer');
+		var printer = new PdfPrinter(this.fontDescriptors);
+		//i tried to do this without recursion, but pdfKit still had Infinity stuck
+		//somewhere in it's guts, so this seemed to be the most efficient was to handle it.
+		return printer.createPdfKitDocument(docDefinition, options);
+	}
+
+
+	renderPages(pages, this.fontProvider, this.pdfKitDoc);
+
+
 
 	if (options.autoPrint) {
 		var printActionRef = this.pdfKitDoc.ref({
@@ -157,7 +167,7 @@ function calculatePageHeight(pages, margins) {
 			height += item.item.getHeight();
 		})
 	})
-	return height;
+	return Math.ceil(height);
 }
 
 function fixPageMargins(margin) {
