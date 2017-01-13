@@ -148,10 +148,13 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			});
 
 			if (tocIndexPosition > 0) {
-				body[0][0].text = docStructure[tocIndexPosition].toc.title;
-				docStructure[tocIndexPosition] = toc;
+					body[0][0].text = docStructure[tocIndexPosition].toc.title;
+					docStructure[tocIndexPosition] = toc;
+					body = [];
+					result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+					docStructure[tocIndexPosition].table.body = body;
 			} else {
-				docStructure.push(toc);
+					docStructure.push(toc);
 			}
 			result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
 		}
