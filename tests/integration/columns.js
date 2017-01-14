@@ -179,11 +179,8 @@ describe('Integration test: columns', function () {
 		]);
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}).join(''), 'auto ');
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}).join(''), 'column');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {
-			page: 0,
-			item: 2
-		}).join(''), 'This is a star-sized column. It should get ');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 3}).join(''), 'the remaining space divided by the number');
+		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 2}).join(''), 'This is a star-sized column. It should get the ');
+		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 3}).join(''), 'remaining space divided by the number');
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 4}).join(''), 'this one');
 	});
 
