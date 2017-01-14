@@ -176,10 +176,10 @@ describe('Printer', function () {
 		assertEllipse(Pdfkit.prototype.ellipse.secondCall.args);
 
 	});
-	
+
 	it('should print only the require number of pages', function () {
     printer = new Printer(fontDescriptors);
-    
+
     var docDefinition = {
       pageSize: 'A4',
 			maxPagesNumber: 1,
@@ -193,15 +193,15 @@ describe('Printer', function () {
         pageOrientation: 'landscape'
       }]
     };
-    
+
     printer.createPdfKitDocument(docDefinition);
-    
+
     assert(Pdfkit.prototype.addPage.callCount === 1);
 	});
-  
+
   it('should print all pages when maxPagesNumber is undefined', function () {
     printer = new Printer(fontDescriptors);
-    
+
     var docDefinition = {
       pageSize: 'A4',
       content: [
@@ -218,9 +218,9 @@ describe('Printer', function () {
           pageBreak: 'before',
         }]
     };
-    
+
     printer.createPdfKitDocument(docDefinition);
-    
+
     assert(Pdfkit.prototype.addPage.callCount === 3);
   });
 
