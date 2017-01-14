@@ -82,6 +82,11 @@ function PdfPrinter(fontDescriptors) {
 PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	options = options || {};
 
+	// if pageSize.height is set to auto, set the height to infinity so there are no page breaks.
+	if (docDefinition.pageSize.height === 'auto') {
+		docDefinition.pageSize.height = Infinity;
+	}
+
 	var pageSize = pageSize2widthAndHeight(docDefinition.pageSize || 'a4');
 
 	if (docDefinition.pageOrientation === 'landscape') {
@@ -89,7 +94,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	}
 	pageSize.orientation = docDefinition.pageOrientation === 'landscape' ? docDefinition.pageOrientation : 'portrait';
 
-	this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], compress: docDefinition.compress || true});
+	this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], autoFirstPage: false, compress: docDefinition.compress || true});
 	this.pdfKitDoc.info.Producer = 'pdfmake';
 	this.pdfKitDoc.info.Creator = 'pdfmake';
 
@@ -125,6 +130,13 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		pages = pages.slice(0, maxNumberPages);
 	}
 
+	// if pageSize.height is set to Infinity, calculate the actual height of the page that
+	// was laid out using the height of each of the items in the page.
+	if (pageSize.height === Infinity) {
+		var pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
+		this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
+	}
+
 	renderPages(pages, this.fontProvider, this.pdfKitDoc);
 
 	if (options.autoPrint) {
@@ -138,6 +150,17 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	}
 	return this.pdfKitDoc;
 };
+
+function calculatePageHeight(pages, margins) {
+	var fixedMargins = fixPageMargins(margins || 40);
+	var height = fixedMargins.top + fixedMargins.bottom;
+	pages.forEach(function (page) {
+		page.items.forEach(function (item) {
+			height += item.item.getHeight();
+		});
+	});
+	return height;
+}
 
 function fixPageMargins(margin) {
 	if (!margin) {
@@ -273,6 +296,7 @@ function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
 
 function renderPages(pages, fontProvider, pdfKitDoc) {
 	pdfKitDoc._pdfMakePages = pages;
+	pdfKitDoc.addPage();
 	for (var i = 0; i < pages.length; i++) {
 		if (i > 0) {
 			updatePageOrientationInOptions(pages[i], pdfKitDoc);
