@@ -64,7 +64,7 @@
 				name: names[i++],
 				activate: function() {
 					$http.get('samples/' + example).success(function(data) {
-						editor.getSession().setValue('// playground requires you to assign document definition to a variable called dd\n\nvar dd = {\n' + data.replace(/(^)/gm, '\t') + '\n}');
+						editor.getSession().setValue('// playground requires you to assign document definition to a variable called dd\n\nvar dd = {\n' + data.replace(/(\r?)\n/g, '\n').replace(/(^)/gm, '\t') + '\n}');
 					});
 				}
 			});
