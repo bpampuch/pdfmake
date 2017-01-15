@@ -51,6 +51,19 @@ module.exports = {
 					]})
 			},
 			/* *** */
+			
+			/* temporary bugfix for fontkit version 1.5.2 - issue https://github.com/devongovett/fontkit/issues/66 */
+			{test: /fontkit[\/\\]index.js$/, loader: StringReplacePlugin.replace({
+					replacements: [
+						{
+							pattern: 'if (this._font.GDEF) {',
+							replacement: function () {
+								return 'if (this._font.GDEF && this._font.GDEF.glyphClassDef) {';
+							}
+						}
+					]})
+			},
+			/* *** */
 
 			{test: /readable-stream[\/\\]/, loader: StringReplacePlugin.replace({
 					replacements: [
