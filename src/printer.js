@@ -83,7 +83,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	options = options || {};
 
 	// if pageSize.height is set to auto, set the height to infinity so there are no page breaks.
-	if (docDefinition.pageSize.height === 'auto') {
+	if (docDefinition.pageSize && docDefinition.pageSize.height === 'auto') {
 		docDefinition.pageSize.height = Infinity;
 	}
 
