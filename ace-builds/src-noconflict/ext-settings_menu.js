@@ -1,54 +1,419 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Distributed under the BSD license:
- *
- * Copyright (c) 2013 Matthew Christopher Kastor-Inare III, Atropa Inc. Intl
- * All rights reserved.
- *
- * Contributed to Ajax.org under the BSD license.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of Ajax.org B.V. nor the
- *       names of its contributors may be used to endorse or promote products
- *       derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL AJAX.ORG B.V. BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * ***** END LICENSE BLOCK ***** */
-
-ace.define('ace/ext/settings_menu', ['require', 'exports', 'module' , 'ace/ext/menu_tools/generate_settings_menu', 'ace/ext/menu_tools/overlay_page', 'ace/editor'], function(require, exports, module) {
-
-var generateSettingsMenu = require('./menu_tools/generate_settings_menu').generateSettingsMenu;
-var overlayPage = require('./menu_tools/overlay_page').overlayPage;
-function showSettingsMenu(editor) {
-    var sm = document.getElementById('ace_settingsmenu');
-    if (!sm)    
-        overlayPage(editor, generateSettingsMenu(editor), '0', '0', '0');
-}
-module.exports.init = function(editor) {
-    var Editor = require("ace/editor").Editor;
-    Editor.prototype.showSettingsMenu = function() {
-        showSettingsMenu(this);
-    };
+ace.define("ace/ext/menu_tools/element_generator",["require","exports","module"], function(require, exports, module) {
+'use strict';
+module.exports.createOption = function createOption (obj) {
+    var attribute;
+    var el = document.createElement('option');
+    for(attribute in obj) {
+        if(obj.hasOwnProperty(attribute)) {
+            if(attribute === 'selected') {
+                el.setAttribute(attribute, obj[attribute]);
+            } else {
+                el[attribute] = obj[attribute];
+            }
+        }
+    }
+    return el;
 };
+module.exports.createCheckbox = function createCheckbox (id, checked, clss) {
+    var el = document.createElement('input');
+    el.setAttribute('type', 'checkbox');
+    el.setAttribute('id', id);
+    el.setAttribute('name', id);
+    el.setAttribute('value', checked);
+    el.setAttribute('class', clss);
+    if(checked) {
+        el.setAttribute('checked', 'checked');
+    }
+    return el;
+};
+module.exports.createInput = function createInput (id, value, clss) {
+    var el = document.createElement('input');
+    el.setAttribute('type', 'text');
+    el.setAttribute('id', id);
+    el.setAttribute('name', id);
+    el.setAttribute('value', value);
+    el.setAttribute('class', clss);
+    return el;
+};
+module.exports.createLabel = function createLabel (text, labelFor) {
+    var el = document.createElement('label');
+    el.setAttribute('for', labelFor);
+    el.textContent = text;
+    return el;
+};
+module.exports.createSelection = function createSelection (id, values, clss) {
+    var el = document.createElement('select');
+    el.setAttribute('id', id);
+    el.setAttribute('name', id);
+    el.setAttribute('class', clss);
+    values.forEach(function(item) {
+        el.appendChild(module.exports.createOption(item));
+    });
+    return el;
+};
+
 });
 
-ace.define('ace/ext/menu_tools/generate_settings_menu', ['require', 'exports', 'module' , 'ace/ext/menu_tools/element_generator', 'ace/ext/menu_tools/add_editor_menu_options', 'ace/ext/menu_tools/get_set_functions'], function(require, exports, module) {
+ace.define("ace/ext/modelist",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
+var modes = [];
+function getModeForPath(path) {
+    var mode = modesByName.text;
+    var fileName = path.split(/[\/\\]/).pop();
+    for (var i = 0; i < modes.length; i++) {
+        if (modes[i].supportsFile(fileName)) {
+            mode = modes[i];
+            break;
+        }
+    }
+    return mode;
+}
+
+var Mode = function(name, caption, extensions) {
+    this.name = name;
+    this.caption = caption;
+    this.mode = "ace/mode/" + name;
+    this.extensions = extensions;
+    var re;
+    if (/\^/.test(extensions)) {
+        re = extensions.replace(/\|(\^)?/g, function(a, b){
+            return "$|" + (b ? "^" : "^.*\\.");
+        }) + "$";
+    } else {
+        re = "^.*\\.(" + extensions + ")$";
+    }
+
+    this.extRe = new RegExp(re, "gi");
+};
+
+Mode.prototype.supportsFile = function(filename) {
+    return filename.match(this.extRe);
+};
+var supportedModes = {
+    ABAP:        ["abap"],
+    ABC:         ["abc"],
+    ActionScript:["as"],
+    ADA:         ["ada|adb"],
+    Apache_Conf: ["^htaccess|^htgroups|^htpasswd|^conf|htaccess|htgroups|htpasswd"],
+    AsciiDoc:    ["asciidoc|adoc"],
+    Assembly_x86:["asm|a"],
+    AutoHotKey:  ["ahk"],
+    BatchFile:   ["bat|cmd"],
+    Bro:         ["bro"],
+    C_Cpp:       ["cpp|c|cc|cxx|h|hh|hpp|ino"],
+    C9Search:    ["c9search_results"],
+    Cirru:       ["cirru|cr"],
+    Clojure:     ["clj|cljs"],
+    Cobol:       ["CBL|COB"],
+    coffee:      ["coffee|cf|cson|^Cakefile"],
+    ColdFusion:  ["cfm"],
+    CSharp:      ["cs"],
+    CSS:         ["css"],
+    Curly:       ["curly"],
+    D:           ["d|di"],
+    Dart:        ["dart"],
+    Diff:        ["diff|patch"],
+    Dockerfile:  ["^Dockerfile"],
+    Dot:         ["dot"],
+    Drools:      ["drl"],
+    Dummy:       ["dummy"],
+    DummySyntax: ["dummy"],
+    Eiffel:      ["e|ge"],
+    EJS:         ["ejs"],
+    Elixir:      ["ex|exs"],
+    Elm:         ["elm"],
+    Erlang:      ["erl|hrl"],
+    Forth:       ["frt|fs|ldr|fth|4th"],
+    Fortran:     ["f|f90"],
+    FTL:         ["ftl"],
+    Gcode:       ["gcode"],
+    Gherkin:     ["feature"],
+    Gitignore:   ["^.gitignore"],
+    Glsl:        ["glsl|frag|vert"],
+    Gobstones:   ["gbs"],
+    golang:      ["go"],
+    Groovy:      ["groovy"],
+    HAML:        ["haml"],
+    Handlebars:  ["hbs|handlebars|tpl|mustache"],
+    Haskell:     ["hs"],
+    Haskell_Cabal:     ["cabal"],
+    haXe:        ["hx"],
+    Hjson:       ["hjson"],
+    HTML:        ["html|htm|xhtml"],
+    HTML_Elixir: ["eex|html.eex"],
+    HTML_Ruby:   ["erb|rhtml|html.erb"],
+    INI:         ["ini|conf|cfg|prefs"],
+    Io:          ["io"],
+    Jack:        ["jack"],
+    Jade:        ["jade|pug"],
+    Java:        ["java"],
+    JavaScript:  ["js|jsm|jsx"],
+    JSON:        ["json"],
+    JSONiq:      ["jq"],
+    JSP:         ["jsp"],
+    JSX:         ["jsx"],
+    Julia:       ["jl"],
+    Kotlin:      ["kt|kts"],
+    LaTeX:       ["tex|latex|ltx|bib"],
+    LESS:        ["less"],
+    Liquid:      ["liquid"],
+    Lisp:        ["lisp"],
+    LiveScript:  ["ls"],
+    LogiQL:      ["logic|lql"],
+    LSL:         ["lsl"],
+    Lua:         ["lua"],
+    LuaPage:     ["lp"],
+    Lucene:      ["lucene"],
+    Makefile:    ["^Makefile|^GNUmakefile|^makefile|^OCamlMakefile|make"],
+    Markdown:    ["md|markdown"],
+    Mask:        ["mask"],
+    MATLAB:      ["matlab"],
+    Maze:        ["mz"],
+    MEL:         ["mel"],
+    MUSHCode:    ["mc|mush"],
+    MySQL:       ["mysql"],
+    Nix:         ["nix"],
+    NSIS:        ["nsi|nsh"],
+    ObjectiveC:  ["m|mm"],
+    OCaml:       ["ml|mli"],
+    Pascal:      ["pas|p"],
+    Perl:        ["pl|pm"],
+    pgSQL:       ["pgsql"],
+    PHP:         ["php|phtml|shtml|php3|php4|php5|phps|phpt|aw|ctp|module"],
+    Powershell:  ["ps1"],
+    Praat:       ["praat|praatscript|psc|proc"],
+    Prolog:      ["plg|prolog"],
+    Properties:  ["properties"],
+    Protobuf:    ["proto"],
+    Python:      ["py"],
+    R:           ["r"],
+    Razor:       ["cshtml|asp"],
+    RDoc:        ["Rd"],
+    RHTML:       ["Rhtml"],
+    RST:         ["rst"],
+    Ruby:        ["rb|ru|gemspec|rake|^Guardfile|^Rakefile|^Gemfile"],
+    Rust:        ["rs"],
+    SASS:        ["sass"],
+    SCAD:        ["scad"],
+    Scala:       ["scala"],
+    Scheme:      ["scm|sm|rkt|oak|scheme"],
+    SCSS:        ["scss"],
+    SH:          ["sh|bash|^.bashrc"],
+    SJS:         ["sjs"],
+    Smarty:      ["smarty|tpl"],
+    snippets:    ["snippets"],
+    Soy_Template:["soy"],
+    Space:       ["space"],
+    SQL:         ["sql"],
+    SQLServer:   ["sqlserver"],
+    Stylus:      ["styl|stylus"],
+    SVG:         ["svg"],
+    Swift:       ["swift"],
+    Tcl:         ["tcl"],
+    Tex:         ["tex"],
+    Text:        ["txt"],
+    Textile:     ["textile"],
+    Toml:        ["toml"],
+    TSX:         ["tsx"],
+    Twig:        ["twig|swig"],
+    Typescript:  ["ts|typescript|str"],
+    Vala:        ["vala"],
+    VBScript:    ["vbs|vb"],
+    Velocity:    ["vm"],
+    Verilog:     ["v|vh|sv|svh"],
+    VHDL:        ["vhd|vhdl"],
+    Wollok:      ["wlk|wpgm|wtest"],
+    XML:         ["xml|rdf|rss|wsdl|xslt|atom|mathml|mml|xul|xbl|xaml"],
+    XQuery:      ["xq"],
+    YAML:        ["yaml|yml"],
+    Django:      ["html"]
+};
+
+var nameOverrides = {
+    ObjectiveC: "Objective-C",
+    CSharp: "C#",
+    golang: "Go",
+    C_Cpp: "C and C++",
+    coffee: "CoffeeScript",
+    HTML_Ruby: "HTML (Ruby)",
+    HTML_Elixir: "HTML (Elixir)",
+    FTL: "FreeMarker"
+};
+var modesByName = {};
+for (var name in supportedModes) {
+    var data = supportedModes[name];
+    var displayName = (nameOverrides[name] || name).replace(/_/g, " ");
+    var filename = name.toLowerCase();
+    var mode = new Mode(filename, displayName, data[0]);
+    modesByName[filename] = mode;
+    modes.push(mode);
+}
+
+module.exports = {
+    getModeForPath: getModeForPath,
+    modes: modes,
+    modesByName: modesByName
+};
+
+});
+
+ace.define("ace/ext/themelist",["require","exports","module","ace/lib/fixoldbrowsers"], function(require, exports, module) {
+"use strict";
+require("ace/lib/fixoldbrowsers");
+
+var themeData = [
+    ["Chrome"         ],
+    ["Clouds"         ],
+    ["Crimson Editor" ],
+    ["Dawn"           ],
+    ["Dreamweaver"    ],
+    ["Eclipse"        ],
+    ["GitHub"         ],
+    ["IPlastic"       ],
+    ["Solarized Light"],
+    ["TextMate"       ],
+    ["Tomorrow"       ],
+    ["XCode"          ],
+    ["Kuroir"],
+    ["KatzenMilch"],
+    ["SQL Server"           ,"sqlserver"               , "light"],
+    ["Ambiance"             ,"ambiance"                ,  "dark"],
+    ["Chaos"                ,"chaos"                   ,  "dark"],
+    ["Clouds Midnight"      ,"clouds_midnight"         ,  "dark"],
+    ["Cobalt"               ,"cobalt"                  ,  "dark"],
+    ["Gruvbox"              ,"gruvbox"                 ,  "dark"],
+    ["idle Fingers"         ,"idle_fingers"            ,  "dark"],
+    ["krTheme"              ,"kr_theme"                ,  "dark"],
+    ["Merbivore"            ,"merbivore"               ,  "dark"],
+    ["Merbivore Soft"       ,"merbivore_soft"          ,  "dark"],
+    ["Mono Industrial"      ,"mono_industrial"         ,  "dark"],
+    ["Monokai"              ,"monokai"                 ,  "dark"],
+    ["Pastel on dark"       ,"pastel_on_dark"          ,  "dark"],
+    ["Solarized Dark"       ,"solarized_dark"          ,  "dark"],
+    ["Terminal"             ,"terminal"                ,  "dark"],
+    ["Tomorrow Night"       ,"tomorrow_night"          ,  "dark"],
+    ["Tomorrow Night Blue"  ,"tomorrow_night_blue"     ,  "dark"],
+    ["Tomorrow Night Bright","tomorrow_night_bright"   ,  "dark"],
+    ["Tomorrow Night 80s"   ,"tomorrow_night_eighties" ,  "dark"],
+    ["Twilight"             ,"twilight"                ,  "dark"],
+    ["Vibrant Ink"          ,"vibrant_ink"             ,  "dark"]
+];
+
+
+exports.themesByName = {};
+exports.themes = themeData.map(function(data) {
+    var name = data[1] || data[0].replace(/ /g, "_").toLowerCase();
+    var theme = {
+        caption: data[0],
+        theme: "ace/theme/" + name,
+        isDark: data[2] == "dark",
+        name: name
+    };
+    exports.themesByName[name] = theme;
+    return theme;
+});
+
+});
+
+ace.define("ace/ext/menu_tools/add_editor_menu_options",["require","exports","module","ace/ext/modelist","ace/ext/themelist"], function(require, exports, module) {
+'use strict';
+module.exports.addEditorMenuOptions = function addEditorMenuOptions (editor) {
+    var modelist = require('../modelist');
+    var themelist = require('../themelist');
+    editor.menuOptions = {
+        setNewLineMode: [{
+            textContent: "unix",
+            value: "unix"
+        }, {
+            textContent: "windows",
+            value: "windows"
+        }, {
+            textContent: "auto",
+            value: "auto"
+        }],
+        setTheme: [],
+        setMode: [],
+        setKeyboardHandler: [{
+            textContent: "ace",
+            value: ""
+        }, {
+            textContent: "vim",
+            value: "ace/keyboard/vim"
+        }, {
+            textContent: "emacs",
+            value: "ace/keyboard/emacs"
+        }, {
+            textContent: "textarea",
+            value: "ace/keyboard/textarea"
+        }, {
+            textContent: "sublime",
+            value: "ace/keyboard/sublime"
+        }]
+    };
+
+    editor.menuOptions.setTheme = themelist.themes.map(function(theme) {
+        return {
+            textContent: theme.caption,
+            value: theme.theme
+        };
+    });
+
+    editor.menuOptions.setMode = modelist.modes.map(function(mode) {
+        return {
+            textContent: mode.name,
+            value: mode.mode
+        };
+    });
+};
+
+
+});
+
+ace.define("ace/ext/menu_tools/get_set_functions",["require","exports","module"], function(require, exports, module) {
+'use strict';
+module.exports.getSetFunctions = function getSetFunctions (editor) {
+    var out = [];
+    var my = {
+        'editor' : editor,
+        'session' : editor.session,
+        'renderer' : editor.renderer
+    };
+    var opts = [];
+    var skip = [
+        'setOption',
+        'setUndoManager',
+        'setDocument',
+        'setValue',
+        'setBreakpoints',
+        'setScrollTop',
+        'setScrollLeft',
+        'setSelectionStyle',
+        'setWrapLimitRange'
+    ];
+    ['renderer', 'session', 'editor'].forEach(function(esra) {
+        var esr = my[esra];
+        var clss = esra;
+        for(var fn in esr) {
+            if(skip.indexOf(fn) === -1) {
+                if(/^set/.test(fn) && opts.indexOf(fn) === -1) {
+                    opts.push(fn);
+                    out.push({
+                        'functionName' : fn,
+                        'parentObj' : esr,
+                        'parentName' : clss
+                    });
+                }
+            }
+        }
+    });
+    return out;
+};
+
+});
+
+ace.define("ace/ext/menu_tools/generate_settings_menu",["require","exports","module","ace/ext/menu_tools/element_generator","ace/ext/menu_tools/add_editor_menu_options","ace/ext/menu_tools/get_set_functions","ace/ace"], function(require, exports, module) {
+'use strict';
 var egen = require('./element_generator');
 var addEditorMenuOptions = require('./add_editor_menu_options').addEditorMenuOptions;
 var getSetFunctions = require('./get_set_functions').getSetFunctions;
@@ -67,6 +432,12 @@ module.exports.generateSettingsMenu = function generateSettingsMenu (editor) {
         elements.forEach(function(element) {
             topmenu.appendChild(element);
         });
+        
+        var el = topmenu.appendChild(document.createElement('div'));
+        var version = require("../../ace").version;
+        el.style.padding = "1em";
+        el.textContent = "Ace version " + version;
+        
         return topmenu;
     }
     function createNewEntry(obj, clss, item, val) {
@@ -166,375 +537,8 @@ module.exports.generateSettingsMenu = function generateSettingsMenu (editor) {
 
 });
 
-ace.define('ace/ext/menu_tools/element_generator', ['require', 'exports', 'module' ], function(require, exports, module) {
-module.exports.createOption = function createOption (obj) {
-    var attribute;
-    var el = document.createElement('option');
-    for(attribute in obj) {
-        if(obj.hasOwnProperty(attribute)) {
-            if(attribute === 'selected') {
-                el.setAttribute(attribute, obj[attribute]);
-            } else {
-                el[attribute] = obj[attribute];
-            }
-        }
-    }
-    return el;
-};
-module.exports.createCheckbox = function createCheckbox (id, checked, clss) {
-    var el = document.createElement('input');
-    el.setAttribute('type', 'checkbox');
-    el.setAttribute('id', id);
-    el.setAttribute('name', id);
-    el.setAttribute('value', checked);
-    el.setAttribute('class', clss);
-    if(checked) {
-        el.setAttribute('checked', 'checked');
-    }
-    return el;
-};
-module.exports.createInput = function createInput (id, value, clss) {
-    var el = document.createElement('input');
-    el.setAttribute('type', 'text');
-    el.setAttribute('id', id);
-    el.setAttribute('name', id);
-    el.setAttribute('value', value);
-    el.setAttribute('class', clss);
-    return el;
-};
-module.exports.createLabel = function createLabel (text, labelFor) {
-    var el = document.createElement('label');
-    el.setAttribute('for', labelFor);
-    el.textContent = text;
-    return el;
-};
-module.exports.createSelection = function createSelection (id, values, clss) {
-    var el = document.createElement('select');
-    el.setAttribute('id', id);
-    el.setAttribute('name', id);
-    el.setAttribute('class', clss);
-    values.forEach(function(item) {
-        el.appendChild(module.exports.createOption(item));
-    });
-    return el;
-};
-
-});
-
-ace.define('ace/ext/menu_tools/add_editor_menu_options', ['require', 'exports', 'module' , 'ace/ext/modelist', 'ace/ext/themelist'], function(require, exports, module) {
-module.exports.addEditorMenuOptions = function addEditorMenuOptions (editor) {
-    var modelist = require('../modelist');
-    var themelist = require('../themelist');
-    editor.menuOptions = {
-        "setNewLineMode" : [{
-            "textContent" : "unix",
-            "value" : "unix"
-        }, {
-            "textContent" : "windows",
-            "value" : "windows"
-        }, {
-            "textContent" : "auto",
-            "value" : "auto"
-        }],
-        "setTheme" : [],
-        "setMode" : [],
-        "setKeyboardHandler": [{
-            "textContent" : "ace",
-            "value" : ""
-        }, {
-            "textContent" : "vim",
-            "value" : "ace/keyboard/vim"
-        }, {
-            "textContent" : "emacs",
-            "value" : "ace/keyboard/emacs"
-        }]
-    };
-
-    editor.menuOptions.setTheme = themelist.themes.map(function(theme) {
-        return {
-            'textContent' : theme.caption,
-            'value' : theme.theme
-        };
-    });
-
-    editor.menuOptions.setMode = modelist.modes.map(function(mode) {
-        return {
-            'textContent' : mode.name,
-            'value' : mode.mode
-        };
-    });
-};
-
-
-});
-ace.define('ace/ext/modelist', ['require', 'exports', 'module' ], function(require, exports, module) {
-
-
-var modes = [];
-function getModeForPath(path) {
-    var mode = modesByName.text;
-    var fileName = path.split(/[\/\\]/).pop();
-    for (var i = 0; i < modes.length; i++) {
-        if (modes[i].supportsFile(fileName)) {
-            mode = modes[i];
-            break;
-        }
-    }
-    return mode;
-}
-
-var Mode = function(name, caption, extensions) {
-    this.name = name;
-    this.caption = caption;
-    this.mode = "ace/mode/" + name;
-    this.extensions = extensions;
-    if (/\^/.test(extensions)) {
-        var re = extensions.replace(/\|(\^)?/g, function(a, b){
-            return "$|" + (b ? "^" : "^.*\\.");
-        }) + "$";
-    } else {
-        var re = "^.*\\.(" + extensions + ")$";
-    }
-
-    this.extRe = new RegExp(re, "gi");
-};
-
-Mode.prototype.supportsFile = function(filename) {
-    return filename.match(this.extRe);
-};
-var supportedModes = {
-    ABAP:        ["abap"],
-    ActionScript:["as"],
-    ADA:         ["ada|adb"],
-    Apache_Conf: ["^htaccess|^htgroups|^htpasswd|^conf|htaccess|htgroups|htpasswd"],
-    AsciiDoc:    ["asciidoc"],
-    Assembly_x86:["asm"],
-    AutoHotKey:  ["ahk"],
-    BatchFile:   ["bat|cmd"],
-    C9Search:    ["c9search_results"],
-    C_Cpp:       ["cpp|c|cc|cxx|h|hh|hpp"],
-    Cirru:       ["cirru|cr"],
-    Clojure:     ["clj"],
-    Cobol:       ["CBL|COB"],
-    coffee:      ["coffee|cf|cson|^Cakefile"],
-    ColdFusion:  ["cfm"],
-    CSharp:      ["cs"],
-    CSS:         ["css"],
-    Curly:       ["curly"],
-    D:           ["d|di"],
-    Dart:        ["dart"],
-    Diff:        ["diff|patch"],
-    Dot:         ["dot"],
-    Erlang:      ["erl|hrl"],
-    EJS:         ["ejs"],
-    Forth:       ["frt|fs|ldr"],
-    FTL:         ["ftl"],
-    Gherkin:     ["feature"],
-    Glsl:        ["glsl|frag|vert"],
-    golang:      ["go"],
-    Groovy:      ["groovy"],
-    HAML:        ["haml"],
-    Handlebars:  ["hbs|handlebars|tpl|mustache"],
-    Haskell:     ["hs"],
-    haXe:        ["hx"],
-    HTML:        ["html|htm|xhtml"],
-    HTML_Ruby:   ["erb|rhtml|html.erb"],
-    INI:         ["ini|conf|cfg|prefs"],
-    Jack:        ["jack"],
-    Jade:        ["jade"],
-    Java:        ["java"],
-    JavaScript:  ["js|jsm"],
-    JSON:        ["json"],
-    JSONiq:      ["jq"],
-    JSP:         ["jsp"],
-    JSX:         ["jsx"],
-    Julia:       ["jl"],
-    LaTeX:       ["tex|latex|ltx|bib"],
-    LESS:        ["less"],
-    Liquid:      ["liquid"],
-    Lisp:        ["lisp"],
-    LiveScript:  ["ls"],
-    LogiQL:      ["logic|lql"],
-    LSL:         ["lsl"],
-    Lua:         ["lua"],
-    LuaPage:     ["lp"],
-    Lucene:      ["lucene"],
-    Makefile:    ["^Makefile|^GNUmakefile|^makefile|^OCamlMakefile|make"],
-    MATLAB:      ["matlab"],
-    Markdown:    ["md|markdown"],
-    MEL:         ["mel"],
-    MySQL:       ["mysql"],
-    MUSHCode:    ["mc|mush"],
-    Nix:         ["nix"],
-    ObjectiveC:  ["m|mm"],
-    OCaml:       ["ml|mli"],
-    Pascal:      ["pas|p"],
-    Perl:        ["pl|pm"],
-    pgSQL:       ["pgsql"],
-    PHP:         ["php|phtml"],
-    Powershell:  ["ps1"],
-    Prolog:      ["plg|prolog"],
-    Properties:  ["properties"],
-    Protobuf:    ["proto"],
-    Python:      ["py"],
-    R:           ["r"],
-    RDoc:        ["Rd"],
-    RHTML:       ["Rhtml"],
-    Ruby:        ["rb|ru|gemspec|rake|^Guardfile|^Rakefile|^Gemfile"],
-    Rust:        ["rs"],
-    SASS:        ["sass"],
-    SCAD:        ["scad"],
-    Scala:       ["scala"],
-    Smarty:      ["smarty|tpl"],
-    Scheme:      ["scm|rkt"],
-    SCSS:        ["scss"],
-    SH:          ["sh|bash|^.bashrc"],
-    SJS:         ["sjs"],
-    Space:       ["space"],
-    snippets:    ["snippets"],
-    Soy_Template:["soy"],
-    SQL:         ["sql"],
-    Stylus:      ["styl|stylus"],
-    SVG:         ["svg"],
-    Tcl:         ["tcl"],
-    Tex:         ["tex"],
-    Text:        ["txt"],
-    Textile:     ["textile"],
-    Toml:        ["toml"],
-    Twig:        ["twig"],
-    Typescript:  ["ts|typescript|str"],
-    VBScript:    ["vbs"],
-    Velocity:    ["vm"],
-    Verilog:     ["v|vh|sv|svh"],
-    XML:         ["xml|rdf|rss|wsdl|xslt|atom|mathml|mml|xul|xbl"],
-    XQuery:      ["xq"],
-    YAML:        ["yaml|yml"]
-};
-
-var nameOverrides = {
-    ObjectiveC: "Objective-C",
-    CSharp: "C#",
-    golang: "Go",
-    C_Cpp: "C/C++",
-    coffee: "CoffeeScript",
-    HTML_Ruby: "HTML (Ruby)",
-    FTL: "FreeMarker"
-};
-var modesByName = {};
-for (var name in supportedModes) {
-    var data = supportedModes[name];
-    var displayName = (nameOverrides[name] || name).replace(/_/g, " ");
-    var filename = name.toLowerCase();
-    var mode = new Mode(filename, displayName, data[0]);
-    modesByName[filename] = mode;
-    modes.push(mode);
-}
-
-module.exports = {
-    getModeForPath: getModeForPath,
-    modes: modes,
-    modesByName: modesByName
-};
-
-});
-
-ace.define('ace/ext/themelist', ['require', 'exports', 'module' ], function(require, exports, module) {
-
-
-var themeData = [
-    ["Chrome"         ],
-    ["Clouds"         ],
-    ["Crimson Editor" ],
-    ["Dawn"           ],
-    ["Dreamweaver"    ],
-    ["Eclipse"        ],
-    ["GitHub"         ],
-    ["Solarized Light"],
-    ["TextMate"       ],
-    ["Tomorrow"       ],
-    ["XCode"          ],
-    ["Kuroir"],
-    ["KatzenMilch"],
-    ["Ambiance"             ,"ambiance"                ,  "dark"],
-    ["Chaos"                ,"chaos"                   ,  "dark"],
-    ["Clouds Midnight"      ,"clouds_midnight"         ,  "dark"],
-    ["Cobalt"               ,"cobalt"                  ,  "dark"],
-    ["idle Fingers"         ,"idle_fingers"            ,  "dark"],
-    ["krTheme"              ,"kr_theme"                ,  "dark"],
-    ["Merbivore"            ,"merbivore"               ,  "dark"],
-    ["Merbivore Soft"       ,"merbivore_soft"          ,  "dark"],
-    ["Mono Industrial"      ,"mono_industrial"         ,  "dark"],
-    ["Monokai"              ,"monokai"                 ,  "dark"],
-    ["Pastel on dark"       ,"pastel_on_dark"          ,  "dark"],
-    ["Solarized Dark"       ,"solarized_dark"          ,  "dark"],
-    ["Terminal"             ,"terminal"                ,  "dark"],
-    ["Tomorrow Night"       ,"tomorrow_night"          ,  "dark"],
-    ["Tomorrow Night Blue"  ,"tomorrow_night_blue"     ,  "dark"],
-    ["Tomorrow Night Bright","tomorrow_night_bright"   ,  "dark"],
-    ["Tomorrow Night 80s"   ,"tomorrow_night_eighties" ,  "dark"],
-    ["Twilight"             ,"twilight"                ,  "dark"],
-    ["Vibrant Ink"          ,"vibrant_ink"             ,  "dark"]
-];
-
-
-exports.themesByName = {};
-exports.themes = themeData.map(function(data) {
-    var name = data[1] || data[0].replace(/ /g, "_").toLowerCase();
-    var theme = {
-        caption: data[0],
-        theme: "ace/theme/" + name,
-        isDark: data[2] == "dark",
-        name: name
-    };
-    exports.themesByName[name] = theme;
-    return theme;
-});
-
-});
-
-ace.define('ace/ext/menu_tools/get_set_functions', ['require', 'exports', 'module' ], function(require, exports, module) {
-module.exports.getSetFunctions = function getSetFunctions (editor) {
-    var out = [];
-    var my = {
-        'editor' : editor,
-        'session' : editor.session,
-        'renderer' : editor.renderer
-    };
-    var opts = [];
-    var skip = [
-        'setOption',
-        'setUndoManager',
-        'setDocument',
-        'setValue',
-        'setBreakpoints',
-        'setScrollTop',
-        'setScrollLeft',
-        'setSelectionStyle',
-        'setWrapLimitRange'
-    ];
-    ['renderer', 'session', 'editor'].forEach(function(esra) {
-        var esr = my[esra];
-        var clss = esra;
-        for(var fn in esr) {
-            if(skip.indexOf(fn) === -1) {
-                if(/^set/.test(fn) && opts.indexOf(fn) === -1) {
-                    opts.push(fn);
-                    out.push({
-                        'functionName' : fn,
-                        'parentObj' : esr,
-                        'parentName' : clss
-                    });
-                }
-            }
-        }
-    });
-    return out;
-};
-
-});
-
-ace.define('ace/ext/menu_tools/overlay_page', ['require', 'exports', 'module' , 'ace/lib/dom'], function(require, exports, module) {
-
+ace.define("ace/ext/menu_tools/overlay_page",["require","exports","module","ace/lib/dom"], function(require, exports, module) {
+'use strict';
 var dom = require("../../lib/dom");
 var cssText = "#ace_settingsmenu, #kbshortcutmenu {\
 background-color: #F7F7F7;\
@@ -632,7 +636,24 @@ module.exports.overlayPage = function overlayPage(editor, contentElement, top, r
     editor.blur();
 };
 
-});;
+});
+
+ace.define("ace/ext/settings_menu",["require","exports","module","ace/ext/menu_tools/generate_settings_menu","ace/ext/menu_tools/overlay_page","ace/editor"], function(require, exports, module) {
+"use strict";
+var generateSettingsMenu = require('./menu_tools/generate_settings_menu').generateSettingsMenu;
+var overlayPage = require('./menu_tools/overlay_page').overlayPage;
+function showSettingsMenu(editor) {
+    var sm = document.getElementById('ace_settingsmenu');
+    if (!sm)    
+        overlayPage(editor, generateSettingsMenu(editor), '0', '0', '0');
+}
+module.exports.init = function(editor) {
+    var Editor = require("ace/editor").Editor;
+    Editor.prototype.showSettingsMenu = function() {
+        showSettingsMenu(this);
+    };
+};
+});
                 (function() {
                     ace.require(["ace/ext/settings_menu"], function() {});
                 })();

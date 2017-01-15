@@ -7,22 +7,19 @@
     <meta name="author" content="Fabian Jakobs">
     <!--
     Ace
-      version 
+      version 1.2.6
       commit  
     -->
 
-    
+    <link rel="stylesheet" href="demo/kitchen-sink/styles.css" type="text/css" media="screen" charset="utf-8">
+    <script async="true" src="https://use.edgefonts.net/source-code-pro.js"></script>
 
     <link href="./doc/site/images/favicon.ico" rel="icon" type="image/x-icon">
-    
-      <link rel="stylesheet" href="kitchen-sink/styles.css" type="text/css" media="screen" charset="utf-8">
-      <script async="true" src="http://use.edgefonts.net/source-code-pro.js"></script>
-    
 </head>
 <body>
 <div id="optionsPanel" style="position:absolute;height:100%;width:260px">
   <a href="http://c9.io" title="Cloud9 IDE | Your code anywhere, anytime">
-    <img id="c9-logo" src="kitchen-sink/logo.png" style="width: 172px;margin: -9px 30px -12px 51px;">
+    <img id="c9-logo" src="demo/kitchen-sink/logo.png" style="width: 172px;margin: -9px 30px -12px 51px;">
   </a>
   <div style="position: absolute; overflow: hidden; top:100px; bottom:0">
   <div style="width: 120%; height:100%; overflow-y: scroll">
@@ -258,9 +255,11 @@
   </table>
   
   <a href="http://ace.c9.io">
-    <img id="ace-logo" src="doc/site/images/ace-logo.png" style="width: 134px;margin: 46px 0px 4px 66px;">
+    <img id="ace-logo" src="demo/kitchen-sink/ace-logo.png" style="width: 134px;margin: 46px 0px 4px 66px;">
   </a>
-
+  <div><a target="_test" href="./lib/ace/test/tests.html"
+    style="color: whitesmoke; text-align: left; padding: 1em;">tests</a>
+  </div>
   </div>
   </div>
 </div>
@@ -272,7 +271,7 @@
   <script src="src/ace.js" data-ace-base="src" type="text/javascript" charset="utf-8"></script>
   <script src="src/keybinding-vim.js"></script>
   <script src="src/keybinding-emacs.js"></script>
-  <script src="kitchen-sink/demo.js"></script>
+  <script src="demo/kitchen-sink/demo.js"></script>
   <script type="text/javascript" charset="utf-8">
     require("kitchen-sink/demo");
   </script>

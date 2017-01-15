@@ -1,1 +1,1 @@
-define("ace/snippets/verilog",["require","exports","module"],function(e,t,n){t.snippetText="",t.scope="verilog"})
+define("ace/snippets/verilog",["require","exports","module"],function(e,t,n){"use strict";t.snippetText=undefined,t.scope="verilog"})

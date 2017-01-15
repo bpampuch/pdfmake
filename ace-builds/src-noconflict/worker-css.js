@@ -1,35 +1,46 @@
 "no use strict";
 ;(function(window) {
-if (typeof window.window != "undefined" && window.document) {
+if (typeof window.window != "undefined" && window.document)
     return;
+if (window.require && window.define)
+    return;
+
+if (!window.console) {
+    window.console = function() {
+        var msgs = Array.prototype.slice.call(arguments, 0);
+        postMessage({type: "log", data: msgs});
+    };
+    window.console.error =
+    window.console.warn = 
+    window.console.log =
+    window.console.trace = window.console;
 }
-
-window.console = function() {
-    var msgs = Array.prototype.slice.call(arguments, 0);
-    postMessage({type: "log", data: msgs});
-};
-window.console.error =
-window.console.warn = 
-window.console.log =
-window.console.trace = window.console;
-
 window.window = window;
 window.ace = window;
 
 window.onerror = function(message, file, line, col, err) {
-    console.error("Worker " + (err ? err.stack : message));
+    postMessage({type: "error", data: {
+        message: message,
+        data: err.data,
+        file: file,
+        line: line, 
+        col: col,
+        stack: err.stack
+    }});
 };
 
 window.normalizeModule = function(parentId, moduleName) {
+    // normalize plugin requires
     if (moduleName.indexOf("!") !== -1) {
         var chunks = moduleName.split("!");
         return window.normalizeModule(parentId, chunks[0]) + "!" + window.normalizeModule(parentId, chunks[1]);
     }
+    // normalize relative requires
     if (moduleName.charAt(0) == ".") {
         var base = parentId.split("/").slice(0, -1).join("/");
         moduleName = (base ? base + "/" : "") + moduleName;
         
-        while(moduleName.indexOf(".") !== -1 && previous != moduleName) {
+        while (moduleName.indexOf(".") !== -1 && previous != moduleName) {
             var previous = moduleName;
             moduleName = moduleName.replace(/^\.\//, "").replace(/\/\.\//, "/").replace(/[^\/]+\/\.\.\//, "");
         }
@@ -38,7 +49,7 @@ window.normalizeModule = function(parentId, moduleName) {
     return moduleName;
 };
 
-window.require = function(parentId, id) {
+window.require = function require(parentId, id) {
     if (!id) {
         id = parentId;
         parentId = null;
@@ -56,17 +67,36 @@ window.require = function(parentId, id) {
         }
         return module.exports;
     }
-    
-    var chunks = id.split("/");
+   
     if (!window.require.tlns)
         return console.log("unable to load " + id);
-    chunks[0] = window.require.tlns[chunks[0]] || chunks[0];
-    var path = chunks.join("/") + ".js";
+    
+    var path = resolveModuleId(id, window.require.tlns);
+    if (path.slice(-3) != ".js") path += ".js";
     
     window.require.id = id;
+    window.require.modules[id] = {}; // prevent infinite loop on broken modules
     importScripts(path);
     return window.require(parentId, id);
 };
+function resolveModuleId(id, paths) {
+    var testPath = id, tail = "";
+    while (testPath) {
+        var alias = paths[testPath];
+        if (typeof alias == "string") {
+            return alias + tail;
+        } else if (alias) {
+            return  alias.location.replace(/\/*$/, "/") + (tail || alias.main || alias.name);
+        } else if (alias === false) {
+            return "";
+        }
+        var i = testPath.lastIndexOf("/");
+        if (i === -1) break;
+        tail = testPath.substr(i) + tail;
+        testPath = testPath.slice(0, i);
+    }
+    return id;
+}
 window.require.modules = {};
 window.require.tlns = {};
 
@@ -82,13 +112,20 @@ window.define = function(id, deps, factory) {
         deps = [];
         id = window.require.id;
     }
+    
+    if (typeof factory != "function") {
+        window.require.modules[id] = {
+            exports: factory,
+            initialized: true
+        };
+        return;
+    }
 
     if (!deps.length)
-        deps = ['require', 'exports', 'module'];
+        // If there is no dependencies, we inject "require", "exports" and
+        // "module" as dependencies, to provide CommonJS compatibility.
+        deps = ["require", "exports", "module"];
 
-    if (id.indexOf("text!") === 0) 
-        return;
-    
     var req = function(childId) {
         return window.require(id, childId);
     };
@@ -98,12 +135,16 @@ window.define = function(id, deps, factory) {
         factory: function() {
             var module = this;
             var returnExports = factory.apply(this, deps.map(function(dep) {
-              switch(dep) {
-                  case 'require': return req;
-                  case 'exports': return module.exports;
-                  case 'module':  return module;
-                  default:        return req(dep);
-              }
+                switch (dep) {
+                    // Because "require", "exports" and "module" aren't actual
+                    // dependencies, we must handle them seperately.
+                    case "require": return req;
+                    case "exports": return module.exports;
+                    case "module":  return module;
+                    // But for all other dependencies, we can just go ahead and
+                    // require them.
+                    default:        return req(dep);
+                }
             }));
             if (returnExports)
                 module.exports = returnExports;
@@ -112,9 +153,10 @@ window.define = function(id, deps, factory) {
     };
 };
 window.define.amd = {};
-
+require.tlns = {};
 window.initBaseUrls  = function initBaseUrls(topLevelNamespaces) {
-    require.tlns = topLevelNamespaces;
+    for (var i in topLevelNamespaces)
+        require.tlns[i] = topLevelNamespaces[i];
 };
 
 window.initSender = function initSender() {
@@ -154,93 +196,29 @@ var sender = window.sender = null;
 
 window.onmessage = function(e) {
     var msg = e.data;
-    if (msg.command) {
+    if (msg.event && sender) {
+        sender._signal(msg.event, msg.data);
+    }
+    else if (msg.command) {
         if (main[msg.command])
             main[msg.command].apply(main, msg.args);
+        else if (window[msg.command])
+            window[msg.command].apply(window, msg.args);
         else
             throw new Error("Unknown command:" + msg.command);
     }
-    else if (msg.init) {        
-        initBaseUrls(msg.tlns);
+    else if (msg.init) {
+        window.initBaseUrls(msg.tlns);
         require("ace/lib/es5-shim");
-        sender = window.sender = initSender();
+        sender = window.sender = window.initSender();
         var clazz = require(msg.module)[msg.classname];
         main = window.main = new clazz(sender);
-    } 
-    else if (msg.event && sender) {
-        sender._signal(msg.event, msg.data);
     }
 };
 })(this);
 
-ace.define('ace/mode/css_worker', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/lib/lang', 'ace/worker/mirror', 'ace/mode/css/csslint'], function(require, exports, module) {
-
-
-var oop = require("../lib/oop");
-var lang = require("../lib/lang");
-var Mirror = require("../worker/mirror").Mirror;
-var CSSLint = require("./css/csslint").CSSLint;
-
-var Worker = exports.Worker = function(sender) {
-    Mirror.call(this, sender);
-    this.setTimeout(400);
-    this.ruleset = null;
-    this.setDisabledRules("ids");
-    this.setInfoRules("adjoining-classes|qualified-headings|zero-units|gradients|import|outline-none");
-};
-
-oop.inherits(Worker, Mirror);
-
-(function() {
-    this.setInfoRules = function(ruleNames) {
-        if (typeof ruleNames == "string")
-            ruleNames = ruleNames.split("|");
-        this.infoRules = lang.arrayToMap(ruleNames);
-        this.doc.getValue() && this.deferredUpdate.schedule(100);
-    };
-
-    this.setDisabledRules = function(ruleNames) {
-        if (!ruleNames) {
-            this.ruleset = null;
-        } else {
-            if (typeof ruleNames == "string")
-                ruleNames = ruleNames.split("|");
-            var all = {};
-
-            CSSLint.getRules().forEach(function(x){
-                all[x.id] = true;
-            });
-            ruleNames.forEach(function(x) {
-                delete all[x];
-            });
-            
-            this.ruleset = all;
-        }
-        this.doc.getValue() && this.deferredUpdate.schedule(100);
-    };
-
-    this.onUpdate = function() {
-        var value = this.doc.getValue();
-        var infoRules = this.infoRules;
-
-        var result = CSSLint.verify(value, this.ruleset);
-        this.sender.emit("csslint", result.messages.map(function(msg) {
-            return {
-                row: msg.line - 1,
-                column: msg.col - 1,
-                text: msg.message,
-                type: infoRules[msg.rule.id] ? "info" : msg.type,
-                rule: msg.rule.name
-            }
-        }));
-    };
-
-}).call(Worker.prototype);
-
-});
-
-ace.define('ace/lib/oop', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+ace.define("ace/lib/oop",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.inherits = function(ctor, superCtor) {
     ctor.super_ = superCtor;
@@ -267,8 +245,8 @@ exports.implement = function(proto, mixin) {
 
 });
 
-ace.define('ace/lib/lang', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+ace.define("ace/lib/lang",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.last = function(a) {
     return a[a.length - 1];
@@ -313,28 +291,30 @@ exports.copyArray = function(array){
     var copy = [];
     for (var i=0, l=array.length; i<l; i++) {
         if (array[i] && typeof array[i] == "object")
-            copy[i] = this.copyObject( array[i] );
+            copy[i] = this.copyObject(array[i]);
         else 
             copy[i] = array[i];
     }
     return copy;
 };
 
-exports.deepCopy = function (obj) {
+exports.deepCopy = function deepCopy(obj) {
     if (typeof obj !== "object" || !obj)
         return obj;
-    var cons = obj.constructor;
-    if (cons === RegExp)
+    var copy;
+    if (Array.isArray(obj)) {
+        copy = [];
+        for (var key = 0; key < obj.length; key++) {
+            copy[key] = deepCopy(obj[key]);
+        }
+        return copy;
+    }
+    if (Object.prototype.toString.call(obj) !== "[object Object]")
         return obj;
     
-    var copy = cons();
-    for (var key in obj) {
-        if (typeof obj[key] === "object") {
-            copy[key] = exports.deepCopy(obj[key]);
-        } else {
-            copy[key] = obj[key];
-        }
-    }
+    copy = {};
+    for (var key in obj)
+        copy[key] = deepCopy(obj[key]);
     return copy;
 };
 
@@ -383,7 +363,6 @@ exports.getMatchOffsets = function(string, regExp) {
     return matches;
 };
 exports.deferredCall = function(fcn) {
-
     var timer = null;
     var callback = function() {
         timer = null;
@@ -454,1190 +433,8 @@ exports.delayedCall = function(fcn, defaultTimeout) {
 };
 });
 
-ace.define('ace/lib/es5-shim', ['require', 'exports', 'module' ], function(require, exports, module) {
-
-function Empty() {}
-
-if (!Function.prototype.bind) {
-    Function.prototype.bind = function bind(that) { // .length is 1
-        var target = this;
-        if (typeof target != "function") {
-            throw new TypeError("Function.prototype.bind called on incompatible " + target);
-        }
-        var args = slice.call(arguments, 1); // for normal call
-        var bound = function () {
-
-            if (this instanceof bound) {
-
-                var result = target.apply(
-                    this,
-                    args.concat(slice.call(arguments))
-                );
-                if (Object(result) === result) {
-                    return result;
-                }
-                return this;
-
-            } else {
-                return target.apply(
-                    that,
-                    args.concat(slice.call(arguments))
-                );
-
-            }
-
-        };
-        if(target.prototype) {
-            Empty.prototype = target.prototype;
-            bound.prototype = new Empty();
-            Empty.prototype = null;
-        }
-        return bound;
-    };
-}
-var call = Function.prototype.call;
-var prototypeOfArray = Array.prototype;
-var prototypeOfObject = Object.prototype;
-var slice = prototypeOfArray.slice;
-var _toString = call.bind(prototypeOfObject.toString);
-var owns = call.bind(prototypeOfObject.hasOwnProperty);
-var defineGetter;
-var defineSetter;
-var lookupGetter;
-var lookupSetter;
-var supportsAccessors;
-if ((supportsAccessors = owns(prototypeOfObject, "__defineGetter__"))) {
-    defineGetter = call.bind(prototypeOfObject.__defineGetter__);
-    defineSetter = call.bind(prototypeOfObject.__defineSetter__);
-    lookupGetter = call.bind(prototypeOfObject.__lookupGetter__);
-    lookupSetter = call.bind(prototypeOfObject.__lookupSetter__);
-}
-if ([1,2].splice(0).length != 2) {
-    if(function() { // test IE < 9 to splice bug - see issue #138
-        function makeArray(l) {
-            var a = new Array(l+2);
-            a[0] = a[1] = 0;
-            return a;
-        }
-        var array = [], lengthBefore;
-        
-        array.splice.apply(array, makeArray(20));
-        array.splice.apply(array, makeArray(26));
-
-        lengthBefore = array.length; //46
-        array.splice(5, 0, "XXX"); // add one element
-
-        lengthBefore + 1 == array.length
-
-        if (lengthBefore + 1 == array.length) {
-            return true;// has right splice implementation without bugs
-        }
-    }()) {//IE 6/7
-        var array_splice = Array.prototype.splice;
-        Array.prototype.splice = function(start, deleteCount) {
-            if (!arguments.length) {
-                return [];
-            } else {
-                return array_splice.apply(this, [
-                    start === void 0 ? 0 : start,
-                    deleteCount === void 0 ? (this.length - start) : deleteCount
-                ].concat(slice.call(arguments, 2)))
-            }
-        };
-    } else {//IE8
-        Array.prototype.splice = function(pos, removeCount){
-            var length = this.length;
-            if (pos > 0) {
-                if (pos > length)
-                    pos = length;
-            } else if (pos == void 0) {
-                pos = 0;
-            } else if (pos < 0) {
-                pos = Math.max(length + pos, 0);
-            }
-
-            if (!(pos+removeCount < length))
-                removeCount = length - pos;
-
-            var removed = this.slice(pos, pos+removeCount);
-            var insert = slice.call(arguments, 2);
-            var add = insert.length;            
-            if (pos === length) {
-                if (add) {
-                    this.push.apply(this, insert);
-                }
-            } else {
-                var remove = Math.min(removeCount, length - pos);
-                var tailOldPos = pos + remove;
-                var tailNewPos = tailOldPos + add - remove;
-                var tailCount = length - tailOldPos;
-                var lengthAfterRemove = length - remove;
-
-                if (tailNewPos < tailOldPos) { // case A
-                    for (var i = 0; i < tailCount; ++i) {
-                        this[tailNewPos+i] = this[tailOldPos+i];
-                    }
-                } else if (tailNewPos > tailOldPos) { // case B
-                    for (i = tailCount; i--; ) {
-                        this[tailNewPos+i] = this[tailOldPos+i];
-                    }
-                } // else, add == remove (nothing to do)
-
-                if (add && pos === lengthAfterRemove) {
-                    this.length = lengthAfterRemove; // truncate array
-                    this.push.apply(this, insert);
-                } else {
-                    this.length = lengthAfterRemove + add; // reserves space
-                    for (i = 0; i < add; ++i) {
-                        this[pos+i] = insert[i];
-                    }
-                }
-            }
-            return removed;
-        };
-    }
-}
-if (!Array.isArray) {
-    Array.isArray = function isArray(obj) {
-        return _toString(obj) == "[object Array]";
-    };
-}
-var boxedString = Object("a"),
-    splitString = boxedString[0] != "a" || !(0 in boxedString);
-
-if (!Array.prototype.forEach) {
-    Array.prototype.forEach = function forEach(fun /*, thisp*/) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                object,
-            thisp = arguments[1],
-            i = -1,
-            length = self.length >>> 0;
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(); // TODO message
-        }
-
-        while (++i < length) {
-            if (i in self) {
-                fun.call(thisp, self[i], i, object);
-            }
-        }
-    };
-}
-if (!Array.prototype.map) {
-    Array.prototype.map = function map(fun /*, thisp*/) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                object,
-            length = self.length >>> 0,
-            result = Array(length),
-            thisp = arguments[1];
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(fun + " is not a function");
-        }
-
-        for (var i = 0; i < length; i++) {
-            if (i in self)
-                result[i] = fun.call(thisp, self[i], i, object);
-        }
-        return result;
-    };
-}
-if (!Array.prototype.filter) {
-    Array.prototype.filter = function filter(fun /*, thisp */) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                    object,
-            length = self.length >>> 0,
-            result = [],
-            value,
-            thisp = arguments[1];
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(fun + " is not a function");
-        }
-
-        for (var i = 0; i < length; i++) {
-            if (i in self) {
-                value = self[i];
-                if (fun.call(thisp, value, i, object)) {
-                    result.push(value);
-                }
-            }
-        }
-        return result;
-    };
-}
-if (!Array.prototype.every) {
-    Array.prototype.every = function every(fun /*, thisp */) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                object,
-            length = self.length >>> 0,
-            thisp = arguments[1];
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(fun + " is not a function");
-        }
-
-        for (var i = 0; i < length; i++) {
-            if (i in self && !fun.call(thisp, self[i], i, object)) {
-                return false;
-            }
-        }
-        return true;
-    };
-}
-if (!Array.prototype.some) {
-    Array.prototype.some = function some(fun /*, thisp */) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                object,
-            length = self.length >>> 0,
-            thisp = arguments[1];
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(fun + " is not a function");
-        }
-
-        for (var i = 0; i < length; i++) {
-            if (i in self && fun.call(thisp, self[i], i, object)) {
-                return true;
-            }
-        }
-        return false;
-    };
-}
-if (!Array.prototype.reduce) {
-    Array.prototype.reduce = function reduce(fun /*, initial*/) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                object,
-            length = self.length >>> 0;
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(fun + " is not a function");
-        }
-        if (!length && arguments.length == 1) {
-            throw new TypeError("reduce of empty array with no initial value");
-        }
-
-        var i = 0;
-        var result;
-        if (arguments.length >= 2) {
-            result = arguments[1];
-        } else {
-            do {
-                if (i in self) {
-                    result = self[i++];
-                    break;
-                }
-                if (++i >= length) {
-                    throw new TypeError("reduce of empty array with no initial value");
-                }
-            } while (true);
-        }
-
-        for (; i < length; i++) {
-            if (i in self) {
-                result = fun.call(void 0, result, self[i], i, object);
-            }
-        }
-
-        return result;
-    };
-}
-if (!Array.prototype.reduceRight) {
-    Array.prototype.reduceRight = function reduceRight(fun /*, initial*/) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                object,
-            length = self.length >>> 0;
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(fun + " is not a function");
-        }
-        if (!length && arguments.length == 1) {
-            throw new TypeError("reduceRight of empty array with no initial value");
-        }
-
-        var result, i = length - 1;
-        if (arguments.length >= 2) {
-            result = arguments[1];
-        } else {
-            do {
-                if (i in self) {
-                    result = self[i--];
-                    break;
-                }
-                if (--i < 0) {
-                    throw new TypeError("reduceRight of empty array with no initial value");
-                }
-            } while (true);
-        }
-
-        do {
-            if (i in this) {
-                result = fun.call(void 0, result, self[i], i, object);
-            }
-        } while (i--);
-
-        return result;
-    };
-}
-if (!Array.prototype.indexOf || ([0, 1].indexOf(1, 2) != -1)) {
-    Array.prototype.indexOf = function indexOf(sought /*, fromIndex */ ) {
-        var self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                toObject(this),
-            length = self.length >>> 0;
-
-        if (!length) {
-            return -1;
-        }
-
-        var i = 0;
-        if (arguments.length > 1) {
-            i = toInteger(arguments[1]);
-        }
-        i = i >= 0 ? i : Math.max(0, length + i);
-        for (; i < length; i++) {
-            if (i in self && self[i] === sought) {
-                return i;
-            }
-        }
-        return -1;
-    };
-}
-if (!Array.prototype.lastIndexOf || ([0, 1].lastIndexOf(0, -3) != -1)) {
-    Array.prototype.lastIndexOf = function lastIndexOf(sought /*, fromIndex */) {
-        var self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                toObject(this),
-            length = self.length >>> 0;
-
-        if (!length) {
-            return -1;
-        }
-        var i = length - 1;
-        if (arguments.length > 1) {
-            i = Math.min(i, toInteger(arguments[1]));
-        }
-        i = i >= 0 ? i : length - Math.abs(i);
-        for (; i >= 0; i--) {
-            if (i in self && sought === self[i]) {
-                return i;
-            }
-        }
-        return -1;
-    };
-}
-if (!Object.getPrototypeOf) {
-    Object.getPrototypeOf = function getPrototypeOf(object) {
-        return object.__proto__ || (
-            object.constructor ?
-            object.constructor.prototype :
-            prototypeOfObject
-        );
-    };
-}
-if (!Object.getOwnPropertyDescriptor) {
-    var ERR_NON_OBJECT = "Object.getOwnPropertyDescriptor called on a " +
-                         "non-object: ";
-    Object.getOwnPropertyDescriptor = function getOwnPropertyDescriptor(object, property) {
-        if ((typeof object != "object" && typeof object != "function") || object === null)
-            throw new TypeError(ERR_NON_OBJECT + object);
-        if (!owns(object, property))
-            return;
-
-        var descriptor, getter, setter;
-        descriptor =  { enumerable: true, configurable: true };
-        if (supportsAccessors) {
-            var prototype = object.__proto__;
-            object.__proto__ = prototypeOfObject;
-
-            var getter = lookupGetter(object, property);
-            var setter = lookupSetter(object, property);
-            object.__proto__ = prototype;
-
-            if (getter || setter) {
-                if (getter) descriptor.get = getter;
-                if (setter) descriptor.set = setter;
-                return descriptor;
-            }
-        }
-        descriptor.value = object[property];
-        return descriptor;
-    };
-}
-if (!Object.getOwnPropertyNames) {
-    Object.getOwnPropertyNames = function getOwnPropertyNames(object) {
-        return Object.keys(object);
-    };
-}
-if (!Object.create) {
-    var createEmpty;
-    if (Object.prototype.__proto__ === null) {
-        createEmpty = function () {
-            return { "__proto__": null };
-        };
-    } else {
-        createEmpty = function () {
-            var empty = {};
-            for (var i in empty)
-                empty[i] = null;
-            empty.constructor =
-            empty.hasOwnProperty =
-            empty.propertyIsEnumerable =
-            empty.isPrototypeOf =
-            empty.toLocaleString =
-            empty.toString =
-            empty.valueOf =
-            empty.__proto__ = null;
-            return empty;
-        }
-    }
-
-    Object.create = function create(prototype, properties) {
-        var object;
-        if (prototype === null) {
-            object = createEmpty();
-        } else {
-            if (typeof prototype != "object")
-                throw new TypeError("typeof prototype["+(typeof prototype)+"] != 'object'");
-            var Type = function () {};
-            Type.prototype = prototype;
-            object = new Type();
-            object.__proto__ = prototype;
-        }
-        if (properties !== void 0)
-            Object.defineProperties(object, properties);
-        return object;
-    };
-}
-
-function doesDefinePropertyWork(object) {
-    try {
-        Object.defineProperty(object, "sentinel", {});
-        return "sentinel" in object;
-    } catch (exception) {
-    }
-}
-if (Object.defineProperty) {
-    var definePropertyWorksOnObject = doesDefinePropertyWork({});
-    var definePropertyWorksOnDom = typeof document == "undefined" ||
-        doesDefinePropertyWork(document.createElement("div"));
-    if (!definePropertyWorksOnObject || !definePropertyWorksOnDom) {
-        var definePropertyFallback = Object.defineProperty;
-    }
-}
-
-if (!Object.defineProperty || definePropertyFallback) {
-    var ERR_NON_OBJECT_DESCRIPTOR = "Property description must be an object: ";
-    var ERR_NON_OBJECT_TARGET = "Object.defineProperty called on non-object: "
-    var ERR_ACCESSORS_NOT_SUPPORTED = "getters & setters can not be defined " +
-                                      "on this javascript engine";
-
-    Object.defineProperty = function defineProperty(object, property, descriptor) {
-        if ((typeof object != "object" && typeof object != "function") || object === null)
-            throw new TypeError(ERR_NON_OBJECT_TARGET + object);
-        if ((typeof descriptor != "object" && typeof descriptor != "function") || descriptor === null)
-            throw new TypeError(ERR_NON_OBJECT_DESCRIPTOR + descriptor);
-        if (definePropertyFallback) {
-            try {
-                return definePropertyFallback.call(Object, object, property, descriptor);
-            } catch (exception) {
-            }
-        }
-        if (owns(descriptor, "value")) {
-
-            if (supportsAccessors && (lookupGetter(object, property) ||
-                                      lookupSetter(object, property)))
-            {
-                var prototype = object.__proto__;
-                object.__proto__ = prototypeOfObject;
-                delete object[property];
-                object[property] = descriptor.value;
-                object.__proto__ = prototype;
-            } else {
-                object[property] = descriptor.value;
-            }
-        } else {
-            if (!supportsAccessors)
-                throw new TypeError(ERR_ACCESSORS_NOT_SUPPORTED);
-            if (owns(descriptor, "get"))
-                defineGetter(object, property, descriptor.get);
-            if (owns(descriptor, "set"))
-                defineSetter(object, property, descriptor.set);
-        }
-
-        return object;
-    };
-}
-if (!Object.defineProperties) {
-    Object.defineProperties = function defineProperties(object, properties) {
-        for (var property in properties) {
-            if (owns(properties, property))
-                Object.defineProperty(object, property, properties[property]);
-        }
-        return object;
-    };
-}
-if (!Object.seal) {
-    Object.seal = function seal(object) {
-        return object;
-    };
-}
-if (!Object.freeze) {
-    Object.freeze = function freeze(object) {
-        return object;
-    };
-}
-try {
-    Object.freeze(function () {});
-} catch (exception) {
-    Object.freeze = (function freeze(freezeObject) {
-        return function freeze(object) {
-            if (typeof object == "function") {
-                return object;
-            } else {
-                return freezeObject(object);
-            }
-        };
-    })(Object.freeze);
-}
-if (!Object.preventExtensions) {
-    Object.preventExtensions = function preventExtensions(object) {
-        return object;
-    };
-}
-if (!Object.isSealed) {
-    Object.isSealed = function isSealed(object) {
-        return false;
-    };
-}
-if (!Object.isFrozen) {
-    Object.isFrozen = function isFrozen(object) {
-        return false;
-    };
-}
-if (!Object.isExtensible) {
-    Object.isExtensible = function isExtensible(object) {
-        if (Object(object) === object) {
-            throw new TypeError(); // TODO message
-        }
-        var name = '';
-        while (owns(object, name)) {
-            name += '?';
-        }
-        object[name] = true;
-        var returnValue = owns(object, name);
-        delete object[name];
-        return returnValue;
-    };
-}
-if (!Object.keys) {
-    var hasDontEnumBug = true,
-        dontEnums = [
-            "toString",
-            "toLocaleString",
-            "valueOf",
-            "hasOwnProperty",
-            "isPrototypeOf",
-            "propertyIsEnumerable",
-            "constructor"
-        ],
-        dontEnumsLength = dontEnums.length;
-
-    for (var key in {"toString": null}) {
-        hasDontEnumBug = false;
-    }
-
-    Object.keys = function keys(object) {
-
-        if (
-            (typeof object != "object" && typeof object != "function") ||
-            object === null
-        ) {
-            throw new TypeError("Object.keys called on a non-object");
-        }
-
-        var keys = [];
-        for (var name in object) {
-            if (owns(object, name)) {
-                keys.push(name);
-            }
-        }
-
-        if (hasDontEnumBug) {
-            for (var i = 0, ii = dontEnumsLength; i < ii; i++) {
-                var dontEnum = dontEnums[i];
-                if (owns(object, dontEnum)) {
-                    keys.push(dontEnum);
-                }
-            }
-        }
-        return keys;
-    };
-
-}
-if (!Date.now) {
-    Date.now = function now() {
-        return new Date().getTime();
-    };
-}
-var ws = "\x09\x0A\x0B\x0C\x0D\x20\xA0\u1680\u180E\u2000\u2001\u2002\u2003" +
-    "\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\u2028" +
-    "\u2029\uFEFF";
-if (!String.prototype.trim || ws.trim()) {
-    ws = "[" + ws + "]";
-    var trimBeginRegexp = new RegExp("^" + ws + ws + "*"),
-        trimEndRegexp = new RegExp(ws + ws + "*$");
-    String.prototype.trim = function trim() {
-        return String(this).replace(trimBeginRegexp, "").replace(trimEndRegexp, "");
-    };
-}
-
-function toInteger(n) {
-    n = +n;
-    if (n !== n) { // isNaN
-        n = 0;
-    } else if (n !== 0 && n !== (1/0) && n !== -(1/0)) {
-        n = (n > 0 || -1) * Math.floor(Math.abs(n));
-    }
-    return n;
-}
-
-function isPrimitive(input) {
-    var type = typeof input;
-    return (
-        input === null ||
-        type === "undefined" ||
-        type === "boolean" ||
-        type === "number" ||
-        type === "string"
-    );
-}
-
-function toPrimitive(input) {
-    var val, valueOf, toString;
-    if (isPrimitive(input)) {
-        return input;
-    }
-    valueOf = input.valueOf;
-    if (typeof valueOf === "function") {
-        val = valueOf.call(input);
-        if (isPrimitive(val)) {
-            return val;
-        }
-    }
-    toString = input.toString;
-    if (typeof toString === "function") {
-        val = toString.call(input);
-        if (isPrimitive(val)) {
-            return val;
-        }
-    }
-    throw new TypeError();
-}
-var toObject = function (o) {
-    if (o == null) { // this matches both null and undefined
-        throw new TypeError("can't convert "+o+" to object");
-    }
-    return Object(o);
-};
-
-});
-
-ace.define('ace/document', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/lib/event_emitter', 'ace/range', 'ace/anchor'], function(require, exports, module) {
-
-
-var oop = require("./lib/oop");
-var EventEmitter = require("./lib/event_emitter").EventEmitter;
-var Range = require("./range").Range;
-var Anchor = require("./anchor").Anchor;
-
-var Document = function(text) {
-    this.$lines = [];
-    if (text.length === 0) {
-        this.$lines = [""];
-    } else if (Array.isArray(text)) {
-        this._insertLines(0, text);
-    } else {
-        this.insert({row: 0, column:0}, text);
-    }
-};
-
-(function() {
-
-    oop.implement(this, EventEmitter);
-    this.setValue = function(text) {
-        var len = this.getLength();
-        this.remove(new Range(0, 0, len, this.getLine(len-1).length));
-        this.insert({row: 0, column:0}, text);
-    };
-    this.getValue = function() {
-        return this.getAllLines().join(this.getNewLineCharacter());
-    };
-    this.createAnchor = function(row, column) {
-        return new Anchor(this, row, column);
-    };
-    if ("aaa".split(/a/).length === 0)
-        this.$split = function(text) {
-            return text.replace(/\r\n|\r/g, "\n").split("\n");
-        };
-    else
-        this.$split = function(text) {
-            return text.split(/\r\n|\r|\n/);
-        };
-
-
-    this.$detectNewLine = function(text) {
-        var match = text.match(/^.*?(\r\n|\r|\n)/m);
-        this.$autoNewLine = match ? match[1] : "\n";
-        this._signal("changeNewLineMode");
-    };
-    this.getNewLineCharacter = function() {
-        switch (this.$newLineMode) {
-          case "windows":
-            return "\r\n";
-          case "unix":
-            return "\n";
-          default:
-            return this.$autoNewLine || "\n";
-        }
-    };
-
-    this.$autoNewLine = "";
-    this.$newLineMode = "auto";
-    this.setNewLineMode = function(newLineMode) {
-        if (this.$newLineMode === newLineMode)
-            return;
-
-        this.$newLineMode = newLineMode;
-        this._signal("changeNewLineMode");
-    };
-    this.getNewLineMode = function() {
-        return this.$newLineMode;
-    };
-    this.isNewLine = function(text) {
-        return (text == "\r\n" || text == "\r" || text == "\n");
-    };
-    this.getLine = function(row) {
-        return this.$lines[row] || "";
-    };
-    this.getLines = function(firstRow, lastRow) {
-        return this.$lines.slice(firstRow, lastRow + 1);
-    };
-    this.getAllLines = function() {
-        return this.getLines(0, this.getLength());
-    };
-    this.getLength = function() {
-        return this.$lines.length;
-    };
-    this.getTextRange = function(range) {
-        if (range.start.row == range.end.row) {
-            return this.getLine(range.start.row)
-                .substring(range.start.column, range.end.column);
-        }
-        var lines = this.getLines(range.start.row, range.end.row);
-        lines[0] = (lines[0] || "").substring(range.start.column);
-        var l = lines.length - 1;
-        if (range.end.row - range.start.row == l)
-            lines[l] = lines[l].substring(0, range.end.column);
-        return lines.join(this.getNewLineCharacter());
-    };
-
-    this.$clipPosition = function(position) {
-        var length = this.getLength();
-        if (position.row >= length) {
-            position.row = Math.max(0, length - 1);
-            position.column = this.getLine(length-1).length;
-        } else if (position.row < 0)
-            position.row = 0;
-        return position;
-    };
-    this.insert = function(position, text) {
-        if (!text || text.length === 0)
-            return position;
-
-        position = this.$clipPosition(position);
-        if (this.getLength() <= 1)
-            this.$detectNewLine(text);
-
-        var lines = this.$split(text);
-        var firstLine = lines.splice(0, 1)[0];
-        var lastLine = lines.length == 0 ? null : lines.splice(lines.length - 1, 1)[0];
-
-        position = this.insertInLine(position, firstLine);
-        if (lastLine !== null) {
-            position = this.insertNewLine(position); // terminate first line
-            position = this._insertLines(position.row, lines);
-            position = this.insertInLine(position, lastLine || "");
-        }
-        return position;
-    };
-    this.insertLines = function(row, lines) {
-        if (row >= this.getLength())
-            return this.insert({row: row, column: 0}, "\n" + lines.join("\n"));
-        return this._insertLines(Math.max(row, 0), lines);
-    };
-    this._insertLines = function(row, lines) {
-        if (lines.length == 0)
-            return {row: row, column: 0};
-        while (lines.length > 0xF000) {
-            var end = this._insertLines(row, lines.slice(0, 0xF000));
-            lines = lines.slice(0xF000);
-            row = end.row;
-        }
-
-        var args = [row, 0];
-        args.push.apply(args, lines);
-        this.$lines.splice.apply(this.$lines, args);
-
-        var range = new Range(row, 0, row + lines.length, 0);
-        var delta = {
-            action: "insertLines",
-            range: range,
-            lines: lines
-        };
-        this._signal("change", { data: delta });
-        return range.end;
-    };
-    this.insertNewLine = function(position) {
-        position = this.$clipPosition(position);
-        var line = this.$lines[position.row] || "";
-
-        this.$lines[position.row] = line.substring(0, position.column);
-        this.$lines.splice(position.row + 1, 0, line.substring(position.column, line.length));
-
-        var end = {
-            row : position.row + 1,
-            column : 0
-        };
-
-        var delta = {
-            action: "insertText",
-            range: Range.fromPoints(position, end),
-            text: this.getNewLineCharacter()
-        };
-        this._signal("change", { data: delta });
-
-        return end;
-    };
-    this.insertInLine = function(position, text) {
-        if (text.length == 0)
-            return position;
-
-        var line = this.$lines[position.row] || "";
-
-        this.$lines[position.row] = line.substring(0, position.column) + text
-                + line.substring(position.column);
-
-        var end = {
-            row : position.row,
-            column : position.column + text.length
-        };
-
-        var delta = {
-            action: "insertText",
-            range: Range.fromPoints(position, end),
-            text: text
-        };
-        this._signal("change", { data: delta });
-
-        return end;
-    };
-    this.remove = function(range) {
-        if (!(range instanceof Range))
-            range = Range.fromPoints(range.start, range.end);
-        range.start = this.$clipPosition(range.start);
-        range.end = this.$clipPosition(range.end);
-
-        if (range.isEmpty())
-            return range.start;
-
-        var firstRow = range.start.row;
-        var lastRow = range.end.row;
-
-        if (range.isMultiLine()) {
-            var firstFullRow = range.start.column == 0 ? firstRow : firstRow + 1;
-            var lastFullRow = lastRow - 1;
-
-            if (range.end.column > 0)
-                this.removeInLine(lastRow, 0, range.end.column);
-
-            if (lastFullRow >= firstFullRow)
-                this._removeLines(firstFullRow, lastFullRow);
-
-            if (firstFullRow != firstRow) {
-                this.removeInLine(firstRow, range.start.column, this.getLine(firstRow).length);
-                this.removeNewLine(range.start.row);
-            }
-        }
-        else {
-            this.removeInLine(firstRow, range.start.column, range.end.column);
-        }
-        return range.start;
-    };
-    this.removeInLine = function(row, startColumn, endColumn) {
-        if (startColumn == endColumn)
-            return;
-
-        var range = new Range(row, startColumn, row, endColumn);
-        var line = this.getLine(row);
-        var removed = line.substring(startColumn, endColumn);
-        var newLine = line.substring(0, startColumn) + line.substring(endColumn, line.length);
-        this.$lines.splice(row, 1, newLine);
-
-        var delta = {
-            action: "removeText",
-            range: range,
-            text: removed
-        };
-        this._signal("change", { data: delta });
-        return range.start;
-    };
-    this.removeLines = function(firstRow, lastRow) {
-        if (firstRow < 0 || lastRow >= this.getLength())
-            return this.remove(new Range(firstRow, 0, lastRow + 1, 0));
-        return this._removeLines(firstRow, lastRow);
-    };
-
-    this._removeLines = function(firstRow, lastRow) {
-        var range = new Range(firstRow, 0, lastRow + 1, 0);
-        var removed = this.$lines.splice(firstRow, lastRow - firstRow + 1);
-
-        var delta = {
-            action: "removeLines",
-            range: range,
-            nl: this.getNewLineCharacter(),
-            lines: removed
-        };
-        this._signal("change", { data: delta });
-        return removed;
-    };
-    this.removeNewLine = function(row) {
-        var firstLine = this.getLine(row);
-        var secondLine = this.getLine(row+1);
-
-        var range = new Range(row, firstLine.length, row+1, 0);
-        var line = firstLine + secondLine;
-
-        this.$lines.splice(row, 2, line);
-
-        var delta = {
-            action: "removeText",
-            range: range,
-            text: this.getNewLineCharacter()
-        };
-        this._signal("change", { data: delta });
-    };
-    this.replace = function(range, text) {
-        if (!(range instanceof Range))
-            range = Range.fromPoints(range.start, range.end);
-        if (text.length == 0 && range.isEmpty())
-            return range.start;
-        if (text == this.getTextRange(range))
-            return range.end;
-
-        this.remove(range);
-        if (text) {
-            var end = this.insert(range.start, text);
-        }
-        else {
-            end = range.start;
-        }
-
-        return end;
-    };
-    this.applyDeltas = function(deltas) {
-        for (var i=0; i<deltas.length; i++) {
-            var delta = deltas[i];
-            var range = Range.fromPoints(delta.range.start, delta.range.end);
-
-            if (delta.action == "insertLines")
-                this.insertLines(range.start.row, delta.lines);
-            else if (delta.action == "insertText")
-                this.insert(range.start, delta.text);
-            else if (delta.action == "removeLines")
-                this._removeLines(range.start.row, range.end.row - 1);
-            else if (delta.action == "removeText")
-                this.remove(range);
-        }
-    };
-    this.revertDeltas = function(deltas) {
-        for (var i=deltas.length-1; i>=0; i--) {
-            var delta = deltas[i];
-
-            var range = Range.fromPoints(delta.range.start, delta.range.end);
-
-            if (delta.action == "insertLines")
-                this._removeLines(range.start.row, range.end.row - 1);
-            else if (delta.action == "insertText")
-                this.remove(range);
-            else if (delta.action == "removeLines")
-                this._insertLines(range.start.row, delta.lines);
-            else if (delta.action == "removeText")
-                this.insert(range.start, delta.text);
-        }
-    };
-    this.indexToPosition = function(index, startRow) {
-        var lines = this.$lines || this.getAllLines();
-        var newlineLength = this.getNewLineCharacter().length;
-        for (var i = startRow || 0, l = lines.length; i < l; i++) {
-            index -= lines[i].length + newlineLength;
-            if (index < 0)
-                return {row: i, column: index + lines[i].length + newlineLength};
-        }
-        return {row: l-1, column: lines[l-1].length};
-    };
-    this.positionToIndex = function(pos, startRow) {
-        var lines = this.$lines || this.getAllLines();
-        var newlineLength = this.getNewLineCharacter().length;
-        var index = 0;
-        var row = Math.min(pos.row, lines.length);
-        for (var i = startRow || 0; i < row; ++i)
-            index += lines[i].length + newlineLength;
-
-        return index + pos.column;
-    };
-
-}).call(Document.prototype);
-
-exports.Document = Document;
-});
-
-ace.define('ace/lib/event_emitter', ['require', 'exports', 'module' ], function(require, exports, module) {
-
-
-var EventEmitter = {};
-var stopPropagation = function() { this.propagationStopped = true; };
-var preventDefault = function() { this.defaultPrevented = true; };
-
-EventEmitter._emit =
-EventEmitter._dispatchEvent = function(eventName, e) {
-    this._eventRegistry || (this._eventRegistry = {});
-    this._defaultHandlers || (this._defaultHandlers = {});
-
-    var listeners = this._eventRegistry[eventName] || [];
-    var defaultHandler = this._defaultHandlers[eventName];
-    if (!listeners.length && !defaultHandler)
-        return;
-
-    if (typeof e != "object" || !e)
-        e = {};
-
-    if (!e.type)
-        e.type = eventName;
-    if (!e.stopPropagation)
-        e.stopPropagation = stopPropagation;
-    if (!e.preventDefault)
-        e.preventDefault = preventDefault;
-
-    listeners = listeners.slice();
-    for (var i=0; i<listeners.length; i++) {
-        listeners[i](e, this);
-        if (e.propagationStopped)
-            break;
-    }
-    
-    if (defaultHandler && !e.defaultPrevented)
-        return defaultHandler(e, this);
-};
-
-
-EventEmitter._signal = function(eventName, e) {
-    var listeners = (this._eventRegistry || {})[eventName];
-    if (!listeners)
-        return;
-    listeners = listeners.slice();
-    for (var i=0; i<listeners.length; i++)
-        listeners[i](e, this);
-};
-
-EventEmitter.once = function(eventName, callback) {
-    var _self = this;
-    callback && this.addEventListener(eventName, function newCallback() {
-        _self.removeEventListener(eventName, newCallback);
-        callback.apply(null, arguments);
-    });
-};
-
-
-EventEmitter.setDefaultHandler = function(eventName, callback) {
-    var handlers = this._defaultHandlers
-    if (!handlers)
-        handlers = this._defaultHandlers = {_disabled_: {}};
-    
-    if (handlers[eventName]) {
-        var old = handlers[eventName];
-        var disabled = handlers._disabled_[eventName];
-        if (!disabled)
-            handlers._disabled_[eventName] = disabled = [];
-        disabled.push(old);
-        var i = disabled.indexOf(callback);
-        if (i != -1) 
-            disabled.splice(i, 1);
-    }
-    handlers[eventName] = callback;
-};
-EventEmitter.removeDefaultHandler = function(eventName, callback) {
-    var handlers = this._defaultHandlers
-    if (!handlers)
-        return;
-    var disabled = handlers._disabled_[eventName];
-    
-    if (handlers[eventName] == callback) {
-        var old = handlers[eventName];
-        if (disabled)
-            this.setDefaultHandler(eventName, disabled.pop());
-    } else if (disabled) {
-        var i = disabled.indexOf(callback);
-        if (i != -1)
-            disabled.splice(i, 1);
-    }
-};
-
-EventEmitter.on =
-EventEmitter.addEventListener = function(eventName, callback, capturing) {
-    this._eventRegistry = this._eventRegistry || {};
-
-    var listeners = this._eventRegistry[eventName];
-    if (!listeners)
-        listeners = this._eventRegistry[eventName] = [];
-
-    if (listeners.indexOf(callback) == -1)
-        listeners[capturing ? "unshift" : "push"](callback);
-    return callback;
-};
-
-EventEmitter.off =
-EventEmitter.removeListener =
-EventEmitter.removeEventListener = function(eventName, callback) {
-    this._eventRegistry = this._eventRegistry || {};
-
-    var listeners = this._eventRegistry[eventName];
-    if (!listeners)
-        return;
-
-    var index = listeners.indexOf(callback);
-    if (index !== -1)
-        listeners.splice(index, 1);
-};
-
-EventEmitter.removeAllListeners = function(eventName) {
-    if (this._eventRegistry) this._eventRegistry[eventName] = [];
-};
-
-exports.EventEmitter = EventEmitter;
-
-});
-
-ace.define('ace/range', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+ace.define("ace/range",["require","exports","module"], function(require, exports, module) {
+"use strict";
 var comparePoints = function(p1, p2) {
     return p1.row - p2.row || p1.column - p2.column;
 };
@@ -1764,7 +561,7 @@ var Range = function(startRow, startColumn, endRow, endColumn) {
         if (!this.isMultiLine()) {
             if (row === this.start.row) {
                 return column < this.start.column ? -1 : (column > this.end.column ? 1 : 0);
-            };
+            }
         }
 
         if (row < this.start.row)
@@ -1875,8 +672,199 @@ Range.comparePoints = function(p1, p2) {
 exports.Range = Range;
 });
 
-ace.define('ace/anchor', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/lib/event_emitter'], function(require, exports, module) {
+ace.define("ace/apply_delta",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
+function throwDeltaError(delta, errorText){
+    console.log("Invalid Delta:", delta);
+    throw "Invalid Delta: " + errorText;
+}
+
+function positionInDocument(docLines, position) {
+    return position.row    >= 0 && position.row    <  docLines.length &&
+           position.column >= 0 && position.column <= docLines[position.row].length;
+}
+
+function validateDelta(docLines, delta) {
+    if (delta.action != "insert" && delta.action != "remove")
+        throwDeltaError(delta, "delta.action must be 'insert' or 'remove'");
+    if (!(delta.lines instanceof Array))
+        throwDeltaError(delta, "delta.lines must be an Array");
+    if (!delta.start || !delta.end)
+       throwDeltaError(delta, "delta.start/end must be an present");
+    var start = delta.start;
+    if (!positionInDocument(docLines, delta.start))
+        throwDeltaError(delta, "delta.start must be contained in document");
+    var end = delta.end;
+    if (delta.action == "remove" && !positionInDocument(docLines, end))
+        throwDeltaError(delta, "delta.end must contained in document for 'remove' actions");
+    var numRangeRows = end.row - start.row;
+    var numRangeLastLineChars = (end.column - (numRangeRows == 0 ? start.column : 0));
+    if (numRangeRows != delta.lines.length - 1 || delta.lines[numRangeRows].length != numRangeLastLineChars)
+        throwDeltaError(delta, "delta.range must match delta lines");
+}
+
+exports.applyDelta = function(docLines, delta, doNotValidate) {
+    
+    var row = delta.start.row;
+    var startColumn = delta.start.column;
+    var line = docLines[row] || "";
+    switch (delta.action) {
+        case "insert":
+            var lines = delta.lines;
+            if (lines.length === 1) {
+                docLines[row] = line.substring(0, startColumn) + delta.lines[0] + line.substring(startColumn);
+            } else {
+                var args = [row, 1].concat(delta.lines);
+                docLines.splice.apply(docLines, args);
+                docLines[row] = line.substring(0, startColumn) + docLines[row];
+                docLines[row + delta.lines.length - 1] += line.substring(startColumn);
+            }
+            break;
+        case "remove":
+            var endColumn = delta.end.column;
+            var endRow = delta.end.row;
+            if (row === endRow) {
+                docLines[row] = line.substring(0, startColumn) + line.substring(endColumn);
+            } else {
+                docLines.splice(
+                    row, endRow - row + 1,
+                    line.substring(0, startColumn) + docLines[endRow].substring(endColumn)
+                );
+            }
+            break;
+    }
+}
+});
+
+ace.define("ace/lib/event_emitter",["require","exports","module"], function(require, exports, module) {
+"use strict";
+
+var EventEmitter = {};
+var stopPropagation = function() { this.propagationStopped = true; };
+var preventDefault = function() { this.defaultPrevented = true; };
+
+EventEmitter._emit =
+EventEmitter._dispatchEvent = function(eventName, e) {
+    this._eventRegistry || (this._eventRegistry = {});
+    this._defaultHandlers || (this._defaultHandlers = {});
+
+    var listeners = this._eventRegistry[eventName] || [];
+    var defaultHandler = this._defaultHandlers[eventName];
+    if (!listeners.length && !defaultHandler)
+        return;
+
+    if (typeof e != "object" || !e)
+        e = {};
+
+    if (!e.type)
+        e.type = eventName;
+    if (!e.stopPropagation)
+        e.stopPropagation = stopPropagation;
+    if (!e.preventDefault)
+        e.preventDefault = preventDefault;
+
+    listeners = listeners.slice();
+    for (var i=0; i<listeners.length; i++) {
+        listeners[i](e, this);
+        if (e.propagationStopped)
+            break;
+    }
+    
+    if (defaultHandler && !e.defaultPrevented)
+        return defaultHandler(e, this);
+};
+
+
+EventEmitter._signal = function(eventName, e) {
+    var listeners = (this._eventRegistry || {})[eventName];
+    if (!listeners)
+        return;
+    listeners = listeners.slice();
+    for (var i=0; i<listeners.length; i++)
+        listeners[i](e, this);
+};
+
+EventEmitter.once = function(eventName, callback) {
+    var _self = this;
+    callback && this.addEventListener(eventName, function newCallback() {
+        _self.removeEventListener(eventName, newCallback);
+        callback.apply(null, arguments);
+    });
+};
+
+
+EventEmitter.setDefaultHandler = function(eventName, callback) {
+    var handlers = this._defaultHandlers
+    if (!handlers)
+        handlers = this._defaultHandlers = {_disabled_: {}};
+    
+    if (handlers[eventName]) {
+        var old = handlers[eventName];
+        var disabled = handlers._disabled_[eventName];
+        if (!disabled)
+            handlers._disabled_[eventName] = disabled = [];
+        disabled.push(old);
+        var i = disabled.indexOf(callback);
+        if (i != -1) 
+            disabled.splice(i, 1);
+    }
+    handlers[eventName] = callback;
+};
+EventEmitter.removeDefaultHandler = function(eventName, callback) {
+    var handlers = this._defaultHandlers
+    if (!handlers)
+        return;
+    var disabled = handlers._disabled_[eventName];
+    
+    if (handlers[eventName] == callback) {
+        var old = handlers[eventName];
+        if (disabled)
+            this.setDefaultHandler(eventName, disabled.pop());
+    } else if (disabled) {
+        var i = disabled.indexOf(callback);
+        if (i != -1)
+            disabled.splice(i, 1);
+    }
+};
+
+EventEmitter.on =
+EventEmitter.addEventListener = function(eventName, callback, capturing) {
+    this._eventRegistry = this._eventRegistry || {};
+
+    var listeners = this._eventRegistry[eventName];
+    if (!listeners)
+        listeners = this._eventRegistry[eventName] = [];
+
+    if (listeners.indexOf(callback) == -1)
+        listeners[capturing ? "unshift" : "push"](callback);
+    return callback;
+};
+
+EventEmitter.off =
+EventEmitter.removeListener =
+EventEmitter.removeEventListener = function(eventName, callback) {
+    this._eventRegistry = this._eventRegistry || {};
+
+    var listeners = this._eventRegistry[eventName];
+    if (!listeners)
+        return;
+
+    var index = listeners.indexOf(callback);
+    if (index !== -1)
+        listeners.splice(index, 1);
+};
+
+EventEmitter.removeAllListeners = function(eventName) {
+    if (this._eventRegistry) this._eventRegistry[eventName] = [];
+};
+
+exports.EventEmitter = EventEmitter;
+
+});
+
+ace.define("ace/anchor",["require","exports","module","ace/lib/oop","ace/lib/event_emitter"], function(require, exports, module) {
+"use strict";
 
 var oop = require("./lib/oop");
 var EventEmitter = require("./lib/event_emitter").EventEmitter;
@@ -1901,68 +889,46 @@ var Anchor = exports.Anchor = function(doc, row, column) {
         return this.document;
     };
     this.$insertRight = false;
-    this.onChange = function(e) {
-        var delta = e.data;
-        var range = delta.range;
-
-        if (range.start.row == range.end.row && range.start.row != this.row)
+    this.onChange = function(delta) {
+        if (delta.start.row == delta.end.row && delta.start.row != this.row)
             return;
 
-        if (range.start.row > this.row)
+        if (delta.start.row > this.row)
             return;
-
-        if (range.start.row == this.row && range.start.column > this.column)
-            return;
-
-        var row = this.row;
-        var column = this.column;
-        var start = range.start;
-        var end = range.end;
-
-        if (delta.action === "insertText") {
-            if (start.row === row && start.column <= column) {
-                if (start.column === column && this.$insertRight) {
-                } else if (start.row === end.row) {
-                    column += end.column - start.column;
-                } else {
-                    column -= start.column;
-                    row += end.row - start.row;
-                }
-            } else if (start.row !== end.row && start.row < row) {
-                row += end.row - start.row;
-            }
-        } else if (delta.action === "insertLines") {
-            if (start.row <= row) {
-                row += end.row - start.row;
-            }
-        } else if (delta.action === "removeText") {
-            if (start.row === row && start.column < column) {
-                if (end.column >= column)
-                    column = start.column;
-                else
-                    column = Math.max(0, column - (end.column - start.column));
-
-            } else if (start.row !== end.row && start.row < row) {
-                if (end.row === row)
-                    column = Math.max(0, column - end.column) + start.column;
-                row -= (end.row - start.row);
-            } else if (end.row === row) {
-                row -= end.row - start.row;
-                column = Math.max(0, column - end.column) + start.column;
-            }
-        } else if (delta.action == "removeLines") {
-            if (start.row <= row) {
-                if (end.row <= row)
-                    row -= end.row - start.row;
-                else {
-                    row = start.row;
-                    column = 0;
-                }
-            }
-        }
-
-        this.setPosition(row, column, true);
+            
+        var point = $getTransformedPoint(delta, {row: this.row, column: this.column}, this.$insertRight);
+        this.setPosition(point.row, point.column, true);
     };
+    
+    function $pointsInOrder(point1, point2, equalPointsInOrder) {
+        var bColIsAfter = equalPointsInOrder ? point1.column <= point2.column : point1.column < point2.column;
+        return (point1.row < point2.row) || (point1.row == point2.row && bColIsAfter);
+    }
+            
+    function $getTransformedPoint(delta, point, moveIfEqual) {
+        var deltaIsInsert = delta.action == "insert";
+        var deltaRowShift = (deltaIsInsert ? 1 : -1) * (delta.end.row    - delta.start.row);
+        var deltaColShift = (deltaIsInsert ? 1 : -1) * (delta.end.column - delta.start.column);
+        var deltaStart = delta.start;
+        var deltaEnd = deltaIsInsert ? deltaStart : delta.end; // Collapse insert range.
+        if ($pointsInOrder(point, deltaStart, moveIfEqual)) {
+            return {
+                row: point.row,
+                column: point.column
+            };
+        }
+        if ($pointsInOrder(deltaEnd, point, !moveIfEqual)) {
+            return {
+                row: point.row + deltaRowShift,
+                column: point.column + (point.row == deltaEnd.row ? deltaColShift : 0)
+            };
+        }
+        
+        return {
+            row: deltaStart.row,
+            column: deltaStart.column
+        };
+    }
     this.setPosition = function(row, column, noClip) {
         var pos;
         if (noClip) {
@@ -2021,11 +987,430 @@ var Anchor = exports.Anchor = function(doc, row, column) {
 }).call(Anchor.prototype);
 
 });
-ace.define('ace/mode/css/csslint', ['require', 'exports', 'module' ], function(require, exports, module) {
+
+ace.define("ace/document",["require","exports","module","ace/lib/oop","ace/apply_delta","ace/lib/event_emitter","ace/range","ace/anchor"], function(require, exports, module) {
+"use strict";
+
+var oop = require("./lib/oop");
+var applyDelta = require("./apply_delta").applyDelta;
+var EventEmitter = require("./lib/event_emitter").EventEmitter;
+var Range = require("./range").Range;
+var Anchor = require("./anchor").Anchor;
+
+var Document = function(textOrLines) {
+    this.$lines = [""];
+    if (textOrLines.length === 0) {
+        this.$lines = [""];
+    } else if (Array.isArray(textOrLines)) {
+        this.insertMergedLines({row: 0, column: 0}, textOrLines);
+    } else {
+        this.insert({row: 0, column:0}, textOrLines);
+    }
+};
+
+(function() {
+
+    oop.implement(this, EventEmitter);
+    this.setValue = function(text) {
+        var len = this.getLength() - 1;
+        this.remove(new Range(0, 0, len, this.getLine(len).length));
+        this.insert({row: 0, column: 0}, text);
+    };
+    this.getValue = function() {
+        return this.getAllLines().join(this.getNewLineCharacter());
+    };
+    this.createAnchor = function(row, column) {
+        return new Anchor(this, row, column);
+    };
+    if ("aaa".split(/a/).length === 0) {
+        this.$split = function(text) {
+            return text.replace(/\r\n|\r/g, "\n").split("\n");
+        };
+    } else {
+        this.$split = function(text) {
+            return text.split(/\r\n|\r|\n/);
+        };
+    }
+
+
+    this.$detectNewLine = function(text) {
+        var match = text.match(/^.*?(\r\n|\r|\n)/m);
+        this.$autoNewLine = match ? match[1] : "\n";
+        this._signal("changeNewLineMode");
+    };
+    this.getNewLineCharacter = function() {
+        switch (this.$newLineMode) {
+          case "windows":
+            return "\r\n";
+          case "unix":
+            return "\n";
+          default:
+            return this.$autoNewLine || "\n";
+        }
+    };
+
+    this.$autoNewLine = "";
+    this.$newLineMode = "auto";
+    this.setNewLineMode = function(newLineMode) {
+        if (this.$newLineMode === newLineMode)
+            return;
+
+        this.$newLineMode = newLineMode;
+        this._signal("changeNewLineMode");
+    };
+    this.getNewLineMode = function() {
+        return this.$newLineMode;
+    };
+    this.isNewLine = function(text) {
+        return (text == "\r\n" || text == "\r" || text == "\n");
+    };
+    this.getLine = function(row) {
+        return this.$lines[row] || "";
+    };
+    this.getLines = function(firstRow, lastRow) {
+        return this.$lines.slice(firstRow, lastRow + 1);
+    };
+    this.getAllLines = function() {
+        return this.getLines(0, this.getLength());
+    };
+    this.getLength = function() {
+        return this.$lines.length;
+    };
+    this.getTextRange = function(range) {
+        return this.getLinesForRange(range).join(this.getNewLineCharacter());
+    };
+    this.getLinesForRange = function(range) {
+        var lines;
+        if (range.start.row === range.end.row) {
+            lines = [this.getLine(range.start.row).substring(range.start.column, range.end.column)];
+        } else {
+            lines = this.getLines(range.start.row, range.end.row);
+            lines[0] = (lines[0] || "").substring(range.start.column);
+            var l = lines.length - 1;
+            if (range.end.row - range.start.row == l)
+                lines[l] = lines[l].substring(0, range.end.column);
+        }
+        return lines;
+    };
+    this.insertLines = function(row, lines) {
+        console.warn("Use of document.insertLines is deprecated. Use the insertFullLines method instead.");
+        return this.insertFullLines(row, lines);
+    };
+    this.removeLines = function(firstRow, lastRow) {
+        console.warn("Use of document.removeLines is deprecated. Use the removeFullLines method instead.");
+        return this.removeFullLines(firstRow, lastRow);
+    };
+    this.insertNewLine = function(position) {
+        console.warn("Use of document.insertNewLine is deprecated. Use insertMergedLines(position, ['', '']) instead.");
+        return this.insertMergedLines(position, ["", ""]);
+    };
+    this.insert = function(position, text) {
+        if (this.getLength() <= 1)
+            this.$detectNewLine(text);
+        
+        return this.insertMergedLines(position, this.$split(text));
+    };
+    this.insertInLine = function(position, text) {
+        var start = this.clippedPos(position.row, position.column);
+        var end = this.pos(position.row, position.column + text.length);
+        
+        this.applyDelta({
+            start: start,
+            end: end,
+            action: "insert",
+            lines: [text]
+        }, true);
+        
+        return this.clonePos(end);
+    };
+    
+    this.clippedPos = function(row, column) {
+        var length = this.getLength();
+        if (row === undefined) {
+            row = length;
+        } else if (row < 0) {
+            row = 0;
+        } else if (row >= length) {
+            row = length - 1;
+            column = undefined;
+        }
+        var line = this.getLine(row);
+        if (column == undefined)
+            column = line.length;
+        column = Math.min(Math.max(column, 0), line.length);
+        return {row: row, column: column};
+    };
+    
+    this.clonePos = function(pos) {
+        return {row: pos.row, column: pos.column};
+    };
+    
+    this.pos = function(row, column) {
+        return {row: row, column: column};
+    };
+    
+    this.$clipPosition = function(position) {
+        var length = this.getLength();
+        if (position.row >= length) {
+            position.row = Math.max(0, length - 1);
+            position.column = this.getLine(length - 1).length;
+        } else {
+            position.row = Math.max(0, position.row);
+            position.column = Math.min(Math.max(position.column, 0), this.getLine(position.row).length);
+        }
+        return position;
+    };
+    this.insertFullLines = function(row, lines) {
+        row = Math.min(Math.max(row, 0), this.getLength());
+        var column = 0;
+        if (row < this.getLength()) {
+            lines = lines.concat([""]);
+            column = 0;
+        } else {
+            lines = [""].concat(lines);
+            row--;
+            column = this.$lines[row].length;
+        }
+        this.insertMergedLines({row: row, column: column}, lines);
+    };    
+    this.insertMergedLines = function(position, lines) {
+        var start = this.clippedPos(position.row, position.column);
+        var end = {
+            row: start.row + lines.length - 1,
+            column: (lines.length == 1 ? start.column : 0) + lines[lines.length - 1].length
+        };
+        
+        this.applyDelta({
+            start: start,
+            end: end,
+            action: "insert",
+            lines: lines
+        });
+        
+        return this.clonePos(end);
+    };
+    this.remove = function(range) {
+        var start = this.clippedPos(range.start.row, range.start.column);
+        var end = this.clippedPos(range.end.row, range.end.column);
+        this.applyDelta({
+            start: start,
+            end: end,
+            action: "remove",
+            lines: this.getLinesForRange({start: start, end: end})
+        });
+        return this.clonePos(start);
+    };
+    this.removeInLine = function(row, startColumn, endColumn) {
+        var start = this.clippedPos(row, startColumn);
+        var end = this.clippedPos(row, endColumn);
+        
+        this.applyDelta({
+            start: start,
+            end: end,
+            action: "remove",
+            lines: this.getLinesForRange({start: start, end: end})
+        }, true);
+        
+        return this.clonePos(start);
+    };
+    this.removeFullLines = function(firstRow, lastRow) {
+        firstRow = Math.min(Math.max(0, firstRow), this.getLength() - 1);
+        lastRow  = Math.min(Math.max(0, lastRow ), this.getLength() - 1);
+        var deleteFirstNewLine = lastRow == this.getLength() - 1 && firstRow > 0;
+        var deleteLastNewLine  = lastRow  < this.getLength() - 1;
+        var startRow = ( deleteFirstNewLine ? firstRow - 1                  : firstRow                    );
+        var startCol = ( deleteFirstNewLine ? this.getLine(startRow).length : 0                           );
+        var endRow   = ( deleteLastNewLine  ? lastRow + 1                   : lastRow                     );
+        var endCol   = ( deleteLastNewLine  ? 0                             : this.getLine(endRow).length ); 
+        var range = new Range(startRow, startCol, endRow, endCol);
+        var deletedLines = this.$lines.slice(firstRow, lastRow + 1);
+        
+        this.applyDelta({
+            start: range.start,
+            end: range.end,
+            action: "remove",
+            lines: this.getLinesForRange(range)
+        });
+        return deletedLines;
+    };
+    this.removeNewLine = function(row) {
+        if (row < this.getLength() - 1 && row >= 0) {
+            this.applyDelta({
+                start: this.pos(row, this.getLine(row).length),
+                end: this.pos(row + 1, 0),
+                action: "remove",
+                lines: ["", ""]
+            });
+        }
+    };
+    this.replace = function(range, text) {
+        if (!(range instanceof Range))
+            range = Range.fromPoints(range.start, range.end);
+        if (text.length === 0 && range.isEmpty())
+            return range.start;
+        if (text == this.getTextRange(range))
+            return range.end;
+
+        this.remove(range);
+        var end;
+        if (text) {
+            end = this.insert(range.start, text);
+        }
+        else {
+            end = range.start;
+        }
+        
+        return end;
+    };
+    this.applyDeltas = function(deltas) {
+        for (var i=0; i<deltas.length; i++) {
+            this.applyDelta(deltas[i]);
+        }
+    };
+    this.revertDeltas = function(deltas) {
+        for (var i=deltas.length-1; i>=0; i--) {
+            this.revertDelta(deltas[i]);
+        }
+    };
+    this.applyDelta = function(delta, doNotValidate) {
+        var isInsert = delta.action == "insert";
+        if (isInsert ? delta.lines.length <= 1 && !delta.lines[0]
+            : !Range.comparePoints(delta.start, delta.end)) {
+            return;
+        }
+        
+        if (isInsert && delta.lines.length > 20000)
+            this.$splitAndapplyLargeDelta(delta, 20000);
+        applyDelta(this.$lines, delta, doNotValidate);
+        this._signal("change", delta);
+    };
+    
+    this.$splitAndapplyLargeDelta = function(delta, MAX) {
+        var lines = delta.lines;
+        var l = lines.length;
+        var row = delta.start.row; 
+        var column = delta.start.column;
+        var from = 0, to = 0;
+        do {
+            from = to;
+            to += MAX - 1;
+            var chunk = lines.slice(from, to);
+            if (to > l) {
+                delta.lines = chunk;
+                delta.start.row = row + from;
+                delta.start.column = column;
+                break;
+            }
+            chunk.push("");
+            this.applyDelta({
+                start: this.pos(row + from, column),
+                end: this.pos(row + to, column = 0),
+                action: delta.action,
+                lines: chunk
+            }, true);
+        } while(true);
+    };
+    this.revertDelta = function(delta) {
+        this.applyDelta({
+            start: this.clonePos(delta.start),
+            end: this.clonePos(delta.end),
+            action: (delta.action == "insert" ? "remove" : "insert"),
+            lines: delta.lines.slice()
+        });
+    };
+    this.indexToPosition = function(index, startRow) {
+        var lines = this.$lines || this.getAllLines();
+        var newlineLength = this.getNewLineCharacter().length;
+        for (var i = startRow || 0, l = lines.length; i < l; i++) {
+            index -= lines[i].length + newlineLength;
+            if (index < 0)
+                return {row: i, column: index + lines[i].length + newlineLength};
+        }
+        return {row: l-1, column: lines[l-1].length};
+    };
+    this.positionToIndex = function(pos, startRow) {
+        var lines = this.$lines || this.getAllLines();
+        var newlineLength = this.getNewLineCharacter().length;
+        var index = 0;
+        var row = Math.min(pos.row, lines.length);
+        for (var i = startRow || 0; i < row; ++i)
+            index += lines[i].length + newlineLength;
+
+        return index + pos.column;
+    };
+
+}).call(Document.prototype);
+
+exports.Document = Document;
+});
+
+ace.define("ace/worker/mirror",["require","exports","module","ace/range","ace/document","ace/lib/lang"], function(require, exports, module) {
+"use strict";
+
+var Range = require("../range").Range;
+var Document = require("../document").Document;
+var lang = require("../lib/lang");
+    
+var Mirror = exports.Mirror = function(sender) {
+    this.sender = sender;
+    var doc = this.doc = new Document("");
+    
+    var deferredUpdate = this.deferredUpdate = lang.delayedCall(this.onUpdate.bind(this));
+    
+    var _self = this;
+    sender.on("change", function(e) {
+        var data = e.data;
+        if (data[0].start) {
+            doc.applyDeltas(data);
+        } else {
+            for (var i = 0; i < data.length; i += 2) {
+                if (Array.isArray(data[i+1])) {
+                    var d = {action: "insert", start: data[i], lines: data[i+1]};
+                } else {
+                    var d = {action: "remove", start: data[i], end: data[i+1]};
+                }
+                doc.applyDelta(d, true);
+            }
+        }
+        if (_self.$timeout)
+            return deferredUpdate.schedule(_self.$timeout);
+        _self.onUpdate();
+    });
+};
+
+(function() {
+    
+    this.$timeout = 500;
+    
+    this.setTimeout = function(timeout) {
+        this.$timeout = timeout;
+    };
+    
+    this.setValue = function(value) {
+        this.doc.setValue(value);
+        this.deferredUpdate.schedule(this.$timeout);
+    };
+    
+    this.getValue = function(callbackId) {
+        this.sender.callback(this.doc.getValue(), callbackId);
+    };
+    
+    this.onUpdate = function() {
+    };
+    
+    this.isPending = function() {
+        return this.deferredUpdate.isPending();
+    };
+    
+}).call(Mirror.prototype);
+
+});
+
+ace.define("ace/mode/css/csslint",["require","exports","module"], function(require, exports, module) {
 var parserlib = {};
 (function(){
 function EventTarget(){
-    this._listeners = {};    
+    this._listeners = {};
 }
 
 EventTarget.prototype = {
@@ -2036,7 +1421,7 @@ EventTarget.prototype = {
         }
 
         this._listeners[type].push(listener);
-    },    
+    },
     fire: function(event){
         if (typeof event == "string"){
             event = { type: event };
@@ -2044,17 +1429,17 @@ EventTarget.prototype = {
         if (typeof event.target != "undefined"){
             event.target = this;
         }
-        
+
         if (typeof event.type == "undefined"){
             throw new Error("Event object missing 'type' property.");
         }
-        
+
         if (this._listeners[event.type]){
             var listeners = this._listeners[event.type].concat();
             for (var i=0, len=listeners.length; i < len; i++){
                 listeners[i].call(this, event);
             }
-        }            
+        }
     },
     removeListener: function(type, listener){
         if (this._listeners[type]){
@@ -2065,9 +1450,9 @@ EventTarget.prototype = {
                     break;
                 }
             }
-            
-            
-        }            
+
+
+        }
     }
 };
 function StringReader(text){
@@ -2203,7 +1588,7 @@ SyntaxUnit.fromToken = function(token){
 SyntaxUnit.prototype = {
     constructor: SyntaxUnit,
     valueOf: function(){
-        return this.toString();
+        return this.text;
     },
     toString: function(){
         return this.text;
@@ -2216,7 +1601,7 @@ function TokenStreamBase(input, tokenData){
     this._tokenData = tokenData;
     this._lt = [];
     this._ltIndex = 0;
-    
+
     this._ltIndexCache = [];
 }
 TokenStreamBase.createTokenData = function(tokens){
@@ -2226,7 +1611,7 @@ TokenStreamBase.createTokenData = function(tokens){
         tokenData     = tokens.concat([]),
         i            = 0,
         len            = tokenData.length+1;
-    
+
     tokenData.UNKNOWN = -1;
     tokenData.unshift({name:"EOF"});
 
@@ -2237,29 +1622,29 @@ TokenStreamBase.createTokenData = function(tokens){
             typeMap[tokenData[i].text] = i;
         }
     }
-    
+
     tokenData.name = function(tt){
         return nameMap[tt];
     };
-    
+
     tokenData.type = function(c){
         return typeMap[c];
     };
-    
+
     return tokenData;
 };
 
 TokenStreamBase.prototype = {
-    constructor: TokenStreamBase,    
+    constructor: TokenStreamBase,
     match: function(tokenTypes, channel){
         if (!(tokenTypes instanceof Array)){
             tokenTypes = [tokenTypes];
         }
-                
+
         var tt  = this.get(channel),
             i   = 0,
             len = tokenTypes.length;
-            
+
         while(i < len){
             if (tt == tokenTypes[i++]){
                 return true;
@@ -2267,7 +1652,7 @@ TokenStreamBase.prototype = {
         }
         this.unget();
         return false;
-    },        
+    },
     mustMatch: function(tokenTypes, channel){
 
         var token;
@@ -2275,22 +1660,22 @@ TokenStreamBase.prototype = {
             tokenTypes = [tokenTypes];
         }
 
-        if (!this.match.apply(this, arguments)){    
+        if (!this.match.apply(this, arguments)){
             token = this.LT(1);
-            throw new SyntaxError("Expected " + this._tokenData[tokenTypes[0]].name + 
+            throw new SyntaxError("Expected " + this._tokenData[tokenTypes[0]].name +
                 " at line " + token.startLine + ", col " + token.startCol + ".", token.startLine, token.startCol);
         }
     },
     advance: function(tokenTypes, channel){
-        
+
         while(this.LA(0) !== 0 && !this.match(tokenTypes, channel)){
             this.get();
         }
 
-        return this.LA(0);    
-    },      
+        return this.LA(0);
+    },
     get: function(channel){
-    
+
         var tokenInfo   = this._tokenData,
             reader      = this._reader,
             value,
@@ -2299,8 +1684,8 @@ TokenStreamBase.prototype = {
             found       = false,
             token,
             info;
-        if (this._lt.length && this._ltIndex >= 0 && this._ltIndex < this._lt.length){  
-                           
+        if (this._lt.length && this._ltIndex >= 0 && this._ltIndex < this._lt.length){
+
             i++;
             this._token = this._lt[this._ltIndex++];
             info = tokenInfo[this._token.type];
@@ -2321,9 +1706,9 @@ TokenStreamBase.prototype = {
             token.channel = tokenInfo[token.type].channel;
             this._token = token;
             this._lt.push(token);
-            this._ltIndexCache.push(this._lt.length - this._ltIndex + i);  
+            this._ltIndexCache.push(this._lt.length - this._ltIndex + i);
             if (this._lt.length > 5){
-                this._lt.shift();                
+                this._lt.shift();
             }
             if (this._ltIndexCache.length > 5){
                 this._ltIndexCache.shift();
@@ -2331,8 +1716,8 @@ TokenStreamBase.prototype = {
             this._ltIndex = this._lt.length;
         }
         info = tokenInfo[token.type];
-        if (info && 
-                (info.hide || 
+        if (info &&
+                (info.hide ||
                 (info.channel !== undefined && channel !== info.channel))){
             return this.get(channel);
         } else {
@@ -2347,31 +1732,31 @@ TokenStreamBase.prototype = {
                 throw new Error("Too much lookahead.");
             }
             while(total){
-                tt = this.get();   
-                total--;                            
+                tt = this.get();
+                total--;
             }
             while(total < index){
                 this.unget();
                 total++;
             }
         } else if (index < 0){
-        
+
             if(this._lt[this._ltIndex+index]){
                 tt = this._lt[this._ltIndex+index].type;
             } else {
                 throw new Error("Too much lookbehind.");
             }
-        
+
         } else {
             tt = this._token.type;
         }
-        
+
         return tt;
-    
-    },    
+
+    },
     LT: function(index){
         this.LA(index);
-        return this._lt[this._ltIndex+index-1];    
+        return this._lt[this._ltIndex+index-1];
     },
     peek: function(){
         return this.LA(1);
@@ -2385,10 +1770,10 @@ TokenStreamBase.prototype = {
         } else {
             return this._tokenData[tokenType].name;
         }
-    },    
+    },
     tokenType: function(tokenName){
         return this._tokenData[tokenName] || -1;
-    },      
+    },
     unget: function(){
         if (this._ltIndexCache.length){
             this._ltIndex -= this._ltIndexCache.pop();//--;
@@ -2399,8 +1784,6 @@ TokenStreamBase.prototype = {
     }
 
 };
-
-
 
 
 parserlib.util = {
@@ -2417,7 +1800,6 @@ TokenStreamBase = parserlib.util.TokenStreamBase,
 StringReader = parserlib.util.StringReader,
 SyntaxError = parserlib.util.SyntaxError,
 SyntaxUnit  = parserlib.util.SyntaxUnit;
-
 
 var Colors = {
     aliceblue       :"#f0f8ff",
@@ -2445,6 +1827,7 @@ var Colors = {
     darkcyan        :"#008b8b",
     darkgoldenrod   :"#b8860b",
     darkgray        :"#a9a9a9",
+    darkgrey        :"#a9a9a9",
     darkgreen       :"#006400",
     darkkhaki       :"#bdb76b",
     darkmagenta     :"#8b008b",
@@ -2456,11 +1839,13 @@ var Colors = {
     darkseagreen    :"#8fbc8f",
     darkslateblue   :"#483d8b",
     darkslategray   :"#2f4f4f",
+    darkslategrey   :"#2f4f4f",
     darkturquoise   :"#00ced1",
     darkviolet      :"#9400d3",
     deeppink        :"#ff1493",
     deepskyblue     :"#00bfff",
     dimgray         :"#696969",
+    dimgrey         :"#696969",
     dodgerblue      :"#1e90ff",
     firebrick       :"#b22222",
     floralwhite     :"#fffaf0",
@@ -2471,6 +1856,7 @@ var Colors = {
     gold            :"#ffd700",
     goldenrod       :"#daa520",
     gray            :"#808080",
+    grey            :"#808080",
     green           :"#008000",
     greenyellow     :"#adff2f",
     honeydew        :"#f0fff0",
@@ -2488,12 +1874,14 @@ var Colors = {
     lightcyan       :"#e0ffff",
     lightgoldenrodyellow  :"#fafad2",
     lightgray       :"#d3d3d3",
+    lightgrey       :"#d3d3d3",
     lightgreen      :"#90ee90",
     lightpink       :"#ffb6c1",
     lightsalmon     :"#ffa07a",
     lightseagreen   :"#20b2aa",
     lightskyblue    :"#87cefa",
     lightslategray  :"#778899",
+    lightslategrey  :"#778899",
     lightsteelblue  :"#b0c4de",
     lightyellow     :"#ffffe0",
     lime            :"#00ff00",
@@ -2546,6 +1934,7 @@ var Colors = {
     skyblue         :"#87ceeb",
     slateblue       :"#6a5acd",
     slategray       :"#708090",
+    slategrey       :"#708090",
     snow            :"#fffafa",
     springgreen     :"#00ff7f",
     steelblue       :"#4682b4",
@@ -2570,6 +1959,7 @@ var Colors = {
     buttontext          :"Text on push buttons.",
     captiontext         :"Text in caption, size box, and scrollbar arrow box.",
     graytext            :"Grayed (disabled) text. This color is set to #000 if the current display driver does not support a solid gray color.",
+    greytext            :"Greyed (disabled) text. This color is set to #000 if the current display driver does not support a solid grey color.",
     highlight           :"Item(s) selected in a control.",
     highlighttext       :"Text of item(s) selected in a control.",
     inactiveborder      :"Inactive window border.",
@@ -2590,7 +1980,7 @@ var Colors = {
     windowtext          :"Text in windows."
 };
 function Combinator(text, line, col){
-    
+
     SyntaxUnit.call(this, text, line, col, Parser.COMBINATOR_TYPE);
     this.type = "unknown";
     if (/^\s+$/.test(text)){
@@ -2608,7 +1998,7 @@ function Combinator(text, line, col){
 Combinator.prototype = new SyntaxUnit();
 Combinator.prototype.constructor = Combinator;
 function MediaFeature(name, value){
-    
+
     SyntaxUnit.call(this, "(" + name + (value !== null ? ":" + value : "") + ")", name.startLine, name.startCol, Parser.MEDIA_FEATURE_TYPE);
     this.name = name;
     this.value = value;
@@ -2617,7 +2007,7 @@ function MediaFeature(name, value){
 MediaFeature.prototype = new SyntaxUnit();
 MediaFeature.prototype.constructor = MediaFeature;
 function MediaQuery(modifier, mediaType, features, line, col){
-    
+
     SyntaxUnit.call(this, (modifier ? modifier + " ": "") + (mediaType ? mediaType : "") + (mediaType && features.length > 0 ? " and " : "") + features.join(" and "), line, col, Parser.MEDIA_QUERY_TYPE);
     this.modifier = modifier;
     this.mediaType = mediaType;
@@ -2825,7 +2215,7 @@ Parser.prototype = function(){
                 this._readWhitespace();
 
                 tokenStream.mustMatch([Tokens.STRING, Tokens.URI]);
-                uri = tokenStream.token().value.replace(/(?:url\()?["']([^"']+)["']\)?/, "$1");
+                uri = tokenStream.token().value.replace(/^(?:url\()?["']?([^"']+?)["']?\)?$/, "$1");
 
                 this._readWhitespace();
 
@@ -2906,8 +2296,10 @@ Parser.prototype = function(){
                 while(true) {
                     if (tokenStream.peek() == Tokens.PAGE_SYM){
                         this._page();
-                    } else   if (tokenStream.peek() == Tokens.FONT_FACE_SYM){
+                    } else if (tokenStream.peek() == Tokens.FONT_FACE_SYM){
                         this._font_face();
+                    } else if (tokenStream.peek() == Tokens.VIEWPORT_SYM){
+                        this._viewport();
                     } else if (!this._ruleset()){
                         break;
                     }
@@ -3754,7 +3146,7 @@ Parser.prototype = function(){
                     value       = null,
                     operator    = null;
 
-                value = this._term();
+                value = this._term(inFunction);
                 if (value !== null){
 
                     values.push(value);
@@ -3764,11 +3156,11 @@ Parser.prototype = function(){
                         if (operator){
                             values.push(operator);
                         } /*else {
-							values.push(new PropertyValue(valueParts, valueParts[0].line, valueParts[0].col));
-							valueParts = [];
-						}*/
+                            values.push(new PropertyValue(valueParts, valueParts[0].line, valueParts[0].col));
+                            valueParts = [];
+                        }*/
 
-                        value = this._term();
+                        value = this._term(inFunction);
 
                         if (value === null){
                             break;
@@ -3781,11 +3173,12 @@ Parser.prototype = function(){
                 return values.length > 0 ? new PropertyValue(values, values[0].line, values[0].col) : null;
             },
 
-            _term: function(){
+            _term: function(inFunction){
 
                 var tokenStream = this._tokenStream,
                     unary       = null,
                     value       = null,
+                    endChar     = null,
                     token,
                     line,
                     col;
@@ -3801,6 +3194,18 @@ Parser.prototype = function(){
                         line = tokenStream.token().startLine;
                         col = tokenStream.token().startCol;
                     }
+                } else if (inFunction && tokenStream.match([Tokens.LPAREN, Tokens.LBRACE, Tokens.LBRACKET])){
+
+                    token = tokenStream.token();
+                    endChar = token.endChar;
+                    value = token.value + this._expr(inFunction).text;
+                    if (unary === null){
+                        line = tokenStream.token().startLine;
+                        col = tokenStream.token().startCol;
+                    }
+                    tokenStream.mustMatch(Tokens.type(endChar));
+                    value += endChar;
+                    this._readWhitespace();
                 } else if (tokenStream.match([Tokens.NUMBER, Tokens.PERCENTAGE, Tokens.LENGTH,
                         Tokens.ANGLE, Tokens.TIME,
                         Tokens.FREQ, Tokens.STRING, Tokens.IDENT, Tokens.URI, Tokens.UNICODE_RANGE])){
@@ -4198,44 +3603,52 @@ Parser.prototype = function(){
     return proto;
 }();
 var Properties = {
+    "align-items"                   : "flex-start | flex-end | center | baseline | stretch",
+    "align-content"                 : "flex-start | flex-end | center | space-between | space-around | stretch",
+    "align-self"                    : "auto | flex-start | flex-end | center | baseline | stretch",
+    "-webkit-align-items"           : "flex-start | flex-end | center | baseline | stretch",
+    "-webkit-align-content"         : "flex-start | flex-end | center | space-between | space-around | stretch",
+    "-webkit-align-self"            : "auto | flex-start | flex-end | center | baseline | stretch",
     "alignment-adjust"              : "auto | baseline | before-edge | text-before-edge | middle | central | after-edge | text-after-edge | ideographic | alphabetic | hanging | mathematical | <percentage> | <length>",
     "alignment-baseline"            : "baseline | use-script | before-edge | text-before-edge | after-edge | text-after-edge | central | middle | ideographic | alphabetic | hanging | mathematical",
     "animation"                     : 1,
     "animation-delay"               : { multi: "<time>", comma: true },
-    "animation-direction"           : { multi: "normal | alternate", comma: true },
+    "animation-direction"           : { multi: "normal | reverse | alternate | alternate-reverse", comma: true },
     "animation-duration"            : { multi: "<time>", comma: true },
+    "animation-fill-mode"           : { multi: "none | forwards | backwards | both", comma: true },
     "animation-iteration-count"     : { multi: "<number> | infinite", comma: true },
     "animation-name"                : { multi: "none | <ident>", comma: true },
     "animation-play-state"          : { multi: "running | paused", comma: true },
     "animation-timing-function"     : 1,
     "-moz-animation-delay"               : { multi: "<time>", comma: true },
-    "-moz-animation-direction"           : { multi: "normal | alternate", comma: true },
+    "-moz-animation-direction"           : { multi: "normal | reverse | alternate | alternate-reverse", comma: true },
     "-moz-animation-duration"            : { multi: "<time>", comma: true },
     "-moz-animation-iteration-count"     : { multi: "<number> | infinite", comma: true },
     "-moz-animation-name"                : { multi: "none | <ident>", comma: true },
     "-moz-animation-play-state"          : { multi: "running | paused", comma: true },
-    
+
     "-ms-animation-delay"               : { multi: "<time>", comma: true },
-    "-ms-animation-direction"           : { multi: "normal | alternate", comma: true },
+    "-ms-animation-direction"           : { multi: "normal | reverse | alternate | alternate-reverse", comma: true },
     "-ms-animation-duration"            : { multi: "<time>", comma: true },
     "-ms-animation-iteration-count"     : { multi: "<number> | infinite", comma: true },
     "-ms-animation-name"                : { multi: "none | <ident>", comma: true },
     "-ms-animation-play-state"          : { multi: "running | paused", comma: true },
-    
+
     "-webkit-animation-delay"               : { multi: "<time>", comma: true },
-    "-webkit-animation-direction"           : { multi: "normal | alternate", comma: true },
+    "-webkit-animation-direction"           : { multi: "normal | reverse | alternate | alternate-reverse", comma: true },
     "-webkit-animation-duration"            : { multi: "<time>", comma: true },
+    "-webkit-animation-fill-mode"           : { multi: "none | forwards | backwards | both", comma: true },
     "-webkit-animation-iteration-count"     : { multi: "<number> | infinite", comma: true },
     "-webkit-animation-name"                : { multi: "none | <ident>", comma: true },
     "-webkit-animation-play-state"          : { multi: "running | paused", comma: true },
-    
+
     "-o-animation-delay"               : { multi: "<time>", comma: true },
-    "-o-animation-direction"           : { multi: "normal | alternate", comma: true },
+    "-o-animation-direction"           : { multi: "normal | reverse | alternate | alternate-reverse", comma: true },
     "-o-animation-duration"            : { multi: "<time>", comma: true },
     "-o-animation-iteration-count"     : { multi: "<number> | infinite", comma: true },
     "-o-animation-name"                : { multi: "none | <ident>", comma: true },
-    "-o-animation-play-state"          : { multi: "running | paused", comma: true },        
-    
+    "-o-animation-play-state"          : { multi: "running | paused", comma: true },
+
     "appearance"                    : "icon | window | desktop | workspace | document | tooltip | dialog | button | push-button | hyperlink | radio-button | checkbox | menu-item | tab | menu | menubar | pull-down-menu | pop-up-menu | list-menu | radio-group | checkbox-group | outline-tree | range | field | combo-box | signature | password | normal | none | inherit",
     "azimuth"                       : function (expression) {
         var simple      = "<angle> | leftwards | rightwards | inherit",
@@ -4243,13 +3656,13 @@ var Properties = {
             behind      = false,
             valid       = false,
             part;
-        
+
         if (!ValidationTypes.isAny(expression, simple)) {
             if (ValidationTypes.isAny(expression, "behind")) {
                 behind = true;
                 valid = true;
             }
-            
+
             if (ValidationTypes.isAny(expression, direction)) {
                 valid = true;
                 if (!behind) {
@@ -4257,7 +3670,7 @@ var Properties = {
                 }
             }
         }
-        
+
         if (expression.hasNext()) {
             part = expression.next();
             if (valid) {
@@ -4265,7 +3678,7 @@ var Properties = {
             } else {
                 throw new ValidationError("Expected (<'azimuth'>) but found '" + part + "'.", part.line, part.col);
             }
-        }        
+        }
     },
     "backface-visibility"           : "visible | hidden",
     "background"                    : 1,
@@ -4298,19 +3711,19 @@ var Properties = {
     "border-image-outset"           : { multi: "<length> | <number>", max: 4 },
     "border-image-repeat"           : { multi: "stretch | repeat | round", max: 2 },
     "border-image-slice"            : function(expression) {
-        
+
         var valid   = false,
             numeric = "<number> | <percentage>",
             fill    = false,
             count   = 0,
             max     = 4,
             part;
-        
+
         if (ValidationTypes.isAny(expression, "fill")) {
             fill = true;
             valid = true;
         }
-        
+
         while (expression.hasNext() && count < max) {
             valid = ValidationTypes.isAny(expression, numeric);
             if (!valid) {
@@ -4318,14 +3731,14 @@ var Properties = {
             }
             count++;
         }
-        
-        
+
+
         if (!fill) {
             ValidationTypes.isAny(expression, "fill");
         } else {
             valid = true;
         }
-        
+
         if (expression.hasNext()) {
             part = expression.next();
             if (valid) {
@@ -4333,7 +3746,7 @@ var Properties = {
             } else {
                 throw new ValidationError("Expected ([<number> | <percentage>]{1,4} && fill?) but found '" + part + "'.", part.line, part.col);
             }
-        }         
+        }
     },
     "border-image-source"           : "<image> | none",
     "border-image-width"            : { multi: "<length> | <percentage> | <number> | auto", max: 4 },
@@ -4342,7 +3755,7 @@ var Properties = {
     "border-left-style"             : "<border-style>",
     "border-left-width"             : "<border-width>",
     "border-radius"                 : function(expression) {
-        
+
         var valid   = false,
             simple = "<length> | <percentage> | inherit",
             slash   = false,
@@ -4354,7 +3767,7 @@ var Properties = {
         while (expression.hasNext() && count < max) {
             valid = ValidationTypes.isAny(expression, simple);
             if (!valid) {
-            
+
                 if (expression.peek() == "/" && count > 0 && !slash) {
                     slash = true;
                     max = count + 5;
@@ -4365,7 +3778,7 @@ var Properties = {
             }
             count++;
         }
-        
+
         if (expression.hasNext()) {
             part = expression.next();
             if (valid) {
@@ -4373,7 +3786,7 @@ var Properties = {
             } else {
                 throw new ValidationError("Expected (<'border-radius'>) but found '" + part + "'.", part.line, part.col);
             }
-        }         
+        }
     },
     "border-right"                  : "<border-width> || <border-style> || <color>",
     "border-right-color"            : "<color> | inherit",
@@ -4388,27 +3801,36 @@ var Properties = {
     "border-top-style"              : "<border-style>",
     "border-top-width"              : "<border-width>",
     "border-width"                  : { multi: "<border-width>", max: 4 },
-    "bottom"                        : "<margin-width> | inherit", 
-    "box-align"                     : "start | end | center | baseline | stretch",        //http://www.w3.org/TR/2009/WD-css3-flexbox-20090723/
-    "box-decoration-break"          : "slice |clone",
-    "box-direction"                 : "normal | reverse | inherit",
-    "box-flex"                      : "<number>",
-    "box-flex-group"                : "<integer>",
-    "box-lines"                     : "single | multiple",
-    "box-ordinal-group"             : "<integer>",
-    "box-orient"                    : "horizontal | vertical | inline-axis | block-axis | inherit",
-    "box-pack"                      : "start | end | center | justify",
+    "bottom"                        : "<margin-width> | inherit",
+    "-moz-box-align"                : "start | end | center | baseline | stretch",
+    "-moz-box-decoration-break"     : "slice |clone",
+    "-moz-box-direction"            : "normal | reverse | inherit",
+    "-moz-box-flex"                 : "<number>",
+    "-moz-box-flex-group"           : "<integer>",
+    "-moz-box-lines"                : "single | multiple",
+    "-moz-box-ordinal-group"        : "<integer>",
+    "-moz-box-orient"               : "horizontal | vertical | inline-axis | block-axis | inherit",
+    "-moz-box-pack"                 : "start | end | center | justify",
+    "-webkit-box-align"             : "start | end | center | baseline | stretch",
+    "-webkit-box-decoration-break"  : "slice |clone",
+    "-webkit-box-direction"         : "normal | reverse | inherit",
+    "-webkit-box-flex"              : "<number>",
+    "-webkit-box-flex-group"        : "<integer>",
+    "-webkit-box-lines"             : "single | multiple",
+    "-webkit-box-ordinal-group"     : "<integer>",
+    "-webkit-box-orient"            : "horizontal | vertical | inline-axis | block-axis | inherit",
+    "-webkit-box-pack"              : "start | end | center | justify",
     "box-shadow"                    : function (expression) {
         var result      = false,
             part;
 
         if (!ValidationTypes.isAny(expression, "none")) {
-            Validation.multiProperty("<shadow>", expression, true, Infinity);                       
+            Validation.multiProperty("<shadow>", expression, true, Infinity);
         } else {
             if (expression.hasNext()) {
                 part = expression.next();
                 throw new ValidationError("Expected end of value but found '" + part + "'.", part.line, part.col);
-            }   
+            }
         }
     },
     "box-sizing"                    : "content-box | border-box | inherit",
@@ -4439,7 +3861,7 @@ var Properties = {
     "cue-before"                    : 1,
     "cursor"                        : 1,
     "direction"                     : "ltr | rtl | inherit",
-    "display"                       : "inline | block | list-item | inline-block | table | inline-table | table-row-group | table-header-group | table-footer-group | table-row | table-column-group | table-column | table-cell | table-caption | box | inline-box | grid | inline-grid | none | inherit | -moz-box | -moz-inline-block | -moz-inline-box | -moz-inline-grid | -moz-inline-stack | -moz-inline-table | -moz-grid | -moz-grid-group | -moz-grid-line | -moz-groupbox | -moz-deck | -moz-popup | -moz-stack | -moz-marker | -webkit-box | -webkit-inline-box",
+    "display"                       : "inline | block | list-item | inline-block | table | inline-table | table-row-group | table-header-group | table-footer-group | table-row | table-column-group | table-column | table-cell | table-caption | grid | inline-grid | none | inherit | -moz-box | -moz-inline-block | -moz-inline-box | -moz-inline-grid | -moz-inline-stack | -moz-inline-table | -moz-grid | -moz-grid-group | -moz-grid-line | -moz-groupbox | -moz-deck | -moz-popup | -moz-stack | -moz-marker | -webkit-box | -webkit-inline-box | -ms-flexbox | -ms-inline-flexbox | flex | -webkit-flex | inline-flex | -webkit-inline-flex",
     "dominant-baseline"             : 1,
     "drop-initial-after-adjust"     : "central | middle | after-edge | text-after-edge | ideographic | alphabetic | mathematical | <percentage> | <length>",
     "drop-initial-after-align"      : "baseline | use-script | before-edge | text-before-edge | after-edge | text-after-edge | central | middle | ideographic | alphabetic | hanging | mathematical",
@@ -4452,7 +3874,27 @@ var Properties = {
     "filter"                        : 1,
     "fit"                           : "fill | hidden | meet | slice",
     "fit-position"                  : 1,
-    "float"                         : "left | right | none | inherit",    
+    "flex"                          : "<flex>",
+    "flex-basis"                    : "<width>",
+    "flex-direction"                : "row | row-reverse | column | column-reverse",
+    "flex-flow"                     : "<flex-direction> || <flex-wrap>",
+    "flex-grow"                     : "<number>",
+    "flex-shrink"                   : "<number>",
+    "flex-wrap"                     : "nowrap | wrap | wrap-reverse",
+    "-webkit-flex"                  : "<flex>",
+    "-webkit-flex-basis"            : "<width>",
+    "-webkit-flex-direction"        : "row | row-reverse | column | column-reverse",
+    "-webkit-flex-flow"             : "<flex-direction> || <flex-wrap>",
+    "-webkit-flex-grow"             : "<number>",
+    "-webkit-flex-shrink"           : "<number>",
+    "-webkit-flex-wrap"             : "nowrap | wrap | wrap-reverse",
+    "-ms-flex"                      : "<flex>",
+    "-ms-flex-align"                : "start | end | center | stretch | baseline",
+    "-ms-flex-direction"            : "row | row-reverse | column | column-reverse | inherit",
+    "-ms-flex-order"                : "<number>",
+    "-ms-flex-pack"                 : "start | end | center | justify",
+    "-ms-flex-wrap"                 : "nowrap | wrap | wrap-reverse",
+    "float"                         : "left | right | none | inherit",
     "float-offset"                  : 1,
     "font"                          : 1,
     "font-family"                   : 1,
@@ -4476,7 +3918,7 @@ var Properties = {
     "grid-row-span"                 : "<integer>",
     "grid-row-sizing"               : 1,
     "hanging-punctuation"           : 1,
-    "height"                        : "<margin-width> | inherit",
+    "height"                        : "<margin-width> | <content-sizing> | inherit",
     "hyphenate-after"               : "<integer> | auto",
     "hyphenate-before"              : "<integer> | auto",
     "hyphenate-character"           : "<string> | auto",
@@ -4488,6 +3930,8 @@ var Properties = {
     "image-rendering"               : 1,
     "image-resolution"              : 1,
     "inline-box-align"              : "initial | last | <integer>",
+    "justify-content"               : "flex-start | flex-end | center | space-between | space-around",
+    "-webkit-justify-content"       : "flex-start | flex-end | center | space-between | space-around",
     "left"                          : "<margin-width> | inherit",
     "letter-spacing"                : "<length> | normal | inherit",
     "line-height"                   : "<number> | <length> | <percentage> | normal | inherit",
@@ -4513,10 +3957,10 @@ var Properties = {
     "marquee-play-count"            : 1,
     "marquee-speed"                 : 1,
     "marquee-style"                 : 1,
-    "max-height"                    : "<length> | <percentage> | none | inherit",
-    "max-width"                     : "<length> | <percentage> | none | inherit",
-    "min-height"                    : "<length> | <percentage> | inherit",
-    "min-width"                     : "<length> | <percentage> | inherit",
+    "max-height"                    : "<length> | <percentage> | <content-sizing> | none | inherit",
+    "max-width"                     : "<length> | <percentage> | <content-sizing> | none | inherit",
+    "min-height"                    : "<length> | <percentage> | <content-sizing> | contain-floats | -moz-contain-floats | -webkit-contain-floats | inherit",
+    "min-width"                     : "<length> | <percentage> | <content-sizing> | contain-floats | -moz-contain-floats | -webkit-contain-floats | inherit",
     "move-to"                       : 1,
     "nav-down"                      : 1,
     "nav-index"                     : 1,
@@ -4524,6 +3968,8 @@ var Properties = {
     "nav-right"                     : 1,
     "nav-up"                        : 1,
     "opacity"                       : "<number> | inherit",
+    "order"                         : "<integer>",
+    "-webkit-order"                 : "<integer>",
     "orphans"                       : "<integer> | inherit",
     "outline"                       : 1,
     "outline-color"                 : "<color> | invert | inherit",
@@ -4532,6 +3978,7 @@ var Properties = {
     "outline-width"                 : "<border-width> | inherit",
     "overflow"                      : "visible | hidden | scroll | auto | inherit",
     "overflow-style"                : 1,
+    "overflow-wrap"                 : "normal | break-word",
     "overflow-x"                    : 1,
     "overflow-y"                    : 1,
     "padding"                       : { multi: "<padding-width> | inherit", max: 4 },
@@ -4580,7 +4027,7 @@ var Properties = {
     "src"                           : 1,
     "stress"                        : 1,
     "string-set"                    : 1,
-    
+
     "table-layout"                  : "auto | fixed | inherit",
     "tab-size"                      : "<integer> | <length>",
     "target"                        : 1,
@@ -4601,6 +4048,8 @@ var Properties = {
     "text-transform"                : "capitalize | uppercase | lowercase | none | inherit",
     "text-wrap"                     : "normal | none | avoid",
     "top"                           : "<margin-width> | inherit",
+    "-ms-touch-action"              : "auto | none | pan-x | pan-y",
+    "touch-action"                  : "auto | none | pan-x | pan-y",
     "transform"                     : 1,
     "transform-origin"              : 1,
     "transform-style"               : 1,
@@ -4609,7 +4058,7 @@ var Properties = {
     "transition-duration"           : 1,
     "transition-property"           : 1,
     "transition-timing-function"    : 1,
-    "unicode-bidi"                  : "normal | embed | bidi-override | inherit",
+    "unicode-bidi"                  : "normal | embed | isolate | bidi-override | isolate-override | plaintext | inherit",
     "user-modify"                   : "read-only | read-write | write-only | inherit",
     "user-select"                   : "none | text | toggle | element | elements | all | inherit",
     "vertical-align"                : "auto | use-script | baseline | sub | super | top | text-top | central | middle | bottom | text-bottom | <percentage> | <length>",
@@ -4626,15 +4075,16 @@ var Properties = {
     "white-space"                   : "normal | pre | nowrap | pre-wrap | pre-line | inherit | -pre-wrap | -o-pre-wrap | -moz-pre-wrap | -hp-pre-wrap", //http://perishablepress.com/wrapping-content/
     "white-space-collapse"          : 1,
     "widows"                        : "<integer> | inherit",
-    "width"                         : "<length> | <percentage> | auto | inherit" ,
+    "width"                         : "<length> | <percentage> | <content-sizing> | auto | inherit",
     "word-break"                    : "normal | keep-all | break-all",
     "word-spacing"                  : "<length> | normal | inherit",
-    "word-wrap"                     : 1,
+    "word-wrap"                     : "normal | break-word",
+    "writing-mode"                  : "horizontal-tb | vertical-rl | vertical-lr | lr-tb | rl-tb | tb-rl | bt-rl | tb-lr | bt-lr | lr-bt | rl-bt | lr | rl | tb | inherit",
     "z-index"                       : "<integer> | auto | inherit",
     "zoom"                          : "<number> | <percentage> | normal"
 };
 function PropertyName(text, hack, line, col){
-    
+
     SyntaxUnit.call(this, text, line, col, Parser.PROPERTY_NAME_TYPE);
     this.hack = hack;
 
@@ -4649,7 +4099,7 @@ function PropertyValue(parts, line, col){
 
     SyntaxUnit.call(this, parts.join(" "), line, col, Parser.PROPERTY_VALUE_TYPE);
     this.parts = parts;
-    
+
 }
 
 PropertyValue.prototype = new SyntaxUnit();
@@ -4659,7 +4109,7 @@ function PropertyValueIterator(value){
     this._parts = value.parts;
     this._marks = [];
     this.value = value;
-    
+
 }
 PropertyValueIterator.prototype.count = function(){
     return this._parts.length;
@@ -4691,14 +4141,14 @@ function PropertyValuePart(text, line, col){
 
     SyntaxUnit.call(this, text, line, col, Parser.PROPERTY_VALUE_PART_TYPE);
     this.type = "unknown";
-    
+
     var temp;
     if (/^([+\-]?[\d\.]+)([a-z]+)$/i.test(text)){  //dimension
         this.type = "dimension";
         this.value = +RegExp.$1;
         this.units = RegExp.$2;
         switch(this.units.toLowerCase()){
-        
+
             case "em":
             case "rem":
             case "ex":
@@ -4711,36 +4161,34 @@ function PropertyValuePart(text, line, col){
             case "ch":
             case "vh":
             case "vw":
-            case "vm":
+            case "vmax":
+            case "vmin":
                 this.type = "length";
                 break;
-                
+
             case "deg":
             case "rad":
             case "grad":
                 this.type = "angle";
                 break;
-            
+
             case "ms":
             case "s":
                 this.type = "time";
                 break;
-            
+
             case "hz":
             case "khz":
                 this.type = "frequency";
                 break;
-            
+
             case "dpi":
             case "dpcm":
                 this.type = "resolution";
                 break;
-                
+
         }
-        
-    } else if (/^([+\-]?[\d\.]+)%$/i.test(text)){  //percentage
-        this.type = "percentage";
-        this.value = +RegExp.$1;
+
     } else if (/^([+\-]?[\d\.]+)%$/i.test(text)){  //percentage
         this.type = "percentage";
         this.value = +RegExp.$1;
@@ -4750,18 +4198,18 @@ function PropertyValuePart(text, line, col){
     } else if (/^([+\-]?[\d\.]+)$/i.test(text)){  //number
         this.type = "number";
         this.value = +RegExp.$1;
-    
+
     } else if (/^#([a-f0-9]{3,6})/i.test(text)){  //hexcolor
         this.type = "color";
         temp = RegExp.$1;
         if (temp.length == 3){
             this.red    = parseInt(temp.charAt(0)+temp.charAt(0),16);
             this.green  = parseInt(temp.charAt(1)+temp.charAt(1),16);
-            this.blue   = parseInt(temp.charAt(2)+temp.charAt(2),16);            
+            this.blue   = parseInt(temp.charAt(2)+temp.charAt(2),16);
         } else {
             this.red    = parseInt(temp.substring(0,2),16);
             this.green  = parseInt(temp.substring(2,4),16);
-            this.blue   = parseInt(temp.substring(4,6),16);            
+            this.blue   = parseInt(temp.substring(4,6),16);
         }
     } else if (/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i.test(text)){ //rgb() color with absolute numbers
         this.type   = "color";
@@ -4784,18 +4232,18 @@ function PropertyValuePart(text, line, col){
         this.red    = +RegExp.$1 * 255 / 100;
         this.green  = +RegExp.$2 * 255 / 100;
         this.blue   = +RegExp.$3 * 255 / 100;
-        this.alpha  = +RegExp.$4;        
+        this.alpha  = +RegExp.$4;
     } else if (/^hsl\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i.test(text)){ //hsl()
         this.type   = "color";
         this.hue    = +RegExp.$1;
         this.saturation = +RegExp.$2 / 100;
-        this.lightness  = +RegExp.$3 / 100;        
+        this.lightness  = +RegExp.$3 / 100;
     } else if (/^hsla\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*,\s*([\d\.]+)\s*\)/i.test(text)){ //hsla() color with percentages
         this.type   = "color";
         this.hue    = +RegExp.$1;
         this.saturation = +RegExp.$2 / 100;
-        this.lightness  = +RegExp.$3 / 100;        
-        this.alpha  = +RegExp.$4;        
+        this.lightness  = +RegExp.$3 / 100;
+        this.alpha  = +RegExp.$4;
     } else if (/^url\(["']?([^\)"']+)["']?\)/i.test(text)){ //URI
         this.type   = "uri";
         this.uri    = RegExp.$1;
@@ -4811,11 +4259,11 @@ function PropertyValuePart(text, line, col){
         temp        = Colors[text.toLowerCase()].substring(1);
         this.red    = parseInt(temp.substring(0,2),16);
         this.green  = parseInt(temp.substring(2,4),16);
-        this.blue   = parseInt(temp.substring(4,6),16);         
+        this.blue   = parseInt(temp.substring(4,6),16);
     } else if (/^[\,\/]$/.test(text)){
         this.type   = "operator";
         this.value  = text;
-    } else if (/^[a-z\-\u0080-\uFFFF][a-z0-9\-\u0080-\uFFFF]*$/i.test(text)){
+    } else if (/^[a-z\-_\u0080-\uFFFF][a-z0-9\-_\u0080-\uFFFF]*$/i.test(text)){
         this.type   = "identifier";
         this.value  = text;
     }
@@ -4841,7 +4289,7 @@ Pseudos.isElement = function(pseudo){
     return pseudo.indexOf("::") === 0 || Pseudos[pseudo.toLowerCase()] == Pseudos.ELEMENT;
 };
 function Selector(parts, line, col){
-    
+
     SyntaxUnit.call(this, parts.join(" "), line, col, Parser.SELECTOR_TYPE);
     this.parts = parts;
     this.specificity = Specificity.calculate(this);
@@ -4851,7 +4299,7 @@ function Selector(parts, line, col){
 Selector.prototype = new SyntaxUnit();
 Selector.prototype.constructor = Selector;
 function SelectorPart(elementName, modifiers, text, line, col){
-    
+
     SyntaxUnit.call(this, text, line, col, Parser.SELECTOR_PART_TYPE);
     this.elementName = elementName;
     this.modifiers = modifiers;
@@ -4861,7 +4309,7 @@ function SelectorPart(elementName, modifiers, text, line, col){
 SelectorPart.prototype = new SyntaxUnit();
 SelectorPart.prototype.constructor = SelectorPart;
 function SelectorSubPart(text, type, line, col){
-    
+
     SyntaxUnit.call(this, text, line, col, Parser.SELECTOR_SUB_PART_TYPE);
     this.type = type;
     this.args = [];
@@ -4882,7 +4330,7 @@ Specificity.prototype = {
     compare: function(other){
         var comps = ["a", "b", "c", "d"],
             i, len;
-            
+
         for (i=0, len=comps.length; i < len; i++){
             if (this[comps[i]] < other[comps[i]]){
                 return -1;
@@ -4890,7 +4338,7 @@ Specificity.prototype = {
                 return 1;
             }
         }
-        
+
         return 0;
     },
     valueOf: function(){
@@ -4906,17 +4354,17 @@ Specificity.calculate = function(selector){
     var i, len,
         part,
         b=0, c=0, d=0;
-        
+
     function updateValues(part){
-    
+
         var i, j, len, num,
             elementName = part.elementName ? part.elementName.text : "",
             modifier;
-    
+
         if (elementName && elementName.charAt(elementName.length-1) != "*") {
             d++;
-        }    
-    
+        }
+
         for (i=0, len=part.modifiers.length; i < len; i++){
             modifier = part.modifiers[i];
             switch(modifier.type){
@@ -4924,35 +4372,35 @@ Specificity.calculate = function(selector){
                 case "attribute":
                     c++;
                     break;
-                    
+
                 case "id":
                     b++;
                     break;
-                    
+
                 case "pseudo":
                     if (Pseudos.isElement(modifier.text)){
                         d++;
                     } else {
                         c++;
-                    }                    
+                    }
                     break;
-                    
+
                 case "not":
                     for (j=0, num=modifier.args.length; j < num; j++){
                         updateValues(modifier.args[j]);
                     }
-            }    
+            }
          }
     }
-    
+
     for (i=0, len=selector.parts.length; i < len; i++){
         part = selector.parts[i];
-        
+
         if (part instanceof SelectorPart){
-            updateValues(part);                
+            updateValues(part);
         }
     }
-    
+
     return new Specificity(0, b, c, d);
 };
 
@@ -4990,15 +4438,15 @@ function isIdentStart(c){
 }
 
 function mix(receiver, supplier){
-	for (var prop in supplier){
-		if (supplier.hasOwnProperty(prop)){
-			receiver[prop] = supplier[prop];
-		}
-	}
-	return receiver;
+    for (var prop in supplier){
+        if (supplier.hasOwnProperty(prop)){
+            receiver[prop] = supplier[prop];
+        }
+    }
+    return receiver;
 }
 function TokenStream(input){
-	TokenStreamBase.call(this, input, Tokens);
+    TokenStreamBase.call(this, input, Tokens);
 }
 
 TokenStream.prototype = mix(new TokenStreamBase(), {
@@ -5116,6 +4564,7 @@ TokenStream.prototype = mix(new TokenStreamBase(), {
             value:      value,
             type:       tt,
             channel:    options.channel,
+            endChar:    options.endChar,
             hide:       options.hide || false,
             startLine:  startLine,
             startCol:   startCol,
@@ -5136,7 +4585,7 @@ TokenStream.prototype = mix(new TokenStreamBase(), {
         tt = Tokens.type(rule.toLowerCase());
         if (tt == Tokens.CHAR || tt == Tokens.UNKNOWN){
             if (rule.length > 1){
-                tt = Tokens.UNKNOWN_SYM;                
+                tt = Tokens.UNKNOWN_SYM;
             } else {
                 tt = Tokens.CHAR;
                 rule = first;
@@ -5148,12 +4597,15 @@ TokenStream.prototype = mix(new TokenStreamBase(), {
     },
     charToken: function(c, startLine, startCol){
         var tt = Tokens.type(c);
+        var opts = {};
 
         if (tt == -1){
             tt = Tokens.CHAR;
+        } else {
+            opts.endChar = Tokens[tt].endChar;
         }
 
-        return this.createToken(tt, c, startLine, startCol);
+        return this.createToken(tt, c, startLine, startCol, opts);
     },
     commentToken: function(first, startLine, startCol){
         var reader  = this._reader,
@@ -5297,7 +4749,7 @@ TokenStream.prototype = mix(new TokenStreamBase(), {
             ident = this.readName(reader.read());
             value += ident;
 
-            if (/^em$|^ex$|^px$|^gd$|^rem$|^vw$|^vh$|^vm$|^ch$|^cm$|^mm$|^in$|^pt$|^pc$/i.test(ident)){
+            if (/^em$|^ex$|^px$|^gd$|^rem$|^vw$|^vh$|^vmax$|^vmin$|^ch$|^cm$|^mm$|^in$|^pt$|^pc$/i.test(ident)){
                 tt = Tokens.LENGTH;
             } else if (/^deg|^rad$|^grad$/i.test(ident)){
                 tt = Tokens.ANGLE;
@@ -5531,30 +4983,30 @@ TokenStream.prototype = mix(new TokenStreamBase(), {
 
         return ident;
     },
-    
+
     readEscape: function(first){
         var reader  = this._reader,
             cssEscape = first || "",
             i       = 0,
-            c       = reader.peek();    
-    
+            c       = reader.peek();
+
         if (isHexDigit(c)){
             do {
                 cssEscape += reader.read();
                 c = reader.peek();
             } while(c && isHexDigit(c) && ++i < 6);
         }
-        
+
         if (cssEscape.length == 3 && /\s/.test(c) ||
             cssEscape.length == 7 || cssEscape.length == 1){
                 reader.read();
         } else {
             c = "";
         }
-        
+
         return cssEscape + c;
     },
-    
+
     readComment: function(first){
         var reader  = this._reader,
             comment = first || "",
@@ -5579,7 +5031,6 @@ TokenStream.prototype = mix(new TokenStreamBase(), {
     }
 });
 
-
 var Tokens  = [
     { name: "CDO"},
     { name: "CDC"},
@@ -5599,7 +5050,7 @@ var Tokens  = [
     { name: "FONT_FACE_SYM", text: "@font-face"},
     { name: "CHARSET_SYM", text: "@charset"},
     { name: "NAMESPACE_SYM", text: "@namespace"},
-    { name: "VIEWPORT_SYM", text: "@viewport"},
+    { name: "VIEWPORT_SYM", text: ["@viewport", "@-ms-viewport"]},
     { name: "UNKNOWN_SYM" },
     { name: "KEYFRAMES_SYM", text: [ "@keyframes", "@-webkit-keyframes", "@-moz-keyframes", "@-o-keyframes" ] },
     { name: "IMPORTANT_SYM"},
@@ -5657,6 +5108,7 @@ var Tokens  = [
 
     {
         name: "LBRACE",
+        endChar: "}",
         text: "{"
     },
     {
@@ -5665,6 +5117,7 @@ var Tokens  = [
     },
     {
         name: "LBRACKET",
+        endChar: "]",
         text: "["
     },
     {
@@ -5686,6 +5139,7 @@ var Tokens  = [
 
     {
         name: "LPAREN",
+        endChar: ")",
         text: "("
     },
     {
@@ -5736,14 +5190,14 @@ var Validation = {
             expression  = new PropertyValueIterator(value),
             spec        = Properties[name],
             part,
-            valid,            
+            valid,
             j, count,
             msg,
             types,
             last,
             literals,
             max, multi, group;
-            
+
         if (!spec) {
             if (name.indexOf("-") !== 0){    //vendor prefixed are ok
                 throw new ValidationError("Unknown property '" + property + "'.", property.line, property.col);
@@ -5765,14 +5219,14 @@ var Validation = {
         }
 
     },
-    
+
     singleProperty: function(types, expression, max, partial) {
 
         var result      = false,
             value       = expression.value,
             count       = 0,
             part;
-         
+
         while (expression.hasNext() && count < max) {
             result = ValidationTypes.isAny(expression, types);
             if (!result) {
@@ -5780,21 +5234,21 @@ var Validation = {
             }
             count++;
         }
-        
+
         if (!result) {
             if (expression.hasNext() && !expression.isFirst()) {
                 part = expression.peek();
                 throw new ValidationError("Expected end of value but found '" + part + "'.", part.line, part.col);
             } else {
                  throw new ValidationError("Expected (" + types + ") but found '" + value + "'.", value.line, value.col);
-            }        
+            }
         } else if (expression.hasNext()) {
             part = expression.next();
             throw new ValidationError("Expected end of value but found '" + part + "'.", part.line, part.col);
-        }          
-                 
-    },    
-    
+        }
+
+    },
+
     multiProperty: function (types, expression, comma, max) {
 
         var result      = false,
@@ -5802,7 +5256,7 @@ var Validation = {
             count       = 0,
             sep         = false,
             part;
-            
+
         while(expression.hasNext() && !result && count < max) {
             if (ValidationTypes.isAny(expression, types)) {
                 count++;
@@ -5821,7 +5275,7 @@ var Validation = {
 
             }
         }
-        
+
         if (!result) {
             if (expression.hasNext() && !expression.isFirst()) {
                 part = expression.peek();
@@ -5829,19 +5283,19 @@ var Validation = {
             } else {
                 part = expression.previous();
                 if (comma && part == ",") {
-                    throw new ValidationError("Expected end of value but found '" + part + "'.", part.line, part.col); 
+                    throw new ValidationError("Expected end of value but found '" + part + "'.", part.line, part.col);
                 } else {
                     throw new ValidationError("Expected (" + types + ") but found '" + value + "'.", value.line, value.col);
                 }
             }
-        
+
         } else if (expression.hasNext()) {
             part = expression.next();
             throw new ValidationError("Expected end of value but found '" + part + "'.", part.line, part.col);
-        }  
+        }
 
     },
-    
+
     groupProperty: function (types, expression, comma) {
 
         var result      = false,
@@ -5851,7 +5305,7 @@ var Validation = {
             partial     = false,
             name,
             part;
-            
+
         while(expression.hasNext() && !result) {
             name = ValidationTypes.isAnyOfGroup(expression, types);
             if (name) {
@@ -5861,7 +5315,7 @@ var Validation = {
                     groups[name] = 1;
                     groups.count++;
                     partial = true;
-                    
+
                     if (groups.count == typeCount || !expression.hasNext()) {
                         result = true;
                     }
@@ -5870,8 +5324,8 @@ var Validation = {
                 break;
             }
         }
-        
-        if (!result) {        
+
+        if (!result) {
             if (partial && expression.hasNext()) {
                     part = expression.peek();
                     throw new ValidationError("Expected end of value but found '" + part + "'.", part.line, part.col);
@@ -5881,10 +5335,10 @@ var Validation = {
         } else if (expression.hasNext()) {
             part = expression.next();
             throw new ValidationError("Expected end of value but found '" + part + "'.", part.line, part.col);
-        }           
+        }
     }
 
-    
+
 
 };
 function ValidationError(message, line, col){
@@ -5900,47 +5354,47 @@ var ValidationTypes = {
         var text = part.text.toString().toLowerCase(),
             args = literals.split(" | "),
             i, len, found = false;
-        
+
         for (i=0,len=args.length; i < len && !found; i++){
             if (text == args[i].toLowerCase()){
                 found = true;
             }
         }
-        
-        return found;    
+
+        return found;
     },
-    
+
     isSimple: function(type) {
         return !!this.simple[type];
     },
-    
+
     isComplex: function(type) {
         return !!this.complex[type];
     },
     isAny: function (expression, types) {
         var args = types.split(" | "),
             i, len, found = false;
-        
+
         for (i=0,len=args.length; i < len && !found && expression.hasNext(); i++){
             found = this.isType(expression, args[i]);
         }
-        
-        return found;    
+
+        return found;
     },
     isAnyOfGroup: function(expression, types) {
         var args = types.split(" || "),
             i, len, found = false;
-        
+
         for (i=0,len=args.length; i < len && !found; i++){
             found = this.isType(expression, args[i]);
         }
-        
+
         return found ? args[i-1] : false;
     },
     isType: function (expression, type) {
         var part = expression.peek(),
             result = false;
-            
+
         if (type.charAt(0) != "<") {
             result = this.isLiteral(part, type);
             if (result) {
@@ -5954,49 +5408,49 @@ var ValidationTypes = {
         } else {
             result = this.complex[type](expression);
         }
-        
+
         return result;
     },
-    
-    
-    
+
+
+
     simple: {
 
         "<absolute-size>": function(part){
             return ValidationTypes.isLiteral(part, "xx-small | x-small | small | medium | large | x-large | xx-large");
         },
-        
+
         "<attachment>": function(part){
             return ValidationTypes.isLiteral(part, "scroll | fixed | local");
         },
-        
+
         "<attr>": function(part){
             return part.type == "function" && part.name == "attr";
         },
-                
+
         "<bg-image>": function(part){
             return this["<image>"](part) || this["<gradient>"](part) ||  part == "none";
-        },        
-        
+        },
+
         "<gradient>": function(part) {
             return part.type == "function" && /^(?:\-(?:ms|moz|o|webkit)\-)?(?:repeating\-)?(?:radial\-|linear\-)?gradient/i.test(part);
         },
-        
+
         "<box>": function(part){
             return ValidationTypes.isLiteral(part, "padding-box | border-box | content-box");
         },
-        
+
         "<content>": function(part){
             return part.type == "function" && part.name == "content";
-        },        
-        
+        },
+
         "<relative-size>": function(part){
             return ValidationTypes.isLiteral(part, "smaller | larger");
         },
         "<ident>": function(part){
             return part.type == "identifier";
         },
-        
+
         "<length>": function(part){
             if (part.type == "function" && /^(?:\-(?:ms|moz|o|webkit)\-)?calc/i.test(part)){
                 return true;
@@ -6004,35 +5458,35 @@ var ValidationTypes = {
                 return part.type == "length" || part.type == "number" || part.type == "integer" || part == "0";
             }
         },
-        
+
         "<color>": function(part){
             return part.type == "color" || part == "transparent";
         },
-        
+
         "<number>": function(part){
             return part.type == "number" || this["<integer>"](part);
         },
-        
+
         "<integer>": function(part){
             return part.type == "integer";
         },
-        
+
         "<line>": function(part){
             return part.type == "integer";
         },
-        
+
         "<angle>": function(part){
             return part.type == "angle";
-        },        
-        
+        },
+
         "<uri>": function(part){
             return part.type == "uri";
         },
-        
+
         "<image>": function(part){
             return this["<uri>"](part);
         },
-        
+
         "<percentage>": function(part){
             return part.type == "percentage" || part == "0";
         },
@@ -6040,28 +5494,56 @@ var ValidationTypes = {
         "<border-width>": function(part){
             return this["<length>"](part) || ValidationTypes.isLiteral(part, "thin | medium | thick");
         },
-        
+
         "<border-style>": function(part){
             return ValidationTypes.isLiteral(part, "none | hidden | dotted | dashed | solid | double | groove | ridge | inset | outset");
         },
-        
+
+        "<content-sizing>": function(part){ // http://www.w3.org/TR/css3-sizing/#width-height-keywords
+            return ValidationTypes.isLiteral(part, "fill-available | -moz-available | -webkit-fill-available | max-content | -moz-max-content | -webkit-max-content | min-content | -moz-min-content | -webkit-min-content | fit-content | -moz-fit-content | -webkit-fit-content");
+        },
+
         "<margin-width>": function(part){
             return this["<length>"](part) || this["<percentage>"](part) || ValidationTypes.isLiteral(part, "auto");
         },
-        
+
         "<padding-width>": function(part){
             return this["<length>"](part) || this["<percentage>"](part);
         },
-        
+
         "<shape>": function(part){
             return part.type == "function" && (part.name == "rect" || part.name == "inset-rect");
         },
-        
+
         "<time>": function(part) {
             return part.type == "time";
+        },
+
+        "<flex-grow>": function(part){
+            return this["<number>"](part);
+        },
+
+        "<flex-shrink>": function(part){
+            return this["<number>"](part);
+        },
+
+        "<width>": function(part){
+            return this["<margin-width>"](part);
+        },
+
+        "<flex-basis>": function(part){
+            return this["<width>"](part);
+        },
+
+        "<flex-direction>": function(part){
+            return ValidationTypes.isLiteral(part, "row | row-reverse | column | column-reverse");
+        },
+
+        "<flex-wrap>": function(part){
+            return ValidationTypes.isLiteral(part, "nowrap | wrap | wrap-reverse");
         }
     },
-    
+
     complex: {
 
         "<bg-position>": function(expression){
@@ -6119,7 +5601,7 @@ var ValidationTypes = {
                     }
                 }
             }
-            
+
             return result;
         },
 
@@ -6128,28 +5610,28 @@ var ValidationTypes = {
                 result  = false,
                 numeric = "<percentage> | <length> | auto",
                 part,
-                i, len;      
-      
+                i, len;
+
             if (ValidationTypes.isAny(expression, "cover | contain")) {
                 result = true;
             } else if (ValidationTypes.isAny(expression, numeric)) {
-                result = true;                
+                result = true;
                 ValidationTypes.isAny(expression, numeric);
             }
-            
+
             return result;
         },
-        
+
         "<repeat-style>": function(expression){
             var result  = false,
                 values  = "repeat | space | round | no-repeat",
                 part;
-            
+
             if (expression.hasNext()){
                 part = expression.next();
-                
+
                 if (ValidationTypes.isLiteral(part, "repeat-x | repeat-y")) {
-                    result = true;                    
+                    result = true;
                 } else if (ValidationTypes.isLiteral(part, values)) {
                     result = true;
 
@@ -6158,66 +5640,97 @@ var ValidationTypes = {
                     }
                 }
             }
-            
+
             return result;
-            
+
         },
-        
+
         "<shadow>": function(expression) {
             var result  = false,
                 count   = 0,
                 inset   = false,
                 color   = false,
                 part;
-                
-            if (expression.hasNext()) {            
-                
+
+            if (expression.hasNext()) {
+
                 if (ValidationTypes.isAny(expression, "inset")){
                     inset = true;
                 }
-                
+
                 if (ValidationTypes.isAny(expression, "<color>")) {
                     color = true;
-                }                
-                
+                }
+
                 while (ValidationTypes.isAny(expression, "<length>") && count < 4) {
                     count++;
                 }
-                
-                
+
+
                 if (expression.hasNext()) {
                     if (!color) {
                         ValidationTypes.isAny(expression, "<color>");
                     }
-                    
+
                     if (!inset) {
                         ValidationTypes.isAny(expression, "inset");
                     }
 
                 }
-                
+
                 result = (count >= 2 && count <= 4);
-            
+
             }
-            
+
             return result;
         },
-        
+
         "<x-one-radius>": function(expression) {
             var result  = false,
                 simple = "<length> | <percentage> | inherit";
-                
+
             if (ValidationTypes.isAny(expression, simple)){
                 result = true;
                 ValidationTypes.isAny(expression, simple);
-            }                
-            
+            }
+
+            return result;
+        },
+
+        "<flex>": function(expression) {
+            var part,
+                result = false;
+            if (ValidationTypes.isAny(expression, "none | inherit")) {
+                result = true;
+            } else {
+                if (ValidationTypes.isType(expression, "<flex-grow>")) {
+                    if (expression.peek()) {
+                        if (ValidationTypes.isType(expression, "<flex-shrink>")) {
+                            if (expression.peek()) {
+                                result = ValidationTypes.isType(expression, "<flex-basis>");
+                            } else {
+                                result = true;
+                            }
+                        } else if (ValidationTypes.isType(expression, "<flex-basis>")) {
+                            result = expression.peek() === null;
+                        }
+                    } else {
+                        result = true;
+                    }
+                } else if (ValidationTypes.isType(expression, "<flex-basis>")) {
+                    result = true;
+                }
+            }
+
+            if (!result) {
+                part = expression.peek();
+                throw new ValidationError("Expected (none | [ <flex-grow> <flex-shrink>? || <flex-basis> ]) but found '" + expression.value.text + "'.", part.line, part.col);
+            }
+
             return result;
         }
     }
 };
-
-
 
 parserlib.css = {
 Colors              :Colors,
@@ -6238,14 +5751,106 @@ ValidationError     :ValidationError
 };
 })();
 
-
-
-
 (function(){
 for(var prop in parserlib){
 exports[prop] = parserlib[prop];
 }
 })();
+
+
+function objectToString(o) {
+  return Object.prototype.toString.call(o);
+}
+var util = {
+  isArray: function (ar) {
+    return Array.isArray(ar) || (typeof ar === 'object' && objectToString(ar) === '[object Array]');
+  },
+  isDate: function (d) {
+    return typeof d === 'object' && objectToString(d) === '[object Date]';
+  },
+  isRegExp: function (re) {
+    return typeof re === 'object' && objectToString(re) === '[object RegExp]';
+  },
+  getRegExpFlags: function (re) {
+    var flags = '';
+    re.global && (flags += 'g');
+    re.ignoreCase && (flags += 'i');
+    re.multiline && (flags += 'm');
+    return flags;
+  }
+};
+
+
+if (typeof module === 'object')
+  module.exports = clone;
+
+function clone(parent, circular, depth, prototype) {
+  var allParents = [];
+  var allChildren = [];
+
+  var useBuffer = typeof Buffer != 'undefined';
+
+  if (typeof circular == 'undefined')
+    circular = true;
+
+  if (typeof depth == 'undefined')
+    depth = Infinity;
+  function _clone(parent, depth) {
+    if (parent === null)
+      return null;
+
+    if (depth == 0)
+      return parent;
+
+    var child;
+    if (typeof parent != 'object') {
+      return parent;
+    }
+
+    if (util.isArray(parent)) {
+      child = [];
+    } else if (util.isRegExp(parent)) {
+      child = new RegExp(parent.source, util.getRegExpFlags(parent));
+      if (parent.lastIndex) child.lastIndex = parent.lastIndex;
+    } else if (util.isDate(parent)) {
+      child = new Date(parent.getTime());
+    } else if (useBuffer && Buffer.isBuffer(parent)) {
+      child = new Buffer(parent.length);
+      parent.copy(child);
+      return child;
+    } else {
+      if (typeof prototype == 'undefined') child = Object.create(Object.getPrototypeOf(parent));
+      else child = Object.create(prototype);
+    }
+
+    if (circular) {
+      var index = allParents.indexOf(parent);
+
+      if (index != -1) {
+        return allChildren[index];
+      }
+      allParents.push(parent);
+      allChildren.push(child);
+    }
+
+    for (var i in parent) {
+      child[i] = _clone(parent[i], depth - 1);
+    }
+
+    return child;
+  }
+
+  return _clone(parent, depth);
+}
+clone.clonePrototype = function(parent) {
+  if (parent === null)
+    return null;
+
+  var c = function () {};
+  c.prototype = parent;
+  return new c();
+};
+
 var CSSLint = (function(){
 
     var rules           = [],
@@ -6253,7 +5858,7 @@ var CSSLint = (function(){
         embeddedRuleset = /\/\*csslint([^\*]*)\*\//,
         api             = new parserlib.util.EventTarget();
 
-    api.version = "0.10.0";
+    api.version = "@VERSION@";
     api.addRule = function(rule){
         rules.push(rule);
         rules[rule.id] = rule;
@@ -6327,20 +5932,20 @@ var CSSLint = (function(){
     };
     api.verify = function(text, ruleset){
 
-        var i       = 0,
-            len     = rules.length,
+        var i = 0,
             reporter,
             lines,
             report,
             parser = new parserlib.css.Parser({ starHack: true, ieFilters: true,
                                                 underscoreHack: true, strict: false });
-        lines = text.replace(/\n\r?/g, "$split$").split('$split$');
+        lines = text.replace(/\n\r?/g, "$split$").split("$split$");
 
         if (!ruleset){
             ruleset = this.getRuleset();
         }
 
         if (embeddedRuleset.test(text)){
+            ruleset = clone(ruleset);
             ruleset = applyEmbeddedRuleset(text, ruleset);
         }
 
@@ -6405,7 +6010,7 @@ Reporter.prototype = {
     },
     report: function(message, line, col, rule){
         this.messages.push({
-            type    : this.ruleset[rule.id] == 2 ? "error" : "warning",
+            type    : this.ruleset[rule.id] === 2 ? "error" : "warning",
             line    : line,
             col     : col,
             message : message,
@@ -6478,6 +6083,7 @@ CSSLint.Util = {
         }
     }
 };
+
 CSSLint.addRule({
     id: "adjoining-classes",
     name: "Disallow adjoining classes",
@@ -6497,11 +6103,11 @@ CSSLint.addRule({
                 selector = selectors[i];
                 for (j=0; j < selector.parts.length; j++){
                     part = selector.parts[j];
-                    if (part.type == parser.SELECTOR_PART_TYPE){
+                    if (part.type === parser.SELECTOR_PART_TYPE){
                         classCount = 0;
                         for (k=0; k < part.modifiers.length; k++){
                             modifier = part.modifiers[k];
-                            if (modifier.type == "class"){
+                            if (modifier.type === "class"){
                                 classCount++;
                             }
                             if (classCount > 1){
@@ -6548,13 +6154,13 @@ CSSLint.addRule({
 
         function endRule(){
             var prop, value;
-            
+
             if (!boxSizing) {
                 if (properties.height){
                     for (prop in heightProperties){
                         if (heightProperties.hasOwnProperty(prop) && properties[prop]){
                             value = properties[prop].value;
-                            if (!(prop == "padding" && value.parts.length === 2 && value.parts[0].value === 0)){
+                            if (!(prop === "padding" && value.parts.length === 2 && value.parts[0].value === 0)){
                                 reporter.report("Using height with " + prop + " can sometimes make elements larger than you expect.", properties[prop].line, properties[prop].col, rule);
                             }
                         }
@@ -6565,47 +6171,48 @@ CSSLint.addRule({
                     for (prop in widthProperties){
                         if (widthProperties.hasOwnProperty(prop) && properties[prop]){
                             value = properties[prop].value;
-                            
-                            if (!(prop == "padding" && value.parts.length === 2 && value.parts[1].value === 0)){
+
+                            if (!(prop === "padding" && value.parts.length === 2 && value.parts[1].value === 0)){
                                 reporter.report("Using width with " + prop + " can sometimes make elements larger than you expect.", properties[prop].line, properties[prop].col, rule);
                             }
                         }
                     }
-                }   
-            }     
+                }
+            }
         }
 
         parser.addListener("startrule", startRule);
         parser.addListener("startfontface", startRule);
         parser.addListener("startpage", startRule);
         parser.addListener("startpagemargin", startRule);
-        parser.addListener("startkeyframerule", startRule); 
+        parser.addListener("startkeyframerule", startRule);
 
         parser.addListener("property", function(event){
             var name = event.property.text.toLowerCase();
-            
+
             if (heightProperties[name] || widthProperties[name]){
-                if (!/^0\S*$/.test(event.value) && !(name == "border" && event.value == "none")){
+                if (!/^0\S*$/.test(event.value) && !(name === "border" && event.value.toString() === "none")){
                     properties[name] = { line: event.property.line, col: event.property.col, value: event.value };
                 }
             } else {
                 if (/^(width|height)/i.test(name) && /^(length|percentage)/.test(event.value.parts[0].type)){
                     properties[name] = 1;
-                } else if (name == "box-sizing") {
+                } else if (name === "box-sizing") {
                     boxSizing = true;
                 }
             }
-            
+
         });
 
         parser.addListener("endrule", endRule);
         parser.addListener("endfontface", endRule);
         parser.addListener("endpage", endRule);
         parser.addListener("endpagemargin", endRule);
-        parser.addListener("endkeyframerule", endRule);         
+        parser.addListener("endkeyframerule", endRule);
     }
 
 });
+
 CSSLint.addRule({
     id: "box-sizing",
     name: "Disallow use of box-sizing",
@@ -6617,14 +6224,15 @@ CSSLint.addRule({
 
         parser.addListener("property", function(event){
             var name = event.property.text.toLowerCase();
-   
-            if (name == "box-sizing"){
+
+            if (name === "box-sizing"){
                 reporter.report("The box-sizing property isn't supported in IE6 and IE7.", event.line, event.col, rule);
             }
-        });       
+        });
     }
 
 });
+
 CSSLint.addRule({
     id: "bulletproof-font-face",
     name: "Use the bulletproof @font-face syntax",
@@ -6632,12 +6240,11 @@ CSSLint.addRule({
     browsers: "All",
     init: function(parser, reporter){
         var rule = this,
-            count = 0,
             fontFaceRule = false,
             firstSrc     = true,
             ruleFailed    = false,
             line, col;
-        parser.addListener("startfontface", function(event){
+        parser.addListener("startfontface", function(){
             fontFaceRule = true;
         });
 
@@ -6650,7 +6257,7 @@ CSSLint.addRule({
                 value        = event.value.toString();
             line = event.line;
             col  = event.col;
-            if (propertyName === 'src') {
+            if (propertyName === "src") {
                 var regex = /^\s?url\(['"].+\.eot\?.*['"]\)\s*format\(['"]embedded-opentype['"]\).*$/i;
                 if (!value.match(regex) && firstSrc) {
                     ruleFailed = true;
@@ -6662,7 +6269,7 @@ CSSLint.addRule({
 
 
         });
-        parser.addListener("endfontface", function(event){
+        parser.addListener("endfontface", function(){
             fontFaceRule = false;
 
             if (ruleFailed) {
@@ -6670,7 +6277,8 @@ CSSLint.addRule({
             }
         });
     }
-}); 
+});
+
 CSSLint.addRule({
     id: "compatible-vendor-prefixes",
     name: "Require compatible vendor prefixes",
@@ -6752,15 +6360,15 @@ CSSLint.addRule({
         for (prop in compatiblePrefixes) {
             if (compatiblePrefixes.hasOwnProperty(prop)) {
                 variations = [];
-                prefixed = compatiblePrefixes[prop].split(' ');
+                prefixed = compatiblePrefixes[prop].split(" ");
                 for (i = 0, len = prefixed.length; i < len; i++) {
-                    variations.push('-' + prefixed[i] + '-' + prop);
+                    variations.push("-" + prefixed[i] + "-" + prop);
                 }
                 compatiblePrefixes[prop] = variations;
                 arrayPush.apply(applyTo, variations);
             }
         }
-                
+
         parser.addListener("startrule", function () {
             properties = [];
         });
@@ -6769,21 +6377,21 @@ CSSLint.addRule({
             inKeyFrame = event.prefix || true;
         });
 
-        parser.addListener("endkeyframes", function (event) {
+        parser.addListener("endkeyframes", function () {
             inKeyFrame = false;
         });
 
         parser.addListener("property", function (event) {
             var name = event.property;
             if (CSSLint.Util.indexOf(applyTo, name.text) > -1) {
-                if (!inKeyFrame || typeof inKeyFrame != "string" || 
+                if (!inKeyFrame || typeof inKeyFrame !== "string" ||
                         name.text.indexOf("-" + inKeyFrame + "-") !== 0) {
                     properties.push(name);
                 }
             }
         });
 
-        parser.addListener("endrule", function (event) {
+        parser.addListener("endrule", function () {
             if (!properties.length) {
                 return;
             }
@@ -6833,8 +6441,8 @@ CSSLint.addRule({
                         for (i = 0, len = full.length; i < len; i++) {
                             item = full[i];
                             if (CSSLint.Util.indexOf(actual, item) === -1) {
-                                propertiesSpecified = (actual.length === 1) ? actual[0] : (actual.length == 2) ? actual.join(" and ") : actual.join(", ");
-                                reporter.report("The property " + item + " is compatible with " + propertiesSpecified + " and should be included as well.", value.actualNodes[0].line, value.actualNodes[0].col, rule); 
+                                propertiesSpecified = (actual.length === 1) ? actual[0] : (actual.length === 2) ? actual.join(" and ") : actual.join(", ");
+                                reporter.report("The property " + item + " is compatible with " + propertiesSpecified + " and should be included as well.", value.actualNodes[0].line, value.actualNodes[0].col, rule);
                             }
                         }
 
@@ -6844,6 +6452,7 @@ CSSLint.addRule({
         });
     }
 });
+
 CSSLint.addRule({
     id: "display-property-grouping",
     name: "Require properties appropriate for display",
@@ -6873,12 +6482,12 @@ CSSLint.addRule({
 
         function reportProperty(name, display, msg){
             if (properties[name]){
-                if (typeof propertiesToCheck[name] != "string" || properties[name].value.toLowerCase() != propertiesToCheck[name]){
+                if (typeof propertiesToCheck[name] !== "string" || properties[name].value.toLowerCase() !== propertiesToCheck[name]){
                     reporter.report(msg || name + " can't be used with display: " + display + ".", properties[name].line, properties[name].col, rule);
                 }
             }
         }
-        
+
         function startRule(){
             properties = {};
         }
@@ -6894,7 +6503,7 @@ CSSLint.addRule({
                         reportProperty("width", display);
                         reportProperty("margin", display);
                         reportProperty("margin-top", display);
-                        reportProperty("margin-bottom", display);              
+                        reportProperty("margin-bottom", display);
                         reportProperty("float", display, "display:inline has no effect on floated elements (but may be used to fix the IE6 double-margin bug).");
                         break;
 
@@ -6917,7 +6526,7 @@ CSSLint.addRule({
                         }
                 }
             }
-          
+
         }
 
         parser.addListener("startrule", startRule);
@@ -6930,7 +6539,7 @@ CSSLint.addRule({
             var name = event.property.text.toLowerCase();
 
             if (propertiesToCheck[name]){
-                properties[name] = { value: event.value.text, line: event.property.line, col: event.property.col };                    
+                properties[name] = { value: event.value.text, line: event.property.line, col: event.property.col };
             }
         });
 
@@ -6943,6 +6552,7 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "duplicate-background-images",
     name: "Disallow duplicate background images",
@@ -6959,8 +6569,8 @@ CSSLint.addRule({
 
             if (name.match(/background/i)) {
                 for (i=0, len=value.parts.length; i < len; i++) {
-                    if (value.parts[i].type == 'uri') {
-                        if (typeof stack[value.parts[i].uri] === 'undefined') {
+                    if (value.parts[i].type === "uri") {
+                        if (typeof stack[value.parts[i].uri] === "undefined") {
                             stack[value.parts[i].uri] = event;
                         }
                         else {
@@ -6972,6 +6582,7 @@ CSSLint.addRule({
         });
     }
 });
+
 CSSLint.addRule({
     id: "duplicate-properties",
     name: "Disallow duplicate properties",
@@ -6980,35 +6591,36 @@ CSSLint.addRule({
     init: function(parser, reporter){
         var rule = this,
             properties,
-            lastProperty;            
-            
-        function startRule(event){
-            properties = {};        
+            lastProperty;
+
+        function startRule(){
+            properties = {};
         }
-        
+
         parser.addListener("startrule", startRule);
         parser.addListener("startfontface", startRule);
         parser.addListener("startpage", startRule);
         parser.addListener("startpagemargin", startRule);
-        parser.addListener("startkeyframerule", startRule);        
-        
+        parser.addListener("startkeyframerule", startRule);
+
         parser.addListener("property", function(event){
             var property = event.property,
                 name = property.text.toLowerCase();
-            
-            if (properties[name] && (lastProperty != name || properties[name] == event.value.text)){
+
+            if (properties[name] && (lastProperty !== name || properties[name] === event.value.text)){
                 reporter.report("Duplicate property '" + event.property + "' found.", event.line, event.col, rule);
             }
-            
+
             properties[name] = event.value.text;
             lastProperty = name;
-                        
+
         });
-            
-        
+
+
     }
 
 });
+
 CSSLint.addRule({
     id: "empty-rules",
     name: "Disallow empty rules",
@@ -7035,6 +6647,7 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "errors",
     name: "Parsing Errors",
@@ -7050,6 +6663,7 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "fallback-colors",
     name: "Require fallback colors",
@@ -7074,53 +6688,54 @@ CSSLint.addRule({
                 "background-color": 1
             },
             properties;
-        
-        function startRule(event){
-            properties = {};    
-            lastProperty = null;    
+
+        function startRule(){
+            properties = {};
+            lastProperty = null;
         }
-        
+
         parser.addListener("startrule", startRule);
         parser.addListener("startfontface", startRule);
         parser.addListener("startpage", startRule);
         parser.addListener("startpagemargin", startRule);
-        parser.addListener("startkeyframerule", startRule);        
-        
+        parser.addListener("startkeyframerule", startRule);
+
         parser.addListener("property", function(event){
             var property = event.property,
                 name = property.text.toLowerCase(),
                 parts = event.value.parts,
-                i = 0, 
+                i = 0,
                 colorType = "",
-                len = parts.length;                
-                        
+                len = parts.length;
+
             if(propertiesToCheck[name]){
                 while(i < len){
-                    if (parts[i].type == "color"){
+                    if (parts[i].type === "color"){
                         if ("alpha" in parts[i] || "hue" in parts[i]){
-                            
+
                             if (/([^\)]+)\(/.test(parts[i])){
                                 colorType = RegExp.$1.toUpperCase();
                             }
-                            
-                            if (!lastProperty || (lastProperty.property.text.toLowerCase() != name || lastProperty.colorType != "compat")){
+
+                            if (!lastProperty || (lastProperty.property.text.toLowerCase() !== name || lastProperty.colorType !== "compat")){
                                 reporter.report("Fallback " + name + " (hex or RGB) should precede " + colorType + " " + name + ".", event.line, event.col, rule);
                             }
                         } else {
                             event.colorType = "compat";
                         }
                     }
-                    
+
                     i++;
                 }
             }
 
             lastProperty = event;
-        });        
-         
+        });
+
     }
 
 });
+
 CSSLint.addRule({
     id: "floats",
     name: "Disallow too many floats",
@@ -7130,8 +6745,8 @@ CSSLint.addRule({
         var rule = this;
         var count = 0;
         parser.addListener("property", function(event){
-            if (event.property.text.toLowerCase() == "float" &&
-                    event.value.text.toLowerCase() != "none"){
+            if (event.property.text.toLowerCase() === "float" &&
+                    event.value.text.toLowerCase() !== "none"){
                 count++;
             }
         });
@@ -7144,6 +6759,7 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "font-faces",
     name: "Don't use too many web fonts",
@@ -7166,6 +6782,7 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "font-sizes",
     name: "Disallow too many font sizes",
@@ -7175,7 +6792,7 @@ CSSLint.addRule({
         var rule = this,
             count = 0;
         parser.addListener("property", function(event){
-            if (event.property == "font-size"){
+            if (event.property.toString() === "font-size"){
                 count++;
             }
         });
@@ -7188,6 +6805,7 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "gradients",
     name: "Require all gradient definitions",
@@ -7226,7 +6844,7 @@ CSSLint.addRule({
             if (!gradients.webkit){
                 missing.push("Webkit (Safari 5+, Chrome)");
             }
-            
+
             if (!gradients.oldWebkit){
                 missing.push("Old Webkit (Safari 4+, Chrome)");
             }
@@ -7235,8 +6853,8 @@ CSSLint.addRule({
                 missing.push("Opera 11.1+");
             }
 
-            if (missing.length && missing.length < 4){            
-                reporter.report("Missing vendor-prefixed CSS gradients for " + missing.join(", ") + ".", event.selectors[0].line, event.selectors[0].col, rule); 
+            if (missing.length && missing.length < 4){
+                reporter.report("Missing vendor-prefixed CSS gradients for " + missing.join(", ") + ".", event.selectors[0].line, event.selectors[0].col, rule);
             }
 
         });
@@ -7244,6 +6862,7 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "ids",
     name: "Disallow IDs in selectors",
@@ -7265,17 +6884,17 @@ CSSLint.addRule({
 
                 for (j=0; j < selector.parts.length; j++){
                     part = selector.parts[j];
-                    if (part.type == parser.SELECTOR_PART_TYPE){
+                    if (part.type === parser.SELECTOR_PART_TYPE){
                         for (k=0; k < part.modifiers.length; k++){
                             modifier = part.modifiers[k];
-                            if (modifier.type == "id"){
+                            if (modifier.type === "id"){
                                 idCount++;
                             }
                         }
                     }
                 }
 
-                if (idCount == 1){
+                if (idCount === 1){
                     reporter.report("Don't use IDs in selectors.", selector.line, selector.col, rule);
                 } else if (idCount > 1){
                     reporter.report(idCount + " IDs in the selector, really?", selector.line, selector.col, rule);
@@ -7286,6 +6905,7 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "import",
     name: "Disallow @import",
@@ -7293,14 +6913,15 @@ CSSLint.addRule({
     browsers: "All",
     init: function(parser, reporter){
         var rule = this;
-        
-        parser.addListener("import", function(event){        
+
+        parser.addListener("import", function(event){
             reporter.report("@import prevents parallel downloads, use <link> instead.", event.line, event.col, rule);
         });
 
     }
 
 });
+
 CSSLint.addRule({
     id: "important",
     name: "Disallow !important",
@@ -7324,6 +6945,7 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "known-properties",
     name: "Require use of known properties",
@@ -7333,7 +6955,6 @@ CSSLint.addRule({
         var rule = this;
 
         parser.addListener("property", function(event){
-            var name = event.property.text.toLowerCase();
             if (event.invalid) {
                 reporter.report(event.invalid.message, event.line, event.col, rule);
             }
@@ -7342,6 +6963,44 @@ CSSLint.addRule({
     }
 
 });
+CSSLint.addRule({
+    id: "order-alphabetical",
+    name: "Alphabetical order",
+    desc: "Assure properties are in alphabetical order",
+    browsers: "All",
+    init: function(parser, reporter){
+        var rule = this,
+            properties;
+
+        var startRule = function () {
+            properties = [];
+        };
+
+        parser.addListener("startrule", startRule);
+        parser.addListener("startfontface", startRule);
+        parser.addListener("startpage", startRule);
+        parser.addListener("startpagemargin", startRule);
+        parser.addListener("startkeyframerule", startRule);
+
+        parser.addListener("property", function(event){
+            var name = event.property.text,
+                lowerCasePrefixLessName = name.toLowerCase().replace(/^-.*?-/, "");
+
+            properties.push(lowerCasePrefixLessName);
+        });
+
+        parser.addListener("endrule", function(event){
+            var currentProperties = properties.join(","),
+                expectedProperties = properties.sort().join(",");
+
+            if (currentProperties !== expectedProperties){
+                reporter.report("Rule doesn't have all its properties in alphabetical ordered.", event.line, event.col, rule);
+            }
+        });
+    }
+
+});
+
 CSSLint.addRule({
     id: "outline-none",
     name: "Disallow outline: none",
@@ -7365,14 +7024,14 @@ CSSLint.addRule({
                 lastRule = null;
             }
         }
-        
-        function endRule(event){
+
+        function endRule(){
             if (lastRule){
                 if (lastRule.outline){
-                    if (lastRule.selectors.toString().toLowerCase().indexOf(":focus") == -1){
+                    if (lastRule.selectors.toString().toLowerCase().indexOf(":focus") === -1){
                         reporter.report("Outlines should only be modified using :focus.", lastRule.line, lastRule.col, rule);
-                    } else if (lastRule.propCount == 1) {
-                        reporter.report("Outlines shouldn't be hidden unless other visual changes are made.", lastRule.line, lastRule.col, rule);                        
+                    } else if (lastRule.propCount === 1) {
+                        reporter.report("Outlines shouldn't be hidden unless other visual changes are made.", lastRule.line, lastRule.col, rule);
                     }
                 }
             }
@@ -7382,30 +7041,31 @@ CSSLint.addRule({
         parser.addListener("startfontface", startRule);
         parser.addListener("startpage", startRule);
         parser.addListener("startpagemargin", startRule);
-        parser.addListener("startkeyframerule", startRule); 
+        parser.addListener("startkeyframerule", startRule);
 
         parser.addListener("property", function(event){
             var name = event.property.text.toLowerCase(),
-                value = event.value;                
-                
+                value = event.value;
+
             if (lastRule){
                 lastRule.propCount++;
-                if (name == "outline" && (value == "none" || value == "0")){
+                if (name === "outline" && (value.toString() === "none" || value.toString() === "0")){
                     lastRule.outline = true;
-                }            
+                }
             }
-            
+
         });
-        
+
         parser.addListener("endrule", endRule);
         parser.addListener("endfontface", endRule);
         parser.addListener("endpage", endRule);
         parser.addListener("endpagemargin", endRule);
-        parser.addListener("endkeyframerule", endRule); 
+        parser.addListener("endkeyframerule", endRule);
 
     }
 
 });
+
 CSSLint.addRule({
     id: "overqualified-elements",
     name: "Disallow overqualified elements",
@@ -7414,7 +7074,7 @@ CSSLint.addRule({
     init: function(parser, reporter){
         var rule = this,
             classes = {};
-            
+
         parser.addListener("startrule", function(event){
             var selectors = event.selectors,
                 selector,
@@ -7427,13 +7087,13 @@ CSSLint.addRule({
 
                 for (j=0; j < selector.parts.length; j++){
                     part = selector.parts[j];
-                    if (part.type == parser.SELECTOR_PART_TYPE){
+                    if (part.type === parser.SELECTOR_PART_TYPE){
                         for (k=0; k < part.modifiers.length; k++){
                             modifier = part.modifiers[k];
-                            if (part.elementName && modifier.type == "id"){
+                            if (part.elementName && modifier.type === "id"){
                                 reporter.report("Element (" + part + ") is overqualified, just use " + modifier + " without element name.", part.line, part.col, rule);
-                            } else if (modifier.type == "class"){
-                                
+                            } else if (modifier.type === "class"){
+
                                 if (!classes[modifier]){
                                     classes[modifier] = [];
                                 }
@@ -7444,21 +7104,22 @@ CSSLint.addRule({
                 }
             }
         });
-        
+
         parser.addListener("endstylesheet", function(){
-        
+
             var prop;
             for (prop in classes){
                 if (classes.hasOwnProperty(prop)){
-                    if (classes[prop].length == 1 && classes[prop][0].part.elementName){
+                    if (classes[prop].length === 1 && classes[prop][0].part.elementName){
                         reporter.report("Element (" + classes[prop][0].part + ") is overqualified, just use " + classes[prop][0].modifier + " without element name.", classes[prop][0].part.line, classes[prop][0].part.col, rule);
                     }
                 }
-            }        
+            }
         });
     }
 
 });
+
 CSSLint.addRule({
     id: "qualified-headings",
     name: "Disallow qualified headings",
@@ -7478,7 +7139,7 @@ CSSLint.addRule({
 
                 for (j=0; j < selector.parts.length; j++){
                     part = selector.parts[j];
-                    if (part.type == parser.SELECTOR_PART_TYPE){
+                    if (part.type === parser.SELECTOR_PART_TYPE){
                         if (part.elementName && /h[1-6]/.test(part.elementName.toString()) && j > 0){
                             reporter.report("Heading (" + part.elementName + ") should not be qualified.", part.line, part.col, rule);
                         }
@@ -7489,6 +7150,7 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "regex-selectors",
     name: "Disallow selectors that look like regexs",
@@ -7508,10 +7170,10 @@ CSSLint.addRule({
                 selector = selectors[i];
                 for (j=0; j < selector.parts.length; j++){
                     part = selector.parts[j];
-                    if (part.type == parser.SELECTOR_PART_TYPE){
+                    if (part.type === parser.SELECTOR_PART_TYPE){
                         for (k=0; k < part.modifiers.length; k++){
                             modifier = part.modifiers[k];
-                            if (modifier.type == "attribute"){
+                            if (modifier.type === "attribute"){
                                 if (/([\~\|\^\$\*]=)/.test(modifier)){
                                     reporter.report("Attribute selectors with " + RegExp.$1 + " are slow!", modifier.line, modifier.col, rule);
                                 }
@@ -7525,14 +7187,14 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "rules-count",
     name: "Rules Count",
     desc: "Track how many rules there are.",
     browsers: "All",
     init: function(parser, reporter){
-        var rule = this,
-            count = 0;
+        var count = 0;
         parser.addListener("startrule", function(){
             count++;
         });
@@ -7543,6 +7205,7 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "selector-max-approaching",
     name: "Warn when approaching the 4095 selector limit for IE",
@@ -7551,18 +7214,19 @@ CSSLint.addRule({
     init: function(parser, reporter) {
         var rule = this, count = 0;
 
-        parser.addListener('startrule', function(event) {
+        parser.addListener("startrule", function(event) {
             count += event.selectors.length;
         });
 
         parser.addListener("endstylesheet", function() {
             if (count >= 3800) {
-                reporter.report("You have " + count + " selectors. Internet Explorer supports a maximum of 4095 selectors per stylesheet. Consider refactoring.",0,0,rule); 
+                reporter.report("You have " + count + " selectors. Internet Explorer supports a maximum of 4095 selectors per stylesheet. Consider refactoring.",0,0,rule);
             }
         });
     }
 
 });
+
 CSSLint.addRule({
     id: "selector-max",
     name: "Error when past the 4095 selector limit for IE",
@@ -7571,18 +7235,55 @@ CSSLint.addRule({
     init: function(parser, reporter){
         var rule = this, count = 0;
 
-        parser.addListener('startrule',function(event) {
+        parser.addListener("startrule", function(event) {
             count += event.selectors.length;
         });
 
         parser.addListener("endstylesheet", function() {
             if (count > 4095) {
-                reporter.report("You have " + count + " selectors. Internet Explorer supports a maximum of 4095 selectors per stylesheet. Consider refactoring.",0,0,rule); 
+                reporter.report("You have " + count + " selectors. Internet Explorer supports a maximum of 4095 selectors per stylesheet. Consider refactoring.",0,0,rule);
             }
         });
     }
 
 });
+
+CSSLint.addRule({
+    id: "selector-newline",
+    name: "Disallow new-line characters in selectors",
+    desc: "New-line characters in selectors are usually a forgotten comma and not a descendant combinator.",
+    browsers: "All",
+    init: function(parser, reporter) {
+        var rule = this;
+
+        function startRule(event) {
+            var i, len, selector, p, n, pLen, part, part2, type, currentLine, nextLine,
+                selectors = event.selectors;
+
+            for (i = 0, len = selectors.length; i < len; i++) {
+                selector = selectors[i];
+                for (p = 0, pLen = selector.parts.length; p < pLen; p++) {
+                    for (n = p + 1; n < pLen; n++) {
+                        part = selector.parts[p];
+                        part2 = selector.parts[n];
+                        type = part.type;
+                        currentLine = part.line;
+                        nextLine = part2.line;
+
+                        if (type === "descendant" && nextLine > currentLine) {
+                            reporter.report("newline character found in selector (forgot a comma?)", currentLine, selectors[i].parts[0].col, rule);
+                        }
+                    }
+                }
+
+            }
+        }
+
+        parser.addListener("startrule", startRule);
+
+    }
+});
+
 CSSLint.addRule({
     id: "shorthand",
     name: "Require shorthand properties",
@@ -7605,7 +7306,7 @@ CSSLint.addRule({
                     "padding-bottom",
                     "padding-left",
                     "padding-right"
-                ]              
+                ]
             };
         for (prop in mapping){
             if (mapping.hasOwnProperty(prop)){
@@ -7614,33 +7315,32 @@ CSSLint.addRule({
                 }
             }
         }
-            
-        function startRule(event){
+
+        function startRule(){
             properties = {};
         }
         function endRule(event){
-            
+
             var prop, i, len, total;
             for (prop in mapping){
                 if (mapping.hasOwnProperty(prop)){
                     total=0;
-                    
+
                     for (i=0, len=mapping[prop].length; i < len; i++){
                         total += properties[mapping[prop][i]] ? 1 : 0;
                     }
-                    
-                    if (total == mapping[prop].length){
+
+                    if (total === mapping[prop].length){
                         reporter.report("The properties " + mapping[prop].join(", ") + " can be replaced by " + prop + ".", event.line, event.col, rule);
                     }
                 }
             }
-        }        
-        
+        }
+
         parser.addListener("startrule", startRule);
         parser.addListener("startfontface", startRule);
         parser.addListener("property", function(event){
-            var name = event.property.toString().toLowerCase(),
-                value = event.value.parts[0].value;
+            var name = event.property.toString().toLowerCase();
 
             if (propertiesToCheck[name]){
                 properties[name] = 1;
@@ -7648,11 +7348,12 @@ CSSLint.addRule({
         });
 
         parser.addListener("endrule", endRule);
-        parser.addListener("endfontface", endRule);     
+        parser.addListener("endfontface", endRule);
 
     }
 
 });
+
 CSSLint.addRule({
     id: "star-property-hack",
     name: "Disallow properties with a star prefix",
@@ -7663,12 +7364,13 @@ CSSLint.addRule({
         parser.addListener("property", function(event){
             var property = event.property;
 
-            if (property.hack == "*") {
+            if (property.hack === "*") {
                 reporter.report("Property with star prefix found.", event.property.line, event.property.col, rule);
             }
         });
     }
 });
+
 CSSLint.addRule({
     id: "text-indent",
     name: "Disallow negative text-indent",
@@ -7680,12 +7382,12 @@ CSSLint.addRule({
             direction;
 
 
-        function startRule(event){
+        function startRule(){
             textIndent = false;
             direction = "inherit";
         }
-        function endRule(event){
-            if (textIndent && direction != "ltr"){
+        function endRule(){
+            if (textIndent && direction !== "ltr"){
                 reporter.report("Negative text-indent doesn't work well with RTL. If you use text-indent for image replacement explicitly set direction for that item to ltr.", textIndent.line, textIndent.col, rule);
             }
         }
@@ -7696,9 +7398,9 @@ CSSLint.addRule({
             var name = event.property.toString().toLowerCase(),
                 value = event.value;
 
-            if (name == "text-indent" && value.parts[0].value < -99){
+            if (name === "text-indent" && value.parts[0].value < -99){
                 textIndent = event.property;
-            } else if (name == "direction" && value == "ltr"){
+            } else if (name === "direction" && value.toString() === "ltr"){
                 direction = "ltr";
             }
         });
@@ -7709,6 +7411,7 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "underscore-property-hack",
     name: "Disallow properties with an underscore prefix",
@@ -7719,12 +7422,13 @@ CSSLint.addRule({
         parser.addListener("property", function(event){
             var property = event.property;
 
-            if (property.hack == "_") {
+            if (property.hack === "_") {
                 reporter.report("Property with underscore prefix found.", event.property.line, event.property.col, rule);
             }
         });
     }
 });
+
 CSSLint.addRule({
     id: "unique-headings",
     name: "Headings should only be defined once",
@@ -7733,7 +7437,7 @@ CSSLint.addRule({
     init: function(parser, reporter){
         var rule = this;
 
-        var headings =  {
+        var headings = {
                 h1: 0,
                 h2: 0,
                 h3: 0,
@@ -7754,14 +7458,14 @@ CSSLint.addRule({
                 part = selector.parts[selector.parts.length-1];
 
                 if (part.elementName && /(h[1-6])/i.test(part.elementName.toString())){
-                    
+
                     for (j=0; j < part.modifiers.length; j++){
-                        if (part.modifiers[j].type == "pseudo"){
+                        if (part.modifiers[j].type === "pseudo"){
                             pseudo = true;
                             break;
                         }
                     }
-                
+
                     if (!pseudo){
                         headings[RegExp.$1]++;
                         if (headings[RegExp.$1] > 1) {
@@ -7771,11 +7475,11 @@ CSSLint.addRule({
                 }
             }
         });
-        
-        parser.addListener("endstylesheet", function(event){
+
+        parser.addListener("endstylesheet", function(){
             var prop,
                 messages = [];
-                
+
             for (prop in headings){
                 if (headings.hasOwnProperty(prop)){
                     if (headings[prop] > 1){
@@ -7783,14 +7487,15 @@ CSSLint.addRule({
                     }
                 }
             }
-            
+
             if (messages.length){
                 reporter.rollupWarn("You have " + messages.join(", ") + " defined in this stylesheet.", rule);
             }
-        });        
+        });
     }
 
 });
+
 CSSLint.addRule({
     id: "universal-selector",
     name: "Disallow universal selector",
@@ -7803,14 +7508,13 @@ CSSLint.addRule({
             var selectors = event.selectors,
                 selector,
                 part,
-                modifier,
-                i, j, k;
+                i;
 
             for (i=0; i < selectors.length; i++){
                 selector = selectors[i];
-                
+
                 part = selector.parts[selector.parts.length-1];
-                if (part.elementName == "*"){
+                if (part.elementName === "*"){
                     reporter.report(rule.desc, part.line, part.col, rule);
                 }
             }
@@ -7818,6 +7522,7 @@ CSSLint.addRule({
     }
 
 });
+
 CSSLint.addRule({
     id: "unqualified-attributes",
     name: "Disallow unqualified attribute selectors",
@@ -7827,31 +7532,32 @@ CSSLint.addRule({
         var rule = this;
 
         parser.addListener("startrule", function(event){
-            
+
             var selectors = event.selectors,
                 selector,
                 part,
                 modifier,
-                i, j, k;
+                i, k;
 
             for (i=0; i < selectors.length; i++){
                 selector = selectors[i];
-                
+
                 part = selector.parts[selector.parts.length-1];
-                if (part.type == parser.SELECTOR_PART_TYPE){
+                if (part.type === parser.SELECTOR_PART_TYPE){
                     for (k=0; k < part.modifiers.length; k++){
                         modifier = part.modifiers[k];
-                        if (modifier.type == "attribute" && (!part.elementName || part.elementName == "*")){
-                            reporter.report(rule.desc, part.line, part.col, rule);                               
+                        if (modifier.type === "attribute" && (!part.elementName || part.elementName === "*")){
+                            reporter.report(rule.desc, part.line, part.col, rule);
                         }
                     }
                 }
-                
-            }            
+
+            }
         });
     }
 
 });
+
 CSSLint.addRule({
     id: "vendor-prefix",
     name: "Require standard property with vendor prefix",
@@ -7867,71 +7573,67 @@ CSSLint.addRule({
                 "-webkit-border-top-right-radius": "border-top-right-radius",
                 "-webkit-border-bottom-left-radius": "border-bottom-left-radius",
                 "-webkit-border-bottom-right-radius": "border-bottom-right-radius",
-                
+
                 "-o-border-radius": "border-radius",
                 "-o-border-top-left-radius": "border-top-left-radius",
                 "-o-border-top-right-radius": "border-top-right-radius",
                 "-o-border-bottom-left-radius": "border-bottom-left-radius",
                 "-o-border-bottom-right-radius": "border-bottom-right-radius",
-                
+
                 "-moz-border-radius": "border-radius",
                 "-moz-border-radius-topleft": "border-top-left-radius",
                 "-moz-border-radius-topright": "border-top-right-radius",
                 "-moz-border-radius-bottomleft": "border-bottom-left-radius",
-                "-moz-border-radius-bottomright": "border-bottom-right-radius",                
-                
+                "-moz-border-radius-bottomright": "border-bottom-right-radius",
+
                 "-moz-column-count": "column-count",
                 "-webkit-column-count": "column-count",
-                
+
                 "-moz-column-gap": "column-gap",
                 "-webkit-column-gap": "column-gap",
-                
+
                 "-moz-column-rule": "column-rule",
                 "-webkit-column-rule": "column-rule",
-                
+
                 "-moz-column-rule-style": "column-rule-style",
                 "-webkit-column-rule-style": "column-rule-style",
-                
+
                 "-moz-column-rule-color": "column-rule-color",
                 "-webkit-column-rule-color": "column-rule-color",
-                
+
                 "-moz-column-rule-width": "column-rule-width",
                 "-webkit-column-rule-width": "column-rule-width",
-                
+
                 "-moz-column-width": "column-width",
                 "-webkit-column-width": "column-width",
-                
+
                 "-webkit-column-span": "column-span",
                 "-webkit-columns": "columns",
-                
+
                 "-moz-box-shadow": "box-shadow",
                 "-webkit-box-shadow": "box-shadow",
-                
+
                 "-moz-transform" : "transform",
                 "-webkit-transform" : "transform",
                 "-o-transform" : "transform",
                 "-ms-transform" : "transform",
-                
+
                 "-moz-transform-origin" : "transform-origin",
                 "-webkit-transform-origin" : "transform-origin",
                 "-o-transform-origin" : "transform-origin",
                 "-ms-transform-origin" : "transform-origin",
-                
+
                 "-moz-box-sizing" : "box-sizing",
-                "-webkit-box-sizing" : "box-sizing",
-                
-                "-moz-user-select" : "user-select",
-                "-khtml-user-select" : "user-select",
-                "-webkit-user-select" : "user-select"                
+                "-webkit-box-sizing" : "box-sizing"
             };
         function startRule(){
             properties = {};
-            num=1;        
+            num = 1;
         }
-        function endRule(event){
+        function endRule(){
             var prop,
-                i, len,
-                standard,
+                i,
+                len,
                 needed,
                 actual,
                 needsStandard = [];
@@ -7946,7 +7648,7 @@ CSSLint.addRule({
                 needed = needsStandard[i].needed;
                 actual = needsStandard[i].actual;
 
-                if (!properties[needed]){               
+                if (!properties[needed]){
                     reporter.report("Missing standard property '" + needed + "' to go along with '" + actual + "'.", properties[actual][0].name.line, properties[actual][0].name.col, rule);
                 } else {
                     if (properties[needed][0].pos < properties[actual][0].pos){
@@ -7955,13 +7657,13 @@ CSSLint.addRule({
                 }
             }
 
-        }        
-        
+        }
+
         parser.addListener("startrule", startRule);
         parser.addListener("startfontface", startRule);
         parser.addListener("startpage", startRule);
         parser.addListener("startpagemargin", startRule);
-        parser.addListener("startkeyframerule", startRule);         
+        parser.addListener("startkeyframerule", startRule);
 
         parser.addListener("property", function(event){
             var name = event.property.text.toLowerCase();
@@ -7977,10 +7679,11 @@ CSSLint.addRule({
         parser.addListener("endfontface", endRule);
         parser.addListener("endpage", endRule);
         parser.addListener("endpagemargin", endRule);
-        parser.addListener("endkeyframerule", endRule);         
+        parser.addListener("endkeyframerule", endRule);
     }
 
 });
+
 CSSLint.addRule({
     id: "zero-units",
     name: "Disallow units for 0 values",
@@ -7990,11 +7693,11 @@ CSSLint.addRule({
         var rule = this;
         parser.addListener("property", function(event){
             var parts = event.value.parts,
-                i = 0, 
+                i = 0,
                 len = parts.length;
 
             while(i < len){
-                if ((parts[i].units || parts[i].type == "percentage") && parts[i].value === 0 && parts[i].type != "time"){
+                if ((parts[i].units || parts[i].type === "percentage") && parts[i].value === 0 && parts[i].type !== "time"){
                     reporter.report("Values of 0 shouldn't have units specified.", parts[i].line, parts[i].col, rule);
                 }
                 i++;
@@ -8005,12 +7708,13 @@ CSSLint.addRule({
     }
 
 });
+
 (function() {
     var xmlEscape = function(str) {
         if (!str || str.constructor !== String) {
             return "";
         }
-        
+
         return str.replace(/[\"&><]/g, function(match) {
             switch (match) {
                 case "\"":
@@ -8020,7 +7724,7 @@ CSSLint.addRule({
                 case "<":
                     return "&lt;";
                 case ">":
-                    return "&gt;";            
+                    return "&gt;";
             }
         });
     };
@@ -8037,23 +7741,23 @@ CSSLint.addRule({
         readError: function(filename, message) {
             return "<file name=\"" + xmlEscape(filename) + "\"><error line=\"0\" column=\"0\" severty=\"error\" message=\"" + xmlEscape(message) + "\"></error></file>";
         },
-        formatResults: function(results, filename, options) {
+        formatResults: function(results, filename/*, options*/) {
             var messages = results.messages,
                 output = [];
             var generateSource = function(rule) {
-                if (!rule || !('name' in rule)) {
+                if (!rule || !("name" in rule)) {
                     return "";
                 }
-                return 'net.csslint.' + rule.name.replace(/\s/g,'');
+                return "net.csslint." + rule.name.replace(/\s/g,"");
             };
 
 
 
             if (messages.length > 0) {
                 output.push("<file name=\""+filename+"\">");
-                CSSLint.Util.forEach(messages, function (message, i) {
+                CSSLint.Util.forEach(messages, function (message) {
                     if (!message.rollup) {
-                      output.push("<error line=\"" + message.line + "\" column=\"" + message.col + "\" severity=\"" + message.type + "\"" +
+                        output.push("<error line=\"" + message.line + "\" column=\"" + message.col + "\" severity=\"" + message.type + "\"" +
                           " message=\"" + xmlEscape(message.message) + "\" source=\"" + generateSource(message.rule) +"\"/>");
                     }
                 });
@@ -8065,6 +7769,7 @@ CSSLint.addRule({
     });
 
 }());
+
 CSSLint.addFormatter({
     id: "compact",
     name: "Compact, 'porcelain' format",
@@ -8083,21 +7788,22 @@ CSSLint.addFormatter({
         };
 
         if (messages.length === 0) {
-            return options.quiet ? "" : filename + ": Lint Free!";
+              return options.quiet ? "" : filename + ": Lint Free!";
         }
 
-        CSSLint.Util.forEach(messages, function(message, i) {
+        CSSLint.Util.forEach(messages, function(message) {
             if (message.rollup) {
                 output += filename + ": " + capitalize(message.type) + " - " + message.message + "\n";
             } else {
-                output += filename + ": " + "line " + message.line + 
-                    ", col " + message.col + ", " + capitalize(message.type) + " - " + message.message + "\n";
+                output += filename + ": " + "line " + message.line +
+                    ", col " + message.col + ", " + capitalize(message.type) + " - " + message.message + " (" + message.rule.id + ")\n";
             }
         });
-    
+
         return output;
     }
 });
+
 CSSLint.addFormatter({
     id: "csslint-xml",
     name: "CSSLint XML format",
@@ -8107,7 +7813,7 @@ CSSLint.addFormatter({
     endFormat: function(){
         return "</csslint>";
     },
-    formatResults: function(results, filename, options) {
+    formatResults: function(results, filename/*, options*/) {
         var messages = results.messages,
             output = [];
         var escapeSpecialCharacters = function(str) {
@@ -8119,7 +7825,7 @@ CSSLint.addFormatter({
 
         if (messages.length > 0) {
             output.push("<file name=\""+filename+"\">");
-            CSSLint.Util.forEach(messages, function (message, i) {
+            CSSLint.Util.forEach(messages, function (message) {
                 if (message.rollup) {
                     output.push("<issue severity=\"" + message.type + "\" reason=\"" + escapeSpecialCharacters(message.message) + "\" evidence=\"" + escapeSpecialCharacters(message.evidence) + "\"/>");
                 } else {
@@ -8133,6 +7839,7 @@ CSSLint.addFormatter({
         return output.join("");
     }
 });
+
 CSSLint.addFormatter({
     id: "junit-xml",
     name: "JUNIT XML format",
@@ -8142,19 +7849,19 @@ CSSLint.addFormatter({
     endFormat: function() {
         return "</testsuites>";
     },
-    formatResults: function(results, filename, options) {
+    formatResults: function(results, filename/*, options*/) {
 
         var messages = results.messages,
             output = [],
             tests = {
-                'error': 0,
-                'failure': 0
+                "error": 0,
+                "failure": 0
             };
         var generateSource = function(rule) {
-            if (!rule || !('name' in rule)) {
+            if (!rule || !("name" in rule)) {
                 return "";
             }
-            return 'net.csslint.' + rule.name.replace(/\s/g,'');
+            return "net.csslint." + rule.name.replace(/\s/g,"");
         };
         var escapeSpecialCharacters = function(str) {
 
@@ -8168,11 +7875,11 @@ CSSLint.addFormatter({
 
         if (messages.length > 0) {
 
-            messages.forEach(function (message, i) {
-                var type = message.type === 'warning' ? 'error' : message.type;
+            messages.forEach(function (message) {
+                var type = message.type === "warning" ? "error" : message.type;
                 if (!message.rollup) {
                     output.push("<testcase time=\"0\" name=\"" + generateSource(message.rule) + "\">");
-                    output.push("<" + type + " message=\"" + escapeSpecialCharacters(message.message) + "\"><![CDATA[" + message.line + ':' + message.col + ':' + escapeSpecialCharacters(message.evidence)  + "]]></" + type + ">");
+                    output.push("<" + type + " message=\"" + escapeSpecialCharacters(message.message) + "\"><![CDATA[" + message.line + ":" + message.col + ":" + escapeSpecialCharacters(message.evidence)  + "]]></" + type + ">");
                     output.push("</testcase>");
 
                     tests[type] += 1;
@@ -8190,6 +7897,7 @@ CSSLint.addFormatter({
 
     }
 });
+
 CSSLint.addFormatter({
     id: "lint-xml",
     name: "Lint XML format",
@@ -8199,7 +7907,7 @@ CSSLint.addFormatter({
     endFormat: function(){
         return "</lint>";
     },
-    formatResults: function(results, filename, options) {
+    formatResults: function(results, filename/*, options*/) {
         var messages = results.messages,
             output = [];
         var escapeSpecialCharacters = function(str) {
@@ -8210,9 +7918,9 @@ CSSLint.addFormatter({
         };
 
         if (messages.length > 0) {
-        
+
             output.push("<file name=\""+filename+"\">");
-            CSSLint.Util.forEach(messages, function (message, i) {
+            CSSLint.Util.forEach(messages, function (message) {
                 if (message.rollup) {
                     output.push("<issue severity=\"" + message.type + "\" reason=\"" + escapeSpecialCharacters(message.message) + "\" evidence=\"" + escapeSpecialCharacters(message.evidence) + "\"/>");
                 } else {
@@ -8226,6 +7934,7 @@ CSSLint.addFormatter({
         return output.join("");
     }
 });
+
 CSSLint.addFormatter({
     id: "text",
     name: "Plain Text",
@@ -8244,12 +7953,19 @@ CSSLint.addFormatter({
             return options.quiet ? "" : "\n\ncsslint: No errors in " + filename + ".";
         }
 
-        output = "\n\ncsslint: There are " + messages.length  +  " problems in " + filename + ".";
+        output = "\n\ncsslint: There ";
+        if (messages.length === 1) {
+            output += "is 1 problem";
+        } else {
+            output += "are " + messages.length  +  " problems";
+        }
+        output += " in " + filename + ".";
+
         var pos = filename.lastIndexOf("/"),
             shortFilename = filename;
 
         if (pos === -1){
-            pos = filename.lastIndexOf("\\");       
+            pos = filename.lastIndexOf("\\");
         }
         if (pos > -1){
             shortFilename = filename.substring(pos+1);
@@ -8266,58 +7982,779 @@ CSSLint.addFormatter({
                 output += "\n" + message.evidence;
             }
         });
-    
+
         return output;
     }
 });
 
-exports.CSSLint = CSSLint;
+module.exports.CSSLint = CSSLint;
 
-});ace.define('ace/worker/mirror', ['require', 'exports', 'module' , 'ace/document', 'ace/lib/lang'], function(require, exports, module) {
+});
 
+ace.define("ace/mode/css_worker",["require","exports","module","ace/lib/oop","ace/lib/lang","ace/worker/mirror","ace/mode/css/csslint"], function(require, exports, module) {
+"use strict";
 
-var Document = require("../document").Document;
+var oop = require("../lib/oop");
 var lang = require("../lib/lang");
-    
-var Mirror = exports.Mirror = function(sender) {
-    this.sender = sender;
-    var doc = this.doc = new Document("");
-    
-    var deferredUpdate = this.deferredUpdate = lang.delayedCall(this.onUpdate.bind(this));
-    
-    var _self = this;
-    sender.on("change", function(e) {
-        doc.applyDeltas(e.data);
-        if (_self.$timeout)
-            return deferredUpdate.schedule(_self.$timeout);
-        _self.onUpdate();
-    });
+var Mirror = require("../worker/mirror").Mirror;
+var CSSLint = require("./css/csslint").CSSLint;
+
+var Worker = exports.Worker = function(sender) {
+    Mirror.call(this, sender);
+    this.setTimeout(400);
+    this.ruleset = null;
+    this.setDisabledRules("ids|order-alphabetical");
+    this.setInfoRules(
+      "adjoining-classes|qualified-headings|zero-units|gradients|" +
+      "import|outline-none|vendor-prefix"
+    );
 };
 
+oop.inherits(Worker, Mirror);
+
 (function() {
-    
-    this.$timeout = 500;
-    
-    this.setTimeout = function(timeout) {
-        this.$timeout = timeout;
+    this.setInfoRules = function(ruleNames) {
+        if (typeof ruleNames == "string")
+            ruleNames = ruleNames.split("|");
+        this.infoRules = lang.arrayToMap(ruleNames);
+        this.doc.getValue() && this.deferredUpdate.schedule(100);
     };
-    
-    this.setValue = function(value) {
-        this.doc.setValue(value);
-        this.deferredUpdate.schedule(this.$timeout);
+
+    this.setDisabledRules = function(ruleNames) {
+        if (!ruleNames) {
+            this.ruleset = null;
+        } else {
+            if (typeof ruleNames == "string")
+                ruleNames = ruleNames.split("|");
+            var all = {};
+
+            CSSLint.getRules().forEach(function(x){
+                all[x.id] = true;
+            });
+            ruleNames.forEach(function(x) {
+                delete all[x];
+            });
+            
+            this.ruleset = all;
+        }
+        this.doc.getValue() && this.deferredUpdate.schedule(100);
     };
-    
-    this.getValue = function(callbackId) {
-        this.sender.callback(this.doc.getValue(), callbackId);
-    };
-    
+
     this.onUpdate = function() {
+        var value = this.doc.getValue();
+        if (!value)
+            return this.sender.emit("annotate", []);
+        var infoRules = this.infoRules;
+
+        var result = CSSLint.verify(value, this.ruleset);
+        this.sender.emit("annotate", result.messages.map(function(msg) {
+            return {
+                row: msg.line - 1,
+                column: msg.col - 1,
+                text: msg.message,
+                type: infoRules[msg.rule.id] ? "info" : msg.type,
+                rule: msg.rule.name
+            }
+        }));
     };
-    
-    this.isPending = function() {
-        return this.deferredUpdate.isPending();
+
+}).call(Worker.prototype);
+
+});
+
+ace.define("ace/lib/es5-shim",["require","exports","module"], function(require, exports, module) {
+
+function Empty() {}
+
+if (!Function.prototype.bind) {
+    Function.prototype.bind = function bind(that) { // .length is 1
+        var target = this;
+        if (typeof target != "function") {
+            throw new TypeError("Function.prototype.bind called on incompatible " + target);
+        }
+        var args = slice.call(arguments, 1); // for normal call
+        var bound = function () {
+
+            if (this instanceof bound) {
+
+                var result = target.apply(
+                    this,
+                    args.concat(slice.call(arguments))
+                );
+                if (Object(result) === result) {
+                    return result;
+                }
+                return this;
+
+            } else {
+                return target.apply(
+                    that,
+                    args.concat(slice.call(arguments))
+                );
+
+            }
+
+        };
+        if(target.prototype) {
+            Empty.prototype = target.prototype;
+            bound.prototype = new Empty();
+            Empty.prototype = null;
+        }
+        return bound;
     };
-    
-}).call(Mirror.prototype);
+}
+var call = Function.prototype.call;
+var prototypeOfArray = Array.prototype;
+var prototypeOfObject = Object.prototype;
+var slice = prototypeOfArray.slice;
+var _toString = call.bind(prototypeOfObject.toString);
+var owns = call.bind(prototypeOfObject.hasOwnProperty);
+var defineGetter;
+var defineSetter;
+var lookupGetter;
+var lookupSetter;
+var supportsAccessors;
+if ((supportsAccessors = owns(prototypeOfObject, "__defineGetter__"))) {
+    defineGetter = call.bind(prototypeOfObject.__defineGetter__);
+    defineSetter = call.bind(prototypeOfObject.__defineSetter__);
+    lookupGetter = call.bind(prototypeOfObject.__lookupGetter__);
+    lookupSetter = call.bind(prototypeOfObject.__lookupSetter__);
+}
+if ([1,2].splice(0).length != 2) {
+    if(function() { // test IE < 9 to splice bug - see issue #138
+        function makeArray(l) {
+            var a = new Array(l+2);
+            a[0] = a[1] = 0;
+            return a;
+        }
+        var array = [], lengthBefore;
+        
+        array.splice.apply(array, makeArray(20));
+        array.splice.apply(array, makeArray(26));
+
+        lengthBefore = array.length; //46
+        array.splice(5, 0, "XXX"); // add one element
+
+        lengthBefore + 1 == array.length
+
+        if (lengthBefore + 1 == array.length) {
+            return true;// has right splice implementation without bugs
+        }
+    }()) {//IE 6/7
+        var array_splice = Array.prototype.splice;
+        Array.prototype.splice = function(start, deleteCount) {
+            if (!arguments.length) {
+                return [];
+            } else {
+                return array_splice.apply(this, [
+                    start === void 0 ? 0 : start,
+                    deleteCount === void 0 ? (this.length - start) : deleteCount
+                ].concat(slice.call(arguments, 2)))
+            }
+        };
+    } else {//IE8
+        Array.prototype.splice = function(pos, removeCount){
+            var length = this.length;
+            if (pos > 0) {
+                if (pos > length)
+                    pos = length;
+            } else if (pos == void 0) {
+                pos = 0;
+            } else if (pos < 0) {
+                pos = Math.max(length + pos, 0);
+            }
+
+            if (!(pos+removeCount < length))
+                removeCount = length - pos;
+
+            var removed = this.slice(pos, pos+removeCount);
+            var insert = slice.call(arguments, 2);
+            var add = insert.length;            
+            if (pos === length) {
+                if (add) {
+                    this.push.apply(this, insert);
+                }
+            } else {
+                var remove = Math.min(removeCount, length - pos);
+                var tailOldPos = pos + remove;
+                var tailNewPos = tailOldPos + add - remove;
+                var tailCount = length - tailOldPos;
+                var lengthAfterRemove = length - remove;
+
+                if (tailNewPos < tailOldPos) { // case A
+                    for (var i = 0; i < tailCount; ++i) {
+                        this[tailNewPos+i] = this[tailOldPos+i];
+                    }
+                } else if (tailNewPos > tailOldPos) { // case B
+                    for (i = tailCount; i--; ) {
+                        this[tailNewPos+i] = this[tailOldPos+i];
+                    }
+                } // else, add == remove (nothing to do)
+
+                if (add && pos === lengthAfterRemove) {
+                    this.length = lengthAfterRemove; // truncate array
+                    this.push.apply(this, insert);
+                } else {
+                    this.length = lengthAfterRemove + add; // reserves space
+                    for (i = 0; i < add; ++i) {
+                        this[pos+i] = insert[i];
+                    }
+                }
+            }
+            return removed;
+        };
+    }
+}
+if (!Array.isArray) {
+    Array.isArray = function isArray(obj) {
+        return _toString(obj) == "[object Array]";
+    };
+}
+var boxedString = Object("a"),
+    splitString = boxedString[0] != "a" || !(0 in boxedString);
+
+if (!Array.prototype.forEach) {
+    Array.prototype.forEach = function forEach(fun /*, thisp*/) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                object,
+            thisp = arguments[1],
+            i = -1,
+            length = self.length >>> 0;
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(); // TODO message
+        }
+
+        while (++i < length) {
+            if (i in self) {
+                fun.call(thisp, self[i], i, object);
+            }
+        }
+    };
+}
+if (!Array.prototype.map) {
+    Array.prototype.map = function map(fun /*, thisp*/) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                object,
+            length = self.length >>> 0,
+            result = Array(length),
+            thisp = arguments[1];
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(fun + " is not a function");
+        }
+
+        for (var i = 0; i < length; i++) {
+            if (i in self)
+                result[i] = fun.call(thisp, self[i], i, object);
+        }
+        return result;
+    };
+}
+if (!Array.prototype.filter) {
+    Array.prototype.filter = function filter(fun /*, thisp */) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                    object,
+            length = self.length >>> 0,
+            result = [],
+            value,
+            thisp = arguments[1];
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(fun + " is not a function");
+        }
+
+        for (var i = 0; i < length; i++) {
+            if (i in self) {
+                value = self[i];
+                if (fun.call(thisp, value, i, object)) {
+                    result.push(value);
+                }
+            }
+        }
+        return result;
+    };
+}
+if (!Array.prototype.every) {
+    Array.prototype.every = function every(fun /*, thisp */) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                object,
+            length = self.length >>> 0,
+            thisp = arguments[1];
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(fun + " is not a function");
+        }
+
+        for (var i = 0; i < length; i++) {
+            if (i in self && !fun.call(thisp, self[i], i, object)) {
+                return false;
+            }
+        }
+        return true;
+    };
+}
+if (!Array.prototype.some) {
+    Array.prototype.some = function some(fun /*, thisp */) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                object,
+            length = self.length >>> 0,
+            thisp = arguments[1];
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(fun + " is not a function");
+        }
+
+        for (var i = 0; i < length; i++) {
+            if (i in self && fun.call(thisp, self[i], i, object)) {
+                return true;
+            }
+        }
+        return false;
+    };
+}
+if (!Array.prototype.reduce) {
+    Array.prototype.reduce = function reduce(fun /*, initial*/) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                object,
+            length = self.length >>> 0;
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(fun + " is not a function");
+        }
+        if (!length && arguments.length == 1) {
+            throw new TypeError("reduce of empty array with no initial value");
+        }
+
+        var i = 0;
+        var result;
+        if (arguments.length >= 2) {
+            result = arguments[1];
+        } else {
+            do {
+                if (i in self) {
+                    result = self[i++];
+                    break;
+                }
+                if (++i >= length) {
+                    throw new TypeError("reduce of empty array with no initial value");
+                }
+            } while (true);
+        }
+
+        for (; i < length; i++) {
+            if (i in self) {
+                result = fun.call(void 0, result, self[i], i, object);
+            }
+        }
+
+        return result;
+    };
+}
+if (!Array.prototype.reduceRight) {
+    Array.prototype.reduceRight = function reduceRight(fun /*, initial*/) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                object,
+            length = self.length >>> 0;
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(fun + " is not a function");
+        }
+        if (!length && arguments.length == 1) {
+            throw new TypeError("reduceRight of empty array with no initial value");
+        }
+
+        var result, i = length - 1;
+        if (arguments.length >= 2) {
+            result = arguments[1];
+        } else {
+            do {
+                if (i in self) {
+                    result = self[i--];
+                    break;
+                }
+                if (--i < 0) {
+                    throw new TypeError("reduceRight of empty array with no initial value");
+                }
+            } while (true);
+        }
+
+        do {
+            if (i in this) {
+                result = fun.call(void 0, result, self[i], i, object);
+            }
+        } while (i--);
+
+        return result;
+    };
+}
+if (!Array.prototype.indexOf || ([0, 1].indexOf(1, 2) != -1)) {
+    Array.prototype.indexOf = function indexOf(sought /*, fromIndex */ ) {
+        var self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                toObject(this),
+            length = self.length >>> 0;
+
+        if (!length) {
+            return -1;
+        }
+
+        var i = 0;
+        if (arguments.length > 1) {
+            i = toInteger(arguments[1]);
+        }
+        i = i >= 0 ? i : Math.max(0, length + i);
+        for (; i < length; i++) {
+            if (i in self && self[i] === sought) {
+                return i;
+            }
+        }
+        return -1;
+    };
+}
+if (!Array.prototype.lastIndexOf || ([0, 1].lastIndexOf(0, -3) != -1)) {
+    Array.prototype.lastIndexOf = function lastIndexOf(sought /*, fromIndex */) {
+        var self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                toObject(this),
+            length = self.length >>> 0;
+
+        if (!length) {
+            return -1;
+        }
+        var i = length - 1;
+        if (arguments.length > 1) {
+            i = Math.min(i, toInteger(arguments[1]));
+        }
+        i = i >= 0 ? i : length - Math.abs(i);
+        for (; i >= 0; i--) {
+            if (i in self && sought === self[i]) {
+                return i;
+            }
+        }
+        return -1;
+    };
+}
+if (!Object.getPrototypeOf) {
+    Object.getPrototypeOf = function getPrototypeOf(object) {
+        return object.__proto__ || (
+            object.constructor ?
+            object.constructor.prototype :
+            prototypeOfObject
+        );
+    };
+}
+if (!Object.getOwnPropertyDescriptor) {
+    var ERR_NON_OBJECT = "Object.getOwnPropertyDescriptor called on a " +
+                         "non-object: ";
+    Object.getOwnPropertyDescriptor = function getOwnPropertyDescriptor(object, property) {
+        if ((typeof object != "object" && typeof object != "function") || object === null)
+            throw new TypeError(ERR_NON_OBJECT + object);
+        if (!owns(object, property))
+            return;
+
+        var descriptor, getter, setter;
+        descriptor =  { enumerable: true, configurable: true };
+        if (supportsAccessors) {
+            var prototype = object.__proto__;
+            object.__proto__ = prototypeOfObject;
+
+            var getter = lookupGetter(object, property);
+            var setter = lookupSetter(object, property);
+            object.__proto__ = prototype;
+
+            if (getter || setter) {
+                if (getter) descriptor.get = getter;
+                if (setter) descriptor.set = setter;
+                return descriptor;
+            }
+        }
+        descriptor.value = object[property];
+        return descriptor;
+    };
+}
+if (!Object.getOwnPropertyNames) {
+    Object.getOwnPropertyNames = function getOwnPropertyNames(object) {
+        return Object.keys(object);
+    };
+}
+if (!Object.create) {
+    var createEmpty;
+    if (Object.prototype.__proto__ === null) {
+        createEmpty = function () {
+            return { "__proto__": null };
+        };
+    } else {
+        createEmpty = function () {
+            var empty = {};
+            for (var i in empty)
+                empty[i] = null;
+            empty.constructor =
+            empty.hasOwnProperty =
+            empty.propertyIsEnumerable =
+            empty.isPrototypeOf =
+            empty.toLocaleString =
+            empty.toString =
+            empty.valueOf =
+            empty.__proto__ = null;
+            return empty;
+        }
+    }
+
+    Object.create = function create(prototype, properties) {
+        var object;
+        if (prototype === null) {
+            object = createEmpty();
+        } else {
+            if (typeof prototype != "object")
+                throw new TypeError("typeof prototype["+(typeof prototype)+"] != 'object'");
+            var Type = function () {};
+            Type.prototype = prototype;
+            object = new Type();
+            object.__proto__ = prototype;
+        }
+        if (properties !== void 0)
+            Object.defineProperties(object, properties);
+        return object;
+    };
+}
+
+function doesDefinePropertyWork(object) {
+    try {
+        Object.defineProperty(object, "sentinel", {});
+        return "sentinel" in object;
+    } catch (exception) {
+    }
+}
+if (Object.defineProperty) {
+    var definePropertyWorksOnObject = doesDefinePropertyWork({});
+    var definePropertyWorksOnDom = typeof document == "undefined" ||
+        doesDefinePropertyWork(document.createElement("div"));
+    if (!definePropertyWorksOnObject || !definePropertyWorksOnDom) {
+        var definePropertyFallback = Object.defineProperty;
+    }
+}
+
+if (!Object.defineProperty || definePropertyFallback) {
+    var ERR_NON_OBJECT_DESCRIPTOR = "Property description must be an object: ";
+    var ERR_NON_OBJECT_TARGET = "Object.defineProperty called on non-object: "
+    var ERR_ACCESSORS_NOT_SUPPORTED = "getters & setters can not be defined " +
+                                      "on this javascript engine";
+
+    Object.defineProperty = function defineProperty(object, property, descriptor) {
+        if ((typeof object != "object" && typeof object != "function") || object === null)
+            throw new TypeError(ERR_NON_OBJECT_TARGET + object);
+        if ((typeof descriptor != "object" && typeof descriptor != "function") || descriptor === null)
+            throw new TypeError(ERR_NON_OBJECT_DESCRIPTOR + descriptor);
+        if (definePropertyFallback) {
+            try {
+                return definePropertyFallback.call(Object, object, property, descriptor);
+            } catch (exception) {
+            }
+        }
+        if (owns(descriptor, "value")) {
+
+            if (supportsAccessors && (lookupGetter(object, property) ||
+                                      lookupSetter(object, property)))
+            {
+                var prototype = object.__proto__;
+                object.__proto__ = prototypeOfObject;
+                delete object[property];
+                object[property] = descriptor.value;
+                object.__proto__ = prototype;
+            } else {
+                object[property] = descriptor.value;
+            }
+        } else {
+            if (!supportsAccessors)
+                throw new TypeError(ERR_ACCESSORS_NOT_SUPPORTED);
+            if (owns(descriptor, "get"))
+                defineGetter(object, property, descriptor.get);
+            if (owns(descriptor, "set"))
+                defineSetter(object, property, descriptor.set);
+        }
+
+        return object;
+    };
+}
+if (!Object.defineProperties) {
+    Object.defineProperties = function defineProperties(object, properties) {
+        for (var property in properties) {
+            if (owns(properties, property))
+                Object.defineProperty(object, property, properties[property]);
+        }
+        return object;
+    };
+}
+if (!Object.seal) {
+    Object.seal = function seal(object) {
+        return object;
+    };
+}
+if (!Object.freeze) {
+    Object.freeze = function freeze(object) {
+        return object;
+    };
+}
+try {
+    Object.freeze(function () {});
+} catch (exception) {
+    Object.freeze = (function freeze(freezeObject) {
+        return function freeze(object) {
+            if (typeof object == "function") {
+                return object;
+            } else {
+                return freezeObject(object);
+            }
+        };
+    })(Object.freeze);
+}
+if (!Object.preventExtensions) {
+    Object.preventExtensions = function preventExtensions(object) {
+        return object;
+    };
+}
+if (!Object.isSealed) {
+    Object.isSealed = function isSealed(object) {
+        return false;
+    };
+}
+if (!Object.isFrozen) {
+    Object.isFrozen = function isFrozen(object) {
+        return false;
+    };
+}
+if (!Object.isExtensible) {
+    Object.isExtensible = function isExtensible(object) {
+        if (Object(object) === object) {
+            throw new TypeError(); // TODO message
+        }
+        var name = '';
+        while (owns(object, name)) {
+            name += '?';
+        }
+        object[name] = true;
+        var returnValue = owns(object, name);
+        delete object[name];
+        return returnValue;
+    };
+}
+if (!Object.keys) {
+    var hasDontEnumBug = true,
+        dontEnums = [
+            "toString",
+            "toLocaleString",
+            "valueOf",
+            "hasOwnProperty",
+            "isPrototypeOf",
+            "propertyIsEnumerable",
+            "constructor"
+        ],
+        dontEnumsLength = dontEnums.length;
+
+    for (var key in {"toString": null}) {
+        hasDontEnumBug = false;
+    }
+
+    Object.keys = function keys(object) {
+
+        if (
+            (typeof object != "object" && typeof object != "function") ||
+            object === null
+        ) {
+            throw new TypeError("Object.keys called on a non-object");
+        }
+
+        var keys = [];
+        for (var name in object) {
+            if (owns(object, name)) {
+                keys.push(name);
+            }
+        }
+
+        if (hasDontEnumBug) {
+            for (var i = 0, ii = dontEnumsLength; i < ii; i++) {
+                var dontEnum = dontEnums[i];
+                if (owns(object, dontEnum)) {
+                    keys.push(dontEnum);
+                }
+            }
+        }
+        return keys;
+    };
+
+}
+if (!Date.now) {
+    Date.now = function now() {
+        return new Date().getTime();
+    };
+}
+var ws = "\x09\x0A\x0B\x0C\x0D\x20\xA0\u1680\u180E\u2000\u2001\u2002\u2003" +
+    "\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\u2028" +
+    "\u2029\uFEFF";
+if (!String.prototype.trim || ws.trim()) {
+    ws = "[" + ws + "]";
+    var trimBeginRegexp = new RegExp("^" + ws + ws + "*"),
+        trimEndRegexp = new RegExp(ws + ws + "*$");
+    String.prototype.trim = function trim() {
+        return String(this).replace(trimBeginRegexp, "").replace(trimEndRegexp, "");
+    };
+}
+
+function toInteger(n) {
+    n = +n;
+    if (n !== n) { // isNaN
+        n = 0;
+    } else if (n !== 0 && n !== (1/0) && n !== -(1/0)) {
+        n = (n > 0 || -1) * Math.floor(Math.abs(n));
+    }
+    return n;
+}
+
+function isPrimitive(input) {
+    var type = typeof input;
+    return (
+        input === null ||
+        type === "undefined" ||
+        type === "boolean" ||
+        type === "number" ||
+        type === "string"
+    );
+}
+
+function toPrimitive(input) {
+    var val, valueOf, toString;
+    if (isPrimitive(input)) {
+        return input;
+    }
+    valueOf = input.valueOf;
+    if (typeof valueOf === "function") {
+        val = valueOf.call(input);
+        if (isPrimitive(val)) {
+            return val;
+        }
+    }
+    toString = input.toString;
+    if (typeof toString === "function") {
+        val = toString.call(input);
+        if (isPrimitive(val)) {
+            return val;
+        }
+    }
+    throw new TypeError();
+}
+var toObject = function (o) {
+    if (o == null) { // this matches both null and undefined
+        throw new TypeError("can't convert "+o+" to object");
+    }
+    return Object(o);
+};
 
 });

@@ -1,35 +1,46 @@
 "no use strict";
 ;(function(window) {
-if (typeof window.window != "undefined" && window.document) {
+if (typeof window.window != "undefined" && window.document)
     return;
+if (window.require && window.define)
+    return;
+
+if (!window.console) {
+    window.console = function() {
+        var msgs = Array.prototype.slice.call(arguments, 0);
+        postMessage({type: "log", data: msgs});
+    };
+    window.console.error =
+    window.console.warn = 
+    window.console.log =
+    window.console.trace = window.console;
 }
-
-window.console = function() {
-    var msgs = Array.prototype.slice.call(arguments, 0);
-    postMessage({type: "log", data: msgs});
-};
-window.console.error =
-window.console.warn = 
-window.console.log =
-window.console.trace = window.console;
-
 window.window = window;
 window.ace = window;
 
 window.onerror = function(message, file, line, col, err) {
-    console.error("Worker " + (err ? err.stack : message));
+    postMessage({type: "error", data: {
+        message: message,
+        data: err.data,
+        file: file,
+        line: line, 
+        col: col,
+        stack: err.stack
+    }});
 };
 
 window.normalizeModule = function(parentId, moduleName) {
+    // normalize plugin requires
     if (moduleName.indexOf("!") !== -1) {
         var chunks = moduleName.split("!");
         return window.normalizeModule(parentId, chunks[0]) + "!" + window.normalizeModule(parentId, chunks[1]);
     }
+    // normalize relative requires
     if (moduleName.charAt(0) == ".") {
         var base = parentId.split("/").slice(0, -1).join("/");
         moduleName = (base ? base + "/" : "") + moduleName;
         
-        while(moduleName.indexOf(".") !== -1 && previous != moduleName) {
+        while (moduleName.indexOf(".") !== -1 && previous != moduleName) {
             var previous = moduleName;
             moduleName = moduleName.replace(/^\.\//, "").replace(/\/\.\//, "/").replace(/[^\/]+\/\.\.\//, "");
         }
@@ -38,7 +49,7 @@ window.normalizeModule = function(parentId, moduleName) {
     return moduleName;
 };
 
-window.require = function(parentId, id) {
+window.require = function require(parentId, id) {
     if (!id) {
         id = parentId;
         parentId = null;
@@ -56,17 +67,36 @@ window.require = function(parentId, id) {
         }
         return module.exports;
     }
-    
-    var chunks = id.split("/");
+   
     if (!window.require.tlns)
         return console.log("unable to load " + id);
-    chunks[0] = window.require.tlns[chunks[0]] || chunks[0];
-    var path = chunks.join("/") + ".js";
+    
+    var path = resolveModuleId(id, window.require.tlns);
+    if (path.slice(-3) != ".js") path += ".js";
     
     window.require.id = id;
+    window.require.modules[id] = {}; // prevent infinite loop on broken modules
     importScripts(path);
     return window.require(parentId, id);
 };
+function resolveModuleId(id, paths) {
+    var testPath = id, tail = "";
+    while (testPath) {
+        var alias = paths[testPath];
+        if (typeof alias == "string") {
+            return alias + tail;
+        } else if (alias) {
+            return  alias.location.replace(/\/*$/, "/") + (tail || alias.main || alias.name);
+        } else if (alias === false) {
+            return "";
+        }
+        var i = testPath.lastIndexOf("/");
+        if (i === -1) break;
+        tail = testPath.substr(i) + tail;
+        testPath = testPath.slice(0, i);
+    }
+    return id;
+}
 window.require.modules = {};
 window.require.tlns = {};
 
@@ -82,13 +112,20 @@ window.define = function(id, deps, factory) {
         deps = [];
         id = window.require.id;
     }
+    
+    if (typeof factory != "function") {
+        window.require.modules[id] = {
+            exports: factory,
+            initialized: true
+        };
+        return;
+    }
 
     if (!deps.length)
-        deps = ['require', 'exports', 'module'];
+        // If there is no dependencies, we inject "require", "exports" and
+        // "module" as dependencies, to provide CommonJS compatibility.
+        deps = ["require", "exports", "module"];
 
-    if (id.indexOf("text!") === 0) 
-        return;
-    
     var req = function(childId) {
         return window.require(id, childId);
     };
@@ -98,12 +135,16 @@ window.define = function(id, deps, factory) {
         factory: function() {
             var module = this;
             var returnExports = factory.apply(this, deps.map(function(dep) {
-              switch(dep) {
-                  case 'require': return req;
-                  case 'exports': return module.exports;
-                  case 'module':  return module;
-                  default:        return req(dep);
-              }
+                switch (dep) {
+                    // Because "require", "exports" and "module" aren't actual
+                    // dependencies, we must handle them seperately.
+                    case "require": return req;
+                    case "exports": return module.exports;
+                    case "module":  return module;
+                    // But for all other dependencies, we can just go ahead and
+                    // require them.
+                    default:        return req(dep);
+                }
             }));
             if (returnExports)
                 module.exports = returnExports;
@@ -112,9 +153,10 @@ window.define = function(id, deps, factory) {
     };
 };
 window.define.amd = {};
-
+require.tlns = {};
 window.initBaseUrls  = function initBaseUrls(topLevelNamespaces) {
-    require.tlns = topLevelNamespaces;
+    for (var i in topLevelNamespaces)
+        require.tlns[i] = topLevelNamespaces[i];
 };
 
 window.initSender = function initSender() {
@@ -154,90 +196,29 @@ var sender = window.sender = null;
 
 window.onmessage = function(e) {
     var msg = e.data;
-    if (msg.command) {
+    if (msg.event && sender) {
+        sender._signal(msg.event, msg.data);
+    }
+    else if (msg.command) {
         if (main[msg.command])
             main[msg.command].apply(main, msg.args);
+        else if (window[msg.command])
+            window[msg.command].apply(window, msg.args);
         else
             throw new Error("Unknown command:" + msg.command);
     }
-    else if (msg.init) {        
-        initBaseUrls(msg.tlns);
+    else if (msg.init) {
+        window.initBaseUrls(msg.tlns);
         require("ace/lib/es5-shim");
-        sender = window.sender = initSender();
+        sender = window.sender = window.initSender();
         var clazz = require(msg.module)[msg.classname];
         main = window.main = new clazz(sender);
-    } 
-    else if (msg.event && sender) {
-        sender._signal(msg.event, msg.data);
     }
 };
 })(this);
 
-define('ace/mode/html_worker', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/lib/lang', 'ace/worker/mirror', 'ace/mode/html/saxparser'], function(require, exports, module) {
-
-
-var oop = require("../lib/oop");
-var lang = require("../lib/lang");
-var Mirror = require("../worker/mirror").Mirror;
-var SAXParser = require("./html/saxparser").SAXParser;
-
-var errorTypes = {
-    "expected-doctype-but-got-start-tag": "info",
-    "expected-doctype-but-got-chars": "info",
-    "non-html-root": "info",
-}
-
-var Worker = exports.Worker = function(sender) {
-    Mirror.call(this, sender);
-    this.setTimeout(400);
-    this.context = null;
-};
-
-oop.inherits(Worker, Mirror);
-
-(function() {
-
-    this.setOptions = function(options) {
-        this.context = options.context;
-    };
-
-    this.onUpdate = function() {
-        var value = this.doc.getValue();
-        if (!value)
-            return;
-        var parser = new SAXParser();
-        var errors = [];
-        var noop = function(){};
-        parser.contentHandler = {
-           startDocument: noop,
-           endDocument: noop,
-           startElement: noop,
-           endElement: noop,
-           characters: noop
-        };
-        parser.errorHandler = {
-            error: function(message, location, code) {
-                errors.push({
-                    row: location.line,
-                    column: location.column,
-                    text: message,
-                    type: errorTypes[code] || "error"
-                });
-            }
-        };
-        if (this.context)
-            parser.parseFragment(value, this.context);
-        else
-            parser.parse(value);
-        this.sender.emit("error", errors);
-    };
-
-}).call(Worker.prototype);
-
-});
-
-define('ace/lib/oop', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+define("ace/lib/oop",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.inherits = function(ctor, superCtor) {
     ctor.super_ = superCtor;
@@ -264,8 +245,8 @@ exports.implement = function(proto, mixin) {
 
 });
 
-define('ace/lib/lang', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+define("ace/lib/lang",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.last = function(a) {
     return a[a.length - 1];
@@ -310,28 +291,30 @@ exports.copyArray = function(array){
     var copy = [];
     for (var i=0, l=array.length; i<l; i++) {
         if (array[i] && typeof array[i] == "object")
-            copy[i] = this.copyObject( array[i] );
+            copy[i] = this.copyObject(array[i]);
         else 
             copy[i] = array[i];
     }
     return copy;
 };
 
-exports.deepCopy = function (obj) {
+exports.deepCopy = function deepCopy(obj) {
     if (typeof obj !== "object" || !obj)
         return obj;
-    var cons = obj.constructor;
-    if (cons === RegExp)
+    var copy;
+    if (Array.isArray(obj)) {
+        copy = [];
+        for (var key = 0; key < obj.length; key++) {
+            copy[key] = deepCopy(obj[key]);
+        }
+        return copy;
+    }
+    if (Object.prototype.toString.call(obj) !== "[object Object]")
         return obj;
     
-    var copy = cons();
-    for (var key in obj) {
-        if (typeof obj[key] === "object") {
-            copy[key] = exports.deepCopy(obj[key]);
-        } else {
-            copy[key] = obj[key];
-        }
-    }
+    copy = {};
+    for (var key in obj)
+        copy[key] = deepCopy(obj[key]);
     return copy;
 };
 
@@ -380,7 +363,6 @@ exports.getMatchOffsets = function(string, regExp) {
     return matches;
 };
 exports.deferredCall = function(fcn) {
-
     var timer = null;
     var callback = function() {
         timer = null;
@@ -451,1190 +433,8 @@ exports.delayedCall = function(fcn, defaultTimeout) {
 };
 });
 
-define('ace/lib/es5-shim', ['require', 'exports', 'module' ], function(require, exports, module) {
-
-function Empty() {}
-
-if (!Function.prototype.bind) {
-    Function.prototype.bind = function bind(that) { // .length is 1
-        var target = this;
-        if (typeof target != "function") {
-            throw new TypeError("Function.prototype.bind called on incompatible " + target);
-        }
-        var args = slice.call(arguments, 1); // for normal call
-        var bound = function () {
-
-            if (this instanceof bound) {
-
-                var result = target.apply(
-                    this,
-                    args.concat(slice.call(arguments))
-                );
-                if (Object(result) === result) {
-                    return result;
-                }
-                return this;
-
-            } else {
-                return target.apply(
-                    that,
-                    args.concat(slice.call(arguments))
-                );
-
-            }
-
-        };
-        if(target.prototype) {
-            Empty.prototype = target.prototype;
-            bound.prototype = new Empty();
-            Empty.prototype = null;
-        }
-        return bound;
-    };
-}
-var call = Function.prototype.call;
-var prototypeOfArray = Array.prototype;
-var prototypeOfObject = Object.prototype;
-var slice = prototypeOfArray.slice;
-var _toString = call.bind(prototypeOfObject.toString);
-var owns = call.bind(prototypeOfObject.hasOwnProperty);
-var defineGetter;
-var defineSetter;
-var lookupGetter;
-var lookupSetter;
-var supportsAccessors;
-if ((supportsAccessors = owns(prototypeOfObject, "__defineGetter__"))) {
-    defineGetter = call.bind(prototypeOfObject.__defineGetter__);
-    defineSetter = call.bind(prototypeOfObject.__defineSetter__);
-    lookupGetter = call.bind(prototypeOfObject.__lookupGetter__);
-    lookupSetter = call.bind(prototypeOfObject.__lookupSetter__);
-}
-if ([1,2].splice(0).length != 2) {
-    if(function() { // test IE < 9 to splice bug - see issue #138
-        function makeArray(l) {
-            var a = new Array(l+2);
-            a[0] = a[1] = 0;
-            return a;
-        }
-        var array = [], lengthBefore;
-        
-        array.splice.apply(array, makeArray(20));
-        array.splice.apply(array, makeArray(26));
-
-        lengthBefore = array.length; //46
-        array.splice(5, 0, "XXX"); // add one element
-
-        lengthBefore + 1 == array.length
-
-        if (lengthBefore + 1 == array.length) {
-            return true;// has right splice implementation without bugs
-        }
-    }()) {//IE 6/7
-        var array_splice = Array.prototype.splice;
-        Array.prototype.splice = function(start, deleteCount) {
-            if (!arguments.length) {
-                return [];
-            } else {
-                return array_splice.apply(this, [
-                    start === void 0 ? 0 : start,
-                    deleteCount === void 0 ? (this.length - start) : deleteCount
-                ].concat(slice.call(arguments, 2)))
-            }
-        };
-    } else {//IE8
-        Array.prototype.splice = function(pos, removeCount){
-            var length = this.length;
-            if (pos > 0) {
-                if (pos > length)
-                    pos = length;
-            } else if (pos == void 0) {
-                pos = 0;
-            } else if (pos < 0) {
-                pos = Math.max(length + pos, 0);
-            }
-
-            if (!(pos+removeCount < length))
-                removeCount = length - pos;
-
-            var removed = this.slice(pos, pos+removeCount);
-            var insert = slice.call(arguments, 2);
-            var add = insert.length;            
-            if (pos === length) {
-                if (add) {
-                    this.push.apply(this, insert);
-                }
-            } else {
-                var remove = Math.min(removeCount, length - pos);
-                var tailOldPos = pos + remove;
-                var tailNewPos = tailOldPos + add - remove;
-                var tailCount = length - tailOldPos;
-                var lengthAfterRemove = length - remove;
-
-                if (tailNewPos < tailOldPos) { // case A
-                    for (var i = 0; i < tailCount; ++i) {
-                        this[tailNewPos+i] = this[tailOldPos+i];
-                    }
-                } else if (tailNewPos > tailOldPos) { // case B
-                    for (i = tailCount; i--; ) {
-                        this[tailNewPos+i] = this[tailOldPos+i];
-                    }
-                } // else, add == remove (nothing to do)
-
-                if (add && pos === lengthAfterRemove) {
-                    this.length = lengthAfterRemove; // truncate array
-                    this.push.apply(this, insert);
-                } else {
-                    this.length = lengthAfterRemove + add; // reserves space
-                    for (i = 0; i < add; ++i) {
-                        this[pos+i] = insert[i];
-                    }
-                }
-            }
-            return removed;
-        };
-    }
-}
-if (!Array.isArray) {
-    Array.isArray = function isArray(obj) {
-        return _toString(obj) == "[object Array]";
-    };
-}
-var boxedString = Object("a"),
-    splitString = boxedString[0] != "a" || !(0 in boxedString);
-
-if (!Array.prototype.forEach) {
-    Array.prototype.forEach = function forEach(fun /*, thisp*/) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                object,
-            thisp = arguments[1],
-            i = -1,
-            length = self.length >>> 0;
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(); // TODO message
-        }
-
-        while (++i < length) {
-            if (i in self) {
-                fun.call(thisp, self[i], i, object);
-            }
-        }
-    };
-}
-if (!Array.prototype.map) {
-    Array.prototype.map = function map(fun /*, thisp*/) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                object,
-            length = self.length >>> 0,
-            result = Array(length),
-            thisp = arguments[1];
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(fun + " is not a function");
-        }
-
-        for (var i = 0; i < length; i++) {
-            if (i in self)
-                result[i] = fun.call(thisp, self[i], i, object);
-        }
-        return result;
-    };
-}
-if (!Array.prototype.filter) {
-    Array.prototype.filter = function filter(fun /*, thisp */) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                    object,
-            length = self.length >>> 0,
-            result = [],
-            value,
-            thisp = arguments[1];
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(fun + " is not a function");
-        }
-
-        for (var i = 0; i < length; i++) {
-            if (i in self) {
-                value = self[i];
-                if (fun.call(thisp, value, i, object)) {
-                    result.push(value);
-                }
-            }
-        }
-        return result;
-    };
-}
-if (!Array.prototype.every) {
-    Array.prototype.every = function every(fun /*, thisp */) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                object,
-            length = self.length >>> 0,
-            thisp = arguments[1];
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(fun + " is not a function");
-        }
-
-        for (var i = 0; i < length; i++) {
-            if (i in self && !fun.call(thisp, self[i], i, object)) {
-                return false;
-            }
-        }
-        return true;
-    };
-}
-if (!Array.prototype.some) {
-    Array.prototype.some = function some(fun /*, thisp */) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                object,
-            length = self.length >>> 0,
-            thisp = arguments[1];
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(fun + " is not a function");
-        }
-
-        for (var i = 0; i < length; i++) {
-            if (i in self && fun.call(thisp, self[i], i, object)) {
-                return true;
-            }
-        }
-        return false;
-    };
-}
-if (!Array.prototype.reduce) {
-    Array.prototype.reduce = function reduce(fun /*, initial*/) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                object,
-            length = self.length >>> 0;
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(fun + " is not a function");
-        }
-        if (!length && arguments.length == 1) {
-            throw new TypeError("reduce of empty array with no initial value");
-        }
-
-        var i = 0;
-        var result;
-        if (arguments.length >= 2) {
-            result = arguments[1];
-        } else {
-            do {
-                if (i in self) {
-                    result = self[i++];
-                    break;
-                }
-                if (++i >= length) {
-                    throw new TypeError("reduce of empty array with no initial value");
-                }
-            } while (true);
-        }
-
-        for (; i < length; i++) {
-            if (i in self) {
-                result = fun.call(void 0, result, self[i], i, object);
-            }
-        }
-
-        return result;
-    };
-}
-if (!Array.prototype.reduceRight) {
-    Array.prototype.reduceRight = function reduceRight(fun /*, initial*/) {
-        var object = toObject(this),
-            self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                object,
-            length = self.length >>> 0;
-        if (_toString(fun) != "[object Function]") {
-            throw new TypeError(fun + " is not a function");
-        }
-        if (!length && arguments.length == 1) {
-            throw new TypeError("reduceRight of empty array with no initial value");
-        }
-
-        var result, i = length - 1;
-        if (arguments.length >= 2) {
-            result = arguments[1];
-        } else {
-            do {
-                if (i in self) {
-                    result = self[i--];
-                    break;
-                }
-                if (--i < 0) {
-                    throw new TypeError("reduceRight of empty array with no initial value");
-                }
-            } while (true);
-        }
-
-        do {
-            if (i in this) {
-                result = fun.call(void 0, result, self[i], i, object);
-            }
-        } while (i--);
-
-        return result;
-    };
-}
-if (!Array.prototype.indexOf || ([0, 1].indexOf(1, 2) != -1)) {
-    Array.prototype.indexOf = function indexOf(sought /*, fromIndex */ ) {
-        var self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                toObject(this),
-            length = self.length >>> 0;
-
-        if (!length) {
-            return -1;
-        }
-
-        var i = 0;
-        if (arguments.length > 1) {
-            i = toInteger(arguments[1]);
-        }
-        i = i >= 0 ? i : Math.max(0, length + i);
-        for (; i < length; i++) {
-            if (i in self && self[i] === sought) {
-                return i;
-            }
-        }
-        return -1;
-    };
-}
-if (!Array.prototype.lastIndexOf || ([0, 1].lastIndexOf(0, -3) != -1)) {
-    Array.prototype.lastIndexOf = function lastIndexOf(sought /*, fromIndex */) {
-        var self = splitString && _toString(this) == "[object String]" ?
-                this.split("") :
-                toObject(this),
-            length = self.length >>> 0;
-
-        if (!length) {
-            return -1;
-        }
-        var i = length - 1;
-        if (arguments.length > 1) {
-            i = Math.min(i, toInteger(arguments[1]));
-        }
-        i = i >= 0 ? i : length - Math.abs(i);
-        for (; i >= 0; i--) {
-            if (i in self && sought === self[i]) {
-                return i;
-            }
-        }
-        return -1;
-    };
-}
-if (!Object.getPrototypeOf) {
-    Object.getPrototypeOf = function getPrototypeOf(object) {
-        return object.__proto__ || (
-            object.constructor ?
-            object.constructor.prototype :
-            prototypeOfObject
-        );
-    };
-}
-if (!Object.getOwnPropertyDescriptor) {
-    var ERR_NON_OBJECT = "Object.getOwnPropertyDescriptor called on a " +
-                         "non-object: ";
-    Object.getOwnPropertyDescriptor = function getOwnPropertyDescriptor(object, property) {
-        if ((typeof object != "object" && typeof object != "function") || object === null)
-            throw new TypeError(ERR_NON_OBJECT + object);
-        if (!owns(object, property))
-            return;
-
-        var descriptor, getter, setter;
-        descriptor =  { enumerable: true, configurable: true };
-        if (supportsAccessors) {
-            var prototype = object.__proto__;
-            object.__proto__ = prototypeOfObject;
-
-            var getter = lookupGetter(object, property);
-            var setter = lookupSetter(object, property);
-            object.__proto__ = prototype;
-
-            if (getter || setter) {
-                if (getter) descriptor.get = getter;
-                if (setter) descriptor.set = setter;
-                return descriptor;
-            }
-        }
-        descriptor.value = object[property];
-        return descriptor;
-    };
-}
-if (!Object.getOwnPropertyNames) {
-    Object.getOwnPropertyNames = function getOwnPropertyNames(object) {
-        return Object.keys(object);
-    };
-}
-if (!Object.create) {
-    var createEmpty;
-    if (Object.prototype.__proto__ === null) {
-        createEmpty = function () {
-            return { "__proto__": null };
-        };
-    } else {
-        createEmpty = function () {
-            var empty = {};
-            for (var i in empty)
-                empty[i] = null;
-            empty.constructor =
-            empty.hasOwnProperty =
-            empty.propertyIsEnumerable =
-            empty.isPrototypeOf =
-            empty.toLocaleString =
-            empty.toString =
-            empty.valueOf =
-            empty.__proto__ = null;
-            return empty;
-        }
-    }
-
-    Object.create = function create(prototype, properties) {
-        var object;
-        if (prototype === null) {
-            object = createEmpty();
-        } else {
-            if (typeof prototype != "object")
-                throw new TypeError("typeof prototype["+(typeof prototype)+"] != 'object'");
-            var Type = function () {};
-            Type.prototype = prototype;
-            object = new Type();
-            object.__proto__ = prototype;
-        }
-        if (properties !== void 0)
-            Object.defineProperties(object, properties);
-        return object;
-    };
-}
-
-function doesDefinePropertyWork(object) {
-    try {
-        Object.defineProperty(object, "sentinel", {});
-        return "sentinel" in object;
-    } catch (exception) {
-    }
-}
-if (Object.defineProperty) {
-    var definePropertyWorksOnObject = doesDefinePropertyWork({});
-    var definePropertyWorksOnDom = typeof document == "undefined" ||
-        doesDefinePropertyWork(document.createElement("div"));
-    if (!definePropertyWorksOnObject || !definePropertyWorksOnDom) {
-        var definePropertyFallback = Object.defineProperty;
-    }
-}
-
-if (!Object.defineProperty || definePropertyFallback) {
-    var ERR_NON_OBJECT_DESCRIPTOR = "Property description must be an object: ";
-    var ERR_NON_OBJECT_TARGET = "Object.defineProperty called on non-object: "
-    var ERR_ACCESSORS_NOT_SUPPORTED = "getters & setters can not be defined " +
-                                      "on this javascript engine";
-
-    Object.defineProperty = function defineProperty(object, property, descriptor) {
-        if ((typeof object != "object" && typeof object != "function") || object === null)
-            throw new TypeError(ERR_NON_OBJECT_TARGET + object);
-        if ((typeof descriptor != "object" && typeof descriptor != "function") || descriptor === null)
-            throw new TypeError(ERR_NON_OBJECT_DESCRIPTOR + descriptor);
-        if (definePropertyFallback) {
-            try {
-                return definePropertyFallback.call(Object, object, property, descriptor);
-            } catch (exception) {
-            }
-        }
-        if (owns(descriptor, "value")) {
-
-            if (supportsAccessors && (lookupGetter(object, property) ||
-                                      lookupSetter(object, property)))
-            {
-                var prototype = object.__proto__;
-                object.__proto__ = prototypeOfObject;
-                delete object[property];
-                object[property] = descriptor.value;
-                object.__proto__ = prototype;
-            } else {
-                object[property] = descriptor.value;
-            }
-        } else {
-            if (!supportsAccessors)
-                throw new TypeError(ERR_ACCESSORS_NOT_SUPPORTED);
-            if (owns(descriptor, "get"))
-                defineGetter(object, property, descriptor.get);
-            if (owns(descriptor, "set"))
-                defineSetter(object, property, descriptor.set);
-        }
-
-        return object;
-    };
-}
-if (!Object.defineProperties) {
-    Object.defineProperties = function defineProperties(object, properties) {
-        for (var property in properties) {
-            if (owns(properties, property))
-                Object.defineProperty(object, property, properties[property]);
-        }
-        return object;
-    };
-}
-if (!Object.seal) {
-    Object.seal = function seal(object) {
-        return object;
-    };
-}
-if (!Object.freeze) {
-    Object.freeze = function freeze(object) {
-        return object;
-    };
-}
-try {
-    Object.freeze(function () {});
-} catch (exception) {
-    Object.freeze = (function freeze(freezeObject) {
-        return function freeze(object) {
-            if (typeof object == "function") {
-                return object;
-            } else {
-                return freezeObject(object);
-            }
-        };
-    })(Object.freeze);
-}
-if (!Object.preventExtensions) {
-    Object.preventExtensions = function preventExtensions(object) {
-        return object;
-    };
-}
-if (!Object.isSealed) {
-    Object.isSealed = function isSealed(object) {
-        return false;
-    };
-}
-if (!Object.isFrozen) {
-    Object.isFrozen = function isFrozen(object) {
-        return false;
-    };
-}
-if (!Object.isExtensible) {
-    Object.isExtensible = function isExtensible(object) {
-        if (Object(object) === object) {
-            throw new TypeError(); // TODO message
-        }
-        var name = '';
-        while (owns(object, name)) {
-            name += '?';
-        }
-        object[name] = true;
-        var returnValue = owns(object, name);
-        delete object[name];
-        return returnValue;
-    };
-}
-if (!Object.keys) {
-    var hasDontEnumBug = true,
-        dontEnums = [
-            "toString",
-            "toLocaleString",
-            "valueOf",
-            "hasOwnProperty",
-            "isPrototypeOf",
-            "propertyIsEnumerable",
-            "constructor"
-        ],
-        dontEnumsLength = dontEnums.length;
-
-    for (var key in {"toString": null}) {
-        hasDontEnumBug = false;
-    }
-
-    Object.keys = function keys(object) {
-
-        if (
-            (typeof object != "object" && typeof object != "function") ||
-            object === null
-        ) {
-            throw new TypeError("Object.keys called on a non-object");
-        }
-
-        var keys = [];
-        for (var name in object) {
-            if (owns(object, name)) {
-                keys.push(name);
-            }
-        }
-
-        if (hasDontEnumBug) {
-            for (var i = 0, ii = dontEnumsLength; i < ii; i++) {
-                var dontEnum = dontEnums[i];
-                if (owns(object, dontEnum)) {
-                    keys.push(dontEnum);
-                }
-            }
-        }
-        return keys;
-    };
-
-}
-if (!Date.now) {
-    Date.now = function now() {
-        return new Date().getTime();
-    };
-}
-var ws = "\x09\x0A\x0B\x0C\x0D\x20\xA0\u1680\u180E\u2000\u2001\u2002\u2003" +
-    "\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\u2028" +
-    "\u2029\uFEFF";
-if (!String.prototype.trim || ws.trim()) {
-    ws = "[" + ws + "]";
-    var trimBeginRegexp = new RegExp("^" + ws + ws + "*"),
-        trimEndRegexp = new RegExp(ws + ws + "*$");
-    String.prototype.trim = function trim() {
-        return String(this).replace(trimBeginRegexp, "").replace(trimEndRegexp, "");
-    };
-}
-
-function toInteger(n) {
-    n = +n;
-    if (n !== n) { // isNaN
-        n = 0;
-    } else if (n !== 0 && n !== (1/0) && n !== -(1/0)) {
-        n = (n > 0 || -1) * Math.floor(Math.abs(n));
-    }
-    return n;
-}
-
-function isPrimitive(input) {
-    var type = typeof input;
-    return (
-        input === null ||
-        type === "undefined" ||
-        type === "boolean" ||
-        type === "number" ||
-        type === "string"
-    );
-}
-
-function toPrimitive(input) {
-    var val, valueOf, toString;
-    if (isPrimitive(input)) {
-        return input;
-    }
-    valueOf = input.valueOf;
-    if (typeof valueOf === "function") {
-        val = valueOf.call(input);
-        if (isPrimitive(val)) {
-            return val;
-        }
-    }
-    toString = input.toString;
-    if (typeof toString === "function") {
-        val = toString.call(input);
-        if (isPrimitive(val)) {
-            return val;
-        }
-    }
-    throw new TypeError();
-}
-var toObject = function (o) {
-    if (o == null) { // this matches both null and undefined
-        throw new TypeError("can't convert "+o+" to object");
-    }
-    return Object(o);
-};
-
-});
-
-define('ace/document', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/lib/event_emitter', 'ace/range', 'ace/anchor'], function(require, exports, module) {
-
-
-var oop = require("./lib/oop");
-var EventEmitter = require("./lib/event_emitter").EventEmitter;
-var Range = require("./range").Range;
-var Anchor = require("./anchor").Anchor;
-
-var Document = function(text) {
-    this.$lines = [];
-    if (text.length === 0) {
-        this.$lines = [""];
-    } else if (Array.isArray(text)) {
-        this._insertLines(0, text);
-    } else {
-        this.insert({row: 0, column:0}, text);
-    }
-};
-
-(function() {
-
-    oop.implement(this, EventEmitter);
-    this.setValue = function(text) {
-        var len = this.getLength();
-        this.remove(new Range(0, 0, len, this.getLine(len-1).length));
-        this.insert({row: 0, column:0}, text);
-    };
-    this.getValue = function() {
-        return this.getAllLines().join(this.getNewLineCharacter());
-    };
-    this.createAnchor = function(row, column) {
-        return new Anchor(this, row, column);
-    };
-    if ("aaa".split(/a/).length === 0)
-        this.$split = function(text) {
-            return text.replace(/\r\n|\r/g, "\n").split("\n");
-        };
-    else
-        this.$split = function(text) {
-            return text.split(/\r\n|\r|\n/);
-        };
-
-
-    this.$detectNewLine = function(text) {
-        var match = text.match(/^.*?(\r\n|\r|\n)/m);
-        this.$autoNewLine = match ? match[1] : "\n";
-        this._signal("changeNewLineMode");
-    };
-    this.getNewLineCharacter = function() {
-        switch (this.$newLineMode) {
-          case "windows":
-            return "\r\n";
-          case "unix":
-            return "\n";
-          default:
-            return this.$autoNewLine || "\n";
-        }
-    };
-
-    this.$autoNewLine = "";
-    this.$newLineMode = "auto";
-    this.setNewLineMode = function(newLineMode) {
-        if (this.$newLineMode === newLineMode)
-            return;
-
-        this.$newLineMode = newLineMode;
-        this._signal("changeNewLineMode");
-    };
-    this.getNewLineMode = function() {
-        return this.$newLineMode;
-    };
-    this.isNewLine = function(text) {
-        return (text == "\r\n" || text == "\r" || text == "\n");
-    };
-    this.getLine = function(row) {
-        return this.$lines[row] || "";
-    };
-    this.getLines = function(firstRow, lastRow) {
-        return this.$lines.slice(firstRow, lastRow + 1);
-    };
-    this.getAllLines = function() {
-        return this.getLines(0, this.getLength());
-    };
-    this.getLength = function() {
-        return this.$lines.length;
-    };
-    this.getTextRange = function(range) {
-        if (range.start.row == range.end.row) {
-            return this.getLine(range.start.row)
-                .substring(range.start.column, range.end.column);
-        }
-        var lines = this.getLines(range.start.row, range.end.row);
-        lines[0] = (lines[0] || "").substring(range.start.column);
-        var l = lines.length - 1;
-        if (range.end.row - range.start.row == l)
-            lines[l] = lines[l].substring(0, range.end.column);
-        return lines.join(this.getNewLineCharacter());
-    };
-
-    this.$clipPosition = function(position) {
-        var length = this.getLength();
-        if (position.row >= length) {
-            position.row = Math.max(0, length - 1);
-            position.column = this.getLine(length-1).length;
-        } else if (position.row < 0)
-            position.row = 0;
-        return position;
-    };
-    this.insert = function(position, text) {
-        if (!text || text.length === 0)
-            return position;
-
-        position = this.$clipPosition(position);
-        if (this.getLength() <= 1)
-            this.$detectNewLine(text);
-
-        var lines = this.$split(text);
-        var firstLine = lines.splice(0, 1)[0];
-        var lastLine = lines.length == 0 ? null : lines.splice(lines.length - 1, 1)[0];
-
-        position = this.insertInLine(position, firstLine);
-        if (lastLine !== null) {
-            position = this.insertNewLine(position); // terminate first line
-            position = this._insertLines(position.row, lines);
-            position = this.insertInLine(position, lastLine || "");
-        }
-        return position;
-    };
-    this.insertLines = function(row, lines) {
-        if (row >= this.getLength())
-            return this.insert({row: row, column: 0}, "\n" + lines.join("\n"));
-        return this._insertLines(Math.max(row, 0), lines);
-    };
-    this._insertLines = function(row, lines) {
-        if (lines.length == 0)
-            return {row: row, column: 0};
-        while (lines.length > 0xF000) {
-            var end = this._insertLines(row, lines.slice(0, 0xF000));
-            lines = lines.slice(0xF000);
-            row = end.row;
-        }
-
-        var args = [row, 0];
-        args.push.apply(args, lines);
-        this.$lines.splice.apply(this.$lines, args);
-
-        var range = new Range(row, 0, row + lines.length, 0);
-        var delta = {
-            action: "insertLines",
-            range: range,
-            lines: lines
-        };
-        this._signal("change", { data: delta });
-        return range.end;
-    };
-    this.insertNewLine = function(position) {
-        position = this.$clipPosition(position);
-        var line = this.$lines[position.row] || "";
-
-        this.$lines[position.row] = line.substring(0, position.column);
-        this.$lines.splice(position.row + 1, 0, line.substring(position.column, line.length));
-
-        var end = {
-            row : position.row + 1,
-            column : 0
-        };
-
-        var delta = {
-            action: "insertText",
-            range: Range.fromPoints(position, end),
-            text: this.getNewLineCharacter()
-        };
-        this._signal("change", { data: delta });
-
-        return end;
-    };
-    this.insertInLine = function(position, text) {
-        if (text.length == 0)
-            return position;
-
-        var line = this.$lines[position.row] || "";
-
-        this.$lines[position.row] = line.substring(0, position.column) + text
-                + line.substring(position.column);
-
-        var end = {
-            row : position.row,
-            column : position.column + text.length
-        };
-
-        var delta = {
-            action: "insertText",
-            range: Range.fromPoints(position, end),
-            text: text
-        };
-        this._signal("change", { data: delta });
-
-        return end;
-    };
-    this.remove = function(range) {
-        if (!(range instanceof Range))
-            range = Range.fromPoints(range.start, range.end);
-        range.start = this.$clipPosition(range.start);
-        range.end = this.$clipPosition(range.end);
-
-        if (range.isEmpty())
-            return range.start;
-
-        var firstRow = range.start.row;
-        var lastRow = range.end.row;
-
-        if (range.isMultiLine()) {
-            var firstFullRow = range.start.column == 0 ? firstRow : firstRow + 1;
-            var lastFullRow = lastRow - 1;
-
-            if (range.end.column > 0)
-                this.removeInLine(lastRow, 0, range.end.column);
-
-            if (lastFullRow >= firstFullRow)
-                this._removeLines(firstFullRow, lastFullRow);
-
-            if (firstFullRow != firstRow) {
-                this.removeInLine(firstRow, range.start.column, this.getLine(firstRow).length);
-                this.removeNewLine(range.start.row);
-            }
-        }
-        else {
-            this.removeInLine(firstRow, range.start.column, range.end.column);
-        }
-        return range.start;
-    };
-    this.removeInLine = function(row, startColumn, endColumn) {
-        if (startColumn == endColumn)
-            return;
-
-        var range = new Range(row, startColumn, row, endColumn);
-        var line = this.getLine(row);
-        var removed = line.substring(startColumn, endColumn);
-        var newLine = line.substring(0, startColumn) + line.substring(endColumn, line.length);
-        this.$lines.splice(row, 1, newLine);
-
-        var delta = {
-            action: "removeText",
-            range: range,
-            text: removed
-        };
-        this._signal("change", { data: delta });
-        return range.start;
-    };
-    this.removeLines = function(firstRow, lastRow) {
-        if (firstRow < 0 || lastRow >= this.getLength())
-            return this.remove(new Range(firstRow, 0, lastRow + 1, 0));
-        return this._removeLines(firstRow, lastRow);
-    };
-
-    this._removeLines = function(firstRow, lastRow) {
-        var range = new Range(firstRow, 0, lastRow + 1, 0);
-        var removed = this.$lines.splice(firstRow, lastRow - firstRow + 1);
-
-        var delta = {
-            action: "removeLines",
-            range: range,
-            nl: this.getNewLineCharacter(),
-            lines: removed
-        };
-        this._signal("change", { data: delta });
-        return removed;
-    };
-    this.removeNewLine = function(row) {
-        var firstLine = this.getLine(row);
-        var secondLine = this.getLine(row+1);
-
-        var range = new Range(row, firstLine.length, row+1, 0);
-        var line = firstLine + secondLine;
-
-        this.$lines.splice(row, 2, line);
-
-        var delta = {
-            action: "removeText",
-            range: range,
-            text: this.getNewLineCharacter()
-        };
-        this._signal("change", { data: delta });
-    };
-    this.replace = function(range, text) {
-        if (!(range instanceof Range))
-            range = Range.fromPoints(range.start, range.end);
-        if (text.length == 0 && range.isEmpty())
-            return range.start;
-        if (text == this.getTextRange(range))
-            return range.end;
-
-        this.remove(range);
-        if (text) {
-            var end = this.insert(range.start, text);
-        }
-        else {
-            end = range.start;
-        }
-
-        return end;
-    };
-    this.applyDeltas = function(deltas) {
-        for (var i=0; i<deltas.length; i++) {
-            var delta = deltas[i];
-            var range = Range.fromPoints(delta.range.start, delta.range.end);
-
-            if (delta.action == "insertLines")
-                this.insertLines(range.start.row, delta.lines);
-            else if (delta.action == "insertText")
-                this.insert(range.start, delta.text);
-            else if (delta.action == "removeLines")
-                this._removeLines(range.start.row, range.end.row - 1);
-            else if (delta.action == "removeText")
-                this.remove(range);
-        }
-    };
-    this.revertDeltas = function(deltas) {
-        for (var i=deltas.length-1; i>=0; i--) {
-            var delta = deltas[i];
-
-            var range = Range.fromPoints(delta.range.start, delta.range.end);
-
-            if (delta.action == "insertLines")
-                this._removeLines(range.start.row, range.end.row - 1);
-            else if (delta.action == "insertText")
-                this.remove(range);
-            else if (delta.action == "removeLines")
-                this._insertLines(range.start.row, delta.lines);
-            else if (delta.action == "removeText")
-                this.insert(range.start, delta.text);
-        }
-    };
-    this.indexToPosition = function(index, startRow) {
-        var lines = this.$lines || this.getAllLines();
-        var newlineLength = this.getNewLineCharacter().length;
-        for (var i = startRow || 0, l = lines.length; i < l; i++) {
-            index -= lines[i].length + newlineLength;
-            if (index < 0)
-                return {row: i, column: index + lines[i].length + newlineLength};
-        }
-        return {row: l-1, column: lines[l-1].length};
-    };
-    this.positionToIndex = function(pos, startRow) {
-        var lines = this.$lines || this.getAllLines();
-        var newlineLength = this.getNewLineCharacter().length;
-        var index = 0;
-        var row = Math.min(pos.row, lines.length);
-        for (var i = startRow || 0; i < row; ++i)
-            index += lines[i].length + newlineLength;
-
-        return index + pos.column;
-    };
-
-}).call(Document.prototype);
-
-exports.Document = Document;
-});
-
-define('ace/lib/event_emitter', ['require', 'exports', 'module' ], function(require, exports, module) {
-
-
-var EventEmitter = {};
-var stopPropagation = function() { this.propagationStopped = true; };
-var preventDefault = function() { this.defaultPrevented = true; };
-
-EventEmitter._emit =
-EventEmitter._dispatchEvent = function(eventName, e) {
-    this._eventRegistry || (this._eventRegistry = {});
-    this._defaultHandlers || (this._defaultHandlers = {});
-
-    var listeners = this._eventRegistry[eventName] || [];
-    var defaultHandler = this._defaultHandlers[eventName];
-    if (!listeners.length && !defaultHandler)
-        return;
-
-    if (typeof e != "object" || !e)
-        e = {};
-
-    if (!e.type)
-        e.type = eventName;
-    if (!e.stopPropagation)
-        e.stopPropagation = stopPropagation;
-    if (!e.preventDefault)
-        e.preventDefault = preventDefault;
-
-    listeners = listeners.slice();
-    for (var i=0; i<listeners.length; i++) {
-        listeners[i](e, this);
-        if (e.propagationStopped)
-            break;
-    }
-    
-    if (defaultHandler && !e.defaultPrevented)
-        return defaultHandler(e, this);
-};
-
-
-EventEmitter._signal = function(eventName, e) {
-    var listeners = (this._eventRegistry || {})[eventName];
-    if (!listeners)
-        return;
-    listeners = listeners.slice();
-    for (var i=0; i<listeners.length; i++)
-        listeners[i](e, this);
-};
-
-EventEmitter.once = function(eventName, callback) {
-    var _self = this;
-    callback && this.addEventListener(eventName, function newCallback() {
-        _self.removeEventListener(eventName, newCallback);
-        callback.apply(null, arguments);
-    });
-};
-
-
-EventEmitter.setDefaultHandler = function(eventName, callback) {
-    var handlers = this._defaultHandlers
-    if (!handlers)
-        handlers = this._defaultHandlers = {_disabled_: {}};
-    
-    if (handlers[eventName]) {
-        var old = handlers[eventName];
-        var disabled = handlers._disabled_[eventName];
-        if (!disabled)
-            handlers._disabled_[eventName] = disabled = [];
-        disabled.push(old);
-        var i = disabled.indexOf(callback);
-        if (i != -1) 
-            disabled.splice(i, 1);
-    }
-    handlers[eventName] = callback;
-};
-EventEmitter.removeDefaultHandler = function(eventName, callback) {
-    var handlers = this._defaultHandlers
-    if (!handlers)
-        return;
-    var disabled = handlers._disabled_[eventName];
-    
-    if (handlers[eventName] == callback) {
-        var old = handlers[eventName];
-        if (disabled)
-            this.setDefaultHandler(eventName, disabled.pop());
-    } else if (disabled) {
-        var i = disabled.indexOf(callback);
-        if (i != -1)
-            disabled.splice(i, 1);
-    }
-};
-
-EventEmitter.on =
-EventEmitter.addEventListener = function(eventName, callback, capturing) {
-    this._eventRegistry = this._eventRegistry || {};
-
-    var listeners = this._eventRegistry[eventName];
-    if (!listeners)
-        listeners = this._eventRegistry[eventName] = [];
-
-    if (listeners.indexOf(callback) == -1)
-        listeners[capturing ? "unshift" : "push"](callback);
-    return callback;
-};
-
-EventEmitter.off =
-EventEmitter.removeListener =
-EventEmitter.removeEventListener = function(eventName, callback) {
-    this._eventRegistry = this._eventRegistry || {};
-
-    var listeners = this._eventRegistry[eventName];
-    if (!listeners)
-        return;
-
-    var index = listeners.indexOf(callback);
-    if (index !== -1)
-        listeners.splice(index, 1);
-};
-
-EventEmitter.removeAllListeners = function(eventName) {
-    if (this._eventRegistry) this._eventRegistry[eventName] = [];
-};
-
-exports.EventEmitter = EventEmitter;
-
-});
-
-define('ace/range', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+define("ace/range",["require","exports","module"], function(require, exports, module) {
+"use strict";
 var comparePoints = function(p1, p2) {
     return p1.row - p2.row || p1.column - p2.column;
 };
@@ -1761,7 +561,7 @@ var Range = function(startRow, startColumn, endRow, endColumn) {
         if (!this.isMultiLine()) {
             if (row === this.start.row) {
                 return column < this.start.column ? -1 : (column > this.end.column ? 1 : 0);
-            };
+            }
         }
 
         if (row < this.start.row)
@@ -1872,8 +672,199 @@ Range.comparePoints = function(p1, p2) {
 exports.Range = Range;
 });
 
-define('ace/anchor', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/lib/event_emitter'], function(require, exports, module) {
+define("ace/apply_delta",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
+function throwDeltaError(delta, errorText){
+    console.log("Invalid Delta:", delta);
+    throw "Invalid Delta: " + errorText;
+}
+
+function positionInDocument(docLines, position) {
+    return position.row    >= 0 && position.row    <  docLines.length &&
+           position.column >= 0 && position.column <= docLines[position.row].length;
+}
+
+function validateDelta(docLines, delta) {
+    if (delta.action != "insert" && delta.action != "remove")
+        throwDeltaError(delta, "delta.action must be 'insert' or 'remove'");
+    if (!(delta.lines instanceof Array))
+        throwDeltaError(delta, "delta.lines must be an Array");
+    if (!delta.start || !delta.end)
+       throwDeltaError(delta, "delta.start/end must be an present");
+    var start = delta.start;
+    if (!positionInDocument(docLines, delta.start))
+        throwDeltaError(delta, "delta.start must be contained in document");
+    var end = delta.end;
+    if (delta.action == "remove" && !positionInDocument(docLines, end))
+        throwDeltaError(delta, "delta.end must contained in document for 'remove' actions");
+    var numRangeRows = end.row - start.row;
+    var numRangeLastLineChars = (end.column - (numRangeRows == 0 ? start.column : 0));
+    if (numRangeRows != delta.lines.length - 1 || delta.lines[numRangeRows].length != numRangeLastLineChars)
+        throwDeltaError(delta, "delta.range must match delta lines");
+}
+
+exports.applyDelta = function(docLines, delta, doNotValidate) {
+    
+    var row = delta.start.row;
+    var startColumn = delta.start.column;
+    var line = docLines[row] || "";
+    switch (delta.action) {
+        case "insert":
+            var lines = delta.lines;
+            if (lines.length === 1) {
+                docLines[row] = line.substring(0, startColumn) + delta.lines[0] + line.substring(startColumn);
+            } else {
+                var args = [row, 1].concat(delta.lines);
+                docLines.splice.apply(docLines, args);
+                docLines[row] = line.substring(0, startColumn) + docLines[row];
+                docLines[row + delta.lines.length - 1] += line.substring(startColumn);
+            }
+            break;
+        case "remove":
+            var endColumn = delta.end.column;
+            var endRow = delta.end.row;
+            if (row === endRow) {
+                docLines[row] = line.substring(0, startColumn) + line.substring(endColumn);
+            } else {
+                docLines.splice(
+                    row, endRow - row + 1,
+                    line.substring(0, startColumn) + docLines[endRow].substring(endColumn)
+                );
+            }
+            break;
+    }
+}
+});
+
+define("ace/lib/event_emitter",["require","exports","module"], function(require, exports, module) {
+"use strict";
+
+var EventEmitter = {};
+var stopPropagation = function() { this.propagationStopped = true; };
+var preventDefault = function() { this.defaultPrevented = true; };
+
+EventEmitter._emit =
+EventEmitter._dispatchEvent = function(eventName, e) {
+    this._eventRegistry || (this._eventRegistry = {});
+    this._defaultHandlers || (this._defaultHandlers = {});
+
+    var listeners = this._eventRegistry[eventName] || [];
+    var defaultHandler = this._defaultHandlers[eventName];
+    if (!listeners.length && !defaultHandler)
+        return;
+
+    if (typeof e != "object" || !e)
+        e = {};
+
+    if (!e.type)
+        e.type = eventName;
+    if (!e.stopPropagation)
+        e.stopPropagation = stopPropagation;
+    if (!e.preventDefault)
+        e.preventDefault = preventDefault;
+
+    listeners = listeners.slice();
+    for (var i=0; i<listeners.length; i++) {
+        listeners[i](e, this);
+        if (e.propagationStopped)
+            break;
+    }
+    
+    if (defaultHandler && !e.defaultPrevented)
+        return defaultHandler(e, this);
+};
+
+
+EventEmitter._signal = function(eventName, e) {
+    var listeners = (this._eventRegistry || {})[eventName];
+    if (!listeners)
+        return;
+    listeners = listeners.slice();
+    for (var i=0; i<listeners.length; i++)
+        listeners[i](e, this);
+};
+
+EventEmitter.once = function(eventName, callback) {
+    var _self = this;
+    callback && this.addEventListener(eventName, function newCallback() {
+        _self.removeEventListener(eventName, newCallback);
+        callback.apply(null, arguments);
+    });
+};
+
+
+EventEmitter.setDefaultHandler = function(eventName, callback) {
+    var handlers = this._defaultHandlers
+    if (!handlers)
+        handlers = this._defaultHandlers = {_disabled_: {}};
+    
+    if (handlers[eventName]) {
+        var old = handlers[eventName];
+        var disabled = handlers._disabled_[eventName];
+        if (!disabled)
+            handlers._disabled_[eventName] = disabled = [];
+        disabled.push(old);
+        var i = disabled.indexOf(callback);
+        if (i != -1) 
+            disabled.splice(i, 1);
+    }
+    handlers[eventName] = callback;
+};
+EventEmitter.removeDefaultHandler = function(eventName, callback) {
+    var handlers = this._defaultHandlers
+    if (!handlers)
+        return;
+    var disabled = handlers._disabled_[eventName];
+    
+    if (handlers[eventName] == callback) {
+        var old = handlers[eventName];
+        if (disabled)
+            this.setDefaultHandler(eventName, disabled.pop());
+    } else if (disabled) {
+        var i = disabled.indexOf(callback);
+        if (i != -1)
+            disabled.splice(i, 1);
+    }
+};
+
+EventEmitter.on =
+EventEmitter.addEventListener = function(eventName, callback, capturing) {
+    this._eventRegistry = this._eventRegistry || {};
+
+    var listeners = this._eventRegistry[eventName];
+    if (!listeners)
+        listeners = this._eventRegistry[eventName] = [];
+
+    if (listeners.indexOf(callback) == -1)
+        listeners[capturing ? "unshift" : "push"](callback);
+    return callback;
+};
+
+EventEmitter.off =
+EventEmitter.removeListener =
+EventEmitter.removeEventListener = function(eventName, callback) {
+    this._eventRegistry = this._eventRegistry || {};
+
+    var listeners = this._eventRegistry[eventName];
+    if (!listeners)
+        return;
+
+    var index = listeners.indexOf(callback);
+    if (index !== -1)
+        listeners.splice(index, 1);
+};
+
+EventEmitter.removeAllListeners = function(eventName) {
+    if (this._eventRegistry) this._eventRegistry[eventName] = [];
+};
+
+exports.EventEmitter = EventEmitter;
+
+});
+
+define("ace/anchor",["require","exports","module","ace/lib/oop","ace/lib/event_emitter"], function(require, exports, module) {
+"use strict";
 
 var oop = require("./lib/oop");
 var EventEmitter = require("./lib/event_emitter").EventEmitter;
@@ -1898,68 +889,46 @@ var Anchor = exports.Anchor = function(doc, row, column) {
         return this.document;
     };
     this.$insertRight = false;
-    this.onChange = function(e) {
-        var delta = e.data;
-        var range = delta.range;
-
-        if (range.start.row == range.end.row && range.start.row != this.row)
+    this.onChange = function(delta) {
+        if (delta.start.row == delta.end.row && delta.start.row != this.row)
             return;
 
-        if (range.start.row > this.row)
+        if (delta.start.row > this.row)
             return;
-
-        if (range.start.row == this.row && range.start.column > this.column)
-            return;
-
-        var row = this.row;
-        var column = this.column;
-        var start = range.start;
-        var end = range.end;
-
-        if (delta.action === "insertText") {
-            if (start.row === row && start.column <= column) {
-                if (start.column === column && this.$insertRight) {
-                } else if (start.row === end.row) {
-                    column += end.column - start.column;
-                } else {
-                    column -= start.column;
-                    row += end.row - start.row;
-                }
-            } else if (start.row !== end.row && start.row < row) {
-                row += end.row - start.row;
-            }
-        } else if (delta.action === "insertLines") {
-            if (start.row <= row) {
-                row += end.row - start.row;
-            }
-        } else if (delta.action === "removeText") {
-            if (start.row === row && start.column < column) {
-                if (end.column >= column)
-                    column = start.column;
-                else
-                    column = Math.max(0, column - (end.column - start.column));
-
-            } else if (start.row !== end.row && start.row < row) {
-                if (end.row === row)
-                    column = Math.max(0, column - end.column) + start.column;
-                row -= (end.row - start.row);
-            } else if (end.row === row) {
-                row -= end.row - start.row;
-                column = Math.max(0, column - end.column) + start.column;
-            }
-        } else if (delta.action == "removeLines") {
-            if (start.row <= row) {
-                if (end.row <= row)
-                    row -= end.row - start.row;
-                else {
-                    row = start.row;
-                    column = 0;
-                }
-            }
-        }
-
-        this.setPosition(row, column, true);
+            
+        var point = $getTransformedPoint(delta, {row: this.row, column: this.column}, this.$insertRight);
+        this.setPosition(point.row, point.column, true);
     };
+    
+    function $pointsInOrder(point1, point2, equalPointsInOrder) {
+        var bColIsAfter = equalPointsInOrder ? point1.column <= point2.column : point1.column < point2.column;
+        return (point1.row < point2.row) || (point1.row == point2.row && bColIsAfter);
+    }
+            
+    function $getTransformedPoint(delta, point, moveIfEqual) {
+        var deltaIsInsert = delta.action == "insert";
+        var deltaRowShift = (deltaIsInsert ? 1 : -1) * (delta.end.row    - delta.start.row);
+        var deltaColShift = (deltaIsInsert ? 1 : -1) * (delta.end.column - delta.start.column);
+        var deltaStart = delta.start;
+        var deltaEnd = deltaIsInsert ? deltaStart : delta.end; // Collapse insert range.
+        if ($pointsInOrder(point, deltaStart, moveIfEqual)) {
+            return {
+                row: point.row,
+                column: point.column
+            };
+        }
+        if ($pointsInOrder(deltaEnd, point, !moveIfEqual)) {
+            return {
+                row: point.row + deltaRowShift,
+                column: point.column + (point.row == deltaEnd.row ? deltaColShift : 0)
+            };
+        }
+        
+        return {
+            row: deltaStart.row,
+            column: deltaStart.column
+        };
+    }
     this.setPosition = function(row, column, noClip) {
         var pos;
         if (noClip) {
@@ -2018,8 +987,428 @@ var Anchor = exports.Anchor = function(doc, row, column) {
 }).call(Anchor.prototype);
 
 });
-define('ace/mode/html/saxparser', ['require', 'exports', 'module' , 'html5-entities', 'ace/mode/html/InputStream', 'ace/mode/html/EntityParser', 'assert', 'ace/mode/html/messages.json', 'ace/mode/html/constants', 'events', 'ace/mode/html/Tokenizer', 'ace/mode/html/ElementStack', 'ace/mode/html/StackItem', 'ace/mode/html/SAXTreeBuilder', 'ace/mode/Tokenizer', 'ace/mode/html/TreeParser', 'util', 'ace/mode/TreeBuilder', 'buffer', '__browserify_process', 'base64-js', 'ace/mode/html/buffer_ieee754', 'DaboPu', 'ace/mode/html/lib/sax/SAXParser.js'], function(require, exports, module) {
-require=(function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0].call(u.exports,function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
+
+define("ace/document",["require","exports","module","ace/lib/oop","ace/apply_delta","ace/lib/event_emitter","ace/range","ace/anchor"], function(require, exports, module) {
+"use strict";
+
+var oop = require("./lib/oop");
+var applyDelta = require("./apply_delta").applyDelta;
+var EventEmitter = require("./lib/event_emitter").EventEmitter;
+var Range = require("./range").Range;
+var Anchor = require("./anchor").Anchor;
+
+var Document = function(textOrLines) {
+    this.$lines = [""];
+    if (textOrLines.length === 0) {
+        this.$lines = [""];
+    } else if (Array.isArray(textOrLines)) {
+        this.insertMergedLines({row: 0, column: 0}, textOrLines);
+    } else {
+        this.insert({row: 0, column:0}, textOrLines);
+    }
+};
+
+(function() {
+
+    oop.implement(this, EventEmitter);
+    this.setValue = function(text) {
+        var len = this.getLength() - 1;
+        this.remove(new Range(0, 0, len, this.getLine(len).length));
+        this.insert({row: 0, column: 0}, text);
+    };
+    this.getValue = function() {
+        return this.getAllLines().join(this.getNewLineCharacter());
+    };
+    this.createAnchor = function(row, column) {
+        return new Anchor(this, row, column);
+    };
+    if ("aaa".split(/a/).length === 0) {
+        this.$split = function(text) {
+            return text.replace(/\r\n|\r/g, "\n").split("\n");
+        };
+    } else {
+        this.$split = function(text) {
+            return text.split(/\r\n|\r|\n/);
+        };
+    }
+
+
+    this.$detectNewLine = function(text) {
+        var match = text.match(/^.*?(\r\n|\r|\n)/m);
+        this.$autoNewLine = match ? match[1] : "\n";
+        this._signal("changeNewLineMode");
+    };
+    this.getNewLineCharacter = function() {
+        switch (this.$newLineMode) {
+          case "windows":
+            return "\r\n";
+          case "unix":
+            return "\n";
+          default:
+            return this.$autoNewLine || "\n";
+        }
+    };
+
+    this.$autoNewLine = "";
+    this.$newLineMode = "auto";
+    this.setNewLineMode = function(newLineMode) {
+        if (this.$newLineMode === newLineMode)
+            return;
+
+        this.$newLineMode = newLineMode;
+        this._signal("changeNewLineMode");
+    };
+    this.getNewLineMode = function() {
+        return this.$newLineMode;
+    };
+    this.isNewLine = function(text) {
+        return (text == "\r\n" || text == "\r" || text == "\n");
+    };
+    this.getLine = function(row) {
+        return this.$lines[row] || "";
+    };
+    this.getLines = function(firstRow, lastRow) {
+        return this.$lines.slice(firstRow, lastRow + 1);
+    };
+    this.getAllLines = function() {
+        return this.getLines(0, this.getLength());
+    };
+    this.getLength = function() {
+        return this.$lines.length;
+    };
+    this.getTextRange = function(range) {
+        return this.getLinesForRange(range).join(this.getNewLineCharacter());
+    };
+    this.getLinesForRange = function(range) {
+        var lines;
+        if (range.start.row === range.end.row) {
+            lines = [this.getLine(range.start.row).substring(range.start.column, range.end.column)];
+        } else {
+            lines = this.getLines(range.start.row, range.end.row);
+            lines[0] = (lines[0] || "").substring(range.start.column);
+            var l = lines.length - 1;
+            if (range.end.row - range.start.row == l)
+                lines[l] = lines[l].substring(0, range.end.column);
+        }
+        return lines;
+    };
+    this.insertLines = function(row, lines) {
+        console.warn("Use of document.insertLines is deprecated. Use the insertFullLines method instead.");
+        return this.insertFullLines(row, lines);
+    };
+    this.removeLines = function(firstRow, lastRow) {
+        console.warn("Use of document.removeLines is deprecated. Use the removeFullLines method instead.");
+        return this.removeFullLines(firstRow, lastRow);
+    };
+    this.insertNewLine = function(position) {
+        console.warn("Use of document.insertNewLine is deprecated. Use insertMergedLines(position, ['', '']) instead.");
+        return this.insertMergedLines(position, ["", ""]);
+    };
+    this.insert = function(position, text) {
+        if (this.getLength() <= 1)
+            this.$detectNewLine(text);
+        
+        return this.insertMergedLines(position, this.$split(text));
+    };
+    this.insertInLine = function(position, text) {
+        var start = this.clippedPos(position.row, position.column);
+        var end = this.pos(position.row, position.column + text.length);
+        
+        this.applyDelta({
+            start: start,
+            end: end,
+            action: "insert",
+            lines: [text]
+        }, true);
+        
+        return this.clonePos(end);
+    };
+    
+    this.clippedPos = function(row, column) {
+        var length = this.getLength();
+        if (row === undefined) {
+            row = length;
+        } else if (row < 0) {
+            row = 0;
+        } else if (row >= length) {
+            row = length - 1;
+            column = undefined;
+        }
+        var line = this.getLine(row);
+        if (column == undefined)
+            column = line.length;
+        column = Math.min(Math.max(column, 0), line.length);
+        return {row: row, column: column};
+    };
+    
+    this.clonePos = function(pos) {
+        return {row: pos.row, column: pos.column};
+    };
+    
+    this.pos = function(row, column) {
+        return {row: row, column: column};
+    };
+    
+    this.$clipPosition = function(position) {
+        var length = this.getLength();
+        if (position.row >= length) {
+            position.row = Math.max(0, length - 1);
+            position.column = this.getLine(length - 1).length;
+        } else {
+            position.row = Math.max(0, position.row);
+            position.column = Math.min(Math.max(position.column, 0), this.getLine(position.row).length);
+        }
+        return position;
+    };
+    this.insertFullLines = function(row, lines) {
+        row = Math.min(Math.max(row, 0), this.getLength());
+        var column = 0;
+        if (row < this.getLength()) {
+            lines = lines.concat([""]);
+            column = 0;
+        } else {
+            lines = [""].concat(lines);
+            row--;
+            column = this.$lines[row].length;
+        }
+        this.insertMergedLines({row: row, column: column}, lines);
+    };    
+    this.insertMergedLines = function(position, lines) {
+        var start = this.clippedPos(position.row, position.column);
+        var end = {
+            row: start.row + lines.length - 1,
+            column: (lines.length == 1 ? start.column : 0) + lines[lines.length - 1].length
+        };
+        
+        this.applyDelta({
+            start: start,
+            end: end,
+            action: "insert",
+            lines: lines
+        });
+        
+        return this.clonePos(end);
+    };
+    this.remove = function(range) {
+        var start = this.clippedPos(range.start.row, range.start.column);
+        var end = this.clippedPos(range.end.row, range.end.column);
+        this.applyDelta({
+            start: start,
+            end: end,
+            action: "remove",
+            lines: this.getLinesForRange({start: start, end: end})
+        });
+        return this.clonePos(start);
+    };
+    this.removeInLine = function(row, startColumn, endColumn) {
+        var start = this.clippedPos(row, startColumn);
+        var end = this.clippedPos(row, endColumn);
+        
+        this.applyDelta({
+            start: start,
+            end: end,
+            action: "remove",
+            lines: this.getLinesForRange({start: start, end: end})
+        }, true);
+        
+        return this.clonePos(start);
+    };
+    this.removeFullLines = function(firstRow, lastRow) {
+        firstRow = Math.min(Math.max(0, firstRow), this.getLength() - 1);
+        lastRow  = Math.min(Math.max(0, lastRow ), this.getLength() - 1);
+        var deleteFirstNewLine = lastRow == this.getLength() - 1 && firstRow > 0;
+        var deleteLastNewLine  = lastRow  < this.getLength() - 1;
+        var startRow = ( deleteFirstNewLine ? firstRow - 1                  : firstRow                    );
+        var startCol = ( deleteFirstNewLine ? this.getLine(startRow).length : 0                           );
+        var endRow   = ( deleteLastNewLine  ? lastRow + 1                   : lastRow                     );
+        var endCol   = ( deleteLastNewLine  ? 0                             : this.getLine(endRow).length ); 
+        var range = new Range(startRow, startCol, endRow, endCol);
+        var deletedLines = this.$lines.slice(firstRow, lastRow + 1);
+        
+        this.applyDelta({
+            start: range.start,
+            end: range.end,
+            action: "remove",
+            lines: this.getLinesForRange(range)
+        });
+        return deletedLines;
+    };
+    this.removeNewLine = function(row) {
+        if (row < this.getLength() - 1 && row >= 0) {
+            this.applyDelta({
+                start: this.pos(row, this.getLine(row).length),
+                end: this.pos(row + 1, 0),
+                action: "remove",
+                lines: ["", ""]
+            });
+        }
+    };
+    this.replace = function(range, text) {
+        if (!(range instanceof Range))
+            range = Range.fromPoints(range.start, range.end);
+        if (text.length === 0 && range.isEmpty())
+            return range.start;
+        if (text == this.getTextRange(range))
+            return range.end;
+
+        this.remove(range);
+        var end;
+        if (text) {
+            end = this.insert(range.start, text);
+        }
+        else {
+            end = range.start;
+        }
+        
+        return end;
+    };
+    this.applyDeltas = function(deltas) {
+        for (var i=0; i<deltas.length; i++) {
+            this.applyDelta(deltas[i]);
+        }
+    };
+    this.revertDeltas = function(deltas) {
+        for (var i=deltas.length-1; i>=0; i--) {
+            this.revertDelta(deltas[i]);
+        }
+    };
+    this.applyDelta = function(delta, doNotValidate) {
+        var isInsert = delta.action == "insert";
+        if (isInsert ? delta.lines.length <= 1 && !delta.lines[0]
+            : !Range.comparePoints(delta.start, delta.end)) {
+            return;
+        }
+        
+        if (isInsert && delta.lines.length > 20000)
+            this.$splitAndapplyLargeDelta(delta, 20000);
+        applyDelta(this.$lines, delta, doNotValidate);
+        this._signal("change", delta);
+    };
+    
+    this.$splitAndapplyLargeDelta = function(delta, MAX) {
+        var lines = delta.lines;
+        var l = lines.length;
+        var row = delta.start.row; 
+        var column = delta.start.column;
+        var from = 0, to = 0;
+        do {
+            from = to;
+            to += MAX - 1;
+            var chunk = lines.slice(from, to);
+            if (to > l) {
+                delta.lines = chunk;
+                delta.start.row = row + from;
+                delta.start.column = column;
+                break;
+            }
+            chunk.push("");
+            this.applyDelta({
+                start: this.pos(row + from, column),
+                end: this.pos(row + to, column = 0),
+                action: delta.action,
+                lines: chunk
+            }, true);
+        } while(true);
+    };
+    this.revertDelta = function(delta) {
+        this.applyDelta({
+            start: this.clonePos(delta.start),
+            end: this.clonePos(delta.end),
+            action: (delta.action == "insert" ? "remove" : "insert"),
+            lines: delta.lines.slice()
+        });
+    };
+    this.indexToPosition = function(index, startRow) {
+        var lines = this.$lines || this.getAllLines();
+        var newlineLength = this.getNewLineCharacter().length;
+        for (var i = startRow || 0, l = lines.length; i < l; i++) {
+            index -= lines[i].length + newlineLength;
+            if (index < 0)
+                return {row: i, column: index + lines[i].length + newlineLength};
+        }
+        return {row: l-1, column: lines[l-1].length};
+    };
+    this.positionToIndex = function(pos, startRow) {
+        var lines = this.$lines || this.getAllLines();
+        var newlineLength = this.getNewLineCharacter().length;
+        var index = 0;
+        var row = Math.min(pos.row, lines.length);
+        for (var i = startRow || 0; i < row; ++i)
+            index += lines[i].length + newlineLength;
+
+        return index + pos.column;
+    };
+
+}).call(Document.prototype);
+
+exports.Document = Document;
+});
+
+define("ace/worker/mirror",["require","exports","module","ace/range","ace/document","ace/lib/lang"], function(require, exports, module) {
+"use strict";
+
+var Range = require("../range").Range;
+var Document = require("../document").Document;
+var lang = require("../lib/lang");
+    
+var Mirror = exports.Mirror = function(sender) {
+    this.sender = sender;
+    var doc = this.doc = new Document("");
+    
+    var deferredUpdate = this.deferredUpdate = lang.delayedCall(this.onUpdate.bind(this));
+    
+    var _self = this;
+    sender.on("change", function(e) {
+        var data = e.data;
+        if (data[0].start) {
+            doc.applyDeltas(data);
+        } else {
+            for (var i = 0; i < data.length; i += 2) {
+                if (Array.isArray(data[i+1])) {
+                    var d = {action: "insert", start: data[i], lines: data[i+1]};
+                } else {
+                    var d = {action: "remove", start: data[i], end: data[i+1]};
+                }
+                doc.applyDelta(d, true);
+            }
+        }
+        if (_self.$timeout)
+            return deferredUpdate.schedule(_self.$timeout);
+        _self.onUpdate();
+    });
+};
+
+(function() {
+    
+    this.$timeout = 500;
+    
+    this.setTimeout = function(timeout) {
+        this.$timeout = timeout;
+    };
+    
+    this.setValue = function(value) {
+        this.doc.setValue(value);
+        this.deferredUpdate.schedule(this.$timeout);
+    };
+    
+    this.getValue = function(callbackId) {
+        this.sender.callback(this.doc.getValue(), callbackId);
+    };
+    
+    this.onUpdate = function() {
+    };
+    
+    this.isPending = function() {
+        return this.deferredUpdate.isPending();
+    };
+    
+}).call(Mirror.prototype);
+
+});
+
+define("ace/mode/html/saxparser",["require","exports","module"], function(require, exports, module) {
+module.exports = (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({
+1:[function(_dereq_,module,exports){
 function isScopeMarker(node) {
 	if (node.namespaceURI === "http://www.w3.org/1999/xhtml") {
 		return node.localName === "applet"
@@ -2077,14 +1466,12 @@ function isSelectScopeMarker(node) {
 	return !(node.namespaceURI === "http://www.w3.org/1999/xhtml" && node.localName === 'optgroup')
 		&& !(node.namespaceURI === "http://www.w3.org/1999/xhtml" && node.localName === 'option');
 }
-
 function ElementStack() {
 	this.elements = [];
 	this.rootNode = null;
 	this.headElement = null;
 	this.bodyElement = null;
 }
-
 ElementStack.prototype._inScope = function(localName, isMarker) {
 	for (var i = this.elements.length - 1; i >= 0; i--) {
 		var node = this.elements[i];
@@ -2115,7 +1502,6 @@ ElementStack.prototype.pop = function() {
 ElementStack.prototype.remove = function(item) {
 	this.elements.splice(this.elements.indexOf(item), 1);
 };
-
 ElementStack.prototype.popUntilPopped = function(localName) {
 	var element;
 	do {
@@ -2137,35 +1523,27 @@ ElementStack.prototype.popUntilTableRowScopeMarker = function() {
 	while (!isTableRowScopeMarker(this.top))
 		this.pop();
 };
-
 ElementStack.prototype.item = function(index) {
 	return this.elements[index];
 };
-
 ElementStack.prototype.contains = function(element) {
 	return this.elements.indexOf(element) !== -1;
 };
-
 ElementStack.prototype.inScope = function(localName) {
 	return this._inScope(localName, isScopeMarker);
 };
-
 ElementStack.prototype.inListItemScope = function(localName) {
 	return this._inScope(localName, isListItemScopeMarker);
 };
-
 ElementStack.prototype.inTableScope = function(localName) {
 	return this._inScope(localName, isTableScopeMarker);
 };
-
 ElementStack.prototype.inButtonScope = function(localName) {
 	return this._inScope(localName, isButtonScopeMarker);
 };
-
 ElementStack.prototype.inSelectScope = function(localName) {
 	return this._inScope(localName, isSelectScopeMarker);
 };
-
 ElementStack.prototype.hasNumberedHeaderElementInScope = function() {
 	for (var i = this.elements.length - 1; i >= 0; i--) {
 		var node = this.elements[i];
@@ -2175,23 +1553,23 @@ ElementStack.prototype.hasNumberedHeaderElementInScope = function() {
 			return false;
 	}
 };
-
 ElementStack.prototype.furthestBlockForFormattingElement = function(element) {
 	var furthestBlock = null;
 	for (var i = this.elements.length - 1; i >= 0; i--) {
 		var node = this.elements[i];
 		if (node.node === element)
-			return furthestBlock;
+			break;
 		if (node.isSpecial())
 			furthestBlock = node;
 	}
+    return furthestBlock;
 };
-
 ElementStack.prototype.findIndex = function(localName) {
 	for (var i = this.elements.length - 1; i >= 0; i--) {
 		if (this.elements[i].localName == localName)
 			return i;
 	}
+    return -1;
 };
 
 ElementStack.prototype.remove_openElements_until = function(callback) {
@@ -2218,10 +1596,11 @@ Object.defineProperty(ElementStack.prototype, 'length', {
 
 exports.ElementStack = ElementStack;
 
-},{}],2:[function(require,module,exports){
-var entities  = require('html5-entities');
-var InputStream = require('./InputStream').InputStream;
-var LEAD_OFFSET = (0xD800 - (0x10000 >> 10));
+},
+{}],
+2:[function(_dereq_,module,exports){
+var entities  = _dereq_('html5-entities');
+var InputStream = _dereq_('./InputStream').InputStream;
 
 var namedEntityPrefixes = {};
 Object.keys(entities).forEach(function (entityKey) {
@@ -2292,11 +1671,11 @@ EntityParser.consumeEntity = function(buffer, tokenizer, additionalAllowedCharac
 				tokenizer._parseError("invalid-numeric-entity-replaced");
 				code = replacement;
 			}
-			if (code > 0xFFFF && code < 0x10FFFF) {
-				var astralChar = "";
-				astralChar += String.fromCharCode(LEAD_OFFSET + (code >> 10));
-				astralChar += String.fromCharCode(0xDC00 + (code & 0x3FF));
-				decodedCharacter = astralChar;
+			if (code > 0xFFFF && code <= 0x10FFFF) {
+		        code -= 0x10000;
+		        var first = ((0xffc00 & code) >> 10) + 0xD800;
+		        var second = (0x3ff & code) + 0xDC00;
+				decodedCharacter = String.fromCharCode(first, second);
 			} else
 				decodedCharacter = String.fromCharCode(code);
 			if (ch !== ';') {
@@ -2379,7 +1758,7 @@ EntityParser.replaceEntityNumbers = function(c) {
 		case 0x9E: return 0x017E; // LATIN SMALL LETTER Z WITH CARON
 		case 0x9F: return 0x0178; // LATIN CAPITAL LETTER Y WITH DIAERESIS
 		default:
-			if ((c >= 0xD800 && c <= 0xDFFF) || c >= 0x10FFFF) { /// @todo. The spec says > 0x10FFFF, not >=. Section 8.2.4.69.
+			if ((c >= 0xD800 && c <= 0xDFFF) || c > 0x10FFFF) {
 				return 0xFFFD;
 			} else if ((c >= 0x0001 && c <= 0x0008) || (c >= 0x000E && c <= 0x001F) ||
 				(c >= 0x007F && c <= 0x009F) || (c >= 0xFDD0 && c <= 0xFDEF) ||
@@ -2399,7 +1778,9 @@ EntityParser.replaceEntityNumbers = function(c) {
 
 exports.EntityParser = EntityParser;
 
-},{"./InputStream":3,"html5-entities":12}],3:[function(require,module,exports){
+},
+{"./InputStream":3,"html5-entities":12}],
+3:[function(_dereq_,module,exports){
 function InputStream() {
 	this.data = '';
 	this.start = 0;
@@ -2425,7 +1806,10 @@ InputStream.prototype = {
 		if(this.start >= this.data.length) {
 			return InputStream.EOF;
 		}
-		return this.data[this.start++];
+		var ch = this.data[this.start++];
+		if (ch === '\r')
+			ch = '\n';
+		return ch;
 	},
 	advance: function(amount) {
 		this.start += amount;
@@ -2461,7 +1845,7 @@ InputStream.prototype = {
 		} else if(m = new RegExp(re + (this.eof ? "|$" : "")).exec(s)) {
 			var t = this.data.slice(this.start, this.start + m.index);
 			this.advance(m.index);
-			return t.toString();
+			return t.replace(/\r/g, '\n').replace(/\n{2,}/g, '\n');
 		} else {
 			throw InputStream.DRAIN;
 		}
@@ -2507,7 +1891,9 @@ InputStream.prototype = {
 
 exports.InputStream = InputStream;
 
-},{}],4:[function(require,module,exports){
+},
+{}],
+4:[function(_dereq_,module,exports){
 var SpecialElements = {
 	"http://www.w3.org/1999/xhtml": [
 		'address',
@@ -2686,9 +2072,11 @@ StackItem.prototype.isMathMLTextIntegrationPoint = function() {
 
 exports.StackItem = StackItem;
 
-},{}],5:[function(require,module,exports){
-var InputStream = require('./InputStream').InputStream;
-var EntityParser = require('./EntityParser').EntityParser;
+},
+{}],
+5:[function(_dereq_,module,exports){
+var InputStream = _dereq_('./InputStream').InputStream;
+var EntityParser = _dereq_('./EntityParser').EntityParser;
 
 function isWhitespace(c){
 	return c === " " || c === "\n" || c === "\t" || c === "\r" || c === "\f";
@@ -4198,19 +3586,33 @@ Tokenizer.prototype.tokenize = function(source) {
 	}
 };
 
+Object.defineProperty(Tokenizer.prototype, 'lineNumber', {
+	get: function() {
+		return this._inputStream.location().line;
+	}
+});
+
+Object.defineProperty(Tokenizer.prototype, 'columnNumber', {
+	get: function() {
+		return this._inputStream.location().column;
+	}
+});
+
 exports.Tokenizer = Tokenizer;
 
-},{"./EntityParser":2,"./InputStream":3}],6:[function(require,module,exports){
-(function(){var assert = require('assert');
+},
+{"./EntityParser":2,"./InputStream":3}],
+6:[function(_dereq_,module,exports){
+var assert = _dereq_('assert');
 
-var messages = require('./messages.json');
-var constants = require('./constants');
+var messages = _dereq_('./messages.json');
+var constants = _dereq_('./constants');
 
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = _dereq_('events').EventEmitter;
 
-var Tokenizer = require('./Tokenizer').Tokenizer;
-var ElementStack = require('./ElementStack').ElementStack;
-var StackItem = require('./StackItem').StackItem;
+var Tokenizer = _dereq_('./Tokenizer').Tokenizer;
+var ElementStack = _dereq_('./ElementStack').ElementStack;
+var StackItem = _dereq_('./StackItem').StackItem;
 
 var Marker = {};
 
@@ -4310,7 +3712,6 @@ function TreeBuilder() {
 	this.redirectAttachToFosterParent = false;
 	this.selfClosingFlagAcknowledged = false;
 	this.context = "";
-	this.firstStartTag = false;
 	this.pendingTableCharacters = [];
 	this.shouldSkipLeadingNewline = false;
 
@@ -4354,11 +3755,7 @@ function TreeBuilder() {
 			}
 		},
 		startTagHtml: function(name, attributes) {
-			if (!tree.firstStartTag && name == 'html') {
-				tree.parseError('non-html-root');
-			}
-			tree.addAttributesToElement(tree.openElements.rootNode, attributes);
-			tree.firstStartTag = false;
+			modes.inBody.startTagHtml(name, attributes);
 		}
 	};
 
@@ -4537,7 +3934,6 @@ function TreeBuilder() {
 	};
 
 	modes.beforeHTML.startTagHtml = function(name, attributes, selfClosing) {
-		tree.firstStartTag = true;
 		tree.insertHtmlElement(attributes);
 		tree.setInsertionMode('beforeHead');
 	};
@@ -4739,11 +4135,10 @@ function TreeBuilder() {
 		style: 'startTagNoFramesStyle',
 		noscript: 'startTagNoScript',
 		noframes: 'startTagNoFramesStyle',
-		base: 'startTagBaseLinkCommand',
-		basefont: 'startTagBaseLinkCommand',
-		bgsound: 'startTagBaseLinkCommand',
-		command: 'startTagBaseLinkCommand', //FIXME drop command tag?
-		link: 'startTagBaseLinkCommand',
+		base: 'startTagBaseBasefontBgsoundLink',
+		basefont: 'startTagBaseBasefontBgsoundLink',
+		bgsound: 'startTagBaseBasefontBgsoundLink',
+		link: 'startTagBaseBasefontBgsoundLink',
 		meta: 'startTagMeta',
 		"-default": 'startTagOther'
 	};
@@ -4808,7 +4203,7 @@ function TreeBuilder() {
 		tree.setInsertionMode('text');
 	};
 
-	modes.inHead.startTagBaseLinkCommand = function(name, attributes) {
+	modes.inHead.startTagBaseBasefontBgsoundLink = function(name, attributes) {
 		tree.insertSelfClosingElement(name, attributes);
 	};
 
@@ -4935,7 +4330,6 @@ function TreeBuilder() {
 		base: 'startTagProcessInHead',
 		basefont: 'startTagProcessInHead',
 		bgsound: 'startTagProcessInHead',
-		command: 'startTagProcessInHead',
 		link: 'startTagProcessInHead',
 		meta: 'startTagProcessInHead',
 		noframes: 'startTagProcessInHead',
@@ -5113,6 +4507,11 @@ function TreeBuilder() {
 		tree.insertText(characters);
 		if (tree.framesetOk && !isAllWhitespaceOrReplacementCharacters(characters))
 			tree.framesetOk = false;
+	};
+
+	modes.inBody.startTagHtml = function(name, attributes) {
+		tree.parseError('non-html-root');
+		tree.addAttributesToElement(tree.openElements.rootNode, attributes);
 	};
 
 	modes.inBody.startTagProcessInHead = function(name, attributes) {
@@ -5464,7 +4863,7 @@ function TreeBuilder() {
 		} else {
 			tree.generateImpliedEndTags('p');
 			if (tree.currentStackItem().localName != 'p')
-				tree.parseError('unexpected-end-tag', {name: 'p'});
+				tree.parseError('unexpected-implied-end-tag', {name: 'p'});
 			tree.openElements.popUntilPopped(name);
 		}
 	};
@@ -5876,10 +5275,6 @@ function TreeBuilder() {
 
 	modes.inHeadNoscript.processComment = function(data) {
 		modes.inHead.processComment(data);
-	};
-
-	modes.inHeadNoscript.startTagHtml = function(name, attributes) {
-		modes.inBody.processStartTag(name, attributes);
 	};
 
 	modes.inHeadNoscript.startTagBasefontBgsoundLinkMetaNoframesStyle = function(name, attributes) {
@@ -6549,10 +5944,6 @@ function TreeBuilder() {
 			tree.parseError('expected-eof-but-got-char');
 	};
 
-	modes.afterAfterFrameset.startTagHtml = function(name, attributes) {
-		modes.inBody.processStartTag(name, attributes);
-	};
-
 	modes.afterAfterFrameset.startTagNoFrames = function(name, attributes) {
 		modes.inHead.processStartTag(name, attributes);
 	};
@@ -6800,11 +6191,9 @@ TreeBuilder.prototype.processToken = function(token) {
 		break;
 	}
 };
-
 TreeBuilder.prototype.isCdataSectionAllowed = function() {
 	return this.openElements.length > 0 && this.currentStackItem().isForeign();
 };
-
 TreeBuilder.prototype.isSelfClosingFlagAcknowledged = function() {
 	return this.selfClosingFlagAcknowledged;
 };
@@ -6940,7 +6329,6 @@ TreeBuilder.prototype.reconstructActiveFormattingElements = function() {
 	}
 
 };
-
 TreeBuilder.prototype.ensureNoahsArkCondition = function(item) {
 	var kNoahsArkCapacity = 3;
 	if (this.activeFormattingElements.length < kNoahsArkCapacity)
@@ -6979,12 +6367,10 @@ TreeBuilder.prototype.ensureNoahsArkCondition = function(item) {
 	for (var i = kNoahsArkCapacity - 1; i < candidates.length; i++)
 		this.removeElementFromActiveFormattingElements(candidates[i]);
 };
-
 TreeBuilder.prototype.appendElementToActiveFormattingElements = function(item) {
 	this.ensureNoahsArkCondition(item);
 	this.activeFormattingElements.push(item);
 };
-
 TreeBuilder.prototype.removeElementFromActiveFormattingElements = function(item) {
 	var index = this.activeFormattingElements.indexOf(item);
 	if (index >= 0)
@@ -7000,17 +6386,17 @@ TreeBuilder.prototype.elementInActiveFormattingElements = function(name) {
 	return false;
 };
 
-TreeBuilder.prototype.reparentChildren = function(oldParent, newParent) {
-	throw new Error("Not implemented");
+TreeBuilder.prototype.clearActiveFormattingElements = function() {
+    while (!(this.activeFormattingElements.length === 0 || this.activeFormattingElements.pop() == Marker));
 };
 
-TreeBuilder.prototype.clearActiveFormattingElements = function() {
-	while (!(this.activeFormattingElements.length === 0 || this.activeFormattingElements.pop() == Marker));
+TreeBuilder.prototype.reparentChildren = function(oldParent, newParent) {
+	throw new Error("Not implemented");
 };
 TreeBuilder.prototype.setFragmentContext = function(context) {
 	this.context = context;
 };
-TreeBuilder.prototype.parseError = function(code, args, isWarning) {
+TreeBuilder.prototype.parseError = function(code, args) {
 	if (!this.errorHandler)
 		return;
 	var message = formatMessage(messages[code], args);
@@ -7117,8 +6503,9 @@ function formatMessage(format, args) {
 
 exports.TreeBuilder = TreeBuilder;
 
-})()
-},{"./ElementStack":1,"./StackItem":4,"./Tokenizer":5,"./constants":7,"./messages.json":8,"assert":13,"events":14}],7:[function(require,module,exports){
+},
+{"./ElementStack":1,"./StackItem":4,"./Tokenizer":5,"./constants":7,"./messages.json":8,"assert":13,"events":16}],
+7:[function(_dereq_,module,exports){
 exports.SVGTagMap = {
 	"altglyph": "altGlyph",
 	"altglyphdef": "altGlyphDef",
@@ -7241,7 +6628,9 @@ exports.ForeignAttributeMap = {
 	"xmlns": {prefix: null, localName: "xmlns", namespaceURI: "http://www.w3.org/2000/xmlns/"},
 	"xmlns:xlink": {prefix: "xmlns", localName: "xlink", namespaceURI: "http://www.w3.org/2000/xmlns/"},
 };
-},{}],8:[function(require,module,exports){
+},
+{}],
+8:[function(_dereq_,module,exports){
 module.exports={
 	"null-character":
 		"Null character in input stream, replaced with U+FFFD.",
@@ -7385,6 +6774,8 @@ module.exports={
 		"Unexpected start tag head in existing head. Ignored.",
 	"unexpected-end-tag":
 		"Unexpected end tag ({name}). Ignored.",
+	"unexpected-implied-end-tag":
+		"End tag {name} implied, but there were open elements.",
 	"unexpected-start-tag-out-of-my-head":
 		"Unexpected start tag ({name}) that can be in head. Moved.",
 	"unexpected-start-tag":
@@ -7498,10 +6889,12 @@ module.exports={
 	"unexpected-start-tag-in-table":
 		"Unexpected {name}. Expected table content."
 }
-},{}],"DaboPu":[function(require,module,exports){
-var SAXTreeBuilder = require('./SAXTreeBuilder').SAXTreeBuilder;
-var Tokenizer = require('../Tokenizer').Tokenizer;
-var TreeParser = require('./TreeParser').TreeParser;
+},
+{}],
+9:[function(_dereq_,module,exports){
+var SAXTreeBuilder = _dereq_('./SAXTreeBuilder').SAXTreeBuilder;
+var Tokenizer = _dereq_('../Tokenizer').Tokenizer;
+var TreeParser = _dereq_('./TreeParser').TreeParser;
 
 function SAXParser() {
 	this.contentHandler = null;
@@ -7550,9 +6943,11 @@ Object.defineProperty(SAXParser.prototype, 'errorHandler', {
 
 exports.SAXParser = SAXParser;
 
-},{"../Tokenizer":5,"./SAXTreeBuilder":10,"./TreeParser":11}],10:[function(require,module,exports){
-var util = require('util');
-var TreeBuilder = require('../TreeBuilder').TreeBuilder;
+},
+{"../Tokenizer":5,"./SAXTreeBuilder":10,"./TreeParser":11}],
+10:[function(_dereq_,module,exports){
+var util = _dereq_('util');
+var TreeBuilder = _dereq_('../TreeBuilder').TreeBuilder;
 
 function SAXTreeBuilder() {
 	TreeBuilder.call(this);
@@ -7561,28 +6956,33 @@ function SAXTreeBuilder() {
 util.inherits(SAXTreeBuilder, TreeBuilder);
 
 SAXTreeBuilder.prototype.start = function(tokenizer) {
-	this.document = new Document();
+	this.document = new Document(this.tokenizer);
+};
+
+SAXTreeBuilder.prototype.end = function() {
+	this.document.endLocator = this.tokenizer;
 };
 
 SAXTreeBuilder.prototype.insertDoctype = function(name, publicId, systemId) {
-	var doctype = new DTD(name, publicId, systemId);
+	var doctype = new DTD(this.tokenizer, name, publicId, systemId);
+	doctype.endLocator = this.tokenizer;
 	this.document.appendChild(doctype);
 };
 
 SAXTreeBuilder.prototype.createElement = function(namespaceURI, localName, attributes) {
-	var element = new Element(namespaceURI, localName, localName, attributes);
+	var element = new Element(this.tokenizer, namespaceURI, localName, localName, attributes || []);
 	return element;
 };
 
 SAXTreeBuilder.prototype.insertComment = function(data, parent) {
 	if (!parent)
 		parent = this.currentStackItem();
-	var comment = new Comment(data);
+	var comment = new Comment(this.tokenizer, data);
 	parent.appendChild(comment);
 };
 
 SAXTreeBuilder.prototype.appendCharacters = function(parent, data) {
-	var text = new Characters(data);
+	var text = new Characters(this.tokenizer, data);
 	parent.appendChild(text);
 };
 
@@ -7594,7 +6994,7 @@ SAXTreeBuilder.prototype.insertText = function(data) {
 		if (tableIndex === 0) {
 			return this.appendCharacters(table, data);
 		}
-		var text = new Characters(data);
+		var text = new Characters(this.tokenizer, data);
 		var parent = table.parentNode;
 		if (parent) {
 			parent.insertBetween(text, table.previousSibling, table);
@@ -7662,7 +7062,14 @@ var NodeType = {
 	PROCESSING_INSTRUCTION: 10,
 	SKIPPED_ENTITY: 11
 };
-function Node() {
+function Node(locator) {
+	if (!locator) {
+		this.columnNumber = -1;
+		this.lineNumber = -1;
+	} else {
+		this.columnNumber = locator.columnNumber;
+		this.lineNumber = locator.lineNumber;
+	}
 	this.parentNode = null;
 	this.nextSibling = null;
 	this.firstChild = null;
@@ -7695,9 +7102,10 @@ Object.defineProperty(Node.prototype, 'previousSibling', {
 });
 
 
-function ParentNode() {
-	Node.call(this);
+function ParentNode(locator) {
+	Node.call(this, locator);
 	this.lastChild = null;
+	this._endLocator = null;
 }
 
 ParentNode.prototype = Object.create(Node.prototype);
@@ -7787,8 +7195,20 @@ ParentNode.prototype.removeChild = function(node) {
 	node.parentNode = null;
 	return node;
 };
-function Document () {
-	Node.call(this);
+
+Object.defineProperty(ParentNode.prototype, 'endLocator', {
+	get: function() {
+		return this._endLocator;
+	},
+	set: function(endLocator) {
+		this._endLocator = {
+			lineNumber: endLocator.lineNumber,
+			columnNumber: endLocator.columnNumber
+		};
+	}
+});
+function Document (locator) {
+	ParentNode.call(this, locator);
 	this.nodeType = NodeType.DOCUMENT;
 }
 
@@ -7797,19 +7217,18 @@ Document.prototype.visit = function(treeParser) {
 	treeParser.startDocument(this);
 };
 Document.prototype.revisit = function(treeParser) {
-	treeParser.endDocument();
+	treeParser.endDocument(this.endLocator);
 };
 function DocumentFragment() {
-	ParentNode.call(this);
+	ParentNode.call(this, new Locator());
 	this.nodeType = NodeType.DOCUMENT_FRAGMENT;
 }
 
 DocumentFragment.prototype = Object.create(ParentNode.prototype);
 DocumentFragment.prototype.visit = function(treeParser) {
 };
-function Element(uri, localName, qName, atts, prefixMappings) {
-	ParentNode.call(this);
-
+function Element(locator, uri, localName, qName, atts, prefixMappings) {
+	ParentNode.call(this, locator);
 	this.uri = uri;
 	this.localName = localName;
 	this.qName = qName;
@@ -7830,16 +7249,16 @@ Element.prototype.visit = function(treeParser) {
 	treeParser.startElement(this.uri, this.localName, this.qName, this.attributes, this);
 };
 Element.prototype.revisit = function(treeParser) {
-	treeParser.endElement(this.uri, this.localName, this.qName);
+	treeParser.endElement(this.uri, this.localName, this.qName, this.endLocator);
 	if (this.prefixMappings) {
 		for (var key in prefixMappings) {
 			var mapping = prefixMappings[key];
-			treeParser.endPrefixMapping(mapping.getPrefix());
+			treeParser.endPrefixMapping(mapping.getPrefix(), this.endLocator);
 		}
 	}
 };
-function Characters(data){
-	Node.call(this);
+function Characters(locator, data){
+	Node.call(this, locator);
 	this.data = data;
 	this.nodeType = NodeType.CHARACTERS;
 }
@@ -7848,8 +7267,8 @@ Characters.prototype = Object.create(Node.prototype);
 Characters.prototype.visit = function (treeParser) {
 	treeParser.characters(this.data, 0, this.data.length, this);
 };
-function IgnorableWhitespace(data) {
-	Node.call(this);
+function IgnorableWhitespace(locator, data) {
+	Node.call(this, locator);
 	this.data = data;
 	this.nodeType = NodeType.IGNORABLE_WHITESPACE;
 }
@@ -7858,8 +7277,8 @@ IgnorableWhitespace.prototype = Object.create(Node.prototype);
 IgnorableWhitespace.prototype.visit = function(treeParser) {
 	treeParser.ignorableWhitespace(this.data, 0, this.data.length, this);
 };
-function Comment(data) {
-	Node.call(this);
+function Comment(locator, data) {
+	Node.call(this, locator);
 	this.data = data;
 	this.nodeType = NodeType.COMMENT;
 }
@@ -7868,8 +7287,8 @@ Comment.prototype = Object.create(Node.prototype);
 Comment.prototype.visit = function(treeParser) {
 	treeParser.comment(this.data, 0, this.data.length, this);
 };
-function CDATA() {
-	ParentNode.call(this);
+function CDATA(locator) {
+	ParentNode.call(this, locator);
 	this.nodeType = NodeType.CDATA;
 }
 
@@ -7878,7 +7297,7 @@ CDATA.prototype.visit = function(treeParser) {
 	treeParser.startCDATA(this);
 };
 CDATA.prototype.revisit = function(treeParser) {
-	treeParser.endCDATA();
+	treeParser.endCDATA(this.endLocator);
 };
 function Entity(name) {
 	ParentNode.call(this);
@@ -7935,112 +7354,133 @@ DTD.prototype.revisit = function(treeParser) {
 
 exports.SAXTreeBuilder = SAXTreeBuilder;
 
-},{"../TreeBuilder":6,"util":15}],11:[function(require,module,exports){
+},
+{"../TreeBuilder":6,"util":20}],
+11:[function(_dereq_,module,exports){
 function TreeParser(contentHandler, lexicalHandler){
-    this.contentHandler;
-    this.lexicalHandler;
-    this.locatorDelegate;
+	this.contentHandler;
+	this.lexicalHandler;
+	this.locatorDelegate;
 
-    if (!contentHandler) {
-        throw new IllegalArgumentException("contentHandler was null.");
-    }
-    this.contentHandler = contentHandler;
-    if (!lexicalHandler) {
-        this.lexicalHandler = new NullLexicalHandler();
-    } else {
-        this.lexicalHandler = lexicalHandler;
-    }
+	if (!contentHandler) {
+		throw new IllegalArgumentException("contentHandler was null.");
+	}
+	this.contentHandler = contentHandler;
+	if (!lexicalHandler) {
+		this.lexicalHandler = new NullLexicalHandler();
+	} else {
+		this.lexicalHandler = lexicalHandler;
+	}
 }
 TreeParser.prototype.parse = function(node) {
-    var current = node;
-    var next;
-    for (;;) {
-        current.visit(this);
-        if ((next = current.firstChild) != null) {
-            current = next;
-            continue;
-        }
-        for (;;) {
-            current.revisit(this);
-            if (current == node) {
-                return;
-            }
-            if ((next = current.nextSibling) != null) {
-                current = next;
-                break;
-            }
-            current = current.parentNode;
-        }
-    }
+	this.contentHandler.documentLocator = this;
+	var current = node;
+	var next;
+	for (;;) {
+		current.visit(this);
+		if (next = current.firstChild) {
+			current = next;
+			continue;
+		}
+		for (;;) {
+			current.revisit(this);
+			if (current == node) {
+				return;
+			}
+			if (next = current.nextSibling) {
+				current = next;
+				break;
+			}
+			current = current.parentNode;
+		}
+	}
 };
 TreeParser.prototype.characters = function(ch, start, length, locator) {
-    this.locatorDelegate = locator;
-    this.contentHandler.characters(ch, start, length);
+	this.locatorDelegate = locator;
+	this.contentHandler.characters(ch, start, length);
 };
 TreeParser.prototype.endDocument = function(locator) {
-    this.locatorDelegate = locator;
-    this.contentHandler.endDocument();
+	this.locatorDelegate = locator;
+	this.contentHandler.endDocument();
 };
 TreeParser.prototype.endElement = function(uri, localName, qName, locator) {
-    this.locatorDelegate = locator;
-    this.contentHandler.endElement(uri, localName, qName);
+	this.locatorDelegate = locator;
+	this.contentHandler.endElement(uri, localName, qName);
 };
 TreeParser.prototype.endPrefixMapping = function(prefix, locator) {
-    this.locatorDelegate = locator;
-    this.contentHandler.endPrefixMapping(prefix);
+	this.locatorDelegate = locator;
+	this.contentHandler.endPrefixMapping(prefix);
 };
 TreeParser.prototype.ignorableWhitespace = function(ch, start, length, locator) {
-    this.locatorDelegate = locator;
-    this.contentHandler.ignorableWhitespace(ch, start, length);
+	this.locatorDelegate = locator;
+	this.contentHandler.ignorableWhitespace(ch, start, length);
 };
 TreeParser.prototype.processingInstruction = function(target, data, locator) {
-    this.locatorDelegate = locator;
-    this.contentHandler.processingInstruction(target, data);
+	this.locatorDelegate = locator;
+	this.contentHandler.processingInstruction(target, data);
 };
 TreeParser.prototype.skippedEntity = function(name, locator) {
-    this.locatorDelegate = locator;
-    this.contentHandler.skippedEntity(name);
+	this.locatorDelegate = locator;
+	this.contentHandler.skippedEntity(name);
 };
 TreeParser.prototype.startDocument = function(locator) {
-    this.locatorDelegate = locator;
-    this.contentHandler.startDocument();
+	this.locatorDelegate = locator;
+	this.contentHandler.startDocument();
 };
 TreeParser.prototype.startElement = function(uri, localName, qName, atts, locator) {
-    this.locatorDelegate = locator;
-    this.contentHandler.startElement(uri, localName, qName, atts);
+	this.locatorDelegate = locator;
+	this.contentHandler.startElement(uri, localName, qName, atts);
 };
 TreeParser.prototype.startPrefixMapping = function(prefix, uri, locator) {
-    this.locatorDelegate = locator;
-    this.contentHandler.startPrefixMapping(prefix, uri);
+	this.locatorDelegate = locator;
+	this.contentHandler.startPrefixMapping(prefix, uri);
 };
 TreeParser.prototype.comment = function(ch, start, length, locator) {
-    this.locatorDelegate = locator;
-    this.lexicalHandler.comment(ch, start, length);
+	this.locatorDelegate = locator;
+	this.lexicalHandler.comment(ch, start, length);
 };
 TreeParser.prototype.endCDATA = function(locator) {
-    this.locatorDelegate = locator;
-    this.lexicalHandler.endCDATA();
+	this.locatorDelegate = locator;
+	this.lexicalHandler.endCDATA();
 };
 TreeParser.prototype.endDTD = function(locator) {
-    this.locatorDelegate = locator;
-    this.lexicalHandler.endDTD();
+	this.locatorDelegate = locator;
+	this.lexicalHandler.endDTD();
 };
 TreeParser.prototype.endEntity = function(name, locator) {
-    this.locatorDelegate = locator;
-    this.lexicalHandler.endEntity(name);
+	this.locatorDelegate = locator;
+	this.lexicalHandler.endEntity(name);
 };
 TreeParser.prototype.startCDATA = function(locator) {
-    this.locatorDelegate = locator;
-    this.lexicalHandler.startCDATA();
+	this.locatorDelegate = locator;
+	this.lexicalHandler.startCDATA();
 };
 TreeParser.prototype.startDTD = function(name, publicId, systemId, locator) {
-    this.locatorDelegate = locator;
-    this.lexicalHandler.startDTD(name, publicId, systemId);
+	this.locatorDelegate = locator;
+	this.lexicalHandler.startDTD(name, publicId, systemId);
 };
 TreeParser.prototype.startEntity = function(name, locator) {
-    this.locatorDelegate = locator;
-    this.lexicalHandler.startEntity(name);
+	this.locatorDelegate = locator;
+	this.lexicalHandler.startEntity(name);
 };
+
+Object.defineProperty(TreeParser.prototype, 'columnNumber', {
+	get: function() {
+		if (!this.locatorDelegate)
+			return -1;
+		else
+			return this.locatorDelegate.columnNumber;
+	}
+});
+
+Object.defineProperty(TreeParser.prototype, 'lineNumber', {
+	get: function() {
+		if (!this.locatorDelegate)
+			return -1;
+		else
+			return this.locatorDelegate.lineNumber;
+	}
+});
 function NullLexicalHandler() {
 
 }
@@ -8055,675 +7495,58 @@ NullLexicalHandler.prototype.startEntity = function() {};
 
 exports.TreeParser = TreeParser;
 
-},{}],12:[function(require,module,exports){
+},
+{}],
+12:[function(_dereq_,module,exports){
 module.exports = {
-	"AElig": "\u00C6",
-	"AElig;": "\u00C6",
-	"AMP": "&",
-	"AMP;": "&",
-	"Aacute": "\u00C1",
 	"Aacute;": "\u00C1",
-	"Abreve;": "\u0102",
-	"Acirc": "\u00C2",
-	"Acirc;": "\u00C2",
-	"Acy;": "\u0410",
-	"Afr;": "\u1D504",
-	"Agrave": "\u00C0",
-	"Agrave;": "\u00C0",
-	"Alpha;": "\u0391",
-	"Amacr;": "\u0100",
-	"And;": "\u2A53",
-	"Aogon;": "\u0104",
-	"Aopf;": "\u1D538",
-	"ApplyFunction;": "\u2061",
-	"Aring": "\u00C5",
-	"Aring;": "\u00C5",
-	"Ascr;": "\u1D49C",
-	"Assign;": "\u2254",
-	"Atilde": "\u00C3",
-	"Atilde;": "\u00C3",
-	"Auml": "\u00C4",
-	"Auml;": "\u00C4",
-	"Backslash;": "\u2216",
-	"Barv;": "\u2AE7",
-	"Barwed;": "\u2306",
-	"Bcy;": "\u0411",
-	"Because;": "\u2235",
-	"Bernoullis;": "\u212C",
-	"Beta;": "\u0392",
-	"Bfr;": "\u1D505",
-	"Bopf;": "\u1D539",
-	"Breve;": "\u02D8",
-	"Bscr;": "\u212C",
-	"Bumpeq;": "\u224E",
-	"CHcy;": "\u0427",
-	"COPY": "\u00A9",
-	"COPY;": "\u00A9",
-	"Cacute;": "\u0106",
-	"Cap;": "\u22D2",
-	"CapitalDifferentialD;": "\u2145",
-	"Cayleys;": "\u212D",
-	"Ccaron;": "\u010C",
-	"Ccedil": "\u00C7",
-	"Ccedil;": "\u00C7",
-	"Ccirc;": "\u0108",
-	"Cconint;": "\u2230",
-	"Cdot;": "\u010A",
-	"Cedilla;": "\u00B8",
-	"CenterDot;": "\u00B7",
-	"Cfr;": "\u212D",
-	"Chi;": "\u03A7",
-	"CircleDot;": "\u2299",
-	"CircleMinus;": "\u2296",
-	"CirclePlus;": "\u2295",
-	"CircleTimes;": "\u2297",
-	"ClockwiseContourIntegral;": "\u2232",
-	"CloseCurlyDoubleQuote;": "\u201D",
-	"CloseCurlyQuote;": "\u2019",
-	"Colon;": "\u2237",
-	"Colone;": "\u2A74",
-	"Congruent;": "\u2261",
-	"Conint;": "\u222F",
-	"ContourIntegral;": "\u222E",
-	"Copf;": "\u2102",
-	"Coproduct;": "\u2210",
-	"CounterClockwiseContourIntegral;": "\u2233",
-	"Cross;": "\u2A2F",
-	"Cscr;": "\u1D49E",
-	"Cup;": "\u22D3",
-	"CupCap;": "\u224D",
-	"DD;": "\u2145",
-	"DDotrahd;": "\u2911",
-	"DJcy;": "\u0402",
-	"DScy;": "\u0405",
-	"DZcy;": "\u040F",
-	"Dagger;": "\u2021",
-	"Darr;": "\u21A1",
-	"Dashv;": "\u2AE4",
-	"Dcaron;": "\u010E",
-	"Dcy;": "\u0414",
-	"Del;": "\u2207",
-	"Delta;": "\u0394",
-	"Dfr;": "\u1D507",
-	"DiacriticalAcute;": "\u00B4",
-	"DiacriticalDot;": "\u02D9",
-	"DiacriticalDoubleAcute;": "\u02DD",
-	"DiacriticalGrave;": "`",
-	"DiacriticalTilde;": "\u02DC",
-	"Diamond;": "\u22C4",
-	"DifferentialD;": "\u2146",
-	"Dopf;": "\u1D53B",
-	"Dot;": "\u00A8",
-	"DotDot;": "\u20DC",
-	"DotEqual;": "\u2250",
-	"DoubleContourIntegral;": "\u222F",
-	"DoubleDot;": "\u00A8",
-	"DoubleDownArrow;": "\u21D3",
-	"DoubleLeftArrow;": "\u21D0",
-	"DoubleLeftRightArrow;": "\u21D4",
-	"DoubleLeftTee;": "\u2AE4",
-	"DoubleLongLeftArrow;": "\u27F8",
-	"DoubleLongLeftRightArrow;": "\u27FA",
-	"DoubleLongRightArrow;": "\u27F9",
-	"DoubleRightArrow;": "\u21D2",
-	"DoubleRightTee;": "\u22A8",
-	"DoubleUpArrow;": "\u21D1",
-	"DoubleUpDownArrow;": "\u21D5",
-	"DoubleVerticalBar;": "\u2225",
-	"DownArrow;": "\u2193",
-	"DownArrowBar;": "\u2913",
-	"DownArrowUpArrow;": "\u21F5",
-	"DownBreve;": "\u0311",
-	"DownLeftRightVector;": "\u2950",
-	"DownLeftTeeVector;": "\u295E",
-	"DownLeftVector;": "\u21BD",
-	"DownLeftVectorBar;": "\u2956",
-	"DownRightTeeVector;": "\u295F",
-	"DownRightVector;": "\u21C1",
-	"DownRightVectorBar;": "\u2957",
-	"DownTee;": "\u22A4",
-	"DownTeeArrow;": "\u21A7",
-	"Downarrow;": "\u21D3",
-	"Dscr;": "\u1D49F",
-	"Dstrok;": "\u0110",
-	"ENG;": "\u014A",
-	"ETH": "\u00D0",
-	"ETH;": "\u00D0",
-	"Eacute": "\u00C9",
-	"Eacute;": "\u00C9",
-	"Ecaron;": "\u011A",
-	"Ecirc": "\u00CA",
-	"Ecirc;": "\u00CA",
-	"Ecy;": "\u042D",
-	"Edot;": "\u0116",
-	"Efr;": "\u1D508",
-	"Egrave": "\u00C8",
-	"Egrave;": "\u00C8",
-	"Element;": "\u2208",
-	"Emacr;": "\u0112",
-	"EmptySmallSquare;": "\u25FB",
-	"EmptyVerySmallSquare;": "\u25AB",
-	"Eogon;": "\u0118",
-	"Eopf;": "\u1D53C",
-	"Epsilon;": "\u0395",
-	"Equal;": "\u2A75",
-	"EqualTilde;": "\u2242",
-	"Equilibrium;": "\u21CC",
-	"Escr;": "\u2130",
-	"Esim;": "\u2A73",
-	"Eta;": "\u0397",
-	"Euml": "\u00CB",
-	"Euml;": "\u00CB",
-	"Exists;": "\u2203",
-	"ExponentialE;": "\u2147",
-	"Fcy;": "\u0424",
-	"Ffr;": "\u1D509",
-	"FilledSmallSquare;": "\u25FC",
-	"FilledVerySmallSquare;": "\u25AA",
-	"Fopf;": "\u1D53D",
-	"ForAll;": "\u2200",
-	"Fouriertrf;": "\u2131",
-	"Fscr;": "\u2131",
-	"GJcy;": "\u0403",
-	"GT": ">",
-	"GT;": ">",
-	"Gamma;": "\u0393",
-	"Gammad;": "\u03DC",
-	"Gbreve;": "\u011E",
-	"Gcedil;": "\u0122",
-	"Gcirc;": "\u011C",
-	"Gcy;": "\u0413",
-	"Gdot;": "\u0120",
-	"Gfr;": "\u1D50A",
-	"Gg;": "\u22D9",
-	"Gopf;": "\u1D53E",
-	"GreaterEqual;": "\u2265",
-	"GreaterEqualLess;": "\u22DB",
-	"GreaterFullEqual;": "\u2267",
-	"GreaterGreater;": "\u2AA2",
-	"GreaterLess;": "\u2277",
-	"GreaterSlantEqual;": "\u2A7E",
-	"GreaterTilde;": "\u2273",
-	"Gscr;": "\u1D4A2",
-	"Gt;": "\u226B",
-	"HARDcy;": "\u042A",
-	"Hacek;": "\u02C7",
-	"Hat;": "^",
-	"Hcirc;": "\u0124",
-	"Hfr;": "\u210C",
-	"HilbertSpace;": "\u210B",
-	"Hopf;": "\u210D",
-	"HorizontalLine;": "\u2500",
-	"Hscr;": "\u210B",
-	"Hstrok;": "\u0126",
-	"HumpDownHump;": "\u224E",
-	"HumpEqual;": "\u224F",
-	"IEcy;": "\u0415",
-	"IJlig;": "\u0132",
-	"IOcy;": "\u0401",
-	"Iacute": "\u00CD",
-	"Iacute;": "\u00CD",
-	"Icirc": "\u00CE",
-	"Icirc;": "\u00CE",
-	"Icy;": "\u0418",
-	"Idot;": "\u0130",
-	"Ifr;": "\u2111",
-	"Igrave": "\u00CC",
-	"Igrave;": "\u00CC",
-	"Im;": "\u2111",
-	"Imacr;": "\u012A",
-	"ImaginaryI;": "\u2148",
-	"Implies;": "\u21D2",
-	"Int;": "\u222C",
-	"Integral;": "\u222B",
-	"Intersection;": "\u22C2",
-	"InvisibleComma;": "\u2063",
-	"InvisibleTimes;": "\u2062",
-	"Iogon;": "\u012E",
-	"Iopf;": "\u1D540",
-	"Iota;": "\u0399",
-	"Iscr;": "\u2110",
-	"Itilde;": "\u0128",
-	"Iukcy;": "\u0406",
-	"Iuml": "\u00CF",
-	"Iuml;": "\u00CF",
-	"Jcirc;": "\u0134",
-	"Jcy;": "\u0419",
-	"Jfr;": "\u1D50D",
-	"Jopf;": "\u1D541",
-	"Jscr;": "\u1D4A5",
-	"Jsercy;": "\u0408",
-	"Jukcy;": "\u0404",
-	"KHcy;": "\u0425",
-	"KJcy;": "\u040C",
-	"Kappa;": "\u039A",
-	"Kcedil;": "\u0136",
-	"Kcy;": "\u041A",
-	"Kfr;": "\u1D50E",
-	"Kopf;": "\u1D542",
-	"Kscr;": "\u1D4A6",
-	"LJcy;": "\u0409",
-	"LT": "<",
-	"LT;": "<",
-	"Lacute;": "\u0139",
-	"Lambda;": "\u039B",
-	"Lang;": "\u27EA",
-	"Laplacetrf;": "\u2112",
-	"Larr;": "\u219E",
-	"Lcaron;": "\u013D",
-	"Lcedil;": "\u013B",
-	"Lcy;": "\u041B",
-	"LeftAngleBracket;": "\u27E8",
-	"LeftArrow;": "\u2190",
-	"LeftArrowBar;": "\u21E4",
-	"LeftArrowRightArrow;": "\u21C6",
-	"LeftCeiling;": "\u2308",
-	"LeftDoubleBracket;": "\u27E6",
-	"LeftDownTeeVector;": "\u2961",
-	"LeftDownVector;": "\u21C3",
-	"LeftDownVectorBar;": "\u2959",
-	"LeftFloor;": "\u230A",
-	"LeftRightArrow;": "\u2194",
-	"LeftRightVector;": "\u294E",
-	"LeftTee;": "\u22A3",
-	"LeftTeeArrow;": "\u21A4",
-	"LeftTeeVector;": "\u295A",
-	"LeftTriangle;": "\u22B2",
-	"LeftTriangleBar;": "\u29CF",
-	"LeftTriangleEqual;": "\u22B4",
-	"LeftUpDownVector;": "\u2951",
-	"LeftUpTeeVector;": "\u2960",
-	"LeftUpVector;": "\u21BF",
-	"LeftUpVectorBar;": "\u2958",
-	"LeftVector;": "\u21BC",
-	"LeftVectorBar;": "\u2952",
-	"Leftarrow;": "\u21D0",
-	"Leftrightarrow;": "\u21D4",
-	"LessEqualGreater;": "\u22DA",
-	"LessFullEqual;": "\u2266",
-	"LessGreater;": "\u2276",
-	"LessLess;": "\u2AA1",
-	"LessSlantEqual;": "\u2A7D",
-	"LessTilde;": "\u2272",
-	"Lfr;": "\u1D50F",
-	"Ll;": "\u22D8",
-	"Lleftarrow;": "\u21DA",
-	"Lmidot;": "\u013F",
-	"LongLeftArrow;": "\u27F5",
-	"LongLeftRightArrow;": "\u27F7",
-	"LongRightArrow;": "\u27F6",
-	"Longleftarrow;": "\u27F8",
-	"Longleftrightarrow;": "\u27FA",
-	"Longrightarrow;": "\u27F9",
-	"Lopf;": "\u1D543",
-	"LowerLeftArrow;": "\u2199",
-	"LowerRightArrow;": "\u2198",
-	"Lscr;": "\u2112",
-	"Lsh;": "\u21B0",
-	"Lstrok;": "\u0141",
-	"Lt;": "\u226A",
-	"Map;": "\u2905",
-	"Mcy;": "\u041C",
-	"MediumSpace;": "\u205F",
-	"Mellintrf;": "\u2133",
-	"Mfr;": "\u1D510",
-	"MinusPlus;": "\u2213",
-	"Mopf;": "\u1D544",
-	"Mscr;": "\u2133",
-	"Mu;": "\u039C",
-	"NJcy;": "\u040A",
-	"Nacute;": "\u0143",
-	"Ncaron;": "\u0147",
-	"Ncedil;": "\u0145",
-	"Ncy;": "\u041D",
-	"NegativeMediumSpace;": "\u200B",
-	"NegativeThickSpace;": "\u200B",
-	"NegativeThinSpace;": "\u200B",
-	"NegativeVeryThinSpace;": "\u200B",
-	"NestedGreaterGreater;": "\u226B",
-	"NestedLessLess;": "\u226A",
-	"NewLine;": "\u000A",
-	"Nfr;": "\u1D511",
-	"NoBreak;": "\u2060",
-	"NonBreakingSpace;": "\u00A0",
-	"Nopf;": "\u2115",
-	"Not;": "\u2AEC",
-	"NotCongruent;": "\u2262",
-	"NotCupCap;": "\u226D",
-	"NotDoubleVerticalBar;": "\u2226",
-	"NotElement;": "\u2209",
-	"NotEqual;": "\u2260",
-	"NotEqualTilde;": "\u2242\u0338",
-	"NotExists;": "\u2204",
-	"NotGreater;": "\u226F",
-	"NotGreaterEqual;": "\u2271",
-	"NotGreaterFullEqual;": "\u2267\u0338",
-	"NotGreaterGreater;": "\u226B\u0338",
-	"NotGreaterLess;": "\u2279",
-	"NotGreaterSlantEqual;": "\u2A7E\u0338",
-	"NotGreaterTilde;": "\u2275",
-	"NotHumpDownHump;": "\u224E\u0338",
-	"NotHumpEqual;": "\u224F\u0338",
-	"NotLeftTriangle;": "\u22EA",
-	"NotLeftTriangleBar;": "\u29CF\u0338",
-	"NotLeftTriangleEqual;": "\u22EC",
-	"NotLess;": "\u226E",
-	"NotLessEqual;": "\u2270",
-	"NotLessGreater;": "\u2278",
-	"NotLessLess;": "\u226A\u0338",
-	"NotLessSlantEqual;": "\u2A7D\u0338",
-	"NotLessTilde;": "\u2274",
-	"NotNestedGreaterGreater;": "\u2AA2\u0338",
-	"NotNestedLessLess;": "\u2AA1\u0338",
-	"NotPrecedes;": "\u2280",
-	"NotPrecedesEqual;": "\u2AAF\u0338",
-	"NotPrecedesSlantEqual;": "\u22E0",
-	"NotReverseElement;": "\u220C",
-	"NotRightTriangle;": "\u22EB",
-	"NotRightTriangleBar;": "\u29D0\u0338",
-	"NotRightTriangleEqual;": "\u22ED",
-	"NotSquareSubset;": "\u228F\u0338",
-	"NotSquareSubsetEqual;": "\u22E2",
-	"NotSquareSuperset;": "\u2290\u0338",
-	"NotSquareSupersetEqual;": "\u22E3",
-	"NotSubset;": "\u2282\u20D2",
-	"NotSubsetEqual;": "\u2288",
-	"NotSucceeds;": "\u2281",
-	"NotSucceedsEqual;": "\u2AB0\u0338",
-	"NotSucceedsSlantEqual;": "\u22E1",
-	"NotSucceedsTilde;": "\u227F\u0338",
-	"NotSuperset;": "\u2283\u20D2",
-	"NotSupersetEqual;": "\u2289",
-	"NotTilde;": "\u2241",
-	"NotTildeEqual;": "\u2244",
-	"NotTildeFullEqual;": "\u2247",
-	"NotTildeTilde;": "\u2249",
-	"NotVerticalBar;": "\u2224",
-	"Nscr;": "\u1D4A9",
-	"Ntilde": "\u00D1",
-	"Ntilde;": "\u00D1",
-	"Nu;": "\u039D",
-	"OElig;": "\u0152",
-	"Oacute": "\u00D3",
-	"Oacute;": "\u00D3",
-	"Ocirc": "\u00D4",
-	"Ocirc;": "\u00D4",
-	"Ocy;": "\u041E",
-	"Odblac;": "\u0150",
-	"Ofr;": "\u1D512",
-	"Ograve": "\u00D2",
-	"Ograve;": "\u00D2",
-	"Omacr;": "\u014C",
-	"Omega;": "\u03A9",
-	"Omicron;": "\u039F",
-	"Oopf;": "\u1D546",
-	"OpenCurlyDoubleQuote;": "\u201C",
-	"OpenCurlyQuote;": "\u2018",
-	"Or;": "\u2A54",
-	"Oscr;": "\u1D4AA",
-	"Oslash": "\u00D8",
-	"Oslash;": "\u00D8",
-	"Otilde": "\u00D5",
-	"Otilde;": "\u00D5",
-	"Otimes;": "\u2A37",
-	"Ouml": "\u00D6",
-	"Ouml;": "\u00D6",
-	"OverBar;": "\u203E",
-	"OverBrace;": "\u23DE",
-	"OverBracket;": "\u23B4",
-	"OverParenthesis;": "\u23DC",
-	"PartialD;": "\u2202",
-	"Pcy;": "\u041F",
-	"Pfr;": "\u1D513",
-	"Phi;": "\u03A6",
-	"Pi;": "\u03A0",
-	"PlusMinus;": "\u00B1",
-	"Poincareplane;": "\u210C",
-	"Popf;": "\u2119",
-	"Pr;": "\u2ABB",
-	"Precedes;": "\u227A",
-	"PrecedesEqual;": "\u2AAF",
-	"PrecedesSlantEqual;": "\u227C",
-	"PrecedesTilde;": "\u227E",
-	"Prime;": "\u2033",
-	"Product;": "\u220F",
-	"Proportion;": "\u2237",
-	"Proportional;": "\u221D",
-	"Pscr;": "\u1D4AB",
-	"Psi;": "\u03A8",
-	"QUOT": "\u0022",
-	"QUOT;": "\u0022",
-	"Qfr;": "\u1D514",
-	"Qopf;": "\u211A",
-	"Qscr;": "\u1D4AC",
-	"RBarr;": "\u2910",
-	"REG": "\u00AE",
-	"REG;": "\u00AE",
-	"Racute;": "\u0154",
-	"Rang;": "\u27EB",
-	"Rarr;": "\u21A0",
-	"Rarrtl;": "\u2916",
-	"Rcaron;": "\u0158",
-	"Rcedil;": "\u0156",
-	"Rcy;": "\u0420",
-	"Re;": "\u211C",
-	"ReverseElement;": "\u220B",
-	"ReverseEquilibrium;": "\u21CB",
-	"ReverseUpEquilibrium;": "\u296F",
-	"Rfr;": "\u211C",
-	"Rho;": "\u03A1",
-	"RightAngleBracket;": "\u27E9",
-	"RightArrow;": "\u2192",
-	"RightArrowBar;": "\u21E5",
-	"RightArrowLeftArrow;": "\u21C4",
-	"RightCeiling;": "\u2309",
-	"RightDoubleBracket;": "\u27E7",
-	"RightDownTeeVector;": "\u295D",
-	"RightDownVector;": "\u21C2",
-	"RightDownVectorBar;": "\u2955",
-	"RightFloor;": "\u230B",
-	"RightTee;": "\u22A2",
-	"RightTeeArrow;": "\u21A6",
-	"RightTeeVector;": "\u295B",
-	"RightTriangle;": "\u22B3",
-	"RightTriangleBar;": "\u29D0",
-	"RightTriangleEqual;": "\u22B5",
-	"RightUpDownVector;": "\u294F",
-	"RightUpTeeVector;": "\u295C",
-	"RightUpVector;": "\u21BE",
-	"RightUpVectorBar;": "\u2954",
-	"RightVector;": "\u21C0",
-	"RightVectorBar;": "\u2953",
-	"Rightarrow;": "\u21D2",
-	"Ropf;": "\u211D",
-	"RoundImplies;": "\u2970",
-	"Rrightarrow;": "\u21DB",
-	"Rscr;": "\u211B",
-	"Rsh;": "\u21B1",
-	"RuleDelayed;": "\u29F4",
-	"SHCHcy;": "\u0429",
-	"SHcy;": "\u0428",
-	"SOFTcy;": "\u042C",
-	"Sacute;": "\u015A",
-	"Sc;": "\u2ABC",
-	"Scaron;": "\u0160",
-	"Scedil;": "\u015E",
-	"Scirc;": "\u015C",
-	"Scy;": "\u0421",
-	"Sfr;": "\u1D516",
-	"ShortDownArrow;": "\u2193",
-	"ShortLeftArrow;": "\u2190",
-	"ShortRightArrow;": "\u2192",
-	"ShortUpArrow;": "\u2191",
-	"Sigma;": "\u03A3",
-	"SmallCircle;": "\u2218",
-	"Sopf;": "\u1D54A",
-	"Sqrt;": "\u221A",
-	"Square;": "\u25A1",
-	"SquareIntersection;": "\u2293",
-	"SquareSubset;": "\u228F",
-	"SquareSubsetEqual;": "\u2291",
-	"SquareSuperset;": "\u2290",
-	"SquareSupersetEqual;": "\u2292",
-	"SquareUnion;": "\u2294",
-	"Sscr;": "\u1D4AE",
-	"Star;": "\u22C6",
-	"Sub;": "\u22D0",
-	"Subset;": "\u22D0",
-	"SubsetEqual;": "\u2286",
-	"Succeeds;": "\u227B",
-	"SucceedsEqual;": "\u2AB0",
-	"SucceedsSlantEqual;": "\u227D",
-	"SucceedsTilde;": "\u227F",
-	"SuchThat;": "\u220B",
-	"Sum;": "\u2211",
-	"Sup;": "\u22D1",
-	"Superset;": "\u2283",
-	"SupersetEqual;": "\u2287",
-	"Supset;": "\u22D1",
-	"THORN": "\u00DE",
-	"THORN;": "\u00DE",
-	"TRADE;": "\u2122",
-	"TSHcy;": "\u040B",
-	"TScy;": "\u0426",
-	"Tab;": "\u0009",
-	"Tau;": "\u03A4",
-	"Tcaron;": "\u0164",
-	"Tcedil;": "\u0162",
-	"Tcy;": "\u0422",
-	"Tfr;": "\u1D517",
-	"Therefore;": "\u2234",
-	"Theta;": "\u0398",
-	"ThickSpace;": "\u205F\u200A",
-	"ThinSpace;": "\u2009",
-	"Tilde;": "\u223C",
-	"TildeEqual;": "\u2243",
-	"TildeFullEqual;": "\u2245",
-	"TildeTilde;": "\u2248",
-	"Topf;": "\u1D54B",
-	"TripleDot;": "\u20DB",
-	"Tscr;": "\u1D4AF",
-	"Tstrok;": "\u0166",
-	"Uacute": "\u00DA",
-	"Uacute;": "\u00DA",
-	"Uarr;": "\u219F",
-	"Uarrocir;": "\u2949",
-	"Ubrcy;": "\u040E",
-	"Ubreve;": "\u016C",
-	"Ucirc": "\u00DB",
-	"Ucirc;": "\u00DB",
-	"Ucy;": "\u0423",
-	"Udblac;": "\u0170",
-	"Ufr;": "\u1D518",
-	"Ugrave": "\u00D9",
-	"Ugrave;": "\u00D9",
-	"Umacr;": "\u016A",
-	"UnderBar;": "_",
-	"UnderBrace;": "\u23DF",
-	"UnderBracket;": "\u23B5",
-	"UnderParenthesis;": "\u23DD",
-	"Union;": "\u22C3",
-	"UnionPlus;": "\u228E",
-	"Uogon;": "\u0172",
-	"Uopf;": "\u1D54C",
-	"UpArrow;": "\u2191",
-	"UpArrowBar;": "\u2912",
-	"UpArrowDownArrow;": "\u21C5",
-	"UpDownArrow;": "\u2195",
-	"UpEquilibrium;": "\u296E",
-	"UpTee;": "\u22A5",
-	"UpTeeArrow;": "\u21A5",
-	"Uparrow;": "\u21D1",
-	"Updownarrow;": "\u21D5",
-	"UpperLeftArrow;": "\u2196",
-	"UpperRightArrow;": "\u2197",
-	"Upsi;": "\u03D2",
-	"Upsilon;": "\u03A5",
-	"Uring;": "\u016E",
-	"Uscr;": "\u1D4B0",
-	"Utilde;": "\u0168",
-	"Uuml": "\u00DC",
-	"Uuml;": "\u00DC",
-	"VDash;": "\u22AB",
-	"Vbar;": "\u2AEB",
-	"Vcy;": "\u0412",
-	"Vdash;": "\u22A9",
-	"Vdashl;": "\u2AE6",
-	"Vee;": "\u22C1",
-	"Verbar;": "\u2016",
-	"Vert;": "\u2016",
-	"VerticalBar;": "\u2223",
-	"VerticalLine;": "|",
-	"VerticalSeparator;": "\u2758",
-	"VerticalTilde;": "\u2240",
-	"VeryThinSpace;": "\u200A",
-	"Vfr;": "\u1D519",
-	"Vopf;": "\u1D54D",
-	"Vscr;": "\u1D4B1",
-	"Vvdash;": "\u22AA",
-	"Wcirc;": "\u0174",
-	"Wedge;": "\u22C0",
-	"Wfr;": "\u1D51A",
-	"Wopf;": "\u1D54E",
-	"Wscr;": "\u1D4B2",
-	"Xfr;": "\u1D51B",
-	"Xi;": "\u039E",
-	"Xopf;": "\u1D54F",
-	"Xscr;": "\u1D4B3",
-	"YAcy;": "\u042F",
-	"YIcy;": "\u0407",
-	"YUcy;": "\u042E",
-	"Yacute": "\u00DD",
-	"Yacute;": "\u00DD",
-	"Ycirc;": "\u0176",
-	"Ycy;": "\u042B",
-	"Yfr;": "\u1D51C",
-	"Yopf;": "\u1D550",
-	"Yscr;": "\u1D4B4",
-	"Yuml;": "\u0178",
-	"ZHcy;": "\u0416",
-	"Zacute;": "\u0179",
-	"Zcaron;": "\u017D",
-	"Zcy;": "\u0417",
-	"Zdot;": "\u017B",
-	"ZeroWidthSpace;": "\u200B",
-	"Zeta;": "\u0396",
-	"Zfr;": "\u2128",
-	"Zopf;": "\u2124",
-	"Zscr;": "\u1D4B5",
-	"aacute": "\u00E1",
+	"Aacute": "\u00C1",
 	"aacute;": "\u00E1",
+	"aacute": "\u00E1",
+	"Abreve;": "\u0102",
 	"abreve;": "\u0103",
 	"ac;": "\u223E",
-	"acE;": "\u223E\u0333",
 	"acd;": "\u223F",
-	"acirc": "\u00E2",
+	"acE;": "\u223E\u0333",
+	"Acirc;": "\u00C2",
+	"Acirc": "\u00C2",
 	"acirc;": "\u00E2",
-	"acute": "\u00B4",
+	"acirc": "\u00E2",
 	"acute;": "\u00B4",
+	"acute": "\u00B4",
+	"Acy;": "\u0410",
 	"acy;": "\u0430",
-	"aelig": "\u00E6",
+	"AElig;": "\u00C6",
+	"AElig": "\u00C6",
 	"aelig;": "\u00E6",
+	"aelig": "\u00E6",
 	"af;": "\u2061",
-	"afr;": "\u1D51E",
-	"agrave": "\u00E0",
+	"Afr;": "\uD835\uDD04",
+	"afr;": "\uD835\uDD1E",
+	"Agrave;": "\u00C0",
+	"Agrave": "\u00C0",
 	"agrave;": "\u00E0",
+	"agrave": "\u00E0",
 	"alefsym;": "\u2135",
 	"aleph;": "\u2135",
+	"Alpha;": "\u0391",
 	"alpha;": "\u03B1",
+	"Amacr;": "\u0100",
 	"amacr;": "\u0101",
 	"amalg;": "\u2A3F",
-	"amp": "&",
-	"amp;": "&",
-	"and;": "\u2227",
+	"amp;": "\u0026",
+	"amp": "\u0026",
+	"AMP;": "\u0026",
+	"AMP": "\u0026",
 	"andand;": "\u2A55",
+	"And;": "\u2A53",
+	"and;": "\u2227",
 	"andd;": "\u2A5C",
 	"andslope;": "\u2A58",
 	"andv;": "\u2A5A",
 	"ang;": "\u2220",
 	"ange;": "\u29A4",
 	"angle;": "\u2220",
-	"angmsd;": "\u2221",
 	"angmsdaa;": "\u29A8",
 	"angmsdab;": "\u29A9",
 	"angmsdac;": "\u29AA",
@@ -8732,57 +7555,76 @@ module.exports = {
 	"angmsdaf;": "\u29AD",
 	"angmsdag;": "\u29AE",
 	"angmsdah;": "\u29AF",
+	"angmsd;": "\u2221",
 	"angrt;": "\u221F",
 	"angrtvb;": "\u22BE",
 	"angrtvbd;": "\u299D",
 	"angsph;": "\u2222",
 	"angst;": "\u00C5",
 	"angzarr;": "\u237C",
+	"Aogon;": "\u0104",
 	"aogon;": "\u0105",
-	"aopf;": "\u1D552",
+	"Aopf;": "\uD835\uDD38",
+	"aopf;": "\uD835\uDD52",
+	"apacir;": "\u2A6F",
 	"ap;": "\u2248",
 	"apE;": "\u2A70",
-	"apacir;": "\u2A6F",
 	"ape;": "\u224A",
 	"apid;": "\u224B",
 	"apos;": "\u0027",
+	"ApplyFunction;": "\u2061",
 	"approx;": "\u2248",
 	"approxeq;": "\u224A",
-	"aring": "\u00E5",
+	"Aring;": "\u00C5",
+	"Aring": "\u00C5",
 	"aring;": "\u00E5",
-	"ascr;": "\u1D4B6",
-	"ast;": "*",
+	"aring": "\u00E5",
+	"Ascr;": "\uD835\uDC9C",
+	"ascr;": "\uD835\uDCB6",
+	"Assign;": "\u2254",
+	"ast;": "\u002A",
 	"asymp;": "\u2248",
 	"asympeq;": "\u224D",
-	"atilde": "\u00E3",
+	"Atilde;": "\u00C3",
+	"Atilde": "\u00C3",
 	"atilde;": "\u00E3",
-	"auml": "\u00E4",
+	"atilde": "\u00E3",
+	"Auml;": "\u00C4",
+	"Auml": "\u00C4",
 	"auml;": "\u00E4",
+	"auml": "\u00E4",
 	"awconint;": "\u2233",
 	"awint;": "\u2A11",
-	"bNot;": "\u2AED",
 	"backcong;": "\u224C",
 	"backepsilon;": "\u03F6",
 	"backprime;": "\u2035",
 	"backsim;": "\u223D",
 	"backsimeq;": "\u22CD",
+	"Backslash;": "\u2216",
+	"Barv;": "\u2AE7",
 	"barvee;": "\u22BD",
 	"barwed;": "\u2305",
+	"Barwed;": "\u2306",
 	"barwedge;": "\u2305",
 	"bbrk;": "\u23B5",
 	"bbrktbrk;": "\u23B6",
 	"bcong;": "\u224C",
+	"Bcy;": "\u0411",
 	"bcy;": "\u0431",
 	"bdquo;": "\u201E",
 	"becaus;": "\u2235",
 	"because;": "\u2235",
+	"Because;": "\u2235",
 	"bemptyv;": "\u29B0",
 	"bepsi;": "\u03F6",
 	"bernou;": "\u212C",
+	"Bernoullis;": "\u212C",
+	"Beta;": "\u0392",
 	"beta;": "\u03B2",
 	"beth;": "\u2136",
 	"between;": "\u226C",
-	"bfr;": "\u1D51F",
+	"Bfr;": "\uD835\uDD05",
+	"bfr;": "\uD835\uDD1F",
 	"bigcap;": "\u22C2",
 	"bigcirc;": "\u25EF",
 	"bigcup;": "\u22C3",
@@ -8810,138 +7652,177 @@ module.exports = {
 	"block;": "\u2588",
 	"bne;": "\u003D\u20E5",
 	"bnequiv;": "\u2261\u20E5",
+	"bNot;": "\u2AED",
 	"bnot;": "\u2310",
-	"bopf;": "\u1D553",
+	"Bopf;": "\uD835\uDD39",
+	"bopf;": "\uD835\uDD53",
 	"bot;": "\u22A5",
 	"bottom;": "\u22A5",
 	"bowtie;": "\u22C8",
-	"boxDL;": "\u2557",
-	"boxDR;": "\u2554",
-	"boxDl;": "\u2556",
-	"boxDr;": "\u2553",
-	"boxH;": "\u2550",
-	"boxHD;": "\u2566",
-	"boxHU;": "\u2569",
-	"boxHd;": "\u2564",
-	"boxHu;": "\u2567",
-	"boxUL;": "\u255D",
-	"boxUR;": "\u255A",
-	"boxUl;": "\u255C",
-	"boxUr;": "\u2559",
-	"boxV;": "\u2551",
-	"boxVH;": "\u256C",
-	"boxVL;": "\u2563",
-	"boxVR;": "\u2560",
-	"boxVh;": "\u256B",
-	"boxVl;": "\u2562",
-	"boxVr;": "\u255F",
 	"boxbox;": "\u29C9",
-	"boxdL;": "\u2555",
-	"boxdR;": "\u2552",
 	"boxdl;": "\u2510",
+	"boxdL;": "\u2555",
+	"boxDl;": "\u2556",
+	"boxDL;": "\u2557",
 	"boxdr;": "\u250C",
+	"boxdR;": "\u2552",
+	"boxDr;": "\u2553",
+	"boxDR;": "\u2554",
 	"boxh;": "\u2500",
-	"boxhD;": "\u2565",
-	"boxhU;": "\u2568",
+	"boxH;": "\u2550",
 	"boxhd;": "\u252C",
+	"boxHd;": "\u2564",
+	"boxhD;": "\u2565",
+	"boxHD;": "\u2566",
 	"boxhu;": "\u2534",
+	"boxHu;": "\u2567",
+	"boxhU;": "\u2568",
+	"boxHU;": "\u2569",
 	"boxminus;": "\u229F",
 	"boxplus;": "\u229E",
 	"boxtimes;": "\u22A0",
-	"boxuL;": "\u255B",
-	"boxuR;": "\u2558",
 	"boxul;": "\u2518",
+	"boxuL;": "\u255B",
+	"boxUl;": "\u255C",
+	"boxUL;": "\u255D",
 	"boxur;": "\u2514",
+	"boxuR;": "\u2558",
+	"boxUr;": "\u2559",
+	"boxUR;": "\u255A",
 	"boxv;": "\u2502",
-	"boxvH;": "\u256A",
-	"boxvL;": "\u2561",
-	"boxvR;": "\u255E",
+	"boxV;": "\u2551",
 	"boxvh;": "\u253C",
+	"boxvH;": "\u256A",
+	"boxVh;": "\u256B",
+	"boxVH;": "\u256C",
 	"boxvl;": "\u2524",
+	"boxvL;": "\u2561",
+	"boxVl;": "\u2562",
+	"boxVL;": "\u2563",
 	"boxvr;": "\u251C",
+	"boxvR;": "\u255E",
+	"boxVr;": "\u255F",
+	"boxVR;": "\u2560",
 	"bprime;": "\u2035",
 	"breve;": "\u02D8",
-	"brvbar": "\u00A6",
+	"Breve;": "\u02D8",
 	"brvbar;": "\u00A6",
-	"bscr;": "\u1D4B7",
+	"brvbar": "\u00A6",
+	"bscr;": "\uD835\uDCB7",
+	"Bscr;": "\u212C",
 	"bsemi;": "\u204F",
 	"bsim;": "\u223D",
 	"bsime;": "\u22CD",
-	"bsol;": "\u005C",
 	"bsolb;": "\u29C5",
+	"bsol;": "\u005C",
 	"bsolhsub;": "\u27C8",
 	"bull;": "\u2022",
 	"bullet;": "\u2022",
 	"bump;": "\u224E",
 	"bumpE;": "\u2AAE",
 	"bumpe;": "\u224F",
+	"Bumpeq;": "\u224E",
 	"bumpeq;": "\u224F",
+	"Cacute;": "\u0106",
 	"cacute;": "\u0107",
-	"cap;": "\u2229",
 	"capand;": "\u2A44",
 	"capbrcup;": "\u2A49",
 	"capcap;": "\u2A4B",
+	"cap;": "\u2229",
+	"Cap;": "\u22D2",
 	"capcup;": "\u2A47",
 	"capdot;": "\u2A40",
+	"CapitalDifferentialD;": "\u2145",
 	"caps;": "\u2229\uFE00",
 	"caret;": "\u2041",
 	"caron;": "\u02C7",
+	"Cayleys;": "\u212D",
 	"ccaps;": "\u2A4D",
+	"Ccaron;": "\u010C",
 	"ccaron;": "\u010D",
-	"ccedil": "\u00E7",
+	"Ccedil;": "\u00C7",
+	"Ccedil": "\u00C7",
 	"ccedil;": "\u00E7",
+	"ccedil": "\u00E7",
+	"Ccirc;": "\u0108",
 	"ccirc;": "\u0109",
+	"Cconint;": "\u2230",
 	"ccups;": "\u2A4C",
 	"ccupssm;": "\u2A50",
+	"Cdot;": "\u010A",
 	"cdot;": "\u010B",
-	"cedil": "\u00B8",
 	"cedil;": "\u00B8",
+	"cedil": "\u00B8",
+	"Cedilla;": "\u00B8",
 	"cemptyv;": "\u29B2",
-	"cent": "\u00A2",
 	"cent;": "\u00A2",
+	"cent": "\u00A2",
 	"centerdot;": "\u00B7",
-	"cfr;": "\u1D520",
+	"CenterDot;": "\u00B7",
+	"cfr;": "\uD835\uDD20",
+	"Cfr;": "\u212D",
+	"CHcy;": "\u0427",
 	"chcy;": "\u0447",
 	"check;": "\u2713",
 	"checkmark;": "\u2713",
+	"Chi;": "\u03A7",
 	"chi;": "\u03C7",
-	"cir;": "\u25CB",
-	"cirE;": "\u29C3",
 	"circ;": "\u02C6",
 	"circeq;": "\u2257",
 	"circlearrowleft;": "\u21BA",
 	"circlearrowright;": "\u21BB",
-	"circledR;": "\u00AE",
-	"circledS;": "\u24C8",
 	"circledast;": "\u229B",
 	"circledcirc;": "\u229A",
 	"circleddash;": "\u229D",
+	"CircleDot;": "\u2299",
+	"circledR;": "\u00AE",
+	"circledS;": "\u24C8",
+	"CircleMinus;": "\u2296",
+	"CirclePlus;": "\u2295",
+	"CircleTimes;": "\u2297",
+	"cir;": "\u25CB",
+	"cirE;": "\u29C3",
 	"cire;": "\u2257",
 	"cirfnint;": "\u2A10",
 	"cirmid;": "\u2AEF",
 	"cirscir;": "\u29C2",
+	"ClockwiseContourIntegral;": "\u2232",
+	"CloseCurlyDoubleQuote;": "\u201D",
+	"CloseCurlyQuote;": "\u2019",
 	"clubs;": "\u2663",
 	"clubsuit;": "\u2663",
-	"colon;": ":",
+	"colon;": "\u003A",
+	"Colon;": "\u2237",
+	"Colone;": "\u2A74",
 	"colone;": "\u2254",
 	"coloneq;": "\u2254",
-	"comma;": ",",
-	"commat;": "@",
+	"comma;": "\u002C",
+	"commat;": "\u0040",
 	"comp;": "\u2201",
 	"compfn;": "\u2218",
 	"complement;": "\u2201",
 	"complexes;": "\u2102",
 	"cong;": "\u2245",
 	"congdot;": "\u2A6D",
+	"Congruent;": "\u2261",
 	"conint;": "\u222E",
-	"copf;": "\u1D554",
+	"Conint;": "\u222F",
+	"ContourIntegral;": "\u222E",
+	"copf;": "\uD835\uDD54",
+	"Copf;": "\u2102",
 	"coprod;": "\u2210",
-	"copy": "\u00A9",
+	"Coproduct;": "\u2210",
 	"copy;": "\u00A9",
+	"copy": "\u00A9",
+	"COPY;": "\u00A9",
+	"COPY": "\u00A9",
 	"copysr;": "\u2117",
+	"CounterClockwiseContourIntegral;": "\u2233",
 	"crarr;": "\u21B5",
 	"cross;": "\u2717",
-	"cscr;": "\u1D4B8",
+	"Cross;": "\u2A2F",
+	"Cscr;": "\uD835\uDC9E",
+	"cscr;": "\uD835\uDCB8",
 	"csub;": "\u2ACF",
 	"csube;": "\u2AD1",
 	"csup;": "\u2AD0",
@@ -8953,9 +7834,11 @@ module.exports = {
 	"cuesc;": "\u22DF",
 	"cularr;": "\u21B6",
 	"cularrp;": "\u293D",
-	"cup;": "\u222A",
 	"cupbrcap;": "\u2A48",
 	"cupcap;": "\u2A46",
+	"CupCap;": "\u224D",
+	"cup;": "\u222A",
+	"Cup;": "\u22D3",
 	"cupcup;": "\u2A4A",
 	"cupdot;": "\u228D",
 	"cupor;": "\u2A45",
@@ -8966,8 +7849,8 @@ module.exports = {
 	"curlyeqsucc;": "\u22DF",
 	"curlyvee;": "\u22CE",
 	"curlywedge;": "\u22CF",
-	"curren": "\u00A4",
 	"curren;": "\u00A4",
+	"curren": "\u00A4",
 	"curvearrowleft;": "\u21B6",
 	"curvearrowright;": "\u21B7",
 	"cuvee;": "\u22CE",
@@ -8975,63 +7858,116 @@ module.exports = {
 	"cwconint;": "\u2232",
 	"cwint;": "\u2231",
 	"cylcty;": "\u232D",
-	"dArr;": "\u21D3",
-	"dHar;": "\u2965",
 	"dagger;": "\u2020",
+	"Dagger;": "\u2021",
 	"daleth;": "\u2138",
 	"darr;": "\u2193",
+	"Darr;": "\u21A1",
+	"dArr;": "\u21D3",
 	"dash;": "\u2010",
+	"Dashv;": "\u2AE4",
 	"dashv;": "\u22A3",
 	"dbkarow;": "\u290F",
 	"dblac;": "\u02DD",
+	"Dcaron;": "\u010E",
 	"dcaron;": "\u010F",
+	"Dcy;": "\u0414",
 	"dcy;": "\u0434",
-	"dd;": "\u2146",
 	"ddagger;": "\u2021",
 	"ddarr;": "\u21CA",
+	"DD;": "\u2145",
+	"dd;": "\u2146",
+	"DDotrahd;": "\u2911",
 	"ddotseq;": "\u2A77",
-	"deg": "\u00B0",
 	"deg;": "\u00B0",
+	"deg": "\u00B0",
+	"Del;": "\u2207",
+	"Delta;": "\u0394",
 	"delta;": "\u03B4",
 	"demptyv;": "\u29B1",
 	"dfisht;": "\u297F",
-	"dfr;": "\u1D521",
+	"Dfr;": "\uD835\uDD07",
+	"dfr;": "\uD835\uDD21",
+	"dHar;": "\u2965",
 	"dharl;": "\u21C3",
 	"dharr;": "\u21C2",
+	"DiacriticalAcute;": "\u00B4",
+	"DiacriticalDot;": "\u02D9",
+	"DiacriticalDoubleAcute;": "\u02DD",
+	"DiacriticalGrave;": "\u0060",
+	"DiacriticalTilde;": "\u02DC",
 	"diam;": "\u22C4",
 	"diamond;": "\u22C4",
+	"Diamond;": "\u22C4",
 	"diamondsuit;": "\u2666",
 	"diams;": "\u2666",
 	"die;": "\u00A8",
+	"DifferentialD;": "\u2146",
 	"digamma;": "\u03DD",
 	"disin;": "\u22F2",
 	"div;": "\u00F7",
-	"divide": "\u00F7",
 	"divide;": "\u00F7",
+	"divide": "\u00F7",
 	"divideontimes;": "\u22C7",
 	"divonx;": "\u22C7",
+	"DJcy;": "\u0402",
 	"djcy;": "\u0452",
 	"dlcorn;": "\u231E",
 	"dlcrop;": "\u230D",
-	"dollar;": "$",
-	"dopf;": "\u1D555",
+	"dollar;": "\u0024",
+	"Dopf;": "\uD835\uDD3B",
+	"dopf;": "\uD835\uDD55",
+	"Dot;": "\u00A8",
 	"dot;": "\u02D9",
+	"DotDot;": "\u20DC",
 	"doteq;": "\u2250",
 	"doteqdot;": "\u2251",
+	"DotEqual;": "\u2250",
 	"dotminus;": "\u2238",
 	"dotplus;": "\u2214",
 	"dotsquare;": "\u22A1",
 	"doublebarwedge;": "\u2306",
+	"DoubleContourIntegral;": "\u222F",
+	"DoubleDot;": "\u00A8",
+	"DoubleDownArrow;": "\u21D3",
+	"DoubleLeftArrow;": "\u21D0",
+	"DoubleLeftRightArrow;": "\u21D4",
+	"DoubleLeftTee;": "\u2AE4",
+	"DoubleLongLeftArrow;": "\u27F8",
+	"DoubleLongLeftRightArrow;": "\u27FA",
+	"DoubleLongRightArrow;": "\u27F9",
+	"DoubleRightArrow;": "\u21D2",
+	"DoubleRightTee;": "\u22A8",
+	"DoubleUpArrow;": "\u21D1",
+	"DoubleUpDownArrow;": "\u21D5",
+	"DoubleVerticalBar;": "\u2225",
+	"DownArrowBar;": "\u2913",
 	"downarrow;": "\u2193",
+	"DownArrow;": "\u2193",
+	"Downarrow;": "\u21D3",
+	"DownArrowUpArrow;": "\u21F5",
+	"DownBreve;": "\u0311",
 	"downdownarrows;": "\u21CA",
 	"downharpoonleft;": "\u21C3",
 	"downharpoonright;": "\u21C2",
+	"DownLeftRightVector;": "\u2950",
+	"DownLeftTeeVector;": "\u295E",
+	"DownLeftVectorBar;": "\u2956",
+	"DownLeftVector;": "\u21BD",
+	"DownRightTeeVector;": "\u295F",
+	"DownRightVectorBar;": "\u2957",
+	"DownRightVector;": "\u21C1",
+	"DownTeeArrow;": "\u21A7",
+	"DownTee;": "\u22A4",
 	"drbkarow;": "\u2910",
 	"drcorn;": "\u231F",
 	"drcrop;": "\u230C",
-	"dscr;": "\u1D4B9",
+	"Dscr;": "\uD835\uDC9F",
+	"dscr;": "\uD835\uDCB9",
+	"DScy;": "\u0405",
 	"dscy;": "\u0455",
 	"dsol;": "\u29F6",
+	"Dstrok;": "\u0110",
 	"dstrok;": "\u0111",
 	"dtdot;": "\u22F1",
 	"dtri;": "\u25BF",
@@ -9039,48 +7975,67 @@ module.exports = {
 	"duarr;": "\u21F5",
 	"duhar;": "\u296F",
 	"dwangle;": "\u29A6",
+	"DZcy;": "\u040F",
 	"dzcy;": "\u045F",
 	"dzigrarr;": "\u27FF",
-	"eDDot;": "\u2A77",
-	"eDot;": "\u2251",
-	"eacute": "\u00E9",
+	"Eacute;": "\u00C9",
+	"Eacute": "\u00C9",
 	"eacute;": "\u00E9",
+	"eacute": "\u00E9",
 	"easter;": "\u2A6E",
+	"Ecaron;": "\u011A",
 	"ecaron;": "\u011B",
-	"ecir;": "\u2256",
-	"ecirc": "\u00EA",
+	"Ecirc;": "\u00CA",
+	"Ecirc": "\u00CA",
 	"ecirc;": "\u00EA",
+	"ecirc": "\u00EA",
+	"ecir;": "\u2256",
 	"ecolon;": "\u2255",
+	"Ecy;": "\u042D",
 	"ecy;": "\u044D",
+	"eDDot;": "\u2A77",
+	"Edot;": "\u0116",
 	"edot;": "\u0117",
+	"eDot;": "\u2251",
 	"ee;": "\u2147",
 	"efDot;": "\u2252",
-	"efr;": "\u1D522",
+	"Efr;": "\uD835\uDD08",
+	"efr;": "\uD835\uDD22",
 	"eg;": "\u2A9A",
-	"egrave": "\u00E8",
+	"Egrave;": "\u00C8",
+	"Egrave": "\u00C8",
 	"egrave;": "\u00E8",
+	"egrave": "\u00E8",
 	"egs;": "\u2A96",
 	"egsdot;": "\u2A98",
 	"el;": "\u2A99",
+	"Element;": "\u2208",
 	"elinters;": "\u23E7",
 	"ell;": "\u2113",
 	"els;": "\u2A95",
 	"elsdot;": "\u2A97",
+	"Emacr;": "\u0112",
 	"emacr;": "\u0113",
 	"empty;": "\u2205",
 	"emptyset;": "\u2205",
+	"EmptySmallSquare;": "\u25FB",
 	"emptyv;": "\u2205",
+	"EmptyVerySmallSquare;": "\u25AB",
 	"emsp13;": "\u2004",
 	"emsp14;": "\u2005",
 	"emsp;": "\u2003",
+	"ENG;": "\u014A",
 	"eng;": "\u014B",
 	"ensp;": "\u2002",
+	"Eogon;": "\u0118",
 	"eogon;": "\u0119",
-	"eopf;": "\u1D556",
+	"Eopf;": "\uD835\uDD3C",
+	"eopf;": "\uD835\uDD56",
 	"epar;": "\u22D5",
 	"eparsl;": "\u29E3",
 	"eplus;": "\u2A71",
 	"epsi;": "\u03B5",
+	"Epsilon;": "\u0395",
 	"epsilon;": "\u03B5",
 	"epsiv;": "\u03F5",
 	"eqcirc;": "\u2256",
@@ -9088,56 +8043,75 @@ module.exports = {
 	"eqsim;": "\u2242",
 	"eqslantgtr;": "\u2A96",
 	"eqslantless;": "\u2A95",
-	"equals;": "=",
+	"Equal;": "\u2A75",
+	"equals;": "\u003D",
+	"EqualTilde;": "\u2242",
 	"equest;": "\u225F",
+	"Equilibrium;": "\u21CC",
 	"equiv;": "\u2261",
 	"equivDD;": "\u2A78",
 	"eqvparsl;": "\u29E5",
-	"erDot;": "\u2253",
 	"erarr;": "\u2971",
+	"erDot;": "\u2253",
 	"escr;": "\u212F",
+	"Escr;": "\u2130",
 	"esdot;": "\u2250",
+	"Esim;": "\u2A73",
 	"esim;": "\u2242",
+	"Eta;": "\u0397",
 	"eta;": "\u03B7",
-	"eth": "\u00F0",
+	"ETH;": "\u00D0",
+	"ETH": "\u00D0",
 	"eth;": "\u00F0",
-	"euml": "\u00EB",
+	"eth": "\u00F0",
+	"Euml;": "\u00CB",
+	"Euml": "\u00CB",
 	"euml;": "\u00EB",
+	"euml": "\u00EB",
 	"euro;": "\u20AC",
-	"excl;": "!",
+	"excl;": "\u0021",
 	"exist;": "\u2203",
+	"Exists;": "\u2203",
 	"expectation;": "\u2130",
 	"exponentiale;": "\u2147",
+	"ExponentialE;": "\u2147",
 	"fallingdotseq;": "\u2252",
+	"Fcy;": "\u0424",
 	"fcy;": "\u0444",
 	"female;": "\u2640",
 	"ffilig;": "\uFB03",
 	"fflig;": "\uFB00",
 	"ffllig;": "\uFB04",
-	"ffr;": "\u1D523",
+	"Ffr;": "\uD835\uDD09",
+	"ffr;": "\uD835\uDD23",
 	"filig;": "\uFB01",
-	"fjlig;": "\u0066",
+	"FilledSmallSquare;": "\u25FC",
+	"FilledVerySmallSquare;": "\u25AA",
+	"fjlig;": "\u0066\u006A",
 	"flat;": "\u266D",
 	"fllig;": "\uFB02",
 	"fltns;": "\u25B1",
 	"fnof;": "\u0192",
-	"fopf;": "\u1D557",
+	"Fopf;": "\uD835\uDD3D",
+	"fopf;": "\uD835\uDD57",
 	"forall;": "\u2200",
+	"ForAll;": "\u2200",
 	"fork;": "\u22D4",
 	"forkv;": "\u2AD9",
+	"Fouriertrf;": "\u2131",
 	"fpartint;": "\u2A0D",
-	"frac12": "\u00BD",
 	"frac12;": "\u00BD",
+	"frac12": "\u00BD",
 	"frac13;": "\u2153",
-	"frac14": "\u00BC",
 	"frac14;": "\u00BC",
+	"frac14": "\u00BC",
 	"frac15;": "\u2155",
 	"frac16;": "\u2159",
 	"frac18;": "\u215B",
 	"frac23;": "\u2154",
 	"frac25;": "\u2156",
-	"frac34": "\u00BE",
 	"frac34;": "\u00BE",
+	"frac34": "\u00BE",
 	"frac35;": "\u2157",
 	"frac38;": "\u215C",
 	"frac45;": "\u2158",
@@ -9146,55 +8120,78 @@ module.exports = {
 	"frac78;": "\u215E",
 	"frasl;": "\u2044",
 	"frown;": "\u2322",
-	"fscr;": "\u1D4BB",
-	"gE;": "\u2267",
-	"gEl;": "\u2A8C",
+	"fscr;": "\uD835\uDCBB",
+	"Fscr;": "\u2131",
 	"gacute;": "\u01F5",
+	"Gamma;": "\u0393",
 	"gamma;": "\u03B3",
+	"Gammad;": "\u03DC",
 	"gammad;": "\u03DD",
 	"gap;": "\u2A86",
+	"Gbreve;": "\u011E",
 	"gbreve;": "\u011F",
+	"Gcedil;": "\u0122",
+	"Gcirc;": "\u011C",
 	"gcirc;": "\u011D",
+	"Gcy;": "\u0413",
 	"gcy;": "\u0433",
+	"Gdot;": "\u0120",
 	"gdot;": "\u0121",
 	"ge;": "\u2265",
+	"gE;": "\u2267",
+	"gEl;": "\u2A8C",
 	"gel;": "\u22DB",
 	"geq;": "\u2265",
 	"geqq;": "\u2267",
 	"geqslant;": "\u2A7E",
-	"ges;": "\u2A7E",
 	"gescc;": "\u2AA9",
+	"ges;": "\u2A7E",
 	"gesdot;": "\u2A80",
 	"gesdoto;": "\u2A82",
 	"gesdotol;": "\u2A84",
 	"gesl;": "\u22DB\uFE00",
 	"gesles;": "\u2A94",
-	"gfr;": "\u1D524",
+	"Gfr;": "\uD835\uDD0A",
+	"gfr;": "\uD835\uDD24",
 	"gg;": "\u226B",
+	"Gg;": "\u22D9",
 	"ggg;": "\u22D9",
 	"gimel;": "\u2137",
+	"GJcy;": "\u0403",
 	"gjcy;": "\u0453",
+	"gla;": "\u2AA5",
 	"gl;": "\u2277",
 	"glE;": "\u2A92",
-	"gla;": "\u2AA5",
 	"glj;": "\u2AA4",
-	"gnE;": "\u2269",
 	"gnap;": "\u2A8A",
 	"gnapprox;": "\u2A8A",
 	"gne;": "\u2A88",
+	"gnE;": "\u2269",
 	"gneq;": "\u2A88",
 	"gneqq;": "\u2269",
 	"gnsim;": "\u22E7",
-	"gopf;": "\u1D558",
-	"grave;": "`",
+	"Gopf;": "\uD835\uDD3E",
+	"gopf;": "\uD835\uDD58",
+	"grave;": "\u0060",
+	"GreaterEqual;": "\u2265",
+	"GreaterEqualLess;": "\u22DB",
+	"GreaterFullEqual;": "\u2267",
+	"GreaterGreater;": "\u2AA2",
+	"GreaterLess;": "\u2277",
+	"GreaterSlantEqual;": "\u2A7E",
+	"GreaterTilde;": "\u2273",
+	"Gscr;": "\uD835\uDCA2",
 	"gscr;": "\u210A",
 	"gsim;": "\u2273",
 	"gsime;": "\u2A8E",
 	"gsiml;": "\u2A90",
-	"gt": ">",
-	"gt;": ">",
 	"gtcc;": "\u2AA7",
 	"gtcir;": "\u2A7A",
+	"gt;": "\u003E",
+	"gt": "\u003E",
+	"GT;": "\u003E",
+	"GT": "\u003E",
+	"Gt;": "\u226B",
 	"gtdot;": "\u22D7",
 	"gtlPar;": "\u2995",
 	"gtquest;": "\u2A7C",
@@ -9207,149 +8204,210 @@ module.exports = {
 	"gtrsim;": "\u2273",
 	"gvertneqq;": "\u2269\uFE00",
 	"gvnE;": "\u2269\uFE00",
-	"hArr;": "\u21D4",
+	"Hacek;": "\u02C7",
 	"hairsp;": "\u200A",
 	"half;": "\u00BD",
 	"hamilt;": "\u210B",
+	"HARDcy;": "\u042A",
 	"hardcy;": "\u044A",
-	"harr;": "\u2194",
 	"harrcir;": "\u2948",
+	"harr;": "\u2194",
+	"hArr;": "\u21D4",
 	"harrw;": "\u21AD",
+	"Hat;": "\u005E",
 	"hbar;": "\u210F",
+	"Hcirc;": "\u0124",
 	"hcirc;": "\u0125",
 	"hearts;": "\u2665",
 	"heartsuit;": "\u2665",
 	"hellip;": "\u2026",
 	"hercon;": "\u22B9",
-	"hfr;": "\u1D525",
+	"hfr;": "\uD835\uDD25",
+	"Hfr;": "\u210C",
+	"HilbertSpace;": "\u210B",
 	"hksearow;": "\u2925",
 	"hkswarow;": "\u2926",
 	"hoarr;": "\u21FF",
 	"homtht;": "\u223B",
 	"hookleftarrow;": "\u21A9",
 	"hookrightarrow;": "\u21AA",
-	"hopf;": "\u1D559",
+	"hopf;": "\uD835\uDD59",
+	"Hopf;": "\u210D",
 	"horbar;": "\u2015",
-	"hscr;": "\u1D4BD",
+	"HorizontalLine;": "\u2500",
+	"hscr;": "\uD835\uDCBD",
+	"Hscr;": "\u210B",
 	"hslash;": "\u210F",
+	"Hstrok;": "\u0126",
 	"hstrok;": "\u0127",
+	"HumpDownHump;": "\u224E",
+	"HumpEqual;": "\u224F",
 	"hybull;": "\u2043",
 	"hyphen;": "\u2010",
-	"iacute": "\u00ED",
+	"Iacute;": "\u00CD",
+	"Iacute": "\u00CD",
 	"iacute;": "\u00ED",
+	"iacute": "\u00ED",
 	"ic;": "\u2063",
-	"icirc": "\u00EE",
+	"Icirc;": "\u00CE",
+	"Icirc": "\u00CE",
 	"icirc;": "\u00EE",
+	"icirc": "\u00EE",
+	"Icy;": "\u0418",
 	"icy;": "\u0438",
+	"Idot;": "\u0130",
+	"IEcy;": "\u0415",
 	"iecy;": "\u0435",
-	"iexcl": "\u00A1",
 	"iexcl;": "\u00A1",
+	"iexcl": "\u00A1",
 	"iff;": "\u21D4",
-	"ifr;": "\u1D526",
-	"igrave": "\u00EC",
+	"ifr;": "\uD835\uDD26",
+	"Ifr;": "\u2111",
+	"Igrave;": "\u00CC",
+	"Igrave": "\u00CC",
 	"igrave;": "\u00EC",
+	"igrave": "\u00EC",
 	"ii;": "\u2148",
 	"iiiint;": "\u2A0C",
 	"iiint;": "\u222D",
 	"iinfin;": "\u29DC",
 	"iiota;": "\u2129",
+	"IJlig;": "\u0132",
 	"ijlig;": "\u0133",
+	"Imacr;": "\u012A",
 	"imacr;": "\u012B",
 	"image;": "\u2111",
+	"ImaginaryI;": "\u2148",
 	"imagline;": "\u2110",
 	"imagpart;": "\u2111",
 	"imath;": "\u0131",
+	"Im;": "\u2111",
 	"imof;": "\u22B7",
 	"imped;": "\u01B5",
-	"in;": "\u2208",
+	"Implies;": "\u21D2",
 	"incare;": "\u2105",
+	"in;": "\u2208",
 	"infin;": "\u221E",
 	"infintie;": "\u29DD",
 	"inodot;": "\u0131",
-	"int;": "\u222B",
 	"intcal;": "\u22BA",
+	"int;": "\u222B",
+	"Int;": "\u222C",
 	"integers;": "\u2124",
+	"Integral;": "\u222B",
 	"intercal;": "\u22BA",
+	"Intersection;": "\u22C2",
 	"intlarhk;": "\u2A17",
 	"intprod;": "\u2A3C",
+	"InvisibleComma;": "\u2063",
+	"InvisibleTimes;": "\u2062",
+	"IOcy;": "\u0401",
 	"iocy;": "\u0451",
+	"Iogon;": "\u012E",
 	"iogon;": "\u012F",
-	"iopf;": "\u1D55A",
+	"Iopf;": "\uD835\uDD40",
+	"iopf;": "\uD835\uDD5A",
+	"Iota;": "\u0399",
 	"iota;": "\u03B9",
 	"iprod;": "\u2A3C",
-	"iquest": "\u00BF",
 	"iquest;": "\u00BF",
-	"iscr;": "\u1D4BE",
+	"iquest": "\u00BF",
+	"iscr;": "\uD835\uDCBE",
+	"Iscr;": "\u2110",
 	"isin;": "\u2208",
-	"isinE;": "\u22F9",
 	"isindot;": "\u22F5",
+	"isinE;": "\u22F9",
 	"isins;": "\u22F4",
 	"isinsv;": "\u22F3",
 	"isinv;": "\u2208",
 	"it;": "\u2062",
+	"Itilde;": "\u0128",
 	"itilde;": "\u0129",
+	"Iukcy;": "\u0406",
 	"iukcy;": "\u0456",
-	"iuml": "\u00EF",
+	"Iuml;": "\u00CF",
+	"Iuml": "\u00CF",
 	"iuml;": "\u00EF",
+	"iuml": "\u00EF",
+	"Jcirc;": "\u0134",
 	"jcirc;": "\u0135",
+	"Jcy;": "\u0419",
 	"jcy;": "\u0439",
-	"jfr;": "\u1D527",
+	"Jfr;": "\uD835\uDD0D",
+	"jfr;": "\uD835\uDD27",
 	"jmath;": "\u0237",
-	"jopf;": "\u1D55B",
-	"jscr;": "\u1D4BF",
+	"Jopf;": "\uD835\uDD41",
+	"jopf;": "\uD835\uDD5B",
+	"Jscr;": "\uD835\uDCA5",
+	"jscr;": "\uD835\uDCBF",
+	"Jsercy;": "\u0408",
 	"jsercy;": "\u0458",
+	"Jukcy;": "\u0404",
 	"jukcy;": "\u0454",
+	"Kappa;": "\u039A",
 	"kappa;": "\u03BA",
 	"kappav;": "\u03F0",
+	"Kcedil;": "\u0136",
 	"kcedil;": "\u0137",
+	"Kcy;": "\u041A",
 	"kcy;": "\u043A",
-	"kfr;": "\u1D528",
+	"Kfr;": "\uD835\uDD0E",
+	"kfr;": "\uD835\uDD28",
 	"kgreen;": "\u0138",
+	"KHcy;": "\u0425",
 	"khcy;": "\u0445",
+	"KJcy;": "\u040C",
 	"kjcy;": "\u045C",
-	"kopf;": "\u1D55C",
-	"kscr;": "\u1D4C0",
+	"Kopf;": "\uD835\uDD42",
+	"kopf;": "\uD835\uDD5C",
+	"Kscr;": "\uD835\uDCA6",
+	"kscr;": "\uD835\uDCC0",
 	"lAarr;": "\u21DA",
-	"lArr;": "\u21D0",
-	"lAtail;": "\u291B",
-	"lBarr;": "\u290E",
-	"lE;": "\u2266",
-	"lEg;": "\u2A8B",
-	"lHar;": "\u2962",
+	"Lacute;": "\u0139",
 	"lacute;": "\u013A",
 	"laemptyv;": "\u29B4",
 	"lagran;": "\u2112",
+	"Lambda;": "\u039B",
 	"lambda;": "\u03BB",
 	"lang;": "\u27E8",
+	"Lang;": "\u27EA",
 	"langd;": "\u2991",
 	"langle;": "\u27E8",
 	"lap;": "\u2A85",
-	"laquo": "\u00AB",
+	"Laplacetrf;": "\u2112",
 	"laquo;": "\u00AB",
-	"larr;": "\u2190",
+	"laquo": "\u00AB",
 	"larrb;": "\u21E4",
 	"larrbfs;": "\u291F",
+	"larr;": "\u2190",
+	"Larr;": "\u219E",
+	"lArr;": "\u21D0",
 	"larrfs;": "\u291D",
 	"larrhk;": "\u21A9",
 	"larrlp;": "\u21AB",
 	"larrpl;": "\u2939",
 	"larrsim;": "\u2973",
 	"larrtl;": "\u21A2",
-	"lat;": "\u2AAB",
 	"latail;": "\u2919",
+	"lAtail;": "\u291B",
+	"lat;": "\u2AAB",
 	"late;": "\u2AAD",
 	"lates;": "\u2AAD\uFE00",
 	"lbarr;": "\u290C",
+	"lBarr;": "\u290E",
 	"lbbrk;": "\u2772",
-	"lbrace;": "{",
-	"lbrack;": "[",
+	"lbrace;": "\u007B",
+	"lbrack;": "\u005B",
 	"lbrke;": "\u298B",
 	"lbrksld;": "\u298F",
 	"lbrkslu;": "\u298D",
+	"Lcaron;": "\u013D",
 	"lcaron;": "\u013E",
+	"Lcedil;": "\u013B",
 	"lcedil;": "\u013C",
 	"lceil;": "\u2308",
-	"lcub;": "{",
+	"lcub;": "\u007B",
+	"Lcy;": "\u041B",
 	"lcy;": "\u043B",
 	"ldca;": "\u2936",
 	"ldquo;": "\u201C",
@@ -9358,22 +8416,50 @@ module.exports = {
 	"ldrushar;": "\u294B",
 	"ldsh;": "\u21B2",
 	"le;": "\u2264",
+	"lE;": "\u2266",
+	"LeftAngleBracket;": "\u27E8",
+	"LeftArrowBar;": "\u21E4",
 	"leftarrow;": "\u2190",
+	"LeftArrow;": "\u2190",
+	"Leftarrow;": "\u21D0",
+	"LeftArrowRightArrow;": "\u21C6",
 	"leftarrowtail;": "\u21A2",
+	"LeftCeiling;": "\u2308",
+	"LeftDoubleBracket;": "\u27E6",
+	"LeftDownTeeVector;": "\u2961",
+	"LeftDownVectorBar;": "\u2959",
+	"LeftDownVector;": "\u21C3",
+	"LeftFloor;": "\u230A",
 	"leftharpoondown;": "\u21BD",
 	"leftharpoonup;": "\u21BC",
 	"leftleftarrows;": "\u21C7",
 	"leftrightarrow;": "\u2194",
+	"LeftRightArrow;": "\u2194",
+	"Leftrightarrow;": "\u21D4",
 	"leftrightarrows;": "\u21C6",
 	"leftrightharpoons;": "\u21CB",
 	"leftrightsquigarrow;": "\u21AD",
+	"LeftRightVector;": "\u294E",
+	"LeftTeeArrow;": "\u21A4",
+	"LeftTee;": "\u22A3",
+	"LeftTeeVector;": "\u295A",
 	"leftthreetimes;": "\u22CB",
+	"LeftTriangleBar;": "\u29CF",
+	"LeftTriangle;": "\u22B2",
+	"LeftTriangleEqual;": "\u22B4",
+	"LeftUpDownVector;": "\u2951",
+	"LeftUpTeeVector;": "\u2960",
+	"LeftUpVectorBar;": "\u2958",
+	"LeftUpVector;": "\u21BF",
+	"LeftVectorBar;": "\u2952",
+	"LeftVector;": "\u21BC",
+	"lEg;": "\u2A8B",
 	"leg;": "\u22DA",
 	"leq;": "\u2264",
 	"leqq;": "\u2266",
 	"leqslant;": "\u2A7D",
-	"les;": "\u2A7D",
 	"lescc;": "\u2AA8",
+	"les;": "\u2A7D",
 	"lesdot;": "\u2A7F",
 	"lesdoto;": "\u2A81",
 	"lesdotor;": "\u2A83",
@@ -9383,30 +8469,42 @@ module.exports = {
 	"lessdot;": "\u22D6",
 	"lesseqgtr;": "\u22DA",
 	"lesseqqgtr;": "\u2A8B",
+	"LessEqualGreater;": "\u22DA",
+	"LessFullEqual;": "\u2266",
+	"LessGreater;": "\u2276",
 	"lessgtr;": "\u2276",
+	"LessLess;": "\u2AA1",
 	"lesssim;": "\u2272",
+	"LessSlantEqual;": "\u2A7D",
+	"LessTilde;": "\u2272",
 	"lfisht;": "\u297C",
 	"lfloor;": "\u230A",
-	"lfr;": "\u1D529",
+	"Lfr;": "\uD835\uDD0F",
+	"lfr;": "\uD835\uDD29",
 	"lg;": "\u2276",
 	"lgE;": "\u2A91",
+	"lHar;": "\u2962",
 	"lhard;": "\u21BD",
 	"lharu;": "\u21BC",
 	"lharul;": "\u296A",
 	"lhblk;": "\u2584",
+	"LJcy;": "\u0409",
 	"ljcy;": "\u0459",
-	"ll;": "\u226A",
 	"llarr;": "\u21C7",
+	"ll;": "\u226A",
+	"Ll;": "\u22D8",
 	"llcorner;": "\u231E",
+	"Lleftarrow;": "\u21DA",
 	"llhard;": "\u296B",
 	"lltri;": "\u25FA",
+	"Lmidot;": "\u013F",
 	"lmidot;": "\u0140",
-	"lmoust;": "\u23B0",
 	"lmoustache;": "\u23B0",
-	"lnE;": "\u2268",
+	"lmoust;": "\u23B0",
 	"lnap;": "\u2A89",
 	"lnapprox;": "\u2A89",
 	"lne;": "\u2A87",
+	"lnE;": "\u2268",
 	"lneq;": "\u2A87",
 	"lneqq;": "\u2268",
 	"lnsim;": "\u22E6",
@@ -9414,21 +8512,30 @@ module.exports = {
 	"loarr;": "\u21FD",
 	"lobrk;": "\u27E6",
 	"longleftarrow;": "\u27F5",
+	"LongLeftArrow;": "\u27F5",
+	"Longleftarrow;": "\u27F8",
 	"longleftrightarrow;": "\u27F7",
+	"LongLeftRightArrow;": "\u27F7",
+	"Longleftrightarrow;": "\u27FA",
 	"longmapsto;": "\u27FC",
 	"longrightarrow;": "\u27F6",
+	"LongRightArrow;": "\u27F6",
+	"Longrightarrow;": "\u27F9",
 	"looparrowleft;": "\u21AB",
 	"looparrowright;": "\u21AC",
 	"lopar;": "\u2985",
-	"lopf;": "\u1D55D",
+	"Lopf;": "\uD835\uDD43",
+	"lopf;": "\uD835\uDD5D",
 	"loplus;": "\u2A2D",
 	"lotimes;": "\u2A34",
 	"lowast;": "\u2217",
-	"lowbar;": "_",
+	"lowbar;": "\u005F",
+	"LowerLeftArrow;": "\u2199",
+	"LowerRightArrow;": "\u2198",
 	"loz;": "\u25CA",
 	"lozenge;": "\u25CA",
 	"lozf;": "\u29EB",
-	"lpar;": "(",
+	"lpar;": "\u0028",
 	"lparlt;": "\u2993",
 	"lrarr;": "\u21C6",
 	"lrcorner;": "\u231F",
@@ -9437,38 +8544,44 @@ module.exports = {
 	"lrm;": "\u200E",
 	"lrtri;": "\u22BF",
 	"lsaquo;": "\u2039",
-	"lscr;": "\u1D4C1",
+	"lscr;": "\uD835\uDCC1",
+	"Lscr;": "\u2112",
 	"lsh;": "\u21B0",
+	"Lsh;": "\u21B0",
 	"lsim;": "\u2272",
 	"lsime;": "\u2A8D",
 	"lsimg;": "\u2A8F",
-	"lsqb;": "[",
+	"lsqb;": "\u005B",
 	"lsquo;": "\u2018",
 	"lsquor;": "\u201A",
+	"Lstrok;": "\u0141",
 	"lstrok;": "\u0142",
-	"lt": "<",
-	"lt;": "<",
 	"ltcc;": "\u2AA6",
 	"ltcir;": "\u2A79",
+	"lt;": "\u003C",
+	"lt": "\u003C",
+	"LT;": "\u003C",
+	"LT": "\u003C",
+	"Lt;": "\u226A",
 	"ltdot;": "\u22D6",
 	"lthree;": "\u22CB",
 	"ltimes;": "\u22C9",
 	"ltlarr;": "\u2976",
 	"ltquest;": "\u2A7B",
-	"ltrPar;": "\u2996",
 	"ltri;": "\u25C3",
 	"ltrie;": "\u22B4",
 	"ltrif;": "\u25C2",
+	"ltrPar;": "\u2996",
 	"lurdshar;": "\u294A",
 	"luruhar;": "\u2966",
 	"lvertneqq;": "\u2268\uFE00",
 	"lvnE;": "\u2268\uFE00",
-	"mDDot;": "\u223A",
-	"macr": "\u00AF",
 	"macr;": "\u00AF",
+	"macr": "\u00AF",
 	"male;": "\u2642",
 	"malt;": "\u2720",
 	"maltese;": "\u2720",
+	"Map;": "\u2905",
 	"map;": "\u21A6",
 	"mapsto;": "\u21A6",
 	"mapstodown;": "\u21A7",
@@ -9476,45 +8589,44 @@ module.exports = {
 	"mapstoup;": "\u21A5",
 	"marker;": "\u25AE",
 	"mcomma;": "\u2A29",
+	"Mcy;": "\u041C",
 	"mcy;": "\u043C",
 	"mdash;": "\u2014",
+	"mDDot;": "\u223A",
 	"measuredangle;": "\u2221",
-	"mfr;": "\u1D52A",
+	"MediumSpace;": "\u205F",
+	"Mellintrf;": "\u2133",
+	"Mfr;": "\uD835\uDD10",
+	"mfr;": "\uD835\uDD2A",
 	"mho;": "\u2127",
-	"micro": "\u00B5",
 	"micro;": "\u00B5",
-	"mid;": "\u2223",
-	"midast;": "*",
+	"micro": "\u00B5",
+	"midast;": "\u002A",
 	"midcir;": "\u2AF0",
-	"middot": "\u00B7",
+	"mid;": "\u2223",
 	"middot;": "\u00B7",
-	"minus;": "\u2212",
+	"middot": "\u00B7",
 	"minusb;": "\u229F",
+	"minus;": "\u2212",
 	"minusd;": "\u2238",
 	"minusdu;": "\u2A2A",
+	"MinusPlus;": "\u2213",
 	"mlcp;": "\u2ADB",
 	"mldr;": "\u2026",
 	"mnplus;": "\u2213",
 	"models;": "\u22A7",
-	"mopf;": "\u1D55E",
+	"Mopf;": "\uD835\uDD44",
+	"mopf;": "\uD835\uDD5E",
 	"mp;": "\u2213",
-	"mscr;": "\u1D4C2",
+	"mscr;": "\uD835\uDCC2",
+	"Mscr;": "\u2133",
 	"mstpos;": "\u223E",
+	"Mu;": "\u039C",
 	"mu;": "\u03BC",
 	"multimap;": "\u22B8",
 	"mumap;": "\u22B8",
-	"nGg;": "\u22D9\u0338",
-	"nGt;": "\u226B\u20D2",
-	"nGtv;": "\u226B\u0338",
-	"nLeftarrow;": "\u21CD",
-	"nLeftrightarrow;": "\u21CE",
-	"nLl;": "\u22D8\u0338",
-	"nLt;": "\u226A\u20D2",
-	"nLtv;": "\u226A\u0338",
-	"nRightarrow;": "\u21CF",
-	"nVDash;": "\u22AF",
-	"nVdash;": "\u22AE",
 	"nabla;": "\u2207",
+	"Nacute;": "\u0143",
 	"nacute;": "\u0144",
 	"nang;": "\u2220\u20D2",
 	"nap;": "\u2249",
@@ -9522,101 +8634,178 @@ module.exports = {
 	"napid;": "\u224B\u0338",
 	"napos;": "\u0149",
 	"napprox;": "\u2249",
-	"natur;": "\u266E",
 	"natural;": "\u266E",
 	"naturals;": "\u2115",
-	"nbsp": "\u00A0",
+	"natur;": "\u266E",
 	"nbsp;": "\u00A0",
+	"nbsp": "\u00A0",
 	"nbump;": "\u224E\u0338",
 	"nbumpe;": "\u224F\u0338",
 	"ncap;": "\u2A43",
+	"Ncaron;": "\u0147",
 	"ncaron;": "\u0148",
+	"Ncedil;": "\u0145",
 	"ncedil;": "\u0146",
-	"ncong;": "\u2247\u0338",
-	"ncongdot;": "\u2A6D",
+	"ncong;": "\u2247",
+	"ncongdot;": "\u2A6D\u0338",
 	"ncup;": "\u2A42",
+	"Ncy;": "\u041D",
 	"ncy;": "\u043D",
 	"ndash;": "\u2013",
-	"ne;": "\u2260",
-	"neArr;": "\u21D7",
 	"nearhk;": "\u2924",
 	"nearr;": "\u2197",
+	"neArr;": "\u21D7",
 	"nearrow;": "\u2197",
+	"ne;": "\u2260",
 	"nedot;": "\u2250\u0338",
+	"NegativeMediumSpace;": "\u200B",
+	"NegativeThickSpace;": "\u200B",
+	"NegativeThinSpace;": "\u200B",
+	"NegativeVeryThinSpace;": "\u200B",
 	"nequiv;": "\u2262",
 	"nesear;": "\u2928",
 	"nesim;": "\u2242\u0338",
+	"NestedGreaterGreater;": "\u226B",
+	"NestedLessLess;": "\u226A",
+	"NewLine;": "\u000A",
 	"nexist;": "\u2204",
 	"nexists;": "\u2204",
-	"nfr;": "\u1D52B",
+	"Nfr;": "\uD835\uDD11",
+	"nfr;": "\uD835\uDD2B",
 	"ngE;": "\u2267\u0338",
 	"nge;": "\u2271",
 	"ngeq;": "\u2271",
 	"ngeqq;": "\u2267\u0338",
 	"ngeqslant;": "\u2A7E\u0338",
 	"nges;": "\u2A7E\u0338",
+	"nGg;": "\u22D9\u0338",
 	"ngsim;": "\u2275",
+	"nGt;": "\u226B\u20D2",
 	"ngt;": "\u226F",
 	"ngtr;": "\u226F",
-	"nhArr;": "\u21CE",
+	"nGtv;": "\u226B\u0338",
 	"nharr;": "\u21AE",
+	"nhArr;": "\u21CE",
 	"nhpar;": "\u2AF2",
 	"ni;": "\u220B",
 	"nis;": "\u22FC",
 	"nisd;": "\u22FA",
 	"niv;": "\u220B",
+	"NJcy;": "\u040A",
 	"njcy;": "\u045A",
-	"nlArr;": "\u21CD",
-	"nlE;": "\u2266\u0338",
 	"nlarr;": "\u219A",
+	"nlArr;": "\u21CD",
 	"nldr;": "\u2025",
+	"nlE;": "\u2266\u0338",
 	"nle;": "\u2270",
 	"nleftarrow;": "\u219A",
+	"nLeftarrow;": "\u21CD",
 	"nleftrightarrow;": "\u21AE",
+	"nLeftrightarrow;": "\u21CE",
 	"nleq;": "\u2270",
 	"nleqq;": "\u2266\u0338",
 	"nleqslant;": "\u2A7D\u0338",
 	"nles;": "\u2A7D\u0338",
 	"nless;": "\u226E",
+	"nLl;": "\u22D8\u0338",
 	"nlsim;": "\u2274",
+	"nLt;": "\u226A\u20D2",
 	"nlt;": "\u226E",
 	"nltri;": "\u22EA",
 	"nltrie;": "\u22EC",
+	"nLtv;": "\u226A\u0338",
 	"nmid;": "\u2224",
-	"nopf;": "\u1D55F",
-	"not": "\u00AC",
+	"NoBreak;": "\u2060",
+	"NonBreakingSpace;": "\u00A0",
+	"nopf;": "\uD835\uDD5F",
+	"Nopf;": "\u2115",
+	"Not;": "\u2AEC",
 	"not;": "\u00AC",
+	"not": "\u00AC",
+	"NotCongruent;": "\u2262",
+	"NotCupCap;": "\u226D",
+	"NotDoubleVerticalBar;": "\u2226",
+	"NotElement;": "\u2209",
+	"NotEqual;": "\u2260",
+	"NotEqualTilde;": "\u2242\u0338",
+	"NotExists;": "\u2204",
+	"NotGreater;": "\u226F",
+	"NotGreaterEqual;": "\u2271",
+	"NotGreaterFullEqual;": "\u2267\u0338",
+	"NotGreaterGreater;": "\u226B\u0338",
+	"NotGreaterLess;": "\u2279",
+	"NotGreaterSlantEqual;": "\u2A7E\u0338",
+	"NotGreaterTilde;": "\u2275",
+	"NotHumpDownHump;": "\u224E\u0338",
+	"NotHumpEqual;": "\u224F\u0338",
 	"notin;": "\u2209",
-	"notinE;": "\u22F9\u0338",
 	"notindot;": "\u22F5\u0338",
+	"notinE;": "\u22F9\u0338",
 	"notinva;": "\u2209",
 	"notinvb;": "\u22F7",
 	"notinvc;": "\u22F6",
+	"NotLeftTriangleBar;": "\u29CF\u0338",
+	"NotLeftTriangle;": "\u22EA",
+	"NotLeftTriangleEqual;": "\u22EC",
+	"NotLess;": "\u226E",
+	"NotLessEqual;": "\u2270",
+	"NotLessGreater;": "\u2278",
+	"NotLessLess;": "\u226A\u0338",
+	"NotLessSlantEqual;": "\u2A7D\u0338",
+	"NotLessTilde;": "\u2274",
+	"NotNestedGreaterGreater;": "\u2AA2\u0338",
+	"NotNestedLessLess;": "\u2AA1\u0338",
 	"notni;": "\u220C",
 	"notniva;": "\u220C",
 	"notnivb;": "\u22FE",
 	"notnivc;": "\u22FD",
-	"npar;": "\u2226",
+	"NotPrecedes;": "\u2280",
+	"NotPrecedesEqual;": "\u2AAF\u0338",
+	"NotPrecedesSlantEqual;": "\u22E0",
+	"NotReverseElement;": "\u220C",
+	"NotRightTriangleBar;": "\u29D0\u0338",
+	"NotRightTriangle;": "\u22EB",
+	"NotRightTriangleEqual;": "\u22ED",
+	"NotSquareSubset;": "\u228F\u0338",
+	"NotSquareSubsetEqual;": "\u22E2",
+	"NotSquareSuperset;": "\u2290\u0338",
+	"NotSquareSupersetEqual;": "\u22E3",
+	"NotSubset;": "\u2282\u20D2",
+	"NotSubsetEqual;": "\u2288",
+	"NotSucceeds;": "\u2281",
+	"NotSucceedsEqual;": "\u2AB0\u0338",
+	"NotSucceedsSlantEqual;": "\u22E1",
+	"NotSucceedsTilde;": "\u227F\u0338",
+	"NotSuperset;": "\u2283\u20D2",
+	"NotSupersetEqual;": "\u2289",
+	"NotTilde;": "\u2241",
+	"NotTildeEqual;": "\u2244",
+	"NotTildeFullEqual;": "\u2247",
+	"NotTildeTilde;": "\u2249",
+	"NotVerticalBar;": "\u2224",
 	"nparallel;": "\u2226",
+	"npar;": "\u2226",
 	"nparsl;": "\u2AFD\u20E5",
 	"npart;": "\u2202\u0338",
 	"npolint;": "\u2A14",
 	"npr;": "\u2280",
 	"nprcue;": "\u22E0",
-	"npre;": "\u2AAF",
 	"nprec;": "\u2280",
-	"npreceq;": "\u2AAF",
-	"nrArr;": "\u21CF",
-	"nrarr;": "\u219B",
+	"npreceq;": "\u2AAF\u0338",
+	"npre;": "\u2AAF\u0338",
 	"nrarrc;": "\u2933\u0338",
+	"nrarr;": "\u219B",
+	"nrArr;": "\u21CF",
 	"nrarrw;": "\u219D\u0338",
 	"nrightarrow;": "\u219B",
+	"nRightarrow;": "\u21CF",
 	"nrtri;": "\u22EB",
 	"nrtrie;": "\u22ED",
 	"nsc;": "\u2281",
 	"nsccue;": "\u22E1",
 	"nsce;": "\u2AB0\u0338",
-	"nscr;": "\u1D4C3",
+	"Nscr;": "\uD835\uDCA9",
+	"nscr;": "\uD835\uDCC3",
 	"nshortmid;": "\u2224",
 	"nshortparallel;": "\u2226",
 	"nsim;": "\u2241",
@@ -9629,35 +8818,40 @@ module.exports = {
 	"nsub;": "\u2284",
 	"nsubE;": "\u2AC5\u0338",
 	"nsube;": "\u2288",
-	"nsubset;": "\u2282\u0338",
+	"nsubset;": "\u2282\u20D2",
 	"nsubseteq;": "\u2288",
 	"nsubseteqq;": "\u2AC5\u0338",
 	"nsucc;": "\u2281",
 	"nsucceq;": "\u2AB0\u0338",
 	"nsup;": "\u2285",
-	"nsupE;": "\u2AC6",
+	"nsupE;": "\u2AC6\u0338",
 	"nsupe;": "\u2289",
-	"nsupset;": "\u2283\u0338",
+	"nsupset;": "\u2283\u20D2",
 	"nsupseteq;": "\u2289",
 	"nsupseteqq;": "\u2AC6\u0338",
 	"ntgl;": "\u2279",
-	"ntilde": "\u00F1",
+	"Ntilde;": "\u00D1",
+	"Ntilde": "\u00D1",
 	"ntilde;": "\u00F1",
+	"ntilde": "\u00F1",
 	"ntlg;": "\u2278",
 	"ntriangleleft;": "\u22EA",
 	"ntrianglelefteq;": "\u22EC",
 	"ntriangleright;": "\u22EB",
 	"ntrianglerighteq;": "\u22ED",
+	"Nu;": "\u039D",
 	"nu;": "\u03BD",
-	"num;": "#",
+	"num;": "\u0023",
 	"numero;": "\u2116",
 	"numsp;": "\u2007",
-	"nvDash;": "\u22AD",
-	"nvHarr;": "\u2904",
 	"nvap;": "\u224D\u20D2",
 	"nvdash;": "\u22AC",
+	"nvDash;": "\u22AD",
+	"nVdash;": "\u22AE",
+	"nVDash;": "\u22AF",
 	"nvge;": "\u2265\u20D2",
 	"nvgt;": "\u003E\u20D2",
+	"nvHarr;": "\u2904",
 	"nvinfin;": "\u29DE",
 	"nvlArr;": "\u2902",
 	"nvle;": "\u2264\u20D2",
@@ -9666,30 +8860,39 @@ module.exports = {
 	"nvrArr;": "\u2903",
 	"nvrtrie;": "\u22B5\u20D2",
 	"nvsim;": "\u223C\u20D2",
-	"nwArr;": "\u21D6",
 	"nwarhk;": "\u2923",
 	"nwarr;": "\u2196",
+	"nwArr;": "\u21D6",
 	"nwarrow;": "\u2196",
 	"nwnear;": "\u2927",
-	"oS;": "\u24C8",
-	"oacute": "\u00F3",
+	"Oacute;": "\u00D3",
+	"Oacute": "\u00D3",
 	"oacute;": "\u00F3",
+	"oacute": "\u00F3",
 	"oast;": "\u229B",
-	"ocir;": "\u229A",
-	"ocirc": "\u00F4",
+	"Ocirc;": "\u00D4",
+	"Ocirc": "\u00D4",
 	"ocirc;": "\u00F4",
+	"ocirc": "\u00F4",
+	"ocir;": "\u229A",
+	"Ocy;": "\u041E",
 	"ocy;": "\u043E",
 	"odash;": "\u229D",
+	"Odblac;": "\u0150",
 	"odblac;": "\u0151",
 	"odiv;": "\u2A38",
 	"odot;": "\u2299",
 	"odsold;": "\u29BC",
+	"OElig;": "\u0152",
 	"oelig;": "\u0153",
 	"ofcir;": "\u29BF",
-	"ofr;": "\u1D52C",
+	"Ofr;": "\uD835\uDD12",
+	"ofr;": "\uD835\uDD2C",
 	"ogon;": "\u02DB",
-	"ograve": "\u00F2",
+	"Ograve;": "\u00D2",
+	"Ograve": "\u00D2",
 	"ograve;": "\u00F2",
+	"ograve": "\u00F2",
 	"ogt;": "\u29C1",
 	"ohbar;": "\u29B5",
 	"ohm;": "\u03A9",
@@ -9699,160 +8902,211 @@ module.exports = {
 	"olcross;": "\u29BB",
 	"oline;": "\u203E",
 	"olt;": "\u29C0",
+	"Omacr;": "\u014C",
 	"omacr;": "\u014D",
+	"Omega;": "\u03A9",
 	"omega;": "\u03C9",
+	"Omicron;": "\u039F",
 	"omicron;": "\u03BF",
 	"omid;": "\u29B6",
 	"ominus;": "\u2296",
-	"oopf;": "\u1D560",
+	"Oopf;": "\uD835\uDD46",
+	"oopf;": "\uD835\uDD60",
 	"opar;": "\u29B7",
+	"OpenCurlyDoubleQuote;": "\u201C",
+	"OpenCurlyQuote;": "\u2018",
 	"operp;": "\u29B9",
 	"oplus;": "\u2295",
-	"or;": "\u2228",
 	"orarr;": "\u21BB",
+	"Or;": "\u2A54",
+	"or;": "\u2228",
 	"ord;": "\u2A5D",
 	"order;": "\u2134",
 	"orderof;": "\u2134",
-	"ordf": "\u00AA",
 	"ordf;": "\u00AA",
-	"ordm": "\u00BA",
+	"ordf": "\u00AA",
 	"ordm;": "\u00BA",
+	"ordm": "\u00BA",
 	"origof;": "\u22B6",
 	"oror;": "\u2A56",
 	"orslope;": "\u2A57",
 	"orv;": "\u2A5B",
+	"oS;": "\u24C8",
+	"Oscr;": "\uD835\uDCAA",
 	"oscr;": "\u2134",
-	"oslash": "\u00F8",
+	"Oslash;": "\u00D8",
+	"Oslash": "\u00D8",
 	"oslash;": "\u00F8",
+	"oslash": "\u00F8",
 	"osol;": "\u2298",
-	"otilde": "\u00F5",
+	"Otilde;": "\u00D5",
+	"Otilde": "\u00D5",
 	"otilde;": "\u00F5",
-	"otimes;": "\u2297",
+	"otilde": "\u00F5",
 	"otimesas;": "\u2A36",
-	"ouml": "\u00F6",
+	"Otimes;": "\u2A37",
+	"otimes;": "\u2297",
+	"Ouml;": "\u00D6",
+	"Ouml": "\u00D6",
 	"ouml;": "\u00F6",
+	"ouml": "\u00F6",
 	"ovbar;": "\u233D",
-	"par;": "\u2225",
-	"para": "\u00B6",
+	"OverBar;": "\u203E",
+	"OverBrace;": "\u23DE",
+	"OverBracket;": "\u23B4",
+	"OverParenthesis;": "\u23DC",
 	"para;": "\u00B6",
+	"para": "\u00B6",
 	"parallel;": "\u2225",
+	"par;": "\u2225",
 	"parsim;": "\u2AF3",
 	"parsl;": "\u2AFD",
 	"part;": "\u2202",
+	"PartialD;": "\u2202",
+	"Pcy;": "\u041F",
 	"pcy;": "\u043F",
-	"percnt;": "%",
-	"period;": ".",
+	"percnt;": "\u0025",
+	"period;": "\u002E",
 	"permil;": "\u2030",
 	"perp;": "\u22A5",
 	"pertenk;": "\u2031",
-	"pfr;": "\u1D52D",
+	"Pfr;": "\uD835\uDD13",
+	"pfr;": "\uD835\uDD2D",
+	"Phi;": "\u03A6",
 	"phi;": "\u03C6",
 	"phiv;": "\u03D5",
 	"phmmat;": "\u2133",
 	"phone;": "\u260E",
+	"Pi;": "\u03A0",
 	"pi;": "\u03C0",
 	"pitchfork;": "\u22D4",
 	"piv;": "\u03D6",
 	"planck;": "\u210F",
 	"planckh;": "\u210E",
 	"plankv;": "\u210F",
-	"plus;": "+",
 	"plusacir;": "\u2A23",
 	"plusb;": "\u229E",
 	"pluscir;": "\u2A22",
+	"plus;": "\u002B",
 	"plusdo;": "\u2214",
 	"plusdu;": "\u2A25",
 	"pluse;": "\u2A72",
-	"plusmn": "\u00B1",
+	"PlusMinus;": "\u00B1",
 	"plusmn;": "\u00B1",
+	"plusmn": "\u00B1",
 	"plussim;": "\u2A26",
 	"plustwo;": "\u2A27",
 	"pm;": "\u00B1",
+	"Poincareplane;": "\u210C",
 	"pointint;": "\u2A15",
-	"popf;": "\u1D561",
-	"pound": "\u00A3",
+	"popf;": "\uD835\uDD61",
+	"Popf;": "\u2119",
 	"pound;": "\u00A3",
-	"pr;": "\u227A",
-	"prE;": "\u2AB3",
+	"pound": "\u00A3",
 	"prap;": "\u2AB7",
+	"Pr;": "\u2ABB",
+	"pr;": "\u227A",
 	"prcue;": "\u227C",
-	"pre;": "\u2AAF",
-	"prec;": "\u227A",
 	"precapprox;": "\u2AB7",
+	"prec;": "\u227A",
 	"preccurlyeq;": "\u227C",
+	"Precedes;": "\u227A",
+	"PrecedesEqual;": "\u2AAF",
+	"PrecedesSlantEqual;": "\u227C",
+	"PrecedesTilde;": "\u227E",
 	"preceq;": "\u2AAF",
 	"precnapprox;": "\u2AB9",
 	"precneqq;": "\u2AB5",
 	"precnsim;": "\u22E8",
+	"pre;": "\u2AAF",
+	"prE;": "\u2AB3",
 	"precsim;": "\u227E",
 	"prime;": "\u2032",
+	"Prime;": "\u2033",
 	"primes;": "\u2119",
-	"prnE;": "\u2AB5",
 	"prnap;": "\u2AB9",
+	"prnE;": "\u2AB5",
 	"prnsim;": "\u22E8",
 	"prod;": "\u220F",
+	"Product;": "\u220F",
 	"profalar;": "\u232E",
 	"profline;": "\u2312",
 	"profsurf;": "\u2313",
 	"prop;": "\u221D",
+	"Proportional;": "\u221D",
+	"Proportion;": "\u2237",
 	"propto;": "\u221D",
 	"prsim;": "\u227E",
 	"prurel;": "\u22B0",
-	"pscr;": "\u1D4C5",
+	"Pscr;": "\uD835\uDCAB",
+	"pscr;": "\uD835\uDCC5",
+	"Psi;": "\u03A8",
 	"psi;": "\u03C8",
 	"puncsp;": "\u2008",
-	"qfr;": "\u1D52E",
+	"Qfr;": "\uD835\uDD14",
+	"qfr;": "\uD835\uDD2E",
 	"qint;": "\u2A0C",
-	"qopf;": "\u1D562",
+	"qopf;": "\uD835\uDD62",
+	"Qopf;": "\u211A",
 	"qprime;": "\u2057",
-	"qscr;": "\u1D4C6",
+	"Qscr;": "\uD835\uDCAC",
+	"qscr;": "\uD835\uDCC6",
 	"quaternions;": "\u210D",
 	"quatint;": "\u2A16",
-	"quest;": "?",
+	"quest;": "\u003F",
 	"questeq;": "\u225F",
-	"quot": "\u0022",
 	"quot;": "\u0022",
+	"quot": "\u0022",
+	"QUOT;": "\u0022",
+	"QUOT": "\u0022",
 	"rAarr;": "\u21DB",
-	"rArr;": "\u21D2",
-	"rAtail;": "\u291C",
-	"rBarr;": "\u290F",
-	"rHar;": "\u2964",
 	"race;": "\u223D\u0331",
+	"Racute;": "\u0154",
 	"racute;": "\u0155",
 	"radic;": "\u221A",
 	"raemptyv;": "\u29B3",
 	"rang;": "\u27E9",
+	"Rang;": "\u27EB",
 	"rangd;": "\u2992",
 	"range;": "\u29A5",
 	"rangle;": "\u27E9",
-	"raquo": "\u00BB",
 	"raquo;": "\u00BB",
-	"rarr;": "\u2192",
+	"raquo": "\u00BB",
 	"rarrap;": "\u2975",
 	"rarrb;": "\u21E5",
 	"rarrbfs;": "\u2920",
 	"rarrc;": "\u2933",
+	"rarr;": "\u2192",
+	"Rarr;": "\u21A0",
+	"rArr;": "\u21D2",
 	"rarrfs;": "\u291E",
 	"rarrhk;": "\u21AA",
 	"rarrlp;": "\u21AC",
 	"rarrpl;": "\u2945",
 	"rarrsim;": "\u2974",
+	"Rarrtl;": "\u2916",
 	"rarrtl;": "\u21A3",
 	"rarrw;": "\u219D",
 	"ratail;": "\u291A",
+	"rAtail;": "\u291C",
 	"ratio;": "\u2236",
 	"rationals;": "\u211A",
 	"rbarr;": "\u290D",
+	"rBarr;": "\u290F",
+	"RBarr;": "\u2910",
 	"rbbrk;": "\u2773",
-	"rbrace;": "}",
-	"rbrack;": "]",
+	"rbrace;": "\u007D",
+	"rbrack;": "\u005D",
 	"rbrke;": "\u298C",
 	"rbrksld;": "\u298E",
 	"rbrkslu;": "\u2990",
+	"Rcaron;": "\u0158",
 	"rcaron;": "\u0159",
+	"Rcedil;": "\u0156",
 	"rcedil;": "\u0157",
 	"rceil;": "\u2309",
-	"rcub;": "}",
+	"rcub;": "\u007D",
+	"Rcy;": "\u0420",
 	"rcy;": "\u0440",
 	"rdca;": "\u2937",
 	"rdldhar;": "\u2969",
@@ -9863,49 +9117,86 @@ module.exports = {
 	"realine;": "\u211B",
 	"realpart;": "\u211C",
 	"reals;": "\u211D",
+	"Re;": "\u211C",
 	"rect;": "\u25AD",
-	"reg": "\u00AE",
 	"reg;": "\u00AE",
+	"reg": "\u00AE",
+	"REG;": "\u00AE",
+	"REG": "\u00AE",
+	"ReverseElement;": "\u220B",
+	"ReverseEquilibrium;": "\u21CB",
+	"ReverseUpEquilibrium;": "\u296F",
 	"rfisht;": "\u297D",
 	"rfloor;": "\u230B",
-	"rfr;": "\u1D52F",
+	"rfr;": "\uD835\uDD2F",
+	"Rfr;": "\u211C",
+	"rHar;": "\u2964",
 	"rhard;": "\u21C1",
 	"rharu;": "\u21C0",
 	"rharul;": "\u296C",
+	"Rho;": "\u03A1",
 	"rho;": "\u03C1",
 	"rhov;": "\u03F1",
+	"RightAngleBracket;": "\u27E9",
+	"RightArrowBar;": "\u21E5",
 	"rightarrow;": "\u2192",
+	"RightArrow;": "\u2192",
+	"Rightarrow;": "\u21D2",
+	"RightArrowLeftArrow;": "\u21C4",
 	"rightarrowtail;": "\u21A3",
+	"RightCeiling;": "\u2309",
+	"RightDoubleBracket;": "\u27E7",
+	"RightDownTeeVector;": "\u295D",
+	"RightDownVectorBar;": "\u2955",
+	"RightDownVector;": "\u21C2",
+	"RightFloor;": "\u230B",
 	"rightharpoondown;": "\u21C1",
 	"rightharpoonup;": "\u21C0",
 	"rightleftarrows;": "\u21C4",
 	"rightleftharpoons;": "\u21CC",
 	"rightrightarrows;": "\u21C9",
 	"rightsquigarrow;": "\u219D",
+	"RightTeeArrow;": "\u21A6",
+	"RightTee;": "\u22A2",
+	"RightTeeVector;": "\u295B",
 	"rightthreetimes;": "\u22CC",
+	"RightTriangleBar;": "\u29D0",
+	"RightTriangle;": "\u22B3",
+	"RightTriangleEqual;": "\u22B5",
+	"RightUpDownVector;": "\u294F",
+	"RightUpTeeVector;": "\u295C",
+	"RightUpVectorBar;": "\u2954",
+	"RightUpVector;": "\u21BE",
+	"RightVectorBar;": "\u2953",
+	"RightVector;": "\u21C0",
 	"ring;": "\u02DA",
 	"risingdotseq;": "\u2253",
 	"rlarr;": "\u21C4",
 	"rlhar;": "\u21CC",
 	"rlm;": "\u200F",
-	"rmoust;": "\u23B1",
 	"rmoustache;": "\u23B1",
+	"rmoust;": "\u23B1",
 	"rnmid;": "\u2AEE",
 	"roang;": "\u27ED",
 	"roarr;": "\u21FE",
 	"robrk;": "\u27E7",
 	"ropar;": "\u2986",
-	"ropf;": "\u1D563",
+	"ropf;": "\uD835\uDD63",
+	"Ropf;": "\u211D",
 	"roplus;": "\u2A2E",
 	"rotimes;": "\u2A35",
-	"rpar;": ")",
+	"RoundImplies;": "\u2970",
+	"rpar;": "\u0029",
 	"rpargt;": "\u2994",
 	"rppolint;": "\u2A12",
 	"rrarr;": "\u21C9",
+	"Rrightarrow;": "\u21DB",
 	"rsaquo;": "\u203A",
-	"rscr;": "\u1D4C7",
+	"rscr;": "\uD835\uDCC7",
+	"Rscr;": "\u211B",
 	"rsh;": "\u21B1",
-	"rsqb;": "]",
+	"Rsh;": "\u21B1",
+	"rsqb;": "\u005D",
 	"rsquo;": "\u2019",
 	"rsquor;": "\u2019",
 	"rthree;": "\u22CC",
@@ -9914,47 +9205,62 @@ module.exports = {
 	"rtrie;": "\u22B5",
 	"rtrif;": "\u25B8",
 	"rtriltri;": "\u29CE",
+	"RuleDelayed;": "\u29F4",
 	"ruluhar;": "\u2968",
 	"rx;": "\u211E",
+	"Sacute;": "\u015A",
 	"sacute;": "\u015B",
 	"sbquo;": "\u201A",
-	"sc;": "\u227B",
-	"scE;": "\u2AB4",
 	"scap;": "\u2AB8",
+	"Scaron;": "\u0160",
 	"scaron;": "\u0161",
+	"Sc;": "\u2ABC",
+	"sc;": "\u227B",
 	"sccue;": "\u227D",
 	"sce;": "\u2AB0",
+	"scE;": "\u2AB4",
+	"Scedil;": "\u015E",
 	"scedil;": "\u015F",
+	"Scirc;": "\u015C",
 	"scirc;": "\u015D",
-	"scnE;": "\u2AB6",
 	"scnap;": "\u2ABA",
+	"scnE;": "\u2AB6",
 	"scnsim;": "\u22E9",
 	"scpolint;": "\u2A13",
 	"scsim;": "\u227F",
+	"Scy;": "\u0421",
 	"scy;": "\u0441",
-	"sdot;": "\u22C5",
 	"sdotb;": "\u22A1",
+	"sdot;": "\u22C5",
 	"sdote;": "\u2A66",
-	"seArr;": "\u21D8",
 	"searhk;": "\u2925",
 	"searr;": "\u2198",
+	"seArr;": "\u21D8",
 	"searrow;": "\u2198",
-	"sect": "\u00A7",
 	"sect;": "\u00A7",
-	"semi;": ";",
+	"sect": "\u00A7",
+	"semi;": "\u003B",
 	"seswar;": "\u2929",
 	"setminus;": "\u2216",
 	"setmn;": "\u2216",
 	"sext;": "\u2736",
-	"sfr;": "\u1D530",
+	"Sfr;": "\uD835\uDD16",
+	"sfr;": "\uD835\uDD30",
 	"sfrown;": "\u2322",
 	"sharp;": "\u266F",
+	"SHCHcy;": "\u0429",
 	"shchcy;": "\u0449",
+	"SHcy;": "\u0428",
 	"shcy;": "\u0448",
+	"ShortDownArrow;": "\u2193",
+	"ShortLeftArrow;": "\u2190",
 	"shortmid;": "\u2223",
 	"shortparallel;": "\u2225",
-	"shy": "\u00AD",
+	"ShortRightArrow;": "\u2192",
+	"ShortUpArrow;": "\u2191",
 	"shy;": "\u00AD",
+	"shy": "\u00AD",
+	"Sigma;": "\u03A3",
 	"sigma;": "\u03C3",
 	"sigmaf;": "\u03C2",
 	"sigmav;": "\u03C2",
@@ -9970,6 +9276,7 @@ module.exports = {
 	"simplus;": "\u2A24",
 	"simrarr;": "\u2972",
 	"slarr;": "\u2190",
+	"SmallCircle;": "\u2218",
 	"smallsetminus;": "\u2216",
 	"smashp;": "\u2A33",
 	"smeparsl;": "\u29E4",
@@ -9978,11 +9285,13 @@ module.exports = {
 	"smt;": "\u2AAA",
 	"smte;": "\u2AAC",
 	"smtes;": "\u2AAC\uFE00",
+	"SOFTcy;": "\u042C",
 	"softcy;": "\u044C",
-	"sol;": "/",
-	"solb;": "\u29C4",
 	"solbar;": "\u233F",
-	"sopf;": "\u1D564",
+	"solb;": "\u29C4",
+	"sol;": "\u002F",
+	"Sopf;": "\uD835\uDD4A",
+	"sopf;": "\uD835\uDD64",
 	"spades;": "\u2660",
 	"spadesuit;": "\u2660",
 	"spar;": "\u2225",
@@ -9990,6 +9299,7 @@ module.exports = {
 	"sqcaps;": "\u2293\uFE00",
 	"sqcup;": "\u2294",
 	"sqcups;": "\u2294\uFE00",
+	"Sqrt;": "\u221A",
 	"sqsub;": "\u228F",
 	"sqsube;": "\u2291",
 	"sqsubset;": "\u228F",
@@ -9998,23 +9308,33 @@ module.exports = {
 	"sqsupe;": "\u2292",
 	"sqsupset;": "\u2290",
 	"sqsupseteq;": "\u2292",
-	"squ;": "\u25A1",
 	"square;": "\u25A1",
+	"Square;": "\u25A1",
+	"SquareIntersection;": "\u2293",
+	"SquareSubset;": "\u228F",
+	"SquareSubsetEqual;": "\u2291",
+	"SquareSuperset;": "\u2290",
+	"SquareSupersetEqual;": "\u2292",
+	"SquareUnion;": "\u2294",
 	"squarf;": "\u25AA",
+	"squ;": "\u25A1",
 	"squf;": "\u25AA",
 	"srarr;": "\u2192",
-	"sscr;": "\u1D4C8",
+	"Sscr;": "\uD835\uDCAE",
+	"sscr;": "\uD835\uDCC8",
 	"ssetmn;": "\u2216",
 	"ssmile;": "\u2323",
 	"sstarf;": "\u22C6",
+	"Star;": "\u22C6",
 	"star;": "\u2606",
 	"starf;": "\u2605",
 	"straightepsilon;": "\u03F5",
 	"straightphi;": "\u03D5",
 	"strns;": "\u00AF",
 	"sub;": "\u2282",
-	"subE;": "\u2AC5",
+	"Sub;": "\u22D0",
 	"subdot;": "\u2ABD",
+	"subE;": "\u2AC5",
 	"sube;": "\u2286",
 	"subedot;": "\u2AC3",
 	"submult;": "\u2AC1",
@@ -10023,35 +9343,46 @@ module.exports = {
 	"subplus;": "\u2ABF",
 	"subrarr;": "\u2979",
 	"subset;": "\u2282",
+	"Subset;": "\u22D0",
 	"subseteq;": "\u2286",
 	"subseteqq;": "\u2AC5",
+	"SubsetEqual;": "\u2286",
 	"subsetneq;": "\u228A",
 	"subsetneqq;": "\u2ACB",
 	"subsim;": "\u2AC7",
 	"subsub;": "\u2AD5",
 	"subsup;": "\u2AD3",
-	"succ;": "\u227B",
 	"succapprox;": "\u2AB8",
+	"succ;": "\u227B",
 	"succcurlyeq;": "\u227D",
+	"Succeeds;": "\u227B",
+	"SucceedsEqual;": "\u2AB0",
+	"SucceedsSlantEqual;": "\u227D",
+	"SucceedsTilde;": "\u227F",
 	"succeq;": "\u2AB0",
 	"succnapprox;": "\u2ABA",
 	"succneqq;": "\u2AB6",
 	"succnsim;": "\u22E9",
 	"succsim;": "\u227F",
+	"SuchThat;": "\u220B",
 	"sum;": "\u2211",
+	"Sum;": "\u2211",
 	"sung;": "\u266A",
-	"sup1": "\u00B9",
 	"sup1;": "\u00B9",
-	"sup2": "\u00B2",
+	"sup1": "\u00B9",
 	"sup2;": "\u00B2",
-	"sup3": "\u00B3",
+	"sup2": "\u00B2",
 	"sup3;": "\u00B3",
+	"sup3": "\u00B3",
 	"sup;": "\u2283",
-	"supE;": "\u2AC6",
+	"Sup;": "\u22D1",
 	"supdot;": "\u2ABE",
 	"supdsub;": "\u2AD8",
+	"supE;": "\u2AC6",
 	"supe;": "\u2287",
 	"supedot;": "\u2AC4",
+	"Superset;": "\u2283",
+	"SupersetEqual;": "\u2287",
 	"suphsol;": "\u27C9",
 	"suphsub;": "\u2AD7",
 	"suplarr;": "\u297B",
@@ -10060,6 +9391,7 @@ module.exports = {
 	"supne;": "\u228B",
 	"supplus;": "\u2AC0",
 	"supset;": "\u2283",
+	"Supset;": "\u22D1",
 	"supseteq;": "\u2287",
 	"supseteqq;": "\u2AC6",
 	"supsetneq;": "\u228B",
@@ -10067,50 +9399,68 @@ module.exports = {
 	"supsim;": "\u2AC8",
 	"supsub;": "\u2AD4",
 	"supsup;": "\u2AD6",
-	"swArr;": "\u21D9",
 	"swarhk;": "\u2926",
 	"swarr;": "\u2199",
+	"swArr;": "\u21D9",
 	"swarrow;": "\u2199",
 	"swnwar;": "\u292A",
-	"szlig": "\u00DF",
 	"szlig;": "\u00DF",
+	"szlig": "\u00DF",
+	"Tab;": "\u0009",
 	"target;": "\u2316",
+	"Tau;": "\u03A4",
 	"tau;": "\u03C4",
 	"tbrk;": "\u23B4",
+	"Tcaron;": "\u0164",
 	"tcaron;": "\u0165",
+	"Tcedil;": "\u0162",
 	"tcedil;": "\u0163",
+	"Tcy;": "\u0422",
 	"tcy;": "\u0442",
 	"tdot;": "\u20DB",
 	"telrec;": "\u2315",
-	"tfr;": "\u1D531",
+	"Tfr;": "\uD835\uDD17",
+	"tfr;": "\uD835\uDD31",
 	"there4;": "\u2234",
 	"therefore;": "\u2234",
+	"Therefore;": "\u2234",
+	"Theta;": "\u0398",
 	"theta;": "\u03B8",
 	"thetasym;": "\u03D1",
 	"thetav;": "\u03D1",
 	"thickapprox;": "\u2248",
 	"thicksim;": "\u223C",
+	"ThickSpace;": "\u205F\u200A",
+	"ThinSpace;": "\u2009",
 	"thinsp;": "\u2009",
 	"thkap;": "\u2248",
 	"thksim;": "\u223C",
-	"thorn": "\u00FE",
+	"THORN;": "\u00DE",
+	"THORN": "\u00DE",
 	"thorn;": "\u00FE",
+	"thorn": "\u00FE",
 	"tilde;": "\u02DC",
-	"times": "\u00D7",
-	"times;": "\u00D7",
-	"timesb;": "\u22A0",
+	"Tilde;": "\u223C",
+	"TildeEqual;": "\u2243",
+	"TildeFullEqual;": "\u2245",
+	"TildeTilde;": "\u2248",
 	"timesbar;": "\u2A31",
+	"timesb;": "\u22A0",
+	"times;": "\u00D7",
+	"times": "\u00D7",
 	"timesd;": "\u2A30",
 	"tint;": "\u222D",
 	"toea;": "\u2928",
-	"top;": "\u22A4",
 	"topbot;": "\u2336",
 	"topcir;": "\u2AF1",
-	"topf;": "\u1D565",
+	"top;": "\u22A4",
+	"Topf;": "\uD835\uDD4B",
+	"topf;": "\uD835\uDD65",
 	"topfork;": "\u2ADA",
 	"tosa;": "\u2929",
 	"tprime;": "\u2034",
 	"trade;": "\u2122",
+	"TRADE;": "\u2122",
 	"triangle;": "\u25B5",
 	"triangledown;": "\u25BF",
 	"triangleleft;": "\u25C3",
@@ -10121,34 +9471,52 @@ module.exports = {
 	"tridot;": "\u25EC",
 	"trie;": "\u225C",
 	"triminus;": "\u2A3A",
+	"TripleDot;": "\u20DB",
 	"triplus;": "\u2A39",
 	"trisb;": "\u29CD",
 	"tritime;": "\u2A3B",
 	"trpezium;": "\u23E2",
-	"tscr;": "\u1D4C9",
+	"Tscr;": "\uD835\uDCAF",
+	"tscr;": "\uD835\uDCC9",
+	"TScy;": "\u0426",
 	"tscy;": "\u0446",
+	"TSHcy;": "\u040B",
 	"tshcy;": "\u045B",
+	"Tstrok;": "\u0166",
 	"tstrok;": "\u0167",
 	"twixt;": "\u226C",
 	"twoheadleftarrow;": "\u219E",
 	"twoheadrightarrow;": "\u21A0",
-	"uArr;": "\u21D1",
-	"uHar;": "\u2963",
-	"uacute": "\u00FA",
+	"Uacute;": "\u00DA",
+	"Uacute": "\u00DA",
 	"uacute;": "\u00FA",
+	"uacute": "\u00FA",
 	"uarr;": "\u2191",
+	"Uarr;": "\u219F",
+	"uArr;": "\u21D1",
+	"Uarrocir;": "\u2949",
+	"Ubrcy;": "\u040E",
 	"ubrcy;": "\u045E",
+	"Ubreve;": "\u016C",
 	"ubreve;": "\u016D",
-	"ucirc": "\u00FB",
+	"Ucirc;": "\u00DB",
+	"Ucirc": "\u00DB",
 	"ucirc;": "\u00FB",
+	"ucirc": "\u00FB",
+	"Ucy;": "\u0423",
 	"ucy;": "\u0443",
 	"udarr;": "\u21C5",
+	"Udblac;": "\u0170",
 	"udblac;": "\u0171",
 	"udhar;": "\u296E",
 	"ufisht;": "\u297E",
-	"ufr;": "\u1D532",
-	"ugrave": "\u00F9",
+	"Ufr;": "\uD835\uDD18",
+	"ufr;": "\uD835\uDD32",
+	"Ugrave;": "\u00D9",
+	"Ugrave": "\u00D9",
 	"ugrave;": "\u00F9",
+	"ugrave": "\u00F9",
+	"uHar;": "\u2963",
 	"uharl;": "\u21BF",
 	"uharr;": "\u21BE",
 	"uhblk;": "\u2580",
@@ -10156,38 +9524,61 @@ module.exports = {
 	"ulcorner;": "\u231C",
 	"ulcrop;": "\u230F",
 	"ultri;": "\u25F8",
+	"Umacr;": "\u016A",
 	"umacr;": "\u016B",
-	"uml": "\u00A8",
 	"uml;": "\u00A8",
+	"uml": "\u00A8",
+	"UnderBar;": "\u005F",
+	"UnderBrace;": "\u23DF",
+	"UnderBracket;": "\u23B5",
+	"UnderParenthesis;": "\u23DD",
+	"Union;": "\u22C3",
+	"UnionPlus;": "\u228E",
+	"Uogon;": "\u0172",
 	"uogon;": "\u0173",
-	"uopf;": "\u1D566",
+	"Uopf;": "\uD835\uDD4C",
+	"uopf;": "\uD835\uDD66",
+	"UpArrowBar;": "\u2912",
 	"uparrow;": "\u2191",
+	"UpArrow;": "\u2191",
+	"Uparrow;": "\u21D1",
+	"UpArrowDownArrow;": "\u21C5",
 	"updownarrow;": "\u2195",
+	"UpDownArrow;": "\u2195",
+	"Updownarrow;": "\u21D5",
+	"UpEquilibrium;": "\u296E",
 	"upharpoonleft;": "\u21BF",
 	"upharpoonright;": "\u21BE",
 	"uplus;": "\u228E",
+	"UpperLeftArrow;": "\u2196",
+	"UpperRightArrow;": "\u2197",
 	"upsi;": "\u03C5",
+	"Upsi;": "\u03D2",
 	"upsih;": "\u03D2",
+	"Upsilon;": "\u03A5",
 	"upsilon;": "\u03C5",
+	"UpTeeArrow;": "\u21A5",
+	"UpTee;": "\u22A5",
 	"upuparrows;": "\u21C8",
 	"urcorn;": "\u231D",
 	"urcorner;": "\u231D",
 	"urcrop;": "\u230E",
+	"Uring;": "\u016E",
 	"uring;": "\u016F",
 	"urtri;": "\u25F9",
-	"uscr;": "\u1D4CA",
+	"Uscr;": "\uD835\uDCB0",
+	"uscr;": "\uD835\uDCCA",
 	"utdot;": "\u22F0",
+	"Utilde;": "\u0168",
 	"utilde;": "\u0169",
 	"utri;": "\u25B5",
 	"utrif;": "\u25B4",
 	"uuarr;": "\u21C8",
-	"uuml": "\u00FC",
+	"Uuml;": "\u00DC",
+	"Uuml": "\u00DC",
 	"uuml;": "\u00FC",
+	"uuml": "\u00FC",
 	"uwangle;": "\u29A7",
-	"vArr;": "\u21D5",
-	"vBar;": "\u2AE8",
-	"vBarv;": "\u2AE9",
-	"vDash;": "\u22A8",
 	"vangrt;": "\u299C",
 	"varepsilon;": "\u03F5",
 	"varkappa;": "\u03F0",
@@ -10196,6 +9587,7 @@ module.exports = {
 	"varpi;": "\u03D6",
 	"varpropto;": "\u221D",
 	"varr;": "\u2195",
+	"vArr;": "\u21D5",
 	"varrho;": "\u03F1",
 	"varsigma;": "\u03C2",
 	"varsubsetneq;": "\u228A\uFE00",
@@ -10205,157 +9597,211 @@ module.exports = {
 	"vartheta;": "\u03D1",
 	"vartriangleleft;": "\u22B2",
 	"vartriangleright;": "\u22B3",
+	"vBar;": "\u2AE8",
+	"Vbar;": "\u2AEB",
+	"vBarv;": "\u2AE9",
+	"Vcy;": "\u0412",
 	"vcy;": "\u0432",
 	"vdash;": "\u22A2",
-	"vee;": "\u2228",
+	"vDash;": "\u22A8",
+	"Vdash;": "\u22A9",
+	"VDash;": "\u22AB",
+	"Vdashl;": "\u2AE6",
 	"veebar;": "\u22BB",
+	"vee;": "\u2228",
+	"Vee;": "\u22C1",
 	"veeeq;": "\u225A",
 	"vellip;": "\u22EE",
-	"verbar;": "|",
-	"vert;": "|",
-	"vfr;": "\u1D533",
+	"verbar;": "\u007C",
+	"Verbar;": "\u2016",
+	"vert;": "\u007C",
+	"Vert;": "\u2016",
+	"VerticalBar;": "\u2223",
+	"VerticalLine;": "\u007C",
+	"VerticalSeparator;": "\u2758",
+	"VerticalTilde;": "\u2240",
+	"VeryThinSpace;": "\u200A",
+	"Vfr;": "\uD835\uDD19",
+	"vfr;": "\uD835\uDD33",
 	"vltri;": "\u22B2",
 	"vnsub;": "\u2282\u20D2",
 	"vnsup;": "\u2283\u20D2",
-	"vopf;": "\u1D567",
+	"Vopf;": "\uD835\uDD4D",
+	"vopf;": "\uD835\uDD67",
 	"vprop;": "\u221D",
 	"vrtri;": "\u22B3",
-	"vscr;": "\u1D4CB",
+	"Vscr;": "\uD835\uDCB1",
+	"vscr;": "\uD835\uDCCB",
 	"vsubnE;": "\u2ACB\uFE00",
 	"vsubne;": "\u228A\uFE00",
 	"vsupnE;": "\u2ACC\uFE00",
 	"vsupne;": "\u228B\uFE00",
+	"Vvdash;": "\u22AA",
 	"vzigzag;": "\u299A",
+	"Wcirc;": "\u0174",
 	"wcirc;": "\u0175",
 	"wedbar;": "\u2A5F",
 	"wedge;": "\u2227",
+	"Wedge;": "\u22C0",
 	"wedgeq;": "\u2259",
 	"weierp;": "\u2118",
-	"wfr;": "\u1D534",
-	"wopf;": "\u1D568",
+	"Wfr;": "\uD835\uDD1A",
+	"wfr;": "\uD835\uDD34",
+	"Wopf;": "\uD835\uDD4E",
+	"wopf;": "\uD835\uDD68",
 	"wp;": "\u2118",
 	"wr;": "\u2240",
 	"wreath;": "\u2240",
-	"wscr;": "\u1D4CC",
+	"Wscr;": "\uD835\uDCB2",
+	"wscr;": "\uD835\uDCCC",
 	"xcap;": "\u22C2",
 	"xcirc;": "\u25EF",
 	"xcup;": "\u22C3",
 	"xdtri;": "\u25BD",
-	"xfr;": "\u1D535",
-	"xhArr;": "\u27FA",
+	"Xfr;": "\uD835\uDD1B",
+	"xfr;": "\uD835\uDD35",
 	"xharr;": "\u27F7",
+	"xhArr;": "\u27FA",
+	"Xi;": "\u039E",
 	"xi;": "\u03BE",
-	"xlArr;": "\u27F8",
 	"xlarr;": "\u27F5",
+	"xlArr;": "\u27F8",
 	"xmap;": "\u27FC",
 	"xnis;": "\u22FB",
 	"xodot;": "\u2A00",
-	"xopf;": "\u1D569",
+	"Xopf;": "\uD835\uDD4F",
+	"xopf;": "\uD835\uDD69",
 	"xoplus;": "\u2A01",
 	"xotime;": "\u2A02",
-	"xrArr;": "\u27F9",
 	"xrarr;": "\u27F6",
-	"xscr;": "\u1D4CD",
+	"xrArr;": "\u27F9",
+	"Xscr;": "\uD835\uDCB3",
+	"xscr;": "\uD835\uDCCD",
 	"xsqcup;": "\u2A06",
 	"xuplus;": "\u2A04",
 	"xutri;": "\u25B3",
 	"xvee;": "\u22C1",
 	"xwedge;": "\u22C0",
-	"yacute": "\u00FD",
+	"Yacute;": "\u00DD",
+	"Yacute": "\u00DD",
 	"yacute;": "\u00FD",
+	"yacute": "\u00FD",
+	"YAcy;": "\u042F",
 	"yacy;": "\u044F",
+	"Ycirc;": "\u0176",
 	"ycirc;": "\u0177",
+	"Ycy;": "\u042B",
 	"ycy;": "\u044B",
-	"yen": "\u00A5",
 	"yen;": "\u00A5",
-	"yfr;": "\u1D536",
+	"yen": "\u00A5",
+	"Yfr;": "\uD835\uDD1C",
+	"yfr;": "\uD835\uDD36",
+	"YIcy;": "\u0407",
 	"yicy;": "\u0457",
-	"yopf;": "\u1D56A",
-	"yscr;": "\u1D4CE",
+	"Yopf;": "\uD835\uDD50",
+	"yopf;": "\uD835\uDD6A",
+	"Yscr;": "\uD835\uDCB4",
+	"yscr;": "\uD835\uDCCE",
+	"YUcy;": "\u042E",
 	"yucy;": "\u044E",
-	"yuml": "\u00FF",
 	"yuml;": "\u00FF",
+	"yuml": "\u00FF",
+	"Yuml;": "\u0178",
+	"Zacute;": "\u0179",
 	"zacute;": "\u017A",
+	"Zcaron;": "\u017D",
 	"zcaron;": "\u017E",
+	"Zcy;": "\u0417",
 	"zcy;": "\u0437",
+	"Zdot;": "\u017B",
 	"zdot;": "\u017C",
 	"zeetrf;": "\u2128",
+	"ZeroWidthSpace;": "\u200B",
+	"Zeta;": "\u0396",
 	"zeta;": "\u03B6",
-	"zfr;": "\u1D537",
+	"zfr;": "\uD835\uDD37",
+	"Zfr;": "\u2128",
+	"ZHcy;": "\u0416",
 	"zhcy;": "\u0436",
 	"zigrarr;": "\u21DD",
-	"zopf;": "\u1D56B",
-	"zscr;": "\u1D4CF",
+	"zopf;": "\uD835\uDD6B",
+	"Zopf;": "\u2124",
+	"Zscr;": "\uD835\uDCB5",
+	"zscr;": "\uD835\uDCCF",
 	"zwj;": "\u200D",
 	"zwnj;": "\u200C"
 };
 
-},{}],13:[function(require,module,exports){
-(function(){// UTILITY
-var util = require('util');
-var Buffer = require("buffer").Buffer;
-var pSlice = Array.prototype.slice;
+},
+{}],
+13:[function(_dereq_,module,exports){
+var util = _dereq_('util/');
 
-function objectKeys(object) {
-  if (Object.keys) return Object.keys(object);
-  var result = [];
-  for (var name in object) {
-    if (Object.prototype.hasOwnProperty.call(object, name)) {
-      result.push(name);
-    }
-  }
-  return result;
-}
+var pSlice = Array.prototype.slice;
+var hasOwn = Object.prototype.hasOwnProperty;
 
 var assert = module.exports = ok;
 
 assert.AssertionError = function AssertionError(options) {
   this.name = 'AssertionError';
-  this.message = options.message;
   this.actual = options.actual;
   this.expected = options.expected;
   this.operator = options.operator;
+  if (options.message) {
+    this.message = options.message;
+    this.generatedMessage = false;
+  } else {
+    this.message = getMessage(this);
+    this.generatedMessage = true;
+  }
   var stackStartFunction = options.stackStartFunction || fail;
 
   if (Error.captureStackTrace) {
     Error.captureStackTrace(this, stackStartFunction);
   }
+  else {
+    var err = new Error();
+    if (err.stack) {
+      var out = err.stack;
+      var fn_name = stackStartFunction.name;
+      var idx = out.indexOf('\n' + fn_name);
+      if (idx >= 0) {
+        var next_line = out.indexOf('\n', idx + 1);
+        out = out.substring(next_line + 1);
+      }
+
+      this.stack = out;
+    }
+  }
 };
 util.inherits(assert.AssertionError, Error);
 
 function replacer(key, value) {
-  if (value === undefined) {
+  if (util.isUndefined(value)) {
     return '' + value;
   }
-  if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) {
+  if (util.isNumber(value) && (isNaN(value) || !isFinite(value))) {
     return value.toString();
   }
-  if (typeof value === 'function' || value instanceof RegExp) {
+  if (util.isFunction(value) || util.isRegExp(value)) {
     return value.toString();
   }
   return value;
 }
 
 function truncate(s, n) {
-  if (typeof s == 'string') {
+  if (util.isString(s)) {
     return s.length < n ? s : s.slice(0, n);
   } else {
     return s;
   }
 }
 
-assert.AssertionError.prototype.toString = function() {
-  if (this.message) {
-    return [this.name + ':', this.message].join(' ');
-  } else {
-    return [
-      this.name + ':',
-      truncate(JSON.stringify(this.actual, replacer), 128),
-      this.operator,
-      truncate(JSON.stringify(this.expected, replacer), 128)
-    ].join(' ');
-  }
-};
+function getMessage(self) {
+  return truncate(JSON.stringify(self.actual, replacer), 128) + ' ' +
+         self.operator + ' ' +
+         truncate(JSON.stringify(self.expected, replacer), 128);
+}
 
 function fail(actual, expected, message, operator, stackStartFunction) {
   throw new assert.AssertionError({
@@ -10369,7 +9815,7 @@ function fail(actual, expected, message, operator, stackStartFunction) {
 assert.fail = fail;
 
 function ok(value, message) {
-  if (!!!value) fail(value, true, message, '==', assert.ok);
+  if (!value) fail(value, true, message, '==', assert.ok);
 }
 assert.ok = ok;
 
@@ -10393,7 +9839,7 @@ function _deepEqual(actual, expected) {
   if (actual === expected) {
     return true;
 
-  } else if (Buffer.isBuffer(actual) && Buffer.isBuffer(expected)) {
+  } else if (util.isBuffer(actual) && util.isBuffer(expected)) {
     if (actual.length != expected.length) return false;
 
     for (var i = 0; i < actual.length; i++) {
@@ -10401,17 +9847,19 @@ function _deepEqual(actual, expected) {
     }
 
     return true;
-  } else if (actual instanceof Date && expected instanceof Date) {
+  } else if (util.isDate(actual) && util.isDate(expected)) {
     return actual.getTime() === expected.getTime();
-  } else if (typeof actual != 'object' && typeof expected != 'object') {
+  } else if (util.isRegExp(actual) && util.isRegExp(expected)) {
+    return actual.source === expected.source &&
+           actual.global === expected.global &&
+           actual.multiline === expected.multiline &&
+           actual.lastIndex === expected.lastIndex &&
+           actual.ignoreCase === expected.ignoreCase;
+  } else if (!util.isObject(actual) && !util.isObject(expected)) {
     return actual == expected;
   } else {
     return objEquiv(actual, expected);
   }
-}
-
-function isUndefinedOrNull(value) {
-  return value === null || value === undefined;
 }
 
 function isArguments(object) {
@@ -10419,7 +9867,7 @@ function isArguments(object) {
 }
 
 function objEquiv(a, b) {
-  if (isUndefinedOrNull(a) || isUndefinedOrNull(b))
+  if (util.isNullOrUndefined(a) || util.isNullOrUndefined(b))
     return false;
   if (a.prototype !== b.prototype) return false;
   if (isArguments(a)) {
@@ -10475,7 +9923,7 @@ function expectedException(actual, expected) {
     return false;
   }
 
-  if (expected instanceof RegExp) {
+  if (Object.prototype.toString.call(expected) == '[object RegExp]') {
     return expected.test(actual);
   } else if (actual instanceof expected) {
     return true;
@@ -10489,7 +9937,7 @@ function expectedException(actual, expected) {
 function _throws(shouldThrow, block, expected, message) {
   var actual;
 
-  if (typeof expected === 'string') {
+  if (util.isString(expected)) {
     message = expected;
     expected = null;
   }
@@ -10504,11 +9952,11 @@ function _throws(shouldThrow, block, expected, message) {
             (message ? ' ' + message : '.');
 
   if (shouldThrow && !actual) {
-    fail('Missing expected exception' + message);
+    fail(actual, expected, 'Missing expected exception' + message);
   }
 
   if (!shouldThrow && expectedException(actual, expected)) {
-    fail('Got unwanted exception' + message);
+    fail(actual, expected, 'Got unwanted exception' + message);
   }
 
   if ((shouldThrow && actual && expected &&
@@ -10520,469 +9968,40 @@ function _throws(shouldThrow, block, expected, message) {
 assert.throws = function(block, /*optional*/error, /*optional*/message) {
   _throws.apply(this, [true].concat(pSlice.call(arguments)));
 };
-assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
+assert.doesNotThrow = function(block, /*optional*/message) {
   _throws.apply(this, [false].concat(pSlice.call(arguments)));
 };
 
 assert.ifError = function(err) { if (err) {throw err;}};
 
-})()
-},{"buffer":17,"util":15}],14:[function(require,module,exports){
-(function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
+var objectKeys = Object.keys || function (obj) {
+  var keys = [];
+  for (var key in obj) {
+    if (hasOwn.call(obj, key)) keys.push(key);
+  }
+  return keys;
+};
 
-var EventEmitter = exports.EventEmitter = process.EventEmitter;
-var isArray = typeof Array.isArray === 'function'
-    ? Array.isArray
-    : function (xs) {
-        return Object.prototype.toString.call(xs) === '[object Array]'
-    }
-;
-function indexOf (xs, x) {
-    if (xs.indexOf) return xs.indexOf(x);
-    for (var i = 0; i < xs.length; i++) {
-        if (x === xs[i]) return i;
-    }
-    return -1;
+},
+{"util/":15}],
+14:[function(_dereq_,module,exports){
+module.exports = function isBuffer(arg) {
+  return arg && typeof arg === 'object'
+    && typeof arg.copy === 'function'
+    && typeof arg.fill === 'function'
+    && typeof arg.readUInt8 === 'function';
 }
-var defaultMaxListeners = 10;
-EventEmitter.prototype.setMaxListeners = function(n) {
-  if (!this._events) this._events = {};
-  this._events.maxListeners = n;
-};
-
-
-EventEmitter.prototype.emit = function(type) {
-  if (type === 'error') {
-    if (!this._events || !this._events.error ||
-        (isArray(this._events.error) && !this._events.error.length))
-    {
-      if (arguments[1] instanceof Error) {
-        throw arguments[1]; // Unhandled 'error' event
-      } else {
-        throw new Error("Uncaught, unspecified 'error' event.");
-      }
-      return false;
-    }
-  }
-
-  if (!this._events) return false;
-  var handler = this._events[type];
-  if (!handler) return false;
-
-  if (typeof handler == 'function') {
-    switch (arguments.length) {
-      case 1:
-        handler.call(this);
-        break;
-      case 2:
-        handler.call(this, arguments[1]);
-        break;
-      case 3:
-        handler.call(this, arguments[1], arguments[2]);
-        break;
-      default:
-        var args = Array.prototype.slice.call(arguments, 1);
-        handler.apply(this, args);
-    }
-    return true;
-
-  } else if (isArray(handler)) {
-    var args = Array.prototype.slice.call(arguments, 1);
-
-    var listeners = handler.slice();
-    for (var i = 0, l = listeners.length; i < l; i++) {
-      listeners[i].apply(this, args);
-    }
-    return true;
-
-  } else {
-    return false;
-  }
-};
-EventEmitter.prototype.addListener = function(type, listener) {
-  if ('function' !== typeof listener) {
-    throw new Error('addListener only takes instances of Function');
-  }
-
-  if (!this._events) this._events = {};
-  this.emit('newListener', type, listener);
-
-  if (!this._events[type]) {
-    this._events[type] = listener;
-  } else if (isArray(this._events[type])) {
-    if (!this._events[type].warned) {
-      var m;
-      if (this._events.maxListeners !== undefined) {
-        m = this._events.maxListeners;
-      } else {
-        m = defaultMaxListeners;
-      }
-
-      if (m && m > 0 && this._events[type].length > m) {
-        this._events[type].warned = true;
-        console.error('(node) warning: possible EventEmitter memory ' +
-                      'leak detected. %d listeners added. ' +
-                      'Use emitter.setMaxListeners() to increase limit.',
-                      this._events[type].length);
-        console.trace();
-      }
-    }
-    this._events[type].push(listener);
-  } else {
-    this._events[type] = [this._events[type], listener];
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-
-EventEmitter.prototype.once = function(type, listener) {
-  var self = this;
-  self.on(type, function g() {
-    self.removeListener(type, g);
-    listener.apply(this, arguments);
-  });
-
-  return this;
-};
-
-EventEmitter.prototype.removeListener = function(type, listener) {
-  if ('function' !== typeof listener) {
-    throw new Error('removeListener only takes instances of Function');
-  }
-  if (!this._events || !this._events[type]) return this;
-
-  var list = this._events[type];
-
-  if (isArray(list)) {
-    var i = indexOf(list, listener);
-    if (i < 0) return this;
-    list.splice(i, 1);
-    if (list.length == 0)
-      delete this._events[type];
-  } else if (this._events[type] === listener) {
-    delete this._events[type];
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.removeAllListeners = function(type) {
-  if (arguments.length === 0) {
-    this._events = {};
-    return this;
-  }
-  if (type && this._events && this._events[type]) this._events[type] = null;
-  return this;
-};
-
-EventEmitter.prototype.listeners = function(type) {
-  if (!this._events) this._events = {};
-  if (!this._events[type]) this._events[type] = [];
-  if (!isArray(this._events[type])) {
-    this._events[type] = [this._events[type]];
-  }
-  return this._events[type];
-};
-
-})(require("__browserify_process"))
-},{"__browserify_process":20}],15:[function(require,module,exports){
-var events = require('events');
-
-exports.isArray = isArray;
-exports.isDate = function(obj){return Object.prototype.toString.call(obj) === '[object Date]'};
-exports.isRegExp = function(obj){return Object.prototype.toString.call(obj) === '[object RegExp]'};
-
-
-exports.print = function () {};
-exports.puts = function () {};
-exports.debug = function() {};
-
-exports.inspect = function(obj, showHidden, depth, colors) {
-  var seen = [];
-
-  var stylize = function(str, styleType) {
-    var styles =
-        { 'bold' : [1, 22],
-          'italic' : [3, 23],
-          'underline' : [4, 24],
-          'inverse' : [7, 27],
-          'white' : [37, 39],
-          'grey' : [90, 39],
-          'black' : [30, 39],
-          'blue' : [34, 39],
-          'cyan' : [36, 39],
-          'green' : [32, 39],
-          'magenta' : [35, 39],
-          'red' : [31, 39],
-          'yellow' : [33, 39] };
-
-    var style =
-        { 'special': 'cyan',
-          'number': 'blue',
-          'boolean': 'yellow',
-          'undefined': 'grey',
-          'null': 'bold',
-          'string': 'green',
-          'date': 'magenta',
-          'regexp': 'red' }[styleType];
-
-    if (style) {
-      return '\u001b[' + styles[style][0] + 'm' + str +
-             '\u001b[' + styles[style][1] + 'm';
-    } else {
-      return str;
-    }
-  };
-  if (! colors) {
-    stylize = function(str, styleType) { return str; };
-  }
-
-  function format(value, recurseTimes) {
-    if (value && typeof value.inspect === 'function' &&
-        value !== exports &&
-        !(value.constructor && value.constructor.prototype === value)) {
-      return value.inspect(recurseTimes);
-    }
-    switch (typeof value) {
-      case 'undefined':
-        return stylize('undefined', 'undefined');
-
-      case 'string':
-        var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
-                                                 .replace(/'/g, "\\'")
-                                                 .replace(/\\"/g, '"') + '\'';
-        return stylize(simple, 'string');
-
-      case 'number':
-        return stylize('' + value, 'number');
-
-      case 'boolean':
-        return stylize('' + value, 'boolean');
-    }
-    if (value === null) {
-      return stylize('null', 'null');
-    }
-    var visible_keys = Object_keys(value);
-    var keys = showHidden ? Object_getOwnPropertyNames(value) : visible_keys;
-    if (typeof value === 'function' && keys.length === 0) {
-      if (isRegExp(value)) {
-        return stylize('' + value, 'regexp');
-      } else {
-        var name = value.name ? ': ' + value.name : '';
-        return stylize('[Function' + name + ']', 'special');
-      }
-    }
-    if (isDate(value) && keys.length === 0) {
-      return stylize(value.toUTCString(), 'date');
-    }
-
-    var base, type, braces;
-    if (isArray(value)) {
-      type = 'Array';
-      braces = ['[', ']'];
-    } else {
-      type = 'Object';
-      braces = ['{', '}'];
-    }
-    if (typeof value === 'function') {
-      var n = value.name ? ': ' + value.name : '';
-      base = (isRegExp(value)) ? ' ' + value : ' [Function' + n + ']';
-    } else {
-      base = '';
-    }
-    if (isDate(value)) {
-      base = ' ' + value.toUTCString();
-    }
-
-    if (keys.length === 0) {
-      return braces[0] + base + braces[1];
-    }
-
-    if (recurseTimes < 0) {
-      if (isRegExp(value)) {
-        return stylize('' + value, 'regexp');
-      } else {
-        return stylize('[Object]', 'special');
-      }
-    }
-
-    seen.push(value);
-
-    var output = keys.map(function(key) {
-      var name, str;
-      if (value.__lookupGetter__) {
-        if (value.__lookupGetter__(key)) {
-          if (value.__lookupSetter__(key)) {
-            str = stylize('[Getter/Setter]', 'special');
-          } else {
-            str = stylize('[Getter]', 'special');
-          }
-        } else {
-          if (value.__lookupSetter__(key)) {
-            str = stylize('[Setter]', 'special');
-          }
-        }
-      }
-      if (visible_keys.indexOf(key) < 0) {
-        name = '[' + key + ']';
-      }
-      if (!str) {
-        if (seen.indexOf(value[key]) < 0) {
-          if (recurseTimes === null) {
-            str = format(value[key]);
-          } else {
-            str = format(value[key], recurseTimes - 1);
-          }
-          if (str.indexOf('\n') > -1) {
-            if (isArray(value)) {
-              str = str.split('\n').map(function(line) {
-                return '  ' + line;
-              }).join('\n').substr(2);
-            } else {
-              str = '\n' + str.split('\n').map(function(line) {
-                return '   ' + line;
-              }).join('\n');
-            }
-          }
-        } else {
-          str = stylize('[Circular]', 'special');
-        }
-      }
-      if (typeof name === 'undefined') {
-        if (type === 'Array' && key.match(/^\d+$/)) {
-          return str;
-        }
-        name = JSON.stringify('' + key);
-        if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
-          name = name.substr(1, name.length - 2);
-          name = stylize(name, 'name');
-        } else {
-          name = name.replace(/'/g, "\\'")
-                     .replace(/\\"/g, '"')
-                     .replace(/(^"|"$)/g, "'");
-          name = stylize(name, 'string');
-        }
-      }
-
-      return name + ': ' + str;
-    });
-
-    seen.pop();
-
-    var numLinesEst = 0;
-    var length = output.reduce(function(prev, cur) {
-      numLinesEst++;
-      if (cur.indexOf('\n') >= 0) numLinesEst++;
-      return prev + cur.length + 1;
-    }, 0);
-
-    if (length > 50) {
-      output = braces[0] +
-               (base === '' ? '' : base + '\n ') +
-               ' ' +
-               output.join(',\n  ') +
-               ' ' +
-               braces[1];
-
-    } else {
-      output = braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
-    }
-
-    return output;
-  }
-  return format(obj, (typeof depth === 'undefined' ? 2 : depth));
-};
-
-
-function isArray(ar) {
-  return Array.isArray(ar) ||
-         (typeof ar === 'object' && Object.prototype.toString.call(ar) === '[object Array]');
-}
-
-
-function isRegExp(re) {
-  typeof re === 'object' && Object.prototype.toString.call(re) === '[object RegExp]';
-}
-
-
-function isDate(d) {
-  return typeof d === 'object' && Object.prototype.toString.call(d) === '[object Date]';
-}
-
-function pad(n) {
-  return n < 10 ? '0' + n.toString(10) : n.toString(10);
-}
-
-var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
-              'Oct', 'Nov', 'Dec'];
-function timestamp() {
-  var d = new Date();
-  var time = [pad(d.getHours()),
-              pad(d.getMinutes()),
-              pad(d.getSeconds())].join(':');
-  return [d.getDate(), months[d.getMonth()], time].join(' ');
-}
-
-exports.log = function (msg) {};
-
-exports.pump = null;
-
-var Object_keys = Object.keys || function (obj) {
-    var res = [];
-    for (var key in obj) res.push(key);
-    return res;
-};
-
-var Object_getOwnPropertyNames = Object.getOwnPropertyNames || function (obj) {
-    var res = [];
-    for (var key in obj) {
-        if (Object.hasOwnProperty.call(obj, key)) res.push(key);
-    }
-    return res;
-};
-
-var Object_create = Object.create || function (prototype, properties) {
-    var object;
-    if (prototype === null) {
-        object = { '__proto__' : null };
-    }
-    else {
-        if (typeof prototype !== 'object') {
-            throw new TypeError(
-                'typeof prototype[' + (typeof prototype) + '] != \'object\''
-            );
-        }
-        var Type = function () {};
-        Type.prototype = prototype;
-        object = new Type();
-        object.__proto__ = prototype;
-    }
-    if (typeof properties !== 'undefined' && Object.defineProperties) {
-        Object.defineProperties(object, properties);
-    }
-    return object;
-};
-
-exports.inherits = function(ctor, superCtor) {
-  ctor.super_ = superCtor;
-  ctor.prototype = Object_create(superCtor.prototype, {
-    constructor: {
-      value: ctor,
-      enumerable: false,
-      writable: true,
-      configurable: true
-    }
-  });
-};
+},
+{}],
+15:[function(_dereq_,module,exports){
+(function (process,global){
 
 var formatRegExp = /%[sdj%]/g;
 exports.format = function(f) {
-  if (typeof f !== 'string') {
+  if (!isString(f)) {
     var objects = [];
     for (var i = 0; i < arguments.length; i++) {
-      objects.push(exports.inspect(arguments[i]));
+      objects.push(inspect(arguments[i]));
     }
     return objects.join(' ');
   }
@@ -10996,1131 +10015,763 @@ exports.format = function(f) {
     switch (x) {
       case '%s': return String(args[i++]);
       case '%d': return Number(args[i++]);
-      case '%j': return JSON.stringify(args[i++]);
+      case '%j':
+        try {
+          return JSON.stringify(args[i++]);
+        } catch (_) {
+          return '[Circular]';
+        }
       default:
         return x;
     }
   });
-  for(var x = args[i]; i < len; x = args[++i]){
-    if (x === null || typeof x !== 'object') {
+  for (var x = args[i]; i < len; x = args[++i]) {
+    if (isNull(x) || !isObject(x)) {
       str += ' ' + x;
     } else {
-      str += ' ' + exports.inspect(x);
+      str += ' ' + inspect(x);
     }
   }
   return str;
 };
-
-},{"events":14}],16:[function(require,module,exports){
-exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
-  var e, m,
-      eLen = nBytes * 8 - mLen - 1,
-      eMax = (1 << eLen) - 1,
-      eBias = eMax >> 1,
-      nBits = -7,
-      i = isBE ? 0 : (nBytes - 1),
-      d = isBE ? 1 : -1,
-      s = buffer[offset + i];
-
-  i += d;
-
-  e = s & ((1 << (-nBits)) - 1);
-  s >>= (-nBits);
-  nBits += eLen;
-  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8);
-
-  m = e & ((1 << (-nBits)) - 1);
-  e >>= (-nBits);
-  nBits += mLen;
-  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8);
-
-  if (e === 0) {
-    e = 1 - eBias;
-  } else if (e === eMax) {
-    return m ? NaN : ((s ? -1 : 1) * Infinity);
-  } else {
-    m = m + Math.pow(2, mLen);
-    e = e - eBias;
+exports.deprecate = function(fn, msg) {
+  if (isUndefined(global.process)) {
+    return function() {
+      return exports.deprecate(fn, msg).apply(this, arguments);
+    };
   }
-  return (s ? -1 : 1) * m * Math.pow(2, e - mLen);
+
+  if (process.noDeprecation === true) {
+    return fn;
+  }
+
+  var warned = false;
+  function deprecated() {
+    if (!warned) {
+      if (process.throwDeprecation) {
+        throw new Error(msg);
+      } else if (process.traceDeprecation) {
+        console.trace(msg);
+      } else {
+        console.error(msg);
+      }
+      warned = true;
+    }
+    return fn.apply(this, arguments);
+  }
+
+  return deprecated;
 };
 
-exports.writeIEEE754 = function(buffer, value, offset, isBE, mLen, nBytes) {
-  var e, m, c,
-      eLen = nBytes * 8 - mLen - 1,
-      eMax = (1 << eLen) - 1,
-      eBias = eMax >> 1,
-      rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0),
-      i = isBE ? (nBytes - 1) : 0,
-      d = isBE ? -1 : 1,
-      s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0;
 
-  value = Math.abs(value);
-
-  if (isNaN(value) || value === Infinity) {
-    m = isNaN(value) ? 1 : 0;
-    e = eMax;
-  } else {
-    e = Math.floor(Math.log(value) / Math.LN2);
-    if (value * (c = Math.pow(2, -e)) < 1) {
-      e--;
-      c *= 2;
-    }
-    if (e + eBias >= 1) {
-      value += rt / c;
+var debugs = {};
+var debugEnviron;
+exports.debuglog = function(set) {
+  if (isUndefined(debugEnviron))
+    debugEnviron = process.env.NODE_DEBUG || '';
+  set = set.toUpperCase();
+  if (!debugs[set]) {
+    if (new RegExp('\\b' + set + '\\b', 'i').test(debugEnviron)) {
+      var pid = process.pid;
+      debugs[set] = function() {
+        var msg = exports.format.apply(exports, arguments);
+        console.error('%s %d: %s', set, pid, msg);
+      };
     } else {
-      value += rt * Math.pow(2, 1 - eBias);
-    }
-    if (value * c >= 2) {
-      e++;
-      c /= 2;
-    }
-
-    if (e + eBias >= eMax) {
-      m = 0;
-      e = eMax;
-    } else if (e + eBias >= 1) {
-      m = (value * c - 1) * Math.pow(2, mLen);
-      e = e + eBias;
-    } else {
-      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen);
-      e = 0;
+      debugs[set] = function() {};
     }
   }
-
-  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8);
-
-  e = (e << mLen) | m;
-  eLen += mLen;
-  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8);
-
-  buffer[offset + i - d] |= s * 128;
+  return debugs[set];
+};
+function inspect(obj, opts) {
+  var ctx = {
+    seen: [],
+    stylize: stylizeNoColor
+  };
+  if (arguments.length >= 3) ctx.depth = arguments[2];
+  if (arguments.length >= 4) ctx.colors = arguments[3];
+  if (isBoolean(opts)) {
+    ctx.showHidden = opts;
+  } else if (opts) {
+    exports._extend(ctx, opts);
+  }
+  if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
+  if (isUndefined(ctx.depth)) ctx.depth = 2;
+  if (isUndefined(ctx.colors)) ctx.colors = false;
+  if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
+  if (ctx.colors) ctx.stylize = stylizeWithColor;
+  return formatValue(ctx, obj, ctx.depth);
+}
+exports.inspect = inspect;
+inspect.colors = {
+  'bold' : [1, 22],
+  'italic' : [3, 23],
+  'underline' : [4, 24],
+  'inverse' : [7, 27],
+  'white' : [37, 39],
+  'grey' : [90, 39],
+  'black' : [30, 39],
+  'blue' : [34, 39],
+  'cyan' : [36, 39],
+  'green' : [32, 39],
+  'magenta' : [35, 39],
+  'red' : [31, 39],
+  'yellow' : [33, 39]
+};
+inspect.styles = {
+  'special': 'cyan',
+  'number': 'yellow',
+  'boolean': 'yellow',
+  'undefined': 'grey',
+  'null': 'bold',
+  'string': 'green',
+  'date': 'magenta',
+  'regexp': 'red'
 };
 
-},{}],17:[function(require,module,exports){
-(function(){var assert = require('assert');
-exports.Buffer = Buffer;
-exports.SlowBuffer = Buffer;
-Buffer.poolSize = 8192;
-exports.INSPECT_MAX_BYTES = 50;
 
-function Buffer(subject, encoding, offset) {
-  if (!(this instanceof Buffer)) {
-    return new Buffer(subject, encoding, offset);
-  }
-  this.parent = this;
-  this.offset = 0;
+function stylizeWithColor(str, styleType) {
+  var style = inspect.styles[styleType];
 
-  var type;
-  if (typeof offset === 'number') {
-    this.length = coerce(encoding);
-    this.offset = offset;
+  if (style) {
+    return '\u001b[' + inspect.colors[style][0] + 'm' + str +
+           '\u001b[' + inspect.colors[style][1] + 'm';
   } else {
-    switch (type = typeof subject) {
-      case 'number':
-        this.length = coerce(subject);
-        break;
+    return str;
+  }
+}
 
-      case 'string':
-        this.length = Buffer.byteLength(subject, encoding);
-        break;
 
-      case 'object': // Assume object is an array
-        this.length = coerce(subject.length);
-        break;
+function stylizeNoColor(str, styleType) {
+  return str;
+}
 
+
+function arrayToHash(array) {
+  var hash = {};
+
+  array.forEach(function(val, idx) {
+    hash[val] = true;
+  });
+
+  return hash;
+}
+
+
+function formatValue(ctx, value, recurseTimes) {
+  if (ctx.customInspect &&
+      value &&
+      isFunction(value.inspect) &&
+      value.inspect !== exports.inspect &&
+      !(value.constructor && value.constructor.prototype === value)) {
+    var ret = value.inspect(recurseTimes, ctx);
+    if (!isString(ret)) {
+      ret = formatValue(ctx, ret, recurseTimes);
+    }
+    return ret;
+  }
+  var primitive = formatPrimitive(ctx, value);
+  if (primitive) {
+    return primitive;
+  }
+  var keys = Object.keys(value);
+  var visibleKeys = arrayToHash(keys);
+
+  if (ctx.showHidden) {
+    keys = Object.getOwnPropertyNames(value);
+  }
+  if (isError(value)
+      && (keys.indexOf('message') >= 0 || keys.indexOf('description') >= 0)) {
+    return formatError(value);
+  }
+  if (keys.length === 0) {
+    if (isFunction(value)) {
+      var name = value.name ? ': ' + value.name : '';
+      return ctx.stylize('[Function' + name + ']', 'special');
+    }
+    if (isRegExp(value)) {
+      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
+    }
+    if (isDate(value)) {
+      return ctx.stylize(Date.prototype.toString.call(value), 'date');
+    }
+    if (isError(value)) {
+      return formatError(value);
+    }
+  }
+
+  var base = '', array = false, braces = ['{', '}'];
+  if (isArray(value)) {
+    array = true;
+    braces = ['[', ']'];
+  }
+  if (isFunction(value)) {
+    var n = value.name ? ': ' + value.name : '';
+    base = ' [Function' + n + ']';
+  }
+  if (isRegExp(value)) {
+    base = ' ' + RegExp.prototype.toString.call(value);
+  }
+  if (isDate(value)) {
+    base = ' ' + Date.prototype.toUTCString.call(value);
+  }
+  if (isError(value)) {
+    base = ' ' + formatError(value);
+  }
+
+  if (keys.length === 0 && (!array || value.length == 0)) {
+    return braces[0] + base + braces[1];
+  }
+
+  if (recurseTimes < 0) {
+    if (isRegExp(value)) {
+      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
+    } else {
+      return ctx.stylize('[Object]', 'special');
+    }
+  }
+
+  ctx.seen.push(value);
+
+  var output;
+  if (array) {
+    output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
+  } else {
+    output = keys.map(function(key) {
+      return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
+    });
+  }
+
+  ctx.seen.pop();
+
+  return reduceToSingleString(output, base, braces);
+}
+
+
+function formatPrimitive(ctx, value) {
+  if (isUndefined(value))
+    return ctx.stylize('undefined', 'undefined');
+  if (isString(value)) {
+    var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
+                                             .replace(/'/g, "\\'")
+                                             .replace(/\\"/g, '"') + '\'';
+    return ctx.stylize(simple, 'string');
+  }
+  if (isNumber(value))
+    return ctx.stylize('' + value, 'number');
+  if (isBoolean(value))
+    return ctx.stylize('' + value, 'boolean');
+  if (isNull(value))
+    return ctx.stylize('null', 'null');
+}
+
+
+function formatError(value) {
+  return '[' + Error.prototype.toString.call(value) + ']';
+}
+
+
+function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
+  var output = [];
+  for (var i = 0, l = value.length; i < l; ++i) {
+    if (hasOwnProperty(value, String(i))) {
+      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
+          String(i), true));
+    } else {
+      output.push('');
+    }
+  }
+  keys.forEach(function(key) {
+    if (!key.match(/^\d+$/)) {
+      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
+          key, true));
+    }
+  });
+  return output;
+}
+
+
+function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
+  var name, str, desc;
+  desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
+  if (desc.get) {
+    if (desc.set) {
+      str = ctx.stylize('[Getter/Setter]', 'special');
+    } else {
+      str = ctx.stylize('[Getter]', 'special');
+    }
+  } else {
+    if (desc.set) {
+      str = ctx.stylize('[Setter]', 'special');
+    }
+  }
+  if (!hasOwnProperty(visibleKeys, key)) {
+    name = '[' + key + ']';
+  }
+  if (!str) {
+    if (ctx.seen.indexOf(desc.value) < 0) {
+      if (isNull(recurseTimes)) {
+        str = formatValue(ctx, desc.value, null);
+      } else {
+        str = formatValue(ctx, desc.value, recurseTimes - 1);
+      }
+      if (str.indexOf('\n') > -1) {
+        if (array) {
+          str = str.split('\n').map(function(line) {
+            return '  ' + line;
+          }).join('\n').substr(2);
+        } else {
+          str = '\n' + str.split('\n').map(function(line) {
+            return '   ' + line;
+          }).join('\n');
+        }
+      }
+    } else {
+      str = ctx.stylize('[Circular]', 'special');
+    }
+  }
+  if (isUndefined(name)) {
+    if (array && key.match(/^\d+$/)) {
+      return str;
+    }
+    name = JSON.stringify('' + key);
+    if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
+      name = name.substr(1, name.length - 2);
+      name = ctx.stylize(name, 'name');
+    } else {
+      name = name.replace(/'/g, "\\'")
+                 .replace(/\\"/g, '"')
+                 .replace(/(^"|"$)/g, "'");
+      name = ctx.stylize(name, 'string');
+    }
+  }
+
+  return name + ': ' + str;
+}
+
+
+function reduceToSingleString(output, base, braces) {
+  var numLinesEst = 0;
+  var length = output.reduce(function(prev, cur) {
+    numLinesEst++;
+    if (cur.indexOf('\n') >= 0) numLinesEst++;
+    return prev + cur.replace(/\u001b\[\d\d?m/g, '').length + 1;
+  }, 0);
+
+  if (length > 60) {
+    return braces[0] +
+           (base === '' ? '' : base + '\n ') +
+           ' ' +
+           output.join(',\n  ') +
+           ' ' +
+           braces[1];
+  }
+
+  return braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
+}
+function isArray(ar) {
+  return Array.isArray(ar);
+}
+exports.isArray = isArray;
+
+function isBoolean(arg) {
+  return typeof arg === 'boolean';
+}
+exports.isBoolean = isBoolean;
+
+function isNull(arg) {
+  return arg === null;
+}
+exports.isNull = isNull;
+
+function isNullOrUndefined(arg) {
+  return arg == null;
+}
+exports.isNullOrUndefined = isNullOrUndefined;
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+exports.isNumber = isNumber;
+
+function isString(arg) {
+  return typeof arg === 'string';
+}
+exports.isString = isString;
+
+function isSymbol(arg) {
+  return typeof arg === 'symbol';
+}
+exports.isSymbol = isSymbol;
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
+exports.isUndefined = isUndefined;
+
+function isRegExp(re) {
+  return isObject(re) && objectToString(re) === '[object RegExp]';
+}
+exports.isRegExp = isRegExp;
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+exports.isObject = isObject;
+
+function isDate(d) {
+  return isObject(d) && objectToString(d) === '[object Date]';
+}
+exports.isDate = isDate;
+
+function isError(e) {
+  return isObject(e) &&
+      (objectToString(e) === '[object Error]' || e instanceof Error);
+}
+exports.isError = isError;
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+exports.isFunction = isFunction;
+
+function isPrimitive(arg) {
+  return arg === null ||
+         typeof arg === 'boolean' ||
+         typeof arg === 'number' ||
+         typeof arg === 'string' ||
+         typeof arg === 'symbol' ||  // ES6 symbol
+         typeof arg === 'undefined';
+}
+exports.isPrimitive = isPrimitive;
+
+exports.isBuffer = _dereq_('./support/isBuffer');
+
+function objectToString(o) {
+  return Object.prototype.toString.call(o);
+}
+
+
+function pad(n) {
+  return n < 10 ? '0' + n.toString(10) : n.toString(10);
+}
+
+
+var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+              'Oct', 'Nov', 'Dec'];
+function timestamp() {
+  var d = new Date();
+  var time = [pad(d.getHours()),
+              pad(d.getMinutes()),
+              pad(d.getSeconds())].join(':');
+  return [d.getDate(), months[d.getMonth()], time].join(' ');
+}
+exports.log = function() {
+  console.log('%s - %s', timestamp(), exports.format.apply(exports, arguments));
+};
+exports.inherits = _dereq_('inherits');
+
+exports._extend = function(origin, add) {
+  if (!add || !isObject(add)) return origin;
+
+  var keys = Object.keys(add);
+  var i = keys.length;
+  while (i--) {
+    origin[keys[i]] = add[keys[i]];
+  }
+  return origin;
+};
+
+function hasOwnProperty(obj, prop) {
+  return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
+}).call(this,_dereq_("/usr/local/lib/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},
+{"./support/isBuffer":14,"/usr/local/lib/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":18,"inherits":17}],
+16:[function(_dereq_,module,exports){
+
+function EventEmitter() {
+  this._events = this._events || {};
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+EventEmitter.defaultMaxListeners = 10;
+EventEmitter.prototype.setMaxListeners = function(n) {
+  if (!isNumber(n) || n < 0 || isNaN(n))
+    throw TypeError('n must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+EventEmitter.prototype.emit = function(type) {
+  var er, handler, len, args, i, listeners;
+
+  if (!this._events)
+    this._events = {};
+  if (type === 'error') {
+    if (!this._events.error ||
+        (isObject(this._events.error) && !this._events.error.length)) {
+      er = arguments[1];
+      if (er instanceof Error) {
+        throw er; // Unhandled 'error' event
+      } else {
+        throw TypeError('Uncaught, unspecified "error" event.');
+      }
+      return false;
+    }
+  }
+
+  handler = this._events[type];
+
+  if (isUndefined(handler))
+    return false;
+
+  if (isFunction(handler)) {
+    switch (arguments.length) {
+      case 1:
+        handler.call(this);
+        break;
+      case 2:
+        handler.call(this, arguments[1]);
+        break;
+      case 3:
+        handler.call(this, arguments[1], arguments[2]);
+        break;
       default:
-        throw new Error('First argument needs to be a number, ' +
-                        'array or string.');
+        len = arguments.length;
+        args = new Array(len - 1);
+        for (i = 1; i < len; i++)
+          args[i - 1] = arguments[i];
+        handler.apply(this, args);
     }
-    if (isArrayIsh(subject)) {
-      for (var i = 0; i < this.length; i++) {
-        if (subject instanceof Buffer) {
-          this[i] = subject.readUInt8(i);
-        }
-        else {
-          this[i] = subject[i];
-        }
-      }
-    } else if (type == 'string') {
-      this.length = this.write(subject, 0, encoding);
-    } else if (type === 'number') {
-      for (var i = 0; i < this.length; i++) {
-        this[i] = 0;
-      }
+  } else if (isObject(handler)) {
+    len = arguments.length;
+    args = new Array(len - 1);
+    for (i = 1; i < len; i++)
+      args[i - 1] = arguments[i];
+
+    listeners = handler.slice();
+    len = listeners.length;
+    for (i = 0; i < len; i++)
+      listeners[i].apply(this, args);
+  }
+
+  return true;
+};
+
+EventEmitter.prototype.addListener = function(type, listener) {
+  var m;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events)
+    this._events = {};
+  if (this._events.newListener)
+    this.emit('newListener', type,
+              isFunction(listener.listener) ?
+              listener.listener : listener);
+
+  if (!this._events[type])
+    this._events[type] = listener;
+  else if (isObject(this._events[type]))
+    this._events[type].push(listener);
+  else
+    this._events[type] = [this._events[type], listener];
+  if (isObject(this._events[type]) && !this._events[type].warned) {
+    var m;
+    if (!isUndefined(this._maxListeners)) {
+      m = this._maxListeners;
+    } else {
+      m = EventEmitter.defaultMaxListeners;
+    }
+
+    if (m && m > 0 && this._events[type].length > m) {
+      this._events[type].warned = true;
+      console.error('(node) warning: possible EventEmitter memory ' +
+                    'leak detected. %d listeners added. ' +
+                    'Use emitter.setMaxListeners() to increase limit.',
+                    this._events[type].length);
+      console.trace();
     }
   }
-}
 
-Buffer.prototype.get = function get(i) {
-  if (i < 0 || i >= this.length) throw new Error('oob');
-  return this[i];
+  return this;
 };
 
-Buffer.prototype.set = function set(i, v) {
-  if (i < 0 || i >= this.length) throw new Error('oob');
-  return this[i] = v;
-};
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
 
-Buffer.byteLength = function (str, encoding) {
-  switch (encoding || "utf8") {
-    case 'hex':
-      return str.length / 2;
+EventEmitter.prototype.once = function(type, listener) {
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
 
-    case 'utf8':
-    case 'utf-8':
-      return utf8ToBytes(str).length;
+  var fired = false;
 
-    case 'ascii':
-    case 'binary':
-      return str.length;
+  function g() {
+    this.removeListener(type, g);
 
-    case 'base64':
-      return base64ToBytes(str).length;
-
-    default:
-      throw new Error('Unknown encoding');
-  }
-};
-
-Buffer.prototype.utf8Write = function (string, offset, length) {
-  var bytes, pos;
-  return Buffer._charsWritten =  blitBuffer(utf8ToBytes(string), this, offset, length);
-};
-
-Buffer.prototype.asciiWrite = function (string, offset, length) {
-  var bytes, pos;
-  return Buffer._charsWritten =  blitBuffer(asciiToBytes(string), this, offset, length);
-};
-
-Buffer.prototype.binaryWrite = Buffer.prototype.asciiWrite;
-
-Buffer.prototype.base64Write = function (string, offset, length) {
-  var bytes, pos;
-  return Buffer._charsWritten = blitBuffer(base64ToBytes(string), this, offset, length);
-};
-
-Buffer.prototype.base64Slice = function (start, end) {
-  var bytes = Array.prototype.slice.apply(this, arguments)
-  return require("base64-js").fromByteArray(bytes);
-};
-
-Buffer.prototype.utf8Slice = function () {
-  var bytes = Array.prototype.slice.apply(this, arguments);
-  var res = "";
-  var tmp = "";
-  var i = 0;
-  while (i < bytes.length) {
-    if (bytes[i] <= 0x7F) {
-      res += decodeUtf8Char(tmp) + String.fromCharCode(bytes[i]);
-      tmp = "";
-    } else
-      tmp += "%" + bytes[i].toString(16);
-
-    i++;
+    if (!fired) {
+      fired = true;
+      listener.apply(this, arguments);
+    }
   }
 
-  return res + decodeUtf8Char(tmp);
-}
+  g.listener = listener;
+  this.on(type, g);
 
-Buffer.prototype.asciiSlice = function () {
-  var bytes = Array.prototype.slice.apply(this, arguments);
-  var ret = "";
-  for (var i = 0; i < bytes.length; i++)
-    ret += String.fromCharCode(bytes[i]);
+  return this;
+};
+EventEmitter.prototype.removeListener = function(type, listener) {
+  var list, position, length, i;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events || !this._events[type])
+    return this;
+
+  list = this._events[type];
+  length = list.length;
+  position = -1;
+
+  if (list === listener ||
+      (isFunction(list.listener) && list.listener === listener)) {
+    delete this._events[type];
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+
+  } else if (isObject(list)) {
+    for (i = length; i-- > 0;) {
+      if (list[i] === listener ||
+          (list[i].listener && list[i].listener === listener)) {
+        position = i;
+        break;
+      }
+    }
+
+    if (position < 0)
+      return this;
+
+    if (list.length === 1) {
+      list.length = 0;
+      delete this._events[type];
+    } else {
+      list.splice(position, 1);
+    }
+
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.removeAllListeners = function(type) {
+  var key, listeners;
+
+  if (!this._events)
+    return this;
+  if (!this._events.removeListener) {
+    if (arguments.length === 0)
+      this._events = {};
+    else if (this._events[type])
+      delete this._events[type];
+    return this;
+  }
+  if (arguments.length === 0) {
+    for (key in this._events) {
+      if (key === 'removeListener') continue;
+      this.removeAllListeners(key);
+    }
+    this.removeAllListeners('removeListener');
+    this._events = {};
+    return this;
+  }
+
+  listeners = this._events[type];
+
+  if (isFunction(listeners)) {
+    this.removeListener(type, listeners);
+  } else {
+    while (listeners.length)
+      this.removeListener(type, listeners[listeners.length - 1]);
+  }
+  delete this._events[type];
+
+  return this;
+};
+
+EventEmitter.prototype.listeners = function(type) {
+  var ret;
+  if (!this._events || !this._events[type])
+    ret = [];
+  else if (isFunction(this._events[type]))
+    ret = [this._events[type]];
+  else
+    ret = this._events[type].slice();
   return ret;
-}
-
-Buffer.prototype.binarySlice = Buffer.prototype.asciiSlice;
-
-Buffer.prototype.inspect = function() {
-  var out = [],
-      len = this.length;
-  for (var i = 0; i < len; i++) {
-    out[i] = toHex(this[i]);
-    if (i == exports.INSPECT_MAX_BYTES) {
-      out[i + 1] = '...';
-      break;
-    }
-  }
-  return '<Buffer ' + out.join(' ') + '>';
 };
 
-
-Buffer.prototype.hexSlice = function(start, end) {
-  var len = this.length;
-
-  if (!start || start < 0) start = 0;
-  if (!end || end < 0 || end > len) end = len;
-
-  var out = '';
-  for (var i = start; i < end; i++) {
-    out += toHex(this[i]);
-  }
-  return out;
+EventEmitter.listenerCount = function(emitter, type) {
+  var ret;
+  if (!emitter._events || !emitter._events[type])
+    ret = 0;
+  else if (isFunction(emitter._events[type]))
+    ret = 1;
+  else
+    ret = emitter._events[type].length;
+  return ret;
 };
 
-
-Buffer.prototype.toString = function(encoding, start, end) {
-  encoding = String(encoding || 'utf8').toLowerCase();
-  start = +start || 0;
-  if (typeof end == 'undefined') end = this.length;
-  if (+end == start) {
-    return '';
-  }
-
-  switch (encoding) {
-    case 'hex':
-      return this.hexSlice(start, end);
-
-    case 'utf8':
-    case 'utf-8':
-      return this.utf8Slice(start, end);
-
-    case 'ascii':
-      return this.asciiSlice(start, end);
-
-    case 'binary':
-      return this.binarySlice(start, end);
-
-    case 'base64':
-      return this.base64Slice(start, end);
-
-    case 'ucs2':
-    case 'ucs-2':
-      return this.ucs2Slice(start, end);
-
-    default:
-      throw new Error('Unknown encoding');
-  }
-};
-
-
-Buffer.prototype.hexWrite = function(string, offset, length) {
-  offset = +offset || 0;
-  var remaining = this.length - offset;
-  if (!length) {
-    length = remaining;
-  } else {
-    length = +length;
-    if (length > remaining) {
-      length = remaining;
-    }
-  }
-  var strLen = string.length;
-  if (strLen % 2) {
-    throw new Error('Invalid hex string');
-  }
-  if (length > strLen / 2) {
-    length = strLen / 2;
-  }
-  for (var i = 0; i < length; i++) {
-    var byte = parseInt(string.substr(i * 2, 2), 16);
-    if (isNaN(byte)) throw new Error('Invalid hex string');
-    this[offset + i] = byte;
-  }
-  Buffer._charsWritten = i * 2;
-  return i;
-};
-
-
-Buffer.prototype.write = function(string, offset, length, encoding) {
-  if (isFinite(offset)) {
-    if (!isFinite(length)) {
-      encoding = length;
-      length = undefined;
-    }
-  } else {  // legacy
-    var swap = encoding;
-    encoding = offset;
-    offset = length;
-    length = swap;
-  }
-
-  offset = +offset || 0;
-  var remaining = this.length - offset;
-  if (!length) {
-    length = remaining;
-  } else {
-    length = +length;
-    if (length > remaining) {
-      length = remaining;
-    }
-  }
-  encoding = String(encoding || 'utf8').toLowerCase();
-
-  switch (encoding) {
-    case 'hex':
-      return this.hexWrite(string, offset, length);
-
-    case 'utf8':
-    case 'utf-8':
-      return this.utf8Write(string, offset, length);
-
-    case 'ascii':
-      return this.asciiWrite(string, offset, length);
-
-    case 'binary':
-      return this.binaryWrite(string, offset, length);
-
-    case 'base64':
-      return this.base64Write(string, offset, length);
-
-    case 'ucs2':
-    case 'ucs-2':
-      return this.ucs2Write(string, offset, length);
-
-    default:
-      throw new Error('Unknown encoding');
-  }
-};
-Buffer.prototype.slice = function(start, end) {
-  if (end === undefined) end = this.length;
-
-  if (end > this.length) {
-    throw new Error('oob');
-  }
-  if (start > end) {
-    throw new Error('oob');
-  }
-
-  return new Buffer(this, end - start, +start);
-};
-Buffer.prototype.copy = function(target, target_start, start, end) {
-  var source = this;
-  start || (start = 0);
-  if (end === undefined || isNaN(end)) {
-    end = this.length;
-  }
-  target_start || (target_start = 0);
-
-  if (end < start) throw new Error('sourceEnd < sourceStart');
-  if (end === start) return 0;
-  if (target.length == 0 || source.length == 0) return 0;
-
-  if (target_start < 0 || target_start >= target.length) {
-    throw new Error('targetStart out of bounds');
-  }
-
-  if (start < 0 || start >= source.length) {
-    throw new Error('sourceStart out of bounds');
-  }
-
-  if (end < 0 || end > source.length) {
-    throw new Error('sourceEnd out of bounds');
-  }
-  if (end > this.length) {
-    end = this.length;
-  }
-
-  if (target.length - target_start < end - start) {
-    end = target.length - target_start + start;
-  }
-
-  var temp = [];
-  for (var i=start; i<end; i++) {
-    assert.ok(typeof this[i] !== 'undefined', "copying undefined buffer bytes!");
-    temp.push(this[i]);
-  }
-
-  for (var i=target_start; i<target_start+temp.length; i++) {
-    target[i] = temp[i-target_start];
-  }
-};
-Buffer.prototype.fill = function fill(value, start, end) {
-  value || (value = 0);
-  start || (start = 0);
-  end || (end = this.length);
-
-  if (typeof value === 'string') {
-    value = value.charCodeAt(0);
-  }
-  if (!(typeof value === 'number') || isNaN(value)) {
-    throw new Error('value is not a number');
-  }
-
-  if (end < start) throw new Error('end < start');
-  if (end === start) return 0;
-  if (this.length == 0) return 0;
-
-  if (start < 0 || start >= this.length) {
-    throw new Error('start out of bounds');
-  }
-
-  if (end < 0 || end > this.length) {
-    throw new Error('end out of bounds');
-  }
-
-  for (var i = start; i < end; i++) {
-    this[i] = value;
-  }
-}
-Buffer.isBuffer = function isBuffer(b) {
-  return b instanceof Buffer || b instanceof Buffer;
-};
-
-Buffer.concat = function (list, totalLength) {
-  if (!isArray(list)) {
-    throw new Error("Usage: Buffer.concat(list, [totalLength])\n \
-      list should be an Array.");
-  }
-
-  if (list.length === 0) {
-    return new Buffer(0);
-  } else if (list.length === 1) {
-    return list[0];
-  }
-
-  if (typeof totalLength !== 'number') {
-    totalLength = 0;
-    for (var i = 0; i < list.length; i++) {
-      var buf = list[i];
-      totalLength += buf.length;
-    }
-  }
-
-  var buffer = new Buffer(totalLength);
-  var pos = 0;
-  for (var i = 0; i < list.length; i++) {
-    var buf = list[i];
-    buf.copy(buffer, pos);
-    pos += buf.length;
-  }
-  return buffer;
-};
-
-function coerce(length) {
-  length = ~~Math.ceil(+length);
-  return length < 0 ? 0 : length;
+function isFunction(arg) {
+  return typeof arg === 'function';
 }
 
-function isArray(subject) {
-  return (Array.isArray ||
-    function(subject){
-      return {}.toString.apply(subject) == '[object Array]'
-    })
-    (subject)
+function isNumber(arg) {
+  return typeof arg === 'number';
 }
 
-function isArrayIsh(subject) {
-  return isArray(subject) || Buffer.isBuffer(subject) ||
-         subject && typeof subject === 'object' &&
-         typeof subject.length === 'number';
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
 }
 
-function toHex(n) {
-  if (n < 16) return '0' + n.toString(16);
-  return n.toString(16);
+function isUndefined(arg) {
+  return arg === void 0;
 }
 
-function utf8ToBytes(str) {
-  var byteArray = [];
-  for (var i = 0; i < str.length; i++)
-    if (str.charCodeAt(i) <= 0x7F)
-      byteArray.push(str.charCodeAt(i));
-    else {
-      var h = encodeURIComponent(str.charAt(i)).substr(1).split('%');
-      for (var j = 0; j < h.length; j++)
-        byteArray.push(parseInt(h[j], 16));
-    }
-
-  return byteArray;
-}
-
-function asciiToBytes(str) {
-  var byteArray = []
-  for (var i = 0; i < str.length; i++ )
-    byteArray.push( str.charCodeAt(i) & 0xFF );
-
-  return byteArray;
-}
-
-function base64ToBytes(str) {
-  return require("base64-js").toByteArray(str);
-}
-
-function blitBuffer(src, dst, offset, length) {
-  var pos, i = 0;
-  while (i < length) {
-    if ((i+offset >= dst.length) || (i >= src.length))
-      break;
-
-    dst[i + offset] = src[i];
-    i++;
-  }
-  return i;
-}
-
-function decodeUtf8Char(str) {
-  try {
-    return decodeURIComponent(str);
-  } catch (err) {
-    return String.fromCharCode(0xFFFD); // UTF 8 invalid char
+},
+{}],
+17:[function(_dereq_,module,exports){
+if (typeof Object.create === 'function') {
+  module.exports = function inherits(ctor, superCtor) {
+    ctor.super_ = superCtor
+    ctor.prototype = Object.create(superCtor.prototype, {
+      constructor: {
+        value: ctor,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+  };
+} else {
+  module.exports = function inherits(ctor, superCtor) {
+    ctor.super_ = superCtor
+    var TempCtor = function () {}
+    TempCtor.prototype = superCtor.prototype
+    ctor.prototype = new TempCtor()
+    ctor.prototype.constructor = ctor
   }
 }
 
-Buffer.prototype.readUInt8 = function(offset, noAssert) {
-  var buffer = this;
-
-  if (!noAssert) {
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset < buffer.length,
-        'Trying to read beyond buffer length');
-  }
-
-  if (offset >= buffer.length) return;
-
-  return buffer[offset];
-};
-
-function readUInt16(buffer, offset, isBigEndian, noAssert) {
-  var val = 0;
-
-
-  if (!noAssert) {
-    assert.ok(typeof (isBigEndian) === 'boolean',
-        'missing or invalid endian');
-
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset + 1 < buffer.length,
-        'Trying to read beyond buffer length');
-  }
-
-  if (offset >= buffer.length) return 0;
-
-  if (isBigEndian) {
-    val = buffer[offset] << 8;
-    if (offset + 1 < buffer.length) {
-      val |= buffer[offset + 1];
-    }
-  } else {
-    val = buffer[offset];
-    if (offset + 1 < buffer.length) {
-      val |= buffer[offset + 1] << 8;
-    }
-  }
-
-  return val;
-}
-
-Buffer.prototype.readUInt16LE = function(offset, noAssert) {
-  return readUInt16(this, offset, false, noAssert);
-};
-
-Buffer.prototype.readUInt16BE = function(offset, noAssert) {
-  return readUInt16(this, offset, true, noAssert);
-};
-
-function readUInt32(buffer, offset, isBigEndian, noAssert) {
-  var val = 0;
-
-  if (!noAssert) {
-    assert.ok(typeof (isBigEndian) === 'boolean',
-        'missing or invalid endian');
-
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset + 3 < buffer.length,
-        'Trying to read beyond buffer length');
-  }
-
-  if (offset >= buffer.length) return 0;
-
-  if (isBigEndian) {
-    if (offset + 1 < buffer.length)
-      val = buffer[offset + 1] << 16;
-    if (offset + 2 < buffer.length)
-      val |= buffer[offset + 2] << 8;
-    if (offset + 3 < buffer.length)
-      val |= buffer[offset + 3];
-    val = val + (buffer[offset] << 24 >>> 0);
-  } else {
-    if (offset + 2 < buffer.length)
-      val = buffer[offset + 2] << 16;
-    if (offset + 1 < buffer.length)
-      val |= buffer[offset + 1] << 8;
-    val |= buffer[offset];
-    if (offset + 3 < buffer.length)
-      val = val + (buffer[offset + 3] << 24 >>> 0);
-  }
-
-  return val;
-}
-
-Buffer.prototype.readUInt32LE = function(offset, noAssert) {
-  return readUInt32(this, offset, false, noAssert);
-};
-
-Buffer.prototype.readUInt32BE = function(offset, noAssert) {
-  return readUInt32(this, offset, true, noAssert);
-};
-Buffer.prototype.readInt8 = function(offset, noAssert) {
-  var buffer = this;
-  var neg;
-
-  if (!noAssert) {
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset < buffer.length,
-        'Trying to read beyond buffer length');
-  }
-
-  if (offset >= buffer.length) return;
-
-  neg = buffer[offset] & 0x80;
-  if (!neg) {
-    return (buffer[offset]);
-  }
-
-  return ((0xff - buffer[offset] + 1) * -1);
-};
-
-function readInt16(buffer, offset, isBigEndian, noAssert) {
-  var neg, val;
-
-  if (!noAssert) {
-    assert.ok(typeof (isBigEndian) === 'boolean',
-        'missing or invalid endian');
-
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset + 1 < buffer.length,
-        'Trying to read beyond buffer length');
-  }
-
-  val = readUInt16(buffer, offset, isBigEndian, noAssert);
-  neg = val & 0x8000;
-  if (!neg) {
-    return val;
-  }
-
-  return (0xffff - val + 1) * -1;
-}
-
-Buffer.prototype.readInt16LE = function(offset, noAssert) {
-  return readInt16(this, offset, false, noAssert);
-};
-
-Buffer.prototype.readInt16BE = function(offset, noAssert) {
-  return readInt16(this, offset, true, noAssert);
-};
-
-function readInt32(buffer, offset, isBigEndian, noAssert) {
-  var neg, val;
-
-  if (!noAssert) {
-    assert.ok(typeof (isBigEndian) === 'boolean',
-        'missing or invalid endian');
-
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset + 3 < buffer.length,
-        'Trying to read beyond buffer length');
-  }
-
-  val = readUInt32(buffer, offset, isBigEndian, noAssert);
-  neg = val & 0x80000000;
-  if (!neg) {
-    return (val);
-  }
-
-  return (0xffffffff - val + 1) * -1;
-}
-
-Buffer.prototype.readInt32LE = function(offset, noAssert) {
-  return readInt32(this, offset, false, noAssert);
-};
-
-Buffer.prototype.readInt32BE = function(offset, noAssert) {
-  return readInt32(this, offset, true, noAssert);
-};
-
-function readFloat(buffer, offset, isBigEndian, noAssert) {
-  if (!noAssert) {
-    assert.ok(typeof (isBigEndian) === 'boolean',
-        'missing or invalid endian');
-
-    assert.ok(offset + 3 < buffer.length,
-        'Trying to read beyond buffer length');
-  }
-
-  return require('./buffer_ieee754').readIEEE754(buffer, offset, isBigEndian,
-      23, 4);
-}
-
-Buffer.prototype.readFloatLE = function(offset, noAssert) {
-  return readFloat(this, offset, false, noAssert);
-};
-
-Buffer.prototype.readFloatBE = function(offset, noAssert) {
-  return readFloat(this, offset, true, noAssert);
-};
-
-function readDouble(buffer, offset, isBigEndian, noAssert) {
-  if (!noAssert) {
-    assert.ok(typeof (isBigEndian) === 'boolean',
-        'missing or invalid endian');
-
-    assert.ok(offset + 7 < buffer.length,
-        'Trying to read beyond buffer length');
-  }
-
-  return require('./buffer_ieee754').readIEEE754(buffer, offset, isBigEndian,
-      52, 8);
-}
-
-Buffer.prototype.readDoubleLE = function(offset, noAssert) {
-  return readDouble(this, offset, false, noAssert);
-};
-
-Buffer.prototype.readDoubleBE = function(offset, noAssert) {
-  return readDouble(this, offset, true, noAssert);
-};
-function verifuint(value, max) {
-  assert.ok(typeof (value) == 'number',
-      'cannot write a non-number as a number');
-
-  assert.ok(value >= 0,
-      'specified a negative value for writing an unsigned value');
-
-  assert.ok(value <= max, 'value is larger than maximum value for type');
-
-  assert.ok(Math.floor(value) === value, 'value has a fractional component');
-}
-
-Buffer.prototype.writeUInt8 = function(value, offset, noAssert) {
-  var buffer = this;
-
-  if (!noAssert) {
-    assert.ok(value !== undefined && value !== null,
-        'missing value');
-
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset < buffer.length,
-        'trying to write beyond buffer length');
-
-    verifuint(value, 0xff);
-  }
-
-  if (offset < buffer.length) {
-    buffer[offset] = value;
-  }
-};
-
-function writeUInt16(buffer, value, offset, isBigEndian, noAssert) {
-  if (!noAssert) {
-    assert.ok(value !== undefined && value !== null,
-        'missing value');
-
-    assert.ok(typeof (isBigEndian) === 'boolean',
-        'missing or invalid endian');
-
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset + 1 < buffer.length,
-        'trying to write beyond buffer length');
-
-    verifuint(value, 0xffff);
-  }
-
-  for (var i = 0; i < Math.min(buffer.length - offset, 2); i++) {
-    buffer[offset + i] =
-        (value & (0xff << (8 * (isBigEndian ? 1 - i : i)))) >>>
-            (isBigEndian ? 1 - i : i) * 8;
-  }
-
-}
-
-Buffer.prototype.writeUInt16LE = function(value, offset, noAssert) {
-  writeUInt16(this, value, offset, false, noAssert);
-};
-
-Buffer.prototype.writeUInt16BE = function(value, offset, noAssert) {
-  writeUInt16(this, value, offset, true, noAssert);
-};
-
-function writeUInt32(buffer, value, offset, isBigEndian, noAssert) {
-  if (!noAssert) {
-    assert.ok(value !== undefined && value !== null,
-        'missing value');
-
-    assert.ok(typeof (isBigEndian) === 'boolean',
-        'missing or invalid endian');
-
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset + 3 < buffer.length,
-        'trying to write beyond buffer length');
-
-    verifuint(value, 0xffffffff);
-  }
-
-  for (var i = 0; i < Math.min(buffer.length - offset, 4); i++) {
-    buffer[offset + i] =
-        (value >>> (isBigEndian ? 3 - i : i) * 8) & 0xff;
-  }
-}
-
-Buffer.prototype.writeUInt32LE = function(value, offset, noAssert) {
-  writeUInt32(this, value, offset, false, noAssert);
-};
-
-Buffer.prototype.writeUInt32BE = function(value, offset, noAssert) {
-  writeUInt32(this, value, offset, true, noAssert);
-};
-function verifsint(value, max, min) {
-  assert.ok(typeof (value) == 'number',
-      'cannot write a non-number as a number');
-
-  assert.ok(value <= max, 'value larger than maximum allowed value');
-
-  assert.ok(value >= min, 'value smaller than minimum allowed value');
-
-  assert.ok(Math.floor(value) === value, 'value has a fractional component');
-}
-
-function verifIEEE754(value, max, min) {
-  assert.ok(typeof (value) == 'number',
-      'cannot write a non-number as a number');
-
-  assert.ok(value <= max, 'value larger than maximum allowed value');
-
-  assert.ok(value >= min, 'value smaller than minimum allowed value');
-}
-
-Buffer.prototype.writeInt8 = function(value, offset, noAssert) {
-  var buffer = this;
-
-  if (!noAssert) {
-    assert.ok(value !== undefined && value !== null,
-        'missing value');
-
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset < buffer.length,
-        'Trying to write beyond buffer length');
-
-    verifsint(value, 0x7f, -0x80);
-  }
-
-  if (value >= 0) {
-    buffer.writeUInt8(value, offset, noAssert);
-  } else {
-    buffer.writeUInt8(0xff + value + 1, offset, noAssert);
-  }
-};
-
-function writeInt16(buffer, value, offset, isBigEndian, noAssert) {
-  if (!noAssert) {
-    assert.ok(value !== undefined && value !== null,
-        'missing value');
-
-    assert.ok(typeof (isBigEndian) === 'boolean',
-        'missing or invalid endian');
-
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset + 1 < buffer.length,
-        'Trying to write beyond buffer length');
-
-    verifsint(value, 0x7fff, -0x8000);
-  }
-
-  if (value >= 0) {
-    writeUInt16(buffer, value, offset, isBigEndian, noAssert);
-  } else {
-    writeUInt16(buffer, 0xffff + value + 1, offset, isBigEndian, noAssert);
-  }
-}
-
-Buffer.prototype.writeInt16LE = function(value, offset, noAssert) {
-  writeInt16(this, value, offset, false, noAssert);
-};
-
-Buffer.prototype.writeInt16BE = function(value, offset, noAssert) {
-  writeInt16(this, value, offset, true, noAssert);
-};
-
-function writeInt32(buffer, value, offset, isBigEndian, noAssert) {
-  if (!noAssert) {
-    assert.ok(value !== undefined && value !== null,
-        'missing value');
-
-    assert.ok(typeof (isBigEndian) === 'boolean',
-        'missing or invalid endian');
-
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset + 3 < buffer.length,
-        'Trying to write beyond buffer length');
-
-    verifsint(value, 0x7fffffff, -0x80000000);
-  }
-
-  if (value >= 0) {
-    writeUInt32(buffer, value, offset, isBigEndian, noAssert);
-  } else {
-    writeUInt32(buffer, 0xffffffff + value + 1, offset, isBigEndian, noAssert);
-  }
-}
-
-Buffer.prototype.writeInt32LE = function(value, offset, noAssert) {
-  writeInt32(this, value, offset, false, noAssert);
-};
-
-Buffer.prototype.writeInt32BE = function(value, offset, noAssert) {
-  writeInt32(this, value, offset, true, noAssert);
-};
-
-function writeFloat(buffer, value, offset, isBigEndian, noAssert) {
-  if (!noAssert) {
-    assert.ok(value !== undefined && value !== null,
-        'missing value');
-
-    assert.ok(typeof (isBigEndian) === 'boolean',
-        'missing or invalid endian');
-
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset + 3 < buffer.length,
-        'Trying to write beyond buffer length');
-
-    verifIEEE754(value, 3.4028234663852886e+38, -3.4028234663852886e+38);
-  }
-
-  require('./buffer_ieee754').writeIEEE754(buffer, value, offset, isBigEndian,
-      23, 4);
-}
-
-Buffer.prototype.writeFloatLE = function(value, offset, noAssert) {
-  writeFloat(this, value, offset, false, noAssert);
-};
-
-Buffer.prototype.writeFloatBE = function(value, offset, noAssert) {
-  writeFloat(this, value, offset, true, noAssert);
-};
-
-function writeDouble(buffer, value, offset, isBigEndian, noAssert) {
-  if (!noAssert) {
-    assert.ok(value !== undefined && value !== null,
-        'missing value');
-
-    assert.ok(typeof (isBigEndian) === 'boolean',
-        'missing or invalid endian');
-
-    assert.ok(offset !== undefined && offset !== null,
-        'missing offset');
-
-    assert.ok(offset + 7 < buffer.length,
-        'Trying to write beyond buffer length');
-
-    verifIEEE754(value, 1.7976931348623157E+308, -1.7976931348623157E+308);
-  }
-
-  require('./buffer_ieee754').writeIEEE754(buffer, value, offset, isBigEndian,
-      52, 8);
-}
-
-Buffer.prototype.writeDoubleLE = function(value, offset, noAssert) {
-  writeDouble(this, value, offset, false, noAssert);
-};
-
-Buffer.prototype.writeDoubleBE = function(value, offset, noAssert) {
-  writeDouble(this, value, offset, true, noAssert);
-};
-
-})()
-},{"./buffer_ieee754":16,"assert":13,"base64-js":18}],18:[function(require,module,exports){
-(function (exports) {
-	
-
-	var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-
-	function b64ToByteArray(b64) {
-		var i, j, l, tmp, placeHolders, arr;
-	
-		if (b64.length % 4 > 0) {
-			throw 'Invalid string. Length must be a multiple of 4';
-		}
-		placeHolders = b64.indexOf('=');
-		placeHolders = placeHolders > 0 ? b64.length - placeHolders : 0;
-		arr = [];//new Uint8Array(b64.length * 3 / 4 - placeHolders);
-		l = placeHolders > 0 ? b64.length - 4 : b64.length;
-
-		for (i = 0, j = 0; i < l; i += 4, j += 3) {
-			tmp = (lookup.indexOf(b64[i]) << 18) | (lookup.indexOf(b64[i + 1]) << 12) | (lookup.indexOf(b64[i + 2]) << 6) | lookup.indexOf(b64[i + 3]);
-			arr.push((tmp & 0xFF0000) >> 16);
-			arr.push((tmp & 0xFF00) >> 8);
-			arr.push(tmp & 0xFF);
-		}
-
-		if (placeHolders === 2) {
-			tmp = (lookup.indexOf(b64[i]) << 2) | (lookup.indexOf(b64[i + 1]) >> 4);
-			arr.push(tmp & 0xFF);
-		} else if (placeHolders === 1) {
-			tmp = (lookup.indexOf(b64[i]) << 10) | (lookup.indexOf(b64[i + 1]) << 4) | (lookup.indexOf(b64[i + 2]) >> 2);
-			arr.push((tmp >> 8) & 0xFF);
-			arr.push(tmp & 0xFF);
-		}
-
-		return arr;
-	}
-
-	function uint8ToBase64(uint8) {
-		var i,
-			extraBytes = uint8.length % 3, // if we have 1 byte left, pad 2 bytes
-			output = "",
-			temp, length;
-
-		function tripletToBase64 (num) {
-			return lookup[num >> 18 & 0x3F] + lookup[num >> 12 & 0x3F] + lookup[num >> 6 & 0x3F] + lookup[num & 0x3F];
-		};
-		for (i = 0, length = uint8.length - extraBytes; i < length; i += 3) {
-			temp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2]);
-			output += tripletToBase64(temp);
-		}
-		switch (extraBytes) {
-			case 1:
-				temp = uint8[uint8.length - 1];
-				output += lookup[temp >> 2];
-				output += lookup[(temp << 4) & 0x3F];
-				output += '==';
-				break;
-			case 2:
-				temp = (uint8[uint8.length - 2] << 8) + (uint8[uint8.length - 1]);
-				output += lookup[temp >> 10];
-				output += lookup[(temp >> 4) & 0x3F];
-				output += lookup[(temp << 2) & 0x3F];
-				output += '=';
-				break;
-		}
-
-		return output;
-	}
-
-	module.exports.toByteArray = b64ToByteArray;
-	module.exports.fromByteArray = uint8ToBase64;
-}());
-
-},{}],"./lib/sax/SAXParser.js":[function(require,module,exports){
-module.exports=require('DaboPu');
-},{}],20:[function(require,module,exports){
+},
+{}],
+18:[function(_dereq_,module,exports){
 
 var process = module.exports = {};
 
@@ -12138,7 +10789,8 @@ process.nextTick = (function () {
     if (canPost) {
         var queue = [];
         window.addEventListener('message', function (ev) {
-            if (ev.source === window && ev.data === 'process-tick') {
+            var source = ev.source;
+            if ((source === window || source === null) && ev.data === 'process-tick') {
                 ev.stopPropagation();
                 if (queue.length > 0) {
                     var fn = queue.shift();
@@ -12163,6 +10815,13 @@ process.browser = true;
 process.env = {};
 process.argv = [];
 
+function noop() {}
+
+process.on = noop;
+process.once = noop;
+process.off = noop;
+process.emit = noop;
+
 process.binding = function (name) {
     throw new Error('process.binding is not supported');
 }
@@ -12171,54 +10830,776 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}]},{},["DaboPu"])
-;
-exports.SAXParser = require('./lib/sax/SAXParser.js').SAXParser;
-});define('ace/worker/mirror', ['require', 'exports', 'module' , 'ace/document', 'ace/lib/lang'], function(require, exports, module) {
+},
+{}],
+19:[function(_dereq_,module,exports){
+module.exports=_dereq_(14)
+},
+{}],
+20:[function(_dereq_,module,exports){
+module.exports=_dereq_(15)
+},
+{"./support/isBuffer":19,"/usr/local/lib/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":18,"inherits":17}]},{},[9])
+(9)
 
+});
 
-var Document = require("../document").Document;
+define("ace/mode/html_worker",["require","exports","module","ace/lib/oop","ace/lib/lang","ace/worker/mirror","ace/mode/html/saxparser"], function(require, exports, module) {
+"use strict";
+
+var oop = require("../lib/oop");
 var lang = require("../lib/lang");
-    
-var Mirror = exports.Mirror = function(sender) {
-    this.sender = sender;
-    var doc = this.doc = new Document("");
-    
-    var deferredUpdate = this.deferredUpdate = lang.delayedCall(this.onUpdate.bind(this));
-    
-    var _self = this;
-    sender.on("change", function(e) {
-        doc.applyDeltas(e.data);
-        if (_self.$timeout)
-            return deferredUpdate.schedule(_self.$timeout);
-        _self.onUpdate();
-    });
+var Mirror = require("../worker/mirror").Mirror;
+var SAXParser = require("./html/saxparser").SAXParser;
+
+var errorTypes = {
+    "expected-doctype-but-got-start-tag": "info",
+    "expected-doctype-but-got-chars": "info",
+    "non-html-root": "info"
+}
+
+var Worker = exports.Worker = function(sender) {
+    Mirror.call(this, sender);
+    this.setTimeout(400);
+    this.context = null;
 };
 
+oop.inherits(Worker, Mirror);
+
 (function() {
-    
-    this.$timeout = 500;
-    
-    this.setTimeout = function(timeout) {
-        this.$timeout = timeout;
+
+    this.setOptions = function(options) {
+        this.context = options.context;
     };
-    
-    this.setValue = function(value) {
-        this.doc.setValue(value);
-        this.deferredUpdate.schedule(this.$timeout);
-    };
-    
-    this.getValue = function(callbackId) {
-        this.sender.callback(this.doc.getValue(), callbackId);
-    };
-    
+
     this.onUpdate = function() {
+        var value = this.doc.getValue();
+        if (!value)
+            return;
+        var parser = new SAXParser();
+        var errors = [];
+        var noop = function(){};
+        parser.contentHandler = {
+           startDocument: noop,
+           endDocument: noop,
+           startElement: noop,
+           endElement: noop,
+           characters: noop
+        };
+        parser.errorHandler = {
+            error: function(message, location, code) {
+                errors.push({
+                    row: location.line,
+                    column: location.column,
+                    text: message,
+                    type: errorTypes[code] || "error"
+                });
+            }
+        };
+        if (this.context)
+            parser.parseFragment(value, this.context);
+        else
+            parser.parse(value);
+        this.sender.emit("error", errors);
     };
-    
-    this.isPending = function() {
-        return this.deferredUpdate.isPending();
+
+}).call(Worker.prototype);
+
+});
+
+define("ace/lib/es5-shim",["require","exports","module"], function(require, exports, module) {
+
+function Empty() {}
+
+if (!Function.prototype.bind) {
+    Function.prototype.bind = function bind(that) { // .length is 1
+        var target = this;
+        if (typeof target != "function") {
+            throw new TypeError("Function.prototype.bind called on incompatible " + target);
+        }
+        var args = slice.call(arguments, 1); // for normal call
+        var bound = function () {
+
+            if (this instanceof bound) {
+
+                var result = target.apply(
+                    this,
+                    args.concat(slice.call(arguments))
+                );
+                if (Object(result) === result) {
+                    return result;
+                }
+                return this;
+
+            } else {
+                return target.apply(
+                    that,
+                    args.concat(slice.call(arguments))
+                );
+
+            }
+
+        };
+        if(target.prototype) {
+            Empty.prototype = target.prototype;
+            bound.prototype = new Empty();
+            Empty.prototype = null;
+        }
+        return bound;
     };
-    
-}).call(Mirror.prototype);
+}
+var call = Function.prototype.call;
+var prototypeOfArray = Array.prototype;
+var prototypeOfObject = Object.prototype;
+var slice = prototypeOfArray.slice;
+var _toString = call.bind(prototypeOfObject.toString);
+var owns = call.bind(prototypeOfObject.hasOwnProperty);
+var defineGetter;
+var defineSetter;
+var lookupGetter;
+var lookupSetter;
+var supportsAccessors;
+if ((supportsAccessors = owns(prototypeOfObject, "__defineGetter__"))) {
+    defineGetter = call.bind(prototypeOfObject.__defineGetter__);
+    defineSetter = call.bind(prototypeOfObject.__defineSetter__);
+    lookupGetter = call.bind(prototypeOfObject.__lookupGetter__);
+    lookupSetter = call.bind(prototypeOfObject.__lookupSetter__);
+}
+if ([1,2].splice(0).length != 2) {
+    if(function() { // test IE < 9 to splice bug - see issue #138
+        function makeArray(l) {
+            var a = new Array(l+2);
+            a[0] = a[1] = 0;
+            return a;
+        }
+        var array = [], lengthBefore;
+        
+        array.splice.apply(array, makeArray(20));
+        array.splice.apply(array, makeArray(26));
+
+        lengthBefore = array.length; //46
+        array.splice(5, 0, "XXX"); // add one element
+
+        lengthBefore + 1 == array.length
+
+        if (lengthBefore + 1 == array.length) {
+            return true;// has right splice implementation without bugs
+        }
+    }()) {//IE 6/7
+        var array_splice = Array.prototype.splice;
+        Array.prototype.splice = function(start, deleteCount) {
+            if (!arguments.length) {
+                return [];
+            } else {
+                return array_splice.apply(this, [
+                    start === void 0 ? 0 : start,
+                    deleteCount === void 0 ? (this.length - start) : deleteCount
+                ].concat(slice.call(arguments, 2)))
+            }
+        };
+    } else {//IE8
+        Array.prototype.splice = function(pos, removeCount){
+            var length = this.length;
+            if (pos > 0) {
+                if (pos > length)
+                    pos = length;
+            } else if (pos == void 0) {
+                pos = 0;
+            } else if (pos < 0) {
+                pos = Math.max(length + pos, 0);
+            }
+
+            if (!(pos+removeCount < length))
+                removeCount = length - pos;
+
+            var removed = this.slice(pos, pos+removeCount);
+            var insert = slice.call(arguments, 2);
+            var add = insert.length;            
+            if (pos === length) {
+                if (add) {
+                    this.push.apply(this, insert);
+                }
+            } else {
+                var remove = Math.min(removeCount, length - pos);
+                var tailOldPos = pos + remove;
+                var tailNewPos = tailOldPos + add - remove;
+                var tailCount = length - tailOldPos;
+                var lengthAfterRemove = length - remove;
+
+                if (tailNewPos < tailOldPos) { // case A
+                    for (var i = 0; i < tailCount; ++i) {
+                        this[tailNewPos+i] = this[tailOldPos+i];
+                    }
+                } else if (tailNewPos > tailOldPos) { // case B
+                    for (i = tailCount; i--; ) {
+                        this[tailNewPos+i] = this[tailOldPos+i];
+                    }
+                } // else, add == remove (nothing to do)
+
+                if (add && pos === lengthAfterRemove) {
+                    this.length = lengthAfterRemove; // truncate array
+                    this.push.apply(this, insert);
+                } else {
+                    this.length = lengthAfterRemove + add; // reserves space
+                    for (i = 0; i < add; ++i) {
+                        this[pos+i] = insert[i];
+                    }
+                }
+            }
+            return removed;
+        };
+    }
+}
+if (!Array.isArray) {
+    Array.isArray = function isArray(obj) {
+        return _toString(obj) == "[object Array]";
+    };
+}
+var boxedString = Object("a"),
+    splitString = boxedString[0] != "a" || !(0 in boxedString);
+
+if (!Array.prototype.forEach) {
+    Array.prototype.forEach = function forEach(fun /*, thisp*/) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                object,
+            thisp = arguments[1],
+            i = -1,
+            length = self.length >>> 0;
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(); // TODO message
+        }
+
+        while (++i < length) {
+            if (i in self) {
+                fun.call(thisp, self[i], i, object);
+            }
+        }
+    };
+}
+if (!Array.prototype.map) {
+    Array.prototype.map = function map(fun /*, thisp*/) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                object,
+            length = self.length >>> 0,
+            result = Array(length),
+            thisp = arguments[1];
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(fun + " is not a function");
+        }
+
+        for (var i = 0; i < length; i++) {
+            if (i in self)
+                result[i] = fun.call(thisp, self[i], i, object);
+        }
+        return result;
+    };
+}
+if (!Array.prototype.filter) {
+    Array.prototype.filter = function filter(fun /*, thisp */) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                    object,
+            length = self.length >>> 0,
+            result = [],
+            value,
+            thisp = arguments[1];
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(fun + " is not a function");
+        }
+
+        for (var i = 0; i < length; i++) {
+            if (i in self) {
+                value = self[i];
+                if (fun.call(thisp, value, i, object)) {
+                    result.push(value);
+                }
+            }
+        }
+        return result;
+    };
+}
+if (!Array.prototype.every) {
+    Array.prototype.every = function every(fun /*, thisp */) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                object,
+            length = self.length >>> 0,
+            thisp = arguments[1];
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(fun + " is not a function");
+        }
+
+        for (var i = 0; i < length; i++) {
+            if (i in self && !fun.call(thisp, self[i], i, object)) {
+                return false;
+            }
+        }
+        return true;
+    };
+}
+if (!Array.prototype.some) {
+    Array.prototype.some = function some(fun /*, thisp */) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                object,
+            length = self.length >>> 0,
+            thisp = arguments[1];
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(fun + " is not a function");
+        }
+
+        for (var i = 0; i < length; i++) {
+            if (i in self && fun.call(thisp, self[i], i, object)) {
+                return true;
+            }
+        }
+        return false;
+    };
+}
+if (!Array.prototype.reduce) {
+    Array.prototype.reduce = function reduce(fun /*, initial*/) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                object,
+            length = self.length >>> 0;
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(fun + " is not a function");
+        }
+        if (!length && arguments.length == 1) {
+            throw new TypeError("reduce of empty array with no initial value");
+        }
+
+        var i = 0;
+        var result;
+        if (arguments.length >= 2) {
+            result = arguments[1];
+        } else {
+            do {
+                if (i in self) {
+                    result = self[i++];
+                    break;
+                }
+                if (++i >= length) {
+                    throw new TypeError("reduce of empty array with no initial value");
+                }
+            } while (true);
+        }
+
+        for (; i < length; i++) {
+            if (i in self) {
+                result = fun.call(void 0, result, self[i], i, object);
+            }
+        }
+
+        return result;
+    };
+}
+if (!Array.prototype.reduceRight) {
+    Array.prototype.reduceRight = function reduceRight(fun /*, initial*/) {
+        var object = toObject(this),
+            self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                object,
+            length = self.length >>> 0;
+        if (_toString(fun) != "[object Function]") {
+            throw new TypeError(fun + " is not a function");
+        }
+        if (!length && arguments.length == 1) {
+            throw new TypeError("reduceRight of empty array with no initial value");
+        }
+
+        var result, i = length - 1;
+        if (arguments.length >= 2) {
+            result = arguments[1];
+        } else {
+            do {
+                if (i in self) {
+                    result = self[i--];
+                    break;
+                }
+                if (--i < 0) {
+                    throw new TypeError("reduceRight of empty array with no initial value");
+                }
+            } while (true);
+        }
+
+        do {
+            if (i in this) {
+                result = fun.call(void 0, result, self[i], i, object);
+            }
+        } while (i--);
+
+        return result;
+    };
+}
+if (!Array.prototype.indexOf || ([0, 1].indexOf(1, 2) != -1)) {
+    Array.prototype.indexOf = function indexOf(sought /*, fromIndex */ ) {
+        var self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                toObject(this),
+            length = self.length >>> 0;
+
+        if (!length) {
+            return -1;
+        }
+
+        var i = 0;
+        if (arguments.length > 1) {
+            i = toInteger(arguments[1]);
+        }
+        i = i >= 0 ? i : Math.max(0, length + i);
+        for (; i < length; i++) {
+            if (i in self && self[i] === sought) {
+                return i;
+            }
+        }
+        return -1;
+    };
+}
+if (!Array.prototype.lastIndexOf || ([0, 1].lastIndexOf(0, -3) != -1)) {
+    Array.prototype.lastIndexOf = function lastIndexOf(sought /*, fromIndex */) {
+        var self = splitString && _toString(this) == "[object String]" ?
+                this.split("") :
+                toObject(this),
+            length = self.length >>> 0;
+
+        if (!length) {
+            return -1;
+        }
+        var i = length - 1;
+        if (arguments.length > 1) {
+            i = Math.min(i, toInteger(arguments[1]));
+        }
+        i = i >= 0 ? i : length - Math.abs(i);
+        for (; i >= 0; i--) {
+            if (i in self && sought === self[i]) {
+                return i;
+            }
+        }
+        return -1;
+    };
+}
+if (!Object.getPrototypeOf) {
+    Object.getPrototypeOf = function getPrototypeOf(object) {
+        return object.__proto__ || (
+            object.constructor ?
+            object.constructor.prototype :
+            prototypeOfObject
+        );
+    };
+}
+if (!Object.getOwnPropertyDescriptor) {
+    var ERR_NON_OBJECT = "Object.getOwnPropertyDescriptor called on a " +
+                         "non-object: ";
+    Object.getOwnPropertyDescriptor = function getOwnPropertyDescriptor(object, property) {
+        if ((typeof object != "object" && typeof object != "function") || object === null)
+            throw new TypeError(ERR_NON_OBJECT + object);
+        if (!owns(object, property))
+            return;
+
+        var descriptor, getter, setter;
+        descriptor =  { enumerable: true, configurable: true };
+        if (supportsAccessors) {
+            var prototype = object.__proto__;
+            object.__proto__ = prototypeOfObject;
+
+            var getter = lookupGetter(object, property);
+            var setter = lookupSetter(object, property);
+            object.__proto__ = prototype;
+
+            if (getter || setter) {
+                if (getter) descriptor.get = getter;
+                if (setter) descriptor.set = setter;
+                return descriptor;
+            }
+        }
+        descriptor.value = object[property];
+        return descriptor;
+    };
+}
+if (!Object.getOwnPropertyNames) {
+    Object.getOwnPropertyNames = function getOwnPropertyNames(object) {
+        return Object.keys(object);
+    };
+}
+if (!Object.create) {
+    var createEmpty;
+    if (Object.prototype.__proto__ === null) {
+        createEmpty = function () {
+            return { "__proto__": null };
+        };
+    } else {
+        createEmpty = function () {
+            var empty = {};
+            for (var i in empty)
+                empty[i] = null;
+            empty.constructor =
+            empty.hasOwnProperty =
+            empty.propertyIsEnumerable =
+            empty.isPrototypeOf =
+            empty.toLocaleString =
+            empty.toString =
+            empty.valueOf =
+            empty.__proto__ = null;
+            return empty;
+        }
+    }
+
+    Object.create = function create(prototype, properties) {
+        var object;
+        if (prototype === null) {
+            object = createEmpty();
+        } else {
+            if (typeof prototype != "object")
+                throw new TypeError("typeof prototype["+(typeof prototype)+"] != 'object'");
+            var Type = function () {};
+            Type.prototype = prototype;
+            object = new Type();
+            object.__proto__ = prototype;
+        }
+        if (properties !== void 0)
+            Object.defineProperties(object, properties);
+        return object;
+    };
+}
+
+function doesDefinePropertyWork(object) {
+    try {
+        Object.defineProperty(object, "sentinel", {});
+        return "sentinel" in object;
+    } catch (exception) {
+    }
+}
+if (Object.defineProperty) {
+    var definePropertyWorksOnObject = doesDefinePropertyWork({});
+    var definePropertyWorksOnDom = typeof document == "undefined" ||
+        doesDefinePropertyWork(document.createElement("div"));
+    if (!definePropertyWorksOnObject || !definePropertyWorksOnDom) {
+        var definePropertyFallback = Object.defineProperty;
+    }
+}
+
+if (!Object.defineProperty || definePropertyFallback) {
+    var ERR_NON_OBJECT_DESCRIPTOR = "Property description must be an object: ";
+    var ERR_NON_OBJECT_TARGET = "Object.defineProperty called on non-object: "
+    var ERR_ACCESSORS_NOT_SUPPORTED = "getters & setters can not be defined " +
+                                      "on this javascript engine";
+
+    Object.defineProperty = function defineProperty(object, property, descriptor) {
+        if ((typeof object != "object" && typeof object != "function") || object === null)
+            throw new TypeError(ERR_NON_OBJECT_TARGET + object);
+        if ((typeof descriptor != "object" && typeof descriptor != "function") || descriptor === null)
+            throw new TypeError(ERR_NON_OBJECT_DESCRIPTOR + descriptor);
+        if (definePropertyFallback) {
+            try {
+                return definePropertyFallback.call(Object, object, property, descriptor);
+            } catch (exception) {
+            }
+        }
+        if (owns(descriptor, "value")) {
+
+            if (supportsAccessors && (lookupGetter(object, property) ||
+                                      lookupSetter(object, property)))
+            {
+                var prototype = object.__proto__;
+                object.__proto__ = prototypeOfObject;
+                delete object[property];
+                object[property] = descriptor.value;
+                object.__proto__ = prototype;
+            } else {
+                object[property] = descriptor.value;
+            }
+        } else {
+            if (!supportsAccessors)
+                throw new TypeError(ERR_ACCESSORS_NOT_SUPPORTED);
+            if (owns(descriptor, "get"))
+                defineGetter(object, property, descriptor.get);
+            if (owns(descriptor, "set"))
+                defineSetter(object, property, descriptor.set);
+        }
+
+        return object;
+    };
+}
+if (!Object.defineProperties) {
+    Object.defineProperties = function defineProperties(object, properties) {
+        for (var property in properties) {
+            if (owns(properties, property))
+                Object.defineProperty(object, property, properties[property]);
+        }
+        return object;
+    };
+}
+if (!Object.seal) {
+    Object.seal = function seal(object) {
+        return object;
+    };
+}
+if (!Object.freeze) {
+    Object.freeze = function freeze(object) {
+        return object;
+    };
+}
+try {
+    Object.freeze(function () {});
+} catch (exception) {
+    Object.freeze = (function freeze(freezeObject) {
+        return function freeze(object) {
+            if (typeof object == "function") {
+                return object;
+            } else {
+                return freezeObject(object);
+            }
+        };
+    })(Object.freeze);
+}
+if (!Object.preventExtensions) {
+    Object.preventExtensions = function preventExtensions(object) {
+        return object;
+    };
+}
+if (!Object.isSealed) {
+    Object.isSealed = function isSealed(object) {
+        return false;
+    };
+}
+if (!Object.isFrozen) {
+    Object.isFrozen = function isFrozen(object) {
+        return false;
+    };
+}
+if (!Object.isExtensible) {
+    Object.isExtensible = function isExtensible(object) {
+        if (Object(object) === object) {
+            throw new TypeError(); // TODO message
+        }
+        var name = '';
+        while (owns(object, name)) {
+            name += '?';
+        }
+        object[name] = true;
+        var returnValue = owns(object, name);
+        delete object[name];
+        return returnValue;
+    };
+}
+if (!Object.keys) {
+    var hasDontEnumBug = true,
+        dontEnums = [
+            "toString",
+            "toLocaleString",
+            "valueOf",
+            "hasOwnProperty",
+            "isPrototypeOf",
+            "propertyIsEnumerable",
+            "constructor"
+        ],
+        dontEnumsLength = dontEnums.length;
+
+    for (var key in {"toString": null}) {
+        hasDontEnumBug = false;
+    }
+
+    Object.keys = function keys(object) {
+
+        if (
+            (typeof object != "object" && typeof object != "function") ||
+            object === null
+        ) {
+            throw new TypeError("Object.keys called on a non-object");
+        }
+
+        var keys = [];
+        for (var name in object) {
+            if (owns(object, name)) {
+                keys.push(name);
+            }
+        }
+
+        if (hasDontEnumBug) {
+            for (var i = 0, ii = dontEnumsLength; i < ii; i++) {
+                var dontEnum = dontEnums[i];
+                if (owns(object, dontEnum)) {
+                    keys.push(dontEnum);
+                }
+            }
+        }
+        return keys;
+    };
+
+}
+if (!Date.now) {
+    Date.now = function now() {
+        return new Date().getTime();
+    };
+}
+var ws = "\x09\x0A\x0B\x0C\x0D\x20\xA0\u1680\u180E\u2000\u2001\u2002\u2003" +
+    "\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\u2028" +
+    "\u2029\uFEFF";
+if (!String.prototype.trim || ws.trim()) {
+    ws = "[" + ws + "]";
+    var trimBeginRegexp = new RegExp("^" + ws + ws + "*"),
+        trimEndRegexp = new RegExp(ws + ws + "*$");
+    String.prototype.trim = function trim() {
+        return String(this).replace(trimBeginRegexp, "").replace(trimEndRegexp, "");
+    };
+}
+
+function toInteger(n) {
+    n = +n;
+    if (n !== n) { // isNaN
+        n = 0;
+    } else if (n !== 0 && n !== (1/0) && n !== -(1/0)) {
+        n = (n > 0 || -1) * Math.floor(Math.abs(n));
+    }
+    return n;
+}
+
+function isPrimitive(input) {
+    var type = typeof input;
+    return (
+        input === null ||
+        type === "undefined" ||
+        type === "boolean" ||
+        type === "number" ||
+        type === "string"
+    );
+}
+
+function toPrimitive(input) {
+    var val, valueOf, toString;
+    if (isPrimitive(input)) {
+        return input;
+    }
+    valueOf = input.valueOf;
+    if (typeof valueOf === "function") {
+        val = valueOf.call(input);
+        if (isPrimitive(val)) {
+            return val;
+        }
+    }
+    toString = input.toString;
+    if (typeof toString === "function") {
+        val = toString.call(input);
+        if (isPrimitive(val)) {
+            return val;
+        }
+    }
+    throw new TypeError();
+}
+var toObject = function (o) {
+    if (o == null) { // this matches both null and undefined
+        throw new TypeError("can't convert "+o+" to object");
+    }
+    return Object(o);
+};
 
 });

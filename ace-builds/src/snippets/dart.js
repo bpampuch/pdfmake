@@ -1,5 +1,5 @@
-define('ace/snippets/dart', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+define("ace/snippets/dart",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.snippetText = "snippet lib\n\
 	library ${1};\n\

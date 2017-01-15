@@ -1,301 +1,10 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Distributed under the BSD license:
- *
- * Copyright (c) 2010, Ajax.org B.V.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of Ajax.org B.V. nor the
- *       names of its contributors may be used to endorse or promote products
- *       derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL AJAX.ORG B.V. BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * ***** END LICENSE BLOCK ***** */
-
-define('ace/ext/emmet', ['require', 'exports', 'module' , 'ace/keyboard/hash_handler', 'ace/editor', 'ace/snippets', 'ace/range', 'ace/config'], function(require, exports, module) {
-
-var HashHandler = require("ace/keyboard/hash_handler").HashHandler;
-var Editor = require("ace/editor").Editor;
-var snippetManager = require("ace/snippets").snippetManager;
-var Range = require("ace/range").Range;
-var emmet;
-
-Editor.prototype.indexToPosition = function(index) {
-    return this.session.doc.indexToPosition(index);
-};
-
-Editor.prototype.positionToIndex = function(pos) {
-    return this.session.doc.positionToIndex(pos);
-};
-function AceEmmetEditor() {}
-
-AceEmmetEditor.prototype = {
-    setupContext: function(editor) {
-        this.ace = editor;
-        this.indentation = editor.session.getTabString();
-        if (!emmet)
-            emmet = window.emmet;
-        emmet.require("resources").setVariable("indentation", this.indentation);
-        this.$syntax = null;
-        this.$syntax = this.getSyntax();
-    },
-    getSelectionRange: function() {
-        var range = this.ace.getSelectionRange();
-        return {
-            start: this.ace.positionToIndex(range.start),
-            end: this.ace.positionToIndex(range.end)
-        };
-    },
-    createSelection: function(start, end) {
-        this.ace.selection.setRange({
-            start: this.ace.indexToPosition(start),
-            end: this.ace.indexToPosition(end)
-        });
-    },
-    getCurrentLineRange: function() {
-        var row = this.ace.getCursorPosition().row;
-        var lineLength = this.ace.session.getLine(row).length;
-        var index = this.ace.positionToIndex({row: row, column: 0});
-        return {
-            start: index,
-            end: index + lineLength
-        };
-    },
-    getCaretPos: function(){
-        var pos = this.ace.getCursorPosition();
-        return this.ace.positionToIndex(pos);
-    },
-    setCaretPos: function(index){
-        var pos = this.ace.indexToPosition(index);
-        this.ace.selection.moveToPosition(pos);
-    },
-    getCurrentLine: function() {
-        var row = this.ace.getCursorPosition().row;
-        return this.ace.session.getLine(row);
-    },
-    replaceContent: function(value, start, end, noIndent) {
-        if (end == null)
-            end = start == null ? this.getContent().length : start;
-        if (start == null)
-            start = 0;        
-        
-        var editor = this.ace;
-        var range = Range.fromPoints(editor.indexToPosition(start), editor.indexToPosition(end));
-        editor.session.remove(range);
-        
-        range.end = range.start;
-        
-        value = this.$updateTabstops(value);
-        snippetManager.insertSnippet(editor, value)
-    },
-    getContent: function(){
-        return this.ace.getValue();
-    },
-    getSyntax: function() {
-        if (this.$syntax)
-            return this.$syntax;
-        var syntax = this.ace.session.$modeId.split("/").pop();
-        if (syntax == "html" || syntax == "php") {
-            var cursor = this.ace.getCursorPosition();
-            var state = this.ace.session.getState(cursor.row);
-            if (typeof state != "string")
-                state = state[0];
-            if (state) {
-                state = state.split("-");
-                if (state.length > 1)
-                    syntax = state[0];
-                else if (syntax == "php")
-                    syntax = "html";
-            }
-        }
-        return syntax;
-    },
-    getProfileName: function() {
-        switch(this.getSyntax()) {
-          case "css": return "css";
-          case "xml":
-          case "xsl":
-            return "xml";
-          case "html":
-            var profile = emmet.require("resources").getVariable("profile");
-            if (!profile)
-                profile = this.ace.session.getLines(0,2).join("").search(/<!DOCTYPE[^>]+XHTML/i) != -1 ? "xhtml": "html";
-            return profile;
-        }
-        return "xhtml";
-    },
-    prompt: function(title) {
-        return prompt(title);
-    },
-    getSelection: function() {
-        return this.ace.session.getTextRange();
-    },
-    getFilePath: function() {
-        return "";
-    },
-    $updateTabstops: function(value) {
-        var base = 1000;
-        var zeroBase = 0;
-        var lastZero = null;
-        var range = emmet.require('range');
-        var ts = emmet.require('tabStops');
-        var settings = emmet.require('resources').getVocabulary("user");
-        var tabstopOptions = {
-            tabstop: function(data) {
-                var group = parseInt(data.group, 10);
-                var isZero = group === 0;
-                if (isZero)
-                    group = ++zeroBase;
-                else
-                    group += base;
-
-                var placeholder = data.placeholder;
-                if (placeholder) {
-                    placeholder = ts.processText(placeholder, tabstopOptions);
-                }
-
-                var result = '${' + group + (placeholder ? ':' + placeholder : '') + '}';
-
-                if (isZero) {
-                    lastZero = range.create(data.start, result);
-                }
-
-                return result
-            },
-            escape: function(ch) {
-                if (ch == '$') return '\\$';
-                if (ch == '\\') return '\\\\';
-                return ch;
-            }
-        };
-
-        value = ts.processText(value, tabstopOptions);
-
-        if (settings.variables['insert_final_tabstop'] && !/\$\{0\}$/.test(value)) {
-            value += '${0}';
-        } else if (lastZero) {
-            value = emmet.require('utils').replaceSubstring(value, '${0}', lastZero);
-        }
-        
-        return value;
-    }
-};
-
-
-var keymap = {
-    expand_abbreviation: {"mac": "ctrl+alt+e", "win": "alt+e"},
-    match_pair_outward: {"mac": "ctrl+d", "win": "ctrl+,"},
-    match_pair_inward: {"mac": "ctrl+j", "win": "ctrl+shift+0"},
-    matching_pair: {"mac": "ctrl+alt+j", "win": "alt+j"},
-    next_edit_point: "alt+right",
-    prev_edit_point: "alt+left",
-    toggle_comment: {"mac": "command+/", "win": "ctrl+/"},
-    split_join_tag: {"mac": "shift+command+'", "win": "shift+ctrl+`"},
-    remove_tag: {"mac": "command+'", "win": "shift+ctrl+;"},
-    evaluate_math_expression: {"mac": "shift+command+y", "win": "shift+ctrl+y"},
-    increment_number_by_1: "ctrl+up",
-    decrement_number_by_1: "ctrl+down",
-    increment_number_by_01: "alt+up",
-    decrement_number_by_01: "alt+down",
-    increment_number_by_10: {"mac": "alt+command+up", "win": "shift+alt+up"},
-    decrement_number_by_10: {"mac": "alt+command+down", "win": "shift+alt+down"},
-    select_next_item: {"mac": "shift+command+.", "win": "shift+ctrl+."},
-    select_previous_item: {"mac": "shift+command+,", "win": "shift+ctrl+,"},
-    reflect_css_value: {"mac": "shift+command+r", "win": "shift+ctrl+r"},
-
-    encode_decode_data_url: {"mac": "shift+ctrl+d", "win": "ctrl+'"},
-    expand_abbreviation_with_tab: "Tab",
-    wrap_with_abbreviation: {"mac": "shift+ctrl+a", "win": "shift+ctrl+a"}
-};
-
-var editorProxy = new AceEmmetEditor();
-exports.commands = new HashHandler();
-exports.runEmmetCommand = function(editor) {
-    editorProxy.setupContext(editor);
-    if (editorProxy.getSyntax() == "php")
-        return false;
-    var actions = emmet.require("actions");
-
-    if (this.action == "expand_abbreviation_with_tab") {
-        if (!editor.selection.isEmpty())
-            return false;
-    }
-    
-    if (this.action == "wrap_with_abbreviation") {
-        return setTimeout(function() {
-            actions.run("wrap_with_abbreviation", editorProxy);
-        }, 0);
-    }
-    
-    try {
-        var result = actions.run(this.action, editorProxy);
-    } catch(e) {
-        editor._signal("changeStatus", typeof e == "string" ? e : e.message);
-        console.log(e);
-    }
-    return result;
-};
-
-for (var command in keymap) {
-    exports.commands.addCommand({
-        name: "emmet:" + command,
-        action: command,
-        bindKey: keymap[command],
-        exec: exports.runEmmetCommand,
-        multiSelectAction: "forEach"
-    });
-}
-
-var onChangeMode = function(e, target) {
-    var editor = target;
-    if (!editor)
-        return;
-    var modeId = editor.session.$modeId;
-    var enabled = modeId && /css|less|scss|sass|stylus|html|php/.test(modeId);
-    if (e.enableEmmet === false)
-        enabled = false;
-    if (enabled)
-        editor.keyBinding.addKeyboardHandler(exports.commands);
-    else
-        editor.keyBinding.removeKeyboardHandler(exports.commands);
-};
-
-
-exports.AceEmmetEditor = AceEmmetEditor;
-require("ace/config").defineOptions(Editor.prototype, "editor", {
-    enableEmmet: {
-        set: function(val) {
-            this[val ? "on" : "removeListener"]("changeMode", onChangeMode);
-            onChangeMode({enableEmmet: !!val}, this);
-        },
-        value: true
-    }
-});
-
-
-exports.setCore = function(e) {emmet = e;};
-});
-
-define('ace/snippets', ['require', 'exports', 'module' , 'ace/lib/lang', 'ace/range', 'ace/keyboard/hash_handler', 'ace/tokenizer', 'ace/lib/dom'], function(require, exports, module) {
-
-var lang = require("./lib/lang")
-var Range = require("./range").Range
+define("ace/snippets",["require","exports","module","ace/lib/oop","ace/lib/event_emitter","ace/lib/lang","ace/range","ace/anchor","ace/keyboard/hash_handler","ace/tokenizer","ace/lib/dom","ace/editor"], function(require, exports, module) {
+"use strict";
+var oop = require("./lib/oop");
+var EventEmitter = require("./lib/event_emitter").EventEmitter;
+var lang = require("./lib/lang");
+var Range = require("./range").Range;
+var Anchor = require("./anchor").Anchor;
 var HashHandler = require("./keyboard/hash_handler").HashHandler;
 var Tokenizer = require("./tokenizer").Tokenizer;
 var comparePoints = Range.comparePoints;
@@ -306,12 +15,14 @@ var SnippetManager = function() {
 };
 
 (function() {
+    oop.implement(this, EventEmitter);
+    
     this.getTokenizer = function() {
         function TabstopToken(str, _, stack) {
             str = str.substr(1);
             if (/^\d+$/.test(str) && !stack.inFormatString)
                 return [{tabstopId: parseInt(str, 10)}];
-            return [{text: str}]
+            return [{text: str}];
         }
         function escape(ch) {
             return "(?:[^\\\\" + ch + "]|\\\\.)";
@@ -389,7 +100,7 @@ var SnippetManager = function() {
         });
         SnippetManager.prototype.getTokenizer = function() {
             return SnippetManager.$tokenizer;
-        }
+        };
         return SnippetManager.$tokenizer;
     };
 
@@ -523,12 +234,16 @@ var SnippetManager = function() {
         return result;
     };
 
-    this.insertSnippet = function(editor, snippetText) {
+    this.insertSnippetForSelection = function(editor, snippetText) {
         var cursor = editor.getCursorPosition();
         var line = editor.session.getLine(cursor.row);
-        var indentString = line.match(/^\s*/)[0];
         var tabString = editor.session.getTabString();
+        var indentString = line.match(/^\s*/)[0];
+        
+        if (cursor.column < indentString.length)
+            indentString = indentString.slice(0, cursor.column);
 
+        snippetText = snippetText.replace(/\r/g, "");
         var tokens = this.tokenizeTmSnippet(snippetText);
         tokens = this.resolveVariables(tokens, editor);
         tokens = tokens.map(function(x) {
@@ -567,7 +282,7 @@ var SnippetManager = function() {
         tabstops.forEach(function(ts) {ts.length = 0});
         var expanding = {};
         function copyValue(val) {
-            var copy = []
+            var copy = [];
             for (var i = 0; i < val.length; i++) {
                 var p = val[i];
                 if (typeof p == "object") {
@@ -601,14 +316,15 @@ var SnippetManager = function() {
 
             if (ts.indexOf(p) === -1)
                 ts.push(p);
-        };
+        }
         var row = 0, column = 0;
         var text = "";
         tokens.forEach(function(t) {
             if (typeof t === "string") {
-                if (t[0] === "\n"){
-                    column = t.length - 1;
-                    row ++;
+                var lines = t.split("\n");
+                if (lines.length > 1){
+                    column = lines[lines.length - 1].length;
+                    row += lines.length - 1;
                 } else
                     column += t.length;
                 text += t;
@@ -623,17 +339,30 @@ var SnippetManager = function() {
         var end = editor.session.replace(range, text);
 
         var tabstopManager = new TabstopManager(editor);
-        tabstopManager.addTabstops(tabstops, range.start, end);
-        tabstopManager.tabNext();
+        var selectionId = editor.inVirtualSelectionMode && editor.selection.index;
+        tabstopManager.addTabstops(tabstops, range.start, end, selectionId);
+    };
+    
+    this.insertSnippet = function(editor, snippetText) {
+        var self = this;
+        if (editor.inVirtualSelectionMode)
+            return self.insertSnippetForSelection(editor, snippetText);
+        
+        editor.forEachSelection(function() {
+            self.insertSnippetForSelection(editor, snippetText);
+        }, null, {keepOrder: true});
+        
+        if (editor.tabstopManager)
+            editor.tabstopManager.tabNext();
     };
 
     this.$getScope = function(editor) {
         var scope = editor.session.$mode.$id || "";
         scope = scope.split("/").pop();
         if (scope === "html" || scope === "php") {
-            if (scope === "php") 
+            if (scope === "php" && !editor.session.$mode.inlinePhp) 
                 scope = "html";
-            var c = editor.getCursorPosition()
+            var c = editor.getCursorPosition();
             var state = editor.session.getState(c.row);
             if (typeof state === "object") {
                 state = state[0];
@@ -662,7 +391,17 @@ var SnippetManager = function() {
         return scopes;
     };
 
-    this.expandWithTab = function(editor) {
+    this.expandWithTab = function(editor, options) {
+        var self = this;
+        var result = editor.forEachSelection(function() {
+            return self.expandSnippetForSelection(editor, options);
+        }, null, {keepOrder: true});
+        if (result && editor.tabstopManager)
+            editor.tabstopManager.tabNext();
+        return result;
+    };
+    
+    this.expandSnippetForSelection = function(editor, options) {
         var cursor = editor.getCursorPosition();
         var line = editor.session.getLine(cursor.row);
         var before = line.substring(0, cursor.column);
@@ -678,7 +417,8 @@ var SnippetManager = function() {
         }, this);
         if (!snippet)
             return false;
-
+        if (options && options.dryRun)
+            return true;
         editor.session.doc.removeInLine(cursor.row,
             cursor.column - snippet.replaceBefore.length,
             cursor.column + snippet.replaceAfter.length
@@ -686,7 +426,7 @@ var SnippetManager = function() {
 
         this.variables.M__ = snippet.matchBefore;
         this.variables.T__ = snippet.matchAfter;
-        this.insertSnippet(editor, snippet.content);
+        this.insertSnippetForSelection(editor, snippet.content);
 
         this.variables.M__ = this.variables.T__ = null;
         return true;
@@ -716,9 +456,13 @@ var SnippetManager = function() {
         var snippetMap = this.snippetMap;
         var snippetNameMap = this.snippetNameMap;
         var self = this;
+        
+        if (!snippets) 
+            snippets = [];
+        
         function wrapRegexp(src) {
             if (src && !/^\^?\(.*\)\$?$|^\\b$/.test(src))
-                src = "(?:" + src + ")"
+                src = "(?:" + src + ")";
 
             return src || "";
         }
@@ -740,7 +484,7 @@ var SnippetManager = function() {
         function addSnippet(s) {
             if (!s.scope)
                 s.scope = scope || "_";
-            scope = s.scope
+            scope = s.scope;
             if (!snippetMap[scope]) {
                 snippetMap[scope] = [];
                 snippetNameMap[scope] = {};
@@ -760,18 +504,23 @@ var SnippetManager = function() {
                     s.guard = "\\b";
                 s.trigger = lang.escapeRegExp(s.tabTrigger);
             }
-
+            
+            if (!s.trigger && !s.guard && !s.endTrigger && !s.endGuard)
+                return;
+            
             s.startRe = guardedRegexp(s.trigger, s.guard, true);
             s.triggerRe = new RegExp(s.trigger, "", true);
 
             s.endRe = guardedRegexp(s.endTrigger, s.endGuard, true);
             s.endTriggerRe = new RegExp(s.endTrigger, "", true);
-        };
+        }
 
-        if (snippets.content)
+        if (snippets && snippets.content)
             addSnippet(snippets);
         else if (Array.isArray(snippets))
             snippets.forEach(addSnippet);
+        
+        this._signal("registerSnippets", {scope: scope});
     };
     this.unregister = function(snippets, scope) {
         var snippetMap = this.snippetMap;
@@ -800,7 +549,7 @@ var SnippetManager = function() {
         while (m = re.exec(str)) {
             if (m[1]) {
                 try {
-                    snippet = JSON.parse(m[1])
+                    snippet = JSON.parse(m[1]);
                     list.push(snippet);
                 } catch (e) {}
             } if (m[4]) {
@@ -853,9 +602,10 @@ var TabstopManager = function(editor) {
 };
 (function() {
     this.attach = function(editor) {
-        this.index = -1;
+        this.index = 0;
         this.ranges = [];
         this.tabstops = [];
+        this.$openTabstops = null;
         this.selectedTabstop = null;
 
         this.editor = editor;
@@ -879,11 +629,11 @@ var TabstopManager = function(editor) {
         this.editor = null;
     };
 
-    this.onChange = function(e) {
-        var changeRange = e.data.range;
-        var isRemove = e.data.action[0] == "r";
-        var start = changeRange.start;
-        var end = changeRange.end;
+    this.onChange = function(delta) {
+        var changeRange = delta;
+        var isRemove = delta.action[0] == "r";
+        var start = delta.start;
+        var end = delta.end;
         var startRow = start.row;
         var endRow = end.row;
         var lineDif = endRow - startRow;
@@ -895,7 +645,7 @@ var TabstopManager = function(editor) {
         }
         if (!this.$inChange && isRemove) {
             var ts = this.selectedTabstop;
-            var changedOutside = !ts.some(function(r) {
+            var changedOutside = ts && !ts.some(function(r) {
                 return comparePoints(r.start, start) <= 0 && comparePoints(r.end, end) >= 0;
             });
             if (changedOutside)
@@ -907,7 +657,7 @@ var TabstopManager = function(editor) {
             if (r.end.row < start.row)
                 continue;
 
-            if (comparePoints(start, r.start) < 0 && comparePoints(end, r.end) > 0) {
+            if (isRemove && comparePoints(start, r.start) < 0 && comparePoints(end, r.end) > 0) {
                 this.removeRange(r);
                 i--;
                 continue;
@@ -930,7 +680,7 @@ var TabstopManager = function(editor) {
     };
     this.updateLinkedFields = function() {
         var ts = this.selectedTabstop;
-        if (!ts.hasLinkedRanges)
+        if (!ts || !ts.hasLinkedRanges)
             return;
         this.$inChange = true;
         var session = this.editor.session;
@@ -939,7 +689,7 @@ var TabstopManager = function(editor) {
             var range = ts[i];
             if (!range.linked)
                 continue;
-            var fmt = exports.snippetManager.tmStrFormat(text, range.original)
+            var fmt = exports.snippetManager.tmStrFormat(text, range.original);
             session.replace(range, fmt);
         }
         this.$inChange = false;
@@ -950,7 +700,7 @@ var TabstopManager = function(editor) {
     };
     this.onChangeSelection = function() {
         if (!this.editor)
-            return
+            return;
         var lead = this.editor.selection.lead;
         var anchor = this.editor.selection.anchor;
         var isEmpty = this.editor.selection.isEmpty();
@@ -968,14 +718,17 @@ var TabstopManager = function(editor) {
         this.detach();
     };
     this.tabNext = function(dir) {
-        var max = this.tabstops.length - 1;
+        var max = this.tabstops.length;
         var index = this.index + (dir || 1);
-        index = Math.min(Math.max(index, 0), max);
-        this.selectTabstop(index);
+        index = Math.min(Math.max(index, 1), max);
         if (index == max)
+            index = 0;
+        this.selectTabstop(index);
+        if (index === 0)
             this.detach();
     };
     this.selectTabstop = function(index) {
+        this.$openTabstops = null;
         var ts = this.tabstops[this.index];
         if (ts)
             this.addTabstopMarkers(ts);
@@ -993,6 +746,8 @@ var TabstopManager = function(editor) {
                     continue;
                 sel.addRange(ts[i].clone(), true);
             }
+            if (sel.ranges[0])
+                sel.addRange(sel.ranges[0].clone());
         } else {
             this.editor.selection.setRange(ts.firstNonLinked);
         }
@@ -1000,6 +755,8 @@ var TabstopManager = function(editor) {
         this.editor.keyBinding.addKeyboardHandler(this.keyboardHandler);
     };
     this.addTabstops = function(tabstops, start, end) {
+        if (!this.$openTabstops)
+            this.$openTabstops = [];
         if (!tabstops[0]) {
             var p = Range.fromPoints(end, end);
             moveRelative(p.start, start);
@@ -1009,32 +766,43 @@ var TabstopManager = function(editor) {
         }
 
         var i = this.index;
-        var arg = [i, 0];
+        var arg = [i + 1, 0];
         var ranges = this.ranges;
-        var editor = this.editor;
-        tabstops.forEach(function(ts) {
+        tabstops.forEach(function(ts, index) {
+            var dest = this.$openTabstops[index] || ts;
+                
             for (var i = ts.length; i--;) {
                 var p = ts[i];
                 var range = Range.fromPoints(p.start, p.end || p.start);
                 movePoint(range.start, start);
                 movePoint(range.end, start);
                 range.original = p;
-                range.tabstop = ts;
+                range.tabstop = dest;
                 ranges.push(range);
-                ts[i] = range;
+                if (dest != ts)
+                    dest.unshift(range);
+                else
+                    dest[i] = range;
                 if (p.fmtString) {
                     range.linked = true;
-                    ts.hasLinkedRanges = true;
-                } else if (!ts.firstNonLinked)
-                    ts.firstNonLinked = range;
+                    dest.hasLinkedRanges = true;
+                } else if (!dest.firstNonLinked)
+                    dest.firstNonLinked = range;
             }
-            if (!ts.firstNonLinked)
-                ts.hasLinkedRanges = false;
-            arg.push(ts);
-            this.addTabstopMarkers(ts);
+            if (!dest.firstNonLinked)
+                dest.hasLinkedRanges = false;
+            if (dest === ts) {
+                arg.push(dest);
+                this.$openTabstops[index] = dest;
+            }
+            this.addTabstopMarkers(dest);
         }, this);
-        arg.push(arg.splice(2, 1)[0]);
-        this.tabstops.splice.apply(this.tabstops, arg);
+        
+        if (arg.length > 2) {
+            if (this.tabstops.length)
+                arg.push(arg.splice(2, 1)[0]);
+            this.tabstops.splice.apply(this.tabstops, arg);
+        }
     };
 
     this.addTabstopMarkers = function(ts) {
@@ -1057,6 +825,13 @@ var TabstopManager = function(editor) {
         i = this.ranges.indexOf(range);
         this.ranges.splice(i, 1);
         this.editor.session.removeMarker(range.markerId);
+        if (!range.tabstop.length) {
+            i = this.tabstops.indexOf(range.tabstop);
+            if (i != -1)
+                this.tabstops.splice(i, 1);
+            if (!this.tabstops.length)
+                this.detach();
+        }
     };
 
     this.keyboardHandler = new HashHandler();
@@ -1080,6 +855,19 @@ var TabstopManager = function(editor) {
     });
 }).call(TabstopManager.prototype);
 
+
+
+var changeTracker = {};
+changeTracker.onChange = Anchor.prototype.onChange;
+changeTracker.setPosition = function(row, column) {
+    this.pos.row = row;
+    this.pos.column = column;
+};
+changeTracker.update = function(pos, delta, $insertRight) {
+    this.$insertRight = $insertRight;
+    this.pos = pos; 
+    this.onChange(delta);
+};
 
 var movePoint = function(point, diff) {
     if (point.row == 0)
@@ -1106,8 +894,329 @@ require("./lib/dom").importCssString("\
 exports.snippetManager = new SnippetManager();
 
 
+var Editor = require("./editor").Editor;
+(function() {
+    this.insertSnippet = function(content, options) {
+        return exports.snippetManager.insertSnippet(this, content, options);
+    };
+    this.expandSnippet = function(options) {
+        return exports.snippetManager.expandWithTab(this, options);
+    };
+}).call(Editor.prototype);
+
 });
-;
+
+define("ace/ext/emmet",["require","exports","module","ace/keyboard/hash_handler","ace/editor","ace/snippets","ace/range","resources","resources","tabStops","resources","utils","actions","ace/config","ace/config"], function(require, exports, module) {
+"use strict";
+var HashHandler = require("ace/keyboard/hash_handler").HashHandler;
+var Editor = require("ace/editor").Editor;
+var snippetManager = require("ace/snippets").snippetManager;
+var Range = require("ace/range").Range;
+var emmet, emmetPath;
+function AceEmmetEditor() {}
+
+AceEmmetEditor.prototype = {
+    setupContext: function(editor) {
+        this.ace = editor;
+        this.indentation = editor.session.getTabString();
+        if (!emmet)
+            emmet = window.emmet;
+        var resources = emmet.resources || emmet.require("resources");
+        resources.setVariable("indentation", this.indentation);
+        this.$syntax = null;
+        this.$syntax = this.getSyntax();
+    },
+    getSelectionRange: function() {
+        var range = this.ace.getSelectionRange();
+        var doc = this.ace.session.doc;
+        return {
+            start: doc.positionToIndex(range.start),
+            end: doc.positionToIndex(range.end)
+        };
+    },
+    createSelection: function(start, end) {
+        var doc = this.ace.session.doc;
+        this.ace.selection.setRange({
+            start: doc.indexToPosition(start),
+            end: doc.indexToPosition(end)
+        });
+    },
+    getCurrentLineRange: function() {
+        var ace = this.ace;
+        var row = ace.getCursorPosition().row;
+        var lineLength = ace.session.getLine(row).length;
+        var index = ace.session.doc.positionToIndex({row: row, column: 0});
+        return {
+            start: index,
+            end: index + lineLength
+        };
+    },
+    getCaretPos: function(){
+        var pos = this.ace.getCursorPosition();
+        return this.ace.session.doc.positionToIndex(pos);
+    },
+    setCaretPos: function(index){
+        var pos = this.ace.session.doc.indexToPosition(index);
+        this.ace.selection.moveToPosition(pos);
+    },
+    getCurrentLine: function() {
+        var row = this.ace.getCursorPosition().row;
+        return this.ace.session.getLine(row);
+    },
+    replaceContent: function(value, start, end, noIndent) {
+        if (end == null)
+            end = start == null ? this.getContent().length : start;
+        if (start == null)
+            start = 0;        
+        
+        var editor = this.ace;
+        var doc = editor.session.doc;
+        var range = Range.fromPoints(doc.indexToPosition(start), doc.indexToPosition(end));
+        editor.session.remove(range);
+        
+        range.end = range.start;
+        
+        value = this.$updateTabstops(value);
+        snippetManager.insertSnippet(editor, value);
+    },
+    getContent: function(){
+        return this.ace.getValue();
+    },
+    getSyntax: function() {
+        if (this.$syntax)
+            return this.$syntax;
+        var syntax = this.ace.session.$modeId.split("/").pop();
+        if (syntax == "html" || syntax == "php") {
+            var cursor = this.ace.getCursorPosition();
+            var state = this.ace.session.getState(cursor.row);
+            if (typeof state != "string")
+                state = state[0];
+            if (state) {
+                state = state.split("-");
+                if (state.length > 1)
+                    syntax = state[0];
+                else if (syntax == "php")
+                    syntax = "html";
+            }
+        }
+        return syntax;
+    },
+    getProfileName: function() {
+        var resources = emmet.resources || emmet.require("resources");
+        switch (this.getSyntax()) {
+          case "css": return "css";
+          case "xml":
+          case "xsl":
+            return "xml";
+          case "html":
+            var profile = resources.getVariable("profile");
+            if (!profile)
+                profile = this.ace.session.getLines(0,2).join("").search(/<!DOCTYPE[^>]+XHTML/i) != -1 ? "xhtml": "html";
+            return profile;
+          default:
+            var mode = this.ace.session.$mode;
+            return mode.emmetConfig && mode.emmetConfig.profile || "xhtml";
+        }
+    },
+    prompt: function(title) {
+        return prompt(title);
+    },
+    getSelection: function() {
+        return this.ace.session.getTextRange();
+    },
+    getFilePath: function() {
+        return "";
+    },
+    $updateTabstops: function(value) {
+        var base = 1000;
+        var zeroBase = 0;
+        var lastZero = null;
+        var ts = emmet.tabStops || emmet.require('tabStops');
+        var resources = emmet.resources || emmet.require("resources");
+        var settings = resources.getVocabulary("user");
+        var tabstopOptions = {
+            tabstop: function(data) {
+                var group = parseInt(data.group, 10);
+                var isZero = group === 0;
+                if (isZero)
+                    group = ++zeroBase;
+                else
+                    group += base;
+
+                var placeholder = data.placeholder;
+                if (placeholder) {
+                    placeholder = ts.processText(placeholder, tabstopOptions);
+                }
+
+                var result = '${' + group + (placeholder ? ':' + placeholder : '') + '}';
+
+                if (isZero) {
+                    lastZero = [data.start, result];
+                }
+
+                return result;
+            },
+            escape: function(ch) {
+                if (ch == '$') return '\\$';
+                if (ch == '\\') return '\\\\';
+                return ch;
+            }
+        };
+
+        value = ts.processText(value, tabstopOptions);
+
+        if (settings.variables['insert_final_tabstop'] && !/\$\{0\}$/.test(value)) {
+            value += '${0}';
+        } else if (lastZero) {
+            var common = emmet.utils ? emmet.utils.common : emmet.require('utils');
+            value = common.replaceSubstring(value, '${0}', lastZero[0], lastZero[1]);
+        }
+        
+        return value;
+    }
+};
+
+
+var keymap = {
+    expand_abbreviation: {"mac": "ctrl+alt+e", "win": "alt+e"},
+    match_pair_outward: {"mac": "ctrl+d", "win": "ctrl+,"},
+    match_pair_inward: {"mac": "ctrl+j", "win": "ctrl+shift+0"},
+    matching_pair: {"mac": "ctrl+alt+j", "win": "alt+j"},
+    next_edit_point: "alt+right",
+    prev_edit_point: "alt+left",
+    toggle_comment: {"mac": "command+/", "win": "ctrl+/"},
+    split_join_tag: {"mac": "shift+command+'", "win": "shift+ctrl+`"},
+    remove_tag: {"mac": "command+'", "win": "shift+ctrl+;"},
+    evaluate_math_expression: {"mac": "shift+command+y", "win": "shift+ctrl+y"},
+    increment_number_by_1: "ctrl+up",
+    decrement_number_by_1: "ctrl+down",
+    increment_number_by_01: "alt+up",
+    decrement_number_by_01: "alt+down",
+    increment_number_by_10: {"mac": "alt+command+up", "win": "shift+alt+up"},
+    decrement_number_by_10: {"mac": "alt+command+down", "win": "shift+alt+down"},
+    select_next_item: {"mac": "shift+command+.", "win": "shift+ctrl+."},
+    select_previous_item: {"mac": "shift+command+,", "win": "shift+ctrl+,"},
+    reflect_css_value: {"mac": "shift+command+r", "win": "shift+ctrl+r"},
+
+    encode_decode_data_url: {"mac": "shift+ctrl+d", "win": "ctrl+'"},
+    expand_abbreviation_with_tab: "Tab",
+    wrap_with_abbreviation: {"mac": "shift+ctrl+a", "win": "shift+ctrl+a"}
+};
+
+var editorProxy = new AceEmmetEditor();
+exports.commands = new HashHandler();
+exports.runEmmetCommand = function runEmmetCommand(editor) {
+    try {
+        editorProxy.setupContext(editor);
+        var actions = emmet.actions || emmet.require("actions");
+    
+        if (this.action == "expand_abbreviation_with_tab") {
+            if (!editor.selection.isEmpty())
+                return false;
+            var pos = editor.selection.lead;
+            var token = editor.session.getTokenAt(pos.row, pos.column);
+            if (token && /\btag\b/.test(token.type))
+                return false;
+        }
+        
+        if (this.action == "wrap_with_abbreviation") {
+            return setTimeout(function() {
+                actions.run("wrap_with_abbreviation", editorProxy);
+            }, 0);
+        }
+        
+        var result = actions.run(this.action, editorProxy);
+    } catch(e) {
+        if (!emmet) {
+            load(runEmmetCommand.bind(this, editor));
+            return true;
+        }
+        editor._signal("changeStatus", typeof e == "string" ? e : e.message);
+        console.log(e);
+        result = false;
+    }
+    return result;
+};
+
+for (var command in keymap) {
+    exports.commands.addCommand({
+        name: "emmet:" + command,
+        action: command,
+        bindKey: keymap[command],
+        exec: exports.runEmmetCommand,
+        multiSelectAction: "forEach"
+    });
+}
+
+exports.updateCommands = function(editor, enabled) {
+    if (enabled) {
+        editor.keyBinding.addKeyboardHandler(exports.commands);
+    } else {
+        editor.keyBinding.removeKeyboardHandler(exports.commands);
+    }
+};
+
+exports.isSupportedMode = function(mode) {
+    if (!mode) return false;
+    if (mode.emmetConfig) return true;
+    var id = mode.$id || mode;
+    return /css|less|scss|sass|stylus|html|php|twig|ejs|handlebars/.test(id);
+};
+
+exports.isAvailable = function(editor, command) {
+    if (/(evaluate_math_expression|expand_abbreviation)$/.test(command))
+        return true;
+    var mode = editor.session.$mode;
+    var isSupported = exports.isSupportedMode(mode);
+    if (isSupported && mode.$modes) {
+        try {
+            editorProxy.setupContext(editor);
+            if (/js|php/.test(editorProxy.getSyntax()))
+                isSupported = false;
+        } catch(e) {}
+    }
+    return isSupported;
+}
+
+var onChangeMode = function(e, target) {
+    var editor = target;
+    if (!editor)
+        return;
+    var enabled = exports.isSupportedMode(editor.session.$mode);
+    if (e.enableEmmet === false)
+        enabled = false;
+    if (enabled)
+        load();
+    exports.updateCommands(editor, enabled);
+};
+
+var load = function(cb) {
+    if (typeof emmetPath == "string") {
+        require("ace/config").loadModule(emmetPath, function() {
+            emmetPath = null;
+            cb && cb();
+        });
+    }
+};
+
+exports.AceEmmetEditor = AceEmmetEditor;
+require("ace/config").defineOptions(Editor.prototype, "editor", {
+    enableEmmet: {
+        set: function(val) {
+            this[val ? "on" : "removeListener"]("changeMode", onChangeMode);
+            onChangeMode({enableEmmet: !!val}, this);
+        },
+        value: true
+    }
+});
+
+exports.setCore = function(e) {
+    if (typeof e == "string")
+       emmetPath = e;
+    else
+       emmet = e;
+};
+});
                 (function() {
                     window.require(["ace/ext/emmet"], function() {});
                 })();

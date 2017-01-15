@@ -1,5 +1,5 @@
-ace.define('ace/snippets/sql', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+ace.define("ace/snippets/sql",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.snippetText = "snippet tbl\n\
 	create table ${1:table} (\n\

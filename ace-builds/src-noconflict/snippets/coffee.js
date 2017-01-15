@@ -1,5 +1,5 @@
-ace.define('ace/snippets/coffee', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+ace.define("ace/snippets/coffee",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.snippetText = "# Closure loop\n\
 snippet forindo\n\

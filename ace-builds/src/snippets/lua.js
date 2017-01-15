@@ -1,5 +1,5 @@
-define('ace/snippets/lua', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+define("ace/snippets/lua",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.snippetText = "snippet #!\n\
 	#!/usr/bin/env lua\n\

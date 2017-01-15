@@ -1,7 +1,3 @@
-/*PACKAGE
-@import url(//fonts.googleapis.com/css?family=Droid+Sans+Mono);
-  PACKAGE*/
-
 html {
     height: 100%;
     width: 100%;
@@ -20,12 +16,12 @@ body {
     color: white;
 }
 
-#logo {
-    padding: 15px;
-    margin-left: 70px;
+#c9-logo, #ace-logo {
+    padding: 0;
+    border: none;
 }
 
-#editor {
+#editor-container {
     position: absolute;
     top:  0px;
     left: 280px;
@@ -45,3 +41,17 @@ body {
 #controls td + td {
     text-align: left;
 }
+.ace_status-indicator {
+    color: gray;
+    position: absolute;
+    right: 0;
+    border-left: 1px solid;
+}
+
+/* .ace_text-input {
+    z-index: 10!important;
+    opacity: 1!important;
+    background: rgb(84, 0, 255)!important;
+    color: rgb(255, 255, 255)!important;
+    width: 10em!important;
+}*/

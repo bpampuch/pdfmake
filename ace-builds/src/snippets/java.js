@@ -1,5 +1,5 @@
-define('ace/snippets/java', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+define("ace/snippets/java",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.snippetText = "## Access Modifiers\n\
 snippet po\n\

@@ -1,53 +1,53 @@
-ace.define('ace/snippets/html', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+ace.define("ace/snippets/html",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.snippetText = "# Some useful Unicode entities\n\
 # Non-Breaking Space\n\
 snippet nbs\n\
 	&nbsp;\n\
-# \u2190\n\
+# ←\n\
 snippet left\n\
 	&#x2190;\n\
-# \u2192\n\
+# →\n\
 snippet right\n\
 	&#x2192;\n\
-# \u2191\n\
+# ↑\n\
 snippet up\n\
 	&#x2191;\n\
-# \u2193\n\
+# ↓\n\
 snippet down\n\
 	&#x2193;\n\
-# \u21a9\n\
+# ↩\n\
 snippet return\n\
 	&#x21A9;\n\
-# \u21e4\n\
+# ⇤\n\
 snippet backtab\n\
 	&#x21E4;\n\
-# \u21e5\n\
+# ⇥\n\
 snippet tab\n\
 	&#x21E5;\n\
-# \u21e7\n\
+# ⇧\n\
 snippet shift\n\
 	&#x21E7;\n\
-# \u2303\n\
+# ⌃\n\
 snippet ctrl\n\
 	&#x2303;\n\
-# \u2305\n\
+# ⌅\n\
 snippet enter\n\
 	&#x2305;\n\
-# \u2318\n\
+# ⌘\n\
 snippet cmd\n\
 	&#x2318;\n\
-# \u2325\n\
+# ⌥\n\
 snippet option\n\
 	&#x2325;\n\
-# \u2326\n\
+# ⌦\n\
 snippet delete\n\
 	&#x2326;\n\
-# \u232b\n\
+# ⌫\n\
 snippet backspace\n\
 	&#x232B;\n\
-# \u238b\n\
+# ⎋\n\
 snippet esc\n\
 	&#x238B;\n\
 # Generic Doctype\n\

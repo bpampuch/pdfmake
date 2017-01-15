@@ -1,1 +1,1 @@
-define("ace/snippets/curly",["require","exports","module"],function(e,t,n){t.snippetText="",t.scope="curly"})
+define("ace/snippets/curly",["require","exports","module"],function(e,t,n){"use strict";t.snippetText=undefined,t.scope="curly"})

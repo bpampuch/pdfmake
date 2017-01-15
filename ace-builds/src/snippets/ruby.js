@@ -1,5 +1,5 @@
-define('ace/snippets/ruby', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+define("ace/snippets/ruby",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.snippetText = "########################################\n\
 # Ruby snippets - for Rails, see below #\n\

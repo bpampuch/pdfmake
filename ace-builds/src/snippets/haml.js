@@ -1,5 +1,5 @@
-define('ace/snippets/haml', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+define("ace/snippets/haml",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.snippetText = "snippet t\n\
 	%table\n\

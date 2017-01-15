@@ -1,5 +1,5 @@
-define('ace/snippets/php', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+define("ace/snippets/php",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.snippetText = "snippet <?\n\
 	<?php\n\

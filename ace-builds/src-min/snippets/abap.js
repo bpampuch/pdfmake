@@ -1,1 +1,1 @@
-define("ace/snippets/abap",["require","exports","module"],function(e,t,n){t.snippetText="",t.scope="abap"})
+define("ace/snippets/abap",["require","exports","module"],function(e,t,n){"use strict";t.snippetText=undefined,t.scope="abap"})

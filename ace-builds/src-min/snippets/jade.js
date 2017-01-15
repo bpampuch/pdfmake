@@ -1,1 +1,1 @@
-define("ace/snippets/jade",["require","exports","module"],function(e,t,n){t.snippetText="",t.scope="jade"})
+define("ace/snippets/jade",["require","exports","module"],function(e,t,n){"use strict";t.snippetText=undefined,t.scope="jade"})

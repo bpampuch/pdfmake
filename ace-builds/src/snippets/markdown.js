@@ -1,5 +1,5 @@
-define('ace/snippets/markdown', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+define("ace/snippets/markdown",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.snippetText = "# Markdown\n\
 \n\

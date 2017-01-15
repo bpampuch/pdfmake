@@ -1,5 +1,5 @@
-ace.define('ace/snippets/actionscript', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+ace.define("ace/snippets/actionscript",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.snippetText = "snippet main\n\
 	package {\n\

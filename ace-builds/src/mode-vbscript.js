@@ -1,69 +1,43 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Distributed under the BSD license:
- *
- * Copyright (c) 2012, Ajax.org B.V.
- * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of Ajax.org B.V. nor the
- *       names of its contributors may be used to endorse or promote products
- *       derived from this software without specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL AJAX.ORG B.V. BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- *
- * Contributor(s):
- * 
- *
- *
- * ***** END LICENSE BLOCK ***** */
-
-define('ace/mode/vbscript', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/mode/text', 'ace/tokenizer', 'ace/mode/vbscript_highlight_rules'], function(require, exports, module) {
-
-
-var oop = require("../lib/oop");
-var TextMode = require("./text").Mode;
-var Tokenizer = require("../tokenizer").Tokenizer;
-var VBScriptHighlightRules = require("./vbscript_highlight_rules").VBScriptHighlightRules;
-
-var Mode = function() {
-    this.HighlightRules = VBScriptHighlightRules;
-};
-oop.inherits(Mode, TextMode);
-
-(function() {
-       
-    this.lineCommentStart = ["'", "REM"];
-    
-    this.$id = "ace/mode/vbscript";
-}).call(Mode.prototype);
-
-exports.Mode = Mode;
-});
-
-
-define('ace/mode/vbscript_highlight_rules', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/mode/text_highlight_rules'], function(require, exports, module) {
-
+define("ace/mode/vbscript_highlight_rules",["require","exports","module","ace/lib/oop","ace/mode/text_highlight_rules"], function(require, exports, module) {
+"use strict";
 
 var oop = require("../lib/oop");
 var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
 var VBScriptHighlightRules = function() {
+
+    var keywordMapper = this.createKeywordMapper({
+        "keyword.control.asp":  "If|Then|Else|ElseIf|End|While|Wend|For|To|Each|Case|Select|Return"
+            + "|Continue|Do|Until|Loop|Next|With|Exit|Function|Property|Type|Enum|Sub|IIf",
+        "storage.type.asp": "Dim|Call|Class|Const|Dim|Redim|Set|Let|Get|New|Randomize|Option|Explicit",
+        "storage.modifier.asp": "Private|Public|Default",
+        "keyword.operator.asp": "Mod|And|Not|Or|Xor|as",
+        "constant.language.asp": "Empty|False|Nothing|Null|True",
+        "support.class.asp": "Application|ObjectContext|Request|Response|Server|Session",
+        "support.class.collection.asp": "Contents|StaticObjects|ClientCertificate|Cookies|Form|QueryString|ServerVariables",
+        "support.constant.asp": "TotalBytes|Buffer|CacheControl|Charset|ContentType|Expires|ExpiresAbsolute"
+            + "|IsClientConnected|PICS|Status|ScriptTimeout|CodePage|LCID|SessionID|Timeout",
+        "support.function.asp": "Lock|Unlock|SetAbort|SetComplete|BinaryRead|AddHeader|AppendToLog"
+            + "|BinaryWrite|Clear|Flush|Redirect|Write|CreateObject|HTMLEncode|MapPath|URLEncode|Abandon|Convert|Regex",
+        "support.function.event.asp": "Application_OnEnd|Application_OnStart"
+            + "|OnTransactionAbort|OnTransactionCommit|Session_OnEnd|Session_OnStart",
+        "support.function.vb.asp": "Array|Add|Asc|Atn|CBool|CByte|CCur|CDate|CDbl|Chr|CInt|CLng"
+            + "|Conversions|Cos|CreateObject|CSng|CStr|Date|DateAdd|DateDiff|DatePart|DateSerial"
+            + "|DateValue|Day|Derived|Math|Escape|Eval|Exists|Exp|Filter|FormatCurrency"
+            + "|FormatDateTime|FormatNumber|FormatPercent|GetLocale|GetObject|GetRef|Hex"
+            + "|Hour|InputBox|InStr|InStrRev|Int|Fix|IsArray|IsDate|IsEmpty|IsNull|IsNumeric"
+            + "|IsObject|Item|Items|Join|Keys|LBound|LCase|Left|Len|LoadPicture|Log|LTrim|RTrim"
+            + "|Trim|Maths|Mid|Minute|Month|MonthName|MsgBox|Now|Oct|Remove|RemoveAll|Replace"
+            + "|RGB|Right|Rnd|Round|ScriptEngine|ScriptEngineBuildVersion|ScriptEngineMajorVersion"
+            + "|ScriptEngineMinorVersion|Second|SetLocale|Sgn|Sin|Space|Split|Sqr|StrComp|String|StrReverse"
+            + "|Tan|Time|Timer|TimeSerial|TimeValue|TypeName|UBound|UCase|Unescape|VarType|Weekday|WeekdayName|Year",
+        "support.type.vb.asp": "vbtrue|vbfalse|vbcr|vbcrlf|vbformfeed|vblf|vbnewline|vbnullchar|vbnullstring|"
+            + "int32|vbtab|vbverticaltab|vbbinarycompare|vbtextcomparevbsunday|vbmonday|vbtuesday|vbwednesday"
+            + "|vbthursday|vbfriday|vbsaturday|vbusesystemdayofweek|vbfirstjan1|vbfirstfourdays|vbfirstfullweek"
+            + "|vbgeneraldate|vblongdate|vbshortdate|vblongtime|vbshorttime|vbobjecterror|vbEmpty|vbNull|vbInteger"
+            + "|vbLong|vbSingle|vbDouble|vbCurrency|vbDate|vbString|vbObject|vbError|vbBoolean|vbVariant"
+            + "|vbDataObject|vbDecimal|vbByte|vbArray"
+    }, "identifier", true);
 
     this.$rules = {
     "start": [
@@ -74,9 +48,7 @@ var VBScriptHighlightRules = function() {
             regex: "$"
         },
         {
-            token: [
-                null
-            ],
+            token: [null],
             regex: "^(?=\\t)",
             next: "state_3"
         },
@@ -96,34 +68,18 @@ var VBScriptHighlightRules = function() {
                 "variable.parameter.function.asp",
                 "punctuation.definition.parameters.asp"
             ],
-            regex: "^(\\s*)(Function|Sub)(\\s*)([a-zA-Z_]\\w*)(\\s*)(\\()([^)]*)(\\))"
+            regex: "^(\\s*)(Function|Sub)(\\s+)([a-zA-Z_]\\w*)(\\s*)(\\()([^)]*)(\\))"
         },
         {
             token: "punctuation.definition.comment.asp",
-            regex: "'|REM",
-            next: "comment"
-        },
-        {
-            token: [
-                "keyword.control.asp"
-            ],
-            regex: "\\b(?:If|Then|Else|ElseIf|Else If|End If|While|Wend|For|To|Each|Case|Select|End Select|Return|Continue|Do|Until|Loop|Next|With|Exit Do|Exit For|Exit Function|Exit Property|Exit Sub|IIf)\\b"
-        },
-        {
-            token: "keyword.operator.asp",
-            regex: "\\b(?:Mod|And|Not|Or|Xor|as)\\b"
+            regex: "'|REM(?=\\s|$)",
+            next: "comment",
+            caseInsensitive: true
         },
         {
             token: "storage.type.asp",
-            regex: "Dim|Call|Class|Const|Dim|Redim|Function|Sub|Private Sub|Public Sub|End sub|End Function|Set|Let|Get|New|Randomize|Option Explicit|On Error Resume Next|On Error GoTo"
-        },
-        {
-            token: "storage.modifier.asp",
-            regex: "\\b(?:Private|Public|Default)\\b"
-        },
-        {
-            token: "constant.language.asp",
-            regex: "\\b(?:Empty|False|Nothing|Null|True)\\b"
+            regex: "On Error Resume Next|On Error GoTo",
+            caseInsensitive: true
         },
         {
             token: "punctuation.definition.string.begin.asp",
@@ -137,50 +93,20 @@ var VBScriptHighlightRules = function() {
             regex: "(\\$)[a-zA-Z_x7f-xff][a-zA-Z0-9_x7f-xff]*?\\b\\s*"
         },
         {
-            token: "support.class.asp",
-            regex: "\\b(?:Application|ObjectContext|Request|Response|Server|Session)\\b"
-        },
-        {
-            token: "support.class.collection.asp",
-            regex: "\\b(?:Contents|StaticObjects|ClientCertificate|Cookies|Form|QueryString|ServerVariables)\\b"
-        },
-        {
-            token: "support.constant.asp",
-            regex: "\\b(?:TotalBytes|Buffer|CacheControl|Charset|ContentType|Expires|ExpiresAbsolute|IsClientConnected|PICS|Status|ScriptTimeout|CodePage|LCID|SessionID|Timeout)\\b"
-        },
-        {
-            token: "support.function.asp",
-            regex: "\\b(?:Lock|Unlock|SetAbort|SetComplete|BinaryRead|AddHeader|AppendToLog|BinaryWrite|Clear|End|Flush|Redirect|Write|CreateObject|HTMLEncode|MapPath|URLEncode|Abandon|Convert|Regex)\\b"
-        },
-        {
-            token: "support.function.event.asp",
-            regex: "\\b(?:Application_OnEnd|Application_OnStart|OnTransactionAbort|OnTransactionCommit|Session_OnEnd|Session_OnStart)\\b"
-        },
-        {
-            token: "support.function.vb.asp",
-            regex: "\\b(?:Array|Add|Asc|Atn|CBool|CByte|CCur|CDate|CDbl|Chr|CInt|CLng|Conversions|Cos|CreateObject|CSng|CStr|Date|DateAdd|DateDiff|DatePart|DateSerial|DateValue|Day|Derived|Math|Escape|Eval|Exists|Exp|Filter|FormatCurrency|FormatDateTime|FormatNumber|FormatPercent|GetLocale|GetObject|GetRef|Hex|Hour|InputBox|InStr|InStrRev|Int|Fix|IsArray|IsDate|IsEmpty|IsNull|IsNumeric|IsObject|Item|Items|Join|Keys|LBound|LCase|Left|Len|LoadPicture|Log|LTrim|RTrim|Trim|Maths|Mid|Minute|Month|MonthName|MsgBox|Now|Oct|Remove|RemoveAll|Replace|RGB|Right|Rnd|Round|ScriptEngine|ScriptEngineBuildVersion|ScriptEngineMajorVersion|ScriptEngineMinorVersion|Second|SetLocale|Sgn|Sin|Space|Split|Sqr|StrComp|String|StrReverse|Tan|Time|Timer|TimeSerial|TimeValue|TypeName|UBound|UCase|Unescape|VarType|Weekday|WeekdayName|Year)\\b"
-        },
-        {
-            token: [
-                "constant.numeric.asp"
-            ],
+            token: "constant.numeric.asp",
             regex: "-?\\b(?:(?:0(?:x|X)[0-9a-fA-F]*)|(?:(?:[0-9]+\\.?[0-9]*)|(?:\\.[0-9]+))(?:(?:e|E)(?:\\+|-)?[0-9]+)?)(?:L|l|UL|ul|u|U|F|f)?\\b"
         },
         {
-            token: "support.type.vb.asp",
-            regex: "\\b(?:vbtrue|vbfalse|vbcr|vbcrlf|vbformfeed|vblf|vbnewline|vbnullchar|vbnullstring|int32|vbtab|vbverticaltab|vbbinarycompare|vbtextcomparevbsunday|vbmonday|vbtuesday|vbwednesday|vbthursday|vbfriday|vbsaturday|vbusesystemdayofweek|vbfirstjan1|vbfirstfourdays|vbfirstfullweek|vbgeneraldate|vblongdate|vbshortdate|vblongtime|vbshorttime|vbobjecterror|vbEmpty|vbNull|vbInteger|vbLong|vbSingle|vbDouble|vbCurrency|vbDate|vbString|vbObject|vbError|vbBoolean|vbVariant|vbDataObject|vbDecimal|vbByte|vbArray)\\b"
+            regex: "\\w+",
+            token: keywordMapper
         },
         {
-            token: [
-                "entity.name.function.asp"
-            ],
+            token: ["entity.name.function.asp"],
             regex: "(?:(\\b[a-zA-Z_x7f-xff][a-zA-Z0-9_x7f-xff]*?\\b)(?=\\(\\)?))"
         },
         {
-            token: [
-                "keyword.operator.asp"
-            ],
-            regex: "\\-|\\+|\\*\\\/|\\>|\\<|\\=|\\&"
+            token: ["keyword.operator.asp"],
+            regex: "\\-|\\+|\\*\\/|\\>|\\<|\\=|\\&"
         }
     ],
     "state_3": [
@@ -247,4 +173,27 @@ var VBScriptHighlightRules = function() {
 oop.inherits(VBScriptHighlightRules, TextHighlightRules);
 
 exports.VBScriptHighlightRules = VBScriptHighlightRules;
+});
+
+define("ace/mode/vbscript",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/vbscript_highlight_rules"], function(require, exports, module) {
+"use strict";
+
+var oop = require("../lib/oop");
+var TextMode = require("./text").Mode;
+var VBScriptHighlightRules = require("./vbscript_highlight_rules").VBScriptHighlightRules;
+
+var Mode = function() {
+    this.HighlightRules = VBScriptHighlightRules;
+    this.$behaviour = this.$defaultBehaviour;
+};
+oop.inherits(Mode, TextMode);
+
+(function() {
+       
+    this.lineCommentStart = ["'", "REM"];
+    
+    this.$id = "ace/mode/vbscript";
+}).call(Mode.prototype);
+
+exports.Mode = Mode;
 });

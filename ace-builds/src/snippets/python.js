@@ -1,5 +1,5 @@
-define('ace/snippets/python', ['require', 'exports', 'module' ], function(require, exports, module) {
-
+define("ace/snippets/python",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
 exports.snippetText = "snippet #!\n\
 	#!/usr/bin/env python\n\
