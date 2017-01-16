@@ -116,7 +116,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
 		var body = [[{text: 'TABLE OF CONTENTS', alignment: 'center', fontSize: 12, colSpan: 2, margin:[0, 0, 0, 20]}, {}]];
 
-		this.tracker.startTracking('toc', function(tocValue) {
+		this.tracker.startTracking('tocItem', function(tocValue) {
 			var entry = [];
 			entry.push({text: tocValue.text, alignment: 'left', margin: [0, 10, 0, 0]});
 			entry.push({text: tocValue.pageNumber, alignment: 'right', margin: [0, 10, 0, 0]});
@@ -148,13 +148,14 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			});
 
 			if (tocIndexPosition > 0) {
-					body[0][0].text = docStructure[tocIndexPosition].toc.title;
-					docStructure[tocIndexPosition] = toc;
-					body = [];
-					result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
-					docStructure[tocIndexPosition].table.body = body;
+				var title = docStructure[tocIndexPosition].toc.title ? docStructure[tocIndexPosition].toc.title : body[0][0].text;
+				docStructure[tocIndexPosition] = toc;
+				body = [];
+				body = [[{text: title, bold: true, alignment: 'center', fontSize: 12, colSpan: 2, margin:[0, 0, 0, 20]}, {}]];
+				result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+				docStructure[tocIndexPosition].table.body = body;
 			} else {
-					docStructure.push(toc);
+				docStructure.push(toc);
 			}
 			result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
 		}
@@ -378,7 +379,7 @@ LayoutBuilder.prototype.processNode = function (node) {
 		} else if (node.text !== undefined || node.toc) {
 			self.processLeaf(node);
 			if (node.positions.length > 0 && node.toc === undefined && node.tocItem !== undefined && node.tocItem) {
-				self.tracker.emit('toc', { text: node.text, pageNumber: node.positions[0].pageNumber});
+				self.tracker.emit('tocItem', { text: node.text, pageNumber: node.positions[0].pageNumber});
 			}
 		} else if (node.image) {
 			self.processImage(node);
