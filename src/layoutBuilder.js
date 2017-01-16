@@ -114,13 +114,52 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 		});
 	}
 
-	var result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
-	while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
-		resetXYs(result);
-		result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
-	}
+		var body = [[{text: 'TABLE OF CONTENTS', alignment: 'center', fontSize: 12, colSpan: 2, margin:[0, 0, 0, 20]}, {}]];
 
-	return result.pages;
+		this.tracker.startTracking('tocItem', function(tocValue) {
+			var entry = [];
+			entry.push({text: tocValue.text, alignment: 'left', margin: [0, 10, 0, 0]});
+			entry.push({text: tocValue.pageNumber, alignment: 'right', margin: [0, 10, 0, 0]});
+			body.push(entry);
+		});
+		
+
+		var result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+		
+
+		while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
+			resetXYs(result);
+			result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+		}
+
+		if (body.length > 1) {
+			var toc = { 
+						pageBreak: 'before',
+						table: {
+							dontBreakRows: true,
+							widths: ['auto', '*'],
+							body: body
+						},
+						layout: 'noBorders'
+			};
+
+			var tocIndexPosition =_.findIndex(docStructure, function(item) { 
+				return item.toc !== undefined; 
+			});
+
+			if (tocIndexPosition > 0) {
+				var title = docStructure[tocIndexPosition].toc.title ? docStructure[tocIndexPosition].toc.title : body[0][0].text;
+				docStructure[tocIndexPosition] = toc;
+				body = [];
+				body = [[{text: title, bold: true, alignment: 'center', fontSize: 12, colSpan: 2, margin:[0, 0, 0, 20]}, {}]];
+				result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+				docStructure[tocIndexPosition].table.body = body;
+			} else {
+				docStructure.push(toc);
+			}
+			result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+		}
+		return result.pages;
 };
 
 LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
@@ -337,8 +376,11 @@ LayoutBuilder.prototype.processNode = function (node) {
 			self.processList(true, node);
 		} else if (node.table) {
 			self.processTable(node);
-		} else if (node.text !== undefined) {
+		} else if (node.text !== undefined || node.toc) {
 			self.processLeaf(node);
+			if (node.positions.length > 0 && node.toc === undefined && node.tocItem !== undefined && node.tocItem) {
+				self.tracker.emit('tocItem', { text: node.text, pageNumber: node.positions[0].pageNumber});
+			}
 		} else if (node.image) {
 			self.processImage(node);
 		} else if (node.canvas) {
@@ -376,7 +418,7 @@ LayoutBuilder.prototype.processNode = function (node) {
 		if (node.pageBreak === 'after') {
 			self.writer.moveToNextPage(node.pageOrientation);
 		}
-	}
+	};
 };
 
 // vertical container
