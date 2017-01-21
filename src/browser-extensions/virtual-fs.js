@@ -14,7 +14,12 @@ VirtualFileSystem.prototype.readFileSync = function (filename) {
 		return new Buffer(base64content, 'base64');
 	}
 
-	return this.fileSystem[filename];
+	var content = this.fileSystem[filename];
+	if (content) {
+		return content;
+	}
+
+	throw 'File \'' + filename + '\' not found in virtual file system';
 };
 
 VirtualFileSystem.prototype.writeFileSync = function (filename, content) {
@@ -22,7 +27,7 @@ VirtualFileSystem.prototype.writeFileSync = function (filename, content) {
 };
 
 VirtualFileSystem.prototype.bindFS = function (data) {
-	this.baseSystem = data;
+	this.baseSystem = data || {};
 };
 
 
