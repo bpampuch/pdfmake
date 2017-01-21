@@ -93,7 +93,7 @@ Document.prototype._openWindow = function () {
 	return win;
 };
 
-Document.prototype.open = function (message) {
+Document.prototype.open = function () {
 	var win = this._openWindow();
 
 	try {
