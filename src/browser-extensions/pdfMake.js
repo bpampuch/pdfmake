@@ -82,10 +82,19 @@ Document.prototype._bufferToBlob = function (buffer) {
 	return blob;
 };
 
-Document.prototype.open = function (message) {
+Document.prototype._openWindow = function () {
 	// we have to open the window immediately and store the reference
 	// otherwise popup blockers will stop us
 	var win = window.open('', '_blank');
+	if (win === null) {
+		throw 'Open PDF in new window blocked by browser';
+	}
+
+	return win;
+};
+
+Document.prototype.open = function (message) {
+	var win = this._openWindow();
 
 	try {
 		var that = this;
@@ -103,9 +112,7 @@ Document.prototype.open = function (message) {
 
 
 Document.prototype.print = function () {
-	// we have to open the window immediately and store the reference
-	// otherwise popup blockers will stop us
-	var win = window.open('', '_blank');
+	var win = this._openWindow();
 
 	try {
 		var that = this;
