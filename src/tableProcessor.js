@@ -305,7 +305,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			if (i < l - 1) {
 				var fillColor = body[rowIndex][colIndex].fillColor;
 				if (!fillColor) {
-					fillColor = this.layout.fillColor(rowIndex, this.tableNode);
+					fillColor = typeof this.layout.fillColor === 'function' ? this.layout.fillColor(rowIndex, this.tableNode) : this.layout.fillColor;
 				}
 				if (fillColor) {
 					var wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
