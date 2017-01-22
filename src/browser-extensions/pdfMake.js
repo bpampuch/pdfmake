@@ -1,6 +1,5 @@
 /* jslint node: true */
 /* jslint browser: true */
-/* global BlobBuilder */
 'use strict';
 
 var PdfPrinter = require('../printer');
