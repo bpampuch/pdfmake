@@ -317,7 +317,6 @@ DocMeasure.prototype.measureTable = function (node) {
 				data = '';
 			}
 			if (!data._span) {
-				var _this = this;
 				data = rowData[col] = this.styleStack.auto(data, measureCb(this, data));
 
 				if (data.colSpan && data.colSpan > 1) {
@@ -360,10 +359,11 @@ DocMeasure.prototype.measureTable = function (node) {
 			layout = tableLayouts[layout];
 		}
 
+		/*jshint unused: false */
 		var defaultLayout = {
 			hLineWidth: function (i, node) {
 				return 1;
-			}, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
+			},
 			vLineWidth: function (i, node) {
 				return 1;
 			},
@@ -375,10 +375,10 @@ DocMeasure.prototype.measureTable = function (node) {
 			},
 			paddingLeft: function (i, node) {
 				return 4;
-			}, //i && 4 || 0; },
+			},
 			paddingRight: function (i, node) {
 				return 4;
-			}, //(i < node.table.widths.length - 1) ? 4 : 0; },
+			},
 			paddingTop: function (i, node) {
 				return 2;
 			},

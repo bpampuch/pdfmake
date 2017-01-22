@@ -1,5 +1,4 @@
 /* jslint node: true */
-/* global window */
 'use strict';
 
 var _ = require('lodash');
@@ -182,6 +181,7 @@ function fixPageMargins(margin) {
 }
 
 function registerDefaultTableLayouts(layoutBuilder) {
+	/*jshint unused: false */
 	layoutBuilder.registerTableLayouts({
 		noBorders: {
 			hLineWidth: function (i) {
@@ -195,7 +195,7 @@ function registerDefaultTableLayouts(layoutBuilder) {
 			},
 			paddingRight: function (i, node) {
 				return (i < node.table.widths.length - 1) ? 4 : 0;
-			},
+			}
 		},
 		headerLineOnly: {
 			hLineWidth: function (i, node) {
@@ -237,36 +237,8 @@ function registerDefaultTableLayouts(layoutBuilder) {
 	});
 }
 
-var defaultLayout = {
-	hLineWidth: function (i, node) {
-		return 1;
-	}, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
-	vLineWidth: function (i, node) {
-		return 1;
-	},
-	hLineColor: function (i, node) {
-		return 'black';
-	},
-	vLineColor: function (i, node) {
-		return 'black';
-	},
-	paddingLeft: function (i, node) {
-		return 4;
-	}, //i && 4 || 0; },
-	paddingRight: function (i, node) {
-		return 4;
-	}, //(i < node.table.widths.length - 1) ? 4 : 0; },
-	paddingTop: function (i, node) {
-		return 2;
-	},
-	paddingBottom: function (i, node) {
-		return 2;
-	},
-	defaultBorder: true
-};
-
 function pageSize2widthAndHeight(pageSize) {
-	if (typeof pageSize == 'string' || pageSize instanceof String) {
+	if (typeof pageSize === 'string' || pageSize instanceof String) {
 		var size = sizes[pageSize.toUpperCase()];
 		if (!size) {
 			throw ('Page size ' + pageSize + ' not recognized');
@@ -275,13 +247,6 @@ function pageSize2widthAndHeight(pageSize) {
 	}
 
 	return pageSize;
-}
-
-function StringObject(str) {
-	this.isString = true;
-	this.toString = function () {
-		return str;
-	};
 }
 
 function updatePageOrientationInOptions(currentPage, pdfKitDoc) {

@@ -108,6 +108,7 @@ for (var i = 0; i < 45; ++i) {
 
 // mask functions in terms of row # and column #
 // (cf. Table 20 in JIS X 0510:2004 p. 42)
+/*jshint unused: false */
 var MASKFUNCS = [
 	function (i, j) {
 		return (i + j) % 2 === 0;
