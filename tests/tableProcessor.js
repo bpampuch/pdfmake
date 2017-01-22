@@ -14,7 +14,7 @@ describe('TableProcessor', function () {
 		defaultLayout = {
 			hLineWidth: function (i, node) {
 				return 1;
-			}, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
+			},
 			vLineWidth: function (i, node) {
 				return 1;
 			},
@@ -26,15 +26,18 @@ describe('TableProcessor', function () {
 			},
 			paddingLeft: function (i, node) {
 				return 4;
-			}, //i && 4 || 0; },
+			},
 			paddingRight: function (i, node) {
 				return 4;
-			}, //(i < node.table.widths.length - 1) ? 4 : 0; },
+			},
 			paddingTop: function (i, node) {
 				return 2;
 			},
 			paddingBottom: function (i, node) {
 				return 2;
+			},
+			fillColor: function (i, node) {
+				return null;
 			},
 			defaultBorder: true
 		};
@@ -146,7 +149,8 @@ describe('TableProcessor', function () {
 						paddingBottom: _.noop,
 						paddingTop: _.noop,
 						vLineWidth: _.noop,
-						hLineWidth: _.noop
+						hLineWidth: _.noop,
+						fillColor: _.noop
 					}
 				};
 			};

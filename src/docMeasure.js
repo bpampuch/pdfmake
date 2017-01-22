@@ -385,6 +385,9 @@ DocMeasure.prototype.measureTable = function (node) {
 			paddingBottom: function (i, node) {
 				return 2;
 			},
+			fillColor: function (i, node) {
+				return null;
+			},
 			defaultBorder: true
 		};
 
