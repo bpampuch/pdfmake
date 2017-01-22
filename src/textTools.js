@@ -82,7 +82,7 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	var font = this.fontProvider.provideFont(fontName, bold, italics);
 
 	return {
-		width: font.widthOfString(removeDiacritics(text), fontSize),
+		width: font.widthOfString(text, fontSize),
 		height: font.lineHeight(fontSize) * lineHeight,
 		fontSize: fontSize,
 		lineHeight: lineHeight,
@@ -182,16 +182,6 @@ function normalizeString(value) {
 	}
 }
 
-//TODO: support for other languages (currently only polish is supported)
-var diacriticsMap = {'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 'Ł': 'L', 'Ń': 'N', 'Ó': 'O', 'Ś': 'S', 'Ź': 'Z', 'Ż': 'Z', 'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z'};
-// '  << atom.io workaround
-
-function removeDiacritics(text) {
-	return text.replace(/[^A-Za-z0-9\[\] ]/g, function (a) {
-		return diacriticsMap[a] || a;
-	});
-}
-
 function getStyleProperty(item, styleContextStack, property, defaultValue) {
 	var value;
 
@@ -234,7 +224,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
 		// TODO: character spacing
-		item.width = font.widthOfString(removeDiacritics(item.text), fontSize);
+		item.width = font.widthOfString(item.text, fontSize);
 		item.height = font.lineHeight(fontSize) * lineHeight;
 
 		var leadingSpaces = item.text.match(LEADING);
