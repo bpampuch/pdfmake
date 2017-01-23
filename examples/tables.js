@@ -213,7 +213,8 @@ var docDefinition = {
 				// paddingLeft: function(i, node) { return 4; },
 				// paddingRight: function(i, node) { return 4; },
 				// paddingTop: function(i, node) { return 2; },
-				// paddingBottom: function(i, node) { return 2; }
+				// paddingBottom: function(i, node) { return 2; },
+				// fillColor: function (i, node) { return null; }
 			}
 		},
 		{text: 'Optional border', fontSize: 14, bold: true, pageBreak: 'before', margin: [0, 0, 0, 8]},
