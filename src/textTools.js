@@ -133,7 +133,7 @@ function copyStyle(source, destination) {
 	return destination;
 }
 
-function normalizeTextArray(array) {
+function normalizeTextArray(array, styleContextStack) {
 	var results = [];
 
 	if (!Array.isArray(array)) {
@@ -145,11 +145,12 @@ function normalizeTextArray(array) {
 		var style = null;
 		var words;
 
+    var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', false);
 		if (item !== null && (typeof item === 'object' || item instanceof Object)) {
-			words = splitWords(normalizeString(item.text), item.noWrap);
+			words = splitWords(normalizeString(item.text), noWrap);
 			style = copyStyle(item);
 		} else {
-			words = splitWords(normalizeString(item));
+			words = splitWords(normalizeString(item), noWrap);
 		}
 
 		for (var i2 = 0, l2 = words.length; i2 < l2; i2++) {
@@ -206,7 +207,7 @@ function getStyleProperty(item, styleContextStack, property, defaultValue) {
 }
 
 function measure(fontProvider, textArray, styleContextStack) {
-	var normalized = normalizeTextArray(textArray);
+	var normalized = normalizeTextArray(textArray, styleContextStack);
 
 	normalized.forEach(function (item) {
 		var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
