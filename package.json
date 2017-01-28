@@ -9,7 +9,7 @@
   "dependencies": {
     "pdfkit": "^0.8.0",
     "linebreak": "^0.3.0",
-    "lodash": "^4.17.3"
+    "lodash": "^4.17.4"
   },
   "devDependencies": {
     "expose-loader": "^0.7.1",
@@ -19,7 +19,7 @@
     "gulp-replace": "^0.5.4",
     "gulp-sourcemaps": "^1.9.1",
     "gulp-spawn-mocha": "^3.1.0",
-    "gulp-uglify": "^2.0.0",
+    "gulp-uglify": "^2.0.1",
     "gulp-util": "^3.0.8",
     "gulp-each": "^0.2.0",
     "gulp-file-contents-to-json": "^0.2.1",
@@ -28,7 +28,7 @@
     "sinon": "^1.17.7",
     "mocha":"^3.2.0",
     "jshint":"^2.9.4",
-    "string-replace-webpack-plugin": "^0.0.4",
+    "string-replace-webpack-plugin": "^0.0.5",
     "transform-loader": "^0.2.3",
     "brfs": "^1.4.3",
     "webpack": "^1.14.0",
