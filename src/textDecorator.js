@@ -1,7 +1,6 @@
 /* jslint node: true */
 'use strict';
 
-
 function groupDecorations(line) {
 	var groups = [], curGroup = null;
 	for (var i = 0, l = line.inlines.length; i < l; i++) {

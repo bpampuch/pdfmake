@@ -145,7 +145,7 @@ function normalizeTextArray(array, styleContextStack) {
 		var style = null;
 		var words;
 
-    var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', false);
+		var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', false);
 		if (item !== null && (typeof item === 'object' || item instanceof Object)) {
 			words = splitWords(normalizeString(item.text), noWrap);
 			style = copyStyle(item);
