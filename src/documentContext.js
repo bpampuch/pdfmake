@@ -201,7 +201,7 @@ DocumentContext.prototype.moveToNextPage = function (pageOrientation) {
 	if (createNewPage) {
 		var pageSize = getPageSize(this.getCurrentPage(), pageOrientation);
 		this.addPage(pageSize);
-		this.availableWidth = pageSize.width - this.x - this.pageMargins.right;
+		this.pageSnapshot().availableWidth = pageSize.width - this.x - this.pageMargins.right;
 	} else {
 		this.page = nextPageIndex;
 		this.initializePage();
