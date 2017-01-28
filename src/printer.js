@@ -344,7 +344,7 @@ function renderVector(vector, pdfDoc) {
 	//TODO: pdf optimization (there's no need to write all properties everytime)
 	pdfDoc.lineWidth(vector.lineWidth || 1);
 	if (vector.dash) {
-		pdfDoc.dash(vector.dash.length, {space: vector.dash.space || vector.dash.length});
+		pdfDoc.dash(vector.dash.length, {space: vector.dash.space || vector.dash.length, phase: vector.dash.phase || 0});
 	} else {
 		pdfDoc.undash();
 	}
