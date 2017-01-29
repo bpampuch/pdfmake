@@ -94,29 +94,13 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	pageSize.orientation = docDefinition.pageOrientation === 'landscape' ? docDefinition.pageOrientation : 'portrait';
 
 	this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], autoFirstPage: false, compress: docDefinition.compress || true});
-	this.pdfKitDoc.info.Producer = 'pdfmake';
-	this.pdfKitDoc.info.Creator = 'pdfmake';
-
-	// pdf kit maintains the uppercase fieldnames from pdf spec
-	// to keep the pdfmake api consistent, the info field are defined lowercase
-	if (docDefinition.info) {
-		var info = docDefinition.info;
-		// check for falsey an set null, so that pdfkit always get either null or value
-		this.pdfKitDoc.info.Title = info.title ? info.title : null;
-		this.pdfKitDoc.info.Author = info.author ? info.author : null;
-		this.pdfKitDoc.info.Subject = info.subject ? info.subject : null;
-		this.pdfKitDoc.info.Keywords = info.keywords ? info.keywords : null;
-		this.pdfKitDoc.info.CreationDate = info.creationDate ? info.creationDate : null;
-	}
+	setMetadata(docDefinition, this.pdfKitDoc);
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
 	docDefinition.images = docDefinition.images || {};
 
-	var builder = new LayoutBuilder(
-		pageSize,
-		fixPageMargins(docDefinition.pageMargins || 40),
-		new ImageMeasure(this.pdfKitDoc, docDefinition.images));
+	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
 
 	registerDefaultTableLayouts(builder);
 	if (options.tableLayouts) {
@@ -149,6 +133,23 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	}
 	return this.pdfKitDoc;
 };
+
+function setMetadata(docDefinition, pdfKitDoc) {
+	pdfKitDoc.info.Producer = 'pdfmake';
+	pdfKitDoc.info.Creator = 'pdfmake';
+
+	// pdf kit maintains the uppercase fieldnames from pdf spec
+	// to keep the pdfmake api consistent, the info field are defined lowercase
+	if (docDefinition.info) {
+		var info = docDefinition.info;
+		// check for falsey an set null, so that pdfkit always get either null or value
+		pdfKitDoc.info.Title = info.title ? info.title : null;
+		pdfKitDoc.info.Author = info.author ? info.author : null;
+		pdfKitDoc.info.Subject = info.subject ? info.subject : null;
+		pdfKitDoc.info.Keywords = info.keywords ? info.keywords : null;
+		pdfKitDoc.info.CreationDate = info.creationDate ? info.creationDate : null;
+	}
+}
 
 function calculatePageHeight(pages, margins) {
 	var fixedMargins = fixPageMargins(margins || 40);
