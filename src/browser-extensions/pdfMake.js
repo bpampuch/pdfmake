@@ -43,8 +43,11 @@ Document.prototype._createDoc = function (options, callback) {
 	var chunks = [];
 	var result;
 
-	doc.on('data', function (chunk) {
-		chunks.push(chunk);
+	doc.on('readable', function () {
+		var chunk;
+		while ((chunk = doc.read(9007199254740991)) !== null) {
+			chunks.push(chunk);
+		}
 	});
 	doc.on('end', function () {
 		result = Buffer.concat(chunks);

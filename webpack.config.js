@@ -51,7 +51,7 @@ module.exports = {
 					]})
 			},
 			/* *** */
-			
+
 			/* temporary bugfix for fontkit version 1.5.2 - issue https://github.com/devongovett/fontkit/issues/66 */
 			{test: /fontkit[\/\\]index.js$/, loader: StringReplacePlugin.replace({
 					replacements: [
@@ -65,16 +65,6 @@ module.exports = {
 			},
 			/* *** */
 
-			{test: /readable-stream[\/\\]/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: 'stream.read()',
-							replacement: function () {
-								return 'stream.read(9007199254740991)';
-							}
-						}
-					]})
-			},
 			/* hack for IE 10 */
 			{test: /brotli[\/\\]dec[\/\\]/, loader: StringReplacePlugin.replace({
 					replacements: [
