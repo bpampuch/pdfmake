@@ -81,17 +81,7 @@ function PdfPrinter(fontDescriptors) {
 PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	options = options || {};
 
-	// if pageSize.height is set to auto, set the height to infinity so there are no page breaks.
-	if (docDefinition.pageSize && docDefinition.pageSize.height === 'auto') {
-		docDefinition.pageSize.height = Infinity;
-	}
-
-	var pageSize = pageSize2widthAndHeight(docDefinition.pageSize || 'a4');
-
-	if (docDefinition.pageOrientation === 'landscape') {
-		pageSize = {width: pageSize.height, height: pageSize.width};
-	}
-	pageSize.orientation = docDefinition.pageOrientation === 'landscape' ? docDefinition.pageOrientation : 'portrait';
+	var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 
 	this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], autoFirstPage: false, compress: docDefinition.compress || true});
 	setMetadata(docDefinition, this.pdfKitDoc);
@@ -162,6 +152,20 @@ function calculatePageHeight(pages, margins) {
 	return height;
 }
 
+function fixPageSize(pageSize, pageOrientation) {
+	// if pageSize.height is set to auto, set the height to infinity so there are no page breaks.
+	if (pageSize && pageSize.height === 'auto') {
+		pageSize.height = Infinity;
+	}
+
+	var size = pageSize2widthAndHeight(pageSize || 'A4');
+	if (pageOrientation === 'landscape') {
+		size = {width: size.height, height: size.width};
+	}
+	size.orientation = pageOrientation === 'landscape' ? pageOrientation : 'portrait';
+	return size;
+}
+
 function fixPageMargins(margin) {
 	if (!margin) {
 		return null;
@@ -174,8 +178,9 @@ function fixPageMargins(margin) {
 			margin = {left: margin[0], top: margin[1], right: margin[0], bottom: margin[1]};
 		} else if (margin.length === 4) {
 			margin = {left: margin[0], top: margin[1], right: margin[2], bottom: margin[3]};
-		} else
+		} else {
 			throw 'Invalid pageMargins definition';
+		}
 	}
 
 	return margin;
