@@ -95,8 +95,10 @@ Document.prototype._openWindow = function () {
 	return win;
 };
 
-Document.prototype.open = function () {
+Document.prototype.open = function (options) {
 	var win = this._openWindow();
+
+	options.autoPrint = false;
 
 	try {
 		var that = this;
@@ -105,7 +107,7 @@ Document.prototype.open = function () {
 			var urlCreator = window.URL || window.webkitURL;
 			var pdfUrl = urlCreator.createObjectURL(blob);
 			win.location.href = pdfUrl;
-		}, {autoPrint: false});
+		}, options);
 	} catch (e) {
 		win.close();
 		throw e;
@@ -113,8 +115,10 @@ Document.prototype.open = function () {
 };
 
 
-Document.prototype.print = function () {
+Document.prototype.print = function (options) {
 	var win = this._openWindow();
+
+	options.autoPrint = true;
 
 	try {
 		var that = this;
@@ -123,14 +127,14 @@ Document.prototype.print = function () {
 			var urlCreator = window.URL || window.webkitURL;
 			var pdfUrl = urlCreator.createObjectURL(blob);
 			win.location.href = pdfUrl;
-		}, {autoPrint: true});
+		}, options);
 	} catch (e) {
 		win.close();
 		throw e;
 	}
 };
 
-Document.prototype.download = function (defaultFileName, cb) {
+Document.prototype.download = function (defaultFileName, cb, options) {
 	if (typeof defaultFileName === 'function') {
 		cb = defaultFileName;
 		defaultFileName = null;
@@ -145,7 +149,7 @@ Document.prototype.download = function (defaultFileName, cb) {
 		if (typeof cb === 'function') {
 			cb();
 		}
-	});
+	}, options);
 };
 
 Document.prototype.getBase64 = function (cb, options) {
