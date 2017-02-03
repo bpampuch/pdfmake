@@ -142,11 +142,19 @@ function setMetadata(docDefinition, pdfKitDoc) {
 }
 
 function calculatePageHeight(pages, margins) {
+	function getItemHeight(item) {
+		if (typeof item.item.getHeight === 'function') {
+			return item.item.getHeight();
+		} else {
+			return item.item._height;
+		}
+	}
+	
 	var fixedMargins = fixPageMargins(margins || 40);
 	var height = fixedMargins.top + fixedMargins.bottom;
 	pages.forEach(function (page) {
 		page.items.forEach(function (item) {
-			height += item.item.getHeight();
+			height += getItemHeight(item);
 		});
 	});
 	return height;
