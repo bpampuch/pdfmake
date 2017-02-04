@@ -149,7 +149,7 @@ function calculatePageHeight(pages, margins) {
 			return item.item._height;
 		}
 	}
-	
+
 	var fixedMargins = fixPageMargins(margins || 40);
 	var height = fixedMargins.top + fixedMargins.bottom;
 	pages.forEach(function (page) {
@@ -277,10 +277,12 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	pdfKitDoc._pdfMakePages = pages;
 	pdfKitDoc.addPage();
 
-	var totalItems = progressCallback && _.sumBy(pages, function(page) { return page.items.length; });
+	var totalItems = progressCallback && _.sumBy(pages, function (page) {
+		return page.items.length;
+	});
 	var renderedItems = 0;
-	progressCallback = progressCallback || function() {};
-	
+	progressCallback = progressCallback || function () {};
+
 	for (var i = 0; i < pages.length; i++) {
 		if (i > 0) {
 			updatePageOrientationInOptions(pages[i], pdfKitDoc);
