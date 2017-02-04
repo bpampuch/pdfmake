@@ -145,8 +145,11 @@ function calculatePageHeight(pages, margins) {
 	function getItemHeight(item) {
 		if (typeof item.item.getHeight === 'function') {
 			return item.item.getHeight();
-		} else {
+		} else if (item.item._height) {
 			return item.item._height;
+		} else {
+			// TODO: add support for next item types
+			return 0;
 		}
 	}
 
