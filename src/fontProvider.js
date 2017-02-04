@@ -17,9 +17,9 @@ function typeName(bold, italics) {
 	return type;
 }
 
-function FontProvider(fontDescriptors, pdfDoc) {
+function FontProvider(fontDescriptors, pdfKitDoc) {
 	this.fonts = {};
-	this.pdfDoc = pdfDoc;
+	this.pdfKitDoc = pdfKitDoc;
 	this.fontCache = {};
 
 	for (var font in fontDescriptors) {
@@ -49,7 +49,7 @@ FontProvider.prototype.provideFont = function (familyName, bold, italics) {
 		if (!Array.isArray(def)) {
 			def = [def];
 		}
-		this.fontCache[familyName][type] = this.pdfDoc.font.apply(this.pdfDoc, def)._font;
+		this.fontCache[familyName][type] = this.pdfKitDoc.font.apply(this.pdfKitDoc, def)._font;
 	}
 
 	return this.fontCache[familyName][type];

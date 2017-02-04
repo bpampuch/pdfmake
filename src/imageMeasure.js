@@ -3,8 +3,8 @@
 
 var PDFImage = require('pdfkit/js/image');
 
-function ImageMeasure(pdfDoc, imageDictionary) {
-	this.pdfDoc = pdfDoc;
+function ImageMeasure(pdfKitDoc, imageDictionary) {
+	this.pdfKitDoc = pdfKitDoc;
 	this.imageDictionary = imageDictionary || {};
 }
 
@@ -12,8 +12,8 @@ ImageMeasure.prototype.measureImage = function (src) {
 	var image, label;
 	var that = this;
 
-	if (!this.pdfDoc._imageRegistry[src]) {
-		label = 'I' + (++this.pdfDoc._imageCount);
+	if (!this.pdfKitDoc._imageRegistry[src]) {
+		label = 'I' + (++this.pdfKitDoc._imageCount);
 		try {
 			image = PDFImage.open(realImageSrc(src), label);
 		} catch (error) {
@@ -22,10 +22,10 @@ ImageMeasure.prototype.measureImage = function (src) {
 		if (image === null || image === undefined) {
 			throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
 		}
-		image.embed(this.pdfDoc);
-		this.pdfDoc._imageRegistry[src] = image;
+		image.embed(this.pdfKitDoc);
+		this.pdfKitDoc._imageRegistry[src] = image;
 	} else {
-		image = this.pdfDoc._imageRegistry[src];
+		image = this.pdfKitDoc._imageRegistry[src];
 	}
 
 	return {width: image.width, height: image.height};

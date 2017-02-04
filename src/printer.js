@@ -71,10 +71,10 @@ function PdfPrinter(fontDescriptors) {
  *	}
  * }
  *
- * var pdfDoc = printer.createPdfKitDocument(docDefinition);
+ * var pdfKitDoc = printer.createPdfKitDocument(docDefinition);
  *
- * pdfDoc.pipe(fs.createWriteStream('sample.pdf'));
- * pdfDoc.end();
+ * pdfKitDoc.pipe(fs.createWriteStream('sample.pdf'));
+ * pdfKitDoc.end();
  *
  * @return {Object} a pdfKit document object which can be saved or encode to data-url
  */
@@ -366,33 +366,33 @@ function renderWatermark(page, pdfKitDoc) {
 	pdfKitDoc.restore();
 }
 
-function renderVector(vector, pdfDoc) {
+function renderVector(vector, pdfKitDoc) {
 	//TODO: pdf optimization (there's no need to write all properties everytime)
-	pdfDoc.lineWidth(vector.lineWidth || 1);
+	pdfKitDoc.lineWidth(vector.lineWidth || 1);
 	if (vector.dash) {
-		pdfDoc.dash(vector.dash.length, {space: vector.dash.space || vector.dash.length, phase: vector.dash.phase || 0});
+		pdfKitDoc.dash(vector.dash.length, {space: vector.dash.space || vector.dash.length, phase: vector.dash.phase || 0});
 	} else {
-		pdfDoc.undash();
+		pdfKitDoc.undash();
 	}
-	pdfDoc.fillOpacity(vector.fillOpacity || 1);
-	pdfDoc.strokeOpacity(vector.strokeOpacity || 1);
-	pdfDoc.lineJoin(vector.lineJoin || 'miter');
+	pdfKitDoc.fillOpacity(vector.fillOpacity || 1);
+	pdfKitDoc.strokeOpacity(vector.strokeOpacity || 1);
+	pdfKitDoc.lineJoin(vector.lineJoin || 'miter');
 
 	//TODO: clipping
 
 	switch (vector.type) {
 		case 'ellipse':
-			pdfDoc.ellipse(vector.x, vector.y, vector.r1, vector.r2);
+			pdfKitDoc.ellipse(vector.x, vector.y, vector.r1, vector.r2);
 			break;
 		case 'rect':
 			if (vector.r) {
-				pdfDoc.roundedRect(vector.x, vector.y, vector.w, vector.h, vector.r);
+				pdfKitDoc.roundedRect(vector.x, vector.y, vector.w, vector.h, vector.r);
 			} else {
-				pdfDoc.rect(vector.x, vector.y, vector.w, vector.h);
+				pdfKitDoc.rect(vector.x, vector.y, vector.w, vector.h);
 			}
 
 			if (vector.linearGradient) {
-				var gradient = pdfDoc.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
+				var gradient = pdfKitDoc.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
 				var step = 1 / (vector.linearGradient.length - 1);
 
 				for (var i = 0; i < vector.linearGradient.length; i++) {
@@ -403,17 +403,17 @@ function renderVector(vector, pdfDoc) {
 			}
 			break;
 		case 'line':
-			pdfDoc.moveTo(vector.x1, vector.y1);
-			pdfDoc.lineTo(vector.x2, vector.y2);
+			pdfKitDoc.moveTo(vector.x1, vector.y1);
+			pdfKitDoc.lineTo(vector.x2, vector.y2);
 			break;
 		case 'polyline':
 			if (vector.points.length === 0) {
 				break;
 			}
 
-			pdfDoc.moveTo(vector.points[0].x, vector.points[0].y);
+			pdfKitDoc.moveTo(vector.points[0].x, vector.points[0].y);
 			for (var i = 1, l = vector.points.length; i < l; i++) {
-				pdfDoc.lineTo(vector.points[i].x, vector.points[i].y);
+				pdfKitDoc.lineTo(vector.points[i].x, vector.points[i].y);
 			}
 
 			if (vector.points.length > 1) {
@@ -421,18 +421,18 @@ function renderVector(vector, pdfDoc) {
 				var pn = vector.points[vector.points.length - 1];
 
 				if (vector.closePath || p1.x === pn.x && p1.y === pn.y) {
-					pdfDoc.closePath();
+					pdfKitDoc.closePath();
 				}
 			}
 			break;
 	}
 
 	if (vector.color && vector.lineColor) {
-		pdfDoc.fillAndStroke(vector.color, vector.lineColor);
+		pdfKitDoc.fillAndStroke(vector.color, vector.lineColor);
 	} else if (vector.color) {
-		pdfDoc.fill(vector.color);
+		pdfKitDoc.fill(vector.color);
 	} else {
-		pdfDoc.stroke(vector.lineColor || 'black');
+		pdfKitDoc.stroke(vector.lineColor || 'black');
 	}
 }
 
