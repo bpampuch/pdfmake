@@ -110,7 +110,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
 	}
 
-	renderPages(pages, this.fontProvider, this.pdfKitDoc);
+	renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
 
 	if (options.autoPrint) {
 		var printActionRef = this.pdfKitDoc.ref({
@@ -273,9 +273,14 @@ function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
 	}
 }
 
-function renderPages(pages, fontProvider, pdfKitDoc) {
+function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	pdfKitDoc._pdfMakePages = pages;
 	pdfKitDoc.addPage();
+
+	var totalItems = progressCallback && _.sumBy(pages, function(page) { return page.items.length; });
+	var renderedItems = 0;
+	progressCallback = progressCallback || function() {};
+	
 	for (var i = 0; i < pages.length; i++) {
 		if (i > 0) {
 			updatePageOrientationInOptions(pages[i], pdfKitDoc);
@@ -296,6 +301,8 @@ function renderPages(pages, fontProvider, pdfKitDoc) {
 					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
 					break;
 			}
+			renderedItems++;
+			progressCallback(renderedItems / totalItems);
 		}
 		if (page.watermark) {
 			renderWatermark(page, pdfKitDoc);
