@@ -95,11 +95,8 @@ Document.prototype._openWindow = function () {
 	return win;
 };
 
-Document.prototype.open = function (options) {
+Document.prototype._openPdf = function (options) {
 	var win = this._openWindow();
-
-	options.autoPrint = false;
-
 	try {
 		this.getBlob(function (result) {
 			var urlCreator = window.URL || window.webkitURL;
@@ -112,22 +109,17 @@ Document.prototype.open = function (options) {
 	}
 };
 
+Document.prototype.open = function (options) {
+	options.autoPrint = false;
+
+	this._openPdf(options);
+};
+
 
 Document.prototype.print = function (options) {
-	var win = this._openWindow();
-
 	options.autoPrint = true;
 
-	try {
-		this.getBlob(function (result) {
-			var urlCreator = window.URL || window.webkitURL;
-			var pdfUrl = urlCreator.createObjectURL(result);
-			win.location.href = pdfUrl;
-		}, options);
-	} catch (e) {
-		win.close();
-		throw e;
-	}
+	this._openPdf(options);
 };
 
 Document.prototype.download = function (defaultFileName, cb, options) {
