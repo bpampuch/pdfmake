@@ -101,11 +101,9 @@ Document.prototype.open = function (options) {
 	options.autoPrint = false;
 
 	try {
-		var that = this;
-		this.getBuffer(function (result) {
-			var blob = that._bufferToBlob(result);
+		this.getBlob(function (result) {
 			var urlCreator = window.URL || window.webkitURL;
-			var pdfUrl = urlCreator.createObjectURL(blob);
+			var pdfUrl = urlCreator.createObjectURL(result);
 			win.location.href = pdfUrl;
 		}, options);
 	} catch (e) {
@@ -121,11 +119,9 @@ Document.prototype.print = function (options) {
 	options.autoPrint = true;
 
 	try {
-		var that = this;
-		this.getBuffer(function (result) {
-			var blob = that._bufferToBlob(result);
+		this.getBlob(function (result) {
 			var urlCreator = window.URL || window.webkitURL;
-			var pdfUrl = urlCreator.createObjectURL(blob);
+			var pdfUrl = urlCreator.createObjectURL(result);
 			win.location.href = pdfUrl;
 		}, options);
 	} catch (e) {
@@ -141,10 +137,8 @@ Document.prototype.download = function (defaultFileName, cb, options) {
 	}
 
 	defaultFileName = defaultFileName || 'file.pdf';
-	var that = this;
-	this.getBuffer(function (result) {
-		var blob = that._bufferToBlob(result);
-		saveAs(blob, defaultFileName);
+	this.getBlob(function (result) {
+		saveAs(result, defaultFileName);
 
 		if (typeof cb === 'function') {
 			cb();
@@ -167,6 +161,17 @@ Document.prototype.getDataUrl = function (cb, options) {
 	}
 	this.getBuffer(function (buffer) {
 		cb('data:application/pdf;base64,' + buffer.toString('base64'));
+	}, options);
+};
+
+Document.prototype.getBlob = function (cb, options) {
+	if (!cb) {
+		throw 'getBlob is an async method and needs a callback argument';
+	}
+	var that = this;
+	this.getBuffer(function (result) {
+		var blob = that._bufferToBlob(result);
+		cb(blob);
 	}, options);
 };
 
