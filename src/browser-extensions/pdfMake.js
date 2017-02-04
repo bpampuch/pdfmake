@@ -58,7 +58,7 @@ Document.prototype._createDoc = function (options, callback) {
 
 Document.prototype._getPages = function (options, cb) {
 	if (!cb) {
-		throw 'getBuffer is an async method and needs a callback argument';
+		throw '_getPages is an async method and needs a callback argument';
 	}
 	this._createDoc(options, function (ignoreBuffer, pages) {
 		cb(pages);
