@@ -222,6 +222,7 @@ DocMeasure.prototype.gapSizeForList = function () {
 
 DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize) {
 	var marker;
+	var color = styleStack.getProperty('markerColor') || styleStack.getProperty('color') || 'black';
 
 	// TODO: ascender-based calculations
 	var radius = gapSize.fontSize / 6;
@@ -232,7 +233,7 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize) {
 				r1: radius,
 				r2: radius,
 				type: 'ellipse',
-				color: 'black'
+				color: color
 			}]
 	};
 
@@ -244,8 +245,13 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize) {
 
 DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack) {
 	var marker;
+	var textArray = {text: counter};
+	var markerColor = styleStack.getProperty('markerColor');
+	if (markerColor) {
+		textArray.color = markerColor;
+	}
 
-	marker = {_inlines: this.textTools.buildInlines(counter, styleStack).items};
+	marker = {_inlines: this.textTools.buildInlines(textArray, styleStack).items};
 
 	return marker;
 };

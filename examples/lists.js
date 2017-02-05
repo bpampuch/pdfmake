@@ -240,6 +240,44 @@ var docDefinition = {
 				'item 3\nsecond line of item3',
 			]
 		},
+		{text: '\n\nColored unordered list', style: 'header'},
+		{
+			color: 'blue',
+			ul: [
+				'item 1',
+				'item 2',
+				'item 3'
+			]
+		},
+		{text: '\n\nColored unordered list with own marker color', style: 'header'},
+		{
+			color: 'blue',
+			markerColor: 'red',
+			ul: [
+				'item 1',
+				'item 2',
+				'item 3'
+			]
+		},
+		{text: '\n\nColored ordered list', style: 'header'},
+		{
+			color: 'blue',
+			ol: [
+				'item 1',
+				'item 2',
+				'item 3'
+			]
+		},
+		{text: '\n\nColored ordered list with own marker color', style: 'header'},
+		{
+			color: 'blue',
+			markerColor: 'red',
+			ol: [
+				'item 1',
+				'item 2',
+				'item 3'
+			]
+		},
 
 	],
 	styles: {
