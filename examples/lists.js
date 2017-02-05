@@ -16,21 +16,64 @@ var docDefinition = {
 	content: [
 		{text: 'Unordered list', style: 'header'},
 		{
-			ol: [
+			ul: [
 				'item 1',
 				'item 2',
-				'item 3',
+				'item 3'
 			]
 		},
 		{text: '\n\nUnordered list with longer lines', style: 'header'},
 		{
+			ul: [
+				'item 1',
+				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
+				'item 3'
+			]
+		},
+		{text: '\n\nOrdered list', style: 'header'},
+		{
+			ol: [
+				'item 1',
+				'item 2',
+				'item 3'
+			]
+		},
+		{text: '\n\nOrdered list with longer lines', style: 'header'},
+		{
 			ol: [
 				'item 1',
 				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-				'item 3',
+				'item 3'
 			]
 		},
-		{text: '\n\nNested lists', style: 'header'},
+		{text: '\n\nOrdered list should be descending', style: 'header'},
+		{
+			reversed: true,
+			ol: [
+				'item 1',
+				'item 2',
+				'item 3'
+			]
+		},
+		{text: '\n\nOrdered list with start value', style: 'header'},
+		{
+			start: 50,
+			ol: [
+				'item 1',
+				'item 2',
+				'item 3'
+			]
+		},
+		{text: '\n\nOrdered list with own values', style: 'header'},
+		{
+			ol: [
+				{text: 'item 1', counter: '10. '},
+				{text: 'item 2', counter: '20. '},
+				{text: 'item 3', counter: '30. '},
+				{text: 'item 4 without own value'}
+			]
+		},
+		{text: '\n\nNested lists (ordered)', style: 'header'},
 		{
 			ol: [
 				'item 1',
@@ -63,43 +106,10 @@ var docDefinition = {
 						]
 					}
 				],
-				'item 3\nsecond line of item3',
+				'item 3\nsecond line of item3'
 			]
 		},
-		{text: '\n\nLists inside columns', style: 'header'},
-		{
-			columns: [
-				{
-					ul: [
-						'item 1',
-						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-					]
-				},
-				{
-					ul: [
-						'item 1',
-						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-					]
-				}
-			]
-		},
-		{text: 'Unordered list', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'item 2',
-				'item 3',
-			]
-		},
-		{text: '\n\nUnordered list with longer lines', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-				'item 3',
-			]
-		},
-		{text: '\n\nNested lists', style: 'header'},
+		{text: '\n\nNested lists (unordered)', style: 'header'},
 		{
 			ol: [
 				'item 1',
@@ -133,7 +143,7 @@ var docDefinition = {
 				'item 3\nsecond line of item3',
 			]
 		},
-		{text: '\n\nLists inside columns', style: 'header'},
+		{text: '\n\nUnordered lists inside columns', style: 'header'},
 		{
 			columns: [
 				{
@@ -149,23 +159,25 @@ var docDefinition = {
 					]
 				}
 			]
-		}, {text: 'Unordered list', style: 'header'},
+		},
+		{text: '\n\nOrdered lists inside columns', style: 'header'},
 		{
-			ul: [
-				'item 1',
-				'item 2',
-				'item 3',
+			columns: [
+				{
+					ol: [
+						'item 1',
+						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
+					]
+				},
+				{
+					ol: [
+						'item 1',
+						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
+					]
+				}
 			]
 		},
-		{text: '\n\nUnordered list with longer lines', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-				'item 3',
-			]
-		},
-		{text: '\n\nNested lists', style: 'header'},
+		{text: '\n\nNested lists width columns', style: 'header'},
 		{
 			ul: [
 				'item 1',
@@ -228,336 +240,7 @@ var docDefinition = {
 				'item 3\nsecond line of item3',
 			]
 		},
-		{text: '\n\nLists inside columns', style: 'header'},
-		{
-			columns: [
-				{
-					ul: [
-						'item 1',
-						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-					]
-				},
-				{
-					ul: [
-						'item 1',
-						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-					]
-				}
-			]
-		}, {text: 'Unordered list', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'item 2',
-				'item 3',
-			]
-		},
-		{text: '\n\nUnordered list with longer lines', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-				'item 3',
-			]
-		},
-		{text: '\n\nNested lists', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-				{
-					ul: [
-						'subitem 1',
-						'subitem 2',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						{text: [
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-							]},
 
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 4',
-						'subitem 5',
-					]
-				},
-				'item 3\nsecond line of item3',
-			]
-		},
-		{text: '\n\nLists inside columns', style: 'header'},
-		{
-			columns: [
-				{
-					ul: [
-						'item 1',
-						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-					]
-				},
-				{
-					ul: [
-						'item 1',
-						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-					]
-				}
-			]
-		}, {text: 'Unordered list', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'item 2',
-				'item 3',
-			]
-		},
-		{text: '\n\nUnordered list with longer lines', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-				'item 3',
-			]
-		},
-		{text: '\n\nNested lists', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-				{
-					ul: [
-						'subitem 1',
-						'subitem 2',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						{text: [
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-							]},
-
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 4',
-						'subitem 5',
-					]
-				},
-				'item 3\nsecond line of item3',
-			]
-		},
-		{text: '\n\nLists inside columns', style: 'header'},
-		{
-			columns: [
-				{
-					ul: [
-						'item 1',
-						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-					]
-				},
-				{
-					ul: [
-						'item 1',
-						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-					]
-				}
-			]
-		}, {text: 'Unordered list', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'item 2',
-				'item 3',
-			]
-		},
-		{text: '\n\nUnordered list with longer lines', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-				'item 3',
-			]
-		},
-		{text: '\n\nNested lists', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-				{
-					ul: [
-						'subitem 1',
-						'subitem 2',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						{text: [
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-							]},
-
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 4',
-						'subitem 5',
-					]
-				},
-				'item 3\nsecond line of item3',
-			]
-		},
-		{text: '\n\nLists inside columns', style: 'header'},
-		{
-			columns: [
-				{
-					ul: [
-						'item 1',
-						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-					]
-				},
-				{
-					ul: [
-						'item 1',
-						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-					]
-				}
-			]
-		}, {text: 'Unordered list', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'item 2',
-				'item 3',
-			]
-		},
-		{text: '\n\nUnordered list with longer lines', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-				'item 3',
-			]
-		},
-		{text: '\n\nNested lists', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-				{
-					ul: [
-						'subitem 1',
-						'subitem 2',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						{text: [
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-							]},
-
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 4',
-						'subitem 5',
-					]
-				},
-				'item 3\nsecond line of item3',
-			]
-		},
-		{text: '\n\nLists inside columns', style: 'header'},
-		{
-			columns: [
-				{
-					ul: [
-						'item 1',
-						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-					]
-				},
-				{
-					ul: [
-						'item 1',
-						'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-					]
-				}
-			]
-		}, {text: 'Unordered list', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'item 2',
-				'item 3',
-			]
-		},
-		{text: '\n\nUnordered list with longer lines', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-				'item 3',
-			]
-		},
-		{text: '\n\nNested lists', style: 'header'},
-		{
-			ul: [
-				'item 1',
-				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-				{
-					ul: [
-						'subitem 1',
-						'subitem 2',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						{text: [
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-								'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-							]},
-
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 3 - Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit',
-						'subitem 4',
-						'subitem 5',
-					]
-				},
-				'item 3\nsecond line of item3',
-			]
-		},
 	],
 	styles: {
 		header: {
