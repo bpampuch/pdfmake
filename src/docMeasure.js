@@ -371,7 +371,9 @@ DocMeasure.prototype.measureOrderedList = function (node) {
 
 		if (!item.ol && !item.ul) {
 			item.listMarker = this.buildOrderedMarker(item.counter || counter, style, node.type);
-			node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
+			if (item.listMarker._inlines) {
+				node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
+			}
 		}  // TODO: else - nested lists numbering
 
 		node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
