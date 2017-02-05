@@ -272,6 +272,14 @@ DocMeasure.prototype.measureUnorderedList = function (node) {
 };
 
 DocMeasure.prototype.measureOrderedList = function (node) {
+	function getMarkerText(item, counter) {
+		if (item.counter) {
+			return item.counter;
+		}
+
+		return counter + '. ';
+	}
+
 	var style = this.styleStack.clone();
 	var items = node.ol;
 	node.reversed = node.reversed || false;
@@ -286,10 +294,8 @@ DocMeasure.prototype.measureOrderedList = function (node) {
 	for (var i = 0, l = items.length; i < l; i++) {
 		var item = items[i] = this.measureNode(items[i]);
 
-		var marker = counter + '. ';
-
 		if (!item.ol && !item.ul) {
-			item.listMarker = this.buildOrderedMarker(item.counter || marker, style);
+			item.listMarker = this.buildOrderedMarker(getMarkerText(item, counter), style);
 			node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
 		}  // TODO: else - nested lists numbering
 
