@@ -220,22 +220,37 @@ DocMeasure.prototype.gapSizeForList = function () {
 	return this.textTools.sizeOfString('9. ', this.styleStack);
 };
 
-DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize) {
+DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type) {
+	function buildDisc(gapSize, color) {
+		// TODO: ascender-based calculations
+		var radius = gapSize.fontSize / 6;
+		return {
+			canvas: [{
+					x: radius,
+					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+					r1: radius,
+					r2: radius,
+					type: 'ellipse',
+					color: color
+				}]
+		};
+	}
+
 	var marker;
 	var color = styleStack.getProperty('markerColor') || styleStack.getProperty('color') || 'black';
 
-	// TODO: ascender-based calculations
-	var radius = gapSize.fontSize / 6;
-	marker = {
-		canvas: [{
-				x: radius,
-				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
-				r1: radius,
-				r2: radius,
-				type: 'ellipse',
-				color: color
-			}]
-	};
+	switch (type) {
+		//case 'circle':
+		//case 'square':
+		case 'none':
+			marker = {};
+			break;
+
+		case 'disc':
+		default:
+			marker = buildDisc(gapSize, color);
+			break;
+	}
 
 	marker._minWidth = marker._maxWidth = gapSize.width;
 	marker._minHeight = marker._maxHeight = gapSize.height;
@@ -243,22 +258,41 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize) {
 	return marker;
 };
 
-DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack) {
-	var marker;
-	var textArray = {text: counter};
+DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack, type) {
+	function prepareDecimal(counter) {
+		return counter + '. ';
+	}
+
+	var counterText;
+
+	switch (type) {
+		case 'none':
+			counterText = null;
+			break;
+
+		case 'decimal':
+		default:
+			counterText = prepareDecimal(counter);
+			break;
+	}
+
+	if (counterText === null) {
+		return {};
+	}
+
+	var textArray = {text: counterText};
 	var markerColor = styleStack.getProperty('markerColor');
 	if (markerColor) {
 		textArray.color = markerColor;
 	}
 
-	marker = {_inlines: this.textTools.buildInlines(textArray, styleStack).items};
-
-	return marker;
+	return {_inlines: this.textTools.buildInlines(textArray, styleStack).items};
 };
 
 DocMeasure.prototype.measureUnorderedList = function (node) {
 	var style = this.styleStack.clone();
 	var items = node.ul;
+	node.type = node.type || 'disc';
 	node._gapSize = this.gapSizeForList();
 	node._minWidth = 0;
 	node._maxWidth = 0;
@@ -267,7 +301,7 @@ DocMeasure.prototype.measureUnorderedList = function (node) {
 		var item = items[i] = this.measureNode(items[i]);
 
 		if (!item.ol && !item.ul) {
-			item.listMarker = this.buildUnorderedMarker(style, node._gapSize);
+			item.listMarker = this.buildUnorderedMarker(style, node._gapSize, node.type);
 		}
 
 		node._minWidth = Math.max(node._minWidth, items[i]._minWidth + node._gapSize.width);
@@ -278,16 +312,9 @@ DocMeasure.prototype.measureUnorderedList = function (node) {
 };
 
 DocMeasure.prototype.measureOrderedList = function (node) {
-	function getMarkerText(item, counter) {
-		if (item.counter) {
-			return item.counter;
-		}
-
-		return counter + '. ';
-	}
-
 	var style = this.styleStack.clone();
 	var items = node.ol;
+	node.type = node.type || 'decimal';
 	node.reversed = node.reversed || false;
 	if (!node.start) {
 		node.start = node.reversed ? items.length : 1;
@@ -301,7 +328,7 @@ DocMeasure.prototype.measureOrderedList = function (node) {
 		var item = items[i] = this.measureNode(items[i]);
 
 		if (!item.ol && !item.ul) {
-			item.listMarker = this.buildOrderedMarker(getMarkerText(item, counter), style);
+			item.listMarker = this.buildOrderedMarker(item.counter || counter, style, node.type);
 			node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
 		}  // TODO: else - nested lists numbering
 

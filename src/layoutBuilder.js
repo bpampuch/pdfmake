@@ -526,7 +526,7 @@ LayoutBuilder.prototype.processList = function (orderedList, node) {
 
 				offsetVector(vector, -marker._minWidth, 0);
 				self.writer.addVector(vector);
-			} else {
+			} else if (marker._inlines) {
 				var markerLine = new Line(self.pageSize.width);
 				markerLine.addInline(marker._inlines[0]);
 				markerLine.x = -marker._minWidth;

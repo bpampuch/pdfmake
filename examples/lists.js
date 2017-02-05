@@ -67,9 +67,9 @@ var docDefinition = {
 		{text: '\n\nOrdered list with own values', style: 'header'},
 		{
 			ol: [
-				{text: 'item 1', counter: '10. '},
-				{text: 'item 2', counter: '20. '},
-				{text: 'item 3', counter: '30. '},
+				{text: 'item 1', counter: 10},
+				{text: 'item 2', counter: 20},
+				{text: 'item 3', counter: 30},
 				{text: 'item 4 without own value'}
 			]
 		},
