@@ -263,6 +263,65 @@ content: [
 			'item 3'
 		]
 	},
+	{text: '\n\nOrdered list - type: lower-alpha', style: 'header'},
+	{
+		type: 'lower-alpha',
+		ol: [
+			'item 1',
+			'item 2',
+			'item 3'
+		]
+	},
+	{text: '\n\nOrdered list - type: upper-alpha', style: 'header'},
+	{
+		type: 'upper-alpha',
+		ol: [
+			'item 1',
+			'item 2',
+			'item 3'
+		]
+	},
+
+	{text: '\n\nOrdered list - type: upper-roman', style: 'header'},
+	{
+		type: 'upper-roman',
+		ol: [
+			'item 1',
+			'item 2',
+			'item 3',
+			'item 4',
+			'item 5'
+		]
+	},
+	{text: '\n\nOrdered list - type: lower-roman', style: 'header'},
+	{
+		type: 'lower-roman',
+		ol: [
+			'item 1',
+			'item 2',
+			'item 3',
+			'item 4',
+			'item 5'
+		]
+	},
+	{text: '\n\nOrdered list - type: none', style: 'header'},
+	{
+		type: 'none',
+		ol: [
+			'item 1',
+			'item 2',
+			'item 3'
+		]
+	},
+	{text: '\n\nUnordered list - type: none', style: 'header'},
+	{
+		type: 'none',
+		ol: [
+			'item 1',
+			'item 2',
+			'item 3'
+		]
+	},
 
 ],
 styles: {
