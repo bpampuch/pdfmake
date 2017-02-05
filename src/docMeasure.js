@@ -59,9 +59,9 @@ DocMeasure.prototype.measureNode = function (node) {
 		} else if (node.stack) {
 			return extendMargins(self.measureVerticalContainer(node));
 		} else if (node.ul) {
-			return extendMargins(self.measureList(false, node));
+			return extendMargins(self.measureUnorderedList(node));
 		} else if (node.ol) {
-			return extendMargins(self.measureList(true, node));
+			return extendMargins(self.measureOrderedList(node));
 		} else if (node.table) {
 			return extendMargins(self.measureTable(node));
 		} else if (node.text !== undefined) {
@@ -216,34 +216,25 @@ DocMeasure.prototype.measureVerticalContainer = function (node) {
 	return node;
 };
 
-DocMeasure.prototype.gapSizeForList = function (isOrderedList, listItems) {
-	if (isOrderedList) {
-		var longestNo = (listItems.length).toString().replace(/./g, '9');
-		return this.textTools.sizeOfString(longestNo + '. ', this.styleStack);
-	} else {
-		return this.textTools.sizeOfString('9. ', this.styleStack);
-	}
+DocMeasure.prototype.gapSizeForList = function () {
+	return this.textTools.sizeOfString('9. ', this.styleStack);
 };
 
-DocMeasure.prototype.buildMarker = function (isOrderedList, counter, styleStack, gapSize) {
+DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize) {
 	var marker;
 
-	if (isOrderedList) {
-		marker = {_inlines: this.textTools.buildInlines(counter, styleStack).items};
-	} else {
-		// TODO: ascender-based calculations
-		var radius = gapSize.fontSize / 6;
-		marker = {
-			canvas: [{
-					x: radius,
-					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
-					r1: radius,
-					r2: radius,
-					type: 'ellipse',
-					color: 'black'
-				}]
-		};
-	}
+	// TODO: ascender-based calculations
+	var radius = gapSize.fontSize / 6;
+	marker = {
+		canvas: [{
+				x: radius,
+				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+				r1: radius,
+				r2: radius,
+				type: 'ellipse',
+				color: 'black'
+			}]
+	};
 
 	marker._minWidth = marker._maxWidth = gapSize.width;
 	marker._minHeight = marker._maxHeight = gapSize.height;
@@ -251,27 +242,75 @@ DocMeasure.prototype.buildMarker = function (isOrderedList, counter, styleStack,
 	return marker;
 };
 
-DocMeasure.prototype.measureList = function (isOrdered, node) {
-	var style = this.styleStack.clone();
+DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack) {
+	var marker;
 
-	var items = isOrdered ? node.ol : node.ul;
-	node._gapSize = this.gapSizeForList(isOrdered, items);
+	marker = {_inlines: this.textTools.buildInlines(counter, styleStack).items};
+
+	return marker;
+};
+
+DocMeasure.prototype.measureUnorderedList = function (node) {
+	var style = this.styleStack.clone();
+	var items = node.ul;
+	node._gapSize = this.gapSizeForList();
 	node._minWidth = 0;
 	node._maxWidth = 0;
 
-	var counter = 1;
-
 	for (var i = 0, l = items.length; i < l; i++) {
-		var nextItem = items[i] = this.measureNode(items[i]);
+		var item = items[i] = this.measureNode(items[i]);
 
-		var marker = counter++ + '. ';
-
-		if (!nextItem.ol && !nextItem.ul) {
-			nextItem.listMarker = this.buildMarker(isOrdered, nextItem.counter || marker, style, node._gapSize);
-		}  // TODO: else - nested lists numbering
+		if (!item.ol && !item.ul) {
+			item.listMarker = this.buildUnorderedMarker(style, node._gapSize);
+		}
 
 		node._minWidth = Math.max(node._minWidth, items[i]._minWidth + node._gapSize.width);
 		node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth + node._gapSize.width);
+	}
+
+	return node;
+};
+
+DocMeasure.prototype.measureOrderedList = function (node) {
+	var style = this.styleStack.clone();
+	var items = node.ol;
+	node.reversed = node.reversed || false;
+	if (!node.start) {
+		node.start = node.reversed ? items.length : 1;
+	}
+	node._gapSize = this.gapSizeForList();
+	node._minWidth = 0;
+	node._maxWidth = 0;
+
+	var counter = node.start;
+	for (var i = 0, l = items.length; i < l; i++) {
+		var item = items[i] = this.measureNode(items[i]);
+
+		var marker = counter + '. ';
+
+		if (!item.ol && !item.ul) {
+			item.listMarker = this.buildOrderedMarker(item.counter || marker, style);
+			node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
+		}  // TODO: else - nested lists numbering
+
+		node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
+		node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth);
+
+		if (node.reversed) {
+			counter--;
+		} else {
+			counter++;
+		}
+	}
+
+	node._minWidth += node._gapSize.width;
+	node._maxWidth += node._gapSize.width;
+
+	for (var i = 0, l = items.length; i < l; i++) {
+		var item = items[i];
+		if (!item.ol && !item.ul) {
+			item.listMarker._minWidth = item.listMarker._maxWidth = node._gapSize.width;
+		}
 	}
 
 	return node;
