@@ -259,15 +259,57 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 };
 
 DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack, type) {
+	function prepareAlpha(counter) {
+		function toAlpha(num) {
+			return (num >= 26 ? toAlpha((num / 26 >> 0) - 1) : '') + 'abcdefghijklmnopqrstuvwxyz'[num % 26 >> 0];
+		}
+
+		if (counter < 1) {
+			return counter + '. ';
+		}
+
+		return toAlpha(counter - 1) + '. ';
+	}
+
+	function prepareRoman(counter) {
+		if (counter < 1 || counter > 4999) {
+			return counter + '. ';
+		}
+		var num = counter;
+		var lookup = {M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1}, roman = '', i;
+		for (i in lookup) {
+			while (num >= lookup[i]) {
+				roman += i;
+				num -= lookup[i];
+			}
+		}
+		return roman + '. ';
+	}
+
 	function prepareDecimal(counter) {
 		return counter + '. ';
 	}
 
 	var counterText;
-
 	switch (type) {
 		case 'none':
 			counterText = null;
+			break;
+
+		case 'upper-alpha':
+			counterText = prepareAlpha(counter).toUpperCase();
+			break;
+
+		case 'lower-alpha':
+			counterText = prepareAlpha(counter);
+			break;
+
+		case 'upper-roman':
+			counterText = prepareRoman(counter);
+			break;
+
+		case 'lower-roman':
+			counterText = prepareRoman(counter).toLowerCase();
 			break;
 
 		case 'decimal':
