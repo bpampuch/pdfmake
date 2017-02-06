@@ -95,7 +95,12 @@ describe('TextTools', function () {
 		{text: null},
 		{text: 2016},
 		{text: true},
-		{text: false}
+		{text: false},
+		'',
+		null,
+		2016,
+		true,
+		false
 	];
 
 	var styleStack = new StyleContextStack({
@@ -172,32 +177,32 @@ describe('TextTools', function () {
 
 	describe('normalizeTextArray', function () {
 		it('should support plain strings', function () {
-			var result = textTools.normalizeTextArray(plainText);
+			var result = textTools.normalizeTextArray(plainText, styleStack);
 			assert.equal(result.length, 6);
 		});
 
 		it('should support plain strings with new-lines', function () {
-			var result = textTools.normalizeTextArray(plainText);
+			var result = textTools.normalizeTextArray(plainText, styleStack);
 			assert(result[3].lineEnd);
 		});
 
 		it('should support an array of plain strings', function () {
-			var result = textTools.normalizeTextArray(plainTextArray);
+			var result = textTools.normalizeTextArray(plainTextArray, styleStack);
 			assert.equal(result.length, 7);
 		});
 
 		it('should support an array of plain strings with new-lines', function () {
-			var result = textTools.normalizeTextArray(plainTextArray);
+			var result = textTools.normalizeTextArray(plainTextArray, styleStack);
 			assert.equal(result[4].lineEnd, true);
 		});
 
 		it('should support arrays with style definition', function () {
-			var result = textTools.normalizeTextArray(mixedTextArray);
+			var result = textTools.normalizeTextArray(mixedTextArray, styleStack);
 			assert.equal(result.length, 7);
 		});
 
 		it('should keep style definitions after splitting new-lines', function () {
-			var result = textTools.normalizeTextArray(mixedTextArray);
+			var result = textTools.normalizeTextArray(mixedTextArray, styleStack);
 			[0, 2, 3, 4, 5, 6].forEach(function (i) {
 				assert.equal(result[i].bold, true);
 			});
@@ -206,18 +211,21 @@ describe('TextTools', function () {
 		});
 
 		it('should keep unknown style fields after splitting new-lines', function () {
-			var result = textTools.normalizeTextArray(mixedTextArrayWithUnknownStyleDefinitions);
+			var result = textTools.normalizeTextArray(mixedTextArrayWithUnknownStyleDefinitions, styleStack);
 			assert.equal(result.length, 7);
 			assert.equal(result[5].unknownStyle, 123);
 			assert.equal(result[6].unknownStyle, 123);
 		});
 
 		it('should support cast to text', function () {
-			var result = textTools.normalizeTextArray(mixedTextArrayWithVariousTypes);
-			assert.equal(result.length, 3);
+			var result = textTools.normalizeTextArray(mixedTextArrayWithVariousTypes, styleStack);
+			assert.equal(result.length, 6);
 			assert.equal(result[0].text, '2016');
 			assert.equal(result[1].text, 'true');
 			assert.equal(result[2].text, 'false');
+			assert.equal(result[3].text, '2016');
+			assert.equal(result[4].text, 'true');
+			assert.equal(result[5].text, 'false');
 		});
 
 	});
