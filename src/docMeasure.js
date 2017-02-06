@@ -258,22 +258,22 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 	return marker;
 };
 
-DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack, type) {
+DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack, type, separator) {
 	function prepareAlpha(counter) {
 		function toAlpha(num) {
 			return (num >= 26 ? toAlpha((num / 26 >> 0) - 1) : '') + 'abcdefghijklmnopqrstuvwxyz'[num % 26 >> 0];
 		}
 
 		if (counter < 1) {
-			return counter + '. ';
+			return counter.toString();
 		}
 
-		return toAlpha(counter - 1) + '. ';
+		return toAlpha(counter - 1);
 	}
 
 	function prepareRoman(counter) {
 		if (counter < 1 || counter > 4999) {
-			return counter + '. ';
+			return counter.toString();
 		}
 		var num = counter;
 		var lookup = {M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1}, roman = '', i;
@@ -283,11 +283,11 @@ DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack, type) {
 				num -= lookup[i];
 			}
 		}
-		return roman + '. ';
+		return roman;
 	}
 
 	function prepareDecimal(counter) {
-		return counter + '. ';
+		return counter.toString();
 	}
 
 	var counterText;
@@ -320,6 +320,21 @@ DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack, type) {
 
 	if (counterText === null) {
 		return {};
+	}
+
+	if (separator) {
+		if (Array.isArray(separator)) {
+			if (separator[0]) {
+				counterText = separator[0] + counterText;
+			}
+
+			if (separator[1]) {
+				counterText += separator[1];
+			}
+			counterText += ' ';
+		} else {
+			counterText += separator + ' ';
+		}
 	}
 
 	var textArray = {text: counterText};
@@ -357,6 +372,7 @@ DocMeasure.prototype.measureOrderedList = function (node) {
 	var style = this.styleStack.clone();
 	var items = node.ol;
 	node.type = node.type || 'decimal';
+	node.separator = node.separator || '.';
 	node.reversed = node.reversed || false;
 	if (!node.start) {
 		node.start = node.reversed ? items.length : 1;
@@ -370,7 +386,7 @@ DocMeasure.prototype.measureOrderedList = function (node) {
 		var item = items[i] = this.measureNode(items[i]);
 
 		if (!item.ol && !item.ul) {
-			item.listMarker = this.buildOrderedMarker(item.counter || counter, style, node.type);
+			item.listMarker = this.buildOrderedMarker(item.counter || counter, style, node.type, node.separator);
 			if (item.listMarker._inlines) {
 				node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
 			}
