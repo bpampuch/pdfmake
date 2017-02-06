@@ -17,7 +17,7 @@
     "gulp-jshint": "^2.0.4",
     "gulp-rename": "^1.2.2",
     "gulp-replace": "^0.5.4",
-    "gulp-sourcemaps": "^1.9.1",
+    "gulp-sourcemaps": "^2.4.1",
     "gulp-spawn-mocha": "^3.1.0",
     "gulp-uglify": "^2.0.1",
     "gulp-util": "^3.0.8",
