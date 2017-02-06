@@ -337,6 +337,25 @@ var docDefinition = {
 				'item 3'
 			]
 		},
+		{text: '\n\nOrdered list with own separator', style: 'header'},
+		{
+			separator: ')',
+			ol: [
+				'item 1',
+				'item 2',
+				'item 3'
+			]
+		},
+
+		{text: '\n\nOrdered list with own complex separator', style: 'header'},
+		{
+			separator: ['(', ')'],
+			ol: [
+				'item 1',
+				'item 2',
+				'item 3'
+			]
+		},
 
 	],
 	styles: {
