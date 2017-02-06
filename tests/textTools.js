@@ -228,6 +228,21 @@ describe('TextTools', function () {
 			assert.equal(result[5].text, 'false');
 		});
 
+		it('should support keep noWrap from style', function () {
+			var result = textTools.normalizeTextArray([{text: 'very long text'}], styleStackNoWrap);
+			assert.equal(result.length, 1);
+		});
+
+		it('should support disable noWrap in text', function () {
+			var result = textTools.normalizeTextArray([{text: 'very long text', noWrap: false}], styleStackNoWrap);
+			assert.equal(result.length, 3);
+		});
+
+		it('should support enable noWrap in text', function () {
+			var result = textTools.normalizeTextArray([{text: 'very long text', noWrap: true}], styleStack);
+			assert.equal(result.length, 1);
+		});
+
 	});
 
 	describe('measure', function () {
