@@ -482,23 +482,23 @@ describe('LayoutBuilder', function () {
 					columns: [
 						{
 							text: 'col1',
-							width: 'auto',
+							width: 'auto'
 						},
 						{
 							text: 'column',
-							width: 58,
+							width: 58
 						},
 						{
 							text: 'column',
-							width: '*',
+							width: '*'
 						},
 						{
 							text: 'column',
-							width: '*',
+							width: '*'
 						},
 						{
 							text: 'col3',
-							width: 'auto',
+							width: 'auto'
 						}
 					]
 				}
@@ -520,14 +520,14 @@ describe('LayoutBuilder', function () {
 				{
 					columns: [
 						{
-							text: 'col1',
+							text: 'col1'
 						},
 						{
 							text: 'col2',
 							width: 50
 						},
 						{
-							text: 'col3',
+							text: 'col3'
 						}
 
 					]
@@ -566,7 +566,7 @@ describe('LayoutBuilder', function () {
 							width: 50
 						},
 						{
-							text: 'col3',
+							text: 'col3'
 						}
 
 					]
@@ -755,7 +755,7 @@ describe('LayoutBuilder', function () {
 						'paragraph',
 						'paragraph',
 						'paragraph',
-						'paragraph',
+						'paragraph'
 					]
 				},
 				{
@@ -890,7 +890,7 @@ describe('LayoutBuilder', function () {
 						'item',
 						'item',
 						'item',
-						'item',
+						'item'
 					]
 				}
 			];
@@ -914,11 +914,11 @@ describe('LayoutBuilder', function () {
 							ol: [
 								'subitem 1',
 								'subitem 2',
-								'subitem 3',
+								'subitem 3'
 							]
 						},
 						'item 3',
-						'item 4',
+						'item 4'
 					]
 				}
 			];
@@ -992,7 +992,7 @@ describe('LayoutBuilder', function () {
 						widths: 'auto',
 						body: [
 							['a', 'b', 'c'],
-							['aaa', 'bbb', 'ccc'],
+							['aaa', 'bbb', 'ccc']
 						]
 					},
 					layout: emptyTableLayout
@@ -1097,7 +1097,7 @@ describe('LayoutBuilder', function () {
 						body: [
 							['a1', 'b1', 'c1'],
 							['a2', 'b2', 'c2'],
-							['a', 'b', 'c'],
+							['a', 'b', 'c']
 						]
 					},
 					layout: emptyTableLayout
@@ -1120,7 +1120,7 @@ describe('LayoutBuilder', function () {
 						headerRows: 1,
 						widths: 'auto',
 						body: [
-							['h1', 'h2', 'h3'],
+							['h1', 'h2', 'h3']
 						]
 					},
 					layout: emptyTableLayout

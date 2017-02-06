@@ -137,6 +137,17 @@ describe('DocMeasure', function () {
 		});
 	});
 
+	describe('measureUnorderedList', function () {
+		it('should extend document-definition-object if text items are used', function () {
+			var result = docMeasure.measureUnorderedList({ul: ['asdasd', 'bbbb']});
+
+			assert(result.ul[0]._minWidth);
+			assert(result.ul[0]._maxWidth);
+
+			assert(result._gapSize);
+		});
+	});
+
 	describe('measureOrderedList', function () {
 		it('should extend document-definition-object if text items are used', function () {
 			var result = docMeasure.measureOrderedList({ol: ['asdasd', 'bbbb']});
@@ -165,19 +176,6 @@ describe('DocMeasure', function () {
 			assert.equal(node._minWidth, 7 * 12 + node._gapSize.width);
 			assert.equal(node._maxWidth, 14 * 12 + node._gapSize.width);
 		});
-
-	});
-
-	describe('measureUnorderedList', function () {
-		it('should extend document-definition-object if text items are used', function () {
-			var result = docMeasure.measureUnorderedList({ul: ['asdasd', 'bbbb']});
-
-			assert(result.ul[0]._minWidth);
-			assert(result.ul[0]._maxWidth);
-
-			assert(result._gapSize);
-		});
-
 	});
 
 	describe('measureTable', function () {

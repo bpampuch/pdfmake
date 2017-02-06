@@ -6,7 +6,7 @@ var _ = require('lodash');
 
 var FontProvider = require('../src/fontProvider');
 
-describe('FontWrapper', function () {
+describe('FontProvider', function () {
 	var fontProvider, fontDefinitions, pdfDoc;
 
 	beforeEach(function () {

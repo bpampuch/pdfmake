@@ -36,10 +36,10 @@ describe('PageElementWriter', function () {
 			inlines: [
 				{
 					alignment: alignment,
-					x: 0,
+					x: 0
 				},
 				{
-					x: 30,
+					x: 30
 				},
 				{
 					x: 50
