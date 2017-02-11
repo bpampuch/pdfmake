@@ -258,7 +258,7 @@ function pageSize2widthAndHeight(pageSize) {
 	if (typeof pageSize === 'string' || pageSize instanceof String) {
 		var size = sizes[pageSize.toUpperCase()];
 		if (!size) {
-			throw ('Page size ' + pageSize + ' not recognized');
+			throw 'Page size ' + pageSize + ' not recognized';
 		}
 		return {width: size[0], height: size[1]};
 	}
