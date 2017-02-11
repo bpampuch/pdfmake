@@ -170,10 +170,11 @@ function fixPageSize(pageSize, pageOrientation) {
 	}
 
 	var size = pageSize2widthAndHeight(pageSize || 'A4');
-	if (pageOrientation === 'landscape') {
+	if (((pageOrientation === 'portrait') && (size.width > size.height)) ||
+			((pageOrientation === 'landscape') && (size.width < size.height))) { // swap page sizes
 		size = {width: size.height, height: size.width};
 	}
-	size.orientation = pageOrientation === 'landscape' ? pageOrientation : 'portrait';
+	size.orientation = size.width > size.height ? 'landscape' : 'portrait';
 	return size;
 }
 
