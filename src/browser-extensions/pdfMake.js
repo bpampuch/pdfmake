@@ -110,6 +110,7 @@ Document.prototype._openPdf = function (options) {
 };
 
 Document.prototype.open = function (options) {
+	options = options || {};
 	options.autoPrint = false;
 
 	this._openPdf(options);
@@ -117,6 +118,7 @@ Document.prototype.open = function (options) {
 
 
 Document.prototype.print = function (options) {
+	options = options || {};
 	options.autoPrint = true;
 
 	this._openPdf(options);
