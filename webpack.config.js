@@ -16,7 +16,7 @@ module.exports = {
 	},
 	module: {
 		loaders: [
-			{test: /\.json$/, loader: 'json'},
+			{test: /\.json$/, loader: 'json-loader'},
 			{test: /pdfMake.js$/, loader: 'expose?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
 			{test: /pdfkit[\/\\]js[\/\\]mixins[\/\\]fonts.js$/, loader: StringReplacePlugin.replace({
 					replacements: [
@@ -75,12 +75,10 @@ module.exports = {
 							}
 						}
 					]})
-			}
-		],
-		postLoaders: [
-			{test: /fontkit[\/\\]index.js$/, loader: "transform?brfs"},
-			{test: /unicode-properties[\/\\]index.js$/, loader: "transform?brfs"},
-			{test: /linebreak[\/\\]src[\/\\]linebreaker.js/, loader: "transform?brfs"}
+			},
+			{enforce: 'post', test: /fontkit[\/\\]index.js$/, loader: "transform?brfs"},
+			{enforce: 'post', test: /unicode-properties[\/\\]index.js$/, loader: "transform?brfs"},
+			{enforce: 'post', test: /linebreak[\/\\]src[\/\\]linebreaker.js/, loader: "transform?brfs"}
 		]
 	},
 	plugins: [
