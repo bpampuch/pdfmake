@@ -22,7 +22,7 @@ var uglifyOptions = {
 };
 
 
-gulp.task('default', [/*'lint',*/ 'test', 'build']);
+gulp.task('default', [/*'lint',*/ 'test', 'build', 'buildFonts']);
 gulp.task('build', function () {
 	return gulp.src('src/browser-extensions/pdfMake.js')
 		.pipe(webpack(require('./webpack.config.js'), null, reportWebPackErrors))
