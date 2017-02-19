@@ -1,4 +1,4 @@
-## pdfmake [![Build Status][travis_img]][travis_url] [![GitHub][github_img]][github_url] [![npm][npm_img]][npm_url] [![Bower][bower_img]][bower_url] [![Packagist][packagist_img]][packagist_url] [![CDNJS][cdnjs_img]][cndjs_url]
+# pdfmake [![Build Status][travis_img]][travis_url] [![GitHub][github_img]][github_url] [![npm][npm_img]][npm_url] [![Bower][bower_img]][bower_url] [![Packagist][packagist_img]][packagist_url] [![CDNJS][cdnjs_img]][cndjs_url]
 
 [travis_img]: https://travis-ci.org/bpampuch/pdfmake.png?branch=master
 [travis_url]: https://travis-ci.org/bpampuch/pdfmake
