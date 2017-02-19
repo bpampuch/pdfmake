@@ -1,5 +1,23 @@
-pdfmake [![Build Status](https://travis-ci.org/bpampuch/pdfmake.png?branch=master)](https://travis-ci.org/bpampuch/pdfmake) [![NPM version](https://badge.fury.io/js/pdfmake.png)](http://badge.fury.io/js/pdfmake) [![Bower version](https://badge.fury.io/bo/pdfmake.png)](http://badge.fury.io/bo/pdfmake) [![Latest Version](https://img.shields.io/packagist/v/bpampuch/pdfmake.svg)](https://packagist.org/packages/bpampuch/pdfmake) [![CDNJS](https://img.shields.io/cdnjs/v/pdfmake.svg)](https://cdnjs.com/libraries/pdfmake)
-=======
+## pdfmake [![Build Status][travis_img]][travis_url] [![GitHub][github_img]][github_url] [![npm][npm_img]][npm_url] [![Bower][bower_img]][bower_url] [![Packagist][packagist_img]][packagist_url] [![CDNJS][cdnjs_img]][cndjs_url]
+
+[travis_img]: https://travis-ci.org/bpampuch/pdfmake.png?branch=master
+[travis_url]: https://travis-ci.org/bpampuch/pdfmake
+
+[github_img]: https://img.shields.io/github/release/bpampuch/pdfmake.svg
+[github_url]: https://github.com/bpampuch/pdfmake/releases/latest
+
+[npm_img]: https://img.shields.io/npm/v/pdfmake.svg?colorB=0E7FBF
+[npm_url]: https://www.npmjs.com/package/pdfmake
+
+[bower_img]: https://img.shields.io/bower/v/pdfmake.svg?colorB=0E7FBF
+[bower_url]: https://github.com/bpampuch/pdfmake
+
+[packagist_img]: https://img.shields.io/packagist/v/bpampuch/pdfmake.svg?colorB=0E7FBF
+[packagist_url]: https://packagist.org/packages/bpampuch/pdfmake
+
+[cdnjs_img]: https://img.shields.io/cdnjs/v/pdfmake.svg?colorB=0E7FBF
+[cndjs_url]: https://cdnjs.com/libraries/pdfmake
+
 
 Client/server side PDF printing in pure JavaScript
 
