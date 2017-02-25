@@ -240,6 +240,24 @@ var docDefinition = {
 				'item 3\nsecond line of item3',
 			]
 		},
+		{text: '\n\nUnordered list with square marker type', style: 'header'},
+		{
+			type: 'square',
+			ul: [
+				'item 1',
+				'item 2',
+				'item 3'
+			]
+		},
+		{text: '\n\nUnordered list with circle marker type', style: 'header'},
+		{
+			type: 'circle',
+			ul: [
+				'item 1',
+				'item 2',
+				'item 3'
+			]
+		},
 		{text: '\n\nColored unordered list', style: 'header'},
 		{
 			color: 'blue',
@@ -365,9 +383,8 @@ var docDefinition = {
 		}
 	},
 	defaultStyle: {
-		fontSize: 12,
+		fontSize: 12
 	}
-
 };
 
 var now = new Date();
