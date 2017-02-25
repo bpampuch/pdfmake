@@ -236,12 +236,48 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 		};
 	}
 
+	function buildSquare(gapSize, color) {
+		// TODO: ascender-based calculations
+		var size = gapSize.fontSize / 3;
+		return {
+			canvas: [{
+					x: 0,
+					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - (gapSize.fontSize / 3) - (size / 2),
+					h: size,
+					w: size,
+					type: 'rect',
+					color: color
+				}]
+		};
+	}
+
+	function buildCircle(gapSize, color) {
+		// TODO: ascender-based calculations
+		var radius = gapSize.fontSize / 6;
+		return {
+			canvas: [{
+					x: radius,
+					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+					r1: radius,
+					r2: radius,
+					type: 'ellipse',
+					lineColor: color
+				}]
+		};
+	}
+
 	var marker;
 	var color = styleStack.getProperty('markerColor') || styleStack.getProperty('color') || 'black';
 
 	switch (type) {
-		//case 'circle':
-		//case 'square':
+		case 'circle':
+			marker = buildCircle(gapSize, color);
+			break;
+
+		case 'square':
+			marker = buildSquare(gapSize, color);
+			break;
+
 		case 'none':
 			marker = {};
 			break;
