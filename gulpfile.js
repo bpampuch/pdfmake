@@ -9,8 +9,11 @@ var mocha = require('gulp-spawn-mocha');
 var jshint = require('gulp-jshint');
 var each = require('gulp-each');
 var fc2json = require('gulp-file-contents-to-json');
+var header = require('gulp-header');
 var DEBUG = process.env.NODE_ENV === 'debug',
 	CI = process.env.CI === 'true';
+
+var banner = '/*! <%= pkg.name %> v<%= pkg.version %>, @license <%= pkg.license %>, @link <%= pkg.homepage %> */\n';
 
 var uglifyOptions = {
 	compress: {
@@ -24,14 +27,17 @@ var uglifyOptions = {
 
 gulp.task('default', [/*'lint',*/ 'test', 'build', 'buildFonts']);
 gulp.task('build', function () {
+	var pkg = require('./package.json');
 	return gulp.src('src/browser-extensions/pdfMake.js')
 		.pipe(webpack(require('./webpack.config.js'), null, reportWebPackErrors))
 		.pipe(replace(/\/[*/][@#]\s+sourceMappingURL=((?:(?!\s+\*\/).)*).*\n/g, ''))
+		.pipe(header(banner, {pkg: pkg}))
 		.pipe(gulp.dest('build'))
 		.pipe(sourcemaps.init())
 		.pipe(uglify(uglifyOptions))
 		.pipe(rename({extname: '.min.js'}))
 		.pipe(sourcemaps.write('./'))
+		.pipe(header(banner, {pkg: pkg}))
 		.pipe(gulp.dest('build'));
 });
 
