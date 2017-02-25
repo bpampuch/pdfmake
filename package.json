@@ -29,7 +29,7 @@
     "mocha":"^3.2.0",
     "jshint":"^2.9.4",
     "string-replace-webpack-plugin": "^0.0.5",
-    "transform-loader": "^0.2.3",
+    "transform-loader": "^0.2.4",
     "brfs": "^1.4.3",
     "webpack": "^2.2.1",
     "webpack-stream": "^3.2.0"
