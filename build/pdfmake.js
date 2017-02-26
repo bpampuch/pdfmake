@@ -1,3 +1,4 @@
+/*! pdfmake v0.1.26, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -121,7 +122,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Document.prototype._getPages = function (options, cb) {
 		if (!cb) {
-			throw 'getBuffer is an async method and needs a callback argument';
+			throw '_getPages is an async method and needs a callback argument';
 		}
 		this._createDoc(options, function (ignoreBuffer, pages) {
 			cb(pages);
@@ -158,57 +159,49 @@ return /******/ (function(modules) { // webpackBootstrap
 		return win;
 	};
 
-	Document.prototype.open = function () {
+	Document.prototype._openPdf = function (options) {
 		var win = this._openWindow();
-
 		try {
-			var that = this;
-			this.getBuffer(function (result) {
-				var blob = that._bufferToBlob(result);
+			this.getBlob(function (result) {
 				var urlCreator = window.URL || window.webkitURL;
-				var pdfUrl = urlCreator.createObjectURL(blob);
+				var pdfUrl = urlCreator.createObjectURL(result);
 				win.location.href = pdfUrl;
-			}, {autoPrint: false});
+			}, options);
 		} catch (e) {
 			win.close();
 			throw e;
 		}
 	};
 
+	Document.prototype.open = function (options) {
+		options = options || {};
+		options.autoPrint = false;
 
-	Document.prototype.print = function () {
-		var win = this._openWindow();
-
-		try {
-			var that = this;
-			this.getBuffer(function (result) {
-				var blob = that._bufferToBlob(result);
-				var urlCreator = window.URL || window.webkitURL;
-				var pdfUrl = urlCreator.createObjectURL(blob);
-				win.location.href = pdfUrl;
-			}, {autoPrint: true});
-		} catch (e) {
-			win.close();
-			throw e;
-		}
+		this._openPdf(options);
 	};
 
-	Document.prototype.download = function (defaultFileName, cb) {
+
+	Document.prototype.print = function (options) {
+		options = options || {};
+		options.autoPrint = true;
+
+		this._openPdf(options);
+	};
+
+	Document.prototype.download = function (defaultFileName, cb, options) {
 		if (typeof defaultFileName === 'function') {
 			cb = defaultFileName;
 			defaultFileName = null;
 		}
 
 		defaultFileName = defaultFileName || 'file.pdf';
-		var that = this;
-		this.getBuffer(function (result) {
-			var blob = that._bufferToBlob(result);
-			saveAs(blob, defaultFileName);
+		this.getBlob(function (result) {
+			saveAs(result, defaultFileName);
 
 			if (typeof cb === 'function') {
 				cb();
 			}
-		});
+		}, options);
 	};
 
 	Document.prototype.getBase64 = function (cb, options) {
@@ -226,6 +219,17 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 		this.getBuffer(function (buffer) {
 			cb('data:application/pdf;base64,' + buffer.toString('base64'));
+		}, options);
+	};
+
+	Document.prototype.getBlob = function (cb, options) {
+		if (!cb) {
+			throw 'getBlob is an async method and needs a callback argument';
+		}
+		var that = this;
+		this.getBuffer(function (result) {
+			var blob = that._bufferToBlob(result);
+			cb(blob);
 		}, options);
 	};
 
@@ -2343,52 +2347,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *	}
 	 * }
 	 *
-	 * var pdfDoc = printer.createPdfKitDocument(docDefinition);
+	 * var pdfKitDoc = printer.createPdfKitDocument(docDefinition);
 	 *
-	 * pdfDoc.pipe(fs.createWriteStream('sample.pdf'));
-	 * pdfDoc.end();
+	 * pdfKitDoc.pipe(fs.createWriteStream('sample.pdf'));
+	 * pdfKitDoc.end();
 	 *
 	 * @return {Object} a pdfKit document object which can be saved or encode to data-url
 	 */
 	PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		options = options || {};
 
-		// if pageSize.height is set to auto, set the height to infinity so there are no page breaks.
-		if (docDefinition.pageSize && docDefinition.pageSize.height === 'auto') {
-			docDefinition.pageSize.height = Infinity;
-		}
-
-		var pageSize = pageSize2widthAndHeight(docDefinition.pageSize || 'a4');
-
-		if (docDefinition.pageOrientation === 'landscape') {
-			pageSize = {width: pageSize.height, height: pageSize.width};
-		}
-		pageSize.orientation = docDefinition.pageOrientation === 'landscape' ? docDefinition.pageOrientation : 'portrait';
+		var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 
 		this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], autoFirstPage: false, compress: docDefinition.compress || true});
-		this.pdfKitDoc.info.Producer = 'pdfmake';
-		this.pdfKitDoc.info.Creator = 'pdfmake';
-
-		// pdf kit maintains the uppercase fieldnames from pdf spec
-		// to keep the pdfmake api consistent, the info field are defined lowercase
-		if (docDefinition.info) {
-			var info = docDefinition.info;
-			// check for falsey an set null, so that pdfkit always get either null or value
-			this.pdfKitDoc.info.Title = info.title ? info.title : null;
-			this.pdfKitDoc.info.Author = info.author ? info.author : null;
-			this.pdfKitDoc.info.Subject = info.subject ? info.subject : null;
-			this.pdfKitDoc.info.Keywords = info.keywords ? info.keywords : null;
-			this.pdfKitDoc.info.CreationDate = info.creationDate ? info.creationDate : null;
-		}
+		setMetadata(docDefinition, this.pdfKitDoc);
 
 		this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
 		docDefinition.images = docDefinition.images || {};
 
-		var builder = new LayoutBuilder(
-			pageSize,
-			fixPageMargins(docDefinition.pageMargins || 40),
-			new ImageMeasure(this.pdfKitDoc, docDefinition.images));
+		var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
 
 		registerDefaultTableLayouts(builder);
 		if (options.tableLayouts) {
@@ -2408,7 +2386,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
 		}
 
-		renderPages(pages, this.fontProvider, this.pdfKitDoc);
+		renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
 
 		if (options.autoPrint) {
 			var printActionRef = this.pdfKitDoc.ref({
@@ -2422,15 +2400,58 @@ return /******/ (function(modules) { // webpackBootstrap
 		return this.pdfKitDoc;
 	};
 
+	function setMetadata(docDefinition, pdfKitDoc) {
+		pdfKitDoc.info.Producer = 'pdfmake';
+		pdfKitDoc.info.Creator = 'pdfmake';
+
+		// pdf kit maintains the uppercase fieldnames from pdf spec
+		// to keep the pdfmake api consistent, the info field are defined lowercase
+		if (docDefinition.info) {
+			var info = docDefinition.info;
+			// check for falsey an set null, so that pdfkit always get either null or value
+			pdfKitDoc.info.Title = info.title ? info.title : null;
+			pdfKitDoc.info.Author = info.author ? info.author : null;
+			pdfKitDoc.info.Subject = info.subject ? info.subject : null;
+			pdfKitDoc.info.Keywords = info.keywords ? info.keywords : null;
+			pdfKitDoc.info.CreationDate = info.creationDate ? info.creationDate : null;
+		}
+	}
+
 	function calculatePageHeight(pages, margins) {
+		function getItemHeight(item) {
+			if (typeof item.item.getHeight === 'function') {
+				return item.item.getHeight();
+			} else if (item.item._height) {
+				return item.item._height;
+			} else {
+				// TODO: add support for next item types
+				return 0;
+			}
+		}
+
 		var fixedMargins = fixPageMargins(margins || 40);
 		var height = fixedMargins.top + fixedMargins.bottom;
 		pages.forEach(function (page) {
 			page.items.forEach(function (item) {
-				height += item.item.getHeight();
+				height += getItemHeight(item);
 			});
 		});
 		return height;
+	}
+
+	function fixPageSize(pageSize, pageOrientation) {
+		// if pageSize.height is set to auto, set the height to infinity so there are no page breaks.
+		if (pageSize && pageSize.height === 'auto') {
+			pageSize.height = Infinity;
+		}
+
+		var size = pageSize2widthAndHeight(pageSize || 'A4');
+		if (((pageOrientation === 'portrait') && (size.width > size.height)) ||
+				((pageOrientation === 'landscape') && (size.width < size.height))) { // swap page sizes
+			size = {width: size.height, height: size.width};
+		}
+		size.orientation = size.width > size.height ? 'landscape' : 'portrait';
+		return size;
 	}
 
 	function fixPageMargins(margin) {
@@ -2445,8 +2466,9 @@ return /******/ (function(modules) { // webpackBootstrap
 				margin = {left: margin[0], top: margin[1], right: margin[0], bottom: margin[1]};
 			} else if (margin.length === 4) {
 				margin = {left: margin[0], top: margin[1], right: margin[2], bottom: margin[3]};
-			} else
+			} else {
 				throw 'Invalid pageMargins definition';
+			}
 		}
 
 		return margin;
@@ -2513,7 +2535,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (typeof pageSize === 'string' || pageSize instanceof String) {
 			var size = sizes[pageSize.toUpperCase()];
 			if (!size) {
-				throw ('Page size ' + pageSize + ' not recognized');
+				throw 'Page size ' + pageSize + ' not recognized';
 			}
 			return {width: size[0], height: size[1]};
 		}
@@ -2531,9 +2553,16 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 	}
 
-	function renderPages(pages, fontProvider, pdfKitDoc) {
+	function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 		pdfKitDoc._pdfMakePages = pages;
 		pdfKitDoc.addPage();
+
+		var totalItems = progressCallback && _.sumBy(pages, function (page) {
+			return page.items.length;
+		});
+		var renderedItems = 0;
+		progressCallback = progressCallback || function () {};
+
 		for (var i = 0; i < pages.length; i++) {
 			if (i > 0) {
 				updatePageOrientationInOptions(pages[i], pdfKitDoc);
@@ -2554,6 +2583,8 @@ return /******/ (function(modules) { // webpackBootstrap
 						renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
 						break;
 				}
+				renderedItems++;
+				progressCallback(renderedItems / totalItems);
 			}
 			if (page.watermark) {
 				renderWatermark(page, pdfKitDoc);
@@ -2612,33 +2643,33 @@ return /******/ (function(modules) { // webpackBootstrap
 		pdfKitDoc.restore();
 	}
 
-	function renderVector(vector, pdfDoc) {
+	function renderVector(vector, pdfKitDoc) {
 		//TODO: pdf optimization (there's no need to write all properties everytime)
-		pdfDoc.lineWidth(vector.lineWidth || 1);
+		pdfKitDoc.lineWidth(vector.lineWidth || 1);
 		if (vector.dash) {
-			pdfDoc.dash(vector.dash.length, {space: vector.dash.space || vector.dash.length, phase: vector.dash.phase || 0});
+			pdfKitDoc.dash(vector.dash.length, {space: vector.dash.space || vector.dash.length, phase: vector.dash.phase || 0});
 		} else {
-			pdfDoc.undash();
+			pdfKitDoc.undash();
 		}
-		pdfDoc.fillOpacity(vector.fillOpacity || 1);
-		pdfDoc.strokeOpacity(vector.strokeOpacity || 1);
-		pdfDoc.lineJoin(vector.lineJoin || 'miter');
+		pdfKitDoc.fillOpacity(vector.fillOpacity || 1);
+		pdfKitDoc.strokeOpacity(vector.strokeOpacity || 1);
+		pdfKitDoc.lineJoin(vector.lineJoin || 'miter');
 
 		//TODO: clipping
 
 		switch (vector.type) {
 			case 'ellipse':
-				pdfDoc.ellipse(vector.x, vector.y, vector.r1, vector.r2);
+				pdfKitDoc.ellipse(vector.x, vector.y, vector.r1, vector.r2);
 				break;
 			case 'rect':
 				if (vector.r) {
-					pdfDoc.roundedRect(vector.x, vector.y, vector.w, vector.h, vector.r);
+					pdfKitDoc.roundedRect(vector.x, vector.y, vector.w, vector.h, vector.r);
 				} else {
-					pdfDoc.rect(vector.x, vector.y, vector.w, vector.h);
+					pdfKitDoc.rect(vector.x, vector.y, vector.w, vector.h);
 				}
 
 				if (vector.linearGradient) {
-					var gradient = pdfDoc.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
+					var gradient = pdfKitDoc.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
 					var step = 1 / (vector.linearGradient.length - 1);
 
 					for (var i = 0; i < vector.linearGradient.length; i++) {
@@ -2649,17 +2680,17 @@ return /******/ (function(modules) { // webpackBootstrap
 				}
 				break;
 			case 'line':
-				pdfDoc.moveTo(vector.x1, vector.y1);
-				pdfDoc.lineTo(vector.x2, vector.y2);
+				pdfKitDoc.moveTo(vector.x1, vector.y1);
+				pdfKitDoc.lineTo(vector.x2, vector.y2);
 				break;
 			case 'polyline':
 				if (vector.points.length === 0) {
 					break;
 				}
 
-				pdfDoc.moveTo(vector.points[0].x, vector.points[0].y);
+				pdfKitDoc.moveTo(vector.points[0].x, vector.points[0].y);
 				for (var i = 1, l = vector.points.length; i < l; i++) {
-					pdfDoc.lineTo(vector.points[i].x, vector.points[i].y);
+					pdfKitDoc.lineTo(vector.points[i].x, vector.points[i].y);
 				}
 
 				if (vector.points.length > 1) {
@@ -2667,18 +2698,18 @@ return /******/ (function(modules) { // webpackBootstrap
 					var pn = vector.points[vector.points.length - 1];
 
 					if (vector.closePath || p1.x === pn.x && p1.y === pn.y) {
-						pdfDoc.closePath();
+						pdfKitDoc.closePath();
 					}
 				}
 				break;
 		}
 
 		if (vector.color && vector.lineColor) {
-			pdfDoc.fillAndStroke(vector.color, vector.lineColor);
+			pdfKitDoc.fillAndStroke(vector.color, vector.lineColor);
 		} else if (vector.color) {
-			pdfDoc.fill(vector.color);
+			pdfKitDoc.fill(vector.color);
 		} else {
-			pdfDoc.stroke(vector.lineColor || 'black');
+			pdfKitDoc.stroke(vector.lineColor || 'black');
 		}
 	}
 
@@ -19826,9 +19857,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		return type;
 	}
 
-	function FontProvider(fontDescriptors, pdfDoc) {
+	function FontProvider(fontDescriptors, pdfKitDoc) {
 		this.fonts = {};
-		this.pdfDoc = pdfDoc;
+		this.pdfKitDoc = pdfKitDoc;
 		this.fontCache = {};
 
 		for (var font in fontDescriptors) {
@@ -19858,7 +19889,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			if (!Array.isArray(def)) {
 				def = [def];
 			}
-			this.fontCache[familyName][type] = this.pdfDoc.font.apply(this.pdfDoc, def)._font;
+			this.fontCache[familyName][type] = this.pdfKitDoc.font.apply(this.pdfKitDoc, def)._font;
 		}
 
 		return this.fontCache[familyName][type];
@@ -20399,7 +20430,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 					offsetVector(vector, -marker._minWidth, 0);
 					self.writer.addVector(vector);
-				} else {
+				} else if (marker._inlines) {
 					var markerLine = new Line(self.pageSize.width);
 					markerLine.addInline(marker._inlines[0]);
 					markerLine.x = -marker._minWidth;
@@ -20613,9 +20644,9 @@ return /******/ (function(modules) { // webpackBootstrap
 			} else if (node.stack) {
 				return extendMargins(self.measureVerticalContainer(node));
 			} else if (node.ul) {
-				return extendMargins(self.measureList(false, node));
+				return extendMargins(self.measureUnorderedList(node));
 			} else if (node.ol) {
-				return extendMargins(self.measureList(true, node));
+				return extendMargins(self.measureOrderedList(node));
 			} else if (node.table) {
 				return extendMargins(self.measureTable(node));
 			} else if (node.text !== undefined) {
@@ -20770,33 +20801,76 @@ return /******/ (function(modules) { // webpackBootstrap
 		return node;
 	};
 
-	DocMeasure.prototype.gapSizeForList = function (isOrderedList, listItems) {
-		if (isOrderedList) {
-			var longestNo = (listItems.length).toString().replace(/./g, '9');
-			return this.textTools.sizeOfString(longestNo + '. ', this.styleStack);
-		} else {
-			return this.textTools.sizeOfString('9. ', this.styleStack);
-		}
+	DocMeasure.prototype.gapSizeForList = function () {
+		return this.textTools.sizeOfString('9. ', this.styleStack);
 	};
 
-	DocMeasure.prototype.buildMarker = function (isOrderedList, counter, styleStack, gapSize) {
-		var marker;
-
-		if (isOrderedList) {
-			marker = {_inlines: this.textTools.buildInlines(counter, styleStack).items};
-		} else {
+	DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type) {
+		function buildDisc(gapSize, color) {
 			// TODO: ascender-based calculations
 			var radius = gapSize.fontSize / 6;
-			marker = {
+			return {
 				canvas: [{
 						x: radius,
 						y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
 						r1: radius,
 						r2: radius,
 						type: 'ellipse',
-						color: 'black'
+						color: color
 					}]
 			};
+		}
+
+		function buildSquare(gapSize, color) {
+			// TODO: ascender-based calculations
+			var size = gapSize.fontSize / 3;
+			return {
+				canvas: [{
+						x: 0,
+						y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - (gapSize.fontSize / 3) - (size / 2),
+						h: size,
+						w: size,
+						type: 'rect',
+						color: color
+					}]
+			};
+		}
+
+		function buildCircle(gapSize, color) {
+			// TODO: ascender-based calculations
+			var radius = gapSize.fontSize / 6;
+			return {
+				canvas: [{
+						x: radius,
+						y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+						r1: radius,
+						r2: radius,
+						type: 'ellipse',
+						lineColor: color
+					}]
+			};
+		}
+
+		var marker;
+		var color = styleStack.getProperty('markerColor') || styleStack.getProperty('color') || 'black';
+
+		switch (type) {
+			case 'circle':
+				marker = buildCircle(gapSize, color);
+				break;
+
+			case 'square':
+				marker = buildSquare(gapSize, color);
+				break;
+
+			case 'none':
+				marker = {};
+				break;
+
+			case 'disc':
+			default:
+				marker = buildDisc(gapSize, color);
+				break;
 		}
 
 		marker._minWidth = marker._maxWidth = gapSize.width;
@@ -20805,27 +20879,158 @@ return /******/ (function(modules) { // webpackBootstrap
 		return marker;
 	};
 
-	DocMeasure.prototype.measureList = function (isOrdered, node) {
-		var style = this.styleStack.clone();
+	DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack, type, separator) {
+		function prepareAlpha(counter) {
+			function toAlpha(num) {
+				return (num >= 26 ? toAlpha((num / 26 >> 0) - 1) : '') + 'abcdefghijklmnopqrstuvwxyz'[num % 26 >> 0];
+			}
 
-		var items = isOrdered ? node.ol : node.ul;
-		node._gapSize = this.gapSizeForList(isOrdered, items);
+			if (counter < 1) {
+				return counter.toString();
+			}
+
+			return toAlpha(counter - 1);
+		}
+
+		function prepareRoman(counter) {
+			if (counter < 1 || counter > 4999) {
+				return counter.toString();
+			}
+			var num = counter;
+			var lookup = {M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1}, roman = '', i;
+			for (i in lookup) {
+				while (num >= lookup[i]) {
+					roman += i;
+					num -= lookup[i];
+				}
+			}
+			return roman;
+		}
+
+		function prepareDecimal(counter) {
+			return counter.toString();
+		}
+
+		var counterText;
+		switch (type) {
+			case 'none':
+				counterText = null;
+				break;
+
+			case 'upper-alpha':
+				counterText = prepareAlpha(counter).toUpperCase();
+				break;
+
+			case 'lower-alpha':
+				counterText = prepareAlpha(counter);
+				break;
+
+			case 'upper-roman':
+				counterText = prepareRoman(counter);
+				break;
+
+			case 'lower-roman':
+				counterText = prepareRoman(counter).toLowerCase();
+				break;
+
+			case 'decimal':
+			default:
+				counterText = prepareDecimal(counter);
+				break;
+		}
+
+		if (counterText === null) {
+			return {};
+		}
+
+		if (separator) {
+			if (Array.isArray(separator)) {
+				if (separator[0]) {
+					counterText = separator[0] + counterText;
+				}
+
+				if (separator[1]) {
+					counterText += separator[1];
+				}
+				counterText += ' ';
+			} else {
+				counterText += separator + ' ';
+			}
+		}
+
+		var textArray = {text: counterText};
+		var markerColor = styleStack.getProperty('markerColor');
+		if (markerColor) {
+			textArray.color = markerColor;
+		}
+
+		return {_inlines: this.textTools.buildInlines(textArray, styleStack).items};
+	};
+
+	DocMeasure.prototype.measureUnorderedList = function (node) {
+		var style = this.styleStack.clone();
+		var items = node.ul;
+		node.type = node.type || 'disc';
+		node._gapSize = this.gapSizeForList();
 		node._minWidth = 0;
 		node._maxWidth = 0;
 
-		var counter = 1;
-
 		for (var i = 0, l = items.length; i < l; i++) {
-			var nextItem = items[i] = this.measureNode(items[i]);
+			var item = items[i] = this.measureNode(items[i]);
 
-			var marker = counter++ + '. ';
-
-			if (!nextItem.ol && !nextItem.ul) {
-				nextItem.listMarker = this.buildMarker(isOrdered, nextItem.counter || marker, style, node._gapSize);
-			}  // TODO: else - nested lists numbering
+			if (!item.ol && !item.ul) {
+				item.listMarker = this.buildUnorderedMarker(style, node._gapSize, node.type);
+			}
 
 			node._minWidth = Math.max(node._minWidth, items[i]._minWidth + node._gapSize.width);
 			node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth + node._gapSize.width);
+		}
+
+		return node;
+	};
+
+	DocMeasure.prototype.measureOrderedList = function (node) {
+		var style = this.styleStack.clone();
+		var items = node.ol;
+		node.type = node.type || 'decimal';
+		node.separator = node.separator || '.';
+		node.reversed = node.reversed || false;
+		if (!node.start) {
+			node.start = node.reversed ? items.length : 1;
+		}
+		node._gapSize = this.gapSizeForList();
+		node._minWidth = 0;
+		node._maxWidth = 0;
+
+		var counter = node.start;
+		for (var i = 0, l = items.length; i < l; i++) {
+			var item = items[i] = this.measureNode(items[i]);
+
+			if (!item.ol && !item.ul) {
+				item.listMarker = this.buildOrderedMarker(item.counter || counter, style, node.type, node.separator);
+				if (item.listMarker._inlines) {
+					node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
+				}
+			}  // TODO: else - nested lists numbering
+
+			node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
+			node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth);
+
+			if (node.reversed) {
+				counter--;
+			} else {
+				counter++;
+			}
+		}
+
+		node._minWidth += node._gapSize.width;
+		node._maxWidth += node._gapSize.width;
+
+		for (var i = 0, l = items.length; i < l; i++) {
+			var item = items[i];
+			if (!item.ol && !item.ul) {
+				item.listMarker._minWidth = item.listMarker._maxWidth = node._gapSize.width;
+			}
 		}
 
 		return node;
@@ -21245,7 +21450,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			var style = null;
 			var words;
 
-			var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', false);
+			var noWrap = getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 			if (item !== null && (typeof item === 'object' || item instanceof Object)) {
 				words = splitWords(normalizeString(item.text), noWrap);
 				style = copyStyle(item);
@@ -22358,7 +22563,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			'decorationColor',
 			'background',
 			'lineHeight',
-			'noWrap'
+			'noWrap',
+			'markerColor'
 				//'tableCellPadding'
 				// 'cellBorder',
 				// 'headerCellBorder',
@@ -22409,7 +22615,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			for (var i = this.styleOverrides.length - 1; i >= 0; i--) {
 				var item = this.styleOverrides[i];
 
-				if (typeof item == 'string' || item instanceof String) {
+				if (typeof item === 'string' || item instanceof String) {
 					// named-style-override
 
 					var style = this.styleDictionary[item];
@@ -23638,9 +23844,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		var createNewPage = nextPageIndex >= this.pages.length;
 		if (createNewPage) {
+			var currentAvailableWidth = this.availableWidth;
+			var currentPageOrientation = this.getCurrentPage().pageSize.orientation;
+
 			var pageSize = getPageSize(this.getCurrentPage(), pageOrientation);
 			this.addPage(pageSize);
-			this.pageSnapshot().availableWidth = pageSize.width - this.x - this.pageMargins.right;
+
+			if (currentPageOrientation === pageSize.orientation) {
+				this.availableWidth = currentAvailableWidth;
+			}
 		} else {
 			this.page = nextPageIndex;
 			this.initializePage();
@@ -67830,90 +68042,34 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return doneResult();
 	      }
 
+	      context.method = method;
+	      context.arg = arg;
+
 	      while (true) {
 	        var delegate = context.delegate;
 	        if (delegate) {
-	          if (method === "return" ||
-	              (method === "throw" && delegate.iterator[method] === undefined)) {
-	            // A return or throw (when the delegate iterator has no throw
-	            // method) always terminates the yield* loop.
-	            context.delegate = null;
-
-	            // If the delegate iterator has a return method, give it a
-	            // chance to clean up.
-	            var returnMethod = delegate.iterator["return"];
-	            if (returnMethod) {
-	              var record = tryCatch(returnMethod, delegate.iterator, arg);
-	              if (record.type === "throw") {
-	                // If the return method threw an exception, let that
-	                // exception prevail over the original return or throw.
-	                method = "throw";
-	                arg = record.arg;
-	                continue;
-	              }
-	            }
-
-	            if (method === "return") {
-	              // Continue with the outer return, now that the delegate
-	              // iterator has been terminated.
-	              continue;
-	            }
+	          var delegateResult = maybeInvokeDelegate(delegate, context);
+	          if (delegateResult) {
+	            if (delegateResult === ContinueSentinel) continue;
+	            return delegateResult;
 	          }
-
-	          var record = tryCatch(
-	            delegate.iterator[method],
-	            delegate.iterator,
-	            arg
-	          );
-
-	          if (record.type === "throw") {
-	            context.delegate = null;
-
-	            // Like returning generator.throw(uncaught), but without the
-	            // overhead of an extra function call.
-	            method = "throw";
-	            arg = record.arg;
-	            continue;
-	          }
-
-	          // Delegate generator ran and handled its own exceptions so
-	          // regardless of what the method was, we continue as if it is
-	          // "next" with an undefined arg.
-	          method = "next";
-	          arg = undefined;
-
-	          var info = record.arg;
-	          if (info.done) {
-	            context[delegate.resultName] = info.value;
-	            context.next = delegate.nextLoc;
-	          } else {
-	            state = GenStateSuspendedYield;
-	            return info;
-	          }
-
-	          context.delegate = null;
 	        }
 
-	        if (method === "next") {
+	        if (context.method === "next") {
 	          // Setting context._sent for legacy support of Babel's
 	          // function.sent implementation.
-	          context.sent = context._sent = arg;
+	          context.sent = context._sent = context.arg;
 
-	        } else if (method === "throw") {
+	        } else if (context.method === "throw") {
 	          if (state === GenStateSuspendedStart) {
 	            state = GenStateCompleted;
-	            throw arg;
+	            throw context.arg;
 	          }
 
-	          if (context.dispatchException(arg)) {
-	            // If the dispatched exception was caught by a catch block,
-	            // then let that catch block handle the exception normally.
-	            method = "next";
-	            arg = undefined;
-	          }
+	          context.dispatchException(context.arg);
 
-	        } else if (method === "return") {
-	          context.abrupt("return", arg);
+	        } else if (context.method === "return") {
+	          context.abrupt("return", context.arg);
 	        }
 
 	        state = GenStateExecuting;
@@ -67926,30 +68082,106 @@ return /******/ (function(modules) { // webpackBootstrap
 	            ? GenStateCompleted
 	            : GenStateSuspendedYield;
 
-	          var info = {
+	          if (record.arg === ContinueSentinel) {
+	            continue;
+	          }
+
+	          return {
 	            value: record.arg,
 	            done: context.done
 	          };
 
-	          if (record.arg === ContinueSentinel) {
-	            if (context.delegate && method === "next") {
-	              // Deliberately forget the last sent value so that we don't
-	              // accidentally pass it on to the delegate.
-	              arg = undefined;
-	            }
-	          } else {
-	            return info;
-	          }
-
 	        } else if (record.type === "throw") {
 	          state = GenStateCompleted;
 	          // Dispatch the exception by looping back around to the
-	          // context.dispatchException(arg) call above.
-	          method = "throw";
-	          arg = record.arg;
+	          // context.dispatchException(context.arg) call above.
+	          context.method = "throw";
+	          context.arg = record.arg;
 	        }
 	      }
 	    };
+	  }
+
+	  // Call delegate.iterator[context.method](context.arg) and handle the
+	  // result, either by returning a { value, done } result from the
+	  // delegate iterator, or by modifying context.method and context.arg,
+	  // setting context.delegate to null, and returning the ContinueSentinel.
+	  function maybeInvokeDelegate(delegate, context) {
+	    var method = delegate.iterator[context.method];
+	    if (method === undefined) {
+	      // A .throw or .return when the delegate iterator has no .throw
+	      // method always terminates the yield* loop.
+	      context.delegate = null;
+
+	      if (context.method === "throw") {
+	        if (delegate.iterator.return) {
+	          // If the delegate iterator has a return method, give it a
+	          // chance to clean up.
+	          context.method = "return";
+	          context.arg = undefined;
+	          maybeInvokeDelegate(delegate, context);
+
+	          if (context.method === "throw") {
+	            // If maybeInvokeDelegate(context) changed context.method from
+	            // "return" to "throw", let that override the TypeError below.
+	            return ContinueSentinel;
+	          }
+	        }
+
+	        context.method = "throw";
+	        context.arg = new TypeError(
+	          "The iterator does not provide a 'throw' method");
+	      }
+
+	      return ContinueSentinel;
+	    }
+
+	    var record = tryCatch(method, delegate.iterator, context.arg);
+
+	    if (record.type === "throw") {
+	      context.method = "throw";
+	      context.arg = record.arg;
+	      context.delegate = null;
+	      return ContinueSentinel;
+	    }
+
+	    var info = record.arg;
+
+	    if (! info) {
+	      context.method = "throw";
+	      context.arg = new TypeError("iterator result is not an object");
+	      context.delegate = null;
+	      return ContinueSentinel;
+	    }
+
+	    if (info.done) {
+	      // Assign the result of the finished delegate to the temporary
+	      // variable specified by delegate.resultName (see delegateYield).
+	      context[delegate.resultName] = info.value;
+
+	      // Resume execution at the desired location (see delegateYield).
+	      context.next = delegate.nextLoc;
+
+	      // If context.method was "throw" but the delegate handled the
+	      // exception, let the outer generator proceed normally. If
+	      // context.method was "next", forget context.arg since it has been
+	      // "consumed" by the delegate iterator. If context.method was
+	      // "return", allow the original .return call to continue in the
+	      // outer generator.
+	      if (context.method !== "return") {
+	        context.method = "next";
+	        context.arg = undefined;
+	      }
+
+	    } else {
+	      // Re-yield the result returned by the delegate method.
+	      return info;
+	    }
+
+	    // The delegate iterator is finished, so forget it and continue with
+	    // the outer generator.
+	    context.delegate = null;
+	    return ContinueSentinel;
 	  }
 
 	  // Define Generator.prototype.{next,throw,return} in terms of the
@@ -68072,6 +68304,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	      this.done = false;
 	      this.delegate = null;
 
+	      this.method = "next";
+	      this.arg = undefined;
+
 	      this.tryEntries.forEach(resetTryEntry);
 
 	      if (!skipTempReset) {
@@ -68108,7 +68343,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	        record.type = "throw";
 	        record.arg = exception;
 	        context.next = loc;
-	        return !!caught;
+
+	        if (caught) {
+	          // If the dispatched exception was caught by a catch block,
+	          // then let that catch block handle the exception normally.
+	          context.method = "next";
+	          context.arg = undefined;
+	        }
+
+	        return !! caught;
 	      }
 
 	      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
@@ -68176,12 +68419,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	      record.arg = arg;
 
 	      if (finallyEntry) {
+	        this.method = "next";
 	        this.next = finallyEntry.finallyLoc;
-	      } else {
-	        this.complete(record);
+	        return ContinueSentinel;
 	      }
 
-	      return ContinueSentinel;
+	      return this.complete(record);
 	    },
 
 	    complete: function(record, afterLoc) {
@@ -68193,11 +68436,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	          record.type === "continue") {
 	        this.next = record.arg;
 	      } else if (record.type === "return") {
-	        this.rval = record.arg;
+	        this.rval = this.arg = record.arg;
+	        this.method = "return";
 	        this.next = "end";
 	      } else if (record.type === "normal" && afterLoc) {
 	        this.next = afterLoc;
 	      }
+
+	      return ContinueSentinel;
 	    },
 
 	    finish: function(finallyLoc) {
@@ -68235,6 +68481,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	        resultName: resultName,
 	        nextLoc: nextLoc
 	      };
+
+	      if (this.method === "next") {
+	        // Deliberately forget the last sent value so that we don't
+	        // accidentally pass it on to the delegate.
+	        this.arg = undefined;
+	      }
 
 	      return ContinueSentinel;
 	    }
@@ -105648,8 +105900,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var PDFImage = __webpack_require__(295);
 
-	function ImageMeasure(pdfDoc, imageDictionary) {
-		this.pdfDoc = pdfDoc;
+	function ImageMeasure(pdfKitDoc, imageDictionary) {
+		this.pdfKitDoc = pdfKitDoc;
 		this.imageDictionary = imageDictionary || {};
 	}
 
@@ -105657,8 +105909,8 @@ return /******/ (function(modules) { // webpackBootstrap
 		var image, label;
 		var that = this;
 
-		if (!this.pdfDoc._imageRegistry[src]) {
-			label = 'I' + (++this.pdfDoc._imageCount);
+		if (!this.pdfKitDoc._imageRegistry[src]) {
+			label = 'I' + (++this.pdfKitDoc._imageCount);
 			try {
 				image = PDFImage.open(realImageSrc(src), label);
 			} catch (error) {
@@ -105667,10 +105919,10 @@ return /******/ (function(modules) { // webpackBootstrap
 			if (image === null || image === undefined) {
 				throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
 			}
-			image.embed(this.pdfDoc);
-			this.pdfDoc._imageRegistry[src] = image;
+			image.embed(this.pdfKitDoc);
+			this.pdfKitDoc._imageRegistry[src] = image;
 		} else {
-			image = this.pdfDoc._imageRegistry[src];
+			image = this.pdfKitDoc._imageRegistry[src];
 		}
 
 		return {width: image.width, height: image.height};
