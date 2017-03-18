@@ -164,14 +164,22 @@ function calculatePageHeight(pages, margins) {
 }
 
 function fixPageSize(pageSize, pageOrientation) {
+	function isNeedSwapPageSizes(pageOrientation) {
+		if (typeof pageOrientation === 'string' || pageOrientation instanceof String) {
+			pageOrientation = pageOrientation.toLowerCase();
+			return ((pageOrientation === 'portrait') && (size.width > size.height)) ||
+				((pageOrientation === 'landscape') && (size.width < size.height));
+		}
+		return false;
+	}
+
 	// if pageSize.height is set to auto, set the height to infinity so there are no page breaks.
 	if (pageSize && pageSize.height === 'auto') {
 		pageSize.height = Infinity;
 	}
 
 	var size = pageSize2widthAndHeight(pageSize || 'A4');
-	if (((pageOrientation === 'portrait') && (size.width > size.height)) ||
-			((pageOrientation === 'landscape') && (size.width < size.height))) { // swap page sizes
+	if (isNeedSwapPageSizes(pageOrientation)) { // swap page sizes
 		size = {width: size.height, height: size.width};
 	}
 	size.orientation = size.width > size.height ? 'landscape' : 'portrait';

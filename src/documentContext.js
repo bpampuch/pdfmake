@@ -163,7 +163,7 @@ DocumentContext.prototype.endDetachedBlock = function () {
 function pageOrientation(pageOrientationString, currentPageOrientation) {
 	if (pageOrientationString === undefined) {
 		return currentPageOrientation;
-	} else if (pageOrientationString === 'landscape') {
+	} else if ((typeof pageOrientation === 'string' || pageOrientation instanceof String) && (pageOrientationString.toLowerCase() === 'landscape')) {
 		return 'landscape';
 	} else {
 		return 'portrait';
