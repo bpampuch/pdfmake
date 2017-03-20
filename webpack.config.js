@@ -38,33 +38,6 @@ module.exports = {
 						}
 					]})
 			},
-
-			/* temporary bugfix for fontkit version 1.5.2 - issue https://github.com/devongovett/fontkit/issues/65 */
-			{test: /fontkit[\/\\]index.js$/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: 'if (i < classDef.classValueArray.length) {',
-							replacement: function () {
-								return 'if (i > -1 && i < classDef.classValueArray.length) {';
-							}
-						}
-					]})
-			},
-			/* *** */
-
-			/* temporary bugfix for fontkit version 1.5.2 - issue https://github.com/devongovett/fontkit/issues/66 */
-			{test: /fontkit[\/\\]index.js$/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: 'if (this._font.GDEF) {',
-							replacement: function () {
-								return 'if (this._font.GDEF && this._font.GDEF.glyphClassDef) {';
-							}
-						}
-					]})
-			},
-			/* *** */
-
 			/* hack for IE 10 */
 			{test: /brotli[\/\\]dec[\/\\]/, loader: StringReplacePlugin.replace({
 					replacements: [
