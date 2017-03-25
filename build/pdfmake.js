@@ -1,4 +1,4 @@
-/*! pdfmake v0.1.26, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.1.27, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -67,7 +67,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	'use strict';
 
 	var PdfPrinter = __webpack_require__(6);
-	var FileSaver = __webpack_require__(304);
+	var FileSaver = __webpack_require__(299);
 	var saveAs = FileSaver.saveAs;
 
 	var defaultClientFonts = {
@@ -2281,9 +2281,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	var FontProvider = __webpack_require__(9);
 	var LayoutBuilder = __webpack_require__(10);
 	var PdfKit = __webpack_require__(29);
-	var sizes = __webpack_require__(301);
-	var ImageMeasure = __webpack_require__(302);
-	var textDecorator = __webpack_require__(303);
+	var sizes = __webpack_require__(296);
+	var ImageMeasure = __webpack_require__(297);
+	var textDecorator = __webpack_require__(298);
 
 	_.noConflict();
 
@@ -2440,14 +2440,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function fixPageSize(pageSize, pageOrientation) {
+		function isNeedSwapPageSizes(pageOrientation) {
+			if (typeof pageOrientation === 'string' || pageOrientation instanceof String) {
+				pageOrientation = pageOrientation.toLowerCase();
+				return ((pageOrientation === 'portrait') && (size.width > size.height)) ||
+					((pageOrientation === 'landscape') && (size.width < size.height));
+			}
+			return false;
+		}
+
 		// if pageSize.height is set to auto, set the height to infinity so there are no page breaks.
 		if (pageSize && pageSize.height === 'auto') {
 			pageSize.height = Infinity;
 		}
 
 		var size = pageSize2widthAndHeight(pageSize || 'A4');
-		if (((pageOrientation === 'portrait') && (size.width > size.height)) ||
-				((pageOrientation === 'landscape') && (size.width < size.height))) { // swap page sizes
+		if (isNeedSwapPageSizes(pageOrientation)) { // swap page sizes
 			size = {width: size.height, height: size.width};
 		}
 		size.orientation = size.width > size.height ? 'landscape' : 'portrait';
@@ -23808,7 +23816,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	function pageOrientation(pageOrientationString, currentPageOrientation) {
 		if (pageOrientationString === undefined) {
 			return currentPageOrientation;
-		} else if (pageOrientationString === 'landscape') {
+		} else if ((typeof pageOrientationString === 'string' || pageOrientationString instanceof String) && (pageOrientationString.toLowerCase() === 'landscape')) {
 			return 'landscape';
 		} else {
 			return 'portrait';
@@ -24950,11 +24958,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    mixin(__webpack_require__(78));
 
-	    mixin(__webpack_require__(287));
+	    mixin(__webpack_require__(282));
 
-	    mixin(__webpack_require__(294));
+	    mixin(__webpack_require__(289));
 
-	    mixin(__webpack_require__(300));
+	    mixin(__webpack_require__(295));
 
 	    PDFDocument.prototype.addPage = function(options) {
 	      var pages;
@@ -25889,7 +25897,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  this.highWaterMark = hwm || hwm === 0 ? hwm : defaultHwm;
 
 	  // cast to ints.
-	  this.highWaterMark = ~ ~this.highWaterMark;
+	  this.highWaterMark = ~~this.highWaterMark;
 
 	  // A linked list is used to store data chunks instead of an array because the
 	  // linked list can remove elements from the beginning faster than
@@ -27255,7 +27263,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  this.highWaterMark = hwm || hwm === 0 ? hwm : defaultHwm;
 
 	  // cast to ints.
-	  this.highWaterMark = ~ ~this.highWaterMark;
+	  this.highWaterMark = ~~this.highWaterMark;
 
 	  // drain event flag.
 	  this.needDrain = false;
@@ -27410,20 +27418,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	  processNextTick(cb, er);
 	}
 
-	// If we get something that is not a buffer, string, null, or undefined,
-	// and we're not in objectMode, then that's an error.
-	// Otherwise stream chunks are all considered to be of length=1, and the
-	// watermarks determine how many objects to keep in the buffer, rather than
-	// how many bytes or characters.
+	// Checks that a user-supplied chunk is valid, especially for the particular
+	// mode the stream is in. Currently this means that `null` is never accepted
+	// and undefined/non-string values are only allowed in object mode.
 	function validChunk(stream, state, chunk, cb) {
 	  var valid = true;
 	  var er = false;
-	  // Always throw error if a null is written
-	  // if we are not in object mode then throw
-	  // if it is not a buffer, string, or undefined.
+
 	  if (chunk === null) {
 	    er = new TypeError('May not write null values to stream');
-	  } else if (!Buffer.isBuffer(chunk) && typeof chunk !== 'string' && chunk !== undefined && !state.objectMode) {
+	  } else if (typeof chunk !== 'string' && chunk !== undefined && !state.objectMode) {
 	    er = new TypeError('Invalid non-string/buffer chunk');
 	  }
 	  if (er) {
@@ -27437,19 +27441,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	Writable.prototype.write = function (chunk, encoding, cb) {
 	  var state = this._writableState;
 	  var ret = false;
+	  var isBuf = Buffer.isBuffer(chunk);
 
 	  if (typeof encoding === 'function') {
 	    cb = encoding;
 	    encoding = null;
 	  }
 
-	  if (Buffer.isBuffer(chunk)) encoding = 'buffer';else if (!encoding) encoding = state.defaultEncoding;
+	  if (isBuf) encoding = 'buffer';else if (!encoding) encoding = state.defaultEncoding;
 
 	  if (typeof cb !== 'function') cb = nop;
 
-	  if (state.ended) writeAfterEnd(this, cb);else if (validChunk(this, state, chunk, cb)) {
+	  if (state.ended) writeAfterEnd(this, cb);else if (isBuf || validChunk(this, state, chunk, cb)) {
 	    state.pendingcb++;
-	    ret = writeOrBuffer(this, state, chunk, encoding, cb);
+	    ret = writeOrBuffer(this, state, isBuf, chunk, encoding, cb);
 	  }
 
 	  return ret;
@@ -27489,10 +27494,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	// if we're already writing something, then just put this
 	// in the queue, and wait our turn.  Otherwise, call _write
 	// If we return false, then we need a drain event, so set that flag.
-	function writeOrBuffer(stream, state, chunk, encoding, cb) {
-	  chunk = decodeChunk(state, chunk, encoding);
-
-	  if (Buffer.isBuffer(chunk)) encoding = 'buffer';
+	function writeOrBuffer(stream, state, isBuf, chunk, encoding, cb) {
+	  if (!isBuf) {
+	    chunk = decodeChunk(state, chunk, encoding);
+	    if (Buffer.isBuffer(chunk)) encoding = 'buffer';
+	  }
 	  var len = state.objectMode ? 1 : chunk.length;
 
 	  state.length += len;
@@ -27561,8 +27567,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      asyncWrite(afterWrite, stream, state, finished, cb);
 	      /*</replacement>*/
 	    } else {
-	        afterWrite(stream, state, finished, cb);
-	      }
+	      afterWrite(stream, state, finished, cb);
+	    }
 	  }
 	}
 
@@ -27713,7 +27719,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  this.next = null;
 	  this.entry = null;
-
 	  this.finish = function (err) {
 	    var entry = _this.entry;
 	    _this.entry = null;
@@ -37892,9 +37897,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  module.exports = PDFFont;
 
-	  StandardFont = __webpack_require__(284);
+	  StandardFont = __webpack_require__(279);
 
-	  EmbeddedFont = __webpack_require__(286);
+	  EmbeddedFont = __webpack_require__(281);
 
 	}).call(this);
 
@@ -37918,25 +37923,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _classCallCheck = _interopDefault(__webpack_require__(205));
 	var _createClass = _interopDefault(__webpack_require__(206));
 	var _Map = _interopDefault(__webpack_require__(207));
-	var _Object$getPrototypeOf = _interopDefault(__webpack_require__(224));
-	var _possibleConstructorReturn = _interopDefault(__webpack_require__(227));
-	var _inherits = _interopDefault(__webpack_require__(228));
+	var _possibleConstructorReturn = _interopDefault(__webpack_require__(224));
+	var _inherits = _interopDefault(__webpack_require__(225));
 	var restructure_src_utils = __webpack_require__(107);
-	var _Object$defineProperties = _interopDefault(__webpack_require__(236));
-	var isEqual = _interopDefault(__webpack_require__(239));
-	var _get = _interopDefault(__webpack_require__(242));
-	var _Object$assign = _interopDefault(__webpack_require__(243));
-	var _toConsumableArray = _interopDefault(__webpack_require__(247));
-	var _String$fromCodePoint = _interopDefault(__webpack_require__(253));
-	var _slicedToArray = _interopDefault(__webpack_require__(256));
-	var _Array$from = _interopDefault(__webpack_require__(248));
-	var _Set = _interopDefault(__webpack_require__(260));
-	var unicode = _interopDefault(__webpack_require__(264));
+	var _Object$defineProperties = _interopDefault(__webpack_require__(233));
+	var isEqual = _interopDefault(__webpack_require__(236));
+	var _Object$assign = _interopDefault(__webpack_require__(239));
+	var _String$fromCodePoint = _interopDefault(__webpack_require__(243));
+	var _Array$from = _interopDefault(__webpack_require__(246));
+	var _Set = _interopDefault(__webpack_require__(251));
+	var unicode = _interopDefault(__webpack_require__(255));
 	var UnicodeTrie = _interopDefault(__webpack_require__(15));
-	var StateMachine = _interopDefault(__webpack_require__(266));
-	var cloneDeep = _interopDefault(__webpack_require__(271));
+	var StateMachine = _interopDefault(__webpack_require__(257));
+	var cloneDeep = _interopDefault(__webpack_require__(266));
 	var inflate = _interopDefault(__webpack_require__(16));
-	var brotli = _interopDefault(__webpack_require__(272));
+	var brotli = _interopDefault(__webpack_require__(267));
 
 
 
@@ -38441,51 +38442,43 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	NameTable.process = function (stream) {
 	  var records = {};
-	  var _iteratorNormalCompletion = true;
-	  var _didIteratorError = false;
-	  var _iteratorError = undefined;
+	  for (var _iterator = this.records, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	    var _ref;
 
-	  try {
-	    for (var _iterator = _getIterator(this.records), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	      var record = _step.value;
-
-	      // find out what language this is for
-	      var language = LANGUAGES[record.platformID][record.languageID];
-
-	      if (language == null && this.langTags != null && record.languageID >= 0x8000) {
-	        language = this.langTags[record.languageID - 0x8000].tag;
-	      }
-
-	      if (language == null) {
-	        language = record.platformID + '-' + record.languageID;
-	      }
-
-	      // if the nameID is >= 256, it is a font feature record (AAT)
-	      var key = record.nameID >= 256 ? 'fontFeatures' : NAMES[record.nameID] || record.nameID;
-	      if (records[key] == null) {
-	        records[key] = {};
-	      }
-
-	      var obj = records[key];
-	      if (record.nameID >= 256) {
-	        obj = obj[record.nameID] || (obj[record.nameID] = {});
-	      }
-
-	      obj[language] = record.string;
+	    if (_isArray) {
+	      if (_i >= _iterator.length) break;
+	      _ref = _iterator[_i++];
+	    } else {
+	      _i = _iterator.next();
+	      if (_i.done) break;
+	      _ref = _i.value;
 	    }
-	  } catch (err) {
-	    _didIteratorError = true;
-	    _iteratorError = err;
-	  } finally {
-	    try {
-	      if (!_iteratorNormalCompletion && _iterator.return) {
-	        _iterator.return();
-	      }
-	    } finally {
-	      if (_didIteratorError) {
-	        throw _iteratorError;
-	      }
+
+	    var record = _ref;
+
+	    // find out what language this is for
+	    var language = LANGUAGES[record.platformID][record.languageID];
+
+	    if (language == null && this.langTags != null && record.languageID >= 0x8000) {
+	      language = this.langTags[record.languageID - 0x8000].tag;
 	    }
+
+	    if (language == null) {
+	      language = record.platformID + '-' + record.languageID;
+	    }
+
+	    // if the nameID is >= 256, it is a font feature record (AAT)
+	    var key = record.nameID >= 256 ? 'fontFeatures' : NAMES[record.nameID] || record.nameID;
+	    if (records[key] == null) {
+	      records[key] = {};
+	    }
+
+	    var obj = records[key];
+	    if (record.nameID >= 256) {
+	      obj = obj[record.nameID] || (obj[record.nameID] = {});
+	    }
+
+	    obj[language] = record.string;
 	  }
 
 	  this.records = records;
@@ -38695,204 +38688,175 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.type = type;
 	  }
 
-	  _createClass(CFFIndex, [{
-	    key: "decode",
-	    value: function decode(stream, parent) {
-	      var count = stream.readUInt16BE();
-	      if (count === 0) {
-	        return [];
-	      }
-
-	      var offSize = stream.readUInt8();
-	      var offsetType = void 0;
-	      if (offSize === 1) {
-	        offsetType = r.uint8;
-	      } else if (offSize === 2) {
-	        offsetType = r.uint16;
-	      } else if (offSize === 3) {
-	        offsetType = r.uint24;
-	      } else if (offSize === 4) {
-	        offsetType = r.uint32;
-	      } else {
-	        throw new Error("Bad offset size in CFFIndex: " + offSize + " " + stream.pos);
-	      }
-
-	      var ret = [];
-	      var startPos = stream.pos + (count + 1) * offSize - 1;
-
-	      var start = offsetType.decode(stream);
-	      for (var i = 0; i < count; i++) {
-	        var end = offsetType.decode(stream);
-
-	        if (this.type != null) {
-	          var pos = stream.pos;
-	          stream.pos = startPos + start;
-
-	          parent.length = end - start;
-	          ret.push(this.type.decode(stream, parent));
-	          stream.pos = pos;
-	        } else {
-	          ret.push({
-	            offset: startPos + start,
-	            length: end - start
-	          });
-	        }
-
-	        start = end;
-	      }
-
-	      stream.pos = startPos + start;
-	      return ret;
+	  CFFIndex.prototype.decode = function decode(stream, parent) {
+	    var count = stream.readUInt16BE();
+	    if (count === 0) {
+	      return [];
 	    }
-	  }, {
-	    key: "size",
-	    value: function size(arr, parent) {
-	      var size = 2;
-	      if (arr.length === 0) {
-	        return size;
-	      }
 
-	      var type = this.type || new r.Buffer();
+	    var offSize = stream.readUInt8();
+	    var offsetType = void 0;
+	    if (offSize === 1) {
+	      offsetType = r.uint8;
+	    } else if (offSize === 2) {
+	      offsetType = r.uint16;
+	    } else if (offSize === 3) {
+	      offsetType = r.uint24;
+	    } else if (offSize === 4) {
+	      offsetType = r.uint32;
+	    } else {
+	      throw new Error("Bad offset size in CFFIndex: " + offSize + " " + stream.pos);
+	    }
 
-	      // find maximum offset to detminine offset type
-	      var offset = 1;
-	      for (var i = 0; i < arr.length; i++) {
-	        var item = arr[i];
-	        offset += type.size(item, parent);
-	      }
+	    var ret = [];
+	    var startPos = stream.pos + (count + 1) * offSize - 1;
 
-	      var offsetType = void 0;
-	      if (offset <= 0xff) {
-	        offsetType = r.uint8;
-	      } else if (offset <= 0xffff) {
-	        offsetType = r.uint16;
-	      } else if (offset <= 0xffffff) {
-	        offsetType = r.uint24;
-	      } else if (offset <= 0xffffffff) {
-	        offsetType = r.uint32;
+	    var start = offsetType.decode(stream);
+	    for (var i = 0; i < count; i++) {
+	      var end = offsetType.decode(stream);
+
+	      if (this.type != null) {
+	        var pos = stream.pos;
+	        stream.pos = startPos + start;
+
+	        parent.length = end - start;
+	        ret.push(this.type.decode(stream, parent));
+	        stream.pos = pos;
 	      } else {
-	        throw new Error("Bad offset in CFFIndex");
+	        ret.push({
+	          offset: startPos + start,
+	          length: end - start
+	        });
 	      }
 
-	      size += 1 + offsetType.size() * (arr.length + 1);
-	      size += offset - 1;
+	      start = end;
+	    }
 
+	    stream.pos = startPos + start;
+	    return ret;
+	  };
+
+	  CFFIndex.prototype.size = function size(arr, parent) {
+	    var size = 2;
+	    if (arr.length === 0) {
 	      return size;
 	    }
-	  }, {
-	    key: "encode",
-	    value: function encode(stream, arr, parent) {
-	      stream.writeUInt16BE(arr.length);
-	      if (arr.length === 0) {
-	        return;
-	      }
 
-	      var type = this.type || new r.Buffer();
+	    var type = this.type || new r.Buffer();
 
-	      // find maximum offset to detminine offset type
-	      var sizes = [];
-	      var offset = 1;
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
+	    // find maximum offset to detminine offset type
+	    var offset = 1;
+	    for (var i = 0; i < arr.length; i++) {
+	      var item = arr[i];
+	      offset += type.size(item, parent);
+	    }
 
-	      try {
-	        for (var _iterator = _getIterator(arr), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var item = _step.value;
+	    var offsetType = void 0;
+	    if (offset <= 0xff) {
+	      offsetType = r.uint8;
+	    } else if (offset <= 0xffff) {
+	      offsetType = r.uint16;
+	    } else if (offset <= 0xffffff) {
+	      offsetType = r.uint24;
+	    } else if (offset <= 0xffffffff) {
+	      offsetType = r.uint32;
+	    } else {
+	      throw new Error("Bad offset in CFFIndex");
+	    }
 
-	          var s = type.size(item, parent);
-	          sizes.push(s);
-	          offset += s;
-	        }
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
-	        }
-	      }
+	    size += 1 + offsetType.size() * (arr.length + 1);
+	    size += offset - 1;
 
-	      var offsetType = void 0;
-	      if (offset <= 0xff) {
-	        offsetType = r.uint8;
-	      } else if (offset <= 0xffff) {
-	        offsetType = r.uint16;
-	      } else if (offset <= 0xffffff) {
-	        offsetType = r.uint24;
-	      } else if (offset <= 0xffffffff) {
-	        offsetType = r.uint32;
-	      } else {
-	        throw new Error("Bad offset in CFFIndex");
-	      }
+	    return size;
+	  };
 
-	      // write offset size
-	      stream.writeUInt8(offsetType.size());
-
-	      // write elements
-	      offset = 1;
-	      offsetType.encode(stream, offset);
-
-	      var _iteratorNormalCompletion2 = true;
-	      var _didIteratorError2 = false;
-	      var _iteratorError2 = undefined;
-
-	      try {
-	        for (var _iterator2 = _getIterator(sizes), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	          var size = _step2.value;
-
-	          offset += size;
-	          offsetType.encode(stream, offset);
-	        }
-	      } catch (err) {
-	        _didIteratorError2 = true;
-	        _iteratorError2 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	            _iterator2.return();
-	          }
-	        } finally {
-	          if (_didIteratorError2) {
-	            throw _iteratorError2;
-	          }
-	        }
-	      }
-
-	      var _iteratorNormalCompletion3 = true;
-	      var _didIteratorError3 = false;
-	      var _iteratorError3 = undefined;
-
-	      try {
-	        for (var _iterator3 = _getIterator(arr), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	          var _item = _step3.value;
-
-	          type.encode(stream, _item, parent);
-	        }
-	      } catch (err) {
-	        _didIteratorError3 = true;
-	        _iteratorError3 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	            _iterator3.return();
-	          }
-	        } finally {
-	          if (_didIteratorError3) {
-	            throw _iteratorError3;
-	          }
-	        }
-	      }
-
+	  CFFIndex.prototype.encode = function encode(stream, arr, parent) {
+	    stream.writeUInt16BE(arr.length);
+	    if (arr.length === 0) {
 	      return;
 	    }
-	  }]);
+
+	    var type = this.type || new r.Buffer();
+
+	    // find maximum offset to detminine offset type
+	    var sizes = [];
+	    var offset = 1;
+	    for (var _iterator = arr, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	      var _ref;
+
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
+	      } else {
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
+	      }
+
+	      var item = _ref;
+
+	      var s = type.size(item, parent);
+	      sizes.push(s);
+	      offset += s;
+	    }
+
+	    var offsetType = void 0;
+	    if (offset <= 0xff) {
+	      offsetType = r.uint8;
+	    } else if (offset <= 0xffff) {
+	      offsetType = r.uint16;
+	    } else if (offset <= 0xffffff) {
+	      offsetType = r.uint24;
+	    } else if (offset <= 0xffffffff) {
+	      offsetType = r.uint32;
+	    } else {
+	      throw new Error("Bad offset in CFFIndex");
+	    }
+
+	    // write offset size
+	    stream.writeUInt8(offsetType.size());
+
+	    // write elements
+	    offset = 1;
+	    offsetType.encode(stream, offset);
+
+	    for (var _iterator2 = sizes, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	      var _ref2;
+
+	      if (_isArray2) {
+	        if (_i2 >= _iterator2.length) break;
+	        _ref2 = _iterator2[_i2++];
+	      } else {
+	        _i2 = _iterator2.next();
+	        if (_i2.done) break;
+	        _ref2 = _i2.value;
+	      }
+
+	      var size = _ref2;
+
+	      offset += size;
+	      offsetType.encode(stream, offset);
+	    }
+
+	    for (var _iterator3 = arr, _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	      var _ref3;
+
+	      if (_isArray3) {
+	        if (_i3 >= _iterator3.length) break;
+	        _ref3 = _iterator3[_i3++];
+	      } else {
+	        _i3 = _iterator3.next();
+	        if (_i3.done) break;
+	        _ref3 = _i3.value;
+	      }
+
+	      var _item = _ref3;
+
+	      type.encode(stream, _item, parent);
+	    }
+
+	    return;
+	  };
 
 	  return CFFIndex;
 	}();
@@ -38912,126 +38876,121 @@ return /******/ (function(modules) { // webpackBootstrap
 	    _classCallCheck(this, CFFOperand);
 	  }
 
-	  _createClass(CFFOperand, null, [{
-	    key: 'decode',
-	    value: function decode(stream, value) {
-	      if (32 <= value && value <= 246) {
-	        return value - 139;
+	  CFFOperand.decode = function decode(stream, value) {
+	    if (32 <= value && value <= 246) {
+	      return value - 139;
+	    }
+
+	    if (247 <= value && value <= 250) {
+	      return (value - 247) * 256 + stream.readUInt8() + 108;
+	    }
+
+	    if (251 <= value && value <= 254) {
+	      return -(value - 251) * 256 - stream.readUInt8() - 108;
+	    }
+
+	    if (value === 28) {
+	      return stream.readInt16BE();
+	    }
+
+	    if (value === 29) {
+	      return stream.readInt32BE();
+	    }
+
+	    if (value === 30) {
+	      var str = '';
+	      while (true) {
+	        var b = stream.readUInt8();
+
+	        var n1 = b >> 4;
+	        if (n1 === FLOAT_EOF) {
+	          break;
+	        }
+	        str += FLOAT_LOOKUP[n1];
+
+	        var n2 = b & 15;
+	        if (n2 === FLOAT_EOF) {
+	          break;
+	        }
+	        str += FLOAT_LOOKUP[n2];
 	      }
 
-	      if (247 <= value && value <= 250) {
-	        return (value - 247) * 256 + stream.readUInt8() + 108;
-	      }
+	      return parseFloat(str);
+	    }
 
-	      if (251 <= value && value <= 254) {
-	        return -(value - 251) * 256 - stream.readUInt8() - 108;
-	      }
+	    return null;
+	  };
 
-	      if (value === 28) {
-	        return stream.readInt16BE();
-	      }
+	  CFFOperand.size = function size(value) {
+	    // if the value needs to be forced to the largest size (32 bit)
+	    // e.g. for unknown pointers, set to 32768
+	    if (value.forceLarge) {
+	      value = 32768;
+	    }
 
-	      if (value === 29) {
-	        return stream.readInt32BE();
-	      }
+	    if ((value | 0) !== value) {
+	      // floating point
+	      var str = '' + value;
+	      return 1 + Math.ceil((str.length + 1) / 2);
+	    } else if (-107 <= value && value <= 107) {
+	      return 1;
+	    } else if (108 <= value && value <= 1131 || -1131 <= value && value <= -108) {
+	      return 2;
+	    } else if (-32768 <= value && value <= 32767) {
+	      return 3;
+	    } else {
+	      return 5;
+	    }
+	  };
 
-	      if (value === 30) {
-	        var str = '';
-	        while (true) {
-	          var b = stream.readUInt8();
+	  CFFOperand.encode = function encode(stream, value) {
+	    // if the value needs to be forced to the largest size (32 bit)
+	    // e.g. for unknown pointers, save the old value and set to 32768
+	    var val = Number(value);
 
-	          var n1 = b >> 4;
-	          if (n1 === FLOAT_EOF) {
-	            break;
-	          }
-	          str += FLOAT_LOOKUP[n1];
+	    if (value.forceLarge) {
+	      stream.writeUInt8(29);
+	      return stream.writeInt32BE(val);
+	    } else if ((val | 0) !== val) {
+	      // floating point
+	      stream.writeUInt8(30);
 
-	          var n2 = b & 15;
-	          if (n2 === FLOAT_EOF) {
-	            break;
-	          }
-	          str += FLOAT_LOOKUP[n2];
+	      var str = '' + val;
+	      for (var i = 0; i < str.length; i += 2) {
+	        var c1 = str[i];
+	        var n1 = FLOAT_ENCODE_LOOKUP[c1] || +c1;
+
+	        if (i === str.length - 1) {
+	          var n2 = FLOAT_EOF;
+	        } else {
+	          var c2 = str[i + 1];
+	          var n2 = FLOAT_ENCODE_LOOKUP[c2] || +c2;
 	        }
 
-	        return parseFloat(str);
+	        stream.writeUInt8(n1 << 4 | n2 & 15);
 	      }
 
-	      return null;
+	      if (n2 !== FLOAT_EOF) {
+	        return stream.writeUInt8(FLOAT_EOF << 4);
+	      }
+	    } else if (-107 <= val && val <= 107) {
+	      return stream.writeUInt8(val + 139);
+	    } else if (108 <= val && val <= 1131) {
+	      val -= 108;
+	      stream.writeUInt8((val >> 8) + 247);
+	      return stream.writeUInt8(val & 0xff);
+	    } else if (-1131 <= val && val <= -108) {
+	      val = -val - 108;
+	      stream.writeUInt8((val >> 8) + 251);
+	      return stream.writeUInt8(val & 0xff);
+	    } else if (-32768 <= val && val <= 32767) {
+	      stream.writeUInt8(28);
+	      return stream.writeInt16BE(val);
+	    } else {
+	      stream.writeUInt8(29);
+	      return stream.writeInt32BE(val);
 	    }
-	  }, {
-	    key: 'size',
-	    value: function size(value) {
-	      // if the value needs to be forced to the largest size (32 bit)
-	      // e.g. for unknown pointers, set to 32768
-	      if (value.forceLarge) {
-	        value = 32768;
-	      }
-
-	      if ((value | 0) !== value) {
-	        // floating point
-	        var str = '' + value;
-	        return 1 + Math.ceil((str.length + 1) / 2);
-	      } else if (-107 <= value && value <= 107) {
-	        return 1;
-	      } else if (108 <= value && value <= 1131 || -1131 <= value && value <= -108) {
-	        return 2;
-	      } else if (-32768 <= value && value <= 32767) {
-	        return 3;
-	      } else {
-	        return 5;
-	      }
-	    }
-	  }, {
-	    key: 'encode',
-	    value: function encode(stream, value) {
-	      // if the value needs to be forced to the largest size (32 bit)
-	      // e.g. for unknown pointers, save the old value and set to 32768
-	      var val = Number(value);
-
-	      if (value.forceLarge) {
-	        stream.writeUInt8(29);
-	        return stream.writeInt32BE(val);
-	      } else if ((val | 0) !== val) {
-	        // floating point
-	        stream.writeUInt8(30);
-
-	        var str = '' + val;
-	        for (var i = 0; i < str.length; i += 2) {
-	          var c1 = str[i];
-	          var n1 = FLOAT_ENCODE_LOOKUP[c1] || +c1;
-
-	          if (i === str.length - 1) {
-	            var n2 = FLOAT_EOF;
-	          } else {
-	            var c2 = str[i + 1];
-	            var n2 = FLOAT_ENCODE_LOOKUP[c2] || +c2;
-	          }
-
-	          stream.writeUInt8(n1 << 4 | n2 & 15);
-	        }
-
-	        if (n2 !== FLOAT_EOF) {
-	          return stream.writeUInt8(FLOAT_EOF << 4);
-	        }
-	      } else if (-107 <= val && val <= 107) {
-	        return stream.writeUInt8(val + 139);
-	      } else if (108 <= val && val <= 1131) {
-	        val -= 108;
-	        stream.writeUInt8((val >> 8) + 247);
-	        return stream.writeUInt8(val & 0xff);
-	      } else if (-1131 <= val && val <= -108) {
-	        val = -val - 108;
-	        stream.writeUInt8((val >> 8) + 251);
-	        return stream.writeUInt8(val & 0xff);
-	      } else if (-32768 <= val && val <= 32767) {
-	        stream.writeUInt8(28);
-	        return stream.writeInt16BE(val);
-	      } else {
-	        stream.writeUInt8(29);
-	        return stream.writeInt32BE(val);
-	      }
-	    }
-	  }]);
+	  };
 
 	  return CFFOperand;
 	}();
@@ -39044,285 +39003,238 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    this.ops = ops;
 	    this.fields = {};
-	    var _iteratorNormalCompletion = true;
-	    var _didIteratorError = false;
-	    var _iteratorError = undefined;
+	    for (var _iterator = ops, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	      var _ref;
 
-	    try {
-	      for (var _iterator = _getIterator(ops), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	        var field = _step.value;
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
+	      } else {
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
+	      }
 
-	        var key = Array.isArray(field[0]) ? field[0][0] << 8 | field[0][1] : field[0];
-	        this.fields[key] = field;
-	      }
-	    } catch (err) {
-	      _didIteratorError = true;
-	      _iteratorError = err;
-	    } finally {
-	      try {
-	        if (!_iteratorNormalCompletion && _iterator.return) {
-	          _iterator.return();
-	        }
-	      } finally {
-	        if (_didIteratorError) {
-	          throw _iteratorError;
-	        }
-	      }
+	      var field = _ref;
+
+	      var key = Array.isArray(field[0]) ? field[0][0] << 8 | field[0][1] : field[0];
+	      this.fields[key] = field;
 	    }
 	  }
 
-	  _createClass(CFFDict, [{
-	    key: 'decodeOperands',
-	    value: function decodeOperands(type, stream, ret, operands) {
-	      var _this = this;
+	  CFFDict.prototype.decodeOperands = function decodeOperands(type, stream, ret, operands) {
+	    var _this = this;
 
-	      if (Array.isArray(type)) {
-	        return operands.map(function (op, i) {
-	          return _this.decodeOperands(type[i], stream, ret, [op]);
-	        });
-	      } else if (type.decode != null) {
-	        return type.decode(stream, ret, operands);
-	      } else {
-	        switch (type) {
-	          case 'number':
-	          case 'offset':
-	          case 'sid':
-	            return operands[0];
-	          case 'boolean':
-	            return !!operands[0];
-	          default:
-	            return operands;
-	        }
-	      }
-	    }
-	  }, {
-	    key: 'encodeOperands',
-	    value: function encodeOperands(type, stream, ctx, operands) {
-	      var _this2 = this;
-
-	      if (Array.isArray(type)) {
-	        return operands.map(function (op, i) {
-	          return _this2.encodeOperands(type[i], stream, ctx, op)[0];
-	        });
-	      } else if (type.encode != null) {
-	        return type.encode(stream, operands, ctx);
-	      } else if (typeof operands === 'number') {
-	        return [operands];
-	      } else if (typeof operands === 'boolean') {
-	        return [+operands];
-	      } else if (Array.isArray(operands)) {
-	        return operands;
-	      } else {
-	        return [operands];
-	      }
-	    }
-	  }, {
-	    key: 'decode',
-	    value: function decode(stream, parent) {
-	      var end = stream.pos + parent.length;
-	      var ret = {};
-	      var operands = [];
-
-	      // define hidden properties
-	      _Object$defineProperties(ret, {
-	        parent: { value: parent },
-	        _startOffset: { value: stream.pos }
+	    if (Array.isArray(type)) {
+	      return operands.map(function (op, i) {
+	        return _this.decodeOperands(type[i], stream, ret, [op]);
 	      });
+	    } else if (type.decode != null) {
+	      return type.decode(stream, ret, operands);
+	    } else {
+	      switch (type) {
+	        case 'number':
+	        case 'offset':
+	        case 'sid':
+	          return operands[0];
+	        case 'boolean':
+	          return !!operands[0];
+	        default:
+	          return operands;
+	      }
+	    }
+	  };
 
-	      // fill in defaults
-	      for (var key in this.fields) {
-	        var field = this.fields[key];
-	        ret[field[1]] = field[3];
+	  CFFDict.prototype.encodeOperands = function encodeOperands(type, stream, ctx, operands) {
+	    var _this2 = this;
+
+	    if (Array.isArray(type)) {
+	      return operands.map(function (op, i) {
+	        return _this2.encodeOperands(type[i], stream, ctx, op)[0];
+	      });
+	    } else if (type.encode != null) {
+	      return type.encode(stream, operands, ctx);
+	    } else if (typeof operands === 'number') {
+	      return [operands];
+	    } else if (typeof operands === 'boolean') {
+	      return [+operands];
+	    } else if (Array.isArray(operands)) {
+	      return operands;
+	    } else {
+	      return [operands];
+	    }
+	  };
+
+	  CFFDict.prototype.decode = function decode(stream, parent) {
+	    var end = stream.pos + parent.length;
+	    var ret = {};
+	    var operands = [];
+
+	    // define hidden properties
+	    _Object$defineProperties(ret, {
+	      parent: { value: parent },
+	      _startOffset: { value: stream.pos }
+	    });
+
+	    // fill in defaults
+	    for (var key in this.fields) {
+	      var field = this.fields[key];
+	      ret[field[1]] = field[3];
+	    }
+
+	    while (stream.pos < end) {
+	      var b = stream.readUInt8();
+	      if (b <= 21) {
+	        if (b === 12) {
+	          b = b << 8 | stream.readUInt8();
+	        }
+
+	        var _field = this.fields[b];
+	        if (!_field) {
+	          throw new Error('Unknown operator ' + b);
+	        }
+
+	        var val = this.decodeOperands(_field[2], stream, ret, operands);
+	        if (val != null) {
+	          if (val instanceof restructure_src_utils.PropertyDescriptor) {
+	            _Object$defineProperty(ret, _field[1], val);
+	          } else {
+	            ret[_field[1]] = val;
+	          }
+	        }
+
+	        operands = [];
+	      } else {
+	        operands.push(CFFOperand.decode(stream, b));
+	      }
+	    }
+
+	    return ret;
+	  };
+
+	  CFFDict.prototype.size = function size(dict, parent) {
+	    var includePointers = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
+
+	    var ctx = {
+	      parent: parent,
+	      val: dict,
+	      pointerSize: 0,
+	      startOffset: parent.startOffset || 0
+	    };
+
+	    var len = 0;
+
+	    for (var k in this.fields) {
+	      var field = this.fields[k];
+	      var val = dict[field[1]];
+	      if (val == null || isEqual(val, field[3])) {
+	        continue;
 	      }
 
-	      while (stream.pos < end) {
-	        var b = stream.readUInt8();
-	        if (b <= 21) {
-	          if (b === 12) {
-	            b = b << 8 | stream.readUInt8();
-	          }
+	      var operands = this.encodeOperands(field[2], null, ctx, val);
+	      for (var _iterator2 = operands, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	        var _ref2;
 
-	          var _field = this.fields[b];
-	          if (!_field) {
-	            throw new Error('Unknown operator ' + b);
-	          }
-
-	          var val = this.decodeOperands(_field[2], stream, ret, operands);
-	          if (val != null) {
-	            if (val instanceof restructure_src_utils.PropertyDescriptor) {
-	              _Object$defineProperty(ret, _field[1], val);
-	            } else {
-	              ret[_field[1]] = val;
-	            }
-	          }
-
-	          operands = [];
+	        if (_isArray2) {
+	          if (_i2 >= _iterator2.length) break;
+	          _ref2 = _iterator2[_i2++];
 	        } else {
-	          operands.push(CFFOperand.decode(stream, b));
+	          _i2 = _iterator2.next();
+	          if (_i2.done) break;
+	          _ref2 = _i2.value;
 	        }
+
+	        var op = _ref2;
+
+	        len += CFFOperand.size(op);
 	      }
 
-	      return ret;
+	      var key = Array.isArray(field[0]) ? field[0] : [field[0]];
+	      len += key.length;
 	    }
-	  }, {
-	    key: 'size',
-	    value: function size(dict, parent) {
-	      var includePointers = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
 
-	      var ctx = {
-	        parent: parent,
-	        val: dict,
-	        pointerSize: 0,
-	        startOffset: parent.startOffset || 0
-	      };
-
-	      var len = 0;
-
-	      for (var k in this.fields) {
-	        var field = this.fields[k];
-	        var val = dict[field[1]];
-	        if (val == null || isEqual(val, field[3])) {
-	          continue;
-	        }
-
-	        var operands = this.encodeOperands(field[2], null, ctx, val);
-	        var _iteratorNormalCompletion2 = true;
-	        var _didIteratorError2 = false;
-	        var _iteratorError2 = undefined;
-
-	        try {
-	          for (var _iterator2 = _getIterator(operands), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	            var op = _step2.value;
-
-	            len += CFFOperand.size(op);
-	          }
-	        } catch (err) {
-	          _didIteratorError2 = true;
-	          _iteratorError2 = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	              _iterator2.return();
-	            }
-	          } finally {
-	            if (_didIteratorError2) {
-	              throw _iteratorError2;
-	            }
-	          }
-	        }
-
-	        var key = Array.isArray(field[0]) ? field[0] : [field[0]];
-	        len += key.length;
-	      }
-
-	      if (includePointers) {
-	        len += ctx.pointerSize;
-	      }
-
-	      return len;
+	    if (includePointers) {
+	      len += ctx.pointerSize;
 	    }
-	  }, {
-	    key: 'encode',
-	    value: function encode(stream, dict, parent) {
-	      var ctx = {
-	        pointers: [],
-	        startOffset: stream.pos,
-	        parent: parent,
-	        val: dict,
-	        pointerSize: 0
-	      };
 
-	      ctx.pointerOffset = stream.pos + this.size(dict, ctx, false);
+	    return len;
+	  };
 
-	      var _iteratorNormalCompletion3 = true;
-	      var _didIteratorError3 = false;
-	      var _iteratorError3 = undefined;
+	  CFFDict.prototype.encode = function encode(stream, dict, parent) {
+	    var ctx = {
+	      pointers: [],
+	      startOffset: stream.pos,
+	      parent: parent,
+	      val: dict,
+	      pointerSize: 0
+	    };
 
-	      try {
-	        for (var _iterator3 = _getIterator(this.ops), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	          var field = _step3.value;
+	    ctx.pointerOffset = stream.pos + this.size(dict, ctx, false);
 
-	          var val = dict[field[1]];
-	          if (val == null || isEqual(val, field[3])) {
-	            continue;
-	          }
+	    for (var _iterator3 = this.ops, _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	      var _ref3;
 
-	          var operands = this.encodeOperands(field[2], stream, ctx, val);
-	          var _iteratorNormalCompletion4 = true;
-	          var _didIteratorError4 = false;
-	          var _iteratorError4 = undefined;
-
-	          try {
-	            for (var _iterator4 = _getIterator(operands), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	              var op = _step4.value;
-
-	              CFFOperand.encode(stream, op);
-	            }
-	          } catch (err) {
-	            _didIteratorError4 = true;
-	            _iteratorError4 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion4 && _iterator4.return) {
-	                _iterator4.return();
-	              }
-	            } finally {
-	              if (_didIteratorError4) {
-	                throw _iteratorError4;
-	              }
-	            }
-	          }
-
-	          var key = Array.isArray(field[0]) ? field[0] : [field[0]];
-	          var _iteratorNormalCompletion5 = true;
-	          var _didIteratorError5 = false;
-	          var _iteratorError5 = undefined;
-
-	          try {
-	            for (var _iterator5 = _getIterator(key), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-	              var _op = _step5.value;
-
-	              stream.writeUInt8(_op);
-	            }
-	          } catch (err) {
-	            _didIteratorError5 = true;
-	            _iteratorError5 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion5 && _iterator5.return) {
-	                _iterator5.return();
-	              }
-	            } finally {
-	              if (_didIteratorError5) {
-	                throw _iteratorError5;
-	              }
-	            }
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError3 = true;
-	        _iteratorError3 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	            _iterator3.return();
-	          }
-	        } finally {
-	          if (_didIteratorError3) {
-	            throw _iteratorError3;
-	          }
-	        }
+	      if (_isArray3) {
+	        if (_i3 >= _iterator3.length) break;
+	        _ref3 = _iterator3[_i3++];
+	      } else {
+	        _i3 = _iterator3.next();
+	        if (_i3.done) break;
+	        _ref3 = _i3.value;
 	      }
 
-	      var i = 0;
-	      while (i < ctx.pointers.length) {
-	        var ptr = ctx.pointers[i++];
-	        ptr.type.encode(stream, ptr.val, ptr.parent);
+	      var field = _ref3;
+
+	      var val = dict[field[1]];
+	      if (val == null || isEqual(val, field[3])) {
+	        continue;
 	      }
 
-	      return;
+	      var operands = this.encodeOperands(field[2], stream, ctx, val);
+	      for (var _iterator4 = operands, _isArray4 = Array.isArray(_iterator4), _i4 = 0, _iterator4 = _isArray4 ? _iterator4 : _getIterator(_iterator4);;) {
+	        var _ref4;
+
+	        if (_isArray4) {
+	          if (_i4 >= _iterator4.length) break;
+	          _ref4 = _iterator4[_i4++];
+	        } else {
+	          _i4 = _iterator4.next();
+	          if (_i4.done) break;
+	          _ref4 = _i4.value;
+	        }
+
+	        var op = _ref4;
+
+	        CFFOperand.encode(stream, op);
+	      }
+
+	      var key = Array.isArray(field[0]) ? field[0] : [field[0]];
+	      for (var _iterator5 = key, _isArray5 = Array.isArray(_iterator5), _i5 = 0, _iterator5 = _isArray5 ? _iterator5 : _getIterator(_iterator5);;) {
+	        var _ref5;
+
+	        if (_isArray5) {
+	          if (_i5 >= _iterator5.length) break;
+	          _ref5 = _iterator5[_i5++];
+	        } else {
+	          _i5 = _iterator5.next();
+	          if (_i5.done) break;
+	          _ref5 = _i5.value;
+	        }
+
+	        var _op = _ref5;
+
+	        stream.writeUInt8(_op);
+	      }
 	    }
-	  }]);
+
+	    var i = 0;
+	    while (i < ctx.pointers.length) {
+	      var ptr = ctx.pointers[i++];
+	      ptr.type.encode(stream, ptr.val, ptr.parent);
+	    }
+
+	    return;
+	  };
 
 	  return CFFDict;
 	}();
@@ -39339,46 +39251,42 @@ return /******/ (function(modules) { // webpackBootstrap
 	      options.type = 'global';
 	    }
 
-	    return _possibleConstructorReturn(this, (CFFPointer.__proto__ || _Object$getPrototypeOf(CFFPointer)).call(this, null, type, options));
+	    return _possibleConstructorReturn(this, _r$Pointer.call(this, null, type, options));
 	  }
 
-	  _createClass(CFFPointer, [{
-	    key: 'decode',
-	    value: function decode(stream, parent, operands) {
-	      this.offsetType = {
-	        decode: function decode() {
-	          return operands[0];
-	        }
-	      };
-
-	      return _get(CFFPointer.prototype.__proto__ || _Object$getPrototypeOf(CFFPointer.prototype), 'decode', this).call(this, stream, parent, operands);
-	    }
-	  }, {
-	    key: 'encode',
-	    value: function encode(stream, value, ctx) {
-	      if (!stream) {
-	        // compute the size (so ctx.pointerSize is correct)
-	        this.offsetType = {
-	          size: function size() {
-	            return 0;
-	          }
-	        };
-
-	        this.size(value, ctx);
-	        return [new Ptr(0)];
+	  CFFPointer.prototype.decode = function decode(stream, parent, operands) {
+	    this.offsetType = {
+	      decode: function decode() {
+	        return operands[0];
 	      }
+	    };
 
-	      var ptr = null;
+	    return _r$Pointer.prototype.decode.call(this, stream, parent, operands);
+	  };
+
+	  CFFPointer.prototype.encode = function encode(stream, value, ctx) {
+	    if (!stream) {
+	      // compute the size (so ctx.pointerSize is correct)
 	      this.offsetType = {
-	        encode: function encode(stream, val) {
-	          return ptr = val;
+	        size: function size() {
+	          return 0;
 	        }
 	      };
 
-	      _get(CFFPointer.prototype.__proto__ || _Object$getPrototypeOf(CFFPointer.prototype), 'encode', this).call(this, stream, value, ctx);
-	      return [new Ptr(ptr)];
+	      this.size(value, ctx);
+	      return [new Ptr(0)];
 	    }
-	  }]);
+
+	    var ptr = null;
+	    this.offsetType = {
+	      encode: function encode(stream, val) {
+	        return ptr = val;
+	      }
+	    };
+
+	    _r$Pointer.prototype.encode.call(this, stream, value, ctx);
+	    return [new Ptr(ptr)];
+	  };
 
 	  return CFFPointer;
 	}(r.Pointer);
@@ -39391,12 +39299,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.forceLarge = true;
 	  }
 
-	  _createClass(Ptr, [{
-	    key: 'valueOf',
-	    value: function valueOf() {
-	      return this.val;
-	    }
-	  }]);
+	  Ptr.prototype.valueOf = function valueOf() {
+	    return this.val;
+	  };
 
 	  return Ptr;
 	}();
@@ -39430,31 +39335,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.type = type;
 	  }
 
-	  _createClass(PredefinedOp, [{
-	    key: 'decode',
-	    value: function decode(stream, parent, operands) {
-	      if (this.predefinedOps[operands[0]]) {
-	        return this.predefinedOps[operands[0]];
-	      }
+	  PredefinedOp.prototype.decode = function decode(stream, parent, operands) {
+	    if (this.predefinedOps[operands[0]]) {
+	      return this.predefinedOps[operands[0]];
+	    }
 
-	      return this.type.decode(stream, parent, operands);
-	    }
-	  }, {
-	    key: 'size',
-	    value: function size(value, ctx) {
-	      return this.type.size(value, ctx);
-	    }
-	  }, {
-	    key: 'encode',
-	    value: function encode(stream, value, ctx) {
-	      var index = this.predefinedOps.indexOf(value);
-	      if (index !== -1) {
-	        return index;
-	      }
+	    return this.type.decode(stream, parent, operands);
+	  };
 
-	      return this.type.encode(stream, value, ctx);
+	  PredefinedOp.prototype.size = function size(value, ctx) {
+	    return this.type.size(value, ctx);
+	  };
+
+	  PredefinedOp.prototype.encode = function encode(stream, value, ctx) {
+	    var index = this.predefinedOps.indexOf(value);
+	    if (index !== -1) {
+	      return index;
 	    }
-	  }]);
+
+	    return this.type.encode(stream, value, ctx);
+	  };
 
 	  return PredefinedOp;
 	}();
@@ -39465,15 +39365,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function CFFEncodingVersion() {
 	    _classCallCheck(this, CFFEncodingVersion);
 
-	    return _possibleConstructorReturn(this, (CFFEncodingVersion.__proto__ || _Object$getPrototypeOf(CFFEncodingVersion)).call(this, 'UInt8'));
+	    return _possibleConstructorReturn(this, _r$Number.call(this, 'UInt8'));
 	  }
 
-	  _createClass(CFFEncodingVersion, [{
-	    key: 'decode',
-	    value: function decode(stream) {
-	      return r.uint8.decode(stream) & 0x7f;
-	    }
-	  }]);
+	  CFFEncodingVersion.prototype.decode = function decode(stream) {
+	    return r.uint8.decode(stream) & 0x7f;
+	  };
 
 	  return CFFEncodingVersion;
 	}(r.Number);
@@ -39513,25 +39410,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function RangeArray() {
 	    _classCallCheck(this, RangeArray);
 
-	    return _possibleConstructorReturn(this, (RangeArray.__proto__ || _Object$getPrototypeOf(RangeArray)).apply(this, arguments));
+	    return _possibleConstructorReturn(this, _r$Array.apply(this, arguments));
 	  }
 
-	  _createClass(RangeArray, [{
-	    key: 'decode',
-	    value: function decode(stream, parent) {
-	      var length = restructure_src_utils.resolveLength(this.length, stream, parent);
-	      var count = 0;
-	      var res = [];
-	      while (count < length) {
-	        var range = this.type.decode(stream, parent);
-	        range.offset = count;
-	        count += range.nLeft + 1;
-	        res.push(range);
-	      }
-
-	      return res;
+	  RangeArray.prototype.decode = function decode(stream, parent) {
+	    var length = restructure_src_utils.resolveLength(this.length, stream, parent);
+	    var count = 0;
+	    var res = [];
+	    while (count < length) {
+	      var range = this.type.decode(stream, parent);
+	      range.offset = count;
+	      count += range.nLeft + 1;
+	      res.push(range);
 	    }
-	  }]);
+
+	    return res;
+	  };
 
 	  return RangeArray;
 	}(r.Array);
@@ -39584,23 +39478,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	    _classCallCheck(this, CFFPrivateOp);
 	  }
 
-	  _createClass(CFFPrivateOp, [{
-	    key: 'decode',
-	    value: function decode(stream, parent, operands) {
-	      parent.length = operands[0];
-	      return ptr.decode(stream, parent, [operands[1]]);
-	    }
-	  }, {
-	    key: 'size',
-	    value: function size(dict, ctx) {
-	      return [CFFPrivateDict.size(dict, ctx, false), ptr.size(dict, ctx)[0]];
-	    }
-	  }, {
-	    key: 'encode',
-	    value: function encode(stream, dict, ctx) {
-	      return [CFFPrivateDict.size(dict, ctx, false), ptr.encode(stream, dict, ctx)[0]];
-	    }
-	  }]);
+	  CFFPrivateOp.prototype.decode = function decode(stream, parent, operands) {
+	    parent.length = operands[0];
+	    return ptr.decode(stream, parent, [operands[1]]);
+	  };
+
+	  CFFPrivateOp.prototype.size = function size(dict, ctx) {
+	    return [CFFPrivateDict.size(dict, ctx, false), ptr.size(dict, ctx)[0]];
+	  };
+
+	  CFFPrivateOp.prototype.encode = function encode(stream, dict, ctx) {
+	    return [CFFPrivateDict.size(dict, ctx, false), ptr.encode(stream, dict, ctx)[0]];
+	  };
 
 	  return CFFPrivateOp;
 	}();
@@ -39639,118 +39528,116 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.decode();
 	  }
 
-	  _createClass(CFFFont, [{
-	    key: 'decode',
-	    value: function decode() {
-	      var start = this.stream.pos;
-	      var top = CFFTop.decode(this.stream);
-	      for (var key in top) {
-	        var val = top[key];
-	        this[key] = val;
-	      }
+	  CFFFont.decode = function decode(stream) {
+	    return new CFFFont(stream);
+	  };
 
-	      if (this.topDictIndex.length !== 1) {
-	        throw new Error("Only a single font is allowed in CFF");
-	      }
-
-	      this.isCIDFont = this.topDict.ROS != null;
-
-	      return this;
+	  CFFFont.prototype.decode = function decode() {
+	    var start = this.stream.pos;
+	    var top = CFFTop.decode(this.stream);
+	    for (var key in top) {
+	      var val = top[key];
+	      this[key] = val;
 	    }
-	  }, {
-	    key: 'string',
-	    value: function string(sid) {
-	      if (sid < standardStrings.length) {
-	        return standardStrings[sid];
-	      }
 
-	      return this.stringIndex[sid - standardStrings.length];
+	    if (this.topDictIndex.length !== 1) {
+	      throw new Error("Only a single font is allowed in CFF");
 	    }
-	  }, {
-	    key: 'getCharString',
-	    value: function getCharString(glyph) {
-	      this.stream.pos = this.topDict.CharStrings[glyph].offset;
-	      return this.stream.readBuffer(this.topDict.CharStrings[glyph].length);
+
+	    this.isCIDFont = this.topDict.ROS != null;
+
+	    return this;
+	  };
+
+	  CFFFont.prototype.string = function string(sid) {
+	    if (sid < standardStrings.length) {
+	      return standardStrings[sid];
 	    }
-	  }, {
-	    key: 'getGlyphName',
-	    value: function getGlyphName(gid) {
-	      var charset = this.topDict.charset;
 
-	      if (Array.isArray(charset)) {
-	        return charset[gid];
-	      }
+	    return this.stringIndex[sid - standardStrings.length];
+	  };
 
-	      if (gid === 0) {
-	        return '.notdef';
-	      }
+	  CFFFont.prototype.getCharString = function getCharString(glyph) {
+	    this.stream.pos = this.topDict.CharStrings[glyph].offset;
+	    return this.stream.readBuffer(this.topDict.CharStrings[glyph].length);
+	  };
 
-	      gid -= 1;
+	  CFFFont.prototype.getGlyphName = function getGlyphName(gid) {
+	    var charset = this.topDict.charset;
 
-	      switch (charset.version) {
-	        case 0:
-	          return this.string(charset.glyphs[gid]);
+	    if (Array.isArray(charset)) {
+	      return charset[gid];
+	    }
 
-	        case 1:
-	        case 2:
-	          for (var i = 0; i < charset.ranges.length; i++) {
-	            var range = charset.ranges[i];
-	            if (range.offset <= gid && gid <= range.offset + range.nLeft) {
-	              return this.string(range.first + (gid - range.offset));
-	            }
+	    if (gid === 0) {
+	      return '.notdef';
+	    }
+
+	    gid -= 1;
+
+	    switch (charset.version) {
+	      case 0:
+	        return this.string(charset.glyphs[gid]);
+
+	      case 1:
+	      case 2:
+	        for (var i = 0; i < charset.ranges.length; i++) {
+	          var range = charset.ranges[i];
+	          if (range.offset <= gid && gid <= range.offset + range.nLeft) {
+	            return this.string(range.first + (gid - range.offset));
 	          }
-	          break;
+	        }
+	        break;
+	    }
+
+	    return null;
+	  };
+
+	  CFFFont.prototype.fdForGlyph = function fdForGlyph(gid) {
+	    if (!this.topDict.FDSelect) {
+	      return null;
+	    }
+
+	    switch (this.topDict.FDSelect.version) {
+	      case 0:
+	        return this.topDict.FDSelect.fds[gid];
+
+	      case 3:
+	        var ranges = this.topDict.FDSelect.ranges;
+
+	        var low = 0;
+	        var high = ranges.length - 1;
+
+	        while (low <= high) {
+	          var mid = low + high >> 1;
+
+	          if (gid < ranges[mid].first) {
+	            high = mid - 1;
+	          } else if (mid < high && gid > ranges[mid + 1].first) {
+	            low = mid + 1;
+	          } else {
+	            return ranges[mid].fd;
+	          }
+	        }
+	      default:
+	        throw new Error('Unknown FDSelect version: ' + this.topDict.FDSelect.version);
+	    }
+	  };
+
+	  CFFFont.prototype.privateDictForGlyph = function privateDictForGlyph(gid) {
+	    if (this.topDict.FDSelect) {
+	      var fd = this.fdForGlyph(gid);
+	      if (this.topDict.FDArray[fd]) {
+	        return this.topDict.FDArray[fd].Private;
 	      }
 
 	      return null;
 	    }
-	  }, {
-	    key: 'fdForGlyph',
-	    value: function fdForGlyph(gid) {
-	      if (!this.topDict.FDSelect) {
-	        return null;
-	      }
 
-	      switch (this.topDict.FDSelect.version) {
-	        case 0:
-	          return this.topDict.FDSelect.fds[gid];
+	    return this.topDict.Private;
+	  };
 
-	        case 3:
-	          var ranges = this.topDict.FDSelect.ranges;
-
-	          var low = 0;
-	          var high = ranges.length - 1;
-
-	          while (low <= high) {
-	            var mid = low + high >> 1;
-
-	            if (gid < ranges[mid].first) {
-	              high = mid - 1;
-	            } else if (mid < high && gid > ranges[mid + 1].first) {
-	              low = mid + 1;
-	            } else {
-	              return ranges[mid].fd;
-	            }
-	          }
-	        default:
-	          throw new Error('Unknown FDSelect version: ' + this.topDict.FDSelect.version);
-	      }
-	    }
-	  }, {
-	    key: 'privateDictForGlyph',
-	    value: function privateDictForGlyph(gid) {
-	      if (this.topDict.FDSelect) {
-	        var fd = this.fdForGlyph(gid);
-	        if (this.topDict.FDArray[fd]) {
-	          return this.topDict.FDArray[fd].Private;
-	        }
-
-	        return null;
-	      }
-
-	      return this.topDict.Private;
-	    }
-	  }, {
+	  _createClass(CFFFont, [{
 	    key: 'topDict',
 	    get: function get() {
 	      return this.topDictIndex[0];
@@ -39769,11 +39656,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    key: 'familyName',
 	    get: function get() {
 	      return this.string(this.topDict.FamilyName);
-	    }
-	  }], [{
-	    key: 'decode',
-	    value: function decode(stream) {
-	      return new CFFFont(stream);
 	    }
 	  }]);
 
@@ -40382,43 +40264,38 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.key = key;
 	  }
 
-	  _createClass(ValueRecord, [{
-	    key: 'buildStruct',
-	    value: function buildStruct(parent) {
-	      var struct = parent;
-	      while (!struct[this.key] && struct.parent) {
-	        struct = struct.parent;
+	  ValueRecord.prototype.buildStruct = function buildStruct(parent) {
+	    var struct = parent;
+	    while (!struct[this.key] && struct.parent) {
+	      struct = struct.parent;
+	    }
+
+	    if (!struct[this.key]) return;
+
+	    var fields = {};
+	    fields.rel = function () {
+	      return struct._startOffset;
+	    };
+
+	    var format = struct[this.key];
+	    for (var key in format) {
+	      if (format[key]) {
+	        fields[key] = types[key];
 	      }
-
-	      if (!struct[this.key]) return;
-
-	      var fields = {};
-	      fields.rel = function () {
-	        return struct._startOffset;
-	      };
-
-	      var format = struct[this.key];
-	      for (var key in format) {
-	        if (format[key]) {
-	          fields[key] = types[key];
-	        }
-	      }
-
-	      return new r.Struct(fields);
 	    }
-	  }, {
-	    key: 'size',
-	    value: function size(val, ctx) {
-	      return this.buildStruct(ctx).size(val, ctx);
-	    }
-	  }, {
-	    key: 'decode',
-	    value: function decode(stream, parent) {
-	      var res = this.buildStruct(parent).decode(stream, parent);
-	      delete res.rel;
-	      return res;
-	    }
-	  }]);
+
+	    return new r.Struct(fields);
+	  };
+
+	  ValueRecord.prototype.size = function size(val, ctx) {
+	    return this.buildStruct(ctx).size(val, ctx);
+	  };
+
+	  ValueRecord.prototype.decode = function decode(stream, parent) {
+	    var res = this.buildStruct(parent).decode(stream, parent);
+	    delete res.rel;
+	    return res;
+	  };
 
 	  return ValueRecord;
 	}();
@@ -40957,24 +40834,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this._items = [];
 	  }
 
-	  _createClass(UnboundedArrayAccessor, [{
-	    key: 'getItem',
-	    value: function getItem(index) {
-	      if (this._items[index] == null) {
-	        var pos = this.stream.pos;
-	        this.stream.pos = this.base + this.type.size(null, this.parent) * index;
-	        this._items[index] = this.type.decode(this.stream, this.parent);
-	        this.stream.pos = pos;
-	      }
+	  UnboundedArrayAccessor.prototype.getItem = function getItem(index) {
+	    if (this._items[index] == null) {
+	      var pos = this.stream.pos;
+	      this.stream.pos = this.base + this.type.size(null, this.parent) * index;
+	      this._items[index] = this.type.decode(this.stream, this.parent);
+	      this.stream.pos = pos;
+	    }
 
-	      return this._items[index];
-	    }
-	  }, {
-	    key: 'inspect',
-	    value: function inspect() {
-	      return '[UnboundedArray ' + this.type.constructor.name + ']';
-	    }
-	  }]);
+	    return this._items[index];
+	  };
+
+	  UnboundedArrayAccessor.prototype.inspect = function inspect() {
+	    return '[UnboundedArray ' + this.type.constructor.name + ']';
+	  };
 
 	  return UnboundedArrayAccessor;
 	}();
@@ -40985,15 +40858,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function UnboundedArray(type) {
 	    _classCallCheck(this, UnboundedArray);
 
-	    return _possibleConstructorReturn(this, (UnboundedArray.__proto__ || _Object$getPrototypeOf(UnboundedArray)).call(this, type, 0));
+	    return _possibleConstructorReturn(this, _r$Array.call(this, type, 0));
 	  }
 
-	  _createClass(UnboundedArray, [{
-	    key: 'decode',
-	    value: function decode(stream, parent) {
-	      return new UnboundedArrayAccessor(this.type, stream, parent);
-	    }
-	  }]);
+	  UnboundedArray.prototype.decode = function decode(stream, parent) {
+	    return new UnboundedArrayAccessor(this.type, stream, parent);
+	  };
 
 	  return UnboundedArray;
 	}(r.Array);
@@ -41009,25 +40879,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	      this.type = type;
 	    }
 
-	    _createClass(Shadow, [{
-	      key: 'decode',
-	      value: function decode(stream, ctx) {
-	        ctx = ctx.parent.parent;
-	        return this.type.decode(stream, ctx);
-	      }
-	    }, {
-	      key: 'size',
-	      value: function size(val, ctx) {
-	        ctx = ctx.parent.parent;
-	        return this.type.size(val, ctx);
-	      }
-	    }, {
-	      key: 'encode',
-	      value: function encode(stream, val, ctx) {
-	        ctx = ctx.parent.parent;
-	        return this.type.encode(stream, val, ctx);
-	      }
-	    }]);
+	    Shadow.prototype.decode = function decode(stream, ctx) {
+	      ctx = ctx.parent.parent;
+	      return this.type.decode(stream, ctx);
+	    };
+
+	    Shadow.prototype.size = function size(val, ctx) {
+	      ctx = ctx.parent.parent;
+	      return this.type.size(val, ctx);
+	    };
+
+	    Shadow.prototype.encode = function encode(stream, val, ctx) {
+	      ctx = ctx.parent.parent;
+	      return this.type.encode(stream, val, ctx);
+	    };
 
 	    return Shadow;
 	  }();
@@ -41252,15 +41117,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	    _classCallCheck(this, Offset);
 	  }
 
-	  _createClass(Offset, null, [{
-	    key: 'decode',
-	    value: function decode(stream, parent) {
-	      // In short format, offsets are multiplied by 2.
-	      // This doesn't seem to be documented by Apple, but it
-	      // is implemented this way in Freetype.
-	      return parent.flags ? stream.readUInt32BE() : stream.readUInt16BE() * 2;
-	    }
-	  }]);
+	  Offset.decode = function decode(stream, parent) {
+	    // In short format, offsets are multiplied by 2.
+	    // This doesn't seem to be documented by Apple, but it
+	    // is implemented this way in Freetype.
+	    return parent.flags ? stream.readUInt32BE() : stream.readUInt16BE() * 2;
+	  };
 
 	  return Offset;
 	}();
@@ -41527,29 +41389,21 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Directory.process = function () {
 	  var tables = {};
-	  var _iteratorNormalCompletion = true;
-	  var _didIteratorError = false;
-	  var _iteratorError = undefined;
+	  for (var _iterator = this.tables, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	    var _ref;
 
-	  try {
-	    for (var _iterator = _getIterator(this.tables), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	      var table = _step.value;
+	    if (_isArray) {
+	      if (_i >= _iterator.length) break;
+	      _ref = _iterator[_i++];
+	    } else {
+	      _i = _iterator.next();
+	      if (_i.done) break;
+	      _ref = _i.value;
+	    }
 
-	      tables[table.tag] = table;
-	    }
-	  } catch (err) {
-	    _didIteratorError = true;
-	    _iteratorError = err;
-	  } finally {
-	    try {
-	      if (!_iteratorNormalCompletion && _iterator.return) {
-	        _iterator.return();
-	      }
-	    } finally {
-	      if (_didIteratorError) {
-	        throw _iteratorError;
-	      }
-	    }
+	    var table = _ref;
+
+	    tables[table.tag] = table;
 	  }
 
 	  this.tables = tables;
@@ -41656,32 +41510,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	    // If not unicode cmap was found, and iconv-lite is installed,
 	    // take the first table with a supported encoding.
 	    if (!this.cmap && iconv) {
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
+	      for (var _iterator = cmapTable.tables, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	        var _ref;
 
-	      try {
-	        for (var _iterator = _getIterator(cmapTable.tables), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var cmap = _step.value;
-
-	          var encoding = getEncoding(cmap.platformID, cmap.encodingID, cmap.table.language - 1);
-	          if (iconv.encodingExists(encoding)) {
-	            this.cmap = cmap.table;
-	            this.encoding = encoding;
-	          }
+	        if (_isArray) {
+	          if (_i >= _iterator.length) break;
+	          _ref = _iterator[_i++];
+	        } else {
+	          _i = _iterator.next();
+	          if (_i.done) break;
+	          _ref = _i.value;
 	        }
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
+
+	        var cmap = _ref;
+
+	        var encoding = getEncoding(cmap.platformID, cmap.encodingID, cmap.table.language - 1);
+	        if (iconv.encodingExists(encoding)) {
+	          this.cmap = cmap.table;
+	          this.encoding = encoding;
 	        }
 	      }
 	    }
@@ -41696,374 +41542,327 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  }
 
-	  _createClass(CmapProcessor, [{
-	    key: 'findSubtable',
-	    value: function findSubtable(cmapTable, pairs) {
-	      var _iteratorNormalCompletion2 = true;
-	      var _didIteratorError2 = false;
-	      var _iteratorError2 = undefined;
+	  CmapProcessor.prototype.findSubtable = function findSubtable(cmapTable, pairs) {
+	    for (var _iterator2 = pairs, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	      var _ref2;
 
-	      try {
-	        for (var _iterator2 = _getIterator(pairs), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	          var _step2$value = _slicedToArray(_step2.value, 2),
-	              platformID = _step2$value[0],
-	              encodingID = _step2$value[1];
-
-	          var _iteratorNormalCompletion3 = true;
-	          var _didIteratorError3 = false;
-	          var _iteratorError3 = undefined;
-
-	          try {
-	            for (var _iterator3 = _getIterator(cmapTable.tables), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	              var cmap = _step3.value;
-
-	              if (cmap.platformID === platformID && cmap.encodingID === encodingID) {
-	                return cmap.table;
-	              }
-	            }
-	          } catch (err) {
-	            _didIteratorError3 = true;
-	            _iteratorError3 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	                _iterator3.return();
-	              }
-	            } finally {
-	              if (_didIteratorError3) {
-	                throw _iteratorError3;
-	              }
-	            }
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError2 = true;
-	        _iteratorError2 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	            _iterator2.return();
-	          }
-	        } finally {
-	          if (_didIteratorError2) {
-	            throw _iteratorError2;
-	          }
-	        }
+	      if (_isArray2) {
+	        if (_i2 >= _iterator2.length) break;
+	        _ref2 = _iterator2[_i2++];
+	      } else {
+	        _i2 = _iterator2.next();
+	        if (_i2.done) break;
+	        _ref2 = _i2.value;
 	      }
 
-	      return null;
-	    }
-	  }, {
-	    key: 'lookup',
-	    value: function lookup(codepoint, variationSelector) {
-	      // If there is no Unicode cmap in this font, we need to re-encode
-	      // the codepoint in the encoding that the cmap supports.
-	      if (this.encoding) {
-	        var buf = iconv.encode(_String$fromCodePoint(codepoint), this.encoding);
-	        codepoint = 0;
-	        for (var i = 0; i < buf.length; i++) {
-	          codepoint = codepoint << 8 | buf[i];
+	      var _ref3 = _ref2,
+	          platformID = _ref3[0],
+	          encodingID = _ref3[1];
+
+	      for (var _iterator3 = cmapTable.tables, _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	        var _ref4;
+
+	        if (_isArray3) {
+	          if (_i3 >= _iterator3.length) break;
+	          _ref4 = _iterator3[_i3++];
+	        } else {
+	          _i3 = _iterator3.next();
+	          if (_i3.done) break;
+	          _ref4 = _i3.value;
 	        }
 
-	        // Otherwise, try to get a Unicode variation selector for this codepoint if one is provided.
-	      } else if (variationSelector) {
-	        var gid = this.getVariationSelector(codepoint, variationSelector);
-	        if (gid) {
-	          return gid;
+	        var cmap = _ref4;
+
+	        if (cmap.platformID === platformID && cmap.encodingID === encodingID) {
+	          return cmap.table;
 	        }
-	      }
-
-	      var cmap = this.cmap;
-	      switch (cmap.version) {
-	        case 0:
-	          return cmap.codeMap.get(codepoint) || 0;
-
-	        case 4:
-	          {
-	            var min = 0;
-	            var max = cmap.segCount - 1;
-	            while (min <= max) {
-	              var mid = min + max >> 1;
-
-	              if (codepoint < cmap.startCode.get(mid)) {
-	                max = mid - 1;
-	              } else if (codepoint > cmap.endCode.get(mid)) {
-	                min = mid + 1;
-	              } else {
-	                var rangeOffset = cmap.idRangeOffset.get(mid);
-	                var _gid = void 0;
-
-	                if (rangeOffset === 0) {
-	                  _gid = codepoint + cmap.idDelta.get(mid);
-	                } else {
-	                  var index = rangeOffset / 2 + (codepoint - cmap.startCode.get(mid)) - (cmap.segCount - mid);
-	                  _gid = cmap.glyphIndexArray.get(index) || 0;
-	                  if (_gid !== 0) {
-	                    _gid += cmap.idDelta.get(mid);
-	                  }
-	                }
-
-	                return _gid & 0xffff;
-	              }
-	            }
-
-	            return 0;
-	          }
-
-	        case 8:
-	          throw new Error('TODO: cmap format 8');
-
-	        case 6:
-	        case 10:
-	          return cmap.glyphIndices.get(codepoint - cmap.firstCode) || 0;
-
-	        case 12:
-	        case 13:
-	          {
-	            var _min = 0;
-	            var _max = cmap.nGroups - 1;
-	            while (_min <= _max) {
-	              var _mid = _min + _max >> 1;
-	              var group = cmap.groups.get(_mid);
-
-	              if (codepoint < group.startCharCode) {
-	                _max = _mid - 1;
-	              } else if (codepoint > group.endCharCode) {
-	                _min = _mid + 1;
-	              } else {
-	                if (cmap.version === 12) {
-	                  return group.glyphID + (codepoint - group.startCharCode);
-	                } else {
-	                  return group.glyphID;
-	                }
-	              }
-	            }
-
-	            return 0;
-	          }
-
-	        case 14:
-	          throw new Error('TODO: cmap format 14');
-
-	        default:
-	          throw new Error('Unknown cmap format ' + cmap.version);
 	      }
 	    }
-	  }, {
-	    key: 'getVariationSelector',
-	    value: function getVariationSelector(codepoint, variationSelector) {
-	      if (!this.uvs) {
-	        return 0;
+
+	    return null;
+	  };
+
+	  CmapProcessor.prototype.lookup = function lookup(codepoint, variationSelector) {
+	    // If there is no Unicode cmap in this font, we need to re-encode
+	    // the codepoint in the encoding that the cmap supports.
+	    if (this.encoding) {
+	      var buf = iconv.encode(_String$fromCodePoint(codepoint), this.encoding);
+	      codepoint = 0;
+	      for (var i = 0; i < buf.length; i++) {
+	        codepoint = codepoint << 8 | buf[i];
 	      }
 
-	      var selectors = this.uvs.varSelectors.toArray();
-	      var i = binarySearch(selectors, function (x) {
-	        return variationSelector - x.varSelector;
-	      });
-	      var sel = selectors[i];
-
-	      if (i !== -1 && sel.defaultUVS) {
-	        i = binarySearch(sel.defaultUVS, function (x) {
-	          return codepoint < x.startUnicodeValue ? -1 : codepoint > x.startUnicodeValue + x.additionalCount ? +1 : 0;
-	        });
+	      // Otherwise, try to get a Unicode variation selector for this codepoint if one is provided.
+	    } else if (variationSelector) {
+	      var gid = this.getVariationSelector(codepoint, variationSelector);
+	      if (gid) {
+	        return gid;
 	      }
+	    }
 
-	      if (i !== -1 && sel.nonDefaultUVS) {
-	        i = binarySearch(sel.nonDefaultUVS, function (x) {
-	          return codepoint - x.unicodeValue;
-	        });
-	        if (i !== -1) {
-	          return sel.nonDefaultUVS[i].glyphID;
+	    var cmap = this.cmap;
+	    switch (cmap.version) {
+	      case 0:
+	        return cmap.codeMap.get(codepoint) || 0;
+
+	      case 4:
+	        {
+	          var min = 0;
+	          var max = cmap.segCount - 1;
+	          while (min <= max) {
+	            var mid = min + max >> 1;
+
+	            if (codepoint < cmap.startCode.get(mid)) {
+	              max = mid - 1;
+	            } else if (codepoint > cmap.endCode.get(mid)) {
+	              min = mid + 1;
+	            } else {
+	              var rangeOffset = cmap.idRangeOffset.get(mid);
+	              var _gid = void 0;
+
+	              if (rangeOffset === 0) {
+	                _gid = codepoint + cmap.idDelta.get(mid);
+	              } else {
+	                var index = rangeOffset / 2 + (codepoint - cmap.startCode.get(mid)) - (cmap.segCount - mid);
+	                _gid = cmap.glyphIndexArray.get(index) || 0;
+	                if (_gid !== 0) {
+	                  _gid += cmap.idDelta.get(mid);
+	                }
+	              }
+
+	              return _gid & 0xffff;
+	            }
+	          }
+
+	          return 0;
 	        }
-	      }
 
+	      case 8:
+	        throw new Error('TODO: cmap format 8');
+
+	      case 6:
+	      case 10:
+	        return cmap.glyphIndices.get(codepoint - cmap.firstCode) || 0;
+
+	      case 12:
+	      case 13:
+	        {
+	          var _min = 0;
+	          var _max = cmap.nGroups - 1;
+	          while (_min <= _max) {
+	            var _mid = _min + _max >> 1;
+	            var group = cmap.groups.get(_mid);
+
+	            if (codepoint < group.startCharCode) {
+	              _max = _mid - 1;
+	            } else if (codepoint > group.endCharCode) {
+	              _min = _mid + 1;
+	            } else {
+	              if (cmap.version === 12) {
+	                return group.glyphID + (codepoint - group.startCharCode);
+	              } else {
+	                return group.glyphID;
+	              }
+	            }
+	          }
+
+	          return 0;
+	        }
+
+	      case 14:
+	        throw new Error('TODO: cmap format 14');
+
+	      default:
+	        throw new Error('Unknown cmap format ' + cmap.version);
+	    }
+	  };
+
+	  CmapProcessor.prototype.getVariationSelector = function getVariationSelector(codepoint, variationSelector) {
+	    if (!this.uvs) {
 	      return 0;
 	    }
-	  }, {
-	    key: 'getCharacterSet',
-	    value: function getCharacterSet() {
-	      var cmap = this.cmap;
-	      switch (cmap.version) {
-	        case 0:
-	          return range(0, cmap.codeMap.length);
 
-	        case 4:
-	          {
-	            var res = [];
-	            var endCodes = cmap.endCode.toArray();
-	            for (var i = 0; i < endCodes.length; i++) {
-	              var tail = endCodes[i] + 1;
-	              var start = cmap.startCode.get(i);
-	              res.push.apply(res, _toConsumableArray(range(start, tail)));
-	            }
+	    var selectors = this.uvs.varSelectors.toArray();
+	    var i = binarySearch(selectors, function (x) {
+	      return variationSelector - x.varSelector;
+	    });
+	    var sel = selectors[i];
 
-	            return res;
-	          }
+	    if (i !== -1 && sel.defaultUVS) {
+	      i = binarySearch(sel.defaultUVS, function (x) {
+	        return codepoint < x.startUnicodeValue ? -1 : codepoint > x.startUnicodeValue + x.additionalCount ? +1 : 0;
+	      });
+	    }
 
-	        case 8:
-	          throw new Error('TODO: cmap format 8');
-
-	        case 6:
-	        case 10:
-	          return range(cmap.firstCode, cmap.firstCode + cmap.glyphIndices.length);
-
-	        case 12:
-	        case 13:
-	          {
-	            var _res = [];
-	            var _iteratorNormalCompletion4 = true;
-	            var _didIteratorError4 = false;
-	            var _iteratorError4 = undefined;
-
-	            try {
-	              for (var _iterator4 = _getIterator(cmap.groups.toArray()), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	                var group = _step4.value;
-
-	                _res.push.apply(_res, _toConsumableArray(range(group.startCharCode, group.endCharCode + 1)));
-	              }
-	            } catch (err) {
-	              _didIteratorError4 = true;
-	              _iteratorError4 = err;
-	            } finally {
-	              try {
-	                if (!_iteratorNormalCompletion4 && _iterator4.return) {
-	                  _iterator4.return();
-	                }
-	              } finally {
-	                if (_didIteratorError4) {
-	                  throw _iteratorError4;
-	                }
-	              }
-	            }
-
-	            return _res;
-	          }
-
-	        case 14:
-	          throw new Error('TODO: cmap format 14');
-
-	        default:
-	          throw new Error('Unknown cmap format ' + cmap.version);
+	    if (i !== -1 && sel.nonDefaultUVS) {
+	      i = binarySearch(sel.nonDefaultUVS, function (x) {
+	        return codepoint - x.unicodeValue;
+	      });
+	      if (i !== -1) {
+	        return sel.nonDefaultUVS[i].glyphID;
 	      }
 	    }
-	  }, {
-	    key: 'codePointsForGlyph',
-	    value: function codePointsForGlyph(gid) {
-	      var cmap = this.cmap;
-	      switch (cmap.version) {
-	        case 0:
-	          {
-	            var res = [];
-	            for (var i = 0; i < 256; i++) {
-	              if (cmap.codeMap.get(i) === gid) {
-	                res.push(i);
-	              }
-	            }
 
-	            return res;
+	    return 0;
+	  };
+
+	  CmapProcessor.prototype.getCharacterSet = function getCharacterSet() {
+	    var cmap = this.cmap;
+	    switch (cmap.version) {
+	      case 0:
+	        return range(0, cmap.codeMap.length);
+
+	      case 4:
+	        {
+	          var res = [];
+	          var endCodes = cmap.endCode.toArray();
+	          for (var i = 0; i < endCodes.length; i++) {
+	            var tail = endCodes[i] + 1;
+	            var start = cmap.startCode.get(i);
+	            res.push.apply(res, range(start, tail));
 	          }
 
-	        case 4:
-	          {
-	            var _res2 = [];
-	            for (var _i = 0; _i < cmap.segCount; _i++) {
-	              var end = cmap.endCode.get(_i);
-	              var start = cmap.startCode.get(_i);
-	              var rangeOffset = cmap.idRangeOffset.get(_i);
-	              var delta = cmap.idDelta.get(_i);
+	          return res;
+	        }
 
-	              for (var c = start; c <= end; c++) {
-	                var g = 0;
-	                if (rangeOffset === 0) {
-	                  g = c + delta;
-	                } else {
-	                  var index = rangeOffset / 2 + (c - start) - (cmap.segCount - _i);
-	                  g = cmap.glyphIndexArray.get(index) || 0;
-	                  if (g !== 0) {
-	                    g += delta;
-	                  }
-	                }
+	      case 8:
+	        throw new Error('TODO: cmap format 8');
 
-	                if (g === gid) {
-	                  _res2.push(c);
-	                }
-	              }
+	      case 6:
+	      case 10:
+	        return range(cmap.firstCode, cmap.firstCode + cmap.glyphIndices.length);
+
+	      case 12:
+	      case 13:
+	        {
+	          var _res = [];
+	          for (var _iterator4 = cmap.groups.toArray(), _isArray4 = Array.isArray(_iterator4), _i4 = 0, _iterator4 = _isArray4 ? _iterator4 : _getIterator(_iterator4);;) {
+	            var _ref5;
+
+	            if (_isArray4) {
+	              if (_i4 >= _iterator4.length) break;
+	              _ref5 = _iterator4[_i4++];
+	            } else {
+	              _i4 = _iterator4.next();
+	              if (_i4.done) break;
+	              _ref5 = _i4.value;
 	            }
 
-	            return _res2;
+	            var group = _ref5;
+
+	            _res.push.apply(_res, range(group.startCharCode, group.endCharCode + 1));
 	          }
 
-	        case 12:
-	          {
-	            var _res3 = [];
-	            var _iteratorNormalCompletion5 = true;
-	            var _didIteratorError5 = false;
-	            var _iteratorError5 = undefined;
+	          return _res;
+	        }
 
-	            try {
-	              for (var _iterator5 = _getIterator(cmap.groups.toArray()), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-	                var group = _step5.value;
+	      case 14:
+	        throw new Error('TODO: cmap format 14');
 
-	                if (gid >= group.glyphID && gid <= group.glyphID + (group.endCharCode - group.startCharCode)) {
-	                  _res3.push(group.startCharCode + (gid - group.glyphID));
-	                }
-	              }
-	            } catch (err) {
-	              _didIteratorError5 = true;
-	              _iteratorError5 = err;
-	            } finally {
-	              try {
-	                if (!_iteratorNormalCompletion5 && _iterator5.return) {
-	                  _iterator5.return();
-	                }
-	              } finally {
-	                if (_didIteratorError5) {
-	                  throw _iteratorError5;
-	                }
-	              }
-	            }
-
-	            return _res3;
-	          }
-
-	        case 13:
-	          {
-	            var _res4 = [];
-	            var _iteratorNormalCompletion6 = true;
-	            var _didIteratorError6 = false;
-	            var _iteratorError6 = undefined;
-
-	            try {
-	              for (var _iterator6 = _getIterator(cmap.groups.toArray()), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-	                var _group = _step6.value;
-
-	                if (gid === _group.glyphID) {
-	                  _res4.push.apply(_res4, _toConsumableArray(range(_group.startCharCode, _group.endCharCode + 1)));
-	                }
-	              }
-	            } catch (err) {
-	              _didIteratorError6 = true;
-	              _iteratorError6 = err;
-	            } finally {
-	              try {
-	                if (!_iteratorNormalCompletion6 && _iterator6.return) {
-	                  _iterator6.return();
-	                }
-	              } finally {
-	                if (_didIteratorError6) {
-	                  throw _iteratorError6;
-	                }
-	              }
-	            }
-
-	            return _res4;
-	          }
-
-	        default:
-	          throw new Error('Unknown cmap format ' + cmap.version);
-	      }
+	      default:
+	        throw new Error('Unknown cmap format ' + cmap.version);
 	    }
-	  }]);
+	  };
+
+	  CmapProcessor.prototype.codePointsForGlyph = function codePointsForGlyph(gid) {
+	    var cmap = this.cmap;
+	    switch (cmap.version) {
+	      case 0:
+	        {
+	          var res = [];
+	          for (var i = 0; i < 256; i++) {
+	            if (cmap.codeMap.get(i) === gid) {
+	              res.push(i);
+	            }
+	          }
+
+	          return res;
+	        }
+
+	      case 4:
+	        {
+	          var _res2 = [];
+	          for (var _i5 = 0; _i5 < cmap.segCount; _i5++) {
+	            var end = cmap.endCode.get(_i5);
+	            var start = cmap.startCode.get(_i5);
+	            var rangeOffset = cmap.idRangeOffset.get(_i5);
+	            var delta = cmap.idDelta.get(_i5);
+
+	            for (var c = start; c <= end; c++) {
+	              var g = 0;
+	              if (rangeOffset === 0) {
+	                g = c + delta;
+	              } else {
+	                var index = rangeOffset / 2 + (c - start) - (cmap.segCount - _i5);
+	                g = cmap.glyphIndexArray.get(index) || 0;
+	                if (g !== 0) {
+	                  g += delta;
+	                }
+	              }
+
+	              if (g === gid) {
+	                _res2.push(c);
+	              }
+	            }
+	          }
+
+	          return _res2;
+	        }
+
+	      case 12:
+	        {
+	          var _res3 = [];
+	          for (var _iterator5 = cmap.groups.toArray(), _isArray5 = Array.isArray(_iterator5), _i6 = 0, _iterator5 = _isArray5 ? _iterator5 : _getIterator(_iterator5);;) {
+	            var _ref6;
+
+	            if (_isArray5) {
+	              if (_i6 >= _iterator5.length) break;
+	              _ref6 = _iterator5[_i6++];
+	            } else {
+	              _i6 = _iterator5.next();
+	              if (_i6.done) break;
+	              _ref6 = _i6.value;
+	            }
+
+	            var group = _ref6;
+
+	            if (gid >= group.glyphID && gid <= group.glyphID + (group.endCharCode - group.startCharCode)) {
+	              _res3.push(group.startCharCode + (gid - group.glyphID));
+	            }
+	          }
+
+	          return _res3;
+	        }
+
+	      case 13:
+	        {
+	          var _res4 = [];
+	          for (var _iterator6 = cmap.groups.toArray(), _isArray6 = Array.isArray(_iterator6), _i7 = 0, _iterator6 = _isArray6 ? _iterator6 : _getIterator(_iterator6);;) {
+	            var _ref7;
+
+	            if (_isArray6) {
+	              if (_i7 >= _iterator6.length) break;
+	              _ref7 = _iterator6[_i7++];
+	            } else {
+	              _i7 = _iterator6.next();
+	              if (_i7.done) break;
+	              _ref7 = _i7.value;
+	            }
+
+	            var _group = _ref7;
+
+	            if (gid === _group.glyphID) {
+	              _res4.push.apply(_res4, range(_group.startCharCode, _group.endCharCode + 1));
+	            }
+	          }
+
+	          return _res4;
+	        }
+
+	      default:
+	        throw new Error('Unknown cmap format ' + cmap.version);
+	    }
+	  };
 
 	  return CmapProcessor;
 	}(), (_applyDecoratedDescriptor$1(_class$1.prototype, 'getCharacterSet', [cache], _Object$getOwnPropertyDescriptor(_class$1.prototype, 'getCharacterSet'), _class$1.prototype), _applyDecoratedDescriptor$1(_class$1.prototype, 'codePointsForGlyph', [cache], _Object$getOwnPropertyDescriptor(_class$1.prototype, 'codePointsForGlyph'), _class$1.prototype)), _class$1);
@@ -42075,139 +41874,106 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.kern = font.kern;
 	  }
 
-	  _createClass(KernProcessor, [{
-	    key: "process",
-	    value: function process(glyphs, positions) {
-	      for (var glyphIndex = 0; glyphIndex < glyphs.length - 1; glyphIndex++) {
-	        var left = glyphs[glyphIndex].id;
-	        var right = glyphs[glyphIndex + 1].id;
-	        positions[glyphIndex].xAdvance += this.getKerning(left, right);
-	      }
+	  KernProcessor.prototype.process = function process(glyphs, positions) {
+	    for (var glyphIndex = 0; glyphIndex < glyphs.length - 1; glyphIndex++) {
+	      var left = glyphs[glyphIndex].id;
+	      var right = glyphs[glyphIndex + 1].id;
+	      positions[glyphIndex].xAdvance += this.getKerning(left, right);
 	    }
-	  }, {
-	    key: "getKerning",
-	    value: function getKerning(left, right) {
-	      var res = 0;
+	  };
 
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
+	  KernProcessor.prototype.getKerning = function getKerning(left, right) {
+	    var res = 0;
 
-	      try {
-	        for (var _iterator = _getIterator(this.kern.tables), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var table = _step.value;
+	    for (var _iterator = this.kern.tables, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	      var _ref;
 
-	          if (table.coverage.crossStream) {
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
+	      } else {
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
+	      }
+
+	      var table = _ref;
+
+	      if (table.coverage.crossStream) {
+	        continue;
+	      }
+
+	      switch (table.version) {
+	        case 0:
+	          if (!table.coverage.horizontal) {
 	            continue;
 	          }
 
-	          switch (table.version) {
-	            case 0:
-	              if (!table.coverage.horizontal) {
-	                continue;
-	              }
-
-	              break;
-	            case 1:
-	              if (table.coverage.vertical || table.coverage.variation) {
-	                continue;
-	              }
-
-	              break;
-	            default:
-	              throw new Error("Unsupported kerning table version " + table.version);
+	          break;
+	        case 1:
+	          if (table.coverage.vertical || table.coverage.variation) {
+	            continue;
 	          }
 
-	          var val = 0;
-	          var s = table.subtable;
-	          switch (table.format) {
-	            case 0:
-	              // TODO: binary search
-	              var _iteratorNormalCompletion2 = true;
-	              var _didIteratorError2 = false;
-	              var _iteratorError2 = undefined;
-
-	              try {
-	                for (var _iterator2 = _getIterator(s.pairs), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	                  var pair = _step2.value;
-
-	                  if (pair.left === left && pair.right === right) {
-	                    val = pair.value;
-	                    break;
-	                  }
-	                }
-	              } catch (err) {
-	                _didIteratorError2 = true;
-	                _iteratorError2 = err;
-	              } finally {
-	                try {
-	                  if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	                    _iterator2.return();
-	                  }
-	                } finally {
-	                  if (_didIteratorError2) {
-	                    throw _iteratorError2;
-	                  }
-	                }
-	              }
-
-	              break;
-
-	            case 2:
-	              var leftOffset = 0,
-	                  rightOffset = 0;
-	              if (left >= s.leftTable.firstGlyph && left < s.leftTable.firstGlyph + s.leftTable.nGlyphs) {
-	                leftOffset = s.leftTable.offsets[left - s.leftTable.firstGlyph];
-	              } else {
-	                leftOffset = s.array.off;
-	              }
-
-	              if (right >= s.rightTable.firstGlyph && right < s.rightTable.firstGlyph + s.rightTable.nGlyphs) {
-	                rightOffset = s.rightTable.offsets[right - s.rightTable.firstGlyph];
-	              }
-
-	              var index = (leftOffset + rightOffset - s.array.off) / 2;
-	              val = s.array.values.get(index);
-	              break;
-
-	            case 3:
-	              if (left >= s.glyphCount || right >= s.glyphCount) {
-	                return 0;
-	              }
-
-	              val = s.kernValue[s.kernIndex[s.leftClass[left] * s.rightClassCount + s.rightClass[right]]];
-	              break;
-
-	            default:
-	              throw new Error("Unsupported kerning sub-table format " + table.format);
-	          }
-
-	          // Microsoft supports the override flag, which resets the result
-	          // Otherwise, the sum of the results from all subtables is returned
-	          if (table.coverage.override) {
-	            res = val;
-	          } else {
-	            res += val;
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
-	        }
+	          break;
+	        default:
+	          throw new Error('Unsupported kerning table version ' + table.version);
 	      }
 
-	      return res;
+	      var val = 0;
+	      var s = table.subtable;
+	      switch (table.format) {
+	        case 0:
+	          var pairIdx = binarySearch(s.pairs, function (pair) {
+	            return left - pair.left || right - pair.right;
+	          });
+
+	          if (pairIdx >= 0) {
+	            val = s.pairs[pairIdx].value;
+	          }
+
+	          break;
+
+	        case 2:
+	          var leftOffset = 0,
+	              rightOffset = 0;
+	          if (left >= s.leftTable.firstGlyph && left < s.leftTable.firstGlyph + s.leftTable.nGlyphs) {
+	            leftOffset = s.leftTable.offsets[left - s.leftTable.firstGlyph];
+	          } else {
+	            leftOffset = s.array.off;
+	          }
+
+	          if (right >= s.rightTable.firstGlyph && right < s.rightTable.firstGlyph + s.rightTable.nGlyphs) {
+	            rightOffset = s.rightTable.offsets[right - s.rightTable.firstGlyph];
+	          }
+
+	          var index = (leftOffset + rightOffset - s.array.off) / 2;
+	          val = s.array.values.get(index);
+	          break;
+
+	        case 3:
+	          if (left >= s.glyphCount || right >= s.glyphCount) {
+	            return 0;
+	          }
+
+	          val = s.kernValue[s.kernIndex[s.leftClass[left] * s.rightClassCount + s.rightClass[right]]];
+	          break;
+
+	        default:
+	          throw new Error('Unsupported kerning sub-table format ' + table.format);
+	      }
+
+	      // Microsoft supports the override flag, which resets the result
+	      // Otherwise, the sum of the results from all subtables is returned
+	      if (table.coverage.override) {
+	        res = val;
+	      } else {
+	        res += val;
+	      }
 	    }
-	  }]);
+
+	    return res;
+	  };
 
 	  return KernProcessor;
 	}();
@@ -42228,261 +41994,256 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.font = font;
 	  }
 
-	  _createClass(UnicodeLayoutEngine, [{
-	    key: 'positionGlyphs',
-	    value: function positionGlyphs(glyphs, positions) {
-	      // find each base + mark cluster, and position the marks relative to the base
-	      var clusterStart = 0;
-	      var clusterEnd = 0;
-	      for (var index = 0; index < glyphs.length; index++) {
-	        var glyph = glyphs[index];
-	        if (glyph.isMark) {
-	          // TODO: handle ligatures
-	          clusterEnd = index;
-	        } else {
-	          if (clusterStart !== clusterEnd) {
-	            this.positionCluster(glyphs, positions, clusterStart, clusterEnd);
-	          }
-
-	          clusterStart = clusterEnd = index;
+	  UnicodeLayoutEngine.prototype.positionGlyphs = function positionGlyphs(glyphs, positions) {
+	    // find each base + mark cluster, and position the marks relative to the base
+	    var clusterStart = 0;
+	    var clusterEnd = 0;
+	    for (var index = 0; index < glyphs.length; index++) {
+	      var glyph = glyphs[index];
+	      if (glyph.isMark) {
+	        // TODO: handle ligatures
+	        clusterEnd = index;
+	      } else {
+	        if (clusterStart !== clusterEnd) {
+	          this.positionCluster(glyphs, positions, clusterStart, clusterEnd);
 	        }
-	      }
 
-	      if (clusterStart !== clusterEnd) {
-	        this.positionCluster(glyphs, positions, clusterStart, clusterEnd);
+	        clusterStart = clusterEnd = index;
 	      }
-
-	      return positions;
 	    }
-	  }, {
-	    key: 'positionCluster',
-	    value: function positionCluster(glyphs, positions, clusterStart, clusterEnd) {
-	      var base = glyphs[clusterStart];
-	      var baseBox = base.cbox.copy();
 
-	      // adjust bounding box for ligature glyphs
-	      if (base.codePoints.length > 1) {
-	        // LTR. TODO: RTL support.
-	        baseBox.minX += (base.codePoints.length - 1) * baseBox.width / base.codePoints.length;
-	      }
+	    if (clusterStart !== clusterEnd) {
+	      this.positionCluster(glyphs, positions, clusterStart, clusterEnd);
+	    }
 
-	      var xOffset = -positions[clusterStart].xAdvance;
-	      var yOffset = 0;
-	      var yGap = this.font.unitsPerEm / 16;
+	    return positions;
+	  };
 
-	      // position each of the mark glyphs relative to the base glyph
-	      for (var index = clusterStart + 1; index <= clusterEnd; index++) {
-	        var mark = glyphs[index];
-	        var markBox = mark.cbox;
-	        var position = positions[index];
+	  UnicodeLayoutEngine.prototype.positionCluster = function positionCluster(glyphs, positions, clusterStart, clusterEnd) {
+	    var base = glyphs[clusterStart];
+	    var baseBox = base.cbox.copy();
 
-	        var combiningClass = this.getCombiningClass(mark.codePoints[0]);
+	    // adjust bounding box for ligature glyphs
+	    if (base.codePoints.length > 1) {
+	      // LTR. TODO: RTL support.
+	      baseBox.minX += (base.codePoints.length - 1) * baseBox.width / base.codePoints.length;
+	    }
 
-	        if (combiningClass !== 'Not_Reordered') {
-	          position.xOffset = position.yOffset = 0;
+	    var xOffset = -positions[clusterStart].xAdvance;
+	    var yOffset = 0;
+	    var yGap = this.font.unitsPerEm / 16;
 
-	          // x positioning
-	          switch (combiningClass) {
-	            case 'Double_Above':
-	            case 'Double_Below':
-	              // LTR. TODO: RTL support.
-	              position.xOffset += baseBox.minX - markBox.width / 2 - markBox.minX;
-	              break;
+	    // position each of the mark glyphs relative to the base glyph
+	    for (var index = clusterStart + 1; index <= clusterEnd; index++) {
+	      var mark = glyphs[index];
+	      var markBox = mark.cbox;
+	      var position = positions[index];
 
-	            case 'Attached_Below_Left':
-	            case 'Below_Left':
-	            case 'Above_Left':
-	              // left align
-	              position.xOffset += baseBox.minX - markBox.minX;
-	              break;
+	      var combiningClass = this.getCombiningClass(mark.codePoints[0]);
 
-	            case 'Attached_Above_Right':
-	            case 'Below_Right':
-	            case 'Above_Right':
-	              // right align
-	              position.xOffset += baseBox.maxX - markBox.width - markBox.minX;
-	              break;
+	      if (combiningClass !== 'Not_Reordered') {
+	        position.xOffset = position.yOffset = 0;
 
-	            default:
-	              // Attached_Below, Attached_Above, Below, Above, other
-	              // center align
-	              position.xOffset += baseBox.minX + (baseBox.width - markBox.width) / 2 - markBox.minX;
-	          }
+	        // x positioning
+	        switch (combiningClass) {
+	          case 'Double_Above':
+	          case 'Double_Below':
+	            // LTR. TODO: RTL support.
+	            position.xOffset += baseBox.minX - markBox.width / 2 - markBox.minX;
+	            break;
 
-	          // y positioning
-	          switch (combiningClass) {
-	            case 'Double_Below':
-	            case 'Below_Left':
-	            case 'Below':
-	            case 'Below_Right':
-	            case 'Attached_Below_Left':
-	            case 'Attached_Below':
-	              // add a small gap between the glyphs if they are not attached
-	              if (combiningClass === 'Attached_Below_Left' || combiningClass === 'Attached_Below') {
-	                baseBox.minY += yGap;
-	              }
+	          case 'Attached_Below_Left':
+	          case 'Below_Left':
+	          case 'Above_Left':
+	            // left align
+	            position.xOffset += baseBox.minX - markBox.minX;
+	            break;
 
-	              position.yOffset = -baseBox.minY - markBox.maxY;
-	              baseBox.minY += markBox.height;
-	              break;
+	          case 'Attached_Above_Right':
+	          case 'Below_Right':
+	          case 'Above_Right':
+	            // right align
+	            position.xOffset += baseBox.maxX - markBox.width - markBox.minX;
+	            break;
 
-	            case 'Double_Above':
-	            case 'Above_Left':
-	            case 'Above':
-	            case 'Above_Right':
-	            case 'Attached_Above':
-	            case 'Attached_Above_Right':
-	              // add a small gap between the glyphs if they are not attached
-	              if (combiningClass === 'Attached_Above' || combiningClass === 'Attached_Above_Right') {
-	                baseBox.maxY += yGap;
-	              }
-
-	              position.yOffset = baseBox.maxY - markBox.minY;
-	              baseBox.maxY += markBox.height;
-	              break;
-	          }
-
-	          position.xAdvance = position.yAdvance = 0;
-	          position.xOffset += xOffset;
-	          position.yOffset += yOffset;
-	        } else {
-	          xOffset -= position.xAdvance;
-	          yOffset -= position.yAdvance;
+	          default:
+	            // Attached_Below, Attached_Above, Below, Above, other
+	            // center align
+	            position.xOffset += baseBox.minX + (baseBox.width - markBox.width) / 2 - markBox.minX;
 	        }
-	      }
 
-	      return;
-	    }
-	  }, {
-	    key: 'getCombiningClass',
-	    value: function getCombiningClass(codePoint) {
-	      var combiningClass = unicode.getCombiningClass(codePoint);
+	        // y positioning
+	        switch (combiningClass) {
+	          case 'Double_Below':
+	          case 'Below_Left':
+	          case 'Below':
+	          case 'Below_Right':
+	          case 'Attached_Below_Left':
+	          case 'Attached_Below':
+	            // add a small gap between the glyphs if they are not attached
+	            if (combiningClass === 'Attached_Below_Left' || combiningClass === 'Attached_Below') {
+	              baseBox.minY += yGap;
+	            }
 
-	      // Thai / Lao need some per-character work
-	      if ((codePoint & ~0xff) === 0x0e00) {
-	        if (combiningClass === 'Not_Reordered') {
-	          switch (codePoint) {
-	            case 0x0e31:
-	            case 0x0e34:
-	            case 0x0e35:
-	            case 0x0e36:
-	            case 0x0e37:
-	            case 0x0e47:
-	            case 0x0e4c:
-	            case 0x0e3d:
-	            case 0x0e4e:
-	              return 'Above_Right';
+	            position.yOffset = -baseBox.minY - markBox.maxY;
+	            baseBox.minY += markBox.height;
+	            break;
 
-	            case 0x0eb1:
-	            case 0x0eb4:
-	            case 0x0eb5:
-	            case 0x0eb6:
-	            case 0x0eb7:
-	            case 0x0ebb:
-	            case 0x0ecc:
-	            case 0x0ecd:
-	              return 'Above';
+	          case 'Double_Above':
+	          case 'Above_Left':
+	          case 'Above':
+	          case 'Above_Right':
+	          case 'Attached_Above':
+	          case 'Attached_Above_Right':
+	            // add a small gap between the glyphs if they are not attached
+	            if (combiningClass === 'Attached_Above' || combiningClass === 'Attached_Above_Right') {
+	              baseBox.maxY += yGap;
+	            }
 
-	            case 0x0ebc:
-	              return 'Below';
-	          }
-	        } else if (codePoint === 0x0e3a) {
-	          // virama
-	          return 'Below_Right';
+	            position.yOffset = baseBox.maxY - markBox.minY;
+	            baseBox.maxY += markBox.height;
+	            break;
 	        }
+
+	        position.xAdvance = position.yAdvance = 0;
+	        position.xOffset += xOffset;
+	        position.yOffset += yOffset;
+	      } else {
+	        xOffset -= position.xAdvance;
+	        yOffset -= position.yAdvance;
 	      }
-
-	      switch (combiningClass) {
-	        // Hebrew
-
-	        case 'CCC10': // sheva
-	        case 'CCC11': // hataf segol
-	        case 'CCC12': // hataf patah
-	        case 'CCC13': // hataf qamats
-	        case 'CCC14': // hiriq
-	        case 'CCC15': // tsere
-	        case 'CCC16': // segol
-	        case 'CCC17': // patah
-	        case 'CCC18': // qamats
-	        case 'CCC20': // qubuts
-	        case 'CCC22':
-	          // meteg
-	          return 'Below';
-
-	        case 'CCC23':
-	          // rafe
-	          return 'Attached_Above';
-
-	        case 'CCC24':
-	          // shin dot
-	          return 'Above_Right';
-
-	        case 'CCC25': // sin dot
-	        case 'CCC19':
-	          // holam
-	          return 'Above_Left';
-
-	        case 'CCC26':
-	          // point varika
-	          return 'Above';
-
-	        case 'CCC21':
-	          // dagesh
-	          break;
-
-	        // Arabic and Syriac
-
-	        case 'CCC27': // fathatan
-	        case 'CCC28': // dammatan
-	        case 'CCC30': // fatha
-	        case 'CCC31': // damma
-	        case 'CCC33': // shadda
-	        case 'CCC34': // sukun
-	        case 'CCC35': // superscript alef
-	        case 'CCC36':
-	          // superscript alaph
-	          return 'Above';
-
-	        case 'CCC29': // kasratan
-	        case 'CCC32':
-	          // kasra
-	          return 'Below';
-
-	        // Thai
-
-	        case 'CCC103':
-	          // sara u / sara uu
-	          return 'Below_Right';
-
-	        case 'CCC107':
-	          // mai
-	          return 'Above_Right';
-
-	        // Lao
-
-	        case 'CCC118':
-	          // sign u / sign uu
-	          return 'Below';
-
-	        case 'CCC122':
-	          // mai
-	          return 'Above';
-
-	        // Tibetan
-
-	        case 'CCC129': // sign aa
-	        case 'CCC132':
-	          // sign u
-	          return 'Below';
-
-	        case 'CCC130':
-	          // sign i
-	          return 'Above';
-	      }
-
-	      return combiningClass;
 	    }
-	  }]);
+
+	    return;
+	  };
+
+	  UnicodeLayoutEngine.prototype.getCombiningClass = function getCombiningClass(codePoint) {
+	    var combiningClass = unicode.getCombiningClass(codePoint);
+
+	    // Thai / Lao need some per-character work
+	    if ((codePoint & ~0xff) === 0x0e00) {
+	      if (combiningClass === 'Not_Reordered') {
+	        switch (codePoint) {
+	          case 0x0e31:
+	          case 0x0e34:
+	          case 0x0e35:
+	          case 0x0e36:
+	          case 0x0e37:
+	          case 0x0e47:
+	          case 0x0e4c:
+	          case 0x0e3d:
+	          case 0x0e4e:
+	            return 'Above_Right';
+
+	          case 0x0eb1:
+	          case 0x0eb4:
+	          case 0x0eb5:
+	          case 0x0eb6:
+	          case 0x0eb7:
+	          case 0x0ebb:
+	          case 0x0ecc:
+	          case 0x0ecd:
+	            return 'Above';
+
+	          case 0x0ebc:
+	            return 'Below';
+	        }
+	      } else if (codePoint === 0x0e3a) {
+	        // virama
+	        return 'Below_Right';
+	      }
+	    }
+
+	    switch (combiningClass) {
+	      // Hebrew
+
+	      case 'CCC10': // sheva
+	      case 'CCC11': // hataf segol
+	      case 'CCC12': // hataf patah
+	      case 'CCC13': // hataf qamats
+	      case 'CCC14': // hiriq
+	      case 'CCC15': // tsere
+	      case 'CCC16': // segol
+	      case 'CCC17': // patah
+	      case 'CCC18': // qamats
+	      case 'CCC20': // qubuts
+	      case 'CCC22':
+	        // meteg
+	        return 'Below';
+
+	      case 'CCC23':
+	        // rafe
+	        return 'Attached_Above';
+
+	      case 'CCC24':
+	        // shin dot
+	        return 'Above_Right';
+
+	      case 'CCC25': // sin dot
+	      case 'CCC19':
+	        // holam
+	        return 'Above_Left';
+
+	      case 'CCC26':
+	        // point varika
+	        return 'Above';
+
+	      case 'CCC21':
+	        // dagesh
+	        break;
+
+	      // Arabic and Syriac
+
+	      case 'CCC27': // fathatan
+	      case 'CCC28': // dammatan
+	      case 'CCC30': // fatha
+	      case 'CCC31': // damma
+	      case 'CCC33': // shadda
+	      case 'CCC34': // sukun
+	      case 'CCC35': // superscript alef
+	      case 'CCC36':
+	        // superscript alaph
+	        return 'Above';
+
+	      case 'CCC29': // kasratan
+	      case 'CCC32':
+	        // kasra
+	        return 'Below';
+
+	      // Thai
+
+	      case 'CCC103':
+	        // sara u / sara uu
+	        return 'Below_Right';
+
+	      case 'CCC107':
+	        // mai
+	        return 'Above_Right';
+
+	      // Lao
+
+	      case 'CCC118':
+	        // sign u / sign uu
+	        return 'Below';
+
+	      case 'CCC122':
+	        // mai
+	        return 'Above';
+
+	      // Tibetan
+
+	      case 'CCC129': // sign aa
+	      case 'CCC132':
+	        // sign u
+	        return 'Below';
+
+	      case 'CCC130':
+	        // sign i
+	        return 'Above';
+	    }
+
+	    return combiningClass;
+	  };
 
 	  return UnicodeLayoutEngine;
 	}();
@@ -42530,31 +42291,29 @@ return /******/ (function(modules) { // webpackBootstrap
 	   */
 
 
+	  BBox.prototype.addPoint = function addPoint(x, y) {
+	    if (x < this.minX) {
+	      this.minX = x;
+	    }
+
+	    if (y < this.minY) {
+	      this.minY = y;
+	    }
+
+	    if (x > this.maxX) {
+	      this.maxX = x;
+	    }
+
+	    if (y > this.maxY) {
+	      this.maxY = y;
+	    }
+	  };
+
+	  BBox.prototype.copy = function copy() {
+	    return new BBox(this.minX, this.minY, this.maxX, this.maxY);
+	  };
+
 	  _createClass(BBox, [{
-	    key: "addPoint",
-	    value: function addPoint(x, y) {
-	      if (x < this.minX) {
-	        this.minX = x;
-	      }
-
-	      if (y < this.minY) {
-	        this.minY = y;
-	      }
-
-	      if (x > this.maxX) {
-	        this.maxX = x;
-	      }
-
-	      if (y > this.maxY) {
-	        this.maxY = y;
-	      }
-	    }
-	  }, {
-	    key: "copy",
-	    value: function copy() {
-	      return new BBox(this.minX, this.minY, this.maxX, this.maxY);
-	    }
-	  }, {
 	    key: "width",
 	    get: function get() {
 	      return this.maxX - this.minX;
@@ -42607,29 +42366,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	    key: 'advanceWidth',
 	    get: function get() {
 	      var width = 0;
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
+	      for (var _iterator = this.positions, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	        var _ref;
 
-	      try {
-	        for (var _iterator = _getIterator(this.positions), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var position = _step.value;
+	        if (_isArray) {
+	          if (_i >= _iterator.length) break;
+	          _ref = _iterator[_i++];
+	        } else {
+	          _i = _iterator.next();
+	          if (_i.done) break;
+	          _ref = _i.value;
+	        }
 
-	          width += position.xAdvance;
-	        }
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
-	        }
+	        var position = _ref;
+
+	        width += position.xAdvance;
 	      }
 
 	      return width;
@@ -42644,29 +42395,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	    key: 'advanceHeight',
 	    get: function get() {
 	      var height = 0;
-	      var _iteratorNormalCompletion2 = true;
-	      var _didIteratorError2 = false;
-	      var _iteratorError2 = undefined;
+	      for (var _iterator2 = this.positions, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	        var _ref2;
 
-	      try {
-	        for (var _iterator2 = _getIterator(this.positions), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	          var position = _step2.value;
+	        if (_isArray2) {
+	          if (_i2 >= _iterator2.length) break;
+	          _ref2 = _iterator2[_i2++];
+	        } else {
+	          _i2 = _iterator2.next();
+	          if (_i2.done) break;
+	          _ref2 = _i2.value;
+	        }
 
-	          height += position.yAdvance;
-	        }
-	      } catch (err) {
-	        _didIteratorError2 = true;
-	        _iteratorError2 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	            _iterator2.return();
-	          }
-	        } finally {
-	          if (_didIteratorError2) {
-	            throw _iteratorError2;
-	          }
-	        }
+	        var position = _ref2;
+
+	        height += position.yAdvance;
 	      }
 
 	      return height;
@@ -43448,9 +43191,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	// Maps strings in a [featureType, featureSetting]
 	// to their equivalent number codes
 	function mapFeatureStrings(f) {
-	  var _f = _slicedToArray(f, 2),
-	      type = _f[0],
-	      setting = _f[1];
+	  var type = f[0],
+	      setting = f[1];
 
 	  if (isNaN(type)) {
 	    var typeCode = features[type] && features[type].code;
@@ -43486,8 +43228,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var _feature = features[type];
 	      for (var setting in _feature) {
 	        var _r = void 0;
-	        var _f2 = mapFeatureStrings([type, setting]);
-	        if (_feature[setting] && (_r = AATMapping[_f2[0]] && AATMapping[_f2[0]][_f2[1]])) {
+	        var _f = mapFeatureStrings([type, setting]);
+	        if (_feature[setting] && (_r = AATMapping[_f[0]] && AATMapping[_f[0]][_f[1]])) {
 	          res[_r] = true;
 	        }
 	      }
@@ -43534,177 +43276,157 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.table = table;
 	  }
 
-	  _createClass(AATLookupTable, [{
-	    key: 'lookup',
-	    value: function lookup(glyph) {
-	      switch (this.table.version) {
-	        case 0:
-	          // simple array format
-	          return this.table.values.getItem(glyph);
+	  AATLookupTable.prototype.lookup = function lookup(glyph) {
+	    switch (this.table.version) {
+	      case 0:
+	        // simple array format
+	        return this.table.values.getItem(glyph);
 
-	        case 2: // segment format
-	        case 4:
-	          {
-	            var min = 0;
-	            var max = this.table.binarySearchHeader.nUnits - 1;
+	      case 2: // segment format
+	      case 4:
+	        {
+	          var min = 0;
+	          var max = this.table.binarySearchHeader.nUnits - 1;
 
-	            while (min <= max) {
-	              var mid = min + max >> 1;
-	              var seg = this.table.segments[mid];
+	          while (min <= max) {
+	            var mid = min + max >> 1;
+	            var seg = this.table.segments[mid];
 
-	              // special end of search value
-	              if (seg.firstGlyph === 0xffff) {
-	                return null;
-	              }
-
-	              if (glyph < seg.firstGlyph) {
-	                max = mid - 1;
-	              } else if (glyph > seg.lastGlyph) {
-	                min = mid + 1;
-	              } else {
-	                if (this.table.version === 2) {
-	                  return seg.value;
-	                } else {
-	                  return seg.values[glyph - seg.firstGlyph];
-	                }
-	              }
+	            // special end of search value
+	            if (seg.firstGlyph === 0xffff) {
+	              return null;
 	            }
 
-	            return null;
-	          }
-
-	        case 6:
-	          {
-	            // lookup single
-	            var _min = 0;
-	            var _max = this.table.binarySearchHeader.nUnits - 1;
-
-	            while (_min <= _max) {
-	              var mid = _min + _max >> 1;
-	              var seg = this.table.segments[mid];
-
-	              // special end of search value
-	              if (seg.glyph === 0xffff) {
-	                return null;
-	              }
-
-	              if (glyph < seg.glyph) {
-	                _max = mid - 1;
-	              } else if (glyph > seg.glyph) {
-	                _min = mid + 1;
-	              } else {
+	            if (glyph < seg.firstGlyph) {
+	              max = mid - 1;
+	            } else if (glyph > seg.lastGlyph) {
+	              min = mid + 1;
+	            } else {
+	              if (this.table.version === 2) {
 	                return seg.value;
+	              } else {
+	                return seg.values[glyph - seg.firstGlyph];
 	              }
 	            }
-
-	            return null;
 	          }
 
-	        case 8:
+	          return null;
+	        }
+
+	      case 6:
+	        {
+	          // lookup single
+	          var _min = 0;
+	          var _max = this.table.binarySearchHeader.nUnits - 1;
+
+	          while (_min <= _max) {
+	            var mid = _min + _max >> 1;
+	            var seg = this.table.segments[mid];
+
+	            // special end of search value
+	            if (seg.glyph === 0xffff) {
+	              return null;
+	            }
+
+	            if (glyph < seg.glyph) {
+	              _max = mid - 1;
+	            } else if (glyph > seg.glyph) {
+	              _min = mid + 1;
+	            } else {
+	              return seg.value;
+	            }
+	          }
+
+	          return null;
+	        }
+
+	      case 8:
+	        // lookup trimmed
+	        return this.table.values[glyph - this.table.firstGlyph];
+
+	      default:
+	        throw new Error('Unknown lookup table format: ' + this.table.version);
+	    }
+	  };
+
+	  AATLookupTable.prototype.glyphsForValue = function glyphsForValue(classValue) {
+	    var res = [];
+
+	    switch (this.table.version) {
+	      case 2: // segment format
+	      case 4:
+	        {
+	          for (var _iterator = this.table.segments, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	            var _ref;
+
+	            if (_isArray) {
+	              if (_i >= _iterator.length) break;
+	              _ref = _iterator[_i++];
+	            } else {
+	              _i = _iterator.next();
+	              if (_i.done) break;
+	              _ref = _i.value;
+	            }
+
+	            var segment = _ref;
+
+	            if (this.table.version === 2 && segment.value === classValue) {
+	              res.push.apply(res, range(segment.firstGlyph, segment.lastGlyph + 1));
+	            } else {
+	              for (var index = 0; index < segment.values.length; index++) {
+	                if (segment.values[index] === classValue) {
+	                  res.push(segment.firstGlyph + index);
+	                }
+	              }
+	            }
+	          }
+
+	          break;
+	        }
+
+	      case 6:
+	        {
+	          // lookup single
+	          for (var _iterator2 = this.table.segments, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	            var _ref2;
+
+	            if (_isArray2) {
+	              if (_i2 >= _iterator2.length) break;
+	              _ref2 = _iterator2[_i2++];
+	            } else {
+	              _i2 = _iterator2.next();
+	              if (_i2.done) break;
+	              _ref2 = _i2.value;
+	            }
+
+	            var _segment = _ref2;
+
+	            if (_segment.value === classValue) {
+	              res.push(_segment.glyph);
+	            }
+	          }
+
+	          break;
+	        }
+
+	      case 8:
+	        {
 	          // lookup trimmed
-	          return this.table.values[glyph - this.table.firstGlyph];
+	          for (var i = 0; i < this.table.values.length; i++) {
+	            if (this.table.values[i] === classValue) {
+	              res.push(this.table.firstGlyph + i);
+	            }
+	          }
 
-	        default:
-	          throw new Error('Unknown lookup table format: ' + this.table.version);
-	      }
+	          break;
+	        }
+
+	      default:
+	        throw new Error('Unknown lookup table format: ' + this.table.version);
 	    }
-	  }, {
-	    key: 'glyphsForValue',
-	    value: function glyphsForValue(classValue) {
-	      var res = [];
 
-	      switch (this.table.version) {
-	        case 2: // segment format
-	        case 4:
-	          {
-	            var _iteratorNormalCompletion = true;
-	            var _didIteratorError = false;
-	            var _iteratorError = undefined;
-
-	            try {
-	              for (var _iterator = _getIterator(this.table.segments), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	                var segment = _step.value;
-
-	                if (this.table.version === 2 && segment.value === classValue) {
-	                  res.push.apply(res, _toConsumableArray(range(segment.firstGlyph, segment.lastGlyph + 1)));
-	                } else {
-	                  for (var index = 0; index < segment.values.length; index++) {
-	                    if (segment.values[index] === classValue) {
-	                      res.push(segment.firstGlyph + index);
-	                    }
-	                  }
-	                }
-	              }
-	            } catch (err) {
-	              _didIteratorError = true;
-	              _iteratorError = err;
-	            } finally {
-	              try {
-	                if (!_iteratorNormalCompletion && _iterator.return) {
-	                  _iterator.return();
-	                }
-	              } finally {
-	                if (_didIteratorError) {
-	                  throw _iteratorError;
-	                }
-	              }
-	            }
-
-	            break;
-	          }
-
-	        case 6:
-	          {
-	            // lookup single
-	            var _iteratorNormalCompletion2 = true;
-	            var _didIteratorError2 = false;
-	            var _iteratorError2 = undefined;
-
-	            try {
-	              for (var _iterator2 = _getIterator(this.table.segments), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	                var _segment = _step2.value;
-
-	                if (_segment.value === classValue) {
-	                  res.push(_segment.glyph);
-	                }
-	              }
-	            } catch (err) {
-	              _didIteratorError2 = true;
-	              _iteratorError2 = err;
-	            } finally {
-	              try {
-	                if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	                  _iterator2.return();
-	                }
-	              } finally {
-	                if (_didIteratorError2) {
-	                  throw _iteratorError2;
-	                }
-	              }
-	            }
-
-	            break;
-	          }
-
-	        case 8:
-	          {
-	            // lookup trimmed
-	            for (var i = 0; i < this.table.values.length; i++) {
-	              if (this.table.values[i] === classValue) {
-	                res.push(this.table.firstGlyph + i);
-	              }
-	            }
-
-	            break;
-	          }
-
-	        default:
-	          throw new Error('Unknown lookup table format: ' + this.table.version);
-	      }
-
-	      return res;
-	    }
-	  }]);
+	    return res;
+	  };
 
 	  return AATLookupTable;
 	}(), (_applyDecoratedDescriptor$3(_class$3.prototype, 'glyphsForValue', [cache], _Object$getOwnPropertyDescriptor(_class$3.prototype, 'glyphsForValue'), _class$3.prototype)), _class$3);
@@ -43723,118 +43445,106 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.lookupTable = new AATLookupTable(stateTable.classTable);
 	  }
 
-	  _createClass(AATStateMachine, [{
-	    key: 'process',
-	    value: function process(glyphs, reverse, processEntry) {
-	      var currentState = START_OF_TEXT_STATE; // START_OF_LINE_STATE is used for kashida glyph insertions sometimes I think?
-	      var index = reverse ? glyphs.length - 1 : 0;
-	      var dir = reverse ? -1 : 1;
+	  AATStateMachine.prototype.process = function process(glyphs, reverse, processEntry) {
+	    var currentState = START_OF_TEXT_STATE; // START_OF_LINE_STATE is used for kashida glyph insertions sometimes I think?
+	    var index = reverse ? glyphs.length - 1 : 0;
+	    var dir = reverse ? -1 : 1;
 
-	      while (dir === 1 && index <= glyphs.length || dir === -1 && index >= -1) {
-	        var glyph = null;
-	        var classCode = OUT_OF_BOUNDS_CLASS;
-	        var shouldAdvance = true;
+	    while (dir === 1 && index <= glyphs.length || dir === -1 && index >= -1) {
+	      var glyph = null;
+	      var classCode = OUT_OF_BOUNDS_CLASS;
+	      var shouldAdvance = true;
 
-	        if (index === glyphs.length || index === -1) {
-	          classCode = END_OF_TEXT_CLASS;
+	      if (index === glyphs.length || index === -1) {
+	        classCode = END_OF_TEXT_CLASS;
+	      } else {
+	        glyph = glyphs[index];
+	        if (glyph.id === 0xffff) {
+	          // deleted glyph
+	          classCode = DELETED_GLYPH_CLASS;
 	        } else {
-	          glyph = glyphs[index];
-	          if (glyph.id === 0xffff) {
-	            // deleted glyph
-	            classCode = DELETED_GLYPH_CLASS;
-	          } else {
-	            classCode = this.lookupTable.lookup(glyph.id);
-	            if (classCode == null) {
-	              classCode = OUT_OF_BOUNDS_CLASS;
-	            }
+	          classCode = this.lookupTable.lookup(glyph.id);
+	          if (classCode == null) {
+	            classCode = OUT_OF_BOUNDS_CLASS;
 	          }
-	        }
-
-	        var row = this.stateTable.stateArray.getItem(currentState);
-	        var entryIndex = row[classCode];
-	        var entry = this.stateTable.entryTable.getItem(entryIndex);
-
-	        if (classCode !== END_OF_TEXT_CLASS && classCode !== DELETED_GLYPH_CLASS) {
-	          processEntry(glyph, entry, index);
-	          shouldAdvance = !(entry.flags & DONT_ADVANCE);
-	        }
-
-	        currentState = entry.newState;
-	        if (shouldAdvance) {
-	          index += dir;
 	        }
 	      }
 
-	      return glyphs;
+	      var row = this.stateTable.stateArray.getItem(currentState);
+	      var entryIndex = row[classCode];
+	      var entry = this.stateTable.entryTable.getItem(entryIndex);
+
+	      if (classCode !== END_OF_TEXT_CLASS && classCode !== DELETED_GLYPH_CLASS) {
+	        processEntry(glyph, entry, index);
+	        shouldAdvance = !(entry.flags & DONT_ADVANCE);
+	      }
+
+	      currentState = entry.newState;
+	      if (shouldAdvance) {
+	        index += dir;
+	      }
 	    }
 
-	    /**
-	     * Performs a depth-first traversal of the glyph strings
-	     * represented by the state machine.
-	     */
+	    return glyphs;
+	  };
 
-	  }, {
-	    key: 'traverse',
-	    value: function traverse(opts) {
-	      var state = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-	      var visited = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : new _Set();
+	  /**
+	   * Performs a depth-first traversal of the glyph strings
+	   * represented by the state machine.
+	   */
 
-	      if (visited.has(state)) {
-	        return;
-	      }
 
-	      visited.add(state);
+	  AATStateMachine.prototype.traverse = function traverse(opts) {
+	    var state = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+	    var visited = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : new _Set();
 
-	      var _stateTable = this.stateTable,
-	          nClasses = _stateTable.nClasses,
-	          stateArray = _stateTable.stateArray,
-	          entryTable = _stateTable.entryTable;
+	    if (visited.has(state)) {
+	      return;
+	    }
 
-	      var row = stateArray.getItem(state);
+	    visited.add(state);
 
-	      // Skip predefined classes
-	      for (var classCode = 4; classCode < nClasses; classCode++) {
-	        var entryIndex = row[classCode];
-	        var entry = entryTable.getItem(entryIndex);
+	    var _stateTable = this.stateTable,
+	        nClasses = _stateTable.nClasses,
+	        stateArray = _stateTable.stateArray,
+	        entryTable = _stateTable.entryTable;
 
-	        // Try all glyphs in the class
-	        var _iteratorNormalCompletion = true;
-	        var _didIteratorError = false;
-	        var _iteratorError = undefined;
+	    var row = stateArray.getItem(state);
 
-	        try {
-	          for (var _iterator = _getIterator(this.lookupTable.glyphsForValue(classCode)), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	            var glyph = _step.value;
+	    // Skip predefined classes
+	    for (var classCode = 4; classCode < nClasses; classCode++) {
+	      var entryIndex = row[classCode];
+	      var entry = entryTable.getItem(entryIndex);
 
-	            if (opts.enter) {
-	              opts.enter(glyph, entry);
-	            }
+	      // Try all glyphs in the class
+	      for (var _iterator = this.lookupTable.glyphsForValue(classCode), _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	        var _ref;
 
-	            if (entry.newState !== 0) {
-	              this.traverse(opts, entry.newState, visited);
-	            }
+	        if (_isArray) {
+	          if (_i >= _iterator.length) break;
+	          _ref = _iterator[_i++];
+	        } else {
+	          _i = _iterator.next();
+	          if (_i.done) break;
+	          _ref = _i.value;
+	        }
 
-	            if (opts.exit) {
-	              opts.exit(glyph, entry);
-	            }
-	          }
-	        } catch (err) {
-	          _didIteratorError = true;
-	          _iteratorError = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion && _iterator.return) {
-	              _iterator.return();
-	            }
-	          } finally {
-	            if (_didIteratorError) {
-	              throw _iteratorError;
-	            }
-	          }
+	        var glyph = _ref;
+
+	        if (opts.enter) {
+	          opts.enter(glyph, entry);
+	        }
+
+	        if (entry.newState !== 0) {
+	          this.traverse(opts, entry.newState, visited);
+	        }
+
+	        if (opts.exit) {
+	          opts.exit(glyph, entry);
 	        }
 	      }
 	    }
-	  }]);
+	  };
 
 	  return AATStateMachine;
 	}();
@@ -43910,487 +43620,416 @@ return /******/ (function(modules) { // webpackBootstrap
 	  // Features should be in the form of {featureType:{featureSetting:true}}
 
 
-	  _createClass(AATMorxProcessor, [{
-	    key: 'process',
-	    value: function process(glyphs) {
-	      var features = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
+	  AATMorxProcessor.prototype.process = function process(glyphs) {
+	    var features = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
-	      try {
-	        for (var _iterator = _getIterator(this.morx.chains), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var chain = _step.value;
+	    for (var _iterator = this.morx.chains, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	      var _ref;
 
-	          var flags = chain.defaultFlags;
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
+	      } else {
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
+	      }
 
-	          // enable/disable the requested features
-	          var _iteratorNormalCompletion2 = true;
-	          var _didIteratorError2 = false;
-	          var _iteratorError2 = undefined;
+	      var chain = _ref;
 
-	          try {
-	            for (var _iterator2 = _getIterator(chain.features), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	              var feature = _step2.value;
+	      var flags = chain.defaultFlags;
 
-	              var f = void 0;
-	              if ((f = features[feature.featureType]) && f[feature.featureSetting]) {
-	                flags &= feature.disableFlags;
-	                flags |= feature.enableFlags;
-	              }
-	            }
-	          } catch (err) {
-	            _didIteratorError2 = true;
-	            _iteratorError2 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	                _iterator2.return();
-	              }
-	            } finally {
-	              if (_didIteratorError2) {
-	                throw _iteratorError2;
-	              }
-	            }
-	          }
+	      // enable/disable the requested features
+	      for (var _iterator2 = chain.features, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	        var _ref2;
 
-	          var _iteratorNormalCompletion3 = true;
-	          var _didIteratorError3 = false;
-	          var _iteratorError3 = undefined;
-
-	          try {
-	            for (var _iterator3 = _getIterator(chain.subtables), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	              var subtable = _step3.value;
-
-	              if (subtable.subFeatureFlags & flags) {
-	                this.processSubtable(subtable, glyphs);
-	              }
-	            }
-	          } catch (err) {
-	            _didIteratorError3 = true;
-	            _iteratorError3 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	                _iterator3.return();
-	              }
-	            } finally {
-	              if (_didIteratorError3) {
-	                throw _iteratorError3;
-	              }
-	            }
-	          }
+	        if (_isArray2) {
+	          if (_i2 >= _iterator2.length) break;
+	          _ref2 = _iterator2[_i2++];
+	        } else {
+	          _i2 = _iterator2.next();
+	          if (_i2.done) break;
+	          _ref2 = _i2.value;
 	        }
 
-	        // remove deleted glyphs
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
+	        var feature = _ref2;
+
+	        var f = void 0;
+	        if ((f = features[feature.featureType]) && f[feature.featureSetting]) {
+	          flags &= feature.disableFlags;
+	          flags |= feature.enableFlags;
 	        }
 	      }
 
-	      var index = glyphs.length - 1;
-	      while (index >= 0) {
-	        if (glyphs[index].id === 0xffff) {
-	          glyphs.splice(index, 1);
+	      for (var _iterator3 = chain.subtables, _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	        var _ref3;
+
+	        if (_isArray3) {
+	          if (_i3 >= _iterator3.length) break;
+	          _ref3 = _iterator3[_i3++];
+	        } else {
+	          _i3 = _iterator3.next();
+	          if (_i3.done) break;
+	          _ref3 = _i3.value;
 	        }
 
-	        index--;
-	      }
+	        var subtable = _ref3;
 
-	      return glyphs;
-	    }
-	  }, {
-	    key: 'processSubtable',
-	    value: function processSubtable(subtable, glyphs) {
-	      this.subtable = subtable;
-	      this.glyphs = glyphs;
-	      if (this.subtable.type === 4) {
-	        this.processNoncontextualSubstitutions(this.subtable, this.glyphs);
-	        return;
-	      }
-
-	      this.ligatureStack = [];
-	      this.markedGlyph = null;
-	      this.firstGlyph = null;
-	      this.lastGlyph = null;
-	      this.markedIndex = null;
-
-	      var stateMachine = this.getStateMachine(subtable);
-	      var process = this.getProcessor();
-
-	      var reverse = !!(this.subtable.coverage & REVERSE_DIRECTION);
-	      return stateMachine.process(this.glyphs, reverse, process);
-	    }
-	  }, {
-	    key: 'getStateMachine',
-	    value: function getStateMachine(subtable) {
-	      return new AATStateMachine(subtable.table.stateTable);
-	    }
-	  }, {
-	    key: 'getProcessor',
-	    value: function getProcessor() {
-	      switch (this.subtable.type) {
-	        case 0:
-	          return this.processIndicRearragement;
-	        case 1:
-	          return this.processContextualSubstitution;
-	        case 2:
-	          return this.processLigature;
-	        case 4:
-	          return this.processNoncontextualSubstitutions;
-	        case 5:
-	          return this.processGlyphInsertion;
-	        default:
-	          throw new Error('Invalid morx subtable type: ' + this.subtable.type);
+	        if (subtable.subFeatureFlags & flags) {
+	          this.processSubtable(subtable, glyphs);
+	        }
 	      }
 	    }
-	  }, {
-	    key: 'processIndicRearragement',
-	    value: function processIndicRearragement(glyph, entry, index) {
-	      if (entry.flags & MARK_FIRST) {
-	        this.firstGlyph = index;
+
+	    // remove deleted glyphs
+	    var index = glyphs.length - 1;
+	    while (index >= 0) {
+	      if (glyphs[index].id === 0xffff) {
+	        glyphs.splice(index, 1);
 	      }
 
-	      if (entry.flags & MARK_LAST) {
-	        this.lastGlyph = index;
-	      }
-
-	      reorderGlyphs(this.glyphs, entry.flags & VERB, this.firstGlyph, this.lastGlyph);
+	      index--;
 	    }
-	  }, {
-	    key: 'processContextualSubstitution',
-	    value: function processContextualSubstitution(glyph, entry, index) {
-	      var subsitutions = this.subtable.table.substitutionTable.items;
-	      if (entry.markIndex !== 0xffff) {
-	        var lookup = subsitutions.getItem(entry.markIndex);
-	        var lookupTable = new AATLookupTable(lookup);
-	        glyph = this.glyphs[this.markedGlyph];
+
+	    return glyphs;
+	  };
+
+	  AATMorxProcessor.prototype.processSubtable = function processSubtable(subtable, glyphs) {
+	    this.subtable = subtable;
+	    this.glyphs = glyphs;
+	    if (this.subtable.type === 4) {
+	      this.processNoncontextualSubstitutions(this.subtable, this.glyphs);
+	      return;
+	    }
+
+	    this.ligatureStack = [];
+	    this.markedGlyph = null;
+	    this.firstGlyph = null;
+	    this.lastGlyph = null;
+	    this.markedIndex = null;
+
+	    var stateMachine = this.getStateMachine(subtable);
+	    var process = this.getProcessor();
+
+	    var reverse = !!(this.subtable.coverage & REVERSE_DIRECTION);
+	    return stateMachine.process(this.glyphs, reverse, process);
+	  };
+
+	  AATMorxProcessor.prototype.getStateMachine = function getStateMachine(subtable) {
+	    return new AATStateMachine(subtable.table.stateTable);
+	  };
+
+	  AATMorxProcessor.prototype.getProcessor = function getProcessor() {
+	    switch (this.subtable.type) {
+	      case 0:
+	        return this.processIndicRearragement;
+	      case 1:
+	        return this.processContextualSubstitution;
+	      case 2:
+	        return this.processLigature;
+	      case 4:
+	        return this.processNoncontextualSubstitutions;
+	      case 5:
+	        return this.processGlyphInsertion;
+	      default:
+	        throw new Error('Invalid morx subtable type: ' + this.subtable.type);
+	    }
+	  };
+
+	  AATMorxProcessor.prototype.processIndicRearragement = function processIndicRearragement(glyph, entry, index) {
+	    if (entry.flags & MARK_FIRST) {
+	      this.firstGlyph = index;
+	    }
+
+	    if (entry.flags & MARK_LAST) {
+	      this.lastGlyph = index;
+	    }
+
+	    reorderGlyphs(this.glyphs, entry.flags & VERB, this.firstGlyph, this.lastGlyph);
+	  };
+
+	  AATMorxProcessor.prototype.processContextualSubstitution = function processContextualSubstitution(glyph, entry, index) {
+	    var subsitutions = this.subtable.table.substitutionTable.items;
+	    if (entry.markIndex !== 0xffff) {
+	      var lookup = subsitutions.getItem(entry.markIndex);
+	      var lookupTable = new AATLookupTable(lookup);
+	      glyph = this.glyphs[this.markedGlyph];
+	      var gid = lookupTable.lookup(glyph.id);
+	      if (gid) {
+	        this.glyphs[this.markedGlyph] = this.font.getGlyph(gid, glyph.codePoints);
+	      }
+	    }
+
+	    if (entry.currentIndex !== 0xffff) {
+	      var _lookup = subsitutions.getItem(entry.currentIndex);
+	      var _lookupTable = new AATLookupTable(_lookup);
+	      glyph = this.glyphs[index];
+	      var gid = _lookupTable.lookup(glyph.id);
+	      if (gid) {
+	        this.glyphs[index] = this.font.getGlyph(gid, glyph.codePoints);
+	      }
+	    }
+
+	    if (entry.flags & SET_MARK) {
+	      this.markedGlyph = index;
+	    }
+	  };
+
+	  AATMorxProcessor.prototype.processLigature = function processLigature(glyph, entry, index) {
+	    if (entry.flags & SET_COMPONENT) {
+	      this.ligatureStack.push(index);
+	    }
+
+	    if (entry.flags & PERFORM_ACTION) {
+	      var _ligatureStack;
+
+	      var actions = this.subtable.table.ligatureActions;
+	      var components = this.subtable.table.components;
+	      var ligatureList = this.subtable.table.ligatureList;
+
+	      var actionIndex = entry.action;
+	      var last = false;
+	      var ligatureIndex = 0;
+	      var codePoints = [];
+	      var ligatureGlyphs = [];
+
+	      while (!last) {
+	        var _codePoints;
+
+	        var componentGlyph = this.ligatureStack.pop();
+	        (_codePoints = codePoints).unshift.apply(_codePoints, this.glyphs[componentGlyph].codePoints);
+
+	        var action = actions.getItem(actionIndex++);
+	        last = !!(action & LAST_MASK);
+	        var store = !!(action & STORE_MASK);
+	        var offset = (action & OFFSET_MASK) << 2 >> 2; // sign extend 30 to 32 bits
+	        offset += this.glyphs[componentGlyph].id;
+
+	        var component = components.getItem(offset);
+	        ligatureIndex += component;
+
+	        if (last || store) {
+	          var ligatureEntry = ligatureList.getItem(ligatureIndex);
+	          this.glyphs[componentGlyph] = this.font.getGlyph(ligatureEntry, codePoints);
+	          ligatureGlyphs.push(componentGlyph);
+	          ligatureIndex = 0;
+	          codePoints = [];
+	        } else {
+	          this.glyphs[componentGlyph] = this.font.getGlyph(0xffff);
+	        }
+	      }
+
+	      // Put ligature glyph indexes back on the stack
+	      (_ligatureStack = this.ligatureStack).push.apply(_ligatureStack, ligatureGlyphs);
+	    }
+	  };
+
+	  AATMorxProcessor.prototype.processNoncontextualSubstitutions = function processNoncontextualSubstitutions(subtable, glyphs, index) {
+	    var lookupTable = new AATLookupTable(subtable.table.lookupTable);
+
+	    for (index = 0; index < glyphs.length; index++) {
+	      var glyph = glyphs[index];
+	      if (glyph.id !== 0xffff) {
 	        var gid = lookupTable.lookup(glyph.id);
 	        if (gid) {
-	          this.glyphs[this.markedGlyph] = this.font.getGlyph(gid, glyph.codePoints);
-	        }
-	      }
-
-	      if (entry.currentIndex !== 0xffff) {
-	        var _lookup = subsitutions.getItem(entry.currentIndex);
-	        var _lookupTable = new AATLookupTable(_lookup);
-	        glyph = this.glyphs[index];
-	        var gid = _lookupTable.lookup(glyph.id);
-	        if (gid) {
-	          this.glyphs[index] = this.font.getGlyph(gid, glyph.codePoints);
-	        }
-	      }
-
-	      if (entry.flags & SET_MARK) {
-	        this.markedGlyph = index;
-	      }
-	    }
-	  }, {
-	    key: 'processLigature',
-	    value: function processLigature(glyph, entry, index) {
-	      if (entry.flags & SET_COMPONENT) {
-	        this.ligatureStack.push(index);
-	      }
-
-	      if (entry.flags & PERFORM_ACTION) {
-	        var _ligatureStack;
-
-	        var actions = this.subtable.table.ligatureActions;
-	        var components = this.subtable.table.components;
-	        var ligatureList = this.subtable.table.ligatureList;
-
-	        var actionIndex = entry.action;
-	        var last = false;
-	        var ligatureIndex = 0;
-	        var codePoints = [];
-	        var ligatureGlyphs = [];
-
-	        while (!last) {
-	          var _codePoints;
-
-	          var componentGlyph = this.ligatureStack.pop();
-	          (_codePoints = codePoints).unshift.apply(_codePoints, _toConsumableArray(this.glyphs[componentGlyph].codePoints));
-
-	          var action = actions.getItem(actionIndex++);
-	          last = !!(action & LAST_MASK);
-	          var store = !!(action & STORE_MASK);
-	          var offset = (action & OFFSET_MASK) << 2 >> 2; // sign extend 30 to 32 bits
-	          offset += this.glyphs[componentGlyph].id;
-
-	          var component = components.getItem(offset);
-	          ligatureIndex += component;
-
-	          if (last || store) {
-	            var ligatureEntry = ligatureList.getItem(ligatureIndex);
-	            this.glyphs[componentGlyph] = this.font.getGlyph(ligatureEntry, codePoints);
-	            ligatureGlyphs.push(componentGlyph);
-	            ligatureIndex = 0;
-	            codePoints = [];
-	          } else {
-	            this.glyphs[componentGlyph] = this.font.getGlyph(0xffff);
-	          }
-	        }
-
-	        // Put ligature glyph indexes back on the stack
-	        (_ligatureStack = this.ligatureStack).push.apply(_ligatureStack, ligatureGlyphs);
-	      }
-	    }
-	  }, {
-	    key: 'processNoncontextualSubstitutions',
-	    value: function processNoncontextualSubstitutions(subtable, glyphs, index) {
-	      var lookupTable = new AATLookupTable(subtable.table.lookupTable);
-
-	      for (index = 0; index < glyphs.length; index++) {
-	        var glyph = glyphs[index];
-	        if (glyph.id !== 0xffff) {
-	          var gid = lookupTable.lookup(glyph.id);
-	          if (gid) {
-	            // 0 means do nothing
-	            glyphs[index] = this.font.getGlyph(gid, glyph.codePoints);
-	          }
+	          // 0 means do nothing
+	          glyphs[index] = this.font.getGlyph(gid, glyph.codePoints);
 	        }
 	      }
 	    }
-	  }, {
-	    key: '_insertGlyphs',
-	    value: function _insertGlyphs(glyphIndex, insertionActionIndex, count, isBefore) {
-	      var _glyphs;
+	  };
 
-	      var insertions = [];
-	      while (count--) {
-	        var gid = this.subtable.table.insertionActions.getItem(insertionActionIndex++);
-	        insertions.push(this.font.getGlyph(gid));
-	      }
+	  AATMorxProcessor.prototype._insertGlyphs = function _insertGlyphs(glyphIndex, insertionActionIndex, count, isBefore) {
+	    var _glyphs;
 
-	      if (!isBefore) {
-	        glyphIndex++;
-	      }
-
-	      (_glyphs = this.glyphs).splice.apply(_glyphs, [glyphIndex, 0].concat(insertions));
+	    var insertions = [];
+	    while (count--) {
+	      var gid = this.subtable.table.insertionActions.getItem(insertionActionIndex++);
+	      insertions.push(this.font.getGlyph(gid));
 	    }
-	  }, {
-	    key: 'processGlyphInsertion',
-	    value: function processGlyphInsertion(glyph, entry, index) {
-	      if (entry.flags & SET_MARK) {
-	        this.markedIndex = index;
-	      }
 
-	      if (entry.markedInsertIndex !== 0xffff) {
-	        var count = (entry.flags & MARKED_INSERT_COUNT) >>> 5;
-	        var isBefore = !!(entry.flags & MARKED_INSERT_BEFORE);
-	        this._insertGlyphs(this.markedIndex, entry.markedInsertIndex, count, isBefore);
-	      }
-
-	      if (entry.currentInsertIndex !== 0xffff) {
-	        var _count = (entry.flags & CURRENT_INSERT_COUNT) >>> 5;
-	        var _isBefore = !!(entry.flags & CURRENT_INSERT_BEFORE);
-	        this._insertGlyphs(index, entry.currentInsertIndex, _count, _isBefore);
-	      }
+	    if (!isBefore) {
+	      glyphIndex++;
 	    }
-	  }, {
-	    key: 'getSupportedFeatures',
-	    value: function getSupportedFeatures() {
-	      var features = [];
-	      var _iteratorNormalCompletion4 = true;
-	      var _didIteratorError4 = false;
-	      var _iteratorError4 = undefined;
 
-	      try {
-	        for (var _iterator4 = _getIterator(this.morx.chains), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	          var chain = _step4.value;
-	          var _iteratorNormalCompletion5 = true;
-	          var _didIteratorError5 = false;
-	          var _iteratorError5 = undefined;
+	    (_glyphs = this.glyphs).splice.apply(_glyphs, [glyphIndex, 0].concat(insertions));
+	  };
 
-	          try {
-	            for (var _iterator5 = _getIterator(chain.features), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-	              var feature = _step5.value;
+	  AATMorxProcessor.prototype.processGlyphInsertion = function processGlyphInsertion(glyph, entry, index) {
+	    if (entry.flags & SET_MARK) {
+	      this.markedIndex = index;
+	    }
 
-	              features.push([feature.featureType, feature.featureSetting]);
-	            }
-	          } catch (err) {
-	            _didIteratorError5 = true;
-	            _iteratorError5 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion5 && _iterator5.return) {
-	                _iterator5.return();
-	              }
-	            } finally {
-	              if (_didIteratorError5) {
-	                throw _iteratorError5;
-	              }
-	            }
-	          }
+	    if (entry.markedInsertIndex !== 0xffff) {
+	      var count = (entry.flags & MARKED_INSERT_COUNT) >>> 5;
+	      var isBefore = !!(entry.flags & MARKED_INSERT_BEFORE);
+	      this._insertGlyphs(this.markedIndex, entry.markedInsertIndex, count, isBefore);
+	    }
+
+	    if (entry.currentInsertIndex !== 0xffff) {
+	      var _count = (entry.flags & CURRENT_INSERT_COUNT) >>> 5;
+	      var _isBefore = !!(entry.flags & CURRENT_INSERT_BEFORE);
+	      this._insertGlyphs(index, entry.currentInsertIndex, _count, _isBefore);
+	    }
+	  };
+
+	  AATMorxProcessor.prototype.getSupportedFeatures = function getSupportedFeatures() {
+	    var features = [];
+	    for (var _iterator4 = this.morx.chains, _isArray4 = Array.isArray(_iterator4), _i4 = 0, _iterator4 = _isArray4 ? _iterator4 : _getIterator(_iterator4);;) {
+	      var _ref4;
+
+	      if (_isArray4) {
+	        if (_i4 >= _iterator4.length) break;
+	        _ref4 = _iterator4[_i4++];
+	      } else {
+	        _i4 = _iterator4.next();
+	        if (_i4.done) break;
+	        _ref4 = _i4.value;
+	      }
+
+	      var chain = _ref4;
+
+	      for (var _iterator5 = chain.features, _isArray5 = Array.isArray(_iterator5), _i5 = 0, _iterator5 = _isArray5 ? _iterator5 : _getIterator(_iterator5);;) {
+	        var _ref5;
+
+	        if (_isArray5) {
+	          if (_i5 >= _iterator5.length) break;
+	          _ref5 = _iterator5[_i5++];
+	        } else {
+	          _i5 = _iterator5.next();
+	          if (_i5.done) break;
+	          _ref5 = _i5.value;
 	        }
-	      } catch (err) {
-	        _didIteratorError4 = true;
-	        _iteratorError4 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion4 && _iterator4.return) {
-	            _iterator4.return();
-	          }
-	        } finally {
-	          if (_didIteratorError4) {
-	            throw _iteratorError4;
-	          }
-	        }
+
+	        var feature = _ref5;
+
+	        features.push([feature.featureType, feature.featureSetting]);
+	      }
+	    }
+
+	    return features;
+	  };
+
+	  AATMorxProcessor.prototype.generateInputs = function generateInputs(gid) {
+	    if (!this.inputCache) {
+	      this.generateInputCache();
+	    }
+
+	    return this.inputCache[gid] || [];
+	  };
+
+	  AATMorxProcessor.prototype.generateInputCache = function generateInputCache() {
+	    this.inputCache = {};
+
+	    for (var _iterator6 = this.morx.chains, _isArray6 = Array.isArray(_iterator6), _i6 = 0, _iterator6 = _isArray6 ? _iterator6 : _getIterator(_iterator6);;) {
+	      var _ref6;
+
+	      if (_isArray6) {
+	        if (_i6 >= _iterator6.length) break;
+	        _ref6 = _iterator6[_i6++];
+	      } else {
+	        _i6 = _iterator6.next();
+	        if (_i6.done) break;
+	        _ref6 = _i6.value;
 	      }
 
-	      return features;
-	    }
-	  }, {
-	    key: 'generateInputs',
-	    value: function generateInputs(gid) {
-	      if (!this.inputCache) {
-	        this.generateInputCache();
-	      }
+	      var chain = _ref6;
 
-	      return this.inputCache[gid] || [];
-	    }
-	  }, {
-	    key: 'generateInputCache',
-	    value: function generateInputCache() {
-	      this.inputCache = {};
+	      var flags = chain.defaultFlags;
 
-	      var _iteratorNormalCompletion6 = true;
-	      var _didIteratorError6 = false;
-	      var _iteratorError6 = undefined;
+	      for (var _iterator7 = chain.subtables, _isArray7 = Array.isArray(_iterator7), _i7 = 0, _iterator7 = _isArray7 ? _iterator7 : _getIterator(_iterator7);;) {
+	        var _ref7;
 
-	      try {
-	        for (var _iterator6 = _getIterator(this.morx.chains), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-	          var chain = _step6.value;
-
-	          var flags = chain.defaultFlags;
-
-	          var _iteratorNormalCompletion7 = true;
-	          var _didIteratorError7 = false;
-	          var _iteratorError7 = undefined;
-
-	          try {
-	            for (var _iterator7 = _getIterator(chain.subtables), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-	              var subtable = _step7.value;
-
-	              if (subtable.subFeatureFlags & flags) {
-	                this.generateInputsForSubtable(subtable);
-	              }
-	            }
-	          } catch (err) {
-	            _didIteratorError7 = true;
-	            _iteratorError7 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion7 && _iterator7.return) {
-	                _iterator7.return();
-	              }
-	            } finally {
-	              if (_didIteratorError7) {
-	                throw _iteratorError7;
-	              }
-	            }
-	          }
+	        if (_isArray7) {
+	          if (_i7 >= _iterator7.length) break;
+	          _ref7 = _iterator7[_i7++];
+	        } else {
+	          _i7 = _iterator7.next();
+	          if (_i7.done) break;
+	          _ref7 = _i7.value;
 	        }
-	      } catch (err) {
-	        _didIteratorError6 = true;
-	        _iteratorError6 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion6 && _iterator6.return) {
-	            _iterator6.return();
-	          }
-	        } finally {
-	          if (_didIteratorError6) {
-	            throw _iteratorError6;
-	          }
+
+	        var subtable = _ref7;
+
+	        if (subtable.subFeatureFlags & flags) {
+	          this.generateInputsForSubtable(subtable);
 	        }
 	      }
 	    }
-	  }, {
-	    key: 'generateInputsForSubtable',
-	    value: function generateInputsForSubtable(subtable) {
-	      var _this = this;
+	  };
 
-	      // Currently, only supporting ligature subtables.
-	      if (subtable.type !== 2) {
-	        return;
-	      }
+	  AATMorxProcessor.prototype.generateInputsForSubtable = function generateInputsForSubtable(subtable) {
+	    var _this = this;
 
-	      var reverse = !!(subtable.coverage & REVERSE_DIRECTION);
-	      if (reverse) {
-	        throw new Error('Reverse subtable, not supported.');
-	      }
+	    // Currently, only supporting ligature subtables.
+	    if (subtable.type !== 2) {
+	      return;
+	    }
 
-	      this.subtable = subtable;
-	      this.ligatureStack = [];
+	    var reverse = !!(subtable.coverage & REVERSE_DIRECTION);
+	    if (reverse) {
+	      throw new Error('Reverse subtable, not supported.');
+	    }
 
-	      var stateMachine = this.getStateMachine(subtable);
-	      var process = this.getProcessor();
+	    this.subtable = subtable;
+	    this.ligatureStack = [];
 
-	      var input = [];
-	      var stack = [];
-	      this.glyphs = [];
+	    var stateMachine = this.getStateMachine(subtable);
+	    var process = this.getProcessor();
 
-	      stateMachine.traverse({
-	        enter: function enter(glyph, entry) {
-	          var glyphs = _this.glyphs;
-	          stack.push({
-	            glyphs: glyphs.slice(),
-	            ligatureStack: _this.ligatureStack.slice()
+	    var input = [];
+	    var stack = [];
+	    this.glyphs = [];
+
+	    stateMachine.traverse({
+	      enter: function enter(glyph, entry) {
+	        var glyphs = _this.glyphs;
+	        stack.push({
+	          glyphs: glyphs.slice(),
+	          ligatureStack: _this.ligatureStack.slice()
+	        });
+
+	        // Add glyph to input and glyphs to process.
+	        var g = _this.font.getGlyph(glyph);
+	        input.push(g);
+	        glyphs.push(input[input.length - 1]);
+
+	        // Process ligature substitution
+	        process(glyphs[glyphs.length - 1], entry, glyphs.length - 1);
+
+	        // Add input to result if only one matching (non-deleted) glyph remains.
+	        var count = 0;
+	        var found = 0;
+	        for (var i = 0; i < glyphs.length && count <= 1; i++) {
+	          if (glyphs[i].id !== 0xffff) {
+	            count++;
+	            found = glyphs[i].id;
+	          }
+	        }
+
+	        if (count === 1) {
+	          var result = input.map(function (g) {
+	            return g.id;
 	          });
-
-	          // Add glyph to input and glyphs to process.
-	          var g = _this.font.getGlyph(glyph);
-	          input.push(g);
-	          glyphs.push(input[input.length - 1]);
-
-	          // Process ligature substitution
-	          process(glyphs[glyphs.length - 1], entry, glyphs.length - 1);
-
-	          // Add input to result if only one matching (non-deleted) glyph remains.
-	          var count = 0;
-	          var found = 0;
-	          for (var i = 0; i < glyphs.length && count <= 1; i++) {
-	            if (glyphs[i].id !== 0xffff) {
-	              count++;
-	              found = glyphs[i].id;
-	            }
+	          var _cache = _this.inputCache[found];
+	          if (_cache) {
+	            _cache.push(result);
+	          } else {
+	            _this.inputCache[found] = [result];
 	          }
-
-	          if (count === 1) {
-	            var result = input.map(function (g) {
-	              return g.id;
-	            });
-	            var _cache = _this.inputCache[found];
-	            if (_cache) {
-	              _cache.push(result);
-	            } else {
-	              _this.inputCache[found] = [result];
-	            }
-	          }
-	        },
-
-	        exit: function exit() {
-	          var _stack$pop = stack.pop();
-
-	          _this.glyphs = _stack$pop.glyphs;
-	          _this.ligatureStack = _stack$pop.ligatureStack;
-
-	          input.pop();
 	        }
-	      });
-	    }
-	  }]);
+	      },
+
+	      exit: function exit() {
+	        var _stack$pop = stack.pop();
+
+	        _this.glyphs = _stack$pop.glyphs;
+	        _this.ligatureStack = _stack$pop.ligatureStack;
+
+	        input.pop();
+	      }
+	    });
+	  };
 
 	  return AATMorxProcessor;
 	}(), (_applyDecoratedDescriptor$2(_class$2.prototype, 'getStateMachine', [cache], _Object$getOwnPropertyDescriptor(_class$2.prototype, 'getStateMachine'), _class$2.prototype)), _class$2);
@@ -44404,12 +44043,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	    end.reverse();
 	  }
 
-	  var start = glyphs.splice.apply(glyphs, [rangeA[0], rangeA[1]].concat(_toConsumableArray(end)));
+	  var start = glyphs.splice.apply(glyphs, [rangeA[0], rangeA[1]].concat(end));
 	  if (reverseA) {
 	    start.reverse();
 	  }
 
-	  glyphs.splice.apply(glyphs, [rangeB[0] - (rangeA[1] - 1), 0].concat(_toConsumableArray(start)));
+	  glyphs.splice.apply(glyphs, [rangeB[0] - (rangeA[1] - 1), 0].concat(start));
 	  return glyphs;
 	}
 
@@ -44493,93 +44132,71 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.morxProcessor = new AATMorxProcessor(font);
 	  }
 
-	  _createClass(AATLayoutEngine, [{
-	    key: 'substitute',
-	    value: function substitute(glyphs, features, script, language) {
-	      // AAT expects the glyphs to be in visual order prior to morx processing,
-	      // so reverse the glyphs if the script is right-to-left.
-	      var isRTL = direction(script) === 'rtl';
-	      if (isRTL) {
-	        glyphs.reverse();
+	  AATLayoutEngine.prototype.substitute = function substitute(glyphs, features, script, language) {
+	    // AAT expects the glyphs to be in visual order prior to morx processing,
+	    // so reverse the glyphs if the script is right-to-left.
+	    var isRTL = direction(script) === 'rtl';
+	    if (isRTL) {
+	      glyphs.reverse();
+	    }
+
+	    this.morxProcessor.process(glyphs, mapOTToAAT(features));
+	    return glyphs;
+	  };
+
+	  AATLayoutEngine.prototype.getAvailableFeatures = function getAvailableFeatures(script, language) {
+	    return mapAATToOT(this.morxProcessor.getSupportedFeatures());
+	  };
+
+	  AATLayoutEngine.prototype.stringsForGlyph = function stringsForGlyph(gid) {
+	    var glyphStrings = this.morxProcessor.generateInputs(gid);
+	    var result = new _Set();
+
+	    for (var _iterator = glyphStrings, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	      var _ref;
+
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
+	      } else {
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
 	      }
 
-	      this.morxProcessor.process(glyphs, mapOTToAAT(features));
-	      return glyphs;
+	      var glyphs = _ref;
+
+	      this._addStrings(glyphs, 0, result, '');
 	    }
-	  }, {
-	    key: 'getAvailableFeatures',
-	    value: function getAvailableFeatures(script, language) {
-	      return mapAATToOT(this.morxProcessor.getSupportedFeatures());
-	    }
-	  }, {
-	    key: 'stringsForGlyph',
-	    value: function stringsForGlyph(gid) {
-	      var glyphStrings = this.morxProcessor.generateInputs(gid);
-	      var result = new _Set();
 
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
+	    return result;
+	  };
 
-	      try {
-	        for (var _iterator = _getIterator(glyphStrings), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var glyphs = _step.value;
+	  AATLayoutEngine.prototype._addStrings = function _addStrings(glyphs, index, strings, string) {
+	    var codePoints = this.font._cmapProcessor.codePointsForGlyph(glyphs[index]);
 
-	          this._addStrings(glyphs, 0, result, '');
-	        }
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
-	        }
+	    for (var _iterator2 = codePoints, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	      var _ref2;
+
+	      if (_isArray2) {
+	        if (_i2 >= _iterator2.length) break;
+	        _ref2 = _iterator2[_i2++];
+	      } else {
+	        _i2 = _iterator2.next();
+	        if (_i2.done) break;
+	        _ref2 = _i2.value;
 	      }
 
-	      return result;
-	    }
-	  }, {
-	    key: '_addStrings',
-	    value: function _addStrings(glyphs, index, strings, string) {
-	      var codePoints = this.font._cmapProcessor.codePointsForGlyph(glyphs[index]);
+	      var codePoint = _ref2;
 
-	      var _iteratorNormalCompletion2 = true;
-	      var _didIteratorError2 = false;
-	      var _iteratorError2 = undefined;
-
-	      try {
-	        for (var _iterator2 = _getIterator(codePoints), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	          var codePoint = _step2.value;
-
-	          var s = string + _String$fromCodePoint(codePoint);
-	          if (index < glyphs.length - 1) {
-	            this._addStrings(glyphs, index + 1, strings, s);
-	          } else {
-	            strings.add(s);
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError2 = true;
-	        _iteratorError2 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	            _iterator2.return();
-	          }
-	        } finally {
-	          if (_didIteratorError2) {
-	            throw _iteratorError2;
-	          }
-	        }
+	      var s = string + _String$fromCodePoint(codePoint);
+	      if (index < glyphs.length - 1) {
+	        this._addStrings(glyphs, index + 1, strings, s);
+	      } else {
+	        strings.add(s);
 	      }
 	    }
-	  }]);
+	  };
 
 	  return AATLayoutEngine;
 	}();
@@ -44613,196 +44230,156 @@ return /******/ (function(modules) { // webpackBootstrap
 	   */
 
 
-	  _createClass(ShapingPlan, [{
-	    key: '_addFeatures',
-	    value: function _addFeatures(features) {
-	      var stage = this.stages[this.stages.length - 1];
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
+	  ShapingPlan.prototype._addFeatures = function _addFeatures(features) {
+	    var stage = this.stages[this.stages.length - 1];
+	    for (var _iterator = features, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	      var _ref;
 
-	      try {
-	        for (var _iterator = _getIterator(features), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var feature = _step.value;
-
-	          if (!this.allFeatures[feature]) {
-	            stage.push(feature);
-	            this.allFeatures[feature] = true;
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
-	        }
-	      }
-	    }
-
-	    /**
-	     * Adds the given features to the global list
-	     */
-
-	  }, {
-	    key: '_addGlobal',
-	    value: function _addGlobal(features) {
-	      var _iteratorNormalCompletion2 = true;
-	      var _didIteratorError2 = false;
-	      var _iteratorError2 = undefined;
-
-	      try {
-	        for (var _iterator2 = _getIterator(features), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	          var feature = _step2.value;
-
-	          this.globalFeatures[feature] = true;
-	        }
-	      } catch (err) {
-	        _didIteratorError2 = true;
-	        _iteratorError2 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	            _iterator2.return();
-	          }
-	        } finally {
-	          if (_didIteratorError2) {
-	            throw _iteratorError2;
-	          }
-	        }
-	      }
-	    }
-
-	    /**
-	     * Add features to the last stage
-	     */
-
-	  }, {
-	    key: 'add',
-	    value: function add(arg) {
-	      var global = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-
-	      if (this.stages.length === 0) {
-	        this.stages.push([]);
-	      }
-
-	      if (typeof arg === 'string') {
-	        arg = [arg];
-	      }
-
-	      if (Array.isArray(arg)) {
-	        this._addFeatures(arg);
-	        if (global) {
-	          this._addGlobal(arg);
-	        }
-	      } else if ((typeof arg === 'undefined' ? 'undefined' : _typeof(arg)) === 'object') {
-	        var features = (arg.global || []).concat(arg.local || []);
-	        this._addFeatures(features);
-	        if (arg.global) {
-	          this._addGlobal(arg.global);
-	        }
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
 	      } else {
-	        throw new Error("Unsupported argument to ShapingPlan#add");
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
+	      }
+
+	      var feature = _ref;
+
+	      if (!this.allFeatures[feature]) {
+	        stage.push(feature);
+	        this.allFeatures[feature] = true;
 	      }
 	    }
+	  };
 
-	    /**
-	     * Add a new stage
-	     */
+	  /**
+	   * Adds the given features to the global list
+	   */
 
-	  }, {
-	    key: 'addStage',
-	    value: function addStage(arg, global) {
-	      if (typeof arg === 'function') {
-	        this.stages.push(arg, []);
+
+	  ShapingPlan.prototype._addGlobal = function _addGlobal(features) {
+	    for (var _iterator2 = features, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	      var _ref2;
+
+	      if (_isArray2) {
+	        if (_i2 >= _iterator2.length) break;
+	        _ref2 = _iterator2[_i2++];
 	      } else {
-	        this.stages.push([]);
-	        this.add(arg, global);
+	        _i2 = _iterator2.next();
+	        if (_i2.done) break;
+	        _ref2 = _i2.value;
 	      }
+
+	      var feature = _ref2;
+
+	      this.globalFeatures[feature] = true;
+	    }
+	  };
+
+	  /**
+	   * Add features to the last stage
+	   */
+
+
+	  ShapingPlan.prototype.add = function add(arg) {
+	    var global = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
+	    if (this.stages.length === 0) {
+	      this.stages.push([]);
 	    }
 
-	    /**
-	     * Assigns the global features to the given glyphs
-	     */
-
-	  }, {
-	    key: 'assignGlobalFeatures',
-	    value: function assignGlobalFeatures(glyphs) {
-	      var _iteratorNormalCompletion3 = true;
-	      var _didIteratorError3 = false;
-	      var _iteratorError3 = undefined;
-
-	      try {
-	        for (var _iterator3 = _getIterator(glyphs), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	          var glyph = _step3.value;
-
-	          for (var feature in this.globalFeatures) {
-	            glyph.features[feature] = true;
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError3 = true;
-	        _iteratorError3 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	            _iterator3.return();
-	          }
-	        } finally {
-	          if (_didIteratorError3) {
-	            throw _iteratorError3;
-	          }
-	        }
-	      }
+	    if (typeof arg === 'string') {
+	      arg = [arg];
 	    }
 
-	    /**
-	     * Executes the planned stages using the given OTProcessor
-	     */
+	    if (Array.isArray(arg)) {
+	      this._addFeatures(arg);
+	      if (global) {
+	        this._addGlobal(arg);
+	      }
+	    } else if ((typeof arg === 'undefined' ? 'undefined' : _typeof(arg)) === 'object') {
+	      var features = (arg.global || []).concat(arg.local || []);
+	      this._addFeatures(features);
+	      if (arg.global) {
+	        this._addGlobal(arg.global);
+	      }
+	    } else {
+	      throw new Error("Unsupported argument to ShapingPlan#add");
+	    }
+	  };
 
-	  }, {
-	    key: 'process',
-	    value: function process(processor, glyphs, positions) {
-	      processor.selectScript(this.script, this.language);
+	  /**
+	   * Add a new stage
+	   */
 
-	      var _iteratorNormalCompletion4 = true;
-	      var _didIteratorError4 = false;
-	      var _iteratorError4 = undefined;
 
-	      try {
-	        for (var _iterator4 = _getIterator(this.stages), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	          var stage = _step4.value;
+	  ShapingPlan.prototype.addStage = function addStage(arg, global) {
+	    if (typeof arg === 'function') {
+	      this.stages.push(arg, []);
+	    } else {
+	      this.stages.push([]);
+	      this.add(arg, global);
+	    }
+	  };
 
-	          if (typeof stage === 'function') {
-	            if (!positions) {
-	              stage(this.font, glyphs, positions);
-	            }
-	          } else if (stage.length > 0) {
-	            processor.applyFeatures(stage, glyphs, positions);
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError4 = true;
-	        _iteratorError4 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion4 && _iterator4.return) {
-	            _iterator4.return();
-	          }
-	        } finally {
-	          if (_didIteratorError4) {
-	            throw _iteratorError4;
-	          }
-	        }
+	  /**
+	   * Assigns the global features to the given glyphs
+	   */
+
+
+	  ShapingPlan.prototype.assignGlobalFeatures = function assignGlobalFeatures(glyphs) {
+	    for (var _iterator3 = glyphs, _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	      var _ref3;
+
+	      if (_isArray3) {
+	        if (_i3 >= _iterator3.length) break;
+	        _ref3 = _iterator3[_i3++];
+	      } else {
+	        _i3 = _iterator3.next();
+	        if (_i3.done) break;
+	        _ref3 = _i3.value;
+	      }
+
+	      var glyph = _ref3;
+
+	      for (var feature in this.globalFeatures) {
+	        glyph.features[feature] = true;
 	      }
 	    }
-	  }]);
+	  };
+
+	  /**
+	   * Executes the planned stages using the given OTProcessor
+	   */
+
+
+	  ShapingPlan.prototype.process = function process(processor, glyphs, positions) {
+	    processor.selectScript(this.script, this.language);
+
+	    for (var _iterator4 = this.stages, _isArray4 = Array.isArray(_iterator4), _i4 = 0, _iterator4 = _isArray4 ? _iterator4 : _getIterator(_iterator4);;) {
+	      var _ref4;
+
+	      if (_isArray4) {
+	        if (_i4 >= _iterator4.length) break;
+	        _ref4 = _iterator4[_i4++];
+	      } else {
+	        _i4 = _iterator4.next();
+	        if (_i4.done) break;
+	        _ref4 = _i4.value;
+	      }
+
+	      var stage = _ref4;
+
+	      if (typeof stage === 'function') {
+	        if (!positions) {
+	          stage(this.font, glyphs, positions);
+	        }
+	      } else if (stage.length > 0) {
+	        processor.applyFeatures(stage, glyphs, positions);
+	      }
+	    }
+	  };
 
 	  return ShapingPlan;
 	}();
@@ -44822,73 +44399,66 @@ return /******/ (function(modules) { // webpackBootstrap
 	    _classCallCheck(this, DefaultShaper);
 	  }
 
-	  _createClass(DefaultShaper, null, [{
-	    key: 'plan',
-	    value: function plan(_plan, glyphs, features) {
-	      // Plan the features we want to apply
-	      this.planPreprocessing(_plan);
-	      this.planFeatures(_plan);
-	      this.planPostprocessing(_plan, features);
+	  DefaultShaper.plan = function plan(_plan, glyphs, features) {
+	    // Plan the features we want to apply
+	    this.planPreprocessing(_plan);
+	    this.planFeatures(_plan);
+	    this.planPostprocessing(_plan, features);
 
-	      // Assign the global features to all the glyphs
-	      _plan.assignGlobalFeatures(glyphs);
+	    // Assign the global features to all the glyphs
+	    _plan.assignGlobalFeatures(glyphs);
 
-	      // Assign local features to glyphs
-	      this.assignFeatures(_plan, glyphs);
-	    }
-	  }, {
-	    key: 'planPreprocessing',
-	    value: function planPreprocessing(plan) {
-	      plan.add({
-	        global: DIRECTIONAL_FEATURES[plan.direction],
-	        local: FRACTIONAL_FEATURES
-	      });
-	    }
-	  }, {
-	    key: 'planFeatures',
-	    value: function planFeatures(plan) {
-	      // Do nothing by default. Let subclasses override this.
-	    }
-	  }, {
-	    key: 'planPostprocessing',
-	    value: function planPostprocessing(plan, userFeatures) {
-	      plan.add([].concat(COMMON_FEATURES, HORIZONTAL_FEATURES, _toConsumableArray(userFeatures)));
-	    }
-	  }, {
-	    key: 'assignFeatures',
-	    value: function assignFeatures(plan, glyphs) {
-	      // Enable contextual fractions
-	      var i = 0;
-	      while (i < glyphs.length) {
-	        var glyph = glyphs[i];
-	        if (glyph.codePoints[0] === 0x2044) {
-	          // fraction slash
-	          var start = i - 1;
-	          var end = i + 1;
+	    // Assign local features to glyphs
+	    this.assignFeatures(_plan, glyphs);
+	  };
 
-	          // Apply numerator
-	          while (start >= 0 && unicode.isDigit(glyphs[start].codePoints[0])) {
-	            glyphs[start].features.numr = true;
-	            glyphs[start].features.frac = true;
-	            start--;
-	          }
+	  DefaultShaper.planPreprocessing = function planPreprocessing(plan) {
+	    plan.add({
+	      global: DIRECTIONAL_FEATURES[plan.direction],
+	      local: FRACTIONAL_FEATURES
+	    });
+	  };
 
-	          // Apply denominator
-	          while (end < glyphs.length && unicode.isDigit(glyphs[end].codePoints[0])) {
-	            glyphs[end].features.dnom = true;
-	            glyphs[end].features.frac = true;
-	            end++;
-	          }
+	  DefaultShaper.planFeatures = function planFeatures(plan) {
+	    // Do nothing by default. Let subclasses override this.
+	  };
 
-	          // Apply fraction slash
-	          glyph.features.frac = true;
-	          i = end - 1;
-	        } else {
-	          i++;
+	  DefaultShaper.planPostprocessing = function planPostprocessing(plan, userFeatures) {
+	    plan.add([].concat(COMMON_FEATURES, HORIZONTAL_FEATURES, userFeatures));
+	  };
+
+	  DefaultShaper.assignFeatures = function assignFeatures(plan, glyphs) {
+	    // Enable contextual fractions
+	    var i = 0;
+	    while (i < glyphs.length) {
+	      var glyph = glyphs[i];
+	      if (glyph.codePoints[0] === 0x2044) {
+	        // fraction slash
+	        var start = i - 1;
+	        var end = i + 1;
+
+	        // Apply numerator
+	        while (start >= 0 && unicode.isDigit(glyphs[start].codePoints[0])) {
+	          glyphs[start].features.numr = true;
+	          glyphs[start].features.frac = true;
+	          start--;
 	        }
+
+	        // Apply denominator
+	        while (end < glyphs.length && unicode.isDigit(glyphs[end].codePoints[0])) {
+	          glyphs[end].features.dnom = true;
+	          glyphs[end].features.frac = true;
+	          end++;
+	        }
+
+	        // Apply fraction slash
+	        glyph.features.frac = true;
+	        i = end - 1;
+	      } else {
+	        i++;
 	      }
 	    }
-	  }]);
+	  };
 
 	  return DefaultShaper;
 	}(), _class$4.zeroMarkWidths = 'AFTER_GPOS', _temp);
@@ -44955,65 +44525,60 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function ArabicShaper() {
 	    _classCallCheck(this, ArabicShaper);
 
-	    return _possibleConstructorReturn(this, (ArabicShaper.__proto__ || _Object$getPrototypeOf(ArabicShaper)).apply(this, arguments));
+	    return _possibleConstructorReturn(this, _DefaultShaper.apply(this, arguments));
 	  }
 
-	  _createClass(ArabicShaper, null, [{
-	    key: 'planFeatures',
-	    value: function planFeatures(plan) {
-	      plan.add(['ccmp', 'locl']);
-	      for (var i = 0; i < FEATURES.length; i++) {
-	        var feature = FEATURES[i];
-	        plan.addStage(feature, false);
-	      }
-
-	      plan.addStage('mset');
+	  ArabicShaper.planFeatures = function planFeatures(plan) {
+	    plan.add(['ccmp', 'locl']);
+	    for (var i = 0; i < FEATURES.length; i++) {
+	      var feature = FEATURES[i];
+	      plan.addStage(feature, false);
 	    }
-	  }, {
-	    key: 'assignFeatures',
-	    value: function assignFeatures(plan, glyphs) {
-	      _get(ArabicShaper.__proto__ || _Object$getPrototypeOf(ArabicShaper), 'assignFeatures', this).call(this, plan, glyphs);
 
-	      var prev = -1;
-	      var state = 0;
-	      var actions = [];
+	    plan.addStage('mset');
+	  };
 
-	      // Apply the state machine to map glyphs to features
-	      for (var i = 0; i < glyphs.length; i++) {
-	        var curAction = void 0,
-	            prevAction = void 0;
-	        var glyph = glyphs[i];
-	        var type = getShapingClass(glyph.codePoints[0]);
-	        if (type === ShapingClasses.Transparent) {
-	          actions[i] = NONE;
-	          continue;
-	        }
+	  ArabicShaper.assignFeatures = function assignFeatures(plan, glyphs) {
+	    _DefaultShaper.assignFeatures.call(this, plan, glyphs);
 
-	        var _STATE_TABLE$state$ty = _slicedToArray(STATE_TABLE[state][type], 3);
+	    var prev = -1;
+	    var state = 0;
+	    var actions = [];
 
-	        prevAction = _STATE_TABLE$state$ty[0];
-	        curAction = _STATE_TABLE$state$ty[1];
-	        state = _STATE_TABLE$state$ty[2];
-
-
-	        if (prevAction !== NONE && prev !== -1) {
-	          actions[prev] = prevAction;
-	        }
-
-	        actions[i] = curAction;
-	        prev = i;
+	    // Apply the state machine to map glyphs to features
+	    for (var i = 0; i < glyphs.length; i++) {
+	      var curAction = void 0,
+	          prevAction = void 0;
+	      var glyph = glyphs[i];
+	      var type = getShapingClass(glyph.codePoints[0]);
+	      if (type === ShapingClasses.Transparent) {
+	        actions[i] = NONE;
+	        continue;
 	      }
 
-	      // Apply the chosen features to their respective glyphs
-	      for (var index = 0; index < glyphs.length; index++) {
-	        var feature = void 0;
-	        var glyph = glyphs[index];
-	        if (feature = actions[index]) {
-	          glyph.features[feature] = true;
-	        }
+	      var _STATE_TABLE$state$ty = STATE_TABLE[state][type];
+	      prevAction = _STATE_TABLE$state$ty[0];
+	      curAction = _STATE_TABLE$state$ty[1];
+	      state = _STATE_TABLE$state$ty[2];
+
+
+	      if (prevAction !== NONE && prev !== -1) {
+	        actions[prev] = prevAction;
+	      }
+
+	      actions[i] = curAction;
+	      prev = i;
+	    }
+
+	    // Apply the chosen features to their respective glyphs
+	    for (var index = 0; index < glyphs.length; index++) {
+	      var feature = void 0;
+	      var glyph = glyphs[index];
+	      if (feature = actions[index]) {
+	        glyph.features[feature] = true;
 	      }
 	    }
-	  }]);
+	  };
 
 	  return ArabicShaper;
 	}(DefaultShaper);
@@ -45040,78 +44605,70 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.reset(flags);
 	  }
 
-	  _createClass(GlyphIterator, [{
-	    key: "reset",
-	    value: function reset() {
-	      var flags = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+	  GlyphIterator.prototype.reset = function reset() {
+	    var flags = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
-	      this.flags = flags;
-	      this.index = 0;
-	    }
-	  }, {
-	    key: "shouldIgnore",
-	    value: function shouldIgnore(glyph, flags) {
-	      return flags.ignoreMarks && glyph.isMark || flags.ignoreBaseGlyphs && !glyph.isMark || flags.ignoreLigatures && glyph.isLigature;
-	    }
-	  }, {
-	    key: "move",
-	    value: function move(dir) {
+	    this.flags = flags;
+	    this.index = 0;
+	  };
+
+	  GlyphIterator.prototype.shouldIgnore = function shouldIgnore(glyph, flags) {
+	    return flags.ignoreMarks && glyph.isMark || flags.ignoreBaseGlyphs && !glyph.isMark || flags.ignoreLigatures && glyph.isLigature;
+	  };
+
+	  GlyphIterator.prototype.move = function move(dir) {
+	    this.index += dir;
+	    while (0 <= this.index && this.index < this.glyphs.length && this.shouldIgnore(this.glyphs[this.index], this.flags)) {
 	      this.index += dir;
-	      while (0 <= this.index && this.index < this.glyphs.length && this.shouldIgnore(this.glyphs[this.index], this.flags)) {
-	        this.index += dir;
-	      }
-
-	      if (0 > this.index || this.index >= this.glyphs.length) {
-	        return null;
-	      }
-
-	      return this.glyphs[this.index];
 	    }
-	  }, {
-	    key: "next",
-	    value: function next() {
-	      return this.move(+1);
-	    }
-	  }, {
-	    key: "prev",
-	    value: function prev() {
-	      return this.move(-1);
-	    }
-	  }, {
-	    key: "peek",
-	    value: function peek() {
-	      var count = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
 
-	      var idx = this.index;
-	      var res = this.increment(count);
-	      this.index = idx;
-	      return res;
+	    if (0 > this.index || this.index >= this.glyphs.length) {
+	      return null;
 	    }
-	  }, {
-	    key: "peekIndex",
-	    value: function peekIndex() {
-	      var count = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
 
-	      var idx = this.index;
-	      this.increment(count);
-	      var res = this.index;
-	      this.index = idx;
-	      return res;
+	    return this.glyphs[this.index];
+	  };
+
+	  GlyphIterator.prototype.next = function next() {
+	    return this.move(+1);
+	  };
+
+	  GlyphIterator.prototype.prev = function prev() {
+	    return this.move(-1);
+	  };
+
+	  GlyphIterator.prototype.peek = function peek() {
+	    var count = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+
+	    var idx = this.index;
+	    var res = this.increment(count);
+	    this.index = idx;
+	    return res;
+	  };
+
+	  GlyphIterator.prototype.peekIndex = function peekIndex() {
+	    var count = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+
+	    var idx = this.index;
+	    this.increment(count);
+	    var res = this.index;
+	    this.index = idx;
+	    return res;
+	  };
+
+	  GlyphIterator.prototype.increment = function increment() {
+	    var count = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+
+	    var dir = count < 0 ? -1 : 1;
+	    count = Math.abs(count);
+	    while (count--) {
+	      this.move(dir);
 	    }
-	  }, {
-	    key: "increment",
-	    value: function increment() {
-	      var count = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
 
-	      var dir = count < 0 ? -1 : 1;
-	      count = Math.abs(count);
-	      while (count--) {
-	        this.move(dir);
-	      }
+	    return this.glyphs[this.index];
+	  };
 
-	      return this.glyphs[this.index];
-	    }
-	  }, {
+	  _createClass(GlyphIterator, [{
 	    key: "cur",
 	    get: function get() {
 	      return this.glyphs[this.index] || null;
@@ -45148,703 +44705,558 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.ligatureID = 1;
 	  }
 
-	  _createClass(OTProcessor, [{
-	    key: 'findScript',
-	    value: function findScript(script) {
-	      if (this.table.scriptList == null) {
-	        return null;
-	      }
-
-	      if (!Array.isArray(script)) {
-	        script = [script];
-	      }
-
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
-
-	      try {
-	        for (var _iterator = _getIterator(this.table.scriptList), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var entry = _step.value;
-	          var _iteratorNormalCompletion2 = true;
-	          var _didIteratorError2 = false;
-	          var _iteratorError2 = undefined;
-
-	          try {
-	            for (var _iterator2 = _getIterator(script), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	              var s = _step2.value;
-
-	              if (entry.tag === s) {
-	                return entry;
-	              }
-	            }
-	          } catch (err) {
-	            _didIteratorError2 = true;
-	            _iteratorError2 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	                _iterator2.return();
-	              }
-	            } finally {
-	              if (_didIteratorError2) {
-	                throw _iteratorError2;
-	              }
-	            }
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
-	        }
-	      }
-
+	  OTProcessor.prototype.findScript = function findScript(script) {
+	    if (this.table.scriptList == null) {
 	      return null;
 	    }
-	  }, {
-	    key: 'selectScript',
-	    value: function selectScript(script, language) {
-	      var changed = false;
-	      var entry = void 0;
-	      if (!this.script || script !== this.scriptTag) {
+
+	    if (!Array.isArray(script)) {
+	      script = [script];
+	    }
+
+	    for (var _iterator = this.table.scriptList, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	      var _ref;
+
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
+	      } else {
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
+	      }
+
+	      var entry = _ref;
+
+	      for (var _iterator2 = script, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	        var _ref2;
+
+	        if (_isArray2) {
+	          if (_i2 >= _iterator2.length) break;
+	          _ref2 = _iterator2[_i2++];
+	        } else {
+	          _i2 = _iterator2.next();
+	          if (_i2.done) break;
+	          _ref2 = _i2.value;
+	        }
+
+	        var s = _ref2;
+
+	        if (entry.tag === s) {
+	          return entry;
+	        }
+	      }
+	    }
+
+	    return null;
+	  };
+
+	  OTProcessor.prototype.selectScript = function selectScript(script, language) {
+	    var changed = false;
+	    var entry = void 0;
+	    if (!this.script || script !== this.scriptTag) {
+	      entry = this.findScript(script);
+	      if (script) {
 	        entry = this.findScript(script);
-	        if (script) {
-	          entry = this.findScript(script);
-	        }
-
-	        if (!entry) {
-	          entry = this.findScript(DEFAULT_SCRIPTS);
-	        }
-
-	        if (!entry) {
-	          return;
-	        }
-
-	        this.scriptTag = entry.tag;
-	        this.script = entry.script;
-	        this.direction = direction(script);
-	        this.language = null;
-	        changed = true;
 	      }
 
-	      if (!language && language !== this.langugeTag) {
-	        var _iteratorNormalCompletion3 = true;
-	        var _didIteratorError3 = false;
-	        var _iteratorError3 = undefined;
+	      if (!entry) {
+	        entry = this.findScript(DEFAULT_SCRIPTS);
+	      }
 
-	        try {
-	          for (var _iterator3 = _getIterator(this.script.langSysRecords), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	            var lang = _step3.value;
+	      if (!entry) {
+	        return;
+	      }
 
-	            if (lang.tag === language) {
-	              this.language = lang.langSys;
-	              this.langugeTag = lang.tag;
-	              changed = true;
-	              break;
-	            }
-	          }
-	        } catch (err) {
-	          _didIteratorError3 = true;
-	          _iteratorError3 = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	              _iterator3.return();
-	            }
-	          } finally {
-	            if (_didIteratorError3) {
-	              throw _iteratorError3;
-	            }
-	          }
+	      this.scriptTag = entry.tag;
+	      this.script = entry.script;
+	      this.direction = direction(script);
+	      this.language = null;
+	      changed = true;
+	    }
+
+	    if (!language && language !== this.langugeTag) {
+	      for (var _iterator3 = this.script.langSysRecords, _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	        var _ref3;
+
+	        if (_isArray3) {
+	          if (_i3 >= _iterator3.length) break;
+	          _ref3 = _iterator3[_i3++];
+	        } else {
+	          _i3 = _iterator3.next();
+	          if (_i3.done) break;
+	          _ref3 = _i3.value;
 	        }
-	      }
 
-	      if (!this.language) {
-	        this.language = this.script.defaultLangSys;
-	      }
+	        var lang = _ref3;
 
-	      // Build a feature lookup table
-	      if (changed) {
-	        this.features = {};
-	        if (this.language) {
-	          var _iteratorNormalCompletion4 = true;
-	          var _didIteratorError4 = false;
-	          var _iteratorError4 = undefined;
-
-	          try {
-	            for (var _iterator4 = _getIterator(this.language.featureIndexes), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	              var featureIndex = _step4.value;
-
-	              var record = this.table.featureList[featureIndex];
-	              this.features[record.tag] = record.feature;
-	            }
-	          } catch (err) {
-	            _didIteratorError4 = true;
-	            _iteratorError4 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion4 && _iterator4.return) {
-	                _iterator4.return();
-	              }
-	            } finally {
-	              if (_didIteratorError4) {
-	                throw _iteratorError4;
-	              }
-	            }
-	          }
+	        if (lang.tag === language) {
+	          this.language = lang.langSys;
+	          this.langugeTag = lang.tag;
+	          changed = true;
+	          break;
 	        }
 	      }
 	    }
-	  }, {
-	    key: 'lookupsForFeatures',
-	    value: function lookupsForFeatures() {
-	      var userFeatures = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
-	      var exclude = arguments[1];
 
-	      var lookups = [];
-	      var _iteratorNormalCompletion5 = true;
-	      var _didIteratorError5 = false;
-	      var _iteratorError5 = undefined;
-
-	      try {
-	        for (var _iterator5 = _getIterator(userFeatures), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-	          var tag = _step5.value;
-
-	          var feature = this.features[tag];
-	          if (!feature) {
-	            continue;
-	          }
-
-	          var _iteratorNormalCompletion6 = true;
-	          var _didIteratorError6 = false;
-	          var _iteratorError6 = undefined;
-
-	          try {
-	            for (var _iterator6 = _getIterator(feature.lookupListIndexes), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-	              var lookupIndex = _step6.value;
-
-	              if (exclude && exclude.indexOf(lookupIndex) !== -1) {
-	                continue;
-	              }
-
-	              lookups.push({
-	                feature: tag,
-	                index: lookupIndex,
-	                lookup: this.table.lookupList.get(lookupIndex)
-	              });
-	            }
-	          } catch (err) {
-	            _didIteratorError6 = true;
-	            _iteratorError6 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion6 && _iterator6.return) {
-	                _iterator6.return();
-	              }
-	            } finally {
-	              if (_didIteratorError6) {
-	                throw _iteratorError6;
-	              }
-	            }
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError5 = true;
-	        _iteratorError5 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion5 && _iterator5.return) {
-	            _iterator5.return();
-	          }
-	        } finally {
-	          if (_didIteratorError5) {
-	            throw _iteratorError5;
-	          }
-	        }
-	      }
-
-	      lookups.sort(function (a, b) {
-	        return a.index - b.index;
-	      });
-	      return lookups;
+	    if (!this.language) {
+	      this.language = this.script.defaultLangSys;
 	    }
-	  }, {
-	    key: 'applyFeatures',
-	    value: function applyFeatures(userFeatures, glyphs, advances) {
-	      var lookups = this.lookupsForFeatures(userFeatures);
-	      this.applyLookups(lookups, glyphs, advances);
-	    }
-	  }, {
-	    key: 'applyLookups',
-	    value: function applyLookups(lookups, glyphs, positions) {
-	      this.glyphs = glyphs;
-	      this.positions = positions;
-	      this.glyphIterator = new GlyphIterator(glyphs);
 
-	      var _iteratorNormalCompletion7 = true;
-	      var _didIteratorError7 = false;
-	      var _iteratorError7 = undefined;
+	    // Build a feature lookup table
+	    if (changed) {
+	      this.features = {};
+	      if (this.language) {
+	        for (var _iterator4 = this.language.featureIndexes, _isArray4 = Array.isArray(_iterator4), _i4 = 0, _iterator4 = _isArray4 ? _iterator4 : _getIterator(_iterator4);;) {
+	          var _ref4;
 
-	      try {
-	        for (var _iterator7 = _getIterator(lookups), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-	          var _step7$value = _step7.value,
-	              feature = _step7$value.feature,
-	              lookup = _step7$value.lookup;
-
-	          this.glyphIterator.reset(lookup.flags);
-
-	          while (this.glyphIterator.index < glyphs.length) {
-	            if (!(feature in this.glyphIterator.cur.features)) {
-	              this.glyphIterator.next();
-	              continue;
-	            }
-
-	            var _iteratorNormalCompletion8 = true;
-	            var _didIteratorError8 = false;
-	            var _iteratorError8 = undefined;
-
-	            try {
-	              for (var _iterator8 = _getIterator(lookup.subTables), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-	                var table = _step8.value;
-
-	                var res = this.applyLookup(lookup.lookupType, table);
-	                if (res) {
-	                  break;
-	                }
-	              }
-	            } catch (err) {
-	              _didIteratorError8 = true;
-	              _iteratorError8 = err;
-	            } finally {
-	              try {
-	                if (!_iteratorNormalCompletion8 && _iterator8.return) {
-	                  _iterator8.return();
-	                }
-	              } finally {
-	                if (_didIteratorError8) {
-	                  throw _iteratorError8;
-	                }
-	              }
-	            }
-
-	            this.glyphIterator.next();
+	          if (_isArray4) {
+	            if (_i4 >= _iterator4.length) break;
+	            _ref4 = _iterator4[_i4++];
+	          } else {
+	            _i4 = _iterator4.next();
+	            if (_i4.done) break;
+	            _ref4 = _i4.value;
 	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError7 = true;
-	        _iteratorError7 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion7 && _iterator7.return) {
-	            _iterator7.return();
-	          }
-	        } finally {
-	          if (_didIteratorError7) {
-	            throw _iteratorError7;
-	          }
+
+	          var featureIndex = _ref4;
+
+	          var record = this.table.featureList[featureIndex];
+	          this.features[record.tag] = record.feature;
 	        }
 	      }
 	    }
-	  }, {
-	    key: 'applyLookup',
-	    value: function applyLookup(lookup, table) {
-	      throw new Error("applyLookup must be implemented by subclasses");
-	    }
-	  }, {
-	    key: 'applyLookupList',
-	    value: function applyLookupList(lookupRecords) {
-	      var glyphIndex = this.glyphIterator.index;
+	  };
 
-	      var _iteratorNormalCompletion9 = true;
-	      var _didIteratorError9 = false;
-	      var _iteratorError9 = undefined;
+	  OTProcessor.prototype.lookupsForFeatures = function lookupsForFeatures() {
+	    var userFeatures = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+	    var exclude = arguments[1];
 
-	      try {
-	        for (var _iterator9 = _getIterator(lookupRecords), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-	          var lookupRecord = _step9.value;
+	    var lookups = [];
+	    for (var _iterator5 = userFeatures, _isArray5 = Array.isArray(_iterator5), _i5 = 0, _iterator5 = _isArray5 ? _iterator5 : _getIterator(_iterator5);;) {
+	      var _ref5;
 
-	          this.glyphIterator.index = glyphIndex;
-	          this.glyphIterator.increment(lookupRecord.sequenceIndex);
-
-	          var lookup = this.table.lookupList.get(lookupRecord.lookupListIndex);
-	          var _iteratorNormalCompletion10 = true;
-	          var _didIteratorError10 = false;
-	          var _iteratorError10 = undefined;
-
-	          try {
-	            for (var _iterator10 = _getIterator(lookup.subTables), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-	              var table = _step10.value;
-
-	              this.applyLookup(lookup.lookupType, table);
-	            }
-	          } catch (err) {
-	            _didIteratorError10 = true;
-	            _iteratorError10 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion10 && _iterator10.return) {
-	                _iterator10.return();
-	              }
-	            } finally {
-	              if (_didIteratorError10) {
-	                throw _iteratorError10;
-	              }
-	            }
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError9 = true;
-	        _iteratorError9 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion9 && _iterator9.return) {
-	            _iterator9.return();
-	          }
-	        } finally {
-	          if (_didIteratorError9) {
-	            throw _iteratorError9;
-	          }
-	        }
+	      if (_isArray5) {
+	        if (_i5 >= _iterator5.length) break;
+	        _ref5 = _iterator5[_i5++];
+	      } else {
+	        _i5 = _iterator5.next();
+	        if (_i5.done) break;
+	        _ref5 = _i5.value;
 	      }
+
+	      var tag = _ref5;
+
+	      var feature = this.features[tag];
+	      if (!feature) {
+	        continue;
+	      }
+
+	      for (var _iterator6 = feature.lookupListIndexes, _isArray6 = Array.isArray(_iterator6), _i6 = 0, _iterator6 = _isArray6 ? _iterator6 : _getIterator(_iterator6);;) {
+	        var _ref6;
+
+	        if (_isArray6) {
+	          if (_i6 >= _iterator6.length) break;
+	          _ref6 = _iterator6[_i6++];
+	        } else {
+	          _i6 = _iterator6.next();
+	          if (_i6.done) break;
+	          _ref6 = _i6.value;
+	        }
+
+	        var lookupIndex = _ref6;
+
+	        if (exclude && exclude.indexOf(lookupIndex) !== -1) {
+	          continue;
+	        }
+
+	        lookups.push({
+	          feature: tag,
+	          index: lookupIndex,
+	          lookup: this.table.lookupList.get(lookupIndex)
+	        });
+	      }
+	    }
+
+	    lookups.sort(function (a, b) {
+	      return a.index - b.index;
+	    });
+	    return lookups;
+	  };
+
+	  OTProcessor.prototype.applyFeatures = function applyFeatures(userFeatures, glyphs, advances) {
+	    var lookups = this.lookupsForFeatures(userFeatures);
+	    this.applyLookups(lookups, glyphs, advances);
+	  };
+
+	  OTProcessor.prototype.applyLookups = function applyLookups(lookups, glyphs, positions) {
+	    this.glyphs = glyphs;
+	    this.positions = positions;
+	    this.glyphIterator = new GlyphIterator(glyphs);
+
+	    for (var _iterator7 = lookups, _isArray7 = Array.isArray(_iterator7), _i7 = 0, _iterator7 = _isArray7 ? _iterator7 : _getIterator(_iterator7);;) {
+	      var _ref7;
+
+	      if (_isArray7) {
+	        if (_i7 >= _iterator7.length) break;
+	        _ref7 = _iterator7[_i7++];
+	      } else {
+	        _i7 = _iterator7.next();
+	        if (_i7.done) break;
+	        _ref7 = _i7.value;
+	      }
+
+	      var _ref8 = _ref7,
+	          feature = _ref8.feature,
+	          lookup = _ref8.lookup;
+
+	      this.glyphIterator.reset(lookup.flags);
+
+	      while (this.glyphIterator.index < glyphs.length) {
+	        if (!(feature in this.glyphIterator.cur.features)) {
+	          this.glyphIterator.next();
+	          continue;
+	        }
+
+	        for (var _iterator8 = lookup.subTables, _isArray8 = Array.isArray(_iterator8), _i8 = 0, _iterator8 = _isArray8 ? _iterator8 : _getIterator(_iterator8);;) {
+	          var _ref9;
+
+	          if (_isArray8) {
+	            if (_i8 >= _iterator8.length) break;
+	            _ref9 = _iterator8[_i8++];
+	          } else {
+	            _i8 = _iterator8.next();
+	            if (_i8.done) break;
+	            _ref9 = _i8.value;
+	          }
+
+	          var table = _ref9;
+
+	          var res = this.applyLookup(lookup.lookupType, table);
+	          if (res) {
+	            break;
+	          }
+	        }
+
+	        this.glyphIterator.next();
+	      }
+	    }
+	  };
+
+	  OTProcessor.prototype.applyLookup = function applyLookup(lookup, table) {
+	    throw new Error("applyLookup must be implemented by subclasses");
+	  };
+
+	  OTProcessor.prototype.applyLookupList = function applyLookupList(lookupRecords) {
+	    var glyphIndex = this.glyphIterator.index;
+
+	    for (var _iterator9 = lookupRecords, _isArray9 = Array.isArray(_iterator9), _i9 = 0, _iterator9 = _isArray9 ? _iterator9 : _getIterator(_iterator9);;) {
+	      var _ref10;
+
+	      if (_isArray9) {
+	        if (_i9 >= _iterator9.length) break;
+	        _ref10 = _iterator9[_i9++];
+	      } else {
+	        _i9 = _iterator9.next();
+	        if (_i9.done) break;
+	        _ref10 = _i9.value;
+	      }
+
+	      var lookupRecord = _ref10;
 
 	      this.glyphIterator.index = glyphIndex;
-	      return true;
-	    }
-	  }, {
-	    key: 'coverageIndex',
-	    value: function coverageIndex(coverage, glyph) {
-	      if (glyph == null) {
-	        glyph = this.glyphIterator.cur.id;
-	      }
+	      this.glyphIterator.increment(lookupRecord.sequenceIndex);
 
-	      switch (coverage.version) {
-	        case 1:
-	          return coverage.glyphs.indexOf(glyph);
+	      var lookup = this.table.lookupList.get(lookupRecord.lookupListIndex);
+	      for (var _iterator10 = lookup.subTables, _isArray10 = Array.isArray(_iterator10), _i10 = 0, _iterator10 = _isArray10 ? _iterator10 : _getIterator(_iterator10);;) {
+	        var _ref11;
 
-	        case 2:
-	          var _iteratorNormalCompletion11 = true;
-	          var _didIteratorError11 = false;
-	          var _iteratorError11 = undefined;
-
-	          try {
-	            for (var _iterator11 = _getIterator(coverage.rangeRecords), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-	              var range = _step11.value;
-
-	              if (range.start <= glyph && glyph <= range.end) {
-	                return range.startCoverageIndex + glyph - range.start;
-	              }
-	            }
-	          } catch (err) {
-	            _didIteratorError11 = true;
-	            _iteratorError11 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion11 && _iterator11.return) {
-	                _iterator11.return();
-	              }
-	            } finally {
-	              if (_didIteratorError11) {
-	                throw _iteratorError11;
-	              }
-	            }
-	          }
-
-	          break;
-	      }
-
-	      return -1;
-	    }
-	  }, {
-	    key: 'match',
-	    value: function match(sequenceIndex, sequence, fn, matched) {
-	      var pos = this.glyphIterator.index;
-	      var glyph = this.glyphIterator.increment(sequenceIndex);
-	      var idx = 0;
-
-	      while (idx < sequence.length && glyph && fn(sequence[idx], glyph.id)) {
-	        if (matched) {
-	          matched.push(this.glyphIterator.index);
+	        if (_isArray10) {
+	          if (_i10 >= _iterator10.length) break;
+	          _ref11 = _iterator10[_i10++];
+	        } else {
+	          _i10 = _iterator10.next();
+	          if (_i10.done) break;
+	          _ref11 = _i10.value;
 	        }
 
-	        idx++;
-	        glyph = this.glyphIterator.next();
+	        var table = _ref11;
+
+	        this.applyLookup(lookup.lookupType, table);
+	      }
+	    }
+
+	    this.glyphIterator.index = glyphIndex;
+	    return true;
+	  };
+
+	  OTProcessor.prototype.coverageIndex = function coverageIndex(coverage, glyph) {
+	    if (glyph == null) {
+	      glyph = this.glyphIterator.cur.id;
+	    }
+
+	    switch (coverage.version) {
+	      case 1:
+	        return coverage.glyphs.indexOf(glyph);
+
+	      case 2:
+	        for (var _iterator11 = coverage.rangeRecords, _isArray11 = Array.isArray(_iterator11), _i11 = 0, _iterator11 = _isArray11 ? _iterator11 : _getIterator(_iterator11);;) {
+	          var _ref12;
+
+	          if (_isArray11) {
+	            if (_i11 >= _iterator11.length) break;
+	            _ref12 = _iterator11[_i11++];
+	          } else {
+	            _i11 = _iterator11.next();
+	            if (_i11.done) break;
+	            _ref12 = _i11.value;
+	          }
+
+	          var range = _ref12;
+
+	          if (range.start <= glyph && glyph <= range.end) {
+	            return range.startCoverageIndex + glyph - range.start;
+	          }
+	        }
+
+	        break;
+	    }
+
+	    return -1;
+	  };
+
+	  OTProcessor.prototype.match = function match(sequenceIndex, sequence, fn, matched) {
+	    var pos = this.glyphIterator.index;
+	    var glyph = this.glyphIterator.increment(sequenceIndex);
+	    var idx = 0;
+
+	    while (idx < sequence.length && glyph && fn(sequence[idx], glyph.id)) {
+	      if (matched) {
+	        matched.push(this.glyphIterator.index);
 	      }
 
-	      this.glyphIterator.index = pos;
-	      if (idx < sequence.length) {
-	        return false;
-	      }
-
-	      return matched || true;
+	      idx++;
+	      glyph = this.glyphIterator.next();
 	    }
-	  }, {
-	    key: 'sequenceMatches',
-	    value: function sequenceMatches(sequenceIndex, sequence) {
-	      return this.match(sequenceIndex, sequence, function (component, glyph) {
-	        return component === glyph;
-	      });
-	    }
-	  }, {
-	    key: 'sequenceMatchIndices',
-	    value: function sequenceMatchIndices(sequenceIndex, sequence) {
-	      return this.match(sequenceIndex, sequence, function (component, glyph) {
-	        return component === glyph;
-	      }, []);
-	    }
-	  }, {
-	    key: 'coverageSequenceMatches',
-	    value: function coverageSequenceMatches(sequenceIndex, sequence) {
-	      var _this = this;
 
-	      return this.match(sequenceIndex, sequence, function (coverage, glyph) {
-	        return _this.coverageIndex(coverage, glyph) >= 0;
-	      });
-	    }
-	  }, {
-	    key: 'getClassID',
-	    value: function getClassID(glyph, classDef) {
-	      switch (classDef.version) {
-	        case 1:
-	          // Class array
-	          var i = glyph - classDef.startGlyph;
-	          if (i > -1 && i < classDef.classValueArray.length) {
-	            return classDef.classValueArray[i];
-	          }
-
-	          break;
-
-	        case 2:
-	          var _iteratorNormalCompletion12 = true;
-	          var _didIteratorError12 = false;
-	          var _iteratorError12 = undefined;
-
-	          try {
-	            for (var _iterator12 = _getIterator(classDef.classRangeRecord), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-	              var range = _step12.value;
-
-	              if (range.start <= glyph && glyph <= range.end) {
-	                return range.class;
-	              }
-	            }
-	          } catch (err) {
-	            _didIteratorError12 = true;
-	            _iteratorError12 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion12 && _iterator12.return) {
-	                _iterator12.return();
-	              }
-	            } finally {
-	              if (_didIteratorError12) {
-	                throw _iteratorError12;
-	              }
-	            }
-	          }
-
-	          break;
-	      }
-
-	      return 0;
-	    }
-	  }, {
-	    key: 'classSequenceMatches',
-	    value: function classSequenceMatches(sequenceIndex, sequence, classDef) {
-	      var _this2 = this;
-
-	      return this.match(sequenceIndex, sequence, function (classID, glyph) {
-	        return classID === _this2.getClassID(glyph, classDef);
-	      });
-	    }
-	  }, {
-	    key: 'applyContext',
-	    value: function applyContext(table) {
-	      switch (table.version) {
-	        case 1:
-	          var index = this.coverageIndex(table.coverage);
-	          if (index === -1) {
-	            return false;
-	          }
-
-	          var set = table.ruleSets[index];
-	          var _iteratorNormalCompletion13 = true;
-	          var _didIteratorError13 = false;
-	          var _iteratorError13 = undefined;
-
-	          try {
-	            for (var _iterator13 = _getIterator(set), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-	              var rule = _step13.value;
-
-	              if (this.sequenceMatches(1, rule.input)) {
-	                return this.applyLookupList(rule.lookupRecords);
-	              }
-	            }
-	          } catch (err) {
-	            _didIteratorError13 = true;
-	            _iteratorError13 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion13 && _iterator13.return) {
-	                _iterator13.return();
-	              }
-	            } finally {
-	              if (_didIteratorError13) {
-	                throw _iteratorError13;
-	              }
-	            }
-	          }
-
-	          break;
-
-	        case 2:
-	          if (this.coverageIndex(table.coverage) === -1) {
-	            return false;
-	          }
-
-	          index = this.getClassID(this.glyphIterator.cur.id, table.classDef);
-	          if (index === -1) {
-	            return false;
-	          }
-
-	          set = table.classSet[index];
-	          var _iteratorNormalCompletion14 = true;
-	          var _didIteratorError14 = false;
-	          var _iteratorError14 = undefined;
-
-	          try {
-	            for (var _iterator14 = _getIterator(set), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-	              var _rule = _step14.value;
-
-	              if (this.classSequenceMatches(1, _rule.classes, table.classDef)) {
-	                return this.applyLookupList(_rule.lookupRecords);
-	              }
-	            }
-	          } catch (err) {
-	            _didIteratorError14 = true;
-	            _iteratorError14 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion14 && _iterator14.return) {
-	                _iterator14.return();
-	              }
-	            } finally {
-	              if (_didIteratorError14) {
-	                throw _iteratorError14;
-	              }
-	            }
-	          }
-
-	          break;
-
-	        case 3:
-	          if (this.coverageSequenceMatches(0, table.coverages)) {
-	            return this.applyLookupList(table.lookupRecords);
-	          }
-
-	          break;
-	      }
-
+	    this.glyphIterator.index = pos;
+	    if (idx < sequence.length) {
 	      return false;
 	    }
-	  }, {
-	    key: 'applyChainingContext',
-	    value: function applyChainingContext(table) {
-	      switch (table.version) {
-	        case 1:
-	          var index = this.coverageIndex(table.coverage);
-	          if (index === -1) {
-	            return false;
+
+	    return matched || true;
+	  };
+
+	  OTProcessor.prototype.sequenceMatches = function sequenceMatches(sequenceIndex, sequence) {
+	    return this.match(sequenceIndex, sequence, function (component, glyph) {
+	      return component === glyph;
+	    });
+	  };
+
+	  OTProcessor.prototype.sequenceMatchIndices = function sequenceMatchIndices(sequenceIndex, sequence) {
+	    return this.match(sequenceIndex, sequence, function (component, glyph) {
+	      return component === glyph;
+	    }, []);
+	  };
+
+	  OTProcessor.prototype.coverageSequenceMatches = function coverageSequenceMatches(sequenceIndex, sequence) {
+	    var _this = this;
+
+	    return this.match(sequenceIndex, sequence, function (coverage, glyph) {
+	      return _this.coverageIndex(coverage, glyph) >= 0;
+	    });
+	  };
+
+	  OTProcessor.prototype.getClassID = function getClassID(glyph, classDef) {
+	    switch (classDef.version) {
+	      case 1:
+	        // Class array
+	        var i = glyph - classDef.startGlyph;
+	        if (i >= 0 && i < classDef.classValueArray.length) {
+	          return classDef.classValueArray[i];
+	        }
+
+	        break;
+
+	      case 2:
+	        for (var _iterator12 = classDef.classRangeRecord, _isArray12 = Array.isArray(_iterator12), _i12 = 0, _iterator12 = _isArray12 ? _iterator12 : _getIterator(_iterator12);;) {
+	          var _ref13;
+
+	          if (_isArray12) {
+	            if (_i12 >= _iterator12.length) break;
+	            _ref13 = _iterator12[_i12++];
+	          } else {
+	            _i12 = _iterator12.next();
+	            if (_i12.done) break;
+	            _ref13 = _i12.value;
 	          }
 
-	          var set = table.chainRuleSets[index];
-	          var _iteratorNormalCompletion15 = true;
-	          var _didIteratorError15 = false;
-	          var _iteratorError15 = undefined;
+	          var range = _ref13;
 
-	          try {
-	            for (var _iterator15 = _getIterator(set), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
-	              var rule = _step15.value;
-
-	              if (this.sequenceMatches(-rule.backtrack.length, rule.backtrack) && this.sequenceMatches(1, rule.input) && this.sequenceMatches(1 + rule.input.length, rule.lookahead)) {
-	                return this.applyLookupList(rule.lookupRecords);
-	              }
-	            }
-	          } catch (err) {
-	            _didIteratorError15 = true;
-	            _iteratorError15 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion15 && _iterator15.return) {
-	                _iterator15.return();
-	              }
-	            } finally {
-	              if (_didIteratorError15) {
-	                throw _iteratorError15;
-	              }
-	            }
+	          if (range.start <= glyph && glyph <= range.end) {
+	            return range.class;
 	          }
+	        }
 
-	          break;
-
-	        case 2:
-	          if (this.coverageIndex(table.coverage) === -1) {
-	            return false;
-	          }
-
-	          index = this.getClassID(this.glyphIterator.cur.id, table.inputClassDef);
-	          var rules = table.chainClassSet[index];
-	          if (!rules) {
-	            return false;
-	          }
-
-	          var _iteratorNormalCompletion16 = true;
-	          var _didIteratorError16 = false;
-	          var _iteratorError16 = undefined;
-
-	          try {
-	            for (var _iterator16 = _getIterator(rules), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
-	              var _rule2 = _step16.value;
-
-	              if (this.classSequenceMatches(-_rule2.backtrack.length, _rule2.backtrack, table.backtrackClassDef) && this.classSequenceMatches(1, _rule2.input, table.inputClassDef) && this.classSequenceMatches(1 + _rule2.input.length, _rule2.lookahead, table.lookaheadClassDef)) {
-	                return this.applyLookupList(_rule2.lookupRecords);
-	              }
-	            }
-	          } catch (err) {
-	            _didIteratorError16 = true;
-	            _iteratorError16 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion16 && _iterator16.return) {
-	                _iterator16.return();
-	              }
-	            } finally {
-	              if (_didIteratorError16) {
-	                throw _iteratorError16;
-	              }
-	            }
-	          }
-
-	          break;
-
-	        case 3:
-	          if (this.coverageSequenceMatches(-table.backtrackGlyphCount, table.backtrackCoverage) && this.coverageSequenceMatches(0, table.inputCoverage) && this.coverageSequenceMatches(table.inputGlyphCount, table.lookaheadCoverage)) {
-	            return this.applyLookupList(table.lookupRecords);
-	          }
-
-	          break;
-	      }
-
-	      return false;
+	        break;
 	    }
-	  }]);
+
+	    return 0;
+	  };
+
+	  OTProcessor.prototype.classSequenceMatches = function classSequenceMatches(sequenceIndex, sequence, classDef) {
+	    var _this2 = this;
+
+	    return this.match(sequenceIndex, sequence, function (classID, glyph) {
+	      return classID === _this2.getClassID(glyph, classDef);
+	    });
+	  };
+
+	  OTProcessor.prototype.applyContext = function applyContext(table) {
+	    switch (table.version) {
+	      case 1:
+	        var index = this.coverageIndex(table.coverage);
+	        if (index === -1) {
+	          return false;
+	        }
+
+	        var set = table.ruleSets[index];
+	        for (var _iterator13 = set, _isArray13 = Array.isArray(_iterator13), _i13 = 0, _iterator13 = _isArray13 ? _iterator13 : _getIterator(_iterator13);;) {
+	          var _ref14;
+
+	          if (_isArray13) {
+	            if (_i13 >= _iterator13.length) break;
+	            _ref14 = _iterator13[_i13++];
+	          } else {
+	            _i13 = _iterator13.next();
+	            if (_i13.done) break;
+	            _ref14 = _i13.value;
+	          }
+
+	          var rule = _ref14;
+
+	          if (this.sequenceMatches(1, rule.input)) {
+	            return this.applyLookupList(rule.lookupRecords);
+	          }
+	        }
+
+	        break;
+
+	      case 2:
+	        if (this.coverageIndex(table.coverage) === -1) {
+	          return false;
+	        }
+
+	        index = this.getClassID(this.glyphIterator.cur.id, table.classDef);
+	        if (index === -1) {
+	          return false;
+	        }
+
+	        set = table.classSet[index];
+	        for (var _iterator14 = set, _isArray14 = Array.isArray(_iterator14), _i14 = 0, _iterator14 = _isArray14 ? _iterator14 : _getIterator(_iterator14);;) {
+	          var _ref15;
+
+	          if (_isArray14) {
+	            if (_i14 >= _iterator14.length) break;
+	            _ref15 = _iterator14[_i14++];
+	          } else {
+	            _i14 = _iterator14.next();
+	            if (_i14.done) break;
+	            _ref15 = _i14.value;
+	          }
+
+	          var _rule = _ref15;
+
+	          if (this.classSequenceMatches(1, _rule.classes, table.classDef)) {
+	            return this.applyLookupList(_rule.lookupRecords);
+	          }
+	        }
+
+	        break;
+
+	      case 3:
+	        if (this.coverageSequenceMatches(0, table.coverages)) {
+	          return this.applyLookupList(table.lookupRecords);
+	        }
+
+	        break;
+	    }
+
+	    return false;
+	  };
+
+	  OTProcessor.prototype.applyChainingContext = function applyChainingContext(table) {
+	    switch (table.version) {
+	      case 1:
+	        var index = this.coverageIndex(table.coverage);
+	        if (index === -1) {
+	          return false;
+	        }
+
+	        var set = table.chainRuleSets[index];
+	        for (var _iterator15 = set, _isArray15 = Array.isArray(_iterator15), _i15 = 0, _iterator15 = _isArray15 ? _iterator15 : _getIterator(_iterator15);;) {
+	          var _ref16;
+
+	          if (_isArray15) {
+	            if (_i15 >= _iterator15.length) break;
+	            _ref16 = _iterator15[_i15++];
+	          } else {
+	            _i15 = _iterator15.next();
+	            if (_i15.done) break;
+	            _ref16 = _i15.value;
+	          }
+
+	          var rule = _ref16;
+
+	          if (this.sequenceMatches(-rule.backtrack.length, rule.backtrack) && this.sequenceMatches(1, rule.input) && this.sequenceMatches(1 + rule.input.length, rule.lookahead)) {
+	            return this.applyLookupList(rule.lookupRecords);
+	          }
+	        }
+
+	        break;
+
+	      case 2:
+	        if (this.coverageIndex(table.coverage) === -1) {
+	          return false;
+	        }
+
+	        index = this.getClassID(this.glyphIterator.cur.id, table.inputClassDef);
+	        var rules = table.chainClassSet[index];
+	        if (!rules) {
+	          return false;
+	        }
+
+	        for (var _iterator16 = rules, _isArray16 = Array.isArray(_iterator16), _i16 = 0, _iterator16 = _isArray16 ? _iterator16 : _getIterator(_iterator16);;) {
+	          var _ref17;
+
+	          if (_isArray16) {
+	            if (_i16 >= _iterator16.length) break;
+	            _ref17 = _iterator16[_i16++];
+	          } else {
+	            _i16 = _iterator16.next();
+	            if (_i16.done) break;
+	            _ref17 = _i16.value;
+	          }
+
+	          var _rule2 = _ref17;
+
+	          if (this.classSequenceMatches(-_rule2.backtrack.length, _rule2.backtrack, table.backtrackClassDef) && this.classSequenceMatches(1, _rule2.input, table.inputClassDef) && this.classSequenceMatches(1 + _rule2.input.length, _rule2.lookahead, table.lookaheadClassDef)) {
+	            return this.applyLookupList(_rule2.lookupRecords);
+	          }
+	        }
+
+	        break;
+
+	      case 3:
+	        if (this.coverageSequenceMatches(-table.backtrackGlyphCount, table.backtrackCoverage) && this.coverageSequenceMatches(0, table.inputCoverage) && this.coverageSequenceMatches(table.inputGlyphCount, table.lookaheadCoverage)) {
+	          return this.applyLookupList(table.lookupRecords);
+	        }
+
+	        break;
+	    }
+
+	    return false;
+	  };
 
 	  return OTProcessor;
 	}();
@@ -45933,59 +45345,54 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function HangulShaper() {
 	    _classCallCheck(this, HangulShaper);
 
-	    return _possibleConstructorReturn(this, (HangulShaper.__proto__ || _Object$getPrototypeOf(HangulShaper)).apply(this, arguments));
+	    return _possibleConstructorReturn(this, _DefaultShaper.apply(this, arguments));
 	  }
 
-	  _createClass(HangulShaper, null, [{
-	    key: 'planFeatures',
-	    value: function planFeatures(plan) {
-	      plan.add(['ljmo', 'vjmo', 'tjmo'], false);
-	    }
-	  }, {
-	    key: 'assignFeatures',
-	    value: function assignFeatures(plan, glyphs) {
-	      var state = 0;
-	      var i = 0;
-	      while (i < glyphs.length) {
-	        var action = void 0;
-	        var glyph = glyphs[i];
-	        var code = glyph.codePoints[0];
-	        var type = getType(code);
+	  HangulShaper.planFeatures = function planFeatures(plan) {
+	    plan.add(['ljmo', 'vjmo', 'tjmo'], false);
+	  };
 
-	        var _STATE_TABLE$state$ty = _slicedToArray(STATE_TABLE$1[state][type], 2);
+	  HangulShaper.assignFeatures = function assignFeatures(plan, glyphs) {
+	    var state = 0;
+	    var i = 0;
+	    while (i < glyphs.length) {
+	      var action = void 0;
+	      var glyph = glyphs[i];
+	      var code = glyph.codePoints[0];
+	      var type = getType(code);
 
-	        action = _STATE_TABLE$state$ty[0];
-	        state = _STATE_TABLE$state$ty[1];
+	      var _STATE_TABLE$state$ty = STATE_TABLE$1[state][type];
+	      action = _STATE_TABLE$state$ty[0];
+	      state = _STATE_TABLE$state$ty[1];
 
 
-	        switch (action) {
-	          case DECOMPOSE:
-	            // Decompose the composed syllable if it is not supported by the font.
-	            if (!plan.font.hasGlyphForCodePoint(code)) {
-	              i = decompose(glyphs, i, plan.font);
-	            }
-	            break;
+	      switch (action) {
+	        case DECOMPOSE:
+	          // Decompose the composed syllable if it is not supported by the font.
+	          if (!plan.font.hasGlyphForCodePoint(code)) {
+	            i = decompose(glyphs, i, plan.font);
+	          }
+	          break;
 
-	          case COMPOSE:
-	            // Found a decomposed syllable. Try to compose if supported by the font.
-	            i = compose(glyphs, i, plan.font);
-	            break;
+	        case COMPOSE:
+	          // Found a decomposed syllable. Try to compose if supported by the font.
+	          i = compose(glyphs, i, plan.font);
+	          break;
 
-	          case TONE_MARK:
-	            // Got a valid syllable, followed by a tone mark. Move the tone mark to the beginning of the syllable.
-	            reorderToneMark(glyphs, i, plan.font);
-	            break;
+	        case TONE_MARK:
+	          // Got a valid syllable, followed by a tone mark. Move the tone mark to the beginning of the syllable.
+	          reorderToneMark(glyphs, i, plan.font);
+	          break;
 
-	          case INVALID:
-	            // Tone mark has no valid syllable to attach to, so insert a dotted circle
-	            i = insertDottedCircle(glyphs, i, plan.font);
-	            break;
-	        }
-
-	        i++;
+	        case INVALID:
+	          // Tone mark has no valid syllable to attach to, so insert a dotted circle
+	          i = insertDottedCircle(glyphs, i, plan.font);
+	          break;
 	      }
+
+	      i++;
 	    }
-	  }]);
+	  };
 
 	  return HangulShaper;
 	}(DefaultShaper), _class$5.zeroMarkWidths = 'NONE', _temp$1);
@@ -46273,58 +45680,54 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function UniversalShaper() {
 	    _classCallCheck(this, UniversalShaper);
 
-	    return _possibleConstructorReturn(this, (UniversalShaper.__proto__ || _Object$getPrototypeOf(UniversalShaper)).apply(this, arguments));
+	    return _possibleConstructorReturn(this, _DefaultShaper.apply(this, arguments));
 	  }
 
-	  _createClass(UniversalShaper, null, [{
-	    key: 'planFeatures',
-	    value: function planFeatures(plan) {
-	      plan.addStage(setupSyllables);
+	  UniversalShaper.planFeatures = function planFeatures(plan) {
+	    plan.addStage(setupSyllables);
 
-	      // Default glyph pre-processing group
-	      plan.addStage(['locl', 'ccmp', 'nukt', 'akhn']);
+	    // Default glyph pre-processing group
+	    plan.addStage(['locl', 'ccmp', 'nukt', 'akhn']);
 
-	      // Reordering group
-	      plan.addStage(clearSubstitutionFlags);
-	      plan.addStage(['rphf'], false);
-	      plan.addStage(recordRphf);
-	      plan.addStage(clearSubstitutionFlags);
-	      plan.addStage(['pref']);
-	      plan.addStage(recordPref);
+	    // Reordering group
+	    plan.addStage(clearSubstitutionFlags);
+	    plan.addStage(['rphf'], false);
+	    plan.addStage(recordRphf);
+	    plan.addStage(clearSubstitutionFlags);
+	    plan.addStage(['pref']);
+	    plan.addStage(recordPref);
 
-	      // Orthographic unit shaping group
-	      plan.addStage(['rkrf', 'abvf', 'blwf', 'half', 'pstf', 'vatu', 'cjct']);
-	      plan.addStage(reorder);
+	    // Orthographic unit shaping group
+	    plan.addStage(['rkrf', 'abvf', 'blwf', 'half', 'pstf', 'vatu', 'cjct']);
+	    plan.addStage(reorder);
 
-	      // Topographical features
-	      // Scripts that need this are handled by the Arabic shaper, not implemented here for now.
-	      // plan.addStage(['isol', 'init', 'medi', 'fina', 'med2', 'fin2', 'fin3'], false);
+	    // Topographical features
+	    // Scripts that need this are handled by the Arabic shaper, not implemented here for now.
+	    // plan.addStage(['isol', 'init', 'medi', 'fina', 'med2', 'fin2', 'fin3'], false);
 
-	      // Standard topographic presentation and positional feature application
-	      plan.addStage(['abvs', 'blws', 'pres', 'psts', 'dist', 'abvm', 'blwm']);
-	    }
-	  }, {
-	    key: 'assignFeatures',
-	    value: function assignFeatures(plan, glyphs) {
-	      var _loop = function _loop(i) {
-	        var codepoint = glyphs[i].codePoints[0];
-	        if (decompositions[codepoint]) {
-	          var decomposed = decompositions[codepoint].map(function (c) {
-	            var g = plan.font.glyphForCodePoint(c);
-	            return new GlyphInfo(plan.font, g.id, [c], glyphs[i].features);
-	          });
+	    // Standard topographic presentation and positional feature application
+	    plan.addStage(['abvs', 'blws', 'pres', 'psts', 'dist', 'abvm', 'blwm']);
+	  };
 
-	          glyphs.splice.apply(glyphs, [i, 1].concat(_toConsumableArray(decomposed)));
-	        }
-	      };
+	  UniversalShaper.assignFeatures = function assignFeatures(plan, glyphs) {
+	    var _loop = function _loop(i) {
+	      var codepoint = glyphs[i].codePoints[0];
+	      if (decompositions[codepoint]) {
+	        var decomposed = decompositions[codepoint].map(function (c) {
+	          var g = plan.font.glyphForCodePoint(c);
+	          return new GlyphInfo(plan.font, g.id, [c], glyphs[i].features);
+	        });
 
-	      // Decompose split vowels
-	      // TODO: do this in a more general unicode normalizer
-	      for (var i = glyphs.length - 1; i >= 0; i--) {
-	        _loop(i);
+	        glyphs.splice.apply(glyphs, [i, 1].concat(decomposed));
 	      }
+	    };
+
+	    // Decompose split vowels
+	    // TODO: do this in a more general unicode normalizer
+	    for (var i = glyphs.length - 1; i >= 0; i--) {
+	      _loop(i);
 	    }
-	  }]);
+	  };
 
 	  return UniversalShaper;
 	}(DefaultShaper), _class$6.zeroMarkWidths = 'BEFORE_GPOS', _temp$2);
@@ -46342,129 +45745,97 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function setupSyllables(font, glyphs) {
 	  var syllable = 0;
-	  var _iteratorNormalCompletion = true;
-	  var _didIteratorError = false;
-	  var _iteratorError = undefined;
+	  for (var _iterator = stateMachine.match(glyphs.map(useCategory)), _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	    var _ref;
 
-	  try {
-	    for (var _iterator = _getIterator(stateMachine.match(glyphs.map(useCategory))), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	      var _step$value = _slicedToArray(_step.value, 3),
-	          start = _step$value[0],
-	          end = _step$value[1],
-	          tags = _step$value[2];
-
-	      ++syllable;
-
-	      // Create shaper info
-	      for (var i = start; i <= end; i++) {
-	        glyphs[i].shaperInfo = new USEInfo(categories[useCategory(glyphs[i])], tags[0], syllable);
-	      }
-
-	      // Assign rphf feature
-	      var limit = glyphs[start].shaperInfo.category === 'R' ? 1 : Math.min(3, end - start);
-	      for (var _i = start; _i < start + limit; _i++) {
-	        glyphs[_i].features.rphf = true;
-	      }
+	    if (_isArray) {
+	      if (_i >= _iterator.length) break;
+	      _ref = _iterator[_i++];
+	    } else {
+	      _i = _iterator.next();
+	      if (_i.done) break;
+	      _ref = _i.value;
 	    }
-	  } catch (err) {
-	    _didIteratorError = true;
-	    _iteratorError = err;
-	  } finally {
-	    try {
-	      if (!_iteratorNormalCompletion && _iterator.return) {
-	        _iterator.return();
-	      }
-	    } finally {
-	      if (_didIteratorError) {
-	        throw _iteratorError;
-	      }
+
+	    var _ref2 = _ref,
+	        start = _ref2[0],
+	        end = _ref2[1],
+	        tags = _ref2[2];
+
+	    ++syllable;
+
+	    // Create shaper info
+	    for (var i = start; i <= end; i++) {
+	      glyphs[i].shaperInfo = new USEInfo(categories[useCategory(glyphs[i])], tags[0], syllable);
+	    }
+
+	    // Assign rphf feature
+	    var limit = glyphs[start].shaperInfo.category === 'R' ? 1 : Math.min(3, end - start);
+	    for (var _i2 = start; _i2 < start + limit; _i2++) {
+	      glyphs[_i2].features.rphf = true;
 	    }
 	  }
 	}
 
 	function clearSubstitutionFlags(font, glyphs) {
-	  var _iteratorNormalCompletion2 = true;
-	  var _didIteratorError2 = false;
-	  var _iteratorError2 = undefined;
+	  for (var _iterator2 = glyphs, _isArray2 = Array.isArray(_iterator2), _i3 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	    var _ref3;
 
-	  try {
-	    for (var _iterator2 = _getIterator(glyphs), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	      var glyph = _step2.value;
+	    if (_isArray2) {
+	      if (_i3 >= _iterator2.length) break;
+	      _ref3 = _iterator2[_i3++];
+	    } else {
+	      _i3 = _iterator2.next();
+	      if (_i3.done) break;
+	      _ref3 = _i3.value;
+	    }
 
-	      glyph.substituted = false;
-	    }
-	  } catch (err) {
-	    _didIteratorError2 = true;
-	    _iteratorError2 = err;
-	  } finally {
-	    try {
-	      if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	        _iterator2.return();
-	      }
-	    } finally {
-	      if (_didIteratorError2) {
-	        throw _iteratorError2;
-	      }
-	    }
+	    var glyph = _ref3;
+
+	    glyph.substituted = false;
 	  }
 	}
 
 	function recordRphf(font, glyphs) {
-	  var _iteratorNormalCompletion3 = true;
-	  var _didIteratorError3 = false;
-	  var _iteratorError3 = undefined;
+	  for (var _iterator3 = glyphs, _isArray3 = Array.isArray(_iterator3), _i4 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	    var _ref4;
 
-	  try {
-	    for (var _iterator3 = _getIterator(glyphs), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	      var glyph = _step3.value;
-
-	      if (glyph.substituted && glyph.features.rphf) {
-	        // Mark a substituted repha.
-	        glyph.shaperInfo.category = 'R';
-	      }
+	    if (_isArray3) {
+	      if (_i4 >= _iterator3.length) break;
+	      _ref4 = _iterator3[_i4++];
+	    } else {
+	      _i4 = _iterator3.next();
+	      if (_i4.done) break;
+	      _ref4 = _i4.value;
 	    }
-	  } catch (err) {
-	    _didIteratorError3 = true;
-	    _iteratorError3 = err;
-	  } finally {
-	    try {
-	      if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	        _iterator3.return();
-	      }
-	    } finally {
-	      if (_didIteratorError3) {
-	        throw _iteratorError3;
-	      }
+
+	    var glyph = _ref4;
+
+	    if (glyph.substituted && glyph.features.rphf) {
+	      // Mark a substituted repha.
+	      glyph.shaperInfo.category = 'R';
 	    }
 	  }
 	}
 
 	function recordPref(font, glyphs) {
-	  var _iteratorNormalCompletion4 = true;
-	  var _didIteratorError4 = false;
-	  var _iteratorError4 = undefined;
+	  for (var _iterator4 = glyphs, _isArray4 = Array.isArray(_iterator4), _i5 = 0, _iterator4 = _isArray4 ? _iterator4 : _getIterator(_iterator4);;) {
+	    var _ref5;
 
-	  try {
-	    for (var _iterator4 = _getIterator(glyphs), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	      var glyph = _step4.value;
-
-	      if (glyph.substituted) {
-	        // Mark a substituted pref as VPre, as they behave the same way.
-	        glyph.shaperInfo.category = 'VPre';
-	      }
+	    if (_isArray4) {
+	      if (_i5 >= _iterator4.length) break;
+	      _ref5 = _iterator4[_i5++];
+	    } else {
+	      _i5 = _iterator4.next();
+	      if (_i5.done) break;
+	      _ref5 = _i5.value;
 	    }
-	  } catch (err) {
-	    _didIteratorError4 = true;
-	    _iteratorError4 = err;
-	  } finally {
-	    try {
-	      if (!_iteratorNormalCompletion4 && _iterator4.return) {
-	        _iterator4.return();
-	      }
-	    } finally {
-	      if (_didIteratorError4) {
-	        throw _iteratorError4;
-	      }
+
+	    var glyph = _ref5;
+
+	    if (glyph.substituted) {
+	      // Mark a substituted pref as VPre, as they behave the same way.
+	      glyph.shaperInfo.category = 'VPre';
 	    }
 	  }
 	}
@@ -46506,7 +45877,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            i--;
 	          }
 
-	          glyphs.splice.apply(glyphs, [start, 0].concat(_toConsumableArray(glyphs.splice(start + 1, i - start)), [glyphs[i]]));
+	          glyphs.splice.apply(glyphs, [start, 0].concat(glyphs.splice(start + 1, i - start), [glyphs[i]]));
 	          break;
 	        }
 	      }
@@ -46520,7 +45891,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        // place, and shift things in between backward.
 	        j = isHalant(glyphs[i]) ? i + 1 : i;
 	      } else if ((info.category === 'VPre' || info.category === 'VMPre') && j < i) {
-	        glyphs.splice.apply(glyphs, [j, 1, glyphs[i]].concat(_toConsumableArray(glyphs.splice(j, i - j))));
+	        glyphs.splice.apply(glyphs, [j, 1, glyphs[i]].concat(glyphs.splice(j, i - j)));
 	      }
 	    }
 	  }
@@ -46618,276 +45989,247 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function GSUBProcessor() {
 	    _classCallCheck(this, GSUBProcessor);
 
-	    return _possibleConstructorReturn(this, (GSUBProcessor.__proto__ || _Object$getPrototypeOf(GSUBProcessor)).apply(this, arguments));
+	    return _possibleConstructorReturn(this, _OTProcessor.apply(this, arguments));
 	  }
 
-	  _createClass(GSUBProcessor, [{
-	    key: 'applyLookup',
-	    value: function applyLookup(lookupType, table) {
-	      var _this2 = this;
+	  GSUBProcessor.prototype.applyLookup = function applyLookup(lookupType, table) {
+	    var _this2 = this;
 
-	      switch (lookupType) {
-	        case 1:
-	          {
-	            // Single Substitution
-	            var index = this.coverageIndex(table.coverage);
-	            if (index === -1) {
-	              return false;
-	            }
+	    switch (lookupType) {
+	      case 1:
+	        {
+	          // Single Substitution
+	          var index = this.coverageIndex(table.coverage);
+	          if (index === -1) {
+	            return false;
+	          }
 
-	            var glyph = this.glyphIterator.cur;
-	            switch (table.version) {
-	              case 1:
-	                glyph.id = glyph.id + table.deltaGlyphID & 0xffff;
-	                break;
+	          var glyph = this.glyphIterator.cur;
+	          switch (table.version) {
+	            case 1:
+	              glyph.id = glyph.id + table.deltaGlyphID & 0xffff;
+	              break;
 
-	              case 2:
-	                glyph.id = table.substitute.get(index);
-	                break;
-	            }
+	            case 2:
+	              glyph.id = table.substitute.get(index);
+	              break;
+	          }
 
+	          return true;
+	        }
+
+	      case 2:
+	        {
+	          // Multiple Substitution
+	          var _index = this.coverageIndex(table.coverage);
+	          if (_index !== -1) {
+	            var _ret = function () {
+	              var _glyphs;
+
+	              var sequence = table.sequences.get(_index);
+	              _this2.glyphIterator.cur.id = sequence[0];
+	              _this2.glyphIterator.cur.ligatureComponent = 0;
+
+	              var features = _this2.glyphIterator.cur.features;
+	              var curGlyph = _this2.glyphIterator.cur;
+	              var replacement = sequence.slice(1).map(function (gid, i) {
+	                var glyph = new GlyphInfo(_this2.font, gid, undefined, features);
+	                glyph.shaperInfo = curGlyph.shaperInfo;
+	                glyph.isLigated = curGlyph.isLigated;
+	                glyph.ligatureComponent = i + 1;
+	                glyph.substituted = true;
+	                return glyph;
+	              });
+
+	              (_glyphs = _this2.glyphs).splice.apply(_glyphs, [_this2.glyphIterator.index + 1, 0].concat(replacement));
+	              return {
+	                v: true
+	              };
+	            }();
+
+	            if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+	          }
+
+	          return false;
+	        }
+
+	      case 3:
+	        {
+	          // Alternate Substitution
+	          var _index2 = this.coverageIndex(table.coverage);
+	          if (_index2 !== -1) {
+	            var USER_INDEX = 0; // TODO
+	            this.glyphIterator.cur.id = table.alternateSet.get(_index2)[USER_INDEX];
 	            return true;
 	          }
 
-	        case 2:
-	          {
-	            // Multiple Substitution
-	            var _index = this.coverageIndex(table.coverage);
-	            if (_index !== -1) {
-	              var _ret = function () {
-	                var _glyphs;
+	          return false;
+	        }
 
-	                var sequence = table.sequences.get(_index);
-	                _this2.glyphIterator.cur.id = sequence[0];
-	                _this2.glyphIterator.cur.ligatureComponent = 0;
-
-	                var features = _this2.glyphIterator.cur.features;
-	                var curGlyph = _this2.glyphIterator.cur;
-	                var replacement = sequence.slice(1).map(function (gid, i) {
-	                  var glyph = new GlyphInfo(_this2.font, gid, undefined, features);
-	                  glyph.shaperInfo = curGlyph.shaperInfo;
-	                  glyph.isLigated = curGlyph.isLigated;
-	                  glyph.ligatureComponent = i + 1;
-	                  glyph.substituted = true;
-	                  return glyph;
-	                });
-
-	                (_glyphs = _this2.glyphs).splice.apply(_glyphs, [_this2.glyphIterator.index + 1, 0].concat(_toConsumableArray(replacement)));
-	                return {
-	                  v: true
-	                };
-	              }();
-
-	              if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
-	            }
-
+	      case 4:
+	        {
+	          // Ligature Substitution
+	          var _index3 = this.coverageIndex(table.coverage);
+	          if (_index3 === -1) {
 	            return false;
 	          }
 
-	        case 3:
-	          {
-	            // Alternate Substitution
-	            var _index2 = this.coverageIndex(table.coverage);
-	            if (_index2 !== -1) {
-	              var USER_INDEX = 0; // TODO
-	              this.glyphIterator.cur.id = table.alternateSet.get(_index2)[USER_INDEX];
-	              return true;
+	          for (var _iterator = table.ligatureSets.get(_index3), _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	            var _ref;
+
+	            if (_isArray) {
+	              if (_i >= _iterator.length) break;
+	              _ref = _iterator[_i++];
+	            } else {
+	              _i = _iterator.next();
+	              if (_i.done) break;
+	              _ref = _i.value;
 	            }
 
-	            return false;
-	          }
+	            var ligature = _ref;
 
-	        case 4:
-	          {
-	            // Ligature Substitution
-	            var _index3 = this.coverageIndex(table.coverage);
-	            if (_index3 === -1) {
-	              return false;
+	            var matched = this.sequenceMatchIndices(1, ligature.components);
+	            if (!matched) {
+	              continue;
 	            }
 
-	            var _iteratorNormalCompletion = true;
-	            var _didIteratorError = false;
-	            var _iteratorError = undefined;
+	            var _curGlyph = this.glyphIterator.cur;
 
-	            try {
-	              for (var _iterator = _getIterator(table.ligatureSets.get(_index3)), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	                var ligature = _step.value;
+	            // Concatenate all of the characters the new ligature will represent
+	            var characters = _curGlyph.codePoints.slice();
+	            for (var _iterator2 = matched, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	              var _ref2;
 
-	                var matched = this.sequenceMatchIndices(1, ligature.components);
-	                if (!matched) {
-	                  continue;
-	                }
-
-	                var curGlyph = this.glyphIterator.cur;
-
-	                // Concatenate all of the characters the new ligature will represent
-	                var characters = curGlyph.codePoints.slice();
-	                var _iteratorNormalCompletion2 = true;
-	                var _didIteratorError2 = false;
-	                var _iteratorError2 = undefined;
-
-	                try {
-	                  for (var _iterator2 = _getIterator(matched), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	                    var _index4 = _step2.value;
-
-	                    characters.push.apply(characters, _toConsumableArray(this.glyphs[_index4].codePoints));
-	                  }
-
-	                  // Create the replacement ligature glyph
-	                } catch (err) {
-	                  _didIteratorError2 = true;
-	                  _iteratorError2 = err;
-	                } finally {
-	                  try {
-	                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	                      _iterator2.return();
-	                    }
-	                  } finally {
-	                    if (_didIteratorError2) {
-	                      throw _iteratorError2;
-	                    }
-	                  }
-	                }
-
-	                var ligatureGlyph = new GlyphInfo(this.font, ligature.glyph, characters, curGlyph.features);
-	                ligatureGlyph.shaperInfo = curGlyph.shaperInfo;
-	                ligatureGlyph.isLigated = true;
-	                ligatureGlyph.substituted = true;
-
-	                // From Harfbuzz:
-	                // - If it *is* a mark ligature, we don't allocate a new ligature id, and leave
-	                //   the ligature to keep its old ligature id.  This will allow it to attach to
-	                //   a base ligature in GPOS.  Eg. if the sequence is: LAM,LAM,SHADDA,FATHA,HEH,
-	                //   and LAM,LAM,HEH for a ligature, they will leave SHADDA and FATHA with a
-	                //   ligature id and component value of 2.  Then if SHADDA,FATHA form a ligature
-	                //   later, we don't want them to lose their ligature id/component, otherwise
-	                //   GPOS will fail to correctly position the mark ligature on top of the
-	                //   LAM,LAM,HEH ligature. See https://bugzilla.gnome.org/show_bug.cgi?id=676343
-	                //
-	                // - If a ligature is formed of components that some of which are also ligatures
-	                //   themselves, and those ligature components had marks attached to *their*
-	                //   components, we have to attach the marks to the new ligature component
-	                //   positions!  Now *that*'s tricky!  And these marks may be following the
-	                //   last component of the whole sequence, so we should loop forward looking
-	                //   for them and update them.
-	                //
-	                //   Eg. the sequence is LAM,LAM,SHADDA,FATHA,HEH, and the font first forms a
-	                //   'calt' ligature of LAM,HEH, leaving the SHADDA and FATHA with a ligature
-	                //   id and component == 1.  Now, during 'liga', the LAM and the LAM-HEH ligature
-	                //   form a LAM-LAM-HEH ligature.  We need to reassign the SHADDA and FATHA to
-	                //   the new ligature with a component value of 2.
-	                //
-	                //   This in fact happened to a font...  See https://bugzilla.gnome.org/show_bug.cgi?id=437633
-	                var isMarkLigature = curGlyph.isMark;
-	                for (var i = 0; i < matched.length && isMarkLigature; i++) {
-	                  isMarkLigature = this.glyphs[matched[i]].isMark;
-	                }
-
-	                ligatureGlyph.ligatureID = isMarkLigature ? null : this.ligatureID++;
-
-	                var lastLigID = curGlyph.ligatureID;
-	                var lastNumComps = curGlyph.codePoints.length;
-	                var curComps = lastNumComps;
-	                var idx = this.glyphIterator.index + 1;
-
-	                // Set ligatureID and ligatureComponent on glyphs that were skipped in the matched sequence.
-	                // This allows GPOS to attach marks to the correct ligature components.
-	                var _iteratorNormalCompletion3 = true;
-	                var _didIteratorError3 = false;
-	                var _iteratorError3 = undefined;
-
-	                try {
-	                  for (var _iterator3 = _getIterator(matched), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	                    var matchIndex = _step3.value;
-
-	                    // Don't assign new ligature components for mark ligatures (see above)
-	                    if (isMarkLigature) {
-	                      idx = matchIndex;
-	                    } else {
-	                      while (idx < matchIndex) {
-	                        var ligatureComponent = curComps - lastNumComps + Math.min(this.glyphs[idx].ligatureComponent || 1, lastNumComps);
-	                        this.glyphs[idx].ligatureID = ligatureGlyph.ligatureID;
-	                        this.glyphs[idx].ligatureComponent = ligatureComponent;
-	                        idx++;
-	                      }
-	                    }
-
-	                    lastLigID = this.glyphs[idx].ligatureID;
-	                    lastNumComps = this.glyphs[idx].codePoints.length;
-	                    curComps += lastNumComps;
-	                    idx++; // skip base glyph
-	                  }
-
-	                  // Adjust ligature components for any marks following
-	                } catch (err) {
-	                  _didIteratorError3 = true;
-	                  _iteratorError3 = err;
-	                } finally {
-	                  try {
-	                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	                      _iterator3.return();
-	                    }
-	                  } finally {
-	                    if (_didIteratorError3) {
-	                      throw _iteratorError3;
-	                    }
-	                  }
-	                }
-
-	                if (lastLigID && !isMarkLigature) {
-	                  for (var _i = idx; _i < this.glyphs.length; _i++) {
-	                    if (this.glyphs[_i].ligatureID === lastLigID) {
-	                      var ligatureComponent = curComps - lastNumComps + Math.min(this.glyphs[_i].ligatureComponent || 1, lastNumComps);
-	                      this.glyphs[_i].ligatureComponent = ligatureComponent;
-	                    } else {
-	                      break;
-	                    }
-	                  }
-	                }
-
-	                // Delete the matched glyphs, and replace the current glyph with the ligature glyph
-	                for (var _i2 = matched.length - 1; _i2 >= 0; _i2--) {
-	                  this.glyphs.splice(matched[_i2], 1);
-	                }
-
-	                this.glyphs[this.glyphIterator.index] = ligatureGlyph;
-	                return true;
+	              if (_isArray2) {
+	                if (_i2 >= _iterator2.length) break;
+	                _ref2 = _iterator2[_i2++];
+	              } else {
+	                _i2 = _iterator2.next();
+	                if (_i2.done) break;
+	                _ref2 = _i2.value;
 	              }
-	            } catch (err) {
-	              _didIteratorError = true;
-	              _iteratorError = err;
-	            } finally {
-	              try {
-	                if (!_iteratorNormalCompletion && _iterator.return) {
-	                  _iterator.return();
+
+	              var _index4 = _ref2;
+
+	              characters.push.apply(characters, this.glyphs[_index4].codePoints);
+	            }
+
+	            // Create the replacement ligature glyph
+	            var ligatureGlyph = new GlyphInfo(this.font, ligature.glyph, characters, _curGlyph.features);
+	            ligatureGlyph.shaperInfo = _curGlyph.shaperInfo;
+	            ligatureGlyph.isLigated = true;
+	            ligatureGlyph.substituted = true;
+
+	            // From Harfbuzz:
+	            // - If it *is* a mark ligature, we don't allocate a new ligature id, and leave
+	            //   the ligature to keep its old ligature id.  This will allow it to attach to
+	            //   a base ligature in GPOS.  Eg. if the sequence is: LAM,LAM,SHADDA,FATHA,HEH,
+	            //   and LAM,LAM,HEH for a ligature, they will leave SHADDA and FATHA with a
+	            //   ligature id and component value of 2.  Then if SHADDA,FATHA form a ligature
+	            //   later, we don't want them to lose their ligature id/component, otherwise
+	            //   GPOS will fail to correctly position the mark ligature on top of the
+	            //   LAM,LAM,HEH ligature. See https://bugzilla.gnome.org/show_bug.cgi?id=676343
+	            //
+	            // - If a ligature is formed of components that some of which are also ligatures
+	            //   themselves, and those ligature components had marks attached to *their*
+	            //   components, we have to attach the marks to the new ligature component
+	            //   positions!  Now *that*'s tricky!  And these marks may be following the
+	            //   last component of the whole sequence, so we should loop forward looking
+	            //   for them and update them.
+	            //
+	            //   Eg. the sequence is LAM,LAM,SHADDA,FATHA,HEH, and the font first forms a
+	            //   'calt' ligature of LAM,HEH, leaving the SHADDA and FATHA with a ligature
+	            //   id and component == 1.  Now, during 'liga', the LAM and the LAM-HEH ligature
+	            //   form a LAM-LAM-HEH ligature.  We need to reassign the SHADDA and FATHA to
+	            //   the new ligature with a component value of 2.
+	            //
+	            //   This in fact happened to a font...  See https://bugzilla.gnome.org/show_bug.cgi?id=437633
+	            var isMarkLigature = _curGlyph.isMark;
+	            for (var i = 0; i < matched.length && isMarkLigature; i++) {
+	              isMarkLigature = this.glyphs[matched[i]].isMark;
+	            }
+
+	            ligatureGlyph.ligatureID = isMarkLigature ? null : this.ligatureID++;
+
+	            var lastLigID = _curGlyph.ligatureID;
+	            var lastNumComps = _curGlyph.codePoints.length;
+	            var curComps = lastNumComps;
+	            var idx = this.glyphIterator.index + 1;
+
+	            // Set ligatureID and ligatureComponent on glyphs that were skipped in the matched sequence.
+	            // This allows GPOS to attach marks to the correct ligature components.
+	            for (var _iterator3 = matched, _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	              var _ref3;
+
+	              if (_isArray3) {
+	                if (_i3 >= _iterator3.length) break;
+	                _ref3 = _iterator3[_i3++];
+	              } else {
+	                _i3 = _iterator3.next();
+	                if (_i3.done) break;
+	                _ref3 = _i3.value;
+	              }
+
+	              var matchIndex = _ref3;
+
+	              // Don't assign new ligature components for mark ligatures (see above)
+	              if (isMarkLigature) {
+	                idx = matchIndex;
+	              } else {
+	                while (idx < matchIndex) {
+	                  var ligatureComponent = curComps - lastNumComps + Math.min(this.glyphs[idx].ligatureComponent || 1, lastNumComps);
+	                  this.glyphs[idx].ligatureID = ligatureGlyph.ligatureID;
+	                  this.glyphs[idx].ligatureComponent = ligatureComponent;
+	                  idx++;
 	                }
-	              } finally {
-	                if (_didIteratorError) {
-	                  throw _iteratorError;
+	              }
+
+	              lastLigID = this.glyphs[idx].ligatureID;
+	              lastNumComps = this.glyphs[idx].codePoints.length;
+	              curComps += lastNumComps;
+	              idx++; // skip base glyph
+	            }
+
+	            // Adjust ligature components for any marks following
+	            if (lastLigID && !isMarkLigature) {
+	              for (var _i4 = idx; _i4 < this.glyphs.length; _i4++) {
+	                if (this.glyphs[_i4].ligatureID === lastLigID) {
+	                  var ligatureComponent = curComps - lastNumComps + Math.min(this.glyphs[_i4].ligatureComponent || 1, lastNumComps);
+	                  this.glyphs[_i4].ligatureComponent = ligatureComponent;
+	                } else {
+	                  break;
 	                }
 	              }
 	            }
 
-	            return false;
+	            // Delete the matched glyphs, and replace the current glyph with the ligature glyph
+	            for (var _i5 = matched.length - 1; _i5 >= 0; _i5--) {
+	              this.glyphs.splice(matched[_i5], 1);
+	            }
+
+	            this.glyphs[this.glyphIterator.index] = ligatureGlyph;
+	            return true;
 	          }
 
-	        case 5:
-	          // Contextual Substitution
-	          return this.applyContext(table);
+	          return false;
+	        }
 
-	        case 6:
-	          // Chaining Contextual Substitution
-	          return this.applyChainingContext(table);
+	      case 5:
+	        // Contextual Substitution
+	        return this.applyContext(table);
 
-	        case 7:
-	          // Extension Substitution
-	          return this.applyLookup(table.lookupType, table.extension);
+	      case 6:
+	        // Chaining Contextual Substitution
+	        return this.applyChainingContext(table);
 
-	        default:
-	          throw new Error('GSUB lookupType ' + lookupType + ' is not supported');
-	      }
+	      case 7:
+	        // Extension Substitution
+	        return this.applyLookup(table.lookupType, table.extension);
+
+	      default:
+	        throw new Error('GSUB lookupType ' + lookupType + ' is not supported');
 	    }
-	  }]);
+	  };
 
 	  return GSUBProcessor;
 	}(OTProcessor);
@@ -46898,365 +46240,348 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function GPOSProcessor() {
 	    _classCallCheck(this, GPOSProcessor);
 
-	    return _possibleConstructorReturn(this, (GPOSProcessor.__proto__ || _Object$getPrototypeOf(GPOSProcessor)).apply(this, arguments));
+	    return _possibleConstructorReturn(this, _OTProcessor.apply(this, arguments));
 	  }
 
-	  _createClass(GPOSProcessor, [{
-	    key: 'applyPositionValue',
-	    value: function applyPositionValue(sequenceIndex, value) {
-	      var position = this.positions[this.glyphIterator.peekIndex(sequenceIndex)];
-	      if (value.xAdvance != null) {
-	        position.xAdvance += value.xAdvance;
-	      }
-
-	      if (value.yAdvance != null) {
-	        position.yAdvance += value.yAdvance;
-	      }
-
-	      if (value.xPlacement != null) {
-	        position.xOffset += value.xPlacement;
-	      }
-
-	      if (value.yPlacement != null) {
-	        position.yOffset += value.yPlacement;
-	      }
-
-	      // TODO: device tables
+	  GPOSProcessor.prototype.applyPositionValue = function applyPositionValue(sequenceIndex, value) {
+	    var position = this.positions[this.glyphIterator.peekIndex(sequenceIndex)];
+	    if (value.xAdvance != null) {
+	      position.xAdvance += value.xAdvance;
 	    }
-	  }, {
-	    key: 'applyLookup',
-	    value: function applyLookup(lookupType, table) {
-	      switch (lookupType) {
-	        case 1:
-	          {
-	            // Single positioning value
-	            var index = this.coverageIndex(table.coverage);
-	            if (index === -1) {
-	              return false;
-	            }
 
-	            switch (table.version) {
-	              case 1:
-	                this.applyPositionValue(0, table.value);
-	                break;
+	    if (value.yAdvance != null) {
+	      position.yAdvance += value.yAdvance;
+	    }
 
-	              case 2:
-	                this.applyPositionValue(0, table.values.get(index));
-	                break;
-	            }
+	    if (value.xPlacement != null) {
+	      position.xOffset += value.xPlacement;
+	    }
 
-	            return true;
+	    if (value.yPlacement != null) {
+	      position.yOffset += value.yPlacement;
+	    }
+
+	    // TODO: device tables
+	  };
+
+	  GPOSProcessor.prototype.applyLookup = function applyLookup(lookupType, table) {
+	    switch (lookupType) {
+	      case 1:
+	        {
+	          // Single positioning value
+	          var index = this.coverageIndex(table.coverage);
+	          if (index === -1) {
+	            return false;
 	          }
 
-	        case 2:
-	          {
-	            // Pair Adjustment Positioning
-	            var nextGlyph = this.glyphIterator.peek();
-	            if (!nextGlyph) {
-	              return false;
-	            }
+	          switch (table.version) {
+	            case 1:
+	              this.applyPositionValue(0, table.value);
+	              break;
 
-	            var _index = this.coverageIndex(table.coverage);
-	            if (_index === -1) {
-	              return false;
-	            }
+	            case 2:
+	              this.applyPositionValue(0, table.values.get(index));
+	              break;
+	          }
 
-	            switch (table.version) {
-	              case 1:
-	                // Adjustments for glyph pairs
-	                var set = table.pairSets.get(_index);
+	          return true;
+	        }
 
-	                var _iteratorNormalCompletion = true;
-	                var _didIteratorError = false;
-	                var _iteratorError = undefined;
+	      case 2:
+	        {
+	          // Pair Adjustment Positioning
+	          var nextGlyph = this.glyphIterator.peek();
+	          if (!nextGlyph) {
+	            return false;
+	          }
 
-	                try {
-	                  for (var _iterator = _getIterator(set), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	                    var _pair = _step.value;
+	          var _index = this.coverageIndex(table.coverage);
+	          if (_index === -1) {
+	            return false;
+	          }
 
-	                    if (_pair.secondGlyph === nextGlyph.id) {
-	                      this.applyPositionValue(0, _pair.value1);
-	                      this.applyPositionValue(1, _pair.value2);
-	                      return true;
-	                    }
-	                  }
-	                } catch (err) {
-	                  _didIteratorError = true;
-	                  _iteratorError = err;
-	                } finally {
-	                  try {
-	                    if (!_iteratorNormalCompletion && _iterator.return) {
-	                      _iterator.return();
-	                    }
-	                  } finally {
-	                    if (_didIteratorError) {
-	                      throw _iteratorError;
-	                    }
-	                  }
+	          switch (table.version) {
+	            case 1:
+	              // Adjustments for glyph pairs
+	              var set = table.pairSets.get(_index);
+
+	              for (var _iterator = set, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	                var _ref;
+
+	                if (_isArray) {
+	                  if (_i >= _iterator.length) break;
+	                  _ref = _iterator[_i++];
+	                } else {
+	                  _i = _iterator.next();
+	                  if (_i.done) break;
+	                  _ref = _i.value;
 	                }
 
+	                var _pair = _ref;
+
+	                if (_pair.secondGlyph === nextGlyph.id) {
+	                  this.applyPositionValue(0, _pair.value1);
+	                  this.applyPositionValue(1, _pair.value2);
+	                  return true;
+	                }
+	              }
+
+	              return false;
+
+	            case 2:
+	              // Class pair adjustment
+	              var class1 = this.getClassID(this.glyphIterator.cur.id, table.classDef1);
+	              var class2 = this.getClassID(nextGlyph.id, table.classDef2);
+	              if (class1 === -1 || class2 === -1) {
 	                return false;
-
-	              case 2:
-	                // Class pair adjustment
-	                var class1 = this.getClassID(this.glyphIterator.cur.id, table.classDef1);
-	                var class2 = this.getClassID(nextGlyph.id, table.classDef2);
-	                if (class1 === -1 || class2 === -1) {
-	                  return false;
-	                }
-
-	                var pair = table.classRecords.get(class1).get(class2);
-	                this.applyPositionValue(0, pair.value1);
-	                this.applyPositionValue(1, pair.value2);
-	                return true;
-	            }
-	          }
-
-	        case 3:
-	          {
-	            // Cursive Attachment Positioning
-	            var nextIndex = this.glyphIterator.peekIndex();
-	            var _nextGlyph = this.glyphs[nextIndex];
-	            if (!_nextGlyph) {
-	              return false;
-	            }
-
-	            var curRecord = table.entryExitRecords[this.coverageIndex(table.coverage)];
-	            if (!curRecord || !curRecord.exitAnchor) {
-	              return false;
-	            }
-
-	            var nextRecord = table.entryExitRecords[this.coverageIndex(table.coverage, _nextGlyph.id)];
-	            if (!nextRecord || !nextRecord.entryAnchor) {
-	              return false;
-	            }
-
-	            var entry = this.getAnchor(nextRecord.entryAnchor);
-	            var exit = this.getAnchor(curRecord.exitAnchor);
-
-	            var cur = this.positions[this.glyphIterator.index];
-	            var next = this.positions[nextIndex];
-
-	            switch (this.direction) {
-	              case 'ltr':
-	                cur.xAdvance = exit.x + cur.xOffset;
-
-	                var d = entry.x + next.xOffset;
-	                next.xAdvance -= d;
-	                next.xOffset -= d;
-	                break;
-
-	              case 'rtl':
-	                d = exit.x + cur.xOffset;
-	                cur.xAdvance -= d;
-	                cur.xOffset -= d;
-	                next.xAdvance = entry.x + next.xOffset;
-	                break;
-	            }
-
-	            if (this.glyphIterator.flags.rightToLeft) {
-	              this.glyphIterator.cur.cursiveAttachment = nextIndex;
-	              cur.yOffset = entry.y - exit.y;
-	            } else {
-	              _nextGlyph.cursiveAttachment = this.glyphIterator.index;
-	              cur.yOffset = exit.y - entry.y;
-	            }
-
-	            return true;
-	          }
-
-	        case 4:
-	          {
-	            // Mark to base positioning
-	            var markIndex = this.coverageIndex(table.markCoverage);
-	            if (markIndex === -1) {
-	              return false;
-	            }
-
-	            // search backward for a base glyph
-	            var baseGlyphIndex = this.glyphIterator.index;
-	            while (--baseGlyphIndex >= 0 && this.glyphs[baseGlyphIndex].isMark) {}
-
-	            if (baseGlyphIndex < 0) {
-	              return false;
-	            }
-
-	            var baseIndex = this.coverageIndex(table.baseCoverage, this.glyphs[baseGlyphIndex].id);
-	            if (baseIndex === -1) {
-	              return false;
-	            }
-
-	            var markRecord = table.markArray[markIndex];
-	            var baseAnchor = table.baseArray[baseIndex][markRecord.class];
-	            this.applyAnchor(markRecord, baseAnchor, baseGlyphIndex);
-	            return true;
-	          }
-
-	        case 5:
-	          {
-	            // Mark to ligature positioning
-	            var _markIndex = this.coverageIndex(table.markCoverage);
-	            if (_markIndex === -1) {
-	              return false;
-	            }
-
-	            // search backward for a base glyph
-	            var _baseGlyphIndex = this.glyphIterator.index;
-	            while (--_baseGlyphIndex >= 0 && this.glyphs[_baseGlyphIndex].isMark) {}
-
-	            if (_baseGlyphIndex < 0) {
-	              return false;
-	            }
-
-	            var ligIndex = this.coverageIndex(table.ligatureCoverage, this.glyphs[_baseGlyphIndex].id);
-	            if (ligIndex === -1) {
-	              return false;
-	            }
-
-	            var ligAttach = table.ligatureArray[ligIndex];
-	            var markGlyph = this.glyphIterator.cur;
-	            var ligGlyph = this.glyphs[_baseGlyphIndex];
-	            var compIndex = ligGlyph.ligatureID && ligGlyph.ligatureID === markGlyph.ligatureID && markGlyph.ligatureComponent != null ? Math.min(markGlyph.ligatureComponent, ligGlyph.codePoints.length) - 1 : ligGlyph.codePoints.length - 1;
-
-	            var _markRecord = table.markArray[_markIndex];
-	            var _baseAnchor = ligAttach[compIndex][_markRecord.class];
-	            this.applyAnchor(_markRecord, _baseAnchor, _baseGlyphIndex);
-	            return true;
-	          }
-
-	        case 6:
-	          {
-	            // Mark to mark positioning
-	            var mark1Index = this.coverageIndex(table.mark1Coverage);
-	            if (mark1Index === -1) {
-	              return false;
-	            }
-
-	            // get the previous mark to attach to
-	            var prevIndex = this.glyphIterator.peekIndex(-1);
-	            var prev = this.glyphs[prevIndex];
-	            if (!prev || !prev.isMark) {
-	              return false;
-	            }
-
-	            var _cur = this.glyphIterator.cur;
-
-	            // The following logic was borrowed from Harfbuzz
-	            var good = false;
-	            if (_cur.ligatureID === prev.ligatureID) {
-	              if (!_cur.ligatureID) {
-	                // Marks belonging to the same base
-	                good = true;
-	              } else if (_cur.ligatureComponent === prev.ligatureComponent) {
-	                // Marks belonging to the same ligature component
-	                good = true;
 	              }
-	            } else {
-	              // If ligature ids don't match, it may be the case that one of the marks
-	              // itself is a ligature, in which case match.
-	              if (_cur.ligatureID && !_cur.ligatureComponent || prev.ligatureID && !prev.ligatureComponent) {
-	                good = true;
-	              }
-	            }
 
-	            if (!good) {
-	              return false;
-	            }
+	              var pair = table.classRecords.get(class1).get(class2);
+	              this.applyPositionValue(0, pair.value1);
+	              this.applyPositionValue(1, pair.value2);
+	              return true;
+	          }
+	        }
 
-	            var mark2Index = this.coverageIndex(table.mark2Coverage, prev.id);
-	            if (mark2Index === -1) {
-	              return false;
-	            }
-
-	            var _markRecord2 = table.mark1Array[mark1Index];
-	            var _baseAnchor2 = table.mark2Array[mark2Index][_markRecord2.class];
-	            this.applyAnchor(_markRecord2, _baseAnchor2, prevIndex);
-	            return true;
+	      case 3:
+	        {
+	          // Cursive Attachment Positioning
+	          var nextIndex = this.glyphIterator.peekIndex();
+	          var _nextGlyph = this.glyphs[nextIndex];
+	          if (!_nextGlyph) {
+	            return false;
 	          }
 
-	        case 7:
-	          // Contextual positioning
-	          return this.applyContext(table);
+	          var curRecord = table.entryExitRecords[this.coverageIndex(table.coverage)];
+	          if (!curRecord || !curRecord.exitAnchor) {
+	            return false;
+	          }
 
-	        case 8:
-	          // Chaining contextual positioning
-	          return this.applyChainingContext(table);
+	          var nextRecord = table.entryExitRecords[this.coverageIndex(table.coverage, _nextGlyph.id)];
+	          if (!nextRecord || !nextRecord.entryAnchor) {
+	            return false;
+	          }
 
-	        case 9:
-	          // Extension positioning
-	          return this.applyLookup(table.lookupType, table.extension);
+	          var entry = this.getAnchor(nextRecord.entryAnchor);
+	          var exit = this.getAnchor(curRecord.exitAnchor);
 
-	        default:
-	          throw new Error('Unsupported GPOS table: ' + lookupType);
-	      }
+	          var cur = this.positions[this.glyphIterator.index];
+	          var next = this.positions[nextIndex];
+
+	          switch (this.direction) {
+	            case 'ltr':
+	              cur.xAdvance = exit.x + cur.xOffset;
+
+	              var d = entry.x + next.xOffset;
+	              next.xAdvance -= d;
+	              next.xOffset -= d;
+	              break;
+
+	            case 'rtl':
+	              d = exit.x + cur.xOffset;
+	              cur.xAdvance -= d;
+	              cur.xOffset -= d;
+	              next.xAdvance = entry.x + next.xOffset;
+	              break;
+	          }
+
+	          if (this.glyphIterator.flags.rightToLeft) {
+	            this.glyphIterator.cur.cursiveAttachment = nextIndex;
+	            cur.yOffset = entry.y - exit.y;
+	          } else {
+	            _nextGlyph.cursiveAttachment = this.glyphIterator.index;
+	            cur.yOffset = exit.y - entry.y;
+	          }
+
+	          return true;
+	        }
+
+	      case 4:
+	        {
+	          // Mark to base positioning
+	          var markIndex = this.coverageIndex(table.markCoverage);
+	          if (markIndex === -1) {
+	            return false;
+	          }
+
+	          // search backward for a base glyph
+	          var baseGlyphIndex = this.glyphIterator.index;
+	          while (--baseGlyphIndex >= 0 && this.glyphs[baseGlyphIndex].isMark) {}
+
+	          if (baseGlyphIndex < 0) {
+	            return false;
+	          }
+
+	          var baseIndex = this.coverageIndex(table.baseCoverage, this.glyphs[baseGlyphIndex].id);
+	          if (baseIndex === -1) {
+	            return false;
+	          }
+
+	          var markRecord = table.markArray[markIndex];
+	          var baseAnchor = table.baseArray[baseIndex][markRecord.class];
+	          this.applyAnchor(markRecord, baseAnchor, baseGlyphIndex);
+	          return true;
+	        }
+
+	      case 5:
+	        {
+	          // Mark to ligature positioning
+	          var _markIndex = this.coverageIndex(table.markCoverage);
+	          if (_markIndex === -1) {
+	            return false;
+	          }
+
+	          // search backward for a base glyph
+	          var _baseGlyphIndex = this.glyphIterator.index;
+	          while (--_baseGlyphIndex >= 0 && this.glyphs[_baseGlyphIndex].isMark) {}
+
+	          if (_baseGlyphIndex < 0) {
+	            return false;
+	          }
+
+	          var ligIndex = this.coverageIndex(table.ligatureCoverage, this.glyphs[_baseGlyphIndex].id);
+	          if (ligIndex === -1) {
+	            return false;
+	          }
+
+	          var ligAttach = table.ligatureArray[ligIndex];
+	          var markGlyph = this.glyphIterator.cur;
+	          var ligGlyph = this.glyphs[_baseGlyphIndex];
+	          var compIndex = ligGlyph.ligatureID && ligGlyph.ligatureID === markGlyph.ligatureID && markGlyph.ligatureComponent != null ? Math.min(markGlyph.ligatureComponent, ligGlyph.codePoints.length) - 1 : ligGlyph.codePoints.length - 1;
+
+	          var _markRecord = table.markArray[_markIndex];
+	          var _baseAnchor = ligAttach[compIndex][_markRecord.class];
+	          this.applyAnchor(_markRecord, _baseAnchor, _baseGlyphIndex);
+	          return true;
+	        }
+
+	      case 6:
+	        {
+	          // Mark to mark positioning
+	          var mark1Index = this.coverageIndex(table.mark1Coverage);
+	          if (mark1Index === -1) {
+	            return false;
+	          }
+
+	          // get the previous mark to attach to
+	          var prevIndex = this.glyphIterator.peekIndex(-1);
+	          var prev = this.glyphs[prevIndex];
+	          if (!prev || !prev.isMark) {
+	            return false;
+	          }
+
+	          var _cur = this.glyphIterator.cur;
+
+	          // The following logic was borrowed from Harfbuzz
+	          var good = false;
+	          if (_cur.ligatureID === prev.ligatureID) {
+	            if (!_cur.ligatureID) {
+	              // Marks belonging to the same base
+	              good = true;
+	            } else if (_cur.ligatureComponent === prev.ligatureComponent) {
+	              // Marks belonging to the same ligature component
+	              good = true;
+	            }
+	          } else {
+	            // If ligature ids don't match, it may be the case that one of the marks
+	            // itself is a ligature, in which case match.
+	            if (_cur.ligatureID && !_cur.ligatureComponent || prev.ligatureID && !prev.ligatureComponent) {
+	              good = true;
+	            }
+	          }
+
+	          if (!good) {
+	            return false;
+	          }
+
+	          var mark2Index = this.coverageIndex(table.mark2Coverage, prev.id);
+	          if (mark2Index === -1) {
+	            return false;
+	          }
+
+	          var _markRecord2 = table.mark1Array[mark1Index];
+	          var _baseAnchor2 = table.mark2Array[mark2Index][_markRecord2.class];
+	          this.applyAnchor(_markRecord2, _baseAnchor2, prevIndex);
+	          return true;
+	        }
+
+	      case 7:
+	        // Contextual positioning
+	        return this.applyContext(table);
+
+	      case 8:
+	        // Chaining contextual positioning
+	        return this.applyChainingContext(table);
+
+	      case 9:
+	        // Extension positioning
+	        return this.applyLookup(table.lookupType, table.extension);
+
+	      default:
+	        throw new Error('Unsupported GPOS table: ' + lookupType);
 	    }
-	  }, {
-	    key: 'applyAnchor',
-	    value: function applyAnchor(markRecord, baseAnchor, baseGlyphIndex) {
-	      var baseCoords = this.getAnchor(baseAnchor);
-	      var markCoords = this.getAnchor(markRecord.markAnchor);
+	  };
 
-	      var basePos = this.positions[baseGlyphIndex];
-	      var markPos = this.positions[this.glyphIterator.index];
+	  GPOSProcessor.prototype.applyAnchor = function applyAnchor(markRecord, baseAnchor, baseGlyphIndex) {
+	    var baseCoords = this.getAnchor(baseAnchor);
+	    var markCoords = this.getAnchor(markRecord.markAnchor);
 
-	      markPos.xOffset = baseCoords.x - markCoords.x;
-	      markPos.yOffset = baseCoords.y - markCoords.y;
-	      this.glyphIterator.cur.markAttachment = baseGlyphIndex;
+	    var basePos = this.positions[baseGlyphIndex];
+	    var markPos = this.positions[this.glyphIterator.index];
+
+	    markPos.xOffset = baseCoords.x - markCoords.x;
+	    markPos.yOffset = baseCoords.y - markCoords.y;
+	    this.glyphIterator.cur.markAttachment = baseGlyphIndex;
+	  };
+
+	  GPOSProcessor.prototype.getAnchor = function getAnchor(anchor) {
+	    // TODO: contour point, device tables
+	    return {
+	      x: anchor.xCoordinate,
+	      y: anchor.yCoordinate
+	    };
+	  };
+
+	  GPOSProcessor.prototype.applyFeatures = function applyFeatures(userFeatures, glyphs, advances) {
+	    _OTProcessor.prototype.applyFeatures.call(this, userFeatures, glyphs, advances);
+
+	    for (var i = 0; i < this.glyphs.length; i++) {
+	      this.fixCursiveAttachment(i);
 	    }
-	  }, {
-	    key: 'getAnchor',
-	    value: function getAnchor(anchor) {
-	      // TODO: contour point, device tables
-	      return {
-	        x: anchor.xCoordinate,
-	        y: anchor.yCoordinate
-	      };
-	    }
-	  }, {
-	    key: 'applyFeatures',
-	    value: function applyFeatures(userFeatures, glyphs, advances) {
-	      _get(GPOSProcessor.prototype.__proto__ || _Object$getPrototypeOf(GPOSProcessor.prototype), 'applyFeatures', this).call(this, userFeatures, glyphs, advances);
 
-	      for (var i = 0; i < this.glyphs.length; i++) {
-	        this.fixCursiveAttachment(i);
-	      }
+	    this.fixMarkAttachment();
+	  };
 
-	      this.fixMarkAttachment();
+	  GPOSProcessor.prototype.fixCursiveAttachment = function fixCursiveAttachment(i) {
+	    var glyph = this.glyphs[i];
+	    if (glyph.cursiveAttachment != null) {
+	      var j = glyph.cursiveAttachment;
+
+	      glyph.cursiveAttachment = null;
+	      this.fixCursiveAttachment(j);
+
+	      this.positions[i].yOffset += this.positions[j].yOffset;
 	    }
-	  }, {
-	    key: 'fixCursiveAttachment',
-	    value: function fixCursiveAttachment(i) {
+	  };
+
+	  GPOSProcessor.prototype.fixMarkAttachment = function fixMarkAttachment() {
+	    for (var i = 0; i < this.glyphs.length; i++) {
 	      var glyph = this.glyphs[i];
-	      if (glyph.cursiveAttachment != null) {
-	        var j = glyph.cursiveAttachment;
+	      if (glyph.markAttachment != null) {
+	        var j = glyph.markAttachment;
 
-	        glyph.cursiveAttachment = null;
-	        this.fixCursiveAttachment(j);
-
+	        this.positions[i].xOffset += this.positions[j].xOffset;
 	        this.positions[i].yOffset += this.positions[j].yOffset;
-	      }
-	    }
-	  }, {
-	    key: 'fixMarkAttachment',
-	    value: function fixMarkAttachment() {
-	      for (var i = 0; i < this.glyphs.length; i++) {
-	        var glyph = this.glyphs[i];
-	        if (glyph.markAttachment != null) {
-	          var j = glyph.markAttachment;
 
-	          this.positions[i].xOffset += this.positions[j].xOffset;
-	          this.positions[i].yOffset += this.positions[j].yOffset;
-
-	          if (this.direction === 'ltr') {
-	            for (var k = j; k < i; k++) {
-	              this.positions[i].xOffset -= this.positions[k].xAdvance;
-	              this.positions[i].yOffset -= this.positions[k].yAdvance;
-	            }
+	        if (this.direction === 'ltr') {
+	          for (var k = j; k < i; k++) {
+	            this.positions[i].xOffset -= this.positions[k].xAdvance;
+	            this.positions[i].yOffset -= this.positions[k].yAdvance;
 	          }
 	        }
 	      }
 	    }
-	  }]);
+	  };
 
 	  return GPOSProcessor;
 	}(OTProcessor);
@@ -47280,97 +46605,89 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  }
 
-	  _createClass(OTLayoutEngine, [{
-	    key: 'setup',
-	    value: function setup(glyphs, features, script, language) {
-	      var _this = this;
+	  OTLayoutEngine.prototype.setup = function setup(glyphs, features, script, language) {
+	    var _this = this;
 
-	      // Map glyphs to GlyphInfo objects so data can be passed between
-	      // GSUB and GPOS without mutating the real (shared) Glyph objects.
-	      this.glyphInfos = glyphs.map(function (glyph) {
-	        return new GlyphInfo(_this.font, glyph.id, [].concat(_toConsumableArray(glyph.codePoints)));
+	    // Map glyphs to GlyphInfo objects so data can be passed between
+	    // GSUB and GPOS without mutating the real (shared) Glyph objects.
+	    this.glyphInfos = glyphs.map(function (glyph) {
+	      return new GlyphInfo(_this.font, glyph.id, [].concat(glyph.codePoints));
+	    });
+
+	    // Choose a shaper based on the script, and setup a shaping plan.
+	    // This determines which features to apply to which glyphs.
+	    this.shaper = choose(script);
+	    this.plan = new ShapingPlan(this.font, script, language);
+	    return this.shaper.plan(this.plan, this.glyphInfos, features);
+	  };
+
+	  OTLayoutEngine.prototype.substitute = function substitute(glyphs) {
+	    var _this2 = this;
+
+	    if (this.GSUBProcessor) {
+	      this.plan.process(this.GSUBProcessor, this.glyphInfos);
+
+	      // Map glyph infos back to normal Glyph objects
+	      glyphs = this.glyphInfos.map(function (glyphInfo) {
+	        return _this2.font.getGlyph(glyphInfo.id, glyphInfo.codePoints);
 	      });
-
-	      // Choose a shaper based on the script, and setup a shaping plan.
-	      // This determines which features to apply to which glyphs.
-	      this.shaper = choose(script);
-	      this.plan = new ShapingPlan(this.font, script, language);
-	      return this.shaper.plan(this.plan, this.glyphInfos, features);
 	    }
-	  }, {
-	    key: 'substitute',
-	    value: function substitute(glyphs) {
-	      var _this2 = this;
 
-	      if (this.GSUBProcessor) {
-	        this.plan.process(this.GSUBProcessor, this.glyphInfos);
+	    return glyphs;
+	  };
 
-	        // Map glyph infos back to normal Glyph objects
-	        glyphs = this.glyphInfos.map(function (glyphInfo) {
-	          return _this2.font.getGlyph(glyphInfo.id, glyphInfo.codePoints);
-	        });
-	      }
-
-	      return glyphs;
+	  OTLayoutEngine.prototype.position = function position(glyphs, positions) {
+	    if (this.shaper.zeroMarkWidths === 'BEFORE_GPOS') {
+	      this.zeroMarkAdvances(positions);
 	    }
-	  }, {
-	    key: 'position',
-	    value: function position(glyphs, positions) {
-	      if (this.shaper.zeroMarkWidths === 'BEFORE_GPOS') {
-	        this.zeroMarkAdvances(positions);
-	      }
 
-	      if (this.GPOSProcessor) {
-	        this.plan.process(this.GPOSProcessor, this.glyphInfos, positions);
-	      }
-
-	      if (this.shaper.zeroMarkWidths === 'AFTER_GPOS') {
-	        this.zeroMarkAdvances(positions);
-	      }
-
-	      // Reverse the glyphs and positions if the script is right-to-left
-	      if (this.plan.direction === 'rtl') {
-	        glyphs.reverse();
-	        positions.reverse();
-	      }
-
-	      return this.GPOSProcessor && this.GPOSProcessor.features;
+	    if (this.GPOSProcessor) {
+	      this.plan.process(this.GPOSProcessor, this.glyphInfos, positions);
 	    }
-	  }, {
-	    key: 'zeroMarkAdvances',
-	    value: function zeroMarkAdvances(positions) {
-	      for (var i = 0; i < this.glyphInfos.length; i++) {
-	        if (this.glyphInfos[i].isMark) {
-	          positions[i].xAdvance = 0;
-	          positions[i].yAdvance = 0;
-	        }
+
+	    if (this.shaper.zeroMarkWidths === 'AFTER_GPOS') {
+	      this.zeroMarkAdvances(positions);
+	    }
+
+	    // Reverse the glyphs and positions if the script is right-to-left
+	    if (this.plan.direction === 'rtl') {
+	      glyphs.reverse();
+	      positions.reverse();
+	    }
+
+	    return this.GPOSProcessor && this.GPOSProcessor.features;
+	  };
+
+	  OTLayoutEngine.prototype.zeroMarkAdvances = function zeroMarkAdvances(positions) {
+	    for (var i = 0; i < this.glyphInfos.length; i++) {
+	      if (this.glyphInfos[i].isMark) {
+	        positions[i].xAdvance = 0;
+	        positions[i].yAdvance = 0;
 	      }
 	    }
-	  }, {
-	    key: 'cleanup',
-	    value: function cleanup() {
-	      this.glyphInfos = null;
-	      this.plan = null;
-	      this.shaper = null;
+	  };
+
+	  OTLayoutEngine.prototype.cleanup = function cleanup() {
+	    this.glyphInfos = null;
+	    this.plan = null;
+	    this.shaper = null;
+	  };
+
+	  OTLayoutEngine.prototype.getAvailableFeatures = function getAvailableFeatures(script, language) {
+	    var features = [];
+
+	    if (this.GSUBProcessor) {
+	      this.GSUBProcessor.selectScript(script, language);
+	      features.push.apply(features, _Object$keys(this.GSUBProcessor.features));
 	    }
-	  }, {
-	    key: 'getAvailableFeatures',
-	    value: function getAvailableFeatures(script, language) {
-	      var features = [];
 
-	      if (this.GSUBProcessor) {
-	        this.GSUBProcessor.selectScript(script, language);
-	        features.push.apply(features, _toConsumableArray(_Object$keys(this.GSUBProcessor.features)));
-	      }
-
-	      if (this.GPOSProcessor) {
-	        this.GPOSProcessor.selectScript(script, language);
-	        features.push.apply(features, _toConsumableArray(_Object$keys(this.GPOSProcessor.features)));
-	      }
-
-	      return features;
+	    if (this.GPOSProcessor) {
+	      this.GPOSProcessor.selectScript(script, language);
+	      features.push.apply(features, _Object$keys(this.GPOSProcessor.features));
 	    }
-	  }]);
+
+	    return features;
+	  };
 
 	  return OTLayoutEngine;
 	}();
@@ -47392,204 +46709,173 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  }
 
-	  _createClass(LayoutEngine, [{
-	    key: 'layout',
-	    value: function layout(string) {
-	      var features = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-	      var script = arguments[2];
-	      var language = arguments[3];
+	  LayoutEngine.prototype.layout = function layout(string) {
+	    var features = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+	    var script = arguments[2];
+	    var language = arguments[3];
 
-	      // Make the features parameter optional
-	      if (typeof features === 'string') {
-	        script = features;
-	        language = script;
-	        features = [];
+	    // Make the features parameter optional
+	    if (typeof features === 'string') {
+	      script = features;
+	      language = script;
+	      features = [];
+	    }
+
+	    // Map string to glyphs if needed
+	    if (typeof string === 'string') {
+	      // Attempt to detect the script from the string if not provided.
+	      if (script == null) {
+	        script = forString(string);
 	      }
 
-	      // Map string to glyphs if needed
-	      if (typeof string === 'string') {
-	        // Attempt to detect the script from the string if not provided.
-	        if (script == null) {
-	          script = forString(string);
+	      var glyphs = this.font.glyphsForString(string);
+	    } else {
+	      // Attempt to detect the script from the glyph code points if not provided.
+	      if (script == null) {
+	        var codePoints = [];
+	        for (var _iterator = string, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	          var _ref;
+
+	          if (_isArray) {
+	            if (_i >= _iterator.length) break;
+	            _ref = _iterator[_i++];
+	          } else {
+	            _i = _iterator.next();
+	            if (_i.done) break;
+	            _ref = _i.value;
+	          }
+
+	          var glyph = _ref;
+
+	          codePoints.push.apply(codePoints, glyph.codePoints);
 	        }
 
-	        var glyphs = this.font.glyphsForString(string);
+	        script = forCodePoints(codePoints);
+	      }
+
+	      var glyphs = string;
+	    }
+
+	    // Return early if there are no glyphs
+	    if (glyphs.length === 0) {
+	      return new GlyphRun(glyphs, []);
+	    }
+
+	    // Setup the advanced layout engine
+	    if (this.engine && this.engine.setup) {
+	      this.engine.setup(glyphs, features, script, language);
+	    }
+
+	    // Substitute and position the glyphs
+	    glyphs = this.substitute(glyphs, features, script, language);
+	    var positions = this.position(glyphs, features, script, language);
+
+	    // Let the layout engine clean up any state it might have
+	    if (this.engine && this.engine.cleanup) {
+	      this.engine.cleanup();
+	    }
+
+	    return new GlyphRun(glyphs, positions);
+	  };
+
+	  LayoutEngine.prototype.substitute = function substitute(glyphs, features, script, language) {
+	    // Call the advanced layout engine to make substitutions
+	    if (this.engine && this.engine.substitute) {
+	      glyphs = this.engine.substitute(glyphs, features, script, language);
+	    }
+
+	    return glyphs;
+	  };
+
+	  LayoutEngine.prototype.position = function position(glyphs, features, script, language) {
+	    // Get initial glyph positions
+	    var positions = glyphs.map(function (glyph) {
+	      return new GlyphPosition(glyph.advanceWidth);
+	    });
+	    var positioned = null;
+
+	    // Call the advanced layout engine. Returns the features applied.
+	    if (this.engine && this.engine.position) {
+	      positioned = this.engine.position(glyphs, positions, features, script, language);
+	    }
+
+	    // if there is no GPOS table, use unicode properties to position marks.
+	    if (!positioned) {
+	      if (!this.unicodeLayoutEngine) {
+	        this.unicodeLayoutEngine = new UnicodeLayoutEngine(this.font);
+	      }
+
+	      this.unicodeLayoutEngine.positionGlyphs(glyphs, positions);
+	    }
+
+	    // if kerning is not supported by GPOS, do kerning with the TrueType/AAT kern table
+	    if ((!positioned || !positioned.kern) && this.font.kern) {
+	      if (!this.kernProcessor) {
+	        this.kernProcessor = new KernProcessor(this.font);
+	      }
+
+	      this.kernProcessor.process(glyphs, positions);
+	    }
+
+	    return positions;
+	  };
+
+	  LayoutEngine.prototype.getAvailableFeatures = function getAvailableFeatures(script, language) {
+	    var features = [];
+
+	    if (this.engine) {
+	      features.push.apply(features, this.engine.getAvailableFeatures(script, language));
+	    }
+
+	    if (this.font.kern && features.indexOf('kern') === -1) {
+	      features.push('kern');
+	    }
+
+	    return features;
+	  };
+
+	  LayoutEngine.prototype.stringsForGlyph = function stringsForGlyph(gid) {
+	    var result = new _Set();
+
+	    var codePoints = this.font._cmapProcessor.codePointsForGlyph(gid);
+	    for (var _iterator2 = codePoints, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	      var _ref2;
+
+	      if (_isArray2) {
+	        if (_i2 >= _iterator2.length) break;
+	        _ref2 = _iterator2[_i2++];
 	      } else {
-	        // Attempt to detect the script from the glyph code points if not provided.
-	        if (script == null) {
-	          var codePoints = [];
-	          var _iteratorNormalCompletion = true;
-	          var _didIteratorError = false;
-	          var _iteratorError = undefined;
-
-	          try {
-	            for (var _iterator = _getIterator(string), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	              var glyph = _step.value;
-
-	              codePoints.push.apply(codePoints, _toConsumableArray(glyph.codePoints));
-	            }
-	          } catch (err) {
-	            _didIteratorError = true;
-	            _iteratorError = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion && _iterator.return) {
-	                _iterator.return();
-	              }
-	            } finally {
-	              if (_didIteratorError) {
-	                throw _iteratorError;
-	              }
-	            }
-	          }
-
-	          script = forCodePoints(codePoints);
-	        }
-
-	        var glyphs = string;
+	        _i2 = _iterator2.next();
+	        if (_i2.done) break;
+	        _ref2 = _i2.value;
 	      }
 
-	      // Return early if there are no glyphs
-	      if (glyphs.length === 0) {
-	        return new GlyphRun(glyphs, []);
-	      }
+	      var codePoint = _ref2;
 
-	      // Setup the advanced layout engine
-	      if (this.engine && this.engine.setup) {
-	        this.engine.setup(glyphs, features, script, language);
-	      }
-
-	      // Substitute and position the glyphs
-	      glyphs = this.substitute(glyphs, features, script, language);
-	      var positions = this.position(glyphs, features, script, language);
-
-	      // Let the layout engine clean up any state it might have
-	      if (this.engine && this.engine.cleanup) {
-	        this.engine.cleanup();
-	      }
-
-	      return new GlyphRun(glyphs, positions);
+	      result.add(_String$fromCodePoint(codePoint));
 	    }
-	  }, {
-	    key: 'substitute',
-	    value: function substitute(glyphs, features, script, language) {
-	      // Call the advanced layout engine to make substitutions
-	      if (this.engine && this.engine.substitute) {
-	        glyphs = this.engine.substitute(glyphs, features, script, language);
-	      }
 
-	      return glyphs;
+	    if (this.engine && this.engine.stringsForGlyph) {
+	      for (var _iterator3 = this.engine.stringsForGlyph(gid), _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	        var _ref3;
+
+	        if (_isArray3) {
+	          if (_i3 >= _iterator3.length) break;
+	          _ref3 = _iterator3[_i3++];
+	        } else {
+	          _i3 = _iterator3.next();
+	          if (_i3.done) break;
+	          _ref3 = _i3.value;
+	        }
+
+	        var string = _ref3;
+
+	        result.add(string);
+	      }
 	    }
-	  }, {
-	    key: 'position',
-	    value: function position(glyphs, features, script, language) {
-	      // Get initial glyph positions
-	      var positions = glyphs.map(function (glyph) {
-	        return new GlyphPosition(glyph.advanceWidth);
-	      });
-	      var positioned = null;
 
-	      // Call the advanced layout engine. Returns the features applied.
-	      if (this.engine && this.engine.position) {
-	        positioned = this.engine.position(glyphs, positions, features, script, language);
-	      }
-
-	      // if there is no GPOS table, use unicode properties to position marks.
-	      if (!positioned) {
-	        if (!this.unicodeLayoutEngine) {
-	          this.unicodeLayoutEngine = new UnicodeLayoutEngine(this.font);
-	        }
-
-	        this.unicodeLayoutEngine.positionGlyphs(glyphs, positions);
-	      }
-
-	      // if kerning is not supported by GPOS, do kerning with the TrueType/AAT kern table
-	      if ((!positioned || !positioned.kern) && this.font.kern) {
-	        if (!this.kernProcessor) {
-	          this.kernProcessor = new KernProcessor(this.font);
-	        }
-
-	        this.kernProcessor.process(glyphs, positions);
-	      }
-
-	      return positions;
-	    }
-	  }, {
-	    key: 'getAvailableFeatures',
-	    value: function getAvailableFeatures(script, language) {
-	      var features = [];
-
-	      if (this.engine) {
-	        features.push.apply(features, _toConsumableArray(this.engine.getAvailableFeatures(script, language)));
-	      }
-
-	      if (this.font.kern && features.indexOf('kern') === -1) {
-	        features.push('kern');
-	      }
-
-	      return features;
-	    }
-	  }, {
-	    key: 'stringsForGlyph',
-	    value: function stringsForGlyph(gid) {
-	      var result = new _Set();
-
-	      var codePoints = this.font._cmapProcessor.codePointsForGlyph(gid);
-	      var _iteratorNormalCompletion2 = true;
-	      var _didIteratorError2 = false;
-	      var _iteratorError2 = undefined;
-
-	      try {
-	        for (var _iterator2 = _getIterator(codePoints), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	          var codePoint = _step2.value;
-
-	          result.add(_String$fromCodePoint(codePoint));
-	        }
-	      } catch (err) {
-	        _didIteratorError2 = true;
-	        _iteratorError2 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	            _iterator2.return();
-	          }
-	        } finally {
-	          if (_didIteratorError2) {
-	            throw _iteratorError2;
-	          }
-	        }
-	      }
-
-	      if (this.engine && this.engine.stringsForGlyph) {
-	        var _iteratorNormalCompletion3 = true;
-	        var _didIteratorError3 = false;
-	        var _iteratorError3 = undefined;
-
-	        try {
-	          for (var _iterator3 = _getIterator(this.engine.stringsForGlyph(gid)), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	            var string = _step3.value;
-
-	            result.add(string);
-	          }
-	        } catch (err) {
-	          _didIteratorError3 = true;
-	          _iteratorError3 = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	              _iterator3.return();
-	            }
-	          } finally {
-	            if (_didIteratorError3) {
-	              throw _iteratorError3;
-	            }
-	          }
-	        }
-	      }
-
-	      return _Array$from(result);
-	    }
-	  }]);
+	    return _Array$from(result);
+	  };
 
 	  return LayoutEngine;
 	}();
@@ -47625,70 +46911,60 @@ return /******/ (function(modules) { // webpackBootstrap
 	   */
 
 
+	  Path.prototype.toFunction = function toFunction() {
+	    var cmds = this.commands.map(function (c) {
+	      return '  ctx.' + c.command + '(' + c.args.join(', ') + ');';
+	    });
+	    return new Function('ctx', cmds.join('\n'));
+	  };
+
+	  /**
+	   * Converts the path to an SVG path data string
+	   * @return {string}
+	   */
+
+
+	  Path.prototype.toSVG = function toSVG() {
+	    var cmds = this.commands.map(function (c) {
+	      var args = c.args.map(function (arg) {
+	        return Math.round(arg * 100) / 100;
+	      });
+	      return '' + SVG_COMMANDS[c.command] + args.join(' ');
+	    });
+
+	    return cmds.join('');
+	  };
+
+	  /**
+	   * Gets the "control box" of a path.
+	   * This is like the bounding box, but it includes all points including
+	   * control points of bezier segments and is much faster to compute than
+	   * the real bounding box.
+	   * @type {BBox}
+	   */
+
+
 	  _createClass(Path, [{
-	    key: 'toFunction',
-	    value: function toFunction() {
-	      var cmds = this.commands.map(function (c) {
-	        return '  ctx.' + c.command + '(' + c.args.join(', ') + ');';
-	      });
-	      return new Function('ctx', cmds.join('\n'));
-	    }
-
-	    /**
-	     * Converts the path to an SVG path data string
-	     * @return {string}
-	     */
-
-	  }, {
-	    key: 'toSVG',
-	    value: function toSVG() {
-	      var cmds = this.commands.map(function (c) {
-	        var args = c.args.map(function (arg) {
-	          return Math.round(arg * 100) / 100;
-	        });
-	        return '' + SVG_COMMANDS[c.command] + args.join(' ');
-	      });
-
-	      return cmds.join('');
-	    }
-
-	    /**
-	     * Gets the "control box" of a path.
-	     * This is like the bounding box, but it includes all points including
-	     * control points of bezier segments and is much faster to compute than
-	     * the real bounding box.
-	     * @type {BBox}
-	     */
-
-	  }, {
 	    key: 'cbox',
 	    get: function get() {
 	      if (!this._cbox) {
 	        var cbox = new BBox();
-	        var _iteratorNormalCompletion = true;
-	        var _didIteratorError = false;
-	        var _iteratorError = undefined;
+	        for (var _iterator = this.commands, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	          var _ref;
 
-	        try {
-	          for (var _iterator = _getIterator(this.commands), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	            var command = _step.value;
-
-	            for (var _i = 0; _i < command.args.length; _i += 2) {
-	              cbox.addPoint(command.args[_i], command.args[_i + 1]);
-	            }
+	          if (_isArray) {
+	            if (_i >= _iterator.length) break;
+	            _ref = _iterator[_i++];
+	          } else {
+	            _i = _iterator.next();
+	            if (_i.done) break;
+	            _ref = _i.value;
 	          }
-	        } catch (err) {
-	          _didIteratorError = true;
-	          _iteratorError = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion && _iterator.return) {
-	              _iterator.return();
-	            }
-	          } finally {
-	            if (_didIteratorError) {
-	              throw _iteratorError;
-	            }
+
+	          var command = _ref;
+
+	          for (var _i2 = 0; _i2 < command.args.length; _i2 += 2) {
+	            cbox.addPoint(command.args[_i2], command.args[_i2 + 1]);
 	          }
 	        }
 
@@ -47719,121 +46995,113 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return Math.pow(1 - t, 3) * p0[i] + 3 * Math.pow(1 - t, 2) * t * p1[i] + 3 * (1 - t) * Math.pow(t, 2) * p2[i] + Math.pow(t, 3) * p3[i];
 	      };
 
-	      var _iteratorNormalCompletion2 = true;
-	      var _didIteratorError2 = false;
-	      var _iteratorError2 = undefined;
+	      for (var _iterator2 = this.commands, _isArray2 = Array.isArray(_iterator2), _i3 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	        var _ref2;
 
-	      try {
-	        for (var _iterator2 = _getIterator(this.commands), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	          var c = _step2.value;
-
-	          switch (c.command) {
-	            case 'moveTo':
-	            case 'lineTo':
-	              var _c$args = _slicedToArray(c.args, 2),
-	                  x = _c$args[0],
-	                  y = _c$args[1];
-
-	              bbox.addPoint(x, y);
-	              cx = x;
-	              cy = y;
-	              break;
-
-	            case 'quadraticCurveTo':
-	            case 'bezierCurveTo':
-	              if (c.command === 'quadraticCurveTo') {
-	                // http://fontforge.org/bezier.html
-	                var _c$args2 = _slicedToArray(c.args, 4),
-	                    qp1x = _c$args2[0],
-	                    qp1y = _c$args2[1],
-	                    p3x = _c$args2[2],
-	                    p3y = _c$args2[3];
-
-	                var cp1x = cx + 2 / 3 * (qp1x - cx); // CP1 = QP0 + 2/3 * (QP1-QP0)
-	                var cp1y = cy + 2 / 3 * (qp1y - cy);
-	                var cp2x = p3x + 2 / 3 * (qp1x - p3x); // CP2 = QP2 + 2/3 * (QP1-QP2)
-	                var cp2y = p3y + 2 / 3 * (qp1y - p3y);
-	              } else {
-	                var _c$args3 = _slicedToArray(c.args, 6),
-	                    cp1x = _c$args3[0],
-	                    cp1y = _c$args3[1],
-	                    cp2x = _c$args3[2],
-	                    cp2y = _c$args3[3],
-	                    p3x = _c$args3[4],
-	                    p3y = _c$args3[5];
-	              }
-
-	              // http://blog.hackers-cafe.net/2009/06/how-to-calculate-bezier-curves-bounding.html
-	              bbox.addPoint(p3x, p3y);
-
-	              var p0 = [cx, cy];
-	              var p1 = [cp1x, cp1y];
-	              var p2 = [cp2x, cp2y];
-	              var p3 = [p3x, p3y];
-
-	              for (var i = 0; i <= 1; i++) {
-	                var b = 6 * p0[i] - 12 * p1[i] + 6 * p2[i];
-	                var a = -3 * p0[i] + 9 * p1[i] - 9 * p2[i] + 3 * p3[i];
-	                c = 3 * p1[i] - 3 * p0[i];
-
-	                if (a === 0) {
-	                  if (b === 0) {
-	                    continue;
-	                  }
-
-	                  var t = -c / b;
-	                  if (0 < t && t < 1) {
-	                    if (i === 0) {
-	                      bbox.addPoint(f(t), bbox.maxY);
-	                    } else if (i === 1) {
-	                      bbox.addPoint(bbox.maxX, f(t));
-	                    }
-	                  }
-
-	                  continue;
-	                }
-
-	                var b2ac = Math.pow(b, 2) - 4 * c * a;
-	                if (b2ac < 0) {
-	                  continue;
-	                }
-
-	                var t1 = (-b + Math.sqrt(b2ac)) / (2 * a);
-	                if (0 < t1 && t1 < 1) {
-	                  if (i === 0) {
-	                    bbox.addPoint(f(t1), bbox.maxY);
-	                  } else if (i === 1) {
-	                    bbox.addPoint(bbox.maxX, f(t1));
-	                  }
-	                }
-
-	                var t2 = (-b - Math.sqrt(b2ac)) / (2 * a);
-	                if (0 < t2 && t2 < 1) {
-	                  if (i === 0) {
-	                    bbox.addPoint(f(t2), bbox.maxY);
-	                  } else if (i === 1) {
-	                    bbox.addPoint(bbox.maxX, f(t2));
-	                  }
-	                }
-	              }
-
-	              cx = p3x;
-	              cy = p3y;
-	              break;
-	          }
+	        if (_isArray2) {
+	          if (_i3 >= _iterator2.length) break;
+	          _ref2 = _iterator2[_i3++];
+	        } else {
+	          _i3 = _iterator2.next();
+	          if (_i3.done) break;
+	          _ref2 = _i3.value;
 	        }
-	      } catch (err) {
-	        _didIteratorError2 = true;
-	        _iteratorError2 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	            _iterator2.return();
-	          }
-	        } finally {
-	          if (_didIteratorError2) {
-	            throw _iteratorError2;
-	          }
+
+	        var c = _ref2;
+
+	        switch (c.command) {
+	          case 'moveTo':
+	          case 'lineTo':
+	            var _c$args = c.args,
+	                x = _c$args[0],
+	                y = _c$args[1];
+
+	            bbox.addPoint(x, y);
+	            cx = x;
+	            cy = y;
+	            break;
+
+	          case 'quadraticCurveTo':
+	          case 'bezierCurveTo':
+	            if (c.command === 'quadraticCurveTo') {
+	              // http://fontforge.org/bezier.html
+	              var _c$args2 = c.args,
+	                  qp1x = _c$args2[0],
+	                  qp1y = _c$args2[1],
+	                  p3x = _c$args2[2],
+	                  p3y = _c$args2[3];
+
+	              var cp1x = cx + 2 / 3 * (qp1x - cx); // CP1 = QP0 + 2/3 * (QP1-QP0)
+	              var cp1y = cy + 2 / 3 * (qp1y - cy);
+	              var cp2x = p3x + 2 / 3 * (qp1x - p3x); // CP2 = QP2 + 2/3 * (QP1-QP2)
+	              var cp2y = p3y + 2 / 3 * (qp1y - p3y);
+	            } else {
+	              var _c$args3 = c.args,
+	                  cp1x = _c$args3[0],
+	                  cp1y = _c$args3[1],
+	                  cp2x = _c$args3[2],
+	                  cp2y = _c$args3[3],
+	                  p3x = _c$args3[4],
+	                  p3y = _c$args3[5];
+	            }
+
+	            // http://blog.hackers-cafe.net/2009/06/how-to-calculate-bezier-curves-bounding.html
+	            bbox.addPoint(p3x, p3y);
+
+	            var p0 = [cx, cy];
+	            var p1 = [cp1x, cp1y];
+	            var p2 = [cp2x, cp2y];
+	            var p3 = [p3x, p3y];
+
+	            for (var i = 0; i <= 1; i++) {
+	              var b = 6 * p0[i] - 12 * p1[i] + 6 * p2[i];
+	              var a = -3 * p0[i] + 9 * p1[i] - 9 * p2[i] + 3 * p3[i];
+	              c = 3 * p1[i] - 3 * p0[i];
+
+	              if (a === 0) {
+	                if (b === 0) {
+	                  continue;
+	                }
+
+	                var t = -c / b;
+	                if (0 < t && t < 1) {
+	                  if (i === 0) {
+	                    bbox.addPoint(f(t), bbox.maxY);
+	                  } else if (i === 1) {
+	                    bbox.addPoint(bbox.maxX, f(t));
+	                  }
+	                }
+
+	                continue;
+	              }
+
+	              var b2ac = Math.pow(b, 2) - 4 * c * a;
+	              if (b2ac < 0) {
+	                continue;
+	              }
+
+	              var t1 = (-b + Math.sqrt(b2ac)) / (2 * a);
+	              if (0 < t1 && t1 < 1) {
+	                if (i === 0) {
+	                  bbox.addPoint(f(t1), bbox.maxY);
+	                } else if (i === 1) {
+	                  bbox.addPoint(bbox.maxX, f(t1));
+	                }
+	              }
+
+	              var t2 = (-b - Math.sqrt(b2ac)) / (2 * a);
+	              if (0 < t2 && t2 < 1) {
+	                if (i === 0) {
+	                  bbox.addPoint(f(t2), bbox.maxY);
+	                } else if (i === 1) {
+	                  bbox.addPoint(bbox.maxX, f(t2));
+	                }
+	              }
+	            }
+
+	            cx = p3x;
+	            cy = p3y;
+	            break;
 	        }
 	      }
 
@@ -47847,7 +47115,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _arr = ['moveTo', 'lineTo', 'quadraticCurveTo', 'bezierCurveTo', 'closePath'];
 
 	var _loop = function _loop() {
-	  var command = _arr[_i2];
+	  var command = _arr[_i4];
 	  Path.prototype[command] = function () {
 	    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
 	      args[_key] = arguments[_key];
@@ -47863,7 +47131,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	};
 
-	for (var _i2 = 0; _i2 < _arr.length; _i2++) {
+	for (var _i4 = 0; _i4 < _arr.length; _i4++) {
 	  _loop();
 	}
 
@@ -47931,142 +47199,133 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.isLigature = this.codePoints.length > 1;
 	  }
 
-	  _createClass(Glyph, [{
-	    key: '_getPath',
-	    value: function _getPath() {
-	      return new Path();
+	  Glyph.prototype._getPath = function _getPath() {
+	    return new Path();
+	  };
+
+	  Glyph.prototype._getCBox = function _getCBox() {
+	    return this.path.cbox;
+	  };
+
+	  Glyph.prototype._getBBox = function _getBBox() {
+	    return this.path.bbox;
+	  };
+
+	  Glyph.prototype._getTableMetrics = function _getTableMetrics(table) {
+	    if (this.id < table.metrics.length) {
+	      return table.metrics.get(this.id);
 	    }
-	  }, {
-	    key: '_getCBox',
-	    value: function _getCBox() {
-	      return this.path.cbox;
+
+	    var metric = table.metrics.get(table.metrics.length - 1);
+	    var res = {
+	      advance: metric ? metric.advance : 0,
+	      bearing: table.bearings.get(this.id - table.metrics.length) || 0
+	    };
+
+	    return res;
+	  };
+
+	  Glyph.prototype._getMetrics = function _getMetrics(cbox) {
+	    if (this._metrics) {
+	      return this._metrics;
 	    }
-	  }, {
-	    key: '_getBBox',
-	    value: function _getBBox() {
-	      return this.path.bbox;
-	    }
-	  }, {
-	    key: '_getTableMetrics',
-	    value: function _getTableMetrics(table) {
-	      if (this.id < table.metrics.length) {
-	        return table.metrics.get(this.id);
+
+	    var _getTableMetrics2 = this._getTableMetrics(this._font.hmtx),
+	        advanceWidth = _getTableMetrics2.advance,
+	        leftBearing = _getTableMetrics2.bearing;
+
+	    // For vertical metrics, use vmtx if available, or fall back to global data from OS/2 or hhea
+
+
+	    if (this._font.vmtx) {
+	      var _getTableMetrics3 = this._getTableMetrics(this._font.vmtx),
+	          advanceHeight = _getTableMetrics3.advance,
+	          topBearing = _getTableMetrics3.bearing;
+	    } else {
+	      var os2 = void 0;
+	      if (typeof cbox === 'undefined' || cbox === null) {
+	        cbox = this.cbox;
 	      }
 
-	      var metric = table.metrics.get(table.metrics.length - 1);
-	      var res = {
-	        advance: metric ? metric.advance : 0,
-	        bearing: table.bearings.get(this.id - table.metrics.length) || 0
-	      };
-
-	      return res;
-	    }
-	  }, {
-	    key: '_getMetrics',
-	    value: function _getMetrics(cbox) {
-	      if (this._metrics) {
-	        return this._metrics;
-	      }
-
-	      var _getTableMetrics2 = this._getTableMetrics(this._font.hmtx),
-	          advanceWidth = _getTableMetrics2.advance,
-	          leftBearing = _getTableMetrics2.bearing;
-
-	      // For vertical metrics, use vmtx if available, or fall back to global data from OS/2 or hhea
-
-
-	      if (this._font.vmtx) {
-	        var _getTableMetrics3 = this._getTableMetrics(this._font.vmtx),
-	            advanceHeight = _getTableMetrics3.advance,
-	            topBearing = _getTableMetrics3.bearing;
+	      if ((os2 = this._font['OS/2']) && os2.version > 0) {
+	        var advanceHeight = Math.abs(os2.typoAscender - os2.typoDescender);
+	        var topBearing = os2.typoAscender - cbox.maxY;
 	      } else {
-	        var os2 = void 0;
-	        if (typeof cbox === 'undefined' || cbox === null) {
-	          cbox = this.cbox;
+	        var hhea = this._font.hhea;
+
+	        var advanceHeight = Math.abs(hhea.ascent - hhea.descent);
+	        var topBearing = hhea.ascent - cbox.maxY;
+	      }
+	    }
+
+	    return this._metrics = { advanceWidth: advanceWidth, advanceHeight: advanceHeight, leftBearing: leftBearing, topBearing: topBearing };
+	  };
+
+	  /**
+	   * The glyph’s control box.
+	   * This is often the same as the bounding box, but is faster to compute.
+	   * Because of the way bezier curves are defined, some of the control points
+	   * can be outside of the bounding box. Where `bbox` takes this into account,
+	   * `cbox` does not. Thus, cbox is less accurate, but faster to compute.
+	   * See [here](http://www.freetype.org/freetype2/docs/glyphs/glyphs-6.html#section-2)
+	   * for a more detailed description.
+	   *
+	   * @type {BBox}
+	   */
+
+
+	  Glyph.prototype._getName = function _getName() {
+	    var post = this._font.post;
+
+	    if (!post) {
+	      return null;
+	    }
+
+	    switch (post.version) {
+	      case 1:
+	        return StandardNames[this.id];
+
+	      case 2:
+	        var id = post.glyphNameIndex[this.id];
+	        if (id < StandardNames.length) {
+	          return StandardNames[id];
 	        }
 
-	        if ((os2 = this._font['OS/2']) && os2.version > 0) {
-	          var advanceHeight = Math.abs(os2.typoAscender - os2.typoDescender);
-	          var topBearing = os2.typoAscender - cbox.maxY;
-	        } else {
-	          var hhea = this._font.hhea;
+	        return post.names[id - StandardNames.length];
 
-	          var advanceHeight = Math.abs(hhea.ascent - hhea.descent);
-	          var topBearing = hhea.ascent - cbox.maxY;
-	        }
-	      }
+	      case 2.5:
+	        return StandardNames[this.id + post.offsets[this.id]];
 
-	      return this._metrics = { advanceWidth: advanceWidth, advanceHeight: advanceHeight, leftBearing: leftBearing, topBearing: topBearing };
+	      case 4:
+	        return String.fromCharCode(post.map[this.id]);
 	    }
+	  };
 
-	    /**
-	     * The glyph’s control box.
-	     * This is often the same as the bounding box, but is faster to compute.
-	     * Because of the way bezier curves are defined, some of the control points
-	     * can be outside of the bounding box. Where `bbox` takes this into account,
-	     * `cbox` does not. Thus, cbox is less accurate, but faster to compute.
-	     * See [here](http://www.freetype.org/freetype2/docs/glyphs/glyphs-6.html#section-2)
-	     * for a more detailed description.
-	     *
-	     * @type {BBox}
-	     */
-
-	  }, {
-	    key: '_getName',
-	    value: function _getName() {
-	      var post = this._font.post;
-
-	      if (!post) {
-	        return null;
-	      }
-
-	      switch (post.version) {
-	        case 1:
-	          return StandardNames[this.id];
-
-	        case 2:
-	          var id = post.glyphNameIndex[this.id];
-	          if (id < StandardNames.length) {
-	            return StandardNames[id];
-	          }
-
-	          return post.names[id - StandardNames.length];
-
-	        case 2.5:
-	          return StandardNames[this.id + post.offsets[this.id]];
-
-	        case 4:
-	          return String.fromCharCode(post.map[this.id]);
-	      }
-	    }
-
-	    /**
-	     * The glyph's name
-	     * @type {string}
-	     */
-
-	  }, {
-	    key: 'render',
+	  /**
+	   * The glyph's name
+	   * @type {string}
+	   */
 
 
-	    /**
-	     * Renders the glyph to the given graphics context, at the specified font size.
-	     * @param {CanvasRenderingContext2d} ctx
-	     * @param {number} size
-	     */
-	    value: function render(ctx, size) {
-	      ctx.save();
+	  /**
+	   * Renders the glyph to the given graphics context, at the specified font size.
+	   * @param {CanvasRenderingContext2d} ctx
+	   * @param {number} size
+	   */
+	  Glyph.prototype.render = function render(ctx, size) {
+	    ctx.save();
 
-	      var scale = 1 / this._font.head.unitsPerEm * size;
-	      ctx.scale(scale, scale);
+	    var scale = 1 / this._font.head.unitsPerEm * size;
+	    ctx.scale(scale, scale);
 
-	      var fn = this.path.toFunction();
-	      fn(ctx);
-	      ctx.fill();
+	    var fn = this.path.toFunction();
+	    fn(ctx);
+	    ctx.fill();
 
-	      ctx.restore();
-	    }
-	  }, {
+	    ctx.restore();
+	  };
+
+	  _createClass(Glyph, [{
 	    key: 'cbox',
 	    get: function get() {
 	      return this._getCBox();
@@ -48169,12 +47428,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.y = y;
 	  }
 
-	  _createClass(Point, [{
-	    key: 'copy',
-	    value: function copy() {
-	      return new Point(this.onCurve, this.endContour, this.x, this.y);
-	    }
-	  }]);
+	  Point.prototype.copy = function copy() {
+	    return new Point(this.onCurve, this.endContour, this.x, this.y);
+	  };
 
 	  return Point;
 	}();
@@ -48203,386 +47459,358 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function TTFGlyph() {
 	    _classCallCheck(this, TTFGlyph);
 
-	    return _possibleConstructorReturn(this, (TTFGlyph.__proto__ || _Object$getPrototypeOf(TTFGlyph)).apply(this, arguments));
+	    return _possibleConstructorReturn(this, _Glyph.apply(this, arguments));
 	  }
 
-	  _createClass(TTFGlyph, [{
-	    key: '_getCBox',
-
-	    // Parses just the glyph header and returns the bounding box
-	    value: function _getCBox(internal) {
-	      // We need to decode the glyph if variation processing is requested,
-	      // so it's easier just to recompute the path's cbox after decoding.
-	      if (this._font._variationProcessor && !internal) {
-	        return this.path.cbox;
-	      }
-
-	      var stream = this._font._getTableStream('glyf');
-	      stream.pos += this._font.loca.offsets[this.id];
-	      var glyph = GlyfHeader.decode(stream);
-
-	      var cbox = new BBox(glyph.xMin, glyph.yMin, glyph.xMax, glyph.yMax);
-	      return _Object$freeze(cbox);
+	  // Parses just the glyph header and returns the bounding box
+	  TTFGlyph.prototype._getCBox = function _getCBox(internal) {
+	    // We need to decode the glyph if variation processing is requested,
+	    // so it's easier just to recompute the path's cbox after decoding.
+	    if (this._font._variationProcessor && !internal) {
+	      return this.path.cbox;
 	    }
 
-	    // Parses a single glyph coordinate
+	    var stream = this._font._getTableStream('glyf');
+	    stream.pos += this._font.loca.offsets[this.id];
+	    var glyph = GlyfHeader.decode(stream);
 
-	  }, {
-	    key: '_parseGlyphCoord',
-	    value: function _parseGlyphCoord(stream, prev, short, same) {
-	      if (short) {
-	        var val = stream.readUInt8();
-	        if (!same) {
-	          val = -val;
-	        }
+	    var cbox = new BBox(glyph.xMin, glyph.yMin, glyph.xMax, glyph.yMax);
+	    return _Object$freeze(cbox);
+	  };
 
-	        val += prev;
+	  // Parses a single glyph coordinate
+
+
+	  TTFGlyph.prototype._parseGlyphCoord = function _parseGlyphCoord(stream, prev, short, same) {
+	    if (short) {
+	      var val = stream.readUInt8();
+	      if (!same) {
+	        val = -val;
+	      }
+
+	      val += prev;
+	    } else {
+	      if (same) {
+	        var val = prev;
 	      } else {
-	        if (same) {
-	          var val = prev;
-	        } else {
-	          var val = prev + stream.readInt16BE();
-	        }
+	        var val = prev + stream.readInt16BE();
 	      }
-
-	      return val;
 	    }
 
-	    // Decodes the glyph data into points for simple glyphs,
-	    // or components for composite glyphs
+	    return val;
+	  };
 
-	  }, {
-	    key: '_decode',
-	    value: function _decode() {
-	      var glyfPos = this._font.loca.offsets[this.id];
-	      var nextPos = this._font.loca.offsets[this.id + 1];
-
-	      // Nothing to do if there is no data for this glyph
-	      if (glyfPos === nextPos) {
-	        return null;
-	      }
-
-	      var stream = this._font._getTableStream('glyf');
-	      stream.pos += glyfPos;
-	      var startPos = stream.pos;
-
-	      var glyph = GlyfHeader.decode(stream);
-
-	      if (glyph.numberOfContours > 0) {
-	        this._decodeSimple(glyph, stream);
-	      } else if (glyph.numberOfContours < 0) {
-	        this._decodeComposite(glyph, stream, startPos);
-	      }
-
-	      return glyph;
-	    }
-	  }, {
-	    key: '_decodeSimple',
-	    value: function _decodeSimple(glyph, stream) {
-	      // this is a simple glyph
-	      glyph.points = [];
-
-	      var endPtsOfContours = new r.Array(r.uint16, glyph.numberOfContours).decode(stream);
-	      glyph.instructions = new r.Array(r.uint8, r.uint16).decode(stream);
-
-	      var flags = [];
-	      var numCoords = endPtsOfContours[endPtsOfContours.length - 1] + 1;
-
-	      while (flags.length < numCoords) {
-	        var flag = stream.readUInt8();
-	        flags.push(flag);
-
-	        // check for repeat flag
-	        if (flag & REPEAT) {
-	          var count = stream.readUInt8();
-	          for (var j = 0; j < count; j++) {
-	            flags.push(flag);
-	          }
-	        }
-	      }
-
-	      for (var i = 0; i < flags.length; i++) {
-	        var flag = flags[i];
-	        var point = new Point(!!(flag & ON_CURVE), endPtsOfContours.indexOf(i) >= 0, 0, 0);
-	        glyph.points.push(point);
-	      }
-
-	      var px = 0;
-	      for (var i = 0; i < flags.length; i++) {
-	        var flag = flags[i];
-	        glyph.points[i].x = px = this._parseGlyphCoord(stream, px, flag & X_SHORT_VECTOR, flag & SAME_X);
-	      }
-
-	      var py = 0;
-	      for (var i = 0; i < flags.length; i++) {
-	        var flag = flags[i];
-	        glyph.points[i].y = py = this._parseGlyphCoord(stream, py, flag & Y_SHORT_VECTOR, flag & SAME_Y);
-	      }
-
-	      if (this._font._variationProcessor) {
-	        var points = glyph.points.slice();
-	        points.push.apply(points, _toConsumableArray(this._getPhantomPoints(glyph)));
-
-	        this._font._variationProcessor.transformPoints(this.id, points);
-	        glyph.phantomPoints = points.slice(-4);
-	      }
-
-	      return;
-	    }
-	  }, {
-	    key: '_decodeComposite',
-	    value: function _decodeComposite(glyph, stream) {
-	      var offset = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-
-	      // this is a composite glyph
-	      glyph.components = [];
-	      var haveInstructions = false;
-	      var flags = MORE_COMPONENTS;
-
-	      while (flags & MORE_COMPONENTS) {
-	        flags = stream.readUInt16BE();
-	        var gPos = stream.pos - offset;
-	        var glyphID = stream.readUInt16BE();
-	        if (!haveInstructions) {
-	          haveInstructions = (flags & WE_HAVE_INSTRUCTIONS) !== 0;
-	        }
-
-	        if (flags & ARG_1_AND_2_ARE_WORDS) {
-	          var dx = stream.readInt16BE();
-	          var dy = stream.readInt16BE();
-	        } else {
-	          var dx = stream.readInt8();
-	          var dy = stream.readInt8();
-	        }
-
-	        var component = new Component(glyphID, dx, dy);
-	        component.pos = gPos;
-
-	        if (flags & WE_HAVE_A_SCALE) {
-	          // fixed number with 14 bits of fraction
-	          component.scaleX = component.scaleY = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
-	        } else if (flags & WE_HAVE_AN_X_AND_Y_SCALE) {
-	          component.scaleX = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
-	          component.scaleY = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
-	        } else if (flags & WE_HAVE_A_TWO_BY_TWO) {
-	          component.scaleX = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
-	          component.scale01 = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
-	          component.scale10 = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
-	          component.scaleY = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
-	        }
-
-	        glyph.components.push(component);
-	      }
-
-	      if (this._font._variationProcessor) {
-	        var points = [];
-	        for (var j = 0; j < glyph.components.length; j++) {
-	          var component = glyph.components[j];
-	          points.push(new Point(true, true, component.dx, component.dy));
-	        }
-
-	        points.push.apply(points, _toConsumableArray(this._getPhantomPoints(glyph)));
-
-	        this._font._variationProcessor.transformPoints(this.id, points);
-	        glyph.phantomPoints = points.splice(-4, 4);
-
-	        for (var i = 0; i < points.length; i++) {
-	          var point = points[i];
-	          glyph.components[i].dx = point.x;
-	          glyph.components[i].dy = point.y;
-	        }
-	      }
-
-	      return haveInstructions;
-	    }
-	  }, {
-	    key: '_getPhantomPoints',
-	    value: function _getPhantomPoints(glyph) {
-	      var cbox = this._getCBox(true);
-	      if (this._metrics == null) {
-	        this._metrics = Glyph.prototype._getMetrics.call(this, cbox);
-	      }
-
-	      var _metrics = this._metrics,
-	          advanceWidth = _metrics.advanceWidth,
-	          advanceHeight = _metrics.advanceHeight,
-	          leftBearing = _metrics.leftBearing,
-	          topBearing = _metrics.topBearing;
+	  // Decodes the glyph data into points for simple glyphs,
+	  // or components for composite glyphs
 
 
-	      return [new Point(false, true, glyph.xMin - leftBearing, 0), new Point(false, true, glyph.xMin - leftBearing + advanceWidth, 0), new Point(false, true, 0, glyph.yMax + topBearing), new Point(false, true, 0, glyph.yMax + topBearing + advanceHeight)];
+	  TTFGlyph.prototype._decode = function _decode() {
+	    var glyfPos = this._font.loca.offsets[this.id];
+	    var nextPos = this._font.loca.offsets[this.id + 1];
+
+	    // Nothing to do if there is no data for this glyph
+	    if (glyfPos === nextPos) {
+	      return null;
 	    }
 
-	    // Decodes font data, resolves composite glyphs, and returns an array of contours
+	    var stream = this._font._getTableStream('glyf');
+	    stream.pos += glyfPos;
+	    var startPos = stream.pos;
 
-	  }, {
-	    key: '_getContours',
-	    value: function _getContours() {
-	      var glyph = this._decode();
-	      if (!glyph) {
-	        return [];
+	    var glyph = GlyfHeader.decode(stream);
+
+	    if (glyph.numberOfContours > 0) {
+	      this._decodeSimple(glyph, stream);
+	    } else if (glyph.numberOfContours < 0) {
+	      this._decodeComposite(glyph, stream, startPos);
+	    }
+
+	    return glyph;
+	  };
+
+	  TTFGlyph.prototype._decodeSimple = function _decodeSimple(glyph, stream) {
+	    // this is a simple glyph
+	    glyph.points = [];
+
+	    var endPtsOfContours = new r.Array(r.uint16, glyph.numberOfContours).decode(stream);
+	    glyph.instructions = new r.Array(r.uint8, r.uint16).decode(stream);
+
+	    var flags = [];
+	    var numCoords = endPtsOfContours[endPtsOfContours.length - 1] + 1;
+
+	    while (flags.length < numCoords) {
+	      var flag = stream.readUInt8();
+	      flags.push(flag);
+
+	      // check for repeat flag
+	      if (flag & REPEAT) {
+	        var count = stream.readUInt8();
+	        for (var j = 0; j < count; j++) {
+	          flags.push(flag);
+	        }
+	      }
+	    }
+
+	    for (var i = 0; i < flags.length; i++) {
+	      var flag = flags[i];
+	      var point = new Point(!!(flag & ON_CURVE), endPtsOfContours.indexOf(i) >= 0, 0, 0);
+	      glyph.points.push(point);
+	    }
+
+	    var px = 0;
+	    for (var i = 0; i < flags.length; i++) {
+	      var flag = flags[i];
+	      glyph.points[i].x = px = this._parseGlyphCoord(stream, px, flag & X_SHORT_VECTOR, flag & SAME_X);
+	    }
+
+	    var py = 0;
+	    for (var i = 0; i < flags.length; i++) {
+	      var flag = flags[i];
+	      glyph.points[i].y = py = this._parseGlyphCoord(stream, py, flag & Y_SHORT_VECTOR, flag & SAME_Y);
+	    }
+
+	    if (this._font._variationProcessor) {
+	      var points = glyph.points.slice();
+	      points.push.apply(points, this._getPhantomPoints(glyph));
+
+	      this._font._variationProcessor.transformPoints(this.id, points);
+	      glyph.phantomPoints = points.slice(-4);
+	    }
+
+	    return;
+	  };
+
+	  TTFGlyph.prototype._decodeComposite = function _decodeComposite(glyph, stream) {
+	    var offset = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+
+	    // this is a composite glyph
+	    glyph.components = [];
+	    var haveInstructions = false;
+	    var flags = MORE_COMPONENTS;
+
+	    while (flags & MORE_COMPONENTS) {
+	      flags = stream.readUInt16BE();
+	      var gPos = stream.pos - offset;
+	      var glyphID = stream.readUInt16BE();
+	      if (!haveInstructions) {
+	        haveInstructions = (flags & WE_HAVE_INSTRUCTIONS) !== 0;
 	      }
 
-	      if (glyph.numberOfContours < 0) {
-	        // resolve composite glyphs
-	        var points = [];
-	        var _iteratorNormalCompletion = true;
-	        var _didIteratorError = false;
-	        var _iteratorError = undefined;
-
-	        try {
-	          for (var _iterator = _getIterator(glyph.components), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	            var component = _step.value;
-
-	            glyph = this._font.getGlyph(component.glyphID)._decode();
-	            // TODO transform
-	            var _iteratorNormalCompletion2 = true;
-	            var _didIteratorError2 = false;
-	            var _iteratorError2 = undefined;
-
-	            try {
-	              for (var _iterator2 = _getIterator(glyph.points), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	                var _point = _step2.value;
-
-	                points.push(new Point(_point.onCurve, _point.endContour, _point.x + component.dx, _point.y + component.dy));
-	              }
-	            } catch (err) {
-	              _didIteratorError2 = true;
-	              _iteratorError2 = err;
-	            } finally {
-	              try {
-	                if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	                  _iterator2.return();
-	                }
-	              } finally {
-	                if (_didIteratorError2) {
-	                  throw _iteratorError2;
-	                }
-	              }
-	            }
-	          }
-	        } catch (err) {
-	          _didIteratorError = true;
-	          _iteratorError = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion && _iterator.return) {
-	              _iterator.return();
-	            }
-	          } finally {
-	            if (_didIteratorError) {
-	              throw _iteratorError;
-	            }
-	          }
-	        }
+	      if (flags & ARG_1_AND_2_ARE_WORDS) {
+	        var dx = stream.readInt16BE();
+	        var dy = stream.readInt16BE();
 	      } else {
-	        var points = glyph.points || [];
+	        var dx = stream.readInt8();
+	        var dy = stream.readInt8();
 	      }
 
-	      // Recompute and cache metrics if we performed variation processing
-	      if (glyph.phantomPoints) {
-	        this._metrics.advanceWidth = glyph.phantomPoints[1].x - glyph.phantomPoints[0].x;
-	        this._metrics.advanceHeight = glyph.phantomPoints[3].y - glyph.phantomPoints[2].y;
-	        this._metrics.leftBearing = glyph.xMin - glyph.phantomPoints[0].x;
-	        this._metrics.topBearing = glyph.phantomPoints[2].y - glyph.yMax;
+	      var component = new Component(glyphID, dx, dy);
+	      component.pos = gPos;
+
+	      if (flags & WE_HAVE_A_SCALE) {
+	        // fixed number with 14 bits of fraction
+	        component.scaleX = component.scaleY = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
+	      } else if (flags & WE_HAVE_AN_X_AND_Y_SCALE) {
+	        component.scaleX = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
+	        component.scaleY = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
+	      } else if (flags & WE_HAVE_A_TWO_BY_TWO) {
+	        component.scaleX = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
+	        component.scale01 = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
+	        component.scale10 = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
+	        component.scaleY = (stream.readUInt8() << 24 | stream.readUInt8() << 16) / 1073741824;
 	      }
 
-	      var contours = [];
-	      var cur = [];
-	      for (var k = 0; k < points.length; k++) {
-	        var point = points[k];
-	        cur.push(point);
-	        if (point.endContour) {
-	          contours.push(cur);
-	          cur = [];
+	      glyph.components.push(component);
+	    }
+
+	    if (this._font._variationProcessor) {
+	      var points = [];
+	      for (var j = 0; j < glyph.components.length; j++) {
+	        var component = glyph.components[j];
+	        points.push(new Point(true, true, component.dx, component.dy));
+	      }
+
+	      points.push.apply(points, this._getPhantomPoints(glyph));
+
+	      this._font._variationProcessor.transformPoints(this.id, points);
+	      glyph.phantomPoints = points.splice(-4, 4);
+
+	      for (var i = 0; i < points.length; i++) {
+	        var point = points[i];
+	        glyph.components[i].dx = point.x;
+	        glyph.components[i].dy = point.y;
+	      }
+	    }
+
+	    return haveInstructions;
+	  };
+
+	  TTFGlyph.prototype._getPhantomPoints = function _getPhantomPoints(glyph) {
+	    var cbox = this._getCBox(true);
+	    if (this._metrics == null) {
+	      this._metrics = Glyph.prototype._getMetrics.call(this, cbox);
+	    }
+
+	    var _metrics = this._metrics,
+	        advanceWidth = _metrics.advanceWidth,
+	        advanceHeight = _metrics.advanceHeight,
+	        leftBearing = _metrics.leftBearing,
+	        topBearing = _metrics.topBearing;
+
+
+	    return [new Point(false, true, glyph.xMin - leftBearing, 0), new Point(false, true, glyph.xMin - leftBearing + advanceWidth, 0), new Point(false, true, 0, glyph.yMax + topBearing), new Point(false, true, 0, glyph.yMax + topBearing + advanceHeight)];
+	  };
+
+	  // Decodes font data, resolves composite glyphs, and returns an array of contours
+
+
+	  TTFGlyph.prototype._getContours = function _getContours() {
+	    var glyph = this._decode();
+	    if (!glyph) {
+	      return [];
+	    }
+
+	    if (glyph.numberOfContours < 0) {
+	      // resolve composite glyphs
+	      var points = [];
+	      for (var _iterator = glyph.components, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	        var _ref;
+
+	        if (_isArray) {
+	          if (_i >= _iterator.length) break;
+	          _ref = _iterator[_i++];
+	        } else {
+	          _i = _iterator.next();
+	          if (_i.done) break;
+	          _ref = _i.value;
+	        }
+
+	        var component = _ref;
+
+	        glyph = this._font.getGlyph(component.glyphID)._decode();
+	        // TODO transform
+	        for (var _iterator2 = glyph.points, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	          var _ref2;
+
+	          if (_isArray2) {
+	            if (_i2 >= _iterator2.length) break;
+	            _ref2 = _iterator2[_i2++];
+	          } else {
+	            _i2 = _iterator2.next();
+	            if (_i2.done) break;
+	            _ref2 = _i2.value;
+	          }
+
+	          var _point = _ref2;
+
+	          points.push(new Point(_point.onCurve, _point.endContour, _point.x + component.dx, _point.y + component.dy));
 	        }
 	      }
-
-	      return contours;
+	    } else {
+	      var points = glyph.points || [];
 	    }
-	  }, {
-	    key: '_getMetrics',
-	    value: function _getMetrics() {
-	      if (this._metrics) {
-	        return this._metrics;
+
+	    // Recompute and cache metrics if we performed variation processing
+	    if (glyph.phantomPoints) {
+	      this._metrics.advanceWidth = glyph.phantomPoints[1].x - glyph.phantomPoints[0].x;
+	      this._metrics.advanceHeight = glyph.phantomPoints[3].y - glyph.phantomPoints[2].y;
+	      this._metrics.leftBearing = glyph.xMin - glyph.phantomPoints[0].x;
+	      this._metrics.topBearing = glyph.phantomPoints[2].y - glyph.yMax;
+	    }
+
+	    var contours = [];
+	    var cur = [];
+	    for (var k = 0; k < points.length; k++) {
+	      var point = points[k];
+	      cur.push(point);
+	      if (point.endContour) {
+	        contours.push(cur);
+	        cur = [];
 	      }
+	    }
 
-	      var cbox = this._getCBox(true);
-	      _get(TTFGlyph.prototype.__proto__ || _Object$getPrototypeOf(TTFGlyph.prototype), '_getMetrics', this).call(this, cbox);
+	    return contours;
+	  };
 
-	      if (this._font._variationProcessor) {
-	        // Decode the font data (and cache for later).
-	        // This triggers recomputation of metrics
-	        this.path;
-	      }
-
+	  TTFGlyph.prototype._getMetrics = function _getMetrics() {
+	    if (this._metrics) {
 	      return this._metrics;
 	    }
 
-	    // Converts contours to a Path object that can be rendered
+	    var cbox = this._getCBox(true);
+	    _Glyph.prototype._getMetrics.call(this, cbox);
 
-	  }, {
-	    key: '_getPath',
-	    value: function _getPath() {
-	      var contours = this._getContours();
-	      var path = new Path();
+	    if (this._font._variationProcessor) {
+	      // Decode the font data (and cache for later).
+	      // This triggers recomputation of metrics
+	      this.path;
+	    }
 
-	      for (var i = 0; i < contours.length; i++) {
-	        var contour = contours[i];
-	        var firstPt = contour[0];
-	        var lastPt = contour[contour.length - 1];
-	        var start = 0;
+	    return this._metrics;
+	  };
 
-	        if (firstPt.onCurve) {
-	          // The first point will be consumed by the moveTo command, so skip in the loop
-	          var curvePt = null;
-	          start = 1;
+	  // Converts contours to a Path object that can be rendered
+
+
+	  TTFGlyph.prototype._getPath = function _getPath() {
+	    var contours = this._getContours();
+	    var path = new Path();
+
+	    for (var i = 0; i < contours.length; i++) {
+	      var contour = contours[i];
+	      var firstPt = contour[0];
+	      var lastPt = contour[contour.length - 1];
+	      var start = 0;
+
+	      if (firstPt.onCurve) {
+	        // The first point will be consumed by the moveTo command, so skip in the loop
+	        var curvePt = null;
+	        start = 1;
+	      } else {
+	        if (lastPt.onCurve) {
+	          // Start at the last point if the first point is off curve and the last point is on curve
+	          firstPt = lastPt;
 	        } else {
-	          if (lastPt.onCurve) {
-	            // Start at the last point if the first point is off curve and the last point is on curve
-	            firstPt = lastPt;
-	          } else {
-	            // Start at the middle if both the first and last points are off curve
-	            firstPt = new Point(false, false, (firstPt.x + lastPt.x) / 2, (firstPt.y + lastPt.y) / 2);
-	          }
-
-	          var curvePt = firstPt;
+	          // Start at the middle if both the first and last points are off curve
+	          firstPt = new Point(false, false, (firstPt.x + lastPt.x) / 2, (firstPt.y + lastPt.y) / 2);
 	        }
 
-	        path.moveTo(firstPt.x, firstPt.y);
-
-	        for (var j = start; j < contour.length; j++) {
-	          var pt = contour[j];
-	          var prevPt = j === 0 ? firstPt : contour[j - 1];
-
-	          if (prevPt.onCurve && pt.onCurve) {
-	            path.lineTo(pt.x, pt.y);
-	          } else if (prevPt.onCurve && !pt.onCurve) {
-	            var curvePt = pt;
-	          } else if (!prevPt.onCurve && !pt.onCurve) {
-	            var midX = (prevPt.x + pt.x) / 2;
-	            var midY = (prevPt.y + pt.y) / 2;
-	            path.quadraticCurveTo(prevPt.x, prevPt.y, midX, midY);
-	            var curvePt = pt;
-	          } else if (!prevPt.onCurve && pt.onCurve) {
-	            path.quadraticCurveTo(curvePt.x, curvePt.y, pt.x, pt.y);
-	            var curvePt = null;
-	          } else {
-	            throw new Error("Unknown TTF path state");
-	          }
-	        }
-
-	        // Connect the first and last points
-	        if (curvePt) {
-	          path.quadraticCurveTo(curvePt.x, curvePt.y, firstPt.x, firstPt.y);
-	        }
-
-	        path.closePath();
+	        var curvePt = firstPt;
 	      }
 
-	      return path;
+	      path.moveTo(firstPt.x, firstPt.y);
+
+	      for (var j = start; j < contour.length; j++) {
+	        var pt = contour[j];
+	        var prevPt = j === 0 ? firstPt : contour[j - 1];
+
+	        if (prevPt.onCurve && pt.onCurve) {
+	          path.lineTo(pt.x, pt.y);
+	        } else if (prevPt.onCurve && !pt.onCurve) {
+	          var curvePt = pt;
+	        } else if (!prevPt.onCurve && !pt.onCurve) {
+	          var midX = (prevPt.x + pt.x) / 2;
+	          var midY = (prevPt.y + pt.y) / 2;
+	          path.quadraticCurveTo(prevPt.x, prevPt.y, midX, midY);
+	          var curvePt = pt;
+	        } else if (!prevPt.onCurve && pt.onCurve) {
+	          path.quadraticCurveTo(curvePt.x, curvePt.y, pt.x, pt.y);
+	          var curvePt = null;
+	        } else {
+	          throw new Error("Unknown TTF path state");
+	        }
+	      }
+
+	      // Connect the first and last points
+	      if (curvePt) {
+	        path.quadraticCurveTo(curvePt.x, curvePt.y, firstPt.x, firstPt.y);
+	      }
+
+	      path.closePath();
 	    }
-	  }]);
+
+	    return path;
+	  };
 
 	  return TTFGlyph;
 	}(Glyph);
@@ -48597,232 +47825,128 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function CFFGlyph() {
 	    _classCallCheck(this, CFFGlyph);
 
-	    return _possibleConstructorReturn(this, (CFFGlyph.__proto__ || _Object$getPrototypeOf(CFFGlyph)).apply(this, arguments));
+	    return _possibleConstructorReturn(this, _Glyph.apply(this, arguments));
 	  }
 
-	  _createClass(CFFGlyph, [{
-	    key: '_getName',
-	    value: function _getName() {
-	      return this._font['CFF '].getGlyphName(this.id);
+	  CFFGlyph.prototype._getName = function _getName() {
+	    return this._font['CFF '].getGlyphName(this.id);
+	  };
+
+	  CFFGlyph.prototype.bias = function bias(s) {
+	    if (s.length < 1240) {
+	      return 107;
+	    } else if (s.length < 33900) {
+	      return 1131;
+	    } else {
+	      return 32768;
 	    }
-	  }, {
-	    key: 'bias',
-	    value: function bias(s) {
-	      if (s.length < 1240) {
-	        return 107;
-	      } else if (s.length < 33900) {
-	        return 1131;
-	      } else {
-	        return 32768;
+	  };
+
+	  CFFGlyph.prototype._getPath = function _getPath() {
+	    var stream = this._font.stream;
+	    var pos = stream.pos;
+
+
+	    var cff = this._font['CFF '];
+	    var str = cff.topDict.CharStrings[this.id];
+	    var end = str.offset + str.length;
+	    stream.pos = str.offset;
+
+	    var path = new Path();
+	    var stack = [];
+	    var trans = [];
+
+	    var width = null;
+	    var nStems = 0;
+	    var x = 0,
+	        y = 0;
+	    var usedGsubrs = void 0;
+	    var usedSubrs = void 0;
+	    var open = false;
+
+	    this._usedGsubrs = usedGsubrs = {};
+	    this._usedSubrs = usedSubrs = {};
+
+	    var gsubrs = cff.globalSubrIndex || [];
+	    var gsubrsBias = this.bias(gsubrs);
+
+	    var privateDict = cff.privateDictForGlyph(this.id);
+	    var subrs = privateDict.Subrs || [];
+	    var subrsBias = this.bias(subrs);
+
+	    function parseStems() {
+	      if (stack.length % 2 !== 0) {
+	        if (width === null) {
+	          width = stack.shift() + privateDict.nominalWidthX;
+	        }
 	      }
+
+	      nStems += stack.length >> 1;
+	      return stack.length = 0;
 	    }
-	  }, {
-	    key: '_getPath',
-	    value: function _getPath() {
-	      var stream = this._font.stream;
-	      var pos = stream.pos;
 
-
-	      var cff = this._font['CFF '];
-	      var str = cff.topDict.CharStrings[this.id];
-	      var end = str.offset + str.length;
-	      stream.pos = str.offset;
-
-	      var path = new Path();
-	      var stack = [];
-	      var trans = [];
-
-	      var width = null;
-	      var nStems = 0;
-	      var x = 0,
-	          y = 0;
-	      var usedGsubrs = void 0;
-	      var usedSubrs = void 0;
-	      var open = false;
-
-	      this._usedGsubrs = usedGsubrs = {};
-	      this._usedSubrs = usedSubrs = {};
-
-	      var gsubrs = cff.globalSubrIndex || [];
-	      var gsubrsBias = this.bias(gsubrs);
-
-	      var privateDict = cff.privateDictForGlyph(this.id);
-	      var subrs = privateDict.Subrs || [];
-	      var subrsBias = this.bias(subrs);
-
-	      function parseStems() {
-	        if (stack.length % 2 !== 0) {
-	          if (width === null) {
-	            width = stack.shift() + privateDict.nominalWidthX;
-	          }
-	        }
-
-	        nStems += stack.length >> 1;
-	        return stack.length = 0;
+	    function moveTo(x, y) {
+	      if (open) {
+	        path.closePath();
 	      }
 
-	      function moveTo(x, y) {
-	        if (open) {
-	          path.closePath();
-	        }
+	      path.moveTo(x, y);
+	      open = true;
+	    }
 
-	        path.moveTo(x, y);
-	        open = true;
-	      }
+	    var parse = function parse() {
+	      while (stream.pos < end) {
+	        var op = stream.readUInt8();
+	        if (op < 32) {
+	          switch (op) {
+	            case 1: // hstem
+	            case 3: // vstem
+	            case 18: // hstemhm
+	            case 23:
+	              // vstemhm
+	              parseStems();
+	              break;
 
-	      var parse = function parse() {
-	        while (stream.pos < end) {
-	          var op = stream.readUInt8();
-	          if (op < 32) {
-	            switch (op) {
-	              case 1: // hstem
-	              case 3: // vstem
-	              case 18: // hstemhm
-	              case 23:
-	                // vstemhm
-	                parseStems();
-	                break;
-
-	              case 4:
-	                // vmoveto
-	                if (stack.length > 1) {
-	                  if (typeof width === 'undefined' || width === null) {
-	                    width = stack.shift() + privateDict.nominalWidthX;
-	                  }
+	            case 4:
+	              // vmoveto
+	              if (stack.length > 1) {
+	                if (typeof width === 'undefined' || width === null) {
+	                  width = stack.shift() + privateDict.nominalWidthX;
 	                }
+	              }
 
-	                y += stack.shift();
-	                moveTo(x, y);
-	                break;
+	              y += stack.shift();
+	              moveTo(x, y);
+	              break;
 
-	              case 5:
-	                // rlineto
-	                while (stack.length >= 2) {
-	                  x += stack.shift();
-	                  y += stack.shift();
-	                  path.lineTo(x, y);
-	                }
-	                break;
-
-	              case 6: // hlineto
-	              case 7:
-	                // vlineto
-	                var phase = op === 6;
-	                while (stack.length >= 1) {
-	                  if (phase) {
-	                    x += stack.shift();
-	                  } else {
-	                    y += stack.shift();
-	                  }
-
-	                  path.lineTo(x, y);
-	                  phase = !phase;
-	                }
-	                break;
-
-	              case 8:
-	                // rrcurveto
-	                while (stack.length > 0) {
-	                  var c1x = x + stack.shift();
-	                  var c1y = y + stack.shift();
-	                  var c2x = c1x + stack.shift();
-	                  var c2y = c1y + stack.shift();
-	                  x = c2x + stack.shift();
-	                  y = c2y + stack.shift();
-	                  path.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
-	                }
-	                break;
-
-	              case 10:
-	                // callsubr
-	                var index = stack.pop() + subrsBias;
-	                var subr = subrs[index];
-	                if (subr) {
-	                  usedSubrs[index] = true;
-	                  var p = stream.pos;
-	                  var e = end;
-	                  stream.pos = subr.offset;
-	                  end = subr.offset + subr.length;
-	                  parse();
-	                  stream.pos = p;
-	                  end = e;
-	                }
-	                break;
-
-	              case 11:
-	                // return
-	                return;
-
-	              case 14:
-	                // endchar
-	                if (stack.length > 0) {
-	                  if (typeof width === 'undefined' || width === null) {
-	                    width = stack.shift() + privateDict.nominalWidthX;
-	                  }
-	                }
-
-	                path.closePath();
-	                open = false;
-	                break;
-
-	              case 19: // hintmask
-	              case 20:
-	                // cntrmask
-	                parseStems();
-	                stream.pos += nStems + 7 >> 3;
-	                break;
-
-	              case 21:
-	                // rmoveto
-	                if (stack.length > 2) {
-	                  if (typeof width === 'undefined' || width === null) {
-	                    width = stack.shift() + privateDict.nominalWidthX;
-	                  }
-	                  var haveWidth = true;
-	                }
-
-	                x += stack.shift();
-	                y += stack.shift();
-	                moveTo(x, y);
-	                break;
-
-	              case 22:
-	                // hmoveto
-	                if (stack.length > 1) {
-	                  if (typeof width === 'undefined' || width === null) {
-	                    width = stack.shift() + privateDict.nominalWidthX;
-	                  }
-	                }
-
-	                x += stack.shift();
-	                moveTo(x, y);
-	                break;
-
-	              case 24:
-	                // rcurveline
-	                while (stack.length >= 8) {
-	                  var c1x = x + stack.shift();
-	                  var c1y = y + stack.shift();
-	                  var c2x = c1x + stack.shift();
-	                  var c2y = c1y + stack.shift();
-	                  x = c2x + stack.shift();
-	                  y = c2y + stack.shift();
-	                  path.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
-	                }
-
+	            case 5:
+	              // rlineto
+	              while (stack.length >= 2) {
 	                x += stack.shift();
 	                y += stack.shift();
 	                path.lineTo(x, y);
-	                break;
+	              }
+	              break;
 
-	              case 25:
-	                // rlinecurve
-	                while (stack.length >= 8) {
+	            case 6: // hlineto
+	            case 7:
+	              // vlineto
+	              var phase = op === 6;
+	              while (stack.length >= 1) {
+	                if (phase) {
 	                  x += stack.shift();
+	                } else {
 	                  y += stack.shift();
-	                  path.lineTo(x, y);
 	                }
 
+	                path.lineTo(x, y);
+	                phase = !phase;
+	              }
+	              break;
+
+	            case 8:
+	              // rrcurveto
+	              while (stack.length > 0) {
 	                var c1x = x + stack.shift();
 	                var c1y = y + stack.shift();
 	                var c2x = c1x + stack.shift();
@@ -48830,359 +47954,458 @@ return /******/ (function(modules) { // webpackBootstrap
 	                x = c2x + stack.shift();
 	                y = c2y + stack.shift();
 	                path.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
-	                break;
+	              }
+	              break;
 
-	              case 26:
-	                // vvcurveto
-	                if (stack.length % 2) {
-	                  x += stack.shift();
+	            case 10:
+	              // callsubr
+	              var index = stack.pop() + subrsBias;
+	              var subr = subrs[index];
+	              if (subr) {
+	                usedSubrs[index] = true;
+	                var p = stream.pos;
+	                var e = end;
+	                stream.pos = subr.offset;
+	                end = subr.offset + subr.length;
+	                parse();
+	                stream.pos = p;
+	                end = e;
+	              }
+	              break;
+
+	            case 11:
+	              // return
+	              return;
+
+	            case 14:
+	              // endchar
+	              if (stack.length > 0) {
+	                if (typeof width === 'undefined' || width === null) {
+	                  width = stack.shift() + privateDict.nominalWidthX;
 	                }
+	              }
 
-	                while (stack.length >= 4) {
-	                  c1x = x;
-	                  c1y = y + stack.shift();
-	                  c2x = c1x + stack.shift();
-	                  c2y = c1y + stack.shift();
-	                  x = c2x;
-	                  y = c2y + stack.shift();
-	                  path.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+	              path.closePath();
+	              open = false;
+	              break;
+
+	            case 19: // hintmask
+	            case 20:
+	              // cntrmask
+	              parseStems();
+	              stream.pos += nStems + 7 >> 3;
+	              break;
+
+	            case 21:
+	              // rmoveto
+	              if (stack.length > 2) {
+	                if (typeof width === 'undefined' || width === null) {
+	                  width = stack.shift() + privateDict.nominalWidthX;
 	                }
-	                break;
+	                var haveWidth = true;
+	              }
 
-	              case 27:
-	                // hhcurveto
-	                if (stack.length % 2) {
-	                  y += stack.shift();
+	              x += stack.shift();
+	              y += stack.shift();
+	              moveTo(x, y);
+	              break;
+
+	            case 22:
+	              // hmoveto
+	              if (stack.length > 1) {
+	                if (typeof width === 'undefined' || width === null) {
+	                  width = stack.shift() + privateDict.nominalWidthX;
 	                }
+	              }
 
-	                while (stack.length >= 4) {
+	              x += stack.shift();
+	              moveTo(x, y);
+	              break;
+
+	            case 24:
+	              // rcurveline
+	              while (stack.length >= 8) {
+	                var c1x = x + stack.shift();
+	                var c1y = y + stack.shift();
+	                var c2x = c1x + stack.shift();
+	                var c2y = c1y + stack.shift();
+	                x = c2x + stack.shift();
+	                y = c2y + stack.shift();
+	                path.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+	              }
+
+	              x += stack.shift();
+	              y += stack.shift();
+	              path.lineTo(x, y);
+	              break;
+
+	            case 25:
+	              // rlinecurve
+	              while (stack.length >= 8) {
+	                x += stack.shift();
+	                y += stack.shift();
+	                path.lineTo(x, y);
+	              }
+
+	              var c1x = x + stack.shift();
+	              var c1y = y + stack.shift();
+	              var c2x = c1x + stack.shift();
+	              var c2y = c1y + stack.shift();
+	              x = c2x + stack.shift();
+	              y = c2y + stack.shift();
+	              path.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+	              break;
+
+	            case 26:
+	              // vvcurveto
+	              if (stack.length % 2) {
+	                x += stack.shift();
+	              }
+
+	              while (stack.length >= 4) {
+	                c1x = x;
+	                c1y = y + stack.shift();
+	                c2x = c1x + stack.shift();
+	                c2y = c1y + stack.shift();
+	                x = c2x;
+	                y = c2y + stack.shift();
+	                path.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+	              }
+	              break;
+
+	            case 27:
+	              // hhcurveto
+	              if (stack.length % 2) {
+	                y += stack.shift();
+	              }
+
+	              while (stack.length >= 4) {
+	                c1x = x + stack.shift();
+	                c1y = y;
+	                c2x = c1x + stack.shift();
+	                c2y = c1y + stack.shift();
+	                x = c2x + stack.shift();
+	                y = c2y;
+	                path.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+	              }
+	              break;
+
+	            case 28:
+	              // shortint
+	              stack.push(stream.readInt16BE());
+	              break;
+
+	            case 29:
+	              // callgsubr
+	              index = stack.pop() + gsubrsBias;
+	              subr = gsubrs[index];
+	              if (subr) {
+	                usedGsubrs[index] = true;
+	                var p = stream.pos;
+	                var e = end;
+	                stream.pos = subr.offset;
+	                end = subr.offset + subr.length;
+	                parse();
+	                stream.pos = p;
+	                end = e;
+	              }
+	              break;
+
+	            case 30: // vhcurveto
+	            case 31:
+	              // hvcurveto
+	              phase = op === 31;
+	              while (stack.length >= 4) {
+	                if (phase) {
 	                  c1x = x + stack.shift();
 	                  c1y = y;
 	                  c2x = c1x + stack.shift();
 	                  c2y = c1y + stack.shift();
+	                  y = c2y + stack.shift();
+	                  x = c2x + (stack.length === 1 ? stack.shift() : 0);
+	                } else {
+	                  c1x = x;
+	                  c1y = y + stack.shift();
+	                  c2x = c1x + stack.shift();
+	                  c2y = c1y + stack.shift();
 	                  x = c2x + stack.shift();
-	                  y = c2y;
-	                  path.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+	                  y = c2y + (stack.length === 1 ? stack.shift() : 0);
 	                }
-	                break;
 
-	              case 28:
-	                // shortint
-	                stack.push(stream.readInt16BE());
-	                break;
+	                path.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+	                phase = !phase;
+	              }
+	              break;
 
-	              case 29:
-	                // callgsubr
-	                index = stack.pop() + gsubrsBias;
-	                subr = gsubrs[index];
-	                if (subr) {
-	                  usedGsubrs[index] = true;
-	                  var p = stream.pos;
-	                  var e = end;
-	                  stream.pos = subr.offset;
-	                  end = subr.offset + subr.length;
-	                  parse();
-	                  stream.pos = p;
-	                  end = e;
-	                }
-	                break;
+	            case 12:
+	              op = stream.readUInt8();
+	              switch (op) {
+	                case 3:
+	                  // and
+	                  var a = stack.pop();
+	                  var b = stack.pop();
+	                  stack.push(a && b ? 1 : 0);
+	                  break;
 
-	              case 30: // vhcurveto
-	              case 31:
-	                // hvcurveto
-	                phase = op === 31;
-	                while (stack.length >= 4) {
-	                  if (phase) {
-	                    c1x = x + stack.shift();
-	                    c1y = y;
-	                    c2x = c1x + stack.shift();
-	                    c2y = c1y + stack.shift();
-	                    y = c2y + stack.shift();
-	                    x = c2x + (stack.length === 1 ? stack.shift() : 0);
-	                  } else {
-	                    c1x = x;
-	                    c1y = y + stack.shift();
-	                    c2x = c1x + stack.shift();
-	                    c2y = c1y + stack.shift();
-	                    x = c2x + stack.shift();
-	                    y = c2y + (stack.length === 1 ? stack.shift() : 0);
+	                case 4:
+	                  // or
+	                  a = stack.pop();
+	                  b = stack.pop();
+	                  stack.push(a || b ? 1 : 0);
+	                  break;
+
+	                case 5:
+	                  // not
+	                  a = stack.pop();
+	                  stack.push(a ? 0 : 1);
+	                  break;
+
+	                case 9:
+	                  // abs
+	                  a = stack.pop();
+	                  stack.push(Math.abs(a));
+	                  break;
+
+	                case 10:
+	                  // add
+	                  a = stack.pop();
+	                  b = stack.pop();
+	                  stack.push(a + b);
+	                  break;
+
+	                case 11:
+	                  // sub
+	                  a = stack.pop();
+	                  b = stack.pop();
+	                  stack.push(a - b);
+	                  break;
+
+	                case 12:
+	                  // div
+	                  a = stack.pop();
+	                  b = stack.pop();
+	                  stack.push(a / b);
+	                  break;
+
+	                case 14:
+	                  // neg
+	                  a = stack.pop();
+	                  stack.push(-a);
+	                  break;
+
+	                case 15:
+	                  // eq
+	                  a = stack.pop();
+	                  b = stack.pop();
+	                  stack.push(a === b ? 1 : 0);
+	                  break;
+
+	                case 18:
+	                  // drop
+	                  stack.pop();
+	                  break;
+
+	                case 20:
+	                  // put
+	                  var val = stack.pop();
+	                  var idx = stack.pop();
+	                  trans[idx] = val;
+	                  break;
+
+	                case 21:
+	                  // get
+	                  idx = stack.pop();
+	                  stack.push(trans[idx] || 0);
+	                  break;
+
+	                case 22:
+	                  // ifelse
+	                  var s1 = stack.pop();
+	                  var s2 = stack.pop();
+	                  var v1 = stack.pop();
+	                  var v2 = stack.pop();
+	                  stack.push(v1 <= v2 ? s1 : s2);
+	                  break;
+
+	                case 23:
+	                  // random
+	                  stack.push(Math.random());
+	                  break;
+
+	                case 24:
+	                  // mul
+	                  a = stack.pop();
+	                  b = stack.pop();
+	                  stack.push(a * b);
+	                  break;
+
+	                case 26:
+	                  // sqrt
+	                  a = stack.pop();
+	                  stack.push(Math.sqrt(a));
+	                  break;
+
+	                case 27:
+	                  // dup
+	                  a = stack.pop();
+	                  stack.push(a, a);
+	                  break;
+
+	                case 28:
+	                  // exch
+	                  a = stack.pop();
+	                  b = stack.pop();
+	                  stack.push(b, a);
+	                  break;
+
+	                case 29:
+	                  // index
+	                  idx = stack.pop();
+	                  if (idx < 0) {
+	                    idx = 0;
+	                  } else if (idx > stack.length - 1) {
+	                    idx = stack.length - 1;
 	                  }
 
-	                  path.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
-	                  phase = !phase;
-	                }
-	                break;
+	                  stack.push(stack[idx]);
+	                  break;
 
-	              case 12:
-	                op = stream.readUInt8();
-	                switch (op) {
-	                  case 3:
-	                    // and
-	                    var a = stack.pop();
-	                    var b = stack.pop();
-	                    stack.push(a && b ? 1 : 0);
-	                    break;
+	                case 30:
+	                  // roll
+	                  var n = stack.pop();
+	                  var j = stack.pop();
 
-	                  case 4:
-	                    // or
-	                    a = stack.pop();
-	                    b = stack.pop();
-	                    stack.push(a || b ? 1 : 0);
-	                    break;
-
-	                  case 5:
-	                    // not
-	                    a = stack.pop();
-	                    stack.push(a ? 0 : 1);
-	                    break;
-
-	                  case 9:
-	                    // abs
-	                    a = stack.pop();
-	                    stack.push(Math.abs(a));
-	                    break;
-
-	                  case 10:
-	                    // add
-	                    a = stack.pop();
-	                    b = stack.pop();
-	                    stack.push(a + b);
-	                    break;
-
-	                  case 11:
-	                    // sub
-	                    a = stack.pop();
-	                    b = stack.pop();
-	                    stack.push(a - b);
-	                    break;
-
-	                  case 12:
-	                    // div
-	                    a = stack.pop();
-	                    b = stack.pop();
-	                    stack.push(a / b);
-	                    break;
-
-	                  case 14:
-	                    // neg
-	                    a = stack.pop();
-	                    stack.push(-a);
-	                    break;
-
-	                  case 15:
-	                    // eq
-	                    a = stack.pop();
-	                    b = stack.pop();
-	                    stack.push(a === b ? 1 : 0);
-	                    break;
-
-	                  case 18:
-	                    // drop
-	                    stack.pop();
-	                    break;
-
-	                  case 20:
-	                    // put
-	                    var val = stack.pop();
-	                    var idx = stack.pop();
-	                    trans[idx] = val;
-	                    break;
-
-	                  case 21:
-	                    // get
-	                    idx = stack.pop();
-	                    stack.push(trans[idx] || 0);
-	                    break;
-
-	                  case 22:
-	                    // ifelse
-	                    var s1 = stack.pop();
-	                    var s2 = stack.pop();
-	                    var v1 = stack.pop();
-	                    var v2 = stack.pop();
-	                    stack.push(v1 <= v2 ? s1 : s2);
-	                    break;
-
-	                  case 23:
-	                    // random
-	                    stack.push(Math.random());
-	                    break;
-
-	                  case 24:
-	                    // mul
-	                    a = stack.pop();
-	                    b = stack.pop();
-	                    stack.push(a * b);
-	                    break;
-
-	                  case 26:
-	                    // sqrt
-	                    a = stack.pop();
-	                    stack.push(Math.sqrt(a));
-	                    break;
-
-	                  case 27:
-	                    // dup
-	                    a = stack.pop();
-	                    stack.push(a, a);
-	                    break;
-
-	                  case 28:
-	                    // exch
-	                    a = stack.pop();
-	                    b = stack.pop();
-	                    stack.push(b, a);
-	                    break;
-
-	                  case 29:
-	                    // index
-	                    idx = stack.pop();
-	                    if (idx < 0) {
-	                      idx = 0;
-	                    } else if (idx > stack.length - 1) {
-	                      idx = stack.length - 1;
-	                    }
-
-	                    stack.push(stack[idx]);
-	                    break;
-
-	                  case 30:
-	                    // roll
-	                    var n = stack.pop();
-	                    var j = stack.pop();
-
-	                    if (j >= 0) {
-	                      while (j > 0) {
-	                        var t = stack[n - 1];
-	                        for (var i = n - 2; i >= 0; i--) {
-	                          stack[i + 1] = stack[i];
-	                        }
-
-	                        stack[0] = t;
-	                        j--;
+	                  if (j >= 0) {
+	                    while (j > 0) {
+	                      var t = stack[n - 1];
+	                      for (var i = n - 2; i >= 0; i--) {
+	                        stack[i + 1] = stack[i];
 	                      }
-	                    } else {
-	                      while (j < 0) {
-	                        var t = stack[0];
-	                        for (var _i = 0; _i <= n; _i++) {
-	                          stack[_i] = stack[_i + 1];
-	                        }
 
-	                        stack[n - 1] = t;
-	                        j++;
+	                      stack[0] = t;
+	                      j--;
+	                    }
+	                  } else {
+	                    while (j < 0) {
+	                      var t = stack[0];
+	                      for (var _i = 0; _i <= n; _i++) {
+	                        stack[_i] = stack[_i + 1];
 	                      }
+
+	                      stack[n - 1] = t;
+	                      j++;
 	                    }
-	                    break;
+	                  }
+	                  break;
 
-	                  case 34:
-	                    // hflex
-	                    c1x = x + stack.shift();
-	                    c1y = y;
-	                    c2x = c1x + stack.shift();
-	                    c2y = c1y + stack.shift();
-	                    var c3x = c2x + stack.shift();
-	                    var c3y = c2y;
-	                    var c4x = c3x + stack.shift();
-	                    var c4y = c3y;
-	                    var c5x = c4x + stack.shift();
-	                    var c5y = c4y;
-	                    var c6x = c5x + stack.shift();
-	                    var c6y = c5y;
-	                    x = c6x;
-	                    y = c6y;
+	                case 34:
+	                  // hflex
+	                  c1x = x + stack.shift();
+	                  c1y = y;
+	                  c2x = c1x + stack.shift();
+	                  c2y = c1y + stack.shift();
+	                  var c3x = c2x + stack.shift();
+	                  var c3y = c2y;
+	                  var c4x = c3x + stack.shift();
+	                  var c4y = c3y;
+	                  var c5x = c4x + stack.shift();
+	                  var c5y = c4y;
+	                  var c6x = c5x + stack.shift();
+	                  var c6y = c5y;
+	                  x = c6x;
+	                  y = c6y;
 
-	                    path.bezierCurveTo(c1x, c1y, c2x, c2y, c3x, c3y);
-	                    path.bezierCurveTo(c4x, c4y, c5x, c5y, c6x, c6y);
-	                    break;
+	                  path.bezierCurveTo(c1x, c1y, c2x, c2y, c3x, c3y);
+	                  path.bezierCurveTo(c4x, c4y, c5x, c5y, c6x, c6y);
+	                  break;
 
-	                  case 35:
-	                    // flex
-	                    var pts = [];
+	                case 35:
+	                  // flex
+	                  var pts = [];
 
-	                    for (var _i2 = 0; _i2 <= 5; _i2++) {
-	                      x += stack.shift();
-	                      y += stack.shift();
-	                      pts.push(x, y);
-	                    }
-
-	                    path.bezierCurveTo.apply(path, _toConsumableArray(pts.slice(0, 6)));
-	                    path.bezierCurveTo.apply(path, _toConsumableArray(pts.slice(6)));
-	                    stack.shift(); // fd
-	                    break;
-
-	                  case 36:
-	                    // hflex1
-	                    c1x = x + stack.shift();
-	                    c1y = y + stack.shift();
-	                    c2x = c1x + stack.shift();
-	                    c2y = c1y + stack.shift();
-	                    c3x = c2x + stack.shift();
-	                    c3y = c2y;
-	                    c4x = c3x + stack.shift();
-	                    c4y = c3y;
-	                    c5x = c4x + stack.shift();
-	                    c5y = c4y + stack.shift();
-	                    c6x = c5x + stack.shift();
-	                    c6y = c5y;
-	                    x = c6x;
-	                    y = c6y;
-
-	                    path.bezierCurveTo(c1x, c1y, c2x, c2y, c3x, c3y);
-	                    path.bezierCurveTo(c4x, c4y, c5x, c5y, c6x, c6y);
-	                    break;
-
-	                  case 37:
-	                    // flex1
-	                    var startx = x;
-	                    var starty = y;
-
-	                    pts = [];
-	                    for (var _i3 = 0; _i3 <= 4; _i3++) {
-	                      x += stack.shift();
-	                      y += stack.shift();
-	                      pts.push(x, y);
-	                    }
-
-	                    if (Math.abs(x - startx) > Math.abs(y - starty)) {
-	                      // horizontal
-	                      x += stack.shift();
-	                      y = starty;
-	                    } else {
-	                      x = startx;
-	                      y += stack.shift();
-	                    }
-
+	                  for (var _i2 = 0; _i2 <= 5; _i2++) {
+	                    x += stack.shift();
+	                    y += stack.shift();
 	                    pts.push(x, y);
-	                    path.bezierCurveTo.apply(path, _toConsumableArray(pts.slice(0, 6)));
-	                    path.bezierCurveTo.apply(path, _toConsumableArray(pts.slice(6)));
-	                    break;
+	                  }
 
-	                  default:
-	                    throw new Error('Unknown op: 12 ' + op);
-	                }
-	                break;
+	                  path.bezierCurveTo.apply(path, pts.slice(0, 6));
+	                  path.bezierCurveTo.apply(path, pts.slice(6));
+	                  stack.shift(); // fd
+	                  break;
 
-	              default:
-	                throw new Error('Unknown op: ' + op);
-	            }
-	          } else if (op < 247) {
-	            stack.push(op - 139);
-	          } else if (op < 251) {
-	            var b1 = stream.readUInt8();
-	            stack.push((op - 247) * 256 + b1 + 108);
-	          } else if (op < 255) {
-	            var b1 = stream.readUInt8();
-	            stack.push(-(op - 251) * 256 - b1 - 108);
-	          } else {
-	            stack.push(stream.readInt32BE() / 65536);
+	                case 36:
+	                  // hflex1
+	                  c1x = x + stack.shift();
+	                  c1y = y + stack.shift();
+	                  c2x = c1x + stack.shift();
+	                  c2y = c1y + stack.shift();
+	                  c3x = c2x + stack.shift();
+	                  c3y = c2y;
+	                  c4x = c3x + stack.shift();
+	                  c4y = c3y;
+	                  c5x = c4x + stack.shift();
+	                  c5y = c4y + stack.shift();
+	                  c6x = c5x + stack.shift();
+	                  c6y = c5y;
+	                  x = c6x;
+	                  y = c6y;
+
+	                  path.bezierCurveTo(c1x, c1y, c2x, c2y, c3x, c3y);
+	                  path.bezierCurveTo(c4x, c4y, c5x, c5y, c6x, c6y);
+	                  break;
+
+	                case 37:
+	                  // flex1
+	                  var startx = x;
+	                  var starty = y;
+
+	                  pts = [];
+	                  for (var _i3 = 0; _i3 <= 4; _i3++) {
+	                    x += stack.shift();
+	                    y += stack.shift();
+	                    pts.push(x, y);
+	                  }
+
+	                  if (Math.abs(x - startx) > Math.abs(y - starty)) {
+	                    // horizontal
+	                    x += stack.shift();
+	                    y = starty;
+	                  } else {
+	                    x = startx;
+	                    y += stack.shift();
+	                  }
+
+	                  pts.push(x, y);
+	                  path.bezierCurveTo.apply(path, pts.slice(0, 6));
+	                  path.bezierCurveTo.apply(path, pts.slice(6));
+	                  break;
+
+	                default:
+	                  throw new Error('Unknown op: 12 ' + op);
+	              }
+	              break;
+
+	            default:
+	              throw new Error('Unknown op: ' + op);
 	          }
+	        } else if (op < 247) {
+	          stack.push(op - 139);
+	        } else if (op < 251) {
+	          var b1 = stream.readUInt8();
+	          stack.push((op - 247) * 256 + b1 + 108);
+	        } else if (op < 255) {
+	          var b1 = stream.readUInt8();
+	          stack.push(-(op - 251) * 256 - b1 - 108);
+	        } else {
+	          stack.push(stream.readInt32BE() / 65536);
 	        }
-	      };
+	      }
+	    };
 
-	      parse();
-	      return path;
-	    }
-	  }]);
+	    parse();
+	    return path;
+	  };
 
 	  return CFFGlyph;
 	}(Glyph);
@@ -49206,53 +48429,48 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function SBIXGlyph() {
 	    _classCallCheck(this, SBIXGlyph);
 
-	    return _possibleConstructorReturn(this, (SBIXGlyph.__proto__ || _Object$getPrototypeOf(SBIXGlyph)).apply(this, arguments));
+	    return _possibleConstructorReturn(this, _TTFGlyph.apply(this, arguments));
 	  }
 
-	  _createClass(SBIXGlyph, [{
-	    key: 'getImageForSize',
-
-	    /**
-	     * Returns an object representing a glyph image at the given point size.
-	     * The object has a data property with a Buffer containing the actual image data,
-	     * along with the image type, and origin.
-	     *
-	     * @param {number} size
-	     * @return {object}
-	     */
-	    value: function getImageForSize(size) {
-	      for (var i = 0; i < this._font.sbix.imageTables.length; i++) {
-	        var table = this._font.sbix.imageTables[i];
-	        if (table.ppem >= size) {
-	          break;
-	        }
-	      }
-
-	      var offsets = table.imageOffsets;
-	      var start = offsets[this.id];
-	      var end = offsets[this.id + 1];
-
-	      if (start === end) {
-	        return null;
-	      }
-
-	      this._font.stream.pos = start;
-	      return SBIXImage.decode(this._font.stream, { buflen: end - start });
-	    }
-	  }, {
-	    key: 'render',
-	    value: function render(ctx, size) {
-	      var img = this.getImageForSize(size);
-	      if (img != null) {
-	        var scale = size / this._font.unitsPerEm;
-	        ctx.image(img.data, { height: size, x: img.originX, y: (this.bbox.minY - img.originY) * scale });
-	      }
-
-	      if (this._font.sbix.flags.renderOutlines) {
-	        _get(SBIXGlyph.prototype.__proto__ || _Object$getPrototypeOf(SBIXGlyph.prototype), 'render', this).call(this, ctx, size);
+	  /**
+	   * Returns an object representing a glyph image at the given point size.
+	   * The object has a data property with a Buffer containing the actual image data,
+	   * along with the image type, and origin.
+	   *
+	   * @param {number} size
+	   * @return {object}
+	   */
+	  SBIXGlyph.prototype.getImageForSize = function getImageForSize(size) {
+	    for (var i = 0; i < this._font.sbix.imageTables.length; i++) {
+	      var table = this._font.sbix.imageTables[i];
+	      if (table.ppem >= size) {
+	        break;
 	      }
 	    }
-	  }]);
+
+	    var offsets = table.imageOffsets;
+	    var start = offsets[this.id];
+	    var end = offsets[this.id + 1];
+
+	    if (start === end) {
+	      return null;
+	    }
+
+	    this._font.stream.pos = start;
+	    return SBIXImage.decode(this._font.stream, { buflen: end - start });
+	  };
+
+	  SBIXGlyph.prototype.render = function render(ctx, size) {
+	    var img = this.getImageForSize(size);
+	    if (img != null) {
+	      var scale = size / this._font.unitsPerEm;
+	      ctx.image(img.data, { height: size, x: img.originX, y: (this.bbox.minY - img.originY) * scale });
+	    }
+
+	    if (this._font.sbix.flags.renderOutlines) {
+	      _TTFGlyph.prototype.render.call(this, ctx, size);
+	    }
+	  };
 
 	  return SBIXGlyph;
 	}(TTFGlyph);
@@ -49277,63 +48495,53 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function COLRGlyph() {
 	    _classCallCheck(this, COLRGlyph);
 
-	    return _possibleConstructorReturn(this, (COLRGlyph.__proto__ || _Object$getPrototypeOf(COLRGlyph)).apply(this, arguments));
+	    return _possibleConstructorReturn(this, _Glyph.apply(this, arguments));
 	  }
 
+	  COLRGlyph.prototype._getBBox = function _getBBox() {
+	    var bbox = new BBox();
+	    for (var i = 0; i < this.layers.length; i++) {
+	      var layer = this.layers[i];
+	      var b = layer.glyph.bbox;
+	      bbox.addPoint(b.minX, b.minY);
+	      bbox.addPoint(b.maxX, b.maxY);
+	    }
+
+	    return bbox;
+	  };
+
+	  /**
+	   * Returns an array of objects containing the glyph and color for
+	   * each layer in the composite color glyph.
+	   * @type {object[]}
+	   */
+
+
+	  COLRGlyph.prototype.render = function render(ctx, size) {
+	    for (var _iterator = this.layers, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	      var _ref;
+
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
+	      } else {
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
+	      }
+
+	      var _ref2 = _ref,
+	          glyph = _ref2.glyph,
+	          color = _ref2.color;
+
+	      ctx.fillColor([color.red, color.green, color.blue], color.alpha / 255 * 100);
+	      glyph.render(ctx, size);
+	    }
+
+	    return;
+	  };
+
 	  _createClass(COLRGlyph, [{
-	    key: '_getBBox',
-	    value: function _getBBox() {
-	      var bbox = new BBox();
-	      for (var i = 0; i < this.layers.length; i++) {
-	        var layer = this.layers[i];
-	        var b = layer.glyph.bbox;
-	        bbox.addPoint(b.minX, b.minY);
-	        bbox.addPoint(b.maxX, b.maxY);
-	      }
-
-	      return bbox;
-	    }
-
-	    /**
-	     * Returns an array of objects containing the glyph and color for
-	     * each layer in the composite color glyph.
-	     * @type {object[]}
-	     */
-
-	  }, {
-	    key: 'render',
-	    value: function render(ctx, size) {
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
-
-	      try {
-	        for (var _iterator = _getIterator(this.layers), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var _step$value = _step.value,
-	              glyph = _step$value.glyph,
-	              color = _step$value.color;
-
-	          ctx.fillColor([color.red, color.green, color.blue], color.alpha / 255 * 100);
-	          glyph.render(ctx, size);
-	        }
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
-	        }
-	      }
-
-	      return;
-	    }
-	  }, {
 	    key: 'layers',
 	    get: function get() {
 	      var cpal = this._font.CPAL;
@@ -49417,375 +48625,365 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.normalizedCoords = this.normalizeCoords(coords);
 	  }
 
-	  _createClass(GlyphVariationProcessor, [{
-	    key: 'normalizeCoords',
-	    value: function normalizeCoords(coords) {
-	      // the default mapping is linear along each axis, in two segments:
-	      // from the minValue to defaultValue, and from defaultValue to maxValue.
-	      var normalized = [];
-	      for (var i = 0; i < this.font.fvar.axis.length; i++) {
-	        var axis = this.font.fvar.axis[i];
-	        if (coords[i] < axis.defaultValue) {
-	          normalized.push((coords[i] - axis.defaultValue) / (axis.defaultValue - axis.minValue));
-	        } else {
-	          normalized.push((coords[i] - axis.defaultValue) / (axis.maxValue - axis.defaultValue));
-	        }
+	  GlyphVariationProcessor.prototype.normalizeCoords = function normalizeCoords(coords) {
+	    // the default mapping is linear along each axis, in two segments:
+	    // from the minValue to defaultValue, and from defaultValue to maxValue.
+	    var normalized = [];
+	    for (var i = 0; i < this.font.fvar.axis.length; i++) {
+	      var axis = this.font.fvar.axis[i];
+	      if (coords[i] < axis.defaultValue) {
+	        normalized.push((coords[i] - axis.defaultValue) / (axis.defaultValue - axis.minValue));
+	      } else {
+	        normalized.push((coords[i] - axis.defaultValue) / (axis.maxValue - axis.defaultValue));
 	      }
-
-	      // if there is an avar table, the normalized value is calculated
-	      // by interpolating between the two nearest mapped values.
-	      if (this.font.avar) {
-	        for (var i = 0; i < this.font.avar.segment.length; i++) {
-	          var segment = this.font.avar.segment[i];
-	          for (var j = 0; j < segment.correspondence.length; j++) {
-	            var pair = segment.correspondence[j];
-	            if (j >= 1 && normalized[i] < pair.fromCoord) {
-	              var prev = segment.correspondence[j - 1];
-	              normalized[i] = (normalized[i] - prev.fromCoord) * (pair.toCoord - prev.toCoord) / (pair.fromCoord - prev.fromCoord) + prev.toCoord;
-
-	              break;
-	            }
-	          }
-	        }
-	      }
-
-	      return normalized;
 	    }
-	  }, {
-	    key: 'transformPoints',
-	    value: function transformPoints(gid, glyphPoints) {
-	      if (!this.font.fvar || !this.font.gvar) {
-	        return;
-	      }
 
-	      var gvar = this.font.gvar;
+	    // if there is an avar table, the normalized value is calculated
+	    // by interpolating between the two nearest mapped values.
+	    if (this.font.avar) {
+	      for (var i = 0; i < this.font.avar.segment.length; i++) {
+	        var segment = this.font.avar.segment[i];
+	        for (var j = 0; j < segment.correspondence.length; j++) {
+	          var pair = segment.correspondence[j];
+	          if (j >= 1 && normalized[i] < pair.fromCoord) {
+	            var prev = segment.correspondence[j - 1];
+	            normalized[i] = (normalized[i] - prev.fromCoord) * (pair.toCoord - prev.toCoord) / (pair.fromCoord - prev.fromCoord) + prev.toCoord;
 
-	      if (gid >= gvar.glyphCount) {
-	        return;
-	      }
-
-	      var offset = gvar.offsets[gid];
-	      if (offset === gvar.offsets[gid + 1]) {
-	        return;
-	      }
-
-	      // Read the gvar data for this glyph
-	      var stream = this.font.stream;
-
-	      stream.pos = offset;
-	      if (stream.pos >= stream.length) {
-	        return;
-	      }
-
-	      var tupleCount = stream.readUInt16BE();
-	      var offsetToData = offset + stream.readUInt16BE();
-
-	      if (tupleCount & TUPLES_SHARE_POINT_NUMBERS) {
-	        var here = stream.pos;
-	        stream.pos = offsetToData;
-	        var sharedPoints = this.decodePoints();
-	        offsetToData = stream.pos;
-	        stream.pos = here;
-	      }
-
-	      var origPoints = glyphPoints.map(function (pt) {
-	        return pt.copy();
-	      });
-
-	      tupleCount &= TUPLE_COUNT_MASK;
-	      for (var i = 0; i < tupleCount; i++) {
-	        var tupleDataSize = stream.readUInt16BE();
-	        var tupleIndex = stream.readUInt16BE();
-
-	        if (tupleIndex & EMBEDDED_TUPLE_COORD) {
-	          var tupleCoords = [];
-	          for (var a = 0; a < gvar.axisCount; a++) {
-	            tupleCoords.push(stream.readInt16BE() / 16384);
-	          }
-	        } else {
-	          if ((tupleIndex & TUPLE_INDEX_MASK) >= gvar.globalCoordCount) {
-	            throw new Error('Invalid gvar table');
-	          }
-
-	          var tupleCoords = gvar.globalCoords[tupleIndex & TUPLE_INDEX_MASK];
-	        }
-
-	        if (tupleIndex & INTERMEDIATE_TUPLE) {
-	          var startCoords = [];
-	          for (var _a = 0; _a < gvar.axisCount; _a++) {
-	            startCoords.push(stream.readInt16BE() / 16384);
-	          }
-
-	          var endCoords = [];
-	          for (var _a2 = 0; _a2 < gvar.axisCount; _a2++) {
-	            endCoords.push(stream.readInt16BE() / 16384);
+	            break;
 	          }
 	        }
+	      }
+	    }
 
-	        // Get the factor at which to apply this tuple
-	        var factor = this.tupleFactor(tupleIndex, tupleCoords, startCoords, endCoords);
-	        if (factor === 0) {
-	          offsetToData += tupleDataSize;
-	          continue;
+	    return normalized;
+	  };
+
+	  GlyphVariationProcessor.prototype.transformPoints = function transformPoints(gid, glyphPoints) {
+	    if (!this.font.fvar || !this.font.gvar) {
+	      return;
+	    }
+
+	    var gvar = this.font.gvar;
+
+	    if (gid >= gvar.glyphCount) {
+	      return;
+	    }
+
+	    var offset = gvar.offsets[gid];
+	    if (offset === gvar.offsets[gid + 1]) {
+	      return;
+	    }
+
+	    // Read the gvar data for this glyph
+	    var stream = this.font.stream;
+
+	    stream.pos = offset;
+	    if (stream.pos >= stream.length) {
+	      return;
+	    }
+
+	    var tupleCount = stream.readUInt16BE();
+	    var offsetToData = offset + stream.readUInt16BE();
+
+	    if (tupleCount & TUPLES_SHARE_POINT_NUMBERS) {
+	      var here = stream.pos;
+	      stream.pos = offsetToData;
+	      var sharedPoints = this.decodePoints();
+	      offsetToData = stream.pos;
+	      stream.pos = here;
+	    }
+
+	    var origPoints = glyphPoints.map(function (pt) {
+	      return pt.copy();
+	    });
+
+	    tupleCount &= TUPLE_COUNT_MASK;
+	    for (var i = 0; i < tupleCount; i++) {
+	      var tupleDataSize = stream.readUInt16BE();
+	      var tupleIndex = stream.readUInt16BE();
+
+	      if (tupleIndex & EMBEDDED_TUPLE_COORD) {
+	        var tupleCoords = [];
+	        for (var a = 0; a < gvar.axisCount; a++) {
+	          tupleCoords.push(stream.readInt16BE() / 16384);
+	        }
+	      } else {
+	        if ((tupleIndex & TUPLE_INDEX_MASK) >= gvar.globalCoordCount) {
+	          throw new Error('Invalid gvar table');
 	        }
 
-	        var here = stream.pos;
-	        stream.pos = offsetToData;
+	        var tupleCoords = gvar.globalCoords[tupleIndex & TUPLE_INDEX_MASK];
+	      }
 
-	        if (tupleIndex & PRIVATE_POINT_NUMBERS) {
-	          var points = this.decodePoints();
-	        } else {
-	          var points = sharedPoints;
+	      if (tupleIndex & INTERMEDIATE_TUPLE) {
+	        var startCoords = [];
+	        for (var _a = 0; _a < gvar.axisCount; _a++) {
+	          startCoords.push(stream.readInt16BE() / 16384);
 	        }
 
-	        // points.length = 0 means there are deltas for all points
-	        var nPoints = points.length === 0 ? glyphPoints.length : points.length;
-	        var xDeltas = this.decodeDeltas(nPoints);
-	        var yDeltas = this.decodeDeltas(nPoints);
-
-	        if (points.length === 0) {
-	          // all points
-	          for (var _i = 0; _i < glyphPoints.length; _i++) {
-	            var point = glyphPoints[_i];
-	            point.x += Math.round(xDeltas[_i] * factor);
-	            point.y += Math.round(yDeltas[_i] * factor);
-	          }
-	        } else {
-	          var outPoints = origPoints.map(function (pt) {
-	            return pt.copy();
-	          });
-	          var hasDelta = glyphPoints.map(function () {
-	            return false;
-	          });
-
-	          for (var _i2 = 0; _i2 < points.length; _i2++) {
-	            var idx = points[_i2];
-	            if (idx < glyphPoints.length) {
-	              var _point = outPoints[idx];
-	              hasDelta[idx] = true;
-
-	              _point.x += Math.round(xDeltas[_i2] * factor);
-	              _point.y += Math.round(yDeltas[_i2] * factor);
-	            }
-	          }
-
-	          this.interpolateMissingDeltas(outPoints, origPoints, hasDelta);
-
-	          for (var _i3 = 0; _i3 < glyphPoints.length; _i3++) {
-	            var deltaX = outPoints[_i3].x - origPoints[_i3].x;
-	            var deltaY = outPoints[_i3].y - origPoints[_i3].y;
-
-	            glyphPoints[_i3].x += deltaX;
-	            glyphPoints[_i3].y += deltaY;
-	          }
+	        var endCoords = [];
+	        for (var _a2 = 0; _a2 < gvar.axisCount; _a2++) {
+	          endCoords.push(stream.readInt16BE() / 16384);
 	        }
+	      }
 
+	      // Get the factor at which to apply this tuple
+	      var factor = this.tupleFactor(tupleIndex, tupleCoords, startCoords, endCoords);
+	      if (factor === 0) {
 	        offsetToData += tupleDataSize;
-	        stream.pos = here;
-	      }
-	    }
-	  }, {
-	    key: 'decodePoints',
-	    value: function decodePoints() {
-	      var stream = this.font.stream;
-	      var count = stream.readUInt8();
-
-	      if (count & POINTS_ARE_WORDS) {
-	        count = (count & POINT_RUN_COUNT_MASK) << 8 | stream.readUInt8();
+	        continue;
 	      }
 
-	      var points = new Uint16Array(count);
-	      var i = 0;
-	      var point = 0;
-	      while (i < count) {
-	        var run = stream.readUInt8();
-	        var runCount = (run & POINT_RUN_COUNT_MASK) + 1;
-	        var fn = run & POINTS_ARE_WORDS ? stream.readUInt16 : stream.readUInt8;
+	      var here = stream.pos;
+	      stream.pos = offsetToData;
 
-	        for (var j = 0; j < runCount && i < count; j++) {
-	          point += fn.call(stream);
-	          points[i++] = point;
+	      if (tupleIndex & PRIVATE_POINT_NUMBERS) {
+	        var points = this.decodePoints();
+	      } else {
+	        var points = sharedPoints;
+	      }
+
+	      // points.length = 0 means there are deltas for all points
+	      var nPoints = points.length === 0 ? glyphPoints.length : points.length;
+	      var xDeltas = this.decodeDeltas(nPoints);
+	      var yDeltas = this.decodeDeltas(nPoints);
+
+	      if (points.length === 0) {
+	        // all points
+	        for (var _i = 0; _i < glyphPoints.length; _i++) {
+	          var point = glyphPoints[_i];
+	          point.x += Math.round(xDeltas[_i] * factor);
+	          point.y += Math.round(yDeltas[_i] * factor);
 	        }
-	      }
+	      } else {
+	        var outPoints = origPoints.map(function (pt) {
+	          return pt.copy();
+	        });
+	        var hasDelta = glyphPoints.map(function () {
+	          return false;
+	        });
 
-	      return points;
-	    }
-	  }, {
-	    key: 'decodeDeltas',
-	    value: function decodeDeltas(count) {
-	      var stream = this.font.stream;
-	      var i = 0;
-	      var deltas = new Int16Array(count);
+	        for (var _i2 = 0; _i2 < points.length; _i2++) {
+	          var idx = points[_i2];
+	          if (idx < glyphPoints.length) {
+	            var _point = outPoints[idx];
+	            hasDelta[idx] = true;
 
-	      while (i < count) {
-	        var run = stream.readUInt8();
-	        var runCount = (run & DELTA_RUN_COUNT_MASK) + 1;
-
-	        if (run & DELTAS_ARE_ZERO) {
-	          i += runCount;
-	        } else {
-	          var fn = run & DELTAS_ARE_WORDS ? stream.readInt16BE : stream.readInt8;
-	          for (var j = 0; j < runCount && i < count; j++) {
-	            deltas[i++] = fn.call(stream);
+	            _point.x += Math.round(xDeltas[_i2] * factor);
+	            _point.y += Math.round(yDeltas[_i2] * factor);
 	          }
 	        }
+
+	        this.interpolateMissingDeltas(outPoints, origPoints, hasDelta);
+
+	        for (var _i3 = 0; _i3 < glyphPoints.length; _i3++) {
+	          var deltaX = outPoints[_i3].x - origPoints[_i3].x;
+	          var deltaY = outPoints[_i3].y - origPoints[_i3].y;
+
+	          glyphPoints[_i3].x += deltaX;
+	          glyphPoints[_i3].y += deltaY;
+	        }
 	      }
 
-	      return deltas;
+	      offsetToData += tupleDataSize;
+	      stream.pos = here;
 	    }
-	  }, {
-	    key: 'tupleFactor',
-	    value: function tupleFactor(tupleIndex, tupleCoords, startCoords, endCoords) {
-	      var normalized = this.normalizedCoords;
-	      var gvar = this.font.gvar;
+	  };
 
-	      var factor = 1;
+	  GlyphVariationProcessor.prototype.decodePoints = function decodePoints() {
+	    var stream = this.font.stream;
+	    var count = stream.readUInt8();
 
-	      for (var i = 0; i < gvar.axisCount; i++) {
-	        if (tupleCoords[i] === 0) {
-	          continue;
+	    if (count & POINTS_ARE_WORDS) {
+	      count = (count & POINT_RUN_COUNT_MASK) << 8 | stream.readUInt8();
+	    }
+
+	    var points = new Uint16Array(count);
+	    var i = 0;
+	    var point = 0;
+	    while (i < count) {
+	      var run = stream.readUInt8();
+	      var runCount = (run & POINT_RUN_COUNT_MASK) + 1;
+	      var fn = run & POINTS_ARE_WORDS ? stream.readUInt16 : stream.readUInt8;
+
+	      for (var j = 0; j < runCount && i < count; j++) {
+	        point += fn.call(stream);
+	        points[i++] = point;
+	      }
+	    }
+
+	    return points;
+	  };
+
+	  GlyphVariationProcessor.prototype.decodeDeltas = function decodeDeltas(count) {
+	    var stream = this.font.stream;
+	    var i = 0;
+	    var deltas = new Int16Array(count);
+
+	    while (i < count) {
+	      var run = stream.readUInt8();
+	      var runCount = (run & DELTA_RUN_COUNT_MASK) + 1;
+
+	      if (run & DELTAS_ARE_ZERO) {
+	        i += runCount;
+	      } else {
+	        var fn = run & DELTAS_ARE_WORDS ? stream.readInt16BE : stream.readInt8;
+	        for (var j = 0; j < runCount && i < count; j++) {
+	          deltas[i++] = fn.call(stream);
 	        }
+	      }
+	    }
 
-	        if (normalized[i] === 0) {
+	    return deltas;
+	  };
+
+	  GlyphVariationProcessor.prototype.tupleFactor = function tupleFactor(tupleIndex, tupleCoords, startCoords, endCoords) {
+	    var normalized = this.normalizedCoords;
+	    var gvar = this.font.gvar;
+
+	    var factor = 1;
+
+	    for (var i = 0; i < gvar.axisCount; i++) {
+	      if (tupleCoords[i] === 0) {
+	        continue;
+	      }
+
+	      if (normalized[i] === 0) {
+	        return 0;
+	      }
+
+	      if ((tupleIndex & INTERMEDIATE_TUPLE) === 0) {
+	        if (normalized[i] < Math.min(0, tupleCoords[i]) || normalized[i] > Math.max(0, tupleCoords[i])) {
 	          return 0;
 	        }
 
-	        if ((tupleIndex & INTERMEDIATE_TUPLE) === 0) {
-	          if (normalized[i] < Math.min(0, tupleCoords[i]) || normalized[i] > Math.max(0, tupleCoords[i])) {
-	            return 0;
-	          }
-
-	          factor = factor * normalized[i] / tupleCoords[i];
+	        factor = factor * normalized[i] / tupleCoords[i];
+	      } else {
+	        if (normalized[i] < startCoords[i] || normalized[i] > endCoords[i]) {
+	          return 0;
+	        } else if (normalized[i] < tupleCoords[i]) {
+	          factor = factor * (normalized[i] - startCoords[i]) / (tupleCoords[i] - startCoords[i]);
 	        } else {
-	          if (normalized[i] < startCoords[i] || normalized[i] > endCoords[i]) {
-	            return 0;
-	          } else if (normalized[i] < tupleCoords[i]) {
-	            factor = factor * (normalized[i] - startCoords[i]) / (tupleCoords[i] - startCoords[i]);
-	          } else {
-	            factor = factor * (endCoords[i] - normalized[i]) / (endCoords[i] - tupleCoords[i]);
-	          }
+	          factor = factor * (endCoords[i] - normalized[i]) / (endCoords[i] - tupleCoords[i]);
 	        }
 	      }
-
-	      return factor;
 	    }
 
-	    // Interpolates points without delta values.
-	    // Needed for the Ø and Q glyphs in Skia.
-	    // Algorithm from Freetype.
+	    return factor;
+	  };
 
-	  }, {
-	    key: 'interpolateMissingDeltas',
-	    value: function interpolateMissingDeltas(points, inPoints, hasDelta) {
-	      if (points.length === 0) {
-	        return;
+	  // Interpolates points without delta values.
+	  // Needed for the Ø and Q glyphs in Skia.
+	  // Algorithm from Freetype.
+
+
+	  GlyphVariationProcessor.prototype.interpolateMissingDeltas = function interpolateMissingDeltas(points, inPoints, hasDelta) {
+	    if (points.length === 0) {
+	      return;
+	    }
+
+	    var point = 0;
+	    while (point < points.length) {
+	      var firstPoint = point;
+
+	      // find the end point of the contour
+	      var endPoint = point;
+	      var pt = points[endPoint];
+	      while (!pt.endContour) {
+	        pt = points[++endPoint];
 	      }
 
-	      var point = 0;
-	      while (point < points.length) {
-	        var firstPoint = point;
-
-	        // find the end point of the contour
-	        var endPoint = point;
-	        var pt = points[endPoint];
-	        while (!pt.endContour) {
-	          pt = points[++endPoint];
-	        }
-
-	        // find the first point that has a delta
-	        while (point <= endPoint && !hasDelta[point]) {
-	          point++;
-	        }
-
-	        if (point > endPoint) {
-	          continue;
-	        }
-
-	        var firstDelta = point;
-	        var curDelta = point;
+	      // find the first point that has a delta
+	      while (point <= endPoint && !hasDelta[point]) {
 	        point++;
+	      }
 
-	        while (point <= endPoint) {
-	          // find the next point with a delta, and interpolate intermediate points
-	          if (hasDelta[point]) {
-	            this.deltaInterpolate(curDelta + 1, point - 1, curDelta, point, inPoints, points);
-	            curDelta = point;
-	          }
+	      if (point > endPoint) {
+	        continue;
+	      }
 
-	          point++;
+	      var firstDelta = point;
+	      var curDelta = point;
+	      point++;
+
+	      while (point <= endPoint) {
+	        // find the next point with a delta, and interpolate intermediate points
+	        if (hasDelta[point]) {
+	          this.deltaInterpolate(curDelta + 1, point - 1, curDelta, point, inPoints, points);
+	          curDelta = point;
 	        }
 
-	        // shift contour if we only have a single delta
-	        if (curDelta === firstDelta) {
-	          this.deltaShift(firstPoint, endPoint, curDelta, inPoints, points);
+	        point++;
+	      }
+
+	      // shift contour if we only have a single delta
+	      if (curDelta === firstDelta) {
+	        this.deltaShift(firstPoint, endPoint, curDelta, inPoints, points);
+	      } else {
+	        // otherwise, handle the remaining points at the end and beginning of the contour
+	        this.deltaInterpolate(curDelta + 1, endPoint, curDelta, firstDelta, inPoints, points);
+
+	        if (firstDelta > 0) {
+	          this.deltaInterpolate(firstPoint, firstDelta - 1, curDelta, firstDelta, inPoints, points);
+	        }
+	      }
+
+	      point = endPoint + 1;
+	    }
+	  };
+
+	  GlyphVariationProcessor.prototype.deltaInterpolate = function deltaInterpolate(p1, p2, ref1, ref2, inPoints, outPoints) {
+	    if (p1 > p2) {
+	      return;
+	    }
+
+	    var iterable = ['x', 'y'];
+	    for (var i = 0; i < iterable.length; i++) {
+	      var k = iterable[i];
+	      if (inPoints[ref1][k] > inPoints[ref2][k]) {
+	        var p = ref1;
+	        ref1 = ref2;
+	        ref2 = p;
+	      }
+
+	      var in1 = inPoints[ref1][k];
+	      var in2 = inPoints[ref2][k];
+	      var out1 = outPoints[ref1][k];
+	      var out2 = outPoints[ref2][k];
+
+	      var scale = in1 === in2 ? 0 : (out2 - out1) / (in2 - in1);
+
+	      for (var _p = p1; _p <= p2; _p++) {
+	        var out = inPoints[_p][k];
+
+	        if (out <= in1) {
+	          out += out1 - in1;
+	        } else if (out >= in2) {
+	          out += out2 - in2;
 	        } else {
-	          // otherwise, handle the remaining points at the end and beginning of the contour
-	          this.deltaInterpolate(curDelta + 1, endPoint, curDelta, firstDelta, inPoints, points);
-
-	          if (firstDelta > 0) {
-	            this.deltaInterpolate(firstPoint, firstDelta - 1, curDelta, firstDelta, inPoints, points);
-	          }
+	          out = out1 + (out - in1) * scale;
 	        }
 
-	        point = endPoint + 1;
+	        outPoints[_p][k] = out;
 	      }
 	    }
-	  }, {
-	    key: 'deltaInterpolate',
-	    value: function deltaInterpolate(p1, p2, ref1, ref2, inPoints, outPoints) {
-	      if (p1 > p2) {
-	        return;
-	      }
+	  };
 
-	      var iterable = ['x', 'y'];
-	      for (var i = 0; i < iterable.length; i++) {
-	        var k = iterable[i];
-	        if (inPoints[ref1][k] > inPoints[ref2][k]) {
-	          var p = ref1;
-	          ref1 = ref2;
-	          ref2 = p;
-	        }
+	  GlyphVariationProcessor.prototype.deltaShift = function deltaShift(p1, p2, ref, inPoints, outPoints) {
+	    var deltaX = outPoints[ref].x - inPoints[ref].x;
+	    var deltaY = outPoints[ref].y - inPoints[ref].y;
 
-	        var in1 = inPoints[ref1][k];
-	        var in2 = inPoints[ref2][k];
-	        var out1 = outPoints[ref1][k];
-	        var out2 = outPoints[ref2][k];
+	    if (deltaX === 0 && deltaY === 0) {
+	      return;
+	    }
 
-	        var scale = in1 === in2 ? 0 : (out2 - out1) / (in2 - in1);
-
-	        for (var _p = p1; _p <= p2; _p++) {
-	          var out = inPoints[_p][k];
-
-	          if (out <= in1) {
-	            out += out1 - in1;
-	          } else if (out >= in2) {
-	            out += out2 - in2;
-	          } else {
-	            out = out1 + (out - in1) * scale;
-	          }
-
-	          outPoints[_p][k] = out;
-	        }
+	    for (var p = p1; p <= p2; p++) {
+	      if (p !== ref) {
+	        outPoints[p].x += deltaX;
+	        outPoints[p].y += deltaY;
 	      }
 	    }
-	  }, {
-	    key: 'deltaShift',
-	    value: function deltaShift(p1, p2, ref, inPoints, outPoints) {
-	      var deltaX = outPoints[ref].x - inPoints[ref].x;
-	      var deltaY = outPoints[ref].y - inPoints[ref].y;
-
-	      if (deltaX === 0 && deltaY === 0) {
-	        return;
-	      }
-
-	      for (var p = p1; p <= p2; p++) {
-	        if (p !== ref) {
-	          outPoints[p].x += deltaX;
-	          outPoints[p].y += deltaY;
-	        }
-	      }
-	    }
-	  }]);
+	  };
 
 	  return GlyphVariationProcessor;
 	}();
@@ -49802,35 +49000,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.includeGlyph(0);
 	  }
 
-	  _createClass(Subset, [{
-	    key: 'includeGlyph',
-	    value: function includeGlyph(glyph) {
-	      if ((typeof glyph === 'undefined' ? 'undefined' : _typeof(glyph)) === 'object') {
-	        glyph = glyph.id;
-	      }
-
-	      if (this.mapping[glyph] == null) {
-	        this.glyphs.push(glyph);
-	        this.mapping[glyph] = this.glyphs.length - 1;
-	      }
-
-	      return this.mapping[glyph];
+	  Subset.prototype.includeGlyph = function includeGlyph(glyph) {
+	    if ((typeof glyph === 'undefined' ? 'undefined' : _typeof(glyph)) === 'object') {
+	      glyph = glyph.id;
 	    }
-	  }, {
-	    key: 'encodeStream',
-	    value: function encodeStream() {
-	      var _this = this;
 
-	      var s = new r.EncodeStream();
-
-	      process.nextTick(function () {
-	        _this.encode(s);
-	        return s.end();
-	      });
-
-	      return s;
+	    if (this.mapping[glyph] == null) {
+	      this.glyphs.push(glyph);
+	      this.mapping[glyph] = this.glyphs.length - 1;
 	    }
-	  }]);
+
+	    return this.mapping[glyph];
+	  };
+
+	  Subset.prototype.encodeStream = function encodeStream() {
+	    var _this = this;
+
+	    var s = new r.EncodeStream();
+
+	    process.nextTick(function () {
+	      _this.encode(s);
+	      return s.end();
+	    });
+
+	    return s;
+	  };
 
 	  return Subset;
 	}();
@@ -49848,21 +49042,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	    _classCallCheck(this, Point);
 	  }
 
-	  _createClass(Point, null, [{
-	    key: 'size',
-	    value: function size(val) {
-	      return val >= 0 && val <= 255 ? 1 : 2;
+	  Point.size = function size(val) {
+	    return val >= 0 && val <= 255 ? 1 : 2;
+	  };
+
+	  Point.encode = function encode(stream, value) {
+	    if (value >= 0 && value <= 255) {
+	      stream.writeUInt8(value);
+	    } else {
+	      stream.writeInt16BE(value);
 	    }
-	  }, {
-	    key: 'encode',
-	    value: function encode(stream, value) {
-	      if (value >= 0 && value <= 255) {
-	        stream.writeUInt8(value);
-	      } else {
-	        stream.writeInt16BE(value);
-	      }
-	    }
-	  }]);
+	  };
 
 	  return Point;
 	}();
@@ -49889,130 +49079,126 @@ return /******/ (function(modules) { // webpackBootstrap
 	    _classCallCheck(this, TTFGlyphEncoder);
 	  }
 
-	  _createClass(TTFGlyphEncoder, [{
-	    key: 'encodeSimple',
-	    value: function encodeSimple(path) {
-	      var instructions = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+	  TTFGlyphEncoder.prototype.encodeSimple = function encodeSimple(path) {
+	    var instructions = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
 
-	      var endPtsOfContours = [];
-	      var xPoints = [];
-	      var yPoints = [];
-	      var flags = [];
-	      var same = 0;
-	      var lastX = 0,
-	          lastY = 0,
-	          lastFlag = 0;
-	      var pointCount = 0;
+	    var endPtsOfContours = [];
+	    var xPoints = [];
+	    var yPoints = [];
+	    var flags = [];
+	    var same = 0;
+	    var lastX = 0,
+	        lastY = 0,
+	        lastFlag = 0;
+	    var pointCount = 0;
 
-	      for (var i = 0; i < path.commands.length; i++) {
-	        var c = path.commands[i];
+	    for (var i = 0; i < path.commands.length; i++) {
+	      var c = path.commands[i];
 
-	        for (var j = 0; j < c.args.length; j += 2) {
-	          var x = c.args[j];
-	          var y = c.args[j + 1];
-	          var flag = 0;
+	      for (var j = 0; j < c.args.length; j += 2) {
+	        var x = c.args[j];
+	        var y = c.args[j + 1];
+	        var flag = 0;
 
-	          // If the ending point of a quadratic curve is the midpoint
-	          // between the control point and the control point of the next
-	          // quadratic curve, we can omit the ending point.
-	          if (c.command === 'quadraticCurveTo' && j === 2) {
-	            var next = path.commands[i + 1];
-	            if (next && next.command === 'quadraticCurveTo') {
-	              var midX = (lastX + next.args[0]) / 2;
-	              var midY = (lastY + next.args[1]) / 2;
+	        // If the ending point of a quadratic curve is the midpoint
+	        // between the control point and the control point of the next
+	        // quadratic curve, we can omit the ending point.
+	        if (c.command === 'quadraticCurveTo' && j === 2) {
+	          var next = path.commands[i + 1];
+	          if (next && next.command === 'quadraticCurveTo') {
+	            var midX = (lastX + next.args[0]) / 2;
+	            var midY = (lastY + next.args[1]) / 2;
 
-	              if (x === midX && y === midY) {
-	                continue;
-	              }
+	            if (x === midX && y === midY) {
+	              continue;
 	            }
 	          }
-
-	          // All points except control points are on curve.
-	          if (!(c.command === 'quadraticCurveTo' && j === 0)) {
-	            flag |= ON_CURVE$1;
-	          }
-
-	          flag = this._encodePoint(x, lastX, xPoints, flag, X_SHORT_VECTOR$1, SAME_X$1);
-	          flag = this._encodePoint(y, lastY, yPoints, flag, Y_SHORT_VECTOR$1, SAME_Y$1);
-
-	          if (flag === lastFlag && same < 255) {
-	            flags[flags.length - 1] |= REPEAT$1;
-	            same++;
-	          } else {
-	            if (same > 0) {
-	              flags.push(same);
-	              same = 0;
-	            }
-
-	            flags.push(flag);
-	            lastFlag = flag;
-	          }
-
-	          lastX = x;
-	          lastY = y;
-	          pointCount++;
 	        }
 
-	        if (c.command === 'closePath') {
-	          endPtsOfContours.push(pointCount - 1);
+	        // All points except control points are on curve.
+	        if (!(c.command === 'quadraticCurveTo' && j === 0)) {
+	          flag |= ON_CURVE$1;
 	        }
+
+	        flag = this._encodePoint(x, lastX, xPoints, flag, X_SHORT_VECTOR$1, SAME_X$1);
+	        flag = this._encodePoint(y, lastY, yPoints, flag, Y_SHORT_VECTOR$1, SAME_Y$1);
+
+	        if (flag === lastFlag && same < 255) {
+	          flags[flags.length - 1] |= REPEAT$1;
+	          same++;
+	        } else {
+	          if (same > 0) {
+	            flags.push(same);
+	            same = 0;
+	          }
+
+	          flags.push(flag);
+	          lastFlag = flag;
+	        }
+
+	        lastX = x;
+	        lastY = y;
+	        pointCount++;
 	      }
 
-	      // Close the path if the last command didn't already
-	      if (path.commands.length > 1 && path.commands[path.commands.length - 1].command !== 'closePath') {
+	      if (c.command === 'closePath') {
 	        endPtsOfContours.push(pointCount - 1);
 	      }
-
-	      var bbox = path.bbox;
-	      var glyf = {
-	        numberOfContours: endPtsOfContours.length,
-	        xMin: bbox.minX,
-	        yMin: bbox.minY,
-	        xMax: bbox.maxX,
-	        yMax: bbox.maxY,
-	        endPtsOfContours: endPtsOfContours,
-	        instructions: instructions,
-	        flags: flags,
-	        xPoints: xPoints,
-	        yPoints: yPoints
-	      };
-
-	      var size = Glyf.size(glyf);
-	      var tail = 4 - size % 4;
-
-	      var stream = new r.EncodeStream(size + tail);
-	      Glyf.encode(stream, glyf);
-
-	      // Align to 4-byte length
-	      if (tail !== 0) {
-	        stream.fill(0, tail);
-	      }
-
-	      return stream.buffer;
 	    }
-	  }, {
-	    key: '_encodePoint',
-	    value: function _encodePoint(value, last, points, flag, shortFlag, sameFlag) {
-	      var diff = value - last;
 
-	      if (value === last) {
-	        flag |= sameFlag;
-	      } else {
-	        if (-255 <= diff && diff <= 255) {
-	          flag |= shortFlag;
-	          if (diff < 0) {
-	            diff = -diff;
-	          } else {
-	            flag |= sameFlag;
-	          }
+	    // Close the path if the last command didn't already
+	    if (path.commands.length > 1 && path.commands[path.commands.length - 1].command !== 'closePath') {
+	      endPtsOfContours.push(pointCount - 1);
+	    }
+
+	    var bbox = path.bbox;
+	    var glyf = {
+	      numberOfContours: endPtsOfContours.length,
+	      xMin: bbox.minX,
+	      yMin: bbox.minY,
+	      xMax: bbox.maxX,
+	      yMax: bbox.maxY,
+	      endPtsOfContours: endPtsOfContours,
+	      instructions: instructions,
+	      flags: flags,
+	      xPoints: xPoints,
+	      yPoints: yPoints
+	    };
+
+	    var size = Glyf.size(glyf);
+	    var tail = 4 - size % 4;
+
+	    var stream = new r.EncodeStream(size + tail);
+	    Glyf.encode(stream, glyf);
+
+	    // Align to 4-byte length
+	    if (tail !== 0) {
+	      stream.fill(0, tail);
+	    }
+
+	    return stream.buffer;
+	  };
+
+	  TTFGlyphEncoder.prototype._encodePoint = function _encodePoint(value, last, points, flag, shortFlag, sameFlag) {
+	    var diff = value - last;
+
+	    if (value === last) {
+	      flag |= sameFlag;
+	    } else {
+	      if (-255 <= diff && diff <= 255) {
+	        flag |= shortFlag;
+	        if (diff < 0) {
+	          diff = -diff;
+	        } else {
+	          flag |= sameFlag;
 	        }
-
-	        points.push(diff);
 	      }
 
-	      return flag;
+	      points.push(diff);
 	    }
-	  }]);
+
+	    return flag;
+	  };
 
 	  return TTFGlyphEncoder;
 	}();
@@ -50023,154 +49209,142 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function TTFSubset(font) {
 	    _classCallCheck(this, TTFSubset);
 
-	    var _this = _possibleConstructorReturn(this, (TTFSubset.__proto__ || _Object$getPrototypeOf(TTFSubset)).call(this, font));
+	    var _this = _possibleConstructorReturn(this, _Subset.call(this, font));
 
 	    _this.glyphEncoder = new TTFGlyphEncoder();
 	    return _this;
 	  }
 
-	  _createClass(TTFSubset, [{
-	    key: '_addGlyph',
-	    value: function _addGlyph(gid) {
-	      var glyph = this.font.getGlyph(gid);
-	      var glyf = glyph._decode();
+	  TTFSubset.prototype._addGlyph = function _addGlyph(gid) {
+	    var glyph = this.font.getGlyph(gid);
+	    var glyf = glyph._decode();
 
-	      // get the offset to the glyph from the loca table
-	      var curOffset = this.font.loca.offsets[gid];
-	      var nextOffset = this.font.loca.offsets[gid + 1];
+	    // get the offset to the glyph from the loca table
+	    var curOffset = this.font.loca.offsets[gid];
+	    var nextOffset = this.font.loca.offsets[gid + 1];
 
-	      var stream = this.font._getTableStream('glyf');
-	      stream.pos += curOffset;
+	    var stream = this.font._getTableStream('glyf');
+	    stream.pos += curOffset;
 
-	      var buffer = stream.readBuffer(nextOffset - curOffset);
+	    var buffer = stream.readBuffer(nextOffset - curOffset);
 
-	      // if it is a compound glyph, include its components
-	      if (glyf && glyf.numberOfContours < 0) {
-	        buffer = new Buffer(buffer);
-	        var _iteratorNormalCompletion = true;
-	        var _didIteratorError = false;
-	        var _iteratorError = undefined;
+	    // if it is a compound glyph, include its components
+	    if (glyf && glyf.numberOfContours < 0) {
+	      buffer = new Buffer(buffer);
+	      for (var _iterator = glyf.components, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	        var _ref;
 
-	        try {
-	          for (var _iterator = _getIterator(glyf.components), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	            var component = _step.value;
-
-	            gid = this.includeGlyph(component.glyphID);
-	            buffer.writeUInt16BE(gid, component.pos);
-	          }
-	        } catch (err) {
-	          _didIteratorError = true;
-	          _iteratorError = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion && _iterator.return) {
-	              _iterator.return();
-	            }
-	          } finally {
-	            if (_didIteratorError) {
-	              throw _iteratorError;
-	            }
-	          }
+	        if (_isArray) {
+	          if (_i >= _iterator.length) break;
+	          _ref = _iterator[_i++];
+	        } else {
+	          _i = _iterator.next();
+	          if (_i.done) break;
+	          _ref = _i.value;
 	        }
-	      } else if (glyf && this.font._variationProcessor) {
-	        // If this is a TrueType variation glyph, re-encode the path
-	        buffer = this.glyphEncoder.encodeSimple(glyph.path, glyf.instructions);
+
+	        var component = _ref;
+
+	        gid = this.includeGlyph(component.glyphID);
+	        buffer.writeUInt16BE(gid, component.pos);
 	      }
-
-	      this.glyf.push(buffer);
-	      this.loca.offsets.push(this.offset);
-
-	      this.hmtx.metrics.push({
-	        advance: glyph.advanceWidth,
-	        bearing: glyph._getMetrics().leftBearing
-	      });
-
-	      this.offset += buffer.length;
-	      return this.glyf.length - 1;
+	    } else if (glyf && this.font._variationProcessor) {
+	      // If this is a TrueType variation glyph, re-encode the path
+	      buffer = this.glyphEncoder.encodeSimple(glyph.path, glyf.instructions);
 	    }
-	  }, {
-	    key: 'encode',
-	    value: function encode(stream) {
-	      // tables required by PDF spec:
-	      //   head, hhea, loca, maxp, cvt , prep, glyf, hmtx, fpgm
-	      //
-	      // additional tables required for standalone fonts:
-	      //   name, cmap, OS/2, post
 
-	      this.glyf = [];
-	      this.offset = 0;
-	      this.loca = {
-	        offsets: []
-	      };
+	    this.glyf.push(buffer);
+	    this.loca.offsets.push(this.offset);
 
-	      this.hmtx = {
-	        metrics: [],
-	        bearings: []
-	      };
+	    this.hmtx.metrics.push({
+	      advance: glyph.advanceWidth,
+	      bearing: glyph._getMetrics().leftBearing
+	    });
 
-	      // include all the glyphs
-	      // not using a for loop because we need to support adding more
-	      // glyphs to the array as we go, and CoffeeScript caches the length.
-	      var i = 0;
-	      while (i < this.glyphs.length) {
-	        this._addGlyph(this.glyphs[i++]);
+	    this.offset += buffer.length;
+	    return this.glyf.length - 1;
+	  };
+
+	  TTFSubset.prototype.encode = function encode(stream) {
+	    // tables required by PDF spec:
+	    //   head, hhea, loca, maxp, cvt , prep, glyf, hmtx, fpgm
+	    //
+	    // additional tables required for standalone fonts:
+	    //   name, cmap, OS/2, post
+
+	    this.glyf = [];
+	    this.offset = 0;
+	    this.loca = {
+	      offsets: []
+	    };
+
+	    this.hmtx = {
+	      metrics: [],
+	      bearings: []
+	    };
+
+	    // include all the glyphs
+	    // not using a for loop because we need to support adding more
+	    // glyphs to the array as we go, and CoffeeScript caches the length.
+	    var i = 0;
+	    while (i < this.glyphs.length) {
+	      this._addGlyph(this.glyphs[i++]);
+	    }
+
+	    var maxp = cloneDeep(this.font.maxp);
+	    maxp.numGlyphs = this.glyf.length;
+
+	    this.loca.offsets.push(this.offset);
+	    tables.loca.preEncode.call(this.loca);
+
+	    var head = cloneDeep(this.font.head);
+	    head.indexToLocFormat = this.loca.version;
+
+	    var hhea = cloneDeep(this.font.hhea);
+	    hhea.numberOfMetrics = this.hmtx.metrics.length;
+
+	    // map = []
+	    // for index in [0...256]
+	    //     if index < @numGlyphs
+	    //         map[index] = index
+	    //     else
+	    //         map[index] = 0
+	    //
+	    // cmapTable =
+	    //     version: 0
+	    //     length: 262
+	    //     language: 0
+	    //     codeMap: map
+	    //
+	    // cmap =
+	    //     version: 0
+	    //     numSubtables: 1
+	    //     tables: [
+	    //         platformID: 1
+	    //         encodingID: 0
+	    //         table: cmapTable
+	    //     ]
+
+	    // TODO: subset prep, cvt, fpgm?
+	    Directory.encode(stream, {
+	      tables: {
+	        head: head,
+	        hhea: hhea,
+	        loca: this.loca,
+	        maxp: maxp,
+	        'cvt ': this.font['cvt '],
+	        prep: this.font.prep,
+	        glyf: this.glyf,
+	        hmtx: this.hmtx,
+	        fpgm: this.font.fpgm
+
+	        // name: clone @font.name
+	        // 'OS/2': clone @font['OS/2']
+	        // post: clone @font.post
+	        // cmap: cmap
 	      }
-
-	      var maxp = cloneDeep(this.font.maxp);
-	      maxp.numGlyphs = this.glyf.length;
-
-	      this.loca.offsets.push(this.offset);
-	      tables.loca.preEncode.call(this.loca);
-
-	      var head = cloneDeep(this.font.head);
-	      head.indexToLocFormat = this.loca.version;
-
-	      var hhea = cloneDeep(this.font.hhea);
-	      hhea.numberOfMetrics = this.hmtx.metrics.length;
-
-	      // map = []
-	      // for index in [0...256]
-	      //     if index < @numGlyphs
-	      //         map[index] = index
-	      //     else
-	      //         map[index] = 0
-	      //
-	      // cmapTable =
-	      //     version: 0
-	      //     length: 262
-	      //     language: 0
-	      //     codeMap: map
-	      //
-	      // cmap =
-	      //     version: 0
-	      //     numSubtables: 1
-	      //     tables: [
-	      //         platformID: 1
-	      //         encodingID: 0
-	      //         table: cmapTable
-	      //     ]
-
-	      // TODO: subset prep, cvt, fpgm?
-	      Directory.encode(stream, {
-	        tables: {
-	          head: head,
-	          hhea: hhea,
-	          loca: this.loca,
-	          maxp: maxp,
-	          'cvt ': this.font['cvt '],
-	          prep: this.font.prep,
-	          glyf: this.glyf,
-	          hmtx: this.hmtx,
-	          fpgm: this.font.fpgm
-
-	          // name: clone @font.name
-	          // 'OS/2': clone @font['OS/2']
-	          // post: clone @font.post
-	          // cmap: cmap
-	        }
-	      });
-	    }
-	  }]);
+	    });
+	  };
 
 	  return TTFSubset;
 	}(Subset);
@@ -50181,7 +49355,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function CFFSubset(font) {
 	    _classCallCheck(this, CFFSubset);
 
-	    var _this = _possibleConstructorReturn(this, (CFFSubset.__proto__ || _Object$getPrototypeOf(CFFSubset)).call(this, font));
+	    var _this = _possibleConstructorReturn(this, _Subset.call(this, font));
 
 	    _this.cff = _this.font['CFF '];
 	    if (!_this.cff) {
@@ -50190,227 +49364,195 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return _this;
 	  }
 
-	  _createClass(CFFSubset, [{
-	    key: 'subsetCharstrings',
-	    value: function subsetCharstrings() {
-	      this.charstrings = [];
-	      var gsubrs = {};
+	  CFFSubset.prototype.subsetCharstrings = function subsetCharstrings() {
+	    this.charstrings = [];
+	    var gsubrs = {};
 
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
+	    for (var _iterator = this.glyphs, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	      var _ref;
 
-	      try {
-	        for (var _iterator = _getIterator(this.glyphs), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var gid = _step.value;
-
-	          this.charstrings.push(this.cff.getCharString(gid));
-
-	          var glyph = this.font.getGlyph(gid);
-	          var path = glyph.path; // this causes the glyph to be parsed
-
-	          for (var subr in glyph._usedGsubrs) {
-	            gsubrs[subr] = true;
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
-	        }
-	      }
-
-	      this.gsubrs = this.subsetSubrs(this.cff.globalSubrIndex, gsubrs);
-	    }
-	  }, {
-	    key: 'subsetSubrs',
-	    value: function subsetSubrs(subrs, used) {
-	      var res = [];
-	      for (var i = 0; i < subrs.length; i++) {
-	        var subr = subrs[i];
-	        if (used[i]) {
-	          this.cff.stream.pos = subr.offset;
-	          res.push(this.cff.stream.readBuffer(subr.length));
-	        } else {
-	          res.push(new Buffer([11])); // return
-	        }
-	      }
-
-	      return res;
-	    }
-	  }, {
-	    key: 'subsetFontdict',
-	    value: function subsetFontdict(topDict) {
-	      topDict.FDArray = [];
-	      topDict.FDSelect = {
-	        version: 0,
-	        fds: []
-	      };
-
-	      var used_fds = {};
-	      var used_subrs = [];
-	      var _iteratorNormalCompletion2 = true;
-	      var _didIteratorError2 = false;
-	      var _iteratorError2 = undefined;
-
-	      try {
-	        for (var _iterator2 = _getIterator(this.glyphs), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	          var gid = _step2.value;
-
-	          var fd = this.cff.fdForGlyph(gid);
-	          if (fd == null) {
-	            continue;
-	          }
-
-	          if (!used_fds[fd]) {
-	            topDict.FDArray.push(_Object$assign({}, this.cff.topDict.FDArray[fd]));
-	            used_subrs.push({});
-	          }
-
-	          used_fds[fd] = true;
-	          topDict.FDSelect.fds.push(topDict.FDArray.length - 1);
-
-	          var glyph = this.font.getGlyph(gid);
-	          var path = glyph.path; // this causes the glyph to be parsed
-	          for (var subr in glyph._usedSubrs) {
-	            used_subrs[used_subrs.length - 1][subr] = true;
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError2 = true;
-	        _iteratorError2 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	            _iterator2.return();
-	          }
-	        } finally {
-	          if (_didIteratorError2) {
-	            throw _iteratorError2;
-	          }
-	        }
-	      }
-
-	      for (var i = 0; i < topDict.FDArray.length; i++) {
-	        var dict = topDict.FDArray[i];
-	        delete dict.FontName;
-	        if (dict.Private && dict.Private.Subrs) {
-	          dict.Private = _Object$assign({}, dict.Private);
-	          dict.Private.Subrs = this.subsetSubrs(dict.Private.Subrs, used_subrs[i]);
-	        }
-	      }
-
-	      return;
-	    }
-	  }, {
-	    key: 'createCIDFontdict',
-	    value: function createCIDFontdict(topDict) {
-	      var used_subrs = {};
-	      var _iteratorNormalCompletion3 = true;
-	      var _didIteratorError3 = false;
-	      var _iteratorError3 = undefined;
-
-	      try {
-	        for (var _iterator3 = _getIterator(this.glyphs), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	          var gid = _step3.value;
-
-	          var glyph = this.font.getGlyph(gid);
-	          var path = glyph.path; // this causes the glyph to be parsed
-
-	          for (var subr in glyph._usedSubrs) {
-	            used_subrs[subr] = true;
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError3 = true;
-	        _iteratorError3 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	            _iterator3.return();
-	          }
-	        } finally {
-	          if (_didIteratorError3) {
-	            throw _iteratorError3;
-	          }
-	        }
-	      }
-
-	      var privateDict = _Object$assign({}, this.cff.topDict.Private);
-	      privateDict.Subrs = this.subsetSubrs(this.cff.topDict.Private.Subrs, used_subrs);
-
-	      topDict.FDArray = [{ Private: privateDict }];
-	      return topDict.FDSelect = {
-	        version: 3,
-	        nRanges: 1,
-	        ranges: [{ first: 0, fd: 0 }],
-	        sentinel: this.charstrings.length
-	      };
-	    }
-	  }, {
-	    key: 'addString',
-	    value: function addString(string) {
-	      if (!string) {
-	        return null;
-	      }
-
-	      if (!this.strings) {
-	        this.strings = [];
-	      }
-
-	      this.strings.push(string);
-	      return standardStrings.length + this.strings.length - 1;
-	    }
-	  }, {
-	    key: 'encode',
-	    value: function encode(stream) {
-	      this.subsetCharstrings();
-
-	      var charset = {
-	        version: this.charstrings.length > 255 ? 2 : 1,
-	        ranges: [{ first: 1, nLeft: this.charstrings.length - 2 }]
-	      };
-
-	      var topDict = _Object$assign({}, this.cff.topDict);
-	      topDict.Private = null;
-	      topDict.charset = charset;
-	      topDict.Encoding = null;
-	      topDict.CharStrings = this.charstrings;
-
-	      var _arr = ['version', 'Notice', 'Copyright', 'FullName', 'FamilyName', 'Weight', 'PostScript', 'BaseFontName', 'FontName'];
-	      for (var _i = 0; _i < _arr.length; _i++) {
-	        var key = _arr[_i];
-	        topDict[key] = this.addString(this.cff.string(topDict[key]));
-	      }
-
-	      topDict.ROS = [this.addString('Adobe'), this.addString('Identity'), 0];
-	      topDict.CIDCount = this.charstrings.length;
-
-	      if (this.cff.isCIDFont) {
-	        this.subsetFontdict(topDict);
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
 	      } else {
-	        this.createCIDFontdict(topDict);
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
 	      }
 
-	      var top = {
-	        header: this.cff.header,
-	        nameIndex: [this.cff.postscriptName],
-	        topDictIndex: [topDict],
-	        stringIndex: this.strings,
-	        globalSubrIndex: this.gsubrs
-	      };
+	      var gid = _ref;
 
-	      CFFTop.encode(stream, top);
+	      this.charstrings.push(this.cff.getCharString(gid));
+
+	      var glyph = this.font.getGlyph(gid);
+	      var path = glyph.path; // this causes the glyph to be parsed
+
+	      for (var subr in glyph._usedGsubrs) {
+	        gsubrs[subr] = true;
+	      }
 	    }
-	  }]);
+
+	    this.gsubrs = this.subsetSubrs(this.cff.globalSubrIndex, gsubrs);
+	  };
+
+	  CFFSubset.prototype.subsetSubrs = function subsetSubrs(subrs, used) {
+	    var res = [];
+	    for (var i = 0; i < subrs.length; i++) {
+	      var subr = subrs[i];
+	      if (used[i]) {
+	        this.cff.stream.pos = subr.offset;
+	        res.push(this.cff.stream.readBuffer(subr.length));
+	      } else {
+	        res.push(new Buffer([11])); // return
+	      }
+	    }
+
+	    return res;
+	  };
+
+	  CFFSubset.prototype.subsetFontdict = function subsetFontdict(topDict) {
+	    topDict.FDArray = [];
+	    topDict.FDSelect = {
+	      version: 0,
+	      fds: []
+	    };
+
+	    var used_fds = {};
+	    var used_subrs = [];
+	    for (var _iterator2 = this.glyphs, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	      var _ref2;
+
+	      if (_isArray2) {
+	        if (_i2 >= _iterator2.length) break;
+	        _ref2 = _iterator2[_i2++];
+	      } else {
+	        _i2 = _iterator2.next();
+	        if (_i2.done) break;
+	        _ref2 = _i2.value;
+	      }
+
+	      var gid = _ref2;
+
+	      var fd = this.cff.fdForGlyph(gid);
+	      if (fd == null) {
+	        continue;
+	      }
+
+	      if (!used_fds[fd]) {
+	        topDict.FDArray.push(_Object$assign({}, this.cff.topDict.FDArray[fd]));
+	        used_subrs.push({});
+	      }
+
+	      used_fds[fd] = true;
+	      topDict.FDSelect.fds.push(topDict.FDArray.length - 1);
+
+	      var glyph = this.font.getGlyph(gid);
+	      var path = glyph.path; // this causes the glyph to be parsed
+	      for (var subr in glyph._usedSubrs) {
+	        used_subrs[used_subrs.length - 1][subr] = true;
+	      }
+	    }
+
+	    for (var i = 0; i < topDict.FDArray.length; i++) {
+	      var dict = topDict.FDArray[i];
+	      delete dict.FontName;
+	      if (dict.Private && dict.Private.Subrs) {
+	        dict.Private = _Object$assign({}, dict.Private);
+	        dict.Private.Subrs = this.subsetSubrs(dict.Private.Subrs, used_subrs[i]);
+	      }
+	    }
+
+	    return;
+	  };
+
+	  CFFSubset.prototype.createCIDFontdict = function createCIDFontdict(topDict) {
+	    var used_subrs = {};
+	    for (var _iterator3 = this.glyphs, _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	      var _ref3;
+
+	      if (_isArray3) {
+	        if (_i3 >= _iterator3.length) break;
+	        _ref3 = _iterator3[_i3++];
+	      } else {
+	        _i3 = _iterator3.next();
+	        if (_i3.done) break;
+	        _ref3 = _i3.value;
+	      }
+
+	      var gid = _ref3;
+
+	      var glyph = this.font.getGlyph(gid);
+	      var path = glyph.path; // this causes the glyph to be parsed
+
+	      for (var subr in glyph._usedSubrs) {
+	        used_subrs[subr] = true;
+	      }
+	    }
+
+	    var privateDict = _Object$assign({}, this.cff.topDict.Private);
+	    privateDict.Subrs = this.subsetSubrs(this.cff.topDict.Private.Subrs, used_subrs);
+
+	    topDict.FDArray = [{ Private: privateDict }];
+	    return topDict.FDSelect = {
+	      version: 3,
+	      nRanges: 1,
+	      ranges: [{ first: 0, fd: 0 }],
+	      sentinel: this.charstrings.length
+	    };
+	  };
+
+	  CFFSubset.prototype.addString = function addString(string) {
+	    if (!string) {
+	      return null;
+	    }
+
+	    if (!this.strings) {
+	      this.strings = [];
+	    }
+
+	    this.strings.push(string);
+	    return standardStrings.length + this.strings.length - 1;
+	  };
+
+	  CFFSubset.prototype.encode = function encode(stream) {
+	    this.subsetCharstrings();
+
+	    var charset = {
+	      version: this.charstrings.length > 255 ? 2 : 1,
+	      ranges: [{ first: 1, nLeft: this.charstrings.length - 2 }]
+	    };
+
+	    var topDict = _Object$assign({}, this.cff.topDict);
+	    topDict.Private = null;
+	    topDict.charset = charset;
+	    topDict.Encoding = null;
+	    topDict.CharStrings = this.charstrings;
+
+	    var _arr = ['version', 'Notice', 'Copyright', 'FullName', 'FamilyName', 'Weight', 'PostScript', 'BaseFontName', 'FontName'];
+	    for (var _i4 = 0; _i4 < _arr.length; _i4++) {
+	      var key = _arr[_i4];
+	      topDict[key] = this.addString(this.cff.string(topDict[key]));
+	    }
+
+	    topDict.ROS = [this.addString('Adobe'), this.addString('Identity'), 0];
+	    topDict.CIDCount = this.charstrings.length;
+
+	    if (this.cff.isCIDFont) {
+	      this.subsetFontdict(topDict);
+	    } else {
+	      this.createCIDFontdict(topDict);
+	    }
+
+	    var top = {
+	      header: this.cff.header,
+	      nameIndex: [this.cff.postscriptName],
+	      topDictIndex: [topDict],
+	      stringIndex: this.strings,
+	      globalSubrIndex: this.gsubrs
+	    };
+
+	    CFFTop.encode(stream, top);
+	  };
 
 	  return CFFSubset;
 	}(Subset);
@@ -50450,13 +49592,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * It supports TrueType, and PostScript glyphs, and several color glyph formats.
 	 */
 	var TTFFont = (_class = function () {
-	  _createClass(TTFFont, null, [{
-	    key: 'probe',
-	    value: function probe(buffer) {
-	      var format = buffer.toString('ascii', 0, 4);
-	      return format === 'true' || format === 'OTTO' || format === String.fromCharCode(0, 1, 0, 0);
-	    }
-	  }]);
+	  TTFFont.probe = function probe(buffer) {
+	    var format = buffer.toString('ascii', 0, 4);
+	    return format === 'true' || format === 'OTTO' || format === String.fromCharCode(0, 1, 0, 0);
+	  };
 
 	  function TTFFont(stream) {
 	    var variationCoords = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
@@ -50484,318 +49623,295 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  }
 
+	  TTFFont.prototype._getTable = function _getTable(table) {
+	    if (!(table.tag in this._tables)) {
+	      try {
+	        this._tables[table.tag] = this._decodeTable(table);
+	      } catch (e) {
+	        if (fontkit.logErrors) {
+	          console.error('Error decoding table ' + table.tag);
+	          console.error(e.stack);
+	        }
+	      }
+	    }
+
+	    return this._tables[table.tag];
+	  };
+
+	  TTFFont.prototype._getTableStream = function _getTableStream(tag) {
+	    var table = this.directory.tables[tag];
+	    if (table) {
+	      this.stream.pos = table.offset;
+	      return this.stream;
+	    }
+
+	    return null;
+	  };
+
+	  TTFFont.prototype._decodeDirectory = function _decodeDirectory() {
+	    return this.directory = Directory.decode(this.stream, { _startOffset: 0 });
+	  };
+
+	  TTFFont.prototype._decodeTable = function _decodeTable(table) {
+	    var pos = this.stream.pos;
+
+	    var stream = this._getTableStream(table.tag);
+	    var result = tables[table.tag].decode(stream, this, table.length);
+
+	    this.stream.pos = pos;
+	    return result;
+	  };
+
+	  /**
+	   * The unique PostScript name for this font
+	   * @type {string}
+	   */
+
+
+	  /**
+	   * Gets a string from the font's `name` table
+	   * `lang` is a BCP-47 language code.
+	   * @return {string}
+	   */
+	  TTFFont.prototype.getName = function getName(key) {
+	    var lang = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'en';
+
+	    var record = this.name.records[key];
+	    if (record) {
+	      return record[lang];
+	    }
+
+	    return null;
+	  };
+
+	  /**
+	   * The font's full name, e.g. "Helvetica Bold"
+	   * @type {string}
+	   */
+
+
+	  /**
+	   * Returns whether there is glyph in the font for the given unicode code point.
+	   *
+	   * @param {number} codePoint
+	   * @return {boolean}
+	   */
+	  TTFFont.prototype.hasGlyphForCodePoint = function hasGlyphForCodePoint(codePoint) {
+	    return !!this._cmapProcessor.lookup(codePoint);
+	  };
+
+	  /**
+	   * Maps a single unicode code point to a Glyph object.
+	   * Does not perform any advanced substitutions (there is no context to do so).
+	   *
+	   * @param {number} codePoint
+	   * @return {Glyph}
+	   */
+
+
+	  TTFFont.prototype.glyphForCodePoint = function glyphForCodePoint(codePoint) {
+	    return this.getGlyph(this._cmapProcessor.lookup(codePoint), [codePoint]);
+	  };
+
+	  /**
+	   * Returns an array of Glyph objects for the given string.
+	   * This is only a one-to-one mapping from characters to glyphs.
+	   * For most uses, you should use font.layout (described below), which
+	   * provides a much more advanced mapping supporting AAT and OpenType shaping.
+	   *
+	   * @param {string} string
+	   * @return {Glyph[]}
+	   */
+
+
+	  TTFFont.prototype.glyphsForString = function glyphsForString(string) {
+	    var glyphs = [];
+	    var len = string.length;
+	    var idx = 0;
+	    var last = -1;
+	    var state = -1;
+
+	    while (idx <= len) {
+	      var code = 0;
+	      var nextState = 0;
+
+	      if (idx < len) {
+	        // Decode the next codepoint from UTF 16
+	        code = string.charCodeAt(idx++);
+	        if (0xd800 <= code && code <= 0xdbff && idx < len) {
+	          var next = string.charCodeAt(idx);
+	          if (0xdc00 <= next && next <= 0xdfff) {
+	            idx++;
+	            code = ((code & 0x3ff) << 10) + (next & 0x3ff) + 0x10000;
+	          }
+	        }
+
+	        // Compute the next state: 1 if the next codepoint is a variation selector, 0 otherwise.
+	        nextState = 0xfe00 <= code && code <= 0xfe0f || 0xe0100 <= code && code <= 0xe01ef ? 1 : 0;
+	      } else {
+	        idx++;
+	      }
+
+	      if (state === 0 && nextState === 1) {
+	        // Variation selector following normal codepoint.
+	        glyphs.push(this.getGlyph(this._cmapProcessor.lookup(last, code), [last, code]));
+	      } else if (state === 0 && nextState === 0) {
+	        // Normal codepoint following normal codepoint.
+	        glyphs.push(this.glyphForCodePoint(last));
+	      }
+
+	      last = code;
+	      state = nextState;
+	    }
+
+	    return glyphs;
+	  };
+
+	  /**
+	   * Returns a GlyphRun object, which includes an array of Glyphs and GlyphPositions for the given string.
+	   *
+	   * @param {string} string
+	   * @param {string[]} [userFeatures]
+	   * @param {string} [script]
+	   * @param {string} [language]
+	   * @return {GlyphRun}
+	   */
+	  TTFFont.prototype.layout = function layout(string, userFeatures, script, language) {
+	    return this._layoutEngine.layout(string, userFeatures, script, language);
+	  };
+
+	  /**
+	   * Returns an array of strings that map to the given glyph id.
+	   * @param {number} gid - glyph id
+	   */
+
+
+	  TTFFont.prototype.stringsForGlyph = function stringsForGlyph(gid) {
+	    return this._layoutEngine.stringsForGlyph(gid);
+	  };
+
+	  /**
+	   * An array of all [OpenType feature tags](https://www.microsoft.com/typography/otspec/featuretags.htm)
+	   * (or mapped AAT tags) supported by the font.
+	   * The features parameter is an array of OpenType feature tags to be applied in addition to the default set.
+	   * If this is an AAT font, the OpenType feature tags are mapped to AAT features.
+	   *
+	   * @type {string[]}
+	   */
+
+
+	  TTFFont.prototype._getBaseGlyph = function _getBaseGlyph(glyph) {
+	    var characters = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+
+	    if (!this._glyphs[glyph]) {
+	      if (this.directory.tables.glyf) {
+	        this._glyphs[glyph] = new TTFGlyph(glyph, characters, this);
+	      } else if (this.directory.tables['CFF ']) {
+	        this._glyphs[glyph] = new CFFGlyph(glyph, characters, this);
+	      }
+	    }
+
+	    return this._glyphs[glyph] || null;
+	  };
+
+	  /**
+	   * Returns a glyph object for the given glyph id.
+	   * You can pass the array of code points this glyph represents for
+	   * your use later, and it will be stored in the glyph object.
+	   *
+	   * @param {number} glyph
+	   * @param {number[]} characters
+	   * @return {Glyph}
+	   */
+
+
+	  TTFFont.prototype.getGlyph = function getGlyph(glyph) {
+	    var characters = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+
+	    if (!this._glyphs[glyph]) {
+	      if (this.directory.tables.sbix) {
+	        this._glyphs[glyph] = new SBIXGlyph(glyph, characters, this);
+	      } else if (this.directory.tables.COLR && this.directory.tables.CPAL) {
+	        this._glyphs[glyph] = new COLRGlyph(glyph, characters, this);
+	      } else {
+	        this._getBaseGlyph(glyph, characters);
+	      }
+	    }
+
+	    return this._glyphs[glyph] || null;
+	  };
+
+	  /**
+	   * Returns a Subset for this font.
+	   * @return {Subset}
+	   */
+
+
+	  TTFFont.prototype.createSubset = function createSubset() {
+	    if (this.directory.tables['CFF ']) {
+	      return new CFFSubset(this);
+	    }
+
+	    return new TTFSubset(this);
+	  };
+
+	  /**
+	   * Returns an object describing the available variation axes
+	   * that this font supports. Keys are setting tags, and values
+	   * contain the axis name, range, and default value.
+	   *
+	   * @type {object}
+	   */
+
+
+	  /**
+	   * Returns a new font with the given variation settings applied.
+	   * Settings can either be an instance name, or an object containing
+	   * variation tags as specified by the `variationAxes` property.
+	   *
+	   * @param {object} settings
+	   * @return {TTFFont}
+	   */
+	  TTFFont.prototype.getVariation = function getVariation(settings) {
+	    if (!this.directory.tables.fvar || !this.directory.tables.gvar || !this.directory.tables.glyf) {
+	      throw new Error('Variations require a font with the fvar, gvar, and glyf tables.');
+	    }
+
+	    if (typeof settings === 'string') {
+	      settings = this.namedVariations[settings];
+	    }
+
+	    if ((typeof settings === 'undefined' ? 'undefined' : _typeof(settings)) !== 'object') {
+	      throw new Error('Variation settings must be either a variation name or settings object.');
+	    }
+
+	    // normalize the coordinates
+	    var coords = this.fvar.axis.map(function (axis, i) {
+	      var axisTag = axis.axisTag.trim();
+	      if (axisTag in settings) {
+	        return Math.max(axis.minValue, Math.min(axis.maxValue, settings[axisTag]));
+	      } else {
+	        return axis.defaultValue;
+	      }
+	    });
+
+	    var stream = new r.DecodeStream(this.stream.buffer);
+	    stream.pos = this._directoryPos;
+
+	    var font = new TTFFont(stream, coords);
+	    font._tables = this._tables;
+
+	    return font;
+	  };
+
+	  // Standardized format plugin API
+
+
+	  TTFFont.prototype.getFont = function getFont(name) {
+	    return this.getVariation(name);
+	  };
+
 	  _createClass(TTFFont, [{
-	    key: '_getTable',
-	    value: function _getTable(table) {
-	      if (!(table.tag in this._tables)) {
-	        try {
-	          this._tables[table.tag] = this._decodeTable(table);
-	        } catch (e) {
-	          if (fontkit.logErrors) {
-	            console.error('Error decoding table ' + table.tag);
-	            console.error(e.stack);
-	          }
-	        }
-	      }
-
-	      return this._tables[table.tag];
-	    }
-	  }, {
-	    key: '_getTableStream',
-	    value: function _getTableStream(tag) {
-	      var table = this.directory.tables[tag];
-	      if (table) {
-	        this.stream.pos = table.offset;
-	        return this.stream;
-	      }
-
-	      return null;
-	    }
-	  }, {
-	    key: '_decodeDirectory',
-	    value: function _decodeDirectory() {
-	      return this.directory = Directory.decode(this.stream, { _startOffset: 0 });
-	    }
-	  }, {
-	    key: '_decodeTable',
-	    value: function _decodeTable(table) {
-	      var pos = this.stream.pos;
-
-	      var stream = this._getTableStream(table.tag);
-	      var result = tables[table.tag].decode(stream, this, table.length);
-
-	      this.stream.pos = pos;
-	      return result;
-	    }
-
-	    /**
-	     * The unique PostScript name for this font
-	     * @type {string}
-	     */
-
-	  }, {
-	    key: 'getName',
-
-
-	    /**
-	     * Gets a string from the font's `name` table
-	     * `lang` is a BCP-47 language code.
-	     * @return {string}
-	     */
-	    value: function getName(key) {
-	      var lang = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'en';
-
-	      var record = this.name.records[key];
-	      if (record) {
-	        return record[lang];
-	      }
-
-	      return null;
-	    }
-
-	    /**
-	     * The font's full name, e.g. "Helvetica Bold"
-	     * @type {string}
-	     */
-
-	  }, {
-	    key: 'hasGlyphForCodePoint',
-
-
-	    /**
-	     * Returns whether there is glyph in the font for the given unicode code point.
-	     *
-	     * @param {number} codePoint
-	     * @return {boolean}
-	     */
-	    value: function hasGlyphForCodePoint(codePoint) {
-	      return !!this._cmapProcessor.lookup(codePoint);
-	    }
-
-	    /**
-	     * Maps a single unicode code point to a Glyph object.
-	     * Does not perform any advanced substitutions (there is no context to do so).
-	     *
-	     * @param {number} codePoint
-	     * @return {Glyph}
-	     */
-
-	  }, {
-	    key: 'glyphForCodePoint',
-	    value: function glyphForCodePoint(codePoint) {
-	      return this.getGlyph(this._cmapProcessor.lookup(codePoint), [codePoint]);
-	    }
-
-	    /**
-	     * Returns an array of Glyph objects for the given string.
-	     * This is only a one-to-one mapping from characters to glyphs.
-	     * For most uses, you should use font.layout (described below), which
-	     * provides a much more advanced mapping supporting AAT and OpenType shaping.
-	     *
-	     * @param {string} string
-	     * @return {Glyph[]}
-	     */
-
-	  }, {
-	    key: 'glyphsForString',
-	    value: function glyphsForString(string) {
-	      var glyphs = [];
-	      var len = string.length;
-	      var idx = 0;
-	      var last = -1;
-	      var state = -1;
-
-	      while (idx <= len) {
-	        var code = 0;
-	        var nextState = 0;
-
-	        if (idx < len) {
-	          // Decode the next codepoint from UTF 16
-	          code = string.charCodeAt(idx++);
-	          if (0xd800 <= code && code <= 0xdbff && idx < len) {
-	            var next = string.charCodeAt(idx);
-	            if (0xdc00 <= next && next <= 0xdfff) {
-	              idx++;
-	              code = ((code & 0x3ff) << 10) + (next & 0x3ff) + 0x10000;
-	            }
-	          }
-
-	          // Compute the next state: 1 if the next codepoint is a variation selector, 0 otherwise.
-	          nextState = 0xfe00 <= code && code <= 0xfe0f || 0xe0100 <= code && code <= 0xe01ef ? 1 : 0;
-	        } else {
-	          idx++;
-	        }
-
-	        if (state === 0 && nextState === 1) {
-	          // Variation selector following normal codepoint.
-	          glyphs.push(this.getGlyph(this._cmapProcessor.lookup(last, code), [last, code]));
-	        } else if (state === 0 && nextState === 0) {
-	          // Normal codepoint following normal codepoint.
-	          glyphs.push(this.glyphForCodePoint(last));
-	        }
-
-	        last = code;
-	        state = nextState;
-	      }
-
-	      return glyphs;
-	    }
-	  }, {
-	    key: 'layout',
-
-
-	    /**
-	     * Returns a GlyphRun object, which includes an array of Glyphs and GlyphPositions for the given string.
-	     *
-	     * @param {string} string
-	     * @param {string[]} [userFeatures]
-	     * @param {string} [script]
-	     * @param {string} [language]
-	     * @return {GlyphRun}
-	     */
-	    value: function layout(string, userFeatures, script, language) {
-	      return this._layoutEngine.layout(string, userFeatures, script, language);
-	    }
-
-	    /**
-	     * Returns an array of strings that map to the given glyph id.
-	     * @param {number} gid - glyph id
-	     */
-
-	  }, {
-	    key: 'stringsForGlyph',
-	    value: function stringsForGlyph(gid) {
-	      return this._layoutEngine.stringsForGlyph(gid);
-	    }
-
-	    /**
-	     * An array of all [OpenType feature tags](https://www.microsoft.com/typography/otspec/featuretags.htm)
-	     * (or mapped AAT tags) supported by the font.
-	     * The features parameter is an array of OpenType feature tags to be applied in addition to the default set.
-	     * If this is an AAT font, the OpenType feature tags are mapped to AAT features.
-	     *
-	     * @type {string[]}
-	     */
-
-	  }, {
-	    key: '_getBaseGlyph',
-	    value: function _getBaseGlyph(glyph) {
-	      var characters = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-
-	      if (!this._glyphs[glyph]) {
-	        if (this.directory.tables.glyf) {
-	          this._glyphs[glyph] = new TTFGlyph(glyph, characters, this);
-	        } else if (this.directory.tables['CFF ']) {
-	          this._glyphs[glyph] = new CFFGlyph(glyph, characters, this);
-	        }
-	      }
-
-	      return this._glyphs[glyph] || null;
-	    }
-
-	    /**
-	     * Returns a glyph object for the given glyph id.
-	     * You can pass the array of code points this glyph represents for
-	     * your use later, and it will be stored in the glyph object.
-	     *
-	     * @param {number} glyph
-	     * @param {number[]} characters
-	     * @return {Glyph}
-	     */
-
-	  }, {
-	    key: 'getGlyph',
-	    value: function getGlyph(glyph) {
-	      var characters = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-
-	      if (!this._glyphs[glyph]) {
-	        if (this.directory.tables.sbix) {
-	          this._glyphs[glyph] = new SBIXGlyph(glyph, characters, this);
-	        } else if (this.directory.tables.COLR && this.directory.tables.CPAL) {
-	          this._glyphs[glyph] = new COLRGlyph(glyph, characters, this);
-	        } else {
-	          this._getBaseGlyph(glyph, characters);
-	        }
-	      }
-
-	      return this._glyphs[glyph] || null;
-	    }
-
-	    /**
-	     * Returns a Subset for this font.
-	     * @return {Subset}
-	     */
-
-	  }, {
-	    key: 'createSubset',
-	    value: function createSubset() {
-	      if (this.directory.tables['CFF ']) {
-	        return new CFFSubset(this);
-	      }
-
-	      return new TTFSubset(this);
-	    }
-
-	    /**
-	     * Returns an object describing the available variation axes
-	     * that this font supports. Keys are setting tags, and values
-	     * contain the axis name, range, and default value.
-	     *
-	     * @type {object}
-	     */
-
-	  }, {
-	    key: 'getVariation',
-
-
-	    /**
-	     * Returns a new font with the given variation settings applied.
-	     * Settings can either be an instance name, or an object containing
-	     * variation tags as specified by the `variationAxes` property.
-	     *
-	     * @param {object} settings
-	     * @return {TTFFont}
-	     */
-	    value: function getVariation(settings) {
-	      if (!this.directory.tables.fvar || !this.directory.tables.gvar || !this.directory.tables.glyf) {
-	        throw new Error('Variations require a font with the fvar, gvar, and glyf tables.');
-	      }
-
-	      if (typeof settings === 'string') {
-	        settings = this.namedVariations[settings];
-	      }
-
-	      if ((typeof settings === 'undefined' ? 'undefined' : _typeof(settings)) !== 'object') {
-	        throw new Error('Variation settings must be either a variation name or settings object.');
-	      }
-
-	      // normalize the coordinates
-	      var coords = this.fvar.axis.map(function (axis, i) {
-	        var axisTag = axis.axisTag.trim();
-	        if (axisTag in settings) {
-	          return Math.max(axis.minValue, Math.min(axis.maxValue, settings[axisTag]));
-	        } else {
-	          return axis.defaultValue;
-	        }
-	      });
-
-	      var stream = new r.DecodeStream(this.stream.buffer);
-	      stream.pos = this._directoryPos;
-
-	      var font = new TTFFont(stream, coords);
-	      font._tables = this._tables;
-
-	      return font;
-	    }
-
-	    // Standardized format plugin API
-
-	  }, {
-	    key: 'getFont',
-	    value: function getFont(name) {
-	      return this.getVariation(name);
-	    }
-	  }, {
 	    key: 'postscriptName',
 	    get: function get() {
 	      var name = this.name.records.postscriptName;
@@ -51010,34 +50126,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return res;
 	      }
 
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
+	      for (var _iterator = this.fvar.axis, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	        var _ref;
 
-	      try {
-	        for (var _iterator = _getIterator(this.fvar.axis), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var axis = _step.value;
+	        if (_isArray) {
+	          if (_i >= _iterator.length) break;
+	          _ref = _iterator[_i++];
+	        } else {
+	          _i = _iterator.next();
+	          if (_i.done) break;
+	          _ref = _i.value;
+	        }
 
-	          res[axis.axisTag.trim()] = {
-	            name: axis.name.en,
-	            min: axis.minValue,
-	            default: axis.defaultValue,
-	            max: axis.maxValue
-	          };
-	        }
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
-	        }
+	        var axis = _ref;
+
+	        res[axis.axisTag.trim()] = {
+	          name: axis.name.en,
+	          min: axis.minValue,
+	          default: axis.defaultValue,
+	          max: axis.maxValue
+	        };
 	      }
 
 	      return res;
@@ -51059,35 +50167,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return res;
 	      }
 
-	      var _iteratorNormalCompletion2 = true;
-	      var _didIteratorError2 = false;
-	      var _iteratorError2 = undefined;
+	      for (var _iterator2 = this.fvar.instance, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	        var _ref2;
 
-	      try {
-	        for (var _iterator2 = _getIterator(this.fvar.instance), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	          var instance = _step2.value;
-
-	          var settings = {};
-	          for (var i = 0; i < this.fvar.axis.length; i++) {
-	            var axis = this.fvar.axis[i];
-	            settings[axis.axisTag.trim()] = instance.coord[i];
-	          }
-
-	          res[instance.name.en] = settings;
+	        if (_isArray2) {
+	          if (_i2 >= _iterator2.length) break;
+	          _ref2 = _iterator2[_i2++];
+	        } else {
+	          _i2 = _iterator2.next();
+	          if (_i2.done) break;
+	          _ref2 = _i2.value;
 	        }
-	      } catch (err) {
-	        _didIteratorError2 = true;
-	        _iteratorError2 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	            _iterator2.return();
-	          }
-	        } finally {
-	          if (_didIteratorError2) {
-	            throw _iteratorError2;
-	          }
+
+	        var instance = _ref2;
+
+	        var settings = {};
+	        for (var i = 0; i < this.fvar.axis.length; i++) {
+	          var axis = this.fvar.axis[i];
+	          settings[axis.axisTag.trim()] = instance.coord[i];
 	        }
+
+	        res[instance.name.en] = settings;
 	      }
 
 	      return res;
@@ -51124,29 +50224,21 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	WOFFDirectory.process = function () {
 	  var tables = {};
-	  var _iteratorNormalCompletion = true;
-	  var _didIteratorError = false;
-	  var _iteratorError = undefined;
+	  for (var _iterator = this.tables, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	    var _ref;
 
-	  try {
-	    for (var _iterator = _getIterator(this.tables), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	      var table = _step.value;
+	    if (_isArray) {
+	      if (_i >= _iterator.length) break;
+	      _ref = _iterator[_i++];
+	    } else {
+	      _i = _iterator.next();
+	      if (_i.done) break;
+	      _ref = _i.value;
+	    }
 
-	      tables[table.tag] = table;
-	    }
-	  } catch (err) {
-	    _didIteratorError = true;
-	    _iteratorError = err;
-	  } finally {
-	    try {
-	      if (!_iteratorNormalCompletion && _iterator.return) {
-	        _iterator.return();
-	      }
-	    } finally {
-	      if (_didIteratorError) {
-	        throw _iteratorError;
-	      }
-	    }
+	    var table = _ref;
+
+	    tables[table.tag] = table;
 	  }
 
 	  this.tables = tables;
@@ -51158,39 +50250,34 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function WOFFFont() {
 	    _classCallCheck(this, WOFFFont);
 
-	    return _possibleConstructorReturn(this, (WOFFFont.__proto__ || _Object$getPrototypeOf(WOFFFont)).apply(this, arguments));
+	    return _possibleConstructorReturn(this, _TTFFont.apply(this, arguments));
 	  }
 
-	  _createClass(WOFFFont, [{
-	    key: '_decodeDirectory',
-	    value: function _decodeDirectory() {
-	      this.directory = WOFFDirectory.decode(this.stream, { _startOffset: 0 });
-	    }
-	  }, {
-	    key: '_getTableStream',
-	    value: function _getTableStream(tag) {
-	      var table = this.directory.tables[tag];
-	      if (table) {
-	        this.stream.pos = table.offset;
+	  WOFFFont.probe = function probe(buffer) {
+	    return buffer.toString('ascii', 0, 4) === 'wOFF';
+	  };
 
-	        if (table.compLength < table.length) {
-	          this.stream.pos += 2; // skip deflate header
-	          var outBuffer = new Buffer(table.length);
-	          var buf = inflate(this.stream.readBuffer(table.compLength - 2), outBuffer);
-	          return new r.DecodeStream(buf);
-	        } else {
-	          return this.stream;
-	        }
+	  WOFFFont.prototype._decodeDirectory = function _decodeDirectory() {
+	    this.directory = WOFFDirectory.decode(this.stream, { _startOffset: 0 });
+	  };
+
+	  WOFFFont.prototype._getTableStream = function _getTableStream(tag) {
+	    var table = this.directory.tables[tag];
+	    if (table) {
+	      this.stream.pos = table.offset;
+
+	      if (table.compLength < table.length) {
+	        this.stream.pos += 2; // skip deflate header
+	        var outBuffer = new Buffer(table.length);
+	        var buf = inflate(this.stream.readBuffer(table.compLength - 2), outBuffer);
+	        return new r.DecodeStream(buf);
+	      } else {
+	        return this.stream;
 	      }
+	    }
 
-	      return null;
-	    }
-	  }], [{
-	    key: 'probe',
-	    value: function probe(buffer) {
-	      return buffer.toString('ascii', 0, 4) === 'wOFF';
-	    }
-	  }]);
+	    return null;
+	  };
 
 	  return WOFFFont;
 	}(TTFFont);
@@ -51205,21 +50292,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function WOFF2Glyph() {
 	    _classCallCheck(this, WOFF2Glyph);
 
-	    return _possibleConstructorReturn(this, (WOFF2Glyph.__proto__ || _Object$getPrototypeOf(WOFF2Glyph)).apply(this, arguments));
+	    return _possibleConstructorReturn(this, _TTFGlyph.apply(this, arguments));
 	  }
 
-	  _createClass(WOFF2Glyph, [{
-	    key: '_decode',
-	    value: function _decode() {
-	      // We have to decode in advance (in WOFF2Font), so just return the pre-decoded data.
-	      return this._font._transformedGlyphs[this.id];
-	    }
-	  }, {
-	    key: '_getCBox',
-	    value: function _getCBox() {
-	      return this.path.bbox;
-	    }
-	  }]);
+	  WOFF2Glyph.prototype._decode = function _decode() {
+	    // We have to decode in advance (in WOFF2Font), so just return the pre-decoded data.
+	    return this._font._transformedGlyphs[this.id];
+	  };
+
+	  WOFF2Glyph.prototype._getCBox = function _getCBox() {
+	    return this.path.bbox;
+	  };
 
 	  return WOFF2Glyph;
 	}(TTFGlyph);
@@ -51308,114 +50391,106 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function WOFF2Font() {
 	    _classCallCheck(this, WOFF2Font);
 
-	    return _possibleConstructorReturn(this, (WOFF2Font.__proto__ || _Object$getPrototypeOf(WOFF2Font)).apply(this, arguments));
+	    return _possibleConstructorReturn(this, _TTFFont.apply(this, arguments));
 	  }
 
-	  _createClass(WOFF2Font, [{
-	    key: '_decodeDirectory',
-	    value: function _decodeDirectory() {
-	      this.directory = WOFF2Directory.decode(this.stream);
-	      this._dataPos = this.stream.pos;
+	  WOFF2Font.probe = function probe(buffer) {
+	    return buffer.toString('ascii', 0, 4) === 'wOF2';
+	  };
+
+	  WOFF2Font.prototype._decodeDirectory = function _decodeDirectory() {
+	    this.directory = WOFF2Directory.decode(this.stream);
+	    this._dataPos = this.stream.pos;
+	  };
+
+	  WOFF2Font.prototype._decompress = function _decompress() {
+	    // decompress data and setup table offsets if we haven't already
+	    if (!this._decompressed) {
+	      this.stream.pos = this._dataPos;
+	      var buffer = this.stream.readBuffer(this.directory.totalCompressedSize);
+
+	      var decompressedSize = 0;
+	      for (var tag in this.directory.tables) {
+	        var entry = this.directory.tables[tag];
+	        entry.offset = decompressedSize;
+	        decompressedSize += entry.transformLength != null ? entry.transformLength : entry.length;
+	      }
+
+	      var decompressed = brotli(buffer, decompressedSize);
+	      if (!decompressed) {
+	        throw new Error('Error decoding compressed data in WOFF2');
+	      }
+
+	      this.stream = new r.DecodeStream(new Buffer(decompressed));
+	      this._decompressed = true;
 	    }
-	  }, {
-	    key: '_decompress',
-	    value: function _decompress() {
-	      // decompress data and setup table offsets if we haven't already
-	      if (!this._decompressed) {
-	        this.stream.pos = this._dataPos;
-	        var buffer = this.stream.readBuffer(this.directory.totalCompressedSize);
+	  };
 
-	        var decompressedSize = 0;
-	        for (var tag in this.directory.tables) {
-	          var entry = this.directory.tables[tag];
-	          entry.offset = decompressedSize;
-	          decompressedSize += entry.transformLength != null ? entry.transformLength : entry.length;
+	  WOFF2Font.prototype._decodeTable = function _decodeTable(table) {
+	    this._decompress();
+	    return _TTFFont.prototype._decodeTable.call(this, table);
+	  };
+
+	  // Override this method to get a glyph and return our
+	  // custom subclass if there is a glyf table.
+
+
+	  WOFF2Font.prototype._getBaseGlyph = function _getBaseGlyph(glyph) {
+	    var characters = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+
+	    if (!this._glyphs[glyph]) {
+	      if (this.directory.tables.glyf && this.directory.tables.glyf.transformed) {
+	        if (!this._transformedGlyphs) {
+	          this._transformGlyfTable();
 	        }
-
-	        var decompressed = brotli(buffer, decompressedSize);
-	        if (!decompressed) {
-	          throw new Error('Error decoding compressed data in WOFF2');
-	        }
-
-	        this.stream = new r.DecodeStream(new Buffer(decompressed));
-	        this._decompressed = true;
+	        return this._glyphs[glyph] = new WOFF2Glyph(glyph, characters, this);
+	      } else {
+	        return _TTFFont.prototype._getBaseGlyph.call(this, glyph, characters);
 	      }
 	    }
-	  }, {
-	    key: '_decodeTable',
-	    value: function _decodeTable(table) {
-	      this._decompress();
-	      return _get(WOFF2Font.prototype.__proto__ || _Object$getPrototypeOf(WOFF2Font.prototype), '_decodeTable', this).call(this, table);
-	    }
+	  };
 
-	    // Override this method to get a glyph and return our
-	    // custom subclass if there is a glyf table.
+	  WOFF2Font.prototype._transformGlyfTable = function _transformGlyfTable() {
+	    this._decompress();
+	    this.stream.pos = this.directory.tables.glyf.offset;
+	    var table = GlyfTable.decode(this.stream);
+	    var glyphs = [];
 
-	  }, {
-	    key: '_getBaseGlyph',
-	    value: function _getBaseGlyph(glyph) {
-	      var characters = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+	    for (var index = 0; index < table.numGlyphs; index++) {
+	      var glyph = {};
+	      var nContours = table.nContours.readInt16BE();
+	      glyph.numberOfContours = nContours;
 
-	      if (!this._glyphs[glyph]) {
-	        if (this.directory.tables.glyf && this.directory.tables.glyf.transformed) {
-	          if (!this._transformedGlyphs) {
-	            this._transformGlyfTable();
-	          }
-	          return this._glyphs[glyph] = new WOFF2Glyph(glyph, characters, this);
-	        } else {
-	          return _get(WOFF2Font.prototype.__proto__ || _Object$getPrototypeOf(WOFF2Font.prototype), '_getBaseGlyph', this).call(this, glyph, characters);
+	      if (nContours > 0) {
+	        // simple glyph
+	        var nPoints = [];
+	        var totalPoints = 0;
+
+	        for (var i = 0; i < nContours; i++) {
+	          var _r = read255UInt16(table.nPoints);
+	          nPoints.push(_r);
+	          totalPoints += _r;
 	        }
-	      }
-	    }
-	  }, {
-	    key: '_transformGlyfTable',
-	    value: function _transformGlyfTable() {
-	      this._decompress();
-	      this.stream.pos = this.directory.tables.glyf.offset;
-	      var table = GlyfTable.decode(this.stream);
-	      var glyphs = [];
 
-	      for (var index = 0; index < table.numGlyphs; index++) {
-	        var glyph = {};
-	        var nContours = table.nContours.readInt16BE();
-	        glyph.numberOfContours = nContours;
+	        glyph.points = decodeTriplet(table.flags, table.glyphs, totalPoints);
+	        for (var _i = 0; _i < nContours; _i++) {
+	          glyph.points[nPoints[_i] - 1].endContour = true;
+	        }
 
-	        if (nContours > 0) {
-	          // simple glyph
-	          var nPoints = [];
-	          var totalPoints = 0;
-
-	          for (var i = 0; i < nContours; i++) {
-	            var _r = read255UInt16(table.nPoints);
-	            nPoints.push(_r);
-	            totalPoints += _r;
-	          }
-
-	          glyph.points = decodeTriplet(table.flags, table.glyphs, totalPoints);
-	          for (var _i = 0; _i < nContours; _i++) {
-	            glyph.points[nPoints[_i] - 1].endContour = true;
-	          }
-
+	        var instructionSize = read255UInt16(table.glyphs);
+	      } else if (nContours < 0) {
+	        // composite glyph
+	        var haveInstructions = TTFGlyph.prototype._decodeComposite.call({ _font: this }, glyph, table.composites);
+	        if (haveInstructions) {
 	          var instructionSize = read255UInt16(table.glyphs);
-	        } else if (nContours < 0) {
-	          // composite glyph
-	          var haveInstructions = TTFGlyph.prototype._decodeComposite.call({ _font: this }, glyph, table.composites);
-	          if (haveInstructions) {
-	            var instructionSize = read255UInt16(table.glyphs);
-	          }
 	        }
-
-	        glyphs.push(glyph);
 	      }
 
-	      this._transformedGlyphs = glyphs;
+	      glyphs.push(glyph);
 	    }
-	  }], [{
-	    key: 'probe',
-	    value: function probe(buffer) {
-	      return buffer.toString('ascii', 0, 4) === 'wOF2';
-	    }
-	  }]);
+
+	    this._transformedGlyphs = glyphs;
+	  };
 
 	  return WOFF2Font;
 	}(TTFFont);
@@ -51428,12 +50503,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this._buf = new r.Buffer(length);
 	  }
 
-	  _createClass(Substream, [{
-	    key: 'decode',
-	    value: function decode(stream, parent) {
-	      return new r.DecodeStream(this._buf.decode(stream, parent));
-	    }
-	  }]);
+	  Substream.prototype.decode = function decode(stream, parent) {
+	    return new r.DecodeStream(this._buf.decode(stream, parent));
+	  };
 
 	  return Substream;
 	}();
@@ -51548,12 +50620,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 
 	var TrueTypeCollection = function () {
-	  _createClass(TrueTypeCollection, null, [{
-	    key: 'probe',
-	    value: function probe(buffer) {
-	      return buffer.toString('ascii', 0, 4) === 'ttcf';
-	    }
-	  }]);
+	  TrueTypeCollection.probe = function probe(buffer) {
+	    return buffer.toString('ascii', 0, 4) === 'ttcf';
+	  };
 
 	  function TrueTypeCollection(stream) {
 	    _classCallCheck(this, TrueTypeCollection);
@@ -51566,70 +50635,53 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.header = TTCHeader.decode(stream);
 	  }
 
-	  _createClass(TrueTypeCollection, [{
-	    key: 'getFont',
-	    value: function getFont(name) {
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
+	  TrueTypeCollection.prototype.getFont = function getFont(name) {
+	    for (var _iterator = this.header.offsets, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	      var _ref;
 
-	      try {
-	        for (var _iterator = _getIterator(this.header.offsets), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var offset = _step.value;
-
-	          var stream = new r.DecodeStream(this.stream.buffer);
-	          stream.pos = offset;
-	          var font = new TTFFont(stream);
-	          if (font.postscriptName === name) {
-	            return font;
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
-	        }
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
+	      } else {
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
 	      }
 
-	      return null;
+	      var offset = _ref;
+
+	      var stream = new r.DecodeStream(this.stream.buffer);
+	      stream.pos = offset;
+	      var font = new TTFFont(stream);
+	      if (font.postscriptName === name) {
+	        return font;
+	      }
 	    }
-	  }, {
+
+	    return null;
+	  };
+
+	  _createClass(TrueTypeCollection, [{
 	    key: 'fonts',
 	    get: function get() {
 	      var fonts = [];
-	      var _iteratorNormalCompletion2 = true;
-	      var _didIteratorError2 = false;
-	      var _iteratorError2 = undefined;
+	      for (var _iterator2 = this.header.offsets, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	        var _ref2;
 
-	      try {
-	        for (var _iterator2 = _getIterator(this.header.offsets), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	          var offset = _step2.value;
+	        if (_isArray2) {
+	          if (_i2 >= _iterator2.length) break;
+	          _ref2 = _iterator2[_i2++];
+	        } else {
+	          _i2 = _iterator2.next();
+	          if (_i2.done) break;
+	          _ref2 = _i2.value;
+	        }
 
-	          var stream = new r.DecodeStream(this.stream.buffer);
-	          stream.pos = offset;
-	          fonts.push(new TTFFont(stream));
-	        }
-	      } catch (err) {
-	        _didIteratorError2 = true;
-	        _iteratorError2 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	            _iterator2.return();
-	          }
-	        } finally {
-	          if (_didIteratorError2) {
-	            throw _iteratorError2;
-	          }
-	        }
+	        var offset = _ref2;
+
+	        var stream = new r.DecodeStream(this.stream.buffer);
+	        stream.pos = offset;
+	        fonts.push(new TTFFont(stream));
 	      }
 
 	      return fonts;
@@ -51682,47 +50734,36 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 
 	var DFont = function () {
-	  _createClass(DFont, null, [{
-	    key: 'probe',
-	    value: function probe(buffer) {
-	      var stream = new r.DecodeStream(buffer);
+	  DFont.probe = function probe(buffer) {
+	    var stream = new r.DecodeStream(buffer);
 
-	      try {
-	        var header = DFontHeader.decode(stream);
-	      } catch (e) {
-	        return false;
-	      }
-
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
-
-	      try {
-	        for (var _iterator = _getIterator(header.map.typeList.types), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var type = _step.value;
-
-	          if (type.name === 'sfnt') {
-	            return true;
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
-	        }
-	      }
-
+	    try {
+	      var header = DFontHeader.decode(stream);
+	    } catch (e) {
 	      return false;
 	    }
-	  }]);
+
+	    for (var _iterator = header.map.typeList.types, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	      var _ref;
+
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
+	      } else {
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
+	      }
+
+	      var type = _ref;
+
+	      if (type.name === 'sfnt') {
+	        return true;
+	      }
+	    }
+
+	    return false;
+	  };
 
 	  function DFont(stream) {
 	    _classCallCheck(this, DFont);
@@ -51730,131 +50771,99 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.stream = stream;
 	    this.header = DFontHeader.decode(this.stream);
 
-	    var _iteratorNormalCompletion2 = true;
-	    var _didIteratorError2 = false;
-	    var _iteratorError2 = undefined;
+	    for (var _iterator2 = this.header.map.typeList.types, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	      var _ref2;
 
-	    try {
-	      for (var _iterator2 = _getIterator(this.header.map.typeList.types), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	        var type = _step2.value;
-	        var _iteratorNormalCompletion3 = true;
-	        var _didIteratorError3 = false;
-	        var _iteratorError3 = undefined;
+	      if (_isArray2) {
+	        if (_i2 >= _iterator2.length) break;
+	        _ref2 = _iterator2[_i2++];
+	      } else {
+	        _i2 = _iterator2.next();
+	        if (_i2.done) break;
+	        _ref2 = _i2.value;
+	      }
 
-	        try {
-	          for (var _iterator3 = _getIterator(type.refList), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	            var ref = _step3.value;
+	      var type = _ref2;
 
-	            if (ref.nameOffset >= 0) {
-	              this.stream.pos = ref.nameOffset + this.header.map.nameListOffset;
-	              ref.name = DFontName.decode(this.stream);
-	            } else {
-	              ref.name = null;
-	            }
-	          }
-	        } catch (err) {
-	          _didIteratorError3 = true;
-	          _iteratorError3 = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	              _iterator3.return();
-	            }
-	          } finally {
-	            if (_didIteratorError3) {
-	              throw _iteratorError3;
-	            }
-	          }
+	      for (var _iterator3 = type.refList, _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	        var _ref3;
+
+	        if (_isArray3) {
+	          if (_i3 >= _iterator3.length) break;
+	          _ref3 = _iterator3[_i3++];
+	        } else {
+	          _i3 = _iterator3.next();
+	          if (_i3.done) break;
+	          _ref3 = _i3.value;
 	        }
 
-	        if (type.name === 'sfnt') {
-	          this.sfnt = type;
+	        var ref = _ref3;
+
+	        if (ref.nameOffset >= 0) {
+	          this.stream.pos = ref.nameOffset + this.header.map.nameListOffset;
+	          ref.name = DFontName.decode(this.stream);
+	        } else {
+	          ref.name = null;
 	        }
 	      }
-	    } catch (err) {
-	      _didIteratorError2 = true;
-	      _iteratorError2 = err;
-	    } finally {
-	      try {
-	        if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	          _iterator2.return();
-	        }
-	      } finally {
-	        if (_didIteratorError2) {
-	          throw _iteratorError2;
-	        }
+
+	      if (type.name === 'sfnt') {
+	        this.sfnt = type;
 	      }
 	    }
 	  }
 
-	  _createClass(DFont, [{
-	    key: 'getFont',
-	    value: function getFont(name) {
-	      if (!this.sfnt) {
-	        return null;
-	      }
-
-	      var _iteratorNormalCompletion4 = true;
-	      var _didIteratorError4 = false;
-	      var _iteratorError4 = undefined;
-
-	      try {
-	        for (var _iterator4 = _getIterator(this.sfnt.refList), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	          var ref = _step4.value;
-
-	          var pos = this.header.dataOffset + ref.dataOffset + 4;
-	          var stream = new r.DecodeStream(this.stream.buffer.slice(pos));
-	          var font = new TTFFont(stream);
-	          if (font.postscriptName === name) {
-	            return font;
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError4 = true;
-	        _iteratorError4 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion4 && _iterator4.return) {
-	            _iterator4.return();
-	          }
-	        } finally {
-	          if (_didIteratorError4) {
-	            throw _iteratorError4;
-	          }
-	        }
-	      }
-
+	  DFont.prototype.getFont = function getFont(name) {
+	    if (!this.sfnt) {
 	      return null;
 	    }
-	  }, {
+
+	    for (var _iterator4 = this.sfnt.refList, _isArray4 = Array.isArray(_iterator4), _i4 = 0, _iterator4 = _isArray4 ? _iterator4 : _getIterator(_iterator4);;) {
+	      var _ref4;
+
+	      if (_isArray4) {
+	        if (_i4 >= _iterator4.length) break;
+	        _ref4 = _iterator4[_i4++];
+	      } else {
+	        _i4 = _iterator4.next();
+	        if (_i4.done) break;
+	        _ref4 = _i4.value;
+	      }
+
+	      var ref = _ref4;
+
+	      var pos = this.header.dataOffset + ref.dataOffset + 4;
+	      var stream = new r.DecodeStream(this.stream.buffer.slice(pos));
+	      var font = new TTFFont(stream);
+	      if (font.postscriptName === name) {
+	        return font;
+	      }
+	    }
+
+	    return null;
+	  };
+
+	  _createClass(DFont, [{
 	    key: 'fonts',
 	    get: function get() {
 	      var fonts = [];
-	      var _iteratorNormalCompletion5 = true;
-	      var _didIteratorError5 = false;
-	      var _iteratorError5 = undefined;
+	      for (var _iterator5 = this.sfnt.refList, _isArray5 = Array.isArray(_iterator5), _i5 = 0, _iterator5 = _isArray5 ? _iterator5 : _getIterator(_iterator5);;) {
+	        var _ref5;
 
-	      try {
-	        for (var _iterator5 = _getIterator(this.sfnt.refList), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-	          var ref = _step5.value;
+	        if (_isArray5) {
+	          if (_i5 >= _iterator5.length) break;
+	          _ref5 = _iterator5[_i5++];
+	        } else {
+	          _i5 = _iterator5.next();
+	          if (_i5.done) break;
+	          _ref5 = _i5.value;
+	        }
 
-	          var pos = this.header.dataOffset + ref.dataOffset + 4;
-	          var stream = new r.DecodeStream(this.stream.buffer.slice(pos));
-	          fonts.push(new TTFFont(stream));
-	        }
-	      } catch (err) {
-	        _didIteratorError5 = true;
-	        _iteratorError5 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion5 && _iterator5.return) {
-	            _iterator5.return();
-	          }
-	        } finally {
-	          if (_didIteratorError5) {
-	            throw _iteratorError5;
-	          }
-	        }
+	        var ref = _ref5;
+
+	        var pos = this.header.dataOffset + ref.dataOffset + 4;
+	        var stream = new r.DecodeStream(this.stream.buffer.slice(pos));
+	        fonts.push(new TTFFont(stream));
 	      }
 
 	      return fonts;
@@ -66400,33 +65409,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 224 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(225), __esModule: true };
-
-/***/ },
-/* 225 */
-/***/ function(module, exports, __webpack_require__) {
-
-	__webpack_require__(226);
-	module.exports = __webpack_require__(139).Object.getPrototypeOf;
-
-/***/ },
-/* 226 */
-/***/ function(module, exports, __webpack_require__) {
-
-	// 19.1.2.9 Object.getPrototypeOf(O)
-	var toObject        = __webpack_require__(172)
-	  , $getPrototypeOf = __webpack_require__(171);
-
-	__webpack_require__(137)('getPrototypeOf', function(){
-	  return function getPrototypeOf(it){
-	    return $getPrototypeOf(toObject(it));
-	  };
-	});
-
-/***/ },
-/* 227 */
-/***/ function(module, exports, __webpack_require__) {
-
 	"use strict";
 
 	exports.__esModule = true;
@@ -66446,18 +65428,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 228 */
+/* 225 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	exports.__esModule = true;
 
-	var _setPrototypeOf = __webpack_require__(229);
+	var _setPrototypeOf = __webpack_require__(226);
 
 	var _setPrototypeOf2 = _interopRequireDefault(_setPrototypeOf);
 
-	var _create = __webpack_require__(233);
+	var _create = __webpack_require__(230);
 
 	var _create2 = _interopRequireDefault(_create);
 
@@ -66484,28 +65466,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 229 */
+/* 226 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(230), __esModule: true };
+	module.exports = { "default": __webpack_require__(227), __esModule: true };
 
 /***/ },
-/* 230 */
+/* 227 */
 /***/ function(module, exports, __webpack_require__) {
 
-	__webpack_require__(231);
+	__webpack_require__(228);
 	module.exports = __webpack_require__(139).Object.setPrototypeOf;
 
 /***/ },
-/* 231 */
+/* 228 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// 19.1.3.19 Object.setPrototypeOf(O, proto)
 	var $export = __webpack_require__(138);
-	$export($export.S, 'Object', {setPrototypeOf: __webpack_require__(232).set});
+	$export($export.S, 'Object', {setPrototypeOf: __webpack_require__(229).set});
 
 /***/ },
-/* 232 */
+/* 229 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Works with __proto__ only. Old v8 can't work with null proto objects.
@@ -66535,6 +65517,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
+/* 230 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = { "default": __webpack_require__(231), __esModule: true };
+
+/***/ },
+/* 231 */
+/***/ function(module, exports, __webpack_require__) {
+
+	__webpack_require__(232);
+	var $Object = __webpack_require__(139).Object;
+	module.exports = function create(P, D){
+	  return $Object.create(P, D);
+	};
+
+/***/ },
+/* 232 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var $export = __webpack_require__(138)
+	// 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
+	$export($export.S, 'Object', {create: __webpack_require__(156)});
+
+/***/ },
 /* 233 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -66546,36 +65552,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	__webpack_require__(235);
 	var $Object = __webpack_require__(139).Object;
-	module.exports = function create(P, D){
-	  return $Object.create(P, D);
-	};
-
-/***/ },
-/* 235 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var $export = __webpack_require__(138)
-	// 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
-	$export($export.S, 'Object', {create: __webpack_require__(156)});
-
-/***/ },
-/* 236 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(237), __esModule: true };
-
-/***/ },
-/* 237 */
-/***/ function(module, exports, __webpack_require__) {
-
-	__webpack_require__(238);
-	var $Object = __webpack_require__(139).Object;
 	module.exports = function defineProperties(T, D){
 	  return $Object.defineProperties(T, D);
 	};
 
 /***/ },
-/* 238 */
+/* 235 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var $export = __webpack_require__(138);
@@ -66583,12 +65565,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	$export($export.S + $export.F * !__webpack_require__(133), 'Object', {defineProperties: __webpack_require__(157)});
 
 /***/ },
-/* 239 */
+/* 236 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var pSlice = Array.prototype.slice;
-	var objectKeys = __webpack_require__(240);
-	var isArguments = __webpack_require__(241);
+	var objectKeys = __webpack_require__(237);
+	var isArguments = __webpack_require__(238);
 
 	var deepEqual = module.exports = function (actual, expected, opts) {
 	  if (!opts) opts = {};
@@ -66683,7 +65665,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 240 */
+/* 237 */
 /***/ function(module, exports) {
 
 	exports = module.exports = typeof Object.keys === 'function'
@@ -66698,7 +65680,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 241 */
+/* 238 */
 /***/ function(module, exports) {
 
 	var supportsArgumentsClass = (function(){
@@ -66724,72 +65706,29 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 242 */
+/* 239 */
 /***/ function(module, exports, __webpack_require__) {
 
-	"use strict";
-
-	exports.__esModule = true;
-
-	var _getPrototypeOf = __webpack_require__(224);
-
-	var _getPrototypeOf2 = _interopRequireDefault(_getPrototypeOf);
-
-	var _getOwnPropertyDescriptor = __webpack_require__(119);
-
-	var _getOwnPropertyDescriptor2 = _interopRequireDefault(_getOwnPropertyDescriptor);
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-	exports.default = function get(object, property, receiver) {
-	  if (object === null) object = Function.prototype;
-	  var desc = (0, _getOwnPropertyDescriptor2.default)(object, property);
-
-	  if (desc === undefined) {
-	    var parent = (0, _getPrototypeOf2.default)(object);
-
-	    if (parent === null) {
-	      return undefined;
-	    } else {
-	      return get(parent, property, receiver);
-	    }
-	  } else if ("value" in desc) {
-	    return desc.value;
-	  } else {
-	    var getter = desc.get;
-
-	    if (getter === undefined) {
-	      return undefined;
-	    }
-
-	    return getter.call(receiver);
-	  }
-	};
+	module.exports = { "default": __webpack_require__(240), __esModule: true };
 
 /***/ },
-/* 243 */
+/* 240 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(244), __esModule: true };
-
-/***/ },
-/* 244 */
-/***/ function(module, exports, __webpack_require__) {
-
-	__webpack_require__(245);
+	__webpack_require__(241);
 	module.exports = __webpack_require__(139).Object.assign;
 
 /***/ },
-/* 245 */
+/* 241 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// 19.1.3.1 Object.assign(target, source)
 	var $export = __webpack_require__(138);
 
-	$export($export.S + $export.F, 'Object', {assign: __webpack_require__(246)});
+	$export($export.S + $export.F, 'Object', {assign: __webpack_require__(242)});
 
 /***/ },
-/* 246 */
+/* 242 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -66827,47 +65766,62 @@ return /******/ (function(modules) { // webpackBootstrap
 	} : $assign;
 
 /***/ },
+/* 243 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = { "default": __webpack_require__(244), __esModule: true };
+
+/***/ },
+/* 244 */
+/***/ function(module, exports, __webpack_require__) {
+
+	__webpack_require__(245);
+	module.exports = __webpack_require__(139).String.fromCodePoint;
+
+/***/ },
+/* 245 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var $export        = __webpack_require__(138)
+	  , toIndex        = __webpack_require__(163)
+	  , fromCharCode   = String.fromCharCode
+	  , $fromCodePoint = String.fromCodePoint;
+
+	// length should be 1, old FF problem
+	$export($export.S + $export.F * (!!$fromCodePoint && $fromCodePoint.length != 1), 'String', {
+	  // 21.1.2.2 String.fromCodePoint(...codePoints)
+	  fromCodePoint: function fromCodePoint(x){ // eslint-disable-line no-unused-vars
+	    var res  = []
+	      , aLen = arguments.length
+	      , i    = 0
+	      , code;
+	    while(aLen > i){
+	      code = +arguments[i++];
+	      if(toIndex(code, 0x10ffff) !== code)throw RangeError(code + ' is not a valid code point');
+	      res.push(code < 0x10000
+	        ? fromCharCode(code)
+	        : fromCharCode(((code -= 0x10000) >> 10) + 0xd800, code % 0x400 + 0xdc00)
+	      );
+	    } return res.join('');
+	  }
+	});
+
+/***/ },
+/* 246 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = { "default": __webpack_require__(247), __esModule: true };
+
+/***/ },
 /* 247 */
 /***/ function(module, exports, __webpack_require__) {
 
-	"use strict";
-
-	exports.__esModule = true;
-
-	var _from = __webpack_require__(248);
-
-	var _from2 = _interopRequireDefault(_from);
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-	exports.default = function (arr) {
-	  if (Array.isArray(arr)) {
-	    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
-	      arr2[i] = arr[i];
-	    }
-
-	    return arr2;
-	  } else {
-	    return (0, _from2.default)(arr);
-	  }
-	};
-
-/***/ },
-/* 248 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(249), __esModule: true };
-
-/***/ },
-/* 249 */
-/***/ function(module, exports, __webpack_require__) {
-
 	__webpack_require__(173);
-	__webpack_require__(250);
+	__webpack_require__(248);
 	module.exports = __webpack_require__(139).Array.from;
 
 /***/ },
-/* 250 */
+/* 248 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -66877,10 +65831,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  , call           = __webpack_require__(214)
 	  , isArrayIter    = __webpack_require__(215)
 	  , toLength       = __webpack_require__(161)
-	  , createProperty = __webpack_require__(251)
+	  , createProperty = __webpack_require__(249)
 	  , getIterFn      = __webpack_require__(176);
 
-	$export($export.S + $export.F * !__webpack_require__(252)(function(iter){ Array.from(iter); }), 'Array', {
+	$export($export.S + $export.F * !__webpack_require__(250)(function(iter){ Array.from(iter); }), 'Array', {
 	  // 22.1.2.1 Array.from(arrayLike, mapfn = undefined, thisArg = undefined)
 	  from: function from(arrayLike/*, mapfn = undefined, thisArg = undefined*/){
 	    var O       = toObject(arrayLike)
@@ -66910,7 +65864,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 251 */
+/* 249 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -66923,7 +65877,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 252 */
+/* 250 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var ITERATOR     = __webpack_require__(170)('iterator')
@@ -66949,149 +65903,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 253 */
+/* 251 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(254), __esModule: true };
+	module.exports = { "default": __webpack_require__(252), __esModule: true };
 
 /***/ },
-/* 254 */
-/***/ function(module, exports, __webpack_require__) {
-
-	__webpack_require__(255);
-	module.exports = __webpack_require__(139).String.fromCodePoint;
-
-/***/ },
-/* 255 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var $export        = __webpack_require__(138)
-	  , toIndex        = __webpack_require__(163)
-	  , fromCharCode   = String.fromCharCode
-	  , $fromCodePoint = String.fromCodePoint;
-
-	// length should be 1, old FF problem
-	$export($export.S + $export.F * (!!$fromCodePoint && $fromCodePoint.length != 1), 'String', {
-	  // 21.1.2.2 String.fromCodePoint(...codePoints)
-	  fromCodePoint: function fromCodePoint(x){ // eslint-disable-line no-unused-vars
-	    var res  = []
-	      , aLen = arguments.length
-	      , i    = 0
-	      , code;
-	    while(aLen > i){
-	      code = +arguments[i++];
-	      if(toIndex(code, 0x10ffff) !== code)throw RangeError(code + ' is not a valid code point');
-	      res.push(code < 0x10000
-	        ? fromCharCode(code)
-	        : fromCharCode(((code -= 0x10000) >> 10) + 0xd800, code % 0x400 + 0xdc00)
-	      );
-	    } return res.join('');
-	  }
-	});
-
-/***/ },
-/* 256 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	exports.__esModule = true;
-
-	var _isIterable2 = __webpack_require__(257);
-
-	var _isIterable3 = _interopRequireDefault(_isIterable2);
-
-	var _getIterator2 = __webpack_require__(145);
-
-	var _getIterator3 = _interopRequireDefault(_getIterator2);
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-	exports.default = function () {
-	  function sliceIterator(arr, i) {
-	    var _arr = [];
-	    var _n = true;
-	    var _d = false;
-	    var _e = undefined;
-
-	    try {
-	      for (var _i = (0, _getIterator3.default)(arr), _s; !(_n = (_s = _i.next()).done); _n = true) {
-	        _arr.push(_s.value);
-
-	        if (i && _arr.length === i) break;
-	      }
-	    } catch (err) {
-	      _d = true;
-	      _e = err;
-	    } finally {
-	      try {
-	        if (!_n && _i["return"]) _i["return"]();
-	      } finally {
-	        if (_d) throw _e;
-	      }
-	    }
-
-	    return _arr;
-	  }
-
-	  return function (arr, i) {
-	    if (Array.isArray(arr)) {
-	      return arr;
-	    } else if ((0, _isIterable3.default)(Object(arr))) {
-	      return sliceIterator(arr, i);
-	    } else {
-	      throw new TypeError("Invalid attempt to destructure non-iterable instance");
-	    }
-	  };
-	}();
-
-/***/ },
-/* 257 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(258), __esModule: true };
-
-/***/ },
-/* 258 */
-/***/ function(module, exports, __webpack_require__) {
-
-	__webpack_require__(147);
-	__webpack_require__(173);
-	module.exports = __webpack_require__(259);
-
-/***/ },
-/* 259 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var classof   = __webpack_require__(177)
-	  , ITERATOR  = __webpack_require__(170)('iterator')
-	  , Iterators = __webpack_require__(151);
-	module.exports = __webpack_require__(139).isIterable = function(it){
-	  var O = Object(it);
-	  return O[ITERATOR] !== undefined
-	    || '@@iterator' in O
-	    || Iterators.hasOwnProperty(classof(O));
-	};
-
-/***/ },
-/* 260 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(261), __esModule: true };
-
-/***/ },
-/* 261 */
+/* 252 */
 /***/ function(module, exports, __webpack_require__) {
 
 	__webpack_require__(199);
 	__webpack_require__(173);
 	__webpack_require__(147);
-	__webpack_require__(262);
-	__webpack_require__(263);
+	__webpack_require__(253);
+	__webpack_require__(254);
 	module.exports = __webpack_require__(139).Set;
 
 /***/ },
-/* 262 */
+/* 253 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -67108,7 +65937,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}, strong);
 
 /***/ },
-/* 263 */
+/* 254 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// https://github.com/DavidBruant/Map-Set.prototype.toJSON
@@ -67117,7 +65946,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	$export($export.P + $export.R, 'Set', {toJSON: __webpack_require__(222)('Set')});
 
 /***/ },
-/* 264 */
+/* 255 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.9.1
@@ -67125,7 +65954,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	UnicodeTrie = __webpack_require__(15);
 
-	data = __webpack_require__(265);
+	data = __webpack_require__(256);
 
 
 
@@ -67266,7 +66095,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 265 */
+/* 256 */
 /***/ function(module, exports) {
 
 	module.exports = {
@@ -67503,17 +66332,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 266 */
+/* 257 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-	var _slicedToArray = _interopDefault(__webpack_require__(256));
+	var _slicedToArray = _interopDefault(__webpack_require__(258));
 	var _getIterator = _interopDefault(__webpack_require__(145));
-	var _defineProperty = _interopDefault(__webpack_require__(267));
-	var _regeneratorRuntime = _interopDefault(__webpack_require__(268));
+	var _defineProperty = _interopDefault(__webpack_require__(262));
+	var _regeneratorRuntime = _interopDefault(__webpack_require__(263));
 	var _Symbol$iterator = _interopDefault(__webpack_require__(186));
 	var _classCallCheck = _interopDefault(__webpack_require__(205));
 	var _createClass = _interopDefault(__webpack_require__(206));
@@ -67699,7 +66528,91 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 
 /***/ },
-/* 267 */
+/* 258 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	exports.__esModule = true;
+
+	var _isIterable2 = __webpack_require__(259);
+
+	var _isIterable3 = _interopRequireDefault(_isIterable2);
+
+	var _getIterator2 = __webpack_require__(145);
+
+	var _getIterator3 = _interopRequireDefault(_getIterator2);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	exports.default = function () {
+	  function sliceIterator(arr, i) {
+	    var _arr = [];
+	    var _n = true;
+	    var _d = false;
+	    var _e = undefined;
+
+	    try {
+	      for (var _i = (0, _getIterator3.default)(arr), _s; !(_n = (_s = _i.next()).done); _n = true) {
+	        _arr.push(_s.value);
+
+	        if (i && _arr.length === i) break;
+	      }
+	    } catch (err) {
+	      _d = true;
+	      _e = err;
+	    } finally {
+	      try {
+	        if (!_n && _i["return"]) _i["return"]();
+	      } finally {
+	        if (_d) throw _e;
+	      }
+	    }
+
+	    return _arr;
+	  }
+
+	  return function (arr, i) {
+	    if (Array.isArray(arr)) {
+	      return arr;
+	    } else if ((0, _isIterable3.default)(Object(arr))) {
+	      return sliceIterator(arr, i);
+	    } else {
+	      throw new TypeError("Invalid attempt to destructure non-iterable instance");
+	    }
+	  };
+	}();
+
+/***/ },
+/* 259 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = { "default": __webpack_require__(260), __esModule: true };
+
+/***/ },
+/* 260 */
+/***/ function(module, exports, __webpack_require__) {
+
+	__webpack_require__(147);
+	__webpack_require__(173);
+	module.exports = __webpack_require__(261);
+
+/***/ },
+/* 261 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var classof   = __webpack_require__(177)
+	  , ITERATOR  = __webpack_require__(170)('iterator')
+	  , Iterators = __webpack_require__(151);
+	module.exports = __webpack_require__(139).isIterable = function(it){
+	  var O = Object(it);
+	  return O[ITERATOR] !== undefined
+	    || '@@iterator' in O
+	    || Iterators.hasOwnProperty(classof(O));
+	};
+
+/***/ },
+/* 262 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -67728,14 +66641,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 268 */
+/* 263 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(269);
+	module.exports = __webpack_require__(264);
 
 
 /***/ },
-/* 269 */
+/* 264 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {// This method of obtaining a reference to the global object needs to be
@@ -67756,7 +66669,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	// Force reevalutation of runtime.js.
 	g.regeneratorRuntime = undefined;
 
-	module.exports = __webpack_require__(270);
+	module.exports = __webpack_require__(265);
 
 	if (hadRuntime) {
 	  // Restore the original runtime.
@@ -67773,7 +66686,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 270 */
+/* 265 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, process) {/**
@@ -68503,7 +67416,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(34)))
 
 /***/ },
-/* 271 */
+/* 266 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {var clone = (function() {
@@ -68670,14 +67583,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 272 */
+/* 267 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(273).BrotliDecompressBuffer;
+	module.exports = __webpack_require__(268).BrotliDecompressBuffer;
 
 
 /***/ },
-/* 273 */
+/* 268 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -68695,15 +67608,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	   limitations under the License.
 	*/
 
-	var BrotliInput = __webpack_require__(274).BrotliInput;
-	var BrotliOutput = __webpack_require__(274).BrotliOutput;
-	var BrotliBitReader = __webpack_require__(275);
-	var BrotliDictionary = __webpack_require__(276);
-	var HuffmanCode = __webpack_require__(280).HuffmanCode;
-	var BrotliBuildHuffmanTable = __webpack_require__(280).BrotliBuildHuffmanTable;
-	var Context = __webpack_require__(281);
-	var Prefix = __webpack_require__(282);
-	var Transform = __webpack_require__(283);
+	var BrotliInput = __webpack_require__(269).BrotliInput;
+	var BrotliOutput = __webpack_require__(269).BrotliOutput;
+	var BrotliBitReader = __webpack_require__(270);
+	var BrotliDictionary = __webpack_require__(271);
+	var HuffmanCode = __webpack_require__(275).HuffmanCode;
+	var BrotliBuildHuffmanTable = __webpack_require__(275).BrotliBuildHuffmanTable;
+	var Context = __webpack_require__(276);
+	var Prefix = __webpack_require__(277);
+	var Transform = __webpack_require__(278);
 
 	var kDefaultCodeLength = 8;
 	var kCodeLengthRepeatCode = 16;
@@ -69621,7 +68534,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 274 */
+/* 269 */
 /***/ function(module, exports) {
 
 	function BrotliInput(buffer) {
@@ -69661,7 +68574,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 275 */
+/* 270 */
 /***/ function(module, exports) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -69791,7 +68704,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 276 */
+/* 271 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -69811,7 +68724,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	   Collection of static dictionary words.
 	*/
 
-	var data = __webpack_require__(277);
+	var data = __webpack_require__(272);
 	exports.init = function() {
 	  exports.dictionary = data.init();
 	};
@@ -69833,10 +68746,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 277 */
+/* 272 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var base64 = __webpack_require__(278);
+	var base64 = __webpack_require__(273);
 	var fs = __webpack_require__(53);
 
 	/**
@@ -69847,14 +68760,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * it's own dictionary. 😜
 	 */
 	exports.init = function() {
-	  var BrotliDecompressBuffer = __webpack_require__(273).BrotliDecompressBuffer;
-	  var compressed = base64.toByteArray(__webpack_require__(279));
+	  var BrotliDecompressBuffer = __webpack_require__(268).BrotliDecompressBuffer;
+	  var compressed = base64.toByteArray(__webpack_require__(274));
 	  return BrotliDecompressBuffer(compressed);
 	};
 
 
 /***/ },
-/* 278 */
+/* 273 */
 /***/ function(module, exports) {
 
 	'use strict'
@@ -69974,14 +68887,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 279 */
+/* 274 */
 /***/ function(module, exports) {
 
 	module.exports="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";
 
 
 /***/ },
-/* 280 */
+/* 275 */
 /***/ function(module, exports) {
 
 	function HuffmanCode(bits, value) {
@@ -70110,7 +69023,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 281 */
+/* 276 */
 /***/ function(module, exports) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -70366,7 +69279,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 282 */
+/* 277 */
 /***/ function(module, exports) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -70432,7 +69345,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 283 */
+/* 278 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -70452,7 +69365,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	   Transformations on dictionary words.
 	*/
 
-	var BrotliDictionary = __webpack_require__(276);
+	var BrotliDictionary = __webpack_require__(271);
 
 	var kIdentity       = 0;
 	var kOmitLast1      = 1;
@@ -70685,7 +69598,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 284 */
+/* 279 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(__dirname) {// Generated by CoffeeScript 1.10.0
@@ -70694,7 +69607,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
 	    hasProp = {}.hasOwnProperty;
 
-	  AFMFont = __webpack_require__(285);
+	  AFMFont = __webpack_require__(280);
 
 	  PDFFont = __webpack_require__(79);
 
@@ -70816,7 +69729,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, "/"))
 
 /***/ },
-/* 285 */
+/* 280 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.10.0
@@ -70992,7 +69905,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 286 */
+/* 281 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.10.0
@@ -71178,14 +70091,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 287 */
+/* 282 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.10.0
 	(function() {
 	  var LineWrapper;
 
-	  LineWrapper = __webpack_require__(288);
+	  LineWrapper = __webpack_require__(283);
 
 	  module.exports = {
 	    initText: function() {
@@ -71519,7 +70432,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 288 */
+/* 283 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.10.0
@@ -71530,7 +70443,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  EventEmitter = __webpack_require__(31).EventEmitter;
 
-	  LineBreaker = __webpack_require__(289);
+	  LineBreaker = __webpack_require__(284);
 
 	  LineWrapper = (function(superClass) {
 	    extend(LineWrapper, superClass);
@@ -71778,20 +70691,20 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 289 */
+/* 284 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.7.1
 	(function() {
 	  var AI, AL, BA, BK, CB, CI_BRK, CJ, CP_BRK, CR, DI_BRK, ID, IN_BRK, LF, LineBreaker, NL, NS, PR_BRK, SA, SG, SP, UnicodeTrie, WJ, XX, characterClasses, classTrie, pairTable, _ref, _ref1;
 
-	  UnicodeTrie = __webpack_require__(290);
+	  UnicodeTrie = __webpack_require__(285);
 
-	  classTrie = new UnicodeTrie(__webpack_require__(291));
+	  classTrie = new UnicodeTrie(__webpack_require__(286));
 
-	  _ref = __webpack_require__(292), BK = _ref.BK, CR = _ref.CR, LF = _ref.LF, NL = _ref.NL, CB = _ref.CB, BA = _ref.BA, SP = _ref.SP, WJ = _ref.WJ, SP = _ref.SP, BK = _ref.BK, LF = _ref.LF, NL = _ref.NL, AI = _ref.AI, AL = _ref.AL, SA = _ref.SA, SG = _ref.SG, XX = _ref.XX, CJ = _ref.CJ, ID = _ref.ID, NS = _ref.NS, characterClasses = _ref.characterClasses;
+	  _ref = __webpack_require__(287), BK = _ref.BK, CR = _ref.CR, LF = _ref.LF, NL = _ref.NL, CB = _ref.CB, BA = _ref.BA, SP = _ref.SP, WJ = _ref.WJ, SP = _ref.SP, BK = _ref.BK, LF = _ref.LF, NL = _ref.NL, AI = _ref.AI, AL = _ref.AL, SA = _ref.SA, SG = _ref.SG, XX = _ref.XX, CJ = _ref.CJ, ID = _ref.ID, NS = _ref.NS, characterClasses = _ref.characterClasses;
 
-	  _ref1 = __webpack_require__(293), DI_BRK = _ref1.DI_BRK, IN_BRK = _ref1.IN_BRK, CI_BRK = _ref1.CI_BRK, CP_BRK = _ref1.CP_BRK, PR_BRK = _ref1.PR_BRK, pairTable = _ref1.pairTable;
+	  _ref1 = __webpack_require__(288), DI_BRK = _ref1.DI_BRK, IN_BRK = _ref1.IN_BRK, CI_BRK = _ref1.CI_BRK, CP_BRK = _ref1.CP_BRK, PR_BRK = _ref1.PR_BRK, pairTable = _ref1.pairTable;
 
 	  LineBreaker = (function() {
 	    var Break, mapClass, mapFirst;
@@ -71939,7 +70852,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 290 */
+/* 285 */
 /***/ function(module, exports) {
 
 	// Generated by CoffeeScript 1.7.1
@@ -72031,7 +70944,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 291 */
+/* 286 */
 /***/ function(module, exports) {
 
 	module.exports = {
@@ -104658,7 +103571,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 292 */
+/* 287 */
 /***/ function(module, exports) {
 
 	// Generated by CoffeeScript 1.7.1
@@ -104749,7 +103662,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 293 */
+/* 288 */
 /***/ function(module, exports) {
 
 	// Generated by CoffeeScript 1.7.1
@@ -104772,14 +103685,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 294 */
+/* 289 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.10.0
 	(function() {
 	  var PDFImage;
 
-	  PDFImage = __webpack_require__(295);
+	  PDFImage = __webpack_require__(290);
 
 	  module.exports = {
 	    initImages: function() {
@@ -104861,7 +103774,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 295 */
+/* 290 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.10.0
@@ -104876,11 +103789,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  fs = __webpack_require__(53);
 
-	  Data = __webpack_require__(296);
+	  Data = __webpack_require__(291);
 
-	  JPEG = __webpack_require__(297);
+	  JPEG = __webpack_require__(292);
 
-	  PNG = __webpack_require__(298);
+	  PNG = __webpack_require__(293);
 
 	  PDFImage = (function() {
 	    function PDFImage() {}
@@ -104921,7 +103834,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 296 */
+/* 291 */
 /***/ function(module, exports) {
 
 	// Generated by CoffeeScript 1.10.0
@@ -105119,7 +104032,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 297 */
+/* 292 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.10.0
@@ -105203,7 +104116,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 298 */
+/* 293 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.10.0
@@ -105212,7 +104125,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  zlib = __webpack_require__(56);
 
-	  PNG = __webpack_require__(299);
+	  PNG = __webpack_require__(294);
 
 	  PNGImage = (function() {
 	    function PNGImage(data, label) {
@@ -105368,7 +104281,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 299 */
+/* 294 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.4.0
@@ -105692,7 +104605,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 300 */
+/* 295 */
 /***/ function(module, exports) {
 
 	// Generated by CoffeeScript 1.10.0
@@ -105831,7 +104744,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 301 */
+/* 296 */
 /***/ function(module, exports) {
 
 	/* jslint node: true */
@@ -105892,13 +104805,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 302 */
+/* 297 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {/* jslint node: true */
 	'use strict';
 
-	var PDFImage = __webpack_require__(295);
+	var PDFImage = __webpack_require__(290);
 
 	function ImageMeasure(pdfKitDoc, imageDictionary) {
 		this.pdfKitDoc = pdfKitDoc;
@@ -105948,7 +104861,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ },
-/* 303 */
+/* 298 */
 /***/ function(module, exports) {
 
 	/* jslint node: true */
@@ -106100,7 +105013,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 304 */
+/* 299 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* FileSaver.js
@@ -106286,7 +105199,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	if (typeof module !== "undefined" && module.exports) {
 	  module.exports.saveAs = saveAs;
-	} else if (("function" !== "undefined" && __webpack_require__(305) !== null) && (__webpack_require__(306) !== null)) {
+	} else if (("function" !== "undefined" && __webpack_require__(300) !== null) && (__webpack_require__(301) !== null)) {
 	  !(__WEBPACK_AMD_DEFINE_RESULT__ = function() {
 	    return saveAs;
 	  }.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
@@ -106294,14 +105207,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 305 */
+/* 300 */
 /***/ function(module, exports) {
 
 	module.exports = function() { throw new Error("define cannot be used indirect"); };
 
 
 /***/ },
-/* 306 */
+/* 301 */
 /***/ function(module, exports) {
 
 	/* WEBPACK VAR INJECTION */(function(__webpack_amd_options__) {module.exports = __webpack_amd_options__;
