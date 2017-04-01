@@ -97,6 +97,7 @@ StyleContextStack.prototype.autopush = function (item) {
 		'decorationColor',
 		'background',
 		'lineHeight',
+		'characterSpacing',
 		'noWrap',
 		'markerColor'
 			//'tableCellPadding'

@@ -78,11 +78,12 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	var bold = getStyleProperty({}, styleContextStack, 'bold', false);
 	var italics = getStyleProperty({}, styleContextStack, 'italics', false);
 	var lineHeight = getStyleProperty({}, styleContextStack, 'lineHeight', 1);
+	var characterSpacing = getStyleProperty({}, styleContextStack, 'characterSpacing', 0);
 
 	var font = this.fontProvider.provideFont(fontName, bold, italics);
 
 	return {
-		width: font.widthOfString(text, fontSize),
+		width: font.widthOfString(text, fontSize) + ((characterSpacing || 0) * (text.length - 1)),
 		height: font.lineHeight(fontSize) * lineHeight,
 		fontSize: fontSize,
 		lineHeight: lineHeight,
@@ -220,24 +221,24 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var decorationStyle = getStyleProperty(item, styleContextStack, 'decorationStyle', null);
 		var background = getStyleProperty(item, styleContextStack, 'background', null);
 		var lineHeight = getStyleProperty(item, styleContextStack, 'lineHeight', 1);
+		var characterSpacing = getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
 		var link = getStyleProperty(item, styleContextStack, 'link', null);
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
-		// TODO: character spacing
-		item.width = font.widthOfString(item.text, fontSize);
+		item.width = font.widthOfString(item.text, fontSize) + ((characterSpacing || 0) * (item.text.length - 1));
 		item.height = font.lineHeight(fontSize) * lineHeight;
 
 		var leadingSpaces = item.text.match(LEADING);
 		var trailingSpaces = item.text.match(TRAILING);
 		if (leadingSpaces) {
-			item.leadingCut = font.widthOfString(leadingSpaces[0], fontSize);
+			item.leadingCut = font.widthOfString(leadingSpaces[0], fontSize) + ((characterSpacing || 0) * (leadingSpaces[0].length - 1));
 		} else {
 			item.leadingCut = 0;
 		}
 
 		if (trailingSpaces) {
-			item.trailingCut = font.widthOfString(trailingSpaces[0], fontSize);
+			item.trailingCut = font.widthOfString(trailingSpaces[0], fontSize) + ((characterSpacing || 0) * (trailingSpaces[0].length - 1));
 		} else {
 			item.trailingCut = 0;
 		}
@@ -245,6 +246,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.alignment = getStyleProperty(item, styleContextStack, 'alignment', 'left');
 		item.font = font;
 		item.fontSize = fontSize;
+		item.characterSpacing = characterSpacing;
 		item.color = color;
 		item.decoration = decoration;
 		item.decorationColor = decorationColor;

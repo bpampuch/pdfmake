@@ -346,6 +346,7 @@ function renderLine(line, x, y, pdfKitDoc) {
 		pdfKitDoc.text(inline.text, x + inline.x, y + shiftToBaseline, {
 			lineBreak: false,
 			textWidth: inline.width,
+			characterSpacing: inline.characterSpacing,
 			wordCount: 1,
 			link: inline.link
 		});
