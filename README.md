@@ -645,8 +645,10 @@ There's one thing on the roadmap for v2 (no deadline however) - make the library
 ## License
 MIT
 
--------
+## Authors
+* [@bpampuch](https://github.com/bpampuch) (founder)
+* [@liborm85](https://github.com/liborm85)
 
-pdfmake is based on a truly amazing library pdfkit.org - credits to @devongovett
+pdfmake is based on a truly amazing library [pdfkit](https://github.com/devongovett/pdfkit) (credits to [@devongovett](https://github.com/devongovett)).
 
-big thanks to @yelouafi for making this library even better
+Thanks to all contributors.
