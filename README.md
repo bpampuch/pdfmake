@@ -113,6 +113,18 @@ Parameters:
 
 Name can be defined only by using metadata `title` property (see [Document metadata](#document-metadata)).
 
+Asynchronous example:
+```js
+$scope.generatePdf = function() {
+  // create the window before the callback
+  var win = window.open('', '_blank');
+  $http.post('/someUrl', data).then(function(response) {
+    // pass the "win" argument
+    pdfMake.createPdf(docDefinition).open({}, win);
+  });
+};
+```
+
 #### Print the PDF
 ```js
 pdfMake.createPdf(docDefinition).print();
@@ -120,6 +132,18 @@ pdfMake.createPdf(docDefinition).print();
 Parameters:
 * `options` _(optional)_
 * `win` _(optional)_ - window (when an asynchronous operation)
+
+Asynchronous example:
+```js
+$scope.generatePdf = function() {
+  // create the window before the callback
+  var win = window.open('', '_blank');
+  $http.post('/someUrl', data).then(function(response) {
+    // pass the "win" argument
+    pdfMake.createPdf(docDefinition).print({}, win);
+  });
+};
+```
 
 #### Put the PDF into your own page as URL data
 ```js
