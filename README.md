@@ -92,19 +92,37 @@ var docDefinition = { content: 'This is an sample PDF printed with pdfMake' };
 
 or become pretty complex (having multi-level tables, images, lists, paragraphs, margins, styles etc...).
 
-As soon as you have the document-definition-object, you're ready to create and open/print/download the PDF:
+As soon as you have the document-definition-object, you're ready to create and download/open/print the PDF:
 
+#### Download the PDF
 ```js
-// open the PDF in a new window
-pdfMake.createPdf(docDefinition).open();
-
-// print the PDF
-pdfMake.createPdf(docDefinition).print();
-
-// download the PDF
 pdfMake.createPdf(docDefinition).download();
+```
+Parameters:
+* `defaultFileName` _(optional)_ - file name
+* `cb` _(optional)_ - callback function
+* `options` _(optional)_
 
-// put the PDF into your own page as URL data
+#### Open the PDF in a new window
+```js
+pdfMake.createPdf(docDefinition).open();
+```
+Parameters:
+* `options` _(optional)_
+* `win` _(optional)_ - window (when an asynchronous operation)
+
+Name can be defined only by using metadata `title` property (see [Document metadata](#document-metadata)).
+
+#### Print the PDF
+```js
+pdfMake.createPdf(docDefinition).print();
+```
+Parameters:
+* `options` _(optional)_
+* `win` _(optional)_ - window (when an asynchronous operation)
+
+#### Put the PDF into your own page as URL data
+```js
 const pdfDocGenerator = pdfMake.createPdf(docDefinition);
 pdfDocGenerator.getDataUrl((dataUrl) => {
 	const targetElement = document.querySelector('#iframeContainer');
@@ -112,19 +130,32 @@ pdfDocGenerator.getDataUrl((dataUrl) => {
 	iframe.src = dataUrl;
 	targetElement.appendChild(iframe);
 });
+```
+Parameters:
+* `cb` - callback function
+* `options` _(optional)_
 
-// get the PDF as base64 data
+#### Get the PDF as base64 data
+```js
 const pdfDocGenerator = pdfMake.createPdf(docDefinition);
 pdfDocGenerator.getBase64((data) => {
 	alert(data);
 });
+```
+Parameters:
+* `cb` - callback function
+* `options` _(optional)_
 
-// or get the PDF as buffer
+#### Get the PDF as buffer
+```js
 const pdfDocGenerator = pdfMake.createPdf(docDefinition);
 pdfDocGenerator.getBuffer((buffer) => {
 	// ...
 });
 ```
+Parameters:
+* `cb` - callback function
+* `options` _(optional)_
 
 #### Styling
 pdfmake makes it possible to style any paragraph or its part:
