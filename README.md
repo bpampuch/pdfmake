@@ -93,6 +93,14 @@ var docDefinition = { content: 'This is an sample PDF printed with pdfMake' };
 or become pretty complex (having multi-level tables, images, lists, paragraphs, margins, styles etc...).
 
 As soon as you have the document-definition-object, you're ready to create and download/open/print the PDF:
+```js
+pdfMake.createPdf(docDefinition).download();
+
+pdfMake.createPdf(docDefinition).open();
+
+pdfMake.createPdf(docDefinition).print();
+```
+Details in the next chapters.
 
 #### Download the PDF
 ```js
