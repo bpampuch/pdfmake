@@ -179,25 +179,25 @@ DocMeasure.prototype.measureImage = function (node) {
 		node._width = node._minWidth = node._maxWidth = node.width || imageSize.width;
 		node._height = node.height || (imageSize.height * node._width / imageSize.width);
 
-    if (typeof node.maxWidth === "number" && node.maxWidth < node._width) {
-      node._width = node._minWidth = node._maxWidth = node.maxWidth;
-      node._height = node._width * imageSize.height / imageSize.width;
-    }
+		if (typeof node.maxWidth === "number" && node.maxWidth < node._width) {
+			node._width = node._minWidth = node._maxWidth = node.maxWidth;
+			node._height = node._width * imageSize.height / imageSize.width;
+		}
 
-    if (typeof node.maxHeight === "number" && node.maxHeight < node._height) {
-      node._height = node.maxHeight;
-      node._width = node._minWidth = node._maxWidth = node._height * imageSize.width / imageSize.height;
-    }
+		if (typeof node.maxHeight === "number" && node.maxHeight < node._height) {
+			node._height = node.maxHeight;
+			node._width = node._minWidth = node._maxWidth = node._height * imageSize.width / imageSize.height;
+		}
 
-    if (typeof node.minWidth === "number" && node.minWidth > node._width) {
-      node._width = node._minWidth = node._maxWidth = node.minWidth;
-      node._height = node._width * imageSize.height / imageSize.width;
-    }
+		if (typeof node.minWidth === "number" && node.minWidth > node._width) {
+			node._width = node._minWidth = node._maxWidth = node.minWidth;
+			node._height = node._width * imageSize.height / imageSize.width;
+		}
 
-    if (typeof node.minHeight === "number" && node.minHeight > node._height) {
-      node._height = node.minHeight;
-      node._width = node._minWidth = node._maxWidth = node._height * imageSize.width / imageSize.height;
-    }
+		if (typeof node.minHeight === "number" && node.minHeight > node._height) {
+			node._height = node.minHeight;
+			node._width = node._minWidth = node._maxWidth = node._height * imageSize.width / imageSize.height;
+		}
 	}
 
 	node._alignment = this.styleStack.getProperty('alignment');
