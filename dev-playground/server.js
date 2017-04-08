@@ -11,7 +11,7 @@ var app = express();
 
 var rootDir = path.resolve(path.dirname('.'));
 
-app.use(express.static(rootDir + '/dev-playground/public/'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: false }));
 
@@ -19,10 +19,10 @@ function createPdfBinary(pdfDoc, callback) {
 
   var fontDescriptors = {
     Roboto: {
-      normal: 'examples/fonts/Roboto-Regular.ttf',
-      bold: 'examples/fonts/Roboto-Medium.ttf',
-      italics: 'examples/fonts/Roboto-Italic.ttf',
-      bolditalics: 'examples/fonts/Roboto-MediumItalic.ttf'
+      normal: path.join(__dirname, '..', 'examples', '/fonts/Roboto-Regular.ttf'),
+      bold: path.join(__dirname, '..', 'examples', '/fonts/Roboto-Medium.ttf'),
+      italics: path.join(__dirname, '..', 'examples', '/fonts/Roboto-Italic.ttf'),
+      bolditalics: path.join(__dirname, '..', 'examples', '/fonts/Roboto-MediumItalic.ttf')
     }
   };
 
