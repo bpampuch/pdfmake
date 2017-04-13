@@ -165,7 +165,7 @@ LayoutBuilder.prototype.addBackground = function (background) {
 
 LayoutBuilder.prototype.addStaticRepeatable = function (headerOrFooter, sizeFunction) {
 	this.addDynamicRepeatable(function () {
-		return headerOrFooter;
+		return JSON.parse(JSON.stringify(headerOrFooter)); // copy to new object
 	}, sizeFunction);
 };
 
