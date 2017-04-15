@@ -83,7 +83,7 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	var font = this.fontProvider.provideFont(fontName, bold, italics);
 
 	return {
-		width: font.widthOfString(text, fontSize) + ((characterSpacing || 0) * (text.length - 1)),
+		width: widthOfString(text, font, fontSize, characterSpacing),
 		height: font.lineHeight(fontSize) * lineHeight,
 		fontSize: fontSize,
 		lineHeight: lineHeight,
@@ -226,19 +226,19 @@ function measure(fontProvider, textArray, styleContextStack) {
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
-		item.width = font.widthOfString(item.text, fontSize) + ((characterSpacing || 0) * (item.text.length - 1));
+		item.width = widthOfString(item.text, font, fontSize, characterSpacing);
 		item.height = font.lineHeight(fontSize) * lineHeight;
 
 		var leadingSpaces = item.text.match(LEADING);
 		var trailingSpaces = item.text.match(TRAILING);
 		if (leadingSpaces) {
-			item.leadingCut = font.widthOfString(leadingSpaces[0], fontSize) + ((characterSpacing || 0) * (leadingSpaces[0].length - 1));
+			item.leadingCut = widthOfString(leadingSpaces[0], font, fontSize, characterSpacing);
 		} else {
 			item.leadingCut = 0;
 		}
 
 		if (trailingSpaces) {
-			item.trailingCut = font.widthOfString(trailingSpaces[0], fontSize) + ((characterSpacing || 0) * (trailingSpaces[0].length - 1));
+			item.trailingCut = widthOfString(trailingSpaces[0], font, fontSize, characterSpacing);
 		} else {
 			item.trailingCut = 0;
 		}
@@ -256,6 +256,10 @@ function measure(fontProvider, textArray, styleContextStack) {
 	});
 
 	return normalized;
+}
+
+function widthOfString(text, font, fontSize, characterSpacing) {
+	return font.widthOfString(text, fontSize) + ((characterSpacing || 0) * (text.length - 1));
 }
 
 /****TESTS**** (add a leading '/' to uncomment)
