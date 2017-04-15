@@ -134,8 +134,9 @@ function drawBackground(line, x, y, pdfKitDoc) {
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
 		if (inline.background) {
+			var justifyShift = (inline.justifyShift || 0);
 			pdfKitDoc.fillColor(inline.background)
-				.rect(x + inline.x, y, inline.width, height)
+				.rect(x + inline.x - justifyShift, y, inline.width + justifyShift, height)
 				.fill();
 		}
 	}

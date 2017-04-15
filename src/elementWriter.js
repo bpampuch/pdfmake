@@ -82,6 +82,7 @@ ElementWriter.prototype.alignLine = function (line) {
 			offset = i * additionalSpacing;
 
 			line.inlines[i].x += offset;
+			line.inlines[i].justifyShift = additionalSpacing;
 		}
 	}
 };
