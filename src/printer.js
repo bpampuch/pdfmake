@@ -125,19 +125,32 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 };
 
 function setMetadata(docDefinition, pdfKitDoc) {
+	// PDF standard has these properties reserved: Title, Author, Subject, Keywords,
+	// Creator, Producer, CreationDate, ModDate, Trapped.
+	// To keep the pdfmake api consistent, the info field are defined lowercase.
+	// Custom properties don't contain a space.
+	function standardizePropertyKey(key) {
+		var standardProperties = ['Title', 'Author', 'Subject', 'Keywords',
+			'Creator', 'Producer', 'CreationDate', 'ModDate', 'Trapped'];
+		var standardizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+		if (standardProperties.indexOf(standardizedKey) !== -1) {
+			return standardizedKey;
+		}
+
+		return key.replace(/\s+/g, '');
+	}
+
 	pdfKitDoc.info.Producer = 'pdfmake';
 	pdfKitDoc.info.Creator = 'pdfmake';
 
-	// pdf kit maintains the uppercase fieldnames from pdf spec
-	// to keep the pdfmake api consistent, the info field are defined lowercase
 	if (docDefinition.info) {
-		var info = docDefinition.info;
-		// check for falsey an set null, so that pdfkit always get either null or value
-		pdfKitDoc.info.Title = info.title ? info.title : null;
-		pdfKitDoc.info.Author = info.author ? info.author : null;
-		pdfKitDoc.info.Subject = info.subject ? info.subject : null;
-		pdfKitDoc.info.Keywords = info.keywords ? info.keywords : null;
-		pdfKitDoc.info.CreationDate = info.creationDate ? info.creationDate : null;
+		for (var key in docDefinition.info) {
+			var value = docDefinition.info[key];
+			if (value) {
+				key = standardizePropertyKey(key);
+				pdfKitDoc.info[key] = value;
+			}
+		}
 	}
 }
 

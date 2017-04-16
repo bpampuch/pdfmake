@@ -593,7 +593,6 @@ To change page orientation within a document, add a page break with the new page
 
 #### Document Metadata
 
-(From PdfKit Guide)
 PDF documents can have various metadata associated with them, such as the title, or author
 of the document. You can add that information by adding it to the document definition
 
@@ -608,6 +607,22 @@ var docDefinition = {
   content:  'This is an sample PDF printed with pdfMake'
 }
 ```
+
+Standard properties:
+* **title** - the title of the document
+* **author** - the name of the author
+* **subject** - the subject of the document
+* **keywords** - keywords associated with the document
+* **creator** - the creator of the document (default is 'pdfmake')
+* **producer** - the producer of the document (default is 'pdfmake')
+* **creationDate** - the date the document was created (added automatically by pdfmake)
+* **modDate** - the date the document was last modified
+* **trapped** - the trapped flag in a PDF document indicates whether the document has been "trapped"
+
+Custom properties:
+
+You can add custom properties. Key of property not contain spaces.
+
 
 #### Compression
 
