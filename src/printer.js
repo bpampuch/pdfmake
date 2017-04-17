@@ -397,8 +397,6 @@ function renderVector(vector, pdfKitDoc) {
 	} else {
 		pdfKitDoc.undash();
 	}
-	pdfKitDoc.fillOpacity(vector.fillOpacity || 1);
-	pdfKitDoc.strokeOpacity(vector.strokeOpacity || 1);
 	pdfKitDoc.lineJoin(vector.lineJoin || 'miter');
 
 	//TODO: clipping
@@ -451,11 +449,15 @@ function renderVector(vector, pdfKitDoc) {
 	}
 
 	if (vector.color && vector.lineColor) {
-		pdfKitDoc.fillAndStroke(vector.color, vector.lineColor);
+		pdfKitDoc.fillColor(vector.color, vector.fillOpacity || 1);
+		pdfKitDoc.strokeColor(vector.lineColor, vector.strokeOpacity || 1);
+		pdfKitDoc.fillAndStroke();
 	} else if (vector.color) {
-		pdfKitDoc.fill(vector.color);
+		pdfKitDoc.fillColor(vector.color, vector.fillOpacity || 1);
+		pdfKitDoc.fill();
 	} else {
-		pdfKitDoc.stroke(vector.lineColor || 'black');
+		pdfKitDoc.strokeColor(vector.lineColor || 'black', vector.strokeOpacity || 1);
+		pdfKitDoc.stroke();
 	}
 }
 
