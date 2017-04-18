@@ -133,7 +133,7 @@
 
 			$scope.print = function() {
 				eval(editor.getSession().getValue());
-				pdfMake.createPdf(dd).print(5000);
+				pdfMake.createPdf(dd).print();
 			};
 
 			$scope.openPdf = function() {
