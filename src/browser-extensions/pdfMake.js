@@ -87,7 +87,7 @@ Document.prototype._bufferToBlob = function (buffer) {
 Document.prototype._openWindow = function () {
 	// we have to open the window immediately and store the reference
 	// otherwise popup blockers will stop us
-	var win = window.open('', '_blank');
+	var win = global.open('', '_blank');
 	if (win === null) {
 		throw 'Open PDF in new window blocked by browser';
 	}
@@ -101,7 +101,7 @@ Document.prototype._openPdf = function (options, win) {
 	}
 	try {
 		this.getBlob(function (result) {
-			var urlCreator = window.URL || window.webkitURL;
+			var urlCreator = global.URL || global.webkitURL;
 			var pdfUrl = urlCreator.createObjectURL(result);
 			win.location.href = pdfUrl;
 		}, options);
@@ -187,6 +187,6 @@ module.exports = {
 		if (!canCreatePdf()) {
 			throw 'Your browser does not provide the level of support needed';
 		}
-		return new Document(docDefinition, window.pdfMake.tableLayouts, window.pdfMake.fonts, window.pdfMake.vfs);
+		return new Document(docDefinition, global.pdfMake.tableLayouts, global.pdfMake.fonts, global.pdfMake.vfs);
 	}
 };
