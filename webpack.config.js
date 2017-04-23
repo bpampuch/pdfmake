@@ -38,6 +38,17 @@ module.exports = {
 						}
 					]})
 			},
+			/* hack for Web Worker support */
+			{test: /FileSaver.js$/, loader: StringReplacePlugin.replace({
+					replacements: [
+						{
+							pattern: 'doc.createElementNS("http://www.w3.org/1999/xhtml", "a")',
+							replacement: function () {
+								return 'doc ? doc.createElementNS("http://www.w3.org/1999/xhtml", "a") : []';
+							}
+						}
+					]})
+			},
 			/* hack for IE 10 */
 			{test: /brotli[\/\\]dec[\/\\]/, loader: StringReplacePlugin.replace({
 					replacements: [
