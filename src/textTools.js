@@ -223,6 +223,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var lineHeight = getStyleProperty(item, styleContextStack, 'lineHeight', 1);
 		var characterSpacing = getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
 		var link = getStyleProperty(item, styleContextStack, 'link', null);
+		var targetPage = getStyleProperty(item, styleContextStack, 'targetPage', null);
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -253,6 +254,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.decorationStyle = decorationStyle;
 		item.background = background;
 		item.link = link;
+		item.targetPage = targetPage;
 	});
 
 	return normalized;
