@@ -364,9 +364,9 @@ function renderLine(line, x, y, pdfKitDoc) {
 			link: inline.link
 		});
 
-		if (inline.targetPage) {
-			var _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.targetPage, 0,0]}).end();
-			pdfKitDoc.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, {Subtype: 'Link', Dest: [inline.targetPage-1, 'XYZ', null, null, null]});
+		if (inline.linkToPage) {
+			var _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0,0]}).end();
+			pdfKitDoc.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, {Subtype: 'Link', Dest: [inline.linkToPage-1, 'XYZ', null, null, null]});
 		}
 
 	}
