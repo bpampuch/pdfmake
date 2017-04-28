@@ -363,6 +363,12 @@ function renderLine(line, x, y, pdfKitDoc) {
 			wordCount: 1,
 			link: inline.link
 		});
+
+		if (inline.linkToPage) {
+			var _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0,0]}).end();
+			pdfKitDoc.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, {Subtype: 'Link', Dest: [inline.linkToPage-1, 'XYZ', null, null, null]});
+		}
+
 	}
 
 	textDecorator.drawDecorations(line, x, y, pdfKitDoc);
