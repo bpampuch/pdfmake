@@ -553,6 +553,13 @@ var docDefinition = {
 };
 ```
 
+#### Links
+
+To add external or internal links, use the following syntax:
+```
+{text: 'google', link: 'http://google.com'}
+{text:'Go to page 2', linkToPage: 2}
+```
 
 #### Page dimensions, orientation and margins
 
