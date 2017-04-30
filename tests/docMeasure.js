@@ -3,6 +3,7 @@
 
 var assert = require('assert');
 
+var DocPreprocessor = require('../src/docPreprocessor');
 var DocMeasure = require('../src/docMeasure');
 var StyleContextStack = require('../src/styleContextStack');
 
@@ -47,6 +48,7 @@ var emptyTableLayout = {
 };
 
 var docMeasure = new DocMeasure(sampleTestProvider);
+var docPreprocessor = new DocPreprocessor();
 
 describe('DocMeasure', function () {
 	describe('measureLeaf', function () {
@@ -62,6 +64,7 @@ describe('DocMeasure', function () {
 				}
 			};
 
+			docPreprocessor.preprocessText(node);
 			var result = dm.measureLeaf(node);
 			assert(called);
 			assert(node._inlines);
@@ -78,14 +81,18 @@ describe('DocMeasure', function () {
 
 	describe('measureColumns', function () {
 		it('should extend document-definition-object if text columns are used', function () {
-			var result = docMeasure.measureColumns({columns: ['asdasd', 'bbbb']});
+			var node = {columns: ['asdasd', 'bbbb']};
+			docPreprocessor.preprocessColumns(node);
+			var result = docMeasure.measureColumns(node);
 
 			assert(result.columns[0]._minWidth);
 			assert(result.columns[0]._maxWidth);
 		});
 
 		it('should calculate _minWidth and _maxWidth of all columns', function () {
-			var result = docMeasure.measureColumns({columns: ['this is a test', 'another one']});
+			var node = {columns: ['this is a test', 'another one']};
+			docPreprocessor.preprocessColumns(node);
+			var result = docMeasure.measureColumns(node);
 
 			assert.equal(result.columns[0]._minWidth, 4 * 12);
 			assert.equal(result.columns[0]._maxWidth, 14 * 12);
@@ -95,6 +102,7 @@ describe('DocMeasure', function () {
 
 		it('should set _minWidth and _maxWidth to the sum of inner min/max widths', function () {
 			var node = {columns: [{text: 'this is a test', width: 'auto'}, {text: 'another one', width: 'auto'}], columnGap: 0};
+			docPreprocessor.preprocessColumns(node);
 			var result = docMeasure.measureColumns(node);
 
 			assert.equal(node._minWidth, 4 * 12 + 7 * 12);
@@ -103,6 +111,7 @@ describe('DocMeasure', function () {
 
 		it('should set _minWidth and _maxWidth properly when star columns are defined', function () {
 			var node = {columns: ['this is a test', 'another one'], columnGap: 0};
+			docPreprocessor.preprocessColumns(node);
 			var result = docMeasure.measureColumns(node);
 
 			assert.equal(node._minWidth, 7 * 12 + 7 * 12);
@@ -113,14 +122,18 @@ describe('DocMeasure', function () {
 
 	describe('measureVerticalContainer', function () {
 		it('should extend document-definition-object if text paragraphs are used', function () {
-			var result = docMeasure.measureVerticalContainer({stack: ['asdasd', 'bbbb']});
+			var node = {stack: ['asdasd', 'bbbb']};
+			docPreprocessor.preprocessVerticalContainer(node);
+			var result = docMeasure.measureVerticalContainer(node);
 
 			assert(result.stack[0]._minWidth);
 			assert(result.stack[0]._maxWidth);
 		});
 
 		it('should calculate _minWidth and _maxWidth of all elements', function () {
-			var result = docMeasure.measureVerticalContainer({stack: ['this is a test', 'another one']});
+			var node = {stack: ['this is a test', 'another one']};
+			docPreprocessor.preprocessVerticalContainer(node);
+			var result = docMeasure.measureVerticalContainer(node);
 
 			assert.equal(result.stack[0]._minWidth, 4 * 12);
 			assert.equal(result.stack[0]._maxWidth, 14 * 12);
@@ -130,6 +143,7 @@ describe('DocMeasure', function () {
 
 		it('should set _minWidth and _maxWidth to the max of inner min/max widths', function () {
 			var node = {stack: ['this is a test', 'another one']};
+			docPreprocessor.preprocessVerticalContainer(node);
 			var result = docMeasure.measureVerticalContainer(node);
 
 			assert.equal(node._minWidth, 7 * 12);
@@ -139,7 +153,9 @@ describe('DocMeasure', function () {
 
 	describe('measureUnorderedList', function () {
 		it('should extend document-definition-object if text items are used', function () {
-			var result = docMeasure.measureUnorderedList({ul: ['asdasd', 'bbbb']});
+			var node = {ul: ['asdasd', 'bbbb']};
+			docPreprocessor.preprocessList(node);
+			var result = docMeasure.measureUnorderedList(node);
 
 			assert(result.ul[0]._minWidth);
 			assert(result.ul[0]._maxWidth);
@@ -150,7 +166,9 @@ describe('DocMeasure', function () {
 
 	describe('measureOrderedList', function () {
 		it('should extend document-definition-object if text items are used', function () {
-			var result = docMeasure.measureOrderedList({ol: ['asdasd', 'bbbb']});
+			var node = {ol: ['asdasd', 'bbbb']};
+			docPreprocessor.preprocessList(node);
+			var result = docMeasure.measureOrderedList(node);
 
 			assert(result.ol[0]._minWidth);
 			assert(result.ol[0]._maxWidth);
@@ -159,7 +177,9 @@ describe('DocMeasure', function () {
 		});
 
 		it('should calculate _minWidth and _maxWidth of all elements', function () {
-			var result = docMeasure.measureOrderedList({ol: ['this is a test', 'another one']});
+			var node = {ol: ['this is a test', 'another one']};
+			docPreprocessor.preprocessList(node);
+			var result = docMeasure.measureOrderedList(node);
 
 			assert.equal(result.ol[0]._minWidth, 4 * 12);
 			assert.equal(result.ol[0]._maxWidth, 14 * 12);
@@ -169,6 +189,7 @@ describe('DocMeasure', function () {
 
 		it('should set _minWidth and _maxWidth to the max of inner min/max widths + gapSize', function () {
 			var node = {ol: ['this is a test', 'another one']};
+			docPreprocessor.preprocessList(node);
 			var result = docMeasure.measureOrderedList(node);
 
 			assert(node, result);
@@ -211,6 +232,7 @@ describe('DocMeasure', function () {
 		});
 
 		it('should extend document-definition-object', function () {
+			docPreprocessor.preprocessTable(tableNode);
 			var result = docMeasure.measureTable(tableNode);
 
 			assert(result.table.body[0][0]._minWidth);
@@ -223,6 +245,7 @@ describe('DocMeasure', function () {
 		});
 
 		it('should not spoil widths if measureTable has been called before', function () {
+			docPreprocessor.preprocessTable(tableNode);
 			var result = docMeasure.measureTable(tableNode);
 			result = docMeasure.measureTable(result);
 
@@ -233,6 +256,7 @@ describe('DocMeasure', function () {
 		});
 
 		it('should calculate _minWidth and _maxWidth for all columns', function () {
+			docPreprocessor.preprocessTable(tableNode);
 			var result = docMeasure.measureTable(tableNode);
 
 			result.table.widths.forEach(function (width) {
@@ -243,6 +267,7 @@ describe('DocMeasure', function () {
 		});
 
 		it('should set _minWidth and _maxWidth of each column to min/max width or the largest cell', function () {
+			docPreprocessor.preprocessTable(tableNode);
 			docMeasure.measureTable(tableNode);
 
 			assert.equal(tableNode.table.widths[0]._minWidth, 6 * 12);
@@ -263,6 +288,7 @@ describe('DocMeasure', function () {
 				}
 			};
 
+			docPreprocessor.preprocessTable(node);
 			docMeasure.measureTable(node);
 
 			assert(node.table.widths instanceof Array);
@@ -273,6 +299,7 @@ describe('DocMeasure', function () {
 		});
 
 		it.skip('should set _minWidth and _maxWidth to the sum of column min/max widths', function () {
+			docPreprocessor.preprocessTable(tableNode);
 			var result = docMeasure.measureTable(tableNode);
 
 			assert.equal(tableNode._minWidth, 150 + 6 * 12 + 4 * 12 + 6 * 12);
@@ -282,11 +309,13 @@ describe('DocMeasure', function () {
 		it('should support column spans', function () {
 			tableNode.table.body.push([{text: 'Column 1', colSpan: 2}, {}, 'Column 3', 'Column 4']);
 
+			docPreprocessor.preprocessTable(tableNode);
 			docMeasure.measureTable(tableNode);
 		});
 
 		it('should mark cells directly following colSpan-cell with _span property and set min/maxWidth to 0', function () {
 			tableNode.table.body.push([{text: 'Col 1', colSpan: 3}, {}, {}, 'Col 4']);
+			docPreprocessor.preprocessTable(tableNode);
 			docMeasure.measureTable(tableNode);
 
 			var rows = tableNode.table.body.length;
@@ -302,6 +331,7 @@ describe('DocMeasure', function () {
 		it('spanning cells should not influence min/max column widths if their min/max widths are lower or equal', function () {
 			tableNode.layout = emptyTableLayout;
 
+			docPreprocessor.preprocessTable(tableNode);
 			docMeasure.measureTable(tableNode);
 			var col0min = tableNode.table.widths[0]._minWidth;
 			var col0max = tableNode.table.widths[0]._maxWidth;
@@ -310,6 +340,7 @@ describe('DocMeasure', function () {
 
 			tableNode.table.body.push([{text: 'Co1', colSpan: 2}, {}, 'Column 3', 'Column 4']);
 			tableNode.table.body.push([{text: '123456789012', colSpan: 2}, {}, 'Column 3', 'Column 4']);
+			docPreprocessor.preprocessTable(tableNode);
 			docMeasure.measureTable(tableNode);
 
 			assert.equal(tableNode.table.widths[0]._minWidth, col0min);
@@ -321,6 +352,7 @@ describe('DocMeasure', function () {
 		it('spanning cells, having min-width larger than the sum of min-widths of the columns they span over, should update column min-widths equally', function () {
 			tableNode.layout = emptyTableLayout;
 
+			docPreprocessor.preprocessTable(tableNode);
 			docMeasure.measureTable(tableNode);
 			var col0min = tableNode.table.widths[0]._minWidth;
 			var col1min = tableNode.table.widths[1]._minWidth;
@@ -331,6 +363,7 @@ describe('DocMeasure', function () {
 			// make sure we know default values for
 
 			tableNode.table.body.push([{text: 'thisislongera', colSpan: 2}, {}, 'Column 3', 'Column 4']);
+			docPreprocessor.preprocessTable(tableNode);
 			docMeasure.measureTable(tableNode);
 
 			assert(tableNode.table.widths[0]._minWidth > col0min);
@@ -343,6 +376,7 @@ describe('DocMeasure', function () {
 		it('spanning cells, having max-width larger than the sum of max-widths of the columns they span over, should update column max-widths equally', function () {
 			tableNode.layout = emptyTableLayout;
 
+			docPreprocessor.preprocessTable(tableNode);
 			docMeasure.measureTable(tableNode);
 			var col0max = tableNode.table.widths[0]._maxWidth;
 			var col1max = tableNode.table.widths[1]._maxWidth;
@@ -351,6 +385,7 @@ describe('DocMeasure', function () {
 			assert.equal(col1max, 22 * 12);
 
 			tableNode.table.body.push([{text: '1234 6789 1234 6789 1234 6789 1234 6789 1234 6789', colSpan: 2}, {}, 'Column 3', 'Column 4']);
+			docPreprocessor.preprocessTable(tableNode);
 			docMeasure.measureTable(tableNode);
 
 			assert.equal(tableNode.table.widths[0]._maxWidth, col0max + 1 * 12 / 2);
@@ -372,6 +407,7 @@ describe('DocMeasure', function () {
 				}
 			};
 
+			docPreprocessor.preprocessTable(tableNode);
 			docMeasure.measureTable(tableNode);
 			var col0min = tableNode.table.widths[0]._minWidth;
 			var col1min = tableNode.table.widths[1]._minWidth;
@@ -380,6 +416,7 @@ describe('DocMeasure', function () {
 			assert.equal(col1min, 6 * 12);
 
 			tableNode.table.body.push([{text: 'thisislongera', colSpan: 2}, {}, 'Column 3', 'Column 4']);
+			docPreprocessor.preprocessTable(tableNode);
 			docMeasure.measureTable(tableNode);
 
 			assert.equal(tableNode.table.widths[0]._minWidth, col0min);
@@ -391,6 +428,7 @@ describe('DocMeasure', function () {
 			tableNode.table.body.push([{}, 'Col2', 'Col 3', 'Col 4']);
 			tableNode.table.body.push([{}, 'Col2', 'Col 3', 'Col 4']);
 			tableNode.table.body.push(['Another', 'Col2', 'Col 3', 'Col 4']);
+			docPreprocessor.preprocessTable(tableNode);
 			docMeasure.measureTable(tableNode);
 
 			var rows = tableNode.table.body.length;
@@ -420,19 +458,25 @@ describe('DocMeasure', function () {
 	describe('measureDocument', function () {
 		it('should treat margin in styling properties with higher priority', function () {
 			docMeasure = new DocMeasure(sampleTestProvider, {'marginStyle': {margin: 10}}, {});
-			var result = docMeasure.measureDocument({text: 'test', style: 'marginStyle', margin: [5, 5, 5, 5]});
+			var node = {text: 'test', style: 'marginStyle', margin: [5, 5, 5, 5]};
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
 			assert.deepEqual(result._margin, [5, 5, 5, 5]);
 		});
 
 		it('should apply margins defined in the styles', function () {
 			docMeasure = new DocMeasure(sampleTestProvider, {'topLevel': {margin: [123, 3, 5, 6]}}, {});
-			var result = docMeasure.measureDocument({text: 'test', style: 'topLevel'});
+			var node = {text: 'test', style: 'topLevel'};
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
 			assert.deepEqual(result._margin, [123, 3, 5, 6]);
 		});
 
 		it('should apply sublevel styles not to parent', function () {
 			docMeasure = new DocMeasure(sampleTestProvider, {'topLevel': {margin: [123, 3, 5, 6]}, 'subLevel': {margin: 5}}, {});
-			var result = docMeasure.measureDocument({ul: ['one', 'two', {text: 'three', style: 'subLevel'}], style: 'topLevel'});
+			var node = {ul: ['one', 'two', {text: 'three', style: 'subLevel'}], style: 'topLevel'};
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
 			assert.deepEqual(result._margin, [123, 3, 5, 6]);
 			assert.equal(result.ul[0]._margin, null);
 			assert.equal(result.ul[1]._margin, null);
@@ -441,7 +485,9 @@ describe('DocMeasure', function () {
 
 		it('should apply subsublevel styles not to parent', function () {
 			docMeasure = new DocMeasure(sampleTestProvider, {'topLevel': {margin: [123, 3, 5, 6]}, 'subLevel': {margin: 5}, 'subsubLevel': {margin: 25}}, {});
-			var result = docMeasure.measureDocument({ul: ['one', 'two', {text: 'three', style: 'subLevel'}, {ol: [{text: 'three A', style: 'subsubLevel'}]}], style: 'topLevel'});
+			var node = {ul: ['one', 'two', {text: 'three', style: 'subLevel'}, {ol: [{text: 'three A', style: 'subsubLevel'}]}], style: 'topLevel'};
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
 			assert.deepEqual(result._margin, [123, 3, 5, 6]);
 			assert.equal(result.ul[0]._margin, null);
 			assert.equal(result.ul[1]._margin, null);
@@ -450,40 +496,54 @@ describe('DocMeasure', function () {
 		});
 
 		it('should process marginLeft property if defined', function () {
-			var result = docMeasure.measureDocument({text: 'some text', marginLeft: 5});
+			var node = {text: 'some text', marginLeft: 5};
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
 			assert.deepEqual(result._margin, [5, 0, 0, 0]);
 		});
 
 		it('should process marginRight property if defined', function () {
-			var result = docMeasure.measureDocument({text: 'some text', marginRight: 5});
+			var node = {text: 'some text', marginRight: 5};
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
 			assert.deepEqual(result._margin, [0, 0, 5, 0]);
 		});
 
 		it('should process multiple single margin properties if defined', function () {
-			var result = docMeasure.measureDocument({text: 'some text', marginRight: 5, marginTop: 10, marginBottom: 2});
+			var node = {text: 'some text', marginRight: 5, marginTop: 10, marginBottom: 2};
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
 			assert.deepEqual(result._margin, [0, 10, 5, 2]);
 		});
 
 		it('should treat margin property with higher priority than single margin properties', function () {
-			var result = docMeasure.measureDocument({text: 'some text', marginRight: 5, marginTop: 10, marginBottom: 2, margin: 12});
+			var node = {text: 'some text', marginRight: 5, marginTop: 10, marginBottom: 2, margin: 12};
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
 			assert.deepEqual(result._margin, [12, 12, 12, 12]);
 		});
 
 		it('should combine all single margins defined in style dict ', function () {
 			docMeasure = new DocMeasure(sampleTestProvider, {'style1': {marginLeft: 5}, 'style2': {marginTop: 10}}, {});
-			var result = docMeasure.measureDocument({text: 'some text', style: ['style1', 'style2']});
+			var node = {text: 'some text', style: ['style1', 'style2']};
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
 			assert.deepEqual(result._margin, [5, 10, 0, 0]);
 		});
 
 		it('should combine the single margin defined in style dict and the object itself', function () {
 			docMeasure = new DocMeasure(sampleTestProvider, {'style1': {marginLeft: 5}}, {});
-			var result = docMeasure.measureDocument({text: 'some text', style: ['style1'], marginRight: 15});
+			var node = {text: 'some text', style: ['style1'], marginRight: 15};
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
 			assert.deepEqual(result._margin, [5, 0, 15, 0]);
 		});
 
 		it('should override only left margin if marginLeft is defined', function () {
 			docMeasure = new DocMeasure(sampleTestProvider, {'topLevel': {margin: [123, 3, 5, 6]}, 'subLevel': {marginLeft: 5}}, {});
-			var result = docMeasure.measureDocument({ul: ['one', 'two', {text: 'three', style: 'subLevel'}], style: 'topLevel'});
+			var node = {ul: ['one', 'two', {text: 'three', style: 'subLevel'}], style: 'topLevel'};
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
 			assert.deepEqual(result._margin, [123, 3, 5, 6]);
 			assert.deepEqual(result.ul[2]._margin, [5, 0, 0, 0]);
 		});

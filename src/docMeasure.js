@@ -31,22 +31,6 @@ DocMeasure.prototype.measureDocument = function (docStructure) {
 };
 
 DocMeasure.prototype.measureNode = function (node) {
-	// expand shortcuts
-	if (Array.isArray(node)) {
-		node = {stack: node};
-	} else if (typeof node === 'string' || node instanceof String) {
-		node = {text: node};
-	} else if (typeof node === 'number' || typeof node === 'boolean') {
-		node = {text: node.toString()};
-	} else if (node === null) {
-		node = {text: ''};
-	}
-
-	// Deal with empty nodes to prevent crash in getNodeMargin
-	if (Object.keys(node).length === 0) {
-		// A warning could be logged: console.warn('pdfmake: Empty node, ignoring it');
-		node = {text: ''};
-	}
 
 	var self = this;
 
@@ -503,13 +487,6 @@ DocMeasure.prototype.measureTable = function (node) {
 		for (row = 0, rows = node.table.body.length; row < rows; row++) {
 			var rowData = node.table.body[row];
 			var data = rowData[col];
-			if (data === undefined) {
-				console.error('Malformed table row ', rowData, 'in node ', node);
-				throw 'Malformed table row, a cell is undefined.';
-			}
-			if (data === null) { // transform to object
-				data = '';
-			}
 			if (!data._span) {
 				data = rowData[col] = this.styleStack.auto(data, measureCb(this, data));
 

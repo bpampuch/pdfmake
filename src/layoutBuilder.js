@@ -3,6 +3,7 @@
 
 var _ = require('lodash');
 var TraversalTracker = require('./traversalTracker');
+var DocPreprocessor = require('./docPreprocessor');
 var DocMeasure = require('./docMeasure');
 var DocumentContext = require('./documentContext');
 var PageElementWriter = require('./pageElementWriter');
@@ -105,6 +106,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 		});
 	}
 
+	this.docPreprocessor = new DocPreprocessor();
 	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
 
 
@@ -126,6 +128,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
 
 	this.linearNodeList = [];
+	docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 	docStructure = this.docMeasure.measureDocument(docStructure);
 
 	this.writer = new PageElementWriter(
@@ -158,6 +161,7 @@ LayoutBuilder.prototype.addBackground = function (background) {
 	if (pageBackground) {
 		var pageSize = this.writer.context().getCurrentPage().pageSize;
 		this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
+		pageBackground = this.docPreprocessor.preprocessDocument(pageBackground);
 		this.processNode(this.docMeasure.measureDocument(pageBackground));
 		this.writer.commitUnbreakableBlock(0, 0);
 	}
@@ -180,6 +184,7 @@ LayoutBuilder.prototype.addDynamicRepeatable = function (nodeGetter, sizeFunctio
 		if (node) {
 			var sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
 			this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
+			node = this.docPreprocessor.preprocessDocument(node);
 			this.processNode(this.docMeasure.measureDocument(node));
 			this.writer.commitUnbreakableBlock(sizes.x, sizes.y);
 		}
