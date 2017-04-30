@@ -8,6 +8,7 @@ function DocPreprocessor() {
 }
 
 DocPreprocessor.prototype.preprocessDocument = function (docStructure) {
+	this.tocs = [];
 	return this.preprocessNode(docStructure);
 };
 
@@ -37,6 +38,8 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 		return this.preprocessTable(node);
 	} else if (node.text !== undefined) {
 		return this.preprocessText(node);
+	} else if (node.toc) {
+		return this.preprocessToc(node);
 	} else if (node.image) {
 		return this.preprocessImage(node);
 	} else if (node.canvas) {
@@ -101,6 +104,39 @@ DocPreprocessor.prototype.preprocessTable = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessText = function (node) {
+	if (node.tocItem) {
+		if (!(typeof node.tocItem === 'string' || node.tocItem instanceof String)) {
+			node.tocItem = '_default_';
+		}
+
+		if (!this.tocs[node.tocItem]) {
+			this.tocs[node.tocItem] = {toc: {_items: [], _pseudo: true}};
+		}
+
+		this.tocs[node.tocItem].toc._items.push(node);
+	}
+
+	return node;
+};
+
+DocPreprocessor.prototype.preprocessToc = function (node) {
+	if (!node.toc.id) {
+		node.toc.id = '_default_';
+	}
+
+	node.toc.title = this.preprocessNode(node.toc.title ? node.toc.title : null);
+	node.toc._items = [];
+
+	if (this.tocs[node.toc.id]) {
+		if (!this.tocs[node.toc.id].toc._pseudo) {
+			throw "TOC '" + node.toc.id + "' already exists";
+		}
+
+		node.toc._items = this.tocs[node.toc.id].toc._items;
+	}
+
+	this.tocs[node.toc.id] = node;
+
 	return node;
 };
 

@@ -344,6 +344,8 @@ LayoutBuilder.prototype.processNode = function (node) {
 			self.processTable(node);
 		} else if (node.text !== undefined) {
 			self.processLeaf(node);
+		} else if (node.toc) {
+			self.processToc(node);
 		} else if (node.image) {
 			self.processImage(node);
 		} else if (node.canvas) {
@@ -566,6 +568,10 @@ LayoutBuilder.prototype.processLeaf = function (node) {
 	var currentHeight = (line) ? line.getHeight() : 0;
 	var maxHeight = node.maxHeight || -1;
 
+	if (node._tocItemRef) {
+		line._tocItemNode = node._tocItemRef;
+	}
+
 	while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
 		var positions = this.writer.addLine(line);
 		node.positions.push(positions);
@@ -574,6 +580,11 @@ LayoutBuilder.prototype.processLeaf = function (node) {
 			currentHeight += line.getHeight();
 		}
 	}
+};
+
+LayoutBuilder.prototype.processToc = function (node) {
+	this.processNode(node.toc.title);
+	this.processNode(node.toc._table);
 };
 
 LayoutBuilder.prototype.buildNextLine = function (textNode) {

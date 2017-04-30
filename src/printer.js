@@ -338,6 +338,12 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 }
 
 function renderLine(line, x, y, pdfKitDoc) {
+	if (line._tocItemNode) {
+		// TODO
+		line.inlines[0].text = line._tocItemNode.positions[0].pageNumber.toString();
+		line.inlines[0].x = line.inlines[0].width - ((line.inlines[0].width / 5) * line.inlines[0].text.length);
+	}
+
 	x = x || 0;
 	y = y || 0;
 

@@ -50,6 +50,8 @@ DocMeasure.prototype.measureNode = function (node) {
 			return extendMargins(self.measureTable(node));
 		} else if (node.text !== undefined) {
 			return extendMargins(self.measureLeaf(node));
+		} else if (node.toc) {
+			return extendMargins(self.measureToc(node));
 		} else if (node.image) {
 			return extendMargins(self.measureImage(node));
 		} else if (node.canvas) {
@@ -200,6 +202,33 @@ DocMeasure.prototype.measureLeaf = function (node) {
 	node._inlines = data.items;
 	node._minWidth = data.minWidth;
 	node._maxWidth = data.maxWidth;
+
+	return node;
+};
+
+DocMeasure.prototype.measureToc = function (node) {
+	node.toc.title = this.measureNode(node.toc.title);
+
+	var body = [];
+	for (var i = 0, l = node.toc._items.length; i < l; i++) {
+		var item = node.toc._items[i];
+		body.push([
+			{text: item.text, alignment: 'left', margin: [0, 10, 0, 0]},
+			{text: '00000', alignment: 'right', margin: [0, 10, 0, 0], _tocItemRef: item}
+		]);
+	}
+
+
+	node.toc._table = {
+		table: {
+			dontBreakRows: true,
+			widths: ['auto', '*'],
+			body: body
+		},
+		layout: 'noBorders'
+	};
+
+	node.toc._table = this.measureNode(node.toc._table);
 
 	return node;
 };
