@@ -105,15 +105,23 @@ DocPreprocessor.prototype.preprocessTable = function (node) {
 
 DocPreprocessor.prototype.preprocessText = function (node) {
 	if (node.tocItem) {
-		if (!(typeof node.tocItem === 'string' || node.tocItem instanceof String)) {
-			node.tocItem = '_default_';
+		if (!Array.isArray(node.tocItem)) {
+			node.tocItem = [node.tocItem];
 		}
 
-		if (!this.tocs[node.tocItem]) {
-			this.tocs[node.tocItem] = {toc: {_items: [], _pseudo: true}};
-		}
+		for (var i = 0, l = node.tocItem.length; i < l; i++) {
+			if (!(typeof node.tocItem[i] === 'string' || node.tocItem[i] instanceof String)) {
+				node.tocItem[i] = '_default_';
+			}
 
-		this.tocs[node.tocItem].toc._items.push(node);
+			var tocItemId = node.tocItem[i];
+
+			if (!this.tocs[tocItemId]) {
+				this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
+			}
+
+			this.tocs[tocItemId].toc._items.push(node);
+		}
 	}
 
 	return node;
