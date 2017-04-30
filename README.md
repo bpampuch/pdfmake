@@ -43,6 +43,7 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html)
 * custom page breaks,
 * font embedding,
 * support for complex, multi-level (nested) structures,
+* table of contents,
 * helper methods for opening/printing/downloading the generated PDF,
 * setting of PDF metadata (e.g. author, subject).
 
@@ -560,6 +561,28 @@ To add external or internal links, use the following syntax:
 {text: 'google', link: 'http://google.com'}
 {text:'Go to page 2', linkToPage: 2}
 ```
+
+#### Table of contents
+
+```js
+var docDefinition = {
+  content: [
+    {
+      toc: {
+        // id: 'mainToc'  // optional
+        title: {text: 'INDEX', style: 'header'}
+      }
+    },
+    {
+      text: 'This is a header',
+      style: 'header',
+      tocItem: true, // or tocItem: 'mainToc' if is used id in toc
+      // or tocItem: ['mainToc', 'subToc'] for multiple tocs
+    }
+  ]
+}
+```
+
 
 #### Page dimensions, orientation and margins
 
