@@ -190,6 +190,10 @@ Parameters:
 * `cb` - callback function
 * `options` _(optional)_
 
+#### Server side
+
+see [examples](https://github.com/bpampuch/pdfmake/tree/master/examples) and [dev-playground sever script](https://github.com/bpampuch/pdfmake/blob/master/dev-playground/server.js)
+
 #### Styling
 pdfmake makes it possible to style any paragraph or its part:
 
