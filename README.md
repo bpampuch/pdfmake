@@ -81,6 +81,10 @@ bower install pdfmake
 
 or copy them directly from the build directory from the repository. Otherwise you can always [build it from sources](#building-from-sources).
 
+### Supported browsers
+
+See [issue](https://github.com/bpampuch/pdfmake/issues/800).
+
 ### Document-definition-object
 
 pdfmake follows a declarative approach. It basically means, you'll never have to calculate positions manually or use commands like: ```writeText(text, x, y)```, ```moveDown``` etc..., as you would with a lot of other libraries.
