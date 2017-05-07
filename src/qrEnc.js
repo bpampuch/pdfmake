@@ -740,8 +740,8 @@ function generateFrame(data, options) {
 function buildCanvas(data, options) {
 
 	var canvas = [];
-	var background = data.background || '#fff';
-	var foreground = data.foreground || '#000';
+	var background = options.background || '#fff';
+	var foreground = options.foreground || '#000';
 	//var margin = options.margin || 4;
 	var matrix = generateFrame(data, options);
 	var n = matrix.length;
