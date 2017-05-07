@@ -213,8 +213,8 @@ DocMeasure.prototype.measureToc = function (node) {
 	for (var i = 0, l = node.toc._items.length; i < l; i++) {
 		var item = node.toc._items[i];
 		body.push([
-			{text: item.text, alignment: 'left', margin: [0, 10, 0, 0]},
-			{text: '00000', alignment: 'right', margin: [0, 10, 0, 0], _tocItemRef: item}
+			{text: item.text, alignment: 'left'},
+			{text: '00000', alignment: 'right', _tocItemRef: item}
 		]);
 	}
 
