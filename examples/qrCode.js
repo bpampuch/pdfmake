@@ -23,7 +23,7 @@ var longText = 'The amount of data that can be stored in the QR code symbol depe
 
 
 function header(text) {
-	return {text: text, margins: [0, 0, 0, 8]}
+	return {text: text, margins: [0, 0, 0, 8]};
 }
 
 var docDefinition = {
@@ -31,6 +31,10 @@ var docDefinition = {
 	content: [
 		header(greeting),
 		{qr: greeting},
+		'\n',
+
+		header('Colored QR'),
+		{qr: greeting, foreground: 'red', background: 'yellow'},
 		'\n',
 
 		header(url),
