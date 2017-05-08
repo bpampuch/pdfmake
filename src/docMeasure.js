@@ -222,7 +222,7 @@ DocMeasure.prototype.measureToc = function (node) {
 	node.toc._table = {
 		table: {
 			dontBreakRows: true,
-			widths: ['auto', '*'],
+			widths: ['*', 'auto'],
 			body: body
 		},
 		layout: 'noBorders'
