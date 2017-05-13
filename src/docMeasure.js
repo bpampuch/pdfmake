@@ -207,7 +207,9 @@ DocMeasure.prototype.measureLeaf = function (node) {
 };
 
 DocMeasure.prototype.measureToc = function (node) {
-	node.toc.title = this.measureNode(node.toc.title);
+	if (node.toc.title) {
+		node.toc.title = this.measureNode(node.toc.title);
+	}
 
 	var body = [];
 	for (var i = 0, l = node.toc._items.length; i < l; i++) {

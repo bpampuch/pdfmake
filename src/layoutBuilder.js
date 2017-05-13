@@ -583,7 +583,9 @@ LayoutBuilder.prototype.processLeaf = function (node) {
 };
 
 LayoutBuilder.prototype.processToc = function (node) {
-	this.processNode(node.toc.title);
+	if (node.toc.title) {
+		this.processNode(node.toc.title);
+	}
 	this.processNode(node.toc._table);
 };
 

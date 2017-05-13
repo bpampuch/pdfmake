@@ -132,7 +132,7 @@ DocPreprocessor.prototype.preprocessToc = function (node) {
 		node.toc.id = '_default_';
 	}
 
-	node.toc.title = this.preprocessNode(node.toc.title ? node.toc.title : null);
+	node.toc.title = node.toc.title ? this.preprocessNode(node.toc.title) : null;
 	node.toc._items = [];
 
 	if (this.tocs[node.toc.id]) {
