@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "pdfkit": "^0.8.0",
+    "iconv-lite":"^0.4.17",
     "linebreak": "^0.3.0",
     "lodash": "^4.17.4"
   },
@@ -24,7 +25,6 @@
     "gulp-each": "^0.5.0",
     "gulp-file-contents-to-json": "^0.2.1",
     "gulp-header": "^1.8.8",
-    "iconv-lite":"^0.4.17",
     "json-loader": "^0.5.4",
     "sinon": "^2.2.0",
     "mocha":"^3.3.0",
