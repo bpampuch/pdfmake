@@ -49,17 +49,6 @@ module.exports = {
 						}
 					]})
 			},
-			/* hack for IE 10 */
-			{test: /brotli[\/\\]dec[\/\\]/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: /const /g,
-							replacement: function () {
-								return 'var ';
-							}
-						}
-					]})
-			},
 			{enforce: 'post', test: /fontkit[\/\\]index.js$/, loader: "transform?brfs"},
 			{enforce: 'post', test: /unicode-properties[\/\\]index.js$/, loader: "transform?brfs"},
 			{enforce: 'post', test: /linebreak[\/\\]src[\/\\]linebreaker.js/, loader: "transform?brfs"}
