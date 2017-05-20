@@ -1291,6 +1291,15 @@ describe('LayoutBuilder', function () {
 			assert.equal(pages[0].items.length, 1);
 		});
 
+		it('should support disable wrap long word by noWrap', function () {
+			var desc = [
+				{text: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890', noWrap: true}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			assert.equal(pages[0].items.length, 1);
+		});
+
 		it('should support images');
 		it('should align image properly');
 		it('should break pages if image cannot fit on current page');
