@@ -162,17 +162,17 @@ describe('LayoutBuilder', function () {
 				{
 					fontSize: 72,
 					stack: [
-						'paragraph',
-						'paragraph',
-						'paragraph',
-						'paragraph',
-						'paragraph',
-						'paragraph',
-						'paragraph',
-						'paragraph',
-						'paragraph',
-						'paragraph',
-						'paragraph',
+						{text: 'paragraph', noWrap: true},
+						{text: 'paragraph', noWrap: true},
+						{text: 'paragraph', noWrap: true},
+						{text: 'paragraph', noWrap: true},
+						{text: 'paragraph', noWrap: true},
+						{text: 'paragraph', noWrap: true},
+						{text: 'paragraph', noWrap: true},
+						{text: 'paragraph', noWrap: true},
+						{text: 'paragraph', noWrap: true},
+						{text: 'paragraph', noWrap: true},
+						{text: 'paragraph', noWrap: true}
 					]
 				}
 			];
@@ -186,7 +186,8 @@ describe('LayoutBuilder', function () {
 				'paragraph',
 				{
 					text: 'paragraph',
-					style: 'header'
+					style: 'header',
+					noWrap: true
 				}
 			];
 
@@ -219,11 +220,11 @@ describe('LayoutBuilder', function () {
 				'paragraph',
 				{
 					text: [
-						'paragraph',
+						{text: 'paragraph', noWrap: true},
 						{
 							text: 'paragraph',
 							fontSize: 4
-						},
+						}
 					],
 					style: 'header'
 				}
@@ -251,7 +252,7 @@ describe('LayoutBuilder', function () {
 		it('should support style-overrides', function () {
 			var desc = [
 				'paragraph',
-				{text: 'paragraph', fontSize: 40}
+				{text: 'paragraph', fontSize: 40, noWrap: true}
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}});
@@ -263,7 +264,7 @@ describe('LayoutBuilder', function () {
 		it('style-overrides should take precedence over named styles', function () {
 			var desc = [
 				'paragraph',
-				{text: 'paragraph', fontSize: 40, style: 'header'}
+				{text: 'paragraph', fontSize: 40, style: 'header', noWrap: true}
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}});
@@ -455,16 +456,18 @@ describe('LayoutBuilder', function () {
 						{
 							text: 'col1',
 							width: 'auto',
+							noWrap: true
 						},
 						{
 							text: 'column',
 							width: 'auto',
+							noWrap: true
 						},
 						{
 							text: 'col3',
 							width: 'auto',
+							noWrap: true
 						}
-
 					]
 				}
 			];
@@ -482,23 +485,28 @@ describe('LayoutBuilder', function () {
 					columns: [
 						{
 							text: 'col1',
-							width: 'auto'
+							width: 'auto',
+							noWrap: true
 						},
 						{
 							text: 'column',
-							width: 58
+							width: 58,
+							noWrap: true
 						},
 						{
 							text: 'column',
-							width: '*'
+							width: '*',
+							noWrap: true
 						},
 						{
 							text: 'column',
-							width: '*'
+							width: '*',
+							noWrap: true
 						},
 						{
 							text: 'col3',
-							width: 'auto'
+							width: 'auto',
+							noWrap: true
 						}
 					]
 				}
@@ -756,12 +764,18 @@ describe('LayoutBuilder', function () {
 						'paragraph',
 						'paragraph',
 						'paragraph'
-					]
+					],
+					noWrap: true
 				},
 				{
 					fontSize: 90,
 					ul: [
-						'line 1'
+						{
+							text: [
+								{text: 'line ', noWrap: true},
+								{text: '1'}
+							]
+						}
 					]
 				}
 			];
@@ -960,7 +974,7 @@ describe('LayoutBuilder', function () {
 						widths: [30, 50, 40],
 						body: [
 							['a', 'b', 'c'],
-							['aaa', 'bbb', 'ccc'],
+							[{text: 'aaa', noWrap: true}, {text: 'bbb', noWrap: true}, {text: 'ccc', noWrap: true}]
 						]
 					},
 					layout: emptyTableLayout
@@ -1239,6 +1253,42 @@ describe('LayoutBuilder', function () {
 			assert.equal(pages[0].items[0].item.y, 200);
 			assert.equal(pages[0].items[1].item.x, 0);
 			assert.equal(pages[0].items[1].item.y, 0);
+		});
+
+
+		it('should support wrap long word', function () {
+			var desc = [
+				'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			assert.equal(pages[0].items.length, 3);
+		});
+
+		it('should support wrap long word with big font size', function () {
+			var desc = [
+				{
+					text: 'abc',
+					fontSize: 200
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].items.length, 3);
+		});
+
+		it('should support wrap one big character with big font size', function () {
+			var desc = [
+				{
+					text: 'a',
+					fontSize: 200
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].items.length, 1);
 		});
 
 		it('should support images');

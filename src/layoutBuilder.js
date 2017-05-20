@@ -590,6 +590,15 @@ LayoutBuilder.prototype.processToc = function (node) {
 };
 
 LayoutBuilder.prototype.buildNextLine = function (textNode) {
+
+	function cloneInline(inline) {
+		var newInline = inline.constructor();
+		for (var key in inline) {
+			newInline[key] = inline[key];
+		}
+		return newInline;
+	}
+
 	if (!textNode._inlines || textNode._inlines.length === 0) {
 		return null;
 	}
@@ -597,7 +606,28 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 	var line = new Line(this.writer.context().availableWidth);
 
 	while (textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
-		line.addInline(textNode._inlines.shift());
+		var inline = textNode._inlines.shift();
+
+		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.maxWidth) {
+			var widthPerChar = inline.width / inline.text.length;
+			var maxChars = Math.floor(line.maxWidth / widthPerChar);
+			if (maxChars < 1) {
+				maxChars = 1;
+			}
+			if (maxChars < inline.text.length) {
+				var newInline = cloneInline(inline);
+
+				newInline.text = inline.text.substr(maxChars);
+				inline.text = inline.text.substr(0, maxChars);
+
+				newInline.width = newInline.font.widthOfString(newInline.text, newInline.fontSize) + ((newInline.characterSpacing || 0) * (newInline.text.length - 1));
+				inline.width = inline.font.widthOfString(inline.text, inline.fontSize) + ((inline.characterSpacing || 0) * (inline.text.length - 1));
+
+				textNode._inlines.unshift(newInline);
+			}
+		}
+
+		line.addInline(inline);
 	}
 
 	line.lastLineInParagraph = textNode._inlines.length === 0;
