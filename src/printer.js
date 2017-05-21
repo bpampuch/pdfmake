@@ -8,6 +8,7 @@ var PdfKit = require('pdfkit');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
 var textDecorator = require('./textDecorator');
+var TextTools = require('./textTools');
 
 _.noConflict();
 
@@ -339,9 +340,23 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 
 function renderLine(line, x, y, pdfKitDoc) {
 	if (line._tocItemNode) {
-		// TODO
+		var newWidth;
+		var diffWidth;
+		var textTools = new TextTools(null);
+
 		line.inlines[0].text = line._tocItemNode.positions[0].pageNumber.toString();
-		line.inlines[0].x = line.inlines[0].width - ((line.inlines[0].width / 5) * line.inlines[0].text.length);
+		newWidth = textTools.widthOfString(line.inlines[0].text, line.inlines[0].font, line.inlines[0].fontSize, line.inlines[0].characterSpacing);
+		diffWidth = line.inlines[0].width - newWidth;
+		line.inlines[0].width = newWidth;
+
+		switch (line.inlines[0].alignment) {
+			case 'right':
+				line.inlines[0].x += diffWidth;
+				break;
+			case 'center':
+				line.inlines[0].x += diffWidth / 2;
+				break;
+		}
 	}
 
 	x = x || 0;
