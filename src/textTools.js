@@ -92,6 +92,10 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	};
 };
 
+TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpacing) {
+	return widthOfString(text, font, fontSize, characterSpacing);
+};
+
 function splitWords(text, noWrap) {
 	var results = [];
 	text = text.replace('\t', '    ');

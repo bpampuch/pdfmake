@@ -604,6 +604,7 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 	}
 
 	var line = new Line(this.writer.context().availableWidth);
+	var textTools = new TextTools(null);
 
 	while (textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
 		var inline = textNode._inlines.shift();
@@ -620,8 +621,8 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 				newInline.text = inline.text.substr(maxChars);
 				inline.text = inline.text.substr(0, maxChars);
 
-				newInline.width = newInline.font.widthOfString(newInline.text, newInline.fontSize) + ((newInline.characterSpacing || 0) * (newInline.text.length - 1));
-				inline.width = inline.font.widthOfString(inline.text, inline.fontSize) + ((inline.characterSpacing || 0) * (inline.text.length - 1));
+				newInline.width = textTools.widthOfString(newInline.text, newInline.font, newInline.fontSize, newInline.characterSpacing);
+				inline.width = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing);
 
 				textNode._inlines.unshift(newInline);
 			}
