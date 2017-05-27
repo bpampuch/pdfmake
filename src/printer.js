@@ -473,6 +473,9 @@ function renderVector(vector, pdfKitDoc) {
 				}
 			}
 			break;
+		case 'path':
+			pdfKitDoc.path(vector.d);
+			break;
 	}
 
 	if (vector.color && vector.lineColor) {
