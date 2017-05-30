@@ -1,4 +1,4 @@
-/*! pdfmake v0.1.28, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.1.29, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -2284,10 +2284,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _ = __webpack_require__(7);
 	var FontProvider = __webpack_require__(9);
 	var LayoutBuilder = __webpack_require__(10);
-	var PdfKit = __webpack_require__(29);
+	var PdfKit = __webpack_require__(30);
 	var sizes = __webpack_require__(297);
 	var ImageMeasure = __webpack_require__(298);
 	var textDecorator = __webpack_require__(299);
+	var TextTools = __webpack_require__(15);
 
 	_.noConflict();
 
@@ -2618,6 +2619,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function renderLine(line, x, y, pdfKitDoc) {
+		if (line._tocItemNode) {
+			var newWidth;
+			var diffWidth;
+			var textTools = new TextTools(null);
+
+			line.inlines[0].text = line._tocItemNode.positions[0].pageNumber.toString();
+			newWidth = textTools.widthOfString(line.inlines[0].text, line.inlines[0].font, line.inlines[0].fontSize, line.inlines[0].characterSpacing);
+			diffWidth = line.inlines[0].width - newWidth;
+			line.inlines[0].width = newWidth;
+
+			switch (line.inlines[0].alignment) {
+				case 'right':
+					line.inlines[0].x += diffWidth;
+					break;
+				case 'center':
+					line.inlines[0].x += diffWidth / 2;
+					break;
+			}
+		}
+
 		x = x || 0;
 		y = y || 0;
 
@@ -2732,6 +2753,9 @@ return /******/ (function(modules) { // webpackBootstrap
 					}
 				}
 				break;
+			case 'path':
+				pdfKitDoc.path(vector.d);
+				break;
 		}
 
 		if (vector.color && vector.lineColor) {
@@ -2758,7 +2782,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 	/* temporary browser extension */
-	PdfPrinter.prototype.fs = __webpack_require__(54);
+	PdfPrinter.prototype.fs = __webpack_require__(56);
 
 
 /***/ }),
@@ -19941,18 +19965,19 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _ = __webpack_require__(7);
 	var TraversalTracker = __webpack_require__(11);
-	var DocMeasure = __webpack_require__(12);
-	var DocumentContext = __webpack_require__(24);
-	var PageElementWriter = __webpack_require__(25);
-	var ColumnCalculator = __webpack_require__(21);
-	var TableProcessor = __webpack_require__(28);
-	var Line = __webpack_require__(27);
-	var pack = __webpack_require__(22).pack;
-	var offsetVector = __webpack_require__(22).offsetVector;
-	var fontStringify = __webpack_require__(22).fontStringify;
-	var isFunction = __webpack_require__(22).isFunction;
-	var TextTools = __webpack_require__(13);
-	var StyleContextStack = __webpack_require__(20);
+	var DocPreprocessor = __webpack_require__(12);
+	var DocMeasure = __webpack_require__(14);
+	var DocumentContext = __webpack_require__(25);
+	var PageElementWriter = __webpack_require__(26);
+	var ColumnCalculator = __webpack_require__(23);
+	var TableProcessor = __webpack_require__(29);
+	var Line = __webpack_require__(28);
+	var pack = __webpack_require__(13).pack;
+	var offsetVector = __webpack_require__(13).offsetVector;
+	var fontStringify = __webpack_require__(13).fontStringify;
+	var isFunction = __webpack_require__(13).isFunction;
+	var TextTools = __webpack_require__(15);
+	var StyleContextStack = __webpack_require__(22);
 
 	function addAll(target, otherArray) {
 		_.each(otherArray, function (item) {
@@ -20043,6 +20068,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			});
 		}
 
+		this.docPreprocessor = new DocPreprocessor();
 		this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
 
 
@@ -20064,6 +20090,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
 
 		this.linearNodeList = [];
+		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
 		this.writer = new PageElementWriter(
@@ -20096,6 +20123,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		if (pageBackground) {
 			var pageSize = this.writer.context().getCurrentPage().pageSize;
 			this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
+			pageBackground = this.docPreprocessor.preprocessDocument(pageBackground);
 			this.processNode(this.docMeasure.measureDocument(pageBackground));
 			this.writer.commitUnbreakableBlock(0, 0);
 		}
@@ -20118,6 +20146,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			if (node) {
 				var sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
 				this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
+				node = this.docPreprocessor.preprocessDocument(node);
 				this.processNode(this.docMeasure.measureDocument(node));
 				this.writer.commitUnbreakableBlock(sizes.x, sizes.y);
 			}
@@ -20277,6 +20306,8 @@ return /******/ (function(modules) { // webpackBootstrap
 				self.processTable(node);
 			} else if (node.text !== undefined) {
 				self.processLeaf(node);
+			} else if (node.toc) {
+				self.processToc(node);
 			} else if (node.image) {
 				self.processImage(node);
 			} else if (node.canvas) {
@@ -20499,6 +20530,10 @@ return /******/ (function(modules) { // webpackBootstrap
 		var currentHeight = (line) ? line.getHeight() : 0;
 		var maxHeight = node.maxHeight || -1;
 
+		if (node._tocItemRef) {
+			line._tocItemNode = node._tocItemRef;
+		}
+
 		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
 			var positions = this.writer.addLine(line);
 			node.positions.push(positions);
@@ -20509,15 +20544,53 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 	};
 
+	LayoutBuilder.prototype.processToc = function (node) {
+		if (node.toc.title) {
+			this.processNode(node.toc.title);
+		}
+		this.processNode(node.toc._table);
+	};
+
 	LayoutBuilder.prototype.buildNextLine = function (textNode) {
+
+		function cloneInline(inline) {
+			var newInline = inline.constructor();
+			for (var key in inline) {
+				newInline[key] = inline[key];
+			}
+			return newInline;
+		}
+
 		if (!textNode._inlines || textNode._inlines.length === 0) {
 			return null;
 		}
 
 		var line = new Line(this.writer.context().availableWidth);
+		var textTools = new TextTools(null);
 
 		while (textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
-			line.addInline(textNode._inlines.shift());
+			var inline = textNode._inlines.shift();
+
+			if (!inline.noWrap && inline.text.length > 1 && inline.width > line.maxWidth) {
+				var widthPerChar = inline.width / inline.text.length;
+				var maxChars = Math.floor(line.maxWidth / widthPerChar);
+				if (maxChars < 1) {
+					maxChars = 1;
+				}
+				if (maxChars < inline.text.length) {
+					var newInline = cloneInline(inline);
+
+					newInline.text = inline.text.substr(maxChars);
+					inline.text = inline.text.substr(0, maxChars);
+
+					newInline.width = textTools.widthOfString(newInline.text, newInline.font, newInline.fontSize, newInline.characterSpacing);
+					inline.width = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing);
+
+					textNode._inlines.unshift(newInline);
+				}
+			}
+
+			line.addInline(inline);
 		}
 
 		line.lastLineInParagraph = textNode._inlines.length === 0;
@@ -20620,12 +20693,248 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* jslint node: true */
 	'use strict';
 
-	var TextTools = __webpack_require__(13);
-	var StyleContextStack = __webpack_require__(20);
-	var ColumnCalculator = __webpack_require__(21);
-	var fontStringify = __webpack_require__(22).fontStringify;
-	var pack = __webpack_require__(22).pack;
-	var qrEncoder = __webpack_require__(23);
+	var fontStringify = __webpack_require__(13).fontStringify;
+
+	function DocPreprocessor() {
+
+	}
+
+	DocPreprocessor.prototype.preprocessDocument = function (docStructure) {
+		this.tocs = [];
+		return this.preprocessNode(docStructure);
+	};
+
+	DocPreprocessor.prototype.preprocessNode = function (node) {
+		// expand shortcuts and casting values
+		if (Array.isArray(node)) {
+			node = {stack: node};
+		} else if (typeof node === 'string' || node instanceof String) {
+			node = {text: node};
+		} else if (typeof node === 'number' || typeof node === 'boolean') {
+			node = {text: node.toString()};
+		} else if (node === null) {
+			node = {text: ''};
+		} else if (Object.keys(node).length === 0) { // empty object
+			node = {text: ''};
+		}
+
+		if (node.columns) {
+			return this.preprocessColumns(node);
+		} else if (node.stack) {
+			return this.preprocessVerticalContainer(node);
+		} else if (node.ul) {
+			return this.preprocessList(node);
+		} else if (node.ol) {
+			return this.preprocessList(node);
+		} else if (node.table) {
+			return this.preprocessTable(node);
+		} else if (node.text !== undefined) {
+			return this.preprocessText(node);
+		} else if (node.toc) {
+			return this.preprocessToc(node);
+		} else if (node.image) {
+			return this.preprocessImage(node);
+		} else if (node.canvas) {
+			return this.preprocessCanvas(node);
+		} else if (node.qr) {
+			return this.preprocessQr(node);
+		} else {
+			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+		}
+	};
+
+	DocPreprocessor.prototype.preprocessColumns = function (node) {
+		var columns = node.columns;
+
+		for (var i = 0, l = columns.length; i < l; i++) {
+			columns[i] = this.preprocessNode(columns[i]);
+		}
+
+		return node;
+	};
+
+	DocPreprocessor.prototype.preprocessVerticalContainer = function (node) {
+		var items = node.stack;
+
+		for (var i = 0, l = items.length; i < l; i++) {
+			items[i] = this.preprocessNode(items[i]);
+		}
+
+		return node;
+	};
+
+	DocPreprocessor.prototype.preprocessList = function (node) {
+		var items = node.ul || node.ol;
+
+		for (var i = 0, l = items.length; i < l; i++) {
+			items[i] = this.preprocessNode(items[i]);
+		}
+
+		return node;
+	};
+
+	DocPreprocessor.prototype.preprocessTable = function (node) {
+		var col, row, cols, rows;
+
+		for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
+			for (row = 0, rows = node.table.body.length; row < rows; row++) {
+				var rowData = node.table.body[row];
+				var data = rowData[col];
+				if (data === undefined) {
+					console.error('Malformed table row ', rowData, 'in node ', node);
+					throw 'Malformed table row, a cell is undefined.';
+				}
+				if (data === null) { // transform to object
+					data = '';
+				}
+
+				rowData[col] = this.preprocessNode(data);
+			}
+		}
+
+		return node;
+	};
+
+	DocPreprocessor.prototype.preprocessText = function (node) {
+		if (node.tocItem) {
+			if (!Array.isArray(node.tocItem)) {
+				node.tocItem = [node.tocItem];
+			}
+
+			for (var i = 0, l = node.tocItem.length; i < l; i++) {
+				if (!(typeof node.tocItem[i] === 'string' || node.tocItem[i] instanceof String)) {
+					node.tocItem[i] = '_default_';
+				}
+
+				var tocItemId = node.tocItem[i];
+
+				if (!this.tocs[tocItemId]) {
+					this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
+				}
+
+				this.tocs[tocItemId].toc._items.push(node);
+			}
+		}
+
+		return node;
+	};
+
+	DocPreprocessor.prototype.preprocessToc = function (node) {
+		if (!node.toc.id) {
+			node.toc.id = '_default_';
+		}
+
+		node.toc.title = node.toc.title ? this.preprocessNode(node.toc.title) : null;
+		node.toc._items = [];
+
+		if (this.tocs[node.toc.id]) {
+			if (!this.tocs[node.toc.id].toc._pseudo) {
+				throw "TOC '" + node.toc.id + "' already exists";
+			}
+
+			node.toc._items = this.tocs[node.toc.id].toc._items;
+		}
+
+		this.tocs[node.toc.id] = node;
+
+		return node;
+	};
+
+	DocPreprocessor.prototype.preprocessImage = function (node) {
+		return node;
+	};
+
+	DocPreprocessor.prototype.preprocessCanvas = function (node) {
+		return node;
+	};
+
+	DocPreprocessor.prototype.preprocessQr = function (node) {
+		return node;
+	};
+
+	module.exports = DocPreprocessor;
+
+/***/ }),
+/* 13 */
+/***/ (function(module, exports) {
+
+	/* jslint node: true */
+	'use strict';
+
+	function pack() {
+		var result = {};
+
+		for (var i = 0, l = arguments.length; i < l; i++) {
+			var obj = arguments[i];
+
+			if (obj) {
+				for (var key in obj) {
+					if (obj.hasOwnProperty(key)) {
+						result[key] = obj[key];
+					}
+				}
+			}
+		}
+
+		return result;
+	}
+
+	function offsetVector(vector, x, y) {
+		switch (vector.type) {
+			case 'ellipse':
+			case 'rect':
+				vector.x += x;
+				vector.y += y;
+				break;
+			case 'line':
+				vector.x1 += x;
+				vector.x2 += x;
+				vector.y1 += y;
+				vector.y2 += y;
+				break;
+			case 'polyline':
+				for (var i = 0, l = vector.points.length; i < l; i++) {
+					vector.points[i].x += x;
+					vector.points[i].y += y;
+				}
+				break;
+		}
+	}
+
+	function fontStringify(key, val) {
+		if (key === 'font') {
+			return 'font';
+		}
+		return val;
+	}
+
+	function isFunction(functionToCheck) {
+		var getType = {};
+		return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+	}
+
+
+	module.exports = {
+		pack: pack,
+		fontStringify: fontStringify,
+		offsetVector: offsetVector,
+		isFunction: isFunction
+	};
+
+
+/***/ }),
+/* 14 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	/* jslint node: true */
+	'use strict';
+
+	var TextTools = __webpack_require__(15);
+	var StyleContextStack = __webpack_require__(22);
+	var ColumnCalculator = __webpack_require__(23);
+	var fontStringify = __webpack_require__(13).fontStringify;
+	var pack = __webpack_require__(13).pack;
+	var qrEncoder = __webpack_require__(24);
 
 	/**
 	 * @private
@@ -20650,22 +20959,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	DocMeasure.prototype.measureNode = function (node) {
-		// expand shortcuts
-		if (Array.isArray(node)) {
-			node = {stack: node};
-		} else if (typeof node === 'string' || node instanceof String) {
-			node = {text: node};
-		} else if (typeof node === 'number' || typeof node === 'boolean') {
-			node = {text: node.toString()};
-		} else if (node === null) {
-			node = {text: ''};
-		}
-
-		// Deal with empty nodes to prevent crash in getNodeMargin
-		if (Object.keys(node).length === 0) {
-			// A warning could be logged: console.warn('pdfmake: Empty node, ignoring it');
-			node = {text: ''};
-		}
 
 		var self = this;
 
@@ -20685,6 +20978,8 @@ return /******/ (function(modules) { // webpackBootstrap
 				return extendMargins(self.measureTable(node));
 			} else if (node.text !== undefined) {
 				return extendMargins(self.measureLeaf(node));
+			} else if (node.toc) {
+				return extendMargins(self.measureToc(node));
 			} else if (node.image) {
 				return extendMargins(self.measureImage(node));
 			} else if (node.canvas) {
@@ -20835,6 +21130,35 @@ return /******/ (function(modules) { // webpackBootstrap
 		node._inlines = data.items;
 		node._minWidth = data.minWidth;
 		node._maxWidth = data.maxWidth;
+
+		return node;
+	};
+
+	DocMeasure.prototype.measureToc = function (node) {
+		if (node.toc.title) {
+			node.toc.title = this.measureNode(node.toc.title);
+		}
+
+		var body = [];
+		for (var i = 0, l = node.toc._items.length; i < l; i++) {
+			var item = node.toc._items[i];
+			body.push([
+				{text: item.text, alignment: 'left'},
+				{text: '00000', alignment: 'right', _tocItemRef: item}
+			]);
+		}
+
+
+		node.toc._table = {
+			table: {
+				dontBreakRows: true,
+				widths: ['*', 'auto'],
+				body: body
+			},
+			layout: 'noBorders'
+		};
+
+		node.toc._table = this.measureNode(node.toc._table);
 
 		return node;
 	};
@@ -21122,13 +21446,6 @@ return /******/ (function(modules) { // webpackBootstrap
 			for (row = 0, rows = node.table.body.length; row < rows; row++) {
 				var rowData = node.table.body[row];
 				var data = rowData[col];
-				if (data === undefined) {
-					console.error('Malformed table row ', rowData, 'in node ', node);
-					throw 'Malformed table row, a cell is undefined.';
-				}
-				if (data === null) { // transform to object
-					data = '';
-				}
 				if (!data._span) {
 					data = rowData[col] = this.styleStack.auto(data, measureCb(this, data));
 
@@ -21354,13 +21671,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 13 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* jslint node: true */
 	'use strict';
 
-	var LineBreaker = __webpack_require__(14);
+	var LineBreaker = __webpack_require__(16);
 
 	var LEADING = /^(\s)+/g;
 	var TRAILING = /(\s)+$/g;
@@ -21449,6 +21766,10 @@ return /******/ (function(modules) { // webpackBootstrap
 			ascender: font.ascender / 1000 * fontSize,
 			descender: font.descender / 1000 * fontSize
 		};
+	};
+
+	TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpacing) {
+		return widthOfString(text, font, fontSize, characterSpacing);
 	};
 
 	function splitWords(text, noWrap) {
@@ -21583,6 +21904,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			var characterSpacing = getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
 			var link = getStyleProperty(item, styleContextStack, 'link', null);
 			var linkToPage = getStyleProperty(item, styleContextStack, 'linkToPage', null);
+			var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', null);
 
 			var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -21614,6 +21936,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			item.background = background;
 			item.link = link;
 			item.linkToPage = linkToPage;
+			item.noWrap = noWrap;
 		});
 
 		return normalized;
@@ -21634,22 +21957,22 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 14 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.7.1
 	(function() {
 	  var AI, AL, BA, BK, CB, CI_BRK, CJ, CP_BRK, CR, DI_BRK, ID, IN_BRK, LF, LineBreaker, NL, NS, PR_BRK, SA, SG, SP, UnicodeTrie, WJ, XX, base64, characterClasses, classTrie, data, fs, pairTable, _ref, _ref1;
 
-	  UnicodeTrie = __webpack_require__(15);
+	  UnicodeTrie = __webpack_require__(17);
 
 	  
 
-	  base64 = __webpack_require__(17);
+	  base64 = __webpack_require__(19);
 
-	  _ref = __webpack_require__(18), BK = _ref.BK, CR = _ref.CR, LF = _ref.LF, NL = _ref.NL, CB = _ref.CB, BA = _ref.BA, SP = _ref.SP, WJ = _ref.WJ, SP = _ref.SP, BK = _ref.BK, LF = _ref.LF, NL = _ref.NL, AI = _ref.AI, AL = _ref.AL, SA = _ref.SA, SG = _ref.SG, XX = _ref.XX, CJ = _ref.CJ, ID = _ref.ID, NS = _ref.NS, characterClasses = _ref.characterClasses;
+	  _ref = __webpack_require__(20), BK = _ref.BK, CR = _ref.CR, LF = _ref.LF, NL = _ref.NL, CB = _ref.CB, BA = _ref.BA, SP = _ref.SP, WJ = _ref.WJ, SP = _ref.SP, BK = _ref.BK, LF = _ref.LF, NL = _ref.NL, AI = _ref.AI, AL = _ref.AL, SA = _ref.SA, SG = _ref.SG, XX = _ref.XX, CJ = _ref.CJ, ID = _ref.ID, NS = _ref.NS, characterClasses = _ref.characterClasses;
 
-	  _ref1 = __webpack_require__(19), DI_BRK = _ref1.DI_BRK, IN_BRK = _ref1.IN_BRK, CI_BRK = _ref1.CI_BRK, CP_BRK = _ref1.CP_BRK, PR_BRK = _ref1.PR_BRK, pairTable = _ref1.pairTable;
+	  _ref1 = __webpack_require__(21), DI_BRK = _ref1.DI_BRK, IN_BRK = _ref1.IN_BRK, CI_BRK = _ref1.CI_BRK, CP_BRK = _ref1.CP_BRK, PR_BRK = _ref1.PR_BRK, pairTable = _ref1.pairTable;
 
 	  data = base64.toByteArray("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");
 
@@ -21801,13 +22124,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 15 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.7.1
 	var UnicodeTrie, inflate;
 
-	inflate = __webpack_require__(16);
+	inflate = __webpack_require__(18);
 
 	UnicodeTrie = (function() {
 	  var DATA_BLOCK_LENGTH, DATA_GRANULARITY, DATA_MASK, INDEX_1_OFFSET, INDEX_2_BLOCK_LENGTH, INDEX_2_BMP_LENGTH, INDEX_2_MASK, INDEX_SHIFT, LSCP_INDEX_2_LENGTH, LSCP_INDEX_2_OFFSET, OMITTED_BMP_INDEX_1_LENGTH, SHIFT_1, SHIFT_1_2, SHIFT_2, UTF8_2B_INDEX_2_LENGTH, UTF8_2B_INDEX_2_OFFSET;
@@ -21898,7 +22221,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 16 */
+/* 18 */
 /***/ (function(module, exports) {
 
 	var TINF_OK = 0;
@@ -22279,7 +22602,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 17 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -22409,7 +22732,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 18 */
+/* 20 */
 /***/ (function(module, exports) {
 
 	// Generated by CoffeeScript 1.7.1
@@ -22500,7 +22823,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 19 */
+/* 21 */
 /***/ (function(module, exports) {
 
 	// Generated by CoffeeScript 1.7.1
@@ -22523,7 +22846,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 20 */
+/* 22 */
 /***/ (function(module, exports) {
 
 	/* jslint node: true */
@@ -22701,7 +23024,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 21 */
+/* 23 */
 /***/ (function(module, exports) {
 
 	/* jslint node: true */
@@ -22842,75 +23165,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 22 */
-/***/ (function(module, exports) {
-
-	/* jslint node: true */
-	'use strict';
-
-	function pack() {
-		var result = {};
-
-		for (var i = 0, l = arguments.length; i < l; i++) {
-			var obj = arguments[i];
-
-			if (obj) {
-				for (var key in obj) {
-					if (obj.hasOwnProperty(key)) {
-						result[key] = obj[key];
-					}
-				}
-			}
-		}
-
-		return result;
-	}
-
-	function offsetVector(vector, x, y) {
-		switch (vector.type) {
-			case 'ellipse':
-			case 'rect':
-				vector.x += x;
-				vector.y += y;
-				break;
-			case 'line':
-				vector.x1 += x;
-				vector.x2 += x;
-				vector.y1 += y;
-				vector.y2 += y;
-				break;
-			case 'polyline':
-				for (var i = 0, l = vector.points.length; i < l; i++) {
-					vector.points[i].x += x;
-					vector.points[i].y += y;
-				}
-				break;
-		}
-	}
-
-	function fontStringify(key, val) {
-		if (key === 'font') {
-			return 'font';
-		}
-		return val;
-	}
-
-	function isFunction(functionToCheck) {
-		var getType = {};
-		return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
-	}
-
-
-	module.exports = {
-		pack: pack,
-		fontStringify: fontStringify,
-		offsetVector: offsetVector,
-		isFunction: isFunction
-	};
-
-
-/***/ }),
-/* 23 */
+/* 24 */
 /***/ (function(module, exports) {
 
 	/* jslint node: true */
@@ -23655,8 +23910,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	function buildCanvas(data, options) {
 
 		var canvas = [];
-		var background = data.background || '#fff';
-		var foreground = data.foreground || '#000';
+		var background = options.background || '#fff';
+		var foreground = options.foreground || '#000';
 		//var margin = options.margin || 4;
 		var matrix = generateFrame(data, options);
 		var n = matrix.length;
@@ -23703,7 +23958,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 24 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* jslint node: true */
@@ -23994,13 +24249,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 25 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* jslint node: true */
 	'use strict';
 
-	var ElementWriter = __webpack_require__(26);
+	var ElementWriter = __webpack_require__(27);
 
 	/**
 	 * Creates an instance of PageElementWriter - an extended ElementWriter
@@ -24152,16 +24407,16 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 26 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* jslint node: true */
 	'use strict';
 
-	var Line = __webpack_require__(27);
-	var pack = __webpack_require__(22).pack;
-	var offsetVector = __webpack_require__(22).offsetVector;
-	var DocumentContext = __webpack_require__(24);
+	var Line = __webpack_require__(28);
+	var pack = __webpack_require__(13).pack;
+	var offsetVector = __webpack_require__(13).offsetVector;
+	var DocumentContext = __webpack_require__(25);
 
 	/**
 	 * Creates an instance of ElementWriter - a line/vector writer, which adds
@@ -24434,7 +24689,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 27 */
+/* 28 */
 /***/ (function(module, exports) {
 
 	/* jslint node: true */
@@ -24513,13 +24768,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 28 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* jslint node: true */
 	'use strict';
 
-	var ColumnCalculator = __webpack_require__(21);
+	var ColumnCalculator = __webpack_require__(23);
 
 	function TableProcessor(tableNode) {
 		this.tableNode = tableNode;
@@ -24744,6 +24999,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	TableProcessor.prototype.endTable = function (writer) {
 		if (this.cleanUpRepeatables) {
 			writer.popFromRepeatables();
+			this.headerRepeatableHeight = null;
 		}
 	};
 
@@ -24775,6 +25031,10 @@ return /******/ (function(modules) { // webpackBootstrap
 				ys[ys.length - 1].y1 = pageBreak.prevY;
 
 				ys.push({y0: pageBreak.y, page: pageBreak.prevPage + 1});
+
+				if (this.headerRepeatableHeight) {
+					ys[ys.length - 1].y0 += this.headerRepeatableHeight;
+				}
 			}
 		}
 
@@ -24891,6 +25151,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 
 		if (this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
+			this.headerRepeatableHeight = this.headerRepeatable.height;
 			writer.commitUnbreakableBlock();
 			writer.pushToRepeatables(this.headerRepeatable);
 			this.cleanUpRepeatables = true;
@@ -24923,10 +25184,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 29 */
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.10.0
+	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.12.1
 
 	/*
 	PDFDocument - represents an entire PDF document
@@ -24938,15 +25199,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
 	    hasProp = {}.hasOwnProperty;
 
-	  stream = __webpack_require__(30);
+	  stream = __webpack_require__(31);
 
-	  fs = __webpack_require__(54);
+	  fs = __webpack_require__(56);
 
-	  PDFObject = __webpack_require__(55);
+	  PDFObject = __webpack_require__(57);
 
-	  PDFReference = __webpack_require__(56);
+	  PDFReference = __webpack_require__(58);
 
-	  PDFPage = __webpack_require__(74);
+	  PDFPage = __webpack_require__(76);
 
 	  PDFDocument = (function(superClass) {
 	    var mixin;
@@ -25008,13 +25269,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return results;
 	    };
 
-	    mixin(__webpack_require__(75));
-
 	    mixin(__webpack_require__(77));
 
 	    mixin(__webpack_require__(79));
 
-	    mixin(__webpack_require__(283));
+	    mixin(__webpack_require__(81));
+
+	    mixin(__webpack_require__(288));
 
 	    mixin(__webpack_require__(290));
 
@@ -25177,7 +25438,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ }),
-/* 30 */
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -25203,15 +25464,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	module.exports = Stream;
 
-	var EE = __webpack_require__(31).EventEmitter;
-	var inherits = __webpack_require__(32);
+	var EE = __webpack_require__(32).EventEmitter;
+	var inherits = __webpack_require__(33);
 
 	inherits(Stream, EE);
-	Stream.Readable = __webpack_require__(33);
-	Stream.Writable = __webpack_require__(50);
-	Stream.Duplex = __webpack_require__(51);
-	Stream.Transform = __webpack_require__(52);
-	Stream.PassThrough = __webpack_require__(53);
+	Stream.Readable = __webpack_require__(34);
+	Stream.Writable = __webpack_require__(52);
+	Stream.Duplex = __webpack_require__(53);
+	Stream.Transform = __webpack_require__(54);
+	Stream.PassThrough = __webpack_require__(55);
 
 	// Backwards-compat with node 0.4.x
 	Stream.Stream = Stream;
@@ -25310,7 +25571,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 31 */
+/* 32 */
 /***/ (function(module, exports) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -25618,7 +25879,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 32 */
+/* 33 */
 /***/ (function(module, exports) {
 
 	if (typeof Object.create === 'function') {
@@ -25647,20 +25908,20 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 33 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(34);
+	exports = module.exports = __webpack_require__(35);
 	exports.Stream = exports;
 	exports.Readable = exports;
-	exports.Writable = __webpack_require__(43);
-	exports.Duplex = __webpack_require__(42);
-	exports.Transform = __webpack_require__(48);
-	exports.PassThrough = __webpack_require__(49);
+	exports.Writable = __webpack_require__(44);
+	exports.Duplex = __webpack_require__(43);
+	exports.Transform = __webpack_require__(50);
+	exports.PassThrough = __webpack_require__(51);
 
 
 /***/ }),
-/* 34 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {'use strict';
@@ -25668,7 +25929,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = Readable;
 
 	/*<replacement>*/
-	var processNextTick = __webpack_require__(36);
+	var processNextTick = __webpack_require__(37);
 	/*</replacement>*/
 
 	/*<replacement>*/
@@ -25682,7 +25943,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	Readable.ReadableState = ReadableState;
 
 	/*<replacement>*/
-	var EE = __webpack_require__(31).EventEmitter;
+	var EE = __webpack_require__(32).EventEmitter;
 
 	var EElistenerCount = function (emitter, type) {
 	  return emitter.listeners(type).length;
@@ -25690,21 +25951,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	/*</replacement>*/
 
 	/*<replacement>*/
-	var Stream = __webpack_require__(37);
+	var Stream = __webpack_require__(38);
 	/*</replacement>*/
 
 	var Buffer = __webpack_require__(2).Buffer;
 	/*<replacement>*/
-	var bufferShim = __webpack_require__(38);
+	var bufferShim = __webpack_require__(39);
 	/*</replacement>*/
 
 	/*<replacement>*/
-	var util = __webpack_require__(39);
-	util.inherits = __webpack_require__(32);
+	var util = __webpack_require__(40);
+	util.inherits = __webpack_require__(33);
 	/*</replacement>*/
 
 	/*<replacement>*/
-	var debugUtil = __webpack_require__(40);
+	var debugUtil = __webpack_require__(41);
 	var debug = void 0;
 	if (debugUtil && debugUtil.debuglog) {
 	  debug = debugUtil.debuglog('stream');
@@ -25713,7 +25974,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	/*</replacement>*/
 
-	var BufferList = __webpack_require__(41);
+	var BufferList = __webpack_require__(42);
 	var StringDecoder;
 
 	util.inherits(Readable, Stream);
@@ -25735,7 +25996,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function ReadableState(options, stream) {
-	  Duplex = Duplex || __webpack_require__(42);
+	  Duplex = Duplex || __webpack_require__(43);
 
 	  options = options || {};
 
@@ -25797,14 +26058,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	  this.decoder = null;
 	  this.encoding = null;
 	  if (options.encoding) {
-	    if (!StringDecoder) StringDecoder = __webpack_require__(47).StringDecoder;
+	    if (!StringDecoder) StringDecoder = __webpack_require__(48).StringDecoder;
 	    this.decoder = new StringDecoder(options.encoding);
 	    this.encoding = options.encoding;
 	  }
 	}
 
 	function Readable(options) {
-	  Duplex = Duplex || __webpack_require__(42);
+	  Duplex = Duplex || __webpack_require__(43);
 
 	  if (!(this instanceof Readable)) return new Readable(options);
 
@@ -25907,7 +26168,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	// backwards compatibility.
 	Readable.prototype.setEncoding = function (enc) {
-	  if (!StringDecoder) StringDecoder = __webpack_require__(47).StringDecoder;
+	  if (!StringDecoder) StringDecoder = __webpack_require__(48).StringDecoder;
 	  this._readableState.decoder = new StringDecoder(enc);
 	  this._readableState.encoding = enc;
 	  return this;
@@ -26598,10 +26859,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	  return -1;
 	}
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(35)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(36)))
 
 /***/ }),
-/* 35 */
+/* 36 */
 /***/ (function(module, exports) {
 
 	// shim for using process in browser
@@ -26791,7 +27052,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 36 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {'use strict';
@@ -26838,17 +27099,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(35)))
-
-/***/ }),
-/* 37 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = __webpack_require__(31).EventEmitter;
-
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(36)))
 
 /***/ }),
 /* 38 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	module.exports = __webpack_require__(32).EventEmitter;
+
+
+/***/ }),
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
@@ -26963,7 +27224,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ }),
-/* 39 */
+/* 40 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Copyright Joyent, Inc. and other Node contributors.
@@ -27077,20 +27338,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ }),
-/* 40 */
+/* 41 */
 /***/ (function(module, exports) {
 
 	/* (ignored) */
 
 /***/ }),
-/* 41 */
+/* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	var Buffer = __webpack_require__(2).Buffer;
 	/*<replacement>*/
-	var bufferShim = __webpack_require__(38);
+	var bufferShim = __webpack_require__(39);
 	/*</replacement>*/
 
 	module.exports = BufferList;
@@ -27152,7 +27413,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 42 */
+/* 43 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// a duplex stream is just a stream that is both readable and writable.
@@ -27175,16 +27436,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = Duplex;
 
 	/*<replacement>*/
-	var processNextTick = __webpack_require__(36);
+	var processNextTick = __webpack_require__(37);
 	/*</replacement>*/
 
 	/*<replacement>*/
-	var util = __webpack_require__(39);
-	util.inherits = __webpack_require__(32);
+	var util = __webpack_require__(40);
+	util.inherits = __webpack_require__(33);
 	/*</replacement>*/
 
-	var Readable = __webpack_require__(34);
-	var Writable = __webpack_require__(43);
+	var Readable = __webpack_require__(35);
+	var Writable = __webpack_require__(44);
 
 	util.inherits(Duplex, Readable);
 
@@ -27232,7 +27493,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ }),
-/* 43 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process, setImmediate) {// A bit simpler than readable streams.
@@ -27244,7 +27505,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = Writable;
 
 	/*<replacement>*/
-	var processNextTick = __webpack_require__(36);
+	var processNextTick = __webpack_require__(37);
 	/*</replacement>*/
 
 	/*<replacement>*/
@@ -27258,23 +27519,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	Writable.WritableState = WritableState;
 
 	/*<replacement>*/
-	var util = __webpack_require__(39);
-	util.inherits = __webpack_require__(32);
+	var util = __webpack_require__(40);
+	util.inherits = __webpack_require__(33);
 	/*</replacement>*/
 
 	/*<replacement>*/
 	var internalUtil = {
-	  deprecate: __webpack_require__(46)
+	  deprecate: __webpack_require__(47)
 	};
 	/*</replacement>*/
 
 	/*<replacement>*/
-	var Stream = __webpack_require__(37);
+	var Stream = __webpack_require__(38);
 	/*</replacement>*/
 
 	var Buffer = __webpack_require__(2).Buffer;
 	/*<replacement>*/
-	var bufferShim = __webpack_require__(38);
+	var bufferShim = __webpack_require__(39);
 	/*</replacement>*/
 
 	util.inherits(Writable, Stream);
@@ -27289,7 +27550,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function WritableState(options, stream) {
-	  Duplex = Duplex || __webpack_require__(42);
+	  Duplex = Duplex || __webpack_require__(43);
 
 	  options = options || {};
 
@@ -27423,7 +27684,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function Writable(options) {
-	  Duplex = Duplex || __webpack_require__(42);
+	  Duplex = Duplex || __webpack_require__(43);
 
 	  // Writable ctor is applied to Duplexes, too.
 	  // `realHasInstance` is necessary because using plain `instanceof`
@@ -27779,10 +28040,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  };
 	}
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(35), __webpack_require__(44).setImmediate))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(36), __webpack_require__(45).setImmediate))
 
 /***/ }),
-/* 44 */
+/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var apply = Function.prototype.apply;
@@ -27835,13 +28096,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	// setimmediate attaches itself to the global object
-	__webpack_require__(45);
+	__webpack_require__(46);
 	exports.setImmediate = setImmediate;
 	exports.clearImmediate = clearImmediate;
 
 
 /***/ }),
-/* 45 */
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, process) {(function (global, undefined) {
@@ -28031,10 +28292,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    attachTo.clearImmediate = clearImmediate;
 	}(typeof self === "undefined" ? typeof global === "undefined" ? this : global : self));
 
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(35)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(36)))
 
 /***/ }),
-/* 46 */
+/* 47 */
 /***/ (function(module, exports) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {
@@ -28108,13 +28369,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ }),
-/* 47 */
+/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var Buffer = __webpack_require__(2).Buffer;
-	var bufferShim = __webpack_require__(38);
+	var Buffer = __webpack_require__(49).Buffer;
 
 	var isEncoding = Buffer.isEncoding || function (encoding) {
 	  encoding = '' + encoding;
@@ -28191,7 +28451,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	  this.lastNeed = 0;
 	  this.lastTotal = 0;
-	  this.lastChar = bufferShim.allocUnsafe(nb);
+	  this.lastChar = Buffer.allocUnsafe(nb);
 	}
 
 	StringDecoder.prototype.write = function (buf) {
@@ -28386,7 +28646,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ }),
-/* 48 */
+/* 49 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	module.exports = __webpack_require__(2)
+
+
+/***/ }),
+/* 50 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// a transform stream is a readable/writable stream where you do
@@ -28435,11 +28702,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	module.exports = Transform;
 
-	var Duplex = __webpack_require__(42);
+	var Duplex = __webpack_require__(43);
 
 	/*<replacement>*/
-	var util = __webpack_require__(39);
-	util.inherits = __webpack_require__(32);
+	var util = __webpack_require__(40);
+	util.inherits = __webpack_require__(33);
 	/*</replacement>*/
 
 	util.inherits(Transform, Duplex);
@@ -28573,7 +28840,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ }),
-/* 49 */
+/* 51 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// a passthrough stream.
@@ -28584,11 +28851,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	module.exports = PassThrough;
 
-	var Transform = __webpack_require__(48);
+	var Transform = __webpack_require__(50);
 
 	/*<replacement>*/
-	var util = __webpack_require__(39);
-	util.inherits = __webpack_require__(32);
+	var util = __webpack_require__(40);
+	util.inherits = __webpack_require__(33);
 	/*</replacement>*/
 
 	util.inherits(PassThrough, Transform);
@@ -28604,35 +28871,35 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 50 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = __webpack_require__(43);
-
-
-/***/ }),
-/* 51 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = __webpack_require__(42);
-
-
-/***/ }),
 /* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(33).Transform
+	module.exports = __webpack_require__(44);
 
 
 /***/ }),
 /* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(33).PassThrough
+	module.exports = __webpack_require__(43);
 
 
 /***/ }),
 /* 54 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	module.exports = __webpack_require__(34).Transform
+
+
+/***/ }),
+/* 55 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	module.exports = __webpack_require__(34).PassThrough
+
+
+/***/ }),
+/* 56 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer, __dirname) {/* jslint node: true */
@@ -28685,10 +28952,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer, "/"))
 
 /***/ }),
-/* 55 */
+/* 57 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.10.0
+	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.12.1
 
 	/*
 	PDFObject - converts JavaScript types into their corrisponding PDF types.
@@ -28779,9 +29046,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	        out.push('>>');
 	        return out.join('\n');
+	      } else if (typeof object === 'number') {
+	        return PDFObject.number(object);
 	      } else {
 	        return '' + object;
 	      }
+	    };
+
+	    PDFObject.number = function(n) {
+	      if (n > -1e21 && n < 1e21) {
+	        return Math.round(n * 1e6) / 1e6;
+	      }
+	      throw new Error("unsupported number: " + n);
 	    };
 
 	    return PDFObject;
@@ -28790,17 +29066,17 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  module.exports = PDFObject;
 
-	  PDFReference = __webpack_require__(56);
+	  PDFReference = __webpack_require__(58);
 
 	}).call(this);
 
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ }),
-/* 56 */
+/* 58 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.10.0
+	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.12.1
 
 	/*
 	PDFReference - represents a reference to another object in the PDF object heirarchy
@@ -28813,9 +29089,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
 	    hasProp = {}.hasOwnProperty;
 
-	  zlib = __webpack_require__(57);
+	  zlib = __webpack_require__(59);
 
-	  stream = __webpack_require__(30);
+	  stream = __webpack_require__(31);
 
 	  PDFReference = (function(superClass) {
 	    extend(PDFReference, superClass);
@@ -28906,14 +29182,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  module.exports = PDFReference;
 
-	  PDFObject = __webpack_require__(55);
+	  PDFObject = __webpack_require__(57);
 
 	}).call(this);
 
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ }),
-/* 57 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer, process) {// Copyright Joyent, Inc. and other Node contributors.
@@ -28937,11 +29213,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 	// USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-	var Transform = __webpack_require__(52);
+	var Transform = __webpack_require__(54);
 
-	var binding = __webpack_require__(58);
-	var util = __webpack_require__(70);
-	var assert = __webpack_require__(73).ok;
+	var binding = __webpack_require__(60);
+	var util = __webpack_require__(72);
+	var assert = __webpack_require__(75).ok;
 
 	// zlib doesn't provide these, so kludge them in following the same
 	// const naming scheme zlib uses.
@@ -29527,17 +29803,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	util.inherits(InflateRaw, Zlib);
 	util.inherits(Unzip, Zlib);
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer, __webpack_require__(35)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer, __webpack_require__(36)))
 
 /***/ }),
-/* 58 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(process, Buffer) {var msg = __webpack_require__(59);
-	var zstream = __webpack_require__(60);
-	var zlib_deflate = __webpack_require__(61);
-	var zlib_inflate = __webpack_require__(66);
-	var constants = __webpack_require__(69);
+	/* WEBPACK VAR INJECTION */(function(process, Buffer) {var msg = __webpack_require__(61);
+	var zstream = __webpack_require__(62);
+	var zlib_deflate = __webpack_require__(63);
+	var zlib_inflate = __webpack_require__(68);
+	var constants = __webpack_require__(71);
 
 	for (var key in constants) {
 	  exports[key] = constants[key];
@@ -29770,10 +30046,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports.Zlib = Zlib;
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(35), __webpack_require__(2).Buffer))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(36), __webpack_require__(2).Buffer))
 
 /***/ }),
-/* 59 */
+/* 61 */
 /***/ (function(module, exports) {
 
 	'use strict';
@@ -29792,7 +30068,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 60 */
+/* 62 */
 /***/ (function(module, exports) {
 
 	'use strict';
@@ -29827,16 +30103,16 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 61 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var utils   = __webpack_require__(62);
-	var trees   = __webpack_require__(63);
-	var adler32 = __webpack_require__(64);
-	var crc32   = __webpack_require__(65);
-	var msg     = __webpack_require__(59);
+	var utils   = __webpack_require__(64);
+	var trees   = __webpack_require__(65);
+	var adler32 = __webpack_require__(66);
+	var crc32   = __webpack_require__(67);
+	var msg     = __webpack_require__(61);
 
 	/* Public constants ==========================================================*/
 	/* ===========================================================================*/
@@ -31688,7 +31964,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 62 */
+/* 64 */
 /***/ (function(module, exports) {
 
 	'use strict';
@@ -31796,13 +32072,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 63 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 
-	var utils = __webpack_require__(62);
+	var utils = __webpack_require__(64);
 
 	/* Public constants ==========================================================*/
 	/* ===========================================================================*/
@@ -33004,7 +33280,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 64 */
+/* 66 */
 /***/ (function(module, exports) {
 
 	'use strict';
@@ -33042,7 +33318,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 65 */
+/* 67 */
 /***/ (function(module, exports) {
 
 	'use strict';
@@ -33089,17 +33365,17 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 66 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 
-	var utils         = __webpack_require__(62);
-	var adler32       = __webpack_require__(64);
-	var crc32         = __webpack_require__(65);
-	var inflate_fast  = __webpack_require__(67);
-	var inflate_table = __webpack_require__(68);
+	var utils         = __webpack_require__(64);
+	var adler32       = __webpack_require__(66);
+	var crc32         = __webpack_require__(67);
+	var inflate_fast  = __webpack_require__(69);
+	var inflate_table = __webpack_require__(70);
 
 	var CODES = 0;
 	var LENS = 1;
@@ -34633,7 +34909,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 67 */
+/* 69 */
 /***/ (function(module, exports) {
 
 	'use strict';
@@ -34965,13 +35241,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 68 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 
-	var utils = __webpack_require__(62);
+	var utils = __webpack_require__(64);
 
 	var MAXBITS = 15;
 	var ENOUGH_LENS = 852;
@@ -35298,7 +35574,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 69 */
+/* 71 */
 /***/ (function(module, exports) {
 
 	'use strict';
@@ -35354,7 +35630,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 70 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, process) {// Copyright Joyent, Inc. and other Node contributors.
@@ -35882,7 +36158,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	exports.isPrimitive = isPrimitive;
 
-	exports.isBuffer = __webpack_require__(71);
+	exports.isBuffer = __webpack_require__(73);
 
 	function objectToString(o) {
 	  return Object.prototype.toString.call(o);
@@ -35926,7 +36202,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *     prototype.
 	 * @param {function} superCtor Constructor function to inherit prototype from.
 	 */
-	exports.inherits = __webpack_require__(72);
+	exports.inherits = __webpack_require__(74);
 
 	exports._extend = function(origin, add) {
 	  // Don't do anything if add isn't an object
@@ -35944,10 +36220,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return Object.prototype.hasOwnProperty.call(obj, prop);
 	}
 
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(35)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(36)))
 
 /***/ }),
-/* 71 */
+/* 73 */
 /***/ (function(module, exports) {
 
 	module.exports = function isBuffer(arg) {
@@ -35958,7 +36234,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ }),
-/* 72 */
+/* 74 */
 /***/ (function(module, exports) {
 
 	if (typeof Object.create === 'function') {
@@ -35987,7 +36263,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 73 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
@@ -36058,7 +36334,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 	// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-	var util = __webpack_require__(70);
+	var util = __webpack_require__(72);
 	var hasOwn = Object.prototype.hasOwnProperty;
 	var pSlice = Array.prototype.slice;
 	var functionsHaveNames = (function () {
@@ -36484,10 +36760,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ }),
-/* 74 */
+/* 76 */
 /***/ (function(module, exports) {
 
-	// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 
 	/*
 	PDFPage - represents a single page in the PDF document
@@ -36660,14 +36936,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 75 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 	(function() {
 	  var PDFGradient, PDFLinearGradient, PDFRadialGradient, namedColors, ref;
 
-	  ref = __webpack_require__(76), PDFGradient = ref.PDFGradient, PDFLinearGradient = ref.PDFLinearGradient, PDFRadialGradient = ref.PDFRadialGradient;
+	  ref = __webpack_require__(78), PDFGradient = ref.PDFGradient, PDFLinearGradient = ref.PDFLinearGradient, PDFRadialGradient = ref.PDFRadialGradient;
 
 	  module.exports = {
 	    initColor: function() {
@@ -36718,21 +36994,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return null;
 	    },
 	    _setColor: function(color, stroke) {
-	      var gstate, name, op, space;
+	      var op, space;
 	      color = this._normalizeColor(color);
 	      if (!color) {
 	        return false;
-	      }
-	      if (this._sMasked) {
-	        gstate = this.ref({
-	          Type: 'ExtGState',
-	          SMask: 'None'
-	        });
-	        gstate.end();
-	        name = "Gs" + (++this._opacityCount);
-	        this.page.ext_gstates[name] = gstate;
-	        this.addContent("/" + name + " gs");
-	        this._sMasked = false;
 	      }
 	      op = stroke ? 'SCN' : 'scn';
 	      if (color instanceof PDFGradient) {
@@ -36981,10 +37246,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 76 */
+/* 78 */
 /***/ (function(module, exports) {
 
-	// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 	(function() {
 	  var PDFGradient, PDFLinearGradient, PDFRadialGradient,
 	    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -37008,12 +37273,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return this;
 	    };
 
-	    PDFGradient.prototype.embed = function() {
-	      var bounds, dx, dy, encode, fn, form, grad, group, gstate, i, j, k, last, len, m, m0, m1, m11, m12, m2, m21, m22, m3, m4, m5, name, pattern, ref, ref1, ref2, resources, sMask, shader, stop, stops, v;
-	      if (this.embedded || this.stops.length === 0) {
+	    PDFGradient.prototype.setTransform = function(m11, m12, m21, m22, dx, dy) {
+	      this.transform = [m11, m12, m21, m22, dx, dy];
+	      return this;
+	    };
+
+	    PDFGradient.prototype.embed = function(m) {
+	      var bounds, encode, fn, form, grad, gstate, i, j, k, last, len, opacityPattern, pageBBox, pattern, ref, ref1, shader, stop, stops, v;
+	      if (this.stops.length === 0) {
 	        return;
 	      }
 	      this.embedded = true;
+	      this.matrix = m;
 	      last = this.stops[this.stops.length - 1];
 	      if (last[0] < 1) {
 	        this.stops.push([1, last[1], last[2]]);
@@ -37049,15 +37320,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	        fn.end();
 	      }
 	      this.id = 'Sh' + (++this.doc._gradCount);
-	      m = this.doc._ctm.slice();
-	      m0 = m[0], m1 = m[1], m2 = m[2], m3 = m[3], m4 = m[4], m5 = m[5];
-	      ref1 = this.transform, m11 = ref1[0], m12 = ref1[1], m21 = ref1[2], m22 = ref1[3], dx = ref1[4], dy = ref1[5];
-	      m[0] = m0 * m11 + m2 * m12;
-	      m[1] = m1 * m11 + m3 * m12;
-	      m[2] = m0 * m21 + m2 * m22;
-	      m[3] = m1 * m21 + m3 * m22;
-	      m[4] = m0 * dx + m2 * dy + m4;
-	      m[5] = m1 * dx + m3 * dy + m5;
 	      shader = this.shader(fn);
 	      shader.end();
 	      pattern = this.doc.ref({
@@ -37065,77 +37327,93 @@ return /******/ (function(modules) { // webpackBootstrap
 	        PatternType: 2,
 	        Shading: shader,
 	        Matrix: (function() {
-	          var k, len, results;
+	          var k, len, ref1, results;
+	          ref1 = this.matrix;
 	          results = [];
-	          for (k = 0, len = m.length; k < len; k++) {
-	            v = m[k];
+	          for (k = 0, len = ref1.length; k < len; k++) {
+	            v = ref1[k];
 	            results.push(+v.toFixed(5));
 	          }
 	          return results;
-	        })()
+	        }).call(this)
 	      });
-	      this.doc.page.patterns[this.id] = pattern;
 	      pattern.end();
 	      if (this.stops.some(function(stop) {
 	        return stop[2] < 1;
 	      })) {
 	        grad = this.opacityGradient();
 	        grad._colorSpace = 'DeviceGray';
-	        ref2 = this.stops;
-	        for (k = 0, len = ref2.length; k < len; k++) {
-	          stop = ref2[k];
+	        ref1 = this.stops;
+	        for (k = 0, len = ref1.length; k < len; k++) {
+	          stop = ref1[k];
 	          grad.stop(stop[0], [stop[2]]);
 	        }
-	        grad = grad.embed();
-	        group = this.doc.ref({
-	          Type: 'Group',
-	          S: 'Transparency',
-	          CS: 'DeviceGray'
-	        });
-	        group.end();
-	        resources = this.doc.ref({
-	          ProcSet: ['PDF', 'Text', 'ImageB', 'ImageC', 'ImageI'],
-	          Shading: {
-	            Sh1: grad.data.Shading
-	          }
-	        });
-	        resources.end();
+	        grad = grad.embed(this.matrix);
+	        pageBBox = [0, 0, this.doc.page.width, this.doc.page.height];
 	        form = this.doc.ref({
 	          Type: 'XObject',
 	          Subtype: 'Form',
 	          FormType: 1,
-	          BBox: [0, 0, this.doc.page.width, this.doc.page.height],
-	          Group: group,
-	          Resources: resources
+	          BBox: pageBBox,
+	          Group: {
+	            Type: 'Group',
+	            S: 'Transparency',
+	            CS: 'DeviceGray'
+	          },
+	          Resources: {
+	            ProcSet: ['PDF', 'Text', 'ImageB', 'ImageC', 'ImageI'],
+	            Pattern: {
+	              Sh1: grad
+	            }
+	          }
 	        });
-	        form.end("/Sh1 sh");
-	        sMask = this.doc.ref({
-	          Type: 'Mask',
-	          S: 'Luminosity',
-	          G: form
-	        });
-	        sMask.end();
+	        form.write("/Pattern cs /Sh1 scn");
+	        form.end((pageBBox.join(" ")) + " re f");
 	        gstate = this.doc.ref({
 	          Type: 'ExtGState',
-	          SMask: sMask
+	          SMask: {
+	            Type: 'Mask',
+	            S: 'Luminosity',
+	            G: form
+	          }
 	        });
-	        this.opacity_id = ++this.doc._opacityCount;
-	        name = "Gs" + this.opacity_id;
-	        this.doc.page.ext_gstates[name] = gstate;
 	        gstate.end();
+	        opacityPattern = this.doc.ref({
+	          Type: 'Pattern',
+	          PatternType: 1,
+	          PaintType: 1,
+	          TilingType: 2,
+	          BBox: pageBBox,
+	          XStep: pageBBox[2],
+	          YStep: pageBBox[3],
+	          Resources: {
+	            ProcSet: ['PDF', 'Text', 'ImageB', 'ImageC', 'ImageI'],
+	            Pattern: {
+	              Sh1: pattern
+	            },
+	            ExtGState: {
+	              Gs1: gstate
+	            }
+	          }
+	        });
+	        opacityPattern.write("/Gs1 gs /Pattern cs /Sh1 scn");
+	        opacityPattern.end((pageBBox.join(" ")) + " re f");
+	        this.doc.page.patterns[this.id] = opacityPattern;
+	      } else {
+	        this.doc.page.patterns[this.id] = pattern;
 	      }
 	      return pattern;
 	    };
 
 	    PDFGradient.prototype.apply = function(op) {
-	      if (!this.embedded) {
-	        this.embed();
+	      var dx, dy, m, m0, m1, m11, m12, m2, m21, m22, m3, m4, m5, ref, ref1;
+	      ref = this.doc._ctm.slice(), m0 = ref[0], m1 = ref[1], m2 = ref[2], m3 = ref[3], m4 = ref[4], m5 = ref[5];
+	      ref1 = this.transform, m11 = ref1[0], m12 = ref1[1], m21 = ref1[2], m22 = ref1[3], dx = ref1[4], dy = ref1[5];
+	      m = [m0 * m11 + m2 * m12, m1 * m11 + m3 * m12, m0 * m21 + m2 * m22, m1 * m21 + m3 * m22, m0 * dx + m2 * dy + m4, m1 * dx + m3 * dy + m5];
+	      if (!(this.embedded && m.join(" ") === this.matrix.join(" "))) {
+	        this.embed(m);
 	      }
-	      this.doc.addContent("/" + this.id + " " + op);
-	      if (this.opacity_id) {
-	        this.doc.addContent("/Gs" + this.opacity_id + " gs");
-	        return this.doc._sMasked = true;
-	      }
+	      return this.doc.addContent("/" + this.id + " " + op);
 	    };
 
 	    return PDFGradient;
@@ -37214,15 +37492,17 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 77 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 	(function() {
-	  var KAPPA, SVGPath,
+	  var KAPPA, SVGPath, number,
 	    slice = [].slice;
 
-	  SVGPath = __webpack_require__(78);
+	  SVGPath = __webpack_require__(80);
+
+	  number = __webpack_require__(57).number;
 
 	  KAPPA = 4.0 * ((Math.sqrt(2) - 1.0) / 3.0);
 
@@ -37243,7 +37523,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return this.addContent('h');
 	    },
 	    lineWidth: function(w) {
-	      return this.addContent(w + " w");
+	      return this.addContent((number(w)) + " w");
 	    },
 	    _CAP_STYLES: {
 	      BUTT: 0,
@@ -37268,51 +37548,69 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return this.addContent(j + " j");
 	    },
 	    miterLimit: function(m) {
-	      return this.addContent(m + " M");
+	      return this.addContent((number(m)) + " M");
 	    },
 	    dash: function(length, options) {
-	      var phase, ref, space;
+	      var phase, ref, space, v;
 	      if (options == null) {
 	        options = {};
 	      }
 	      if (length == null) {
 	        return this;
 	      }
-	      space = (ref = options.space) != null ? ref : length;
-	      phase = options.phase || 0;
-	      return this.addContent("[" + length + " " + space + "] " + phase + " d");
+	      if (Array.isArray(length)) {
+	        length = ((function() {
+	          var i, len, results;
+	          results = [];
+	          for (i = 0, len = length.length; i < len; i++) {
+	            v = length[i];
+	            results.push(number(v));
+	          }
+	          return results;
+	        })()).join(' ');
+	        phase = options.phase || 0;
+	        return this.addContent("[" + length + "] " + (number(phase)) + " d");
+	      } else {
+	        space = (ref = options.space) != null ? ref : length;
+	        phase = options.phase || 0;
+	        return this.addContent("[" + (number(length)) + " " + (number(space)) + "] " + (number(phase)) + " d");
+	      }
 	    },
 	    undash: function() {
 	      return this.addContent("[] 0 d");
 	    },
 	    moveTo: function(x, y) {
-	      return this.addContent(x + " " + y + " m");
+	      return this.addContent((number(x)) + " " + (number(y)) + " m");
 	    },
 	    lineTo: function(x, y) {
-	      return this.addContent(x + " " + y + " l");
+	      return this.addContent((number(x)) + " " + (number(y)) + " l");
 	    },
 	    bezierCurveTo: function(cp1x, cp1y, cp2x, cp2y, x, y) {
-	      return this.addContent(cp1x + " " + cp1y + " " + cp2x + " " + cp2y + " " + x + " " + y + " c");
+	      return this.addContent((number(cp1x)) + " " + (number(cp1y)) + " " + (number(cp2x)) + " " + (number(cp2y)) + " " + (number(x)) + " " + (number(y)) + " c");
 	    },
 	    quadraticCurveTo: function(cpx, cpy, x, y) {
-	      return this.addContent(cpx + " " + cpy + " " + x + " " + y + " v");
+	      return this.addContent((number(cpx)) + " " + (number(cpy)) + " " + (number(x)) + " " + (number(y)) + " v");
 	    },
 	    rect: function(x, y, w, h) {
-	      return this.addContent(x + " " + y + " " + w + " " + h + " re");
+	      return this.addContent((number(x)) + " " + (number(y)) + " " + (number(w)) + " " + (number(h)) + " re");
 	    },
 	    roundedRect: function(x, y, w, h, r) {
+	      var c;
 	      if (r == null) {
 	        r = 0;
 	      }
+	      r = Math.min(r, 0.5 * w, 0.5 * h);
+	      c = r * (1.0 - KAPPA);
 	      this.moveTo(x + r, y);
 	      this.lineTo(x + w - r, y);
-	      this.quadraticCurveTo(x + w, y, x + w, y + r);
+	      this.bezierCurveTo(x + w - c, y, x + w, y + c, x + w, y + r);
 	      this.lineTo(x + w, y + h - r);
-	      this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+	      this.bezierCurveTo(x + w, y + h - c, x + w - c, y + h, x + w - r, y + h);
 	      this.lineTo(x + r, y + h);
-	      this.quadraticCurveTo(x, y + h, x, y + h - r);
+	      this.bezierCurveTo(x + c, y + h, x, y + h - c, x, y + h - r);
 	      this.lineTo(x, y + r);
-	      return this.quadraticCurveTo(x, y, x + r, y);
+	      this.bezierCurveTo(x, y + c, x + c, y, x + r, y);
+	      return this.closePath();
 	    },
 	    ellipse: function(x, y, r1, r2) {
 	      var ox, oy, xe, xm, ye, ym;
@@ -37412,7 +37710,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        results = [];
 	        for (i = 0, len = ref.length; i < len; i++) {
 	          v = ref[i];
-	          results.push(+v.toFixed(5));
+	          results.push(number(v));
 	        }
 	        return results;
 	      })()).join(' ');
@@ -37465,15 +37763,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 78 */
+/* 80 */
 /***/ (function(module, exports) {
 
-	// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 	(function() {
 	  var SVGPath;
 
 	  SVGPath = (function() {
-	    var apply, arcToSegments, cx, cy, fixRoundingError, parameters, parse, px, py, runners, segmentToBezier, solveArc, sx, sy;
+	    var apply, arcToSegments, cx, cy, parameters, parse, px, py, runners, segmentToBezier, solveArc, sx, sy;
 
 	    function SVGPath() {}
 
@@ -37818,20 +38116,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	      a11 = cos_th * ry;
 	      th_half = 0.5 * (th1 - th0);
 	      t = (8 / 3) * Math.sin(th_half * 0.5) * Math.sin(th_half * 0.5) / Math.sin(th_half);
-	      x1 = fixRoundingError(cx + Math.cos(th0) - t * Math.sin(th0));
-	      y1 = fixRoundingError(cy + Math.sin(th0) + t * Math.cos(th0));
-	      x3 = fixRoundingError(cx + Math.cos(th1));
-	      y3 = fixRoundingError(cy + Math.sin(th1));
-	      x2 = fixRoundingError(x3 + t * Math.sin(th1));
-	      y2 = fixRoundingError(y3 - t * Math.cos(th1));
+	      x1 = cx + Math.cos(th0) - t * Math.sin(th0);
+	      y1 = cy + Math.sin(th0) + t * Math.cos(th0);
+	      x3 = cx + Math.cos(th1);
+	      y3 = cy + Math.sin(th1);
+	      x2 = x3 + t * Math.sin(th1);
+	      y2 = y3 - t * Math.cos(th1);
 	      return [a00 * x1 + a01 * y1, a10 * x1 + a11 * y1, a00 * x2 + a01 * y2, a10 * x2 + a11 * y2, a00 * x3 + a01 * y3, a10 * x3 + a11 * y3];
-	    };
-
-	    fixRoundingError = function(x) {
-	      if (Math.abs(Math.round(x) - x) < 0.0000000000001) {
-	        return Math.round(x);
-	      }
-	      return x;
 	    };
 
 	    return SVGPath;
@@ -37844,14 +38135,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 79 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 	(function() {
 	  var PDFFont;
 
-	  PDFFont = __webpack_require__(80);
+	  PDFFont = __webpack_require__(82);
 
 	  module.exports = {
 	    initFonts: function() {
@@ -37919,14 +38210,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 80 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.10.0
+	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.12.1
 	(function() {
 	  var EmbeddedFont, PDFFont, StandardFont, fontkit;
 
-	  fontkit = __webpack_require__(81);
+	  fontkit = __webpack_require__(83);
 
 	  PDFFont = (function() {
 	    PDFFont.open = function(document, src, family, id) {
@@ -37992,47 +38283,48 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  module.exports = PDFFont;
 
-	  StandardFont = __webpack_require__(280);
+	  StandardFont = __webpack_require__(285);
 
-	  EmbeddedFont = __webpack_require__(282);
+	  EmbeddedFont = __webpack_require__(287);
 
 	}).call(this);
 
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ }),
-/* 81 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer, process) {'use strict';
 
 	function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-	var r = _interopDefault(__webpack_require__(82));
-	var _Object$getOwnPropertyDescriptor = _interopDefault(__webpack_require__(120));
-	var _getIterator = _interopDefault(__webpack_require__(146));
-	var _Object$freeze = _interopDefault(__webpack_require__(179));
-	var _Object$keys = _interopDefault(__webpack_require__(183));
-	var _typeof = _interopDefault(__webpack_require__(186));
-	var _Object$defineProperty = _interopDefault(__webpack_require__(203));
-	var _classCallCheck = _interopDefault(__webpack_require__(206));
-	var _createClass = _interopDefault(__webpack_require__(207));
-	var _Map = _interopDefault(__webpack_require__(208));
-	var _possibleConstructorReturn = _interopDefault(__webpack_require__(225));
-	var _inherits = _interopDefault(__webpack_require__(226));
-	var restructure_src_utils = __webpack_require__(108);
-	var _Object$defineProperties = _interopDefault(__webpack_require__(234));
-	var isEqual = _interopDefault(__webpack_require__(237));
-	var _Object$assign = _interopDefault(__webpack_require__(240));
-	var _String$fromCodePoint = _interopDefault(__webpack_require__(244));
-	var _Array$from = _interopDefault(__webpack_require__(247));
-	var _Set = _interopDefault(__webpack_require__(252));
-	var unicode = _interopDefault(__webpack_require__(256));
-	var UnicodeTrie = _interopDefault(__webpack_require__(15));
-	var StateMachine = _interopDefault(__webpack_require__(258));
-	var cloneDeep = _interopDefault(__webpack_require__(267));
-	var inflate = _interopDefault(__webpack_require__(16));
-	var brotli = _interopDefault(__webpack_require__(268));
+	var r = _interopDefault(__webpack_require__(84));
+	var _Object$getOwnPropertyDescriptor = _interopDefault(__webpack_require__(122));
+	var _getIterator = _interopDefault(__webpack_require__(148));
+	var _Object$freeze = _interopDefault(__webpack_require__(181));
+	var _Object$keys = _interopDefault(__webpack_require__(185));
+	var _typeof = _interopDefault(__webpack_require__(188));
+	var _Object$defineProperty = _interopDefault(__webpack_require__(205));
+	var _classCallCheck = _interopDefault(__webpack_require__(208));
+	var _createClass = _interopDefault(__webpack_require__(209));
+	var _Map = _interopDefault(__webpack_require__(210));
+	var _possibleConstructorReturn = _interopDefault(__webpack_require__(227));
+	var _inherits = _interopDefault(__webpack_require__(228));
+	var restructure_src_utils = __webpack_require__(110);
+	var _Object$defineProperties = _interopDefault(__webpack_require__(236));
+	var isEqual = _interopDefault(__webpack_require__(239));
+	var _Object$assign = _interopDefault(__webpack_require__(242));
+	var _String$fromCodePoint = _interopDefault(__webpack_require__(246));
+	var _Array$from = _interopDefault(__webpack_require__(249));
+	var _Set = _interopDefault(__webpack_require__(254));
+	var unicode = _interopDefault(__webpack_require__(258));
+	var UnicodeTrie = _interopDefault(__webpack_require__(17));
+	var StateMachine = _interopDefault(__webpack_require__(260));
+	var _Number$EPSILON = _interopDefault(__webpack_require__(269));
+	var cloneDeep = _interopDefault(__webpack_require__(272));
+	var inflate = _interopDefault(__webpack_require__(18));
+	var brotli = _interopDefault(__webpack_require__(273));
 
 
 
@@ -38045,7 +38337,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	fontkit.openSync = function (filename, postscriptName) {
-	  var buffer = __webpack_require__(54).readFileSync(filename);
+	  var buffer = __webpack_require__(56).readFileSync(filename);
 	  return fontkit.create(buffer, postscriptName);
 	};
 
@@ -38055,7 +38347,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    postscriptName = null;
 	  }
 
-	  __webpack_require__(54).readFile(filename, function (err, buffer) {
+	  __webpack_require__(56).readFile(filename, function (err, buffer) {
 	    if (err) {
 	      return callback(err);
 	    }
@@ -38095,45 +38387,37 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 	function cache(target, key, descriptor) {
 	  if (descriptor.get) {
-	    (function () {
-	      var get = descriptor.get;
-	      descriptor.get = function () {
-	        var value = get.call(this);
-	        _Object$defineProperty(this, key, { value: value });
-	        return value;
-	      };
-	    })();
+	    var get = descriptor.get;
+	    descriptor.get = function () {
+	      var value = get.call(this);
+	      _Object$defineProperty(this, key, { value: value });
+	      return value;
+	    };
 	  } else if (typeof descriptor.value === 'function') {
-	    var _ret2 = function () {
-	      var fn = descriptor.value;
+	    var fn = descriptor.value;
 
-	      return {
-	        v: {
-	          get: function get() {
-	            var cache = new _Map();
-	            function memoized() {
-	              for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	                args[_key] = arguments[_key];
-	              }
-
-	              var key = args.length > 0 ? args[0] : 'value';
-	              if (cache.has(key)) {
-	                return cache.get(key);
-	              }
-
-	              var result = fn.apply(this, args);
-	              cache.set(key, result);
-	              return result;
-	            };
-
-	            _Object$defineProperty(this, key, { value: memoized });
-	            return memoized;
+	    return {
+	      get: function get() {
+	        var cache = new _Map();
+	        function memoized() {
+	          for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+	            args[_key] = arguments[_key];
 	          }
-	        }
-	      };
-	    }();
 
-	    if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+	          var key = args.length > 0 ? args[0] : 'value';
+	          if (cache.has(key)) {
+	            return cache.get(key);
+	          }
+
+	          var result = fn.apply(this, args);
+	          cache.set(key, result);
+	          return result;
+	        };
+
+	        _Object$defineProperty(this, key, { value: memoized });
+	        return memoized;
+	      }
+	    };
 	  }
 	}
 
@@ -38573,7 +38857,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	      obj = obj[record.nameID] || (obj[record.nameID] = {});
 	    }
 
-	    obj[language] = record.string;
+	    if (typeof record.string === 'string' || typeof obj[language] !== 'string') {
+	      obj[language] = record.string;
+	    }
 	  }
 
 	  this.records = records;
@@ -38783,8 +39069,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.type = type;
 	  }
 
+	  CFFIndex.prototype.getCFFVersion = function getCFFVersion(ctx) {
+	    while (ctx && !ctx.hdrSize) {
+	      ctx = ctx.parent;
+	    }
+
+	    return ctx ? ctx.version : -1;
+	  };
+
 	  CFFIndex.prototype.decode = function decode(stream, parent) {
-	    var count = stream.readUInt16BE();
+	    var version = this.getCFFVersion(parent);
+	    var count = version >= 2 ? stream.readUInt32BE() : stream.readUInt16BE();
+
 	    if (count === 0) {
 	      return [];
 	    }
@@ -39179,7 +39475,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    while (stream.pos < end) {
 	      var b = stream.readUInt8();
-	      if (b <= 21) {
+	      if (b < 28) {
 	        if (b === 12) {
 	          b = b << 8 | stream.readUInt8();
 	        }
@@ -39401,9 +39697,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return Ptr;
 	}();
 
+	var CFFBlendOp = function () {
+	  function CFFBlendOp() {
+	    _classCallCheck(this, CFFBlendOp);
+	  }
+
+	  CFFBlendOp.decode = function decode(stream, parent, operands) {
+	    var numBlends = operands.pop();
+
+	    // TODO: actually blend. For now just consume the deltas
+	    // since we don't use any of the values anyway.
+	    while (operands.length > numBlends) {
+	      operands.pop();
+	    }
+	  };
+
+	  return CFFBlendOp;
+	}();
+
 	var CFFPrivateDict = new CFFDict([
 	// key       name                    type                                          default
-	[6, 'BlueValues', 'delta', null], [7, 'OtherBlues', 'delta', null], [8, 'FamilyBlues', 'delta', null], [9, 'FamilyOtherBlues', 'delta', null], [[12, 9], 'BlueScale', 'number', 0.039625], [[12, 10], 'BlueShift', 'number', 7], [[12, 11], 'BlueFuzz', 'number', 1], [10, 'StdHW', 'number', null], [11, 'StdVW', 'number', null], [[12, 12], 'StemSnapH', 'delta', null], [[12, 13], 'StemSnapV', 'delta', null], [[12, 14], 'ForceBold', 'boolean', false], [[12, 17], 'LanguageGroup', 'number', 0], [[12, 18], 'ExpansionFactor', 'number', 0.06], [[12, 19], 'initialRandomSeed', 'number', 0], [20, 'defaultWidthX', 'number', 0], [21, 'nominalWidthX', 'number', 0], [19, 'Subrs', new CFFPointer(new CFFIndex(), { type: 'local' }), null]]);
+	[6, 'BlueValues', 'delta', null], [7, 'OtherBlues', 'delta', null], [8, 'FamilyBlues', 'delta', null], [9, 'FamilyOtherBlues', 'delta', null], [[12, 9], 'BlueScale', 'number', 0.039625], [[12, 10], 'BlueShift', 'number', 7], [[12, 11], 'BlueFuzz', 'number', 1], [10, 'StdHW', 'number', null], [11, 'StdVW', 'number', null], [[12, 12], 'StemSnapH', 'delta', null], [[12, 13], 'StemSnapV', 'delta', null], [[12, 14], 'ForceBold', 'boolean', false], [[12, 17], 'LanguageGroup', 'number', 0], [[12, 18], 'ExpansionFactor', 'number', 0.06], [[12, 19], 'initialRandomSeed', 'number', 0], [20, 'defaultWidthX', 'number', 0], [21, 'nominalWidthX', 'number', 0], [22, 'vsindex', 'number', 0], [23, 'blend', CFFBlendOp, null], [19, 'Subrs', new CFFPointer(new CFFIndex(), { type: 'local' }), null]]);
 
 	// Automatically generated from Appendix A of the CFF specification; do
 	// not edit. Length should be 391.
@@ -39418,6 +39732,306 @@ return /******/ (function(modules) { // webpackBootstrap
 	var ExpertCharset = ['.notdef', 'space', 'exclamsmall', 'Hungarumlautsmall', 'dollaroldstyle', 'dollarsuperior', 'ampersandsmall', 'Acutesmall', 'parenleftsuperior', 'parenrightsuperior', 'twodotenleader', 'onedotenleader', 'comma', 'hyphen', 'period', 'fraction', 'zerooldstyle', 'oneoldstyle', 'twooldstyle', 'threeoldstyle', 'fouroldstyle', 'fiveoldstyle', 'sixoldstyle', 'sevenoldstyle', 'eightoldstyle', 'nineoldstyle', 'colon', 'semicolon', 'commasuperior', 'threequartersemdash', 'periodsuperior', 'questionsmall', 'asuperior', 'bsuperior', 'centsuperior', 'dsuperior', 'esuperior', 'isuperior', 'lsuperior', 'msuperior', 'nsuperior', 'osuperior', 'rsuperior', 'ssuperior', 'tsuperior', 'ff', 'fi', 'fl', 'ffi', 'ffl', 'parenleftinferior', 'parenrightinferior', 'Circumflexsmall', 'hyphensuperior', 'Gravesmall', 'Asmall', 'Bsmall', 'Csmall', 'Dsmall', 'Esmall', 'Fsmall', 'Gsmall', 'Hsmall', 'Ismall', 'Jsmall', 'Ksmall', 'Lsmall', 'Msmall', 'Nsmall', 'Osmall', 'Psmall', 'Qsmall', 'Rsmall', 'Ssmall', 'Tsmall', 'Usmall', 'Vsmall', 'Wsmall', 'Xsmall', 'Ysmall', 'Zsmall', 'colonmonetary', 'onefitted', 'rupiah', 'Tildesmall', 'exclamdownsmall', 'centoldstyle', 'Lslashsmall', 'Scaronsmall', 'Zcaronsmall', 'Dieresissmall', 'Brevesmall', 'Caronsmall', 'Dotaccentsmall', 'Macronsmall', 'figuredash', 'hypheninferior', 'Ogoneksmall', 'Ringsmall', 'Cedillasmall', 'onequarter', 'onehalf', 'threequarters', 'questiondownsmall', 'oneeighth', 'threeeighths', 'fiveeighths', 'seveneighths', 'onethird', 'twothirds', 'zerosuperior', 'onesuperior', 'twosuperior', 'threesuperior', 'foursuperior', 'fivesuperior', 'sixsuperior', 'sevensuperior', 'eightsuperior', 'ninesuperior', 'zeroinferior', 'oneinferior', 'twoinferior', 'threeinferior', 'fourinferior', 'fiveinferior', 'sixinferior', 'seveninferior', 'eightinferior', 'nineinferior', 'centinferior', 'dollarinferior', 'periodinferior', 'commainferior', 'Agravesmall', 'Aacutesmall', 'Acircumflexsmall', 'Atildesmall', 'Adieresissmall', 'Aringsmall', 'AEsmall', 'Ccedillasmall', 'Egravesmall', 'Eacutesmall', 'Ecircumflexsmall', 'Edieresissmall', 'Igravesmall', 'Iacutesmall', 'Icircumflexsmall', 'Idieresissmall', 'Ethsmall', 'Ntildesmall', 'Ogravesmall', 'Oacutesmall', 'Ocircumflexsmall', 'Otildesmall', 'Odieresissmall', 'OEsmall', 'Oslashsmall', 'Ugravesmall', 'Uacutesmall', 'Ucircumflexsmall', 'Udieresissmall', 'Yacutesmall', 'Thornsmall', 'Ydieresissmall'];
 
 	var ExpertSubsetCharset = ['.notdef', 'space', 'dollaroldstyle', 'dollarsuperior', 'parenleftsuperior', 'parenrightsuperior', 'twodotenleader', 'onedotenleader', 'comma', 'hyphen', 'period', 'fraction', 'zerooldstyle', 'oneoldstyle', 'twooldstyle', 'threeoldstyle', 'fouroldstyle', 'fiveoldstyle', 'sixoldstyle', 'sevenoldstyle', 'eightoldstyle', 'nineoldstyle', 'colon', 'semicolon', 'commasuperior', 'threequartersemdash', 'periodsuperior', 'asuperior', 'bsuperior', 'centsuperior', 'dsuperior', 'esuperior', 'isuperior', 'lsuperior', 'msuperior', 'nsuperior', 'osuperior', 'rsuperior', 'ssuperior', 'tsuperior', 'ff', 'fi', 'fl', 'ffi', 'ffl', 'parenleftinferior', 'parenrightinferior', 'hyphensuperior', 'colonmonetary', 'onefitted', 'rupiah', 'centoldstyle', 'figuredash', 'hypheninferior', 'onequarter', 'onehalf', 'threequarters', 'oneeighth', 'threeeighths', 'fiveeighths', 'seveneighths', 'onethird', 'twothirds', 'zerosuperior', 'onesuperior', 'twosuperior', 'threesuperior', 'foursuperior', 'fivesuperior', 'sixsuperior', 'sevensuperior', 'eightsuperior', 'ninesuperior', 'zeroinferior', 'oneinferior', 'twoinferior', 'threeinferior', 'fourinferior', 'fiveinferior', 'sixinferior', 'seveninferior', 'eightinferior', 'nineinferior', 'centinferior', 'dollarinferior', 'periodinferior', 'commainferior'];
+
+	//########################
+	// Scripts and Languages #
+	//########################
+
+	var LangSysTable = new r.Struct({
+	  reserved: new r.Reserved(r.uint16),
+	  reqFeatureIndex: r.uint16,
+	  featureCount: r.uint16,
+	  featureIndexes: new r.Array(r.uint16, 'featureCount')
+	});
+
+	var LangSysRecord = new r.Struct({
+	  tag: new r.String(4),
+	  langSys: new r.Pointer(r.uint16, LangSysTable, { type: 'parent' })
+	});
+
+	var Script = new r.Struct({
+	  defaultLangSys: new r.Pointer(r.uint16, LangSysTable),
+	  count: r.uint16,
+	  langSysRecords: new r.Array(LangSysRecord, 'count')
+	});
+
+	var ScriptRecord = new r.Struct({
+	  tag: new r.String(4),
+	  script: new r.Pointer(r.uint16, Script, { type: 'parent' })
+	});
+
+	var ScriptList = new r.Array(ScriptRecord, r.uint16);
+
+	//#######################
+	// Features and Lookups #
+	//#######################
+
+	var Feature = new r.Struct({
+	  featureParams: r.uint16, // pointer
+	  lookupCount: r.uint16,
+	  lookupListIndexes: new r.Array(r.uint16, 'lookupCount')
+	});
+
+	var FeatureRecord = new r.Struct({
+	  tag: new r.String(4),
+	  feature: new r.Pointer(r.uint16, Feature, { type: 'parent' })
+	});
+
+	var FeatureList = new r.Array(FeatureRecord, r.uint16);
+
+	var LookupFlags = new r.Struct({
+	  markAttachmentType: r.uint8,
+	  flags: new r.Bitfield(r.uint8, ['rightToLeft', 'ignoreBaseGlyphs', 'ignoreLigatures', 'ignoreMarks', 'useMarkFilteringSet'])
+	});
+
+	function LookupList(SubTable) {
+	  var Lookup = new r.Struct({
+	    lookupType: r.uint16,
+	    flags: LookupFlags,
+	    subTableCount: r.uint16,
+	    subTables: new r.Array(new r.Pointer(r.uint16, SubTable), 'subTableCount'),
+	    markFilteringSet: new r.Optional(r.uint16, function (t) {
+	      return t.flags.flags.useMarkFilteringSet;
+	    })
+	  });
+
+	  return new r.LazyArray(new r.Pointer(r.uint16, Lookup), r.uint16);
+	}
+
+	//#################
+	// Coverage Table #
+	//#################
+
+	var RangeRecord = new r.Struct({
+	  start: r.uint16,
+	  end: r.uint16,
+	  startCoverageIndex: r.uint16
+	});
+
+	var Coverage = new r.VersionedStruct(r.uint16, {
+	  1: {
+	    glyphCount: r.uint16,
+	    glyphs: new r.Array(r.uint16, 'glyphCount')
+	  },
+	  2: {
+	    rangeCount: r.uint16,
+	    rangeRecords: new r.Array(RangeRecord, 'rangeCount')
+	  }
+	});
+
+	//#########################
+	// Class Definition Table #
+	//#########################
+
+	var ClassRangeRecord = new r.Struct({
+	  start: r.uint16,
+	  end: r.uint16,
+	  class: r.uint16
+	});
+
+	var ClassDef = new r.VersionedStruct(r.uint16, {
+	  1: { // Class array
+	    startGlyph: r.uint16,
+	    glyphCount: r.uint16,
+	    classValueArray: new r.Array(r.uint16, 'glyphCount')
+	  },
+	  2: { // Class ranges
+	    classRangeCount: r.uint16,
+	    classRangeRecord: new r.Array(ClassRangeRecord, 'classRangeCount')
+	  }
+	});
+
+	//###############
+	// Device Table #
+	//###############
+
+	var Device = new r.Struct({
+	  startSize: r.uint16,
+	  endSize: r.uint16,
+	  deltaFormat: r.uint16
+	});
+
+	//#############################################
+	// Contextual Substitution/Positioning Tables #
+	//#############################################
+
+	var LookupRecord = new r.Struct({
+	  sequenceIndex: r.uint16,
+	  lookupListIndex: r.uint16
+	});
+
+	var Rule = new r.Struct({
+	  glyphCount: r.uint16,
+	  lookupCount: r.uint16,
+	  input: new r.Array(r.uint16, function (t) {
+	    return t.glyphCount - 1;
+	  }),
+	  lookupRecords: new r.Array(LookupRecord, 'lookupCount')
+	});
+
+	var RuleSet = new r.Array(new r.Pointer(r.uint16, Rule), r.uint16);
+
+	var ClassRule = new r.Struct({
+	  glyphCount: r.uint16,
+	  lookupCount: r.uint16,
+	  classes: new r.Array(r.uint16, function (t) {
+	    return t.glyphCount - 1;
+	  }),
+	  lookupRecords: new r.Array(LookupRecord, 'lookupCount')
+	});
+
+	var ClassSet = new r.Array(new r.Pointer(r.uint16, ClassRule), r.uint16);
+
+	var Context = new r.VersionedStruct(r.uint16, {
+	  1: { // Simple context
+	    coverage: new r.Pointer(r.uint16, Coverage),
+	    ruleSetCount: r.uint16,
+	    ruleSets: new r.Array(new r.Pointer(r.uint16, RuleSet), 'ruleSetCount')
+	  },
+	  2: { // Class-based context
+	    coverage: new r.Pointer(r.uint16, Coverage),
+	    classDef: new r.Pointer(r.uint16, ClassDef),
+	    classSetCnt: r.uint16,
+	    classSet: new r.Array(new r.Pointer(r.uint16, ClassSet), 'classSetCnt')
+	  },
+	  3: {
+	    glyphCount: r.uint16,
+	    lookupCount: r.uint16,
+	    coverages: new r.Array(new r.Pointer(r.uint16, Coverage), 'glyphCount'),
+	    lookupRecords: new r.Array(LookupRecord, 'lookupCount')
+	  }
+	});
+
+	//######################################################
+	// Chaining Contextual Substitution/Positioning Tables #
+	//######################################################
+
+	var ChainRule = new r.Struct({
+	  backtrackGlyphCount: r.uint16,
+	  backtrack: new r.Array(r.uint16, 'backtrackGlyphCount'),
+	  inputGlyphCount: r.uint16,
+	  input: new r.Array(r.uint16, function (t) {
+	    return t.inputGlyphCount - 1;
+	  }),
+	  lookaheadGlyphCount: r.uint16,
+	  lookahead: new r.Array(r.uint16, 'lookaheadGlyphCount'),
+	  lookupCount: r.uint16,
+	  lookupRecords: new r.Array(LookupRecord, 'lookupCount')
+	});
+
+	var ChainRuleSet = new r.Array(new r.Pointer(r.uint16, ChainRule), r.uint16);
+
+	var ChainingContext = new r.VersionedStruct(r.uint16, {
+	  1: { // Simple context glyph substitution
+	    coverage: new r.Pointer(r.uint16, Coverage),
+	    chainCount: r.uint16,
+	    chainRuleSets: new r.Array(new r.Pointer(r.uint16, ChainRuleSet), 'chainCount')
+	  },
+
+	  2: { // Class-based chaining context
+	    coverage: new r.Pointer(r.uint16, Coverage),
+	    backtrackClassDef: new r.Pointer(r.uint16, ClassDef),
+	    inputClassDef: new r.Pointer(r.uint16, ClassDef),
+	    lookaheadClassDef: new r.Pointer(r.uint16, ClassDef),
+	    chainCount: r.uint16,
+	    chainClassSet: new r.Array(new r.Pointer(r.uint16, ChainRuleSet), 'chainCount')
+	  },
+
+	  3: { // Coverage-based chaining context
+	    backtrackGlyphCount: r.uint16,
+	    backtrackCoverage: new r.Array(new r.Pointer(r.uint16, Coverage), 'backtrackGlyphCount'),
+	    inputGlyphCount: r.uint16,
+	    inputCoverage: new r.Array(new r.Pointer(r.uint16, Coverage), 'inputGlyphCount'),
+	    lookaheadGlyphCount: r.uint16,
+	    lookaheadCoverage: new r.Array(new r.Pointer(r.uint16, Coverage), 'lookaheadGlyphCount'),
+	    lookupCount: r.uint16,
+	    lookupRecords: new r.Array(LookupRecord, 'lookupCount')
+	  }
+	});
+
+	var _;
+
+	/*******************
+	 * Variation Store *
+	 *******************/
+
+	var F2DOT14 = new r.Fixed(16, 'BE', 14);
+	var RegionAxisCoordinates = new r.Struct({
+	  startCoord: F2DOT14,
+	  peakCoord: F2DOT14,
+	  endCoord: F2DOT14
+	});
+
+	var VariationRegionList = new r.Struct({
+	  axisCount: r.uint16,
+	  regionCount: r.uint16,
+	  variationRegions: new r.Array(new r.Array(RegionAxisCoordinates, 'axisCount'), 'regionCount')
+	});
+
+	var DeltaSet = new r.Struct({
+	  shortDeltas: new r.Array(r.int16, function (t) {
+	    return t.parent.shortDeltaCount;
+	  }),
+	  regionDeltas: new r.Array(r.int8, function (t) {
+	    return t.parent.regionIndexCount - t.parent.shortDeltaCount;
+	  }),
+	  deltas: function deltas(t) {
+	    return t.shortDeltas.concat(t.regionDeltas);
+	  }
+	});
+
+	var ItemVariationData = new r.Struct({
+	  itemCount: r.uint16,
+	  shortDeltaCount: r.uint16,
+	  regionIndexCount: r.uint16,
+	  regionIndexes: new r.Array(r.uint16, 'regionIndexCount'),
+	  deltaSets: new r.Array(DeltaSet, 'itemCount')
+	});
+
+	var ItemVariationStore = new r.Struct({
+	  format: r.uint16,
+	  variationRegionList: new r.Pointer(r.uint32, VariationRegionList),
+	  variationDataCount: r.uint16,
+	  itemVariationData: new r.Array(new r.Pointer(r.uint32, ItemVariationData), 'variationDataCount')
+	});
+
+	/**********************
+	 * Feature Variations *
+	 **********************/
+
+	var ConditionTable = new r.VersionedStruct(r.uint16, {
+	  1: (_ = {
+	    axisIndex: r.uint16
+	  }, _['axisIndex'] = r.uint16, _.filterRangeMinValue = F2DOT14, _.filterRangeMaxValue = F2DOT14, _)
+	});
+
+	var ConditionSet = new r.Struct({
+	  conditionCount: r.uint16,
+	  conditionTable: new r.Array(new r.Pointer(r.uint32, ConditionTable), 'conditionCount')
+	});
+
+	var FeatureTableSubstitutionRecord = new r.Struct({
+	  featureIndex: r.uint16,
+	  alternateFeatureTable: new r.Pointer(r.uint32, Feature, { type: 'parent' })
+	});
+
+	var FeatureTableSubstitution = new r.Struct({
+	  version: r.fixed32,
+	  substitutionCount: r.uint16,
+	  substitutions: new r.Array(FeatureTableSubstitutionRecord, 'substitutionCount')
+	});
+
+	var FeatureVariationRecord = new r.Struct({
+	  conditionSet: new r.Pointer(r.uint32, ConditionSet, { type: 'parent' }),
+	  featureTableSubstitution: new r.Pointer(r.uint32, FeatureTableSubstitution, { type: 'parent' })
+	});
+
+	var FeatureVariations = new r.Struct({
+	  majorVersion: r.uint16,
+	  minorVersion: r.uint16,
+	  featureVariationRecordCount: r.uint32,
+	  featureVariationRecords: new r.Array(FeatureVariationRecord, 'featureVariationRecordCount')
+	});
 
 	// Checks if an operand is an index of a predefined value,
 	// otherwise delegates to the provided type.
@@ -39547,9 +40161,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var CFFCharset = new PredefinedOp([ISOAdobeCharset, ExpertCharset, ExpertSubsetCharset], new CFFPointer(CFFCustomCharset, { lazy: true }));
 
-	var FDRange = new r.Struct({
+	var FDRange3 = new r.Struct({
 	  first: r.uint16,
 	  fd: r.uint8
+	});
+
+	var FDRange4 = new r.Struct({
+	  first: r.uint32,
+	  fd: r.uint16
 	});
 
 	var FDSelect = new r.VersionedStruct(r.uint8, {
@@ -39561,8 +40180,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  3: {
 	    nRanges: r.uint16,
-	    ranges: new r.Array(FDRange, 'nRanges'),
+	    ranges: new r.Array(FDRange3, 'nRanges'),
 	    sentinel: r.uint16
+	  },
+
+	  4: {
+	    nRanges: r.uint32,
+	    ranges: new r.Array(FDRange4, 'nRanges'),
+	    sentinel: r.uint32
 	  }
 	});
 
@@ -39600,19 +40225,29 @@ return /******/ (function(modules) { // webpackBootstrap
 	// CID font specific
 	[[12, 31], 'CIDFontVersion', 'number', 0], [[12, 32], 'CIDFontRevision', 'number', 0], [[12, 33], 'CIDFontType', 'number', 0], [[12, 34], 'CIDCount', 'number', 8720], [[12, 35], 'UIDBase', 'number', null], [[12, 37], 'FDSelect', new CFFPointer(FDSelect), null], [[12, 36], 'FDArray', new CFFPointer(new CFFIndex(FontDict)), null], [[12, 38], 'FontName', 'sid', null]]);
 
-	var CFFHeader = new r.Struct({
-	  majorVersion: r.uint8,
-	  minorVersion: r.uint8,
-	  hdrSize: r.uint8,
-	  offSize: r.uint8
+	var VariationStore = new r.Struct({
+	  length: r.uint16,
+	  itemVariationStore: ItemVariationStore
 	});
 
-	var CFFTop = new r.Struct({
-	  header: CFFHeader,
-	  nameIndex: new CFFIndex(new r.String('length')),
-	  topDictIndex: new CFFIndex(CFFTopDict),
-	  stringIndex: new CFFIndex(new r.String('length')),
-	  globalSubrIndex: new CFFIndex()
+	var CFF2TopDict = new CFFDict([[[12, 7], 'FontMatrix', 'array', [0.001, 0, 0, 0.001, 0, 0]], [17, 'CharStrings', new CFFPointer(new CFFIndex()), null], [[12, 37], 'FDSelect', new CFFPointer(FDSelect), null], [[12, 36], 'FDArray', new CFFPointer(new CFFIndex(FontDict)), null], [24, 'vstore', new CFFPointer(VariationStore), null], [25, 'maxstack', 'number', 193]]);
+
+	var CFFTop = new r.VersionedStruct(r.fixed16, {
+	  1: {
+	    hdrSize: r.uint8,
+	    offSize: r.uint8,
+	    nameIndex: new CFFIndex(new r.String('length')),
+	    topDictIndex: new CFFIndex(CFFTopDict),
+	    stringIndex: new CFFIndex(new r.String('length')),
+	    globalSubrIndex: new CFFIndex()
+	  },
+
+	  2: {
+	    hdrSize: r.uint8,
+	    length: r.uint16,
+	    topDict: CFF2TopDict,
+	    globalSubrIndex: new CFFIndex()
+	  }
 	});
 
 	var CFFFont = function () {
@@ -39635,16 +40270,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	      this[key] = val;
 	    }
 
-	    if (this.topDictIndex.length !== 1) {
-	      throw new Error("Only a single font is allowed in CFF");
+	    if (this.version < 2) {
+	      if (this.topDictIndex.length !== 1) {
+	        throw new Error("Only a single font is allowed in CFF");
+	      }
+
+	      this.topDict = this.topDictIndex[0];
 	    }
 
 	    this.isCIDFont = this.topDict.ROS != null;
-
 	    return this;
 	  };
 
 	  CFFFont.prototype.string = function string(sid) {
+	    if (this.version >= 2) {
+	      return null;
+	    }
+
 	    if (sid < standardStrings.length) {
 	      return standardStrings[sid];
 	    }
@@ -39658,6 +40300,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 
 	  CFFFont.prototype.getGlyphName = function getGlyphName(gid) {
+	    // CFF2 glyph names are in the post table.
+	    if (this.version >= 2) {
+	      return null;
+	    }
+
+	    // CID-keyed fonts don't have glyph names
+	    if (this.isCIDFont) {
+	      return null;
+	    }
+
 	    var charset = this.topDict.charset;
 
 	    if (Array.isArray(charset)) {
@@ -39698,6 +40350,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return this.topDict.FDSelect.fds[gid];
 
 	      case 3:
+	      case 4:
 	        var ranges = this.topDict.FDSelect.ranges;
 
 	        var low = 0;
@@ -39729,18 +40382,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return null;
 	    }
 
-	    return this.topDict.Private;
+	    if (this.version < 2) {
+	      return this.topDict.Private;
+	    }
+
+	    return this.topDict.FDArray[0].Private;
 	  };
 
 	  _createClass(CFFFont, [{
-	    key: 'topDict',
-	    get: function get() {
-	      return this.topDictIndex[0];
-	    }
-	  }, {
 	    key: 'postscriptName',
 	    get: function get() {
-	      return this.nameIndex[0];
+	      if (this.version < 2) {
+	        return this.nameIndex[0];
+	      }
+
+	      return null;
 	    }
 	  }, {
 	    key: 'fullName',
@@ -40005,217 +40661,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  colorRecordIndices: new r.Array(r.uint16, 'numPalettes')
 	});
 
-	//########################
-	// Scripts and Languages #
-	//########################
-
-	var LangSysTable = new r.Struct({
-	  reserved: new r.Reserved(r.uint16),
-	  reqFeatureIndex: r.uint16,
-	  featureCount: r.uint16,
-	  featureIndexes: new r.Array(r.uint16, 'featureCount')
-	});
-
-	var LangSysRecord = new r.Struct({
-	  tag: new r.String(4),
-	  langSys: new r.Pointer(r.uint16, LangSysTable, { type: 'parent' })
-	});
-
-	var Script = new r.Struct({
-	  defaultLangSys: new r.Pointer(r.uint16, LangSysTable),
-	  count: r.uint16,
-	  langSysRecords: new r.Array(LangSysRecord, 'count')
-	});
-
-	var ScriptRecord = new r.Struct({
-	  tag: new r.String(4),
-	  script: new r.Pointer(r.uint16, Script, { type: 'parent' })
-	});
-
-	var ScriptList = new r.Array(ScriptRecord, r.uint16);
-
-	//#######################
-	// Features and Lookups #
-	//#######################
-
-	var Feature = new r.Struct({
-	  featureParams: r.uint16, // pointer
-	  lookupCount: r.uint16,
-	  lookupListIndexes: new r.Array(r.uint16, 'lookupCount')
-	});
-
-	var FeatureRecord = new r.Struct({
-	  tag: new r.String(4),
-	  feature: new r.Pointer(r.uint16, Feature, { type: 'parent' })
-	});
-
-	var FeatureList = new r.Array(FeatureRecord, r.uint16);
-
-	var LookupFlags = new r.Bitfield(r.uint16, ['rightToLeft', 'ignoreBaseGlyphs', 'ignoreLigatures', 'ignoreMarks', 'useMarkFilteringSet', null, 'markAttachmentType']);
-
-	function LookupList(SubTable) {
-	  var Lookup = new r.Struct({
-	    lookupType: r.uint16,
-	    flags: LookupFlags,
-	    subTableCount: r.uint16,
-	    subTables: new r.Array(new r.Pointer(r.uint16, SubTable), 'subTableCount'),
-	    markFilteringSet: r.uint16 // TODO: only present when flags says so...
-	  });
-
-	  return new r.LazyArray(new r.Pointer(r.uint16, Lookup), r.uint16);
-	}
-
-	//#################
-	// Coverage Table #
-	//#################
-
-	var RangeRecord = new r.Struct({
-	  start: r.uint16,
-	  end: r.uint16,
-	  startCoverageIndex: r.uint16
-	});
-
-	var Coverage = new r.VersionedStruct(r.uint16, {
-	  1: {
-	    glyphCount: r.uint16,
-	    glyphs: new r.Array(r.uint16, 'glyphCount')
-	  },
-	  2: {
-	    rangeCount: r.uint16,
-	    rangeRecords: new r.Array(RangeRecord, 'rangeCount')
-	  }
-	});
-
-	//#########################
-	// Class Definition Table #
-	//#########################
-
-	var ClassRangeRecord = new r.Struct({
-	  start: r.uint16,
-	  end: r.uint16,
-	  class: r.uint16
-	});
-
-	var ClassDef = new r.VersionedStruct(r.uint16, {
-	  1: { // Class array
-	    startGlyph: r.uint16,
-	    glyphCount: r.uint16,
-	    classValueArray: new r.Array(r.uint16, 'glyphCount')
-	  },
-	  2: { // Class ranges
-	    classRangeCount: r.uint16,
-	    classRangeRecord: new r.Array(ClassRangeRecord, 'classRangeCount')
-	  }
-	});
-
-	//###############
-	// Device Table #
-	//###############
-
-	var Device = new r.Struct({
-	  startSize: r.uint16,
-	  endSize: r.uint16,
-	  deltaFormat: r.uint16
-	});
-
-	//#############################################
-	// Contextual Substitution/Positioning Tables #
-	//#############################################
-
-	var LookupRecord = new r.Struct({
-	  sequenceIndex: r.uint16,
-	  lookupListIndex: r.uint16
-	});
-
-	var Rule = new r.Struct({
-	  glyphCount: r.uint16,
-	  lookupCount: r.uint16,
-	  input: new r.Array(r.uint16, function (t) {
-	    return t.glyphCount - 1;
-	  }),
-	  lookupRecords: new r.Array(LookupRecord, 'lookupCount')
-	});
-
-	var RuleSet = new r.Array(new r.Pointer(r.uint16, Rule), r.uint16);
-
-	var ClassRule = new r.Struct({
-	  glyphCount: r.uint16,
-	  lookupCount: r.uint16,
-	  classes: new r.Array(r.uint16, function (t) {
-	    return t.glyphCount - 1;
-	  }),
-	  lookupRecords: new r.Array(LookupRecord, 'lookupCount')
-	});
-
-	var ClassSet = new r.Array(new r.Pointer(r.uint16, ClassRule), r.uint16);
-
-	var Context = new r.VersionedStruct(r.uint16, {
-	  1: { // Simple context
-	    coverage: new r.Pointer(r.uint16, Coverage),
-	    ruleSetCount: r.uint16,
-	    ruleSets: new r.Array(new r.Pointer(r.uint16, RuleSet), 'ruleSetCount')
-	  },
-	  2: { // Class-based context
-	    coverage: new r.Pointer(r.uint16, Coverage),
-	    classDef: new r.Pointer(r.uint16, ClassDef),
-	    classSetCnt: r.uint16,
-	    classSet: new r.Array(new r.Pointer(r.uint16, ClassSet), 'classSetCnt')
-	  },
-	  3: {
-	    glyphCount: r.uint16,
-	    lookupCount: r.uint16,
-	    coverages: new r.Array(new r.Pointer(r.uint16, Coverage), 'glyphCount'),
-	    lookupRecords: new r.Array(LookupRecord, 'lookupCount')
-	  }
-	});
-
-	//######################################################
-	// Chaining Contextual Substitution/Positioning Tables #
-	//######################################################
-
-	var ChainRule = new r.Struct({
-	  backtrackGlyphCount: r.uint16,
-	  backtrack: new r.Array(r.uint16, 'backtrackGlyphCount'),
-	  inputGlyphCount: r.uint16,
-	  input: new r.Array(r.uint16, function (t) {
-	    return t.inputGlyphCount - 1;
-	  }),
-	  lookaheadGlyphCount: r.uint16,
-	  lookahead: new r.Array(r.uint16, 'lookaheadGlyphCount'),
-	  lookupCount: r.uint16,
-	  lookupRecords: new r.Array(LookupRecord, 'lookupCount')
-	});
-
-	var ChainRuleSet = new r.Array(new r.Pointer(r.uint16, ChainRule), r.uint16);
-
-	var ChainingContext = new r.VersionedStruct(r.uint16, {
-	  1: { // Simple context glyph substitution
-	    coverage: new r.Pointer(r.uint16, Coverage),
-	    chainCount: r.uint16,
-	    chainRuleSets: new r.Array(new r.Pointer(r.uint16, ChainRuleSet), 'chainCount')
-	  },
-
-	  2: { // Class-based chaining context
-	    coverage: new r.Pointer(r.uint16, Coverage),
-	    backtrackClassDef: new r.Pointer(r.uint16, ClassDef),
-	    inputClassDef: new r.Pointer(r.uint16, ClassDef),
-	    lookaheadClassDef: new r.Pointer(r.uint16, ClassDef),
-	    chainCount: r.uint16,
-	    chainClassSet: new r.Array(new r.Pointer(r.uint16, ChainRuleSet), 'chainCount')
-	  },
-
-	  3: { // Coverage-based chaining context
-	    backtrackGlyphCount: r.uint16,
-	    backtrackCoverage: new r.Array(new r.Pointer(r.uint16, Coverage), 'backtrackGlyphCount'),
-	    inputGlyphCount: r.uint16,
-	    inputCoverage: new r.Array(new r.Pointer(r.uint16, Coverage), 'inputGlyphCount'),
-	    lookaheadGlyphCount: r.uint16,
-	    lookaheadCoverage: new r.Array(new r.Pointer(r.uint16, Coverage), 'lookaheadGlyphCount'),
-	    lookupCount: r.uint16,
-	    lookupRecords: new r.Array(LookupRecord, 'lookupCount')
-	  }
-	});
-
 	var BaseCoord = new r.VersionedStruct(r.uint16, {
 	  1: { // Design units only
 	    coordinate: r.int16 // X or Y value, in design units
@@ -40279,10 +40724,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	  baseScriptList: new r.Pointer(r.uint16, BaseScriptList)
 	});
 
-	var BASE = new r.Struct({
-	  version: r.uint32, // Version of the BASE table-initially 0x00010000
-	  horizAxis: new r.Pointer(r.uint16, Axis), // May be NULL
-	  vertAxis: new r.Pointer(r.uint16, Axis) // May be NULL
+	var BASE = new r.VersionedStruct(r.uint32, {
+	  header: {
+	    horizAxis: new r.Pointer(r.uint16, Axis), // May be NULL
+	    vertAxis: new r.Pointer(r.uint16, Axis) // May be NULL
+	  },
+
+	  0x00010000: {},
+	  0x00010001: {
+	    itemVariationStore: new r.Pointer(r.uint32, ItemVariationStore)
+	  }
 	});
 
 	var AttachPoint = new r.Array(r.uint16, r.uint16);
@@ -40322,18 +40773,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 
 	var GDEF = new r.VersionedStruct(r.uint32, {
-	  0x00010000: {
-	    glyphClassDef: new r.Pointer(r.uint16, ClassDef), // 1: base glyph, 2: ligature, 3: mark, 4: component
+	  header: {
+	    glyphClassDef: new r.Pointer(r.uint16, ClassDef),
 	    attachList: new r.Pointer(r.uint16, AttachList),
 	    ligCaretList: new r.Pointer(r.uint16, LigCaretList),
 	    markAttachClassDef: new r.Pointer(r.uint16, ClassDef)
 	  },
+
+	  0x00010000: {},
 	  0x00010002: {
-	    glyphClassDef: new r.Pointer(r.uint16, ClassDef),
-	    attachList: new r.Pointer(r.uint16, AttachList),
-	    ligCaretList: new r.Pointer(r.uint16, LigCaretList),
-	    markAttachClassDef: new r.Pointer(r.uint16, ClassDef),
 	    markGlyphSetsDef: new r.Pointer(r.uint16, MarkGlyphSetsDef)
+	  },
+	  0x00010003: {
+	    markGlyphSetsDef: new r.Pointer(r.uint16, MarkGlyphSetsDef),
+	    itemVariationStore: new r.Pointer(r.uint32, ItemVariationStore)
 	  }
 	});
 
@@ -40534,11 +40987,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	// Fix circular reference
 	GPOSLookup.versions[9].extension.type = GPOSLookup;
 
-	var GPOS = new r.Struct({
-	  version: r.int32,
-	  scriptList: new r.Pointer(r.uint16, ScriptList),
-	  featureList: new r.Pointer(r.uint16, FeatureList),
-	  lookupList: new r.Pointer(r.uint16, new LookupList(GPOSLookup))
+	var GPOS = new r.VersionedStruct(r.uint32, {
+	  header: {
+	    scriptList: new r.Pointer(r.uint16, ScriptList),
+	    featureList: new r.Pointer(r.uint16, FeatureList),
+	    lookupList: new r.Pointer(r.uint16, new LookupList(GPOSLookup))
+	  },
+
+	  0x00010000: {},
+	  0x00010001: {
+	    featureVariations: new r.Pointer(r.uint32, FeatureVariations)
+	  }
 	});
 
 	var Sequence = new r.Array(r.uint16, r.uint16);
@@ -40611,11 +41070,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	// Fix circular reference
 	GSUBLookup.versions[7].extension.type = GSUBLookup;
 
-	var GSUB = new r.Struct({
-	  version: r.int32,
-	  scriptList: new r.Pointer(r.uint16, ScriptList),
-	  featureList: new r.Pointer(r.uint16, FeatureList),
-	  lookupList: new r.Pointer(r.uint16, new LookupList(GSUBLookup))
+	var GSUB = new r.VersionedStruct(r.uint32, {
+	  header: {
+	    scriptList: new r.Pointer(r.uint16, ScriptList),
+	    featureList: new r.Pointer(r.uint16, FeatureList),
+	    lookupList: new r.Pointer(r.uint16, new LookupList(GSUBLookup))
+	  },
+
+	  0x00010000: {},
+	  0x00010001: {
+	    featureVariations: new r.Pointer(r.uint32, FeatureVariations)
+	  }
 	});
 
 	var JstfGSUBModList = new r.Array(r.uint16, r.uint16);
@@ -40656,6 +41121,62 @@ return /******/ (function(modules) { // webpackBootstrap
 	  version: r.uint32, // should be 0x00010000
 	  scriptCount: r.uint16,
 	  scriptList: new r.Array(JstfScriptRecord, 'scriptCount')
+	});
+
+	// TODO: add this to restructure
+
+	var VariableSizeNumber = function () {
+	  function VariableSizeNumber(size) {
+	    _classCallCheck(this, VariableSizeNumber);
+
+	    this._size = size;
+	  }
+
+	  VariableSizeNumber.prototype.decode = function decode(stream, parent) {
+	    switch (this.size(0, parent)) {
+	      case 1:
+	        return stream.readUInt8();
+	      case 2:
+	        return stream.readUInt16BE();
+	      case 3:
+	        return stream.readUInt24BE();
+	      case 4:
+	        return stream.readUInt32BE();
+	    }
+	  };
+
+	  VariableSizeNumber.prototype.size = function size(val, parent) {
+	    return restructure_src_utils.resolveLength(this._size, null, parent);
+	  };
+
+	  return VariableSizeNumber;
+	}();
+
+	var MapDataEntry = new r.Struct({
+	  entry: new VariableSizeNumber(function (t) {
+	    return ((t.parent.entryFormat & 0x0030) >> 4) + 1;
+	  }),
+	  outerIndex: function outerIndex(t) {
+	    return t.entry >> (t.parent.entryFormat & 0x000F) + 1;
+	  },
+	  innerIndex: function innerIndex(t) {
+	    return t.entry & (1 << (t.parent.entryFormat & 0x000F) + 1) - 1;
+	  }
+	});
+
+	var DeltaSetIndexMap = new r.Struct({
+	  entryFormat: r.uint16,
+	  mapCount: r.uint16,
+	  mapData: new r.Array(MapDataEntry, 'mapCount')
+	});
+
+	var HVAR = new r.Struct({
+	  majorVersion: r.uint16,
+	  minorVersion: r.uint16,
+	  itemVariationStore: new r.Pointer(r.uint32, ItemVariationStore),
+	  advanceWidthMapping: new r.Pointer(r.uint32, DeltaSetIndexMap),
+	  LSBMapping: new r.Pointer(r.uint32, DeltaSetIndexMap),
+	  RSBMapping: new r.Pointer(r.uint32, DeltaSetIndexMap)
 	});
 
 	var Signature = new r.Struct({
@@ -41190,6 +41711,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  flags: r.uint16,
 	  coord: new r.Array(r.fixed32, function (t) {
 	    return t.parent.axisCount;
+	  }),
+	  postscriptNameID: new r.Optional(r.uint16, function (t) {
+	    return t.parent.instanceSize - t._currentOffset > 0;
 	  })
 	});
 
@@ -41429,6 +41953,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	// PostScript Outlines
 	tables['CFF '] = CFFFont;
+	tables['CFF2'] = CFFFont;
 	tables.VORG = VORG;
 
 	// Bitmap Glyphs
@@ -41444,6 +41969,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	tables.GPOS = GPOS;
 	tables.GSUB = GSUB;
 	tables.JSTF = JSTF;
+
+	// OpenType variations tables
+	tables.HVAR = HVAR;
 
 	// Other OpenType Tables
 	tables.DSIG = DSIG;
@@ -41586,7 +42114,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	// iconv-lite is an optional dependency.
 	try {
-	  var iconv = __webpack_require__(85);
+	  var iconv = __webpack_require__(87);
 	} catch (err) {}
 
 	var CmapProcessor = (_class$1 = function () {
@@ -41600,7 +42128,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    [3, 10], [0, 6], [0, 4],
 
 	    // 16-bit subtables
-	    [3, 1], [0, 3], [0, 2], [0, 1], [0, 0], [3, 0]]);
+	    [3, 1], [0, 3], [0, 2], [0, 1], [0, 0]]);
 
 	    // If not unicode cmap was found, and iconv-lite is installed,
 	    // take the first table with a supported encoding.
@@ -42429,154 +42957,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return BBox;
 	}();
 
-	/**
-	 * Represents a run of Glyph and GlyphPosition objects.
-	 * Returned by the font layout method.
-	 */
-
-	var GlyphRun = function () {
-	  function GlyphRun(glyphs, positions) {
-	    _classCallCheck(this, GlyphRun);
-
-	    /**
-	     * An array of Glyph objects in the run
-	     * @type {Glyph[]}
-	     */
-	    this.glyphs = glyphs;
-
-	    /**
-	     * An array of GlyphPosition objects for each glyph in the run
-	     * @type {GlyphPosition[]}
-	     */
-	    this.positions = positions;
-	  }
-
-	  /**
-	   * The total advance width of the run.
-	   * @type {number}
-	   */
-
-
-	  _createClass(GlyphRun, [{
-	    key: 'advanceWidth',
-	    get: function get() {
-	      var width = 0;
-	      for (var _iterator = this.positions, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
-	        var _ref;
-
-	        if (_isArray) {
-	          if (_i >= _iterator.length) break;
-	          _ref = _iterator[_i++];
-	        } else {
-	          _i = _iterator.next();
-	          if (_i.done) break;
-	          _ref = _i.value;
-	        }
-
-	        var position = _ref;
-
-	        width += position.xAdvance;
-	      }
-
-	      return width;
-	    }
-
-	    /**
-	     * The total advance height of the run.
-	     * @type {number}
-	     */
-
-	  }, {
-	    key: 'advanceHeight',
-	    get: function get() {
-	      var height = 0;
-	      for (var _iterator2 = this.positions, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
-	        var _ref2;
-
-	        if (_isArray2) {
-	          if (_i2 >= _iterator2.length) break;
-	          _ref2 = _iterator2[_i2++];
-	        } else {
-	          _i2 = _iterator2.next();
-	          if (_i2.done) break;
-	          _ref2 = _i2.value;
-	        }
-
-	        var position = _ref2;
-
-	        height += position.yAdvance;
-	      }
-
-	      return height;
-	    }
-
-	    /**
-	     * The bounding box containing all glyphs in the run.
-	     * @type {BBox}
-	     */
-
-	  }, {
-	    key: 'bbox',
-	    get: function get() {
-	      var bbox = new BBox();
-
-	      var x = 0;
-	      var y = 0;
-	      for (var index = 0; index < this.glyphs.length; index++) {
-	        var glyph = this.glyphs[index];
-	        var p = this.positions[index];
-	        var b = glyph.bbox;
-
-	        bbox.addPoint(b.minX + x + p.xOffset, b.minY + y + p.yOffset);
-	        bbox.addPoint(b.maxX + x + p.xOffset, b.maxY + y + p.yOffset);
-
-	        x += p.xAdvance;
-	        y += p.yAdvance;
-	      }
-
-	      return bbox;
-	    }
-	  }]);
-
-	  return GlyphRun;
-	}();
-
-	/**
-	 * Represents positioning information for a glyph in a GlyphRun.
-	 */
-	var GlyphPosition = function GlyphPosition() {
-	  var xAdvance = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-	  var yAdvance = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-	  var xOffset = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-	  var yOffset = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-
-	  _classCallCheck(this, GlyphPosition);
-
-	  /**
-	   * The amount to move the virtual pen in the X direction after rendering this glyph.
-	   * @type {number}
-	   */
-	  this.xAdvance = xAdvance;
-
-	  /**
-	   * The amount to move the virtual pen in the Y direction after rendering this glyph.
-	   * @type {number}
-	   */
-	  this.yAdvance = yAdvance;
-
-	  /**
-	   * The offset from the pen position in the X direction at which to render this glyph.
-	   * @type {number}
-	   */
-	  this.xOffset = xOffset;
-
-	  /**
-	   * The offset from the pen position in the Y direction at which to render this glyph.
-	   * @type {number}
-	   */
-	  this.yOffset = yOffset;
-	};
-
 	// This maps the Unicode Script property to an OpenType script tag
 	// Data from http://www.microsoft.com/typography/otspec/scripttags.htm
 	// and http://www.unicode.org/Public/UNIDATA/PropertyValueAliases.txt.
@@ -42661,7 +43041,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  Ogham: 'ogam',
 	  Ol_Chiki: 'olck',
 	  Old_Turkic: 'orkh',
-	  Oriya: 'orya',
+	  Oriya: ['ory2', 'orya'],
 	  Osmanya: 'osma',
 	  Palmyrene: 'palm',
 	  Pau_Cin_Hau: 'pauc',
@@ -42690,7 +43070,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  Takri: 'takr',
 	  Tai_Le: 'tale',
 	  New_Tai_Lue: 'talu',
-	  Tamil: 'taml',
+	  Tamil: ['tml2', 'taml'],
 	  Tai_Viet: 'tavt',
 	  Telugu: ['tel2', 'telu'],
 	  Tifinagh: 'tfng',
@@ -42710,6 +43090,35 @@ return /******/ (function(modules) { // webpackBootstrap
 	  Unknown: 'zzzz'
 	};
 
+	var OPENTYPE_SCRIPTS = {};
+	for (var script in UNICODE_SCRIPTS) {
+	  var tag = UNICODE_SCRIPTS[script];
+	  if (Array.isArray(tag)) {
+	    for (var _iterator = tag, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	      var _ref;
+
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
+	      } else {
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
+	      }
+
+	      var t = _ref;
+
+	      OPENTYPE_SCRIPTS[t] = script;
+	    }
+	  } else {
+	    OPENTYPE_SCRIPTS[tag] = script;
+	  }
+	}
+
+	function fromOpenType(tag) {
+	  return OPENTYPE_SCRIPTS[tag];
+	}
+
 	function forString(string) {
 	  var len = string.length;
 	  var idx = 0;
@@ -42727,9 +43136,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 	    }
 
-	    var script = unicode.getScript(code);
-	    if (script !== 'Common' && script !== 'Inherited' && script !== 'Unknown') {
-	      return UNICODE_SCRIPTS[script];
+	    var _script = unicode.getScript(code);
+	    if (_script !== 'Common' && _script !== 'Inherited' && _script !== 'Unknown') {
+	      return UNICODE_SCRIPTS[_script];
 	    }
 	  }
 
@@ -42739,9 +43148,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	function forCodePoints(codePoints) {
 	  for (var i = 0; i < codePoints.length; i++) {
 	    var codePoint = codePoints[i];
-	    var script = unicode.getScript(codePoint);
-	    if (script !== 'Common' && script !== 'Inherited' && script !== 'Unknown') {
-	      return UNICODE_SCRIPTS[script];
+	    var _script2 = unicode.getScript(codePoint);
+	    if (_script2 !== 'Common' && _script2 !== 'Inherited' && _script2 !== 'Unknown') {
+	      return UNICODE_SCRIPTS[_script2];
 	    }
 	  }
 
@@ -42786,6 +43195,202 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  return 'ltr';
 	}
+
+	/**
+	 * Represents a run of Glyph and GlyphPosition objects.
+	 * Returned by the font layout method.
+	 */
+
+	var GlyphRun = function () {
+	  function GlyphRun(glyphs, features, script, language) {
+	    _classCallCheck(this, GlyphRun);
+
+	    /**
+	     * An array of Glyph objects in the run
+	     * @type {Glyph[]}
+	     */
+	    this.glyphs = glyphs;
+
+	    /**
+	     * An array of GlyphPosition objects for each glyph in the run
+	     * @type {GlyphPosition[]}
+	     */
+	    this.positions = null;
+
+	    /**
+	     * The script that was requested for shaping. This was either passed in or detected automatically.
+	     * @type {string}
+	     */
+	    this.script = script;
+
+	    /**
+	     * The language requested for shaping, as passed in. If `null`, the default language for the
+	     * script was used.
+	     * @type {string}
+	     */
+	    this.language = language || null;
+
+	    /**
+	     * The directionality of the requested script (either ltr or rtl).
+	     * @type {string}
+	     */
+	    this.direction = direction(script);
+
+	    /**
+	     * The features requested during shaping. This is a combination of user
+	     * specified features and features chosen by the shaper.
+	     * @type {object}
+	     */
+	    this.features = {};
+
+	    // Convert features to an object
+	    if (Array.isArray(features)) {
+	      for (var _iterator = features, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	        var _ref;
+
+	        if (_isArray) {
+	          if (_i >= _iterator.length) break;
+	          _ref = _iterator[_i++];
+	        } else {
+	          _i = _iterator.next();
+	          if (_i.done) break;
+	          _ref = _i.value;
+	        }
+
+	        var tag = _ref;
+
+	        this.features[tag] = true;
+	      }
+	    } else if ((typeof features === 'undefined' ? 'undefined' : _typeof(features)) === 'object') {
+	      this.features = features;
+	    }
+	  }
+
+	  /**
+	   * The total advance width of the run.
+	   * @type {number}
+	   */
+
+
+	  _createClass(GlyphRun, [{
+	    key: 'advanceWidth',
+	    get: function get() {
+	      var width = 0;
+	      for (var _iterator2 = this.positions, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	        var _ref2;
+
+	        if (_isArray2) {
+	          if (_i2 >= _iterator2.length) break;
+	          _ref2 = _iterator2[_i2++];
+	        } else {
+	          _i2 = _iterator2.next();
+	          if (_i2.done) break;
+	          _ref2 = _i2.value;
+	        }
+
+	        var position = _ref2;
+
+	        width += position.xAdvance;
+	      }
+
+	      return width;
+	    }
+
+	    /**
+	     * The total advance height of the run.
+	     * @type {number}
+	     */
+
+	  }, {
+	    key: 'advanceHeight',
+	    get: function get() {
+	      var height = 0;
+	      for (var _iterator3 = this.positions, _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	        var _ref3;
+
+	        if (_isArray3) {
+	          if (_i3 >= _iterator3.length) break;
+	          _ref3 = _iterator3[_i3++];
+	        } else {
+	          _i3 = _iterator3.next();
+	          if (_i3.done) break;
+	          _ref3 = _i3.value;
+	        }
+
+	        var position = _ref3;
+
+	        height += position.yAdvance;
+	      }
+
+	      return height;
+	    }
+
+	    /**
+	     * The bounding box containing all glyphs in the run.
+	     * @type {BBox}
+	     */
+
+	  }, {
+	    key: 'bbox',
+	    get: function get() {
+	      var bbox = new BBox();
+
+	      var x = 0;
+	      var y = 0;
+	      for (var index = 0; index < this.glyphs.length; index++) {
+	        var glyph = this.glyphs[index];
+	        var p = this.positions[index];
+	        var b = glyph.bbox;
+
+	        bbox.addPoint(b.minX + x + p.xOffset, b.minY + y + p.yOffset);
+	        bbox.addPoint(b.maxX + x + p.xOffset, b.maxY + y + p.yOffset);
+
+	        x += p.xAdvance;
+	        y += p.yAdvance;
+	      }
+
+	      return bbox;
+	    }
+	  }]);
+
+	  return GlyphRun;
+	}();
+
+	/**
+	 * Represents positioning information for a glyph in a GlyphRun.
+	 */
+	var GlyphPosition = function GlyphPosition() {
+	  var xAdvance = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+	  var yAdvance = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+	  var xOffset = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+	  var yOffset = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+
+	  _classCallCheck(this, GlyphPosition);
+
+	  /**
+	   * The amount to move the virtual pen in the X direction after rendering this glyph.
+	   * @type {number}
+	   */
+	  this.xAdvance = xAdvance;
+
+	  /**
+	   * The amount to move the virtual pen in the Y direction after rendering this glyph.
+	   * @type {number}
+	   */
+	  this.yAdvance = yAdvance;
+
+	  /**
+	   * The offset from the pen position in the X direction at which to render this glyph.
+	   * @type {number}
+	   */
+	  this.xOffset = xOffset;
+
+	  /**
+	   * The offset from the pen position in the Y direction at which to render this glyph.
+	   * @type {number}
+	   */
+	  this.yOffset = yOffset;
+	};
 
 	// see https://developer.apple.com/fonts/TrueType-Reference-Manual/RM09/AppendixF.html
 	// and /System/Library/Frameworks/CoreText.framework/Versions/A/Headers/SFNTLayoutTypes.h on a Mac
@@ -43269,14 +43874,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	// in the form of {featureType:{featureSetting:true}}
 	function mapOTToAAT(features) {
 	  var res = {};
-	  for (var k = 0; k < features.length; k++) {
+	  for (var k in features) {
 	    var r = void 0;
-	    if (r = OTMapping[features[k]]) {
+	    if (r = OTMapping[k]) {
 	      if (res[r[0]] == null) {
 	        res[r[0]] = {};
 	      }
 
-	      res[r[0]][r[1]] = true;
+	      res[r[0]][r[1]] = features[k];
 	    }
 	  }
 
@@ -44225,18 +44830,17 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    this.font = font;
 	    this.morxProcessor = new AATMorxProcessor(font);
+	    this.fallbackPosition = false;
 	  }
 
-	  AATLayoutEngine.prototype.substitute = function substitute(glyphs, features, script, language) {
+	  AATLayoutEngine.prototype.substitute = function substitute(glyphRun) {
 	    // AAT expects the glyphs to be in visual order prior to morx processing,
 	    // so reverse the glyphs if the script is right-to-left.
-	    var isRTL = direction(script) === 'rtl';
-	    if (isRTL) {
+	    if (glyphRun.direction === 'rtl') {
 	      glyphs.reverse();
 	    }
 
-	    this.morxProcessor.process(glyphs, mapOTToAAT(features));
-	    return glyphs;
+	    this.morxProcessor.process(glyphRun.glyphs, mapOTToAAT(glyphRun.features));
 	  };
 
 	  AATLayoutEngine.prototype.getAvailableFeatures = function getAvailableFeatures(script, language) {
@@ -44259,9 +44863,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        _ref = _i.value;
 	      }
 
-	      var glyphs = _ref;
+	      var _glyphs = _ref;
 
-	      this._addStrings(glyphs, 0, result, '');
+	      this._addStrings(_glyphs, 0, result, '');
 	    }
 
 	    return result;
@@ -44307,12 +44911,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 
 	var ShapingPlan = function () {
-	  function ShapingPlan(font, script, language) {
+	  function ShapingPlan(font, script) {
 	    _classCallCheck(this, ShapingPlan);
 
 	    this.font = font;
 	    this.script = script;
-	    this.language = language;
 	    this.direction = direction(script);
 	    this.stages = [];
 	    this.globalFeatures = {};
@@ -44325,8 +44928,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	   */
 
 
-	  ShapingPlan.prototype._addFeatures = function _addFeatures(features) {
-	    var stage = this.stages[this.stages.length - 1];
+	  ShapingPlan.prototype._addFeatures = function _addFeatures(features, global) {
+	    var stageIndex = this.stages.length - 1;
+	    var stage = this.stages[stageIndex];
 	    for (var _iterator = features, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
 	      var _ref;
 
@@ -44341,34 +44945,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      var feature = _ref;
 
-	      if (!this.allFeatures[feature]) {
+	      if (this.allFeatures[feature] == null) {
 	        stage.push(feature);
-	        this.allFeatures[feature] = true;
+	        this.allFeatures[feature] = stageIndex;
+
+	        if (global) {
+	          this.globalFeatures[feature] = true;
+	        }
 	      }
-	    }
-	  };
-
-	  /**
-	   * Adds the given features to the global list
-	   */
-
-
-	  ShapingPlan.prototype._addGlobal = function _addGlobal(features) {
-	    for (var _iterator2 = features, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
-	      var _ref2;
-
-	      if (_isArray2) {
-	        if (_i2 >= _iterator2.length) break;
-	        _ref2 = _iterator2[_i2++];
-	      } else {
-	        _i2 = _iterator2.next();
-	        if (_i2.done) break;
-	        _ref2 = _i2.value;
-	      }
-
-	      var feature = _ref2;
-
-	      this.globalFeatures[feature] = true;
 	    }
 	  };
 
@@ -44389,16 +44973,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 
 	    if (Array.isArray(arg)) {
-	      this._addFeatures(arg);
-	      if (global) {
-	        this._addGlobal(arg);
-	      }
+	      this._addFeatures(arg, global);
 	    } else if ((typeof arg === 'undefined' ? 'undefined' : _typeof(arg)) === 'object') {
-	      var features = (arg.global || []).concat(arg.local || []);
-	      this._addFeatures(features);
-	      if (arg.global) {
-	        this._addGlobal(arg.global);
-	      }
+	      this._addFeatures(arg.global || [], true);
+	      this._addFeatures(arg.local || [], false);
 	    } else {
 	      throw new Error("Unsupported argument to ShapingPlan#add");
 	    }
@@ -44418,25 +44996,42 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  };
 
+	  ShapingPlan.prototype.setFeatureOverrides = function setFeatureOverrides(features) {
+	    if (Array.isArray(features)) {
+	      this.add(features);
+	    } else if ((typeof features === 'undefined' ? 'undefined' : _typeof(features)) === 'object') {
+	      for (var tag in features) {
+	        if (features[tag]) {
+	          this.add(tag);
+	        } else if (this.allFeatures[tag] != null) {
+	          var stage = this.stages[this.allFeatures[tag]];
+	          stage.splice(stage.indexOf(tag), 1);
+	          delete this.allFeatures[tag];
+	          delete this.globalFeatures[tag];
+	        }
+	      }
+	    }
+	  };
+
 	  /**
 	   * Assigns the global features to the given glyphs
 	   */
 
 
 	  ShapingPlan.prototype.assignGlobalFeatures = function assignGlobalFeatures(glyphs) {
-	    for (var _iterator3 = glyphs, _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
-	      var _ref3;
+	    for (var _iterator2 = glyphs, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	      var _ref2;
 
-	      if (_isArray3) {
-	        if (_i3 >= _iterator3.length) break;
-	        _ref3 = _iterator3[_i3++];
+	      if (_isArray2) {
+	        if (_i2 >= _iterator2.length) break;
+	        _ref2 = _iterator2[_i2++];
 	      } else {
-	        _i3 = _iterator3.next();
-	        if (_i3.done) break;
-	        _ref3 = _i3.value;
+	        _i2 = _iterator2.next();
+	        if (_i2.done) break;
+	        _ref2 = _i2.value;
 	      }
 
-	      var glyph = _ref3;
+	      var glyph = _ref2;
 
 	      for (var feature in this.globalFeatures) {
 	        glyph.features[feature] = true;
@@ -44452,23 +45047,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	  ShapingPlan.prototype.process = function process(processor, glyphs, positions) {
 	    processor.selectScript(this.script, this.language);
 
-	    for (var _iterator4 = this.stages, _isArray4 = Array.isArray(_iterator4), _i4 = 0, _iterator4 = _isArray4 ? _iterator4 : _getIterator(_iterator4);;) {
-	      var _ref4;
+	    for (var _iterator3 = this.stages, _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	      var _ref3;
 
-	      if (_isArray4) {
-	        if (_i4 >= _iterator4.length) break;
-	        _ref4 = _iterator4[_i4++];
+	      if (_isArray3) {
+	        if (_i3 >= _iterator3.length) break;
+	        _ref3 = _iterator3[_i3++];
 	      } else {
-	        _i4 = _iterator4.next();
-	        if (_i4.done) break;
-	        _ref4 = _i4.value;
+	        _i3 = _iterator3.next();
+	        if (_i3.done) break;
+	        _ref3 = _i3.value;
 	      }
 
-	      var stage = _ref4;
+	      var stage = _ref3;
 
 	      if (typeof stage === 'function') {
 	        if (!positions) {
-	          stage(this.font, glyphs, positions);
+	          stage(this.font, glyphs, this);
 	        }
 	      } else if (stage.length > 0) {
 	        processor.applyFeatures(stage, glyphs, positions);
@@ -44481,6 +45076,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _class$4;
 	var _temp;
+	var VARIATION_FEATURES = ['rvrn'];
 	var COMMON_FEATURES = ['ccmp', 'locl', 'rlig', 'mark', 'mkmk'];
 	var FRACTIONAL_FEATURES = ['frac', 'numr', 'dnom'];
 	var HORIZONTAL_FEATURES = ['calt', 'clig', 'liga', 'rclt', 'curs', 'kern'];
@@ -44509,7 +45105,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  DefaultShaper.planPreprocessing = function planPreprocessing(plan) {
 	    plan.add({
-	      global: DIRECTIONAL_FEATURES[plan.direction],
+	      global: [].concat(VARIATION_FEATURES, DIRECTIONAL_FEATURES[plan.direction]),
 	      local: FRACTIONAL_FEATURES
 	    });
 	  };
@@ -44519,7 +45115,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 
 	  DefaultShaper.planPostprocessing = function planPostprocessing(plan, userFeatures) {
-	    plan.add([].concat(COMMON_FEATURES, HORIZONTAL_FEATURES, userFeatures));
+	    plan.add([].concat(COMMON_FEATURES, HORIZONTAL_FEATURES));
+	    plan.setFeatureOverrides(userFeatures);
 	  };
 
 	  DefaultShaper.assignFeatures = function assignFeatures(plan, glyphs) {
@@ -44693,27 +45290,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	var GlyphIterator = function () {
-	  function GlyphIterator(glyphs, flags) {
+	  function GlyphIterator(glyphs, options) {
 	    _classCallCheck(this, GlyphIterator);
 
 	    this.glyphs = glyphs;
-	    this.reset(flags);
+	    this.reset(options);
 	  }
 
 	  GlyphIterator.prototype.reset = function reset() {
-	    var flags = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+	    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+	    var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-	    this.flags = flags;
-	    this.index = 0;
+	    this.options = options;
+	    this.flags = options.flags || {};
+	    this.markAttachmentType = options.markAttachmentType || 0;
+	    this.index = index;
 	  };
 
-	  GlyphIterator.prototype.shouldIgnore = function shouldIgnore(glyph, flags) {
-	    return flags.ignoreMarks && glyph.isMark || flags.ignoreBaseGlyphs && !glyph.isMark || flags.ignoreLigatures && glyph.isLigature;
+	  GlyphIterator.prototype.shouldIgnore = function shouldIgnore(glyph) {
+	    return this.flags.ignoreMarks && glyph.isMark || this.flags.ignoreBaseGlyphs && glyph.isBase || this.flags.ignoreLigatures && glyph.isLigature || this.markAttachmentType && glyph.isMark && glyph.markAttachmentType !== this.markAttachmentType;
 	  };
 
 	  GlyphIterator.prototype.move = function move(dir) {
 	    this.index += dir;
-	    while (0 <= this.index && this.index < this.glyphs.length && this.shouldIgnore(this.glyphs[this.index], this.flags)) {
+	    while (0 <= this.index && this.index < this.glyphs.length && this.shouldIgnore(this.glyphs[this.index])) {
 	      this.index += dir;
 	    }
 
@@ -44791,6 +45391,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.features = {};
 	    this.lookups = {};
 
+	    // Setup variation substitutions
+	    this.variationsIndex = font._variationProcessor ? this.findVariationsIndex(font._variationProcessor.normalizedCoords) : -1;
+
 	    // initialize to default script + language
 	    this.selectScript();
 
@@ -44798,6 +45401,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.glyphs = [];
 	    this.positions = []; // only used by GPOS
 	    this.ligatureID = 1;
+	    this.currentFeature = null;
 	  }
 
 	  OTProcessor.prototype.findScript = function findScript(script) {
@@ -44809,7 +45413,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      script = [script];
 	    }
 
-	    for (var _iterator = this.table.scriptList, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	    for (var _iterator = script, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
 	      var _ref;
 
 	      if (_isArray) {
@@ -44821,9 +45425,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        _ref = _i.value;
 	      }
 
-	      var entry = _ref;
+	      var s = _ref;
 
-	      for (var _iterator2 = script, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	      for (var _iterator2 = this.table.scriptList, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
 	        var _ref2;
 
 	        if (_isArray2) {
@@ -44835,7 +45439,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          _ref2 = _i2.value;
 	        }
 
-	        var s = _ref2;
+	        var entry = _ref2;
 
 	        if (entry.tag === s) {
 	          return entry;
@@ -44851,26 +45455,25 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var entry = void 0;
 	    if (!this.script || script !== this.scriptTag) {
 	      entry = this.findScript(script);
-	      if (script) {
-	        entry = this.findScript(script);
-	      }
-
 	      if (!entry) {
 	        entry = this.findScript(DEFAULT_SCRIPTS);
 	      }
 
 	      if (!entry) {
-	        return;
+	        return this.scriptTag;
 	      }
 
 	      this.scriptTag = entry.tag;
 	      this.script = entry.script;
 	      this.direction = direction(script);
 	      this.language = null;
+	      this.languageTag = null;
 	      changed = true;
 	    }
 
-	    if (!language && language !== this.langugeTag) {
+	    if (!language || language !== this.languageTag) {
+	      this.language = null;
+
 	      for (var _iterator3 = this.script.langSysRecords, _isArray3 = Array.isArray(_iterator3), _i3 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
 	        var _ref3;
 
@@ -44887,15 +45490,17 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        if (lang.tag === language) {
 	          this.language = lang.langSys;
-	          this.langugeTag = lang.tag;
-	          changed = true;
+	          this.languageTag = lang.tag;
 	          break;
 	        }
 	      }
-	    }
 
-	    if (!this.language) {
-	      this.language = this.script.defaultLangSys;
+	      if (!this.language) {
+	        this.language = this.script.defaultLangSys;
+	        this.languageTag = null;
+	      }
+
+	      changed = true;
 	    }
 
 	    // Build a feature lookup table
@@ -44917,10 +45522,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	          var featureIndex = _ref4;
 
 	          var record = this.table.featureList[featureIndex];
-	          this.features[record.tag] = record.feature;
+	          var substituteFeature = this.substituteFeatureForVariations(featureIndex);
+	          this.features[record.tag] = substituteFeature || record.feature;
 	        }
 	      }
 	    }
+
+	    return this.scriptTag;
 	  };
 
 	  OTProcessor.prototype.lookupsForFeatures = function lookupsForFeatures() {
@@ -44979,17 +45587,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return lookups;
 	  };
 
-	  OTProcessor.prototype.applyFeatures = function applyFeatures(userFeatures, glyphs, advances) {
-	    var lookups = this.lookupsForFeatures(userFeatures);
-	    this.applyLookups(lookups, glyphs, advances);
-	  };
+	  OTProcessor.prototype.substituteFeatureForVariations = function substituteFeatureForVariations(featureIndex) {
+	    if (this.variationsIndex === -1) {
+	      return null;
+	    }
 
-	  OTProcessor.prototype.applyLookups = function applyLookups(lookups, glyphs, positions) {
-	    this.glyphs = glyphs;
-	    this.positions = positions;
-	    this.glyphIterator = new GlyphIterator(glyphs);
-
-	    for (var _iterator7 = lookups, _isArray7 = Array.isArray(_iterator7), _i7 = 0, _iterator7 = _isArray7 ? _iterator7 : _getIterator(_iterator7);;) {
+	    var record = this.table.featureVariations.featureVariationRecords[this.variationsIndex];
+	    var substitutions = record.featureTableSubstitution.substitutions;
+	    for (var _iterator7 = substitutions, _isArray7 = Array.isArray(_iterator7), _i7 = 0, _iterator7 = _isArray7 ? _iterator7 : _getIterator(_iterator7);;) {
 	      var _ref7;
 
 	      if (_isArray7) {
@@ -45001,10 +45606,67 @@ return /******/ (function(modules) { // webpackBootstrap
 	        _ref7 = _i7.value;
 	      }
 
-	      var _ref8 = _ref7,
-	          feature = _ref8.feature,
-	          lookup = _ref8.lookup;
+	      var substitution = _ref7;
 
+	      if (substitution.featureIndex === featureIndex) {
+	        return substitution.alternateFeatureTable;
+	      }
+	    }
+
+	    return null;
+	  };
+
+	  OTProcessor.prototype.findVariationsIndex = function findVariationsIndex(coords) {
+	    var variations = this.table.featureVariations;
+	    if (!variations) {
+	      return -1;
+	    }
+
+	    var records = variations.featureVariationRecords;
+	    for (var i = 0; i < records.length; i++) {
+	      var conditions = records[i].conditionSet.conditionTable;
+	      if (this.variationConditionsMatch(conditions, coords)) {
+	        return i;
+	      }
+	    }
+
+	    return -1;
+	  };
+
+	  OTProcessor.prototype.variationConditionsMatch = function variationConditionsMatch(conditions, coords) {
+	    return conditions.every(function (condition) {
+	      var coord = condition.axisIndex < coords.length ? coords[condition.axisIndex] : 0;
+	      return condition.filterRangeMinValue <= coord && coord <= condition.filterRangeMaxValue;
+	    });
+	  };
+
+	  OTProcessor.prototype.applyFeatures = function applyFeatures(userFeatures, glyphs, advances) {
+	    var lookups = this.lookupsForFeatures(userFeatures);
+	    this.applyLookups(lookups, glyphs, advances);
+	  };
+
+	  OTProcessor.prototype.applyLookups = function applyLookups(lookups, glyphs, positions) {
+	    this.glyphs = glyphs;
+	    this.positions = positions;
+	    this.glyphIterator = new GlyphIterator(glyphs);
+
+	    for (var _iterator8 = lookups, _isArray8 = Array.isArray(_iterator8), _i8 = 0, _iterator8 = _isArray8 ? _iterator8 : _getIterator(_iterator8);;) {
+	      var _ref8;
+
+	      if (_isArray8) {
+	        if (_i8 >= _iterator8.length) break;
+	        _ref8 = _iterator8[_i8++];
+	      } else {
+	        _i8 = _iterator8.next();
+	        if (_i8.done) break;
+	        _ref8 = _i8.value;
+	      }
+
+	      var _ref9 = _ref8,
+	          feature = _ref9.feature,
+	          lookup = _ref9.lookup;
+
+	      this.currentFeature = feature;
 	      this.glyphIterator.reset(lookup.flags);
 
 	      while (this.glyphIterator.index < glyphs.length) {
@@ -45013,19 +45675,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	          continue;
 	        }
 
-	        for (var _iterator8 = lookup.subTables, _isArray8 = Array.isArray(_iterator8), _i8 = 0, _iterator8 = _isArray8 ? _iterator8 : _getIterator(_iterator8);;) {
-	          var _ref9;
+	        for (var _iterator9 = lookup.subTables, _isArray9 = Array.isArray(_iterator9), _i9 = 0, _iterator9 = _isArray9 ? _iterator9 : _getIterator(_iterator9);;) {
+	          var _ref10;
 
-	          if (_isArray8) {
-	            if (_i8 >= _iterator8.length) break;
-	            _ref9 = _iterator8[_i8++];
+	          if (_isArray9) {
+	            if (_i9 >= _iterator9.length) break;
+	            _ref10 = _iterator9[_i9++];
 	          } else {
-	            _i8 = _iterator8.next();
-	            if (_i8.done) break;
-	            _ref9 = _i8.value;
+	            _i9 = _iterator9.next();
+	            if (_i9.done) break;
+	            _ref10 = _i9.value;
 	          }
 
-	          var table = _ref9;
+	          var table = _ref10;
 
 	          var res = this.applyLookup(lookup.lookupType, table);
 	          if (res) {
@@ -45043,45 +45705,53 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 
 	  OTProcessor.prototype.applyLookupList = function applyLookupList(lookupRecords) {
+	    var options = this.glyphIterator.options;
 	    var glyphIndex = this.glyphIterator.index;
 
-	    for (var _iterator9 = lookupRecords, _isArray9 = Array.isArray(_iterator9), _i9 = 0, _iterator9 = _isArray9 ? _iterator9 : _getIterator(_iterator9);;) {
-	      var _ref10;
+	    for (var _iterator10 = lookupRecords, _isArray10 = Array.isArray(_iterator10), _i10 = 0, _iterator10 = _isArray10 ? _iterator10 : _getIterator(_iterator10);;) {
+	      var _ref11;
 
-	      if (_isArray9) {
-	        if (_i9 >= _iterator9.length) break;
-	        _ref10 = _iterator9[_i9++];
+	      if (_isArray10) {
+	        if (_i10 >= _iterator10.length) break;
+	        _ref11 = _iterator10[_i10++];
 	      } else {
-	        _i9 = _iterator9.next();
-	        if (_i9.done) break;
-	        _ref10 = _i9.value;
+	        _i10 = _iterator10.next();
+	        if (_i10.done) break;
+	        _ref11 = _i10.value;
 	      }
 
-	      var lookupRecord = _ref10;
+	      var lookupRecord = _ref11;
 
-	      this.glyphIterator.index = glyphIndex;
+	      // Reset flags and find glyph index for this lookup record
+	      this.glyphIterator.reset(options, glyphIndex);
 	      this.glyphIterator.increment(lookupRecord.sequenceIndex);
 
+	      // Get the lookup and setup flags for subtables
 	      var lookup = this.table.lookupList.get(lookupRecord.lookupListIndex);
-	      for (var _iterator10 = lookup.subTables, _isArray10 = Array.isArray(_iterator10), _i10 = 0, _iterator10 = _isArray10 ? _iterator10 : _getIterator(_iterator10);;) {
-	        var _ref11;
+	      this.glyphIterator.reset(lookup.flags, this.glyphIterator.index);
 
-	        if (_isArray10) {
-	          if (_i10 >= _iterator10.length) break;
-	          _ref11 = _iterator10[_i10++];
+	      // Apply lookup subtables until one matches
+	      for (var _iterator11 = lookup.subTables, _isArray11 = Array.isArray(_iterator11), _i11 = 0, _iterator11 = _isArray11 ? _iterator11 : _getIterator(_iterator11);;) {
+	        var _ref12;
+
+	        if (_isArray11) {
+	          if (_i11 >= _iterator11.length) break;
+	          _ref12 = _iterator11[_i11++];
 	        } else {
-	          _i10 = _iterator10.next();
-	          if (_i10.done) break;
-	          _ref11 = _i10.value;
+	          _i11 = _iterator11.next();
+	          if (_i11.done) break;
+	          _ref12 = _i11.value;
 	        }
 
-	        var table = _ref11;
+	        var table = _ref12;
 
-	        this.applyLookup(lookup.lookupType, table);
+	        if (this.applyLookup(lookup.lookupType, table)) {
+	          break;
+	        }
 	      }
 	    }
 
-	    this.glyphIterator.index = glyphIndex;
+	    this.glyphIterator.reset(options, glyphIndex);
 	    return true;
 	  };
 
@@ -45095,19 +45765,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return coverage.glyphs.indexOf(glyph);
 
 	      case 2:
-	        for (var _iterator11 = coverage.rangeRecords, _isArray11 = Array.isArray(_iterator11), _i11 = 0, _iterator11 = _isArray11 ? _iterator11 : _getIterator(_iterator11);;) {
-	          var _ref12;
+	        for (var _iterator12 = coverage.rangeRecords, _isArray12 = Array.isArray(_iterator12), _i12 = 0, _iterator12 = _isArray12 ? _iterator12 : _getIterator(_iterator12);;) {
+	          var _ref13;
 
-	          if (_isArray11) {
-	            if (_i11 >= _iterator11.length) break;
-	            _ref12 = _iterator11[_i11++];
+	          if (_isArray12) {
+	            if (_i12 >= _iterator12.length) break;
+	            _ref13 = _iterator12[_i12++];
 	          } else {
-	            _i11 = _iterator11.next();
-	            if (_i11.done) break;
-	            _ref12 = _i11.value;
+	            _i12 = _iterator12.next();
+	            if (_i12.done) break;
+	            _ref13 = _i12.value;
 	          }
 
-	          var range = _ref12;
+	          var range = _ref13;
 
 	          if (range.start <= glyph && glyph <= range.end) {
 	            return range.startCoverageIndex + glyph - range.start;
@@ -45125,7 +45795,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var glyph = this.glyphIterator.increment(sequenceIndex);
 	    var idx = 0;
 
-	    while (idx < sequence.length && glyph && fn(sequence[idx], glyph.id)) {
+	    while (idx < sequence.length && glyph && fn(sequence[idx], glyph)) {
 	      if (matched) {
 	        matched.push(this.glyphIterator.index);
 	      }
@@ -45144,21 +45814,28 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  OTProcessor.prototype.sequenceMatches = function sequenceMatches(sequenceIndex, sequence) {
 	    return this.match(sequenceIndex, sequence, function (component, glyph) {
-	      return component === glyph;
+	      return component === glyph.id;
 	    });
 	  };
 
 	  OTProcessor.prototype.sequenceMatchIndices = function sequenceMatchIndices(sequenceIndex, sequence) {
+	    var _this = this;
+
 	    return this.match(sequenceIndex, sequence, function (component, glyph) {
-	      return component === glyph;
+	      // If the current feature doesn't apply to this glyph,
+	      if (!(_this.currentFeature in glyph.features)) {
+	        return false;
+	      }
+
+	      return component === glyph.id;
 	    }, []);
 	  };
 
 	  OTProcessor.prototype.coverageSequenceMatches = function coverageSequenceMatches(sequenceIndex, sequence) {
-	    var _this = this;
+	    var _this2 = this;
 
 	    return this.match(sequenceIndex, sequence, function (coverage, glyph) {
-	      return _this.coverageIndex(coverage, glyph) >= 0;
+	      return _this2.coverageIndex(coverage, glyph.id) >= 0;
 	    });
 	  };
 
@@ -45174,19 +45851,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	        break;
 
 	      case 2:
-	        for (var _iterator12 = classDef.classRangeRecord, _isArray12 = Array.isArray(_iterator12), _i12 = 0, _iterator12 = _isArray12 ? _iterator12 : _getIterator(_iterator12);;) {
-	          var _ref13;
+	        for (var _iterator13 = classDef.classRangeRecord, _isArray13 = Array.isArray(_iterator13), _i13 = 0, _iterator13 = _isArray13 ? _iterator13 : _getIterator(_iterator13);;) {
+	          var _ref14;
 
-	          if (_isArray12) {
-	            if (_i12 >= _iterator12.length) break;
-	            _ref13 = _iterator12[_i12++];
+	          if (_isArray13) {
+	            if (_i13 >= _iterator13.length) break;
+	            _ref14 = _iterator13[_i13++];
 	          } else {
-	            _i12 = _iterator12.next();
-	            if (_i12.done) break;
-	            _ref13 = _i12.value;
+	            _i13 = _iterator13.next();
+	            if (_i13.done) break;
+	            _ref14 = _i13.value;
 	          }
 
-	          var range = _ref13;
+	          var range = _ref14;
 
 	          if (range.start <= glyph && glyph <= range.end) {
 	            return range.class;
@@ -45200,10 +45877,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 
 	  OTProcessor.prototype.classSequenceMatches = function classSequenceMatches(sequenceIndex, sequence, classDef) {
-	    var _this2 = this;
+	    var _this3 = this;
 
 	    return this.match(sequenceIndex, sequence, function (classID, glyph) {
-	      return classID === _this2.getClassID(glyph, classDef);
+	      return classID === _this3.getClassID(glyph.id, classDef);
 	    });
 	  };
 
@@ -45216,19 +45893,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 
 	        var set = table.ruleSets[index];
-	        for (var _iterator13 = set, _isArray13 = Array.isArray(_iterator13), _i13 = 0, _iterator13 = _isArray13 ? _iterator13 : _getIterator(_iterator13);;) {
-	          var _ref14;
+	        for (var _iterator14 = set, _isArray14 = Array.isArray(_iterator14), _i14 = 0, _iterator14 = _isArray14 ? _iterator14 : _getIterator(_iterator14);;) {
+	          var _ref15;
 
-	          if (_isArray13) {
-	            if (_i13 >= _iterator13.length) break;
-	            _ref14 = _iterator13[_i13++];
+	          if (_isArray14) {
+	            if (_i14 >= _iterator14.length) break;
+	            _ref15 = _iterator14[_i14++];
 	          } else {
-	            _i13 = _iterator13.next();
-	            if (_i13.done) break;
-	            _ref14 = _i13.value;
+	            _i14 = _iterator14.next();
+	            if (_i14.done) break;
+	            _ref15 = _i14.value;
 	          }
 
-	          var rule = _ref14;
+	          var rule = _ref15;
 
 	          if (this.sequenceMatches(1, rule.input)) {
 	            return this.applyLookupList(rule.lookupRecords);
@@ -45248,19 +45925,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 
 	        set = table.classSet[index];
-	        for (var _iterator14 = set, _isArray14 = Array.isArray(_iterator14), _i14 = 0, _iterator14 = _isArray14 ? _iterator14 : _getIterator(_iterator14);;) {
-	          var _ref15;
+	        for (var _iterator15 = set, _isArray15 = Array.isArray(_iterator15), _i15 = 0, _iterator15 = _isArray15 ? _iterator15 : _getIterator(_iterator15);;) {
+	          var _ref16;
 
-	          if (_isArray14) {
-	            if (_i14 >= _iterator14.length) break;
-	            _ref15 = _iterator14[_i14++];
+	          if (_isArray15) {
+	            if (_i15 >= _iterator15.length) break;
+	            _ref16 = _iterator15[_i15++];
 	          } else {
-	            _i14 = _iterator14.next();
-	            if (_i14.done) break;
-	            _ref15 = _i14.value;
+	            _i15 = _iterator15.next();
+	            if (_i15.done) break;
+	            _ref16 = _i15.value;
 	          }
 
-	          var _rule = _ref15;
+	          var _rule = _ref16;
 
 	          if (this.classSequenceMatches(1, _rule.classes, table.classDef)) {
 	            return this.applyLookupList(_rule.lookupRecords);
@@ -45289,19 +45966,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 
 	        var set = table.chainRuleSets[index];
-	        for (var _iterator15 = set, _isArray15 = Array.isArray(_iterator15), _i15 = 0, _iterator15 = _isArray15 ? _iterator15 : _getIterator(_iterator15);;) {
-	          var _ref16;
+	        for (var _iterator16 = set, _isArray16 = Array.isArray(_iterator16), _i16 = 0, _iterator16 = _isArray16 ? _iterator16 : _getIterator(_iterator16);;) {
+	          var _ref17;
 
-	          if (_isArray15) {
-	            if (_i15 >= _iterator15.length) break;
-	            _ref16 = _iterator15[_i15++];
+	          if (_isArray16) {
+	            if (_i16 >= _iterator16.length) break;
+	            _ref17 = _iterator16[_i16++];
 	          } else {
-	            _i15 = _iterator15.next();
-	            if (_i15.done) break;
-	            _ref16 = _i15.value;
+	            _i16 = _iterator16.next();
+	            if (_i16.done) break;
+	            _ref17 = _i16.value;
 	          }
 
-	          var rule = _ref16;
+	          var rule = _ref17;
 
 	          if (this.sequenceMatches(-rule.backtrack.length, rule.backtrack) && this.sequenceMatches(1, rule.input) && this.sequenceMatches(1 + rule.input.length, rule.lookahead)) {
 	            return this.applyLookupList(rule.lookupRecords);
@@ -45321,19 +45998,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	          return false;
 	        }
 
-	        for (var _iterator16 = rules, _isArray16 = Array.isArray(_iterator16), _i16 = 0, _iterator16 = _isArray16 ? _iterator16 : _getIterator(_iterator16);;) {
-	          var _ref17;
+	        for (var _iterator17 = rules, _isArray17 = Array.isArray(_iterator17), _i17 = 0, _iterator17 = _isArray17 ? _iterator17 : _getIterator(_iterator17);;) {
+	          var _ref18;
 
-	          if (_isArray16) {
-	            if (_i16 >= _iterator16.length) break;
-	            _ref17 = _iterator16[_i16++];
+	          if (_isArray17) {
+	            if (_i17 >= _iterator17.length) break;
+	            _ref18 = _iterator17[_i17++];
 	          } else {
-	            _i16 = _iterator16.next();
-	            if (_i16.done) break;
-	            _ref17 = _i16.value;
+	            _i17 = _iterator17.next();
+	            if (_i17.done) break;
+	            _ref18 = _i17.value;
 	          }
 
-	          var _rule2 = _ref17;
+	          var _rule2 = _ref18;
 
 	          if (this.classSequenceMatches(-_rule2.backtrack.length, _rule2.backtrack, table.backtrackClassDef) && this.classSequenceMatches(1, _rule2.input, table.inputClassDef) && this.classSequenceMatches(1 + _rule2.input.length, _rule2.lookahead, table.lookaheadClassDef)) {
 	            return this.applyLookupList(_rule2.lookupRecords);
@@ -45359,7 +46036,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var GlyphInfo = function () {
 	  function GlyphInfo(font, id) {
 	    var codePoints = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
-	    var features = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
+	    var features = arguments[3];
 
 	    _classCallCheck(this, GlyphInfo);
 
@@ -45379,12 +46056,17 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    this.ligatureID = null;
 	    this.ligatureComponent = null;
-	    this.ligated = false;
+	    this.isLigated = false;
 	    this.cursiveAttachment = null;
 	    this.markAttachment = null;
 	    this.shaperInfo = null;
 	    this.substituted = false;
+	    this.isMultiplied = false;
 	  }
+
+	  GlyphInfo.prototype.copy = function copy() {
+	    return new GlyphInfo(this._font, this.id, this.codePoints, this.features);
+	  };
 
 	  _createClass(GlyphInfo, [{
 	    key: 'id',
@@ -45395,14 +46077,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	      this._id = id;
 	      this.substituted = true;
 
-	      if (this._font.GDEF && this._font.GDEF.glyphClassDef) {
+	      var GDEF = this._font.GDEF;
+	      if (GDEF && GDEF.glyphClassDef) {
 	        // TODO: clean this up
-	        var classID = OTProcessor.prototype.getClassID(id, this._font.GDEF.glyphClassDef);
-	        this.isMark = classID === 3;
+	        var classID = OTProcessor.prototype.getClassID(id, GDEF.glyphClassDef);
+	        this.isBase = classID === 1;
 	        this.isLigature = classID === 2;
+	        this.isMark = classID === 3;
+	        this.markAttachmentType = GDEF.markAttachClassDef ? OTProcessor.prototype.getClassID(id, GDEF.markAttachClassDef) : 0;
 	      } else {
 	        this.isMark = this.codePoints.every(unicode.isMark);
+	        this.isBase = !this.isMark;
 	        this.isLigature = this.codePoints.length > 1;
+	        this.markAttachmentType = 0;
 	      }
 	    }
 	  }]);
@@ -45744,32 +46431,1144 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return i;
 	}
 
-	var categories$1 = ["O", "IND", "S", "GB", "B", "FM", "CGJ", "VMAbv", "VMPst", "VAbv", "VPst", "CMBlw", "VPre", "VBlw", "H", "VMBlw", "CMAbv", "MBlw", "CS", "R", "SUB", "MPst", "MPre", "FAbv", "FPst", "FBlw", "SMAbv", "SMBlw", "VMPre", "ZWNJ", "ZWJ", "WJ", "VS", "N", "HN", "MAbv"];
-	var decompositions$1 = { "2507": [2503, 2494], "2508": [2503, 2519], "2888": [2887, 2902], "2891": [2887, 2878], "2892": [2887, 2903], "3018": [3014, 3006], "3019": [3015, 3006], "3020": [3014, 3031], "3144": [3142, 3158], "3264": [3263, 3285], "3271": [3270, 3285], "3272": [3270, 3286], "3274": [3270, 3266], "3275": [3270, 3266, 3285], "3402": [3398, 3390], "3403": [3399, 3390], "3404": [3398, 3415], "3546": [3545, 3530], "3548": [3545, 3535], "3549": [3545, 3535, 3530], "3550": [3545, 3551], "3635": [3661, 3634], "3763": [3789, 3762], "3955": [3953, 3954], "3957": [3953, 3956], "3958": [4018, 3968], "3959": [4018, 3953, 3968], "3960": [4019, 3968], "3961": [4019, 3953, 3968], "3969": [3953, 3968], "6971": [6970, 6965], "6973": [6972, 6965], "6976": [6974, 6965], "6977": [6975, 6965], "6979": [6978, 6965], "69934": [69937, 69927], "69935": [69938, 69927], "70475": [70471, 70462], "70476": [70471, 70487], "70843": [70841, 70842], "70844": [70841, 70832], "70846": [70841, 70845], "71098": [71096, 71087], "71099": [71097, 71087] };
-	var stateTable = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [2, 2, 3, 4, 4, 5, 0, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0, 17, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 2, 0, 23, 0, 24], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 27, 0, 0, 0, 0, 26, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 0, 0, 0, 34, 40, 41, 42, 43, 0, 0, 44, 0, 0, 0, 38, 0, 0, 45], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 0, 12, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 0, 9, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 16, 0, 0, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 24], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 11, 12, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 0, 9, 0, 0, 12, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 0, 7, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0, 0, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 24], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 11, 12, 0, 14, 0, 0, 0, 0, 0, 11, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 4, 4, 5, 0, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0, 0, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 24], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 11, 12, 0, 14, 0, 16, 0, 0, 0, 11, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 24], [0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 47, 0, 48, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 11, 12, 0, 14, 0, 16, 0, 0, 0, 11, 0, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 27, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 0, 0, 0, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 0, 0, 35, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 0, 32, 0, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 33, 34, 35, 36, 37, 0, 39, 0, 0, 0, 34, 40, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 45], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 0, 34, 35, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 0, 32, 0, 0, 35, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 49, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 49, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 0, 30, 0, 0, 0, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 0, 0, 0, 34, 40, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 45], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 0, 34, 35, 0, 37, 0, 0, 0, 0, 0, 34, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 0, 34, 35, 0, 37, 0, 39, 0, 0, 0, 34, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 45], [0, 0, 0, 0, 0, 28, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 0, 0, 0, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 0, 34, 35, 0, 37, 0, 39, 0, 0, 0, 34, 0, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 50, 11, 12, 13, 14, 50, 16, 0, 0, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 0, 51, 0, 0, 24], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 48, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, 0, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 53, 34, 35, 36, 37, 53, 39, 0, 0, 0, 34, 40, 41, 42, 43, 0, 0, 44, 0, 0, 0, 54, 0, 0, 45], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 50, 11, 12, 13, 14, 0, 16, 0, 0, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 24], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 50, 11, 12, 13, 14, 50, 16, 0, 0, 0, 11, 18, 19, 20, 21, 0, 0, 22, 0, 0, 0, 0, 0, 0, 24], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 47, 0, 48, 0], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 53, 34, 35, 36, 37, 0, 39, 0, 0, 0, 34, 40, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 45], [0, 0, 0, 0, 0, 28, 0, 29, 30, 31, 32, 53, 34, 35, 36, 37, 53, 39, 0, 0, 0, 34, 40, 41, 42, 43, 0, 0, 44, 0, 0, 0, 0, 0, 0, 45]];
-	var accepting = [false, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
-	var tags = [[], ["broken_cluster"], ["independent_cluster"], ["symbol_cluster"], ["standard_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["numeral_cluster"], ["broken_cluster"], ["independent_cluster"], ["symbol_cluster"], ["symbol_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["virama_terminated_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["broken_cluster"], ["numeral_cluster"], ["number_joiner_terminated_cluster"], ["standard_cluster"], ["broken_cluster"], ["broken_cluster"], ["numeral_cluster"], ["standard_cluster"], ["standard_cluster"]];
-	var useData = {
-		categories: categories$1,
-		decompositions: decompositions$1,
+	var stateTable = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 2, 3, 4, 5, 6, 7, 8, 9, 0, 10, 11, 11, 12, 13, 14, 15, 16, 17], [0, 0, 0, 18, 19, 20, 21, 22, 23, 0, 24, 0, 0, 25, 26, 0, 0, 27, 0], [0, 0, 0, 28, 29, 30, 31, 32, 33, 0, 34, 0, 0, 35, 36, 0, 0, 37, 0], [0, 0, 0, 38, 5, 7, 7, 8, 9, 0, 10, 0, 0, 0, 13, 0, 0, 16, 0], [0, 39, 0, 0, 0, 40, 41, 0, 9, 0, 10, 0, 0, 0, 42, 0, 39, 0, 0], [0, 0, 0, 0, 43, 44, 44, 8, 9, 0, 0, 0, 0, 12, 43, 0, 0, 0, 0], [0, 0, 0, 0, 43, 44, 44, 8, 9, 0, 0, 0, 0, 0, 43, 0, 0, 0, 0], [0, 0, 0, 45, 46, 47, 48, 49, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 0, 50, 0, 0, 51, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 53, 54, 55, 56, 57, 58, 0, 59, 0, 0, 60, 61, 0, 0, 62, 0], [0, 0, 0, 4, 5, 7, 7, 8, 9, 0, 10, 0, 0, 0, 13, 0, 0, 16, 0], [0, 63, 64, 0, 0, 40, 41, 0, 9, 0, 10, 0, 0, 0, 42, 0, 63, 0, 0], [0, 2, 3, 4, 5, 6, 7, 8, 9, 0, 10, 11, 11, 12, 13, 0, 2, 16, 0], [0, 0, 0, 18, 65, 20, 21, 22, 23, 0, 24, 0, 0, 25, 26, 0, 0, 27, 0], [0, 0, 0, 0, 66, 67, 67, 8, 9, 0, 10, 0, 0, 0, 68, 0, 0, 0, 0], [0, 0, 0, 69, 0, 70, 70, 0, 71, 0, 72, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 73, 19, 74, 74, 22, 23, 0, 24, 0, 0, 0, 26, 0, 0, 27, 0], [0, 75, 0, 0, 0, 76, 77, 0, 23, 0, 24, 0, 0, 0, 78, 0, 75, 0, 0], [0, 0, 0, 0, 79, 80, 80, 22, 23, 0, 0, 0, 0, 25, 79, 0, 0, 0, 0], [0, 0, 0, 18, 19, 20, 74, 22, 23, 0, 24, 0, 0, 25, 26, 0, 0, 27, 0], [0, 0, 0, 81, 82, 83, 84, 85, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 0, 0, 86, 0, 0, 87, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 88, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 18, 19, 74, 74, 22, 23, 0, 24, 0, 0, 0, 26, 0, 0, 27, 0], [0, 89, 90, 0, 0, 76, 77, 0, 23, 0, 24, 0, 0, 0, 78, 0, 89, 0, 0], [0, 0, 0, 0, 91, 92, 92, 22, 23, 0, 24, 0, 0, 0, 93, 0, 0, 0, 0], [0, 0, 0, 94, 29, 95, 31, 32, 33, 0, 34, 0, 0, 0, 36, 0, 0, 37, 0], [0, 96, 0, 0, 0, 97, 98, 0, 33, 0, 34, 0, 0, 0, 99, 0, 96, 0, 0], [0, 0, 0, 0, 100, 101, 101, 32, 33, 0, 0, 0, 0, 35, 100, 0, 0, 0, 0], [0, 0, 0, 0, 100, 101, 101, 32, 33, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0], [0, 0, 0, 102, 103, 104, 105, 106, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 0, 0, 107, 0, 0, 108, 0, 34, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 109, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 28, 29, 95, 31, 32, 33, 0, 34, 0, 0, 0, 36, 0, 0, 37, 0], [0, 110, 111, 0, 0, 97, 98, 0, 33, 0, 34, 0, 0, 0, 99, 0, 110, 0, 0], [0, 0, 0, 0, 112, 113, 113, 32, 33, 0, 34, 0, 0, 0, 114, 0, 0, 0, 0], [0, 0, 0, 0, 5, 7, 7, 8, 9, 0, 10, 0, 0, 0, 13, 0, 0, 16, 0], [0, 0, 0, 115, 116, 117, 118, 8, 9, 0, 10, 0, 0, 119, 120, 0, 0, 16, 0], [0, 0, 0, 0, 0, 121, 121, 0, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 39, 0, 122, 0, 123, 123, 8, 9, 0, 10, 0, 0, 0, 42, 0, 39, 0, 0], [0, 124, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 124, 0, 0], [0, 39, 0, 0, 0, 121, 125, 0, 9, 0, 10, 0, 0, 0, 42, 0, 39, 0, 0], [0, 0, 0, 0, 0, 126, 126, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 46, 47, 48, 49, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 0, 47, 47, 49, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 0, 127, 127, 49, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 128, 127, 127, 49, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 129, 130, 131, 132, 133, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 50, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 134, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 135, 54, 56, 56, 57, 58, 0, 59, 0, 0, 0, 61, 0, 0, 62, 0], [0, 136, 0, 0, 0, 137, 138, 0, 58, 0, 59, 0, 0, 0, 139, 0, 136, 0, 0], [0, 0, 0, 0, 140, 141, 141, 57, 58, 0, 0, 0, 0, 60, 140, 0, 0, 0, 0], [0, 0, 0, 0, 140, 141, 141, 57, 58, 0, 0, 0, 0, 0, 140, 0, 0, 0, 0], [0, 0, 0, 142, 143, 144, 145, 146, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 0, 0, 147, 0, 0, 148, 0, 59, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 149, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 53, 54, 56, 56, 57, 58, 0, 59, 0, 0, 0, 61, 0, 0, 62, 0], [0, 150, 151, 0, 0, 137, 138, 0, 58, 0, 59, 0, 0, 0, 139, 0, 150, 0, 0], [0, 0, 0, 0, 152, 153, 153, 57, 58, 0, 59, 0, 0, 0, 154, 0, 0, 0, 0], [0, 0, 0, 155, 116, 156, 157, 8, 9, 0, 10, 0, 0, 158, 120, 0, 0, 16, 0], [0, 0, 0, 0, 0, 121, 121, 0, 9, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0], [0, 75, 3, 4, 5, 159, 160, 8, 161, 0, 162, 0, 11, 12, 163, 0, 75, 16, 0], [0, 0, 0, 0, 0, 40, 164, 0, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 165, 44, 44, 8, 9, 0, 0, 0, 0, 0, 165, 0, 0, 0, 0], [0, 124, 64, 0, 0, 40, 164, 0, 9, 0, 10, 0, 0, 0, 42, 0, 124, 0, 0], [0, 0, 0, 0, 0, 70, 70, 0, 71, 0, 72, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 71, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 166, 0, 0, 167, 0, 72, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 168, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 19, 74, 74, 22, 23, 0, 24, 0, 0, 0, 26, 0, 0, 27, 0], [0, 0, 0, 0, 79, 80, 80, 22, 23, 0, 0, 0, 0, 0, 79, 0, 0, 0, 0], [0, 0, 0, 169, 170, 171, 172, 22, 23, 0, 24, 0, 0, 173, 174, 0, 0, 27, 0], [0, 0, 0, 0, 0, 175, 175, 0, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 75, 0, 176, 0, 177, 177, 22, 23, 0, 24, 0, 0, 0, 78, 0, 75, 0, 0], [0, 178, 90, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 178, 0, 0], [0, 75, 0, 0, 0, 175, 179, 0, 23, 0, 24, 0, 0, 0, 78, 0, 75, 0, 0], [0, 0, 0, 0, 0, 180, 180, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 82, 83, 84, 85, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 0, 0, 83, 83, 85, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 0, 0, 181, 181, 85, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 182, 181, 181, 85, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 183, 184, 185, 186, 187, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 86, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 188, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 189, 170, 190, 191, 22, 23, 0, 24, 0, 0, 192, 174, 0, 0, 27, 0], [0, 0, 0, 0, 0, 175, 175, 0, 23, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 76, 193, 0, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 0, 194, 80, 80, 22, 23, 0, 0, 0, 0, 0, 194, 0, 0, 0, 0], [0, 178, 90, 0, 0, 76, 193, 0, 23, 0, 24, 0, 0, 0, 78, 0, 178, 0, 0], [0, 0, 0, 0, 29, 95, 31, 32, 33, 0, 34, 0, 0, 0, 36, 0, 0, 37, 0], [0, 0, 0, 0, 100, 101, 101, 32, 33, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0], [0, 0, 0, 195, 196, 197, 198, 32, 33, 0, 34, 0, 0, 199, 200, 0, 0, 37, 0], [0, 0, 0, 0, 0, 201, 201, 0, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 96, 0, 202, 0, 203, 203, 32, 33, 0, 34, 0, 0, 0, 99, 0, 96, 0, 0], [0, 204, 111, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 204, 0, 0], [0, 96, 0, 0, 0, 201, 205, 0, 33, 0, 34, 0, 0, 0, 99, 0, 96, 0, 0], [0, 0, 0, 0, 0, 206, 206, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 103, 104, 105, 106, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 0, 0, 104, 104, 106, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 0, 0, 207, 207, 106, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 208, 207, 207, 106, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 209, 210, 211, 212, 213, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 34, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 107, 0, 0, 0, 0, 34, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 214, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 215, 196, 216, 217, 32, 33, 0, 34, 0, 0, 218, 200, 0, 0, 37, 0], [0, 0, 0, 0, 0, 201, 201, 0, 33, 0, 34, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 97, 219, 0, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 0, 220, 101, 101, 32, 33, 0, 0, 0, 0, 0, 220, 0, 0, 0, 0], [0, 204, 111, 0, 0, 97, 219, 0, 33, 0, 34, 0, 0, 0, 99, 0, 204, 0, 0], [0, 0, 0, 221, 116, 222, 222, 8, 9, 0, 10, 0, 0, 0, 120, 0, 0, 16, 0], [0, 223, 0, 0, 0, 40, 224, 0, 9, 0, 10, 0, 0, 0, 42, 0, 223, 0, 0], [0, 0, 0, 0, 225, 44, 44, 8, 9, 0, 0, 0, 0, 119, 225, 0, 0, 0, 0], [0, 0, 0, 115, 116, 117, 222, 8, 9, 0, 10, 0, 0, 119, 120, 0, 0, 16, 0], [0, 0, 0, 115, 116, 222, 222, 8, 9, 0, 10, 0, 0, 0, 120, 0, 0, 16, 0], [0, 226, 64, 0, 0, 40, 224, 0, 9, 0, 10, 0, 0, 0, 42, 0, 226, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 39, 0, 0, 0, 121, 121, 0, 9, 0, 10, 0, 0, 0, 42, 0, 39, 0, 0], [0, 0, 0, 0, 0, 44, 44, 8, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 227, 0, 228, 229, 0, 9, 0, 10, 0, 0, 230, 0, 0, 0, 0, 0], [0, 39, 0, 122, 0, 121, 121, 0, 9, 0, 10, 0, 0, 0, 42, 0, 39, 0, 0], [0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 231, 231, 49, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 232, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 130, 131, 132, 133, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 0, 131, 131, 133, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 0, 233, 233, 133, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 234, 233, 233, 133, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 235, 236, 237, 238, 239, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 54, 56, 56, 57, 58, 0, 59, 0, 0, 0, 61, 0, 0, 62, 0], [0, 0, 0, 240, 241, 242, 243, 57, 58, 0, 59, 0, 0, 244, 245, 0, 0, 62, 0], [0, 0, 0, 0, 0, 246, 246, 0, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 136, 0, 247, 0, 248, 248, 57, 58, 0, 59, 0, 0, 0, 139, 0, 136, 0, 0], [0, 249, 151, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 249, 0, 0], [0, 136, 0, 0, 0, 246, 250, 0, 58, 0, 59, 0, 0, 0, 139, 0, 136, 0, 0], [0, 0, 0, 0, 0, 251, 251, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 143, 144, 145, 146, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 0, 0, 144, 144, 146, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 0, 0, 252, 252, 146, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 253, 252, 252, 146, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 254, 255, 256, 257, 258, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 59, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 147, 0, 0, 0, 0, 59, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 259, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 260, 241, 261, 262, 57, 58, 0, 59, 0, 0, 263, 245, 0, 0, 62, 0], [0, 0, 0, 0, 0, 246, 246, 0, 58, 0, 59, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 137, 264, 0, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 0, 265, 141, 141, 57, 58, 0, 0, 0, 0, 0, 265, 0, 0, 0, 0], [0, 249, 151, 0, 0, 137, 264, 0, 58, 0, 59, 0, 0, 0, 139, 0, 249, 0, 0], [0, 0, 0, 221, 116, 222, 222, 8, 9, 0, 10, 0, 0, 0, 120, 0, 0, 16, 0], [0, 0, 0, 0, 225, 44, 44, 8, 9, 0, 0, 0, 0, 158, 225, 0, 0, 0, 0], [0, 0, 0, 155, 116, 156, 222, 8, 9, 0, 10, 0, 0, 158, 120, 0, 0, 16, 0], [0, 0, 0, 155, 116, 222, 222, 8, 9, 0, 10, 0, 0, 0, 120, 0, 0, 16, 0], [0, 0, 0, 0, 43, 266, 266, 8, 161, 0, 24, 0, 0, 12, 267, 0, 0, 0, 0], [0, 75, 0, 176, 43, 268, 268, 269, 161, 0, 24, 0, 0, 0, 267, 0, 75, 0, 0], [0, 0, 0, 0, 0, 270, 0, 0, 271, 0, 162, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 272, 0, 0, 0, 0, 0, 0, 0, 0], [0, 273, 274, 0, 0, 40, 41, 0, 9, 0, 10, 0, 0, 0, 42, 0, 273, 0, 0], [0, 0, 0, 40, 0, 123, 123, 8, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 0, 121, 275, 0, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 72, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 166, 0, 0, 0, 0, 72, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 276, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 277, 170, 278, 278, 22, 23, 0, 24, 0, 0, 0, 174, 0, 0, 27, 0], [0, 279, 0, 0, 0, 76, 280, 0, 23, 0, 24, 0, 0, 0, 78, 0, 279, 0, 0], [0, 0, 0, 0, 281, 80, 80, 22, 23, 0, 0, 0, 0, 173, 281, 0, 0, 0, 0], [0, 0, 0, 169, 170, 171, 278, 22, 23, 0, 24, 0, 0, 173, 174, 0, 0, 27, 0], [0, 0, 0, 169, 170, 278, 278, 22, 23, 0, 24, 0, 0, 0, 174, 0, 0, 27, 0], [0, 282, 90, 0, 0, 76, 280, 0, 23, 0, 24, 0, 0, 0, 78, 0, 282, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 75, 0, 0, 0, 175, 175, 0, 23, 0, 24, 0, 0, 0, 78, 0, 75, 0, 0], [0, 0, 0, 0, 0, 80, 80, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 283, 0, 284, 285, 0, 23, 0, 24, 0, 0, 286, 0, 0, 0, 0, 0], [0, 75, 0, 176, 0, 175, 175, 0, 23, 0, 24, 0, 0, 0, 78, 0, 75, 0, 0], [0, 0, 0, 0, 0, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 287, 287, 85, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 288, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 184, 185, 186, 187, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 0, 0, 185, 185, 187, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 0, 0, 289, 289, 187, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 290, 289, 289, 187, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 291, 292, 293, 294, 295, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 277, 170, 278, 278, 22, 23, 0, 24, 0, 0, 0, 174, 0, 0, 27, 0], [0, 0, 0, 0, 281, 80, 80, 22, 23, 0, 0, 0, 0, 192, 281, 0, 0, 0, 0], [0, 0, 0, 189, 170, 190, 278, 22, 23, 0, 24, 0, 0, 192, 174, 0, 0, 27, 0], [0, 0, 0, 189, 170, 278, 278, 22, 23, 0, 24, 0, 0, 0, 174, 0, 0, 27, 0], [0, 0, 0, 76, 0, 177, 177, 22, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 0, 0, 175, 296, 0, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 297, 196, 298, 298, 32, 33, 0, 34, 0, 0, 0, 200, 0, 0, 37, 0], [0, 299, 0, 0, 0, 97, 300, 0, 33, 0, 34, 0, 0, 0, 99, 0, 299, 0, 0], [0, 0, 0, 0, 301, 101, 101, 32, 33, 0, 0, 0, 0, 199, 301, 0, 0, 0, 0], [0, 0, 0, 195, 196, 197, 298, 32, 33, 0, 34, 0, 0, 199, 200, 0, 0, 37, 0], [0, 0, 0, 195, 196, 298, 298, 32, 33, 0, 34, 0, 0, 0, 200, 0, 0, 37, 0], [0, 302, 111, 0, 0, 97, 300, 0, 33, 0, 34, 0, 0, 0, 99, 0, 302, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 96, 0, 0, 0, 201, 201, 0, 33, 0, 34, 0, 0, 0, 99, 0, 96, 0, 0], [0, 0, 0, 0, 0, 101, 101, 32, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 303, 0, 304, 305, 0, 33, 0, 34, 0, 0, 306, 0, 0, 0, 0, 0], [0, 96, 0, 202, 0, 201, 201, 0, 33, 0, 34, 0, 0, 0, 99, 0, 96, 0, 0], [0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 307, 307, 106, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 308, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 210, 211, 212, 213, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 0, 0, 211, 211, 213, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 0, 0, 309, 309, 213, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 310, 309, 309, 213, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 311, 312, 313, 314, 315, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 297, 196, 298, 298, 32, 33, 0, 34, 0, 0, 0, 200, 0, 0, 37, 0], [0, 0, 0, 0, 301, 101, 101, 32, 33, 0, 0, 0, 0, 218, 301, 0, 0, 0, 0], [0, 0, 0, 215, 196, 216, 298, 32, 33, 0, 34, 0, 0, 218, 200, 0, 0, 37, 0], [0, 0, 0, 215, 196, 298, 298, 32, 33, 0, 34, 0, 0, 0, 200, 0, 0, 37, 0], [0, 0, 0, 97, 0, 203, 203, 32, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 0, 0, 201, 316, 0, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 0, 116, 222, 222, 8, 9, 0, 10, 0, 0, 0, 120, 0, 0, 16, 0], [0, 0, 0, 0, 225, 44, 44, 8, 9, 0, 0, 0, 0, 0, 225, 0, 0, 0, 0], [0, 0, 0, 317, 318, 319, 320, 8, 9, 0, 10, 0, 0, 321, 322, 0, 0, 16, 0], [0, 223, 0, 323, 0, 123, 123, 8, 9, 0, 10, 0, 0, 0, 42, 0, 223, 0, 0], [0, 223, 0, 0, 0, 121, 324, 0, 9, 0, 10, 0, 0, 0, 42, 0, 223, 0, 0], [0, 0, 0, 325, 318, 326, 327, 8, 9, 0, 10, 0, 0, 328, 322, 0, 0, 16, 0], [0, 0, 0, 64, 0, 121, 121, 0, 9, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 230, 0, 0, 0, 0, 0], [0, 0, 0, 227, 0, 228, 121, 0, 9, 0, 10, 0, 0, 230, 0, 0, 0, 0, 0], [0, 0, 0, 227, 0, 121, 121, 0, 9, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 49, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 46, 0, 0], [0, 0, 0, 0, 0, 329, 329, 133, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 330, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 236, 237, 238, 239, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 0, 237, 237, 239, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 0, 331, 331, 239, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 332, 331, 331, 239, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 333, 40, 121, 334, 0, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 335, 241, 336, 336, 57, 58, 0, 59, 0, 0, 0, 245, 0, 0, 62, 0], [0, 337, 0, 0, 0, 137, 338, 0, 58, 0, 59, 0, 0, 0, 139, 0, 337, 0, 0], [0, 0, 0, 0, 339, 141, 141, 57, 58, 0, 0, 0, 0, 244, 339, 0, 0, 0, 0], [0, 0, 0, 240, 241, 242, 336, 57, 58, 0, 59, 0, 0, 244, 245, 0, 0, 62, 0], [0, 0, 0, 240, 241, 336, 336, 57, 58, 0, 59, 0, 0, 0, 245, 0, 0, 62, 0], [0, 340, 151, 0, 0, 137, 338, 0, 58, 0, 59, 0, 0, 0, 139, 0, 340, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 136, 0, 0, 0, 246, 246, 0, 58, 0, 59, 0, 0, 0, 139, 0, 136, 0, 0], [0, 0, 0, 0, 0, 141, 141, 57, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 341, 0, 342, 343, 0, 58, 0, 59, 0, 0, 344, 0, 0, 0, 0, 0], [0, 136, 0, 247, 0, 246, 246, 0, 58, 0, 59, 0, 0, 0, 139, 0, 136, 0, 0], [0, 0, 0, 0, 0, 0, 0, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 345, 345, 146, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 346, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 255, 256, 257, 258, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 0, 0, 256, 256, 258, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 0, 0, 347, 347, 258, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 348, 347, 347, 258, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 349, 350, 351, 352, 353, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 335, 241, 336, 336, 57, 58, 0, 59, 0, 0, 0, 245, 0, 0, 62, 0], [0, 0, 0, 0, 339, 141, 141, 57, 58, 0, 0, 0, 0, 263, 339, 0, 0, 0, 0], [0, 0, 0, 260, 241, 261, 336, 57, 58, 0, 59, 0, 0, 263, 245, 0, 0, 62, 0], [0, 0, 0, 260, 241, 336, 336, 57, 58, 0, 59, 0, 0, 0, 245, 0, 0, 62, 0], [0, 0, 0, 137, 0, 248, 248, 57, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 0, 0, 246, 354, 0, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 0, 0, 126, 126, 8, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 355, 90, 0, 0, 121, 125, 0, 9, 0, 10, 0, 0, 0, 42, 0, 355, 0, 0], [0, 0, 0, 0, 0, 356, 356, 269, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 357, 358, 359, 360, 361, 161, 0, 162, 0, 0, 0, 362, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 162, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 270, 0, 0, 0, 0, 162, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 363, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 364, 116, 365, 366, 8, 161, 0, 162, 0, 0, 367, 120, 0, 0, 16, 0], [0, 0, 0, 0, 0, 368, 368, 0, 161, 0, 162, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 40, 0, 121, 121, 0, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 170, 278, 278, 22, 23, 0, 24, 0, 0, 0, 174, 0, 0, 27, 0], [0, 0, 0, 0, 281, 80, 80, 22, 23, 0, 0, 0, 0, 0, 281, 0, 0, 0, 0], [0, 0, 0, 369, 370, 371, 372, 22, 23, 0, 24, 0, 0, 373, 374, 0, 0, 27, 0], [0, 279, 0, 375, 0, 177, 177, 22, 23, 0, 24, 0, 0, 0, 78, 0, 279, 0, 0], [0, 279, 0, 0, 0, 175, 376, 0, 23, 0, 24, 0, 0, 0, 78, 0, 279, 0, 0], [0, 0, 0, 377, 370, 378, 379, 22, 23, 0, 24, 0, 0, 380, 374, 0, 0, 27, 0], [0, 0, 0, 90, 0, 175, 175, 0, 23, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 0, 286, 0, 0, 0, 0, 0], [0, 0, 0, 283, 0, 284, 175, 0, 23, 0, 24, 0, 0, 286, 0, 0, 0, 0, 0], [0, 0, 0, 283, 0, 175, 175, 0, 23, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 85, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 82, 0, 0], [0, 0, 0, 0, 0, 381, 381, 187, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 382, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 292, 293, 294, 295, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 0, 0, 293, 293, 295, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 0, 0, 383, 383, 295, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 384, 383, 383, 295, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 385, 76, 175, 386, 0, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 76, 0, 175, 175, 0, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 0, 196, 298, 298, 32, 33, 0, 34, 0, 0, 0, 200, 0, 0, 37, 0], [0, 0, 0, 0, 301, 101, 101, 32, 33, 0, 0, 0, 0, 0, 301, 0, 0, 0, 0], [0, 0, 0, 387, 388, 389, 390, 32, 33, 0, 34, 0, 0, 391, 392, 0, 0, 37, 0], [0, 299, 0, 393, 0, 203, 203, 32, 33, 0, 34, 0, 0, 0, 99, 0, 299, 0, 0], [0, 299, 0, 0, 0, 201, 394, 0, 33, 0, 34, 0, 0, 0, 99, 0, 299, 0, 0], [0, 0, 0, 395, 388, 396, 397, 32, 33, 0, 34, 0, 0, 398, 392, 0, 0, 37, 0], [0, 0, 0, 111, 0, 201, 201, 0, 33, 0, 34, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 306, 0, 0, 0, 0, 0], [0, 0, 0, 303, 0, 304, 201, 0, 33, 0, 34, 0, 0, 306, 0, 0, 0, 0, 0], [0, 0, 0, 303, 0, 201, 201, 0, 33, 0, 34, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 106, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 103, 0, 0], [0, 0, 0, 0, 0, 399, 399, 213, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 312, 313, 314, 315, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 0, 0, 313, 313, 315, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 0, 0, 401, 401, 315, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 402, 401, 401, 315, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 403, 97, 201, 404, 0, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 97, 0, 201, 201, 0, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 405, 318, 406, 406, 8, 9, 0, 10, 0, 0, 0, 322, 0, 0, 16, 0], [0, 407, 0, 0, 0, 40, 408, 0, 9, 0, 10, 0, 0, 0, 42, 0, 407, 0, 0], [0, 0, 0, 0, 409, 44, 44, 8, 9, 0, 0, 0, 0, 321, 409, 0, 0, 0, 0], [0, 0, 0, 317, 318, 319, 406, 8, 9, 0, 10, 0, 0, 321, 322, 0, 0, 16, 0], [0, 0, 0, 317, 318, 406, 406, 8, 9, 0, 10, 0, 0, 0, 322, 0, 0, 16, 0], [0, 410, 64, 0, 0, 40, 408, 0, 9, 0, 10, 0, 0, 0, 42, 0, 410, 0, 0], [0, 223, 0, 0, 0, 121, 121, 0, 9, 0, 10, 0, 0, 0, 42, 0, 223, 0, 0], [0, 223, 0, 323, 0, 121, 121, 0, 9, 0, 10, 0, 0, 0, 42, 0, 223, 0, 0], [0, 0, 0, 405, 318, 406, 406, 8, 9, 0, 10, 0, 0, 0, 322, 0, 0, 16, 0], [0, 0, 0, 0, 409, 44, 44, 8, 9, 0, 0, 0, 0, 328, 409, 0, 0, 0, 0], [0, 0, 0, 325, 318, 326, 406, 8, 9, 0, 10, 0, 0, 328, 322, 0, 0, 16, 0], [0, 0, 0, 325, 318, 406, 406, 8, 9, 0, 10, 0, 0, 0, 322, 0, 0, 16, 0], [0, 0, 0, 0, 0, 0, 0, 133, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 130, 0, 0], [0, 0, 0, 0, 0, 411, 411, 239, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 412, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 40, 121, 334, 0, 9, 0, 10, 0, 0, 0, 42, 0, 0, 0, 0], [0, 0, 0, 0, 413, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 241, 336, 336, 57, 58, 0, 59, 0, 0, 0, 245, 0, 0, 62, 0], [0, 0, 0, 0, 339, 141, 141, 57, 58, 0, 0, 0, 0, 0, 339, 0, 0, 0, 0], [0, 0, 0, 414, 415, 416, 417, 57, 58, 0, 59, 0, 0, 418, 419, 0, 0, 62, 0], [0, 337, 0, 420, 0, 248, 248, 57, 58, 0, 59, 0, 0, 0, 139, 0, 337, 0, 0], [0, 337, 0, 0, 0, 246, 421, 0, 58, 0, 59, 0, 0, 0, 139, 0, 337, 0, 0], [0, 0, 0, 422, 415, 423, 424, 57, 58, 0, 59, 0, 0, 425, 419, 0, 0, 62, 0], [0, 0, 0, 151, 0, 246, 246, 0, 58, 0, 59, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 58, 0, 0, 0, 0, 344, 0, 0, 0, 0, 0], [0, 0, 0, 341, 0, 342, 246, 0, 58, 0, 59, 0, 0, 344, 0, 0, 0, 0, 0], [0, 0, 0, 341, 0, 246, 246, 0, 58, 0, 59, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 146, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 143, 0, 0], [0, 0, 0, 0, 0, 426, 426, 258, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 427, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 350, 351, 352, 353, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 0, 0, 351, 351, 353, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 0, 0, 428, 428, 353, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 429, 428, 428, 353, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 430, 137, 246, 431, 0, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 137, 0, 246, 246, 0, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 432, 116, 433, 434, 8, 161, 0, 162, 0, 0, 435, 120, 0, 0, 16, 0], [0, 0, 0, 0, 0, 180, 180, 269, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 358, 359, 360, 361, 161, 0, 162, 0, 0, 0, 362, 0, 0, 0, 0], [0, 0, 0, 0, 0, 359, 359, 361, 161, 0, 162, 0, 0, 0, 362, 0, 0, 0, 0], [0, 0, 0, 0, 0, 436, 436, 361, 161, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 437, 436, 436, 361, 161, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 438, 439, 440, 441, 442, 161, 0, 162, 0, 0, 0, 362, 0, 0, 0, 0], [0, 443, 274, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 443, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 444, 116, 445, 445, 8, 161, 0, 162, 0, 0, 0, 120, 0, 0, 16, 0], [0, 0, 0, 0, 225, 44, 44, 8, 161, 0, 0, 0, 0, 367, 225, 0, 0, 0, 0], [0, 0, 0, 364, 116, 365, 445, 8, 161, 0, 162, 0, 0, 367, 120, 0, 0, 16, 0], [0, 0, 0, 364, 116, 445, 445, 8, 161, 0, 162, 0, 0, 0, 120, 0, 0, 16, 0], [0, 0, 0, 0, 0, 0, 0, 0, 161, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 446, 370, 447, 447, 22, 23, 0, 24, 0, 0, 0, 374, 0, 0, 27, 0], [0, 448, 0, 0, 0, 76, 449, 0, 23, 0, 24, 0, 0, 0, 78, 0, 448, 0, 0], [0, 0, 0, 0, 450, 80, 80, 22, 23, 0, 0, 0, 0, 373, 450, 0, 0, 0, 0], [0, 0, 0, 369, 370, 371, 447, 22, 23, 0, 24, 0, 0, 373, 374, 0, 0, 27, 0], [0, 0, 0, 369, 370, 447, 447, 22, 23, 0, 24, 0, 0, 0, 374, 0, 0, 27, 0], [0, 451, 90, 0, 0, 76, 449, 0, 23, 0, 24, 0, 0, 0, 78, 0, 451, 0, 0], [0, 279, 0, 0, 0, 175, 175, 0, 23, 0, 24, 0, 0, 0, 78, 0, 279, 0, 0], [0, 279, 0, 375, 0, 175, 175, 0, 23, 0, 24, 0, 0, 0, 78, 0, 279, 0, 0], [0, 0, 0, 446, 370, 447, 447, 22, 23, 0, 24, 0, 0, 0, 374, 0, 0, 27, 0], [0, 0, 0, 0, 450, 80, 80, 22, 23, 0, 0, 0, 0, 380, 450, 0, 0, 0, 0], [0, 0, 0, 377, 370, 378, 447, 22, 23, 0, 24, 0, 0, 380, 374, 0, 0, 27, 0], [0, 0, 0, 377, 370, 447, 447, 22, 23, 0, 24, 0, 0, 0, 374, 0, 0, 27, 0], [0, 0, 0, 0, 0, 0, 0, 187, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 184, 0, 0], [0, 0, 0, 0, 0, 452, 452, 295, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 453, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 76, 175, 386, 0, 23, 0, 24, 0, 0, 0, 78, 0, 0, 0, 0], [0, 0, 0, 0, 454, 0, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 455, 388, 456, 456, 32, 33, 0, 34, 0, 0, 0, 392, 0, 0, 37, 0], [0, 457, 0, 0, 0, 97, 458, 0, 33, 0, 34, 0, 0, 0, 99, 0, 457, 0, 0], [0, 0, 0, 0, 459, 101, 101, 32, 33, 0, 0, 0, 0, 391, 459, 0, 0, 0, 0], [0, 0, 0, 387, 388, 389, 456, 32, 33, 0, 34, 0, 0, 391, 392, 0, 0, 37, 0], [0, 0, 0, 387, 388, 456, 456, 32, 33, 0, 34, 0, 0, 0, 392, 0, 0, 37, 0], [0, 460, 111, 0, 0, 97, 458, 0, 33, 0, 34, 0, 0, 0, 99, 0, 460, 0, 0], [0, 299, 0, 0, 0, 201, 201, 0, 33, 0, 34, 0, 0, 0, 99, 0, 299, 0, 0], [0, 299, 0, 393, 0, 201, 201, 0, 33, 0, 34, 0, 0, 0, 99, 0, 299, 0, 0], [0, 0, 0, 455, 388, 456, 456, 32, 33, 0, 34, 0, 0, 0, 392, 0, 0, 37, 0], [0, 0, 0, 0, 459, 101, 101, 32, 33, 0, 0, 0, 0, 398, 459, 0, 0, 0, 0], [0, 0, 0, 395, 388, 396, 456, 32, 33, 0, 34, 0, 0, 398, 392, 0, 0, 37, 0], [0, 0, 0, 395, 388, 456, 456, 32, 33, 0, 34, 0, 0, 0, 392, 0, 0, 37, 0], [0, 0, 0, 0, 0, 0, 0, 213, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 210, 0, 0], [0, 0, 0, 0, 0, 461, 461, 315, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 462, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 97, 201, 404, 0, 33, 0, 34, 0, 0, 0, 99, 0, 0, 0, 0], [0, 0, 0, 0, 463, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 318, 406, 406, 8, 9, 0, 10, 0, 0, 0, 322, 0, 0, 16, 0], [0, 0, 0, 0, 409, 44, 44, 8, 9, 0, 0, 0, 0, 0, 409, 0, 0, 0, 0], [0, 0, 0, 464, 465, 466, 467, 8, 9, 0, 10, 0, 0, 468, 469, 0, 0, 16, 0], [0, 407, 0, 470, 0, 123, 123, 8, 9, 0, 10, 0, 0, 0, 42, 0, 407, 0, 0], [0, 407, 0, 0, 0, 121, 471, 0, 9, 0, 10, 0, 0, 0, 42, 0, 407, 0, 0], [0, 0, 0, 472, 465, 473, 474, 8, 9, 0, 10, 0, 0, 475, 469, 0, 0, 16, 0], [0, 0, 0, 0, 0, 0, 0, 239, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 236, 0, 0], [0, 0, 0, 0, 0, 0, 476, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 477, 415, 478, 478, 57, 58, 0, 59, 0, 0, 0, 419, 0, 0, 62, 0], [0, 479, 0, 0, 0, 137, 480, 0, 58, 0, 59, 0, 0, 0, 139, 0, 479, 0, 0], [0, 0, 0, 0, 481, 141, 141, 57, 58, 0, 0, 0, 0, 418, 481, 0, 0, 0, 0], [0, 0, 0, 414, 415, 416, 478, 57, 58, 0, 59, 0, 0, 418, 419, 0, 0, 62, 0], [0, 0, 0, 414, 415, 478, 478, 57, 58, 0, 59, 0, 0, 0, 419, 0, 0, 62, 0], [0, 482, 151, 0, 0, 137, 480, 0, 58, 0, 59, 0, 0, 0, 139, 0, 482, 0, 0], [0, 337, 0, 0, 0, 246, 246, 0, 58, 0, 59, 0, 0, 0, 139, 0, 337, 0, 0], [0, 337, 0, 420, 0, 246, 246, 0, 58, 0, 59, 0, 0, 0, 139, 0, 337, 0, 0], [0, 0, 0, 477, 415, 478, 478, 57, 58, 0, 59, 0, 0, 0, 419, 0, 0, 62, 0], [0, 0, 0, 0, 481, 141, 141, 57, 58, 0, 0, 0, 0, 425, 481, 0, 0, 0, 0], [0, 0, 0, 422, 415, 423, 478, 57, 58, 0, 59, 0, 0, 425, 419, 0, 0, 62, 0], [0, 0, 0, 422, 415, 478, 478, 57, 58, 0, 59, 0, 0, 0, 419, 0, 0, 62, 0], [0, 0, 0, 0, 0, 0, 0, 258, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 0], [0, 0, 0, 0, 0, 483, 483, 353, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 484, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 137, 246, 431, 0, 58, 0, 59, 0, 0, 0, 139, 0, 0, 0, 0], [0, 0, 0, 0, 485, 0, 0, 0, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 444, 116, 445, 445, 8, 161, 0, 162, 0, 0, 0, 120, 0, 0, 16, 0], [0, 0, 0, 0, 225, 44, 44, 8, 161, 0, 0, 0, 0, 435, 225, 0, 0, 0, 0], [0, 0, 0, 432, 116, 433, 445, 8, 161, 0, 162, 0, 0, 435, 120, 0, 0, 16, 0], [0, 0, 0, 432, 116, 445, 445, 8, 161, 0, 162, 0, 0, 0, 120, 0, 0, 16, 0], [0, 0, 0, 0, 0, 486, 486, 361, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 487, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 439, 440, 441, 442, 161, 0, 162, 0, 0, 0, 362, 0, 0, 0, 0], [0, 0, 0, 0, 0, 440, 440, 442, 161, 0, 162, 0, 0, 0, 362, 0, 0, 0, 0], [0, 0, 0, 0, 0, 488, 488, 442, 161, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 489, 488, 488, 442, 161, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 490, 491, 492, 493, 494, 161, 0, 162, 0, 0, 0, 362, 0, 0, 0, 0], [0, 0, 0, 495, 0, 496, 497, 0, 161, 0, 162, 0, 0, 498, 0, 0, 0, 0, 0], [0, 0, 0, 0, 116, 445, 445, 8, 161, 0, 162, 0, 0, 0, 120, 0, 0, 16, 0], [0, 0, 0, 0, 225, 44, 44, 8, 161, 0, 0, 0, 0, 0, 225, 0, 0, 0, 0], [0, 0, 0, 0, 370, 447, 447, 22, 23, 0, 24, 0, 0, 0, 374, 0, 0, 27, 0], [0, 0, 0, 0, 450, 80, 80, 22, 23, 0, 0, 0, 0, 0, 450, 0, 0, 0, 0], [0, 0, 0, 499, 500, 501, 502, 22, 23, 0, 24, 0, 0, 503, 504, 0, 0, 27, 0], [0, 448, 0, 505, 0, 177, 177, 22, 23, 0, 24, 0, 0, 0, 78, 0, 448, 0, 0], [0, 448, 0, 0, 0, 175, 506, 0, 23, 0, 24, 0, 0, 0, 78, 0, 448, 0, 0], [0, 0, 0, 507, 500, 508, 509, 22, 23, 0, 24, 0, 0, 510, 504, 0, 0, 27, 0], [0, 0, 0, 0, 0, 0, 0, 295, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 292, 0, 0], [0, 0, 0, 0, 0, 0, 511, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 388, 456, 456, 32, 33, 0, 34, 0, 0, 0, 392, 0, 0, 37, 0], [0, 0, 0, 0, 459, 101, 101, 32, 33, 0, 0, 0, 0, 0, 459, 0, 0, 0, 0], [0, 0, 0, 512, 513, 514, 515, 32, 33, 0, 34, 0, 0, 516, 517, 0, 0, 37, 0], [0, 457, 0, 518, 0, 203, 203, 32, 33, 0, 34, 0, 0, 0, 99, 0, 457, 0, 0], [0, 457, 0, 0, 0, 201, 519, 0, 33, 0, 34, 0, 0, 0, 99, 0, 457, 0, 0], [0, 0, 0, 520, 513, 521, 522, 32, 33, 0, 34, 0, 0, 523, 517, 0, 0, 37, 0], [0, 0, 0, 0, 0, 0, 0, 315, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 312, 0, 0], [0, 0, 0, 0, 0, 0, 524, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 525, 465, 526, 526, 8, 9, 0, 10, 0, 0, 0, 469, 0, 0, 16, 0], [0, 527, 0, 0, 0, 40, 528, 0, 9, 0, 10, 0, 0, 0, 42, 0, 527, 0, 0], [0, 0, 0, 0, 529, 44, 44, 8, 9, 0, 0, 0, 0, 468, 529, 0, 0, 0, 0], [0, 0, 0, 464, 465, 466, 526, 8, 9, 0, 10, 0, 0, 468, 469, 0, 0, 16, 0], [0, 0, 0, 464, 465, 526, 526, 8, 9, 0, 10, 0, 0, 0, 469, 0, 0, 16, 0], [0, 530, 64, 0, 0, 40, 528, 0, 9, 0, 10, 0, 0, 0, 42, 0, 530, 0, 0], [0, 407, 0, 0, 0, 121, 121, 0, 9, 0, 10, 0, 0, 0, 42, 0, 407, 0, 0], [0, 407, 0, 470, 0, 121, 121, 0, 9, 0, 10, 0, 0, 0, 42, 0, 407, 0, 0], [0, 0, 0, 525, 465, 526, 526, 8, 9, 0, 10, 0, 0, 0, 469, 0, 0, 16, 0], [0, 0, 0, 0, 529, 44, 44, 8, 9, 0, 0, 0, 0, 475, 529, 0, 0, 0, 0], [0, 0, 0, 472, 465, 473, 526, 8, 9, 0, 10, 0, 0, 475, 469, 0, 0, 16, 0], [0, 0, 0, 472, 465, 526, 526, 8, 9, 0, 10, 0, 0, 0, 469, 0, 0, 16, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0], [0, 0, 0, 0, 415, 478, 478, 57, 58, 0, 59, 0, 0, 0, 419, 0, 0, 62, 0], [0, 0, 0, 0, 481, 141, 141, 57, 58, 0, 0, 0, 0, 0, 481, 0, 0, 0, 0], [0, 0, 0, 531, 532, 533, 534, 57, 58, 0, 59, 0, 0, 535, 536, 0, 0, 62, 0], [0, 479, 0, 537, 0, 248, 248, 57, 58, 0, 59, 0, 0, 0, 139, 0, 479, 0, 0], [0, 479, 0, 0, 0, 246, 538, 0, 58, 0, 59, 0, 0, 0, 139, 0, 479, 0, 0], [0, 0, 0, 539, 532, 540, 541, 57, 58, 0, 59, 0, 0, 542, 536, 0, 0, 62, 0], [0, 0, 0, 0, 0, 0, 0, 353, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 350, 0, 0], [0, 0, 0, 0, 0, 0, 543, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 361, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 358, 0, 0], [0, 0, 0, 0, 0, 544, 544, 442, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 545, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 491, 492, 493, 494, 161, 0, 162, 0, 0, 0, 362, 0, 0, 0, 0], [0, 0, 0, 0, 0, 492, 492, 494, 161, 0, 162, 0, 0, 0, 362, 0, 0, 0, 0], [0, 0, 0, 0, 0, 546, 546, 494, 161, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 547, 546, 546, 494, 161, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 548, 549, 368, 550, 0, 161, 0, 162, 0, 0, 0, 362, 0, 0, 0, 0], [0, 0, 0, 274, 0, 368, 368, 0, 161, 0, 162, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 161, 0, 0, 0, 0, 498, 0, 0, 0, 0, 0], [0, 0, 0, 495, 0, 496, 368, 0, 161, 0, 162, 0, 0, 498, 0, 0, 0, 0, 0], [0, 0, 0, 495, 0, 368, 368, 0, 161, 0, 162, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 551, 500, 552, 552, 22, 23, 0, 24, 0, 0, 0, 504, 0, 0, 27, 0], [0, 553, 0, 0, 0, 76, 554, 0, 23, 0, 24, 0, 0, 0, 78, 0, 553, 0, 0], [0, 0, 0, 0, 555, 80, 80, 22, 23, 0, 0, 0, 0, 503, 555, 0, 0, 0, 0], [0, 0, 0, 499, 500, 501, 552, 22, 23, 0, 24, 0, 0, 503, 504, 0, 0, 27, 0], [0, 0, 0, 499, 500, 552, 552, 22, 23, 0, 24, 0, 0, 0, 504, 0, 0, 27, 0], [0, 556, 90, 0, 0, 76, 554, 0, 23, 0, 24, 0, 0, 0, 78, 0, 556, 0, 0], [0, 448, 0, 0, 0, 175, 175, 0, 23, 0, 24, 0, 0, 0, 78, 0, 448, 0, 0], [0, 448, 0, 505, 0, 175, 175, 0, 23, 0, 24, 0, 0, 0, 78, 0, 448, 0, 0], [0, 0, 0, 551, 500, 552, 552, 22, 23, 0, 24, 0, 0, 0, 504, 0, 0, 27, 0], [0, 0, 0, 0, 555, 80, 80, 22, 23, 0, 0, 0, 0, 510, 555, 0, 0, 0, 0], [0, 0, 0, 507, 500, 508, 552, 22, 23, 0, 24, 0, 0, 510, 504, 0, 0, 27, 0], [0, 0, 0, 507, 500, 552, 552, 22, 23, 0, 24, 0, 0, 0, 504, 0, 0, 27, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 76, 0, 0], [0, 0, 0, 557, 513, 558, 558, 32, 33, 0, 34, 0, 0, 0, 517, 0, 0, 37, 0], [0, 559, 0, 0, 0, 97, 560, 0, 33, 0, 34, 0, 0, 0, 99, 0, 559, 0, 0], [0, 0, 0, 0, 561, 101, 101, 32, 33, 0, 0, 0, 0, 516, 561, 0, 0, 0, 0], [0, 0, 0, 512, 513, 514, 558, 32, 33, 0, 34, 0, 0, 516, 517, 0, 0, 37, 0], [0, 0, 0, 512, 513, 558, 558, 32, 33, 0, 34, 0, 0, 0, 517, 0, 0, 37, 0], [0, 562, 111, 0, 0, 97, 560, 0, 33, 0, 34, 0, 0, 0, 99, 0, 562, 0, 0], [0, 457, 0, 0, 0, 201, 201, 0, 33, 0, 34, 0, 0, 0, 99, 0, 457, 0, 0], [0, 457, 0, 518, 0, 201, 201, 0, 33, 0, 34, 0, 0, 0, 99, 0, 457, 0, 0], [0, 0, 0, 557, 513, 558, 558, 32, 33, 0, 34, 0, 0, 0, 517, 0, 0, 37, 0], [0, 0, 0, 0, 561, 101, 101, 32, 33, 0, 0, 0, 0, 523, 561, 0, 0, 0, 0], [0, 0, 0, 520, 513, 521, 558, 32, 33, 0, 34, 0, 0, 523, 517, 0, 0, 37, 0], [0, 0, 0, 520, 513, 558, 558, 32, 33, 0, 34, 0, 0, 0, 517, 0, 0, 37, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 97, 0, 0], [0, 0, 0, 0, 465, 526, 526, 8, 9, 0, 10, 0, 0, 0, 469, 0, 0, 16, 0], [0, 0, 0, 0, 529, 44, 44, 8, 9, 0, 0, 0, 0, 0, 529, 0, 0, 0, 0], [0, 0, 0, 563, 66, 564, 565, 8, 9, 0, 10, 0, 0, 566, 68, 0, 0, 16, 0], [0, 527, 0, 567, 0, 123, 123, 8, 9, 0, 10, 0, 0, 0, 42, 0, 527, 0, 0], [0, 527, 0, 0, 0, 121, 568, 0, 9, 0, 10, 0, 0, 0, 42, 0, 527, 0, 0], [0, 0, 0, 569, 66, 570, 571, 8, 9, 0, 10, 0, 0, 572, 68, 0, 0, 16, 0], [0, 0, 0, 573, 532, 574, 574, 57, 58, 0, 59, 0, 0, 0, 536, 0, 0, 62, 0], [0, 575, 0, 0, 0, 137, 576, 0, 58, 0, 59, 0, 0, 0, 139, 0, 575, 0, 0], [0, 0, 0, 0, 577, 141, 141, 57, 58, 0, 0, 0, 0, 535, 577, 0, 0, 0, 0], [0, 0, 0, 531, 532, 533, 574, 57, 58, 0, 59, 0, 0, 535, 536, 0, 0, 62, 0], [0, 0, 0, 531, 532, 574, 574, 57, 58, 0, 59, 0, 0, 0, 536, 0, 0, 62, 0], [0, 578, 151, 0, 0, 137, 576, 0, 58, 0, 59, 0, 0, 0, 139, 0, 578, 0, 0], [0, 479, 0, 0, 0, 246, 246, 0, 58, 0, 59, 0, 0, 0, 139, 0, 479, 0, 0], [0, 479, 0, 537, 0, 246, 246, 0, 58, 0, 59, 0, 0, 0, 139, 0, 479, 0, 0], [0, 0, 0, 573, 532, 574, 574, 57, 58, 0, 59, 0, 0, 0, 536, 0, 0, 62, 0], [0, 0, 0, 0, 577, 141, 141, 57, 58, 0, 0, 0, 0, 542, 577, 0, 0, 0, 0], [0, 0, 0, 539, 532, 540, 574, 57, 58, 0, 59, 0, 0, 542, 536, 0, 0, 62, 0], [0, 0, 0, 539, 532, 574, 574, 57, 58, 0, 59, 0, 0, 0, 536, 0, 0, 62, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 137, 0, 0], [0, 0, 0, 0, 0, 0, 0, 442, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 439, 0, 0], [0, 0, 0, 0, 0, 579, 579, 494, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 580, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 549, 368, 550, 0, 161, 0, 162, 0, 0, 0, 362, 0, 0, 0, 0], [0, 0, 0, 0, 0, 368, 368, 0, 161, 0, 162, 0, 0, 0, 362, 0, 0, 0, 0], [0, 0, 0, 0, 581, 0, 0, 0, 161, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 500, 552, 552, 22, 23, 0, 24, 0, 0, 0, 504, 0, 0, 27, 0], [0, 0, 0, 0, 555, 80, 80, 22, 23, 0, 0, 0, 0, 0, 555, 0, 0, 0, 0], [0, 0, 0, 582, 91, 583, 584, 22, 23, 0, 24, 0, 0, 585, 93, 0, 0, 27, 0], [0, 553, 0, 586, 0, 177, 177, 22, 23, 0, 24, 0, 0, 0, 78, 0, 553, 0, 0], [0, 553, 0, 0, 0, 175, 587, 0, 23, 0, 24, 0, 0, 0, 78, 0, 553, 0, 0], [0, 0, 0, 588, 91, 589, 590, 22, 23, 0, 24, 0, 0, 591, 93, 0, 0, 27, 0], [0, 0, 0, 0, 513, 558, 558, 32, 33, 0, 34, 0, 0, 0, 517, 0, 0, 37, 0], [0, 0, 0, 0, 561, 101, 101, 32, 33, 0, 0, 0, 0, 0, 561, 0, 0, 0, 0], [0, 0, 0, 592, 112, 593, 594, 32, 33, 0, 34, 0, 0, 595, 114, 0, 0, 37, 0], [0, 559, 0, 596, 0, 203, 203, 32, 33, 0, 34, 0, 0, 0, 99, 0, 559, 0, 0], [0, 559, 0, 0, 0, 201, 597, 0, 33, 0, 34, 0, 0, 0, 99, 0, 559, 0, 0], [0, 0, 0, 598, 112, 599, 600, 32, 33, 0, 34, 0, 0, 601, 114, 0, 0, 37, 0], [0, 0, 0, 602, 66, 67, 67, 8, 9, 0, 10, 0, 0, 0, 68, 0, 0, 16, 0], [0, 0, 0, 0, 165, 44, 44, 8, 9, 0, 0, 0, 0, 566, 165, 0, 0, 0, 0], [0, 0, 0, 563, 66, 564, 67, 8, 9, 0, 10, 0, 0, 566, 68, 0, 0, 16, 0], [0, 0, 0, 563, 66, 67, 67, 8, 9, 0, 10, 0, 0, 0, 68, 0, 0, 16, 0], [0, 527, 0, 0, 0, 121, 121, 0, 9, 0, 10, 0, 0, 0, 42, 0, 527, 0, 0], [0, 527, 0, 567, 0, 121, 121, 0, 9, 0, 10, 0, 0, 0, 42, 0, 527, 0, 0], [0, 0, 0, 602, 66, 67, 67, 8, 9, 0, 10, 0, 0, 0, 68, 0, 0, 16, 0], [0, 0, 0, 0, 165, 44, 44, 8, 9, 0, 0, 0, 0, 572, 165, 0, 0, 0, 0], [0, 0, 0, 569, 66, 570, 67, 8, 9, 0, 10, 0, 0, 572, 68, 0, 0, 16, 0], [0, 0, 0, 569, 66, 67, 67, 8, 9, 0, 10, 0, 0, 0, 68, 0, 0, 16, 0], [0, 0, 0, 0, 532, 574, 574, 57, 58, 0, 59, 0, 0, 0, 536, 0, 0, 62, 0], [0, 0, 0, 0, 577, 141, 141, 57, 58, 0, 0, 0, 0, 0, 577, 0, 0, 0, 0], [0, 0, 0, 603, 152, 604, 605, 57, 58, 0, 59, 0, 0, 606, 154, 0, 0, 62, 0], [0, 575, 0, 607, 0, 248, 248, 57, 58, 0, 59, 0, 0, 0, 139, 0, 575, 0, 0], [0, 575, 0, 0, 0, 246, 608, 0, 58, 0, 59, 0, 0, 0, 139, 0, 575, 0, 0], [0, 0, 0, 609, 152, 610, 611, 57, 58, 0, 59, 0, 0, 612, 154, 0, 0, 62, 0], [0, 0, 0, 0, 0, 0, 0, 494, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 491, 0, 0], [0, 0, 0, 0, 0, 0, 613, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 614, 91, 92, 92, 22, 23, 0, 24, 0, 0, 0, 93, 0, 0, 27, 0], [0, 0, 0, 0, 194, 80, 80, 22, 23, 0, 0, 0, 0, 585, 194, 0, 0, 0, 0], [0, 0, 0, 582, 91, 583, 92, 22, 23, 0, 24, 0, 0, 585, 93, 0, 0, 27, 0], [0, 0, 0, 582, 91, 92, 92, 22, 23, 0, 24, 0, 0, 0, 93, 0, 0, 27, 0], [0, 553, 0, 0, 0, 175, 175, 0, 23, 0, 24, 0, 0, 0, 78, 0, 553, 0, 0], [0, 553, 0, 586, 0, 175, 175, 0, 23, 0, 24, 0, 0, 0, 78, 0, 553, 0, 0], [0, 0, 0, 614, 91, 92, 92, 22, 23, 0, 24, 0, 0, 0, 93, 0, 0, 27, 0], [0, 0, 0, 0, 194, 80, 80, 22, 23, 0, 0, 0, 0, 591, 194, 0, 0, 0, 0], [0, 0, 0, 588, 91, 589, 92, 22, 23, 0, 24, 0, 0, 591, 93, 0, 0, 27, 0], [0, 0, 0, 588, 91, 92, 92, 22, 23, 0, 24, 0, 0, 0, 93, 0, 0, 27, 0], [0, 0, 0, 615, 112, 113, 113, 32, 33, 0, 34, 0, 0, 0, 114, 0, 0, 37, 0], [0, 0, 0, 0, 220, 101, 101, 32, 33, 0, 0, 0, 0, 595, 220, 0, 0, 0, 0], [0, 0, 0, 592, 112, 593, 113, 32, 33, 0, 34, 0, 0, 595, 114, 0, 0, 37, 0], [0, 0, 0, 592, 112, 113, 113, 32, 33, 0, 34, 0, 0, 0, 114, 0, 0, 37, 0], [0, 559, 0, 0, 0, 201, 201, 0, 33, 0, 34, 0, 0, 0, 99, 0, 559, 0, 0], [0, 559, 0, 596, 0, 201, 201, 0, 33, 0, 34, 0, 0, 0, 99, 0, 559, 0, 0], [0, 0, 0, 615, 112, 113, 113, 32, 33, 0, 34, 0, 0, 0, 114, 0, 0, 37, 0], [0, 0, 0, 0, 220, 101, 101, 32, 33, 0, 0, 0, 0, 601, 220, 0, 0, 0, 0], [0, 0, 0, 598, 112, 599, 113, 32, 33, 0, 34, 0, 0, 601, 114, 0, 0, 37, 0], [0, 0, 0, 598, 112, 113, 113, 32, 33, 0, 34, 0, 0, 0, 114, 0, 0, 37, 0], [0, 0, 0, 0, 66, 67, 67, 8, 9, 0, 10, 0, 0, 0, 68, 0, 0, 16, 0], [0, 0, 0, 616, 152, 153, 153, 57, 58, 0, 59, 0, 0, 0, 154, 0, 0, 62, 0], [0, 0, 0, 0, 265, 141, 141, 57, 58, 0, 0, 0, 0, 606, 265, 0, 0, 0, 0], [0, 0, 0, 603, 152, 604, 153, 57, 58, 0, 59, 0, 0, 606, 154, 0, 0, 62, 0], [0, 0, 0, 603, 152, 153, 153, 57, 58, 0, 59, 0, 0, 0, 154, 0, 0, 62, 0], [0, 575, 0, 0, 0, 246, 246, 0, 58, 0, 59, 0, 0, 0, 139, 0, 575, 0, 0], [0, 575, 0, 607, 0, 246, 246, 0, 58, 0, 59, 0, 0, 0, 139, 0, 575, 0, 0], [0, 0, 0, 616, 152, 153, 153, 57, 58, 0, 59, 0, 0, 0, 154, 0, 0, 62, 0], [0, 0, 0, 0, 265, 141, 141, 57, 58, 0, 0, 0, 0, 612, 265, 0, 0, 0, 0], [0, 0, 0, 609, 152, 610, 153, 57, 58, 0, 59, 0, 0, 612, 154, 0, 0, 62, 0], [0, 0, 0, 609, 152, 153, 153, 57, 58, 0, 59, 0, 0, 0, 154, 0, 0, 62, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 549, 0, 0], [0, 0, 0, 0, 91, 92, 92, 22, 23, 0, 24, 0, 0, 0, 93, 0, 0, 27, 0], [0, 0, 0, 0, 112, 113, 113, 32, 33, 0, 34, 0, 0, 0, 114, 0, 0, 37, 0], [0, 0, 0, 0, 152, 153, 153, 57, 58, 0, 59, 0, 0, 0, 154, 0, 0, 62, 0]];
+	var accepting = [false, true, true, true, true, true, false, false, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, true, true, false, true, false, true, true, false, false, true, true, true, true, true, true, false, false, true, true, true, true, true, true, true, true, true, true, false, true, true, false, true, true, true, false, true, true, true, false, true, false, true, true, false, false, true, true, true, true, true, true, true, false, true, true, false, true, true, true, false, true, false, true, true, false, false, true, true, true, true, true, true, true, false, true, true, true, false, true, true, true, false, true, false, true, true, false, false, false, true, true, false, false, true, true, true, true, true, true, false, true, false, true, true, false, false, true, true, true, true, true, true, true, false, true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, false, true, false, true, true, false, false, false, true, true, false, false, true, true, true, false, true, true, true, true, true, true, false, true, true, true, false, true, false, true, true, false, false, false, true, true, false, false, true, true, true, false, true, true, true, true, true, false, true, true, true, true, true, false, true, true, false, false, false, false, true, true, false, false, true, true, true, false, true, true, true, false, true, false, true, true, false, false, false, true, true, false, false, true, true, true, false, true, true, true, true, false, true, false, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, false, true, true, false, false, false, false, true, true, false, false, true, true, true, false, true, true, true, true, true, false, true, true, false, false, false, false, true, true, false, false, true, true, true, true, false, true, true, true, true, true, true, false, true, true, false, false, false, false, true, false, true, false, true, true, true, true, true, false, true, true, false, false, false, false, true, true, false, false, true, true, true, false, true, true, false, false, true, false, true, true, false, true, true, false, true, true, false, true, true, true, true, true, true, false, true, true, false, false, false, false, true, false, true, true, false, true, true, true, true, true, true, false, true, true, false, false, false, false, true, false, true, false, true, true, true, true, false, false, false, true, true, false, true, true, true, true, true, true, false, true, true, false, false, false, false, true, false, true, false, true, true, false, false, true, true, false, false, true, true, true, false, true, false, true, true, true, true, false, false, false, true, false, true, true, true, true, false, false, false, true, true, false, true, true, true, true, true, true, false, true, true, false, true, false, true, true, true, true, false, false, false, false, false, false, false, true, true, false, false, true, true, false, true, true, true, true, false, true, true, true, true, true, true, false, true, true, false, true, true, false, true, true, true, true, true, true, false, true, true, false, true, false, true, true, true, true, true, true, false, true, true, true, true, true, true, false, true, true, false, false, false, false, false, true, true, false, true, false, true, true, true, true, true, false, true, true, true, true, true, false, true, true, true, true, true, false, true, true, true, false, true, true, true, true, false, false, false, true, false, true, true, true, true, true, false, true, true, true, false, true, true, true, true, true, false, true, true, true, true, false, true, true, true, true, true, false, true, true, false, true, true, true];
+	var tags = [[], ["broken_cluster"], ["consonant_syllable"], ["vowel_syllable"], ["broken_cluster"], ["broken_cluster"], [], [], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["standalone_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["consonant_syllable"], ["broken_cluster"], ["symbol_cluster"], ["consonant_syllable"], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["vowel_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], [], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], [], [], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], [], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["broken_cluster"], ["broken_cluster"], ["consonant_syllable", "broken_cluster"], ["broken_cluster"], [], ["broken_cluster"], ["symbol_cluster"], [], ["symbol_cluster"], ["symbol_cluster"], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], [], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], [], [], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], [], ["consonant_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], [], [], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["broken_cluster"], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], [], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], [], [], [], ["broken_cluster"], ["broken_cluster"], [], [], ["broken_cluster"], ["broken_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], [], [], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], ["standalone_cluster"], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["symbol_cluster"], ["symbol_cluster"], ["symbol_cluster"], ["consonant_syllable"], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], [], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], [], [], [], ["consonant_syllable"], ["consonant_syllable"], [], [], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["vowel_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], [], [], [], ["vowel_syllable"], ["vowel_syllable"], [], [], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], [], [], [], [], ["broken_cluster"], ["broken_cluster"], [], [], ["broken_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], [], [], [], ["standalone_cluster"], ["standalone_cluster"], [], [], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], ["broken_cluster"], [], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], ["broken_cluster"], ["symbol_cluster"], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], [], [], [], [], ["consonant_syllable"], ["consonant_syllable"], [], [], ["consonant_syllable"], ["consonant_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], [], [], [], [], ["vowel_syllable"], ["vowel_syllable"], [], [], ["vowel_syllable"], ["vowel_syllable"], ["broken_cluster"], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], [], [], [], [], ["broken_cluster"], [], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], [], [], [], [], ["standalone_cluster"], ["standalone_cluster"], [], [], ["standalone_cluster"], ["standalone_cluster"], ["consonant_syllable", "broken_cluster"], [], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], [], [], ["consonant_syllable", "broken_cluster"], [], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], [], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], [], ["consonant_syllable"], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], [], [], [], [], ["consonant_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], [], [], [], [], ["vowel_syllable"], [], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], [], [], [], ["standalone_cluster"], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], [], [], [], [], ["standalone_cluster"], [], ["consonant_syllable", "broken_cluster"], [], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], [], [], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], [], [], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], [], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], [], [], [], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], [], [], [], ["broken_cluster"], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], [], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], [], [], [], [], [], [], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], [], [], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], [], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], ["consonant_syllable"], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], [], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], [], [], [], [], [], ["consonant_syllable", "broken_cluster"], ["consonant_syllable", "broken_cluster"], [], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], [], [], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], ["consonant_syllable"], [], ["consonant_syllable"], ["consonant_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], ["vowel_syllable"], [], ["vowel_syllable"], ["vowel_syllable"], ["broken_cluster"], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], ["standalone_cluster"], [], ["standalone_cluster"], ["standalone_cluster"], [], ["consonant_syllable"], ["vowel_syllable"], ["standalone_cluster"]];
+	var indicMachine = {
 		stateTable: stateTable,
 		accepting: accepting,
 		tags: tags
 	};
 
+	var categories = ["O", "IND", "S", "GB", "B", "FM", "CGJ", "VMAbv", "VMPst", "VAbv", "VPst", "CMBlw", "VPre", "VBlw", "H", "VMBlw", "CMAbv", "MBlw", "CS", "R", "SUB", "MPst", "MPre", "FAbv", "FPst", "FBlw", "SMAbv", "SMBlw", "VMPre", "ZWNJ", "ZWJ", "WJ", "VS", "N", "HN", "MAbv"];
+	var decompositions$1 = { "2507": [2503, 2494], "2508": [2503, 2519], "2888": [2887, 2902], "2891": [2887, 2878], "2892": [2887, 2903], "3018": [3014, 3006], "3019": [3015, 3006], "3020": [3014, 3031], "3144": [3142, 3158], "3264": [3263, 3285], "3271": [3270, 3285], "3272": [3270, 3286], "3274": [3270, 3266], "3275": [3270, 3266, 3285], "3402": [3398, 3390], "3403": [3399, 3390], "3404": [3398, 3415], "3546": [3545, 3530], "3548": [3545, 3535], "3549": [3545, 3535, 3530], "3550": [3545, 3551], "3635": [3661, 3634], "3763": [3789, 3762], "3955": [3953, 3954], "3957": [3953, 3956], "3958": [4018, 3968], "3959": [4018, 3953, 3968], "3960": [4019, 3968], "3961": [4019, 3953, 3968], "3969": [3953, 3968], "6971": [6970, 6965], "6973": [6972, 6965], "6976": [6974, 6965], "6977": [6975, 6965], "6979": [6978, 6965], "69934": [69937, 69927], "69935": [69938, 69927], "70475": [70471, 70462], "70476": [70471, 70487], "70843": [70841, 70842], "70844": [70841, 70832], "70846": [70841, 70845], "71098": [71096, 71087], "71099": [71097, 71087] };
+	var stateTable$1 = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [2, 2, 3, 4, 4, 5, 0, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0, 17, 18, 11, 19, 20, 21, 22, 0, 0, 23, 0, 0, 2, 0, 24, 0, 25], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 28, 0, 0, 0, 0, 27, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 0, 0, 41, 35, 42, 43, 44, 45, 0, 0, 46, 0, 0, 0, 39, 0, 0, 47], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 20, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 0, 12, 0, 14, 0, 0, 0, 0, 0, 0, 0, 20, 21, 22, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 0, 9, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 20, 21, 22, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 16, 0, 0, 18, 11, 19, 20, 21, 22, 0, 0, 23, 0, 0, 0, 0, 0, 0, 25], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 11, 12, 0, 14, 0, 0, 0, 0, 0, 0, 0, 20, 21, 22, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 0, 9, 0, 0, 12, 0, 14, 0, 0, 0, 0, 0, 0, 0, 20, 21, 22, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 0, 7, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 20, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0, 0, 18, 11, 19, 20, 21, 22, 0, 0, 23, 0, 0, 0, 0, 0, 0, 25], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 11, 12, 0, 14, 0, 0, 0, 0, 0, 11, 0, 20, 21, 22, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 4, 4, 5, 0, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0, 0, 18, 11, 19, 20, 21, 22, 0, 0, 23, 0, 0, 0, 0, 0, 0, 25], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 48, 11, 12, 13, 14, 48, 16, 0, 0, 18, 11, 19, 20, 21, 22, 0, 0, 23, 0, 0, 0, 49, 0, 0, 25], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 11, 12, 0, 14, 0, 16, 0, 0, 0, 11, 0, 20, 21, 22, 0, 0, 23, 0, 0, 0, 0, 0, 0, 25], [0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 20, 21, 22, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50, 0, 51, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 0, 11, 12, 0, 14, 0, 16, 0, 0, 0, 11, 0, 20, 21, 22, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 28, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 30, 31, 0, 0, 0, 0, 0, 0, 38, 0, 0, 0, 0, 0, 0, 0, 43, 44, 45, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 0, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 43, 44, 45, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 30, 31, 32, 33, 0, 0, 36, 0, 38, 0, 0, 0, 0, 0, 0, 0, 43, 44, 45, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 30, 31, 0, 33, 0, 0, 0, 0, 38, 0, 0, 0, 0, 0, 0, 0, 43, 44, 45, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 30, 31, 32, 33, 34, 35, 36, 37, 38, 0, 40, 0, 0, 41, 35, 42, 43, 44, 45, 0, 0, 46, 0, 0, 0, 0, 0, 0, 47], [0, 0, 0, 0, 0, 29, 0, 30, 31, 32, 33, 0, 35, 36, 0, 38, 0, 0, 0, 0, 0, 0, 0, 43, 44, 45, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 30, 31, 0, 33, 0, 0, 36, 0, 38, 0, 0, 0, 0, 0, 0, 0, 43, 44, 45, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 41, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 0, 31, 0, 0, 0, 0, 0, 0, 38, 0, 0, 0, 0, 0, 0, 0, 43, 44, 45, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 0, 0, 41, 35, 42, 43, 44, 45, 0, 0, 46, 0, 0, 0, 0, 0, 0, 47], [0, 0, 0, 0, 0, 29, 0, 30, 31, 32, 33, 0, 35, 36, 0, 38, 0, 0, 0, 0, 0, 35, 0, 43, 44, 45, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 30, 31, 32, 33, 52, 35, 36, 37, 38, 52, 40, 0, 0, 41, 35, 42, 43, 44, 45, 0, 0, 46, 0, 0, 0, 53, 0, 0, 47], [0, 0, 0, 0, 0, 29, 0, 30, 31, 32, 33, 0, 35, 36, 0, 38, 0, 40, 0, 0, 0, 35, 0, 43, 44, 45, 0, 0, 46, 0, 0, 0, 0, 0, 0, 47], [0, 0, 0, 0, 0, 29, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 43, 44, 45, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 44, 45, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 30, 31, 0, 0, 0, 0, 0, 0, 38, 0, 0, 0, 0, 0, 0, 0, 43, 44, 45, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 29, 0, 30, 31, 32, 33, 0, 35, 36, 0, 38, 0, 40, 0, 0, 0, 35, 0, 43, 44, 45, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 48, 11, 12, 13, 14, 0, 16, 0, 0, 18, 11, 19, 20, 21, 22, 0, 0, 23, 0, 0, 0, 0, 0, 0, 25], [0, 0, 0, 0, 0, 5, 0, 6, 7, 8, 9, 48, 11, 12, 13, 14, 48, 16, 0, 0, 18, 11, 19, 20, 21, 22, 0, 0, 23, 0, 0, 0, 0, 0, 0, 25], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 51, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 0, 0], [0, 0, 0, 0, 0, 29, 0, 30, 31, 32, 33, 52, 35, 36, 37, 38, 0, 40, 0, 0, 41, 35, 42, 43, 44, 45, 0, 0, 46, 0, 0, 0, 0, 0, 0, 47], [0, 0, 0, 0, 0, 29, 0, 30, 31, 32, 33, 52, 35, 36, 37, 38, 52, 40, 0, 0, 41, 35, 42, 43, 44, 45, 0, 0, 46, 0, 0, 0, 0, 0, 0, 47], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50, 0, 51, 0]];
+	var accepting$1 = [false, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
+	var tags$1 = [[], ["broken_cluster"], ["independent_cluster"], ["symbol_cluster"], ["standard_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], [], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["broken_cluster"], ["numeral_cluster"], ["broken_cluster"], ["independent_cluster"], ["symbol_cluster"], ["symbol_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["virama_terminated_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["standard_cluster"], ["broken_cluster"], ["broken_cluster"], ["numeral_cluster"], ["number_joiner_terminated_cluster"], ["standard_cluster"], ["standard_cluster"], ["numeral_cluster"]];
+	var useData = {
+		categories: categories,
+		decompositions: decompositions$1,
+		stateTable: stateTable$1,
+		accepting: accepting$1,
+		tags: tags$1
+	};
+
+	// Cateories used in the OpenType spec:
+	// https://www.microsoft.com/typography/otfntdev/devanot/shaping.aspx
+	var CATEGORIES = {
+	  X: 1 << 0,
+	  C: 1 << 1,
+	  V: 1 << 2,
+	  N: 1 << 3,
+	  H: 1 << 4,
+	  ZWNJ: 1 << 5,
+	  ZWJ: 1 << 6,
+	  M: 1 << 7,
+	  SM: 1 << 8,
+	  VD: 1 << 9,
+	  A: 1 << 10,
+	  Placeholder: 1 << 11,
+	  Dotted_Circle: 1 << 12,
+	  RS: 1 << 13, // Register Shifter, used in Khmer OT spec.
+	  Coeng: 1 << 14, // Khmer-style Virama.
+	  Repha: 1 << 15, // Atomically-encoded logical or visual repha.
+	  Ra: 1 << 16,
+	  CM: 1 << 17, // Consonant-Medial.
+	  Symbol: 1 << 18 // Avagraha, etc that take marks (SM,A,VD).
+	};
+
+	// Visual positions in a syllable from left to right.
+	var POSITIONS = {
+	  Start: 1 << 0,
+
+	  Ra_To_Become_Reph: 1 << 1,
+	  Pre_M: 1 << 2,
+	  Pre_C: 1 << 3,
+
+	  Base_C: 1 << 4,
+	  After_Main: 1 << 5,
+
+	  Above_C: 1 << 6,
+
+	  Before_Sub: 1 << 7,
+	  Below_C: 1 << 8,
+	  After_Sub: 1 << 9,
+
+	  Before_Post: 1 << 10,
+	  Post_C: 1 << 11,
+	  After_Post: 1 << 12,
+
+	  Final_C: 1 << 13,
+	  SMVD: 1 << 14,
+
+	  End: 1 << 15
+	};
+
+	var CONSONANT_FLAGS = CATEGORIES.C | CATEGORIES.Ra | CATEGORIES.CM | CATEGORIES.V | CATEGORIES.Placeholder | CATEGORIES.Dotted_Circle;
+	var JOINER_FLAGS = CATEGORIES.ZWJ | CATEGORIES.ZWNJ;
+	var HALANT_OR_COENG_FLAGS = CATEGORIES.H | CATEGORIES.Coeng;
+
+	var INDIC_CONFIGS = {
+	  Default: {
+	    hasOldSpec: false,
+	    virama: 0,
+	    basePos: 'Last',
+	    rephPos: POSITIONS.Before_Post,
+	    rephMode: 'Implicit',
+	    blwfMode: 'Pre_And_Post'
+	  },
+
+	  Devanagari: {
+	    hasOldSpec: true,
+	    virama: 0x094D,
+	    basePos: 'Last',
+	    rephPos: POSITIONS.Before_Post,
+	    rephMode: 'Implicit',
+	    blwfMode: 'Pre_And_Post'
+	  },
+
+	  Bengali: {
+	    hasOldSpec: true,
+	    virama: 0x09CD,
+	    basePos: 'Last',
+	    rephPos: POSITIONS.After_Sub,
+	    rephMode: 'Implicit',
+	    blwfMode: 'Pre_And_Post'
+	  },
+
+	  Gurmukhi: {
+	    hasOldSpec: true,
+	    virama: 0x0A4D,
+	    basePos: 'Last',
+	    rephPos: POSITIONS.Before_Sub,
+	    rephMode: 'Implicit',
+	    blwfMode: 'Pre_And_Post'
+	  },
+
+	  Gujarati: {
+	    hasOldSpec: true,
+	    virama: 0x0ACD,
+	    basePos: 'Last',
+	    rephPos: POSITIONS.Before_Post,
+	    rephMode: 'Implicit',
+	    blwfMode: 'Pre_And_Post'
+	  },
+
+	  Oriya: {
+	    hasOldSpec: true,
+	    virama: 0x0B4D,
+	    basePos: 'Last',
+	    rephPos: POSITIONS.After_Main,
+	    rephMode: 'Implicit',
+	    blwfMode: 'Pre_And_Post'
+	  },
+
+	  Tamil: {
+	    hasOldSpec: true,
+	    virama: 0x0BCD,
+	    basePos: 'Last',
+	    rephPos: POSITIONS.After_Post,
+	    rephMode: 'Implicit',
+	    blwfMode: 'Pre_And_Post'
+	  },
+
+	  Telugu: {
+	    hasOldSpec: true,
+	    virama: 0x0C4D,
+	    basePos: 'Last',
+	    rephPos: POSITIONS.After_Post,
+	    rephMode: 'Explicit',
+	    blwfMode: 'Post_Only'
+	  },
+
+	  Kannada: {
+	    hasOldSpec: true,
+	    virama: 0x0CCD,
+	    basePos: 'Last',
+	    rephPos: POSITIONS.After_Post,
+	    rephMode: 'Implicit',
+	    blwfMode: 'Post_Only'
+	  },
+
+	  Malayalam: {
+	    hasOldSpec: true,
+	    virama: 0x0D4D,
+	    basePos: 'Last',
+	    rephPos: POSITIONS.After_Main,
+	    rephMode: 'Log_Repha',
+	    blwfMode: 'Pre_And_Post'
+	  },
+
+	  // Handled by UniversalShaper
+	  // Sinhala: {
+	  //   hasOldSpec: false,
+	  //   virama: 0x0DCA,
+	  //   basePos: 'Last_Sinhala',
+	  //   rephPos: POSITIONS.After_Main,
+	  //   rephMode: 'Explicit',
+	  //   blwfMode: 'Pre_And_Post'
+	  // },
+
+	  Khmer: {
+	    hasOldSpec: false,
+	    virama: 0x17D2,
+	    basePos: 'First',
+	    rephPos: POSITIONS.Ra_To_Become_Reph,
+	    rephMode: 'Vis_Repha',
+	    blwfMode: 'Pre_And_Post'
+	  }
+	};
+
+	// Additional decompositions that aren't in Unicode
+	var INDIC_DECOMPOSITIONS = {
+	  // Khmer
+	  0x17BE: [0x17C1, 0x17BE],
+	  0x17BF: [0x17C1, 0x17BF],
+	  0x17C0: [0x17C1, 0x17C0],
+	  0x17C4: [0x17C1, 0x17C4],
+	  0x17C5: [0x17C1, 0x17C5]
+	};
+
 	var _class$6;
 	var _temp$2;
-	var categories = useData.categories;
 	var decompositions = useData.decompositions;
-	var trie$1 = new UnicodeTrie(Buffer("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","base64"));
-	var stateMachine = new StateMachine(useData);
+
+	var trie$1 = new UnicodeTrie(Buffer("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","base64"));
+	var stateMachine = new StateMachine(indicMachine);
+
+	/**
+	 * The IndicShaper supports indic scripts e.g. Devanagari, Kannada, etc.
+	 * Based on code from Harfbuzz: https://github.com/behdad/harfbuzz/blob/master/src/hb-ot-shape-complex-indic.cc
+	 */
+	var IndicShaper = (_temp$2 = _class$6 = function (_DefaultShaper) {
+	  _inherits(IndicShaper, _DefaultShaper);
+
+	  function IndicShaper() {
+	    _classCallCheck(this, IndicShaper);
+
+	    return _possibleConstructorReturn(this, _DefaultShaper.apply(this, arguments));
+	  }
+
+	  IndicShaper.planFeatures = function planFeatures(plan) {
+	    plan.addStage(setupSyllables);
+
+	    plan.addStage(['locl', 'ccmp']);
+
+	    plan.addStage(initialReordering);
+
+	    plan.addStage('nukt');
+	    plan.addStage('akhn');
+	    plan.addStage('rphf', false);
+	    plan.addStage('rkrf');
+	    plan.addStage('pref', false);
+	    plan.addStage('blwf', false);
+	    plan.addStage('abvf', false);
+	    plan.addStage('half', false);
+	    plan.addStage('pstf', false);
+	    plan.addStage('vatu');
+	    plan.addStage('cjct');
+	    plan.addStage('cfar', false);
+
+	    plan.addStage(finalReordering);
+
+	    plan.addStage({
+	      local: ['init'],
+	      global: ['pres', 'abvs', 'blws', 'psts', 'haln', 'dist', 'abvm', 'blwm', 'calt', 'clig']
+	    });
+
+	    // Setup the indic config for the selected script
+	    plan.unicodeScript = fromOpenType(plan.script);
+	    plan.indicConfig = INDIC_CONFIGS[plan.unicodeScript] || INDIC_CONFIGS.Default;
+	    plan.isOldSpec = plan.indicConfig.hasOldSpec && plan.script[plan.script.length - 1] !== '2';
+
+	    // TODO: turn off kern (Khmer) and liga features.
+	  };
+
+	  IndicShaper.assignFeatures = function assignFeatures(plan, glyphs) {
+	    var _loop = function _loop(i) {
+	      var codepoint = glyphs[i].codePoints[0];
+	      var d = INDIC_DECOMPOSITIONS[codepoint] || decompositions[codepoint];
+	      if (d) {
+	        var decomposed = d.map(function (c) {
+	          var g = plan.font.glyphForCodePoint(c);
+	          return new GlyphInfo(plan.font, g.id, [c], glyphs[i].features);
+	        });
+
+	        glyphs.splice.apply(glyphs, [i, 1].concat(decomposed));
+	      }
+	    };
+
+	    // Decompose split matras
+	    // TODO: do this in a more general unicode normalizer
+	    for (var i = glyphs.length - 1; i >= 0; i--) {
+	      _loop(i);
+	    }
+	  };
+
+	  return IndicShaper;
+	}(DefaultShaper), _class$6.zeroMarkWidths = 'NONE', _temp$2);
+	function indicCategory(glyph) {
+	  return trie$1.get(glyph.codePoints[0]) >> 8;
+	}
+
+	function indicPosition(glyph) {
+	  return 1 << (trie$1.get(glyph.codePoints[0]) & 0xff);
+	}
+
+	var IndicInfo = function IndicInfo(category, position, syllableType, syllable) {
+	  _classCallCheck(this, IndicInfo);
+
+	  this.category = category;
+	  this.position = position;
+	  this.syllableType = syllableType;
+	  this.syllable = syllable;
+	};
+
+	function setupSyllables(font, glyphs) {
+	  var syllable = 0;
+	  var last = 0;
+	  for (var _iterator = stateMachine.match(glyphs.map(indicCategory)), _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	    var _ref;
+
+	    if (_isArray) {
+	      if (_i >= _iterator.length) break;
+	      _ref = _iterator[_i++];
+	    } else {
+	      _i = _iterator.next();
+	      if (_i.done) break;
+	      _ref = _i.value;
+	    }
+
+	    var _ref2 = _ref,
+	        start = _ref2[0],
+	        end = _ref2[1],
+	        tags = _ref2[2];
+
+	    if (start > last) {
+	      ++syllable;
+	      for (var _i2 = last; _i2 < start; _i2++) {
+	        glyphs[_i2].shaperInfo = new IndicInfo(CATEGORIES.X, POSITIONS.End, 'non_indic_cluster', syllable);
+	      }
+	    }
+
+	    ++syllable;
+
+	    // Create shaper info
+	    for (var _i3 = start; _i3 <= end; _i3++) {
+	      glyphs[_i3].shaperInfo = new IndicInfo(1 << indicCategory(glyphs[_i3]), indicPosition(glyphs[_i3]), tags[0], syllable);
+	    }
+
+	    last = end + 1;
+	  }
+
+	  if (last < glyphs.length) {
+	    ++syllable;
+	    for (var i = last; i < glyphs.length; i++) {
+	      glyphs[i].shaperInfo = new IndicInfo(CATEGORIES.X, POSITIONS.End, 'non_indic_cluster', syllable);
+	    }
+	  }
+	}
+
+	function isConsonant(glyph) {
+	  return glyph.shaperInfo.category & CONSONANT_FLAGS;
+	}
+
+	function isJoiner(glyph) {
+	  return glyph.shaperInfo.category & JOINER_FLAGS;
+	}
+
+	function isHalantOrCoeng(glyph) {
+	  return glyph.shaperInfo.category & HALANT_OR_COENG_FLAGS;
+	}
+
+	function wouldSubstitute(glyphs, feature) {
+	  for (var _iterator2 = glyphs, _isArray2 = Array.isArray(_iterator2), _i4 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	    var _glyph$features;
+
+	    var _ref3;
+
+	    if (_isArray2) {
+	      if (_i4 >= _iterator2.length) break;
+	      _ref3 = _iterator2[_i4++];
+	    } else {
+	      _i4 = _iterator2.next();
+	      if (_i4.done) break;
+	      _ref3 = _i4.value;
+	    }
+
+	    var glyph = _ref3;
+
+	    glyph.features = (_glyph$features = {}, _glyph$features[feature] = true, _glyph$features);
+	  }
+
+	  var GSUB = glyphs[0]._font._layoutEngine.engine.GSUBProcessor;
+	  GSUB.applyFeatures([feature], glyphs);
+
+	  return glyphs.length === 1;
+	}
+
+	function consonantPosition(font, consonant, virama) {
+	  var glyphs = [virama, consonant, virama];
+	  if (wouldSubstitute(glyphs.slice(0, 2), 'blwf') || wouldSubstitute(glyphs.slice(1, 3), 'blwf')) {
+	    return POSITIONS.Below_C;
+	  } else if (wouldSubstitute(glyphs.slice(0, 2), 'pstf') || wouldSubstitute(glyphs.slice(1, 3), 'pstf')) {
+	    return POSITIONS.Post_C;
+	  } else if (wouldSubstitute(glyphs.slice(0, 2), 'pref') || wouldSubstitute(glyphs.slice(1, 3), 'pref')) {
+	    return POSITIONS.Post_C;
+	  }
+
+	  return POSITIONS.Base_C;
+	}
+
+	function initialReordering(font, glyphs, plan) {
+	  var indicConfig = plan.indicConfig;
+	  var features = font._layoutEngine.engine.GSUBProcessor.features;
+
+	  var dottedCircle = font.glyphForCodePoint(0x25cc).id;
+	  var virama = font.glyphForCodePoint(indicConfig.virama).id;
+	  if (virama) {
+	    var info = new GlyphInfo(font, virama, [indicConfig.virama]);
+	    for (var i = 0; i < glyphs.length; i++) {
+	      if (glyphs[i].shaperInfo.position === POSITIONS.Base_C) {
+	        glyphs[i].shaperInfo.position = consonantPosition(font, glyphs[i].copy(), info);
+	      }
+	    }
+	  }
+
+	  for (var start = 0, end = nextSyllable(glyphs, 0); start < glyphs.length; start = end, end = nextSyllable(glyphs, start)) {
+	    var _glyphs$start$shaperI = glyphs[start].shaperInfo,
+	        category = _glyphs$start$shaperI.category,
+	        syllableType = _glyphs$start$shaperI.syllableType;
+
+
+	    if (syllableType === 'symbol_cluster' || syllableType === 'non_indic_cluster') {
+	      continue;
+	    }
+
+	    if (syllableType === 'broken_cluster' && dottedCircle) {
+	      var g = new GlyphInfo(font, dottedCircle, [0x25cc]);
+	      g.shaperInfo = new IndicInfo(1 << indicCategory(g), indicPosition(g), glyphs[start].shaperInfo.syllableType, glyphs[start].shaperInfo.syllable);
+
+	      // Insert after possible Repha.
+	      var _i5 = start;
+	      while (_i5 < end && glyphs[_i5].shaperInfo.category === CATEGORIES.Repha) {
+	        _i5++;
+	      }
+
+	      glyphs.splice(_i5++, 0, g);
+	      end++;
+	    }
+
+	    // 1. Find base consonant:
+	    //
+	    // The shaping engine finds the base consonant of the syllable, using the
+	    // following algorithm: starting from the end of the syllable, move backwards
+	    // until a consonant is found that does not have a below-base or post-base
+	    // form (post-base forms have to follow below-base forms), or that is not a
+	    // pre-base reordering Ra, or arrive at the first consonant. The consonant
+	    // stopped at will be the base.
+
+	    var base = end;
+	    var limit = start;
+	    var hasReph = false;
+
+	    // If the syllable starts with Ra + Halant (in a script that has Reph)
+	    // and has more than one consonant, Ra is excluded from candidates for
+	    // base consonants.
+	    if (indicConfig.rephPos !== POSITIONS.Ra_To_Become_Reph && features.rphf && start + 3 <= end && (indicConfig.rephMode === 'Implicit' && !isJoiner(glyphs[start + 2]) || indicConfig.rephMode === 'Explicit' && glyphs[start + 2].shaperInfo.category === CATEGORIES.ZWJ)) {
+	      // See if it matches the 'rphf' feature.
+	      var _g = [glyphs[start].copy(), glyphs[start + 1].copy(), glyphs[start + 2].copy()];
+	      if (wouldSubstitute(_g.slice(0, 2), 'rphf') || indicConfig.rephMode === 'Explicit' && wouldSubstitute(_g, 'rphf')) {
+	        limit += 2;
+	        while (limit < end && isJoiner(glyphs[limit])) {
+	          limit++;
+	        }
+	        base = start;
+	        hasReph = true;
+	      }
+	    } else if (indicConfig.rephMode === 'Log_Repha' && glyphs[start].shaperInfo.category === CATEGORIES.Repha) {
+	      limit++;
+	      while (limit < end && isJoiner(glyphs[limit])) {
+	        limit++;
+	      }
+	      base = start;
+	      hasReph = true;
+	    }
+
+	    switch (indicConfig.basePos) {
+	      case 'Last':
+	        {
+	          // starting from the end of the syllable, move backwards
+	          var _i6 = end;
+	          var seenBelow = false;
+
+	          do {
+	            var _info = glyphs[--_i6].shaperInfo;
+
+	            // until a consonant is found
+	            if (isConsonant(glyphs[_i6])) {
+	              // that does not have a below-base or post-base form
+	              // (post-base forms have to follow below-base forms),
+	              if (_info.position !== POSITIONS.Below_C && (_info.position !== POSITIONS.Post_C || seenBelow)) {
+	                base = _i6;
+	                break;
+	              }
+
+	              // or that is not a pre-base reordering Ra,
+	              //
+	              // IMPLEMENTATION NOTES:
+	              //
+	              // Our pre-base reordering Ra's are marked POS_POST_C, so will be skipped
+	              // by the logic above already.
+	              //
+
+	              // or arrive at the first consonant. The consonant stopped at will
+	              // be the base.
+	              if (_info.position === POSITIONS.Below_C) {
+	                seenBelow = true;
+	              }
+
+	              base = _i6;
+	            } else if (start < _i6 && _info.category === CATEGORIES.ZWJ && glyphs[_i6 - 1].shaperInfo.category === CATEGORIES.H) {
+	              // A ZWJ after a Halant stops the base search, and requests an explicit
+	              // half form.
+	              // A ZWJ before a Halant, requests a subjoined form instead, and hence
+	              // search continues.  This is particularly important for Bengali
+	              // sequence Ra,H,Ya that should form Ya-Phalaa by subjoining Ya.
+	              break;
+	            }
+	          } while (_i6 > limit);
+	          break;
+	        }
+
+	      case 'First':
+	        {
+	          // The first consonant is always the base.
+	          base = start;
+
+	          // Mark all subsequent consonants as below.
+	          for (var _i7 = base + 1; _i7 < end; _i7++) {
+	            if (isConsonant(glyphs[_i7])) {
+	              glyphs[_i7].shaperInfo.position = POSITIONS.Below_C;
+	            }
+	          }
+	        }
+	    }
+
+	    // If the syllable starts with Ra + Halant (in a script that has Reph)
+	    // and has more than one consonant, Ra is excluded from candidates for
+	    // base consonants.
+	    //
+	    //  Only do this for unforced Reph. (ie. not for Ra,H,ZWJ)
+	    if (hasReph && base === start && limit - base <= 2) {
+	      hasReph = false;
+	    }
+
+	    // 2. Decompose and reorder Matras:
+	    //
+	    // Each matra and any syllable modifier sign in the cluster are moved to the
+	    // appropriate position relative to the consonant(s) in the cluster. The
+	    // shaping engine decomposes two- or three-part matras into their constituent
+	    // parts before any repositioning. Matra characters are classified by which
+	    // consonant in a conjunct they have affinity for and are reordered to the
+	    // following positions:
+	    //
+	    //   o Before first half form in the syllable
+	    //   o After subjoined consonants
+	    //   o After post-form consonant
+	    //   o After main consonant (for above marks)
+	    //
+	    // IMPLEMENTATION NOTES:
+	    //
+	    // The normalize() routine has already decomposed matras for us, so we don't
+	    // need to worry about that.
+
+	    // 3.  Reorder marks to canonical order:
+	    //
+	    // Adjacent nukta and halant or nukta and vedic sign are always repositioned
+	    // if necessary, so that the nukta is first.
+	    //
+	    // IMPLEMENTATION NOTES:
+	    //
+	    // We don't need to do this: the normalize() routine already did this for us.
+
+	    // Reorder characters
+
+	    for (var _i8 = start; _i8 < base; _i8++) {
+	      var _info2 = glyphs[_i8].shaperInfo;
+	      _info2.position = Math.min(POSITIONS.Pre_C, _info2.position);
+	    }
+
+	    if (base < end) {
+	      glyphs[base].shaperInfo.position = POSITIONS.Base_C;
+	    }
+
+	    // Mark final consonants.  A final consonant is one appearing after a matra,
+	    // like in Khmer.
+	    for (var _i9 = base + 1; _i9 < end; _i9++) {
+	      if (glyphs[_i9].shaperInfo.category === CATEGORIES.M) {
+	        for (var j = _i9 + 1; j < end; j++) {
+	          if (isConsonant(glyphs[j])) {
+	            glyphs[j].shaperInfo.position = POSITIONS.Final_C;
+	            break;
+	          }
+	        }
+	        break;
+	      }
+	    }
+
+	    // Handle beginning Ra
+	    if (hasReph) {
+	      glyphs[start].shaperInfo.position = POSITIONS.Ra_To_Become_Reph;
+	    }
+
+	    // For old-style Indic script tags, move the first post-base Halant after
+	    // last consonant.
+	    //
+	    // Reports suggest that in some scripts Uniscribe does this only if there
+	    // is *not* a Halant after last consonant already (eg. Kannada), while it
+	    // does it unconditionally in other scripts (eg. Malayalam).  We don't
+	    // currently know about other scripts, so we single out Malayalam for now.
+	    //
+	    // Kannada test case:
+	    // U+0C9A,U+0CCD,U+0C9A,U+0CCD
+	    // With some versions of Lohit Kannada.
+	    // https://bugs.freedesktop.org/show_bug.cgi?id=59118
+	    //
+	    // Malayalam test case:
+	    // U+0D38,U+0D4D,U+0D31,U+0D4D,U+0D31,U+0D4D
+	    // With lohit-ttf-20121122/Lohit-Malayalam.ttf
+	    if (plan.isOldSpec) {
+	      var disallowDoubleHalants = plan.unicodeScript !== 'Malayalam';
+	      for (var _i10 = base + 1; _i10 < end; _i10++) {
+	        if (glyphs[_i10].shaperInfo.category === CATEGORIES.H) {
+	          var _j = void 0;
+	          for (_j = end - 1; _j > _i10; _j--) {
+	            if (isConsonant(glyphs[_j]) || disallowDoubleHalants && glyphs[_j].shaperInfo.category === CATEGORIES.H) {
+	              break;
+	            }
+	          }
+
+	          if (glyphs[_j].shaperInfo.category !== CATEGORIES.H && _j > _i10) {
+	            // Move Halant to after last consonant.
+	            var t = glyphs[_i10];
+	            glyphs.splice.apply(glyphs, [_i10, 0].concat(glyphs.splice(_i10 + 1, _j - _i10)));
+	            glyphs[_j] = t;
+	          }
+
+	          break;
+	        }
+	      }
+	    }
+
+	    // Attach misc marks to previous char to move with them.
+	    var lastPos = POSITIONS.Start;
+	    for (var _i11 = start; _i11 < end; _i11++) {
+	      var _info3 = glyphs[_i11].shaperInfo;
+	      if (_info3.category & (JOINER_FLAGS | CATEGORIES.N | CATEGORIES.RS | CATEGORIES.CM | HALANT_OR_COENG_FLAGS & _info3.category)) {
+	        _info3.position = lastPos;
+	        if (_info3.category === CATEGORIES.H && _info3.position === POSITIONS.Pre_M) {
+	          // Uniscribe doesn't move the Halant with Left Matra.
+	          // TEST: U+092B,U+093F,U+094DE
+	          // We follow.  This is important for the Sinhala
+	          // U+0DDA split matra since it decomposes to U+0DD9,U+0DCA
+	          // where U+0DD9 is a left matra and U+0DCA is the virama.
+	          // We don't want to move the virama with the left matra.
+	          // TEST: U+0D9A,U+0DDA
+	          for (var _j2 = _i11; _j2 > start; _j2--) {
+	            if (glyphs[_j2 - 1].shaperInfo.position !== POSITIONS.Pre_M) {
+	              _info3.position = glyphs[_j2 - 1].shaperInfo.position;
+	              break;
+	            }
+	          }
+	        }
+	      } else if (_info3.position !== POSITIONS.SMVD) {
+	        lastPos = _info3.position;
+	      }
+	    }
+
+	    // For post-base consonants let them own anything before them
+	    // since the last consonant or matra.
+	    var last = base;
+	    for (var _i12 = base + 1; _i12 < end; _i12++) {
+	      if (isConsonant(glyphs[_i12])) {
+	        for (var _j3 = last + 1; _j3 < _i12; _j3++) {
+	          if (glyphs[_j3].shaperInfo.position < POSITIONS.SMVD) {
+	            glyphs[_j3].shaperInfo.position = glyphs[_i12].shaperInfo.position;
+	          }
+	        }
+	        last = _i12;
+	      } else if (glyphs[_i12].shaperInfo.category === CATEGORIES.M) {
+	        last = _i12;
+	      }
+	    }
+
+	    var arr = glyphs.slice(start, end);
+	    arr.sort(function (a, b) {
+	      return a.shaperInfo.position - b.shaperInfo.position;
+	    });
+	    glyphs.splice.apply(glyphs, [start, arr.length].concat(arr));
+
+	    // Find base again
+	    for (var _i13 = start; _i13 < end; _i13++) {
+	      if (glyphs[_i13].shaperInfo.position === POSITIONS.Base_C) {
+	        base = _i13;
+	        break;
+	      }
+	    }
+
+	    // Setup features now
+
+	    // Reph
+	    for (var _i14 = start; _i14 < end && glyphs[_i14].shaperInfo.position === POSITIONS.Ra_To_Become_Reph; _i14++) {
+	      glyphs[_i14].features.rphf = true;
+	    }
+
+	    // Pre-base
+	    var blwf = !plan.isOldSpec && indicConfig.blwfMode === 'Pre_And_Post';
+	    for (var _i15 = start; _i15 < base; _i15++) {
+	      glyphs[_i15].features.half = true;
+	      if (blwf) {
+	        glyphs[_i15].features.blwf = true;
+	      }
+	    }
+
+	    // Post-base
+	    for (var _i16 = base + 1; _i16 < end; _i16++) {
+	      glyphs[_i16].features.abvf = true;
+	      glyphs[_i16].features.pstf = true;
+	      glyphs[_i16].features.blwf = true;
+	    }
+
+	    if (plan.isOldSpec && plan.unicodeScript === 'Devanagari') {
+	      // Old-spec eye-lash Ra needs special handling.  From the
+	      // spec:
+	      //
+	      // "The feature 'below-base form' is applied to consonants
+	      // having below-base forms and following the base consonant.
+	      // The exception is vattu, which may appear below half forms
+	      // as well as below the base glyph. The feature 'below-base
+	      // form' will be applied to all such occurrences of Ra as well."
+	      //
+	      // Test case: U+0924,U+094D,U+0930,U+094d,U+0915
+	      // with Sanskrit 2003 font.
+	      //
+	      // However, note that Ra,Halant,ZWJ is the correct way to
+	      // request eyelash form of Ra, so we wouldbn't inhibit it
+	      // in that sequence.
+	      //
+	      // Test case: U+0924,U+094D,U+0930,U+094d,U+200D,U+0915
+	      for (var _i17 = start; _i17 + 1 < base; _i17++) {
+	        if (glyphs[_i17].shaperInfo.category === CATEGORIES.Ra && glyphs[_i17 + 1].shaperInfo.category === CATEGORIES.H && (_i17 + 1 === base || glyphs[_i17 + 2].shaperInfo.category === CATEGORIES.ZWJ)) {
+	          glyphs[_i17].features.blwf = true;
+	          glyphs[_i17 + 1].features.blwf = true;
+	        }
+	      }
+	    }
+
+	    var prefLen = 2;
+	    if (features.pref && base + prefLen < end) {
+	      // Find a Halant,Ra sequence and mark it for pre-base reordering processing.
+	      for (var _i18 = base + 1; _i18 + prefLen - 1 < end; _i18++) {
+	        var _g2 = [glyphs[_i18].copy(), glyphs[_i18 + 1].copy()];
+	        if (wouldSubstitute(_g2, 'pref')) {
+	          for (var _j4 = 0; _j4 < prefLen; _j4++) {
+	            glyphs[_i18++].features.pref = true;
+	          }
+
+	          // Mark the subsequent stuff with 'cfar'.  Used in Khmer.
+	          // Read the feature spec.
+	          // This allows distinguishing the following cases with MS Khmer fonts:
+	          // U+1784,U+17D2,U+179A,U+17D2,U+1782
+	          // U+1784,U+17D2,U+1782,U+17D2,U+179A
+	          if (features.cfar) {
+	            for (; _i18 < end; _i18++) {
+	              glyphs[_i18].features.cfar = true;
+	            }
+	          }
+
+	          break;
+	        }
+	      }
+	    }
+
+	    // Apply ZWJ/ZWNJ effects
+	    for (var _i19 = start + 1; _i19 < end; _i19++) {
+	      if (isJoiner(glyphs[_i19])) {
+	        var nonJoiner = glyphs[_i19].shaperInfo.category === CATEGORIES.ZWNJ;
+	        var _j5 = _i19;
+
+	        do {
+	          _j5--;
+
+	          // ZWJ/ZWNJ should disable CJCT.  They do that by simply
+	          // being there, since we don't skip them for the CJCT
+	          // feature (ie. F_MANUAL_ZWJ)
+
+	          // A ZWNJ disables HALF.
+	          if (nonJoiner) {
+	            delete glyphs[_j5].features.half;
+	          }
+	        } while (_j5 > start && !isConsonant(glyphs[_j5]));
+	      }
+	    }
+	  }
+	}
+
+	function finalReordering(font, glyphs, plan) {
+	  var indicConfig = plan.indicConfig;
+	  var features = font._layoutEngine.engine.GSUBProcessor.features;
+
+	  for (var start = 0, end = nextSyllable(glyphs, 0); start < glyphs.length; start = end, end = nextSyllable(glyphs, start)) {
+	    // 4. Final reordering:
+	    //
+	    // After the localized forms and basic shaping forms GSUB features have been
+	    // applied (see below), the shaping engine performs some final glyph
+	    // reordering before applying all the remaining font features to the entire
+	    // cluster.
+
+	    var tryPref = !!features.pref;
+
+	    // Find base again
+	    var base = start;
+	    for (; base < end; base++) {
+	      if (glyphs[base].shaperInfo.position >= POSITIONS.Base_C) {
+	        if (tryPref && base + 1 < end) {
+	          for (var i = base + 1; i < end; i++) {
+	            if (glyphs[i].features.pref) {
+	              if (!(glyphs[i].substituted && glyphs[i].isLigated && !glyphs[i].isMultiplied)) {
+	                // Ok, this was a 'pref' candidate but didn't form any.
+	                // Base is around here...
+	                base = i;
+	                while (base < end && isHalantOrCoeng(glyphs[base])) {
+	                  base++;
+	                }
+	                glyphs[base].shaperInfo.position = POSITIONS.BASE_C;
+	                tryPref = false;
+	              }
+	              break;
+	            }
+	          }
+	        }
+
+	        // For Malayalam, skip over unformed below- (but NOT post-) forms.
+	        if (plan.unicodeScript === 'Malayalam') {
+	          for (var _i20 = base + 1; _i20 < end; _i20++) {
+	            while (_i20 < end && isJoiner(glyphs[_i20])) {
+	              _i20++;
+	            }
+
+	            if (_i20 === end || !isHalantOrCoeng(glyphs[_i20])) {
+	              break;
+	            }
+
+	            _i20++; // Skip halant.
+	            while (_i20 < end && isJoiner(glyphs[_i20])) {
+	              _i20++;
+	            }
+
+	            if (_i20 < end && isConsonant(glyphs[_i20]) && glyphs[_i20].shaperInfo.position === POSITIONS.Below_C) {
+	              base = _i20;
+	              glyphs[base].shaperInfo.position = POSITIONS.Base_C;
+	            }
+	          }
+	        }
+
+	        if (start < base && glyphs[base].shaperInfo.position > POSITIONS.Base_C) {
+	          base--;
+	        }
+	        break;
+	      }
+	    }
+
+	    if (base === end && start < base && glyphs[base - 1].shaperInfo.category === CATEGORIES.ZWJ) {
+	      base--;
+	    }
+
+	    if (base < end) {
+	      while (start < base && glyphs[base].shaperInfo.category & (CATEGORIES.N | HALANT_OR_COENG_FLAGS)) {
+	        base--;
+	      }
+	    }
+
+	    // o Reorder matras:
+	    //
+	    // If a pre-base matra character had been reordered before applying basic
+	    // features, the glyph can be moved closer to the main consonant based on
+	    // whether half-forms had been formed. Actual position for the matra is
+	    // defined as “after last standalone halant glyph, after initial matra
+	    // position and before the main consonant”. If ZWJ or ZWNJ follow this
+	    // halant, position is moved after it.
+	    //
+
+	    if (start + 1 < end && start < base) {
+	      // Otherwise there can't be any pre-base matra characters.
+	      // If we lost track of base, alas, position before last thingy.
+	      var newPos = base === end ? base - 2 : base - 1;
+
+	      // Malayalam / Tamil do not have "half" forms or explicit virama forms.
+	      // The glyphs formed by 'half' are Chillus or ligated explicit viramas.
+	      // We want to position matra after them.
+	      if (plan.unicodeScript !== 'Malayalam' && plan.unicodeScript !== 'Tamil') {
+	        while (newPos > start && !(glyphs[newPos].shaperInfo.category & (CATEGORIES.M | HALANT_OR_COENG_FLAGS))) {
+	          newPos--;
+	        }
+
+	        // If we found no Halant we are done.
+	        // Otherwise only proceed if the Halant does
+	        // not belong to the Matra itself!
+	        if (isHalantOrCoeng(glyphs[newPos]) && glyphs[newPos].shaperInfo.position !== POSITIONS.Pre_M) {
+	          // If ZWJ or ZWNJ follow this halant, position is moved after it.
+	          if (newPos + 1 < end && isJoiner(glyphs[newPos + 1])) {
+	            newPos++;
+	          }
+	        } else {
+	          newPos = start; // No move.
+	        }
+	      }
+
+	      if (start < newPos && glyphs[newPos].shaperInfo.position !== POSITIONS.Pre_M) {
+	        // Now go see if there's actually any matras...
+	        for (var _i21 = newPos; _i21 > start; _i21--) {
+	          if (glyphs[_i21 - 1].shaperInfo.position === POSITIONS.Pre_M) {
+	            var oldPos = _i21 - 1;
+	            if (oldPos < base && base <= newPos) {
+	              // Shouldn't actually happen.
+	              base--;
+	            }
+
+	            var tmp = glyphs[oldPos];
+	            glyphs.splice.apply(glyphs, [oldPos, 0].concat(glyphs.splice(oldPos + 1, newPos - oldPos)));
+	            glyphs[newPos] = tmp;
+
+	            newPos--;
+	          }
+	        }
+	      }
+	    }
+
+	    // o Reorder reph:
+	    //
+	    // Reph’s original position is always at the beginning of the syllable,
+	    // (i.e. it is not reordered at the character reordering stage). However,
+	    // it will be reordered according to the basic-forms shaping results.
+	    // Possible positions for reph, depending on the script, are; after main,
+	    // before post-base consonant forms, and after post-base consonant forms.
+
+	    // Two cases:
+	    //
+	    // - If repha is encoded as a sequence of characters (Ra,H or Ra,H,ZWJ), then
+	    //   we should only move it if the sequence ligated to the repha form.
+	    //
+	    // - If repha is encoded separately and in the logical position, we should only
+	    //   move it if it did NOT ligate.  If it ligated, it's probably the font trying
+	    //   to make it work without the reordering.
+	    if (start + 1 < end && glyphs[start].shaperInfo.position === POSITIONS.Ra_To_Become_Reph && glyphs[start].shaperInfo.category === CATEGORIES.Repha !== (glyphs[start].isLigated && !glyphs[start].isMultiplied)) {
+	      var newRephPos = void 0;
+	      var rephPos = indicConfig.rephPos;
+	      var found = false;
+
+	      // 1. If reph should be positioned after post-base consonant forms,
+	      //    proceed to step 5.
+	      if (rephPos !== POSITIONS.After_Post) {
+	        //  2. If the reph repositioning class is not after post-base: target
+	        //     position is after the first explicit halant glyph between the
+	        //     first post-reph consonant and last main consonant. If ZWJ or ZWNJ
+	        //     are following this halant, position is moved after it. If such
+	        //     position is found, this is the target position. Otherwise,
+	        //     proceed to the next step.
+	        //
+	        //     Note: in old-implementation fonts, where classifications were
+	        //     fixed in shaping engine, there was no case where reph position
+	        //     will be found on this step.
+	        newRephPos = start + 1;
+	        while (newRephPos < base && !isHalantOrCoeng(glyphs[newRephPos])) {
+	          newRephPos++;
+	        }
+
+	        if (newRephPos < base && isHalantOrCoeng(glyphs[newRephPos])) {
+	          // ->If ZWJ or ZWNJ are following this halant, position is moved after it.
+	          if (newRephPos + 1 < base && isJoiner(glyphs[newRephPos + 1])) {
+	            newRephPos++;
+	          }
+
+	          found = true;
+	        }
+
+	        // 3. If reph should be repositioned after the main consonant: find the
+	        //    first consonant not ligated with main, or find the first
+	        //    consonant that is not a potential pre-base reordering Ra.
+	        if (!found && rephPos === POSITIONS.After_Main) {
+	          newRephPos = base;
+	          while (newRephPos + 1 < end && glyphs[newRephPos + 1].shaperInfo.position <= POSITIONS.After_Main) {
+	            newRephPos++;
+	          }
+
+	          found = newRephPos < end;
+	        }
+
+	        // 4. If reph should be positioned before post-base consonant, find
+	        //    first post-base classified consonant not ligated with main. If no
+	        //    consonant is found, the target position should be before the
+	        //    first matra, syllable modifier sign or vedic sign.
+	        //
+	        // This is our take on what step 4 is trying to say (and failing, BADLY).
+	        if (!found && rephPos === POSITIONS.After_Sub) {
+	          newRephPos = base;
+	          while (newRephPos + 1 < end && !(glyphs[newRephPos + 1].shaperInfo.position & (POSITIONS.Post_C | POSITIONS.After_Post | POSITIONS.SMVD))) {
+	            newRephPos++;
+	          }
+
+	          found = newRephPos < end;
+	        }
+	      }
+
+	      //  5. If no consonant is found in steps 3 or 4, move reph to a position
+	      //     immediately before the first post-base matra, syllable modifier
+	      //     sign or vedic sign that has a reordering class after the intended
+	      //     reph position. For example, if the reordering position for reph
+	      //     is post-main, it will skip above-base matras that also have a
+	      //     post-main position.
+	      if (!found) {
+	        // Copied from step 2.
+	        newRephPos = start + 1;
+	        while (newRephPos < base && !isHalantOrCoeng(glyphs[newRephPos])) {
+	          newRephPos++;
+	        }
+
+	        if (newRephPos < base && isHalantOrCoeng(glyphs[newRephPos])) {
+	          // ->If ZWJ or ZWNJ are following this halant, position is moved after it.
+	          if (newRephPos + 1 < base && isJoiner(glyphs[newRephPos + 1])) {
+	            newRephPos++;
+	          }
+
+	          found = true;
+	        }
+	      }
+
+	      // 6. Otherwise, reorder reph to the end of the syllable.
+	      if (!found) {
+	        newRephPos = end - 1;
+	        while (newRephPos > start && glyphs[newRephPos].shaperInfo.position === POSITIONS.SMVD) {
+	          newRephPos--;
+	        }
+
+	        // If the Reph is to be ending up after a Matra,Halant sequence,
+	        // position it before that Halant so it can interact with the Matra.
+	        // However, if it's a plain Consonant,Halant we shouldn't do that.
+	        // Uniscribe doesn't do this.
+	        // TEST: U+0930,U+094D,U+0915,U+094B,U+094D
+	        if (isHalantOrCoeng(glyphs[newRephPos])) {
+	          for (var _i22 = base + 1; _i22 < newRephPos; _i22++) {
+	            if (glyphs[_i22].shaperInfo.category === CATEGORIES.M) {
+	              newRephPos--;
+	            }
+	          }
+	        }
+	      }
+
+	      var reph = glyphs[start];
+	      glyphs.splice.apply(glyphs, [start, 0].concat(glyphs.splice(start + 1, newRephPos - start)));
+	      glyphs[newRephPos] = reph;
+
+	      if (start < base && base <= newRephPos) {
+	        base--;
+	      }
+	    }
+
+	    // o Reorder pre-base reordering consonants:
+	    //
+	    // If a pre-base reordering consonant is found, reorder it according to
+	    // the following rules:
+	    if (tryPref && base + 1 < end) {
+	      for (var _i23 = base + 1; _i23 < end; _i23++) {
+	        if (glyphs[_i23].features.pref) {
+	          // 1. Only reorder a glyph produced by substitution during application
+	          //    of the <pref> feature. (Note that a font may shape a Ra consonant with
+	          //    the feature generally but block it in certain contexts.)
+
+	          // Note: We just check that something got substituted.  We don't check that
+	          // the <pref> feature actually did it...
+	          //
+	          // Reorder pref only if it ligated.
+	          if (glyphs[_i23].isLigated && !glyphs[_i23].isMultiplied) {
+	            // 2. Try to find a target position the same way as for pre-base matra.
+	            //    If it is found, reorder pre-base consonant glyph.
+	            //
+	            // 3. If position is not found, reorder immediately before main
+	            //    consonant.
+	            var _newPos = base;
+
+	            // Malayalam / Tamil do not have "half" forms or explicit virama forms.
+	            // The glyphs formed by 'half' are Chillus or ligated explicit viramas.
+	            // We want to position matra after them.
+	            if (plan.unicodeScript !== 'Malayalam' && plan.unicodeScript !== 'Tamil') {
+	              while (_newPos > start && !(glyphs[_newPos - 1].shaperInfo.category & (CATEGORIES.M | HALANT_OR_COENG_FLAGS))) {
+	                _newPos--;
+	              }
+
+	              // In Khmer coeng model, a H,Ra can go *after* matras.  If it goes after a
+	              // split matra, it should be reordered to *before* the left part of such matra.
+	              if (_newPos > start && glyphs[_newPos - 1].shaperInfo.category === CATEGORIES.M) {
+	                var _oldPos2 = _i23;
+	                for (var j = base + 1; j < _oldPos2; j++) {
+	                  if (glyphs[j].shaperInfo.category === CATEGORIES.M) {
+	                    _newPos--;
+	                    break;
+	                  }
+	                }
+	              }
+	            }
+
+	            if (_newPos > start && isHalantOrCoeng(glyphs[_newPos - 1])) {
+	              // -> If ZWJ or ZWNJ follow this halant, position is moved after it.
+	              if (_newPos < end && isJoiner(glyphs[_newPos])) {
+	                _newPos++;
+	              }
+	            }
+
+	            var _oldPos = _i23;
+	            var _tmp = glyphs[_oldPos];
+	            glyphs.splice.apply(glyphs, [_newPos + 1, 0].concat(glyphs.splice(_newPos, _oldPos - _newPos)));
+	            glyphs[_newPos] = _tmp;
+
+	            if (_newPos <= base && base < _oldPos) {
+	              base++;
+	            }
+	          }
+
+	          break;
+	        }
+	      }
+	    }
+
+	    // Apply 'init' to the Left Matra if it's a word start.
+	    if (glyphs[start].shaperInfo.position === POSITIONS.Pre_M && (!start || !/Cf|Mn/.test(unicode.getCategory(glyphs[start - 1].codePoints[0])))) {
+	      glyphs[start].features.init = true;
+	    }
+	  }
+	}
+
+	function nextSyllable(glyphs, start) {
+	  if (start >= glyphs.length) return start;
+	  var syllable = glyphs[start].shaperInfo.syllable;
+	  while (++start < glyphs.length && glyphs[start].shaperInfo.syllable === syllable) {}
+	  return start;
+	}
+
+	var _class$7;
+	var _temp$3;
+	var categories$1 = useData.categories;
+	var decompositions$2 = useData.decompositions;
+	var trie$2 = new UnicodeTrie(Buffer("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","base64"));
+	var stateMachine$1 = new StateMachine(useData);
 
 	/**
 	 * This shaper is an implementation of the Universal Shaping Engine, which
 	 * uses Unicode data to shape a number of scripts without a dedicated shaping engine.
 	 * See https://www.microsoft.com/typography/OpenTypeDev/USE/intro.htm.
 	 */
-	var UniversalShaper = (_temp$2 = _class$6 = function (_DefaultShaper) {
+	var UniversalShaper = (_temp$3 = _class$7 = function (_DefaultShaper) {
 	  _inherits(UniversalShaper, _DefaultShaper);
 
 	  function UniversalShaper() {
@@ -45779,7 +47578,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 
 	  UniversalShaper.planFeatures = function planFeatures(plan) {
-	    plan.addStage(setupSyllables);
+	    plan.addStage(setupSyllables$1);
 
 	    // Default glyph pre-processing group
 	    plan.addStage(['locl', 'ccmp', 'nukt', 'akhn']);
@@ -45807,8 +47606,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  UniversalShaper.assignFeatures = function assignFeatures(plan, glyphs) {
 	    var _loop = function _loop(i) {
 	      var codepoint = glyphs[i].codePoints[0];
-	      if (decompositions[codepoint]) {
-	        var decomposed = decompositions[codepoint].map(function (c) {
+	      if (decompositions$2[codepoint]) {
+	        var decomposed = decompositions$2[codepoint].map(function (c) {
 	          var g = plan.font.glyphForCodePoint(c);
 	          return new GlyphInfo(plan.font, g.id, [c], glyphs[i].features);
 	        });
@@ -45825,9 +47624,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 
 	  return UniversalShaper;
-	}(DefaultShaper), _class$6.zeroMarkWidths = 'BEFORE_GPOS', _temp$2);
+	}(DefaultShaper), _class$7.zeroMarkWidths = 'BEFORE_GPOS', _temp$3);
 	function useCategory(glyph) {
-	  return trie$1.get(glyph.codePoints[0]);
+	  return trie$2.get(glyph.codePoints[0]);
 	}
 
 	var USEInfo = function USEInfo(category, syllableType, syllable) {
@@ -45838,9 +47637,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  this.syllable = syllable;
 	};
 
-	function setupSyllables(font, glyphs) {
+	function setupSyllables$1(font, glyphs) {
 	  var syllable = 0;
-	  for (var _iterator = stateMachine.match(glyphs.map(useCategory)), _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	  for (var _iterator = stateMachine$1.match(glyphs.map(useCategory)), _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
 	    var _ref;
 
 	    if (_isArray) {
@@ -45861,7 +47660,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    // Create shaper info
 	    for (var i = start; i <= end; i++) {
-	      glyphs[i].shaperInfo = new USEInfo(categories[useCategory(glyphs[i])], tags[0], syllable);
+	      glyphs[i].shaperInfo = new USEInfo(categories$1[useCategory(glyphs[i])], tags[0], syllable);
 	    }
 
 	    // Assign rphf feature
@@ -45938,7 +47737,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	function reorder(font, glyphs) {
 	  var dottedCircle = font.glyphForCodePoint(0x25cc).id;
 
-	  for (var start = 0, end = nextSyllable(glyphs, 0); start < glyphs.length; start = end, end = nextSyllable(glyphs, start)) {
+	  for (var start = 0, end = nextSyllable$1(glyphs, 0); start < glyphs.length; start = end, end = nextSyllable$1(glyphs, start)) {
 	    var i = void 0,
 	        j = void 0;
 	    var info = glyphs[start].shaperInfo;
@@ -45992,7 +47791,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
-	function nextSyllable(glyphs, start) {
+	function nextSyllable$1(glyphs, start) {
 	  if (start >= glyphs.length) return start;
 	  var syllable = glyphs[start].shaperInfo.syllable;
 	  while (++start < glyphs.length && glyphs[start].shaperInfo.syllable === syllable) {}
@@ -46018,6 +47817,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	  phlp: ArabicShaper, // Psalter Pahlavi
 
 	  hang: HangulShaper, // Hangul
+
+	  bng2: IndicShaper, // Bengali
+	  beng: IndicShaper, // Bengali
+	  dev2: IndicShaper, // Devanagari
+	  deva: IndicShaper, // Devanagari
+	  gjr2: IndicShaper, // Gujarati
+	  gujr: IndicShaper, // Gujarati
+	  guru: IndicShaper, // Gurmukhi
+	  gur2: IndicShaper, // Gurmukhi
+	  knda: IndicShaper, // Kannada
+	  knd2: IndicShaper, // Kannada
+	  mlm2: IndicShaper, // Malayalam
+	  mlym: IndicShaper, // Malayalam
+	  ory2: IndicShaper, // Oriya
+	  orya: IndicShaper, // Oriya
+	  taml: IndicShaper, // Tamil
+	  tml2: IndicShaper, // Tamil
+	  telu: IndicShaper, // Telugu
+	  tel2: IndicShaper, // Telugu
+	  khmr: IndicShaper, // Khmer
 
 	  bali: UniversalShaper, // Balinese
 	  batk: UniversalShaper, // Batak
@@ -46070,9 +47889,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	function choose(script) {
-	  var shaper = SHAPERS[script];
-	  if (shaper) {
-	    return shaper;
+	  if (!Array.isArray(script)) {
+	    script = [script];
+	  }
+
+	  for (var _iterator = script, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	    var _ref;
+
+	    if (_isArray) {
+	      if (_i >= _iterator.length) break;
+	      _ref = _iterator[_i++];
+	    } else {
+	      _i = _iterator.next();
+	      if (_i.done) break;
+	      _ref = _i.value;
+	    }
+
+	    var s = _ref;
+
+	    var shaper = SHAPERS[s];
+	    if (shaper) {
+	      return shaper;
+	    }
 	  }
 
 	  return DefaultShaper;
@@ -46118,31 +47956,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	          // Multiple Substitution
 	          var _index = this.coverageIndex(table.coverage);
 	          if (_index !== -1) {
-	            var _ret = function () {
-	              var _glyphs;
+	            var _glyphs;
 
-	              var sequence = table.sequences.get(_index);
-	              _this2.glyphIterator.cur.id = sequence[0];
-	              _this2.glyphIterator.cur.ligatureComponent = 0;
+	            var sequence = table.sequences.get(_index);
+	            this.glyphIterator.cur.id = sequence[0];
+	            this.glyphIterator.cur.ligatureComponent = 0;
 
-	              var features = _this2.glyphIterator.cur.features;
-	              var curGlyph = _this2.glyphIterator.cur;
-	              var replacement = sequence.slice(1).map(function (gid, i) {
-	                var glyph = new GlyphInfo(_this2.font, gid, undefined, features);
-	                glyph.shaperInfo = curGlyph.shaperInfo;
-	                glyph.isLigated = curGlyph.isLigated;
-	                glyph.ligatureComponent = i + 1;
-	                glyph.substituted = true;
-	                return glyph;
-	              });
+	            var features = this.glyphIterator.cur.features;
+	            var curGlyph = this.glyphIterator.cur;
+	            var replacement = sequence.slice(1).map(function (gid, i) {
+	              var glyph = new GlyphInfo(_this2.font, gid, undefined, features);
+	              glyph.shaperInfo = curGlyph.shaperInfo;
+	              glyph.isLigated = curGlyph.isLigated;
+	              glyph.ligatureComponent = i + 1;
+	              glyph.substituted = true;
+	              glyph.isMultiplied = true;
+	              return glyph;
+	            });
 
-	              (_glyphs = _this2.glyphs).splice.apply(_glyphs, [_this2.glyphIterator.index + 1, 0].concat(replacement));
-	              return {
-	                v: true
-	              };
-	            }();
-
-	            if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+	            (_glyphs = this.glyphs).splice.apply(_glyphs, [this.glyphIterator.index + 1, 0].concat(replacement));
+	            return true;
 	          }
 
 	          return false;
@@ -46690,6 +48523,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.plan = null;
 	    this.GSUBProcessor = null;
 	    this.GPOSProcessor = null;
+	    this.fallbackPosition = true;
 
 	    if (font.GSUB) {
 	      this.GSUBProcessor = new GSUBProcessor(font, font.GSUB);
@@ -46700,54 +48534,60 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  }
 
-	  OTLayoutEngine.prototype.setup = function setup(glyphs, features, script, language) {
+	  OTLayoutEngine.prototype.setup = function setup(glyphRun) {
 	    var _this = this;
 
 	    // Map glyphs to GlyphInfo objects so data can be passed between
 	    // GSUB and GPOS without mutating the real (shared) Glyph objects.
-	    this.glyphInfos = glyphs.map(function (glyph) {
+	    this.glyphInfos = glyphRun.glyphs.map(function (glyph) {
 	      return new GlyphInfo(_this.font, glyph.id, [].concat(glyph.codePoints));
 	    });
+
+	    // Select a script based on what is available in GSUB/GPOS.
+	    var script = this.GSUBProcessor ? this.GSUBProcessor.selectScript(glyphRun.script, glyphRun.language) : this.GPOSProcessor.selectScript(glyphRun.script, glyphRun.language);
 
 	    // Choose a shaper based on the script, and setup a shaping plan.
 	    // This determines which features to apply to which glyphs.
 	    this.shaper = choose(script);
-	    this.plan = new ShapingPlan(this.font, script, language);
-	    return this.shaper.plan(this.plan, this.glyphInfos, features);
+	    this.plan = new ShapingPlan(this.font, script);
+	    this.shaper.plan(this.plan, this.glyphInfos, glyphRun.features);
+
+	    // Assign chosen features to output glyph run
+	    for (var key in this.plan.allFeatures) {
+	      glyphRun.features[key] = true;
+	    }
 	  };
 
-	  OTLayoutEngine.prototype.substitute = function substitute(glyphs) {
+	  OTLayoutEngine.prototype.substitute = function substitute(glyphRun) {
 	    var _this2 = this;
 
 	    if (this.GSUBProcessor) {
 	      this.plan.process(this.GSUBProcessor, this.glyphInfos);
 
 	      // Map glyph infos back to normal Glyph objects
-	      glyphs = this.glyphInfos.map(function (glyphInfo) {
+	      glyphRun.glyphs = this.glyphInfos.map(function (glyphInfo) {
 	        return _this2.font.getGlyph(glyphInfo.id, glyphInfo.codePoints);
 	      });
 	    }
-
-	    return glyphs;
 	  };
 
-	  OTLayoutEngine.prototype.position = function position(glyphs, positions) {
+	  OTLayoutEngine.prototype.position = function position(glyphRun) {
 	    if (this.shaper.zeroMarkWidths === 'BEFORE_GPOS') {
-	      this.zeroMarkAdvances(positions);
+	      this.zeroMarkAdvances(glyphRun.positions);
 	    }
 
 	    if (this.GPOSProcessor) {
-	      this.plan.process(this.GPOSProcessor, this.glyphInfos, positions);
+	      this.plan.process(this.GPOSProcessor, this.glyphInfos, glyphRun.positions);
 	    }
 
 	    if (this.shaper.zeroMarkWidths === 'AFTER_GPOS') {
-	      this.zeroMarkAdvances(positions);
+	      this.zeroMarkAdvances(glyphRun.positions);
 	    }
 
 	    // Reverse the glyphs and positions if the script is right-to-left
-	    if (this.plan.direction === 'rtl') {
-	      glyphs.reverse();
-	      positions.reverse();
+	    if (glyphRun.direction === 'rtl') {
+	      glyphRun.glyphs.reverse();
+	      glyphRun.positions.reverse();
 	    }
 
 	    return this.GPOSProcessor && this.GPOSProcessor.features;
@@ -46804,11 +48644,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  }
 
-	  LayoutEngine.prototype.layout = function layout(string) {
-	    var features = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-	    var script = arguments[2];
-	    var language = arguments[3];
-
+	  LayoutEngine.prototype.layout = function layout(string, features, script, language) {
 	    // Make the features parameter optional
 	    if (typeof features === 'string') {
 	      script = features;
@@ -46851,68 +48687,121 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var glyphs = string;
 	    }
 
+	    var glyphRun = new GlyphRun(glyphs, features, script, language);
+
 	    // Return early if there are no glyphs
 	    if (glyphs.length === 0) {
-	      return new GlyphRun(glyphs, []);
+	      glyphRun.positions = [];
+	      return glyphRun;
 	    }
 
 	    // Setup the advanced layout engine
 	    if (this.engine && this.engine.setup) {
-	      this.engine.setup(glyphs, features, script, language);
+	      this.engine.setup(glyphRun);
 	    }
 
 	    // Substitute and position the glyphs
-	    glyphs = this.substitute(glyphs, features, script, language);
-	    var positions = this.position(glyphs, features, script, language);
+	    this.substitute(glyphRun);
+	    this.position(glyphRun);
+
+	    this.hideDefaultIgnorables(glyphRun.glyphs, glyphRun.positions);
 
 	    // Let the layout engine clean up any state it might have
 	    if (this.engine && this.engine.cleanup) {
 	      this.engine.cleanup();
 	    }
 
-	    return new GlyphRun(glyphs, positions);
+	    return glyphRun;
 	  };
 
-	  LayoutEngine.prototype.substitute = function substitute(glyphs, features, script, language) {
+	  LayoutEngine.prototype.substitute = function substitute(glyphRun) {
 	    // Call the advanced layout engine to make substitutions
 	    if (this.engine && this.engine.substitute) {
-	      glyphs = this.engine.substitute(glyphs, features, script, language);
+	      this.engine.substitute(glyphRun);
 	    }
-
-	    return glyphs;
 	  };
 
-	  LayoutEngine.prototype.position = function position(glyphs, features, script, language) {
+	  LayoutEngine.prototype.position = function position(glyphRun) {
 	    // Get initial glyph positions
-	    var positions = glyphs.map(function (glyph) {
+	    glyphRun.positions = glyphRun.glyphs.map(function (glyph) {
 	      return new GlyphPosition(glyph.advanceWidth);
 	    });
 	    var positioned = null;
 
 	    // Call the advanced layout engine. Returns the features applied.
 	    if (this.engine && this.engine.position) {
-	      positioned = this.engine.position(glyphs, positions, features, script, language);
+	      positioned = this.engine.position(glyphRun);
 	    }
 
 	    // if there is no GPOS table, use unicode properties to position marks.
-	    if (!positioned) {
+	    if (!positioned && (!this.engine || this.engine.fallbackPosition)) {
 	      if (!this.unicodeLayoutEngine) {
 	        this.unicodeLayoutEngine = new UnicodeLayoutEngine(this.font);
 	      }
 
-	      this.unicodeLayoutEngine.positionGlyphs(glyphs, positions);
+	      this.unicodeLayoutEngine.positionGlyphs(glyphRun.glyphs, glyphRun.positions);
 	    }
 
 	    // if kerning is not supported by GPOS, do kerning with the TrueType/AAT kern table
-	    if ((!positioned || !positioned.kern) && this.font.kern) {
+	    if ((!positioned || !positioned.kern) && glyphRun.features.kern !== false && this.font.kern) {
 	      if (!this.kernProcessor) {
 	        this.kernProcessor = new KernProcessor(this.font);
 	      }
 
-	      this.kernProcessor.process(glyphs, positions);
+	      this.kernProcessor.process(glyphRun.glyphs, glyphRun.positions);
+	      glyphRun.features.kern = true;
 	    }
+	  };
 
-	    return positions;
+	  LayoutEngine.prototype.hideDefaultIgnorables = function hideDefaultIgnorables(glyphs, positions) {
+	    var space = this.font.glyphForCodePoint(0x20);
+	    for (var i = 0; i < glyphs.length; i++) {
+	      if (this.isDefaultIgnorable(glyphs[i].codePoints[0])) {
+	        glyphs[i] = space;
+	        positions[i].xAdvance = 0;
+	        positions[i].yAdvance = 0;
+	      }
+	    }
+	  };
+
+	  LayoutEngine.prototype.isDefaultIgnorable = function isDefaultIgnorable(ch) {
+	    // From DerivedCoreProperties.txt in the Unicode database,
+	    // minus U+115F, U+1160, U+3164 and U+FFA0, which is what
+	    // Harfbuzz and Uniscribe do.
+	    var plane = ch >> 16;
+	    if (plane === 0) {
+	      // BMP
+	      switch (ch >> 8) {
+	        case 0x00:
+	          return ch === 0x00AD;
+	        case 0x03:
+	          return ch === 0x034F;
+	        case 0x06:
+	          return ch === 0x061C;
+	        case 0x17:
+	          return 0x17B4 <= ch && ch <= 0x17B5;
+	        case 0x18:
+	          return 0x180B <= ch && ch <= 0x180E;
+	        case 0x20:
+	          return 0x200B <= ch && ch <= 0x200F || 0x202A <= ch && ch <= 0x202E || 0x2060 <= ch && ch <= 0x206F;
+	        case 0xFE:
+	          return 0xFE00 <= ch && ch <= 0xFE0F || ch === 0xFEFF;
+	        case 0xFF:
+	          return 0xFFF0 <= ch && ch <= 0xFFF8;
+	        default:
+	          return false;
+	      }
+	    } else {
+	      // Other planes
+	      switch (plane) {
+	        case 0x01:
+	          return 0x1BCA0 <= ch && ch <= 0x1BCA3 || 0x1D173 <= ch && ch <= 0x1D17A;
+	        case 0x0E:
+	          return 0xE0000 <= ch && ch <= 0xE0FFF;
+	        default:
+	          return false;
+	      }
+	    }
 	  };
 
 	  LayoutEngine.prototype.getAvailableFeatures = function getAvailableFeatures(script, language) {
@@ -47039,27 +48928,108 @@ return /******/ (function(modules) { // webpackBootstrap
 	   */
 
 
+	  /**
+	   * Applies a mapping function to each point in the path.
+	   * @param {function} fn
+	   * @return {Path}
+	   */
+	  Path.prototype.mapPoints = function mapPoints(fn) {
+	    var path = new Path();
+
+	    for (var _iterator = this.commands, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
+	      var _ref;
+
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
+	      } else {
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
+	      }
+
+	      var c = _ref;
+
+	      var args = [];
+	      for (var _i2 = 0; _i2 < c.args.length; _i2 += 2) {
+	        var _fn = fn(c.args[_i2], c.args[_i2 + 1]),
+	            x = _fn[0],
+	            y = _fn[1];
+
+	        args.push(x, y);
+	      }
+
+	      path[c.command].apply(path, args);
+	    }
+
+	    return path;
+	  };
+
+	  /**
+	   * Transforms the path by the given matrix.
+	   */
+
+
+	  Path.prototype.transform = function transform(m0, m1, m2, m3, m4, m5) {
+	    return this.mapPoints(function (x, y) {
+	      x = m0 * x + m2 * y + m4;
+	      y = m1 * x + m3 * y + m5;
+	      return [x, y];
+	    });
+	  };
+
+	  /**
+	   * Translates the path by the given offset.
+	   */
+
+
+	  Path.prototype.translate = function translate(x, y) {
+	    return this.transform(1, 0, 0, 1, x, y);
+	  };
+
+	  /**
+	   * Rotates the path by the given angle (in radians).
+	   */
+
+
+	  Path.prototype.rotate = function rotate(angle) {
+	    var cos = Math.cos(angle);
+	    var sin = Math.sin(angle);
+	    return this.transform(cos, sin, -sin, cos, 0, 0);
+	  };
+
+	  /**
+	   * Scales the path.
+	   */
+
+
+	  Path.prototype.scale = function scale(scaleX) {
+	    var scaleY = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : scaleX;
+
+	    return this.transform(scaleX, 0, 0, scaleY, 0, 0);
+	  };
+
 	  _createClass(Path, [{
 	    key: 'cbox',
 	    get: function get() {
 	      if (!this._cbox) {
 	        var cbox = new BBox();
-	        for (var _iterator = this.commands, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
-	          var _ref;
+	        for (var _iterator2 = this.commands, _isArray2 = Array.isArray(_iterator2), _i3 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
+	          var _ref2;
 
-	          if (_isArray) {
-	            if (_i >= _iterator.length) break;
-	            _ref = _iterator[_i++];
+	          if (_isArray2) {
+	            if (_i3 >= _iterator2.length) break;
+	            _ref2 = _iterator2[_i3++];
 	          } else {
-	            _i = _iterator.next();
-	            if (_i.done) break;
-	            _ref = _i.value;
+	            _i3 = _iterator2.next();
+	            if (_i3.done) break;
+	            _ref2 = _i3.value;
 	          }
 
-	          var command = _ref;
+	          var command = _ref2;
 
-	          for (var _i2 = 0; _i2 < command.args.length; _i2 += 2) {
-	            cbox.addPoint(command.args[_i2], command.args[_i2 + 1]);
+	          for (var _i4 = 0; _i4 < command.args.length; _i4 += 2) {
+	            cbox.addPoint(command.args[_i4], command.args[_i4 + 1]);
 	          }
 	        }
 
@@ -47090,19 +49060,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return Math.pow(1 - t, 3) * p0[i] + 3 * Math.pow(1 - t, 2) * t * p1[i] + 3 * (1 - t) * Math.pow(t, 2) * p2[i] + Math.pow(t, 3) * p3[i];
 	      };
 
-	      for (var _iterator2 = this.commands, _isArray2 = Array.isArray(_iterator2), _i3 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
-	        var _ref2;
+	      for (var _iterator3 = this.commands, _isArray3 = Array.isArray(_iterator3), _i5 = 0, _iterator3 = _isArray3 ? _iterator3 : _getIterator(_iterator3);;) {
+	        var _ref3;
 
-	        if (_isArray2) {
-	          if (_i3 >= _iterator2.length) break;
-	          _ref2 = _iterator2[_i3++];
+	        if (_isArray3) {
+	          if (_i5 >= _iterator3.length) break;
+	          _ref3 = _iterator3[_i5++];
 	        } else {
-	          _i3 = _iterator2.next();
-	          if (_i3.done) break;
-	          _ref2 = _i3.value;
+	          _i5 = _iterator3.next();
+	          if (_i5.done) break;
+	          _ref3 = _i5.value;
 	        }
 
-	        var c = _ref2;
+	        var c = _ref3;
 
 	        switch (c.command) {
 	          case 'moveTo':
@@ -47210,7 +49180,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _arr = ['moveTo', 'lineTo', 'quadraticCurveTo', 'bezierCurveTo', 'closePath'];
 
 	var _loop = function _loop() {
-	  var command = _arr[_i4];
+	  var command = _arr[_i6];
 	  Path.prototype[command] = function () {
 	    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
 	      args[_key] = arguments[_key];
@@ -47226,13 +49196,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	};
 
-	for (var _i4 = 0; _i4 < _arr.length; _i4++) {
+	for (var _i6 = 0; _i6 < _arr.length; _i6++) {
 	  _loop();
 	}
 
 	var StandardNames = ['.notdef', '.null', 'nonmarkingreturn', 'space', 'exclam', 'quotedbl', 'numbersign', 'dollar', 'percent', 'ampersand', 'quotesingle', 'parenleft', 'parenright', 'asterisk', 'plus', 'comma', 'hyphen', 'period', 'slash', 'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'colon', 'semicolon', 'less', 'equal', 'greater', 'question', 'at', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'bracketleft', 'backslash', 'bracketright', 'asciicircum', 'underscore', 'grave', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'braceleft', 'bar', 'braceright', 'asciitilde', 'Adieresis', 'Aring', 'Ccedilla', 'Eacute', 'Ntilde', 'Odieresis', 'Udieresis', 'aacute', 'agrave', 'acircumflex', 'adieresis', 'atilde', 'aring', 'ccedilla', 'eacute', 'egrave', 'ecircumflex', 'edieresis', 'iacute', 'igrave', 'icircumflex', 'idieresis', 'ntilde', 'oacute', 'ograve', 'ocircumflex', 'odieresis', 'otilde', 'uacute', 'ugrave', 'ucircumflex', 'udieresis', 'dagger', 'degree', 'cent', 'sterling', 'section', 'bullet', 'paragraph', 'germandbls', 'registered', 'copyright', 'trademark', 'acute', 'dieresis', 'notequal', 'AE', 'Oslash', 'infinity', 'plusminus', 'lessequal', 'greaterequal', 'yen', 'mu', 'partialdiff', 'summation', 'product', 'pi', 'integral', 'ordfeminine', 'ordmasculine', 'Omega', 'ae', 'oslash', 'questiondown', 'exclamdown', 'logicalnot', 'radical', 'florin', 'approxequal', 'Delta', 'guillemotleft', 'guillemotright', 'ellipsis', 'nonbreakingspace', 'Agrave', 'Atilde', 'Otilde', 'OE', 'oe', 'endash', 'emdash', 'quotedblleft', 'quotedblright', 'quoteleft', 'quoteright', 'divide', 'lozenge', 'ydieresis', 'Ydieresis', 'fraction', 'currency', 'guilsinglleft', 'guilsinglright', 'fi', 'fl', 'daggerdbl', 'periodcentered', 'quotesinglbase', 'quotedblbase', 'perthousand', 'Acircumflex', 'Ecircumflex', 'Aacute', 'Edieresis', 'Egrave', 'Iacute', 'Icircumflex', 'Idieresis', 'Igrave', 'Oacute', 'Ocircumflex', 'apple', 'Ograve', 'Uacute', 'Ucircumflex', 'Ugrave', 'dotlessi', 'circumflex', 'tilde', 'macron', 'breve', 'dotaccent', 'ring', 'cedilla', 'hungarumlaut', 'ogonek', 'caron', 'Lslash', 'lslash', 'Scaron', 'scaron', 'Zcaron', 'zcaron', 'brokenbar', 'Eth', 'eth', 'Yacute', 'yacute', 'Thorn', 'thorn', 'minus', 'multiply', 'onesuperior', 'twosuperior', 'threesuperior', 'onehalf', 'onequarter', 'threequarters', 'franc', 'Gbreve', 'gbreve', 'Idotaccent', 'Scedilla', 'scedilla', 'Cacute', 'cacute', 'Ccaron', 'ccaron', 'dcroat'];
 
-	var _class$7;
+	var _class$8;
 	function _applyDecoratedDescriptor$4(target, property, decorators, descriptor, context) {
 	  var desc = {};
 	  Object['ke' + 'ys'](descriptor).forEach(function (key) {
@@ -47270,7 +49240,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * There are several subclasses of the base Glyph class internally that may be returned depending
 	 * on the font format, but they all inherit from this class.
 	 */
-	var Glyph = (_class$7 = function () {
+	var Glyph = (_class$8 = function () {
 	  function Glyph(id, codePoints, font) {
 	    _classCallCheck(this, Glyph);
 
@@ -47353,6 +49323,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 	    }
 
+	    if (this._font._variationProcessor && this._font.HVAR) {
+	      advanceWidth += this._font._variationProcessor.getAdvanceAdjustment(this.id, this._font.HVAR);
+	    }
+
 	    return this._metrics = { advanceWidth: advanceWidth, advanceHeight: advanceHeight, leftBearing: leftBearing, topBearing: topBearing };
 	  };
 
@@ -47366,6 +49340,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	   * for a more detailed description.
 	   *
 	   * @type {BBox}
+	   */
+
+
+	  /**
+	   * Returns a path scaled to the given font size.
+	   * @param {number} size
+	   * @return {Path}
+	   */
+	  Glyph.prototype.getScaledPath = function getScaledPath(size) {
+	    var scale = 1 / this._font.unitsPerEm * size;
+	    return this.path.scale(scale);
+	  };
+
+	  /**
+	   * The glyph's advance width.
+	   * @type {number}
 	   */
 
 
@@ -47450,12 +49440,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	      // Decoding is actually performed by subclasses
 	      return this._getPath();
 	    }
-
-	    /**
-	     * The glyph's advance width.
-	     * @type {number}
-	     */
-
 	  }, {
 	    key: 'advanceWidth',
 	    get: function get() {
@@ -47483,7 +49467,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }]);
 
 	  return Glyph;
-	}(), (_applyDecoratedDescriptor$4(_class$7.prototype, 'cbox', [cache], _Object$getOwnPropertyDescriptor(_class$7.prototype, 'cbox'), _class$7.prototype), _applyDecoratedDescriptor$4(_class$7.prototype, 'bbox', [cache], _Object$getOwnPropertyDescriptor(_class$7.prototype, 'bbox'), _class$7.prototype), _applyDecoratedDescriptor$4(_class$7.prototype, 'path', [cache], _Object$getOwnPropertyDescriptor(_class$7.prototype, 'path'), _class$7.prototype), _applyDecoratedDescriptor$4(_class$7.prototype, 'advanceWidth', [cache], _Object$getOwnPropertyDescriptor(_class$7.prototype, 'advanceWidth'), _class$7.prototype), _applyDecoratedDescriptor$4(_class$7.prototype, 'advanceHeight', [cache], _Object$getOwnPropertyDescriptor(_class$7.prototype, 'advanceHeight'), _class$7.prototype), _applyDecoratedDescriptor$4(_class$7.prototype, 'name', [cache], _Object$getOwnPropertyDescriptor(_class$7.prototype, 'name'), _class$7.prototype)), _class$7);
+	}(), (_applyDecoratedDescriptor$4(_class$8.prototype, 'cbox', [cache], _Object$getOwnPropertyDescriptor(_class$8.prototype, 'cbox'), _class$8.prototype), _applyDecoratedDescriptor$4(_class$8.prototype, 'bbox', [cache], _Object$getOwnPropertyDescriptor(_class$8.prototype, 'bbox'), _class$8.prototype), _applyDecoratedDescriptor$4(_class$8.prototype, 'path', [cache], _Object$getOwnPropertyDescriptor(_class$8.prototype, 'path'), _class$8.prototype), _applyDecoratedDescriptor$4(_class$8.prototype, 'advanceWidth', [cache], _Object$getOwnPropertyDescriptor(_class$8.prototype, 'advanceWidth'), _class$8.prototype), _applyDecoratedDescriptor$4(_class$8.prototype, 'advanceHeight', [cache], _Object$getOwnPropertyDescriptor(_class$8.prototype, 'advanceHeight'), _class$8.prototype), _applyDecoratedDescriptor$4(_class$8.prototype, 'name', [cache], _Object$getOwnPropertyDescriptor(_class$8.prototype, 'name'), _class$8.prototype)), _class$8);
 
 	// The header for both simple and composite glyphs
 	var GlyfHeader = new r.Struct({
@@ -47805,8 +49789,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var points = glyph.points || [];
 	    }
 
-	    // Recompute and cache metrics if we performed variation processing
-	    if (glyph.phantomPoints) {
+	    // Recompute and cache metrics if we performed variation processing, and don't have an HVAR table
+	    if (glyph.phantomPoints && !this._font.directory.tables.HVAR) {
 	      this._metrics.advanceWidth = glyph.phantomPoints[1].x - glyph.phantomPoints[0].x;
 	      this._metrics.advanceHeight = glyph.phantomPoints[3].y - glyph.phantomPoints[2].y;
 	      this._metrics.leftBearing = glyph.xMin - glyph.phantomPoints[0].x;
@@ -47835,9 +49819,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var cbox = this._getCBox(true);
 	    _Glyph.prototype._getMetrics.call(this, cbox);
 
-	    if (this._font._variationProcessor) {
-	      // Decode the font data (and cache for later).
-	      // This triggers recomputation of metrics
+	    if (this._font._variationProcessor && !this._font.HVAR) {
+	      // No HVAR table, decode the glyph. This triggers recomputation of metrics.
 	      this.path;
 	    }
 
@@ -47924,6 +49907,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 
 	  CFFGlyph.prototype._getName = function _getName() {
+	    if (this._font.CFF2) {
+	      return _Glyph.prototype._getName.call(this);
+	    }
+
 	    return this._font['CFF '].getGlyphName(this.id);
 	  };
 
@@ -47942,7 +49929,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var pos = stream.pos;
 
 
-	    var cff = this._font['CFF '];
+	    var cff = this._font.CFF2 || this._font['CFF '];
 	    var str = cff.topDict.CharStrings[this.id];
 	    var end = str.offset + str.length;
 	    stream.pos = str.offset;
@@ -47969,11 +49956,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var subrs = privateDict.Subrs || [];
 	    var subrsBias = this.bias(subrs);
 
+	    var vstore = cff.topDict.vstore && cff.topDict.vstore.itemVariationStore;
+	    var vsindex = privateDict.vsindex;
+	    var variationProcessor = this._font._variationProcessor;
+
+	    function checkWidth() {
+	      if (width == null) {
+	        width = stack.shift() + privateDict.nominalWidthX;
+	      }
+	    }
+
 	    function parseStems() {
 	      if (stack.length % 2 !== 0) {
-	        if (width === null) {
-	          width = stack.shift() + privateDict.nominalWidthX;
-	        }
+	        checkWidth();
 	      }
 
 	      nStems += stack.length >> 1;
@@ -48005,9 +50000,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            case 4:
 	              // vmoveto
 	              if (stack.length > 1) {
-	                if (typeof width === 'undefined' || width === null) {
-	                  width = stack.shift() + privateDict.nominalWidthX;
-	                }
+	                checkWidth();
 	              }
 
 	              y += stack.shift();
@@ -48070,19 +50063,70 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	            case 11:
 	              // return
+	              if (cff.version >= 2) {
+	                break;
+	              }
 	              return;
 
 	            case 14:
 	              // endchar
-	              if (stack.length > 0) {
-	                if (typeof width === 'undefined' || width === null) {
-	                  width = stack.shift() + privateDict.nominalWidthX;
-	                }
+	              if (cff.version >= 2) {
+	                break;
 	              }
 
-	              path.closePath();
-	              open = false;
+	              if (stack.length > 0) {
+	                checkWidth();
+	              }
+
+	              if (open) {
+	                path.closePath();
+	                open = false;
+	              }
 	              break;
+
+	            case 15:
+	              {
+	                // vsindex
+	                if (cff.version < 2) {
+	                  throw new Error('vsindex operator not supported in CFF v1');
+	                }
+
+	                vsindex = stack.pop();
+	                break;
+	              }
+
+	            case 16:
+	              {
+	                // blend
+	                if (cff.version < 2) {
+	                  throw new Error('blend operator not supported in CFF v1');
+	                }
+
+	                if (!variationProcessor) {
+	                  throw new Error('blend operator in non-variation font');
+	                }
+
+	                var blendVector = variationProcessor.getBlendVector(vstore, vsindex);
+	                var numBlends = stack.pop();
+	                var numOperands = numBlends * blendVector.length;
+	                var delta = stack.length - numOperands;
+	                var base = delta - numBlends;
+
+	                for (var i = 0; i < numBlends; i++) {
+	                  var sum = stack[base + i];
+	                  for (var j = 0; j < blendVector.length; j++) {
+	                    sum += blendVector[j] * stack[delta++];
+	                  }
+
+	                  stack[base + i] = sum;
+	                }
+
+	                while (numOperands--) {
+	                  stack.pop();
+	                }
+
+	                break;
+	              }
 
 	            case 19: // hintmask
 	            case 20:
@@ -48094,10 +50138,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            case 21:
 	              // rmoveto
 	              if (stack.length > 2) {
-	                if (typeof width === 'undefined' || width === null) {
-	                  width = stack.shift() + privateDict.nominalWidthX;
-	                }
-	                var haveWidth = true;
+	                checkWidth();
 	              }
 
 	              x += stack.shift();
@@ -48108,9 +50149,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            case 22:
 	              // hmoveto
 	              if (stack.length > 1) {
-	                if (typeof width === 'undefined' || width === null) {
-	                  width = stack.shift() + privateDict.nominalWidthX;
-	                }
+	                checkWidth();
 	              }
 
 	              x += stack.shift();
@@ -48368,27 +50407,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	                case 30:
 	                  // roll
 	                  var n = stack.pop();
-	                  var j = stack.pop();
+	                  var _j = stack.pop();
 
-	                  if (j >= 0) {
-	                    while (j > 0) {
+	                  if (_j >= 0) {
+	                    while (_j > 0) {
 	                      var t = stack[n - 1];
-	                      for (var i = n - 2; i >= 0; i--) {
-	                        stack[i + 1] = stack[i];
+	                      for (var _i = n - 2; _i >= 0; _i--) {
+	                        stack[_i + 1] = stack[_i];
 	                      }
 
 	                      stack[0] = t;
-	                      j--;
+	                      _j--;
 	                    }
 	                  } else {
-	                    while (j < 0) {
+	                    while (_j < 0) {
 	                      var t = stack[0];
-	                      for (var _i = 0; _i <= n; _i++) {
-	                        stack[_i] = stack[_i + 1];
+	                      for (var _i2 = 0; _i2 <= n; _i2++) {
+	                        stack[_i2] = stack[_i2 + 1];
 	                      }
 
 	                      stack[n - 1] = t;
-	                      j++;
+	                      _j++;
 	                    }
 	                  }
 	                  break;
@@ -48418,7 +50457,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                  // flex
 	                  var pts = [];
 
-	                  for (var _i2 = 0; _i2 <= 5; _i2++) {
+	                  for (var _i3 = 0; _i3 <= 5; _i3++) {
 	                    x += stack.shift();
 	                    y += stack.shift();
 	                    pts.push(x, y);
@@ -48456,7 +50495,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                  var starty = y;
 
 	                  pts = [];
-	                  for (var _i3 = 0; _i3 <= 4; _i3++) {
+	                  for (var _i4 = 0; _i4 <= 4; _i4++) {
 	                    x += stack.shift();
 	                    y += stack.shift();
 	                    pts.push(x, y);
@@ -48499,6 +50538,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	    };
 
 	    parse();
+
+	    if (open) {
+	      path.closePath();
+	    }
+
 	    return path;
 	  };
 
@@ -48718,6 +50762,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    this.font = font;
 	    this.normalizedCoords = this.normalizeCoords(coords);
+	    this.blendVectors = new _Map();
 	  }
 
 	  GlyphVariationProcessor.prototype.normalizeCoords = function normalizeCoords(coords) {
@@ -48727,9 +50772,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    for (var i = 0; i < this.font.fvar.axis.length; i++) {
 	      var axis = this.font.fvar.axis[i];
 	      if (coords[i] < axis.defaultValue) {
-	        normalized.push((coords[i] - axis.defaultValue) / (axis.defaultValue - axis.minValue));
+	        normalized.push((coords[i] - axis.defaultValue + _Number$EPSILON) / (axis.defaultValue - axis.minValue + _Number$EPSILON));
 	      } else {
-	        normalized.push((coords[i] - axis.defaultValue) / (axis.maxValue - axis.defaultValue));
+	        normalized.push((coords[i] - axis.defaultValue + _Number$EPSILON) / (axis.maxValue - axis.defaultValue + _Number$EPSILON));
 	      }
 	    }
 
@@ -48742,7 +50787,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          var pair = segment.correspondence[j];
 	          if (j >= 1 && normalized[i] < pair.fromCoord) {
 	            var prev = segment.correspondence[j - 1];
-	            normalized[i] = (normalized[i] - prev.fromCoord) * (pair.toCoord - prev.toCoord) / (pair.fromCoord - prev.fromCoord) + prev.toCoord;
+	            normalized[i] = ((normalized[i] - prev.fromCoord) * (pair.toCoord - prev.toCoord) + _Number$EPSILON) / (pair.fromCoord - prev.fromCoord + _Number$EPSILON) + prev.toCoord;
 
 	            break;
 	          }
@@ -48952,14 +50997,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	          return 0;
 	        }
 
-	        factor = factor * normalized[i] / tupleCoords[i];
+	        factor = (factor * normalized[i] + _Number$EPSILON) / (tupleCoords[i] + _Number$EPSILON);
 	      } else {
 	        if (normalized[i] < startCoords[i] || normalized[i] > endCoords[i]) {
 	          return 0;
 	        } else if (normalized[i] < tupleCoords[i]) {
-	          factor = factor * (normalized[i] - startCoords[i]) / (tupleCoords[i] - startCoords[i]);
+	          factor = factor * (normalized[i] - startCoords[i] + _Number$EPSILON) / (tupleCoords[i] - startCoords[i] + _Number$EPSILON);
 	        } else {
-	          factor = factor * (endCoords[i] - normalized[i]) / (endCoords[i] - tupleCoords[i]);
+	          factor = factor * (endCoords[i] - normalized[i] + _Number$EPSILON) / (endCoords[i] - tupleCoords[i] + _Number$EPSILON);
 	        }
 	      }
 	    }
@@ -49046,20 +51091,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var out1 = outPoints[ref1][k];
 	      var out2 = outPoints[ref2][k];
 
-	      var scale = in1 === in2 ? 0 : (out2 - out1) / (in2 - in1);
+	      // If the reference points have the same coordinate but different
+	      // delta, inferred delta is zero.  Otherwise interpolate.
+	      if (in1 !== in2 || out1 === out2) {
+	        var scale = in1 === in2 ? 0 : (out2 - out1) / (in2 - in1);
 
-	      for (var _p = p1; _p <= p2; _p++) {
-	        var out = inPoints[_p][k];
+	        for (var _p = p1; _p <= p2; _p++) {
+	          var out = inPoints[_p][k];
 
-	        if (out <= in1) {
-	          out += out1 - in1;
-	        } else if (out >= in2) {
-	          out += out2 - in2;
-	        } else {
-	          out = out1 + (out - in1) * scale;
+	          if (out <= in1) {
+	            out += out1 - in1;
+	          } else if (out >= in2) {
+	            out += out2 - in2;
+	          } else {
+	            out = out1 + (out - in1) * scale;
+	          }
+
+	          outPoints[_p][k] = out;
 	        }
-
-	        outPoints[_p][k] = out;
 	      }
 	    }
 	  };
@@ -49078,6 +51127,102 @@ return /******/ (function(modules) { // webpackBootstrap
 	        outPoints[p].y += deltaY;
 	      }
 	    }
+	  };
+
+	  GlyphVariationProcessor.prototype.getAdvanceAdjustment = function getAdvanceAdjustment(gid, table) {
+	    var outerIndex = void 0,
+	        innerIndex = void 0;
+
+	    if (table.advanceWidthMapping) {
+	      var idx = gid;
+	      if (idx >= table.advanceWidthMapping.mapCount) {
+	        idx = table.advanceWidthMapping.mapCount - 1;
+	      }
+
+	      var entryFormat = table.advanceWidthMapping.entryFormat;
+	      var _table$advanceWidthMa = table.advanceWidthMapping.mapData[idx];
+	      outerIndex = _table$advanceWidthMa.outerIndex;
+	      innerIndex = _table$advanceWidthMa.innerIndex;
+	    } else {
+	      outerIndex = 0;
+	      innerIndex = gid;
+	    }
+
+	    return this.getMetricDelta(table.itemVariationStore, outerIndex, innerIndex);
+	  };
+
+	  // See pseudo code from `Font Variations Overview'
+	  // in the OpenType specification.
+
+
+	  GlyphVariationProcessor.prototype.getMetricDelta = function getMetricDelta(itemStore, outerIndex, innerIndex) {
+	    var varData = itemStore.itemVariationData[outerIndex];
+	    var deltaSet = varData.deltaSets[innerIndex];
+	    var blendVector = this.getBlendVector(itemStore, outerIndex);
+	    var netAdjustment = 0;
+
+	    for (var master = 0; master < varData.regionIndexCount; master++) {
+	      netAdjustment += deltaSet.deltas[master] * blendVector[master];
+	    }
+
+	    return netAdjustment;
+	  };
+
+	  GlyphVariationProcessor.prototype.getBlendVector = function getBlendVector(itemStore, outerIndex) {
+	    var varData = itemStore.itemVariationData[outerIndex];
+	    if (this.blendVectors.has(varData)) {
+	      return this.blendVectors.get(varData);
+	    }
+
+	    var normalizedCoords = this.normalizedCoords;
+	    var blendVector = [];
+
+	    // outer loop steps through master designs to be blended
+	    for (var master = 0; master < varData.regionIndexCount; master++) {
+	      var scalar = 1;
+	      var regionIndex = varData.regionIndexes[master];
+	      var axes = itemStore.variationRegionList.variationRegions[regionIndex];
+
+	      // inner loop steps through axes in this region
+	      for (var j = 0; j < axes.length; j++) {
+	        var axis = axes[j];
+	        var axisScalar = void 0;
+
+	        // compute the scalar contribution of this axis
+	        // ignore invalid ranges
+	        if (axis.startCoord > axis.peakCoord || axis.peakCoord > axis.endCoord) {
+	          axisScalar = 1;
+	        } else if (axis.startCoord < 0 && axis.endCoord > 0 && axis.peakCoord !== 0) {
+	          axisScalar = 1;
+
+	          // peak of 0 means ignore this axis
+	        } else if (axis.peakCoord === 0) {
+	          axisScalar = 1;
+
+	          // ignore this region if coords are out of range
+	        } else if (normalizedCoords[j] < axis.startCoord || normalizedCoords[j] > axis.endCoord) {
+	          axisScalar = 0;
+
+	          // calculate a proportional factor
+	        } else {
+	          if (normalizedCoords[j] === axis.peakCoord) {
+	            axisScalar = 1;
+	          } else if (normalizedCoords[j] < axis.peakCoord) {
+	            axisScalar = (normalizedCoords[j] - axis.startCoord + _Number$EPSILON) / (axis.peakCoord - axis.startCoord + _Number$EPSILON);
+	          } else {
+	            axisScalar = (axis.endCoord - normalizedCoords[j] + _Number$EPSILON) / (axis.endCoord - axis.peakCoord + _Number$EPSILON);
+	          }
+	        }
+
+	        // take product of all the axis scalars
+	        scalar *= axisScalar;
+	      }
+
+	      blendVector[master] = scalar;
+	    }
+
+	    this.blendVectors.set(varData, blendVector);
+	    return blendVector;
 	  };
 
 	  return GlyphVariationProcessor;
@@ -49639,6 +51784,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 
 	    var top = {
+	      version: 1,
+	      hdrSize: this.cff.hdrSize,
+	      offSize: this.cff.length,
 	      header: this.cff.header,
 	      nameIndex: [this.cff.postscriptName],
 	      topDictIndex: [topDict],
@@ -49698,6 +51846,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    _classCallCheck(this, TTFFont);
 
 	    this.stream = stream;
+	    this.variationCoords = variationCoords;
+
 	    this._directoryPos = this.stream.pos;
 	    this._tables = {};
 	    this._glyphs = {};
@@ -49711,10 +51861,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	          get: this._getTable.bind(this, table)
 	        });
 	      }
-	    }
-
-	    if (variationCoords) {
-	      this._variationProcessor = new GlyphVariationProcessor(this, variationCoords);
 	    }
 	  }
 
@@ -49895,13 +52041,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	   */
 
 
+	  TTFFont.prototype.getAvailableFeatures = function getAvailableFeatures(script, language) {
+	    return this._layoutEngine.getAvailableFeatures(script, language);
+	  };
+
 	  TTFFont.prototype._getBaseGlyph = function _getBaseGlyph(glyph) {
 	    var characters = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
 
 	    if (!this._glyphs[glyph]) {
 	      if (this.directory.tables.glyf) {
 	        this._glyphs[glyph] = new TTFGlyph(glyph, characters, this);
-	      } else if (this.directory.tables['CFF ']) {
+	      } else if (this.directory.tables['CFF '] || this.directory.tables.CFF2) {
 	        this._glyphs[glyph] = new CFFGlyph(glyph, characters, this);
 	      }
 	    }
@@ -49968,8 +52118,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	   * @return {TTFFont}
 	   */
 	  TTFFont.prototype.getVariation = function getVariation(settings) {
-	    if (!this.directory.tables.fvar || !this.directory.tables.gvar || !this.directory.tables.glyf) {
-	      throw new Error('Variations require a font with the fvar, gvar, and glyf tables.');
+	    if (!(this.directory.tables.fvar && (this.directory.tables.gvar && this.directory.tables.glyf || this.directory.tables.CFF2))) {
+	      throw new Error('Variations require a font with the fvar, gvar and glyf, or CFF2 tables.');
 	    }
 
 	    if (typeof settings === 'string') {
@@ -50000,8 +52150,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 
 	  // Standardized format plugin API
-
-
 	  TTFFont.prototype.getFont = function getFont(name) {
 	    return this.getVariation(name);
 	  };
@@ -50287,10 +52435,32 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      return res;
 	    }
+	  }, {
+	    key: '_variationProcessor',
+	    get: function get() {
+	      if (!this.fvar) {
+	        return null;
+	      }
+
+	      var variationCoords = this.variationCoords;
+
+	      // Ignore if no variation coords and not CFF2
+	      if (!variationCoords && !this.CFF2) {
+	        return null;
+	      }
+
+	      if (!variationCoords) {
+	        variationCoords = this.fvar.axis.map(function (axis) {
+	          return axis.defaultValue;
+	        });
+	      }
+
+	      return new GlyphVariationProcessor(this, variationCoords);
+	    }
 	  }]);
 
 	  return TTFFont;
-	}(), (_applyDecoratedDescriptor(_class.prototype, 'bbox', [cache], _Object$getOwnPropertyDescriptor(_class.prototype, 'bbox'), _class.prototype), _applyDecoratedDescriptor(_class.prototype, '_cmapProcessor', [cache], _Object$getOwnPropertyDescriptor(_class.prototype, '_cmapProcessor'), _class.prototype), _applyDecoratedDescriptor(_class.prototype, 'characterSet', [cache], _Object$getOwnPropertyDescriptor(_class.prototype, 'characterSet'), _class.prototype), _applyDecoratedDescriptor(_class.prototype, '_layoutEngine', [cache], _Object$getOwnPropertyDescriptor(_class.prototype, '_layoutEngine'), _class.prototype)), _class);
+	}(), (_applyDecoratedDescriptor(_class.prototype, 'bbox', [cache], _Object$getOwnPropertyDescriptor(_class.prototype, 'bbox'), _class.prototype), _applyDecoratedDescriptor(_class.prototype, '_cmapProcessor', [cache], _Object$getOwnPropertyDescriptor(_class.prototype, '_cmapProcessor'), _class.prototype), _applyDecoratedDescriptor(_class.prototype, 'characterSet', [cache], _Object$getOwnPropertyDescriptor(_class.prototype, 'characterSet'), _class.prototype), _applyDecoratedDescriptor(_class.prototype, '_layoutEngine', [cache], _Object$getOwnPropertyDescriptor(_class.prototype, '_layoutEngine'), _class.prototype), _applyDecoratedDescriptor(_class.prototype, 'variationAxes', [cache], _Object$getOwnPropertyDescriptor(_class.prototype, 'variationAxes'), _class.prototype), _applyDecoratedDescriptor(_class.prototype, 'namedVariations', [cache], _Object$getOwnPropertyDescriptor(_class.prototype, 'namedVariations'), _class.prototype), _applyDecoratedDescriptor(_class.prototype, '_variationProcessor', [cache], _Object$getOwnPropertyDescriptor(_class.prototype, '_variationProcessor'), _class.prototype)), _class);
 
 	var WOFFDirectoryEntry = new r.Struct({
 	  tag: new r.String(4),
@@ -50977,49 +53147,49 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	module.exports = fontkit;
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer, __webpack_require__(35)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer, __webpack_require__(36)))
 
 /***/ }),
-/* 82 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.7.1
 	(function() {
 	  var key, val, _ref, _ref1;
 
-	  exports.EncodeStream = __webpack_require__(83);
+	  exports.EncodeStream = __webpack_require__(85);
 
-	  exports.DecodeStream = __webpack_require__(84);
+	  exports.DecodeStream = __webpack_require__(86);
 
-	  exports.Array = __webpack_require__(106);
+	  exports.Array = __webpack_require__(108);
 
-	  exports.LazyArray = __webpack_require__(109);
+	  exports.LazyArray = __webpack_require__(111);
 
-	  exports.Bitfield = __webpack_require__(110);
+	  exports.Bitfield = __webpack_require__(112);
 
-	  exports.Boolean = __webpack_require__(111);
+	  exports.Boolean = __webpack_require__(113);
 
-	  exports.Buffer = __webpack_require__(112);
+	  exports.Buffer = __webpack_require__(114);
 
-	  exports.Enum = __webpack_require__(113);
+	  exports.Enum = __webpack_require__(115);
 
-	  exports.Optional = __webpack_require__(114);
+	  exports.Optional = __webpack_require__(116);
 
-	  exports.Reserved = __webpack_require__(115);
+	  exports.Reserved = __webpack_require__(117);
 
-	  exports.String = __webpack_require__(116);
+	  exports.String = __webpack_require__(118);
 
-	  exports.Struct = __webpack_require__(117);
+	  exports.Struct = __webpack_require__(119);
 
-	  exports.VersionedStruct = __webpack_require__(118);
+	  exports.VersionedStruct = __webpack_require__(120);
 
-	  _ref = __webpack_require__(107);
+	  _ref = __webpack_require__(109);
 	  for (key in _ref) {
 	    val = _ref[key];
 	    exports[key] = val;
 	  }
 
-	  _ref1 = __webpack_require__(119);
+	  _ref1 = __webpack_require__(121);
 	  for (key in _ref1) {
 	    val = _ref1[key];
 	    exports[key] = val;
@@ -51029,7 +53199,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 83 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.7.1
@@ -51038,12 +53208,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	    __hasProp = {}.hasOwnProperty,
 	    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-	  stream = __webpack_require__(30);
+	  stream = __webpack_require__(31);
 
-	  DecodeStream = __webpack_require__(84);
+	  DecodeStream = __webpack_require__(86);
 
 	  try {
-	    iconv = __webpack_require__(85);
+	    iconv = __webpack_require__(87);
 	  } catch (_error) {}
 
 	  EncodeStream = (function(_super) {
@@ -51187,7 +53357,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ }),
-/* 84 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.7.1
@@ -51195,7 +53365,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var DecodeStream, iconv;
 
 	  try {
-	    iconv = __webpack_require__(85);
+	    iconv = __webpack_require__(87);
 	  } catch (_error) {}
 
 	  DecodeStream = (function() {
@@ -51257,7 +53427,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        default:
 	          buf = this.readBuffer(length);
 	          if (iconv) {
-	            return iconv.decode(buf, encoding);
+	            try {
+	              return iconv.decode(buf, encoding);
+	            } catch (_error) {}
 	          }
 	          return buf;
 	      }
@@ -51294,7 +53466,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ }),
-/* 85 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {"use strict";
@@ -51303,7 +53475,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	// Solution would be installing npm modules "buffer" and "stream" explicitly.
 	var Buffer = __webpack_require__(2).Buffer;
 
-	var bomHandling = __webpack_require__(86),
+	var bomHandling = __webpack_require__(88),
 	    iconv = module.exports;
 
 	// All codecs and aliases are kept here, keyed by encoding name/alias.
@@ -51361,7 +53533,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	iconv._codecDataCache = {};
 	iconv.getCodec = function getCodec(encoding) {
 	    if (!iconv.encodings)
-	        iconv.encodings = __webpack_require__(87); // Lazy load all encoding definitions.
+	        iconv.encodings = __webpack_require__(89); // Lazy load all encoding definitions.
 	    
 	    // Canonicalize encoding name: strip all non-alphanumeric chars and appended year.
 	    var enc = (''+encoding).toLowerCase().replace(/[^0-9a-z]|:\d{4}$/g, "");
@@ -51435,21 +53607,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	    // Load streaming support in Node v0.10+
 	    var nodeVerArr = nodeVer.split(".").map(Number);
 	    if (nodeVerArr[0] > 0 || nodeVerArr[1] >= 10) {
-	        __webpack_require__(104)(iconv);
+	        __webpack_require__(106)(iconv);
 	    }
 
 	    // Load Node primitive extensions.
-	    __webpack_require__(105)(iconv);
+	    __webpack_require__(107)(iconv);
 	}
 
 	if (false) {
 	    console.error("iconv-lite warning: javascript files are loaded not with utf-8 encoding. See https://github.com/ashtuchkin/iconv-lite/wiki/Javascript-source-file-encodings for more info.");
 	}
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(35)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(36)))
 
 /***/ }),
-/* 86 */
+/* 88 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -51507,7 +53679,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 87 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -51515,14 +53687,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	// Update this array if you add/rename/remove files in this directory.
 	// We support Browserify by skipping automatic module discovery and requiring modules directly.
 	var modules = [
-	    __webpack_require__(88),
-	    __webpack_require__(89),
 	    __webpack_require__(90),
 	    __webpack_require__(91),
 	    __webpack_require__(92),
 	    __webpack_require__(93),
 	    __webpack_require__(94),
 	    __webpack_require__(95),
+	    __webpack_require__(96),
+	    __webpack_require__(97),
 	];
 
 	// Put all encoding/alias/codec definitions to single object and export it. 
@@ -51535,7 +53707,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 88 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -51588,7 +53760,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	//------------------------------------------------------------------------------
 
 	// We use node.js internal decoder. Its signature is the same as ours.
-	var StringDecoder = __webpack_require__(47).StringDecoder;
+	var StringDecoder = __webpack_require__(48).StringDecoder;
 
 	if (!StringDecoder.prototype.end) // Node v0.8 doesn't have this method.
 	    StringDecoder.prototype.end = function() {};
@@ -51731,7 +53903,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 89 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -51914,7 +54086,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 90 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -52210,7 +54382,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 91 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -52289,7 +54461,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 92 */
+/* 94 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -52466,7 +54638,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 93 */
+/* 95 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -52916,7 +55088,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ }),
-/* 94 */
+/* 96 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -53477,7 +55649,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 95 */
+/* 97 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -53522,7 +55694,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    'shiftjis': {
 	        type: '_dbcs',
-	        table: function() { return __webpack_require__(96) },
+	        table: function() { return __webpack_require__(98) },
 	        encodeAdd: {'\u00a5': 0x5C, '\u203E': 0x7E},
 	        encodeSkipVals: [{from: 0xED40, to: 0xF940}],
 	    },
@@ -53539,7 +55711,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    'eucjp': {
 	        type: '_dbcs',
-	        table: function() { return __webpack_require__(97) },
+	        table: function() { return __webpack_require__(99) },
 	        encodeAdd: {'\u00a5': 0x5C, '\u203E': 0x7E},
 	    },
 
@@ -53566,13 +55738,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	    '936': 'cp936',
 	    'cp936': {
 	        type: '_dbcs',
-	        table: function() { return __webpack_require__(98) },
+	        table: function() { return __webpack_require__(100) },
 	    },
 
 	    // GBK (~22000 chars) is an extension of CP936 that added user-mapped chars and some other.
 	    'gbk': {
 	        type: '_dbcs',
-	        table: function() { return __webpack_require__(98).concat(__webpack_require__(99)) },
+	        table: function() { return __webpack_require__(100).concat(__webpack_require__(101)) },
 	    },
 	    'xgbk': 'gbk',
 	    'isoir58': 'gbk',
@@ -53584,8 +55756,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    // http://www.khngai.com/chinese/charmap/tblgbk.php?page=0
 	    'gb18030': {
 	        type: '_dbcs',
-	        table: function() { return __webpack_require__(98).concat(__webpack_require__(99)) },
-	        gb18030: function() { return __webpack_require__(100) },
+	        table: function() { return __webpack_require__(100).concat(__webpack_require__(101)) },
+	        gb18030: function() { return __webpack_require__(102) },
 	        encodeSkipVals: [0x80],
 	        encodeAdd: {'€': 0xA2E3},
 	    },
@@ -53600,7 +55772,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    '949': 'cp949',
 	    'cp949': {
 	        type: '_dbcs',
-	        table: function() { return __webpack_require__(101) },
+	        table: function() { return __webpack_require__(103) },
 	    },
 
 	    'cseuckr': 'cp949',
@@ -53641,14 +55813,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    '950': 'cp950',
 	    'cp950': {
 	        type: '_dbcs',
-	        table: function() { return __webpack_require__(102) },
+	        table: function() { return __webpack_require__(104) },
 	    },
 
 	    // Big5 has many variations and is an extension of cp950. We use Encoding Standard's as a consensus.
 	    'big5': 'big5hkscs',
 	    'big5hkscs': {
 	        type: '_dbcs',
-	        table: function() { return __webpack_require__(102).concat(__webpack_require__(103)) },
+	        table: function() { return __webpack_require__(104).concat(__webpack_require__(105)) },
 	        encodeSkipVals: [0xa2cc],
 	    },
 
@@ -53659,7 +55831,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 96 */
+/* 98 */
 /***/ (function(module, exports) {
 
 	module.exports = [
@@ -54210,7 +56382,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	];
 
 /***/ }),
-/* 97 */
+/* 99 */
 /***/ (function(module, exports) {
 
 	module.exports = [
@@ -55035,7 +57207,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	];
 
 /***/ }),
-/* 98 */
+/* 100 */
 /***/ (function(module, exports) {
 
 	module.exports = [
@@ -57659,7 +59831,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	];
 
 /***/ }),
-/* 99 */
+/* 101 */
 /***/ (function(module, exports) {
 
 	module.exports = [
@@ -57922,7 +60094,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	];
 
 /***/ }),
-/* 100 */
+/* 102 */
 /***/ (function(module, exports) {
 
 	module.exports = {
@@ -58347,7 +60519,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 101 */
+/* 103 */
 /***/ (function(module, exports) {
 
 	module.exports = [
@@ -60730,7 +62902,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	];
 
 /***/ }),
-/* 102 */
+/* 104 */
 /***/ (function(module, exports) {
 
 	module.exports = [
@@ -61462,7 +63634,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	];
 
 /***/ }),
-/* 103 */
+/* 105 */
 /***/ (function(module, exports) {
 
 	module.exports = [
@@ -61971,13 +64143,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	];
 
 /***/ }),
-/* 104 */
+/* 106 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	var Buffer = __webpack_require__(2).Buffer,
-	    Transform = __webpack_require__(30).Transform;
+	    Transform = __webpack_require__(31).Transform;
 
 
 	// == Exports ==================================================================
@@ -62098,7 +64270,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 105 */
+/* 107 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -62273,7 +64445,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        // -- Readable -------------------------------------------------------------
 	        if (iconv.supportsStreams) {
-	            var Readable = __webpack_require__(30).Readable;
+	            var Readable = __webpack_require__(31).Readable;
 
 	            original.ReadableSetEncoding = Readable.prototype.setEncoding;
 	            Readable.prototype.setEncoding = function setEncoding(enc, options) {
@@ -62307,7 +64479,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        Buffer.prototype.write = original.BufferWrite;
 
 	        if (iconv.supportsStreams) {
-	            var Readable = __webpack_require__(30).Readable;
+	            var Readable = __webpack_require__(31).Readable;
 
 	            Readable.prototype.setEncoding = original.ReadableSetEncoding;
 	            delete Readable.prototype.collect;
@@ -62319,16 +64491,16 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 106 */
+/* 108 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.7.1
 	(function() {
 	  var ArrayT, NumberT, utils;
 
-	  NumberT = __webpack_require__(107).Number;
+	  NumberT = __webpack_require__(109).Number;
 
-	  utils = __webpack_require__(108);
+	  utils = __webpack_require__(110);
 
 	  ArrayT = (function() {
 	    function ArrayT(type, length, lengthType) {
@@ -62430,7 +64602,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 107 */
+/* 109 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.7.1
@@ -62439,7 +64611,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    __hasProp = {}.hasOwnProperty,
 	    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-	  DecodeStream = __webpack_require__(84);
+	  DecodeStream = __webpack_require__(86);
 
 	  NumberT = (function() {
 	    function NumberT(type, endian) {
@@ -62542,14 +64714,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 108 */
+/* 110 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.7.1
 	(function() {
 	  var NumberT, PropertyDescriptor;
 
-	  NumberT = __webpack_require__(107).Number;
+	  NumberT = __webpack_require__(109).Number;
 
 	  exports.resolveLength = function(length, stream, parent) {
 	    var res;
@@ -62592,7 +64764,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 109 */
+/* 111 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.7.1
@@ -62601,13 +64773,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	    __hasProp = {}.hasOwnProperty,
 	    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-	  ArrayT = __webpack_require__(106);
+	  ArrayT = __webpack_require__(108);
 
-	  NumberT = __webpack_require__(107).Number;
+	  NumberT = __webpack_require__(109).Number;
 
-	  utils = __webpack_require__(108);
+	  utils = __webpack_require__(110);
 
-	  inspect = __webpack_require__(70).inspect;
+	  inspect = __webpack_require__(72).inspect;
 
 	  LazyArrayT = (function(_super) {
 	    __extends(LazyArrayT, _super);
@@ -62698,7 +64870,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 110 */
+/* 112 */
 /***/ (function(module, exports) {
 
 	// Generated by CoffeeScript 1.7.1
@@ -62754,7 +64926,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 111 */
+/* 113 */
 /***/ (function(module, exports) {
 
 	// Generated by CoffeeScript 1.7.1
@@ -62788,16 +64960,16 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 112 */
+/* 114 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.7.1
 	(function() {
 	  var BufferT, NumberT, utils;
 
-	  utils = __webpack_require__(108);
+	  utils = __webpack_require__(110);
 
-	  NumberT = __webpack_require__(107).Number;
+	  NumberT = __webpack_require__(109).Number;
 
 	  BufferT = (function() {
 	    function BufferT(length) {
@@ -62834,7 +65006,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 113 */
+/* 115 */
 /***/ (function(module, exports) {
 
 	// Generated by CoffeeScript 1.7.1
@@ -62876,7 +65048,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 114 */
+/* 116 */
 /***/ (function(module, exports) {
 
 	// Generated by CoffeeScript 1.7.1
@@ -62934,14 +65106,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 115 */
+/* 117 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.7.1
 	(function() {
 	  var Reserved, utils;
 
-	  utils = __webpack_require__(108);
+	  utils = __webpack_require__(110);
 
 	  Reserved = (function() {
 	    function Reserved(type, count) {
@@ -62974,16 +65146,16 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 116 */
+/* 118 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.7.1
 	(function() {
 	  var NumberT, StringT, utils;
 
-	  NumberT = __webpack_require__(107).Number;
+	  NumberT = __webpack_require__(109).Number;
 
-	  utils = __webpack_require__(108);
+	  utils = __webpack_require__(110);
 
 	  StringT = (function() {
 	    function StringT(length, encoding) {
@@ -63063,14 +65235,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ }),
-/* 117 */
+/* 119 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.7.1
 	(function() {
 	  var Struct, utils;
 
-	  utils = __webpack_require__(108);
+	  utils = __webpack_require__(110);
 
 	  Struct = (function() {
 	    function Struct(fields) {
@@ -63195,7 +65367,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 118 */
+/* 120 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.7.1
@@ -63204,7 +65376,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    __hasProp = {}.hasOwnProperty,
 	    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-	  Struct = __webpack_require__(117);
+	  Struct = __webpack_require__(119);
 
 	  VersionedStruct = (function(_super) {
 	    __extends(VersionedStruct, _super);
@@ -63337,14 +65509,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 119 */
+/* 121 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Generated by CoffeeScript 1.7.1
 	(function() {
 	  var Pointer, VoidPointer, utils;
 
-	  utils = __webpack_require__(108);
+	  utils = __webpack_require__(110);
 
 	  Pointer = (function() {
 	    function Pointer(offsetType, type, options) {
@@ -63519,58 +65691,58 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 120 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(121), __esModule: true };
-
-/***/ }),
-/* 121 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(122);
-	var $Object = __webpack_require__(140).Object;
-	module.exports = function getOwnPropertyDescriptor(it, key){
-	  return $Object.getOwnPropertyDescriptor(it, key);
-	};
-
-/***/ }),
 /* 122 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// 19.1.2.6 Object.getOwnPropertyDescriptor(O, P)
-	var toIObject                 = __webpack_require__(123)
-	  , $getOwnPropertyDescriptor = __webpack_require__(127).f;
-
-	__webpack_require__(138)('getOwnPropertyDescriptor', function(){
-	  return function getOwnPropertyDescriptor(it, key){
-	    return $getOwnPropertyDescriptor(toIObject(it), key);
-	  };
-	});
+	module.exports = { "default": __webpack_require__(123), __esModule: true };
 
 /***/ }),
 /* 123 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// to indexed object, toObject with fallback for non-array-like ES3 strings
-	var IObject = __webpack_require__(124)
-	  , defined = __webpack_require__(126);
-	module.exports = function(it){
-	  return IObject(defined(it));
+	__webpack_require__(124);
+	var $Object = __webpack_require__(142).Object;
+	module.exports = function getOwnPropertyDescriptor(it, key){
+	  return $Object.getOwnPropertyDescriptor(it, key);
 	};
 
 /***/ }),
 /* 124 */
 /***/ (function(module, exports, __webpack_require__) {
 
+	// 19.1.2.6 Object.getOwnPropertyDescriptor(O, P)
+	var toIObject                 = __webpack_require__(125)
+	  , $getOwnPropertyDescriptor = __webpack_require__(129).f;
+
+	__webpack_require__(140)('getOwnPropertyDescriptor', function(){
+	  return function getOwnPropertyDescriptor(it, key){
+	    return $getOwnPropertyDescriptor(toIObject(it), key);
+	  };
+	});
+
+/***/ }),
+/* 125 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	// to indexed object, toObject with fallback for non-array-like ES3 strings
+	var IObject = __webpack_require__(126)
+	  , defined = __webpack_require__(128);
+	module.exports = function(it){
+	  return IObject(defined(it));
+	};
+
+/***/ }),
+/* 126 */
+/***/ (function(module, exports, __webpack_require__) {
+
 	// fallback for non-array-like ES3 and non-enumerable old V8 strings
-	var cof = __webpack_require__(125);
+	var cof = __webpack_require__(127);
 	module.exports = Object('z').propertyIsEnumerable(0) ? Object : function(it){
 	  return cof(it) == 'String' ? it.split('') : Object(it);
 	};
 
 /***/ }),
-/* 125 */
+/* 127 */
 /***/ (function(module, exports) {
 
 	var toString = {}.toString;
@@ -63580,7 +65752,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 126 */
+/* 128 */
 /***/ (function(module, exports) {
 
 	// 7.2.1 RequireObjectCoercible(argument)
@@ -63590,18 +65762,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 127 */
+/* 129 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var pIE            = __webpack_require__(128)
-	  , createDesc     = __webpack_require__(129)
-	  , toIObject      = __webpack_require__(123)
-	  , toPrimitive    = __webpack_require__(130)
-	  , has            = __webpack_require__(132)
-	  , IE8_DOM_DEFINE = __webpack_require__(133)
+	var pIE            = __webpack_require__(130)
+	  , createDesc     = __webpack_require__(131)
+	  , toIObject      = __webpack_require__(125)
+	  , toPrimitive    = __webpack_require__(132)
+	  , has            = __webpack_require__(134)
+	  , IE8_DOM_DEFINE = __webpack_require__(135)
 	  , gOPD           = Object.getOwnPropertyDescriptor;
 
-	exports.f = __webpack_require__(134) ? gOPD : function getOwnPropertyDescriptor(O, P){
+	exports.f = __webpack_require__(136) ? gOPD : function getOwnPropertyDescriptor(O, P){
 	  O = toIObject(O);
 	  P = toPrimitive(P, true);
 	  if(IE8_DOM_DEFINE)try {
@@ -63611,13 +65783,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 128 */
+/* 130 */
 /***/ (function(module, exports) {
 
 	exports.f = {}.propertyIsEnumerable;
 
 /***/ }),
-/* 129 */
+/* 131 */
 /***/ (function(module, exports) {
 
 	module.exports = function(bitmap, value){
@@ -63630,11 +65802,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 130 */
+/* 132 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// 7.1.1 ToPrimitive(input [, PreferredType])
-	var isObject = __webpack_require__(131);
+	var isObject = __webpack_require__(133);
 	// instead of the ES6 spec version, we didn't implement @@toPrimitive case
 	// and the second argument - flag - preferred type is a string
 	module.exports = function(it, S){
@@ -63647,7 +65819,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 131 */
+/* 133 */
 /***/ (function(module, exports) {
 
 	module.exports = function(it){
@@ -63655,7 +65827,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 132 */
+/* 134 */
 /***/ (function(module, exports) {
 
 	var hasOwnProperty = {}.hasOwnProperty;
@@ -63664,24 +65836,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 133 */
+/* 135 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	module.exports = !__webpack_require__(134) && !__webpack_require__(135)(function(){
-	  return Object.defineProperty(__webpack_require__(136)('div'), 'a', {get: function(){ return 7; }}).a != 7;
+	module.exports = !__webpack_require__(136) && !__webpack_require__(137)(function(){
+	  return Object.defineProperty(__webpack_require__(138)('div'), 'a', {get: function(){ return 7; }}).a != 7;
 	});
 
 /***/ }),
-/* 134 */
+/* 136 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// Thank's IE8 for his funny defineProperty
-	module.exports = !__webpack_require__(135)(function(){
+	module.exports = !__webpack_require__(137)(function(){
 	  return Object.defineProperty({}, 'a', {get: function(){ return 7; }}).a != 7;
 	});
 
 /***/ }),
-/* 135 */
+/* 137 */
 /***/ (function(module, exports) {
 
 	module.exports = function(exec){
@@ -63693,11 +65865,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 136 */
+/* 138 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var isObject = __webpack_require__(131)
-	  , document = __webpack_require__(137).document
+	var isObject = __webpack_require__(133)
+	  , document = __webpack_require__(139).document
 	  // in old IE typeof document.createElement is 'object'
 	  , is = isObject(document) && isObject(document.createElement);
 	module.exports = function(it){
@@ -63705,7 +65877,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 137 */
+/* 139 */
 /***/ (function(module, exports) {
 
 	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
@@ -63714,13 +65886,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	if(typeof __g == 'number')__g = global; // eslint-disable-line no-undef
 
 /***/ }),
-/* 138 */
+/* 140 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// most Object methods by ES6 should accept primitives
-	var $export = __webpack_require__(139)
-	  , core    = __webpack_require__(140)
-	  , fails   = __webpack_require__(135);
+	var $export = __webpack_require__(141)
+	  , core    = __webpack_require__(142)
+	  , fails   = __webpack_require__(137);
 	module.exports = function(KEY, exec){
 	  var fn  = (core.Object || {})[KEY] || Object[KEY]
 	    , exp = {};
@@ -63729,13 +65901,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 139 */
+/* 141 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var global    = __webpack_require__(137)
-	  , core      = __webpack_require__(140)
-	  , ctx       = __webpack_require__(141)
-	  , hide      = __webpack_require__(143)
+	var global    = __webpack_require__(139)
+	  , core      = __webpack_require__(142)
+	  , ctx       = __webpack_require__(143)
+	  , hide      = __webpack_require__(145)
 	  , PROTOTYPE = 'prototype';
 
 	var $export = function(type, name, source){
@@ -63795,18 +65967,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = $export;
 
 /***/ }),
-/* 140 */
+/* 142 */
 /***/ (function(module, exports) {
 
 	var core = module.exports = {version: '2.4.0'};
 	if(typeof __e == 'number')__e = core; // eslint-disable-line no-undef
 
 /***/ }),
-/* 141 */
+/* 143 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// optional / simple context binding
-	var aFunction = __webpack_require__(142);
+	var aFunction = __webpack_require__(144);
 	module.exports = function(fn, that, length){
 	  aFunction(fn);
 	  if(that === undefined)return fn;
@@ -63827,7 +65999,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 142 */
+/* 144 */
 /***/ (function(module, exports) {
 
 	module.exports = function(it){
@@ -63836,12 +66008,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 143 */
+/* 145 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var dP         = __webpack_require__(144)
-	  , createDesc = __webpack_require__(129);
-	module.exports = __webpack_require__(134) ? function(object, key, value){
+	var dP         = __webpack_require__(146)
+	  , createDesc = __webpack_require__(131);
+	module.exports = __webpack_require__(136) ? function(object, key, value){
 	  return dP.f(object, key, createDesc(1, value));
 	} : function(object, key, value){
 	  object[key] = value;
@@ -63849,15 +66021,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 144 */
+/* 146 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var anObject       = __webpack_require__(145)
-	  , IE8_DOM_DEFINE = __webpack_require__(133)
-	  , toPrimitive    = __webpack_require__(130)
+	var anObject       = __webpack_require__(147)
+	  , IE8_DOM_DEFINE = __webpack_require__(135)
+	  , toPrimitive    = __webpack_require__(132)
 	  , dP             = Object.defineProperty;
 
-	exports.f = __webpack_require__(134) ? Object.defineProperty : function defineProperty(O, P, Attributes){
+	exports.f = __webpack_require__(136) ? Object.defineProperty : function defineProperty(O, P, Attributes){
 	  anObject(O);
 	  P = toPrimitive(P, true);
 	  anObject(Attributes);
@@ -63870,38 +66042,38 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 145 */
+/* 147 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var isObject = __webpack_require__(131);
+	var isObject = __webpack_require__(133);
 	module.exports = function(it){
 	  if(!isObject(it))throw TypeError(it + ' is not an object!');
 	  return it;
 	};
 
 /***/ }),
-/* 146 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(147), __esModule: true };
-
-/***/ }),
-/* 147 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(148);
-	__webpack_require__(174);
-	module.exports = __webpack_require__(176);
-
-/***/ }),
 /* 148 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	__webpack_require__(149);
-	var global        = __webpack_require__(137)
-	  , hide          = __webpack_require__(143)
-	  , Iterators     = __webpack_require__(152)
-	  , TO_STRING_TAG = __webpack_require__(171)('toStringTag');
+	module.exports = { "default": __webpack_require__(149), __esModule: true };
+
+/***/ }),
+/* 149 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	__webpack_require__(150);
+	__webpack_require__(176);
+	module.exports = __webpack_require__(178);
+
+/***/ }),
+/* 150 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	__webpack_require__(151);
+	var global        = __webpack_require__(139)
+	  , hide          = __webpack_require__(145)
+	  , Iterators     = __webpack_require__(154)
+	  , TO_STRING_TAG = __webpack_require__(173)('toStringTag');
 
 	for(var collections = ['NodeList', 'DOMTokenList', 'MediaList', 'StyleSheetList', 'CSSRuleList'], i = 0; i < 5; i++){
 	  var NAME       = collections[i]
@@ -63912,20 +66084,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ }),
-/* 149 */
+/* 151 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
-	var addToUnscopables = __webpack_require__(150)
-	  , step             = __webpack_require__(151)
-	  , Iterators        = __webpack_require__(152)
-	  , toIObject        = __webpack_require__(123);
+	var addToUnscopables = __webpack_require__(152)
+	  , step             = __webpack_require__(153)
+	  , Iterators        = __webpack_require__(154)
+	  , toIObject        = __webpack_require__(125);
 
 	// 22.1.3.4 Array.prototype.entries()
 	// 22.1.3.13 Array.prototype.keys()
 	// 22.1.3.29 Array.prototype.values()
 	// 22.1.3.30 Array.prototype[@@iterator]()
-	module.exports = __webpack_require__(153)(Array, 'Array', function(iterated, kind){
+	module.exports = __webpack_require__(155)(Array, 'Array', function(iterated, kind){
 	  this._t = toIObject(iterated); // target
 	  this._i = 0;                   // next index
 	  this._k = kind;                // kind
@@ -63951,13 +66123,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	addToUnscopables('entries');
 
 /***/ }),
-/* 150 */
+/* 152 */
 /***/ (function(module, exports) {
 
 	module.exports = function(){ /* empty */ };
 
 /***/ }),
-/* 151 */
+/* 153 */
 /***/ (function(module, exports) {
 
 	module.exports = function(done, value){
@@ -63965,26 +66137,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 152 */
+/* 154 */
 /***/ (function(module, exports) {
 
 	module.exports = {};
 
 /***/ }),
-/* 153 */
+/* 155 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
-	var LIBRARY        = __webpack_require__(154)
-	  , $export        = __webpack_require__(139)
-	  , redefine       = __webpack_require__(155)
-	  , hide           = __webpack_require__(143)
-	  , has            = __webpack_require__(132)
-	  , Iterators      = __webpack_require__(152)
-	  , $iterCreate    = __webpack_require__(156)
-	  , setToStringTag = __webpack_require__(170)
-	  , getPrototypeOf = __webpack_require__(172)
-	  , ITERATOR       = __webpack_require__(171)('iterator')
+	var LIBRARY        = __webpack_require__(156)
+	  , $export        = __webpack_require__(141)
+	  , redefine       = __webpack_require__(157)
+	  , hide           = __webpack_require__(145)
+	  , has            = __webpack_require__(134)
+	  , Iterators      = __webpack_require__(154)
+	  , $iterCreate    = __webpack_require__(158)
+	  , setToStringTag = __webpack_require__(172)
+	  , getPrototypeOf = __webpack_require__(174)
+	  , ITERATOR       = __webpack_require__(173)('iterator')
 	  , BUGGY          = !([].keys && 'next' in [].keys()) // Safari has buggy iterators w/o `next`
 	  , FF_ITERATOR    = '@@iterator'
 	  , KEYS           = 'keys'
@@ -64046,29 +66218,29 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 154 */
+/* 156 */
 /***/ (function(module, exports) {
 
 	module.exports = true;
 
 /***/ }),
-/* 155 */
+/* 157 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(143);
+	module.exports = __webpack_require__(145);
 
 /***/ }),
-/* 156 */
+/* 158 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
-	var create         = __webpack_require__(157)
-	  , descriptor     = __webpack_require__(129)
-	  , setToStringTag = __webpack_require__(170)
+	var create         = __webpack_require__(159)
+	  , descriptor     = __webpack_require__(131)
+	  , setToStringTag = __webpack_require__(172)
 	  , IteratorPrototype = {};
 
 	// 25.1.2.1.1 %IteratorPrototype%[@@iterator]()
-	__webpack_require__(143)(IteratorPrototype, __webpack_require__(171)('iterator'), function(){ return this; });
+	__webpack_require__(145)(IteratorPrototype, __webpack_require__(173)('iterator'), function(){ return this; });
 
 	module.exports = function(Constructor, NAME, next){
 	  Constructor.prototype = create(IteratorPrototype, {next: descriptor(1, next)});
@@ -64076,27 +66248,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 157 */
+/* 159 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
-	var anObject    = __webpack_require__(145)
-	  , dPs         = __webpack_require__(158)
-	  , enumBugKeys = __webpack_require__(168)
-	  , IE_PROTO    = __webpack_require__(165)('IE_PROTO')
+	var anObject    = __webpack_require__(147)
+	  , dPs         = __webpack_require__(160)
+	  , enumBugKeys = __webpack_require__(170)
+	  , IE_PROTO    = __webpack_require__(167)('IE_PROTO')
 	  , Empty       = function(){ /* empty */ }
 	  , PROTOTYPE   = 'prototype';
 
 	// Create object with fake `null` prototype: use iframe Object with cleared prototype
 	var createDict = function(){
 	  // Thrash, waste and sodomy: IE GC bug
-	  var iframe = __webpack_require__(136)('iframe')
+	  var iframe = __webpack_require__(138)('iframe')
 	    , i      = enumBugKeys.length
 	    , lt     = '<'
 	    , gt     = '>'
 	    , iframeDocument;
 	  iframe.style.display = 'none';
-	  __webpack_require__(169).appendChild(iframe);
+	  __webpack_require__(171).appendChild(iframe);
 	  iframe.src = 'javascript:'; // eslint-disable-line no-script-url
 	  // createDict = iframe.contentWindow.Object;
 	  // html.removeChild(iframe);
@@ -64123,14 +66295,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 158 */
+/* 160 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var dP       = __webpack_require__(144)
-	  , anObject = __webpack_require__(145)
-	  , getKeys  = __webpack_require__(159);
+	var dP       = __webpack_require__(146)
+	  , anObject = __webpack_require__(147)
+	  , getKeys  = __webpack_require__(161);
 
-	module.exports = __webpack_require__(134) ? Object.defineProperties : function defineProperties(O, Properties){
+	module.exports = __webpack_require__(136) ? Object.defineProperties : function defineProperties(O, Properties){
 	  anObject(O);
 	  var keys   = getKeys(Properties)
 	    , length = keys.length
@@ -64141,25 +66313,25 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 159 */
+/* 161 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// 19.1.2.14 / 15.2.3.14 Object.keys(O)
-	var $keys       = __webpack_require__(160)
-	  , enumBugKeys = __webpack_require__(168);
+	var $keys       = __webpack_require__(162)
+	  , enumBugKeys = __webpack_require__(170);
 
 	module.exports = Object.keys || function keys(O){
 	  return $keys(O, enumBugKeys);
 	};
 
 /***/ }),
-/* 160 */
+/* 162 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var has          = __webpack_require__(132)
-	  , toIObject    = __webpack_require__(123)
-	  , arrayIndexOf = __webpack_require__(161)(false)
-	  , IE_PROTO     = __webpack_require__(165)('IE_PROTO');
+	var has          = __webpack_require__(134)
+	  , toIObject    = __webpack_require__(125)
+	  , arrayIndexOf = __webpack_require__(163)(false)
+	  , IE_PROTO     = __webpack_require__(167)('IE_PROTO');
 
 	module.exports = function(object, names){
 	  var O      = toIObject(object)
@@ -64175,14 +66347,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 161 */
+/* 163 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// false -> Array#indexOf
 	// true  -> Array#includes
-	var toIObject = __webpack_require__(123)
-	  , toLength  = __webpack_require__(162)
-	  , toIndex   = __webpack_require__(164);
+	var toIObject = __webpack_require__(125)
+	  , toLength  = __webpack_require__(164)
+	  , toIndex   = __webpack_require__(166);
 	module.exports = function(IS_INCLUDES){
 	  return function($this, el, fromIndex){
 	    var O      = toIObject($this)
@@ -64201,18 +66373,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 162 */
+/* 164 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// 7.1.15 ToLength
-	var toInteger = __webpack_require__(163)
+	var toInteger = __webpack_require__(165)
 	  , min       = Math.min;
 	module.exports = function(it){
 	  return it > 0 ? min(toInteger(it), 0x1fffffffffffff) : 0; // pow(2, 53) - 1 == 9007199254740991
 	};
 
 /***/ }),
-/* 163 */
+/* 165 */
 /***/ (function(module, exports) {
 
 	// 7.1.4 ToInteger
@@ -64223,10 +66395,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 164 */
+/* 166 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var toInteger = __webpack_require__(163)
+	var toInteger = __webpack_require__(165)
 	  , max       = Math.max
 	  , min       = Math.min;
 	module.exports = function(index, length){
@@ -64235,20 +66407,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 165 */
+/* 167 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var shared = __webpack_require__(166)('keys')
-	  , uid    = __webpack_require__(167);
+	var shared = __webpack_require__(168)('keys')
+	  , uid    = __webpack_require__(169);
 	module.exports = function(key){
 	  return shared[key] || (shared[key] = uid(key));
 	};
 
 /***/ }),
-/* 166 */
+/* 168 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var global = __webpack_require__(137)
+	var global = __webpack_require__(139)
 	  , SHARED = '__core-js_shared__'
 	  , store  = global[SHARED] || (global[SHARED] = {});
 	module.exports = function(key){
@@ -64256,7 +66428,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 167 */
+/* 169 */
 /***/ (function(module, exports) {
 
 	var id = 0
@@ -64266,7 +66438,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 168 */
+/* 170 */
 /***/ (function(module, exports) {
 
 	// IE 8- don't enum bug keys
@@ -64275,30 +66447,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	).split(',');
 
 /***/ }),
-/* 169 */
+/* 171 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(137).document && document.documentElement;
+	module.exports = __webpack_require__(139).document && document.documentElement;
 
 /***/ }),
-/* 170 */
+/* 172 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var def = __webpack_require__(144).f
-	  , has = __webpack_require__(132)
-	  , TAG = __webpack_require__(171)('toStringTag');
+	var def = __webpack_require__(146).f
+	  , has = __webpack_require__(134)
+	  , TAG = __webpack_require__(173)('toStringTag');
 
 	module.exports = function(it, tag, stat){
 	  if(it && !has(it = stat ? it : it.prototype, TAG))def(it, TAG, {configurable: true, value: tag});
 	};
 
 /***/ }),
-/* 171 */
+/* 173 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var store      = __webpack_require__(166)('wks')
-	  , uid        = __webpack_require__(167)
-	  , Symbol     = __webpack_require__(137).Symbol
+	var store      = __webpack_require__(168)('wks')
+	  , uid        = __webpack_require__(169)
+	  , Symbol     = __webpack_require__(139).Symbol
 	  , USE_SYMBOL = typeof Symbol == 'function';
 
 	var $exports = module.exports = function(name){
@@ -64309,13 +66481,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	$exports.store = store;
 
 /***/ }),
-/* 172 */
+/* 174 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// 19.1.2.9 / 15.2.3.2 Object.getPrototypeOf(O)
-	var has         = __webpack_require__(132)
-	  , toObject    = __webpack_require__(173)
-	  , IE_PROTO    = __webpack_require__(165)('IE_PROTO')
+	var has         = __webpack_require__(134)
+	  , toObject    = __webpack_require__(175)
+	  , IE_PROTO    = __webpack_require__(167)('IE_PROTO')
 	  , ObjectProto = Object.prototype;
 
 	module.exports = Object.getPrototypeOf || function(O){
@@ -64327,24 +66499,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 173 */
+/* 175 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// 7.1.13 ToObject(argument)
-	var defined = __webpack_require__(126);
+	var defined = __webpack_require__(128);
 	module.exports = function(it){
 	  return Object(defined(it));
 	};
 
 /***/ }),
-/* 174 */
+/* 176 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
-	var $at  = __webpack_require__(175)(true);
+	var $at  = __webpack_require__(177)(true);
 
 	// 21.1.3.27 String.prototype[@@iterator]()
-	__webpack_require__(153)(String, 'String', function(iterated){
+	__webpack_require__(155)(String, 'String', function(iterated){
 	  this._t = String(iterated); // target
 	  this._i = 0;                // next index
 	// 21.1.5.2.1 %StringIteratorPrototype%.next()
@@ -64359,11 +66531,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 
 /***/ }),
-/* 175 */
+/* 177 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var toInteger = __webpack_require__(163)
-	  , defined   = __webpack_require__(126);
+	var toInteger = __webpack_require__(165)
+	  , defined   = __webpack_require__(128);
 	// true  -> String#at
 	// false -> String#codePointAt
 	module.exports = function(TO_STRING){
@@ -64381,37 +66553,37 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 176 */
+/* 178 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var anObject = __webpack_require__(145)
-	  , get      = __webpack_require__(177);
-	module.exports = __webpack_require__(140).getIterator = function(it){
+	var anObject = __webpack_require__(147)
+	  , get      = __webpack_require__(179);
+	module.exports = __webpack_require__(142).getIterator = function(it){
 	  var iterFn = get(it);
 	  if(typeof iterFn != 'function')throw TypeError(it + ' is not iterable!');
 	  return anObject(iterFn.call(it));
 	};
 
 /***/ }),
-/* 177 */
+/* 179 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var classof   = __webpack_require__(178)
-	  , ITERATOR  = __webpack_require__(171)('iterator')
-	  , Iterators = __webpack_require__(152);
-	module.exports = __webpack_require__(140).getIteratorMethod = function(it){
+	var classof   = __webpack_require__(180)
+	  , ITERATOR  = __webpack_require__(173)('iterator')
+	  , Iterators = __webpack_require__(154);
+	module.exports = __webpack_require__(142).getIteratorMethod = function(it){
 	  if(it != undefined)return it[ITERATOR]
 	    || it['@@iterator']
 	    || Iterators[classof(it)];
 	};
 
 /***/ }),
-/* 178 */
+/* 180 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// getting tag from 19.1.3.6 Object.prototype.toString()
-	var cof = __webpack_require__(125)
-	  , TAG = __webpack_require__(171)('toStringTag')
+	var cof = __webpack_require__(127)
+	  , TAG = __webpack_require__(173)('toStringTag')
 	  // ES3 wrong here
 	  , ARG = cof(function(){ return arguments; }()) == 'Arguments';
 
@@ -64434,45 +66606,45 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 179 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(180), __esModule: true };
-
-/***/ }),
-/* 180 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(181);
-	module.exports = __webpack_require__(140).Object.freeze;
-
-/***/ }),
 /* 181 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// 19.1.2.5 Object.freeze(O)
-	var isObject = __webpack_require__(131)
-	  , meta     = __webpack_require__(182).onFreeze;
+	module.exports = { "default": __webpack_require__(182), __esModule: true };
 
-	__webpack_require__(138)('freeze', function($freeze){
+/***/ }),
+/* 182 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	__webpack_require__(183);
+	module.exports = __webpack_require__(142).Object.freeze;
+
+/***/ }),
+/* 183 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	// 19.1.2.5 Object.freeze(O)
+	var isObject = __webpack_require__(133)
+	  , meta     = __webpack_require__(184).onFreeze;
+
+	__webpack_require__(140)('freeze', function($freeze){
 	  return function freeze(it){
 	    return $freeze && isObject(it) ? $freeze(meta(it)) : it;
 	  };
 	});
 
 /***/ }),
-/* 182 */
+/* 184 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var META     = __webpack_require__(167)('meta')
-	  , isObject = __webpack_require__(131)
-	  , has      = __webpack_require__(132)
-	  , setDesc  = __webpack_require__(144).f
+	var META     = __webpack_require__(169)('meta')
+	  , isObject = __webpack_require__(133)
+	  , has      = __webpack_require__(134)
+	  , setDesc  = __webpack_require__(146).f
 	  , id       = 0;
 	var isExtensible = Object.isExtensible || function(){
 	  return true;
 	};
-	var FREEZE = !__webpack_require__(135)(function(){
+	var FREEZE = !__webpack_require__(137)(function(){
 	  return isExtensible(Object.preventExtensions({}));
 	});
 	var setMeta = function(it){
@@ -64519,45 +66691,45 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 183 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(184), __esModule: true };
-
-/***/ }),
-/* 184 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(185);
-	module.exports = __webpack_require__(140).Object.keys;
-
-/***/ }),
 /* 185 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// 19.1.2.14 Object.keys(O)
-	var toObject = __webpack_require__(173)
-	  , $keys    = __webpack_require__(159);
+	module.exports = { "default": __webpack_require__(186), __esModule: true };
 
-	__webpack_require__(138)('keys', function(){
+/***/ }),
+/* 186 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	__webpack_require__(187);
+	module.exports = __webpack_require__(142).Object.keys;
+
+/***/ }),
+/* 187 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	// 19.1.2.14 Object.keys(O)
+	var toObject = __webpack_require__(175)
+	  , $keys    = __webpack_require__(161);
+
+	__webpack_require__(140)('keys', function(){
 	  return function keys(it){
 	    return $keys(toObject(it));
 	  };
 	});
 
 /***/ }),
-/* 186 */
+/* 188 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	exports.__esModule = true;
 
-	var _iterator = __webpack_require__(187);
+	var _iterator = __webpack_require__(189);
 
 	var _iterator2 = _interopRequireDefault(_iterator);
 
-	var _symbol = __webpack_require__(190);
+	var _symbol = __webpack_require__(192);
 
 	var _symbol2 = _interopRequireDefault(_symbol);
 
@@ -64572,72 +66744,72 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 187 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(188), __esModule: true };
-
-/***/ }),
-/* 188 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(174);
-	__webpack_require__(148);
-	module.exports = __webpack_require__(189).f('iterator');
-
-/***/ }),
 /* 189 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	exports.f = __webpack_require__(171);
+	module.exports = { "default": __webpack_require__(190), __esModule: true };
 
 /***/ }),
 /* 190 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(191), __esModule: true };
+	__webpack_require__(176);
+	__webpack_require__(150);
+	module.exports = __webpack_require__(191).f('iterator');
 
 /***/ }),
 /* 191 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	__webpack_require__(192);
-	__webpack_require__(200);
-	__webpack_require__(201);
-	__webpack_require__(202);
-	module.exports = __webpack_require__(140).Symbol;
+	exports.f = __webpack_require__(173);
 
 /***/ }),
 /* 192 */
 /***/ (function(module, exports, __webpack_require__) {
 
+	module.exports = { "default": __webpack_require__(193), __esModule: true };
+
+/***/ }),
+/* 193 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	__webpack_require__(194);
+	__webpack_require__(202);
+	__webpack_require__(203);
+	__webpack_require__(204);
+	module.exports = __webpack_require__(142).Symbol;
+
+/***/ }),
+/* 194 */
+/***/ (function(module, exports, __webpack_require__) {
+
 	'use strict';
 	// ECMAScript 6 symbols shim
-	var global         = __webpack_require__(137)
-	  , has            = __webpack_require__(132)
-	  , DESCRIPTORS    = __webpack_require__(134)
-	  , $export        = __webpack_require__(139)
-	  , redefine       = __webpack_require__(155)
-	  , META           = __webpack_require__(182).KEY
-	  , $fails         = __webpack_require__(135)
-	  , shared         = __webpack_require__(166)
-	  , setToStringTag = __webpack_require__(170)
-	  , uid            = __webpack_require__(167)
-	  , wks            = __webpack_require__(171)
-	  , wksExt         = __webpack_require__(189)
-	  , wksDefine      = __webpack_require__(193)
-	  , keyOf          = __webpack_require__(194)
-	  , enumKeys       = __webpack_require__(195)
-	  , isArray        = __webpack_require__(197)
-	  , anObject       = __webpack_require__(145)
-	  , toIObject      = __webpack_require__(123)
-	  , toPrimitive    = __webpack_require__(130)
-	  , createDesc     = __webpack_require__(129)
-	  , _create        = __webpack_require__(157)
-	  , gOPNExt        = __webpack_require__(198)
-	  , $GOPD          = __webpack_require__(127)
-	  , $DP            = __webpack_require__(144)
-	  , $keys          = __webpack_require__(159)
+	var global         = __webpack_require__(139)
+	  , has            = __webpack_require__(134)
+	  , DESCRIPTORS    = __webpack_require__(136)
+	  , $export        = __webpack_require__(141)
+	  , redefine       = __webpack_require__(157)
+	  , META           = __webpack_require__(184).KEY
+	  , $fails         = __webpack_require__(137)
+	  , shared         = __webpack_require__(168)
+	  , setToStringTag = __webpack_require__(172)
+	  , uid            = __webpack_require__(169)
+	  , wks            = __webpack_require__(173)
+	  , wksExt         = __webpack_require__(191)
+	  , wksDefine      = __webpack_require__(195)
+	  , keyOf          = __webpack_require__(196)
+	  , enumKeys       = __webpack_require__(197)
+	  , isArray        = __webpack_require__(199)
+	  , anObject       = __webpack_require__(147)
+	  , toIObject      = __webpack_require__(125)
+	  , toPrimitive    = __webpack_require__(132)
+	  , createDesc     = __webpack_require__(131)
+	  , _create        = __webpack_require__(159)
+	  , gOPNExt        = __webpack_require__(200)
+	  , $GOPD          = __webpack_require__(129)
+	  , $DP            = __webpack_require__(146)
+	  , $keys          = __webpack_require__(161)
 	  , gOPD           = $GOPD.f
 	  , dP             = $DP.f
 	  , gOPN           = gOPNExt.f
@@ -64760,11 +66932,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  $GOPD.f = $getOwnPropertyDescriptor;
 	  $DP.f   = $defineProperty;
-	  __webpack_require__(199).f = gOPNExt.f = $getOwnPropertyNames;
-	  __webpack_require__(128).f  = $propertyIsEnumerable;
-	  __webpack_require__(196).f = $getOwnPropertySymbols;
+	  __webpack_require__(201).f = gOPNExt.f = $getOwnPropertyNames;
+	  __webpack_require__(130).f  = $propertyIsEnumerable;
+	  __webpack_require__(198).f = $getOwnPropertySymbols;
 
-	  if(DESCRIPTORS && !__webpack_require__(154)){
+	  if(DESCRIPTORS && !__webpack_require__(156)){
 	    redefine(ObjectProto, 'propertyIsEnumerable', $propertyIsEnumerable, true);
 	  }
 
@@ -64839,7 +67011,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 
 	// 19.4.3.4 Symbol.prototype[@@toPrimitive](hint)
-	$Symbol[PROTOTYPE][TO_PRIMITIVE] || __webpack_require__(143)($Symbol[PROTOTYPE], TO_PRIMITIVE, $Symbol[PROTOTYPE].valueOf);
+	$Symbol[PROTOTYPE][TO_PRIMITIVE] || __webpack_require__(145)($Symbol[PROTOTYPE], TO_PRIMITIVE, $Symbol[PROTOTYPE].valueOf);
 	// 19.4.3.5 Symbol.prototype[@@toStringTag]
 	setToStringTag($Symbol, 'Symbol');
 	// 20.2.1.9 Math[@@toStringTag]
@@ -64848,25 +67020,25 @@ return /******/ (function(modules) { // webpackBootstrap
 	setToStringTag(global.JSON, 'JSON', true);
 
 /***/ }),
-/* 193 */
+/* 195 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var global         = __webpack_require__(137)
-	  , core           = __webpack_require__(140)
-	  , LIBRARY        = __webpack_require__(154)
-	  , wksExt         = __webpack_require__(189)
-	  , defineProperty = __webpack_require__(144).f;
+	var global         = __webpack_require__(139)
+	  , core           = __webpack_require__(142)
+	  , LIBRARY        = __webpack_require__(156)
+	  , wksExt         = __webpack_require__(191)
+	  , defineProperty = __webpack_require__(146).f;
 	module.exports = function(name){
 	  var $Symbol = core.Symbol || (core.Symbol = LIBRARY ? {} : global.Symbol || {});
 	  if(name.charAt(0) != '_' && !(name in $Symbol))defineProperty($Symbol, name, {value: wksExt.f(name)});
 	};
 
 /***/ }),
-/* 194 */
+/* 196 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var getKeys   = __webpack_require__(159)
-	  , toIObject = __webpack_require__(123);
+	var getKeys   = __webpack_require__(161)
+	  , toIObject = __webpack_require__(125);
 	module.exports = function(object, el){
 	  var O      = toIObject(object)
 	    , keys   = getKeys(O)
@@ -64877,13 +67049,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 195 */
+/* 197 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// all enumerable object keys, includes symbols
-	var getKeys = __webpack_require__(159)
-	  , gOPS    = __webpack_require__(196)
-	  , pIE     = __webpack_require__(128);
+	var getKeys = __webpack_require__(161)
+	  , gOPS    = __webpack_require__(198)
+	  , pIE     = __webpack_require__(130);
 	module.exports = function(it){
 	  var result     = getKeys(it)
 	    , getSymbols = gOPS.f;
@@ -64897,28 +67069,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 196 */
+/* 198 */
 /***/ (function(module, exports) {
 
 	exports.f = Object.getOwnPropertySymbols;
 
 /***/ }),
-/* 197 */
+/* 199 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// 7.2.2 IsArray(argument)
-	var cof = __webpack_require__(125);
+	var cof = __webpack_require__(127);
 	module.exports = Array.isArray || function isArray(arg){
 	  return cof(arg) == 'Array';
 	};
 
 /***/ }),
-/* 198 */
+/* 200 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// fallback for IE11 buggy Object.getOwnPropertyNames with iframe and window
-	var toIObject = __webpack_require__(123)
-	  , gOPN      = __webpack_require__(199).f
+	var toIObject = __webpack_require__(125)
+	  , gOPN      = __webpack_require__(201).f
 	  , toString  = {}.toString;
 
 	var windowNames = typeof window == 'object' && window && Object.getOwnPropertyNames
@@ -64938,61 +67110,61 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 199 */
+/* 201 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// 19.1.2.7 / 15.2.3.4 Object.getOwnPropertyNames(O)
-	var $keys      = __webpack_require__(160)
-	  , hiddenKeys = __webpack_require__(168).concat('length', 'prototype');
+	var $keys      = __webpack_require__(162)
+	  , hiddenKeys = __webpack_require__(170).concat('length', 'prototype');
 
 	exports.f = Object.getOwnPropertyNames || function getOwnPropertyNames(O){
 	  return $keys(O, hiddenKeys);
 	};
 
 /***/ }),
-/* 200 */
+/* 202 */
 /***/ (function(module, exports) {
 
 	
 
 /***/ }),
-/* 201 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(193)('asyncIterator');
-
-/***/ }),
-/* 202 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(193)('observable');
-
-/***/ }),
 /* 203 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(204), __esModule: true };
+	__webpack_require__(195)('asyncIterator');
 
 /***/ }),
 /* 204 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	__webpack_require__(205);
-	var $Object = __webpack_require__(140).Object;
-	module.exports = function defineProperty(it, key, desc){
-	  return $Object.defineProperty(it, key, desc);
-	};
+	__webpack_require__(195)('observable');
 
 /***/ }),
 /* 205 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var $export = __webpack_require__(139);
-	// 19.1.2.4 / 15.2.3.6 Object.defineProperty(O, P, Attributes)
-	$export($export.S + $export.F * !__webpack_require__(134), 'Object', {defineProperty: __webpack_require__(144).f});
+	module.exports = { "default": __webpack_require__(206), __esModule: true };
 
 /***/ }),
 /* 206 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	__webpack_require__(207);
+	var $Object = __webpack_require__(142).Object;
+	module.exports = function defineProperty(it, key, desc){
+	  return $Object.defineProperty(it, key, desc);
+	};
+
+/***/ }),
+/* 207 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var $export = __webpack_require__(141);
+	// 19.1.2.4 / 15.2.3.6 Object.defineProperty(O, P, Attributes)
+	$export($export.S + $export.F * !__webpack_require__(136), 'Object', {defineProperty: __webpack_require__(146).f});
+
+/***/ }),
+/* 208 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -65006,14 +67178,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 207 */
+/* 209 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	exports.__esModule = true;
 
-	var _defineProperty = __webpack_require__(203);
+	var _defineProperty = __webpack_require__(205);
 
 	var _defineProperty2 = _interopRequireDefault(_defineProperty);
 
@@ -65038,31 +67210,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	}();
 
 /***/ }),
-/* 208 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(209), __esModule: true };
-
-/***/ }),
-/* 209 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(200);
-	__webpack_require__(174);
-	__webpack_require__(148);
-	__webpack_require__(210);
-	__webpack_require__(222);
-	module.exports = __webpack_require__(140).Map;
-
-/***/ }),
 /* 210 */
 /***/ (function(module, exports, __webpack_require__) {
 
+	module.exports = { "default": __webpack_require__(211), __esModule: true };
+
+/***/ }),
+/* 211 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	__webpack_require__(202);
+	__webpack_require__(176);
+	__webpack_require__(150);
+	__webpack_require__(212);
+	__webpack_require__(224);
+	module.exports = __webpack_require__(142).Map;
+
+/***/ }),
+/* 212 */
+/***/ (function(module, exports, __webpack_require__) {
+
 	'use strict';
-	var strong = __webpack_require__(211);
+	var strong = __webpack_require__(213);
 
 	// 23.1 Map Objects
-	module.exports = __webpack_require__(218)('Map', function(get){
+	module.exports = __webpack_require__(220)('Map', function(get){
 	  return function Map(){ return get(this, arguments.length > 0 ? arguments[0] : undefined); };
 	}, {
 	  // 23.1.3.6 Map.prototype.get(key)
@@ -65077,22 +67249,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	}, strong, true);
 
 /***/ }),
-/* 211 */
+/* 213 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
-	var dP          = __webpack_require__(144).f
-	  , create      = __webpack_require__(157)
-	  , redefineAll = __webpack_require__(212)
-	  , ctx         = __webpack_require__(141)
-	  , anInstance  = __webpack_require__(213)
-	  , defined     = __webpack_require__(126)
-	  , forOf       = __webpack_require__(214)
-	  , $iterDefine = __webpack_require__(153)
-	  , step        = __webpack_require__(151)
-	  , setSpecies  = __webpack_require__(217)
-	  , DESCRIPTORS = __webpack_require__(134)
-	  , fastKey     = __webpack_require__(182).fastKey
+	var dP          = __webpack_require__(146).f
+	  , create      = __webpack_require__(159)
+	  , redefineAll = __webpack_require__(214)
+	  , ctx         = __webpack_require__(143)
+	  , anInstance  = __webpack_require__(215)
+	  , defined     = __webpack_require__(128)
+	  , forOf       = __webpack_require__(216)
+	  , $iterDefine = __webpack_require__(155)
+	  , step        = __webpack_require__(153)
+	  , setSpecies  = __webpack_require__(219)
+	  , DESCRIPTORS = __webpack_require__(136)
+	  , fastKey     = __webpack_require__(184).fastKey
 	  , SIZE        = DESCRIPTORS ? '_s' : 'size';
 
 	var getEntry = function(that, key){
@@ -65224,10 +67396,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 212 */
+/* 214 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var hide = __webpack_require__(143);
+	var hide = __webpack_require__(145);
 	module.exports = function(target, src, safe){
 	  for(var key in src){
 	    if(safe && target[key])target[key] = src[key];
@@ -65236,7 +67408,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 213 */
+/* 215 */
 /***/ (function(module, exports) {
 
 	module.exports = function(it, Constructor, name, forbiddenField){
@@ -65246,15 +67418,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 214 */
+/* 216 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var ctx         = __webpack_require__(141)
-	  , call        = __webpack_require__(215)
-	  , isArrayIter = __webpack_require__(216)
-	  , anObject    = __webpack_require__(145)
-	  , toLength    = __webpack_require__(162)
-	  , getIterFn   = __webpack_require__(177)
+	var ctx         = __webpack_require__(143)
+	  , call        = __webpack_require__(217)
+	  , isArrayIter = __webpack_require__(218)
+	  , anObject    = __webpack_require__(147)
+	  , toLength    = __webpack_require__(164)
+	  , getIterFn   = __webpack_require__(179)
 	  , BREAK       = {}
 	  , RETURN      = {};
 	var exports = module.exports = function(iterable, entries, fn, that, ITERATOR){
@@ -65276,11 +67448,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.RETURN = RETURN;
 
 /***/ }),
-/* 215 */
+/* 217 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// call something on iterator step with safe closing on error
-	var anObject = __webpack_require__(145);
+	var anObject = __webpack_require__(147);
 	module.exports = function(iterator, fn, value, entries){
 	  try {
 	    return entries ? fn(anObject(value)[0], value[1]) : fn(value);
@@ -65293,12 +67465,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 216 */
+/* 218 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// check on default Array iterator
-	var Iterators  = __webpack_require__(152)
-	  , ITERATOR   = __webpack_require__(171)('iterator')
+	var Iterators  = __webpack_require__(154)
+	  , ITERATOR   = __webpack_require__(173)('iterator')
 	  , ArrayProto = Array.prototype;
 
 	module.exports = function(it){
@@ -65306,15 +67478,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 217 */
+/* 219 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
-	var global      = __webpack_require__(137)
-	  , core        = __webpack_require__(140)
-	  , dP          = __webpack_require__(144)
-	  , DESCRIPTORS = __webpack_require__(134)
-	  , SPECIES     = __webpack_require__(171)('species');
+	var global      = __webpack_require__(139)
+	  , core        = __webpack_require__(142)
+	  , dP          = __webpack_require__(146)
+	  , DESCRIPTORS = __webpack_require__(136)
+	  , SPECIES     = __webpack_require__(173)('species');
 
 	module.exports = function(KEY){
 	  var C = typeof core[KEY] == 'function' ? core[KEY] : global[KEY];
@@ -65325,23 +67497,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 218 */
+/* 220 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
-	var global         = __webpack_require__(137)
-	  , $export        = __webpack_require__(139)
-	  , meta           = __webpack_require__(182)
-	  , fails          = __webpack_require__(135)
-	  , hide           = __webpack_require__(143)
-	  , redefineAll    = __webpack_require__(212)
-	  , forOf          = __webpack_require__(214)
-	  , anInstance     = __webpack_require__(213)
-	  , isObject       = __webpack_require__(131)
-	  , setToStringTag = __webpack_require__(170)
-	  , dP             = __webpack_require__(144).f
-	  , each           = __webpack_require__(219)(0)
-	  , DESCRIPTORS    = __webpack_require__(134);
+	var global         = __webpack_require__(139)
+	  , $export        = __webpack_require__(141)
+	  , meta           = __webpack_require__(184)
+	  , fails          = __webpack_require__(137)
+	  , hide           = __webpack_require__(145)
+	  , redefineAll    = __webpack_require__(214)
+	  , forOf          = __webpack_require__(216)
+	  , anInstance     = __webpack_require__(215)
+	  , isObject       = __webpack_require__(133)
+	  , setToStringTag = __webpack_require__(172)
+	  , dP             = __webpack_require__(146).f
+	  , each           = __webpack_require__(221)(0)
+	  , DESCRIPTORS    = __webpack_require__(136);
 
 	module.exports = function(NAME, wrapper, methods, common, IS_MAP, IS_WEAK){
 	  var Base  = global[NAME]
@@ -65389,7 +67561,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 219 */
+/* 221 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// 0 -> Array#forEach
@@ -65399,11 +67571,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	// 4 -> Array#every
 	// 5 -> Array#find
 	// 6 -> Array#findIndex
-	var ctx      = __webpack_require__(141)
-	  , IObject  = __webpack_require__(124)
-	  , toObject = __webpack_require__(173)
-	  , toLength = __webpack_require__(162)
-	  , asc      = __webpack_require__(220);
+	var ctx      = __webpack_require__(143)
+	  , IObject  = __webpack_require__(126)
+	  , toObject = __webpack_require__(175)
+	  , toLength = __webpack_require__(164)
+	  , asc      = __webpack_require__(222);
 	module.exports = function(TYPE, $create){
 	  var IS_MAP        = TYPE == 1
 	    , IS_FILTER     = TYPE == 2
@@ -65438,23 +67610,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 220 */
+/* 222 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// 9.4.2.3 ArraySpeciesCreate(originalArray, length)
-	var speciesConstructor = __webpack_require__(221);
+	var speciesConstructor = __webpack_require__(223);
 
 	module.exports = function(original, length){
 	  return new (speciesConstructor(original))(length);
 	};
 
 /***/ }),
-/* 221 */
+/* 223 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var isObject = __webpack_require__(131)
-	  , isArray  = __webpack_require__(197)
-	  , SPECIES  = __webpack_require__(171)('species');
+	var isObject = __webpack_require__(133)
+	  , isArray  = __webpack_require__(199)
+	  , SPECIES  = __webpack_require__(173)('species');
 
 	module.exports = function(original){
 	  var C;
@@ -65470,21 +67642,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 222 */
+/* 224 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// https://github.com/DavidBruant/Map-Set.prototype.toJSON
-	var $export  = __webpack_require__(139);
+	var $export  = __webpack_require__(141);
 
-	$export($export.P + $export.R, 'Map', {toJSON: __webpack_require__(223)('Map')});
+	$export($export.P + $export.R, 'Map', {toJSON: __webpack_require__(225)('Map')});
 
 /***/ }),
-/* 223 */
+/* 225 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// https://github.com/DavidBruant/Map-Set.prototype.toJSON
-	var classof = __webpack_require__(178)
-	  , from    = __webpack_require__(224);
+	var classof = __webpack_require__(180)
+	  , from    = __webpack_require__(226);
 	module.exports = function(NAME){
 	  return function toJSON(){
 	    if(classof(this) != NAME)throw TypeError(NAME + "#toJSON isn't generic");
@@ -65493,10 +67665,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 224 */
+/* 226 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var forOf = __webpack_require__(214);
+	var forOf = __webpack_require__(216);
 
 	module.exports = function(iter, ITERATOR){
 	  var result = [];
@@ -65506,14 +67678,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 225 */
+/* 227 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	exports.__esModule = true;
 
-	var _typeof2 = __webpack_require__(186);
+	var _typeof2 = __webpack_require__(188);
 
 	var _typeof3 = _interopRequireDefault(_typeof2);
 
@@ -65528,22 +67700,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 226 */
+/* 228 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	exports.__esModule = true;
 
-	var _setPrototypeOf = __webpack_require__(227);
+	var _setPrototypeOf = __webpack_require__(229);
 
 	var _setPrototypeOf2 = _interopRequireDefault(_setPrototypeOf);
 
-	var _create = __webpack_require__(231);
+	var _create = __webpack_require__(233);
 
 	var _create2 = _interopRequireDefault(_create);
 
-	var _typeof2 = __webpack_require__(186);
+	var _typeof2 = __webpack_require__(188);
 
 	var _typeof3 = _interopRequireDefault(_typeof2);
 
@@ -65566,34 +67738,34 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 227 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(228), __esModule: true };
-
-/***/ }),
-/* 228 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(229);
-	module.exports = __webpack_require__(140).Object.setPrototypeOf;
-
-/***/ }),
 /* 229 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// 19.1.3.19 Object.setPrototypeOf(O, proto)
-	var $export = __webpack_require__(139);
-	$export($export.S, 'Object', {setPrototypeOf: __webpack_require__(230).set});
+	module.exports = { "default": __webpack_require__(230), __esModule: true };
 
 /***/ }),
 /* 230 */
 /***/ (function(module, exports, __webpack_require__) {
 
+	__webpack_require__(231);
+	module.exports = __webpack_require__(142).Object.setPrototypeOf;
+
+/***/ }),
+/* 231 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	// 19.1.3.19 Object.setPrototypeOf(O, proto)
+	var $export = __webpack_require__(141);
+	$export($export.S, 'Object', {setPrototypeOf: __webpack_require__(232).set});
+
+/***/ }),
+/* 232 */
+/***/ (function(module, exports, __webpack_require__) {
+
 	// Works with __proto__ only. Old v8 can't work with null proto objects.
 	/* eslint-disable no-proto */
-	var isObject = __webpack_require__(131)
-	  , anObject = __webpack_require__(145);
+	var isObject = __webpack_require__(133)
+	  , anObject = __webpack_require__(147);
 	var check = function(O, proto){
 	  anObject(O);
 	  if(!isObject(proto) && proto !== null)throw TypeError(proto + ": can't set as prototype!");
@@ -65602,7 +67774,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  set: Object.setPrototypeOf || ('__proto__' in {} ? // eslint-disable-line
 	    function(test, buggy, set){
 	      try {
-	        set = __webpack_require__(141)(Function.call, __webpack_require__(127).f(Object.prototype, '__proto__').set, 2);
+	        set = __webpack_require__(143)(Function.call, __webpack_require__(129).f(Object.prototype, '__proto__').set, 2);
 	        set(test, []);
 	        buggy = !(test instanceof Array);
 	      } catch(e){ buggy = true; }
@@ -65617,60 +67789,60 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 231 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(232), __esModule: true };
-
-/***/ }),
-/* 232 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(233);
-	var $Object = __webpack_require__(140).Object;
-	module.exports = function create(P, D){
-	  return $Object.create(P, D);
-	};
-
-/***/ }),
 /* 233 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var $export = __webpack_require__(139)
-	// 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
-	$export($export.S, 'Object', {create: __webpack_require__(157)});
+	module.exports = { "default": __webpack_require__(234), __esModule: true };
 
 /***/ }),
 /* 234 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(235), __esModule: true };
+	__webpack_require__(235);
+	var $Object = __webpack_require__(142).Object;
+	module.exports = function create(P, D){
+	  return $Object.create(P, D);
+	};
 
 /***/ }),
 /* 235 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	__webpack_require__(236);
-	var $Object = __webpack_require__(140).Object;
-	module.exports = function defineProperties(T, D){
-	  return $Object.defineProperties(T, D);
-	};
+	var $export = __webpack_require__(141)
+	// 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
+	$export($export.S, 'Object', {create: __webpack_require__(159)});
 
 /***/ }),
 /* 236 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var $export = __webpack_require__(139);
-	// 19.1.2.3 / 15.2.3.7 Object.defineProperties(O, Properties)
-	$export($export.S + $export.F * !__webpack_require__(134), 'Object', {defineProperties: __webpack_require__(158)});
+	module.exports = { "default": __webpack_require__(237), __esModule: true };
 
 /***/ }),
 /* 237 */
 /***/ (function(module, exports, __webpack_require__) {
 
+	__webpack_require__(238);
+	var $Object = __webpack_require__(142).Object;
+	module.exports = function defineProperties(T, D){
+	  return $Object.defineProperties(T, D);
+	};
+
+/***/ }),
+/* 238 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var $export = __webpack_require__(141);
+	// 19.1.2.3 / 15.2.3.7 Object.defineProperties(O, Properties)
+	$export($export.S + $export.F * !__webpack_require__(136), 'Object', {defineProperties: __webpack_require__(160)});
+
+/***/ }),
+/* 239 */
+/***/ (function(module, exports, __webpack_require__) {
+
 	var pSlice = Array.prototype.slice;
-	var objectKeys = __webpack_require__(238);
-	var isArguments = __webpack_require__(239);
+	var objectKeys = __webpack_require__(240);
+	var isArguments = __webpack_require__(241);
 
 	var deepEqual = module.exports = function (actual, expected, opts) {
 	  if (!opts) opts = {};
@@ -65765,7 +67937,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 238 */
+/* 240 */
 /***/ (function(module, exports) {
 
 	exports = module.exports = typeof Object.keys === 'function'
@@ -65780,7 +67952,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 239 */
+/* 241 */
 /***/ (function(module, exports) {
 
 	var supportsArgumentsClass = (function(){
@@ -65806,42 +67978,42 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 240 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(241), __esModule: true };
-
-/***/ }),
-/* 241 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(242);
-	module.exports = __webpack_require__(140).Object.assign;
-
-/***/ }),
 /* 242 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// 19.1.3.1 Object.assign(target, source)
-	var $export = __webpack_require__(139);
-
-	$export($export.S + $export.F, 'Object', {assign: __webpack_require__(243)});
+	module.exports = { "default": __webpack_require__(243), __esModule: true };
 
 /***/ }),
 /* 243 */
 /***/ (function(module, exports, __webpack_require__) {
 
+	__webpack_require__(244);
+	module.exports = __webpack_require__(142).Object.assign;
+
+/***/ }),
+/* 244 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	// 19.1.3.1 Object.assign(target, source)
+	var $export = __webpack_require__(141);
+
+	$export($export.S + $export.F, 'Object', {assign: __webpack_require__(245)});
+
+/***/ }),
+/* 245 */
+/***/ (function(module, exports, __webpack_require__) {
+
 	'use strict';
 	// 19.1.2.1 Object.assign(target, source, ...)
-	var getKeys  = __webpack_require__(159)
-	  , gOPS     = __webpack_require__(196)
-	  , pIE      = __webpack_require__(128)
-	  , toObject = __webpack_require__(173)
-	  , IObject  = __webpack_require__(124)
+	var getKeys  = __webpack_require__(161)
+	  , gOPS     = __webpack_require__(198)
+	  , pIE      = __webpack_require__(130)
+	  , toObject = __webpack_require__(175)
+	  , IObject  = __webpack_require__(126)
 	  , $assign  = Object.assign;
 
 	// should work with symbols and should have deterministic property order (V8 bug)
-	module.exports = !$assign || __webpack_require__(135)(function(){
+	module.exports = !$assign || __webpack_require__(137)(function(){
 	  var A = {}
 	    , B = {}
 	    , S = Symbol()
@@ -65866,24 +68038,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	} : $assign;
 
 /***/ }),
-/* 244 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(245), __esModule: true };
-
-/***/ }),
-/* 245 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(246);
-	module.exports = __webpack_require__(140).String.fromCodePoint;
-
-/***/ }),
 /* 246 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var $export        = __webpack_require__(139)
-	  , toIndex        = __webpack_require__(164)
+	module.exports = { "default": __webpack_require__(247), __esModule: true };
+
+/***/ }),
+/* 247 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	__webpack_require__(248);
+	module.exports = __webpack_require__(142).String.fromCodePoint;
+
+/***/ }),
+/* 248 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var $export        = __webpack_require__(141)
+	  , toIndex        = __webpack_require__(166)
 	  , fromCharCode   = String.fromCharCode
 	  , $fromCodePoint = String.fromCodePoint;
 
@@ -65907,34 +68079,34 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 
 /***/ }),
-/* 247 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(248), __esModule: true };
-
-/***/ }),
-/* 248 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(174);
-	__webpack_require__(249);
-	module.exports = __webpack_require__(140).Array.from;
-
-/***/ }),
 /* 249 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	'use strict';
-	var ctx            = __webpack_require__(141)
-	  , $export        = __webpack_require__(139)
-	  , toObject       = __webpack_require__(173)
-	  , call           = __webpack_require__(215)
-	  , isArrayIter    = __webpack_require__(216)
-	  , toLength       = __webpack_require__(162)
-	  , createProperty = __webpack_require__(250)
-	  , getIterFn      = __webpack_require__(177);
+	module.exports = { "default": __webpack_require__(250), __esModule: true };
 
-	$export($export.S + $export.F * !__webpack_require__(251)(function(iter){ Array.from(iter); }), 'Array', {
+/***/ }),
+/* 250 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	__webpack_require__(176);
+	__webpack_require__(251);
+	module.exports = __webpack_require__(142).Array.from;
+
+/***/ }),
+/* 251 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	'use strict';
+	var ctx            = __webpack_require__(143)
+	  , $export        = __webpack_require__(141)
+	  , toObject       = __webpack_require__(175)
+	  , call           = __webpack_require__(217)
+	  , isArrayIter    = __webpack_require__(218)
+	  , toLength       = __webpack_require__(164)
+	  , createProperty = __webpack_require__(252)
+	  , getIterFn      = __webpack_require__(179);
+
+	$export($export.S + $export.F * !__webpack_require__(253)(function(iter){ Array.from(iter); }), 'Array', {
 	  // 22.1.2.1 Array.from(arrayLike, mapfn = undefined, thisArg = undefined)
 	  from: function from(arrayLike/*, mapfn = undefined, thisArg = undefined*/){
 	    var O       = toObject(arrayLike)
@@ -65964,12 +68136,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 250 */
+/* 252 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
-	var $defineProperty = __webpack_require__(144)
-	  , createDesc      = __webpack_require__(129);
+	var $defineProperty = __webpack_require__(146)
+	  , createDesc      = __webpack_require__(131);
 
 	module.exports = function(object, index, value){
 	  if(index in object)$defineProperty.f(object, index, createDesc(0, value));
@@ -65977,10 +68149,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 251 */
+/* 253 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var ITERATOR     = __webpack_require__(171)('iterator')
+	var ITERATOR     = __webpack_require__(173)('iterator')
 	  , SAFE_CLOSING = false;
 
 	try {
@@ -66003,31 +68175,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 252 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(253), __esModule: true };
-
-/***/ }),
-/* 253 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(200);
-	__webpack_require__(174);
-	__webpack_require__(148);
-	__webpack_require__(254);
-	__webpack_require__(255);
-	module.exports = __webpack_require__(140).Set;
-
-/***/ }),
 /* 254 */
 /***/ (function(module, exports, __webpack_require__) {
 
+	module.exports = { "default": __webpack_require__(255), __esModule: true };
+
+/***/ }),
+/* 255 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	__webpack_require__(202);
+	__webpack_require__(176);
+	__webpack_require__(150);
+	__webpack_require__(256);
+	__webpack_require__(257);
+	module.exports = __webpack_require__(142).Set;
+
+/***/ }),
+/* 256 */
+/***/ (function(module, exports, __webpack_require__) {
+
 	'use strict';
-	var strong = __webpack_require__(211);
+	var strong = __webpack_require__(213);
 
 	// 23.2 Set Objects
-	module.exports = __webpack_require__(218)('Set', function(get){
+	module.exports = __webpack_require__(220)('Set', function(get){
 	  return function Set(){ return get(this, arguments.length > 0 ? arguments[0] : undefined); };
 	}, {
 	  // 23.2.3.1 Set.prototype.add(value)
@@ -66037,24 +68209,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	}, strong);
 
 /***/ }),
-/* 255 */
+/* 257 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// https://github.com/DavidBruant/Map-Set.prototype.toJSON
-	var $export  = __webpack_require__(139);
+	var $export  = __webpack_require__(141);
 
-	$export($export.P + $export.R, 'Set', {toJSON: __webpack_require__(223)('Set')});
+	$export($export.P + $export.R, 'Set', {toJSON: __webpack_require__(225)('Set')});
 
 /***/ }),
-/* 256 */
+/* 258 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.9.1
 	var CATEGORY_BITS, CATEGORY_MASK, CATEGORY_SHIFT, COMBINING_BITS, COMBINING_MASK, COMBINING_SHIFT, EAW_BITS, EAW_MASK, EAW_SHIFT, NUMBER_BITS, NUMBER_MASK, SCRIPT_BITS, SCRIPT_MASK, SCRIPT_SHIFT, UnicodeTrie, bits, data, fs, log2, trie;
 
-	UnicodeTrie = __webpack_require__(15);
+	UnicodeTrie = __webpack_require__(17);
 
-	data = __webpack_require__(257);
+	data = __webpack_require__(259);
 
 
 
@@ -66195,7 +68367,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ }),
-/* 257 */
+/* 259 */
 /***/ (function(module, exports) {
 
 	module.exports = {
@@ -66432,20 +68604,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 258 */
+/* 260 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-	var _slicedToArray = _interopDefault(__webpack_require__(259));
-	var _getIterator = _interopDefault(__webpack_require__(146));
-	var _defineProperty = _interopDefault(__webpack_require__(263));
-	var _regeneratorRuntime = _interopDefault(__webpack_require__(264));
-	var _Symbol$iterator = _interopDefault(__webpack_require__(187));
-	var _classCallCheck = _interopDefault(__webpack_require__(206));
-	var _createClass = _interopDefault(__webpack_require__(207));
+	var _slicedToArray = _interopDefault(__webpack_require__(261));
+	var _getIterator = _interopDefault(__webpack_require__(148));
+	var _defineProperty = _interopDefault(__webpack_require__(265));
+	var _regeneratorRuntime = _interopDefault(__webpack_require__(266));
+	var _Symbol$iterator = _interopDefault(__webpack_require__(189));
+	var _classCallCheck = _interopDefault(__webpack_require__(208));
+	var _createClass = _interopDefault(__webpack_require__(209));
 
 	var INITIAL_STATE = 1;
 	var FAIL_STATE = 0;
@@ -66628,18 +68800,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 
 /***/ }),
-/* 259 */
+/* 261 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	exports.__esModule = true;
 
-	var _isIterable2 = __webpack_require__(260);
+	var _isIterable2 = __webpack_require__(262);
 
 	var _isIterable3 = _interopRequireDefault(_isIterable2);
 
-	var _getIterator2 = __webpack_require__(146);
+	var _getIterator2 = __webpack_require__(148);
 
 	var _getIterator3 = _interopRequireDefault(_getIterator2);
 
@@ -66684,27 +68856,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	}();
 
 /***/ }),
-/* 260 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	module.exports = { "default": __webpack_require__(261), __esModule: true };
-
-/***/ }),
-/* 261 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	__webpack_require__(148);
-	__webpack_require__(174);
-	module.exports = __webpack_require__(262);
-
-/***/ }),
 /* 262 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var classof   = __webpack_require__(178)
-	  , ITERATOR  = __webpack_require__(171)('iterator')
-	  , Iterators = __webpack_require__(152);
-	module.exports = __webpack_require__(140).isIterable = function(it){
+	module.exports = { "default": __webpack_require__(263), __esModule: true };
+
+/***/ }),
+/* 263 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	__webpack_require__(150);
+	__webpack_require__(176);
+	module.exports = __webpack_require__(264);
+
+/***/ }),
+/* 264 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var classof   = __webpack_require__(180)
+	  , ITERATOR  = __webpack_require__(173)('iterator')
+	  , Iterators = __webpack_require__(154);
+	module.exports = __webpack_require__(142).isIterable = function(it){
 	  var O = Object(it);
 	  return O[ITERATOR] !== undefined
 	    || '@@iterator' in O
@@ -66712,14 +68884,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 263 */
+/* 265 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	exports.__esModule = true;
 
-	var _defineProperty = __webpack_require__(203);
+	var _defineProperty = __webpack_require__(205);
 
 	var _defineProperty2 = _interopRequireDefault(_defineProperty);
 
@@ -66741,14 +68913,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ }),
-/* 264 */
+/* 266 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(265);
+	module.exports = __webpack_require__(267);
 
 
 /***/ }),
-/* 265 */
+/* 267 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {// This method of obtaining a reference to the global object needs to be
@@ -66769,7 +68941,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	// Force reevalutation of runtime.js.
 	g.regeneratorRuntime = undefined;
 
-	module.exports = __webpack_require__(266);
+	module.exports = __webpack_require__(268);
 
 	if (hadRuntime) {
 	  // Restore the original runtime.
@@ -66786,7 +68958,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ }),
-/* 266 */
+/* 268 */
 /***/ (function(module, exports) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {/**
@@ -67529,7 +69701,29 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ }),
-/* 267 */
+/* 269 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	module.exports = { "default": __webpack_require__(270), __esModule: true };
+
+/***/ }),
+/* 270 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	__webpack_require__(271);
+	module.exports = Math.pow(2, -52);
+
+/***/ }),
+/* 271 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	// 20.1.2.1 Number.EPSILON
+	var $export = __webpack_require__(141);
+
+	$export($export.S, 'Number', {EPSILON: Math.pow(2, -52)});
+
+/***/ }),
+/* 272 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {var clone = (function() {
@@ -67696,14 +69890,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ }),
-/* 268 */
+/* 273 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(269).BrotliDecompressBuffer;
+	module.exports = __webpack_require__(274).BrotliDecompressBuffer;
 
 
 /***/ }),
-/* 269 */
+/* 274 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -67721,15 +69915,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	   limitations under the License.
 	*/
 
-	var BrotliInput = __webpack_require__(270).BrotliInput;
-	var BrotliOutput = __webpack_require__(270).BrotliOutput;
-	var BrotliBitReader = __webpack_require__(271);
-	var BrotliDictionary = __webpack_require__(272);
-	var HuffmanCode = __webpack_require__(276).HuffmanCode;
-	var BrotliBuildHuffmanTable = __webpack_require__(276).BrotliBuildHuffmanTable;
-	var Context = __webpack_require__(277);
-	var Prefix = __webpack_require__(278);
-	var Transform = __webpack_require__(279);
+	var BrotliInput = __webpack_require__(275).BrotliInput;
+	var BrotliOutput = __webpack_require__(275).BrotliOutput;
+	var BrotliBitReader = __webpack_require__(276);
+	var BrotliDictionary = __webpack_require__(277);
+	var HuffmanCode = __webpack_require__(281).HuffmanCode;
+	var BrotliBuildHuffmanTable = __webpack_require__(281).BrotliBuildHuffmanTable;
+	var Context = __webpack_require__(282);
+	var Prefix = __webpack_require__(283);
+	var Transform = __webpack_require__(284);
 
 	var kDefaultCodeLength = 8;
 	var kCodeLengthRepeatCode = 16;
@@ -68647,7 +70841,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 270 */
+/* 275 */
 /***/ (function(module, exports) {
 
 	function BrotliInput(buffer) {
@@ -68687,7 +70881,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 271 */
+/* 276 */
 /***/ (function(module, exports) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -68817,7 +71011,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 272 */
+/* 277 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -68837,7 +71031,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	   Collection of static dictionary words.
 	*/
 
-	var data = __webpack_require__(273);
+	var data = __webpack_require__(278);
 	exports.init = function() {
 	  exports.dictionary = data.init();
 	};
@@ -68859,11 +71053,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 273 */
+/* 278 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var base64 = __webpack_require__(274);
-	var fs = __webpack_require__(54);
+	var base64 = __webpack_require__(279);
+	var fs = __webpack_require__(56);
 
 	/**
 	 * The normal dictionary-data.js is quite large, which makes it 
@@ -68873,14 +71067,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * it's own dictionary. 😜
 	 */
 	exports.init = function() {
-	  var BrotliDecompressBuffer = __webpack_require__(269).BrotliDecompressBuffer;
-	  var compressed = base64.toByteArray(__webpack_require__(275));
+	  var BrotliDecompressBuffer = __webpack_require__(274).BrotliDecompressBuffer;
+	  var compressed = base64.toByteArray(__webpack_require__(280));
 	  return BrotliDecompressBuffer(compressed);
 	};
 
 
 /***/ }),
-/* 274 */
+/* 279 */
 /***/ (function(module, exports) {
 
 	'use strict'
@@ -69000,14 +71194,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 275 */
+/* 280 */
 /***/ (function(module, exports) {
 
 	module.exports="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";
 
 
 /***/ }),
-/* 276 */
+/* 281 */
 /***/ (function(module, exports) {
 
 	function HuffmanCode(bits, value) {
@@ -69136,7 +71330,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 277 */
+/* 282 */
 /***/ (function(module, exports) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -69392,7 +71586,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 278 */
+/* 283 */
 /***/ (function(module, exports) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -69458,7 +71652,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 279 */
+/* 284 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* Copyright 2013 Google Inc. All Rights Reserved.
@@ -69478,7 +71672,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	   Transformations on dictionary words.
 	*/
 
-	var BrotliDictionary = __webpack_require__(272);
+	var BrotliDictionary = __webpack_require__(277);
 
 	var kIdentity       = 0;
 	var kOmitLast1      = 1;
@@ -69711,20 +71905,20 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 280 */
+/* 285 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(__dirname) {// Generated by CoffeeScript 1.10.0
+	/* WEBPACK VAR INJECTION */(function(__dirname) {// Generated by CoffeeScript 1.12.1
 	(function() {
 	  var AFMFont, PDFFont, StandardFont, fs,
 	    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
 	    hasProp = {}.hasOwnProperty;
 
-	  AFMFont = __webpack_require__(281);
+	  AFMFont = __webpack_require__(286);
 
-	  PDFFont = __webpack_require__(80);
+	  PDFFont = __webpack_require__(82);
 
-	  fs = __webpack_require__(54);
+	  fs = __webpack_require__(56);
 
 	  StandardFont = (function(superClass) {
 	    var STANDARD_FONTS;
@@ -69842,14 +72036,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, "/"))
 
 /***/ }),
-/* 281 */
+/* 286 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 	(function() {
 	  var AFMFont, fs;
 
-	  fs = __webpack_require__(54);
+	  fs = __webpack_require__(56);
 
 	  AFMFont = (function() {
 	    var WIN_ANSI_MAP, characters;
@@ -70018,19 +72212,19 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 282 */
+/* 287 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 	(function() {
 	  var EmbeddedFont, PDFFont, PDFObject,
 	    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
 	    hasProp = {}.hasOwnProperty,
 	    slice = [].slice;
 
-	  PDFFont = __webpack_require__(80);
+	  PDFFont = __webpack_require__(82);
 
-	  PDFObject = __webpack_require__(55);
+	  PDFObject = __webpack_require__(57);
 
 	  EmbeddedFont = (function(superClass) {
 	    var toHex;
@@ -70050,11 +72244,69 @@ return /******/ (function(modules) { // webpackBootstrap
 	      this.descender = this.font.descent * this.scale;
 	      this.lineGap = this.font.lineGap * this.scale;
 	      this.bbox = this.font.bbox;
+	      this.layoutCache = Object.create(null);
 	    }
 
+	    EmbeddedFont.prototype.layoutRun = function(text, features) {
+	      var i, j, key, len, position, ref, run;
+	      run = this.font.layout(text, features);
+	      ref = run.positions;
+	      for (i = j = 0, len = ref.length; j < len; i = ++j) {
+	        position = ref[i];
+	        for (key in position) {
+	          position[key] *= this.scale;
+	        }
+	        position.advanceWidth = run.glyphs[i].advanceWidth * this.scale;
+	      }
+	      return run;
+	    };
+
+	    EmbeddedFont.prototype.layoutCached = function(text) {
+	      var cached, run;
+	      if (cached = this.layoutCache[text]) {
+	        return cached;
+	      }
+	      run = this.layoutRun(text);
+	      this.layoutCache[text] = run;
+	      return run;
+	    };
+
+	    EmbeddedFont.prototype.layout = function(text, features, onlyWidth) {
+	      var advanceWidth, glyphs, index, last, positions, ref, run;
+	      if (onlyWidth == null) {
+	        onlyWidth = false;
+	      }
+	      if (features) {
+	        return this.layoutRun(text, features);
+	      }
+	      glyphs = onlyWidth ? null : [];
+	      positions = onlyWidth ? null : [];
+	      advanceWidth = 0;
+	      last = 0;
+	      index = 0;
+	      while (index <= text.length) {
+	        if ((index === text.length && last < index) || ((ref = text.charAt(index)) === ' ' || ref === '\t')) {
+	          run = this.layoutCached(text.slice(last, ++index));
+	          if (!onlyWidth) {
+	            glyphs.push.apply(glyphs, run.glyphs);
+	            positions.push.apply(positions, run.positions);
+	          }
+	          advanceWidth += run.advanceWidth;
+	          last = index;
+	        } else {
+	          index++;
+	        }
+	      }
+	      return {
+	        glyphs: glyphs,
+	        positions: positions,
+	        advanceWidth: advanceWidth
+	      };
+	    };
+
 	    EmbeddedFont.prototype.encode = function(text, features) {
-	      var base, base1, gid, glyph, glyphs, i, j, key, len, positions, ref, res;
-	      ref = this.font.layout(text, features), glyphs = ref.glyphs, positions = ref.positions;
+	      var base, base1, gid, glyph, glyphs, i, j, len, positions, ref, res;
+	      ref = this.layout(text, features), glyphs = ref.glyphs, positions = ref.positions;
 	      res = [];
 	      for (i = j = 0, len = glyphs.length; j < len; i = ++j) {
 	        glyph = glyphs[i];
@@ -70066,18 +72318,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if ((base1 = this.unicode)[gid] == null) {
 	          base1[gid] = glyph.codePoints;
 	        }
-	        for (key in positions[i]) {
-	          positions[i][key] *= this.scale;
-	        }
-	        positions[i].advanceWidth = glyph.advanceWidth * this.scale;
 	      }
 	      return [res, positions];
 	    };
 
 	    EmbeddedFont.prototype.widthOfString = function(string, size, features) {
 	      var scale, width;
-	      width = this.font.layout(string, features).advanceWidth;
-	      scale = size / this.font.unitsPerEm;
+	      width = this.layout(string, features, true).advanceWidth;
+	      scale = size / 1000;
 	      return width * scale;
 	    };
 
@@ -70204,14 +72452,16 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 283 */
+/* 288 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 	(function() {
-	  var LineWrapper;
+	  var LineWrapper, number;
 
-	  LineWrapper = __webpack_require__(284);
+	  LineWrapper = __webpack_require__(289);
+
+	  number = __webpack_require__(57).number;
 
 	  module.exports = {
 	    initText: function() {
@@ -70272,13 +72522,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return this._font.widthOfString(string, this._fontSize, options.features) + (options.characterSpacing || 0) * (string.length - 1);
 	    },
 	    heightOfString: function(text, options) {
-	      var height, lineGap, x, y;
+	      var height, lineGap, ref, x, y;
 	      if (options == null) {
 	        options = {};
 	      }
-	      x = this.x, y = this.y;
+	      ref = this, x = ref.x, y = ref.y;
 	      options = this._initOptions(options);
-	      options.height = Infinity;
+	      options.height = 2e308;
 	      lineGap = options.lineGap || this._lineGap || 0;
 	      this._text(text, this.x, this.y, options, (function(_this) {
 	        return function(line, options) {
@@ -70291,9 +72541,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return height;
 	    },
 	    list: function(list, x, y, options, wrapper) {
-	      var flatten, i, indent, itemIndent, items, level, levels, r;
+	      var flatten, i, indent, itemIndent, items, level, levels, midLine, r;
 	      options = this._initOptions(x, y, options);
-	      r = Math.round((this._font.ascender / 1000 * this._fontSize) / 3);
+	      midLine = Math.round((this._font.ascender / 1000 * this._fontSize) / 2);
+	      r = options.bulletRadius || Math.round((this._font.ascender / 1000 * this._fontSize) / 3);
 	      indent = options.textIndent || r * 5;
 	      itemIndent = options.bulletIndent || r * 8;
 	      level = 1;
@@ -70329,7 +72580,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            wrapper.lineWidth -= diff;
 	            level = l;
 	          }
-	          _this.circle(_this.x - indent + r, _this.y + r + (r / 2), r);
+	          _this.circle(_this.x - indent + r, _this.y + midLine, r);
 	          return _this.fill();
 	        };
 	      })(this));
@@ -70353,7 +72604,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return this;
 	    },
 	    _initOptions: function(x, y, options) {
-	      var key, margins, ref, val;
+	      var key, ref, val;
 	      if (x == null) {
 	        x = {};
 	      }
@@ -70391,9 +72642,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this.y = y;
 	      }
 	      if (options.lineBreak !== false) {
-	        margins = this.page.margins;
 	        if (options.width == null) {
-	          options.width = this.page.width - this.x - margins.right;
+	          options.width = this.page.width - this.x - this.page.margins.right;
 	        }
 	      }
 	      options.columns || (options.columns = 0);
@@ -70468,14 +72718,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	        base[name] = this._font.ref();
 	      }
 	      this.addContent("BT");
-	      this.addContent("1 0 0 1 " + x + " " + y + " Tm");
-	      this.addContent("/" + this._font.id + " " + this._fontSize + " Tf");
+	      this.addContent("1 0 0 1 " + (number(x)) + " " + (number(y)) + " Tm");
+	      this.addContent("/" + this._font.id + " " + (number(this._fontSize)) + " Tf");
 	      mode = options.fill && options.stroke ? 2 : options.stroke ? 1 : 0;
 	      if (mode) {
 	        this.addContent(mode + " Tr");
 	      }
 	      if (characterSpacing) {
-	        this.addContent(characterSpacing + " Tc");
+	        this.addContent((number(characterSpacing)) + " Tc");
 	      }
 	      if (wordSpacing) {
 	        words = text.trim().split(/\s+/);
@@ -70503,7 +72753,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          if (last < cur) {
 	            hex = encoded.slice(last, cur).join('');
 	            advance = positions[cur - 1].xAdvance - positions[cur - 1].advanceWidth;
-	            commands.push("<" + hex + "> " + (-advance));
+	            commands.push("<" + hex + "> " + (number(-advance)));
 	          }
 	          return last = cur;
 	        };
@@ -70521,12 +72771,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	        pos = positions[i];
 	        if (pos.xOffset || pos.yOffset) {
 	          flush(i);
-	          this.addContent("1 0 0 1 " + (x + pos.xOffset * scale) + " " + (y + pos.yOffset * scale) + " Tm");
+	          this.addContent("1 0 0 1 " + (number(x + pos.xOffset * scale)) + " " + (number(y + pos.yOffset * scale)) + " Tm");
 	          flush(i + 1);
 	          hadOffset = true;
 	        } else {
 	          if (hadOffset) {
-	            this.addContent("1 0 0 1 " + x + " " + y + " Tm");
+	            this.addContent("1 0 0 1 " + (number(x)) + " " + (number(y)) + " Tm");
 	            hadOffset = false;
 	          }
 	          if (pos.xAdvance - pos.advanceWidth !== 0) {
@@ -70545,18 +72795,18 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 284 */
+/* 289 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 	(function() {
 	  var EventEmitter, LineBreaker, LineWrapper,
 	    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
 	    hasProp = {}.hasOwnProperty;
 
-	  EventEmitter = __webpack_require__(31).EventEmitter;
+	  EventEmitter = __webpack_require__(32).EventEmitter;
 
-	  LineBreaker = __webpack_require__(285);
+	  LineBreaker = __webpack_require__(16);
 
 	  LineWrapper = (function(superClass) {
 	    extend(LineWrapper, superClass);
@@ -70722,6 +72972,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	              }
 	              buffer = buffer + _this.ellipsis;
 	            }
+	            if (bk.required && w > _this.spaceLeft) {
+	              buffer = word;
+	              textWidth = w;
+	              wc = 1;
+	            }
 	            emitLine();
 	            if (_this.document.y + lh > _this.maxY) {
 	              shouldContinue = _this.nextSection();
@@ -70732,12 +72987,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	              }
 	            }
 	            if (bk.required) {
-	              if (w > _this.spaceLeft) {
-	                buffer = word;
-	                textWidth = w;
-	                wc = 1;
-	                emitLine();
-	              }
 	              _this.spaceLeft = _this.lineWidth;
 	              buffer = '';
 	              textWidth = 0;
@@ -70804,33004 +73053,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ }),
-/* 285 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	// Generated by CoffeeScript 1.7.1
-	(function() {
-	  var AI, AL, BA, BK, CB, CI_BRK, CJ, CP_BRK, CR, DI_BRK, ID, IN_BRK, LF, LineBreaker, NL, NS, PR_BRK, SA, SG, SP, UnicodeTrie, WJ, XX, characterClasses, classTrie, pairTable, _ref, _ref1;
-
-	  UnicodeTrie = __webpack_require__(286);
-
-	  classTrie = new UnicodeTrie(__webpack_require__(287));
-
-	  _ref = __webpack_require__(288), BK = _ref.BK, CR = _ref.CR, LF = _ref.LF, NL = _ref.NL, CB = _ref.CB, BA = _ref.BA, SP = _ref.SP, WJ = _ref.WJ, SP = _ref.SP, BK = _ref.BK, LF = _ref.LF, NL = _ref.NL, AI = _ref.AI, AL = _ref.AL, SA = _ref.SA, SG = _ref.SG, XX = _ref.XX, CJ = _ref.CJ, ID = _ref.ID, NS = _ref.NS, characterClasses = _ref.characterClasses;
-
-	  _ref1 = __webpack_require__(289), DI_BRK = _ref1.DI_BRK, IN_BRK = _ref1.IN_BRK, CI_BRK = _ref1.CI_BRK, CP_BRK = _ref1.CP_BRK, PR_BRK = _ref1.PR_BRK, pairTable = _ref1.pairTable;
-
-	  LineBreaker = (function() {
-	    var Break, mapClass, mapFirst;
-
-	    function LineBreaker(string) {
-	      this.string = string;
-	      this.pos = 0;
-	      this.lastPos = 0;
-	      this.curClass = null;
-	      this.nextClass = null;
-	    }
-
-	    LineBreaker.prototype.nextCodePoint = function() {
-	      var code, next;
-	      code = this.string.charCodeAt(this.pos++);
-	      next = this.string.charCodeAt(this.pos);
-	      if ((0xd800 <= code && code <= 0xdbff) && (0xdc00 <= next && next <= 0xdfff)) {
-	        this.pos++;
-	        return ((code - 0xd800) * 0x400) + (next - 0xdc00) + 0x10000;
-	      }
-	      return code;
-	    };
-
-	    mapClass = function(c) {
-	      switch (c) {
-	        case AI:
-	          return AL;
-	        case SA:
-	        case SG:
-	        case XX:
-	          return AL;
-	        case CJ:
-	          return NS;
-	        default:
-	          return c;
-	      }
-	    };
-
-	    mapFirst = function(c) {
-	      switch (c) {
-	        case LF:
-	        case NL:
-	          return BK;
-	        case CB:
-	          return BA;
-	        case SP:
-	          return WJ;
-	        default:
-	          return c;
-	      }
-	    };
-
-	    LineBreaker.prototype.nextCharClass = function(first) {
-	      if (first == null) {
-	        first = false;
-	      }
-	      return mapClass(classTrie.get(this.nextCodePoint()));
-	    };
-
-	    Break = (function() {
-	      function Break(position, required) {
-	        this.position = position;
-	        this.required = required != null ? required : false;
-	      }
-
-	      return Break;
-
-	    })();
-
-	    LineBreaker.prototype.nextBreak = function() {
-	      var cur, lastClass, shouldBreak;
-	      if (this.curClass == null) {
-	        this.curClass = mapFirst(this.nextCharClass());
-	      }
-	      while (this.pos < this.string.length) {
-	        this.lastPos = this.pos;
-	        lastClass = this.nextClass;
-	        this.nextClass = this.nextCharClass();
-	        if (this.curClass === BK || (this.curClass === CR && this.nextClass !== LF)) {
-	          this.curClass = mapFirst(mapClass(this.nextClass));
-	          return new Break(this.lastPos, true);
-	        }
-	        cur = (function() {
-	          switch (this.nextClass) {
-	            case SP:
-	              return this.curClass;
-	            case BK:
-	            case LF:
-	            case NL:
-	              return BK;
-	            case CR:
-	              return CR;
-	            case CB:
-	              return BA;
-	          }
-	        }).call(this);
-	        if (cur != null) {
-	          this.curClass = cur;
-	          if (this.nextClass === CB) {
-	            return new Break(this.lastPos);
-	          }
-	          continue;
-	        }
-	        shouldBreak = false;
-	        switch (pairTable[this.curClass][this.nextClass]) {
-	          case DI_BRK:
-	            shouldBreak = true;
-	            break;
-	          case IN_BRK:
-	            shouldBreak = lastClass === SP;
-	            break;
-	          case CI_BRK:
-	            shouldBreak = lastClass === SP;
-	            if (!shouldBreak) {
-	              continue;
-	            }
-	            break;
-	          case CP_BRK:
-	            if (lastClass !== SP) {
-	              continue;
-	            }
-	        }
-	        this.curClass = this.nextClass;
-	        if (shouldBreak) {
-	          return new Break(this.lastPos);
-	        }
-	      }
-	      if (this.pos >= this.string.length) {
-	        if (this.lastPos < this.string.length) {
-	          this.lastPos = this.string.length;
-	          return new Break(this.string.length);
-	        } else {
-	          return null;
-	        }
-	      }
-	    };
-
-	    return LineBreaker;
-
-	  })();
-
-	  module.exports = LineBreaker;
-
-	}).call(this);
-
-
-/***/ }),
-/* 286 */
-/***/ (function(module, exports) {
-
-	// Generated by CoffeeScript 1.7.1
-	var UnicodeTrie,
-	  __slice = [].slice;
-
-	UnicodeTrie = (function() {
-	  var DATA_BLOCK_LENGTH, DATA_GRANULARITY, DATA_MASK, INDEX_1_OFFSET, INDEX_2_BLOCK_LENGTH, INDEX_2_BMP_LENGTH, INDEX_2_MASK, INDEX_SHIFT, LSCP_INDEX_2_LENGTH, LSCP_INDEX_2_OFFSET, OMITTED_BMP_INDEX_1_LENGTH, SHIFT_1, SHIFT_1_2, SHIFT_2, UTF8_2B_INDEX_2_LENGTH, UTF8_2B_INDEX_2_OFFSET;
-
-	  SHIFT_1 = 6 + 5;
-
-	  SHIFT_2 = 5;
-
-	  SHIFT_1_2 = SHIFT_1 - SHIFT_2;
-
-	  OMITTED_BMP_INDEX_1_LENGTH = 0x10000 >> SHIFT_1;
-
-	  INDEX_2_BLOCK_LENGTH = 1 << SHIFT_1_2;
-
-	  INDEX_2_MASK = INDEX_2_BLOCK_LENGTH - 1;
-
-	  INDEX_SHIFT = 2;
-
-	  DATA_BLOCK_LENGTH = 1 << SHIFT_2;
-
-	  DATA_MASK = DATA_BLOCK_LENGTH - 1;
-
-	  LSCP_INDEX_2_OFFSET = 0x10000 >> SHIFT_2;
-
-	  LSCP_INDEX_2_LENGTH = 0x400 >> SHIFT_2;
-
-	  INDEX_2_BMP_LENGTH = LSCP_INDEX_2_OFFSET + LSCP_INDEX_2_LENGTH;
-
-	  UTF8_2B_INDEX_2_OFFSET = INDEX_2_BMP_LENGTH;
-
-	  UTF8_2B_INDEX_2_LENGTH = 0x800 >> 6;
-
-	  INDEX_1_OFFSET = UTF8_2B_INDEX_2_OFFSET + UTF8_2B_INDEX_2_LENGTH;
-
-	  DATA_GRANULARITY = 1 << INDEX_SHIFT;
-
-	  function UnicodeTrie(json) {
-	    var _ref, _ref1;
-	    if (json == null) {
-	      json = {};
-	    }
-	    this.data = json.data || [];
-	    this.highStart = (_ref = json.highStart) != null ? _ref : 0;
-	    this.errorValue = (_ref1 = json.errorValue) != null ? _ref1 : -1;
-	  }
-
-	  UnicodeTrie.prototype.get = function(codePoint) {
-	    var index;
-	    if (codePoint < 0 || codePoint > 0x10ffff) {
-	      return this.errorValue;
-	    }
-	    if (codePoint < 0xd800 || (codePoint > 0xdbff && codePoint <= 0xffff)) {
-	      index = (this.data[codePoint >> SHIFT_2] << INDEX_SHIFT) + (codePoint & DATA_MASK);
-	      return this.data[index];
-	    }
-	    if (codePoint <= 0xffff) {
-	      index = (this.data[LSCP_INDEX_2_OFFSET + ((codePoint - 0xd800) >> SHIFT_2)] << INDEX_SHIFT) + (codePoint & DATA_MASK);
-	      return this.data[index];
-	    }
-	    if (codePoint < this.highStart) {
-	      index = this.data[(INDEX_1_OFFSET - OMITTED_BMP_INDEX_1_LENGTH) + (codePoint >> SHIFT_1)];
-	      index = this.data[index + ((codePoint >> SHIFT_2) & INDEX_2_MASK)];
-	      index = (index << INDEX_SHIFT) + (codePoint & DATA_MASK);
-	      return this.data[index];
-	    }
-	    return this.data[this.data.length - DATA_GRANULARITY];
-	  };
-
-	  UnicodeTrie.prototype.toJSON = function() {
-	    var res;
-	    res = {
-	      data: __slice.call(this.data),
-	      highStart: this.highStart,
-	      errorValue: this.errorValue
-	    };
-	    return res;
-	  };
-
-	  return UnicodeTrie;
-
-	})();
-
-	module.exports = UnicodeTrie;
-
-
-/***/ }),
-/* 287 */
-/***/ (function(module, exports) {
-
-	module.exports = {
-		"data": [
-			1961,
-			1969,
-			1977,
-			1985,
-			2025,
-			2033,
-			2041,
-			2049,
-			2057,
-			2065,
-			2073,
-			2081,
-			2089,
-			2097,
-			2105,
-			2113,
-			2121,
-			2129,
-			2137,
-			2145,
-			2153,
-			2161,
-			2169,
-			2177,
-			2185,
-			2193,
-			2201,
-			2209,
-			2217,
-			2225,
-			2233,
-			2241,
-			2249,
-			2257,
-			2265,
-			2273,
-			2281,
-			2289,
-			2297,
-			2305,
-			2313,
-			2321,
-			2329,
-			2337,
-			2345,
-			2353,
-			2361,
-			2369,
-			2377,
-			2385,
-			2393,
-			2401,
-			2409,
-			2417,
-			2425,
-			2433,
-			2441,
-			2449,
-			2457,
-			2465,
-			2473,
-			2481,
-			2489,
-			2497,
-			2505,
-			2513,
-			2521,
-			2529,
-			2529,
-			2537,
-			2009,
-			2545,
-			2553,
-			2561,
-			2569,
-			2577,
-			2585,
-			2593,
-			2601,
-			2609,
-			2617,
-			2625,
-			2633,
-			2641,
-			2649,
-			2657,
-			2665,
-			2673,
-			2681,
-			2689,
-			2697,
-			2705,
-			2713,
-			2721,
-			2729,
-			2737,
-			2745,
-			2753,
-			2761,
-			2769,
-			2777,
-			2785,
-			2793,
-			2801,
-			2809,
-			2817,
-			2825,
-			2833,
-			2841,
-			2849,
-			2857,
-			2865,
-			2873,
-			2881,
-			2889,
-			2009,
-			2897,
-			2905,
-			2913,
-			2009,
-			2921,
-			2929,
-			2937,
-			2945,
-			2953,
-			2961,
-			2969,
-			2009,
-			2977,
-			2977,
-			2985,
-			2993,
-			3001,
-			3009,
-			3009,
-			3009,
-			3017,
-			3017,
-			3017,
-			3025,
-			3025,
-			3033,
-			3041,
-			3041,
-			3049,
-			3049,
-			3049,
-			3049,
-			3049,
-			3049,
-			3049,
-			3049,
-			3049,
-			3049,
-			3057,
-			3065,
-			3073,
-			3073,
-			3073,
-			3081,
-			3089,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3097,
-			3105,
-			3113,
-			3113,
-			3121,
-			3129,
-			3137,
-			3145,
-			3153,
-			3161,
-			3161,
-			3169,
-			3177,
-			3185,
-			3193,
-			3193,
-			3193,
-			3193,
-			3201,
-			3209,
-			3209,
-			3217,
-			3225,
-			3233,
-			3241,
-			3241,
-			3241,
-			3249,
-			3257,
-			3265,
-			3273,
-			3273,
-			3281,
-			3289,
-			3297,
-			2009,
-			2009,
-			3305,
-			3313,
-			3321,
-			3329,
-			3337,
-			3345,
-			3353,
-			3361,
-			3369,
-			3377,
-			3385,
-			3393,
-			2009,
-			2009,
-			3401,
-			3409,
-			3417,
-			3417,
-			3417,
-			3417,
-			3417,
-			3417,
-			3425,
-			3425,
-			3433,
-			3433,
-			3433,
-			3433,
-			3433,
-			3433,
-			3433,
-			3433,
-			3433,
-			3433,
-			3433,
-			3433,
-			3433,
-			3433,
-			3433,
-			3441,
-			3449,
-			3457,
-			3465,
-			3473,
-			3481,
-			3489,
-			3497,
-			3505,
-			3513,
-			3521,
-			3529,
-			3537,
-			3545,
-			3553,
-			3561,
-			3569,
-			3577,
-			3585,
-			3593,
-			3601,
-			3609,
-			3617,
-			3625,
-			3625,
-			3633,
-			3641,
-			3649,
-			3649,
-			3649,
-			3649,
-			3649,
-			3657,
-			3665,
-			3665,
-			3673,
-			3681,
-			3681,
-			3681,
-			3681,
-			3689,
-			3697,
-			3697,
-			3705,
-			3713,
-			3721,
-			3729,
-			3737,
-			3745,
-			3753,
-			3761,
-			3769,
-			3777,
-			3785,
-			3793,
-			3801,
-			3809,
-			3817,
-			3825,
-			3833,
-			3841,
-			3849,
-			3857,
-			3865,
-			3873,
-			3881,
-			3881,
-			3881,
-			3881,
-			3881,
-			3881,
-			3881,
-			3881,
-			3881,
-			3881,
-			3881,
-			3881,
-			3889,
-			3897,
-			3905,
-			3913,
-			3921,
-			3921,
-			3921,
-			3921,
-			3921,
-			3921,
-			3921,
-			3921,
-			3921,
-			3921,
-			3929,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			3937,
-			3937,
-			3937,
-			3937,
-			3937,
-			3937,
-			3937,
-			3945,
-			3953,
-			3953,
-			3953,
-			3961,
-			3969,
-			3969,
-			3977,
-			3985,
-			3993,
-			4001,
-			2009,
-			2009,
-			4009,
-			4009,
-			4009,
-			4009,
-			4009,
-			4009,
-			4009,
-			4009,
-			4009,
-			4009,
-			4009,
-			4009,
-			4017,
-			4025,
-			4033,
-			4041,
-			4049,
-			4057,
-			4065,
-			4073,
-			4081,
-			4081,
-			4081,
-			4081,
-			4081,
-			4081,
-			4081,
-			4089,
-			4097,
-			4097,
-			4105,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4113,
-			4121,
-			4121,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4129,
-			4137,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4145,
-			4153,
-			4161,
-			4169,
-			4169,
-			4169,
-			4169,
-			4169,
-			4169,
-			4169,
-			4169,
-			4177,
-			4185,
-			4193,
-			4201,
-			4209,
-			4217,
-			4217,
-			4225,
-			4233,
-			4233,
-			4233,
-			4233,
-			4233,
-			4233,
-			4233,
-			4233,
-			4241,
-			4249,
-			4257,
-			4265,
-			4273,
-			4281,
-			4289,
-			4297,
-			4305,
-			4313,
-			4321,
-			4329,
-			4337,
-			4345,
-			4353,
-			4361,
-			4361,
-			4369,
-			4377,
-			4385,
-			4385,
-			4385,
-			4385,
-			4393,
-			4401,
-			4409,
-			4409,
-			4409,
-			4409,
-			4409,
-			4409,
-			4417,
-			4425,
-			4433,
-			4441,
-			4449,
-			4457,
-			4465,
-			4473,
-			4481,
-			4489,
-			4497,
-			4505,
-			4513,
-			4521,
-			4529,
-			4537,
-			4545,
-			4553,
-			4561,
-			4569,
-			4577,
-			4585,
-			4593,
-			4601,
-			4609,
-			4617,
-			4625,
-			4633,
-			4641,
-			4649,
-			4657,
-			4665,
-			4673,
-			4681,
-			4689,
-			4697,
-			4705,
-			4713,
-			4721,
-			4729,
-			4737,
-			4745,
-			4753,
-			4761,
-			4769,
-			4777,
-			4785,
-			4793,
-			4801,
-			4809,
-			4817,
-			4825,
-			4833,
-			4841,
-			4849,
-			4857,
-			4865,
-			4873,
-			4881,
-			4889,
-			4897,
-			4905,
-			4913,
-			4921,
-			4929,
-			4937,
-			4945,
-			4953,
-			4961,
-			4969,
-			4977,
-			4985,
-			4993,
-			5001,
-			5009,
-			5017,
-			5025,
-			5033,
-			5041,
-			5049,
-			5057,
-			5065,
-			5073,
-			5081,
-			5089,
-			5097,
-			5105,
-			5113,
-			5121,
-			5129,
-			5137,
-			5145,
-			5153,
-			5161,
-			5169,
-			5177,
-			5185,
-			5193,
-			5201,
-			5209,
-			5217,
-			5225,
-			5233,
-			5241,
-			5249,
-			5257,
-			5265,
-			5273,
-			5281,
-			5289,
-			5297,
-			5305,
-			5313,
-			5321,
-			5329,
-			5337,
-			5345,
-			5353,
-			5361,
-			5369,
-			5377,
-			5385,
-			5393,
-			5401,
-			5409,
-			5417,
-			5425,
-			5433,
-			5441,
-			5449,
-			5457,
-			5465,
-			5473,
-			5481,
-			5489,
-			5497,
-			5505,
-			5513,
-			5521,
-			5529,
-			5537,
-			5545,
-			5553,
-			5561,
-			5569,
-			5577,
-			5585,
-			5593,
-			5601,
-			5609,
-			5617,
-			5625,
-			5633,
-			5641,
-			5649,
-			5657,
-			5665,
-			5673,
-			5681,
-			5689,
-			5697,
-			5705,
-			5713,
-			5721,
-			5729,
-			5737,
-			5745,
-			5753,
-			5761,
-			5769,
-			5777,
-			5785,
-			5793,
-			5801,
-			5809,
-			5817,
-			5825,
-			5833,
-			5841,
-			5849,
-			5857,
-			5865,
-			5873,
-			5881,
-			5889,
-			5897,
-			5905,
-			5913,
-			5921,
-			5929,
-			5937,
-			5945,
-			5953,
-			5961,
-			5969,
-			5977,
-			5985,
-			5993,
-			6001,
-			6009,
-			6017,
-			6025,
-			6033,
-			6041,
-			6049,
-			6057,
-			6065,
-			6073,
-			6081,
-			6089,
-			6097,
-			6105,
-			6113,
-			6121,
-			6129,
-			6137,
-			6145,
-			6153,
-			6161,
-			6169,
-			6177,
-			6185,
-			6193,
-			6201,
-			6209,
-			6217,
-			6225,
-			6233,
-			6241,
-			6249,
-			6257,
-			6265,
-			6273,
-			6281,
-			6289,
-			6297,
-			6305,
-			6313,
-			6321,
-			6329,
-			6337,
-			6345,
-			6353,
-			6361,
-			6369,
-			6377,
-			6385,
-			6393,
-			6401,
-			6409,
-			6417,
-			6425,
-			6433,
-			6441,
-			6449,
-			6457,
-			6465,
-			6473,
-			6481,
-			6489,
-			6497,
-			6505,
-			6513,
-			6521,
-			6529,
-			6537,
-			6545,
-			6553,
-			6561,
-			6569,
-			6577,
-			6585,
-			6593,
-			6601,
-			6609,
-			6617,
-			6625,
-			6633,
-			6641,
-			6649,
-			6657,
-			6665,
-			6673,
-			6681,
-			6689,
-			6697,
-			6705,
-			6713,
-			6721,
-			6729,
-			6737,
-			6745,
-			6753,
-			6761,
-			6769,
-			6777,
-			6785,
-			6793,
-			6801,
-			6809,
-			6817,
-			6825,
-			6833,
-			6841,
-			6849,
-			6857,
-			6865,
-			6873,
-			6881,
-			6889,
-			6897,
-			6905,
-			6913,
-			6921,
-			6929,
-			6937,
-			6945,
-			6953,
-			6961,
-			6969,
-			6977,
-			6985,
-			6993,
-			7001,
-			7009,
-			7017,
-			7025,
-			7033,
-			7041,
-			7049,
-			7057,
-			7065,
-			7073,
-			7081,
-			7089,
-			7097,
-			7105,
-			7113,
-			7121,
-			7129,
-			7137,
-			7145,
-			7153,
-			7161,
-			7169,
-			7177,
-			7185,
-			7193,
-			7201,
-			7209,
-			7217,
-			7225,
-			7233,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			7249,
-			7249,
-			7249,
-			7249,
-			7249,
-			7249,
-			7249,
-			7249,
-			7249,
-			7249,
-			7249,
-			7249,
-			7249,
-			7249,
-			7249,
-			7249,
-			7257,
-			7265,
-			7273,
-			7281,
-			7281,
-			7281,
-			7281,
-			7281,
-			7281,
-			7281,
-			7281,
-			7281,
-			7281,
-			7281,
-			7281,
-			7281,
-			7281,
-			7289,
-			7297,
-			7305,
-			7305,
-			7305,
-			7305,
-			7313,
-			7321,
-			7329,
-			7337,
-			7345,
-			7353,
-			7353,
-			7353,
-			7361,
-			7369,
-			7377,
-			7385,
-			7393,
-			7401,
-			7409,
-			7417,
-			7425,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7241,
-			7972,
-			7972,
-			8100,
-			8164,
-			8228,
-			8292,
-			8356,
-			8420,
-			8484,
-			8548,
-			8612,
-			8676,
-			8740,
-			8804,
-			8868,
-			8932,
-			8996,
-			9060,
-			9124,
-			9188,
-			9252,
-			9316,
-			9380,
-			9444,
-			9508,
-			9572,
-			9636,
-			9700,
-			9764,
-			9828,
-			9892,
-			9956,
-			2593,
-			2657,
-			2721,
-			2529,
-			2785,
-			2529,
-			2849,
-			2913,
-			2977,
-			3041,
-			3105,
-			3169,
-			3233,
-			3297,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			3361,
-			2529,
-			2529,
-			2529,
-			3425,
-			2529,
-			2529,
-			3489,
-			3553,
-			2529,
-			3617,
-			3681,
-			3745,
-			3809,
-			3873,
-			3937,
-			4001,
-			4065,
-			4129,
-			4193,
-			4257,
-			4321,
-			4385,
-			4449,
-			4513,
-			4577,
-			4641,
-			4705,
-			4769,
-			4833,
-			4897,
-			4961,
-			5025,
-			5089,
-			5153,
-			5217,
-			5281,
-			5345,
-			5409,
-			5473,
-			5537,
-			5601,
-			5665,
-			5729,
-			5793,
-			5857,
-			5921,
-			5985,
-			6049,
-			6113,
-			6177,
-			6241,
-			6305,
-			6369,
-			6433,
-			6497,
-			6561,
-			6625,
-			6689,
-			6753,
-			6817,
-			6881,
-			6945,
-			7009,
-			7073,
-			7137,
-			7201,
-			7265,
-			7329,
-			7393,
-			7457,
-			7521,
-			7585,
-			7649,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			2529,
-			7713,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			7433,
-			7433,
-			7433,
-			7433,
-			7433,
-			7433,
-			7433,
-			7441,
-			7449,
-			7457,
-			7457,
-			7457,
-			7457,
-			7457,
-			7457,
-			7465,
-			2009,
-			2009,
-			2009,
-			2009,
-			7473,
-			7473,
-			7473,
-			7473,
-			7473,
-			7473,
-			7473,
-			7473,
-			7481,
-			7489,
-			7497,
-			7505,
-			7505,
-			7505,
-			7505,
-			7505,
-			7513,
-			7521,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			7529,
-			7529,
-			7537,
-			7545,
-			7545,
-			7545,
-			7545,
-			7545,
-			7553,
-			7561,
-			7561,
-			7561,
-			7561,
-			7561,
-			7561,
-			7561,
-			7569,
-			7577,
-			7585,
-			7593,
-			7593,
-			7593,
-			7593,
-			7593,
-			7593,
-			7601,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7609,
-			7617,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			7625,
-			7633,
-			7641,
-			7649,
-			7657,
-			7665,
-			7673,
-			7681,
-			7689,
-			7697,
-			7705,
-			2009,
-			7713,
-			7721,
-			7729,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			7737,
-			7745,
-			7753,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7761,
-			7769,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7777,
-			7785,
-			7793,
-			7801,
-			7809,
-			7809,
-			7809,
-			7809,
-			7809,
-			7809,
-			7817,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7825,
-			7833,
-			7841,
-			7849,
-			2009,
-			2009,
-			2009,
-			7857,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			7865,
-			7865,
-			7865,
-			7865,
-			7865,
-			7865,
-			7865,
-			7865,
-			7865,
-			7865,
-			7865,
-			7873,
-			7881,
-			7889,
-			7897,
-			7897,
-			7897,
-			7897,
-			7905,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7913,
-			7921,
-			7929,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			7937,
-			7937,
-			7937,
-			7937,
-			7937,
-			7937,
-			7937,
-			7945,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			7953,
-			7953,
-			7953,
-			7953,
-			7953,
-			7953,
-			7953,
-			2009,
-			7961,
-			7969,
-			7977,
-			7985,
-			7993,
-			2009,
-			2009,
-			8001,
-			8009,
-			8009,
-			8009,
-			8009,
-			8009,
-			8009,
-			8009,
-			8009,
-			8009,
-			8009,
-			8009,
-			8009,
-			8009,
-			8017,
-			8025,
-			8025,
-			8025,
-			8025,
-			8025,
-			8025,
-			8025,
-			8033,
-			8041,
-			8049,
-			8057,
-			8065,
-			8073,
-			8081,
-			8081,
-			8081,
-			8081,
-			8081,
-			8081,
-			8081,
-			8081,
-			8081,
-			8081,
-			8081,
-			8089,
-			2009,
-			8097,
-			8097,
-			8097,
-			8105,
-			2009,
-			2009,
-			2009,
-			2009,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8113,
-			8121,
-			8129,
-			8137,
-			8137,
-			8137,
-			8137,
-			8137,
-			8137,
-			8137,
-			8137,
-			8137,
-			8137,
-			8137,
-			8137,
-			8137,
-			8137,
-			8145,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			2009,
-			67496,
-			67496,
-			67496,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			17,
-			34,
-			30,
-			30,
-			33,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			38,
-			6,
-			3,
-			12,
-			9,
-			10,
-			12,
-			3,
-			0,
-			2,
-			12,
-			9,
-			8,
-			16,
-			8,
-			7,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			8,
-			8,
-			12,
-			12,
-			12,
-			6,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			9,
-			2,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			17,
-			1,
-			12,
-			21,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			35,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			4,
-			0,
-			10,
-			9,
-			9,
-			9,
-			12,
-			29,
-			29,
-			12,
-			29,
-			3,
-			12,
-			17,
-			12,
-			12,
-			10,
-			9,
-			29,
-			29,
-			18,
-			12,
-			29,
-			29,
-			29,
-			29,
-			29,
-			3,
-			29,
-			29,
-			29,
-			0,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			18,
-			29,
-			29,
-			29,
-			18,
-			29,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			29,
-			29,
-			12,
-			29,
-			12,
-			18,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			4,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			4,
-			4,
-			4,
-			4,
-			4,
-			4,
-			4,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			8,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			8,
-			17,
-			39,
-			39,
-			39,
-			39,
-			9,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			17,
-			21,
-			12,
-			21,
-			21,
-			12,
-			21,
-			21,
-			6,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			10,
-			10,
-			10,
-			8,
-			8,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			6,
-			6,
-			6,
-			6,
-			6,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			10,
-			11,
-			11,
-			12,
-			12,
-			12,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			6,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			21,
-			21,
-			12,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			8,
-			6,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			21,
-			21,
-			21,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			17,
-			17,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			21,
-			21,
-			21,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			21,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			12,
-			10,
-			10,
-			12,
-			12,
-			12,
-			12,
-			12,
-			10,
-			12,
-			9,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			21,
-			21,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			21,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			9,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			21,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			9,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			21,
-			21,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			21,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			21,
-			21,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			10,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			21,
-			21,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			39,
-			39,
-			39,
-			39,
-			9,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			12,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			17,
-			17,
-			39,
-			39,
-			39,
-			39,
-			39,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			36,
-			36,
-			36,
-			36,
-			12,
-			18,
-			18,
-			18,
-			18,
-			12,
-			18,
-			18,
-			4,
-			18,
-			18,
-			17,
-			4,
-			6,
-			6,
-			6,
-			6,
-			6,
-			4,
-			12,
-			6,
-			12,
-			12,
-			12,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			17,
-			21,
-			12,
-			21,
-			12,
-			21,
-			0,
-			1,
-			0,
-			1,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			17,
-			21,
-			21,
-			21,
-			21,
-			21,
-			17,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			17,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			18,
-			18,
-			17,
-			18,
-			12,
-			12,
-			12,
-			12,
-			12,
-			4,
-			4,
-			39,
-			39,
-			39,
-			39,
-			39,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			17,
-			17,
-			12,
-			12,
-			12,
-			12,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			21,
-			21,
-			21,
-			12,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			1,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			17,
-			17,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			17,
-			17,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			17,
-			17,
-			5,
-			36,
-			17,
-			12,
-			17,
-			9,
-			36,
-			36,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			6,
-			6,
-			17,
-			17,
-			18,
-			12,
-			6,
-			6,
-			12,
-			21,
-			21,
-			21,
-			4,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			12,
-			39,
-			39,
-			39,
-			6,
-			6,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			12,
-			12,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			39,
-			39,
-			21,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			17,
-			17,
-			12,
-			17,
-			17,
-			17,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			17,
-			17,
-			17,
-			17,
-			17,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			17,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			21,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			18,
-			12,
-			39,
-			17,
-			17,
-			17,
-			17,
-			17,
-			17,
-			17,
-			4,
-			17,
-			17,
-			17,
-			20,
-			21,
-			21,
-			21,
-			21,
-			17,
-			4,
-			17,
-			17,
-			19,
-			29,
-			29,
-			12,
-			3,
-			3,
-			0,
-			3,
-			3,
-			3,
-			0,
-			3,
-			29,
-			29,
-			12,
-			12,
-			15,
-			15,
-			15,
-			17,
-			30,
-			30,
-			21,
-			21,
-			21,
-			21,
-			21,
-			4,
-			10,
-			10,
-			10,
-			10,
-			10,
-			10,
-			10,
-			10,
-			12,
-			3,
-			3,
-			29,
-			5,
-			5,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			8,
-			0,
-			1,
-			5,
-			5,
-			5,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			17,
-			12,
-			17,
-			17,
-			17,
-			17,
-			12,
-			17,
-			17,
-			17,
-			22,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			39,
-			39,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			1,
-			29,
-			12,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			1,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			9,
-			9,
-			9,
-			9,
-			9,
-			9,
-			9,
-			10,
-			9,
-			9,
-			9,
-			9,
-			9,
-			9,
-			9,
-			9,
-			9,
-			9,
-			9,
-			9,
-			9,
-			9,
-			10,
-			9,
-			9,
-			9,
-			9,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			10,
-			12,
-			29,
-			12,
-			12,
-			12,
-			10,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			9,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			29,
-			12,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			29,
-			29,
-			12,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			29,
-			12,
-			29,
-			9,
-			9,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			29,
-			12,
-			29,
-			12,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			14,
-			14,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			1,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			14,
-			14,
-			14,
-			14,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			12,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			12,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			29,
-			12,
-			12,
-			29,
-			12,
-			12,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			14,
-			14,
-			14,
-			14,
-			12,
-			29,
-			29,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			14,
-			14,
-			29,
-			29,
-			14,
-			12,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			14,
-			14,
-			14,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			12,
-			29,
-			29,
-			29,
-			12,
-			29,
-			14,
-			29,
-			29,
-			12,
-			29,
-			29,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			14,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			29,
-			29,
-			29,
-			29,
-			14,
-			12,
-			14,
-			14,
-			14,
-			29,
-			14,
-			14,
-			29,
-			29,
-			29,
-			14,
-			14,
-			29,
-			29,
-			14,
-			29,
-			29,
-			14,
-			14,
-			14,
-			12,
-			29,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			14,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			14,
-			14,
-			14,
-			14,
-			14,
-			29,
-			14,
-			14,
-			14,
-			14,
-			29,
-			29,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			12,
-			12,
-			12,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			12,
-			12,
-			12,
-			3,
-			3,
-			3,
-			3,
-			12,
-			12,
-			12,
-			6,
-			6,
-			12,
-			12,
-			12,
-			12,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			1,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			1,
-			0,
-			1,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			1,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			29,
-			29,
-			29,
-			29,
-			29,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			6,
-			17,
-			17,
-			17,
-			12,
-			6,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			17,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			3,
-			3,
-			3,
-			3,
-			3,
-			3,
-			3,
-			3,
-			3,
-			3,
-			3,
-			3,
-			3,
-			3,
-			17,
-			17,
-			17,
-			17,
-			17,
-			17,
-			17,
-			17,
-			12,
-			17,
-			0,
-			17,
-			12,
-			12,
-			3,
-			3,
-			12,
-			12,
-			3,
-			3,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			17,
-			17,
-			17,
-			17,
-			6,
-			12,
-			17,
-			17,
-			12,
-			17,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			19,
-			19,
-			39,
-			39,
-			39,
-			39,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			1,
-			1,
-			14,
-			14,
-			5,
-			14,
-			14,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			14,
-			14,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			5,
-			0,
-			1,
-			1,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			5,
-			5,
-			14,
-			14,
-			14,
-			39,
-			32,
-			14,
-			32,
-			14,
-			32,
-			14,
-			32,
-			14,
-			32,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			32,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			32,
-			14,
-			32,
-			14,
-			32,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			32,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			32,
-			32,
-			39,
-			39,
-			21,
-			21,
-			5,
-			5,
-			5,
-			5,
-			14,
-			5,
-			32,
-			14,
-			32,
-			14,
-			32,
-			14,
-			32,
-			14,
-			32,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			32,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			32,
-			14,
-			32,
-			14,
-			32,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			32,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			32,
-			32,
-			14,
-			14,
-			14,
-			14,
-			5,
-			32,
-			5,
-			5,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			5,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			17,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			17,
-			6,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			12,
-			17,
-			17,
-			17,
-			17,
-			17,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			12,
-			12,
-			12,
-			21,
-			12,
-			12,
-			12,
-			12,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			10,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			18,
-			18,
-			6,
-			6,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			17,
-			17,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			17,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			25,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			17,
-			17,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			12,
-			17,
-			17,
-			17,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			36,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			17,
-			17,
-			12,
-			12,
-			12,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			17,
-			21,
-			21,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			23,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			24,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			26,
-			39,
-			39,
-			39,
-			39,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			27,
-			39,
-			39,
-			39,
-			39,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			37,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			13,
-			21,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			12,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			13,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			1,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			10,
-			12,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			8,
-			1,
-			1,
-			8,
-			8,
-			6,
-			6,
-			0,
-			1,
-			15,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			14,
-			14,
-			14,
-			14,
-			14,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			14,
-			14,
-			0,
-			1,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			1,
-			14,
-			1,
-			39,
-			5,
-			5,
-			6,
-			6,
-			14,
-			0,
-			1,
-			0,
-			1,
-			0,
-			1,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			9,
-			10,
-			14,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			22,
-			39,
-			6,
-			14,
-			14,
-			9,
-			10,
-			14,
-			14,
-			0,
-			1,
-			14,
-			14,
-			1,
-			14,
-			1,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			5,
-			5,
-			14,
-			14,
-			14,
-			6,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			0,
-			14,
-			1,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			0,
-			14,
-			1,
-			14,
-			0,
-			1,
-			1,
-			0,
-			1,
-			1,
-			5,
-			12,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			32,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			5,
-			5,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			10,
-			9,
-			14,
-			14,
-			14,
-			9,
-			9,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			31,
-			29,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			17,
-			17,
-			17,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			17,
-			17,
-			17,
-			17,
-			17,
-			17,
-			17,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			17,
-			17,
-			17,
-			17,
-			17,
-			17,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			17,
-			17,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			17,
-			17,
-			17,
-			17,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			17,
-			17,
-			17,
-			17,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			17,
-			17,
-			12,
-			17,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			17,
-			17,
-			17,
-			17,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			0,
-			0,
-			1,
-			1,
-			1,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			1,
-			12,
-			12,
-			12,
-			0,
-			1,
-			0,
-			1,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			0,
-			1,
-			1,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			14,
-			14,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			21,
-			21,
-			21,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			11,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			12,
-			39,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			29,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			28,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			12,
-			12,
-			14,
-			14,
-			14,
-			14,
-			14,
-			12,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			12,
-			14,
-			12,
-			14,
-			12,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			12,
-			14,
-			12,
-			12,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			12,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			14,
-			39,
-			39,
-			39,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			21,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39,
-			39
-		],
-		"highStart": 919552,
-		"errorValue": 0
-	};
-
-/***/ }),
-/* 288 */
-/***/ (function(module, exports) {
-
-	// Generated by CoffeeScript 1.7.1
-	(function() {
-	  var AI, AL, B2, BA, BB, BK, CB, CJ, CL, CM, CP, CR, EX, GL, H2, H3, HL, HY, ID, IN, IS, JL, JT, JV, LF, NL, NS, NU, OP, PO, PR, QU, RI, SA, SG, SP, SY, WJ, XX, ZW;
-
-	  exports.OP = OP = 0;
-
-	  exports.CL = CL = 1;
-
-	  exports.CP = CP = 2;
-
-	  exports.QU = QU = 3;
-
-	  exports.GL = GL = 4;
-
-	  exports.NS = NS = 5;
-
-	  exports.EX = EX = 6;
-
-	  exports.SY = SY = 7;
-
-	  exports.IS = IS = 8;
-
-	  exports.PR = PR = 9;
-
-	  exports.PO = PO = 10;
-
-	  exports.NU = NU = 11;
-
-	  exports.AL = AL = 12;
-
-	  exports.HL = HL = 13;
-
-	  exports.ID = ID = 14;
-
-	  exports.IN = IN = 15;
-
-	  exports.HY = HY = 16;
-
-	  exports.BA = BA = 17;
-
-	  exports.BB = BB = 18;
-
-	  exports.B2 = B2 = 19;
-
-	  exports.ZW = ZW = 20;
-
-	  exports.CM = CM = 21;
-
-	  exports.WJ = WJ = 22;
-
-	  exports.H2 = H2 = 23;
-
-	  exports.H3 = H3 = 24;
-
-	  exports.JL = JL = 25;
-
-	  exports.JV = JV = 26;
-
-	  exports.JT = JT = 27;
-
-	  exports.RI = RI = 28;
-
-	  exports.AI = AI = 29;
-
-	  exports.BK = BK = 30;
-
-	  exports.CB = CB = 31;
-
-	  exports.CJ = CJ = 32;
-
-	  exports.CR = CR = 33;
-
-	  exports.LF = LF = 34;
-
-	  exports.NL = NL = 35;
-
-	  exports.SA = SA = 36;
-
-	  exports.SG = SG = 37;
-
-	  exports.SP = SP = 38;
-
-	  exports.XX = XX = 39;
-
-	}).call(this);
-
-
-/***/ }),
-/* 289 */
-/***/ (function(module, exports) {
-
-	// Generated by CoffeeScript 1.7.1
-	(function() {
-	  var CI_BRK, CP_BRK, DI_BRK, IN_BRK, PR_BRK;
-
-	  exports.DI_BRK = DI_BRK = 0;
-
-	  exports.IN_BRK = IN_BRK = 1;
-
-	  exports.CI_BRK = CI_BRK = 2;
-
-	  exports.CP_BRK = CP_BRK = 3;
-
-	  exports.PR_BRK = PR_BRK = 4;
-
-	  exports.pairTable = [[PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, CP_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, CI_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, CI_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, DI_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, DI_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, CI_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, PR_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK], [IN_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, CI_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, IN_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, DI_BRK], [DI_BRK, PR_BRK, PR_BRK, IN_BRK, IN_BRK, IN_BRK, PR_BRK, PR_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK, IN_BRK, DI_BRK, DI_BRK, PR_BRK, CI_BRK, PR_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, DI_BRK, IN_BRK]];
-
-	}).call(this);
-
-
-/***/ }),
 /* 290 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 	(function() {
 	  var PDFImage;
 
@@ -103813,7 +73068,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return this._imageCount = 0;
 	    },
 	    image: function(src, x, y, options) {
-	      var base, bh, bp, bw, h, hp, image, ip, name, ref, ref1, ref2, w, wp;
+	      var base, bh, bp, bw, h, hp, image, ip, name, ref, ref1, ref2, ref3, w, wp;
 	      if (options == null) {
 	        options = {};
 	      }
@@ -103823,15 +73078,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 	      x = (ref = x != null ? x : options.x) != null ? ref : this.x;
 	      y = (ref1 = y != null ? y : options.y) != null ? ref1 : this.y;
-	      if (!Buffer.isBuffer(src)) {
+	      if (typeof src === 'string') {
 	        image = this._imageRegistry[src];
 	      }
 	      if (!image) {
-	        image = PDFImage.open(src, 'I' + (++this._imageCount));
-	        image.embed(this);
-	        if (!Buffer.isBuffer(src)) {
-	          this._imageRegistry[src] = image;
+	        if (src.width && src.height) {
+	          image = src;
+	        } else {
+	          image = this.openImage(src);
 	        }
+	      }
+	      if (!image.obj) {
+	        image.embed(this);
 	      }
 	      if ((base = this.page.xobjects)[name = image.label] == null) {
 	        base[name] = image.obj;
@@ -103860,6 +73118,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	          h = bh;
 	          w = bh * ip;
 	        }
+	      } else if (options.cover) {
+	        ref3 = options.cover, bw = ref3[0], bh = ref3[1];
+	        bp = bw / bh;
+	        ip = image.width / image.height;
+	        if (ip > bp) {
+	          h = bh;
+	          w = bh * ip;
+	        } else {
+	          w = bw;
+	          h = bw / ip;
+	        }
+	      }
+	      if (options.fit || options.cover) {
 	        if (options.align === 'center') {
 	          x = x + bw / 2 - w / 2;
 	        } else if (options.align === 'right') {
@@ -103879,18 +73150,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	      this.addContent("/" + image.label + " Do");
 	      this.restore();
 	      return this;
+	    },
+	    openImage: function(src) {
+	      var image;
+	      if (typeof src === 'string') {
+	        image = this._imageRegistry[src];
+	      }
+	      if (!image) {
+	        image = PDFImage.open(src, 'I' + (++this._imageCount));
+	        if (typeof src === 'string') {
+	          this._imageRegistry[src] = image;
+	        }
+	      }
+	      return image;
 	    }
 	  };
 
 	}).call(this);
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).Buffer))
 
 /***/ }),
 /* 291 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.10.0
+	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.12.1
 
 	/*
 	PDFImage - embeds images in PDF documents
@@ -103900,7 +73183,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	(function() {
 	  var Data, JPEG, PDFImage, PNG, fs;
 
-	  fs = __webpack_require__(54);
+	  fs = __webpack_require__(56);
 
 	  Data = __webpack_require__(292);
 
@@ -103950,7 +73233,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 292 */
 /***/ (function(module, exports) {
 
-	// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 	(function() {
 	  var Data;
 
@@ -104148,12 +73431,12 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 293 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 	(function() {
 	  var JPEG, fs,
 	    indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-	  fs = __webpack_require__(54);
+	  fs = __webpack_require__(56);
 
 	  JPEG = (function() {
 	    var MARKERS;
@@ -104232,11 +73515,11 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 294 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.10.0
+	/* WEBPACK VAR INJECTION */(function(Buffer) {// Generated by CoffeeScript 1.12.1
 	(function() {
 	  var PNG, PNGImage, zlib;
 
-	  zlib = __webpack_require__(57);
+	  zlib = __webpack_require__(59);
 
 	  PNG = __webpack_require__(295);
 
@@ -104423,9 +73706,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	(function() {
 	  var PNG, fs, zlib;
 
-	  fs = __webpack_require__(54);
+	  fs = __webpack_require__(56);
 
-	  zlib = __webpack_require__(57);
+	  zlib = __webpack_require__(59);
 
 	  module.exports = PNG = (function() {
 
@@ -104721,7 +74004,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 296 */
 /***/ (function(module, exports) {
 
-	// Generated by CoffeeScript 1.10.0
+	// Generated by CoffeeScript 1.12.1
 	(function() {
 	  module.exports = {
 	    annotate: function(x, y, w, h, options) {
