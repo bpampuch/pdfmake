@@ -7,7 +7,7 @@
     "test": "tests"
   },
   "dependencies": {
-    "pdfkit": "^0.8.1",
+    "pdfkit": "^0.8.2",
     "iconv-lite":"^0.4.17",
     "linebreak": "^0.3.0",
     "lodash": "^4.17.4"
