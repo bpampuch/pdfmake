@@ -88,15 +88,13 @@ DocPreprocessor.prototype.preprocessTable = function (node) {
 		for (row = 0, rows = node.table.body.length; row < rows; row++) {
 			var rowData = node.table.body[row];
 			var data = rowData[col];
-			if (data === undefined) {
-				console.error('Malformed table row ', rowData, 'in node ', node);
-				throw 'Malformed table row, a cell is undefined.';
-			}
-			if (data === null) { // transform to object
-				data = '';
-			}
+			if (data !== undefined) {
+				if (data === null) { // transform to object
+					data = '';
+				}
 
-			rowData[col] = this.preprocessNode(data);
+				rowData[col] = this.preprocessNode(data);
+			}
 		}
 	}
 
