@@ -92,8 +92,9 @@ DocPreprocessor.prototype.preprocessTable = function (node) {
 				if (data === null) { // transform to object
 					data = '';
 				}
-
-				rowData[col] = this.preprocessNode(data);
+				if (!data._span) {
+					rowData[col] = this.preprocessNode(data);
+				}
 			}
 		}
 	}
