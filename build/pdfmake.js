@@ -1,4 +1,4 @@
-/*! pdfmake v0.1.29, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.1.30, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -20780,15 +20780,14 @@ return /******/ (function(modules) { // webpackBootstrap
 			for (row = 0, rows = node.table.body.length; row < rows; row++) {
 				var rowData = node.table.body[row];
 				var data = rowData[col];
-				if (data === undefined) {
-					console.error('Malformed table row ', rowData, 'in node ', node);
-					throw 'Malformed table row, a cell is undefined.';
+				if (data !== undefined) {
+					if (data === null) { // transform to object
+						data = '';
+					}
+					if (!data._span) {
+						rowData[col] = this.preprocessNode(data);
+					}
 				}
-				if (data === null) { // transform to object
-					data = '';
-				}
-
-				rowData[col] = this.preprocessNode(data);
 			}
 		}
 
@@ -21446,6 +21445,14 @@ return /******/ (function(modules) { // webpackBootstrap
 			for (row = 0, rows = node.table.body.length; row < rows; row++) {
 				var rowData = node.table.body[row];
 				var data = rowData[col];
+				if (data === undefined) {
+					console.error('Malformed table row ', rowData, 'in node ', node);
+					throw 'Malformed table row, a cell is undefined.';
+				}
+				if (data === null) { // transform to object
+					data = '';
+				}
+
 				if (!data._span) {
 					data = rowData[col] = this.styleStack.auto(data, measureCb(this, data));
 
@@ -39846,8 +39853,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	//###############
 
 	var Device = new r.Struct({
-	  startSize: r.uint16,
-	  endSize: r.uint16,
+	  a: r.uint16, // startSize for hinting Device, outerIndex for VariationIndex
+	  b: r.uint16, // endSize for Device, innerIndex for VariationIndex
 	  deltaFormat: r.uint16
 	});
 
@@ -48189,6 +48196,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	      position.yOffset += value.yPlacement;
 	    }
 
+	    // Adjustments for font variations
+	    var variationProcessor = this.font._variationProcessor;
+	    var variationStore = this.font.GDEF && this.font.GDEF.itemVariationStore;
+	    if (variationProcessor && variationStore) {
+	      if (value.xPlaDevice) {
+	        position.xOffset += variationProcessor.getDelta(variationStore, value.xPlaDevice.a, value.xPlaDevice.b);
+	      }
+
+	      if (value.yPlaDevice) {
+	        position.yOffset += variationProcessor.getDelta(variationStore, value.yPlaDevice.a, value.yPlaDevice.b);
+	      }
+
+	      if (value.xAdvDevice) {
+	        position.xAdvance += variationProcessor.getDelta(variationStore, value.xAdvDevice.a, value.xAdvDevice.b);
+	      }
+
+	      if (value.yAdvDevice) {
+	        position.yAdvance += variationProcessor.getDelta(variationStore, value.yAdvDevice.a, value.yAdvDevice.b);
+	      }
+	    }
+
 	    // TODO: device tables
 	  };
 
@@ -48464,10 +48492,23 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  GPOSProcessor.prototype.getAnchor = function getAnchor(anchor) {
 	    // TODO: contour point, device tables
-	    return {
-	      x: anchor.xCoordinate,
-	      y: anchor.yCoordinate
-	    };
+	    var x = anchor.xCoordinate;
+	    var y = anchor.yCoordinate;
+
+	    // Adjustments for font variations
+	    var variationProcessor = this.font._variationProcessor;
+	    var variationStore = this.font.GDEF && this.font.GDEF.itemVariationStore;
+	    if (variationProcessor && variationStore) {
+	      if (anchor.xDeviceTable) {
+	        x += variationProcessor.getDelta(variationStore, anchor.xDeviceTable.a, anchor.xDeviceTable.b);
+	      }
+
+	      if (anchor.yDeviceTable) {
+	        y += variationProcessor.getDelta(variationStore, anchor.yDeviceTable.a, anchor.yDeviceTable.b);
+	      }
+	    }
+
+	    return { x: x, y: y };
 	  };
 
 	  GPOSProcessor.prototype.applyFeatures = function applyFeatures(userFeatures, glyphs, advances) {
@@ -49749,9 +49790,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return [];
 	    }
 
+	    var points = [];
+
 	    if (glyph.numberOfContours < 0) {
 	      // resolve composite glyphs
-	      var points = [];
 	      for (var _iterator = glyph.components, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _getIterator(_iterator);;) {
 	        var _ref;
 
@@ -49766,27 +49808,19 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        var component = _ref;
 
-	        glyph = this._font.getGlyph(component.glyphID)._decode();
-	        // TODO transform
-	        for (var _iterator2 = glyph.points, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _getIterator(_iterator2);;) {
-	          var _ref2;
-
-	          if (_isArray2) {
-	            if (_i2 >= _iterator2.length) break;
-	            _ref2 = _iterator2[_i2++];
-	          } else {
-	            _i2 = _iterator2.next();
-	            if (_i2.done) break;
-	            _ref2 = _i2.value;
+	        var _contours = this._font.getGlyph(component.glyphID)._getContours();
+	        for (var i = 0; i < _contours.length; i++) {
+	          var contour = _contours[i];
+	          for (var j = 0; j < contour.length; j++) {
+	            var _point = contour[j];
+	            var x = _point.x * component.scaleX + _point.y * component.scale01 + component.dx;
+	            var y = _point.y * component.scaleY + _point.x * component.scale10 + component.dy;
+	            points.push(new Point(_point.onCurve, _point.endContour, x, y));
 	          }
-
-	          var _point = _ref2;
-
-	          points.push(new Point(_point.onCurve, _point.endContour, _point.x + component.dx, _point.y + component.dy));
 	        }
 	      }
 	    } else {
-	      var points = glyph.points || [];
+	      points = glyph.points || [];
 	    }
 
 	    // Recompute and cache metrics if we performed variation processing, and don't have an HVAR table
@@ -51148,15 +51182,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	      innerIndex = gid;
 	    }
 
-	    return this.getMetricDelta(table.itemVariationStore, outerIndex, innerIndex);
+	    return this.getDelta(table.itemVariationStore, outerIndex, innerIndex);
 	  };
 
 	  // See pseudo code from `Font Variations Overview'
 	  // in the OpenType specification.
 
 
-	  GlyphVariationProcessor.prototype.getMetricDelta = function getMetricDelta(itemStore, outerIndex, innerIndex) {
+	  GlyphVariationProcessor.prototype.getDelta = function getDelta(itemStore, outerIndex, innerIndex) {
+	    if (outerIndex >= itemStore.itemVariationData.length) {
+	      return 0;
+	    }
+
 	    var varData = itemStore.itemVariationData[outerIndex];
+	    if (innerIndex >= varData.deltaSets.length) {
+	      return 0;
+	    }
+
 	    var deltaSet = varData.deltaSets[innerIndex];
 	    var blendVector = this.getBlendVector(itemStore, outerIndex);
 	    var netAdjustment = 0;
