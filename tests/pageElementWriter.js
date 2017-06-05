@@ -13,7 +13,7 @@ describe('PageElementWriter', function () {
 	var DOCUMENT_WIDTH = 600;
 	var DOCUMENT_HEIGHT = 1100;
 	var DOCUMENT_ORIENTATION = 'portrait';
-
+	var INLINE_TEST_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAGAQMAAADNIO3CAAAAA1BMVEUAAN7GEcIJAAAAAWJLR0QAiAUdSAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB98DBREbA3IZ3d8AAAALSURBVAjXY2BABwAAEgAB74lUpAAAAABJRU5ErkJggg==';
 
 	var MARGINS = {
 		left: 40,
@@ -50,6 +50,18 @@ describe('PageElementWriter', function () {
 		};
 	}
 
+	function buildImage(height) {
+		return {
+			image: INLINE_TEST_IMAGE,
+			_margin: null,
+			_maxWidth: 100,
+			_minWidth: 100,
+			_width: 100,
+			_height: height,
+			positions:[]
+		};
+	}
+
 	function addOneTenthLines(count) {
 		var lastPosition;
 		for (var i = 0; i < count; i++) {
@@ -72,6 +84,7 @@ describe('PageElementWriter', function () {
 		});
 		return rep;
 	}
+
 	beforeEach(function () {
 		pageSize = {width: DOCUMENT_WIDTH, height: DOCUMENT_HEIGHT, orientation: DOCUMENT_ORIENTATION};
 		ctx = new DocumentContext(pageSize, MARGINS);
@@ -118,6 +131,48 @@ describe('PageElementWriter', function () {
 			assert.equal(ctx.pages.length, 2);
 			assert.equal(ctx.pages[1].items[0].item.marker, 'rep');
 			assert.equal(ctx.pages[1].items[1].item.marker, 'another');
+		});
+	});
+
+	describe('addImage', function () {
+		it('should add the image image if something else exists on the page and there\'s enough space left', function () {
+			var lineHeight = 400;
+			pew.addLine(buildLine(lineHeight));
+
+			var position = pew.addImage(buildImage(300));
+
+			assert.equal(ctx.pages.length, 1);
+			assert.deepEqual(position, {pageNumber: 1, left: MARGINS.left, top: lineHeight + MARGINS.top, verticalRatio: 0.4, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500});
+		});
+
+		it('should add a new page if something else exists on the page and there\'s not enough space left', function () {
+			var lineHeight = 900;
+			pew.addLine(buildLine(lineHeight));
+
+			var position = pew.addImage(buildImage(300));
+
+			assert.equal(ctx.pages.length, 2);
+			assert.equal(ctx.pages[0].items.length, 1);
+			assert.equal(ctx.pages[1].items.length, 1);
+			assert.deepEqual(position, {pageNumber: 2, left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500});
+		});
+
+		it('should write into the current page if it\'s a large image and nothing else exists on the page', function () {
+			var position = pew.addImage(buildImage(2000));
+
+			assert.equal(ctx.pages.length, 1);
+			assert.equal(ctx.pages[0].items.length, 1);
+			assert.deepEqual(position, {pageNumber: 1, left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500});
+		});
+
+		it('should write into the a new page page if it\'s a large image and something else does exist on the page', function () {
+			pew.addLine(buildLine(1));
+			var position = pew.addImage(buildImage(2000));
+
+			assert.equal(ctx.pages.length, 2);
+			assert.equal(ctx.pages[0].items.length, 1);
+			assert.equal(ctx.pages[1].items.length, 1);
+			assert.deepEqual(position, {pageNumber: 2, left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500});
 		});
 	});
 
