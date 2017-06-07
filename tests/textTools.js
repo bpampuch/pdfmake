@@ -101,6 +101,10 @@ describe('TextTools', function () {
 		leadingIndent: 10
 	};
 
+	var textWithLeadingSpaces = [
+		{text: '    This is a paragraph', preserveLeadingSpaces: true}
+	];
+
 	var mixedTextArrayWithVariousTypes = [
 		{text: ''},
 		{text: null},
@@ -394,6 +398,11 @@ describe('TextTools', function () {
 			var countLeadingCut = 0;
 			inlines.items.forEach(function(item) { countLeadingCut += item.leadingCut; });
 			assert.equal(countLeadingCut, -10);
+		});
+
+		it('should preserve leading whitespaces when preserveLeadingSpaces is set', function() {
+			var inlines = textTools.buildInlines(textWithLeadingSpaces);
+			assert.equal(inlines.maxWidth, 23 * 12);
 		});
 	});
 
