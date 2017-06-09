@@ -120,7 +120,6 @@ TableProcessor.prototype.beginTable = function (writer) {
 TableProcessor.prototype.onRowBreak = function (rowIndex, writer) {
 	var self = this;
 	return function () {
-		//console.log('moving by : ', topLineWidth, rowPaddingTop);
 		var offset = self.rowPaddingTop + (!self.headerRows ? self.topLineWidth : 0);
 		writer.context().moveDown(offset);
 	};
