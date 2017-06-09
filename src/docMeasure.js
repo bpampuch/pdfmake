@@ -41,13 +41,19 @@ DocMeasure.prototype.measureNode = function (node) {
 		if (node.columns) {
 			return extendMargins(self.measureColumns(node));
 		} else if (node.stack) {
-			return extendMargins(self.measureVerticalContainer(node));
+		  	if (!node.stack.inline) {
+		  		return extendMargins(self.measureVerticalContainer(node));
+		  	} else {
+		  		return extendMargins(self.measureVerticalContainerInline(node));
+		  	}
 		} else if (node.ul) {
 			return extendMargins(self.measureUnorderedList(node));
 		} else if (node.ol) {
 			return extendMargins(self.measureOrderedList(node));
 		} else if (node.table) {
 			return extendMargins(self.measureTable(node));
+		} else if (node.stackObj) {
+			return extendMargins(self.measureObjectContainer(node));
 		} else if (node.text !== undefined) {
 			return extendMargins(self.measureLeaf(node));
 		} else if (node.toc) {
@@ -191,7 +197,6 @@ DocMeasure.prototype.measureImage = function (node) {
 };
 
 DocMeasure.prototype.measureLeaf = function (node) {
-
 	// Make sure style properties of the node itself are considered when building inlines.
 	// We could also just pass [node] to buildInlines, but that fails for bullet points.
 	var styleStack = this.styleStack.clone();
@@ -243,13 +248,49 @@ DocMeasure.prototype.measureVerticalContainer = function (node) {
 
 	for (var i = 0, l = items.length; i < l; i++) {
 		items[i] = this.measureNode(items[i]);
-
 		node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
 		node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth);
 	}
 
 	return node;
 };
+
+
+
+DocMeasure.prototype.measureVerticalContainerInline = function (node) {
+	// // Make sure style properties of the node itself are considered when building inlines.
+	// // We could also just pass [node] to buildInlines, but that fails for bullet points.
+	var self = this;
+
+	var styleStack = this.styleStack.clone();
+	styleStack.push(node);
+
+	node.stack.forEach(function(item) {
+		if (item.stack || item.stackObj) {
+			item = self.measureNode(item);
+		}
+	})
+	var data = this.textTools.buildInlines(node.stack, styleStack);
+
+	node._inlines = data.items;
+	node._minWidth = data.minWidth;
+	node._maxWidth = data.maxWidth;
+
+	return node;
+}
+
+
+DocMeasure.prototype.measureObjectContainer = function (node) {
+	node._minWidth = 0;
+	node._maxWidth = 0;
+
+	if (node.stackObj.text) {
+		node.stackObj.text = this.measureNode(node.stackObj.text);
+		node._minWidth = Math.max(node._minWidth, node.stackObj.text._minWidth);
+		node._maxWidth = Math.max(node._maxWidth, node.stackObj.text._maxWidth);
+	}
+	return node;
+}
 
 DocMeasure.prototype.gapSizeForList = function () {
 	return this.textTools.sizeOfString('9. ', this.styleStack);

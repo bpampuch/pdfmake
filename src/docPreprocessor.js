@@ -16,6 +16,11 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 	// expand shortcuts and casting values
 	if (Array.isArray(node)) {
 		node = {stack: node};
+	} else if ((typeof node.text !== 'string') && (node.text instanceof Object)) {
+		if (Array.isArray(node.text) && (node.text.inline === undefined)) {
+			node.text.inline = true; // default inline output
+		}
+	 	node = {stackObj: node};
 	} else if (typeof node === 'string' || node instanceof String) {
 		node = {text: node};
 	} else if (typeof node === 'number' || typeof node === 'boolean') {
@@ -36,6 +41,8 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 		return this.preprocessList(node);
 	} else if (node.table) {
 		return this.preprocessTable(node);
+	} else if (node.stackObj) {
+		return this.preprocessObjectContainer(node);
 	} else if (node.text !== undefined) {
 		return this.preprocessText(node);
 	} else if (node.toc) {
@@ -68,6 +75,13 @@ DocPreprocessor.prototype.preprocessVerticalContainer = function (node) {
 		items[i] = this.preprocessNode(items[i]);
 	}
 
+	return node;
+};
+
+DocPreprocessor.prototype.preprocessObjectContainer = function (node) {
+	if (node.stackObj.text) {
+		node.stackObj.text = this.preprocessNode(node.stackObj.text);
+	}
 	return node;
 };
 
