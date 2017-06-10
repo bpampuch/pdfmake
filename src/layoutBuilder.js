@@ -332,12 +332,7 @@ LayoutBuilder.prototype.processNode = function (node) {
 		}
 
 		if (node.stack) {
-			if (!node.stack.inline) {
-				self.processVerticalContainer(node);
-		  	} else {
-		  		self.processVerticalContainerInline(node);
-		  	}
-			
+			self.processVerticalContainer(node);
 		} else if (node.columns) {
 			self.processColumns(node);
 		} else if (node.ul) {
@@ -348,6 +343,8 @@ LayoutBuilder.prototype.processNode = function (node) {
 			self.processTable(node);
 		} else if (node.stackObj) {
 			self.processObject(node);
+		} else if (Array.isArray(node.text)) {
+			self.processLeaf(node);
 		} else if (node.text !== undefined) {
 			self.processLeaf(node);
 		} else if (node.toc) {
@@ -403,66 +400,11 @@ LayoutBuilder.prototype.processVerticalContainer = function (node) {
 	});
 };
 
-LayoutBuilder.prototype.processVerticalContainerInline = function (node) {
-	// I'm not very happy with the way list processing is implemented
-	// (both code and algorithm should be rethinked)
-	// if (nextMarker) {
-	// 	var marker = nextMarker;
-	// 	nextMarker = null;
-	var self = this;
-
-	function buildLine(textNode) {
-		var result = null;
-
-		if (textNode.stack) {
-			textNode.stack.forEach(function(item) {
-				if (item.stack || item.stackObj) {
-					result = buildLine(item);
-				}
-			})
-		}
-		if (textNode.stackObj) {
-			var item = textNode.stackObj.text;
-			if (item.stack || item.stackObj) {
-				result = buildLine(item);
-			}
-		}
-
-		var line = self.buildNextLine(textNode);
-		if (line) {
-			if (!result) {
-				result = line;
-			} else {
-				result.inlines = line.inlines.concat(result.inlines);
-			}
-			
-		}
-		return result;
-	}
-
-	var line = buildLine(node);
-
-	var currentHeight = (line) ? line.getHeight() : 0;
-	var maxHeight = node.maxHeight || -1;
-
-	if (node._tocItemRef) {
-		line._tocItemNode = node._tocItemRef;
-	}
-
-	while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
-		var positions = this.writer.addLine(line);
-		node.positions.push(positions);
-		line = this.buildNextLine(node);
-		if (line) {
-			currentHeight += line.getHeight();
-		}
-	}
-};
-
 LayoutBuilder.prototype.processObject = function (node) {
 	var self = this;
 	if (node.stackObj.text) {
 		self.processNode(node.stackObj.text);
+		addAll(node.positions, node.stackObj.text.positions);
 	}
 };
 

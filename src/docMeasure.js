@@ -41,11 +41,7 @@ DocMeasure.prototype.measureNode = function (node) {
 		if (node.columns) {
 			return extendMargins(self.measureColumns(node));
 		} else if (node.stack) {
-		  	if (!node.stack.inline) {
-		  		return extendMargins(self.measureVerticalContainer(node));
-		  	} else {
-		  		return extendMargins(self.measureVerticalContainerInline(node));
-		  	}
+		  	return extendMargins(self.measureVerticalContainer(node));
 		} else if (node.ul) {
 			return extendMargins(self.measureUnorderedList(node));
 		} else if (node.ol) {
@@ -54,6 +50,8 @@ DocMeasure.prototype.measureNode = function (node) {
 			return extendMargins(self.measureTable(node));
 		} else if (node.stackObj) {
 			return extendMargins(self.measureObjectContainer(node));
+		} else if (Array.isArray(node.text)) {
+			return extendMargins(self.measureArrayContainer(node));
 		} else if (node.text !== undefined) {
 			return extendMargins(self.measureLeaf(node));
 		} else if (node.toc) {
@@ -255,31 +253,6 @@ DocMeasure.prototype.measureVerticalContainer = function (node) {
 	return node;
 };
 
-
-
-DocMeasure.prototype.measureVerticalContainerInline = function (node) {
-	// // Make sure style properties of the node itself are considered when building inlines.
-	// // We could also just pass [node] to buildInlines, but that fails for bullet points.
-	var self = this;
-
-	var styleStack = this.styleStack.clone();
-	styleStack.push(node);
-
-	node.stack.forEach(function(item) {
-		if (item.stack || item.stackObj) {
-			item = self.measureNode(item);
-		}
-	})
-	var data = this.textTools.buildInlines(node.stack, styleStack);
-
-	node._inlines = data.items;
-	node._minWidth = data.minWidth;
-	node._maxWidth = data.maxWidth;
-
-	return node;
-}
-
-
 DocMeasure.prototype.measureObjectContainer = function (node) {
 	node._minWidth = 0;
 	node._maxWidth = 0;
@@ -289,6 +262,33 @@ DocMeasure.prototype.measureObjectContainer = function (node) {
 		node._minWidth = Math.max(node._minWidth, node.stackObj.text._minWidth);
 		node._maxWidth = Math.max(node._maxWidth, node.stackObj.text._maxWidth);
 	}
+	return node;
+}
+
+DocMeasure.prototype.measureArrayContainer = function (node) {
+	var self = this;
+
+	var flatten = function(array) {
+		return array.reduce(function(prev, cur) {
+			var current = [];
+			current = Array.isArray(cur.text) ? flatten(cur.text) : cur;
+			var more = [].concat(current).some(Array.isArray);
+			return prev.concat(more ? flatten(current) : current);
+		},[]);
+	};
+
+	// Make sure style properties of the node itself are considered when building inlines.
+	// We could also just pass [node] to buildInlines, but that fails for bullet points.
+	var styleStack = this.styleStack.clone();
+	styleStack.push(node);
+
+	var flattedNode = flatten(node.text);
+	var data = this.textTools.buildInlines(flattedNode, styleStack);
+
+	node._inlines = data.items;
+	node._minWidth = data.minWidth;
+	node._maxWidth = data.maxWidth;
+
 	return node;
 }
 

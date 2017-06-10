@@ -20294,12 +20294,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			}
 
 			if (node.stack) {
-				if (!node.stack.inline) {
-					self.processVerticalContainer(node);
-			  	} else {
-			  		self.processVerticalContainerInline(node);
-			  	}
-				
+				self.processVerticalContainer(node);
 			} else if (node.columns) {
 				self.processColumns(node);
 			} else if (node.ul) {
@@ -20310,6 +20305,8 @@ return /******/ (function(modules) { // webpackBootstrap
 				self.processTable(node);
 			} else if (node.stackObj) {
 				self.processObject(node);
+			} else if (Array.isArray(node.text)) {
+				self.processLeaf(node);
 			} else if (node.text !== undefined) {
 				self.processLeaf(node);
 			} else if (node.toc) {
@@ -20365,66 +20362,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		});
 	};
 
-	LayoutBuilder.prototype.processVerticalContainerInline = function (node) {
-		// I'm not very happy with the way list processing is implemented
-		// (both code and algorithm should be rethinked)
-		// if (nextMarker) {
-		// 	var marker = nextMarker;
-		// 	nextMarker = null;
-		var self = this;
-
-		function buildLine(textNode) {
-			var result = null;
-
-			if (textNode.stack) {
-				textNode.stack.forEach(function(item) {
-					if (item.stack || item.stackObj) {
-						result = buildLine(item);
-					}
-				})
-			}
-			if (textNode.stackObj) {
-				var item = textNode.stackObj.text;
-				if (item.stack || item.stackObj) {
-					result = buildLine(item);
-				}
-			}
-
-			var line = self.buildNextLine(textNode);
-			if (line) {
-				if (!result) {
-					result = line;
-				} else {
-					result.inlines = line.inlines.concat(result.inlines);
-				}
-				
-			}
-			return result;
-		}
-
-		var line = buildLine(node);
-
-		var currentHeight = (line) ? line.getHeight() : 0;
-		var maxHeight = node.maxHeight || -1;
-
-		if (node._tocItemRef) {
-			line._tocItemNode = node._tocItemRef;
-		}
-
-		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
-			var positions = this.writer.addLine(line);
-			node.positions.push(positions);
-			line = this.buildNextLine(node);
-			if (line) {
-				currentHeight += line.getHeight();
-			}
-		}
-	};
-
 	LayoutBuilder.prototype.processObject = function (node) {
 		var self = this;
 		if (node.stackObj.text) {
 			self.processNode(node.stackObj.text);
+			addAll(node.positions, node.stackObj.text.positions);
 		}
 	};
 
@@ -20779,10 +20721,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		// expand shortcuts and casting values
 		if (Array.isArray(node)) {
 			node = {stack: node};
-		} else if ((typeof node.text !== 'string') && (node.text instanceof Object)) {
-			if (Array.isArray(node.text) && (node.text.inline === undefined)) {
-				node.text.inline = true; // default inline output
-			}
+		} else if ((typeof node.text !== 'string') && (node.text instanceof Object) && (!Array.isArray(node.text))) {
 		 	node = {stackObj: node};
 		} else if (typeof node === 'string' || node instanceof String) {
 			node = {text: node};
@@ -20806,6 +20745,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			return this.preprocessTable(node);
 		} else if (node.stackObj) {
 			return this.preprocessObjectContainer(node);
+		} else if (Array.isArray(node.text)) {
+			return this.preprocessArrayContainer(node);
 		} else if (node.text !== undefined) {
 			return this.preprocessText(node);
 		} else if (node.toc) {
@@ -20847,6 +20788,35 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 		return node;
 	};
+
+	DocPreprocessor.prototype.preprocessArrayContainer = function (node) {
+		if (node.tocItem) {
+			if (!Array.isArray(node.tocItem)) {
+				node.tocItem = [node.tocItem];
+			}
+
+			for (var i = 0, l = node.tocItem.length; i < l; i++) {
+				if (!(typeof node.tocItem[i] === 'string' || node.tocItem[i] instanceof String)) {
+					node.tocItem[i] = '_default_';
+				}
+
+				var tocItemId = node.tocItem[i];
+
+				if (!this.tocs[tocItemId]) {
+					this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
+				}
+
+				this.tocs[tocItemId].toc._items.push(node);
+			}
+		}
+
+		var items = node.text;
+		for (var i = 0, l = items.length; i < l; i++) {
+			items[i] = this.preprocessNode(items[i]);
+		}
+
+		return node;
+	}
 
 	DocPreprocessor.prototype.preprocessList = function (node) {
 		var items = node.ul || node.ol;
@@ -21053,11 +21023,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			if (node.columns) {
 				return extendMargins(self.measureColumns(node));
 			} else if (node.stack) {
-			  	if (!node.stack.inline) {
-			  		return extendMargins(self.measureVerticalContainer(node));
-			  	} else {
-			  		return extendMargins(self.measureVerticalContainerInline(node));
-			  	}
+			  	return extendMargins(self.measureVerticalContainer(node));
 			} else if (node.ul) {
 				return extendMargins(self.measureUnorderedList(node));
 			} else if (node.ol) {
@@ -21066,6 +21032,8 @@ return /******/ (function(modules) { // webpackBootstrap
 				return extendMargins(self.measureTable(node));
 			} else if (node.stackObj) {
 				return extendMargins(self.measureObjectContainer(node));
+			} else if (Array.isArray(node.text)) {
+				return extendMargins(self.measureArrayContainer(node));
 			} else if (node.text !== undefined) {
 				return extendMargins(self.measureLeaf(node));
 			} else if (node.toc) {
@@ -21267,31 +21235,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		return node;
 	};
 
-
-
-	DocMeasure.prototype.measureVerticalContainerInline = function (node) {
-		// // Make sure style properties of the node itself are considered when building inlines.
-		// // We could also just pass [node] to buildInlines, but that fails for bullet points.
-		var self = this;
-
-		var styleStack = this.styleStack.clone();
-		styleStack.push(node);
-
-		node.stack.forEach(function(item) {
-			if (item.stack || item.stackObj) {
-				item = self.measureNode(item);
-			}
-		})
-		var data = this.textTools.buildInlines(node.stack, styleStack);
-
-		node._inlines = data.items;
-		node._minWidth = data.minWidth;
-		node._maxWidth = data.maxWidth;
-
-		return node;
-	}
-
-
 	DocMeasure.prototype.measureObjectContainer = function (node) {
 		node._minWidth = 0;
 		node._maxWidth = 0;
@@ -21301,6 +21244,33 @@ return /******/ (function(modules) { // webpackBootstrap
 			node._minWidth = Math.max(node._minWidth, node.stackObj.text._minWidth);
 			node._maxWidth = Math.max(node._maxWidth, node.stackObj.text._maxWidth);
 		}
+		return node;
+	}
+
+	DocMeasure.prototype.measureArrayContainer = function (node) {
+		var self = this;
+
+		var flatten = function(array) {
+			return array.reduce(function(prev, cur) {
+				var current = [];
+				current = Array.isArray(cur.text) ? flatten(cur.text) : cur;
+				var more = [].concat(current).some(Array.isArray);
+				return prev.concat(more ? flatten(current) : current);
+			},[]);
+		};
+
+		// Make sure style properties of the node itself are considered when building inlines.
+		// We could also just pass [node] to buildInlines, but that fails for bullet points.
+		var styleStack = this.styleStack.clone();
+		styleStack.push(node);
+
+		var flattedNode = flatten(node.text);
+		var data = this.textTools.buildInlines(flattedNode, styleStack);
+
+		node._inlines = data.items;
+		node._minWidth = data.minWidth;
+		node._maxWidth = data.maxWidth;
+
 		return node;
 	}
 
