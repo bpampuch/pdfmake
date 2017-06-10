@@ -121,9 +121,9 @@ TableProcessor.prototype.onRowBreak = function (rowIndex, writer) {
 	var self = this;
 	return function () {
 		var offset = self.rowPaddingTop + (!self.headerRows ? self.topLineWidth : 0);
+		writer.context().availableHeight -= self.reservedAtBottom;
 		writer.context().moveDown(offset);
 	};
-
 };
 
 TableProcessor.prototype.beginRow = function (rowIndex, writer) {
