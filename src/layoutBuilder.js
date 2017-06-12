@@ -601,9 +601,6 @@ LayoutBuilder.prototype.processToc = function (node) {
 };
 
 LayoutBuilder.prototype.buildNextLine = function (textNode) {
-
-	var self = this;
-
 	function cloneInline(inline) {
 		var newInline = inline.constructor();
 		for (var key in inline) {

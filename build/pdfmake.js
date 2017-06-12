@@ -20563,9 +20563,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	LayoutBuilder.prototype.buildNextLine = function (textNode) {
-
-		var self = this;
-
 		function cloneInline(inline) {
 			var newInline = inline.constructor();
 			for (var key in inline) {
@@ -21003,7 +21000,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			if (node.columns) {
 				return extendMargins(self.measureColumns(node));
 			} else if (node.stack) {
-			  	return extendMargins(self.measureVerticalContainer(node));
+				return extendMargins(self.measureVerticalContainer(node));
 			} else if (node.ul) {
 				return extendMargins(self.measureUnorderedList(node));
 			} else if (node.ol) {
@@ -21157,6 +21154,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	DocMeasure.prototype.measureLeaf = function (node) {
+
 		// Make sure style properties of the node itself are considered when building inlines.
 		// We could also just pass [node] to buildInlines, but that fails for bullet points.
 		var styleStack = this.styleStack.clone();
@@ -21208,6 +21206,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		for (var i = 0, l = items.length; i < l; i++) {
 			items[i] = this.measureNode(items[i]);
+			
 			node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
 			node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth);
 		}
