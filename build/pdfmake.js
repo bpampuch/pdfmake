@@ -20790,26 +20790,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	DocPreprocessor.prototype.preprocessArrayContainer = function (node) {
-		if (node.tocItem) {
-			if (!Array.isArray(node.tocItem)) {
-				node.tocItem = [node.tocItem];
-			}
-
-			for (var i = 0, l = node.tocItem.length; i < l; i++) {
-				if (!(typeof node.tocItem[i] === 'string' || node.tocItem[i] instanceof String)) {
-					node.tocItem[i] = '_default_';
-				}
-
-				var tocItemId = node.tocItem[i];
-
-				if (!this.tocs[tocItemId]) {
-					this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
-				}
-
-				this.tocs[tocItemId].toc._items.push(node);
-			}
-		}
-
 		var items = node.text;
 		for (var i = 0, l = items.length; i < l; i++) {
 			items[i] = this.preprocessNode(items[i]);
