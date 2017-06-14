@@ -194,6 +194,9 @@ Parameters:
 * `cb` - callback function
 * `options` _(optional)_
 
+#### Using javascript frameworks
+For Ionic and Angular see [issue](https://github.com/bpampuch/pdfmake/issues/1030).
+
 #### Server side
 
 see [examples](https://github.com/bpampuch/pdfmake/tree/master/examples) and [dev-playground server script](https://github.com/bpampuch/pdfmake/blob/master/dev-playground/server.js)
