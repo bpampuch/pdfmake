@@ -69,12 +69,12 @@ To begin with the default configuration, you should include two files:
 ...
 ```
 
-You can get both files using npm:
+You can get both files using npm (server-side and client-side):
 ```
 npm install pdfmake
 ```
 
-or bower:
+or bower (client-side):
 ```
 bower install pdfmake
 ```
