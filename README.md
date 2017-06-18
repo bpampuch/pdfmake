@@ -73,6 +73,8 @@ You can get both files using npm (server-side and client-side):
 ```
 npm install pdfmake
 ```
+ * for server-side use `require('pdfmake');`
+ * for client-side use `require('pdfmake/build/pdfmake.js');` and `require('pdfmake/build/vfs_fonts.js');`
 
 or bower (client-side):
 ```
