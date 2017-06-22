@@ -506,6 +506,7 @@ DocMeasure.prototype.measureTable = function (node) {
 	extendTableWidths(node);
 	node._layout = getLayout(this.tableLayouts);
 	node._offsets = getOffsets(node._layout);
+	node._alignment = this.styleStack.getProperty('alignment');
 
 	var colSpans = [];
 	var col, row, cols, rows;

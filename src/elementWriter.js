@@ -53,15 +53,21 @@ ElementWriter.prototype.addLine = function (line, dontUpdateContextPosition, ind
 };
 
 ElementWriter.prototype.alignLine = function (line) {
-	var width = this.context.availableWidth;
+	var width = this.context.availableWidth; //wrong value
 	var lineWidth = line.getWidth();
 
 	var alignment = line.inlines && line.inlines.length > 0 && line.inlines[0].alignment;
 
 	var offset = 0;
+	console.log('line', line);
+	console.log('alignment', alignment);
 	switch (alignment) {
 		case 'right':
 			offset = width - lineWidth;
+		//	offset =400;
+			console.log('width', width);
+			console.log('lineWidth', lineWidth);
+			console.log('offset', offset);
 			break;
 		case 'center':
 			offset = (width - lineWidth) / 2;

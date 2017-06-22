@@ -290,4 +290,34 @@ describe('Integration test: tables', function () {
 		assert.deepEqual(getColumnText(lines, {cell: 1}), 'Row 2');
 	});
 
+	it.only('renders a simple table in a stack with alignment (issue #72)', function () {
+		var dd = {
+			content: {
+				stack:[{
+					table: {
+						body: [
+							['Column 1', 'Column 2'],
+							['Value 1', 'Value 2']
+						]
+					}}
+				],
+				alignment: 'right'
+			}
+		};
+
+		var pages = testHelper.renderPages('A6', dd);
+		var lines = getCells(pages, {pageNumber: 0});
+
+		const startXAligned = sizes.A6[0] - testHelper.MARGINS.right - (TABLE_PADDING_X) * 2 - TABLE_BORDER_STRENGTH * 1 - lines[0].item.maxWidth;
+	//	var firstColumnSpacing = startX + (TABLE_PADDING_X) * 2 + TABLE_BORDER_STRENGTH * 1 + lines[0].item.maxWidth;
+		var itemRight = pages[0].items[1].item;
+		assert.equal(itemRight.x, startXAligned);
+
+		/*assert.deepEqual(_.map(_.map(lines, 'item'), 'x'), [
+			startX, firstColumnSpacing,
+			startX, firstColumnSpacing]);
+*/
+
+	});
+
 });

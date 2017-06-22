@@ -428,7 +428,7 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 	}
 };
 
-LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow) {
+LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, alignment) {
 	var self = this;
 	var pageBreaks = [], positions = [];
 
@@ -553,7 +553,7 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 	for (var i = 0, l = tableNode.table.body.length; i < l; i++) {
 		processor.beginRow(i, this.writer);
 
-		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i);
+		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, tableNode._alignment);
 		addAll(tableNode.positions, result.positions);
 
 		processor.endRow(i, this.writer, result.pageBreaks);
