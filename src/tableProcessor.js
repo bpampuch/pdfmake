@@ -34,7 +34,11 @@ TableProcessor.prototype.beginTable = function (writer) {
 	// update the border properties of all cells before drawing any lines
 	prepareCellBorders(this.tableNode.table.body);
 
-	this.drawHorizontalLine(0, writer);
+	var rowPaddingTop = this.layout.hLineWidth(0, this.tableNode);
+	var rowHeight = this.tableNode.table.heights[0]._height;
+	if (rowPaddingTop + rowHeight < writer.context().availableHeight) {
+		this.drawHorizontalLine(0, writer);
+	}
 
 	function getTableInnerContentWidth() {
 		var width = 0;
@@ -144,11 +148,13 @@ TableProcessor.prototype.beginRow = function (rowIndex, writer, heights) {
 		if (typeof heights === 'function') {
 			h = heights(rowIndex);
 		} else if (heights.length) {
-			h = heights[rowIndex];
+			h = heights[rowIndex].height;
 		} else {
 			h = heights;
 		}
-		this.reservedAtBottom += h;
+		if (h !== 'auto') {
+			this.reservedAtBottom += h;
+		}
 	}
 
 	writer.context().availableHeight -= this.reservedAtBottom;

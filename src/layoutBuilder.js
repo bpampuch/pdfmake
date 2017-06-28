@@ -565,6 +565,7 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 			height = rowHeights(i);
 		} else if (rowHeights && rowHeights.length) {
 			height = rowHeights[i];
+			if (typeof height === 'object') height = height.height;
 		} else {
 			height = rowHeights;
 		}
