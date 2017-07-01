@@ -90,6 +90,17 @@ describe('TextTools', function () {
 		'         text having two lines       '
 	];
 
+	var textWithLeadingIndent = {
+		text:
+			'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut porttitor risus sapien, at commodo eros suscipit ' +
+			'nec. Pellentesque pretium, justo eleifend pulvinar malesuada, lorem arcu pellentesque ex, ac congue arcu erat ' +
+			'id nunc. Morbi facilisis pulvinar nunc, quis laoreet ligula rutrum ut. Mauris at ante imperdiet, vestibulum ' +
+			'libero nec, iaculis justo. Mauris aliquam congue ligula vel convallis. Duis iaculis ornare nulla, id finibus ' +
+			'sapien commodo quis. Sed semper sagittis urna. Nunc aliquam aliquet placerat. Maecenas ac arcu auctor, ' +
+			'bibendum nisl non, bibendum odio. Proin semper lacus faucibus, pretium neque nec, viverra sem. ',
+		leadingIndent: 10
+	};
+
 	var mixedTextArrayWithVariousTypes = [
 		{text: ''},
 		{text: null},
@@ -377,6 +388,13 @@ describe('TextTools', function () {
 			assert.equal(inlines.maxWidth, 52 * 12);
 		});
 
+		it('should set set the leading indent only to the first line of a paragraph', function() {
+			var inlines = textTools.buildInlines(textWithLeadingIndent);
+			assert.equal(inlines.items[0].leadingCut, -10);
+			var countLeadingCut = 0;
+			inlines.items.forEach(function(item) { countLeadingCut += item.leadingCut; });
+			assert.equal(countLeadingCut, -10);
+		});
 	});
 
 	describe('sizeOfString', function () {
