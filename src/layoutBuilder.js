@@ -428,7 +428,7 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 	}
 };
 
-LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, height) {
+LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, height, clipCells) {
 	var self = this;
 	var pageBreaks = [], positions = [];
 
@@ -450,12 +450,12 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 
 			self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
 			if (!column._span) {
-				if (height) {
+				if (clipCells && height) {
 					self.writer.beginClip(width, height);
 				}
 				self.processNode(column);
 				addAll(positions, column.positions);
-				if (height) {
+				if (clipCells && height) {
 					self.writer.endClip();
 				}
 			} else if (column._columnEndingContext) {
@@ -464,7 +464,7 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 			}
 		}
 
-		self.writer.context().completeColumnGroup(height);
+		self.writer.context().completeColumnGroup(height, clipCells);
 	});
 
 	return {pageBreaks: pageBreaks, positions: positions};
@@ -558,9 +558,9 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 	var rowHeight = tableNode.table.height;
 
 	for (var i = 0, l = tableNode.table.body.length; i < l; i++) {
-		processor.beginRow(i, this.writer);
+		processor.beginRow(i, this.writer, tableNode.table.height);
 		var height = rowHeight && ((typeof rowHeight === 'function') && rowHeight(i) || rowHeight);
-		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
+		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height, tableNode.table.clipCells);
 		addAll(tableNode.positions, result.positions);
 
 		processor.endRow(i, this.writer, result.pageBreaks);
