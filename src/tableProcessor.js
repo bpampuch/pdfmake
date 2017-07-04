@@ -143,6 +143,8 @@ TableProcessor.prototype.beginRow = function (rowIndex, writer, heights) {
 		var h;
 		if (typeof heights === 'function') {
 			h = heights(rowIndex);
+		} else if (heights.length) {
+			h = heights[rowIndex];
 		} else {
 			h = heights;
 		}

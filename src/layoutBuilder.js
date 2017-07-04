@@ -555,11 +555,24 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 	var processor = new TableProcessor(tableNode);
 
 	processor.beginTable(this.writer);
-	var rowHeight = tableNode.table.height;
+	var rowHeights = tableNode.table.heights;
 
 	for (var i = 0, l = tableNode.table.body.length; i < l; i++) {
-		processor.beginRow(i, this.writer, tableNode.table.height);
-		var height = rowHeight && ((typeof rowHeight === 'function') && rowHeight(i) || rowHeight);
+		processor.beginRow(i, this.writer, tableNode.table.heights);
+
+		var height;
+		if (typeof rowHeights === 'function') {
+			height = rowHeights(i);
+		} else if (rowHeights && rowHeights.length) {
+			height = rowHeights[i];
+		} else {
+			height = rowHeights;
+		}
+
+		if (height == 'auto') {
+			height = undefined;
+		}
+
 		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height, tableNode.table.clipCells);
 		addAll(tableNode.positions, result.positions);
 
