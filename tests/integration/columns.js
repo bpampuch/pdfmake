@@ -221,6 +221,21 @@ describe('Integration test: columns', function () {
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}).join(''), 'val');
 	});
 
+	it('renders empty column lists', function () {
+		var dd = {
+			content: [
+				{ columns: [] },
+				{ columns: [
+					{ text: _.map(new Array(80), () => 'Lorem ipsum') }
+				]
+				},
+			]
+		};
+		var pages = testHelper.renderPages('A6', dd);
+
+		assert.deepEqual(pages.length, 2);
+	});
+
 	it('render nested columns', function () {
 		var dd = {
 			content: [
