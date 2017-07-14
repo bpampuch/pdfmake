@@ -245,7 +245,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.height = font.lineHeight(fontSize) * lineHeight;
 
 		var leadingSpaces = item.text.match(LEADING);
-		
+
 		if (!item.leadingCut) {
 			item.leadingCut = 0;
 		}
