@@ -238,6 +238,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var link = getStyleProperty(item, styleContextStack, 'link', null);
 		var linkToPage = getStyleProperty(item, styleContextStack, 'linkToPage', null);
 		var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', null);
+		var preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -250,7 +251,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 			item.leadingCut = 0;
 		}
 
-		if (leadingSpaces) {
+		if (leadingSpaces && !preserveLeadingSpaces) {
 			item.leadingCut += widthOfString(leadingSpaces[0], font, fontSize, characterSpacing);
 		}
 
