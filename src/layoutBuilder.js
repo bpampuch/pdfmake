@@ -320,6 +320,11 @@ LayoutBuilder.prototype.processNode = function (node) {
 	decorateNode(node);
 
 	applyMargins(function () {
+		var unbreakable = node.unbreakable;
+		if (unbreakable) {
+			self.writer.beginUnbreakableBlock();
+		}
+
 		var absPosition = node.absolutePosition;
 		if (absPosition) {
 			self.writer.context().beginDetachedBlock();
@@ -358,6 +363,10 @@ LayoutBuilder.prototype.processNode = function (node) {
 
 		if (absPosition || relPosition) {
 			self.writer.context().endDetachedBlock();
+		}
+
+		if (unbreakable) {
+			self.writer.commitUnbreakableBlock();
 		}
 	});
 
