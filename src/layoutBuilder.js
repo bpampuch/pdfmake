@@ -313,9 +313,8 @@ function decorateNode(node) {
 	};
 }
 
-LayoutBuilder.prototype.processNode = function (node) {
+LayoutBuilder.prototype.processNode = function (node, startX) {
 	var self = this;
-
 	this.linearNodeList.push(node);
 	decorateNode(node);
 
@@ -343,7 +342,7 @@ LayoutBuilder.prototype.processNode = function (node) {
 		} else if (node.table) {
 			self.processTable(node);
 		} else if (node.text !== undefined) {
-			self.processLeaf(node);
+			self.processLeaf(node, startX);
 		} else if (node.toc) {
 			self.processToc(node);
 		} else if (node.image) {
@@ -428,7 +427,7 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 	}
 };
 
-LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, alignment) {
+LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, startX) {
 	var self = this;
 	var pageBreaks = [], positions = [];
 
@@ -450,7 +449,7 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 
 			self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
 			if (!column._span) {
-				self.processNode(column);
+				self.processNode(column, startX);
 				addAll(positions, column.positions);
 			} else if (column._columnEndingContext) {
 				// row-span ending
@@ -546,14 +545,12 @@ LayoutBuilder.prototype.processList = function (orderedList, node) {
 
 // tables
 LayoutBuilder.prototype.processTable = function (tableNode) {
+
 	var processor = new TableProcessor(tableNode);
-
 	processor.beginTable(this.writer);
-
 	for (var i = 0, l = tableNode.table.body.length; i < l; i++) {
 		processor.beginRow(i, this.writer);
-
-		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, tableNode._alignment);
+		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, processor.startX);
 		addAll(tableNode.positions, result.positions);
 
 		processor.endRow(i, this.writer, result.pageBreaks);
@@ -563,7 +560,7 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 };
 
 // leafs (texts)
-LayoutBuilder.prototype.processLeaf = function (node) {
+LayoutBuilder.prototype.processLeaf = function (node, startX) {
 	var line = this.buildNextLine(node);
 	var currentHeight = (line) ? line.getHeight() : 0;
 	var maxHeight = node.maxHeight || -1;
@@ -573,7 +570,7 @@ LayoutBuilder.prototype.processLeaf = function (node) {
 	}
 
 	while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
-		var positions = this.writer.addLine(line);
+		var positions = this.writer.addLine(line, false, startX);
 		node.positions.push(positions);
 		line = this.buildNextLine(node);
 		if (line) {
@@ -590,7 +587,6 @@ LayoutBuilder.prototype.processToc = function (node) {
 };
 
 LayoutBuilder.prototype.buildNextLine = function (textNode) {
-
 	function cloneInline(inline) {
 		var newInline = inline.constructor();
 		for (var key in inline) {
@@ -627,12 +623,10 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 				textNode._inlines.unshift(newInline);
 			}
 		}
-
 		line.addInline(inline);
 	}
 
 	line.lastLineInParagraph = textNode._inlines.length === 0;
-
 	return line;
 };
 

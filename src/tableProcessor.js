@@ -14,19 +14,20 @@ TableProcessor.prototype.beginTable = function (writer) {
 	tableNode = this.tableNode;
 	this.offsets = tableNode._offsets;
 	this.layout = tableNode._layout;
-	this.alignment = tableNode._alignment;
+	this.tableAlignment = tableNode._tableAlignment;
 	availableWidth = writer.context().availableWidth - this.offsets.total;
-console.log('table offsets', tableNode._offsets);
 
 	ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth);
 
 	this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
 	this.startX = 0;
-	if(this.tableNode._alignment === 'right'){
-		this.startX = availableWidth - this.tableWidth;
+	switch (this.tableAlignment) {
+		case 'right':
+			this.startX = writer.context().availableWidth - this.tableWidth;
+			break;
+		case 'center':
+			this.startX = (writer.context().availableWidth - this.tableWidth) / 2;
 	}
-	console.log('tableWidth', this.tableWidth);
-
 	this.rowSpanData = prepareRowSpanData();
 	this.cleanUpRepeatables = false;
 
@@ -66,7 +67,6 @@ console.log('table offsets', tableNode._offsets);
 			lastWidth = paddings + lBorder + self.tableNode.table.widths[i]._calcWidth;
 			rsd[rsd.length - 1].width = lastWidth;
 			x += lastWidth;
-
 			rsd.push({left: x, rowSpan: 0, width: 0});
 		}
 
@@ -186,8 +186,6 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 			}
 
 			if (!currentLine && shouldDrawLine) {
-
-
 				currentLine = {left: data.left, width: 0};
 			}
 
@@ -197,16 +195,13 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 
 			var y = (overrideY || 0) + offset;
 
-console.log('  this  ', this);
 			if (!shouldDrawLine || i === l - 1) {
 				if (currentLine && currentLine.width) {
-					var x1;
-					if(this.tableNode._alignment === 'right'){
-						x1=  this.startX;
-					} else {
-						x1 =currentLine.left;
+					var x1 = currentLine.left;
+					// if (this.tableNode._alignment) {
+					if (this.tableAlignment) {
+						x1 = this.startX;
 					}
-					console.log('XXXXX1', x1);
 					writer.addVector({
 						type: 'line',
 						x1: x1,
@@ -409,8 +404,11 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 
 		for (var i = 0, l = self.tableNode.table.body[rowIndex].length; i < l; i++) {
 			if (!cols) {
-				result.push({x: self.rowSpanData[i].left+ self.startX, index: i});
-
+				if (i) {
+					result.push({x: self.rowSpanData[i].left, index: i});
+				} else {
+					result.push({x: self.rowSpanData[i].left + self.startX , index: i});
+				}
 				var item = self.tableNode.table.body[rowIndex][i];
 				cols = (item._colSpan || item.colSpan || 0);
 			}
@@ -418,9 +416,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 				cols--;
 			}
 		}
-
-		result.push({x: self.rowSpanData[self.rowSpanData.length - 1].left+ self.startX, index: self.rowSpanData.length - 1});
-
+		result.push({x: self.rowSpanData[self.rowSpanData.length - 1].left, index: self.rowSpanData.length - 1});
 		return result;
 	}
 };

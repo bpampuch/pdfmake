@@ -24,7 +24,7 @@ function addPageItem(page, item, index) {
 	}
 }
 
-ElementWriter.prototype.addLine = function (line, dontUpdateContextPosition, index) {
+ElementWriter.prototype.addLine = function (line, dontUpdateContextPosition, startX) {
 	var height = line.getHeight();
 	var context = this.context;
 	var page = context.getCurrentPage(),
@@ -37,12 +37,12 @@ ElementWriter.prototype.addLine = function (line, dontUpdateContextPosition, ind
 	line.x = context.x + (line.x || 0);
 	line.y = context.y + (line.y || 0);
 
-	this.alignLine(line);
+	this.alignLine(line, startX);
 
 	addPageItem(page, {
 		type: 'line',
 		item: line
-	}, index);
+	}, null);
 	this.tracker.emit('lineAdded', line);
 
 	if (!dontUpdateContextPosition) {
@@ -52,25 +52,23 @@ ElementWriter.prototype.addLine = function (line, dontUpdateContextPosition, ind
 	return position;
 };
 
-ElementWriter.prototype.alignLine = function (line) {
-	var width = this.context.availableWidth; //wrong value
+ElementWriter.prototype.alignLine = function (line, startX) {
+	var width = this.context.availableWidth;
+
 	var lineWidth = line.getWidth();
 
 	var alignment = line.inlines && line.inlines.length > 0 && line.inlines[0].alignment;
 
-	var offset = 0;
-	console.log('line', line);
-	console.log('alignment', alignment);
+	// startX allows to align the line inside the aligned table
+	var offset = startX || 0
+
+	// text alignment in page or text in table cell alignment
 	switch (alignment) {
 		case 'right':
-			offset = width - lineWidth;
-		//	offset =400;
-			console.log('width', width);
-			console.log('lineWidth', lineWidth);
-			console.log('offset', offset);
+			offset += width - lineWidth;
 			break;
 		case 'center':
-			offset = (width - lineWidth) / 2;
+			offset += (width - lineWidth) / 2;
 			break;
 	}
 
