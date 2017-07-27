@@ -33,7 +33,13 @@ DocumentContext.prototype.beginColumnGroup = function () {
 		availableHeight: this.availableHeight,
 		availableWidth: this.availableWidth,
 		page: this.page,
-		bottomMost: {y: this.y, page: this.page},
+		bottomMost: {
+			x: this.x,
+			y: this.y,
+			availableHeight: this.availableHeight,
+			availableWidth: this.availableWidth,
+			page: this.page
+		},
 		endingCell: this.endingCell,
 		lastColumnWidth: this.lastColumnWidth
 	});

@@ -495,8 +495,9 @@ DocMeasure.prototype.measureColumns = function (node) {
 
 	var measures = ColumnCalculator.measureMinMax(columns);
 
-	node._minWidth = measures.min + node._gap * (columns.length - 1);
-	node._maxWidth = measures.max + node._gap * (columns.length - 1);
+	var numGaps = (columns.length > 0) ? (columns.length - 1) : 0;
+	node._minWidth = measures.min + node._gap * numGaps;
+	node._maxWidth = measures.max + node._gap * numGaps;
 
 	return node;
 };

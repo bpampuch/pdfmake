@@ -214,6 +214,15 @@ function getStyleProperty(item, styleContextStack, property, defaultValue) {
 function measure(fontProvider, textArray, styleContextStack) {
 	var normalized = normalizeTextArray(textArray, styleContextStack);
 
+	if (normalized.length) {
+		var leadingIndent = getStyleProperty(normalized[0], styleContextStack, 'leadingIndent', 0);
+
+		if (leadingIndent) {
+			normalized[0].leadingCut = -leadingIndent;
+			normalized[0].leadingIndent = leadingIndent;
+		}
+	}
+
 	normalized.forEach(function (item) {
 		var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
 		var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
@@ -229,6 +238,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var link = getStyleProperty(item, styleContextStack, 'link', null);
 		var linkToPage = getStyleProperty(item, styleContextStack, 'linkToPage', null);
 		var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', null);
+		var preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -236,13 +246,16 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.height = font.lineHeight(fontSize) * lineHeight;
 
 		var leadingSpaces = item.text.match(LEADING);
-		var trailingSpaces = item.text.match(TRAILING);
-		if (leadingSpaces) {
-			item.leadingCut = widthOfString(leadingSpaces[0], font, fontSize, characterSpacing);
-		} else {
+		
+		if (!item.leadingCut) {
 			item.leadingCut = 0;
 		}
 
+		if (leadingSpaces && !preserveLeadingSpaces) {
+			item.leadingCut += widthOfString(leadingSpaces[0], font, fontSize, characterSpacing);
+		}
+
+		var trailingSpaces = item.text.match(TRAILING);
 		if (trailingSpaces) {
 			item.trailingCut = widthOfString(trailingSpaces[0], font, fontSize, characterSpacing);
 		} else {
