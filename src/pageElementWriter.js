@@ -28,9 +28,9 @@ function fitOnPage(self, addFct) {
 	return position;
 }
 
-PageElementWriter.prototype.addLine = function (line, dontUpdateContextPosition, index) {
+PageElementWriter.prototype.addLine = function (line, dontUpdateContextPosition, startX) {
 	return fitOnPage(this, function (self) {
-		return self.writer.addLine(line, dontUpdateContextPosition, index);
+		return self.writer.addLine(line, dontUpdateContextPosition, startX);
 	});
 };
 

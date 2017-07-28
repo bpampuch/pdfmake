@@ -11,15 +11,23 @@ TableProcessor.prototype.beginTable = function (writer) {
 	var tableNode;
 	var availableWidth;
 	var self = this;
-
 	tableNode = this.tableNode;
 	this.offsets = tableNode._offsets;
 	this.layout = tableNode._layout;
-
+	this.tableAlignment = tableNode._tableAlignment;
 	availableWidth = writer.context().availableWidth - this.offsets.total;
+
 	ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth);
 
 	this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
+	this.startX = 0;
+	switch (this.tableAlignment) {
+		case 'right':
+			this.startX = writer.context().availableWidth - this.tableWidth;
+			break;
+		case 'center':
+			this.startX = (writer.context().availableWidth - this.tableWidth) / 2;
+	}
 	this.rowSpanData = prepareRowSpanData();
 	this.cleanUpRepeatables = false;
 
@@ -48,7 +56,7 @@ TableProcessor.prototype.beginTable = function (writer) {
 
 	function prepareRowSpanData() {
 		var rsd = [];
-		var x = 0;
+		var x = self.startX;
 		var lastWidth = 0;
 
 		rsd.push({left: 0, rowSpan: 0});
@@ -81,7 +89,7 @@ TableProcessor.prototype.beginTable = function (writer) {
 					var rowSpan = cell.rowSpan || 1;
 					var colSpan = cell.colSpan || 1;
 
-					for (var rowOffset = 0; rowOffset < rowSpan; rowOffset++) {
+					for (var rowOffset = self.startX; rowOffset < rowSpan; rowOffset++) {
 						// set left border
 						if (cell.border[0] !== undefined && rowOffset > 0) {
 							setBorder(rowIndex + rowOffset, colIndex, 0, cell.border[0]);
@@ -120,10 +128,11 @@ TableProcessor.prototype.beginTable = function (writer) {
 TableProcessor.prototype.onRowBreak = function (rowIndex, writer) {
 	var self = this;
 	return function () {
-		var offset = self.rowPaddingTop + (!self.headerRows ? self.topLineWidth : 0);
-		writer.context().availableHeight -= self.reservedAtBottom;
+		//console.log('moving by : ', topLineWidth, rowPaddingTop);
+		var offset = self.rowPaddingTop + (!self.headerRows ? self.topLineWidth : 0)+ self.startX;
 		writer.context().moveDown(offset);
 	};
+
 };
 
 TableProcessor.prototype.beginRow = function (rowIndex, writer) {
@@ -188,10 +197,15 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 
 			if (!shouldDrawLine || i === l - 1) {
 				if (currentLine && currentLine.width) {
+					var x1 = currentLine.left;
+					// if (this.tableNode._alignment) {
+					if (this.tableAlignment) {
+						x1 = this.startX;
+					}
 					writer.addVector({
 						type: 'line',
-						x1: currentLine.left,
-						x2: currentLine.left + currentLine.width,
+						x1: x1,
+						x2: x1 + currentLine.width,
 						y1: y,
 						y2: y,
 						lineWidth: lineWidth,
@@ -390,8 +404,11 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 
 		for (var i = 0, l = self.tableNode.table.body[rowIndex].length; i < l; i++) {
 			if (!cols) {
-				result.push({x: self.rowSpanData[i].left, index: i});
-
+				if (i) {
+					result.push({x: self.rowSpanData[i].left, index: i});
+				} else {
+					result.push({x: self.rowSpanData[i].left + self.startX , index: i});
+				}
 				var item = self.tableNode.table.body[rowIndex][i];
 				cols = (item._colSpan || item.colSpan || 0);
 			}
@@ -399,9 +416,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 				cols--;
 			}
 		}
-
 		result.push({x: self.rowSpanData[self.rowSpanData.length - 1].left, index: self.rowSpanData.length - 1});
-
 		return result;
 	}
 };

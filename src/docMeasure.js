@@ -198,7 +198,6 @@ DocMeasure.prototype.measureLeaf = function (node) {
 	styleStack.push(node);
 
 	var data = this.textTools.buildInlines(node.text, styleStack);
-
 	node._inlines = data.items;
 	node._minWidth = data.minWidth;
 	node._maxWidth = data.maxWidth;
@@ -507,6 +506,8 @@ DocMeasure.prototype.measureTable = function (node) {
 	extendTableWidths(node);
 	node._layout = getLayout(this.tableLayouts);
 	node._offsets = getOffsets(node._layout);
+	node._tableAlignment = this.styleStack.getProperty('tableAlignment');
+	node._alignment = this.styleStack.getProperty('alignment');
 
 	var colSpans = [];
 	var col, row, cols, rows;
