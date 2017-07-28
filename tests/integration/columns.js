@@ -224,10 +224,10 @@ describe('Integration test: columns', function () {
 	it('renders empty column lists', function () {
 		var dd = {
 			content: [
-				{ columns: [] },
-				{ columns: [
-					{ text: _.map(new Array(80), () => 'Lorem ipsum') }
-				]
+				{columns: []},
+				{columns: [
+						{text: _.map(new Array(80), () => 'Lorem ipsum')}
+					]
 				},
 			]
 		};

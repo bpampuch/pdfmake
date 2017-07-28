@@ -58,7 +58,7 @@ describe('PageElementWriter', function () {
 			_minWidth: 100,
 			_width: 100,
 			_height: height,
-			positions:[]
+			positions: []
 		};
 	}
 

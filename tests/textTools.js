@@ -392,15 +392,17 @@ describe('TextTools', function () {
 			assert.equal(inlines.maxWidth, 52 * 12);
 		});
 
-		it('should set set the leading indent only to the first line of a paragraph', function() {
+		it('should set set the leading indent only to the first line of a paragraph', function () {
 			var inlines = textTools.buildInlines(textWithLeadingIndent);
 			assert.equal(inlines.items[0].leadingCut, -10);
 			var countLeadingCut = 0;
-			inlines.items.forEach(function(item) { countLeadingCut += item.leadingCut; });
+			inlines.items.forEach(function (item) {
+				countLeadingCut += item.leadingCut;
+			});
 			assert.equal(countLeadingCut, -10);
 		});
 
-		it('should preserve leading whitespaces when preserveLeadingSpaces is set', function() {
+		it('should preserve leading whitespaces when preserveLeadingSpaces is set', function () {
 			var inlines = textTools.buildInlines(textWithLeadingSpaces);
 			assert.equal(inlines.maxWidth, 23 * 12);
 		});
