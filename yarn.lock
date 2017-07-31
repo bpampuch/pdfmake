@@ -1434,9 +1434,9 @@ gulp-sourcemaps@^2.6.0:
     through2 "2.X"
     vinyl "1.X"
 
-gulp-spawn-mocha@^3.3.0:
-  version "3.3.0"
-  resolved "https://registry.yarnpkg.com/gulp-spawn-mocha/-/gulp-spawn-mocha-3.3.0.tgz#d0a930161b9242b95b7b60b05ae2c75283839454"
+gulp-spawn-mocha@^3.3.1:
+  version "3.3.1"
+  resolved "https://registry.yarnpkg.com/gulp-spawn-mocha/-/gulp-spawn-mocha-3.3.1.tgz#a830221b55503a2fceba196fcfac08c6df3a01b0"
   dependencies:
     gulp-util "~3.0.7"
     lodash "^4.11.1"
@@ -2592,9 +2592,9 @@ pbkdf2@^3.0.3:
   dependencies:
     create-hmac "^1.1.2"
 
-pdfkit@^0.8.2:
-  version "0.8.2"
-  resolved "https://registry.yarnpkg.com/pdfkit/-/pdfkit-0.8.2.tgz#7c7b5697058ee3677053292db660bad948d0972a"
+pdfkit@^0.8.3:
+  version "0.8.3"
+  resolved "https://registry.yarnpkg.com/pdfkit/-/pdfkit-0.8.3.tgz#ec99a57fc55ca309726f856456da14418f5330e3"
   dependencies:
     fontkit "^1.0.0"
     linebreak "^0.3.0"

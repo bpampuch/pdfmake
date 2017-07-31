@@ -7,7 +7,7 @@
     "test": "tests"
   },
   "dependencies": {
-    "pdfkit": "^0.8.2",
+    "pdfkit": "^0.8.3",
     "iconv-lite": "^0.4.18",
     "linebreak": "^0.3.0",
     "lodash": "^4.17.4"
@@ -19,7 +19,7 @@
     "gulp-rename": "^1.2.2",
     "gulp-replace": "^0.6.1",
     "gulp-sourcemaps": "^2.6.0",
-    "gulp-spawn-mocha": "^3.3.0",
+    "gulp-spawn-mocha": "^3.3.1",
     "gulp-uglify": "^2.1.2",
     "gulp-util": "^3.0.8",
     "gulp-each": "^0.5.0",
