@@ -349,7 +349,7 @@ var docDefinition = {
 		{text: '\n\nUnordered list - type: none', style: 'header'},
 		{
 			type: 'none',
-			ol: [
+			ul: [
 				'item 1',
 				'item 2',
 				'item 3'
