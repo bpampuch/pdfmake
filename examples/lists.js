@@ -373,7 +373,7 @@ var docDefinition = {
 				'item 3'
 			]
 		},
-		{text: '\n\nOrdered list with own types', style: 'header'},
+		{text: '\n\nOrdered list with own items type', style: 'header'},
 		{
 			ol: [
 				'item 1',
@@ -381,7 +381,7 @@ var docDefinition = {
 				{text: 'item 3', listType: 'upper-roman'}
 			]
 		},
-		{text: '\n\nUnordered list with own types', style: 'header'},
+		{text: '\n\nUnordered list with own items type', style: 'header'},
 		{
 			ul: [
 				'item 1',
