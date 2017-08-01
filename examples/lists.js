@@ -364,7 +364,6 @@ var docDefinition = {
 				'item 3'
 			]
 		},
-
 		{text: '\n\nOrdered list with own complex separator', style: 'header'},
 		{
 			separator: ['(', ')'],
@@ -374,7 +373,22 @@ var docDefinition = {
 				'item 3'
 			]
 		},
-
+		{text: '\n\nOrdered list with own types', style: 'header'},
+		{
+			ol: [
+				'item 1',
+				{text: 'item 2', listType: 'none'},
+				{text: 'item 3', listType: 'upper-roman'}
+			]
+		},
+		{text: '\n\nUnordered list with own types', style: 'header'},
+		{
+			ul: [
+				'item 1',
+				{text: 'item 2', listType: 'none'},
+				{text: 'item 3', listType: 'circle'}
+			]
+		},
 	],
 	styles: {
 		header: {

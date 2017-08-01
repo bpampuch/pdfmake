@@ -429,7 +429,7 @@ DocMeasure.prototype.measureUnorderedList = function (node) {
 		var item = items[i] = this.measureNode(items[i]);
 
 		if (!item.ol && !item.ul) {
-			item.listMarker = this.buildUnorderedMarker(style, node._gapSize, node.type);
+			item.listMarker = this.buildUnorderedMarker(style, node._gapSize, item.listType || node.type);
 		}
 
 		node._minWidth = Math.max(node._minWidth, items[i]._minWidth + node._gapSize.width);
@@ -457,7 +457,7 @@ DocMeasure.prototype.measureOrderedList = function (node) {
 		var item = items[i] = this.measureNode(items[i]);
 
 		if (!item.ol && !item.ul) {
-			item.listMarker = this.buildOrderedMarker(item.counter || counter, style, node.type, node.separator);
+			item.listMarker = this.buildOrderedMarker(item.counter || counter, style, item.listType || node.type, node.separator);
 			if (item.listMarker._inlines) {
 				node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
 			}
