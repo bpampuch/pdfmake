@@ -140,6 +140,11 @@ $scope.generatePdf = function() {
 };
 ```
 
+Open in same window:
+```js
+pdfMake.createPdf(docDefinition).open({}, window);
+```
+
 #### Print the PDF
 ```js
 pdfMake.createPdf(docDefinition).print();
@@ -158,6 +163,11 @@ $scope.generatePdf = function() {
     pdfMake.createPdf(docDefinition).print({}, win);
   });
 };
+```
+
+Print in same window:
+```js
+pdfMake.createPdf(docDefinition).print({}, window);
 ```
 
 #### Put the PDF into your own page as URL data
