@@ -212,11 +212,14 @@ DocMeasure.prototype.measureToc = function (node) {
 	}
 
 	var body = [];
+	var numberStyle = node.numberStyle || {};
 	for (var i = 0, l = node.toc._items.length; i < l; i++) {
 		var item = node.toc._items[i];
+		var lineStyle = node.toc._items[i].tocStyle || {};
+		var lineMargin = node.toc._items[i].tocMargin || [ 0, 0, 0, 0 ];
 		body.push([
-			{text: item.text, alignment: 'left'},
-			{text: '00000', alignment: 'right', _tocItemRef: item}
+			{text: item.text, alignment: 'left', style: lineStyle, margin: lineMargin},
+			{text: '00000', alignment: 'right', _tocItemRef: item, style: numberStyle}
 		]);
 	}
 
