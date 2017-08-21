@@ -20,13 +20,16 @@ var docDefinition = {
 		},
 		{
 			toc: {
-				title: {text: 'INDEX', style: 'header'}
+				title: {text: 'INDEX', style: 'header'},
+				numberStyle: {bold: true}
 			}
 		},
 		{
 			text: 'This is a header, using header style',
 			style: 'header',
 			tocItem: true,
+			tocStyle: {bold: true},
+			tocMargin: [0, 10, 0, 0],
 			pageBreak: 'before'
 		},
 		'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Confectum ponit legam, perferendis nomine miserum, animi. Moveat nesciunt triari naturam.\n\n',
