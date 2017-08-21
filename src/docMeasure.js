@@ -212,7 +212,7 @@ DocMeasure.prototype.measureToc = function (node) {
 	}
 
 	var body = [];
-	var numberStyle = node.numberStyle || {};
+	var numberStyle = node.toc.numberStyle || {};
 	for (var i = 0, l = node.toc._items.length; i < l; i++) {
 		var item = node.toc._items[i];
 		var lineStyle = node.toc._items[i].tocStyle || {};
