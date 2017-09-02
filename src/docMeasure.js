@@ -216,10 +216,10 @@ DocMeasure.prototype.measureToc = function (node) {
 	for (var i = 0, l = node.toc._items.length; i < l; i++) {
 		var item = node.toc._items[i];
 		var lineStyle = node.toc._items[i].tocStyle || {};
-		var lineMargin = node.toc._items[i].tocMargin || [ 0, 0, 0, 0 ];
+		var lineMargin = node.toc._items[i].tocMargin || [0, 0, 0, 0];
 		body.push([
 			{text: item.text, alignment: 'left', style: lineStyle, margin: lineMargin},
-			{text: '00000', alignment: 'right', _tocItemRef: item, style: numberStyle, margin: [ 0, lineMargin[1], 0, lineMargin[3]]}
+			{text: '00000', alignment: 'right', _tocItemRef: item, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]}
 		]);
 	}
 
