@@ -88,17 +88,13 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	setMetadata(docDefinition, this.pdfKitDoc);
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
-
-	docDefinition.images = docDefinition.images || {};
-
-	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
-
+	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc));
 	registerDefaultTableLayouts(builder);
+
 	if (options.tableLayouts) {
 		builder.registerTableLayouts(options.tableLayouts);
 	}
-
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
+	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.watermark, docDefinition.pageBreakBefore, options.progressCallback);
 	var maxNumberPages = docDefinition.maxPagesNumber || -1;
 	if (typeof maxNumberPages === 'number' && maxNumberPages > -1) {
 		pages = pages.slice(0, maxNumberPages);
@@ -330,7 +326,7 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 					break;
 			}
 			renderedItems++;
-			progressCallback(renderedItems / totalItems);
+			progressCallback((renderedItems / totalItems) * 0.7 + 0.3);
 		}
 		if (page.watermark) {
 			renderWatermark(page, pdfKitDoc);

@@ -1,8 +1,6 @@
 /* jslint node: true */
 'use strict';
 
-var PDFImage = require('pdfkit/js/image');
-
 function ImageMeasure(pdfKitDoc, imageDictionary) {
 	this.pdfKitDoc = pdfKitDoc;
 	this.imageDictionary = imageDictionary || {};
@@ -12,38 +10,27 @@ ImageMeasure.prototype.measureImage = function (src) {
 	var image, label;
 	var that = this;
 
-	if (!this.pdfKitDoc._imageRegistry[src]) {
-		label = 'I' + (++this.pdfKitDoc._imageCount);
-		try {
-			image = PDFImage.open(realImageSrc(src), label);
-		} catch (error) {
-			image = null;
-		}
-		if (image === null || image === undefined) {
-			throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
-		}
-		image.embed(this.pdfKitDoc);
-		this.pdfKitDoc._imageRegistry[src] = image;
-	} else {
-		image = this.pdfKitDoc._imageRegistry[src];
-	}
+  // check if buffer is a PNG
+  if (Buffer.isBuffer(src) && src[0] === 0x89 && src[1] === 0x50 && src[2] === 0x4E && src[3] === 0x47) {
+    // read PNG dimension directly from IHDR
+    return {width: src.readIntBE(16, 4), height: src.readIntBE(20, 4)};
+  }
 
-	return {width: image.width, height: image.height};
-
-	function realImageSrc(src) {
-		var img = that.imageDictionary[src];
-
-		if (!img) {
-			return src;
-		}
-
-		var index = img.indexOf('base64,');
-		if (index < 0) {
-			return that.imageDictionary[src];
-		}
-
-		return new Buffer(img.substring(index + 7), 'base64');
-	}
+  // check if buffer is a JPG
+  if (Buffer.isBuffer(src) && src[0] === 0xff && src[1] === 0xd8) {
+    var i = 2;
+    while (i < src.length - 7) {
+      // Search JPG SOF
+      if (src[i] === 255) {
+        if (src[i+1] === 192 || src[i+1] === 193 || src[i+1] === 194) {
+          // read JPG dimension directly from SOF
+          return {width: src.readUInt16BE(i+7), height: src.readUInt16BE(i+5)};
+        }
+      }
+      ++i;
+    }
+  }
+  throw new Error('Invalid image format');
 };
 
 module.exports = ImageMeasure;

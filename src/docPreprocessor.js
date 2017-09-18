@@ -4,7 +4,7 @@
 var fontStringify = require('./helpers').fontStringify;
 
 function DocPreprocessor() {
-
+ this.nodeCount = 0;
 }
 
 DocPreprocessor.prototype.preprocessDocument = function (docStructure) {
@@ -25,6 +25,7 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 	} else if (Object.keys(node).length === 0) { // empty object
 		node = {text: ''};
 	}
+  ++this.nodeCount;
 
 	if (node.columns) {
 		return this.preprocessColumns(node);

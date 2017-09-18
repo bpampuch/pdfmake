@@ -52,7 +52,8 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
  * @param {Object} defaultStyle default style definition
  * @return {Array} an array of pages
  */
-LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
+LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFct, progressCallback) {
+  this.progressCallback = progressCallback || function () {};
 
 	function addPageBreaksIfNecessary(linearNodeList, pages) {
 
@@ -107,7 +108,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 	}
 
 	this.docPreprocessor = new DocPreprocessor();
-	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
+	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts);
 
 
 	function resetXYs(result) {
@@ -116,20 +117,22 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 		});
 	}
 
-	var result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+	var result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark);
 	while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
 		resetXYs(result);
-		result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+		result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark);
 	}
 
 	return result.pages;
 };
 
-LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
-
-	this.linearNodeList = [];
-	docStructure = this.docPreprocessor.preprocessDocument(docStructure);
-	docStructure = this.docMeasure.measureDocument(docStructure);
+LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark) {
+  var self = this;
+  this.linearNodeList = [];
+  this.processed = 0;
+  docStructure = this.docPreprocessor.preprocessDocument(docStructure);
+  this.nodeCount = this.docPreprocessor.nodeCount;
+  docStructure = this.docMeasure.measureDocument(docStructure, this.nodeCount, this.progressCallback);
 
 	this.writer = new PageElementWriter(
 		new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
@@ -138,7 +141,6 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 	this.writer.context().tracker.startTracking('pageAdded', function () {
 		_this.addBackground(background);
 	});
-
 	this.addBackground(background);
 	this.processNode(docStructure);
 	this.addHeadersAndFooters(header, footer);
@@ -146,7 +148,6 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 	if (watermark != null) {
 		this.addWatermark(watermark, fontProvider, defaultStyle);
 	}
-
 	return {pages: this.writer.context().pages, linearNodeList: this.linearNodeList};
 };
 
@@ -315,6 +316,8 @@ function decorateNode(node) {
 
 LayoutBuilder.prototype.processNode = function (node) {
 	var self = this;
+  ++this.processed;
+  this.progressCallback((this.processed/this.nodeCount) * 0.1 + 0.2);
 
 	this.linearNodeList.push(node);
 	decorateNode(node);
@@ -463,6 +466,7 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 				addAll(positions, column.positions);
 			} else if (column._columnEndingContext) {
 				// row-span ending
+        ++this.processed;
 				self.writer.context().markEnding(column);
 			}
 		}
