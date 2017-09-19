@@ -29,12 +29,13 @@ function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, t
 DocMeasure.prototype.measureDocument = function (docStructure, nodeCount, progressCallback) {
   this.nodeCount = nodeCount;
   this.measured = 0;
-  this.progressCallback = progressCallback;
+  this.progressCallback = progressCallback || function() {};
 	return this.measureNode(docStructure);
 };
 
 DocMeasure.prototype.measureNode = function (node) {
 	var self = this;
+  this.progressCallback = this.progressCallback || function() {};
   ++this.measured;
   this.progressCallback((this.measured / this.nodeCount) * 0.2);
 	return this.styleStack.auto(node, function () {

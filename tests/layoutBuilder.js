@@ -1486,7 +1486,7 @@ describe('LayoutBuilder', function () {
 	});
 
 	describe('dynamic header/footer', function () {
-		var docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction;
+		var docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction;
 
 		beforeEach(function () {
 			fontProvider = sampleTestProvider;
@@ -1498,7 +1498,7 @@ describe('LayoutBuilder', function () {
 			header = sinon.spy();
 			footer = sinon.spy();
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
 			var pageSize = {width: 400, height: 800, orientation: 'portrait'};
 			assert.deepEqual(header.getCall(0).args[2], pageSize);
@@ -1508,7 +1508,7 @@ describe('LayoutBuilder', function () {
 
 	describe('dynamic page break control', function () {
 
-		var docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction;
+		var docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction;
 
 
 		beforeEach(function () {
@@ -1527,7 +1527,7 @@ describe('LayoutBuilder', function () {
 			};
 
 
-			var pages = builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			var pages = builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
 			assert.equal(pages.length, 2);
 		});
@@ -1544,7 +1544,7 @@ describe('LayoutBuilder', function () {
 			pageBreakBeforeFunction = sinon.spy();
 
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
 			assert(pageBreakBeforeFunction.calledTwice);
 			assert.equal(pageBreakBeforeFunction.getCall(0).args[0].id, 'stack');
@@ -1562,7 +1562,7 @@ describe('LayoutBuilder', function () {
 			pageBreakBeforeFunction = sinon.spy();
 
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
 			assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(1).args[1], 'id'), ['text2', 'text3']);
 		});
@@ -1581,7 +1581,7 @@ describe('LayoutBuilder', function () {
 			pageBreakBeforeFunction = sinon.spy();
 
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
 			assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(0).args[2], 'id'), ['text2', 'text3', 'text4']);
 		});
@@ -1600,7 +1600,7 @@ describe('LayoutBuilder', function () {
 			pageBreakBeforeFunction = sinon.spy();
 
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
 			assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(4).args[3], 'id'), ['stack', 'text2', 'text3']);
 		});
@@ -1616,7 +1616,7 @@ describe('LayoutBuilder', function () {
 			pageBreakBeforeFunction = sinon.spy();
 
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
 			assert.equal(pageBreakBeforeFunction.getCall(0).args[0].pages, 2);
 		});
@@ -1628,7 +1628,7 @@ describe('LayoutBuilder', function () {
 
 			pageBreakBeforeFunction = sinon.spy();
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
 			assert.equal(pageBreakBeforeFunction.getCall(1).args[0].headlineLevel, 6);
 		});
@@ -1640,7 +1640,7 @@ describe('LayoutBuilder', function () {
 
 			pageBreakBeforeFunction = sinon.spy();
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
 			assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].startPosition, {pageNumber: 1, left: 40, top: 40, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 720, pageInnerWidth: 320});
 		});
@@ -1652,7 +1652,7 @@ describe('LayoutBuilder', function () {
 
 			pageBreakBeforeFunction = sinon.spy();
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
 			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageOrientation, 'landscape');
 			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].style, 'super-text');
@@ -1684,7 +1684,7 @@ describe('LayoutBuilder', function () {
 
 			pageBreakBeforeFunction = sinon.spy();
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
 			function validateCalled(callIndex, nodeType, id) {
 				var nodeInfo = pageBreakBeforeFunction.getCall(callIndex).args[0];
@@ -1733,7 +1733,7 @@ describe('LayoutBuilder', function () {
 
 			pageBreakBeforeFunction = sinon.spy();
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
 			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageNumbers, [1]);
 			assert.deepEqual(pageBreakBeforeFunction.getCall(2).args[0].pageNumbers, [1, 2]);

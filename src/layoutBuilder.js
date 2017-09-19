@@ -316,6 +316,7 @@ function decorateNode(node) {
 
 LayoutBuilder.prototype.processNode = function (node) {
 	var self = this;
+  this.progressCallback = this.progressCallback || function() {};
   ++this.processed;
   this.progressCallback((this.processed/this.nodeCount) * 0.1 + 0.2);
 
@@ -466,7 +467,7 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 				addAll(positions, column.positions);
 			} else if (column._columnEndingContext) {
 				// row-span ending
-        ++this.processed;
+        ++self.processed;
 				self.writer.context().markEnding(column);
 			}
 		}
