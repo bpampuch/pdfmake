@@ -123,6 +123,10 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 		}
 	}
 
+	if (node.text && node.text.text) {
+		node.text = [this.preprocessNode(node.text)];
+	}
+
 	return node;
 };
 

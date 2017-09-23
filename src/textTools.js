@@ -139,11 +139,21 @@ function copyStyle(source, destination) {
 }
 
 function normalizeTextArray(array, styleContextStack) {
+	function flatten(array) {
+		return array.reduce(function (prev, cur) {
+			var current = Array.isArray(cur.text) ? flatten(cur.text) : cur;
+			var more = [].concat(current).some(Array.isArray);
+			return prev.concat(more ? flatten(current) : current);
+		}, []);
+	}
+
 	var results = [];
 
 	if (!Array.isArray(array)) {
 		array = [array];
 	}
+
+	array = flatten(array);
 
 	for (var i = 0, l = array.length; i < l; i++) {
 		var item = array[i];

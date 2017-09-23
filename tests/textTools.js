@@ -5,6 +5,7 @@ var assert = require('assert');
 
 var TextTools = require('../src/textTools');
 var StyleContextStack = require('../src/styleContextStack');
+var DocPreprocessor = require('../src/docPreprocessor');
 
 var sampleTestProvider = {
 	provideFont: function (familyName, bold, italics) {
@@ -22,6 +23,7 @@ var sampleTestProvider = {
 
 
 var textTools = new TextTools(sampleTestProvider);
+var docPreprocessor = new DocPreprocessor();
 
 describe('TextTools', function () {
 	var sampleText = 'Przyklad, bez nowych linii,   ale !!!! rozne!!!konstrukcje i ..blablablabla.';
@@ -233,7 +235,8 @@ describe('TextTools', function () {
 		});
 
 		it('should support cast to text', function () {
-			var result = textTools.normalizeTextArray(mixedTextArrayWithVariousTypes, styleStack);
+			var node = docPreprocessor.preprocessNode(mixedTextArrayWithVariousTypes);
+			var result = textTools.normalizeTextArray(node.stack, styleStack);
 			assert.equal(result.length, 6);
 			assert.equal(result[0].text, '2016');
 			assert.equal(result[1].text, 'true');
