@@ -96,6 +96,24 @@ describe('LayoutBuilder', function () {
 			assert.equal(pages[0].items[0].item.y + pages[0].items[0].item.getHeight(), pages[0].items[1].item.y);
 		});
 
+		it('should support text in nested object', function () {
+			var desc = [{
+					text: {
+						text: {
+							text: 'hello, world'
+						}
+					}
+				}];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].items.length, 1);
+			assert.equal(pages[0].items[0].item.inlines.length, 2);
+			assert.equal(pages[0].items[0].item.inlines[0].text, 'hello, ');
+			assert.equal(pages[0].items[0].item.inlines[1].text, 'world');
+		});
+
 		it('should split lines with new-line character (bugfix)', function () {
 			var desc = [
 				'first paragraph\nhaving two lines',
@@ -213,6 +231,26 @@ describe('LayoutBuilder', function () {
 
 			assert.equal(pages.length, 1);
 			assert.equal(pages[0].items.length, 2);
+		});
+
+		it('should support inline text in nested arrays', function () {
+			var desc = [{
+					text: [
+						{text: 'a better '},
+						{text: [{text: 'aaaa'}]},
+						{text: 'independently '}
+					]
+				}];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].items.length, 1);
+			assert.equal(pages[0].items[0].item.inlines.length, 4);
+			assert.equal(pages[0].items[0].item.inlines[0].text, 'a ');
+			assert.equal(pages[0].items[0].item.inlines[1].text, 'better ');
+			assert.equal(pages[0].items[0].item.inlines[2].text, 'aaaa');
+			assert.equal(pages[0].items[0].item.inlines[3].text, 'independently ');
 		});
 
 		it('should support inline styling and style overrides', function () {
