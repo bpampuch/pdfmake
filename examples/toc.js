@@ -21,6 +21,8 @@ var docDefinition = {
 		{
 			toc: {
 				title: {text: 'INDEX', style: 'header'},
+				//textMargin: [0, 0, 0, 0],
+				//textStyle: {italics: true},
 				numberStyle: {bold: true}
 			}
 		},
