@@ -207,6 +207,13 @@ Parameters:
 * `options` _(optional)_
 
 #### Using javascript frameworks
+
+```js
+var pdfMake = require('pdfmake/build/pdfmake.js');
+var pdfFonts = require('pdfmake/build/vfs_fonts.js');
+pdfMake.vfs = pdfFonts.pdfMake.vfs; 
+```
+
 For Ionic and Angular see [issue](https://github.com/bpampuch/pdfmake/issues/1030).
 
 #### Server side
