@@ -7,16 +7,16 @@ var ColumnCalculator = require('./columnCalculator');
 var fontStringify = require('./helpers').fontStringify;
 var pack = require('./helpers').pack;
 var qrEncoder = require('./qrEnc.js');
+var fs = require('fs');
 
 /**
  * @private
  */
-function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts, images) {
+function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts) {
 	this.textTools = new TextTools(fontProvider);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 	this.imageMeasure = imageMeasure;
 	this.tableLayouts = tableLayouts;
-	this.images = images;
 	this.autoImageIndex = 1;
 }
 
@@ -26,18 +26,21 @@ function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, t
  * @param  {Object} docStructure document-definition-object
  * @return {Object}              document-measurement-object
  */
-DocMeasure.prototype.measureDocument = function (docStructure) {
+DocMeasure.prototype.measureDocument = function (docStructure, nodeCount, progressCallback) {
+  this.nodeCount = nodeCount;
+  this.measured = 0;
+  this.progressCallback = progressCallback || function() {};
 	return this.measureNode(docStructure);
 };
 
 DocMeasure.prototype.measureNode = function (node) {
-
 	var self = this;
-
+  this.progressCallback = this.progressCallback || function() {};
+  ++this.measured;
+  this.progressCallback((this.measured / this.nodeCount) * 0.2);
 	return this.styleStack.auto(node, function () {
 		// TODO: refactor + rethink whether this is the proper way to handle margins
 		node._margin = getNodeMargin(node);
-
 		if (node.columns) {
 			return extendMargins(self.measureColumns(node));
 		} else if (node.stack) {
@@ -143,17 +146,21 @@ DocMeasure.prototype.measureNode = function (node) {
 };
 
 DocMeasure.prototype.convertIfBase64Image = function (node) {
-	if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) {
-		var label = '$$pdfmake$$' + this.autoImageIndex++;
-		this.images[label] = node.image;
-		node.image = label;
-	}
+  if (typeof node.image === 'string') {
+    var match = node.image.match(/^data:image\/(jpeg|jpg|png);base64,/);
+    // /^data:image\/(jpeg|jpg|png);base64,/.test(node.image)
+    if (match) {
+      node.image = Buffer.from(node.image.slice(match[0].length, node.image.length), 'base64');
+    }
+  }
 };
 
 DocMeasure.prototype.measureImage = function (node) {
-	if (this.images) {
-		this.convertIfBase64Image(node);
-	}
+  this.convertIfBase64Image(node);
+
+  if (typeof node.image === 'string') {
+    node.image = fs.readFileSync(node.image);
+  }
 
 	var imageSize = this.imageMeasure.measureImage(node.image);
 
@@ -509,6 +516,31 @@ DocMeasure.prototype.measureColumns = function (node) {
 };
 
 DocMeasure.prototype.measureTable = function (node) {
+  var self = this;
+  var markSpans = function (rowData, col, span) {
+    for (var i = 1; i < span; i++) {
+      ++self.measured;
+      rowData[col + i] = {
+        _span: true,
+        _minWidth: 0,
+        _maxWidth: 0,
+        rowSpan: rowData[col].rowSpan
+      };
+    }
+  };
+
+  var markVSpans = function(table, row, col, span) {
+    for (var i = 1; i < span; i++) {
+      ++self.measured;
+      table.body[row + i][col] = {
+        _span: true,
+        _minWidth: 0,
+        _maxWidth: 0,
+        fillColor: table.body[row][col].fillColor
+      };
+    }
+  };
+
 	extendTableWidths(node);
 	node._layout = getLayout(this.tableLayouts);
 	node._offsets = getOffsets(node._layout);
@@ -667,28 +699,6 @@ DocMeasure.prototype.measureTable = function (node) {
 		}
 
 		return result;
-	}
-
-	function markSpans(rowData, col, span) {
-		for (var i = 1; i < span; i++) {
-			rowData[col + i] = {
-				_span: true,
-				_minWidth: 0,
-				_maxWidth: 0,
-				rowSpan: rowData[col].rowSpan
-			};
-		}
-	}
-
-	function markVSpans(table, row, col, span) {
-		for (var i = 1; i < span; i++) {
-			table.body[row + i][col] = {
-				_span: true,
-				_minWidth: 0,
-				_maxWidth: 0,
-				fillColor: table.body[row][col].fillColor
-			};
-		}
 	}
 
 	function extendTableWidths(node) {

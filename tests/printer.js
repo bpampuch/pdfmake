@@ -254,11 +254,21 @@ describe('Printer', function () {
 		};
 
 		printer.createPdfKitDocument(docDefinition, {progressCallback: progressCallback});
+    assert(progressCallback.callCount > 4, 'Progress callback should be called at least 4 times');
+    var previousCallValue = 0;
 
-		assert(progressCallback.withArgs(0.25).calledOnce);
-		assert(progressCallback.withArgs(0.5).calledOnce);
-		assert(progressCallback.withArgs(0.75).calledOnce);
-		assert(progressCallback.withArgs(1).calledOnce);
+    for (var i = 0; i < progressCallback.callCount; ++i) {
+      var call = progressCallback.getCall(i);
+      assert(call.args.length === 1, 'Progress callback should return a single value');
+      assert(call.args[0] > previousCallValue, 'Progress callback value should be superior to the previous value');
+      previousCallValue = call.args[0];
+
+      if (i === progressCallback.callCount - 1) {
+        assert(call.args[0] === 1, 'Last progress callback should return 1');
+      } else {
+        assert(call.args[0] < 1);
+      }
+    }
 	});
 
 	it('should work without a progressCallback', function () {

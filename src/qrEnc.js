@@ -745,8 +745,8 @@ function buildCanvas(data, options) {
 	//var margin = options.margin || 4;
 	var matrix = generateFrame(data, options);
 	var n = matrix.length;
-	var modSize = Math.floor(options.fit ? options.fit / n : 5);
-	var size = n * modSize;
+  var modSize = Math.floor(options.fit ? options.fit / n : 5);
+  var size = n * modSize;
 
 	canvas.push({
 		type: 'rect',
@@ -757,12 +757,11 @@ function buildCanvas(data, options) {
 		for (var j = 0; j < n; ++j) {
 			if (matrix[i][j]) {
 				canvas.push({
-					type: 'rect',
+					type: 'qrElement',
 					x: modSize * j,
 					y: modSize * i,
 					w: modSize,
 					h: modSize,
-					lineWidth: 0,
 					color: foreground
 				});
 			}
