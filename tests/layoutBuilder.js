@@ -20,6 +20,14 @@ var DocMeasure = require('../src/docMeasure');
 // var BlockSet = pdfMake.BlockSet;
 // var ColumnSet = pdfMake.ColumnSet;
 
+var styleDictionary = {};
+var defaultStyle = { fontSize: 12, font: 'Roboto' };
+var background; 
+var header;
+var footer;
+var images = {};
+var watermark;
+var pageBreakBeforeFct;
 
 var sampleTestProvider = {
 	provideFont: function (familyName, bold, italics) {
@@ -64,14 +72,15 @@ var emptyTableLayout = {
 };
 
 describe('LayoutBuilder', function () {
+  this.timeout(10000);
 	var builder;
 
 	var imageMeasure = {
-		measureImage: function () {
-			return {
+		measureImage: function (src, cb) {
+			return cb(null, {
 				width: 1,
 				height: 1
-			};
+			});
 		}
 	};
 
@@ -83,20 +92,24 @@ describe('LayoutBuilder', function () {
 	});
 
 	describe('processDocument', function () {
-		it('should arrange texts one below another', function () {
+		it('should arrange texts one below another', function (done) {
 			var desc = [
 				'first paragraph',
 				'another paragraph'
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 1);
-			assert(pages[0].items[0].item.y < pages[0].items[1].item.y);
-			assert.equal(pages[0].items[0].item.y + pages[0].items[0].item.getHeight(), pages[0].items[1].item.y);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert(pages[0].items[0].item.y < pages[0].items[1].item.y);
+        assert.equal(pages[0].items[0].item.y + pages[0].items[0].item.getHeight(), pages[0].items[1].item.y);
+        done();
+      });
 		});
 
-		it('should support text in nested object', function () {
+		it('should support text in nested object', function (done) {
 			var desc = [{
 					text: {
 						text: {
@@ -105,77 +118,102 @@ describe('LayoutBuilder', function () {
 					}
 				}];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 1);
-			assert.equal(pages[0].items[0].item.inlines.length, 2);
-			assert.equal(pages[0].items[0].item.inlines[0].text, 'hello, ');
-			assert.equal(pages[0].items[0].item.inlines[1].text, 'world');
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 1);
+        assert.equal(pages[0].items[0].item.inlines.length, 2);
+        assert.equal(pages[0].items[0].item.inlines[0].text, 'hello, ');
+        assert.equal(pages[0].items[0].item.inlines[1].text, 'world');
+        done();
+      });
 		});
 
-		it('should split lines with new-line character (bugfix)', function () {
+		it('should split lines with new-line character (bugfix)', function (done) {
 			var desc = [
 				'first paragraph\nhaving two lines',
 				'another paragraph'
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 1);
-			assert(pages[0].items.length, 3);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert(pages[0].items.length, 3);
+        done();
+      });
 		});
 
-		it.skip('should span text into lines if theres not enough horizontal space', function () {
+		it.skip('should span text into lines if theres not enough horizontal space', function (done) {
 			var desc = [
 				'first paragraph',
 				'another paragraph, this time a little bit longer though, we want to force this line to be broken into several lines'
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 6);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 6);
+        done();
+      });
 		});
 
-		it('should respect maxHeight', function () {
+		it('should respect maxHeight', function (done) {
 			var desc = [{
 					text: 'another paragraph, this time a little bit longer though, we want to force this line to be broken into several lines',
 					maxHeight: 15
 				}];
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 1);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 1);
+        done();
+      });
 		});
 
-		it('should add new pages when theres not enough space left on current page', function () {
+		it('should add new pages when theres not enough space left on current page', function (done) {
 			var desc = [
 				'first paragraph',
 				'another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block'
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 2);
-			assert.equal(pages[0].items.length, 60);
-			assert.equal(pages[1].items.length, 11);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 2);
+        assert.equal(pages[0].items.length, 60);
+        assert.equal(pages[1].items.length, 11);
+        done();
+      });
 		});
 
-		it('should be able to add more than 1 page if there is not enough space', function () {
+		it('should be able to add more than 1 page if there is not enough space', function (done) {
 			var desc = [
 				'first paragraph',
 				'another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block, another paragraph, this time long enough to be broken into several lines and then to break the containing block'
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 3);
-			assert.equal(pages[0].items.length, 60);
-			assert.equal(pages[1].items.length, 60);
-			assert.equal(pages[2].items.length, 21);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 3);
+        assert.equal(pages[0].items.length, 60);
+        assert.equal(pages[1].items.length, 60);
+        assert.equal(pages[2].items.length, 21);
+        done();
+      });
 		});
 
-		it('should not assume there is enough space left if line boundary is exactly on the page boundary (bugfix)', function () {
+		it('should not assume there is enough space left if line boundary is exactly on the page boundary (bugfix)', function (done) {
 			var desc = [
 				{
 					fontSize: 72,
@@ -195,11 +233,16 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages.length, 2);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.equal(pages.length, 2);
+        done();
+      });
 		});
 
-		it('should support named styles', function () {
+		it('should support named styles', function (done) {
 			var desc = [
 				'paragraph',
 				{
@@ -209,13 +252,17 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}});
-
-			assert.equal(pages[0].items[0].item.getWidth(), 9 * 12);
-			assert.equal(pages[0].items[1].item.getWidth(), 9 * 70);
+			builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}}, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.equal(pages[0].items[0].item.getWidth(), 9 * 12);
+			  assert.equal(pages[0].items[1].item.getWidth(), 9 * 70);
+        done();
+      });
 		});
 
-		it('should support arrays of inlines (as an alternative to simple strings)', function () {
+		it('should support arrays of inlines (as an alternative to simple strings)', function (done) {
 			var desc = [
 				'paragraph',
 				{
@@ -227,13 +274,17 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 15}});
-
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 2);
+			builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 15}}, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 2);
+        done();
+      });
 		});
 
-		it('should support inline text in nested arrays', function () {
+		it('should support inline text in nested arrays', function (done) {
 			var desc = [{
 					text: [
 						{text: 'a better '},
@@ -242,18 +293,22 @@ describe('LayoutBuilder', function () {
 					]
 				}];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 1);
-			assert.equal(pages[0].items[0].item.inlines.length, 4);
-			assert.equal(pages[0].items[0].item.inlines[0].text, 'a ');
-			assert.equal(pages[0].items[0].item.inlines[1].text, 'better ');
-			assert.equal(pages[0].items[0].item.inlines[2].text, 'aaaa');
-			assert.equal(pages[0].items[0].item.inlines[3].text, 'independently ');
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 1);
+        assert.equal(pages[0].items[0].item.inlines.length, 4);
+        assert.equal(pages[0].items[0].item.inlines[0].text, 'a ');
+        assert.equal(pages[0].items[0].item.inlines[1].text, 'better ');
+        assert.equal(pages[0].items[0].item.inlines[2].text, 'aaaa');
+        assert.equal(pages[0].items[0].item.inlines[3].text, 'independently ');
+        done();
+      });
 		});
 
-		it('should support inline styling and style overrides', function () {
+		it('should support inline styling and style overrides', function (done) {
 			var desc = [
 				'paragraph',
 				{
@@ -268,59 +323,79 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}});
-
-			assert.equal(pages[0].items[0].item.getWidth(), 9 * 12);
-			assert.equal(pages[0].items[1].item.getWidth(), 9 * 70);
-			assert.equal(pages[0].items[2].item.getWidth(), 9 * 4);
+			builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}}, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages[0].items[0].item.getWidth(), 9 * 12);
+        assert.equal(pages[0].items[1].item.getWidth(), 9 * 70);
+        assert.equal(pages[0].items[2].item.getWidth(), 9 * 4);
+        done();
+      });
 		});
 
-		it('should support multiple styles (last property wins)', function () {
+		it('should support multiple styles (last property wins)', function (done) {
 			var desc = [
 				'paragraph',
 				{text: 'paragraph', style: ['header', 'small']}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}, small: {fontSize: 35}});
-
-			assert.equal(pages[0].items[0].item.getWidth(), 9 * 12);
-			assert.equal(pages[0].items[1].item.getWidth(), 9 * 35);
+			builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}, small: {fontSize: 35}}, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages[0].items[0].item.getWidth(), 9 * 12);
+        assert.equal(pages[0].items[1].item.getWidth(), 9 * 35);
+        done();
+      });
 		});
 
-		it('should support style-overrides', function () {
+		it('should support style-overrides', function (done) {
 			var desc = [
 				'paragraph',
 				{text: 'paragraph', fontSize: 40, noWrap: true}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}});
-
-			assert.equal(pages[0].items[0].item.getWidth(), 9 * 12);
-			assert.equal(pages[0].items[1].item.getWidth(), 9 * 40);
+			builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}}, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages[0].items[0].item.getWidth(), 9 * 12);
+        assert.equal(pages[0].items[1].item.getWidth(), 9 * 40);
+        done();
+      });
 		});
 
-		it('style-overrides should take precedence over named styles', function () {
+		it('style-overrides should take precedence over named styles', function (done) {
 			var desc = [
 				'paragraph',
 				{text: 'paragraph', fontSize: 40, style: 'header', noWrap: true}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}});
-
-			assert.equal(pages[0].items[1].item.getWidth(), 9 * 40);
+			builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}}, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.equal(pages[0].items[1].item.getWidth(), 9 * 40);
+        done();
+      });
 		});
 
-		it('should support default style', function () {
+		it('should support default style', function (done) {
 			var desc = [
 				'text',
 				'text2'
 			];
-
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, {fontSize: 50});
-			assert.equal(pages[0].items[0].item.getWidth(), 4 * 50);
+			builder.layoutDocument(desc, sampleTestProvider, {}, {fontSize: 50}, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.equal(pages[0].items[0].item.getWidth(), 4 * 50);
+        done();
+      });
 		});
 
-		it('should support columns', function () {
+		it('should support columns', function (done) {
 			var desc = [
 				{
 					columns: [
@@ -334,12 +409,17 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].items[0].item.x, 40);
-			assert.equal(pages[0].items[1].item.x, 200);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages[0].items[0].item.x, 40);
+        assert.equal(pages[0].items[1].item.x, 200);
+        done();
+      });
 		});
 
-		it('should support fixed column widths', function () {
+		it('should support fixed column widths', function (done) {
 			var desc = [
 				{
 					columns: [
@@ -360,14 +440,19 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert(pages[0].items.length, 3);
-			assert.equal(pages[0].items[0].item.x, 40);
-			assert.equal(pages[0].items[1].item.x, 40 + 100);
-			assert.equal(pages[0].items[2].item.x, 40 + 100 + 150);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert(pages[0].items.length, 3);
+        assert.equal(pages[0].items[0].item.x, 40);
+        assert.equal(pages[0].items[1].item.x, 40 + 100);
+        assert.equal(pages[0].items[2].item.x, 40 + 100 + 150);
+        done();
+      });
 		});
 
-		it('should support text-only column definitions', function () {
+		it('should support text-only column definitions', function (done) {
 			var desc = [
 				{
 					columns: [
@@ -377,12 +462,17 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].items[0].item.x, 40);
-			assert.equal(pages[0].items[1].item.x, 200);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages[0].items[0].item.x, 40);
+        assert.equal(pages[0].items[1].item.x, 200);
+        done();
+      });
 		});
 
-		it('column descriptor should support named style inheritance', function () {
+		it('column descriptor should support named style inheritance', function (done) {
 			var desc = [
 				{
 					style: 'header',
@@ -397,14 +487,18 @@ describe('LayoutBuilder', function () {
 					]
 				}
 			];
-
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 20}});
-			assert.equal(pages[0].items.length, 2);
-			assert.equal(pages[0].items[0].item.getWidth(), 8 * 20);
-			assert.equal(pages[0].items[1].item.getWidth(), 8 * 20);
+			builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 20}}, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages[0].items.length, 2);
+        assert.equal(pages[0].items[0].item.getWidth(), 8 * 20);
+        assert.equal(pages[0].items[1].item.getWidth(), 8 * 20);
+        done();
+      });
 		});
 
-		it('column descriptor should support style overrides', function () {
+		it('column descriptor should support style overrides', function (done) {
 			var desc = [
 				{
 					fontSize: 8,
@@ -420,12 +514,17 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 20}});
-			assert.equal(pages[0].items.length, 2);
-			assert.equal(pages[0].items[0].item.getWidth(), 8 * 8);
+			builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 20}}, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages[0].items.length, 2);
+        assert.equal(pages[0].items[0].item.getWidth(), 8 * 8);
+        done();
+      });
 		});
 
-		it('should support column gap', function () {
+		it('should support column gap', function (done) {
 			var desc = [
 				{
 					fontSize: 8,
@@ -437,14 +536,19 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 2);
-			assert.equal(pages[0].items[0].item.x, 40);
-			assert.equal(pages[0].items[1].item.x, 40 + 100 + 23);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 2);
+        assert.equal(pages[0].items[0].item.x, 40);
+        assert.equal(pages[0].items[1].item.x, 40 + 100 + 23);
+        done();
+      });
 		});
 
-		it('should support column gap inheritance', function () {
+		it('should support column gap inheritance', function (done) {
 			var desc = [
 				{
 					fontSize: 8,
@@ -455,11 +559,16 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, {columnGap: 25});
-			assert.equal(pages[0].items[1].item.x, 40 + 100 + 25);
+			builder.layoutDocument(desc, sampleTestProvider, {}, {columnGap: 25}, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.equal(pages[0].items[1].item.x, 40 + 100 + 25);
+        done();
+      });
 		});
 
-		it('should support fixed column widths', function () {
+		it('should support fixed column widths', function (done) {
 			var desc = [
 				{
 					columns: [
@@ -480,14 +589,19 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert(pages[0].items.length, 3);
-			assert.equal(pages[0].items[0].item.x, 40);
-			assert.equal(pages[0].items[1].item.x, 40 + 100);
-			assert.equal(pages[0].items[2].item.x, 40 + 100 + 150);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert(pages[0].items.length, 3);
+        assert.equal(pages[0].items[0].item.x, 40);
+        assert.equal(pages[0].items[1].item.x, 40 + 100);
+        assert.equal(pages[0].items[2].item.x, 40 + 100 + 150);
+        done();
+      });
 		});
 
-		it('should support auto-width columns', function () {
+		it('should support auto-width columns', function (done) {
 			var desc = [
 				{
 					columns: [
@@ -510,14 +624,19 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert(pages[0].items.length, 3);
-			assert.equal(pages[0].items[0].item.x, 40);
-			assert.equal(pages[0].items[1].item.x, 40 + 4 * 12);
-			assert.equal(pages[0].items[2].item.x, 40 + 4 * 12 + 6 * 12);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert(pages[0].items.length, 3);
+        assert.equal(pages[0].items[0].item.x, 40);
+        assert.equal(pages[0].items[1].item.x, 40 + 4 * 12);
+        assert.equal(pages[0].items[2].item.x, 40 + 4 * 12 + 6 * 12);
+        done();
+      });
 		});
 
-		it('should support auto-width columns mixed with other types of columns', function () {
+		it('should support auto-width columns mixed with other types of columns', function (done) {
 			var desc = [
 				{
 					columns: [
@@ -550,18 +669,23 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].items.length, 5);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages[0].items.length, 5);
 
-			var starWidth = (400 - 40 - 40 - 58 - 2 * 4 * 12) / 2;
-			assert.equal(pages[0].items[0].item.x, 40);
-			assert.equal(pages[0].items[1].item.x, 40 + 4 * 12);
-			assert.equal(pages[0].items[2].item.x, 40 + 4 * 12 + 58);
-			assert.equal(pages[0].items[3].item.x, 40 + 4 * 12 + 58 + starWidth);
-			assert.equal(pages[0].items[4].item.x, 40 + 4 * 12 + 58 + 2 * starWidth);
+        var starWidth = (400 - 40 - 40 - 58 - 2 * 4 * 12) / 2;
+        assert.equal(pages[0].items[0].item.x, 40);
+        assert.equal(pages[0].items[1].item.x, 40 + 4 * 12);
+        assert.equal(pages[0].items[2].item.x, 40 + 4 * 12 + 58);
+        assert.equal(pages[0].items[3].item.x, 40 + 4 * 12 + 58 + starWidth);
+        assert.equal(pages[0].items[4].item.x, 40 + 4 * 12 + 58 + 2 * starWidth);
+        done();
+      });
 		});
 
-		it('should support star columns and divide available width equally between all star columns', function () {
+		it('should support star columns and divide available width equally between all star columns', function (done) {
 			var desc = [
 				{
 					columns: [
@@ -580,18 +704,22 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        var pageSpace = 400 - 40 - 40;
+        var starWidth = (pageSpace - 50) / 2;
 
-			var pageSpace = 400 - 40 - 40;
-			var starWidth = (pageSpace - 50) / 2;
-
-			assert(pages[0].items.length, 3);
-			assert.equal(pages[0].items[0].item.x, 40);
-			assert.equal(pages[0].items[1].item.x, 40 + starWidth);
-			assert.equal(pages[0].items[2].item.x, 40 + starWidth + 50);
+        assert(pages[0].items.length, 3);
+        assert.equal(pages[0].items[0].item.x, 40);
+        assert.equal(pages[0].items[1].item.x, 40 + starWidth);
+        assert.equal(pages[0].items[2].item.x, 40 + starWidth + 50);
+        done();
+      });
 		});
 
-		it('should pass column widths to inner elements', function () {
+		it('should pass column widths to inner elements', function (done) {
 			var desc = [
 				{
 					fontSize: 8,
@@ -619,14 +747,18 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			// ((pageWidth - margins - fixed_column_width) / 2_columns) / 2_subcolumns
-			var maxWidth = (400 - 40 - 40 - 50) / 2 / 2;
-			assert.equal(pages[0].items[0].item.maxWidth, maxWidth);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        // ((pageWidth - margins - fixed_column_width) / 2_columns) / 2_subcolumns
+        var maxWidth = (400 - 40 - 40 - 50) / 2 / 2;
+        assert.equal(pages[0].items[0].item.maxWidth, maxWidth);
+        done();
+      });
 		});
 
-		it('should support stack of paragraphs', function () {
+		it('should support stack of paragraphs', function (done) {
 			var desc = [
 				{
 					stack: [
@@ -636,14 +768,19 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages.length, 1);
-			assert(pages[0].items[0].item.getHeight() > 0);
-			assert.equal(pages[0].items.length, 2);
-			assert.equal(pages[0].items[0].item.y + pages[0].items[0].item.getHeight(), pages[0].items[1].item.y);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert(pages[0].items[0].item.getHeight() > 0);
+        assert.equal(pages[0].items.length, 2);
+        assert.equal(pages[0].items[0].item.y + pages[0].items[0].item.getHeight(), pages[0].items[1].item.y);
+        done();
+      });
 		});
 
-		it('stack of paragraphs should inherit styles and overriden properties from column descriptors', function () {
+		it('stack of paragraphs should inherit styles and overriden properties from column descriptors', function (done) {
 			var desc = [
 				{
 					style: 'header',
@@ -665,30 +802,29 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {
-				header: {
-					italics: true,
-					fontSize: 50
-				}
-			});
+			builder.layoutDocument(desc, sampleTestProvider, { header: { italics: true, fontSize: 50 } }, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 5);
+        assert.equal(pages[0].items[0].item.x, pages[0].items[1].item.x);
+        assert.equal(pages[0].items[1].item.x, pages[0].items[2].item.x);
 
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 5);
-			assert.equal(pages[0].items[0].item.x, pages[0].items[1].item.x);
-			assert.equal(pages[0].items[1].item.x, pages[0].items[2].item.x);
+        assert.equal(pages[0].items[0].item.y, pages[0].items[3].item.y);
+        assert.equal(pages[0].items[0].item.y, pages[0].items[4].item.y);
 
-			assert.equal(pages[0].items[0].item.y, pages[0].items[3].item.y);
-			assert.equal(pages[0].items[0].item.y, pages[0].items[4].item.y);
+        assert.equal(pages[0].items[0].item.inlines[0].width, 9 * 50 * 1.5);
+        assert.equal(pages[0].items[1].item.inlines[0].width, 10 * 50 * 1.5);
 
-			assert.equal(pages[0].items[0].item.inlines[0].width, 9 * 50 * 1.5);
-			assert.equal(pages[0].items[1].item.inlines[0].width, 10 * 50 * 1.5);
-
-			assert.equal(pages[0].items[2].item.inlines[0].width, 10 * 50);
-			assert.equal(pages[0].items[3].item.inlines[0].width, 8 * 50);
-			assert.equal(pages[0].items[4].item.inlines[0].width, 6 * 50);
+        assert.equal(pages[0].items[2].item.inlines[0].width, 10 * 50);
+        assert.equal(pages[0].items[3].item.inlines[0].width, 8 * 50);
+        assert.equal(pages[0].items[4].item.inlines[0].width, 6 * 50);
+        done();
+      });
 		});
 
-		it('should support unordered lists', function () {
+		it('should support unordered lists', function (done) {
 			var desc = [
 				'paragraph',
 				{
@@ -700,12 +836,17 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 7);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 7);
+        done();
+      });
 		});
 
-		it('unordered lists should have circles to the left of each element', function () {
+		it('unordered lists should have circles to the left of each element', function (done) {
 			var desc = [
 				'paragraph',
 				{
@@ -717,20 +858,25 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 7);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 7);
 
-			for (var i = 1; i < 7; i += 2) {
-				var circle = pages[0].items[i + 1].item; // circle is added after line
-				var itemLine = pages[0].items[i].item;
+        for (var i = 1; i < 7; i += 2) {
+          var circle = pages[0].items[i + 1].item; // circle is added after line
+          var itemLine = pages[0].items[i].item;
 
-				assert(circle.x < itemLine.x);
-				assert(circle.y > itemLine.y && circle.y < itemLine.y + itemLine.getHeight());
-			}
+          assert(circle.x < itemLine.x);
+          assert(circle.y > itemLine.y && circle.y < itemLine.y + itemLine.getHeight());
+        }
+        done();
+      });
 		});
 
-		it('circle radius for unordered lists should be based on fontSize', function () {
+		it('circle radius for unordered lists should be based on fontSize', function (done) {
 			var desc = [
 				{
 					fontSize: 10,
@@ -750,12 +896,17 @@ describe('LayoutBuilder', function () {
 				},
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			// without Math.toFixed an AssertionError occurs: 1.7999999999999998 == 1.8
-			assert.equal((pages[0].items[7].item.r1 / pages[0].items[1].item.r1).toFixed(1), (18 / 10).toFixed(1));
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        // without Math.toFixed an AssertionError occurs: 1.7999999999999998 == 1.8
+        assert.equal((pages[0].items[7].item.r1 / pages[0].items[1].item.r1).toFixed(1), (18 / 10).toFixed(1));
+        done();
+      });
 		});
 
-		it('unordered lists should support nested lists', function () {
+		it('unordered lists should support nested lists', function (done) {
 			var desc = [
 				{
 					fontSize: 10,
@@ -773,22 +924,27 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].items.length, 10);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages[0].items.length, 10);
 
-			// positioning
-			assert.equal(pages[0].items[0].item.x, pages[0].items[8].item.x);
-			assert.equal(pages[0].items[2].item.x, pages[0].items[4].item.x);
-			assert(pages[0].items[0].item.x < pages[0].items[2].item.x);
+        // positioning
+        assert.equal(pages[0].items[0].item.x, pages[0].items[8].item.x);
+        assert.equal(pages[0].items[2].item.x, pages[0].items[4].item.x);
+        assert(pages[0].items[0].item.x < pages[0].items[2].item.x);
 
-			// circle positioning
-			var circle = pages[0].items[3].item;
-			var itemLine = pages[0].items[2].item;
-			assert(circle.x < itemLine.x);
-			assert(circle.y > itemLine.y && circle.y < itemLine.y + itemLine.getHeight());
+        // circle positioning
+        var circle = pages[0].items[3].item;
+        var itemLine = pages[0].items[2].item;
+        assert(circle.x < itemLine.x);
+        assert(circle.y > itemLine.y && circle.y < itemLine.y + itemLine.getHeight());
+        done();
+      });
 		});
 
-		it('if there is enough space left on the page for the circle but not enough for the following line of text, circle should be drawn on the next page, together with the text', function () {
+		it('if there is enough space left on the page for the circle but not enough for the following line of text, circle should be drawn on the next page, together with the text', function (done) {
 			var desc = [
 				{
 					fontSize: 72,
@@ -818,13 +974,18 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages.length, 2);
-			assert.equal(pages[0].items.length, 9);
-			assert.equal(pages[1].items.length, 3);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 2);
+        assert.equal(pages[0].items.length, 9);
+        assert.equal(pages[1].items.length, 3);
+        done();
+      });
 		});
 
-		it('should support ordered lists', function () {
+		it('should support ordered lists', function (done) {
 			var desc = [
 				'paragraph',
 				{
@@ -836,12 +997,17 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 4 + 3);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 4 + 3);
+        done();
+      });
 		});
 
-		it('numbers in ordered list should use list style, not item-level style (bugfix)', function () {
+		it('numbers in ordered list should use list style, not item-level style (bugfix)', function (done) {
 			var desc = [
 				{
 					fontSize: 5,
@@ -851,13 +1017,18 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].items.length, 2);
-			assert.equal(pages[0].items[0].item.inlines[0].fontSize, 15);
-			assert.equal(pages[0].items[1].item.inlines[0].fontSize, 5);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages[0].items.length, 2);
+        assert.equal(pages[0].items[0].item.inlines[0].fontSize, 15);
+        assert.equal(pages[0].items[1].item.inlines[0].fontSize, 5);
+        done();
+      });
 		});
 
-		it('numbers in ordered lists should be positioned to the left of each item', function () {
+		it('numbers in ordered lists should be positioned to the left of each item', function (done) {
 			var desc = [
 				'paragraph',
 				{
@@ -869,22 +1040,27 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 4 + 3);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 4 + 3);
 
 
-			for (var i = 0; i < 3; i++) {
-				var itemLine = pages[0].items[1 + 2 * i].item;
-				var numberLine = pages[0].items[2 + 2 * i].item;
+        for (var i = 0; i < 3; i++) {
+          var itemLine = pages[0].items[1 + 2 * i].item;
+          var numberLine = pages[0].items[2 + 2 * i].item;
 
-				assert(numberLine.x < itemLine.x);
-				assert(numberLine.x + numberLine.getWidth() <= itemLine.x);
-				assert(numberLine.y >= itemLine.y && numberLine.y <= itemLine.y + itemLine.getHeight());
-			}
+          assert(numberLine.x < itemLine.x);
+          assert(numberLine.x + numberLine.getWidth() <= itemLine.x);
+          assert(numberLine.y >= itemLine.y && numberLine.y <= itemLine.y + itemLine.getHeight());
+        }
+        done();
+      });
 		});
 
-		it('numbers in ordered lists should be positioned to the left of each item also in more complex cases', function () {
+		it('numbers in ordered lists should be positioned to the left of each item also in more complex cases', function (done) {
 			var desc = [
 				'paragraph',
 				{
@@ -898,19 +1074,24 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages.length, 1);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
 
-			for (var i = 0; i < 3; i++) {
-				var paragraphLine = pages[0].items[1 + 2 * i].item;
-				var numberLine = pages[0].items[2 + 2 * i].item;
+        for (var i = 0; i < 3; i++) {
+          var paragraphLine = pages[0].items[1 + 2 * i].item;
+          var numberLine = pages[0].items[2 + 2 * i].item;
 
-				assert(numberLine.x < paragraphLine.x);
-				assert(numberLine.x + numberLine.getWidth() <= paragraphLine.x);
-			}
+          assert(numberLine.x < paragraphLine.x);
+          assert(numberLine.x + numberLine.getWidth() <= paragraphLine.x);
+        }
+        done();
+      });
 		});
 
-		it('numbers in ordered lists should be aligned (vertically) to the bottom of the first line of each item', function () {
+		it('numbers in ordered lists should be aligned (vertically) to the bottom of the first line of each item', function (done) {
 			var desc = [
 				'paragraph',
 				{
@@ -924,18 +1105,23 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages.length, 1);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
 
-			for (var i = 0; i < 3; i++) {
-				var paragraphLine = pages[0].items[1 + 2 * i].item;
-				var numberLine = pages[0].items[2 + 2 * i].item;
+        for (var i = 0; i < 3; i++) {
+          var paragraphLine = pages[0].items[1 + 2 * i].item;
+          var numberLine = pages[0].items[2 + 2 * i].item;
 
-				assert.equal(numberLine.y + numberLine.getAscenderHeight(), paragraphLine.y + paragraphLine.getAscenderHeight());
-			}
+          assert.equal(numberLine.y + numberLine.getAscenderHeight(), paragraphLine.y + paragraphLine.getAscenderHeight());
+        }
+        done();
+      });
 		});
 
-		it('numbers in ordered list should be automatically incremented', function () {
+		it('numbers in ordered list should be automatically incremented', function (done) {
 			var desc = [
 				{
 					ol: [
@@ -947,16 +1133,21 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
 
-			for (var i = 0; i < 4; i++) {
-				var numberLine = pages[0].items[1 + 2 * i].item;
+        for (var i = 0; i < 4; i++) {
+          var numberLine = pages[0].items[1 + 2 * i].item;
 
-				assert.equal(numberLine.inlines[0].text, (i + 1).toString() + '. ');
-			}
+          assert.equal(numberLine.inlines[0].text, (i + 1).toString() + '. ');
+        }
+        done();
+      });
 		});
 
-		it('numbers in ordered sublist should have indepentend counters', function () {
+		it('numbers in ordered sublist should have indepentend counters', function (done) {
 			var desc = [
 				{
 					ol: [
@@ -975,20 +1166,24 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        // item 2
+        assert.equal(pages[0].items[3].item.inlines[0].text, '2. ');
+        // item 3
+        assert.equal(pages[0].items[3 + 6].item.inlines[0].text, '3. ');
 
-			// item 2
-			assert.equal(pages[0].items[3].item.inlines[0].text, '2. ');
-			// item 3
-			assert.equal(pages[0].items[3 + 6].item.inlines[0].text, '3. ');
-
-			// subitem 1
-			assert.equal(pages[0].items[5].item.inlines[0].text, '1. ');
-			// subitem 2
-			assert.equal(pages[0].items[7].item.inlines[0].text, '2. ');
+        // subitem 1
+        assert.equal(pages[0].items[5].item.inlines[0].text, '1. ');
+        // subitem 2
+        assert.equal(pages[0].items[7].item.inlines[0].text, '2. ');
+        done();
+      });
 		});
 
-		it('ordered lists should not add an empty line below the number (bugfix)', function () {
+		it('ordered lists should not add an empty line below the number (bugfix)', function (done) {
 			var desc = [
 				{
 					ol: [
@@ -998,14 +1193,18 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages[0].items[0].item.y, 40);
-			assert.equal(pages[0].items[1].item.y, 40);
-			assert.equal(pages[0].items[2].item.y, 40 + 12);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages[0].items[0].item.y, 40);
+        assert.equal(pages[0].items[1].item.y, 40);
+        assert.equal(pages[0].items[2].item.y, 40 + 12);
+        done();
+      });
 		});
 
-		it('should support tables with fixed widths', function () {
+		it('should support tables with fixed widths', function (done) {
 			var desc = [
 				{
 					table: {
@@ -1019,25 +1218,29 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 6);
-			assert.equal(pages[0].items[0].item.x, 40);
-			assert.equal(pages[0].items[1].item.x, 40 + 30);
-			assert.equal(pages[0].items[2].item.x, 40 + 30 + 50);
-			assert.equal(pages[0].items[3].item.x, 40);
-			assert.equal(pages[0].items[4].item.x, 40 + 30);
-			assert.equal(pages[0].items[5].item.x, 40 + 30 + 50);
-			assert.equal(pages[0].items[0].item.y, 40);
-			assert.equal(pages[0].items[1].item.y, 40);
-			assert.equal(pages[0].items[2].item.y, 40);
-			assert.equal(pages[0].items[3].item.y, 40 + 12);
-			assert.equal(pages[0].items[4].item.y, 40 + 12);
-			assert.equal(pages[0].items[5].item.y, 40 + 12);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 6);
+        assert.equal(pages[0].items[0].item.x, 40);
+        assert.equal(pages[0].items[1].item.x, 40 + 30);
+        assert.equal(pages[0].items[2].item.x, 40 + 30 + 50);
+        assert.equal(pages[0].items[3].item.x, 40);
+        assert.equal(pages[0].items[4].item.x, 40 + 30);
+        assert.equal(pages[0].items[5].item.x, 40 + 30 + 50);
+        assert.equal(pages[0].items[0].item.y, 40);
+        assert.equal(pages[0].items[1].item.y, 40);
+        assert.equal(pages[0].items[2].item.y, 40);
+        assert.equal(pages[0].items[3].item.y, 40 + 12);
+        assert.equal(pages[0].items[4].item.y, 40 + 12);
+        assert.equal(pages[0].items[5].item.y, 40 + 12);
+        done();
+      });
 		});
 
-		it('should support tables with auto column widths', function () {
+		it('should support tables with auto column widths', function (done) {
 			var desc = [
 				{
 					table: {
@@ -1051,25 +1254,29 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 6);
-			assert.equal(pages[0].items[0].item.x, 40);
-			assert.equal(pages[0].items[1].item.x, 40 + 3 * 12);
-			assert.equal(pages[0].items[2].item.x, 40 + 6 * 12);
-			assert.equal(pages[0].items[3].item.x, 40);
-			assert.equal(pages[0].items[4].item.x, 40 + 3 * 12);
-			assert.equal(pages[0].items[5].item.x, 40 + 6 * 12);
-			assert.equal(pages[0].items[0].item.y, 40);
-			assert.equal(pages[0].items[1].item.y, 40);
-			assert.equal(pages[0].items[2].item.y, 40);
-			assert.equal(pages[0].items[3].item.y, 40 + 12);
-			assert.equal(pages[0].items[4].item.y, 40 + 12);
-			assert.equal(pages[0].items[5].item.y, 40 + 12);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 6);
+        assert.equal(pages[0].items[0].item.x, 40);
+        assert.equal(pages[0].items[1].item.x, 40 + 3 * 12);
+        assert.equal(pages[0].items[2].item.x, 40 + 6 * 12);
+        assert.equal(pages[0].items[3].item.x, 40);
+        assert.equal(pages[0].items[4].item.x, 40 + 3 * 12);
+        assert.equal(pages[0].items[5].item.x, 40 + 6 * 12);
+        assert.equal(pages[0].items[0].item.y, 40);
+        assert.equal(pages[0].items[1].item.y, 40);
+        assert.equal(pages[0].items[2].item.y, 40);
+        assert.equal(pages[0].items[3].item.y, 40 + 12);
+        assert.equal(pages[0].items[4].item.y, 40 + 12);
+        assert.equal(pages[0].items[5].item.y, 40 + 12);
+        done();
+      });
 		});
 
-		it('should support tables spanning across pages', function () {
+		it('should support tables spanning across pages', function (done) {
 			var desc = [{
 					table: {
 						widths: 'auto',
@@ -1082,12 +1289,16 @@ describe('LayoutBuilder', function () {
 				desc[0].table.body.push(['a', 'b', 'c']);
 			}
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 2);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.equal(pages.length, 2);
+        done();
+      });
 		});
 
-		it('should support table-cell spanning across pages', function () {
+		it('should support table-cell spanning across pages', function (done) {
 			var desc = [{
 					table: {
 						widths: 'auto',
@@ -1102,13 +1313,17 @@ describe('LayoutBuilder', function () {
 
 			desc[0].table.body.push(['a\nb\nc', 'a\nb\nc', 'a\nb\nc']);
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 2);
-			assert.equal(pages[1].items.length, 6);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 2);
+        assert.equal(pages[1].items.length, 6);
+        done();
+      });
 		});
 
-		it('should not split table headers', function () {
+		it('should not split table headers', function (done) {
 			var desc = [
 				{
 					stack: []
@@ -1129,14 +1344,18 @@ describe('LayoutBuilder', function () {
 				desc[0].stack.push('sample line');
 			}
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 2);
-			assert.equal(pages[0].items.length, 59);
-			assert.equal(pages[1].items.length, 9);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 2);
+        assert.equal(pages[0].items.length, 59);
+        assert.equal(pages[1].items.length, 9);
+        done();
+      });
 		});
 
-		it('should not split multi-row headers', function () {
+		it('should not split multi-row headers', function (done) {
 			var desc = [
 				{
 					stack: []
@@ -1159,14 +1378,19 @@ describe('LayoutBuilder', function () {
 				desc[0].stack.push('sample line');
 			}
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 2);
-			assert.equal(pages[0].items.length, 59);
-			assert.equal(pages[1].items.length, 9);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 2);
+        assert.equal(pages[0].items.length, 59);
+        assert.equal(pages[1].items.length, 9);
+        done();
+      });
 		});
 
-		it('should repeat table headers', function () {
+		it('should repeat table headers', function (done) {
+
 			var desc = [{
 					table: {
 						headerRows: 1,
@@ -1182,17 +1406,21 @@ describe('LayoutBuilder', function () {
 				desc[0].table.body.push(['a', 'b', 'c']);
 			}
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 10);
-			pages.forEach(function (page) {
-				assert.equal(page.items[0].item.inlines[0].text, 'h1');
-				assert.equal(page.items[0].item.y, 40);
-				assert.equal(page.items[0].item.x, 40);
-			});
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 10);
+        pages.forEach(function (page) {
+          assert.equal(page.items[0].item.inlines[0].text, 'h1');
+          assert.equal(page.items[0].item.y, 40);
+          assert.equal(page.items[0].item.x, 40);
+        });
+        done();
+      });
 		});
 
-		it('should not change x positions of repeated table headers, if context.x has changed (bugfix)', function () {
+		it('should not change x positions of repeated table headers, if context.x has changed (bugfix)', function (done) {
 			var desc = [{
 					table: {
 						headerRows: 1,
@@ -1211,23 +1439,27 @@ describe('LayoutBuilder', function () {
 				desc[0].table.body[1][0].ul.push('item');
 			}
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 2);
-			assert.equal(pages[0].items[0].item.x, 40);
-			assert(pages[0].items[4].item.x > 40);
-			assert.equal(pages[1].items[0].item.x, 40);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 2);
+        assert.equal(pages[0].items[0].item.x, 40);
+        assert(pages[0].items[4].item.x > 40);
+        assert.equal(pages[1].items[0].item.x, 40);
+        done();
+      });
 		});
 
 		it('should throw an exception if unrecognized structure is detected', function () {
-			assert.throws(
+      assert.throws(
 				function () {
-					builder.layoutDocument([{ol: ['item', {abc: 'test'}]}], sampleTestProvider);
-				}
-			);
+          builder.layoutDocument([{ol: ['item', {abc: 'test'}]}], sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {});
+        }
+      );
 		});
 
-		it('should support a switch of page orientation within a document', function () {
+		it('should support a switch of page orientation within a document', function (done) {
 			var desc = [
 				{
 					text: 'Page 1, document orientation or default portrait'
@@ -1238,14 +1470,18 @@ describe('LayoutBuilder', function () {
 					pageOrientation: 'landscape'
 				}];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 2);
-			assert.equal(pages[0].pageSize.orientation, 'portrait');
-			assert.equal(pages[1].pageSize.orientation, 'landscape');
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 2);
+        assert.equal(pages[0].pageSize.orientation, 'portrait');
+        assert.equal(pages[1].pageSize.orientation, 'landscape');
+        done();
+      });
 		});
 
-		it('should support changing the page orientation to landscape consecutively', function () {
+		it('should support changing the page orientation to landscape consecutively', function (done) {
 			var desc = [
 				{
 					text: 'Page 1, document orientation or default portrait'
@@ -1262,15 +1498,19 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 3);
-			assert.equal(pages[0].pageSize.orientation, 'portrait');
-			assert.equal(pages[1].pageSize.orientation, 'landscape');
-			assert.equal(pages[2].pageSize.orientation, 'landscape');
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 3);
+        assert.equal(pages[0].pageSize.orientation, 'portrait');
+        assert.equal(pages[1].pageSize.orientation, 'landscape');
+        assert.equal(pages[2].pageSize.orientation, 'landscape');
+        done();
+      });
 		});
 
-		it('should use the absolutePosition attribute to position in absolute coordinates', function () {
+		it('should use the absolutePosition attribute to position in absolute coordinates', function (done) {
 			var desc = [
 				{
 					columns: [
@@ -1286,14 +1526,19 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].items[0].item.x, 123);
-			assert.equal(pages[0].items[0].item.y, 200);
-			assert.equal(pages[0].items[1].item.x, 0);
-			assert.equal(pages[0].items[1].item.y, 0);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages[0].items[0].item.x, 123);
+        assert.equal(pages[0].items[0].item.y, 200);
+        assert.equal(pages[0].items[1].item.x, 0);
+        assert.equal(pages[0].items[1].item.y, 0);
+        done();
+      });
 		});
 
-		it('should not break nodes across multiple pages when unbreakable attribute is passed', function () {
+		it('should not break nodes across multiple pages when unbreakable attribute is passed', function (done) {
 			var desc = [
 				{
 					stack: [
@@ -1308,23 +1553,32 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 2);
-			assert.equal(pages[0].items.length, 33);
-			assert.equal(pages[1].items.length, 53);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 2);
+        assert.equal(pages[0].items.length, 33);
+        assert.equal(pages[1].items.length, 53);
+        done();
+      });
 		});
 
-		it('should support wrap long word', function () {
+		it('should support wrap long word', function (done) {
 			var desc = [
 				'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].items.length, 3);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.equal(pages[0].items.length, 3);
+        done();
+      });
 		});
 
-		it('should support wrap long word with big font size', function () {
+		it('should support wrap long word with big font size', function (done) {
 			var desc = [
 				{
 					text: 'abc',
@@ -1332,12 +1586,17 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 3);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 3);
+        done();
+      });
 		});
 
-		it('should support wrap one big character with big font size', function () {
+		it('should support wrap one big character with big font size', function (done) {
 			var desc = [
 				{
 					text: 'a',
@@ -1345,18 +1604,28 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 1);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].items.length, 1);
+        done();
+      });
 		});
 
-		it('should support disable wrap long word by noWrap', function () {
+		it('should support disable wrap long word by noWrap', function (done) {
 			var desc = [
 				{text: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890', noWrap: true}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-			assert.equal(pages[0].items.length, 1);
+			builder.layoutDocument(desc, sampleTestProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.equal(pages[0].items.length, 1);
+        done();
+      });
 		});
 
 		it('should support images');
@@ -1427,7 +1696,7 @@ describe('LayoutBuilder', function () {
 	describe('processRow', function () {
 		var builder2;
 
-		function createTable(headerRows, otherRows, singleRowLines, pageBreakAfter, secondColumnPageBreakAfter) {
+		function createTable(headerRows, otherRows, singleRowLines, pageBreakAfter, secondColumnPageBreakAfter, cb) {
 			var tableNode = {
 				table: {
 					headerRows: headerRows || 0,
@@ -1457,10 +1726,10 @@ describe('LayoutBuilder', function () {
 				tableNode.table.body.push([stack1, stack2]);
 			}
 
-			new DocMeasure(sampleTestProvider, {}, {}, {}).measureDocument(tableNode);
-			ColumnCalculator.buildColumnWidths(tableNode.table.widths, 320);
-
-			return tableNode;
+			new DocMeasure(sampleTestProvider, {}, {}, {}).measureDocument(tableNode, function(err, doc) {
+        ColumnCalculator.buildColumnWidths(tableNode.table.widths, 320);
+        cb(err, tableNode);
+      });
 		}
 
 		beforeEach(function () {
@@ -1472,75 +1741,102 @@ describe('LayoutBuilder', function () {
 			builder2.linearNodeList = [];
 		});
 
-		it('should return an empty array if no page breaks occur', function () {
-			var doc = createTable(1, 0);
+		it('should return an empty array if no page breaks occur', function (done) {
+			createTable(1, 0,void 0, void 0, void 0, function(err, doc) {
+        if (err) {
+          return done(err);
+        }
+        var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
-			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
-
-			assert(result.pageBreaks instanceof Array);
-			assert.equal(result.pageBreaks.length, 0);
+        assert(result.pageBreaks instanceof Array);
+        assert.equal(result.pageBreaks.length, 0);
+        done();
+      });
 		});
 
-		it('on page break should return an entry with ending/starting positions', function () {
-			var doc = createTable(0, 1, 10, 5);
-			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+		it('on page break should return an entry with ending/starting positions', function (done) {
+			createTable(0, 1, 10, 5, void 0, function(err, doc) {
+        if (err) {
+          return done(err);
+        }
+			  var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
-			assert(result.pageBreaks instanceof Array);
-			assert.equal(result.pageBreaks.length, 1);
-			assert.equal(result.pageBreaks[0].prevPage, 0);
-			assert.equal(result.pageBreaks[0].prevY, 40 + 12 * 5);
+        assert(result.pageBreaks instanceof Array);
+        assert.equal(result.pageBreaks.length, 1);
+        assert.equal(result.pageBreaks[0].prevPage, 0);
+        assert.equal(result.pageBreaks[0].prevY, 40 + 12 * 5);
+        done();
+      });
 		});
 
-		it('on multi-pass page break (columns or table columns) should treat bottom-most page-break as the ending position ', function () {
-			var doc = createTable(0, 1, 10, 5, 7);
-			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+		it('on multi-pass page break (columns or table columns) should treat bottom-most page-break as the ending position ', function (done) {
+			createTable(0, 1, 10, 5, 7, function(err, doc) {
+        if (err) {
+          return done(err);
+        }
+			  var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
-			assert.equal(result.pageBreaks[0].prevY, 40 + 12 * 7);
+			  assert.equal(result.pageBreaks[0].prevY, 40 + 12 * 7);
+        done();
+      });
 		});
 
-		it('on multiple page breaks (more than 2 pages), should return all entries with ending/starting positions', function () {
-			var doc = createTable(0, 1, 100, 90);
-			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+		it('on multiple page breaks (more than 2 pages), should return all entries with ending/starting positions', function (done) {
+			createTable(0, 1, 100, 90, void 0, function(err, doc) {
+        if (err) {
+          return done(err);
+        }
+        var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
-			assert(result.pageBreaks instanceof Array);
-			assert.equal(result.pageBreaks.length, 2);
-			assert.equal(result.pageBreaks[0].prevPage, 0);
-			assert.equal(result.pageBreaks[0].prevY, 40 + 60 * 12);
-			assert.equal(result.pageBreaks[1].prevPage, 1);
-			assert.equal(result.pageBreaks[1].prevY, 40 + (90 - 60) * 12);
+        assert(result.pageBreaks instanceof Array);
+        assert.equal(result.pageBreaks.length, 2);
+        assert.equal(result.pageBreaks[0].prevPage, 0);
+        assert.equal(result.pageBreaks[0].prevY, 40 + 60 * 12);
+        assert.equal(result.pageBreaks[1].prevPage, 1);
+        assert.equal(result.pageBreaks[1].prevY, 40 + (90 - 60) * 12);
+        done();
+      });
 		});
 
-		it('on multiple and multi-pass page breaks should calculate bottom-most endings for every page', function () {
-			var doc = createTable(0, 1, 100, 90, 92);
-			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+		it('on multiple and multi-pass page breaks should calculate bottom-most endings for every page', function (done) {
+			createTable(0, 1, 100, 90, 92, function(err, doc) {
+        if (err) {
+          return done(err);
+        }
+        var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
-			assert(result.pageBreaks instanceof Array);
-			assert.equal(result.pageBreaks.length, 2);
-			assert.equal(result.pageBreaks[0].prevPage, 0);
-			assert.equal(result.pageBreaks[0].prevY, 40 + 60 * 12);
-			assert.equal(result.pageBreaks[1].prevPage, 1);
-			assert.equal(result.pageBreaks[1].prevY, 40 + (92 - 60) * 12);
+        assert(result.pageBreaks instanceof Array);
+        assert.equal(result.pageBreaks.length, 2);
+        assert.equal(result.pageBreaks[0].prevPage, 0);
+        assert.equal(result.pageBreaks[0].prevY, 40 + 60 * 12);
+        assert.equal(result.pageBreaks[1].prevPage, 1);
+        assert.equal(result.pageBreaks[1].prevY, 40 + (92 - 60) * 12);
+        done();
+      });
 		});
 	});
 
 	describe('dynamic header/footer', function () {
 		var docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction;
+  
+    beforeEach(function () {
+      fontProvider = sampleTestProvider;
+      styleDictionary = {};
+    });
 
-		beforeEach(function () {
-			fontProvider = sampleTestProvider;
-			styleDictionary = {};
-		});
-
-		it('should provide the page size', function () {
+		it('should provide the page size', function (done) {
 			docStructure = ['Text'];
 			header = sinon.spy();
 			footer = sinon.spy();
-
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
-
-			var pageSize = {width: 400, height: 800, orientation: 'portrait'};
-			assert.deepEqual(header.getCall(0).args[2], pageSize);
-			assert.deepEqual(footer.getCall(0).args[2], pageSize);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        var pageSize = {width: 400, height: 800, orientation: 'portrait'};
+        assert.deepEqual(header.getCall(0).args[2], pageSize);
+        assert.deepEqual(footer.getCall(0).args[2], pageSize);
+        done();
+      });
 		});
 	});
 
@@ -1554,7 +1850,7 @@ describe('LayoutBuilder', function () {
 			styleDictionary = {};
 		});
 
-		it('should create a pageBreak before', function () {
+		it('should create a pageBreak before', function (done) {
 
 			docStructure = [
 				{text: 'Text 1', id: 'text1'},
@@ -1565,12 +1861,16 @@ describe('LayoutBuilder', function () {
 			};
 
 
-			var pages = builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
-
-			assert.equal(pages.length, 2);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.equal(pages.length, 2);
+        done();
+      });
 		});
 
-		it('should not check for page break if a page break is already specified', function () {
+		it('should not check for page break if a page break is already specified', function (done) {
 
 			docStructure = {
 				stack: [
@@ -1582,14 +1882,18 @@ describe('LayoutBuilder', function () {
 			pageBreakBeforeFunction = sinon.spy();
 
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
-
-			assert(pageBreakBeforeFunction.calledTwice);
-			assert.equal(pageBreakBeforeFunction.getCall(0).args[0].id, 'stack');
-			assert.deepEqual(_.pick(pageBreakBeforeFunction.getCall(1).args[0], ['id', 'text']), {id: 'text1', text: 'Text 1'});
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert(pageBreakBeforeFunction.calledTwice);
+        assert.equal(pageBreakBeforeFunction.getCall(0).args[0].id, 'stack');
+        assert.deepEqual(_.pick(pageBreakBeforeFunction.getCall(1).args[0], ['id', 'text']), {id: 'text1', text: 'Text 1'});
+        done();
+      });
 		});
 
-		it('should provide the list of following nodes on the same page', function () {
+		it('should provide the list of following nodes on the same page', function (done) {
 			docStructure = [
 				{text: 'Text 1 (Page 1)', id: 'text1'},
 				{text: 'Text 2 (Page 1)', id: 'text2'},
@@ -1600,12 +1904,16 @@ describe('LayoutBuilder', function () {
 			pageBreakBeforeFunction = sinon.spy();
 
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
-
-			assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(1).args[1], 'id'), ['text2', 'text3']);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(1).args[1], 'id'), ['text2', 'text3']);
+        done();
+      });
 		});
 
-		it('should provide the list of nodes on the next page', function () {
+		it('should provide the list of nodes on the next page', function (done) {
 			docStructure = {
 				stack: [
 					{text: 'Text 1 (Page 1)', id: 'text1', pageBreak: 'after'},
@@ -1619,12 +1927,16 @@ describe('LayoutBuilder', function () {
 			pageBreakBeforeFunction = sinon.spy();
 
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
-
-			assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(0).args[2], 'id'), ['text2', 'text3', 'text4']);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(0).args[2], 'id'), ['text2', 'text3', 'text4']);
+        done();
+      });
 		});
 
-		it('should provide the list of previous nodes on the same page', function () {
+		it('should provide the list of previous nodes on the same page', function (done) {
 			docStructure = {
 				stack: [
 					{text: 'Text 1 (Page 1)', id: 'text1', pageBreak: 'after'},
@@ -1638,12 +1950,16 @@ describe('LayoutBuilder', function () {
 			pageBreakBeforeFunction = sinon.spy();
 
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
-
-			assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(4).args[3], 'id'), ['stack', 'text2', 'text3']);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.deepEqual(_.map(pageBreakBeforeFunction.getCall(4).args[3], 'id'), ['stack', 'text2', 'text3']);
+        done();
+      });
 		});
 
-		it('should provide the pages of the node', function () {
+		it('should provide the pages of the node', function (done) {
 			docStructure = [
 				{text: 'Text 1 (Page 1)', id: 'text1'},
 				{text: 'Text 2 (Page 1)', id: 'text2'},
@@ -1654,49 +1970,65 @@ describe('LayoutBuilder', function () {
 			pageBreakBeforeFunction = sinon.spy();
 
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
-
-			assert.equal(pageBreakBeforeFunction.getCall(0).args[0].pages, 2);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.equal(pageBreakBeforeFunction.getCall(0).args[0].pages, 2);
+        done();
+      });
 		});
 
-		it('should provide the headlineLevel of the node', function () {
+		it('should provide the headlineLevel of the node', function (done) {
 			docStructure = [
 				{text: 'Text 1 (Page 1)', id: 'text1', headlineLevel: 6}
 			];
 
 			pageBreakBeforeFunction = sinon.spy();
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
-
-			assert.equal(pageBreakBeforeFunction.getCall(1).args[0].headlineLevel, 6);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.equal(pageBreakBeforeFunction.getCall(1).args[0].headlineLevel, 6);
+        done();
+      });
 		});
 
-		it('should provide the position of the node', function () {
+		it('should provide the position of the node', function (done) {
 			docStructure = [
 				{text: 'Text 1 (Page 1)', id: 'text1'}
 			];
 
 			pageBreakBeforeFunction = sinon.spy();
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
-
-			assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].startPosition, {pageNumber: 1, left: 40, top: 40, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 720, pageInnerWidth: 320});
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+			  assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].startPosition, {pageNumber: 1, left: 40, top: 40, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 720, pageInnerWidth: 320});
+        done();
+      });
 		});
 
-		it('should provide the pageOrientation of the node', function () {
+		it('should provide the pageOrientation of the node', function (done) {
 			docStructure = [
 				{text: 'Text 1 (Page 1)', id: 'text1', pageOrientation: 'landscape', style: 'super-text'}
 			];
 
 			pageBreakBeforeFunction = sinon.spy();
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
-
-			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageOrientation, 'landscape');
-			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].style, 'super-text');
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageOrientation, 'landscape');
+        assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].style, 'super-text');
+        done();
+      });
 		});
 
-		it('should work with all specified elements', function () {
+		it('should work with all specified elements', function (done) {
 
 			docStructure = [
 				{text: '', id: 'not-called-because-empty'},
@@ -1722,46 +2054,49 @@ describe('LayoutBuilder', function () {
 
 			pageBreakBeforeFunction = sinon.spy();
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        function validateCalled(callIndex, nodeType, id) {
+          var nodeInfo = pageBreakBeforeFunction.getCall(callIndex).args[0];
+          assert.equal(nodeInfo.id, id);
+          assert(!_.isEmpty(nodeInfo[nodeType]), 'node type accessor ' + nodeType + ' not defined');
+          assert(_.isObject(nodeInfo.startPosition), 'start position is not an object but ' + _.toString(nodeInfo.startPosition));
+          assert(_.isArray(nodeInfo.pageNumbers), 'page numbers is not an array but ' + _.toString(nodeInfo.pageNumbers));
+        }
 
-			function validateCalled(callIndex, nodeType, id) {
-				var nodeInfo = pageBreakBeforeFunction.getCall(callIndex).args[0];
-				assert.equal(nodeInfo.id, id);
-				assert(!_.isEmpty(nodeInfo[nodeType]), 'node type accessor ' + nodeType + ' not defined');
-				assert(_.isObject(nodeInfo.startPosition), 'start position is not an object but ' + _.toString(nodeInfo.startPosition));
-				assert(_.isArray(nodeInfo.pageNumbers), 'page numbers is not an array but ' + _.toString(nodeInfo.pageNumbers));
-			}
+        var textIndex = 1;
+        validateCalled(textIndex, 'text', 'text');
 
-			var textIndex = 1;
-			validateCalled(textIndex, 'text', 'text');
+        var tableIndex = textIndex + 1;
+        validateCalled(tableIndex, 'table', 'table');
 
-			var tableIndex = textIndex + 1;
-			validateCalled(tableIndex, 'table', 'table');
+        var ulIndex = tableIndex + 2;
+        validateCalled(ulIndex, 'ul', 'ul');
+        validateCalled(ulIndex + 1, 'text', 'ul-item');
 
-			var ulIndex = tableIndex + 2;
-			validateCalled(ulIndex, 'ul', 'ul');
-			validateCalled(ulIndex + 1, 'text', 'ul-item');
+        var olIndex = ulIndex + 2;
+        validateCalled(olIndex, 'ol', 'ol');
+        validateCalled(olIndex + 1, 'text', 'ol-item');
 
-			var olIndex = ulIndex + 2;
-			validateCalled(olIndex, 'ol', 'ol');
-			validateCalled(olIndex + 1, 'text', 'ol-item');
+        var imageIndex = olIndex + 2;
+        validateCalled(imageIndex, 'image', 'image');
 
-			var imageIndex = olIndex + 2;
-			validateCalled(imageIndex, 'image', 'image');
+        var qrIndex = imageIndex + 1;
+        validateCalled(qrIndex, 'qr', 'qr');
 
-			var qrIndex = imageIndex + 1;
-			validateCalled(qrIndex, 'qr', 'qr');
+        var canvasIndex = qrIndex + 1;
+        validateCalled(canvasIndex, 'canvas', 'canvas');
 
-			var canvasIndex = qrIndex + 1;
-			validateCalled(canvasIndex, 'canvas', 'canvas');
-
-			var columnIndex = canvasIndex + 1;
-			validateCalled(columnIndex, 'columns', 'columns');
-			validateCalled(columnIndex + 1, 'text', 'column-item');
-
+        var columnIndex = canvasIndex + 1;
+        validateCalled(columnIndex, 'columns', 'columns');
+        validateCalled(columnIndex + 1, 'text', 'column-item');
+        done();
+      });
 		});
 
-		it('should provide all page numbers of the node', function () {
+		it('should provide all page numbers of the node', function (done) {
 			var eightyLineBreaks = new Array(80).join("\n");
 			docStructure = [
 				{text: 'Text 1 (Page 1)', id: 'text1'},
@@ -1771,11 +2106,15 @@ describe('LayoutBuilder', function () {
 
 			pageBreakBeforeFunction = sinon.spy();
 
-			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
-
-			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageNumbers, [1]);
-			assert.deepEqual(pageBreakBeforeFunction.getCall(2).args[0].pageNumbers, [1, 2]);
-			assert.deepEqual(pageBreakBeforeFunction.getCall(3).args[0].pageNumbers, [2]);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction, function(err, pages) {
+        if (err) {
+          return done(err);
+        }
+        assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageNumbers, [1]);
+        assert.deepEqual(pageBreakBeforeFunction.getCall(2).args[0].pageNumbers, [1, 2]);
+        assert.deepEqual(pageBreakBeforeFunction.getCall(3).args[0].pageNumbers, [2]);
+        done();
+      });
 		});
 	});
 });

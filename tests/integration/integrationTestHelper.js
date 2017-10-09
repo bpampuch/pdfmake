@@ -15,7 +15,7 @@ function IntegrationTestHelper() {
 	this.DEFAULT_BULLET_SPACER = '9. ';
 }
 
-IntegrationTestHelper.prototype.renderPages = function (sizeName, docDefinition) {
+IntegrationTestHelper.prototype.renderPages = function (sizeName, docDefinition, cb) {
 	var size = sizes[sizeName];
 	docDefinition.images = docDefinition.images || {};
 	var fontDescriptors = {
@@ -46,7 +46,8 @@ IntegrationTestHelper.prototype.renderPages = function (sizeName, docDefinition)
 		docDefinition.footer,
 		docDefinition.images,
 		docDefinition.watermark,
-		docDefinition.pageBreakBefore
+		docDefinition.pageBreakBefore,
+    cb
 		);
 };
 
