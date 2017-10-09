@@ -22,7 +22,7 @@ describe('Integration test: lists', function () {
 		};
 	}
 
-	it('renders a ordered list', function () {
+	it('renders a ordered list', function (done) {
 		var dd = {
 			content: {
 				ol: [
@@ -33,46 +33,50 @@ describe('Integration test: lists', function () {
 			}
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '1. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '1. ');
+      assert.equal(item1.bullet.x, testHelper.MARGINS.left);
+      assert.equal(item1.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString('1. '));
+      assert.equal(item1.bullet.y, testHelper.MARGINS.top);
+      assert.equal(item1.content.y, testHelper.MARGINS.top);
 
-		assert.equal(item1.bullet.x, testHelper.MARGINS.left);
-		assert.equal(item1.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString('1. '));
-		assert.equal(item1.bullet.y, testHelper.MARGINS.top);
-		assert.equal(item1.content.y, testHelper.MARGINS.top);
+      var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
+      assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
+      assert.equal(_.map(item2.bullet.inlines, 'text').join(''), '2. ');
 
-		var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
-		assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
-		assert.equal(_.map(item2.bullet.inlines, 'text').join(''), '2. ');
+      assert.equal(item2.bullet.x, testHelper.MARGINS.left);
+      assert.equal(item2.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString('2. '));
+      assert.equal(item2.bullet.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT);
+      assert.equal(item2.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT);
 
-		assert.equal(item2.bullet.x, testHelper.MARGINS.left);
-		assert.equal(item2.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString('2. '));
-		assert.equal(item2.bullet.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT);
-		assert.equal(item2.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT);
+      var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
+      assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3 - Paleo American Apparel ');
+      assert.equal(_.map(item3.bullet.inlines, 'text').join(''), '3. ');
 
-		var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
-		assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3 - Paleo American Apparel ');
-		assert.equal(_.map(item3.bullet.inlines, 'text').join(''), '3. ');
+      assert.equal(item3.bullet.x, testHelper.MARGINS.left);
+      assert.equal(item3.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString('3. '));
+      assert.equal(item3.bullet.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 2);
+      assert.equal(item3.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 2);
 
-		assert.equal(item3.bullet.x, testHelper.MARGINS.left);
-		assert.equal(item3.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString('3. '));
-		assert.equal(item3.bullet.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 2);
-		assert.equal(item3.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 2);
+      var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
+      assert.equal(_.map(item4.content.inlines, 'text').join(''), 'forage whatever.');
+      assert.equal(item4.bullet, undefined);
 
-		var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
-		assert.equal(_.map(item4.content.inlines, 'text').join(''), 'forage whatever.');
-		assert.equal(item4.bullet, undefined);
-
-		assert.equal(item4.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
-		assert.equal(item4.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 3);
+      assert.equal(item4.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
+      assert.equal(item4.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 3);
+      done();
+    });
 	});
 
-	it('renders a ordered list and adapts margin to longest list number', function () {
+	it('renders a ordered list and adapts margin to longest list number', function (done) {
 		var dd = {
 			content: {
 				ol: [
@@ -90,26 +94,30 @@ describe('Integration test: lists', function () {
 			}
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '1. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '1. ');
+      assert.equal(item1.bullet.x, testHelper.MARGINS.left);
+      assert.equal(item1.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString('10. '));
 
-		assert.equal(item1.bullet.x, testHelper.MARGINS.left);
-		assert.equal(item1.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString('10. '));
+      var item10 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 10});
+      assert.equal(_.map(item10.content.inlines, 'text').join(''), 'item 10');
+      assert.equal(_.map(item10.bullet.inlines, 'text').join(''), '10. ');
 
-		var item10 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 10});
-		assert.equal(_.map(item10.content.inlines, 'text').join(''), 'item 10');
-		assert.equal(_.map(item10.bullet.inlines, 'text').join(''), '10. ');
-
-		assert.equal(item10.bullet.x, testHelper.MARGINS.left);
-		assert.equal(item10.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString('10. '));
+      assert.equal(item10.bullet.x, testHelper.MARGINS.left);
+      assert.equal(item10.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString('10. '));
+      done();
+    });
 	});
 
-	it('renders a unordered list', function () {
+	it('renders a unordered list', function (done) {
 		var dd = {
 			content: {
 				ul: [
@@ -120,45 +128,49 @@ describe('Integration test: lists', function () {
 			}
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var bulletRadius = 2;
+      var bulletMargin = testHelper.MARGINS.left + bulletRadius;
 
-		var bulletRadius = 2;
-		var bulletMargin = testHelper.MARGINS.left + bulletRadius;
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(item1.bullet.type, 'ellipse');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(item1.bullet.type, 'ellipse');
+      assert.equal(item1.bullet.x, bulletMargin);
+      assert.equal(item1.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
+      assert.equal(item1.content.y, testHelper.MARGINS.top);
 
-		assert.equal(item1.bullet.x, bulletMargin);
-		assert.equal(item1.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
-		assert.equal(item1.content.y, testHelper.MARGINS.top);
+      var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
+      assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
+      assert.equal(item2.bullet.type, 'ellipse');
 
-		var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
-		assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
-		assert.equal(item2.bullet.type, 'ellipse');
+      assert.equal(item2.bullet.x, bulletMargin);
+      assert.equal(item2.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
 
-		assert.equal(item2.bullet.x, bulletMargin);
-		assert.equal(item2.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
+      var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
+      assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3 - Paleo American Apparel ');
+      assert.equal(item3.bullet.type, 'ellipse');
 
-		var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
-		assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3 - Paleo American Apparel ');
-		assert.equal(item3.bullet.type, 'ellipse');
+      assert.equal(item3.bullet.x, bulletMargin);
+      assert.equal(item3.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
+      assert.equal(item3.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 2);
 
-		assert.equal(item3.bullet.x, bulletMargin);
-		assert.equal(item3.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
-		assert.equal(item3.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 2);
+      var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
+      assert.equal(_.map(item4.content.inlines, 'text').join(''), 'forage whatever.');
+      assert.equal(item4.bullet, undefined);
 
-		var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
-		assert.equal(_.map(item4.content.inlines, 'text').join(''), 'forage whatever.');
-		assert.equal(item4.bullet, undefined);
-
-		assert.equal(item4.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
-		assert.equal(item4.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 3);
+      assert.equal(item4.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
+      assert.equal(item4.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 3);
+      done();
+    });
 	});
 
-	it('renders a unordered list and keeps constant small margin', function () {
+	it('renders a unordered list and keeps constant small margin', function (done) {
 		var dd = {
 			content: {
 				ul: [
@@ -176,27 +188,31 @@ describe('Integration test: lists', function () {
 			}
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var bulletRadius = 2;
+      var bulletMargin = testHelper.MARGINS.left + bulletRadius;
 
-		var bulletRadius = 2;
-		var bulletMargin = testHelper.MARGINS.left + bulletRadius;
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(item1.bullet.x, bulletMargin);
+      assert.equal(item1.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
 
-		assert.equal(item1.bullet.x, bulletMargin);
-		assert.equal(item1.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
+      var item10 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 10});
+      assert.equal(_.map(item10.content.inlines, 'text').join(''), 'item 10');
 
-		var item10 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 10});
-		assert.equal(_.map(item10.content.inlines, 'text').join(''), 'item 10');
-
-		assert.equal(item10.bullet.x, bulletMargin);
-		assert.equal(item10.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
+      assert.equal(item10.bullet.x, bulletMargin);
+      assert.equal(item10.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER));
+      done();
+    });
 	});
 
-	it('renders nested lists', function () {
+	it('renders nested lists', function (done) {
 		var dd = {
 			content: {
 				ol: [
@@ -210,51 +226,55 @@ describe('Integration test: lists', function () {
 			}
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '1. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '1. ');
+      assert.equal(item1.bullet.x, testHelper.MARGINS.left);
+      assert.equal(item1.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString('1. '));
 
-		assert.equal(item1.bullet.x, testHelper.MARGINS.left);
-		assert.equal(item1.content.x, testHelper.MARGINS.left + testHelper.getWidthOfString('1. '));
+      var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
+      assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
+      assert.equal(_.map(item2.bullet.inlines, 'text').join(''), '2. ');
 
-		var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
-		assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
-		assert.equal(_.map(item2.bullet.inlines, 'text').join(''), '2. ');
+      var item2BulletSpacing = testHelper.MARGINS.left + testHelper.getWidthOfString('2. ');
+      assert.equal(item2.bullet.x, testHelper.MARGINS.left);
+      assert.equal(item2.content.x, item2BulletSpacing);
 
-		var item2BulletSpacing = testHelper.MARGINS.left + testHelper.getWidthOfString('2. ');
-		assert.equal(item2.bullet.x, testHelper.MARGINS.left);
-		assert.equal(item2.content.x, item2BulletSpacing);
+      var subItem1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
+      assert.equal(_.map(subItem1.content.inlines, 'text').join(''), 'subitem 1');
+      assert.equal(_.map(subItem1.bullet.inlines, 'text').join(''), '1. ');
 
-		var subItem1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
-		assert.equal(_.map(subItem1.content.inlines, 'text').join(''), 'subitem 1');
-		assert.equal(_.map(subItem1.bullet.inlines, 'text').join(''), '1. ');
+      assert.equal(subItem1.bullet.x, item2BulletSpacing);
+      assert.equal(subItem1.content.x, item2BulletSpacing + testHelper.getWidthOfString('1. '));
+      assert.equal(subItem1.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 2);
 
-		assert.equal(subItem1.bullet.x, item2BulletSpacing);
-		assert.equal(subItem1.content.x, item2BulletSpacing + testHelper.getWidthOfString('1. '));
-		assert.equal(subItem1.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 2);
+      var subItem2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
+      assert.equal(_.map(subItem2.content.inlines, 'text').join(''), 'subitem 2');
+      assert.equal(_.map(subItem2.bullet.inlines, 'text').join(''), '2. ');
 
-		var subItem2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
-		assert.equal(_.map(subItem2.content.inlines, 'text').join(''), 'subitem 2');
-		assert.equal(_.map(subItem2.bullet.inlines, 'text').join(''), '2. ');
+      assert.equal(subItem2.bullet.x, item2BulletSpacing);
+      assert.equal(subItem2.content.x, item2BulletSpacing + testHelper.getWidthOfString('2. '));
 
-		assert.equal(subItem2.bullet.x, item2BulletSpacing);
-		assert.equal(subItem2.content.x, item2BulletSpacing + testHelper.getWidthOfString('2. '));
+      var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
+      assert.equal(_.map(item3.bullet.inlines, 'text').join(''), '3. ');
 
-		var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
-		assert.equal(_.map(item3.bullet.inlines, 'text').join(''), '3. ');
-
-		var item3BulletSpacing = testHelper.MARGINS.left + testHelper.getWidthOfString('3. ');
-		assert.equal(item3.bullet.x, testHelper.MARGINS.left);
-		assert.equal(item3.content.x, item3BulletSpacing);
-		assert.equal(item3.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 4);
+      var item3BulletSpacing = testHelper.MARGINS.left + testHelper.getWidthOfString('3. ');
+      assert.equal(item3.bullet.x, testHelper.MARGINS.left);
+      assert.equal(item3.content.x, item3BulletSpacing);
+      assert.equal(item3.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 4);
+      done();
+    });
 	});
 
-	it('renders a ordered list with start value', function () {
+	it('renders a ordered list with start value', function (done) {
 		var dd = {
 			content: [
 				{
@@ -270,20 +290,24 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '50. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '50. ');
-
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), '54. ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), '54. ');
+      done();
+    });
 	});
 
-	it('renders a reversed ordered list', function () {
+	it('renders a reversed ordered list', function (done) {
 		var dd = {
 			content: [
 				{
@@ -299,20 +323,24 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '5. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '5. ');
-
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), '1. ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), '1. ');
+      done();
+    });
 	});
 
-	it('renders a ordered list with own separator', function () {
+	it('renders a ordered list with own separator', function (done) {
 		var dd = {
 			content: [
 				{
@@ -328,20 +356,24 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '1) ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '1) ');
-
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), '5) ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), '5) ');
+      done();
+    });
 	});
 
-	it('renders a ordered list with own complex separator', function () {
+	it('renders a ordered list with own complex separator', function (done) {
 		var dd = {
 			content: [
 				{
@@ -357,20 +389,24 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '(1) ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '(1) ');
-
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), '(5) ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), '(5) ');
+      done();
+    });
 	});
 
-	it('renders a ordered list with upper-roman style type', function () {
+	it('renders a ordered list with upper-roman style type', function (done) {
 		var dd = {
 			content: [
 				{
@@ -386,32 +422,36 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'I. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'I. ');
+      var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
+      assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
+      assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'II. ');
 
-		var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
-		assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
-		assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'II. ');
+      var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
+      assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
+      assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'III. ');
 
-		var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
-		assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
-		assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'III. ');
+      var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
+      assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4');
+      assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'IV. ');
 
-		var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
-		assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4');
-		assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'IV. ');
-
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'V. ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'V. ');
+      done();
+    });
 	});
 
-	it('renders a ordered list with lower-roman style type', function () {
+	it('renders a ordered list with lower-roman style type', function (done) {
 		var dd = {
 			content: [
 				{
@@ -427,32 +467,36 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'i. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'i. ');
+      var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
+      assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
+      assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'ii. ');
 
-		var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
-		assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
-		assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'ii. ');
+      var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
+      assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
+      assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'iii. ');
 
-		var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
-		assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
-		assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'iii. ');
+      var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
+      assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4');
+      assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'iv. ');
 
-		var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
-		assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4');
-		assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'iv. ');
-
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'v. ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'v. ');
+      done();
+    });
 	});
 
-	it('renders a ordered list with upper-roman style type and check maximum', function () {
+	it('renders a ordered list with upper-roman style type and check maximum', function (done) {
 		var dd = {
 			content: [
 				{
@@ -471,40 +515,44 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 4995');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'MMMMCMXCV. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 4995');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'MMMMCMXCV. ');
+      var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
+      assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 4996');
+      assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'MMMMCMXCVI. ');
 
-		var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
-		assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 4996');
-		assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'MMMMCMXCVI. ');
+      var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
+      assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 4997');
+      assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'MMMMCMXCVII. ');
 
-		var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
-		assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 4997');
-		assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'MMMMCMXCVII. ');
+      var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
+      assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4998');
+      assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'MMMMCMXCVIII. ');
 
-		var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
-		assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4998');
-		assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'MMMMCMXCVIII. ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 4999');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'MMMMCMXCIX. ');
 
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 4999');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'MMMMCMXCIX. ');
+      var item6 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 6});
+      assert.equal(_.map(item6.content.inlines, 'text').join(''), 'item 5000');
+      assert.equal(_.map(item6.bullet.inlines, 'text').join(''), '5000. ');
 
-		var item6 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 6});
-		assert.equal(_.map(item6.content.inlines, 'text').join(''), 'item 5000');
-		assert.equal(_.map(item6.bullet.inlines, 'text').join(''), '5000. ');
-
-		var item7 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 7});
-		assert.equal(_.map(item7.content.inlines, 'text').join(''), 'item 5001');
-		assert.equal(_.map(item7.bullet.inlines, 'text').join(''), '5001. ');
+      var item7 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 7});
+      assert.equal(_.map(item7.content.inlines, 'text').join(''), 'item 5001');
+      assert.equal(_.map(item7.bullet.inlines, 'text').join(''), '5001. ');
+      done();
+    });
 	});
 
-	it('renders a ordered list with upper-roman style type and check minimum', function () {
+	it('renders a ordered list with upper-roman style type and check minimum', function (done) {
 		var dd = {
 			content: [
 				{
@@ -521,32 +569,36 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item -2');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '-2. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item -2');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '-2. ');
+      var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
+      assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item -1');
+      assert.equal(_.map(item2.bullet.inlines, 'text').join(''), '-1. ');
 
-		var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
-		assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item -1');
-		assert.equal(_.map(item2.bullet.inlines, 'text').join(''), '-1. ');
+      var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
+      assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 0');
+      assert.equal(_.map(item3.bullet.inlines, 'text').join(''), '0. ');
 
-		var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
-		assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 0');
-		assert.equal(_.map(item3.bullet.inlines, 'text').join(''), '0. ');
+      var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
+      assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'I. ');
 
-		var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
-		assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'I. ');
-
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 2');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'II. ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 2');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'II. ');
+      done();
+    });
 	});
 
-	it('renders a ordered list with upper-alpha style type', function () {
+	it('renders a ordered list with upper-alpha style type', function (done) {
 		var dd = {
 			content: [
 				{
@@ -562,32 +614,36 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'A. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'A. ');
+      var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
+      assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
+      assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'B. ');
 
-		var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
-		assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
-		assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'B. ');
+      var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
+      assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
+      assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'C. ');
 
-		var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
-		assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
-		assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'C. ');
+      var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
+      assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4');
+      assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'D. ');
 
-		var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
-		assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4');
-		assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'D. ');
-
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'E. ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'E. ');
+      done();
+    });
 	});
 
-	it('renders a ordered list with upper-alpha style type (counter 25 - 29)', function () {
+	it('renders a ordered list with upper-alpha style type (counter 25 - 29)', function (done) {
 		var dd = {
 			content: [
 				{
@@ -604,32 +660,36 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'Y. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'Y. ');
+      var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
+      assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
+      assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'Z. ');
 
-		var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
-		assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
-		assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'Z. ');
+      var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
+      assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
+      assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'AA. ');
 
-		var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
-		assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
-		assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'AA. ');
+      var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
+      assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4');
+      assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'AB. ');
 
-		var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
-		assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4');
-		assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'AB. ');
-
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'AC. ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'AC. ');
+      done();
+    });
 	});
 
-	it('renders a ordered list with upper-alpha style type and check minimum', function () {
+	it('renders a ordered list with upper-alpha style type and check minimum', function (done) {
 		var dd = {
 			content: [
 				{
@@ -646,32 +706,36 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item -2');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '-2. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item -2');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '-2. ');
+      var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
+      assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item -1');
+      assert.equal(_.map(item2.bullet.inlines, 'text').join(''), '-1. ');
 
-		var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
-		assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item -1');
-		assert.equal(_.map(item2.bullet.inlines, 'text').join(''), '-1. ');
+      var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
+      assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 0');
+      assert.equal(_.map(item3.bullet.inlines, 'text').join(''), '0. ');
 
-		var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
-		assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 0');
-		assert.equal(_.map(item3.bullet.inlines, 'text').join(''), '0. ');
+      var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
+      assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'A. ');
 
-		var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
-		assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'A. ');
-
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 2');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'B. ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 2');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'B. ');
+      done();
+    });
 	});
 
-	it('renders a ordered list with lower-alpha style type', function () {
+	it('renders a ordered list with lower-alpha style type', function (done) {
 		var dd = {
 			content: [
 				{
@@ -687,32 +751,36 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'a. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'a. ');
+      var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
+      assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
+      assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'b. ');
 
-		var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
-		assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
-		assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'b. ');
+      var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
+      assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
+      assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'c. ');
 
-		var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
-		assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
-		assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'c. ');
+      var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
+      assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4');
+      assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'd. ');
 
-		var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
-		assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4');
-		assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'd. ');
-
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'e. ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'e. ');
+      done();
+    });
 	});
 
-	it('renders a ordered list with lower-alpha style type (counter 25 - 29)', function () {
+	it('renders a ordered list with lower-alpha style type (counter 25 - 29)', function (done) {
 		var dd = {
 			content: [
 				{
@@ -729,32 +797,36 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'y. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), 'y. ');
+      var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
+      assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
+      assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'z. ');
 
-		var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
-		assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item 2');
-		assert.equal(_.map(item2.bullet.inlines, 'text').join(''), 'z. ');
+      var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
+      assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
+      assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'aa. ');
 
-		var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
-		assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 3');
-		assert.equal(_.map(item3.bullet.inlines, 'text').join(''), 'aa. ');
+      var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
+      assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4');
+      assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'ab. ');
 
-		var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
-		assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 4');
-		assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'ab. ');
-
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'ac. ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 5');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'ac. ');
+      done();
+    });
 	});
 
-	it('renders a ordered list with lower-alpha style type and check minimum', function () {
+	it('renders a ordered list with lower-alpha style type and check minimum', function (done) {
 		var dd = {
 			content: [
 				{
@@ -771,29 +843,33 @@ describe('Integration test: lists', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A6', dd);
+		testHelper.renderPages('A6', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
 
-		assert.equal(pages.length, 1);
+      var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
+      assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item -2');
+      assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '-2. ');
 
-		var item1 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 1});
-		assert.equal(_.map(item1.content.inlines, 'text').join(''), 'item -2');
-		assert.equal(_.map(item1.bullet.inlines, 'text').join(''), '-2. ');
+      var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
+      assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item -1');
+      assert.equal(_.map(item2.bullet.inlines, 'text').join(''), '-1. ');
 
-		var item2 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 2});
-		assert.equal(_.map(item2.content.inlines, 'text').join(''), 'item -1');
-		assert.equal(_.map(item2.bullet.inlines, 'text').join(''), '-1. ');
+      var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
+      assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 0');
+      assert.equal(_.map(item3.bullet.inlines, 'text').join(''), '0. ');
 
-		var item3 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 3});
-		assert.equal(_.map(item3.content.inlines, 'text').join(''), 'item 0');
-		assert.equal(_.map(item3.bullet.inlines, 'text').join(''), '0. ');
+      var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
+      assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 1');
+      assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'a. ');
 
-		var item4 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 4});
-		assert.equal(_.map(item4.content.inlines, 'text').join(''), 'item 1');
-		assert.equal(_.map(item4.bullet.inlines, 'text').join(''), 'a. ');
-
-		var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
-		assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 2');
-		assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'b. ');
+      var item5 = getBulletListLine(pages, {pageNumber: 0, itemNumber: 5});
+      assert.equal(_.map(item5.content.inlines, 'text').join(''), 'item 2');
+      assert.equal(_.map(item5.bullet.inlines, 'text').join(''), 'b. ');
+      done();
+    });
 	});
 
 });

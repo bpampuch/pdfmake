@@ -8,7 +8,7 @@ function ImageMeasure(pdfKitDoc, imageDictionary) {
 	this.imageDictionary = imageDictionary || {};
 }
 
-ImageMeasure.prototype.measureImage = function (src) {
+ImageMeasure.prototype.measureImage = function (src, cb) {
 	var image, label;
 	var that = this;
 
@@ -28,7 +28,7 @@ ImageMeasure.prototype.measureImage = function (src) {
 		image = this.pdfKitDoc._imageRegistry[src];
 	}
 
-	return {width: image.width, height: image.height};
+  return cb(null, {width: image.width, height: image.height});
 
 	function realImageSrc(src) {
 		var img = that.imageDictionary[src];

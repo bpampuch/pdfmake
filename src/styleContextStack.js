@@ -140,6 +140,20 @@ StyleContextStack.prototype.auto = function (item, callback) {
 	return result;
 };
 
+StyleContextStack.prototype.asyncAuto = function (item, handler, cb) {
+  var self = this;
+	var pushedItems = this.autopush(item);
+  handler(function(err, result) {
+    if (err) {
+      return cb(err);
+    }
+    if (pushedItems > 0) {
+      self.pop(pushedItems);
+    }
+    cb(null, result);
+  });
+};
+
 /**
  * Evaluates stack and returns value of a named property
  *

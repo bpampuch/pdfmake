@@ -47,7 +47,7 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 	} else if (node.qr) {
 		return this.preprocessQr(node);
 	} else {
-		throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+		throw new Error('Unrecognized document structure: ' + JSON.stringify(node, fontStringify));
 	}
 };
 

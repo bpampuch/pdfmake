@@ -6,11 +6,12 @@ var assert = require('assert');
 var Printer = require('../src/printer.js');
 var sinon = require('sinon');
 var Pdfkit = require('pdfkit');
+var stream = require('stream');
 
 describe('Printer', function () {
-
+  this.timeout(10000);
 	var SHORT_SIDE = 1000, LONG_SIDE = 2000;
-	var fontDescriptors, printer;
+	var fontDescriptors, printer, writable;
 
 	beforeEach(function () {
 		fontDescriptors = {
@@ -19,10 +20,14 @@ describe('Printer', function () {
 			}
 		};
 		Pdfkit.prototype.addPage = sinon.spy(Pdfkit.prototype.addPage);
-
+    writable = new stream.Writable({
+      write: function(chunk, encoding, next) {
+        next();
+      }
+    });
 	});
 
-	it('should pass switched width and height to pdfkit if page orientation changes from default portrait to landscape', function () {
+	it('should pass switched width and height to pdfkit if page orientation changes from default portrait to landscape', function (done) {
 		printer = new Printer(fontDescriptors);
 		var docDefinition = {
 			pageSize: {width: SHORT_SIDE, height: LONG_SIDE},
@@ -37,15 +42,19 @@ describe('Printer', function () {
 				}
 			]
 		};
-		printer.createPdfKitDocument(docDefinition);
+		var doc = printer.createPdfKitDocument(docDefinition);
+    doc.pipe(writable);
+    doc.on('end', function() {
+      assert(Pdfkit.prototype.addPage.callCount === 2);
 
-		assert(Pdfkit.prototype.addPage.callCount === 2);
-
-		assert.equal(Pdfkit.prototype.addPage.firstCall.args[0], undefined);
-		assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
+      assert.equal(Pdfkit.prototype.addPage.firstCall.args[0], undefined);
+      assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
+      done();
+    });
+    doc.end();
 	});
 
-	it('should pass switched width and height to pdfkit if page orientation changes from portrait to landscape', function () {
+	it('should pass switched width and height to pdfkit if page orientation changes from portrait to landscape', function (done) {
 		printer = new Printer(fontDescriptors);
 		var docDefinition = {
 			pageOrientation: 'portrait',
@@ -61,15 +70,19 @@ describe('Printer', function () {
 				}
 			]
 		};
-		printer.createPdfKitDocument(docDefinition);
+		var doc = printer.createPdfKitDocument(docDefinition);
+    doc.pipe(writable);
+    doc.on('end', function() {
+      assert(Pdfkit.prototype.addPage.callCount === 2);
 
-		assert(Pdfkit.prototype.addPage.callCount === 2);
-
-		assert.equal(Pdfkit.prototype.addPage.firstCall.args[0], undefined);
-		assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
+      assert.equal(Pdfkit.prototype.addPage.firstCall.args[0], undefined);
+      assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
+      done();
+    });
+    doc.end();
 	});
 
-	it('should pass switched width and height to pdfkit if page orientation changes from landscape to portrait', function () {
+	it('should pass switched width and height to pdfkit if page orientation changes from landscape to portrait', function (done) {
 		printer = new Printer(fontDescriptors);
 
 		var docDefinition = {
@@ -90,17 +103,21 @@ describe('Printer', function () {
 				}
 			]
 		};
-		printer.createPdfKitDocument(docDefinition);
+		var doc = printer.createPdfKitDocument(docDefinition);
+    doc.pipe(writable);
+    doc.on('end', function() {
+      assert(Pdfkit.prototype.addPage.callCount === 3);
 
-		assert(Pdfkit.prototype.addPage.callCount === 3);
-
-		assert.equal(Pdfkit.prototype.addPage.firstCall.args[0], undefined);
-		assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
-		assert.deepEqual(Pdfkit.prototype.addPage.thirdCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
+      assert.equal(Pdfkit.prototype.addPage.firstCall.args[0], undefined);
+      assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
+      assert.deepEqual(Pdfkit.prototype.addPage.thirdCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
+      done();
+    });
+    doc.end();
 	});
 
 
-	it('should not switch width and height for pdfkit if page orientation changes from landscape to landscape', function () {
+	it('should not switch width and height for pdfkit if page orientation changes from landscape to landscape', function (done) {
 		printer = new Printer(fontDescriptors);
 		var docDefinition = {
 			pageOrientation: 'portrait',
@@ -121,17 +138,20 @@ describe('Printer', function () {
 				}
 			]
 		};
-		printer.createPdfKitDocument(docDefinition);
+		var doc = printer.createPdfKitDocument(docDefinition);
+    doc.pipe(writable);
+    doc.on('end', function() {
+      assert.equal(Pdfkit.prototype.addPage.callCount, 3);
 
-		assert.equal(Pdfkit.prototype.addPage.callCount, 3);
-
-
-		assert.equal(Pdfkit.prototype.addPage.firstCall.args[0], undefined);
-		assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
-		assert.deepEqual(Pdfkit.prototype.addPage.thirdCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
+      assert.equal(Pdfkit.prototype.addPage.firstCall.args[0], undefined);
+      assert.deepEqual(Pdfkit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
+      assert.deepEqual(Pdfkit.prototype.addPage.thirdCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
+      done();
+    });
+    doc.end();
 	});
 
-	it('should print bullet vectors as ellipses', function () {
+	it('should print bullet vectors as ellipses', function (done) {
 		printer = new Printer(fontDescriptors);
 		var docDefinition = {
 			pageOrientation: 'portrait',
@@ -151,33 +171,37 @@ describe('Printer', function () {
 		};
 		Pdfkit.prototype.ellipse = sinon.spy(Pdfkit.prototype.ellipse);
 
-		printer.createPdfKitDocument(docDefinition);
+		var doc = printer.createPdfKitDocument(docDefinition);
+    doc.pipe(writable);
+    doc.on('end', function() {
 
-		function assertEllipse(ellipseCallArgs) {
-			var firstEllipse = {
-				x: ellipseCallArgs[0],
-				y: ellipseCallArgs[1],
-				r1: ellipseCallArgs[2],
-				r2: ellipseCallArgs[3]
-			};
-			assert(firstEllipse.x !== undefined);
-			assert(!isNaN(firstEllipse.x));
-			assert(firstEllipse.y !== undefined);
-			assert(!isNaN(firstEllipse.y));
-			assert(firstEllipse.r1 !== undefined);
-			assert(!isNaN(firstEllipse.r1));
-			assert(firstEllipse.r2 !== undefined);
-			assert(!isNaN(firstEllipse.r2));
-		}
+      function assertEllipse(ellipseCallArgs) {
+        var firstEllipse = {
+          x: ellipseCallArgs[0],
+          y: ellipseCallArgs[1],
+          r1: ellipseCallArgs[2],
+          r2: ellipseCallArgs[3]
+        };
+        assert(firstEllipse.x !== undefined);
+        assert(!isNaN(firstEllipse.x));
+        assert(firstEllipse.y !== undefined);
+        assert(!isNaN(firstEllipse.y));
+        assert(firstEllipse.r1 !== undefined);
+        assert(!isNaN(firstEllipse.r1));
+        assert(firstEllipse.r2 !== undefined);
+        assert(!isNaN(firstEllipse.r2));
+      }
 
-		assert.equal(Pdfkit.prototype.ellipse.callCount, 2);
+      assert.equal(Pdfkit.prototype.ellipse.callCount, 2);
 
-		assertEllipse(Pdfkit.prototype.ellipse.firstCall.args);
-		assertEllipse(Pdfkit.prototype.ellipse.secondCall.args);
-
+      assertEllipse(Pdfkit.prototype.ellipse.firstCall.args);
+      assertEllipse(Pdfkit.prototype.ellipse.secondCall.args);
+      done();
+    });
+    doc.end();
 	});
 
-	it('should print only the require number of pages', function () {
+	it('should print only the require number of pages', function (done) {
 		printer = new Printer(fontDescriptors);
 
 		var docDefinition = {
@@ -194,12 +218,16 @@ describe('Printer', function () {
 				}]
 		};
 
-		printer.createPdfKitDocument(docDefinition);
-
-		assert(Pdfkit.prototype.addPage.callCount === 1);
+		var doc = printer.createPdfKitDocument(docDefinition);
+    doc.pipe(writable);
+    doc.on('end', function() {
+		  assert(Pdfkit.prototype.addPage.callCount === 1);
+      done();
+    });
+    doc.end();
 	});
 
-	it('should print all pages when maxPagesNumber is undefined', function () {
+	it('should print all pages when maxPagesNumber is undefined', function (done) {
 		printer = new Printer(fontDescriptors);
 
 		var docDefinition = {
@@ -219,12 +247,16 @@ describe('Printer', function () {
 				}]
 		};
 
-		printer.createPdfKitDocument(docDefinition);
-
-		assert(Pdfkit.prototype.addPage.callCount === 3);
+		var doc = printer.createPdfKitDocument(docDefinition);
+    doc.pipe(writable);
+    doc.on('end', function() {
+		  assert(Pdfkit.prototype.addPage.callCount === 3);
+      done();
+    });
+    doc.end();
 	});
 
-	it('should report progress on each rendered item when a progressCallback is passed', function () {
+	it('should report progress on each rendered item when a progressCallback is passed', function (done) {
 
 		printer = new Printer(fontDescriptors);
 
@@ -253,15 +285,19 @@ describe('Printer', function () {
 				}]
 		};
 
-		printer.createPdfKitDocument(docDefinition, {progressCallback: progressCallback});
-
-		assert(progressCallback.withArgs(0.25).calledOnce);
-		assert(progressCallback.withArgs(0.5).calledOnce);
-		assert(progressCallback.withArgs(0.75).calledOnce);
-		assert(progressCallback.withArgs(1).calledOnce);
+		var doc = printer.createPdfKitDocument(docDefinition, {progressCallback: progressCallback});
+    doc.pipe(writable);
+    doc.on('end', function() {
+      assert(progressCallback.withArgs(0.25).calledOnce);
+      assert(progressCallback.withArgs(0.5).calledOnce);
+      assert(progressCallback.withArgs(0.75).calledOnce);
+      assert(progressCallback.withArgs(1).calledOnce);
+      done();
+    });
+    doc.end();
 	});
 
-	it('should work without a progressCallback', function () {
+	it('should work without a progressCallback', function (done) {
 		printer = new Printer(fontDescriptors);
 
 		var docDefinition = {
@@ -270,7 +306,12 @@ describe('Printer', function () {
 		};
 
 		assert.doesNotThrow(function () {
-			printer.createPdfKitDocument(docDefinition);
+			var doc = printer.createPdfKitDocument(docDefinition)
+      doc.pipe(writable);
+      doc.on('end', function() {
+        done();
+      });
+      doc.end();
 		});
 	});
 

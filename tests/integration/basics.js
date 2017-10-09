@@ -11,25 +11,29 @@ describe('Integration test: basics', function () {
 
 	var testHelper = new integrationTestHelper();
 
-	it('renders text on page', function () {
-		var pages = testHelper.renderPages('A7', {
+	it('renders text on page', function (done) {
+		testHelper.renderPages('A7', {
 			content: [
 				'First paragraph',
 				'Second paragraph on three lines because it is longer'
 			]
-		});
-
-		assert.equal(pages.length, 1);
-		assert.equal(pages[0].items.length, 4);
-		assert.deepEqual(_.map(_.map(pages[0].items, 'item'), 'x'), [testHelper.MARGINS.left, testHelper.MARGINS.left, testHelper.MARGINS.left, testHelper.MARGINS.left]);
-		assert.deepEqual(_.map(_.map(pages[0].items, 'item'), 'y'), [testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT, testHelper.MARGINS.top + 2 * testHelper.LINE_HEIGHT, testHelper.MARGINS.top + 3 * testHelper.LINE_HEIGHT]);
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}), ['First ', 'paragraph']);
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}), ['Second ', 'paragraph ', 'on ']);
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 2}), ['three ', 'lines ', 'because ', 'it ', 'is ']);
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 3}), ['longer']);
+		}, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
+      assert.equal(pages[0].items.length, 4);
+      assert.deepEqual(_.map(_.map(pages[0].items, 'item'), 'x'), [testHelper.MARGINS.left, testHelper.MARGINS.left, testHelper.MARGINS.left, testHelper.MARGINS.left]);
+      assert.deepEqual(_.map(_.map(pages[0].items, 'item'), 'y'), [testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT, testHelper.MARGINS.top + 2 * testHelper.LINE_HEIGHT, testHelper.MARGINS.top + 3 * testHelper.LINE_HEIGHT]);
+      assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}), ['First ', 'paragraph']);
+      assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}), ['Second ', 'paragraph ', 'on ']);
+      assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 2}), ['three ', 'lines ', 'because ', 'it ', 'is ']);
+      assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 3}), ['longer']);
+      done();
+    });
 	});
 
-	it('renders text with margin', function () {
+	it('renders text with margin', function (done) {
 		var customMargin = 10;
 		var anotherCustomMargin = 13;
 		var dd = {
@@ -44,20 +48,24 @@ describe('Integration test: basics', function () {
 			]
 		};
 
-		var pages = testHelper.renderPages('A5', dd);
+		testHelper.renderPages('A5', dd, function(err, pages) {
+      if (err) {
+        return done(err);
+      }
+      assert.equal(pages.length, 1);
+      assert.equal(pages[0].items[0].item.x, testHelper.MARGINS.left + customMargin);
+      assert.equal(pages[0].items[0].item.y, testHelper.MARGINS.top + customMargin);
 
-		assert.equal(pages.length, 1);
-		assert.equal(pages[0].items[0].item.x, testHelper.MARGINS.left + customMargin);
-		assert.equal(pages[0].items[0].item.y, testHelper.MARGINS.top + customMargin);
+      assert.equal(pages[0].items[1].item.x, testHelper.MARGINS.left);
+      assert.equal(pages[0].items[1].item.y, testHelper.MARGINS.top + customMargin * 3 + testHelper.LINE_HEIGHT);
 
-		assert.equal(pages[0].items[1].item.x, testHelper.MARGINS.left);
-		assert.equal(pages[0].items[1].item.y, testHelper.MARGINS.top + customMargin * 3 + testHelper.LINE_HEIGHT);
+      assert.equal(pages[0].items[2].item.x, testHelper.MARGINS.left + anotherCustomMargin);
+      assert.equal(pages[0].items[2].item.y.toFixed(3), testHelper.MARGINS.top + customMargin * 4 + anotherCustomMargin + testHelper.LINE_HEIGHT * 2);
 
-		assert.equal(pages[0].items[2].item.x, testHelper.MARGINS.left + anotherCustomMargin);
-		assert.equal(pages[0].items[2].item.y.toFixed(3), testHelper.MARGINS.top + customMargin * 4 + anotherCustomMargin + testHelper.LINE_HEIGHT * 2);
-
-		assert.equal(pages[0].items[3].item.x, sizes.A5[0] - testHelper.MARGINS.right - 20 - testHelper.getWidthOfString('has only right margin'));
-		assert.equal(pages[0].items[3].item.y.toFixed(3), (testHelper.MARGINS.top + customMargin * 4 + anotherCustomMargin * 2 + testHelper.LINE_HEIGHT * 3).toFixed(3));
+      assert.equal(pages[0].items[3].item.x, sizes.A5[0] - testHelper.MARGINS.right - 20 - testHelper.getWidthOfString('has only right margin'));
+      assert.equal(pages[0].items[3].item.y.toFixed(3), (testHelper.MARGINS.top + customMargin * 4 + anotherCustomMargin * 2 + testHelper.LINE_HEIGHT * 3).toFixed(3));
+      done();
+    });
 	});
 
 });

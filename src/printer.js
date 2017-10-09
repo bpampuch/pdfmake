@@ -81,48 +81,71 @@ function PdfPrinter(fontDescriptors) {
  */
 PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	options = options || {};
+  var self = this;
+
+  this.ended = false;
+  this.complete = false;
 
 	var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 
 	this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], autoFirstPage: false, compress: docDefinition.compress || true});
+  // save pdfKitDoc.end
+  this.pdfKitDocEnd = this.pdfKitDoc.end.bind(this.pdfKitDoc);
+  // overwrite pdfKitDoc.end
+  this.pdfKitDoc.end = function() {
+    self.ended = true;
+    if (self.complete) {
+      self.pdfKitDocEnd();
+    }
+  };
 	setMetadata(docDefinition, this.pdfKitDoc);
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
-	docDefinition.images = docDefinition.images || {};
+  docDefinition.images = docDefinition.images || {};
 
 	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
 
 	registerDefaultTableLayouts(builder);
+
 	if (options.tableLayouts) {
 		builder.registerTableLayouts(options.tableLayouts);
 	}
+  var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore, function(err, pages) {
+    if (err) {
+      return self.pdfKitDoc.emit('error', err);
+    }
 
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
-	var maxNumberPages = docDefinition.maxPagesNumber || -1;
-	if (typeof maxNumberPages === 'number' && maxNumberPages > -1) {
-		pages = pages.slice(0, maxNumberPages);
-	}
+    var maxNumberPages = docDefinition.maxPagesNumber || -1;
+    if (typeof maxNumberPages === 'number' && maxNumberPages > -1) {
+      pages = pages.slice(0, maxNumberPages);
+    }
 
-	// if pageSize.height is set to Infinity, calculate the actual height of the page that
-	// was laid out using the height of each of the items in the page.
-	if (pageSize.height === Infinity) {
-		var pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
-		this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
-	}
+    // if pageSize.height is set to Infinity, calculate the actual height of the page that
+    // was laid out using the height of each of the items in the page.
+    if (pageSize.height === Infinity) {
+      var pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
+      self.pdfKitDoc.options.size = [pageSize.width, pageHeight];
+    }
 
-	renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
+    renderPages(pages, self.fontProvider, self.pdfKitDoc, options.progressCallback, function(err) {
+      if (options.autoPrint) {
+        var printActionRef = self.pdfKitDoc.ref({
+          Type: 'Action',
+          S: 'Named',
+          N: 'Print'
+        });
+        self.pdfKitDoc._root.data.OpenAction = printActionRef;
+        printActionRef.end();
+      }
+      self.complete = true;
+      if (self.ended) {
+        self.pdfKitDocEnd();
+      }
+    });
+  });
 
-	if (options.autoPrint) {
-		var printActionRef = this.pdfKitDoc.ref({
-			Type: 'Action',
-			S: 'Named',
-			N: 'Print'
-		});
-		this.pdfKitDoc._root.data.OpenAction = printActionRef;
-		printActionRef.end();
-	}
-	return this.pdfKitDoc;
+  return this.pdfKitDoc;
 };
 
 function setMetadata(docDefinition, pdfKitDoc) {
@@ -299,7 +322,7 @@ function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
 	}
 }
 
-function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
+function renderPages(pages, fontProvider, pdfKitDoc, progressCallback, cb) {
 	pdfKitDoc._pdfMakePages = pages;
 	pdfKitDoc.addPage();
 
@@ -309,15 +332,34 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	var renderedItems = 0;
 	progressCallback = progressCallback || function () {};
 
-	for (var i = 0; i < pages.length; i++) {
+  if (!pages.length) {
+    return cb();
+  }
+  var i = 0;
+  (function pageLoop() {
 		if (i > 0) {
 			updatePageOrientationInOptions(pages[i], pdfKitDoc);
 			pdfKitDoc.addPage(pdfKitDoc.options);
 		}
 
 		var page = pages[i];
-		for (var ii = 0, il = page.items.length; ii < il; ii++) {
-			var item = page.items[ii];
+
+    var ii = 0;
+
+    // empty page
+    if (!page.items.length) {
+      if (page.watermark) {
+			  renderWatermark(page, pdfKitDoc);
+		  }
+      ++i;
+      if (i < pages.length) {
+        return setTimeout(pageLoop, 0);
+      }
+      return cb();
+    }
+
+    (function itemLoop() {
+      var item = page.items[ii];
 			switch (item.type) {
 				case 'vector':
 					renderVector(item.item, pdfKitDoc);
@@ -331,11 +373,21 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 			}
 			renderedItems++;
 			progressCallback(renderedItems / totalItems);
-		}
-		if (page.watermark) {
-			renderWatermark(page, pdfKitDoc);
-		}
-	}
+      ++ii;
+      if (ii < page.items.length) {
+        return setTimeout(itemLoop, 0);
+      } else {
+        if (page.watermark) {
+          renderWatermark(page, pdfKitDoc);
+        }
+        ++i;
+        if (i < pages.length) {
+          return setTimeout(pageLoop, 0);
+        }
+        return cb();
+      }
+    })();
+  })();
 }
 
 function renderLine(line, x, y, pdfKitDoc) {
