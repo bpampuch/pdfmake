@@ -25,16 +25,17 @@ ImageMeasure.prototype.measureImage = function(src) {
 
   // check if buffer is a JPG
   if (Buffer.isBuffer(image) && image[0] === 0xff && image[1] === 0xd8) {
-    var i = 2;
-    while (i < image.length - 7) {
-      // Search JPG SOF
-      if (image[i] === 255) {
-        if (image[i + 1] === 192 || image[i + 1] === 193 || image[i + 1] === 194) {
-          // read JPG dimension directly from SOF
-          return { width: image.readUInt16BE(i + 7), height: image.readUInt16BE(i + 5) };
-        }
+    var i = 4
+    while (i < image.length - 8) {
+      i += image.readUInt16BE(i);
+      if (image[i] !== 255) {
+        throw new Error('invalid image jpg format');
       }
-      ++i;
+      // Search JPG SOF
+      if (image[i + 1] === 192 || image[i + 1] === 193 || image[i + 1] === 194) {
+        return { width: image.readUInt16BE(i + 7), height: image.readUInt16BE(i + 5) };
+      }
+      i += 2;
     }
   }
 
