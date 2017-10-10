@@ -67,7 +67,7 @@ ImageMeasure.prototype.measureImage = function(src) {
         try {
           image = PDFImage.open(realSrc, label);
         } catch (error) {
-          throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
+          throw new Error('invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)');
         }
         image.embed(that.pdfKitDoc);
         that.pdfKitDoc._imageRegistry[src] = image;
@@ -76,13 +76,12 @@ ImageMeasure.prototype.measureImage = function(src) {
     }
 
     // check if src is a local file path
-    var stats = fs.statSync(src);
-    if (stats.isFile()) {
+    try {
       that.imageDictionary[src] = fs.readFileSync(src);
       return that.imageDictionary[src];
+    } catch(e) {
+      throw new Error('invalid image, images should contain dataURL entries (or local file paths in node.js)');
     }
-
-    throw 'invalid image, images should contain dataURL entries (or local file paths in node.js)';
   }
 };
 
