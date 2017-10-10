@@ -328,6 +328,13 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 				case 'image':
 					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
 					break;
+        case 'qr':
+          renderVector({
+            type: 'path',
+            d: item.item.d.join(''),
+            color: item.item.color
+          }, pdfKitDoc);
+          break;
 			}
 			renderedItems++;
 			progressCallback(renderedItems / totalItems);

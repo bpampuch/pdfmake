@@ -757,12 +757,11 @@ function buildCanvas(data, options) {
 		for (var j = 0; j < n; ++j) {
 			if (matrix[i][j]) {
 				canvas.push({
-					type: 'rect',
+					type: 'qrElement',
 					x: modSize * j,
 					y: modSize * i,
 					w: modSize,
 					h: modSize,
-					lineWidth: 0,
 					color: foreground
 				});
 			}
