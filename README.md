@@ -214,7 +214,22 @@ var pdfFonts = require('pdfmake/build/vfs_fonts.js');
 pdfMake.vfs = pdfFonts.pdfMake.vfs; 
 ```
 
+or
+
+```js
+import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
+```
+
 For Ionic and Angular see [issue](https://github.com/bpampuch/pdfmake/issues/1030).
+
+When is throwed error **Cannot read property 'TYPED_ARRAY_SUPPORT' of undefined** add to config in webpack:
+```
+exclude: [ /node_modules/, /pdfmake.js$/ ]
+```
+(see [issue](https://github.com/bpampuch/pdfmake/issues/1100#issuecomment-336728521))
+
 
 #### Server side
 
