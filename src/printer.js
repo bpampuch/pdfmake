@@ -344,8 +344,10 @@ function renderLine(line, x, y, pdfKitDoc) {
 		var newWidth;
 		var diffWidth;
 		var textTools = new TextTools(null);
+		var pageNumber = line._tocItemNode.positions[0].pageNumber.toString();
 
-		line.inlines[0].text = line._tocItemNode.positions[0].pageNumber.toString();
+		line.inlines[0].text = pageNumber;
+		line.inlines[0].linkToPage = pageNumber;
 		newWidth = textTools.widthOfString(line.inlines[0].text, line.inlines[0].font, line.inlines[0].fontSize, line.inlines[0].characterSpacing);
 		diffWidth = line.inlines[0].width - newWidth;
 		line.inlines[0].width = newWidth;
