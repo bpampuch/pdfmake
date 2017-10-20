@@ -437,7 +437,7 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 	}
 };
 
-LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow) {
+LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, height, clipCells) {
 	var self = this;
 	var pageBreaks = [], positions = [];
 
@@ -459,15 +459,21 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 
 			self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
 			if (!column._span) {
+				if (clipCells && height) {
+					self.writer.beginClip(width, height);
+				}
 				self.processNode(column);
 				addAll(positions, column.positions);
+				if (clipCells && height) {
+					self.writer.endClip();
+				}
 			} else if (column._columnEndingContext) {
 				// row-span ending
 				self.writer.context().markEnding(column);
 			}
 		}
 
-		self.writer.context().completeColumnGroup();
+		self.writer.context().completeColumnGroup(height, clipCells);
 	});
 
 	return {pageBreaks: pageBreaks, positions: positions};
@@ -558,11 +564,26 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 	var processor = new TableProcessor(tableNode);
 
 	processor.beginTable(this.writer);
+	var rowHeights = tableNode.table.heights;
 
 	for (var i = 0, l = tableNode.table.body.length; i < l; i++) {
-		processor.beginRow(i, this.writer);
+		processor.beginRow(i, this.writer, tableNode.table.heights);
 
-		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i);
+		var height;
+		if (typeof rowHeights === 'function') {
+			height = rowHeights(i);
+		} else if (rowHeights && rowHeights.length) {
+			height = rowHeights[i];
+			if (typeof height === 'object') height = height.height;
+		} else {
+			height = rowHeights;
+		}
+
+		if (height == 'auto') {
+			height = undefined;
+		}
+
+		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height, tableNode.table.clipCells);
 		addAll(tableNode.positions, result.positions);
 
 		processor.endRow(i, this.writer, result.pageBreaks);

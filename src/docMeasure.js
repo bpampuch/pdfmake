@@ -202,6 +202,7 @@ DocMeasure.prototype.measureLeaf = function (node) {
 	node._inlines = data.items;
 	node._minWidth = data.minWidth;
 	node._maxWidth = data.maxWidth;
+	node._height = data.height;
 
 	return node;
 };
@@ -509,7 +510,8 @@ DocMeasure.prototype.measureColumns = function (node) {
 };
 
 DocMeasure.prototype.measureTable = function (node) {
-	extendTableWidths(node);
+	extendTableDimensions(node, 'widths');
+	extendTableDimensions(node, 'heights');
 	node._layout = getLayout(this.tableLayouts);
 	node._offsets = getOffsets(node._layout);
 
@@ -546,6 +548,19 @@ DocMeasure.prototype.measureTable = function (node) {
 
 			if (data.rowSpan && data.rowSpan > 1) {
 				markVSpans(node.table, row, col, data.rowSpan);
+			}
+		}
+	}
+
+	for (row = 0, rows = node.table.body.length; row < rows; row++) {
+		var r = node.table.body[row];
+		var c = node.table.heights[row];
+		c._height = 0;
+		for (col = 0, cols = r.length; col < cols; col++) {
+			if (!r[col]._span) {
+				c._height = Math.max(c._height, r[col]._height);
+			} else {
+				c._height = 0;
 			}
 		}
 	}
@@ -691,23 +706,26 @@ DocMeasure.prototype.measureTable = function (node) {
 		}
 	}
 
-	function extendTableWidths(node) {
-		if (!node.table.widths) {
-			node.table.widths = 'auto';
+	function extendTableDimensions(node, dimension) {
+		if (!node.table[dimension]) {
+			node.table[dimension] = 'auto';
 		}
 
-		if (typeof node.table.widths === 'string' || node.table.widths instanceof String) {
-			node.table.widths = [node.table.widths];
-
-			while (node.table.widths.length < node.table.body[0].length) {
-				node.table.widths.push(node.table.widths[node.table.widths.length - 1]);
-			}
+		if (typeof node.table[dimension] === 'string' || node.table[dimension] instanceof String) {
+			node.table[dimension] = [node.table[dimension]];
 		}
 
-		for (var i = 0, l = node.table.widths.length; i < l; i++) {
-			var w = node.table.widths[i];
+		var n = (dimension == 'widths') ? node.table.body[0].length : node.table.body.length;
+		while (node.table[dimension].length < n) {
+			node.table[dimension].push(node.table[dimension][node.table[dimension].length - 1]);
+		}
+
+		for (var i = 0, l = node.table[dimension].length; i < l; i++) {
+			var w = node.table[dimension][i];
 			if (typeof w === 'number' || w instanceof Number || typeof w === 'string' || w instanceof String) {
-				node.table.widths[i] = {width: w};
+				var x = {};
+				x[dimension.substring(0, dimension.length - 1)] = w;
+				node.table[dimension][i] = x;
 			}
 		}
 	}
