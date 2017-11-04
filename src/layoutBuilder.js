@@ -74,7 +74,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 				'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
 				'width', 'height'
 			]);
-			nodeInfo.startPosition = _.first(node.positions);
+			nodeInfo.startPosition = node.positions[0];
 			nodeInfo.pageNumbers = _.chain(node.positions).map('pageNumber').uniq().value();
 			nodeInfo.pages = pages.length;
 			nodeInfo.stack = isArray(node.stack);
@@ -85,7 +85,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 		return _.some(linearNodeList, function (node, index, followingNodeList) {
 			if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 				node.pageBreakCalculated = true;
-				var pageNumber = _.first(node.nodeInfo.pageNumbers);
+				var pageNumber = node.nodeInfo.pageNumbers[0];
 
 				var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
 					return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
