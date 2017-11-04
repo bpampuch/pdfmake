@@ -82,7 +82,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			node.nodeInfo = nodeInfo;
 		});
 
-		return _.some(linearNodeList, function (node, index, followingNodeList) {
+		return linearNodeList.some(function (node, index, followingNodeList) {
 			if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 				node.pageBreakCalculated = true;
 				var pageNumber = node.nodeInfo.pageNumbers[0];
