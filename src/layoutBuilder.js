@@ -64,8 +64,8 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			return false;
 		}
 
-		linearNodeList = _.reject(linearNodeList, function (node) {
-			return _.isEmpty(node.positions);
+		linearNodeList = linearNodeList.filter(function (node) {
+			return node.positions.length > 0;
 		});
 
 		linearNodeList.forEach(function (node) {
