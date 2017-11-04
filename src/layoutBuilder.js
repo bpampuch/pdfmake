@@ -88,15 +88,15 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 				var pageNumber = _.first(node.nodeInfo.pageNumbers);
 
 				var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
-					return _.includes(node0.nodeInfo.pageNumbers, pageNumber);
+					return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
 				}).value();
 
 				var nodesOnNextPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
-					return _.includes(node0.nodeInfo.pageNumbers, pageNumber + 1);
+					return node0.nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1;
 				}).value();
 
 				var previousNodesOnPage = _.chain(followingNodeList).take(index).filter(function (node0) {
-					return _.includes(node0.nodeInfo.pageNumbers, pageNumber);
+					return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
 				}).value();
 
 				if (
