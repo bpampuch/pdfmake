@@ -19,6 +19,8 @@ var isFunction = require('./helpers').isFunction;
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
 
+_.noConflict();
+
 function addAll(target, otherArray) {
 	_.each(otherArray, function (item) {
 		target.push(item);

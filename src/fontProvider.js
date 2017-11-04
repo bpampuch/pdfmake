@@ -1,10 +1,7 @@
 /* jslint node: true */
 'use strict';
 
-var _ = require('lodash');
 var isArray = require('./helpers').isArray;
-
-_.noConflict();
 
 function typeName(bold, italics) {
 	var type = 'normal';
