@@ -1,8 +1,6 @@
 /* jslint node: true */
 'use strict';
 
-var _ = require('lodash');
-
 var sizes = require('../../src/standardPageSizes');
 var PdfKit = require('pdfkit');
 var LayoutBuilder = require('../../src/layoutBuilder');
@@ -51,7 +49,7 @@ IntegrationTestHelper.prototype.renderPages = function (sizeName, docDefinition)
 };
 
 IntegrationTestHelper.prototype.getInlineTexts = function (pages, options) {
-	return _.map(pages[options.page].items[options.item].item.inlines, 'text');
+	return pages[options.page].items[options.item].item.inlines.map(inline => inline.text);
 };
 
 IntegrationTestHelper.prototype.getWidthOfString = function (inlines) {

@@ -2,7 +2,6 @@
 'use strict';
 
 var assert = require('assert');
-var _ = require('lodash');
 var sinon = require('sinon');
 var TableProcessor = require('../src/tableProcessor');
 
@@ -43,7 +42,7 @@ describe('TableProcessor', function () {
 		};
 
 		contextFake = {
-			moveDown: _.noop
+			moveDown: function () {}
 		};
 
 		writerFake = {
@@ -55,8 +54,8 @@ describe('TableProcessor', function () {
 				addVectorCallCount++;
 			},
 			tracker: {
-				startTracking: _.noop,
-				stopTracking: _.noop
+				startTracking: function () {},
+				stopTracking: function () {}
 			}
 		};
 
@@ -144,13 +143,13 @@ describe('TableProcessor', function () {
 						total: 56472
 					},
 					_layout: {
-						paddingLeft: _.noop,
-						paddingRight: _.noop,
-						paddingBottom: _.noop,
-						paddingTop: _.noop,
-						vLineWidth: _.noop,
-						hLineWidth: _.noop,
-						fillColor: _.noop
+						paddingLeft: function () {},
+						paddingRight: function () {},
+						paddingBottom: function () {},
+						paddingTop: function () {},
+						vLineWidth: function () {},
+						hLineWidth: function () {},
+						fillColor: function () {}
 					}
 				};
 			};
@@ -171,23 +170,23 @@ describe('TableProcessor', function () {
 				context: function () {
 					return {
 						availableWidth: 56473,
-						moveDown: _.noop
+						moveDown: function () {}
 					};
 				},
 				repeatables: [],
 				tracker: {
-					stopTracking: _.noop
+					stopTracking: function () {}
 				},
-				addVector: _.noop,
+				addVector: function () {},
 				popFromRepeatables: sinon.spy(),
 				pushToRepeatables: function (repeatable) {
 					assert.equal(repeatable, header);
 				},
-				beginUnbreakableBlock: _.noop,
+				beginUnbreakableBlock: function () {},
 				currentBlockToRepeatable: function () {
 					return header;
 				},
-				commitUnbreakableBlock: _.noop
+				commitUnbreakableBlock: function () {}
 			};
 
 			var pageBreaks = [];

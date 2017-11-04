@@ -2,7 +2,6 @@
 'use strict';
 
 var assert = require('assert');
-var _ = require('lodash');
 var sizes = require('../../src/standardPageSizes');
 
 var integrationTestHelper = require('./integrationTestHelper');
@@ -12,11 +11,11 @@ describe('Integration test: tables', function () {
 	var testHelper = new integrationTestHelper();
 
 	function getColumnText(lines, options) {
-		return _.map(lines[options.cell].item.inlines, 'text').join('');
+		return lines[options.cell].item.inlines.map(inline => inline.text).join('');
 	}
 
 	function getCells(pages, options) {
-		return _.filter(pages[options.pageNumber].items, {type: 'line'});
+		return pages[options.pageNumber].items.filter(node => node.type === 'line');
 	}
 
 	var TABLE_PADDING_X = 4;
@@ -48,11 +47,11 @@ describe('Integration test: tables', function () {
 
 		var firstColumnSpacing = startX + (TABLE_PADDING_X) * 2 + TABLE_BORDER_STRENGTH * 1 + lines[0].item.maxWidth;
 
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'x'), [
+		assert.deepEqual(lines.map(node => node.item).map(item => item.x), [
 			startX, firstColumnSpacing,
 			startX, firstColumnSpacing]);
 
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'y'), [
+		assert.deepEqual(lines.map(node => node.item).map(item => item.y), [
 			startY, startY,
 			testHelper.MARGINS.top + TABLE_LINE_HEIGHT, testHelper.MARGINS.top + TABLE_LINE_HEIGHT
 		]);
@@ -86,13 +85,13 @@ describe('Integration test: tables', function () {
 
 		var bulletSpacing = testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER);
 
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'x'), [
+		assert.deepEqual(lines.map(node => node.item).map(item => item.x), [
 			startX,
 			startX + bulletSpacing,
 			startX + bulletSpacing
 		]);
 
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'y'), [
+		assert.deepEqual(lines.map(node => node.item).map(item => item.y), [
 			startY,
 			testHelper.MARGINS.top + TABLE_LINE_HEIGHT,
 			testHelper.MARGINS.top + TABLE_LINE_HEIGHT + testHelper.LINE_HEIGHT
@@ -135,7 +134,7 @@ describe('Integration test: tables', function () {
 		var startSubTableX = (startX + TABLE_PADDING_X + TABLE_BORDER_STRENGTH);
 		var firstSubColumnSpacing = startSubTableX + (TABLE_PADDING_X) * 2 + TABLE_BORDER_STRENGTH + lines[3].item.maxWidth;
 
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'x'), [
+		assert.deepEqual(lines.map(node => node.item).map(item => item.x), [
 			startX,
 			firstColumnSpacing,
 
@@ -145,7 +144,7 @@ describe('Integration test: tables', function () {
 			firstColumnSpacing
 		]);
 
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'y'), [
+		assert.deepEqual(lines.map(node => node.item).map(item => item.y), [
 			startY,
 			startY,
 
@@ -185,12 +184,12 @@ describe('Integration test: tables', function () {
 
 		var firstColumnSpacing = startX + TABLE_PADDING_X * 2 + TABLE_BORDER_STRENGTH + definedWidth;
 
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'x'), [
+		assert.deepEqual(lines.map(node => node.item).map(item => item.x), [
 			startX,
 			firstColumnSpacing
 		]);
 
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'y'), [
+		assert.deepEqual(lines.map(node => node.item).map(item => item.y), [
 			startY,
 			startY
 		]);
@@ -223,12 +222,12 @@ describe('Integration test: tables', function () {
 
 		var firstColumnSpacing = startX + TABLE_PADDING_X * 2 + TABLE_BORDER_STRENGTH + definedWidth;
 
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'x'), [
+		assert.deepEqual(lines.map(node => node.item).map(item => item.x), [
 			startX,
 			firstColumnSpacing
 		]);
 
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'y'), [
+		assert.deepEqual(lines.map(node => node.item).map(item => item.y), [
 			startY,
 			startY
 		]);
@@ -257,8 +256,8 @@ describe('Integration test: tables', function () {
 		assert.equal(pages.length, 1);
 		assert.equal(lines.length, 2);
 
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'x')[0], startX);
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'y')[0], startY);
+		assert.deepEqual(lines.map(node => node.item).map(item => item.x)[0], startX);
+		assert.deepEqual(lines.map(node => node.item).map(item => item.y)[0], startY);
 
 		assert.deepEqual(getColumnText(lines, {cell: 0}), 'Column 1 with colspan 2');
 		assert.deepEqual(getColumnText(lines, {cell: 1}), 'Column 2');
@@ -283,8 +282,8 @@ describe('Integration test: tables', function () {
 		assert.equal(pages.length, 1);
 		assert.equal(lines.length, 2);
 
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'x')[0], startX);
-		assert.deepEqual(_.map(_.map(lines, 'item'), 'y')[0], startY);
+		assert.deepEqual(lines.map(node => node.item).map(item => item.x)[0], startX);
+		assert.deepEqual(lines.map(node => node.item).map(item => item.y)[0], startY);
 
 		assert.deepEqual(getColumnText(lines, {cell: 0}), 'Row 1 with rowspan 2');
 		assert.deepEqual(getColumnText(lines, {cell: 1}), 'Row 2');

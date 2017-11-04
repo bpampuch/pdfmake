@@ -2,7 +2,6 @@
 'use strict';
 
 var assert = require('assert');
-var _ = require('lodash');
 var sizes = require('../../src/standardPageSizes');
 
 var integrationTestHelper = require('./integrationTestHelper');
@@ -33,8 +32,8 @@ describe('Integration test: columns', function () {
 
 		assert.equal(pages.length, 1);
 		assert.equal(pages[0].items.length, 4);
-		assert.deepEqual(_.map(_.map(pages[0].items, 'item'), 'x'), [testHelper.MARGINS.left, testHelper.MARGINS.left, columnSpacing, columnSpacing]);
-		assert.deepEqual(_.map(_.map(pages[0].items, 'item'), 'y'), [testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT, testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT]);
+		assert.deepEqual(pages[0].items.map(node => node.item).map(item => item.x), [testHelper.MARGINS.left, testHelper.MARGINS.left, columnSpacing, columnSpacing]);
+		assert.deepEqual(pages[0].items.map(node => node.item).map(item => item.y), [testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT, testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT]);
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}).join(''), 'Lorem ipsum Malit profecta ');
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}).join(''), 'versatur');
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 2}).join(''), 'and alta adipisicing elit Malit ');
@@ -65,8 +64,8 @@ describe('Integration test: columns', function () {
 
 		assert.equal(pages.length, 1);
 		assert.equal(pages[0].items.length, 3);
-		assert.deepEqual(_.map(_.map(pages[0].items, 'item'), 'x'), [testHelper.MARGINS.left, testHelper.MARGINS.left + columnSpacing, testHelper.MARGINS.left + 2 * columnSpacing]);
-		assert.deepEqual(_.map(_.map(pages[0].items, 'item'), 'y'), [testHelper.MARGINS.top, testHelper.MARGINS.top, testHelper.MARGINS.top]);
+		assert.deepEqual(pages[0].items.map(node => node.item).map(item => item.x), [testHelper.MARGINS.left, testHelper.MARGINS.left + columnSpacing, testHelper.MARGINS.left + 2 * columnSpacing]);
+		assert.deepEqual(pages[0].items.map(node => node.item).map(item => item.y), [testHelper.MARGINS.top, testHelper.MARGINS.top, testHelper.MARGINS.top]);
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}).join(''), 'dolor sit amet');
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}).join(''), 'Diu concederetur.');
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 2}).join(''), 'dolor sit amet');
@@ -103,16 +102,16 @@ describe('Integration test: columns', function () {
 
 		assert.equal(pages.length, 1);
 		assert.equal(pages[0].items.length, 6);
-		var items = _.map(pages[0].items, 'item');
-		assert.deepEqual(_.map(items, 'x'), [
+		var items = pages[0].items.map(node => node.item);
+		assert.deepEqual(items.map(item => item.x), [
 			leftColumnSpacing, leftColumnSpacing, leftColumnSpacing, leftColumnSpacing,
 			rightColumnSpacing, rightColumnSpacing
 		]);
-		assert.deepEqual(_.map(items, 'y'), [
+		assert.deepEqual(items.map(item => item.y), [
 			testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT, testHelper.MARGINS.top + 2 * testHelper.LINE_HEIGHT, testHelper.MARGINS.top + 3 * testHelper.LINE_HEIGHT,
 			testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT
 		]);
-		assert.deepEqual(_.map(items, 'maxWidth'), [
+		assert.deepEqual(items.map(item => item.maxWidth), [
 			definedWidth, definedWidth, definedWidth, definedWidth,
 			starWidth, starWidth
 		]);
@@ -150,29 +149,29 @@ describe('Integration test: columns', function () {
 		};
 
 		var pages = testHelper.renderPages('A5', dd);
-		var items = _.map(pages[0].items, 'item');
+		var items = pages[0].items.map(node => node.item);
 
 		var definedWidth = dd.content[0].columns[2].width,
 			autoColumnSpacing = testHelper.MARGINS.left,
 			fixedColumnSpacing = sizes.A5[0] - testHelper.MARGINS.right - definedWidth,
-			autoWidth = _.chain(items).take(2).map('maxWidth').max().value(),
+			autoWidth = Math.max(...items.slice(0, 2).map(node => node.maxWidth)),
 			starWidth = sizes.A5[0] - (testHelper.MARGINS.left + testHelper.MARGINS.right) - 2 * dd.defaultStyle.columnGap - definedWidth - autoWidth,
 			starColumnSpacing = autoColumnSpacing + autoWidth + dd.defaultStyle.columnGap;
 
 
 		assert.equal(pages.length, 1);
 		assert.equal(pages[0].items.length, 5);
-		assert.deepEqual(_.map(items, 'x'), [
+		assert.deepEqual(items.map(item => item.x), [
 			autoColumnSpacing, autoColumnSpacing,
 			starColumnSpacing, starColumnSpacing,
 			fixedColumnSpacing
 		]);
-		assert.deepEqual(_.map(items, 'y'), [
+		assert.deepEqual(items.map(item => item.y), [
 			testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT,
 			testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT,
 			testHelper.MARGINS.top
 		]);
-		assert.deepEqual(_.map(items, 'maxWidth'), [
+		assert.deepEqual(items.map(item => item.maxWidth), [
 			autoWidth, autoWidth,
 			starWidth, starWidth,
 			definedWidth
@@ -206,16 +205,16 @@ describe('Integration test: columns', function () {
 		};
 
 		var pages = testHelper.renderPages('A5', dd);
-		var items = _.map(pages[0].items, 'item');
+		var items = pages[0].items.map(node => node.item);
 
-		var autoWidth = _.chain(items).take(2).map('maxWidth').max().value(),
+		var autoWidth = Math.max(...items.slice(0, 2).map(node => node.maxWidth)),
 			leftColumnSpacing = testHelper.MARGINS.left,
 			rightColumnSpacing = leftColumnSpacing + autoWidth + dd.defaultStyle.columnGap;
 
 		assert.equal(pages.length, 1);
 		assert.equal(pages[0].items.length, 2);
-		assert.deepEqual(_.map(items, 'x'), [leftColumnSpacing, rightColumnSpacing]);
-		assert.deepEqual(_.map(items, 'y'), [testHelper.MARGINS.top, testHelper.MARGINS.top]);
+		assert.deepEqual(items.map(item => item.x), [leftColumnSpacing, rightColumnSpacing]);
+		assert.deepEqual(items.map(item => item.y), [testHelper.MARGINS.top, testHelper.MARGINS.top]);
 
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}).join(''), 'val');
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}).join(''), 'val');
@@ -225,10 +224,11 @@ describe('Integration test: columns', function () {
 		var dd = {
 			content: [
 				{columns: []},
-				{columns: [
-						{text: _.map(new Array(80), () => 'Lorem ipsum')}
+				{
+					columns: [
+						{text: new Array(80).fill().map(() => 'Lorem ipsum')}
 					]
-				},
+				}
 			]
 		};
 		var pages = testHelper.renderPages('A6', dd);
@@ -261,21 +261,21 @@ describe('Integration test: columns', function () {
 		};
 
 		var pages = testHelper.renderPages('A5', dd);
-		var items = _.map(pages[0].items, 'item');
+		var items = pages[0].items.map(node => node.item);
 
 		var gap = dd.defaultStyle.columnGap;
-		var loremIpsumWidth = _.chain(items).takeRight(3).map('maxWidth').max().value(),
+		var loremIpsumWidth = Math.max(...items.slice(items.length - 3, items.length).map(node => node.maxWidth)),
 			definedWidth = dd.content[0].columns[0].width,
 			leftColumnSpacing = testHelper.MARGINS.left,
 			rightColumnSpacing = leftColumnSpacing + definedWidth + gap;
 
 		assert.equal(pages.length, 1);
 		assert.equal(pages[0].items.length, 5);
-		assert.deepEqual(_.map(items, 'x'), [
+		assert.deepEqual(items.map(item => item.x), [
 			leftColumnSpacing, leftColumnSpacing,
 			rightColumnSpacing, rightColumnSpacing + (gap + loremIpsumWidth), rightColumnSpacing + 2 * (gap + loremIpsumWidth)
 		]);
-		assert.deepEqual(_.map(items, 'y'), [testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT, testHelper.MARGINS.top, testHelper.MARGINS.top, testHelper.MARGINS.top]);
+		assert.deepEqual(items.map(item => item.y), [testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT, testHelper.MARGINS.top, testHelper.MARGINS.top, testHelper.MARGINS.top]);
 
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}).join(''), 'Lorem ipsum ');
 		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}).join(''), 'dolor sit amet');

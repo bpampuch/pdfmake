@@ -3,8 +3,9 @@
 'use strict';
 
 var assert = require('assert');
-var Printer = require('../src/printer.js');
 var sinon = require('sinon');
+
+var Printer = require('../src/printer.js');
 var Pdfkit = require('pdfkit');
 
 describe('Printer', function () {
