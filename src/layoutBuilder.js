@@ -99,10 +99,18 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 					return _.includes(node0.nodeInfo.pageNumbers, pageNumber);
 				}).value();
 
-				if (pageBreakBeforeFct(node.nodeInfo,
-					_.map(followingNodesOnPage, 'nodeInfo'),
-					_.map(nodesOnNextPage, 'nodeInfo'),
-					_.map(previousNodesOnPage, 'nodeInfo'))) {
+				if (
+					pageBreakBeforeFct(
+						node.nodeInfo,
+						followingNodesOnPage.map(function (node) {
+							return node.nodeInfo;
+						}),
+						nodesOnNextPage.map(function (node) {
+							return node.nodeInfo;
+						}),
+						previousNodesOnPage.map(function (node) {
+							return node.nodeInfo;
+						}))) {
 					node.pageBreak = 'before';
 					return true;
 				}
