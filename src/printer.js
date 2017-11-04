@@ -1,7 +1,6 @@
 /* jslint node: true */
 'use strict';
 
-var _ = require('lodash');
 var FontProvider = require('./fontProvider');
 var LayoutBuilder = require('./layoutBuilder');
 var PdfKit = require('pdfkit');
@@ -14,8 +13,6 @@ var isString = require('./helpers').isString;
 var isNumber = require('./helpers').isNumber;
 var isBoolean = require('./helpers').isBoolean;
 var isArray = require('./helpers').isArray;
-
-_.noConflict();
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -309,9 +306,13 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	pdfKitDoc._pdfMakePages = pages;
 	pdfKitDoc.addPage();
 
-	var totalItems = progressCallback && _.sumBy(pages, function (page) {
-		return page.items.length;
-	});
+	var totalItems = 0;
+	if (progressCallback) {
+		pages.forEach(function (page) {
+			totalItems += page.items.length;
+		});
+	}
+
 	var renderedItems = 0;
 	progressCallback = progressCallback || function () {};
 

@@ -22,7 +22,7 @@ var StyleContextStack = require('./styleContextStack');
 _.noConflict();
 
 function addAll(target, otherArray) {
-	_.each(otherArray, function (item) {
+	otherArray.forEach(function (item) {
 		target.push(item);
 	});
 }
@@ -68,7 +68,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			return _.isEmpty(node.positions);
 		});
 
-		_.each(linearNodeList, function (node) {
+		linearNodeList.forEach(function (node) {
 			var nodeInfo = _.pick(node, [
 				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
 				'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
@@ -115,7 +115,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
 
 	function resetXYs(result) {
-		_.each(result.linearNodeList, function (node) {
+		result.linearNodeList.forEach(function (node) {
 			node.resetXY();
 		});
 	}
@@ -296,24 +296,28 @@ function decorateNode(node) {
 	var x = node.x, y = node.y;
 	node.positions = [];
 
-	_.each(node.canvas, function (vector) {
-		var x = vector.x, y = vector.y, x1 = vector.x1, y1 = vector.y1, x2 = vector.x2, y2 = vector.y2;
-		vector.resetXY = function () {
-			vector.x = x;
-			vector.y = y;
-			vector.x1 = x1;
-			vector.y1 = y1;
-			vector.x2 = x2;
-			vector.y2 = y2;
-		};
-	});
+	if (isArray(node.canvas)) {
+		node.canvas.forEach(function (vector) {
+			var x = vector.x, y = vector.y, x1 = vector.x1, y1 = vector.y1, x2 = vector.x2, y2 = vector.y2;
+			vector.resetXY = function () {
+				vector.x = x;
+				vector.y = y;
+				vector.x1 = x1;
+				vector.y1 = y1;
+				vector.x2 = x2;
+				vector.y2 = y2;
+			};
+		});
+	}
 
 	node.resetXY = function () {
 		node.x = x;
 		node.y = y;
-		_.each(node.canvas, function (vector) {
-			vector.resetXY();
-		});
+		if (isArray(node.canvas)) {
+			node.canvas.forEach(function (vector) {
+				vector.resetXY();
+			});
+		}
 	};
 }
 
