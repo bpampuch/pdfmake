@@ -10,6 +10,8 @@ var PageElementWriter = require('./pageElementWriter');
 var ColumnCalculator = require('./columnCalculator');
 var TableProcessor = require('./tableProcessor');
 var Line = require('./line');
+var isString = require('./helpers').isString;
+var isArray = require('./helpers').isArray;
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 var fontStringify = require('./helpers').fontStringify;
@@ -73,7 +75,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			nodeInfo.startPosition = _.first(node.positions);
 			nodeInfo.pageNumbers = _.chain(node.positions).map('pageNumber').uniq().value();
 			nodeInfo.pages = pages.length;
-			nodeInfo.stack = _.isArray(node.stack);
+			nodeInfo.stack = isArray(node.stack);
 
 			node.nodeInfo = nodeInfo;
 		});
@@ -224,7 +226,7 @@ LayoutBuilder.prototype.addHeadersAndFooters = function (header, footer) {
 };
 
 LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaultStyle) {
-	if (typeof watermark === 'string') {
+	if (isString(watermark)) {
 		watermark = {'text': watermark};
 	}
 

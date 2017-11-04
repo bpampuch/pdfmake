@@ -1,6 +1,8 @@
 /* jslint node: true */
 'use strict';
 
+var isArray = require('./helpers').isArray;
+
 function groupDecorations(line) {
 	var groups = [], curGroup = null;
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
@@ -12,7 +14,7 @@ function groupDecorations(line) {
 		}
 		var color = inline.decorationColor || inline.color || 'black';
 		var style = inline.decorationStyle || 'solid';
-		decoration = Array.isArray(decoration) ? decoration : [decoration];
+		decoration = isArray(decoration) ? decoration : [decoration];
 		for (var ii = 0, ll = decoration.length; ii < ll; ii++) {
 			var deco = decoration[ii];
 			if (!curGroup || deco !== curGroup.decoration ||

@@ -3,6 +3,7 @@
 'use strict';
 
 var PdfPrinter = require('../printer');
+var isFunction = require('../helpers').isFunction;
 var FileSaver = require('../../libs/FileSaver.js/FileSaver');
 var saveAs = FileSaver.saveAs;
 
@@ -129,7 +130,7 @@ Document.prototype.print = function (options, win) {
 };
 
 Document.prototype.download = function (defaultFileName, cb, options) {
-	if (typeof defaultFileName === 'function') {
+	if (isFunction(defaultFileName)) {
 		cb = defaultFileName;
 		defaultFileName = null;
 	}
@@ -138,7 +139,7 @@ Document.prototype.download = function (defaultFileName, cb, options) {
 	this.getBlob(function (result) {
 		saveAs(result, defaultFileName);
 
-		if (typeof cb === 'function') {
+		if (isFunction(cb)) {
 			cb();
 		}
 	}, options);

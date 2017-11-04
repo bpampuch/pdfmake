@@ -1,6 +1,30 @@
 /* jslint node: true */
 'use strict';
 
+function isString(variable) {
+	return typeof variable === 'string' || variable instanceof String;
+}
+
+function isNumber(variable) {
+	return typeof variable === 'number' || variable instanceof Number;
+}
+
+function isBoolean(variable) {
+	return typeof variable === 'boolean';
+}
+
+function isArray(variable) {
+	return Array.isArray(variable);
+}
+
+function isFunction(variable) {
+	return typeof variable === 'function';
+}
+
+function isObject(variable) {
+	return variable !== null && typeof variable === 'object';
+}
+
 function pack() {
 	var result = {};
 
@@ -48,15 +72,14 @@ function fontStringify(key, val) {
 	return val;
 }
 
-function isFunction(functionToCheck) {
-	var getType = {};
-	return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
-}
-
-
 module.exports = {
+	isString: isString,
+	isNumber: isNumber,
+	isBoolean: isBoolean,
+	isArray: isArray,
+	isFunction: isFunction,
+	isObject: isObject,
 	pack: pack,
 	fontStringify: fontStringify,
-	offsetVector: offsetVector,
-	isFunction: isFunction
+	offsetVector: offsetVector
 };

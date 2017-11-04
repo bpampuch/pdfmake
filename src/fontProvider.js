@@ -2,6 +2,7 @@
 'use strict';
 
 var _ = require('lodash');
+var isArray = require('./helpers').isArray;
 
 _.noConflict();
 
@@ -46,7 +47,7 @@ FontProvider.prototype.provideFont = function (familyName, bold, italics) {
 
 	if (!this.fontCache[familyName][type]) {
 		var def = this.fonts[familyName][type];
-		if (!Array.isArray(def)) {
+		if (!isArray(def)) {
 			def = [def];
 		}
 		this.fontCache[familyName][type] = this.pdfKitDoc.font.apply(this.pdfKitDoc, def)._font;

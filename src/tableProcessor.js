@@ -2,6 +2,7 @@
 'use strict';
 
 var ColumnCalculator = require('./columnCalculator');
+var isFunction = require('./helpers').isFunction;
 
 function TableProcessor(tableNode) {
 	this.tableNode = tableNode;
@@ -195,7 +196,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 						y1: y,
 						y2: y,
 						lineWidth: lineWidth,
-						lineColor: typeof this.layout.hLineColor === 'function' ? this.layout.hLineColor(lineIndex, this.tableNode) : this.layout.hLineColor
+						lineColor: isFunction(this.layout.hLineColor) ? this.layout.hLineColor(lineIndex, this.tableNode) : this.layout.hLineColor
 					}, false, overrideY);
 					currentLine = null;
 				}
@@ -218,7 +219,7 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineIndex, wri
 		y1: y0,
 		y2: y1,
 		lineWidth: width,
-		lineColor: typeof this.layout.vLineColor === 'function' ? this.layout.vLineColor(vLineIndex, this.tableNode) : this.layout.vLineColor
+		lineColor: isFunction(this.layout.vLineColor) ? this.layout.vLineColor(vLineIndex, this.tableNode) : this.layout.vLineColor
 	}, false, true);
 };
 
@@ -309,7 +310,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			if (i < l - 1) {
 				var fillColor = body[rowIndex][colIndex].fillColor;
 				if (!fillColor) {
-					fillColor = typeof this.layout.fillColor === 'function' ? this.layout.fillColor(rowIndex, this.tableNode) : this.layout.fillColor;
+					fillColor = isFunction(this.layout.fillColor) ? this.layout.fillColor(rowIndex, this.tableNode) : this.layout.fillColor;
 				}
 				if (fillColor) {
 					var wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;

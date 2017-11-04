@@ -1,6 +1,8 @@
 /* jslint node: true */
 'use strict';
 
+var isString = require('./helpers').isString;
+
 function buildColumnWidths(columns, availableWidth) {
 	var autoColumns = [],
 		autoMin = 0, autoMax = 0,
@@ -26,7 +28,7 @@ function buildColumnWidths(columns, availableWidth) {
 
 	fixedColumns.forEach(function (col) {
 		// width specified as %
-		if (typeof col.width === 'string' && /\d+%/.test(col.width)) {
+		if (isString(col.width) && /\d+%/.test(col.width)) {
 			col.width = parseFloat(col.width) * initial_availableWidth / 100;
 		}
 		if (col.width < (col._minWidth) && col.elasticWidth) {

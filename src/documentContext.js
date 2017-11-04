@@ -2,6 +2,7 @@
 'use strict';
 
 var TraversalTracker = require('./traversalTracker');
+var isString = require('./helpers').isString;
 
 /**
  * Creates an instance of DocumentContext - a store for current x, y positions and available width/height.
@@ -169,7 +170,7 @@ DocumentContext.prototype.endDetachedBlock = function () {
 function pageOrientation(pageOrientationString, currentPageOrientation) {
 	if (pageOrientationString === undefined) {
 		return currentPageOrientation;
-	} else if ((typeof pageOrientationString === 'string' || pageOrientationString instanceof String) && (pageOrientationString.toLowerCase() === 'landscape')) {
+	} else if (isString(pageOrientationString) && (pageOrientationString.toLowerCase() === 'landscape')) {
 		return 'landscape';
 	} else {
 		return 'portrait';

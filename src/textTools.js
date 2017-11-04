@@ -1,6 +1,10 @@
 /* jslint node: true */
 'use strict';
 
+var isString = require('./helpers').isString;
+var isNumber = require('./helpers').isNumber;
+var isObject = require('./helpers').isObject;
+var isArray = require('./helpers').isArray;
 var LineBreaker = require('linebreak');
 
 var LEADING = /^(\s)+/g;
@@ -141,7 +145,7 @@ function copyStyle(source, destination) {
 function normalizeTextArray(array, styleContextStack) {
 	function flatten(array) {
 		return array.reduce(function (prev, cur) {
-			var current = Array.isArray(cur.text) ? flatten(cur.text) : cur;
+			var current = isArray(cur.text) ? flatten(cur.text) : cur;
 			var more = [].concat(current).some(Array.isArray);
 			return prev.concat(more ? flatten(current) : current);
 		}, []);
@@ -149,7 +153,7 @@ function normalizeTextArray(array, styleContextStack) {
 
 	var results = [];
 
-	if (!Array.isArray(array)) {
+	if (!isArray(array)) {
 		array = [array];
 	}
 
@@ -161,7 +165,7 @@ function normalizeTextArray(array, styleContextStack) {
 		var words;
 
 		var noWrap = getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
-		if (item !== null && (typeof item === 'object' || item instanceof Object)) {
+		if (isObject(item)) {
 			words = splitWords(normalizeString(item.text), noWrap);
 			style = copyStyle(item);
 		} else {
@@ -189,9 +193,9 @@ function normalizeTextArray(array, styleContextStack) {
 function normalizeString(value) {
 	if (value === undefined || value === null) {
 		return '';
-	} else if (typeof value === 'number') {
+	} else if (isNumber(value)) {
 		return value.toString();
-	} else if (typeof value === 'string' || value instanceof String) {
+	} else if (isString(value)) {
 		return value;
 	} else {
 		return value.toString();

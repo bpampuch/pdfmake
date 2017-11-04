@@ -1,6 +1,10 @@
 /* jslint node: true */
 'use strict';
 
+var isString = require('./helpers').isString;
+var isNumber = require('./helpers').isNumber;
+var isBoolean = require('./helpers').isBoolean;
+var isArray = require('./helpers').isArray;
 var fontStringify = require('./helpers').fontStringify;
 
 function DocPreprocessor() {
@@ -14,11 +18,11 @@ DocPreprocessor.prototype.preprocessDocument = function (docStructure) {
 
 DocPreprocessor.prototype.preprocessNode = function (node) {
 	// expand shortcuts and casting values
-	if (Array.isArray(node)) {
+	if (isArray(node)) {
 		node = {stack: node};
-	} else if (typeof node === 'string' || node instanceof String) {
+	} else if (isString(node)) {
 		node = {text: node};
-	} else if (typeof node === 'number' || typeof node === 'boolean') {
+	} else if (isNumber(node) || isBoolean(node)) {
 		node = {text: node.toString()};
 	} else if (node === null) {
 		node = {text: ''};
@@ -104,12 +108,12 @@ DocPreprocessor.prototype.preprocessTable = function (node) {
 
 DocPreprocessor.prototype.preprocessText = function (node) {
 	if (node.tocItem) {
-		if (!Array.isArray(node.tocItem)) {
+		if (!isArray(node.tocItem)) {
 			node.tocItem = [node.tocItem];
 		}
 
 		for (var i = 0, l = node.tocItem.length; i < l; i++) {
-			if (!(typeof node.tocItem[i] === 'string' || node.tocItem[i] instanceof String)) {
+			if (!isString(node.tocItem[i])) {
 				node.tocItem[i] = '_default_';
 			}
 

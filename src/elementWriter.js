@@ -2,6 +2,7 @@
 'use strict';
 
 var Line = require('./line');
+var isNumber = require('./helpers').isNumber;
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 var DocumentContext = require('./documentContext');
@@ -256,7 +257,7 @@ ElementWriter.prototype.pushContext = function (contextOrWidth, height) {
 		contextOrWidth = this.context.availableWidth;
 	}
 
-	if (typeof contextOrWidth === 'number' || contextOrWidth instanceof Number) {
+	if (isNumber(contextOrWidth)) {
 		contextOrWidth = new DocumentContext({width: contextOrWidth, height: height}, {left: 0, right: 0, top: 0, bottom: 0});
 	}
 

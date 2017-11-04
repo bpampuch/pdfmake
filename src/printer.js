@@ -9,6 +9,11 @@ var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
 var textDecorator = require('./textDecorator');
 var TextTools = require('./textTools');
+var isFunction = require('./helpers').isFunction;
+var isString = require('./helpers').isString;
+var isNumber = require('./helpers').isNumber;
+var isBoolean = require('./helpers').isBoolean;
+var isArray = require('./helpers').isArray;
 
 _.noConflict();
 
@@ -83,7 +88,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	options = options || {};
 
 	var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
-	var compressPdf = typeof docDefinition.compress === 'boolean' ? docDefinition.compress : true;
+	var compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 
 	this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], autoFirstPage: false, compress: compressPdf});
 	setMetadata(docDefinition, this.pdfKitDoc);
@@ -101,7 +106,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 
 	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
 	var maxNumberPages = docDefinition.maxPagesNumber || -1;
-	if (typeof maxNumberPages === 'number' && maxNumberPages > -1) {
+	if (isNumber(maxNumberPages) && maxNumberPages > -1) {
 		pages = pages.slice(0, maxNumberPages);
 	}
 
@@ -158,7 +163,7 @@ function setMetadata(docDefinition, pdfKitDoc) {
 
 function calculatePageHeight(pages, margins) {
 	function getItemHeight(item) {
-		if (typeof item.item.getHeight === 'function') {
+		if (isFunction(item.item.getHeight)) {
 			return item.item.getHeight();
 		} else if (item.item._height) {
 			return item.item._height;
@@ -180,7 +185,7 @@ function calculatePageHeight(pages, margins) {
 
 function fixPageSize(pageSize, pageOrientation) {
 	function isNeedSwapPageSizes(pageOrientation) {
-		if (typeof pageOrientation === 'string' || pageOrientation instanceof String) {
+		if (isString(pageOrientation)) {
 			pageOrientation = pageOrientation.toLowerCase();
 			return ((pageOrientation === 'portrait') && (size.width > size.height)) ||
 				((pageOrientation === 'landscape') && (size.width < size.height));
@@ -206,9 +211,9 @@ function fixPageMargins(margin) {
 		return null;
 	}
 
-	if (typeof margin === 'number' || margin instanceof Number) {
+	if (isNumber(margin)) {
 		margin = {left: margin, right: margin, top: margin, bottom: margin};
-	} else if (Array.isArray(margin)) {
+	} else if (isArray(margin)) {
 		if (margin.length === 2) {
 			margin = {left: margin[0], top: margin[1], right: margin[0], bottom: margin[1]};
 		} else if (margin.length === 4) {
@@ -279,7 +284,7 @@ function registerDefaultTableLayouts(layoutBuilder) {
 }
 
 function pageSize2widthAndHeight(pageSize) {
-	if (typeof pageSize === 'string' || pageSize instanceof String) {
+	if (isString(pageSize)) {
 		var size = sizes[pageSize.toUpperCase()];
 		if (!size) {
 			throw 'Page size ' + pageSize + ' not recognized';
