@@ -1,7 +1,6 @@
 /* jslint node: true */
 'use strict';
 
-var _ = require('lodash');
 var TraversalTracker = require('./traversalTracker');
 var DocPreprocessor = require('./docPreprocessor');
 var DocMeasure = require('./docMeasure');
@@ -18,8 +17,6 @@ var fontStringify = require('./helpers').fontStringify;
 var isFunction = require('./helpers').isFunction;
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
-
-_.noConflict();
 
 function addAll(target, otherArray) {
 	otherArray.forEach(function (item) {
@@ -69,11 +66,16 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 		});
 
 		linearNodeList.forEach(function (node) {
-			var nodeInfo = _.pick(node, [
+			var nodeInfo = {};
+			[
 				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
 				'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
 				'width', 'height'
-			]);
+			].forEach(function (key) {
+				if (node[key] !== undefined) {
+					nodeInfo[key] = node[key];
+				}
+			});
 			nodeInfo.startPosition = node.positions[0];
 			nodeInfo.pageNumbers = node.positions.map(function (node) {
 				return node.pageNumber;
@@ -91,17 +93,17 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 				node.pageBreakCalculated = true;
 				var pageNumber = node.nodeInfo.pageNumbers[0];
 
-				var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
+				var followingNodesOnPage = followingNodeList.slice(index + 1).filter(function (node0) {
 					return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
-				}).value();
+				});
 
-				var nodesOnNextPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
+				var nodesOnNextPage = followingNodeList.slice(index + 1).filter(function (node0) {
 					return node0.nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1;
-				}).value();
+				});
 
-				var previousNodesOnPage = _.chain(followingNodeList).take(index).filter(function (node0) {
+				var previousNodesOnPage = followingNodeList.slice(0, index).filter(function (node0) {
 					return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
-				}).value();
+				});
 
 				if (
 					pageBreakBeforeFct(
