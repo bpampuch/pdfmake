@@ -683,6 +683,8 @@ LayoutBuilder.prototype.processCanvas = function (node) {
 		this.writer.moveToNextPage();
 	}
 
+	this.writer.alignCanvas(node);
+
 	node.canvas.forEach(function (vector) {
 		var position = this.writer.addVector(vector);
 		node.positions.push(position);

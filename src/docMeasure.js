@@ -747,6 +747,7 @@ DocMeasure.prototype.measureCanvas = function (node) {
 
 	node._minWidth = node._maxWidth = w;
 	node._minHeight = node._maxHeight = h;
+	node._alignment = this.styleStack.getProperty('alignment');
 
 	return node;
 };

@@ -164,6 +164,25 @@ ElementWriter.prototype.alignImage = function (image) {
 	}
 };
 
+ElementWriter.prototype.alignCanvas = function (node) {
+	var width = this.context.availableWidth;
+	var canvasWidth = node._minWidth;
+	var offset = 0;
+	switch (node._alignment) {
+		case 'right':
+			offset = width - canvasWidth;
+			break;
+		case 'center':
+			offset = (width - canvasWidth) / 2;
+			break;
+	}
+	if (offset) {
+		node.canvas.forEach(function (vector) {
+			offsetVector(vector, offset, 0);
+		});
+	}
+};
+
 ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index) {
 	var context = this.context;
 	var page = context.getCurrentPage(),

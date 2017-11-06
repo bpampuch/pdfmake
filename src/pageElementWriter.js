@@ -50,6 +50,10 @@ PageElementWriter.prototype.addVector = function (vector, ignoreContextX, ignore
 	return this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
 };
 
+PageElementWriter.prototype.alignCanvas = function (node) {
+	this.writer.alignCanvas(node);
+};
+
 PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
 	if (!this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition)) {
 		this.moveToNextPage();
