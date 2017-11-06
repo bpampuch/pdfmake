@@ -676,7 +676,7 @@ LayoutBuilder.prototype.processImage = function (node) {
 LayoutBuilder.prototype.processCanvas = function (node) {
 	var height = node._minHeight;
 
-	if (this.writer.context().availableHeight < height) {
+	if (node.absolutePosition === undefined && this.writer.context().availableHeight < height) {
 		// TODO: support for canvas larger than a page
 		// TODO: support for other overflow methods
 
