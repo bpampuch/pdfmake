@@ -65,6 +65,20 @@ var docDefinition = {
 					lineWidth: 3
 				},
 				{
+					type: 'line',
+					x1: 40, y1: 80,
+					x2: 260, y2: 80,
+					lineWidth: 10,
+					lineCap: 'round'
+				},
+				{
+					type: 'line',
+					x1: 40, y1: 100,
+					x2: 260, y2: 100,
+					lineWidth: 10,
+					lineCap: 'square'
+				},
+				{
 					type: 'ellipse',
 					x: 150, y: 140,
 					color: 'red',

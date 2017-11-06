@@ -434,6 +434,7 @@ function renderVector(vector, pdfKitDoc) {
 		pdfKitDoc.undash();
 	}
 	pdfKitDoc.lineJoin(vector.lineJoin || 'miter');
+	pdfKitDoc.lineCap(vector.lineCap || 'butt');
 
 	//TODO: clipping
 
