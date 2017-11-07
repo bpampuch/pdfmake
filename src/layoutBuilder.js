@@ -575,20 +575,35 @@ LayoutBuilder.prototype.processList = function (orderedList, node) {
 
 // tables
 LayoutBuilder.prototype.processTable = function (tableNode) {
+	var self = this;
+	
+	tableNode.table.insertAdditionHeaderRow = insertAdditionHeaderRow;
+	
 	var processor = new TableProcessor(tableNode);
 
 	processor.beginTable(this.writer);
 
 	for (var i = 0, l = tableNode.table.body.length; i < l; i++) {
-		processor.beginRow(i, this.writer);
-
-		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i);
-		addAll(tableNode.positions, result.positions);
-
-		processor.endRow(i, this.writer, result.pageBreaks);
+		insertRow(tableNode.table.body[i], i, false);
 	}
 
 	processor.endTable(this.writer);
+	
+	function insertAdditionHeaderRow(additionalHeaderRowFn, rowIndex) {
+		var additionRowNode = additionalHeaderRowFn(rowIndex);
+		if (additionRowNode && additionRowNode.table) {
+			var additionalTableNode = self.docMeasure.measureTable(additionRowNode);
+			var additionalRow = additionalTableNode.table.body[0];
+			
+			insertRow(additionalRow, rowIndex, true);
+		}
+	}
+	
+	function insertRow(row, rowIndex, isAdditionalHeaderRow) {
+		processor.beginRow(rowIndex, self.writer);
+		var result = self.processRow(row, tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, rowIndex);
+		processor.endRow(rowIndex, self.writer, result.pageBreaks, isAdditionalHeaderRow);
+	}
 };
 
 // leafs (texts)

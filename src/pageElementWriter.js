@@ -65,6 +65,10 @@ PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
 		this.repeatables.forEach(function (rep) {
 			this.writer.addFragment(rep, true);
 		}, this);
+		
+		if (this.repeatables) {
+			this.writer.tracker.emit('afterAddRepeatedTable', {});
+		}
 	} else {
 		this.repeatables.forEach(function (rep) {
 			this.writer.context.moveDown(rep.height);
