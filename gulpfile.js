@@ -89,3 +89,8 @@ gulp.task('buildFonts', function () {
 		}, 'buffer'))
 		.pipe(gulp.dest('build'));
 });
+
+gulp.task('watch', function() {
+	gulp.watch('./src/**', ['test', 'build']);
+	gulp.watch('./tests/**', ['test']);
+});
