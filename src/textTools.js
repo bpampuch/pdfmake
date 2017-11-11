@@ -79,6 +79,7 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	//TODO: refactor - extract from measure
 	var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
 	var fontSize = getStyleProperty({}, styleContextStack, 'fontSize', 12);
+	var fontFeatures = getStyleProperty({}, styleContextStack, 'fontFeatures', null);
 	var bold = getStyleProperty({}, styleContextStack, 'bold', false);
 	var italics = getStyleProperty({}, styleContextStack, 'italics', false);
 	var lineHeight = getStyleProperty({}, styleContextStack, 'lineHeight', 1);
@@ -87,7 +88,7 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	var font = this.fontProvider.provideFont(fontName, bold, italics);
 
 	return {
-		width: widthOfString(text, font, fontSize, characterSpacing),
+		width: widthOfString(text, font, fontSize, characterSpacing, fontFeatures),
 		height: font.lineHeight(fontSize) * lineHeight,
 		fontSize: fontSize,
 		lineHeight: lineHeight,
@@ -96,8 +97,8 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	};
 };
 
-TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpacing) {
-	return widthOfString(text, font, fontSize, characterSpacing);
+TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpacing, fontFeatures) {
+	return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
 };
 
 function splitWords(text, noWrap) {
@@ -240,6 +241,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 	normalized.forEach(function (item) {
 		var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
 		var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
+		var fontFeatures = getStyleProperty(item, styleContextStack, 'fontFeatures', null);
 		var bold = getStyleProperty(item, styleContextStack, 'bold', false);
 		var italics = getStyleProperty(item, styleContextStack, 'italics', false);
 		var color = getStyleProperty(item, styleContextStack, 'color', 'black');
@@ -256,7 +258,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
-		item.width = widthOfString(item.text, font, fontSize, characterSpacing);
+		item.width = widthOfString(item.text, font, fontSize, characterSpacing, fontFeatures);
 		item.height = font.lineHeight(fontSize) * lineHeight;
 
 		var leadingSpaces = item.text.match(LEADING);
@@ -266,12 +268,12 @@ function measure(fontProvider, textArray, styleContextStack) {
 		}
 
 		if (leadingSpaces && !preserveLeadingSpaces) {
-			item.leadingCut += widthOfString(leadingSpaces[0], font, fontSize, characterSpacing);
+			item.leadingCut += widthOfString(leadingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
 		}
 
 		var trailingSpaces = item.text.match(TRAILING);
 		if (trailingSpaces) {
-			item.trailingCut = widthOfString(trailingSpaces[0], font, fontSize, characterSpacing);
+			item.trailingCut = widthOfString(trailingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
 		} else {
 			item.trailingCut = 0;
 		}
@@ -279,6 +281,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.alignment = getStyleProperty(item, styleContextStack, 'alignment', 'left');
 		item.font = font;
 		item.fontSize = fontSize;
+		item.fontFeatures = fontFeatures;
 		item.characterSpacing = characterSpacing;
 		item.color = color;
 		item.decoration = decoration;
@@ -293,8 +296,8 @@ function measure(fontProvider, textArray, styleContextStack) {
 	return normalized;
 }
 
-function widthOfString(text, font, fontSize, characterSpacing) {
-	return font.widthOfString(text, fontSize) + ((characterSpacing || 0) * (text.length - 1));
+function widthOfString(text, font, fontSize, characterSpacing, fontFeatures) {
+	return font.widthOfString(text, fontSize, fontFeatures) + ((characterSpacing || 0) * (text.length - 1));
 }
 
 /****TESTS**** (add a leading '/' to uncomment)
