@@ -93,7 +93,7 @@ ElementWriter.prototype.addImage = function (image, index) {
 	var page = context.getCurrentPage(),
 		position = this.getCurrentPositionOnPage();
 
-	if (!page || (context.availableHeight < image._height && page.items.length > 0)) {
+	if (!page || (image.absolutePosition === undefined && context.availableHeight < image._height && page.items.length > 0)) {
 		return false;
 	}
 
@@ -121,7 +121,7 @@ ElementWriter.prototype.addQr = function (qr, index) {
 	var page = context.getCurrentPage(),
 		position = this.getCurrentPositionOnPage();
 
-	if (context.availableHeight < qr._height || !page) {
+	if (!page || (qr.absolutePosition === undefined && context.availableHeight < qr._height)) {
 		return false;
 	}
 
