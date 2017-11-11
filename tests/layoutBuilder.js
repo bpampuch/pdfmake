@@ -1310,7 +1310,7 @@ describe('LayoutBuilder', function () {
 			assert.equal(pages[0].items[1].item.y, 0);
 		});
 
-		it('should use the absolutePosition attribute without pagebreak', function () {
+		it('should use the absolutePosition attribute without pagebreak in canvas', function () {
 			var builderAP = new LayoutBuilder({width: 841.89, height: 555.28, orientation: 'portrait'}, {left: 40, right: 40, top: 40, bottom: 40}, imageMeasure);
 			builderAP.pages = [];
 			builderAP.context = [{page: -1, availableWidth: 320, availableHeight: 0}];
@@ -1334,6 +1334,48 @@ describe('LayoutBuilder', function () {
 							points: [{x: 0, y: 400}, {x: 300, y: 555.28}, {x: 200, y: 555.28}, {x: 0, y: 500}]
 						}
 					]
+				}
+			];
+
+			var pages = builderAP.layoutDocument(desc, sampleTestProvider);
+			assert.equal(pages.length, 1);
+		});
+
+		it('should use the absolutePosition attribute without pagebreak in image', function () {
+			var builderAP = new LayoutBuilder({width: 841.89, height: 555.28, orientation: 'portrait'}, {left: 40, right: 40, top: 40, bottom: 40}, imageMeasure);
+			builderAP.pages = [];
+			builderAP.context = [{page: -1, availableWidth: 320, availableHeight: 0}];
+			builderAP.styleStack = new StyleContextStack();
+			var desc = [
+				{
+					image: 'sampleImage.jpg',
+					width: 80,
+					absolutePosition: {x: 250, y: 500}
+				},
+				{
+					image: 'sampleImage.jpg',
+					width: 80,
+					absolutePosition: {x: 450, y: 520}
+				}
+			];
+
+			var pages = builderAP.layoutDocument(desc, sampleTestProvider);
+			assert.equal(pages.length, 1);
+		});
+
+		it('should use the absolutePosition attribute without pagebreak in qr', function () {
+			var builderAP = new LayoutBuilder({width: 841.89, height: 555.28, orientation: 'portrait'}, {left: 40, right: 40, top: 40, bottom: 40}, imageMeasure);
+			builderAP.pages = [];
+			builderAP.context = [{page: -1, availableWidth: 320, availableHeight: 0}];
+			builderAP.styleStack = new StyleContextStack();
+			var desc = [
+				{
+					qr: 'pdfmake',
+					absolutePosition: {x: 250, y: 500}
+				},
+				{
+					qr: 'pdfmake',
+					absolutePosition: {x: 450, y: 520}
 				}
 			];
 
