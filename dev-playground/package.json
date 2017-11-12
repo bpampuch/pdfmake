@@ -2,7 +2,7 @@
   "name": "pdfmake-server-playground",
   "version": "0.0.0",
   "dependencies": {
-    "body-parser": "^1.15.2",
-    "express": "^4.14.0"
+    "body-parser": "^1.18.2",
+    "express": "^4.16.2"
   }
 }
