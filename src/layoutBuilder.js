@@ -459,7 +459,7 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 	}
 };
 
-LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow) {
+LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, height) {
 	var self = this;
 	var pageBreaks = [], positions = [];
 
@@ -489,7 +489,7 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 			}
 		}
 
-		self.writer.context().completeColumnGroup();
+		self.writer.context().completeColumnGroup(height);
 	});
 
 	return {pageBreaks: pageBreaks, positions: positions};
@@ -581,10 +581,24 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 
 	processor.beginTable(this.writer);
 
+	var rowHeights = tableNode.table.heights;
 	for (var i = 0, l = tableNode.table.body.length; i < l; i++) {
 		processor.beginRow(i, this.writer);
 
-		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i);
+		var height;
+		if (isFunction(rowHeights)) {
+			height = rowHeights(i);
+		} else if (isArray(rowHeights)) {
+			height = rowHeights[i];
+		} else {
+			height = rowHeights;
+		}
+
+		if (height === 'auto') {
+			height = undefined;
+		}
+
+		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
 		addAll(tableNode.positions, result.positions);
 
 		processor.endRow(i, this.writer, result.pageBreaks);

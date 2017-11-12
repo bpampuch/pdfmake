@@ -92,17 +92,26 @@ DocumentContext.prototype.saveContextInEndingCell = function (endingCell) {
 	};
 };
 
-DocumentContext.prototype.completeColumnGroup = function () {
+DocumentContext.prototype.completeColumnGroup = function (height) {
 	var saved = this.snapshots.pop();
 
 	this.calculateBottomMost(saved);
 
 	this.endingCell = null;
 	this.x = saved.x;
-	this.y = saved.bottomMost.y;
+
+	var y = saved.bottomMost.y;
+	if (height && (saved.y + height) > y) {
+		y = saved.y + height;
+	}
+
+	this.y = y;
 	this.page = saved.bottomMost.page;
 	this.availableWidth = saved.availableWidth;
 	this.availableHeight = saved.bottomMost.availableHeight;
+	if (height) {
+		this.availableHeight -= (y - saved.bottomMost.y);
+	}
 	this.lastColumnWidth = saved.lastColumnWidth;
 };
 
