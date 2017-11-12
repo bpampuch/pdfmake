@@ -104,7 +104,7 @@ var docDefinition = {
 				]
 			}
 		},
-		{text: 'Defining row heights', pageBreak: 'before', style: 'subheader'},
+		{text: 'Defining row heights', style: 'subheader'},
 		{
 			style: 'tableExample',
 			table: {

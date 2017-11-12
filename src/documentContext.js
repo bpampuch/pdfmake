@@ -101,8 +101,14 @@ DocumentContext.prototype.completeColumnGroup = function (height) {
 	this.x = saved.x;
 
 	var y = saved.bottomMost.y;
-	if (height && (saved.y + height) > y) {
-		y = saved.y + height;
+	if (height) {
+		if (saved.page === saved.bottomMost.page) {
+			if ((saved.y + height) > y) {
+				y = saved.y + height;
+			}
+		} else {
+			y += height;
+		}
 	}
 
 	this.y = y;
