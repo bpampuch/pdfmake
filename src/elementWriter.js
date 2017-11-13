@@ -134,12 +134,43 @@ ElementWriter.prototype.addQr = function (qr, index) {
 
 	this.alignImage(qr);
 
+  var paths = {};
+
 	for (var i = 0, l = qr._canvas.length; i < l; i++) {
 		var vector = qr._canvas[i];
 		vector.x += qr.x;
 		vector.y += qr.y;
-		this.addVector(vector, true, true, index);
+    if (i === 0) {
+      this.addVector(vector, true, true, index);
+    } else {
+      paths[vector.color] = paths[vector.color] || [];
+      paths[vector.color].push('M');
+      paths[vector.color].push(vector.x);
+      paths[vector.color].push(',');
+      paths[vector.color].push(vector.y);
+      paths[vector.color].push('h');
+      paths[vector.color].push(vector.w);
+      paths[vector.color].push('v');
+      paths[vector.color].push(vector.h);
+      paths[vector.color].push('h');
+      paths[vector.color].push(-vector.w);
+      paths[vector.color].push('Z');
+    }
 	}
+
+  Object.keys(paths).forEach(function(color) {
+    var qr = {
+      type: 'qrMatrix',
+      d: paths[color],
+      color: color
+    };
+    if (page) {
+      addPageItem(page, {
+        type: 'qr',
+        item: qr
+      }, index);
+    }
+  });
 
 	context.moveDown(qr._height);
 
@@ -253,6 +284,23 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 					item: img
 				});
 				break;
+
+      case 'qr':
+        for (var i=0; i < item.item.d.length; i+=11) {
+          // change svg path moveTo x offset
+          item.item.d[i + 1] += useBlockXOffset ? 0 : ctx.x;
+          // change svg path moveTo y offset
+          item.item.d[i + 3] += useBlockXOffset ? 0 : ctx.y;
+        }
+        page.items.push({
+          type: 'vector',
+          item: {
+            type: 'path',
+            d: item.item.d.join(''),
+            color: item.item.color
+          }
+        });
+        break;
 		}
 	});
 
