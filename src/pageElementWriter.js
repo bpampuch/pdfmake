@@ -50,6 +50,14 @@ PageElementWriter.prototype.addVector = function (vector, ignoreContextX, ignore
 	return this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
 };
 
+PageElementWriter.prototype.beginClip = function (width, height) {
+	return this.writer.beginClip(width, height);
+};
+
+PageElementWriter.prototype.endClip = function () {
+	return this.writer.endClip();
+};
+
 PageElementWriter.prototype.alignCanvas = function (node) {
 	this.writer.alignCanvas(node);
 };

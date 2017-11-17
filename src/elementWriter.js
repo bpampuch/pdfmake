@@ -198,6 +198,25 @@ ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreCont
 	}
 };
 
+ElementWriter.prototype.beginClip = function (width, height) {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	page.items.push({
+		type: 'beginClip',
+		item: {x: ctx.x, y: ctx.y, width: width, height: height}
+	});
+	return true;
+};
+
+ElementWriter.prototype.endClip = function () {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	page.items.push({
+		type: 'endClip'
+	});
+	return true;
+};
+
 function cloneLine(line) {
 	var result = new Line(line.maxWidth);
 

@@ -335,6 +335,12 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 				case 'image':
 					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
 					break;
+				case 'beginClip':
+					beginClip(item.item, pdfKitDoc);
+					break;
+				case 'endClip':
+					endClip(pdfKitDoc);
+					break;
 			}
 			renderedItems++;
 			progressCallback(renderedItems / totalItems);
@@ -511,6 +517,16 @@ function renderImage(image, x, y, pdfKitDoc) {
 	if (image.link) {
 		pdfKitDoc.link(image.x, image.y, image._width, image._height, image.link);
 	}
+}
+
+function beginClip(rect, pdfKitDoc) {
+	pdfKitDoc.save();
+	pdfKitDoc.addContent('' + rect.x + ' ' + rect.y + ' ' + rect.width + ' ' + rect.height + ' re');
+	pdfKitDoc.clip();
+}
+
+function endClip(pdfKitDoc) {
+	pdfKitDoc.restore();
 }
 
 module.exports = PdfPrinter;
