@@ -334,7 +334,7 @@ content: [
 	{text: '\n\nUnordered list - type: none', style: 'header'},
 	{
 		type: 'none',
-		ol: [
+		ul: [
 			'item 1',
 			'item 2',
 			'item 3'
@@ -349,7 +349,6 @@ content: [
 			'item 3'
 		]
 	},
-
 	{text: '\n\nOrdered list with own complex separator', style: 'header'},
 	{
 		separator: ['(', ')'],
@@ -359,7 +358,22 @@ content: [
 			'item 3'
 		]
 	},
-
+	{text: '\n\nOrdered list with own items type', style: 'header'},
+	{
+		ol: [
+			'item 1',
+			{text: 'item 2', listType: 'none'},
+			{text: 'item 3', listType: 'upper-roman'}
+		]
+	},
+	{text: '\n\nUnordered list with own items type', style: 'header'},
+	{
+		ul: [
+			'item 1',
+			{text: 'item 2', listType: 'none'},
+			{text: 'item 3', listType: 'circle'}
+		]
+	},
 ],
 styles: {
 	header: {
