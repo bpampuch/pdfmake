@@ -25,7 +25,7 @@
     "gulp-file-contents-to-json": "^0.2.1",
     "gulp-header": "^1.8.9",
     "json-loader": "^0.5.7",
-    "sinon": "^4.1.1",
+    "sinon": "^4.1.2",
     "mocha": "^4.0.1",
     "jshint": "^2.9.5",
     "string-replace-webpack-plugin": "^0.1.3",
