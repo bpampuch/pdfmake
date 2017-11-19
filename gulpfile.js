@@ -6,7 +6,7 @@ var rename = require('gulp-rename');
 var sourcemaps = require('gulp-sourcemaps');
 var replace = require('gulp-replace');
 var mocha = require('gulp-spawn-mocha');
-var jshint = require('gulp-jshint');
+var eslint = require('gulp-eslint');
 var each = require('gulp-each');
 var fc2json = require('gulp-file-contents-to-json');
 var header = require('gulp-header');
@@ -72,8 +72,9 @@ gulp.task('copy-tests', function () {
 
 gulp.task('lint', function () {
 	return gulp.src(['./src/**/*.js'])
-		.pipe(jshint())
-		.pipe(jshint.reporter());
+		.pipe(eslint())
+		.pipe(eslint.format())
+		.pipe(eslint.failAfterError());
 });
 
 gulp.task('buildFonts', function () {
@@ -90,7 +91,7 @@ gulp.task('buildFonts', function () {
 		.pipe(gulp.dest('build'));
 });
 
-gulp.task('watch', function() {
+gulp.task('watch', function () {
 	gulp.watch('./src/**', ['test', 'build']);
 	gulp.watch('./tests/**', ['test']);
 });

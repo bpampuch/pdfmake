@@ -14,7 +14,7 @@
   "devDependencies": {
     "expose-loader": "^0.7.3",
     "gulp": "^3.9.1",
-    "gulp-jshint": "^2.0.4",
+    "gulp-eslint": "^4.0.0",
     "gulp-rename": "^1.2.2",
     "gulp-replace": "^0.6.1",
     "gulp-sourcemaps": "^2.6.1",
@@ -27,7 +27,6 @@
     "json-loader": "^0.5.7",
     "sinon": "^4.1.2",
     "mocha": "^4.0.1",
-    "jshint": "^2.9.5",
     "string-replace-webpack-plugin": "^0.1.3",
     "transform-loader": "^0.2.4",
     "brfs": "^1.4.3",
