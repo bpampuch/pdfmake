@@ -25,6 +25,8 @@ function DocumentContext(pageSize, pageMargins) {
 	this.tracker = new TraversalTracker();
 
 	this.addPage(pageSize);
+
+	this.hasBackground = false;
 }
 
 DocumentContext.prototype.beginColumnGroup = function () {

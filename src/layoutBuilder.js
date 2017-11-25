@@ -182,6 +182,7 @@ LayoutBuilder.prototype.addBackground = function (background) {
 		pageBackground = this.docPreprocessor.preprocessDocument(pageBackground);
 		this.processNode(this.docMeasure.measureDocument(pageBackground));
 		this.writer.commitUnbreakableBlock(0, 0);
+		this.writer.context().hasBackground = true;
 	}
 };
 
