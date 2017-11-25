@@ -1,3 +1,4 @@
+/*eslint no-unused-vars: ["error", {"args": "none"}]*/
 'use strict';
 
 var FontProvider = require('./fontProvider');
@@ -223,7 +224,6 @@ function fixPageMargins(margin) {
 }
 
 function registerDefaultTableLayouts(layoutBuilder) {
-	/*jshint unused: false */
 	layoutBuilder.registerTableLayouts({
 		noBorders: {
 			hLineWidth: function (i) {

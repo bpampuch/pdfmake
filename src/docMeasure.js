@@ -1,3 +1,5 @@
+/*eslint no-unused-vars: ["error", {"args": "none"}]*/
+
 'use strict';
 
 var TextTools = require('./textTools');
@@ -578,7 +580,6 @@ DocMeasure.prototype.measureTable = function (node) {
 			layout = tableLayouts[layout];
 		}
 
-		/*jshint unused: false */
 		var defaultLayout = {
 			hLineWidth: function (i, node) {
 				return 1;

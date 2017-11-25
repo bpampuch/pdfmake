@@ -159,7 +159,6 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 	this.addBackground(background);
 	this.processNode(docStructure);
 	this.addHeadersAndFooters(header, footer);
-	/* jshint eqnull:true */
 	if (watermark != null) {
 		this.addWatermark(watermark, fontProvider, defaultStyle);
 	}
