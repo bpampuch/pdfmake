@@ -1,4 +1,3 @@
-/* jslint node: true */
 'use strict';
 /*jshint -W004 */
 /* qr.js -- QR code generator in Javascript (revision 2011-01-19)

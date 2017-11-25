@@ -1,4 +1,3 @@
-/* jslint node: true */
 'use strict';
 
 var Line = require('./line');

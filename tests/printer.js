@@ -1,5 +1,3 @@
-/*global _ */
-/*jshint globalstrict:true*/
 'use strict';
 
 var assert = require('assert');

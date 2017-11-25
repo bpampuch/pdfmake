@@ -1,5 +1,3 @@
-/* jslint node: true */
-/* jslint browser: true */
 'use strict';
 
 var PdfPrinter = require('../printer');
