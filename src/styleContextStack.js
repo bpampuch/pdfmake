@@ -1,4 +1,3 @@
-/* jslint node: true */
 'use strict';
 
 var isString = require('./helpers').isString;
@@ -89,6 +88,7 @@ StyleContextStack.prototype.autopush = function (item) {
 	[
 		'font',
 		'fontSize',
+		'fontFeatures',
 		'bold',
 		'italics',
 		'alignment',

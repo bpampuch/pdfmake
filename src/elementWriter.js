@@ -1,4 +1,3 @@
-/* jslint node: true */
 'use strict';
 
 var Line = require('./line');
@@ -93,7 +92,7 @@ ElementWriter.prototype.addImage = function (image, index) {
 	var page = context.getCurrentPage(),
 		position = this.getCurrentPositionOnPage();
 
-	if (!page || (context.availableHeight < image._height && page.items.length > 0)) {
+	if (!page || (image.absolutePosition === undefined && context.availableHeight < image._height && page.items.length > 0)) {
 		return false;
 	}
 
@@ -121,7 +120,7 @@ ElementWriter.prototype.addQr = function (qr, index) {
 	var page = context.getCurrentPage(),
 		position = this.getCurrentPositionOnPage();
 
-	if (context.availableHeight < qr._height || !page) {
+	if (!page || (qr.absolutePosition === undefined && context.availableHeight < qr._height)) {
 		return false;
 	}
 
@@ -164,6 +163,25 @@ ElementWriter.prototype.alignImage = function (image) {
 	}
 };
 
+ElementWriter.prototype.alignCanvas = function (node) {
+	var width = this.context.availableWidth;
+	var canvasWidth = node._minWidth;
+	var offset = 0;
+	switch (node._alignment) {
+		case 'right':
+			offset = width - canvasWidth;
+			break;
+		case 'center':
+			offset = (width - canvasWidth) / 2;
+			break;
+	}
+	if (offset) {
+		node.canvas.forEach(function (vector) {
+			offsetVector(vector, offset, 0);
+		});
+	}
+};
+
 ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index) {
 	var context = this.context;
 	var page = context.getCurrentPage(),
@@ -177,6 +195,25 @@ ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreCont
 		}, index);
 		return position;
 	}
+};
+
+ElementWriter.prototype.beginClip = function (width, height) {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	page.items.push({
+		type: 'beginClip',
+		item: {x: ctx.x, y: ctx.y, width: width, height: height}
+	});
+	return true;
+};
+
+ElementWriter.prototype.endClip = function () {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	page.items.push({
+		type: 'endClip'
+	});
+	return true;
 };
 
 function cloneLine(line) {

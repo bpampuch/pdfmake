@@ -80,7 +80,7 @@ var docDefinition = {
 		},
 		superMargin: {
 			margin: [20, 0, 40, 0],
-			fontSize: 15,
+			fontSize: 15
 		}
 	}
 };

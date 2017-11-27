@@ -1,4 +1,3 @@
-/* jslint node: true */
 'use strict';
 
 var assert = require('assert');
@@ -1308,6 +1307,79 @@ describe('LayoutBuilder', function () {
 			assert.equal(pages[0].items[0].item.y, 200);
 			assert.equal(pages[0].items[1].item.x, 0);
 			assert.equal(pages[0].items[1].item.y, 0);
+		});
+
+		it('should use the absolutePosition attribute without pagebreak in canvas', function () {
+			var builderAP = new LayoutBuilder({width: 841.89, height: 555.28, orientation: 'portrait'}, {left: 40, right: 40, top: 40, bottom: 40}, imageMeasure);
+			builderAP.pages = [];
+			builderAP.context = [{page: -1, availableWidth: 320, availableHeight: 0}];
+			builderAP.styleStack = new StyleContextStack();
+			var desc = [
+				{
+					absolutePosition: {x: 0, y: 0},
+					canvas: [
+						{
+							type: 'polyline',
+							lineWidth: 0,
+							closePath: true,
+							color: '#fce5d4',
+							points: [{x: 530, y: 0}, {x: 650, y: 0}, {x: 841.89, y: 50}, {x: 841.89, y: 270}]
+						},
+						{
+							type: 'polyline',
+							lineWidth: 0,
+							closePath: true,
+							color: '#fce5d4',
+							points: [{x: 0, y: 400}, {x: 300, y: 555.28}, {x: 200, y: 555.28}, {x: 0, y: 500}]
+						}
+					]
+				}
+			];
+
+			var pages = builderAP.layoutDocument(desc, sampleTestProvider);
+			assert.equal(pages.length, 1);
+		});
+
+		it('should use the absolutePosition attribute without pagebreak in image', function () {
+			var builderAP = new LayoutBuilder({width: 841.89, height: 555.28, orientation: 'portrait'}, {left: 40, right: 40, top: 40, bottom: 40}, imageMeasure);
+			builderAP.pages = [];
+			builderAP.context = [{page: -1, availableWidth: 320, availableHeight: 0}];
+			builderAP.styleStack = new StyleContextStack();
+			var desc = [
+				{
+					image: 'sampleImage.jpg',
+					width: 80,
+					absolutePosition: {x: 250, y: 500}
+				},
+				{
+					image: 'sampleImage.jpg',
+					width: 80,
+					absolutePosition: {x: 450, y: 520}
+				}
+			];
+
+			var pages = builderAP.layoutDocument(desc, sampleTestProvider);
+			assert.equal(pages.length, 1);
+		});
+
+		it('should use the absolutePosition attribute without pagebreak in qr', function () {
+			var builderAP = new LayoutBuilder({width: 841.89, height: 555.28, orientation: 'portrait'}, {left: 40, right: 40, top: 40, bottom: 40}, imageMeasure);
+			builderAP.pages = [];
+			builderAP.context = [{page: -1, availableWidth: 320, availableHeight: 0}];
+			builderAP.styleStack = new StyleContextStack();
+			var desc = [
+				{
+					qr: 'pdfmake',
+					absolutePosition: {x: 250, y: 500}
+				},
+				{
+					qr: 'pdfmake',
+					absolutePosition: {x: 450, y: 520}
+				}
+			];
+
+			var pages = builderAP.layoutDocument(desc, sampleTestProvider);
+			assert.equal(pages.length, 1);
 		});
 
 		it('should not break nodes across multiple pages when unbreakable attribute is passed', function () {

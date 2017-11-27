@@ -104,6 +104,44 @@ var docDefinition = {
 				]
 			}
 		},
+		{text: 'Defining row heights', style: 'subheader'},
+		{
+			style: 'tableExample',
+			table: {
+				heights: [20, 50, 70],
+				body: [
+					['row 1 with height 20', 'column B'],
+					['row 2 with height 50', 'column B'],
+					['row 3 with height 70', 'column B']
+				]
+			}
+		},
+		'With same height:',
+		{
+			style: 'tableExample',
+			table: {
+				heights: 40,
+				body: [
+					['row 1', 'column B'],
+					['row 2', 'column B'],
+					['row 3', 'column B']
+				]
+			}
+		},
+		'With height from function:',
+		{
+			style: 'tableExample',
+			table: {
+				heights: function (row) {
+					return (row + 1) * 25;
+				},
+				body: [
+					['row 1', 'column B'],
+					['row 2', 'column B'],
+					['row 3', 'column B']
+				]
+			}
+		},
 		{text: 'Column/row spans', pageBreak: 'before', style: 'subheader'},
 		'Each cell-element can set a rowSpan or colSpan',
 		{
@@ -249,7 +287,9 @@ var docDefinition = {
 				]
 			},
 			layout: {
-				fillColor: function (i, node) { return (i % 2 === 0) ?  '#CCCCCC' : null; }
+				fillColor: function (i, node) {
+					return (i % 2 === 0) ? '#CCCCCC' : null;
+				}
 			}
 		},
 		{text: 'Optional border', fontSize: 14, bold: true, pageBreak: 'before', margin: [0, 0, 0, 8]},

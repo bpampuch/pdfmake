@@ -1,6 +1,7 @@
-/* jslint node: true */
+/*eslint no-unused-vars: ["error", {"args": "none"}]*/
+/*eslint no-redeclare: "off"*/
+
 'use strict';
-/*jshint -W004 */
 /* qr.js -- QR code generator in Javascript (revision 2011-01-19)
  * Written by Kang Seonghoon <public+qrjs@mearie.org>.
  *

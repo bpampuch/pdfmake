@@ -1,4 +1,3 @@
-/* jslint node: true */
 'use strict';
 
 var ElementWriter = require('./elementWriter');
@@ -48,6 +47,18 @@ PageElementWriter.prototype.addQr = function (qr, index) {
 
 PageElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index) {
 	return this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
+};
+
+PageElementWriter.prototype.beginClip = function (width, height) {
+	return this.writer.beginClip(width, height);
+};
+
+PageElementWriter.prototype.endClip = function () {
+	return this.writer.endClip();
+};
+
+PageElementWriter.prototype.alignCanvas = function (node) {
+	this.writer.alignCanvas(node);
 };
 
 PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {

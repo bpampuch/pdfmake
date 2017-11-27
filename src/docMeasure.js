@@ -1,4 +1,5 @@
-/* jslint node: true */
+/*eslint no-unused-vars: ["error", {"args": "none"}]*/
+
 'use strict';
 
 var TextTools = require('./textTools');
@@ -579,7 +580,6 @@ DocMeasure.prototype.measureTable = function (node) {
 			layout = tableLayouts[layout];
 		}
 
-		/*jshint unused: false */
 		var defaultLayout = {
 			hLineWidth: function (i, node) {
 				return 1;
@@ -747,6 +747,7 @@ DocMeasure.prototype.measureCanvas = function (node) {
 
 	node._minWidth = node._maxWidth = w;
 	node._minHeight = node._maxHeight = h;
+	node._alignment = this.styleStack.getProperty('alignment');
 
 	return node;
 };

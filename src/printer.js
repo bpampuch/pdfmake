@@ -1,4 +1,4 @@
-/* jslint node: true */
+/*eslint no-unused-vars: ["error", {"args": "none"}]*/
 'use strict';
 
 var FontProvider = require('./fontProvider');
@@ -224,7 +224,6 @@ function fixPageMargins(margin) {
 }
 
 function registerDefaultTableLayouts(layoutBuilder) {
-	/*jshint unused: false */
 	layoutBuilder.registerTableLayouts({
 		noBorders: {
 			hLineWidth: function (i) {
@@ -335,6 +334,12 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 				case 'image':
 					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
 					break;
+				case 'beginClip':
+					beginClip(item.item, pdfKitDoc);
+					break;
+				case 'endClip':
+					endClip(pdfKitDoc);
+					break;
 			}
 			renderedItems++;
 			progressCallback(renderedItems / totalItems);
@@ -354,7 +359,7 @@ function renderLine(line, x, y, pdfKitDoc) {
 
 		line.inlines[0].text = pageNumber;
 		line.inlines[0].linkToPage = pageNumber;
-		newWidth = textTools.widthOfString(line.inlines[0].text, line.inlines[0].font, line.inlines[0].fontSize, line.inlines[0].characterSpacing);
+		newWidth = textTools.widthOfString(line.inlines[0].text, line.inlines[0].font, line.inlines[0].fontSize, line.inlines[0].characterSpacing, line.inlines[0].fontFeatures);
 		diffWidth = line.inlines[0].width - newWidth;
 		line.inlines[0].width = newWidth;
 
@@ -381,18 +386,23 @@ function renderLine(line, x, y, pdfKitDoc) {
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
 		var shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
-
-		pdfKitDoc.fill(inline.color || 'black');
-
-		pdfKitDoc._font = inline.font;
-		pdfKitDoc.fontSize(inline.fontSize);
-		pdfKitDoc.text(inline.text, x + inline.x, y + shiftToBaseline, {
+		var options = {
 			lineBreak: false,
 			textWidth: inline.width,
 			characterSpacing: inline.characterSpacing,
 			wordCount: 1,
 			link: inline.link
-		});
+		};
+
+		if (inline.fontFeatures) {
+			options.features = inline.fontFeatures;
+		}
+
+		pdfKitDoc.fill(inline.color || 'black');
+
+		pdfKitDoc._font = inline.font;
+		pdfKitDoc.fontSize(inline.fontSize);
+		pdfKitDoc.text(inline.text, x + inline.x, y + shiftToBaseline, options);
 
 		if (inline.linkToPage) {
 			var _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0]}).end();
@@ -434,6 +444,7 @@ function renderVector(vector, pdfKitDoc) {
 		pdfKitDoc.undash();
 	}
 	pdfKitDoc.lineJoin(vector.lineJoin || 'miter');
+	pdfKitDoc.lineCap(vector.lineCap || 'butt');
 
 	//TODO: clipping
 
@@ -505,6 +516,16 @@ function renderImage(image, x, y, pdfKitDoc) {
 	if (image.link) {
 		pdfKitDoc.link(image.x, image.y, image._width, image._height, image.link);
 	}
+}
+
+function beginClip(rect, pdfKitDoc) {
+	pdfKitDoc.save();
+	pdfKitDoc.addContent('' + rect.x + ' ' + rect.y + ' ' + rect.width + ' ' + rect.height + ' re');
+	pdfKitDoc.clip();
+}
+
+function endClip(pdfKitDoc) {
+	pdfKitDoc.restore();
 }
 
 module.exports = PdfPrinter;

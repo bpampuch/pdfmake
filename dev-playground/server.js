@@ -2,7 +2,6 @@
 var http = require('http');
 var express = require('express');
 var path = require('path');
-var _ = require('lodash');
 var bodyParser = require('body-parser');
 
 var pdfMakePrinter = require('../src/printer');

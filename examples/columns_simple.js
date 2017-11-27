@@ -155,11 +155,11 @@ var docDefinition = {
 		},
 		bigger: {
 			fontSize: 15,
-			italics: true,
+			italics: true
 		}
 	},
 	defaultStyle: {
-		columnGap: 20,
+		columnGap: 20
 	}
 };
 

@@ -30,7 +30,12 @@ var docDefinition = {
 		{text: '    "sample": {', preserveLeadingSpaces: true},
 		{text: '        "json": "nested"', preserveLeadingSpaces: true},
 		{text: '    }', preserveLeadingSpaces: true},
-		{text: '}', preserveLeadingSpaces: true}
+		{text: '}', preserveLeadingSpaces: true},
+		'\n\nfontFeatures property:',
+		{text: 'Hello World 1234567890', fontFeatures: ['smcp']},
+		{text: 'Hello World 1234567890', fontFeatures: ['c2sc']},
+		{text: 'Hello World 1234567890', fontFeatures: ['onum']},
+		{text: 'Hello World 1234567890', fontFeatures: ['onum', 'c2sc']}
 	]
 };
 
