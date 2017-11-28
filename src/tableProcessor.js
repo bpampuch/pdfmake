@@ -34,7 +34,7 @@ TableProcessor.prototype.beginTable = function (writer) {
 	// update the border properties of all cells before drawing any lines
 	prepareCellBorders(this.tableNode.table.body);
 
-	this.drawHorizontalLine(0, writer);
+	writer.context().moveDown(this.layout.hLineWidth(0, this.tableNode));
 
 	function getTableInnerContentWidth() {
 		var width = 0;
@@ -267,6 +267,17 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 	ys[ys.length - 1].y1 = endingY;
 
 	var skipOrphanePadding = (ys[0].y1 - ys[0].y0 === this.rowPaddingTop);
+
+	if (rowIndex == 0) {
+		if (!skipOrphanePadding) {
+			writer.context().page = ys[0].page;
+			var lineWidth = this.layout.hLineWidth(0, this.tableNode);
+			this.drawHorizontalLine(0, writer, this.rowTopY - lineWidth);
+		} else if (ys.length > 0) {
+			this.drawHorizontalLine(0, writer, ys[1].y0);
+		}
+	}
+
 	for (var yi = (skipOrphanePadding ? 1 : 0), yl = ys.length; yi < yl; yi++) {
 		var willBreak = yi < ys.length - 1;
 		var rowBreakWithoutHeader = (yi > 0 && !this.headerRows);
