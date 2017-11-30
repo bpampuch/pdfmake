@@ -174,7 +174,8 @@ describe('TableProcessor', function () {
 				},
 				repeatables: [],
 				tracker: {
-					stopTracking: function () {}
+					stopTracking: function () {},
+					startTracking: function () {}
 				},
 				addVector: function () {},
 				popFromRepeatables: sinon.spy(),
