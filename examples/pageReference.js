@@ -28,6 +28,19 @@ var docDefinition = {
 			}
 		},
 		{
+			text: '\nAnd text can be referenced by textReference:\n'
+		},
+		{
+			table: {
+				body: [
+					[{text: 'page #', bold: true}, {text: 'title', bold: true}],
+					[{pageReference: 'header1', alignment: 'right'}, {textReference: 'header1'}],
+					[{pageReference: 'subheader1', alignment: 'right'}, {textReference: 'subheader1'}],
+					[{pageReference: 'subheader2', alignment: 'right'}, {textReference: 'subheader2'}]
+				]
+			}
+		},
+		{
 			text: 'This is a header, using header style',
 			style: 'header',
 			id: 'header1',

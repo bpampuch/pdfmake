@@ -197,6 +197,10 @@ DocMeasure.prototype.measureImage = function (node) {
 
 DocMeasure.prototype.measureLeaf = function (node) {
 
+	if (node._textRef && node._textRef._nodeRef.text) {
+		node.text = node._textRef._nodeRef.text;
+	}
+
 	// Make sure style properties of the node itself are considered when building inlines.
 	// We could also just pass [node] to buildInlines, but that fails for bullet points.
 	var styleStack = this.styleStack.clone();

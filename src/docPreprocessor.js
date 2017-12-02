@@ -50,7 +50,7 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 		return this.preprocessCanvas(node);
 	} else if (node.qr) {
 		return this.preprocessQr(node);
-	} else if (node.pageReference) {
+	} else if (node.pageReference || node.textReference) {
 		return this.preprocessText(node);
 	} else {
 		throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
@@ -148,6 +148,15 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 		}
 		node.text = '00000';
 		node._pageRef = this.nodeReferences[node.pageReference];
+	}
+
+	if (node.textReference) {
+		if (!this.nodeReferences[node.textReference]) {
+			this.nodeReferences[node.textReference] = {_nodeRef: {}, _pseudo: true};
+		}
+
+		node.text = '';
+		node._textRef = this.nodeReferences[node.textReference];
 	}
 
 	if (node.text && node.text.text) {
