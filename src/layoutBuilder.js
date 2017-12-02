@@ -613,7 +613,11 @@ LayoutBuilder.prototype.processLeaf = function (node) {
 	var maxHeight = node.maxHeight || -1;
 
 	if (node._tocItemRef) {
-		line._tocItemNode = node._tocItemRef;
+		line._pageNodeRef = node._tocItemRef;
+	}
+
+	if (node._pageRef) {
+		line._pageNodeRef = node._pageRef._nodeRef;
 	}
 
 	while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
