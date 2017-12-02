@@ -30,7 +30,7 @@
     "string-replace-webpack-plugin": "^0.1.3",
     "transform-loader": "^0.2.4",
     "brfs": "^1.4.3",
-    "webpack": "^3.8.1",
+    "webpack": "^3.9.1",
     "webpack-stream": "^3.2.0"
   },
   "scripts": {
