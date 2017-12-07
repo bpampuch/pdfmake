@@ -2,7 +2,7 @@
 
 var PdfPrinter = require('../printer');
 var isFunction = require('../helpers').isFunction;
-var FileSaver = require('../../libs/FileSaver.js/FileSaver');
+var FileSaver = require('file-saver');
 var saveAs = FileSaver.saveAs;
 
 var defaultClientFonts = {

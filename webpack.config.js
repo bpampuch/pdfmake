@@ -18,7 +18,7 @@ module.exports = {
 		loaders: [
 			{test: /\.json$/, loader: 'json-loader'},
 			{test: /pdfMake.js$/, loader: 'expose?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
-			{test: /pdfkit[\/\\]js[\/\\]mixins[\/\\]fonts.js$/, loader: StringReplacePlugin.replace({
+			{test: /pdfkit[/\\]js[/\\]mixins[/\\]fonts.js$/, loader: StringReplacePlugin.replace({
 					replacements: [
 						{
 							pattern: 'return this.font(\'Helvetica\');',
@@ -28,7 +28,7 @@ module.exports = {
 						}
 					]})
 			},
-			{test: /fontkit[\/\\]index.js$/, loader: StringReplacePlugin.replace({
+			{test: /fontkit[/\\]index.js$/, loader: StringReplacePlugin.replace({
 					replacements: [
 						{
 							pattern: /fs\./g,
@@ -49,9 +49,9 @@ module.exports = {
 						}
 					]})
 			},
-			{enforce: 'post', test: /fontkit[\/\\]index.js$/, loader: "transform?brfs"},
-			{enforce: 'post', test: /unicode-properties[\/\\]index.js$/, loader: "transform?brfs"},
-			{enforce: 'post', test: /linebreak[\/\\]src[\/\\]linebreaker.js/, loader: "transform?brfs"}
+			{enforce: 'post', test: /fontkit[/\\]index.js$/, loader: "transform?brfs"},
+			{enforce: 'post', test: /unicode-properties[/\\]index.js$/, loader: "transform?brfs"},
+			{enforce: 'post', test: /linebreak[/\\]src[/\\]linebreaker.js/, loader: "transform?brfs"}
 		]
 	},
 	plugins: [

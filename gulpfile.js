@@ -49,7 +49,7 @@ function reportWebPackErrors(err, stats) {
 	}));
 }
 
-gulp.task('test', ['prepareTestEnv'], function (cb) {
+gulp.task('test', ['prepareTestEnv'], function () {
 	return gulp.src(['test-env/tests/**/*.js'])
 		.pipe(mocha({
 			debugBrk: DEBUG,
