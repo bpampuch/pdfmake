@@ -211,7 +211,7 @@ Parameters:
 ```js
 var pdfMake = require('pdfmake/build/pdfmake.js');
 var pdfFonts = require('pdfmake/build/vfs_fonts.js');
-pdfMake.vfs = pdfFonts.pdfMake.vfs; 
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
 ```
 
 or
@@ -717,7 +717,6 @@ var docDefinition = {
 git clone https://github.com/bpampuch/pdfmake.git
 cd pdfmake
 npm install # or: yarn
-git submodule update --init  libs/FileSaver.js
 npm run build # or: yarn run build
 ```
 
