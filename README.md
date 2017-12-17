@@ -206,6 +206,17 @@ Parameters:
 * `cb` - callback function
 * `options` _(optional)_
 
+#### Get the PDF as Blob
+```js
+const pdfDocGenerator = pdfMake.createPdf(docDefinition);
+pdfDocGenerator.getBlob((blob) => {
+	// ...
+});
+```
+Parameters:
+* `cb` - callback function
+* `options` _(optional)_
+
 #### Using javascript frameworks
 
 ```js
