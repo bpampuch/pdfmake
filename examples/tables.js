@@ -271,7 +271,7 @@ var docDefinition = {
 				// paddingRight: function(i, node) { return 4; },
 				// paddingTop: function(i, node) { return 2; },
 				// paddingBottom: function(i, node) { return 2; },
-				// fillColor: function (rowIndex, node, colIndex) { return null; }
+				// fillColor: function (rowIndex, node, columnIndex) { return null; }
 			}
 		},
 		{text: 'zebra style', margin: [0, 20, 0, 8]},
@@ -287,7 +287,7 @@ var docDefinition = {
 				]
 			},
 			layout: {
-				fillColor: function (rowIndex, node, colIndex) {
+				fillColor: function (rowIndex, node, columnIndex) {
 					return (rowIndex % 2 === 0) ? '#CCCCCC' : null;
 				}
 			}
