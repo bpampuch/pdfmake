@@ -1,4 +1,4 @@
-/*! pdfmake v0.1.34, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.1.35, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -62,9 +62,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 1 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(Buffer, global) {/* jslint node: true */
-	/* jslint browser: true */
-	'use strict';
+	/* WEBPACK VAR INJECTION */(function(Buffer, global) {'use strict';
 
 	var PdfPrinter = __webpack_require__(6);
 	var isFunction = __webpack_require__(8).isFunction;
@@ -2279,7 +2277,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* jslint node: true */
+	/*eslint no-unused-vars: ["error", {"args": "none"}]*/
 	'use strict';
 
 	var FontProvider = __webpack_require__(7);
@@ -2505,7 +2503,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function registerDefaultTableLayouts(layoutBuilder) {
-		/*jshint unused: false */
 		layoutBuilder.registerTableLayouts({
 			noBorders: {
 				hLineWidth: function (i) {
@@ -2633,11 +2630,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function renderLine(line, x, y, pdfKitDoc) {
-		if (line._tocItemNode) {
+		if (line._pageNodeRef) {
 			var newWidth;
 			var diffWidth;
 			var textTools = new TextTools(null);
-			var pageNumber = line._tocItemNode.positions[0].pageNumber.toString();
+			var pageNumber = line._pageNodeRef.positions[0].pageNumber.toString();
 
 			line.inlines[0].text = pageNumber;
 			line.inlines[0].linkToPage = pageNumber;
@@ -2821,7 +2818,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* jslint node: true */
 	'use strict';
 
 	var isArray = __webpack_require__(8).isArray;
@@ -2883,7 +2879,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 8 */
 /***/ (function(module, exports) {
 
-	/* jslint node: true */
 	'use strict';
 
 	function isString(variable) {
@@ -2974,7 +2969,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* jslint node: true */
 	'use strict';
 
 	var TraversalTracker = __webpack_require__(10);
@@ -3136,7 +3130,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		this.addBackground(background);
 		this.processNode(docStructure);
 		this.addHeadersAndFooters(header, footer);
-		/* jshint eqnull:true */
 		if (watermark != null) {
 			this.addWatermark(watermark, fontProvider, defaultStyle);
 		}
@@ -3158,6 +3151,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			pageBackground = this.docPreprocessor.preprocessDocument(pageBackground);
 			this.processNode(this.docMeasure.measureDocument(pageBackground));
 			this.writer.commitUnbreakableBlock(0, 0);
+			this.writer.context().hasBackground = true;
 		}
 	};
 
@@ -3590,7 +3584,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		var maxHeight = node.maxHeight || -1;
 
 		if (node._tocItemRef) {
-			line._tocItemNode = node._tocItemRef;
+			line._pageNodeRef = node._tocItemRef;
+		}
+
+		if (node._pageRef) {
+			line._pageNodeRef = node._pageRef._nodeRef;
 		}
 
 		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
@@ -3695,7 +3693,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 10 */
 /***/ (function(module, exports) {
 
-	/* jslint node: true */
 	'use strict';
 
 	/**
@@ -3751,7 +3748,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* jslint node: true */
 	'use strict';
 
 	var isString = __webpack_require__(8).isString;
@@ -3766,6 +3762,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	DocPreprocessor.prototype.preprocessDocument = function (docStructure) {
 		this.tocs = [];
+		this.nodeReferences = [];
 		return this.preprocessNode(docStructure);
 	};
 
@@ -3803,6 +3800,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			return this.preprocessCanvas(node);
 		} else if (node.qr) {
 			return this.preprocessQr(node);
+		} else if (node.pageReference || node.textReference) {
+			return this.preprocessText(node);
 		} else {
 			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
@@ -3880,6 +3879,36 @@ return /******/ (function(modules) { // webpackBootstrap
 			}
 		}
 
+		if (node.id) {
+			if (this.nodeReferences[node.id]) {
+				if (!this.nodeReferences[node.id]._pseudo) {
+					throw "Node id '" + node.id + "' already exists";
+				}
+
+				this.nodeReferences[node.id]._nodeRef = node;
+				this.nodeReferences[node.id]._pseudo = false;
+			} else {
+				this.nodeReferences[node.id] = {_nodeRef: node};
+			}
+		}
+
+		if (node.pageReference) {
+			if (!this.nodeReferences[node.pageReference]) {
+				this.nodeReferences[node.pageReference] = {_nodeRef: {}, _pseudo: true};
+			}
+			node.text = '00000';
+			node._pageRef = this.nodeReferences[node.pageReference];
+		}
+
+		if (node.textReference) {
+			if (!this.nodeReferences[node.textReference]) {
+				this.nodeReferences[node.textReference] = {_nodeRef: {}, _pseudo: true};
+			}
+
+			node.text = '';
+			node._textRef = this.nodeReferences[node.textReference];
+		}
+
 		if (node.text && node.text.text) {
 			node.text = [this.preprocessNode(node.text)];
 		}
@@ -3926,7 +3955,8 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* jslint node: true */
+	/*eslint no-unused-vars: ["error", {"args": "none"}]*/
+
 	'use strict';
 
 	var TextTools = __webpack_require__(13);
@@ -4123,6 +4153,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	DocMeasure.prototype.measureLeaf = function (node) {
+
+		if (node._textRef && node._textRef._nodeRef.text) {
+			node.text = node._textRef._nodeRef.text;
+		}
 
 		// Make sure style properties of the node itself are considered when building inlines.
 		// We could also just pass [node] to buildInlines, but that fails for bullet points.
@@ -4507,7 +4541,6 @@ return /******/ (function(modules) { // webpackBootstrap
 				layout = tableLayouts[layout];
 			}
 
-			/*jshint unused: false */
 			var defaultLayout = {
 				hLineWidth: function (i, node) {
 					return 1;
@@ -4693,7 +4726,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* jslint node: true */
 	'use strict';
 
 	var isString = __webpack_require__(8).isString;
@@ -5898,7 +5930,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* jslint node: true */
 	'use strict';
 
 	var isString = __webpack_require__(8).isString;
@@ -6081,7 +6112,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* jslint node: true */
 	'use strict';
 
 	var isString = __webpack_require__(8).isString;
@@ -6224,9 +6254,10 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 22 */
 /***/ (function(module, exports) {
 
-	/* jslint node: true */
+	/*eslint no-unused-vars: ["error", {"args": "none"}]*/
+	/*eslint no-redeclare: "off"*/
+
 	'use strict';
-	/*jshint -W004 */
 	/* qr.js -- QR code generator in Javascript (revision 2011-01-19)
 	 * Written by Kang Seonghoon <public+qrjs@mearie.org>.
 	 *
@@ -7017,7 +7048,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* jslint node: true */
 	'use strict';
 
 	var TraversalTracker = __webpack_require__(10);
@@ -7044,6 +7074,8 @@ return /******/ (function(modules) { // webpackBootstrap
 		this.tracker = new TraversalTracker();
 
 		this.addPage(pageSize);
+
+		this.hasBackground = false;
 	}
 
 	DocumentContext.prototype.beginColumnGroup = function () {
@@ -7330,7 +7362,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* jslint node: true */
 	'use strict';
 
 	var ElementWriter = __webpack_require__(25);
@@ -7500,7 +7531,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* jslint node: true */
 	'use strict';
 
 	var Line = __webpack_require__(26);
@@ -7821,7 +7851,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 26 */
 /***/ (function(module, exports) {
 
-	/* jslint node: true */
 	'use strict';
 
 	/**
@@ -7900,7 +7929,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* jslint node: true */
 	'use strict';
 
 	var ColumnCalculator = __webpack_require__(21);
@@ -8212,7 +8240,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				if (i < l - 1) {
 					var fillColor = body[rowIndex][colIndex].fillColor;
 					if (!fillColor) {
-						fillColor = isFunction(this.layout.fillColor) ? this.layout.fillColor(rowIndex, this.tableNode) : this.layout.fillColor;
+						fillColor = isFunction(this.layout.fillColor) ? this.layout.fillColor(rowIndex, this.tableNode, colIndex) : this.layout.fillColor;
 					}
 					if (fillColor) {
 						var wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
@@ -8226,7 +8254,7 @@ return /******/ (function(modules) { // webpackBootstrap
 							h: y2 + this.bottomLineWidth - yf,
 							lineWidth: 0,
 							color: fillColor
-						}, false, true, 0);
+						}, false, true, writer.context().hasBackground ? 1 : 0);
 					}
 				}
 			}
@@ -12358,8 +12386,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(Buffer, __dirname) {/* jslint node: true */
-	'use strict';
+	/* WEBPACK VAR INJECTION */(function(Buffer, __dirname) {'use strict';
 
 	function VirtualFileSystem() {
 		this.fileSystem = {};
@@ -41287,7 +41314,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 140 */
 /***/ (function(module, exports) {
 
-	var core = module.exports = { version: '2.5.1' };
+	var core = module.exports = { version: '2.5.3' };
 	if (typeof __e == 'number') __e = core; // eslint-disable-line no-undef
 
 
@@ -41513,7 +41540,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var VALUES_BUG = false;
 	  var proto = Base.prototype;
 	  var $native = proto[ITERATOR] || proto[FF_ITERATOR] || DEFAULT && proto[DEFAULT];
-	  var $default = $native || getMethod(DEFAULT);
+	  var $default = (!BUGGY && $native) || getMethod(DEFAULT);
 	  var $entries = DEFAULT ? !DEF_VALUES ? $default : getMethod('entries') : undefined;
 	  var $anyNative = NAME == 'Array' ? proto.entries || $native : $native;
 	  var methods, key, IteratorPrototype;
@@ -42172,6 +42199,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var enumKeys = __webpack_require__(194);
 	var isArray = __webpack_require__(196);
 	var anObject = __webpack_require__(145);
+	var isObject = __webpack_require__(131);
 	var toIObject = __webpack_require__(123);
 	var toPrimitive = __webpack_require__(130);
 	var createDesc = __webpack_require__(129);
@@ -42364,15 +42392,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return _stringify([S]) != '[null]' || _stringify({ a: S }) != '{}' || _stringify(Object(S)) != '{}';
 	})), 'JSON', {
 	  stringify: function stringify(it) {
-	    if (it === undefined || isSymbol(it)) return; // IE8 returns string on undefined
 	    var args = [it];
 	    var i = 1;
 	    var replacer, $replacer;
 	    while (arguments.length > i) args.push(arguments[i++]);
-	    replacer = args[1];
-	    if (typeof replacer == 'function') $replacer = replacer;
-	    if ($replacer || !isArray(replacer)) replacer = function (key, value) {
-	      if ($replacer) value = $replacer.call(this, key, value);
+	    $replacer = replacer = args[1];
+	    if (!isObject(replacer) && it === undefined || isSymbol(it)) return; // IE8 returns string on undefined
+	    if (!isArray(replacer)) replacer = function (key, value) {
+	      if (typeof $replacer == 'function') value = $replacer.call(this, key, value);
 	      if (!isSymbol(value)) return value;
 	    };
 	    args[1] = replacer;
@@ -43093,7 +43120,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = function (COLLECTION) {
 	  $export($export.S, COLLECTION, { of: function of() {
 	    var length = arguments.length;
-	    var A = Array(length);
+	    var A = new Array(length);
 	    while (length--) A[length] = arguments[length];
 	    return new this(A);
 	  } });
@@ -44200,6 +44227,13 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 271 */
 /***/ (function(module, exports, __webpack_require__) {
 
+	/**
+	 * Copyright (c) 2014-present, Facebook, Inc.
+	 *
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
+	 */
+
 	// This method of obtaining a reference to the global object needs to be
 	// kept identical to the way it is obtained in runtime.js
 	var g = (function() { return this })() || Function("return this")();
@@ -44235,13 +44269,10 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ (function(module, exports) {
 
 	/**
-	 * Copyright (c) 2014, Facebook, Inc.
-	 * All rights reserved.
+	 * Copyright (c) 2014-present, Facebook, Inc.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * https://raw.github.com/facebook/regenerator/master/LICENSE file. An
-	 * additional grant of patent rights can be found in the PATENTS file in
-	 * the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 */
 
 	!(function(global) {
@@ -49418,7 +49449,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 301 */
 /***/ (function(module, exports) {
 
-	/* jslint node: true */
 	'use strict';
 
 	module.exports = {
@@ -49479,8 +49509,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 302 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(Buffer) {/* jslint node: true */
-	'use strict';
+	/* WEBPACK VAR INJECTION */(function(Buffer) {'use strict';
 
 	var PDFImage = __webpack_require__(295);
 
@@ -49535,7 +49564,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 303 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	/* jslint node: true */
 	'use strict';
 
 	var isArray = __webpack_require__(8).isArray;
