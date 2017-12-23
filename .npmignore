@@ -1,4 +1,6 @@
 .git*
+CONTRIBUTING.md
+dev-playground/
 docs/
 examples/
 tests/
@@ -6,4 +8,6 @@ test-env/
 yarn.lock
 composer.json
 bower.json
+.editorconfig
+.eslintrc.json
 .travis.yml
