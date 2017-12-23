@@ -15,5 +15,18 @@
   ],
   "support": {
     "issues": "https://github.com/bpampuch/pdfmake/issues"
+  },
+  "archive": {
+    "exclude": [
+      "bower.json",
+      "CONTRIBUTING.md",
+      "/dev-playground",    
+      "/examples",
+      "tests/",
+			".npmignore",
+      ".editorconfig",
+      ".eslintrc.json",
+      ".travis.yml"
+    ]
   }
 }
