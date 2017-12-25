@@ -677,6 +677,56 @@ To change page orientation within a document, add a page break with the new page
 }
 ```
 
+#### Dynamically control page breaks, for instance to avoid orphan childs
+
+Can be specify a `pageBreakBefore` function, which can determine if a page break should be inserted before the page break. To implement a 'no orphan child' rule, this could like like this:
+
+``` javascript
+var dd = {
+    content: [
+       {text: '1 Headline', headlineLevel: 1},
+       'Some long text of variable length ...',
+       {text: '2 Headline', headlineLevel: 1},
+       'Some long text of variable length ...',
+       {text: '3 Headline', headlineLevel: 1},
+       'Some long text of variable length ...',
+    ],
+  pageBreakBefore: function(currentNode, followingNodesOnPage, nodesOnNextPage, previousNodesOnPage) {
+     return currentNode.headlineLevel === 1 && followingNodesOnPage.length === 0;
+  }
+}
+```
+
+If `pageBreakBefore` returns true, a page break will be added before the `currentNode`. Current node has the following information attached:
+
+``` javascript
+{
+   id: '<as specified in doc definition>', 
+   headlineLevel: '<as specified in doc definition>',
+   text: '<as specified in doc definition>', 
+   ul: '<as specified in doc definition>', 
+   ol: '<as specified in doc definition>', 
+   table: '<as specified in doc definition>', 
+   image: '<as specified in doc definition>', 
+   qr: '<as specified in doc definition>', 
+   canvas: '<as specified in doc definition>', 
+   columns: '<as specified in doc definition>', 
+   style: '<as specified in doc definition>', 
+   pageOrientation '<as specified in doc definition>',
+   pageNumbers: [2, 3], // The pages this element is visible on (e.g. multi-line text could be on more than one page)
+   pages: 6, // the total number of pages of this document
+   stack: false, // if this is an element which encapsulates multiple sub-objects
+   startPosition: {
+     pageNumber: 2, // the page this node starts on
+     pageOrientation: 'landscape', // the orientation of this page
+     left: 60, // the left position
+     right: 60, // the right position
+     verticalRatio: 0.2, // the ratio of space used vertically in this document (excluding margins)
+     horizontalRatio: 0.0  // the ratio of space used horizontally in this document (excluding margins)
+   }
+}
+```
+
 #### Document Metadata
 
 PDF documents can have various metadata associated with them, such as the title, or author
