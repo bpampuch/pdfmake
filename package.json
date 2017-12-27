@@ -22,7 +22,7 @@
     "gulp-header": "^1.8.9",
     "gulp-rename": "^1.2.2",
     "gulp-replace": "^0.6.1",
-    "gulp-sourcemaps": "^2.6.1",
+    "gulp-sourcemaps": "^2.6.2",
     "gulp-spawn-mocha": "^4.0.1",
     "gulp-uglify": "^2.1.2",
     "gulp-util": "^3.0.8",
