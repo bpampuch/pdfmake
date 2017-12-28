@@ -351,6 +351,8 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 }
 
 function renderLine(line, x, y, pdfKitDoc) {
+	var anchorPageNumber;
+
 	if (line._pageNodeRef) {
 		var newWidth;
 		var diffWidth;
@@ -371,6 +373,11 @@ function renderLine(line, x, y, pdfKitDoc) {
 				line.inlines[0].x += diffWidth / 2;
 				break;
 		}
+	}
+
+	if (line._anchorRef) {
+		// Compute the anchor destination page
+		anchorPageNumber = line._anchorRef.positions[0].pageNumber.toString();
 	}
 
 	x = x || 0;
@@ -403,6 +410,11 @@ function renderLine(line, x, y, pdfKitDoc) {
 		pdfKitDoc._font = inline.font;
 		pdfKitDoc.fontSize(inline.fontSize);
 		pdfKitDoc.text(inline.text, x + inline.x, y + shiftToBaseline, options);
+
+		if (anchorPageNumber) {
+			// Add link to the anchor page on each word in the line
+			inline.linkToPage = anchorPageNumber;
+		}
 
 		if (inline.linkToPage) {
 			var _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0]}).end();

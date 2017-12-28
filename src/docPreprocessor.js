@@ -159,6 +159,14 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 		node._textRef = this.nodeReferences[node.textReference];
 	}
 
+	if (node.anchor) {
+		if (!this.nodeReferences[node.anchor]) {
+			this.nodeReferences[node.anchor] = { _nodeRef: {}, _pseudo: true };
+		}
+
+		node._anchorRef = this.nodeReferences[node.anchor];
+	}
+
 	if (node.text && node.text.text) {
 		node.text = [this.preprocessNode(node.text)];
 	}
