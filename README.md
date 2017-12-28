@@ -613,9 +613,37 @@ var docDefinition = {
 #### Links
 
 To add external or internal links, use the following syntax:
+```js
+var docDefinition = {
+  content: [
+    {text: 'google', link: 'http://google.com'},
+    {text: 'Go to page 2', linkToPage: 2}
+  ]
+}
 ```
-{text: 'google', link: 'http://google.com'}
-{text:'Go to page 2', linkToPage: 2}
+
+To add internal links to specific text objects, use the following syntax:
+```js
+var docDefinition = {
+  content: [
+    {
+      text: [
+        'For more info see ',
+        {
+          text:'section 12',
+          // Link to internal object
+          anchor: 'section12'
+        }
+      ]
+    },
+    {
+      text: 'Section 12',
+      // Destination object
+      id: 'section12',
+      style: 'header'
+    }
+  ]
+}
 ```
 
 #### Table of contents
