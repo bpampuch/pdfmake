@@ -24,6 +24,14 @@ function isObject(variable) {
 	return variable !== null && typeof variable === 'object';
 }
 
+function isNull(variable) {
+	return variable === null;
+}
+
+function isUndefined(variable) {
+	return variable === undefined;
+}
+
 function pack() {
 	var result = {};
 
@@ -78,6 +86,8 @@ module.exports = {
 	isArray: isArray,
 	isFunction: isFunction,
 	isObject: isObject,
+	isNull: isNull,
+	isUndefined: isUndefined,
 	pack: pack,
 	fontStringify: fontStringify,
 	offsetVector: offsetVector

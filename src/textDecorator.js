@@ -3,33 +3,35 @@
 var isArray = require('./helpers').isArray;
 
 function groupDecorations(line) {
-	var groups = [], curGroup = null;
+	var groups = [], currentGroup = null;
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
 		var decoration = inline.decoration;
 		if (!decoration) {
-			curGroup = null;
+			currentGroup = null;
 			continue;
+		}
+		if (!isArray(decoration)) {
+			decoration = [decoration];
 		}
 		var color = inline.decorationColor || inline.color || 'black';
 		var style = inline.decorationStyle || 'solid';
-		decoration = isArray(decoration) ? decoration : [decoration];
 		for (var ii = 0, ll = decoration.length; ii < ll; ii++) {
-			var deco = decoration[ii];
-			if (!curGroup || deco !== curGroup.decoration ||
-				style !== curGroup.decorationStyle || color !== curGroup.decorationColor ||
-				deco === 'lineThrough') {
+			var decorationItem = decoration[ii];
+			if (!currentGroup || decorationItem !== currentGroup.decoration ||
+				style !== currentGroup.decorationStyle || color !== currentGroup.decorationColor ||
+				decorationItem === 'lineThrough') {
 
-				curGroup = {
+				currentGroup = {
 					line: line,
-					decoration: deco,
+					decoration: decorationItem,
 					decorationColor: color,
 					decorationStyle: style,
 					inlines: [inline]
 				};
-				groups.push(curGroup);
+				groups.push(currentGroup);
 			} else {
-				curGroup.inlines.push(inline);
+				currentGroup.inlines.push(inline);
 			}
 		}
 	}
@@ -41,8 +43,8 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 	function maxInline() {
 		var max = 0;
 		for (var i = 0, l = group.inlines.length; i < l; i++) {
-			var inl = group.inlines[i];
-			max = inl.fontSize > max ? i : max;
+			var inline = group.inlines[i];
+			max = inline.fontSize > max ? i : max;
 		}
 		return group.inlines[max];
 	}
@@ -114,7 +116,6 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 			rwx += sh * 6;
 		}
 		pdfKitDoc.stroke(group.decorationColor);
-
 	} else {
 		pdfKitDoc.fillColor(group.decorationColor)
 			.rect(x + firstInline.x, y - lw / 2, totalWidth, lw)
@@ -134,12 +135,13 @@ function drawBackground(line, x, y, pdfKitDoc) {
 	var height = line.getHeight();
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
-		if (inline.background) {
-			var justifyShift = (inline.justifyShift || 0);
-			pdfKitDoc.fillColor(inline.background)
-				.rect(x + inline.x - justifyShift, y, inline.width + justifyShift, height)
-				.fill();
+		if (!inline.background) {
+			continue;
 		}
+		var justifyShift = (inline.justifyShift || 0);
+		pdfKitDoc.fillColor(inline.background)
+			.rect(x + inline.x - justifyShift, y, inline.width + justifyShift, height)
+			.fill();
 	}
 }
 
