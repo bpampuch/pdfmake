@@ -1,8 +1,9 @@
 'use strict';
 
 var assert = require('assert');
+var rewire = require("rewire");
 
-var TextTools = require('../src/textTools');
+var TextTools = rewire('../src/textTools');
 var StyleContextStack = require('../src/styleContextStack');
 var DocPreprocessor = require('../src/docPreprocessor');
 
@@ -137,12 +138,12 @@ describe('TextTools', function () {
 
 	describe('splitWords', function () {
 		it('should do basic splitting', function () {
-			var result = textTools.splitWords(sampleText);
+			var result = TextTools.__get__('splitWords')(sampleText);
 			assert.equal(result.length, 8);
 		});
 
 		it('should not set lineEnd on inlines if there are no new-lines', function () {
-			var result = textTools.splitWords(sampleText);
+			var result = TextTools.__get__('splitWords')(sampleText);
 
 			result.forEach(function (item) {
 				assert.notEqual(item.lineEnd, true);
@@ -150,18 +151,18 @@ describe('TextTools', function () {
 		});
 
 		it('should split into lines if there are new-line chars', function () {
-			var result = textTools.splitWords(sampleText2);
+			var result = TextTools.__get__('splitWords')(sampleText2);
 			assert.equal(result.length, 14);
 		});
 
 		it('should split properly when adjacent newlines appear', function () {
-			var result = textTools.splitWords(sampleText2);
+			var result = TextTools.__get__('splitWords')(sampleText2);
 			assert.equal(result[9].text.length, 0);
 			assert.equal(result[9].lineEnd, true);
 		});
 
 		it('should support whitespace-only lines', function () {
-			var result = textTools.splitWords(sampleText2);
+			var result = TextTools.__get__('splitWords')(sampleText2);
 			assert.equal(result[6].text, ' ');
 			assert.equal(result[6].lineEnd, true);
 		});
@@ -170,55 +171,55 @@ describe('TextTools', function () {
 			var txt = 'A\ttest';
 
 			assert.equal(txt.length, 6);
-			var result = textTools.splitWords(txt);
+			var result = TextTools.__get__('splitWords')(txt);
 			assert.equal(result[0].text, 'A    ');
 			assert.equal(result[1].text, 'test');
 		});
 
 		it('should split ZERO WIDTH SPACE character', function () {
-			var result = textTools.splitWords('first line\u200Bsecond line\u200Bthird line');
+			var result = TextTools.__get__('splitWords')('first line\u200Bsecond line\u200Bthird line');
 			assert.equal(result.length, 6);
 		});
 
 		it('should split basic Chinese text', function () {
-			var result = textTools.splitWords('起来！不愿做奴隶的人们！');
+			var result = TextTools.__get__('splitWords')('起来！不愿做奴隶的人们！');
 			assert.equal(result.length, 10);
 		});
 
 		it('should split Chinese text into lines if there are new-line chars', function () {
-			var result = textTools.splitWords('中华民族到了最危险的时候，\n每个人被迫着发出最后的吼声。\n起来！起来！起来！');
+			var result = TextTools.__get__('splitWords')('中华民族到了最危险的时候，\n每个人被迫着发出最后的吼声。\n起来！起来！起来！');
 			assert.equal(result.length, 31);
 		});
 	});
 
 	describe('normalizeTextArray', function () {
 		it('should support plain strings', function () {
-			var result = textTools.normalizeTextArray(plainText, styleStack);
+			var result = TextTools.__get__('normalizeTextArray')(plainText, styleStack);
 			assert.equal(result.length, 6);
 		});
 
 		it('should support plain strings with new-lines', function () {
-			var result = textTools.normalizeTextArray(plainText, styleStack);
+			var result = TextTools.__get__('normalizeTextArray')(plainText, styleStack);
 			assert(result[3].lineEnd);
 		});
 
 		it('should support an array of plain strings', function () {
-			var result = textTools.normalizeTextArray(plainTextArray, styleStack);
+			var result = TextTools.__get__('normalizeTextArray')(plainTextArray, styleStack);
 			assert.equal(result.length, 7);
 		});
 
 		it('should support an array of plain strings with new-lines', function () {
-			var result = textTools.normalizeTextArray(plainTextArray, styleStack);
+			var result = TextTools.__get__('normalizeTextArray')(plainTextArray, styleStack);
 			assert.equal(result[4].lineEnd, true);
 		});
 
 		it('should support arrays with style definition', function () {
-			var result = textTools.normalizeTextArray(mixedTextArray, styleStack);
+			var result = TextTools.__get__('normalizeTextArray')(mixedTextArray, styleStack);
 			assert.equal(result.length, 7);
 		});
 
 		it('should keep style definitions after splitting new-lines', function () {
-			var result = textTools.normalizeTextArray(mixedTextArray, styleStack);
+			var result = TextTools.__get__('normalizeTextArray')(mixedTextArray, styleStack);
 			[0, 2, 3, 4, 5, 6].forEach(function (i) {
 				assert.equal(result[i].bold, true);
 			});
@@ -227,7 +228,7 @@ describe('TextTools', function () {
 		});
 
 		it('should keep unknown style fields after splitting new-lines', function () {
-			var result = textTools.normalizeTextArray(mixedTextArrayWithUnknownStyleDefinitions, styleStack);
+			var result = TextTools.__get__('normalizeTextArray')(mixedTextArrayWithUnknownStyleDefinitions, styleStack);
 			assert.equal(result.length, 7);
 			assert.equal(result[5].unknownStyle, 123);
 			assert.equal(result[6].unknownStyle, 123);
@@ -235,7 +236,7 @@ describe('TextTools', function () {
 
 		it('should support cast to text', function () {
 			var node = docPreprocessor.preprocessNode(mixedTextArrayWithVariousTypes);
-			var result = textTools.normalizeTextArray(node.stack, styleStack);
+			var result = TextTools.__get__('normalizeTextArray')(node.stack, styleStack);
 			assert.equal(result.length, 6);
 			assert.equal(result[0].text, '2016');
 			assert.equal(result[1].text, 'true');
@@ -246,17 +247,17 @@ describe('TextTools', function () {
 		});
 
 		it('should support keep noWrap from style', function () {
-			var result = textTools.normalizeTextArray([{text: 'very long text'}], styleStackNoWrap);
+			var result = TextTools.__get__('normalizeTextArray')([{text: 'very long text'}], styleStackNoWrap);
 			assert.equal(result.length, 1);
 		});
 
 		it('should support disable noWrap in text', function () {
-			var result = textTools.normalizeTextArray([{text: 'very long text', noWrap: false}], styleStackNoWrap);
+			var result = TextTools.__get__('normalizeTextArray')([{text: 'very long text', noWrap: false}], styleStackNoWrap);
 			assert.equal(result.length, 3);
 		});
 
 		it('should support enable noWrap in text', function () {
-			var result = textTools.normalizeTextArray([{text: 'very long text', noWrap: true}], styleStack);
+			var result = TextTools.__get__('normalizeTextArray')([{text: 'very long text', noWrap: true}], styleStack);
 			assert.equal(result.length, 1);
 		});
 
@@ -265,75 +266,75 @@ describe('TextTools', function () {
 	describe('measure', function () {
 		// width + positioning
 		it('should set width', function () {
-			var result = textTools.measure(sampleTestProvider, plainTextArray);
+			var result = TextTools.__get__('measure')(sampleTestProvider, plainTextArray);
 			assert.notEqual(result, null);
 			assert.notEqual(result.length, 0);
 			assert.notEqual(result[0].width, null);
 		});
 
 		it('should measure text widths', function () {
-			var result = textTools.measure(sampleTestProvider, plainTextArray);
+			var result = TextTools.__get__('measure')(sampleTestProvider, plainTextArray);
 			assert.equal(result[0].width, 72);
 			assert.equal(result[2].width, 36);
 			assert.equal(result[3].width, 108);
 		});
 
 		it('should calculate leading and trailing cuts', function () {
-			var result = textTools.measure(sampleTestProvider, plainTextArray);
+			var result = TextTools.__get__('measure')(sampleTestProvider, plainTextArray);
 			assert.equal(result[0].trailingCut, 12);
 			assert.equal(result[0].leadingCut, 0);
 		});
 
 		it('should set the same value for leading and trailing cuts for whitespace-only strings', function () {
-			var result = textTools.measure(sampleTestProvider, plainTextArray);
+			var result = TextTools.__get__('measure')(sampleTestProvider, plainTextArray);
 			assert.equal(result[2].trailingCut, 36);
 			assert.equal(result[2].leadingCut, 36);
 		});
 
 		it('should set leading and trailing cuts to 0 if texts cannot be trimmed', function () {
-			var result = textTools.measure(sampleTestProvider, plainTextArray);
+			var result = TextTools.__get__('measure')(sampleTestProvider, plainTextArray);
 			assert.equal(result[6].trailingCut, 0);
 			assert.equal(result[6].leadingCut, 0);
 		});
 
 		// styling
 		it('should use default style', function () {
-			var result = textTools.measure(sampleTestProvider, 'Imię', styleStack);
+			var result = TextTools.__get__('measure')(sampleTestProvider, 'Imię', styleStack);
 			assert.equal(result[0].width, 4 * 15);
 		});
 
 		it('should use overriden styles from styleStack', function () {
 			styleStack.push('header');
-			var result = textTools.measure(sampleTestProvider, 'Imię', styleStack);
+			var result = TextTools.__get__('measure')(sampleTestProvider, 'Imię', styleStack);
 			assert.equal(result[0].width, 4 * 150);
 			styleStack.pop();
 		});
 
 		it('should support style overrides at text definition level', function () {
-			var result = textTools.measure(sampleTestProvider, [{text: 'Imię', fontSize: 20}], styleStack);
+			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', fontSize: 20}], styleStack);
 			assert.equal(result[0].width, 4 * 20);
 		});
 
 		it('should support named styles at text definition level', function () {
-			var result = textTools.measure(sampleTestProvider, [{text: 'Imię', style: 'header'}], styleStack);
+			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', style: 'header'}], styleStack);
 			assert.equal(result[0].width, 4 * 150);
 		});
 
 		it('should support multiple named styles at text definition level', function () {
-			var result = textTools.measure(sampleTestProvider, [{text: 'Imię', style: ['header', 'small']}], styleStack);
+			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', style: ['header', 'small']}], styleStack);
 			assert.equal(result[0].width, 4 * 8);
 		});
 
 		it('should obey named styles order', function () {
-			var result = textTools.measure(sampleTestProvider, [{text: 'Imię', style: ['header', 'small']}], styleStack);
+			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', style: ['header', 'small']}], styleStack);
 			assert.equal(result[0].width, 4 * 8);
 
-			result = textTools.measure(sampleTestProvider, [{text: 'Imię', style: ['small', 'header']}], styleStack);
+			result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', style: ['small', 'header']}], styleStack);
 			assert.equal(result[0].width, 4 * 150);
 		});
 
 		it('should not take values from named styles if style-overrides have been providede', function () {
-			var result = textTools.measure(sampleTestProvider, [{text: 'Imię', fontSize: 123, style: 'header'}], styleStack);
+			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', fontSize: 123, style: 'header'}], styleStack);
 			assert.equal(result[0].width, 4 * 123);
 		});
 	});

@@ -299,11 +299,4 @@ function widthOfString(text, font, fontSize, characterSpacing, fontFeatures) {
 	return font.widthOfString(text, fontSize, fontFeatures) + ((characterSpacing || 0) * (text.length - 1));
 }
 
-/****TESTS**** (add a leading '/' to uncomment)
- TextTools.prototype.splitWords = splitWords;
- TextTools.prototype.normalizeTextArray = normalizeTextArray;
- TextTools.prototype.measure = measure;
- // */
-
-
 module.exports = TextTools;

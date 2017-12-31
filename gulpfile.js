@@ -49,25 +49,12 @@ function reportWebPackErrors(err, stats) {
 	}));
 }
 
-gulp.task('test', ['prepareTestEnv'], function () {
-	return gulp.src(['test-env/tests/**/*.js'])
+gulp.task('test', function () {
+	return gulp.src(['./tests/**/*.js'])
 		.pipe(mocha({
 			debugBrk: DEBUG,
 			R: CI ? 'spec' : 'nyan'
 		}));
-});
-
-gulp.task('prepareTestEnv', ['copy-src-with-exposed-test-methods', 'copy-tests']);
-
-gulp.task('copy-src-with-exposed-test-methods', function () {
-	return gulp.src(['src/**/*.js'], {base: './'})
-		.pipe(replace(/^(\/(\*)*TESTS.*$)/gm, '/$1'))
-		.pipe(gulp.dest('test-env'));
-});
-
-gulp.task('copy-tests', function () {
-	return gulp.src('tests/**/*.*', {base: './'})
-		.pipe(gulp.dest('test-env'));
 });
 
 gulp.task('lint', function () {

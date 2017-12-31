@@ -301,8 +301,4 @@ function bottomMostContext(c1, c2) {
 	};
 }
 
-/****TESTS**** (add a leading '/' to uncomment)
- DocumentContext.bottomMostContext = bottomMostContext;
- // */
-
 module.exports = DocumentContext;

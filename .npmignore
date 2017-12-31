@@ -4,7 +4,6 @@ dev-playground/
 docs/
 examples/
 tests/
-test-env/
 yarn.lock
 composer.json
 bower.json
