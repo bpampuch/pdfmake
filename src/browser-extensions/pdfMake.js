@@ -36,7 +36,7 @@ Document.prototype._createDoc = function (options, callback) {
 	}
 
 	var printer = new PdfPrinter(this.fonts);
-	printer.fs.bindFS(this.vfs);
+	require('fs').bindFS(this.vfs); // bind virtual file system to file system
 
 	var doc = printer.createPdfKitDocument(this.docDefinition, options);
 	var chunks = [];

@@ -529,7 +529,3 @@ function endClip(pdfKitDoc) {
 }
 
 module.exports = PdfPrinter;
-
-
-/* temporary browser extension */
-PdfPrinter.prototype.fs = require('fs');
