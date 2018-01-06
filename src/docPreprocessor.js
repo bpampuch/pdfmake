@@ -4,6 +4,7 @@ var isString = require('./helpers').isString;
 var isNumber = require('./helpers').isNumber;
 var isBoolean = require('./helpers').isBoolean;
 var isArray = require('./helpers').isArray;
+var isUndefined = require('./helpers').isUndefined;
 var fontStringify = require('./helpers').fontStringify;
 
 function DocPreprocessor() {
@@ -188,6 +189,9 @@ DocPreprocessor.prototype.preprocessToc = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessImage = function (node) {
+	if (!isUndefined(node.image.type) && !isUndefined(node.image.data) && (node.image.type === 'Buffer') && isArray(node.image.data)) {
+		node.image = new Buffer(node.image.data);
+	}
 	return node;
 };
 
