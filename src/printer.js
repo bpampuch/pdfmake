@@ -375,7 +375,7 @@ function renderLine(line, x, y, pdfKitDoc) {
 		}
 	}
 
-	if (line._anchorRef) {
+	if (line._anchorRef && line._anchorRef.positions) {
 		// Compute the anchor destination page
 		anchorPageNumber = line._anchorRef.positions[0].pageNumber.toString();
 	}
@@ -411,7 +411,7 @@ function renderLine(line, x, y, pdfKitDoc) {
 		pdfKitDoc.fontSize(inline.fontSize);
 		pdfKitDoc.text(inline.text, x + inline.x, y + shiftToBaseline, options);
 
-		if (anchorPageNumber) {
+		if (anchorPageNumber !== undefined) {
 			// Add link to the anchor page on each word in the line
 			inline.linkToPage = anchorPageNumber;
 		}
