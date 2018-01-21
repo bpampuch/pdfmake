@@ -84,7 +84,7 @@ var runApplication = function runApplication() {
          *                                                                                          
          */
         // a string or { width: number, height: number }
-        pageSize: 'A0',
+        pageSize: 'LETTER',
 
         pageOrientation: 'portait',
         // [left, top, right, bottom] or [horizontal, vertical] or just a number for equal margins
