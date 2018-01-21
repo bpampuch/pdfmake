@@ -86,7 +86,7 @@ Document.prototype._bufferToBlob = function (buffer) {
 Document.prototype._openWindow = function () {
 	// we have to open the window immediately and store the reference
 	// otherwise popup blockers will stop us
-	var win = global.open('', '_blank');
+	var win = window.open('', '_blank');
 	if (win === null) {
 		throw 'Open PDF in new window blocked by browser';
 	}
@@ -100,7 +100,7 @@ Document.prototype._openPdf = function (options, win) {
 	}
 	try {
 		this.getBlob(function (result) {
-			var urlCreator = global.URL || global.webkitURL;
+			var urlCreator = window.URL || window.webkitURL;
 			var pdfUrl = urlCreator.createObjectURL(result);
 			win.location.href = pdfUrl;
 		}, options);
