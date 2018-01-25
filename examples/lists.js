@@ -14,13 +14,12 @@ var fs = require('fs');
 
 var docDefinition = {
 	content: [
-		{text: 'Unordered list', style: 'header'},
 		{
-			ul: [
-				'item 1',
-				'item 2',
-				'item 3'
-			]
+			text: 'Unordered list', 
+			style: 'header'
+		},
+		{
+			ul: ['item 1', 'item 2','item 3']
 		},
 		{text: '\n\nUnordered list with longer lines', style: 'header'},
 		{
@@ -32,11 +31,7 @@ var docDefinition = {
 		},
 		{text: '\n\nOrdered list', style: 'header'},
 		{
-			ol: [
-				'item 1',
-				'item 2',
-				'item 3'
-			]
+			ol: ['item 1', 'item 2', 'item 3']
 		},
 		{text: '\n\nOrdered list with longer lines', style: 'header'},
 		{
@@ -58,11 +53,7 @@ var docDefinition = {
 		{text: '\n\nOrdered list with start value', style: 'header'},
 		{
 			start: 50,
-			ol: [
-				'item 1',
-				'item 2',
-				'item 3'
-			]
+			ol: ['item 1', 'item 2','item 3']
 		},
 		{text: '\n\nOrdered list with own values', style: 'header'},
 		{
