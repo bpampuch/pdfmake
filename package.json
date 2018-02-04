@@ -24,7 +24,7 @@
     "gulp-replace": "^0.6.1",
     "gulp-sourcemaps": "^2.6.4",
     "gulp-spawn-mocha": "^5.0.0",
-    "gulp-uglify": "^2.1.2",
+    "gulp-uglify": "^3.0.0",
     "gulp-util": "^3.0.8",
     "mocha": "^5.0.0",
     "rewire": "^3.0.2",
