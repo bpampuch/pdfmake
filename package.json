@@ -26,7 +26,6 @@
     "gulp-spawn-mocha": "^5.0.0",
     "gulp-uglify": "^2.1.2",
     "gulp-util": "^3.0.8",
-    "json-loader": "^0.5.7",
     "mocha": "^5.0.0",
     "rewire": "^3.0.2",
     "sinon": "^4.2.2",
