@@ -24,8 +24,6 @@ var uglifyOptions = {
 	}
 };
 
-
-gulp.task('default', [/*'lint',*/ 'test', 'build', 'buildFonts']);
 gulp.task('build', function () {
 	var pkg = require('./package.json');
 	return gulp.src('src/browser-extensions/pdfMake.js')
@@ -82,3 +80,5 @@ gulp.task('watch', function () {
 	gulp.watch('./src/**', ['test', 'build']);
 	gulp.watch('./tests/**', ['test']);
 });
+
+gulp.task('default', gulp.series(/*'lint',*/ 'test', 'build', 'buildFonts'));
