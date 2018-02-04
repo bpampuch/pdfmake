@@ -14,9 +14,11 @@ module.exports = {
 			fs: path.join(__dirname, './src/browser-extensions/virtual-fs.js')
 		}
 	},
+	resolveLoader: {
+		moduleExtensions: ["-loader"]
+	},
 	module: {
 		loaders: [
-			{test: /\.json$/, loader: 'json-loader'},
 			{test: /pdfMake.js$/, loader: 'expose?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
 			{test: /pdfkit[/\\]js[/\\]mixins[/\\]fonts.js$/, loader: StringReplacePlugin.replace({
 					replacements: [
