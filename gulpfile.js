@@ -1,6 +1,5 @@
 var gulp = require('gulp');
 var webpack = require('webpack-stream');
-var gutil = require('gulp-util');
 var uglify = require('gulp-uglify');
 var rename = require('gulp-rename');
 var sourcemaps = require('gulp-sourcemaps');
@@ -10,6 +9,8 @@ var eslint = require('gulp-eslint');
 var each = require('gulp-each');
 var fc2json = require('gulp-file-contents-to-json');
 var header = require('gulp-header');
+var log = require('fancy-log');
+var PluginError = require('plugin-error');
 var DEBUG = process.env.NODE_ENV === 'debug',
 	CI = process.env.CI === 'true';
 
@@ -41,10 +42,9 @@ gulp.task('build', function () {
 
 function reportWebPackErrors(err, stats) {
 	if (err) {
-		throw new gutil.PluginError("webpack", err);
+		throw new PluginError("webpack", err);
 	}
-	gutil.log("[webpack]", stats.toString({
-	}));
+	log("[webpack]", stats.toString({}));
 }
 
 gulp.task('test', function () {
