@@ -774,11 +774,20 @@ var docDefinition = {
 
 ## Building from sources
 
+using npm:
 ```
 git clone https://github.com/bpampuch/pdfmake.git
 cd pdfmake
-npm install # or: yarn
-npm run build # or: yarn run build
+npm install
+npm run build
+```
+
+using yarn:
+```
+git clone https://github.com/bpampuch/pdfmake.git
+cd pdfmake
+yarn
+yarn run build
 ```
 
 ## Coming soon
