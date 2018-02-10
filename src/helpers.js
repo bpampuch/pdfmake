@@ -32,11 +32,11 @@ function isUndefined(variable) {
 	return variable === undefined;
 }
 
-function pack() {
+function pack(...args) {
 	var result = {};
 
-	for (var i = 0, l = arguments.length; i < l; i++) {
-		var obj = arguments[i];
+	for (var i = 0, l = args.length; i < l; i++) {
+		var obj = args[i];
 
 		if (obj) {
 			for (var key in obj) {
