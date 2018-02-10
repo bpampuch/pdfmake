@@ -132,9 +132,8 @@ function splitWords(text, noWrap) {
 	return results;
 }
 
-function copyStyle(source, destination) {
-	destination = destination || {};
-	source = source || {}; //TODO: default style
+function copyStyle(source = {}, destination = {}) {
+	//TODO: default style for source variable
 
 	for (var key in source) {
 		if (key != 'text' && source.hasOwnProperty(key)) {

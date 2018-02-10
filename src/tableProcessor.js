@@ -367,13 +367,13 @@ class TableProcessor {
 		if (this.dontBreakRows) {
 			writer.tracker.auto('pageChanged',
 				() => {
-					if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
-						self.drawHorizontalLine(rowIndex, writer);
-					}
-				},
-				() => {
-					writer.commitUnbreakableBlock();
+				if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
+					self.drawHorizontalLine(rowIndex, writer);
 				}
+			},
+				() => {
+				writer.commitUnbreakableBlock();
+			}
 			);
 		}
 

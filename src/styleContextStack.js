@@ -51,10 +51,10 @@ class StyleContextStack {
 	 *                           one element will be removed from the stack)
 	 */
 	pop(howMany = 1) {
-        while (howMany-- > 0) {
+		while (howMany-- > 0) {
 			this.styleOverrides.pop();
 		}
-    }
+	}
 
 	/**
 	 * Creates a set of named styles or/and a style-overrides-object based on the item,

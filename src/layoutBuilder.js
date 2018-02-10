@@ -180,7 +180,7 @@ class LayoutBuilder {
 
 	addStaticRepeatable(headerOrFooter, sizeFunction) {
 		this.addDynamicRepeatable(() => // copy to new object
-        JSON.parse(JSON.stringify(headerOrFooter)), sizeFunction);
+			JSON.parse(JSON.stringify(headerOrFooter)), sizeFunction);
 	}
 
 	addDynamicRepeatable(nodeGetter, sizeFunction) {
@@ -203,18 +203,18 @@ class LayoutBuilder {
 
 	addHeadersAndFooters(header, footer) {
 		var headerSizeFct = (pageSize, pageMargins) => ({
-            x: 0,
-            y: 0,
-            width: pageSize.width,
-            height: pageMargins.top
-        });
+				x: 0,
+				y: 0,
+				width: pageSize.width,
+				height: pageMargins.top
+			});
 
 		var footerSizeFct = (pageSize, pageMargins) => ({
-            x: 0,
-            y: pageSize.height - pageMargins.bottom,
-            width: pageSize.width,
-            height: pageMargins.bottom
-        });
+				x: 0,
+				y: pageSize.height - pageMargins.bottom,
+				width: pageSize.width,
+				height: pageMargins.bottom
+			});
 
 		if (isFunction(header)) {
 			this.addDynamicRepeatable(header, headerSizeFct);
