@@ -228,53 +228,53 @@ function fixPageMargins(margin) {
 function registerDefaultTableLayouts(layoutBuilder) {
 	layoutBuilder.registerTableLayouts({
 		noBorders: {
-			hLineWidth: function (i) {
+			hLineWidth(i) {
 				return 0;
 			},
-			vLineWidth: function (i) {
+			vLineWidth(i) {
 				return 0;
 			},
-			paddingLeft: function (i) {
+			paddingLeft(i) {
 				return i && 4 || 0;
 			},
-			paddingRight: function (i, node) {
+			paddingRight(i, node) {
 				return (i < node.table.widths.length - 1) ? 4 : 0;
 			}
 		},
 		headerLineOnly: {
-			hLineWidth: function (i, node) {
+			hLineWidth(i, node) {
 				if (i === 0 || i === node.table.body.length) {
 					return 0;
 				}
 				return (i === node.table.headerRows) ? 2 : 0;
 			},
-			vLineWidth: function (i) {
+			vLineWidth(i) {
 				return 0;
 			},
-			paddingLeft: function (i) {
+			paddingLeft(i) {
 				return i === 0 ? 0 : 8;
 			},
-			paddingRight: function (i, node) {
+			paddingRight(i, node) {
 				return (i === node.table.widths.length - 1) ? 0 : 8;
 			}
 		},
 		lightHorizontalLines: {
-			hLineWidth: function (i, node) {
+			hLineWidth(i, node) {
 				if (i === 0 || i === node.table.body.length) {
 					return 0;
 				}
 				return (i === node.table.headerRows) ? 2 : 1;
 			},
-			vLineWidth: function (i) {
+			vLineWidth(i) {
 				return 0;
 			},
-			hLineColor: function (i) {
+			hLineColor(i) {
 				return i === 1 ? 'black' : '#aaa';
 			},
-			paddingLeft: function (i) {
+			paddingLeft(i) {
 				return i === 0 ? 0 : 8;
 			},
-			paddingRight: function (i, node) {
+			paddingRight(i, node) {
 				return (i === node.table.widths.length - 1) ? 0 : 8;
 			}
 		}

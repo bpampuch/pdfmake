@@ -180,7 +180,7 @@ function canCreatePdf() {
 }
 
 module.exports = {
-	createPdf: function (docDefinition) {
+	createPdf(docDefinition) {
 		if (!canCreatePdf()) {
 			throw 'Your browser does not provide the level of support needed';
 		}
