@@ -10,95 +10,98 @@ var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;
 
 /**
- * Creates an instance of TextTools - text measurement utility
- *
- * @constructor
- * @param {FontProvider} fontProvider
+ * Text measurement utility
  */
-function TextTools(fontProvider) {
-	this.fontProvider = fontProvider;
+class TextTools {
+
+	/**
+	 * @param {FontProvider} fontProvider
+	 */
+	constructor(fontProvider) {
+		this.fontProvider = fontProvider;
+	}
+
+	/**
+	 * Converts an array of strings (or inline-definition-objects) into a collection
+	 * of inlines and calculated minWidth/maxWidth.
+	 * and their min/max widths
+	 * @param  {Object} textArray - an array of inline-definition-objects (or strings)
+	 * @param  {Object} styleContextStack current style stack
+	 * @return {Object}                   collection of inlines, minWidth, maxWidth
+	 */
+	buildInlines(textArray, styleContextStack) {
+		var measured = measure(this.fontProvider, textArray, styleContextStack);
+
+		var minWidth = 0,
+			maxWidth = 0,
+			currentLineWidth;
+
+		measured.forEach(function (inline) {
+			minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);
+
+			if (!currentLineWidth) {
+				currentLineWidth = {width: 0, leadingCut: inline.leadingCut, trailingCut: 0};
+			}
+
+			currentLineWidth.width += inline.width;
+			currentLineWidth.trailingCut = inline.trailingCut;
+
+			maxWidth = Math.max(maxWidth, getTrimmedWidth(currentLineWidth));
+
+			if (inline.lineEnd) {
+				currentLineWidth = null;
+			}
+		});
+
+		if (getStyleProperty({}, styleContextStack, 'noWrap', false)) {
+			minWidth = maxWidth;
+		}
+
+		return {
+			items: measured,
+			minWidth: minWidth,
+			maxWidth: maxWidth
+		};
+
+		function getTrimmedWidth(item) {
+			return Math.max(0, item.width - item.leadingCut - item.trailingCut);
+		}
+	}
+
+	/**
+	 * Returns size of the specified string (without breaking it) using the current style
+	 * @param  {String} text              text to be measured
+	 * @param  {Object} styleContextStack current style stack
+	 * @return {Object}                   size of the specified string
+	 */
+	sizeOfString(text, styleContextStack) {
+		text = text ? text.toString().replace(/\t/g, '    ') : '';
+
+		//TODO: refactor - extract from measure
+		var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
+		var fontSize = getStyleProperty({}, styleContextStack, 'fontSize', 12);
+		var fontFeatures = getStyleProperty({}, styleContextStack, 'fontFeatures', null);
+		var bold = getStyleProperty({}, styleContextStack, 'bold', false);
+		var italics = getStyleProperty({}, styleContextStack, 'italics', false);
+		var lineHeight = getStyleProperty({}, styleContextStack, 'lineHeight', 1);
+		var characterSpacing = getStyleProperty({}, styleContextStack, 'characterSpacing', 0);
+
+		var font = this.fontProvider.provideFont(fontName, bold, italics);
+
+		return {
+			width: widthOfString(text, font, fontSize, characterSpacing, fontFeatures),
+			height: font.lineHeight(fontSize) * lineHeight,
+			fontSize: fontSize,
+			lineHeight: lineHeight,
+			ascender: font.ascender / 1000 * fontSize,
+			descender: font.descender / 1000 * fontSize
+		};
+	}
+
+	widthOfString(text, font, fontSize, characterSpacing, fontFeatures) {
+		return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
+	}
 }
-
-/**
- * Converts an array of strings (or inline-definition-objects) into a collection
- * of inlines and calculated minWidth/maxWidth.
- * and their min/max widths
- * @param  {Object} textArray - an array of inline-definition-objects (or strings)
- * @param  {Object} styleContextStack current style stack
- * @return {Object}                   collection of inlines, minWidth, maxWidth
- */
-TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
-	var measured = measure(this.fontProvider, textArray, styleContextStack);
-
-	var minWidth = 0,
-		maxWidth = 0,
-		currentLineWidth;
-
-	measured.forEach(function (inline) {
-		minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);
-
-		if (!currentLineWidth) {
-			currentLineWidth = {width: 0, leadingCut: inline.leadingCut, trailingCut: 0};
-		}
-
-		currentLineWidth.width += inline.width;
-		currentLineWidth.trailingCut = inline.trailingCut;
-
-		maxWidth = Math.max(maxWidth, getTrimmedWidth(currentLineWidth));
-
-		if (inline.lineEnd) {
-			currentLineWidth = null;
-		}
-	});
-
-	if (getStyleProperty({}, styleContextStack, 'noWrap', false)) {
-		minWidth = maxWidth;
-	}
-
-	return {
-		items: measured,
-		minWidth: minWidth,
-		maxWidth: maxWidth
-	};
-
-	function getTrimmedWidth(item) {
-		return Math.max(0, item.width - item.leadingCut - item.trailingCut);
-	}
-};
-
-/**
- * Returns size of the specified string (without breaking it) using the current style
- * @param  {String} text              text to be measured
- * @param  {Object} styleContextStack current style stack
- * @return {Object}                   size of the specified string
- */
-TextTools.prototype.sizeOfString = function (text, styleContextStack) {
-	text = text ? text.toString().replace(/\t/g, '    ') : '';
-
-	//TODO: refactor - extract from measure
-	var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
-	var fontSize = getStyleProperty({}, styleContextStack, 'fontSize', 12);
-	var fontFeatures = getStyleProperty({}, styleContextStack, 'fontFeatures', null);
-	var bold = getStyleProperty({}, styleContextStack, 'bold', false);
-	var italics = getStyleProperty({}, styleContextStack, 'italics', false);
-	var lineHeight = getStyleProperty({}, styleContextStack, 'lineHeight', 1);
-	var characterSpacing = getStyleProperty({}, styleContextStack, 'characterSpacing', 0);
-
-	var font = this.fontProvider.provideFont(fontName, bold, italics);
-
-	return {
-		width: widthOfString(text, font, fontSize, characterSpacing, fontFeatures),
-		height: font.lineHeight(fontSize) * lineHeight,
-		fontSize: fontSize,
-		lineHeight: lineHeight,
-		ascender: font.ascender / 1000 * fontSize,
-		descender: font.descender / 1000 * fontSize
-	};
-};
-
-TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpacing, fontFeatures) {
-	return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
-};
 
 function splitWords(text, noWrap) {
 	var results = [];
