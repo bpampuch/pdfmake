@@ -1,13 +1,14 @@
 var isString = require('./helpers').isString;
 
 function buildColumnWidths(columns, availableWidth) {
-	var autoColumns = [],
-		autoMin = 0, autoMax = 0,
-		starColumns = [],
-		starMaxMin = 0,
-		starMaxMax = 0,
-		fixedColumns = [],
-		initial_availableWidth = availableWidth;
+	var autoColumns = [];
+	var autoMin = 0;
+	var autoMax = 0;
+	var starColumns = [];
+	var starMaxMin = 0;
+	var starMaxMax = 0;
+	var fixedColumns = [];
+	var initial_availableWidth = availableWidth;
 
 	columns.forEach((column) => {
 		if (isAutoColumn(column)) {

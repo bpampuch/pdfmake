@@ -84,7 +84,10 @@ class DocPreprocessor {
 	}
 
 	preprocessTable(node) {
-		var col, row, cols, rows;
+		var col;
+		var row;
+		var cols;
+		var rows;
 
 		for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
 			for (row = 0, rows = node.table.body.length; row < rows; row++) {

@@ -418,7 +418,8 @@ class LayoutBuilder {
 
 	processRow(columns, widths, gaps, tableBody, tableRow, height) {
 		var self = this;
-		var pageBreaks = [], positions = [];
+		var pageBreaks = [];
+		var positions = [];
 
 		this.tracker.auto('pageChanged', storePageBreakData, () => {
 			widths = widths || columns;
@@ -492,9 +493,9 @@ class LayoutBuilder {
 
 	// lists
 	processList(orderedList, node) {
-		var self = this,
-			items = orderedList ? node.ol : node.ul,
-			gapSize = node._gapSize;
+		var self = this;
+		var items = orderedList ? node.ol : node.ul;
+		var gapSize = node._gapSize;
 
 		this.writer.context().addMargin(gapSize.width);
 
@@ -675,12 +676,18 @@ class LayoutBuilder {
 }
 
 function decorateNode(node) {
-	var x = node.x, y = node.y;
+	var x = node.x;
+	var y = node.y;
 	node.positions = [];
 
 	if (isArray(node.canvas)) {
 		node.canvas.forEach(vector => {
-			var x = vector.x, y = vector.y, x1 = vector.x1, y1 = vector.y1, x2 = vector.x2, y2 = vector.y2;
+			var x = vector.x;
+			var y = vector.y;
+			var x1 = vector.x1;
+			var y1 = vector.y1;
+			var x2 = vector.x2;
+			var y2 = vector.y2;
 			vector.resetXY = () => {
 				vector.x = x;
 				vector.y = y;

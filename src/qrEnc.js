@@ -63,7 +63,10 @@ var VERSIONS = [
 
 // mode constants (cf. Table 2 in JIS X 0510:2004 p. 16)
 var MODE_TERMINATOR = 0;
-var MODE_NUMERIC = 1, MODE_ALPHANUMERIC = 2, MODE_OCTET = 4, MODE_KANJI = 8;
+var MODE_NUMERIC = 1;
+var MODE_ALPHANUMERIC = 2;
+var MODE_OCTET = 4;
+var MODE_KANJI = 8;
 
 // validation regexps
 var NUMERIC_REGEXP = /^\d*$/;
@@ -71,11 +74,17 @@ var ALPHANUMERIC_REGEXP = /^[A-Za-z0-9 $%*+\-./:]*$/;
 var ALPHANUMERIC_OUT_REGEXP = /^[A-Z0-9 $%*+\-./:]*$/;
 
 // ECC levels (cf. Table 22 in JIS X 0510:2004 p. 45)
-var ECCLEVEL_L = 1, ECCLEVEL_M = 0, ECCLEVEL_Q = 3, ECCLEVEL_H = 2;
+var ECCLEVEL_L = 1;
+
+var ECCLEVEL_M = 0;
+var ECCLEVEL_Q = 3;
+var ECCLEVEL_H = 2;
 
 // GF(2^8)-to-integer mapping with a reducing polynomial x^8+x^4+x^3+x^2+1
 // invariant: GF256_MAP[GF256_INVMAP[i]] == i for all i in [1,256)
-var GF256_MAP = [], GF256_INVMAP = [-1];
+var GF256_MAP = [];
+
+var GF256_INVMAP = [-1];
 for (var i = 0, v = 1; i < 255; ++i) {
 	GF256_MAP.push(v);
 	GF256_INVMAP[v] = i;
@@ -91,7 +100,8 @@ for (var i = 0, v = 1; i < 255; ++i) {
 // to \alpha to avoid the redundant calculation. (see also calculateecc below.)
 var GF256_GENPOLY = [[]];
 for (var i = 0; i < 30; ++i) {
-	var prevpoly = GF256_GENPOLY[i], poly = [];
+	var prevpoly = GF256_GENPOLY[i];
+	var poly = [];
 	for (var j = 0; j <= i; ++j) {
 		var a = (j < i ? GF256_MAP[prevpoly[j]] : 0);
 		var b = GF256_MAP[(i + (prevpoly[j - 1] || 0)) % 255];
@@ -280,7 +290,8 @@ var validatedata = function (mode, data) {
 // performed, and everything has to be checked before calling this function.
 var encode = function (ver, mode, data, maxbuflen) {
 	var buf = [];
-	var bits = 0, remaining = 8;
+	var bits = 0;
+	var remaining = 8;
 	var datalen = data.length;
 
 	// this function is intentionally no-op when n=0.
@@ -351,7 +362,8 @@ var encode = function (ver, mode, data, maxbuflen) {
 // uses the different generator polynomial than CRC's.
 var calculateecc = function (poly, genpoly) {
 	var modulus = poly.slice(0);
-	var polylen = poly.length, genpolylen = genpoly.length;
+	var polylen = poly.length;
+	var genpolylen = genpoly.length;
 	for (var i = 0; i < genpolylen; ++i)
 		modulus.push(0);
 	for (var i = 0; i < polylen; ) {
@@ -374,7 +386,8 @@ var calculateecc = function (poly, genpoly) {
 // the number of code words in those blocks are 11, 11, 12, 12 respectively.
 var augumenteccs = function (poly, nblocks, genpoly) {
 	var subsizes = [];
-	var subsize = (poly.length / nblocks) | 0, subsize0 = 0;
+	var subsize = (poly.length / nblocks) | 0;
+	var subsize0 = 0;
 	var pivot = nblocks - poly.length % nblocks;
 	for (var i = 0; i < pivot; ++i) {
 		subsizes.push(subsize0);
@@ -433,8 +446,10 @@ var augumentbch = function (poly, p, genpoly, q) {
 // intentional (no initialization needed!), and putdata below will fill
 // the remaining ones.
 var makebasematrix = function (ver) {
-	var v = VERSIONS[ver], n = getsizebyver(ver);
-	var matrix = [], reserved = [];
+	var v = VERSIONS[ver];
+	var n = getsizebyver(ver);
+	var matrix = [];
+	var reserved = [];
 	for (var i = 0; i < n; ++i) {
 		matrix.push([]);
 		reserved.push([]);
@@ -462,9 +477,12 @@ var makebasematrix = function (ver) {
 	}
 
 	// alignment patterns
-	var aligns = v[2], m = aligns.length;
+	var aligns = v[2];
+
+	var m = aligns.length;
 	for (var i = 0; i < m; ++i) {
-		var minj = (i === 0 || i === m - 1 ? 1 : 0), maxj = (i === 0 ? m - 1 : m);
+		var minj = (i === 0 || i === m - 1 ? 1 : 0);
+		var maxj = (i === 0 ? m - 1 : m);
 		for (var j = minj; j < maxj; ++j) {
 			blit(aligns[i], aligns[j], 5, 5, [0x1f, 0x11, 0x15, 0x11, 0x1f]);
 		}
@@ -490,7 +508,8 @@ var makebasematrix = function (ver) {
 // and remaining bits are padded to 0 (cf. JIS X 0510:2004 sec 8.7.3).
 var putdata = function (matrix, reserved, buf) {
 	var n = matrix.length;
-	var k = 0, dir = -1;
+	var k = 0;
+	var dir = -1;
 	for (var i = n - 1; i >= 0; i -= 2) {
 		if (i == 6)
 			--i; // skip the entire timing pattern column
@@ -582,7 +601,8 @@ var evaluatematrix = function (matrix) {
 	};
 
 	var n = matrix.length;
-	var score = 0, nblacks = 0;
+	var score = 0;
+	var nblacks = 0;
 	for (var i = 0; i < n; ++i) {
 		var row = matrix[i];
 		var groups;
@@ -638,14 +658,16 @@ var generate = function (data, ver, mode, ecclevel, mask) {
 	buf = augumenteccs(buf, v[1][ecclevel], GF256_GENPOLY[v[0][ecclevel]]);
 
 	var result = makebasematrix(ver);
-	var matrix = result.matrix, reserved = result.reserved;
+	var matrix = result.matrix;
+	var reserved = result.reserved;
 	putdata(matrix, reserved, buf);
 
 	if (mask < 0) {
 		// find the best mask
 		maskdata(matrix, reserved, 0);
 		putformatinfo(matrix, reserved, ecclevel, 0);
-		var bestmask = 0, bestscore = evaluatematrix(matrix);
+		var bestmask = 0;
+		var bestscore = evaluatematrix(matrix);
 		maskdata(matrix, reserved, 0);
 		for (mask = 1; mask < 8; ++mask) {
 			maskdata(matrix, reserved, mask);

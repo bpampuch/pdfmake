@@ -30,9 +30,9 @@ class TextTools {
 	buildInlines(textArray, styleContextStack) {
 		var measured = measure(this.fontProvider, textArray, styleContextStack);
 
-		var minWidth = 0,
-			maxWidth = 0,
-			currentLineWidth;
+		var minWidth = 0;
+		var maxWidth = 0;
+		var currentLineWidth;
 
 		measured.forEach((inline) => {
 			minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);

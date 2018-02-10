@@ -1,7 +1,8 @@
 var isArray = require('./helpers').isArray;
 
 function groupDecorations(line) {
-	var groups = [], currentGroup = null;
+	var groups = [];
+	var currentGroup = null;
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
 		var decoration = inline.decoration;
@@ -53,13 +54,13 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 		}
 		return sum;
 	}
-	var firstInline = group.inlines[0],
-		biggerInline = maxInline(),
-		totalWidth = width(),
-		lineAscent = group.line.getAscenderHeight(),
-		ascent = biggerInline.font.ascender / 1000 * biggerInline.fontSize,
-		height = biggerInline.height,
-		descent = height - ascent;
+	var firstInline = group.inlines[0];
+	var biggerInline = maxInline();
+	var totalWidth = width();
+	var lineAscent = group.line.getAscenderHeight();
+	var ascent = biggerInline.font.ascender / 1000 * biggerInline.fontSize;
+	var height = biggerInline.height;
+	var descent = height - ascent;
 
 	var lw = 0.5 + Math.floor(Math.max(biggerInline.fontSize - 8, 0) / 2) * 0.12;
 
@@ -102,7 +103,8 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 			rx += (lw * 3);
 		}
 	} else if (group.decorationStyle === 'wavy') {
-		var sh = 0.7, sv = 1;
+		var sh = 0.7;
+		var sv = 1;
 		var nbWaves = Math.ceil(totalWidth / (sh * 2)) + 1;
 		var rwx = x + firstInline.x - 1;
 		pdfKitDoc.rect(x + firstInline.x, y - sv, totalWidth, y + sv).clip();

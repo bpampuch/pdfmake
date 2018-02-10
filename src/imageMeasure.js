@@ -7,7 +7,8 @@ class ImageMeasure {
 	}
 
 	measureImage(src) {
-		var image, label;
+		var image;
+		var label;
 		var that = this;
 
 		if (!this.pdfKitDoc._imageRegistry[src]) {
