@@ -1,5 +1,5 @@
-var ColumnCalculator = require('./columnCalculator');
-var isFunction = require('./helpers').isFunction;
+import ColumnCalculator from './columnCalculator';
+import {isFunction} from './helpers';
 
 class TableProcessor {
 	constructor(tableNode) {
@@ -409,4 +409,4 @@ class TableProcessor {
 	}
 }
 
-module.exports = TableProcessor;
+export default TableProcessor;

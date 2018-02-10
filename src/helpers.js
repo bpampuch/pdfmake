@@ -1,36 +1,36 @@
-function isString(variable) {
+export function isString(variable) {
 	return typeof variable === 'string' || variable instanceof String;
 }
 
-function isNumber(variable) {
+export function isNumber(variable) {
 	return typeof variable === 'number' || variable instanceof Number;
 }
 
-function isBoolean(variable) {
+export function isBoolean(variable) {
 	return typeof variable === 'boolean';
 }
 
-function isArray(variable) {
+export function isArray(variable) {
 	return Array.isArray(variable);
 }
 
-function isFunction(variable) {
+export function isFunction(variable) {
 	return typeof variable === 'function';
 }
 
-function isObject(variable) {
+export function isObject(variable) {
 	return variable !== null && typeof variable === 'object';
 }
 
-function isNull(variable) {
+export function isNull(variable) {
 	return variable === null;
 }
 
-function isUndefined(variable) {
+export function isUndefined(variable) {
 	return variable === undefined;
 }
 
-function pack(...args) {
+export function pack(...args) {
 	var result = {};
 
 	for (var i = 0, l = args.length; i < l; i++) {
@@ -48,7 +48,7 @@ function pack(...args) {
 	return result;
 }
 
-function offsetVector(vector, x, y) {
+export function offsetVector(vector, x, y) {
 	switch (vector.type) {
 		case 'ellipse':
 		case 'rect':
@@ -70,23 +70,9 @@ function offsetVector(vector, x, y) {
 	}
 }
 
-function fontStringify(key, val) {
+export function fontStringify(key, val) {
 	if (key === 'font') {
 		return 'font';
 	}
 	return val;
 }
-
-module.exports = {
-	isString: isString,
-	isNumber: isNumber,
-	isBoolean: isBoolean,
-	isArray: isArray,
-	isFunction: isFunction,
-	isObject: isObject,
-	isNull: isNull,
-	isUndefined: isUndefined,
-	pack: pack,
-	fontStringify: fontStringify,
-	offsetVector: offsetVector
-};

@@ -1,4 +1,4 @@
-var isString = require('./helpers').isString;
+import {isString} from './helpers';
 
 function buildColumnWidths(columns, availableWidth) {
 	var autoColumns = [];
@@ -127,7 +127,7 @@ function measureMinMax(columns) {
  * Calculates column widths
  * @private
  */
-module.exports = {
+export default {
 	buildColumnWidths: buildColumnWidths,
 	measureMinMax: measureMinMax,
 	isAutoColumn: isAutoColumn,

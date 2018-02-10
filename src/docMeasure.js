@@ -1,15 +1,16 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 
-var TextTools = require('./textTools');
-var StyleContextStack = require('./styleContextStack');
-var ColumnCalculator = require('./columnCalculator');
-var isString = require('./helpers').isString;
-var isNumber = require('./helpers').isNumber;
-var isObject = require('./helpers').isObject;
-var isArray = require('./helpers').isArray;
-var fontStringify = require('./helpers').fontStringify;
-var pack = require('./helpers').pack;
-var qrEncoder = require('./qrEnc.js');
+import TextTools from './textTools';
+
+import StyleContextStack from './styleContextStack';
+import ColumnCalculator from './columnCalculator';
+import {isString} from './helpers';
+import {isNumber} from './helpers';
+import {isObject} from './helpers';
+import {isArray} from './helpers';
+import {fontStringify} from './helpers';
+import {pack} from './helpers';
+import qrEncoder from './qrEnc.js';
 
 class DocMeasure {
 	constructor(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts, images) {
@@ -766,4 +767,4 @@ class DocMeasure {
 	}
 }
 
-module.exports = DocMeasure;
+export default DocMeasure;

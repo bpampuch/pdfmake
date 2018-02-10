@@ -1,7 +1,7 @@
-var isString = require('./helpers').isString;
-var isArray = require('./helpers').isArray;
-var isUndefined = require('./helpers').isUndefined;
-var isNull = require('./helpers').isNull;
+import {isString} from './helpers';
+import {isArray} from './helpers';
+import {isUndefined} from './helpers';
+import {isNull} from './helpers';
 
 /**
  * Used for style inheritance and style overrides
@@ -171,4 +171,4 @@ class StyleContextStack {
 	}
 }
 
-module.exports = StyleContextStack;
+export default StyleContextStack;

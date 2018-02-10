@@ -805,6 +805,6 @@ function measure(node) {
 	return node;
 }
 
-module.exports = {
+export default {
 	measure: measure
 };

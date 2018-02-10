@@ -44,4 +44,4 @@ class TraversalTracker {
 	}
 }
 
-module.exports = TraversalTracker;
+export default TraversalTracker;

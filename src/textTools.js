@@ -1,8 +1,8 @@
-var isString = require('./helpers').isString;
-var isNumber = require('./helpers').isNumber;
-var isObject = require('./helpers').isObject;
-var isArray = require('./helpers').isArray;
-var LineBreaker = require('linebreak');
+import {isString} from './helpers';
+import {isNumber} from './helpers';
+import {isObject} from './helpers';
+import {isArray} from './helpers';
+import LineBreaker from 'linebreak';
 
 var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;
@@ -299,4 +299,4 @@ function widthOfString(text, font, fontSize, characterSpacing, fontFeatures) {
 	return font.widthOfString(text, fontSize, fontFeatures) + ((characterSpacing || 0) * (text.length - 1));
 }
 
-module.exports = TextTools;
+export default TextTools;

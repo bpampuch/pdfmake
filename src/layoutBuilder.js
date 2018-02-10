@@ -1,19 +1,19 @@
-var TraversalTracker = require('./traversalTracker');
-var DocPreprocessor = require('./docPreprocessor');
-var DocMeasure = require('./docMeasure');
-var DocumentContext = require('./documentContext');
-var PageElementWriter = require('./pageElementWriter');
-var ColumnCalculator = require('./columnCalculator');
-var TableProcessor = require('./tableProcessor');
-var Line = require('./line');
-var isString = require('./helpers').isString;
-var isArray = require('./helpers').isArray;
-var pack = require('./helpers').pack;
-var offsetVector = require('./helpers').offsetVector;
-var fontStringify = require('./helpers').fontStringify;
-var isFunction = require('./helpers').isFunction;
-var TextTools = require('./textTools');
-var StyleContextStack = require('./styleContextStack');
+import TraversalTracker from './traversalTracker';
+import DocPreprocessor from './docPreprocessor';
+import DocMeasure from './docMeasure';
+import DocumentContext from './documentContext';
+import PageElementWriter from './pageElementWriter';
+import ColumnCalculator from './columnCalculator';
+import TableProcessor from './tableProcessor';
+import Line from './line';
+import {isString} from './helpers';
+import {isArray} from './helpers';
+import {pack} from './helpers';
+import {offsetVector} from './helpers';
+import {fontStringify} from './helpers';
+import {isFunction} from './helpers';
+import TextTools from './textTools';
+import StyleContextStack from './styleContextStack';
 
 function addAll(target, otherArray) {
 	otherArray.forEach((item) => {
@@ -710,4 +710,4 @@ function decorateNode(node) {
 	};
 }
 
-module.exports = LayoutBuilder;
+export default LayoutBuilder;

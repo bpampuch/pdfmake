@@ -1,4 +1,4 @@
-var ElementWriter = require('./elementWriter');
+import ElementWriter from './elementWriter';
 
 /**
  * An extended ElementWriter which can handle:
@@ -153,4 +153,4 @@ function fitOnPage(self, addFct) {
 	return position;
 }
 
-module.exports = PageElementWriter;
+export default PageElementWriter;

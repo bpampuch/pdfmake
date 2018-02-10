@@ -1,16 +1,17 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
-var FontProvider = require('./fontProvider');
-var LayoutBuilder = require('./layoutBuilder');
-var PdfKit = require('pdfkit');
-var sizes = require('./standardPageSizes');
-var ImageMeasure = require('./imageMeasure');
-var textDecorator = require('./textDecorator');
-var TextTools = require('./textTools');
-var isFunction = require('./helpers').isFunction;
-var isString = require('./helpers').isString;
-var isNumber = require('./helpers').isNumber;
-var isBoolean = require('./helpers').isBoolean;
-var isArray = require('./helpers').isArray;
+import FontProvider from './fontProvider';
+
+import LayoutBuilder from './layoutBuilder';
+import PdfKit from 'pdfkit';
+import sizes from './standardPageSizes';
+import ImageMeasure from './imageMeasure';
+import textDecorator from './textDecorator';
+import TextTools from './textTools';
+import {isFunction} from './helpers';
+import {isString} from './helpers';
+import {isNumber} from './helpers';
+import {isBoolean} from './helpers';
+import {isArray} from './helpers';
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -529,4 +530,4 @@ function endClip(pdfKitDoc) {
 	pdfKitDoc.restore();
 }
 
-module.exports = PdfPrinter;
+export default PdfPrinter;

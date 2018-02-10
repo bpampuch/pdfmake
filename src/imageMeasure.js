@@ -1,4 +1,4 @@
-var PDFImage = require('pdfkit/js/image');
+import PDFImage from 'pdfkit/js/image';
 
 class ImageMeasure {
 	constructor(pdfKitDoc, imageDictionary) {
@@ -46,4 +46,4 @@ class ImageMeasure {
 	}
 }
 
-module.exports = ImageMeasure;
+export default ImageMeasure;
