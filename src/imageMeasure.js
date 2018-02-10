@@ -41,7 +41,7 @@ ImageMeasure.prototype.measureImage = function (src) {
 			return that.imageDictionary[src];
 		}
 
-		return new Buffer(img.substring(index + 7), 'base64');
+		return Buffer.from(img.substring(index + 7), 'base64');
 	}
 };
 
