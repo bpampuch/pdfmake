@@ -15,7 +15,7 @@ module.exports = {
 		}
 	},
 	module: {
-		loaders: [
+		rules: [
 			{test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
 			{test: /pdfkit[/\\]js[/\\]mixins[/\\]fonts.js$/, loader: StringReplacePlugin.replace({
 					replacements: [
