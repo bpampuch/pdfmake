@@ -62,7 +62,7 @@ class DocMeasure {
 			} else if (node.qr) {
 				return extendMargins(self.measureQr(node));
 			} else {
-				throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+				throw `Unrecognized document structure: ${JSON.stringify(node, fontStringify)}`;
 			}
 		});
 
@@ -416,7 +416,7 @@ class DocMeasure {
 				}
 				counterText += ' ';
 			} else {
-				counterText += separator + ' ';
+				counterText += `${separator} `;
 			}
 		}
 

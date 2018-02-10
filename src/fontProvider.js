@@ -37,7 +37,7 @@ class FontProvider {
 	provideFont(familyName, bold, italics) {
 		var type = typeName(bold, italics);
 		if (!this.fonts[familyName] || !this.fonts[familyName][type]) {
-			throw new Error('Font \'' + familyName + '\' in style \'' + type + '\' is not defined in the font section of the document definition.');
+			throw new Error(`Font '${familyName}' in style '${type}' is not defined in the font section of the document definition.`);
 		}
 
 		this.fontCache[familyName] = this.fontCache[familyName] || {};

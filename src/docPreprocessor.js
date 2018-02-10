@@ -51,7 +51,7 @@ class DocPreprocessor {
 		} else if (node.pageReference || node.textReference) {
 			return this.preprocessText(node);
 		} else {
-			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+			throw `Unrecognized document structure: ${JSON.stringify(node, fontStringify)}`;
 		}
 	}
 
@@ -130,7 +130,7 @@ class DocPreprocessor {
 		if (node.id) {
 			if (this.nodeReferences[node.id]) {
 				if (!this.nodeReferences[node.id]._pseudo) {
-					throw "Node id '" + node.id + "' already exists";
+					throw `Node id '${node.id}' already exists`;
 				}
 
 				this.nodeReferences[node.id]._nodeRef = node;
@@ -174,7 +174,7 @@ class DocPreprocessor {
 
 		if (this.tocs[node.toc.id]) {
 			if (!this.tocs[node.toc.id].toc._pseudo) {
-				throw "TOC '" + node.toc.id + "' already exists";
+				throw `TOC '${node.toc.id}' already exists`;
 			}
 
 			node.toc._items = this.tocs[node.toc.id].toc._items;
