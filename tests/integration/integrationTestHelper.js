@@ -1,4 +1,4 @@
-var _ = require('lodash');
+'use strict';
 
 var sizes = require('../../src/standardPageSizes');
 var PdfKit = require('pdfkit');
@@ -12,7 +12,7 @@ function IntegrationTestHelper() {
 	this.DEFAULT_BULLET_SPACER = '9. ';
 }
 
-IntegrationTestHelper.prototype.renderPages = function(sizeName, docDefinition) {
+IntegrationTestHelper.prototype.renderPages = function (sizeName, docDefinition) {
 	var size = sizes[sizeName];
 	docDefinition.images = docDefinition.images || {};
 	var fontDescriptors = {
@@ -31,7 +31,7 @@ IntegrationTestHelper.prototype.renderPages = function(sizeName, docDefinition) 
 		pageSize,
 		{left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom},
 		new ImageMeasure(pdfKitDoc, docDefinition.images)
-	);
+		);
 	this.fontProvider = new FontProvider(fontDescriptors, pdfKitDoc);
 
 	return builder.layoutDocument(
@@ -44,14 +44,14 @@ IntegrationTestHelper.prototype.renderPages = function(sizeName, docDefinition) 
 		docDefinition.images,
 		docDefinition.watermark,
 		docDefinition.pageBreakBefore
-	);
+		);
 };
 
-IntegrationTestHelper.prototype.getInlineTexts = function(pages, options) {
-	return _.map(pages[options.page].items[options.item].item.inlines, 'text');
+IntegrationTestHelper.prototype.getInlineTexts = function (pages, options) {
+	return pages[options.page].items[options.item].item.inlines.map(inline => inline.text);
 };
 
-IntegrationTestHelper.prototype.getWidthOfString = function(inlines) {
+IntegrationTestHelper.prototype.getWidthOfString = function (inlines) {
 	return this.fontProvider.fontCache['Roboto'].normal.widthOfString(inlines, 12);
 };
 

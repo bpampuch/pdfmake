@@ -1,8 +1,12 @@
 .git*
+CONTRIBUTING.md
+dev-playground/
 docs/
 examples/
 tests/
-src/browser-extensions/
-build/
-.DS_Store
-
+yarn.lock
+composer.json
+bower.json
+.editorconfig
+.eslintrc.json
+.travis.yml

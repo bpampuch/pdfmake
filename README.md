@@ -1,9 +1,27 @@
-pdfmake [![Build Status](https://travis-ci.org/bpampuch/pdfmake.png?branch=master)](https://travis-ci.org/bpampuch/pdfmake) [![NPM version](https://badge.fury.io/js/pdfmake.png)](http://badge.fury.io/js/pdfmake) [![Bower version](https://badge.fury.io/bo/pdfmake.png)](http://badge.fury.io/bo/pdfmake)
-=======
+# pdfmake [![Build Status][travis_img]][travis_url] [![GitHub][github_img]][github_url] [![npm][npm_img]][npm_url] [![Bower][bower_img]][bower_url] [![Packagist][packagist_img]][packagist_url] [![CDNJS][cdnjs_img]][cndjs_url]
+
+[travis_img]: https://travis-ci.org/bpampuch/pdfmake.svg?branch=master
+[travis_url]: https://travis-ci.org/bpampuch/pdfmake
+
+[github_img]: https://img.shields.io/github/release/bpampuch/pdfmake.svg
+[github_url]: https://github.com/bpampuch/pdfmake/releases/latest
+
+[npm_img]: https://img.shields.io/npm/v/pdfmake.svg?colorB=0E7FBF
+[npm_url]: https://www.npmjs.com/package/pdfmake
+
+[bower_img]: https://img.shields.io/bower/v/pdfmake.svg?colorB=0E7FBF
+[bower_url]: https://github.com/bpampuch/pdfmake
+
+[packagist_img]: https://img.shields.io/packagist/v/bpampuch/pdfmake.svg?colorB=0E7FBF
+[packagist_url]: https://packagist.org/packages/bpampuch/pdfmake
+
+[cdnjs_img]: https://img.shields.io/cdnjs/v/pdfmake.svg?colorB=0E7FBF
+[cndjs_url]: https://cdnjs.com/libraries/pdfmake
+
 
 Client/server side PDF printing in pure JavaScript
 
-Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html)
+Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) and [examples](https://github.com/bpampuch/pdfmake/tree/master/examples).
 
 ### Features
 
@@ -11,22 +29,23 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html)
 * text-alignments (left, right, centered, justified),
 * numbered and bulleted lists,
 * tables and columns
- * auto/fixed/star-sized widths,
- * col-spans and row-spans,
- * headers automatically repeated in case of a page-break,
+  * auto/fixed/star-sized widths,
+  * col-spans and row-spans,
+  * headers automatically repeated in case of a page-break,
 * images and vector graphics,
 * convenient styling and style inheritance,
 * page headers and footers:
- * static or dynamic content,
- * access to current page number and page count,
-* background-layer
+  * static or dynamic content,
+  * access to current page number and page count,
+* background-layer,
 * page dimensions and orientations,
 * margins,
 * custom page breaks,
 * font embedding,
 * support for complex, multi-level (nested) structures,
-* helper methods for opening/printing/downloading the generated PDF.
-* setting of PDF metadata (e.g. author, subject)
+* table of contents,
+* helper methods for opening/printing/downloading the generated PDF,
+* setting of PDF metadata (e.g. author, subject).
 
 ## Getting Started
 
@@ -50,12 +69,23 @@ To begin with the default configuration, you should include two files:
 ...
 ```
 
-You can get both files using bower:
+You can get both files using npm (server-side and client-side):
+```
+npm install pdfmake
+```
+ * for server-side use `require('pdfmake');`
+ * for client-side use `require('pdfmake/build/pdfmake.js');` and `require('pdfmake/build/vfs_fonts.js');`
+
+or bower (client-side):
 ```
 bower install pdfmake
 ```
 
 or copy them directly from the build directory from the repository. Otherwise you can always [build it from sources](#building-from-sources).
+
+### Supported browsers
+
+See [issue](https://github.com/bpampuch/pdfmake/issues/800).
 
 ### Document-definition-object
 
@@ -69,30 +99,152 @@ var docDefinition = { content: 'This is an sample PDF printed with pdfMake' };
 
 or become pretty complex (having multi-level tables, images, lists, paragraphs, margins, styles etc...).
 
-As soon as you have the document-definition-object, you're ready to create and open/print/download the PDF:
-
+As soon as you have the document-definition-object, you're ready to create and download/open/print the PDF:
 ```js
-// open the PDF in a new window
-pdfMake.createPdf(docDefinition).open();
-
-// print the PDF (not working in this version, will be added back in a couple of days)
-// pdfMake.createPdf(docDefinition).print();
-
-// download the PDF
 pdfMake.createPdf(docDefinition).download();
 
-// or, put the PDF into your own page
+pdfMake.createPdf(docDefinition).open();
 
-const pdfDocGenerator=pdfMake.createPdf(docDefinition);
-pdfDocGenerator.getDataUrl((dataUrl)=>{
-	const targetElement=document.querySelector('#iframeContainer');
-	const iframe=document.createElement('iframe');
-	iframe.src=dataUrl;
+pdfMake.createPdf(docDefinition).print();
+```
+Details in the next chapters.
+
+#### Download the PDF
+```js
+pdfMake.createPdf(docDefinition).download();
+```
+Parameters:
+* `defaultFileName` _(optional)_ - file name
+* `cb` _(optional)_ - callback function
+* `options` _(optional)_
+
+#### Open the PDF in a new window
+```js
+pdfMake.createPdf(docDefinition).open();
+```
+Parameters:
+* `options` _(optional)_
+* `win` _(optional)_ - window (when an asynchronous operation)
+
+Name can be defined only by using metadata `title` property (see [Document metadata](#document-metadata)).
+
+Asynchronous example:
+```js
+$scope.generatePdf = function() {
+  // create the window before the callback
+  var win = window.open('', '_blank');
+  $http.post('/someUrl', data).then(function(response) {
+    // pass the "win" argument
+    pdfMake.createPdf(docDefinition).open({}, win);
+  });
+};
+```
+
+Open in same window:
+```js
+pdfMake.createPdf(docDefinition).open({}, window);
+```
+
+#### Print the PDF
+```js
+pdfMake.createPdf(docDefinition).print();
+```
+Parameters:
+* `options` _(optional)_
+* `win` _(optional)_ - window (when an asynchronous operation)
+
+Asynchronous example:
+```js
+$scope.generatePdf = function() {
+  // create the window before the callback
+  var win = window.open('', '_blank');
+  $http.post('/someUrl', data).then(function(response) {
+    // pass the "win" argument
+    pdfMake.createPdf(docDefinition).print({}, win);
+  });
+};
+```
+
+Print in same window:
+```js
+pdfMake.createPdf(docDefinition).print({}, window);
+```
+
+#### Put the PDF into your own page as URL data
+```js
+const pdfDocGenerator = pdfMake.createPdf(docDefinition);
+pdfDocGenerator.getDataUrl((dataUrl) => {
+	const targetElement = document.querySelector('#iframeContainer');
+	const iframe = document.createElement('iframe');
+	iframe.src = dataUrl;
 	targetElement.appendChild(iframe);
 });
-
-
 ```
+Parameters:
+* `cb` - callback function
+* `options` _(optional)_
+
+#### Get the PDF as base64 data
+```js
+const pdfDocGenerator = pdfMake.createPdf(docDefinition);
+pdfDocGenerator.getBase64((data) => {
+	alert(data);
+});
+```
+Parameters:
+* `cb` - callback function
+* `options` _(optional)_
+
+#### Get the PDF as buffer
+```js
+const pdfDocGenerator = pdfMake.createPdf(docDefinition);
+pdfDocGenerator.getBuffer((buffer) => {
+	// ...
+});
+```
+Parameters:
+* `cb` - callback function
+* `options` _(optional)_
+
+#### Get the PDF as Blob
+```js
+const pdfDocGenerator = pdfMake.createPdf(docDefinition);
+pdfDocGenerator.getBlob((blob) => {
+	// ...
+});
+```
+Parameters:
+* `cb` - callback function
+* `options` _(optional)_
+
+#### Using javascript frameworks
+
+```js
+var pdfMake = require('pdfmake/build/pdfmake.js');
+var pdfFonts = require('pdfmake/build/vfs_fonts.js');
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
+```
+
+or
+
+```js
+import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
+```
+
+For Ionic and Angular see [issue](https://github.com/bpampuch/pdfmake/issues/1030).
+
+When is throwed error **Cannot read property 'TYPED_ARRAY_SUPPORT' of undefined** add to config in webpack:
+```
+exclude: [ /node_modules/, /pdfmake.js$/ ]
+```
+(see [issue](https://github.com/bpampuch/pdfmake/issues/1100#issuecomment-336728521))
+
+
+#### Server side
+
+see [examples](https://github.com/bpampuch/pdfmake/tree/master/examples) and [dev-playground server script](https://github.com/bpampuch/pdfmake/blob/master/dev-playground/server.js)
 
 #### Styling
 pdfmake makes it possible to style any paragraph or its part:
@@ -198,6 +350,7 @@ Conceptually tables are similar to columns. They can however have headers, borde
 var docDefinition = {
   content: [
     {
+      layout: 'lightHorizontalLines', // optional
       table: {
         // headers are automatically repeated if the table spans over multiple pages
         // you can declare how many rows should be treated as headers
@@ -215,7 +368,36 @@ var docDefinition = {
 };
 ```
 
+##### Own table layouts
 
+Own table layouts must be defined before calling `pdfMake.createPdf(docDefinition)`.
+```js
+pdfMake.tableLayouts = {
+  exampleLayout: {
+    hLineWidth: function (i, node) {
+      if (i === 0 || i === node.table.body.length) {
+        return 0;
+      }
+      return (i === node.table.headerRows) ? 2 : 1;
+    },
+    vLineWidth: function (i) {
+      return 0;
+    },
+    hLineColor: function (i) {
+      return i === 1 ? 'black' : '#aaa';
+    },
+    paddingLeft: function (i) {
+      return i === 0 ? 0 : 8;
+    },
+    paddingRight: function (i, node) {
+      return (i === node.table.widths.length - 1) ? 0 : 8;
+    }
+  }
+};
+
+// download the PDF
+pdfMake.createPdf(docDefinition).download();
+```
 
 All concepts related to tables are covered by TABLES example in playground.
 
@@ -271,15 +453,18 @@ var docDefinition = {
 };
 ```
 
-For dynamically generated content (including page numbers and page count) you can pass a function to the header or footer:
+For dynamically generated content (including page numbers, page count and page size) you can pass a function to the header or footer:
 
 ```js
 var docDefinition = {
   footer: function(currentPage, pageCount) { return currentPage.toString() + ' of ' + pageCount; },
-  header: function(currentPage, pageCount) {
+  header: function(currentPage, pageCount, pageSize) {
     // you can apply any logic and return any valid pdfmake element
 
-    return { text: 'simple text', alignment: (currentPage % 2) ? 'left' : 'right' };
+    return [
+      { text: 'simple text', alignment: (currentPage % 2) ? 'left' : 'right' },
+      { canvas: [ { type: 'rect', x: 170, y: 32, w: pageSize.width - 170, h: 40 } ] }
+    ]
   },
   (...)
 };
@@ -425,6 +610,35 @@ var docDefinition = {
 };
 ```
 
+#### Links
+
+To add external or internal links, use the following syntax:
+```
+{text: 'google', link: 'http://google.com'}
+{text:'Go to page 2', linkToPage: 2}
+```
+
+#### Table of contents
+
+```js
+var docDefinition = {
+  content: [
+    {
+      toc: {
+        // id: 'mainToc'  // optional
+        title: {text: 'INDEX', style: 'header'}
+      }
+    },
+    {
+      text: 'This is a header',
+      style: 'header',
+      tocItem: true, // or tocItem: 'mainToc' if is used id in toc
+      // or tocItem: ['mainToc', 'subToc'] for multiple tocs
+    }
+  ]
+}
+```
+
 
 #### Page dimensions, orientation and margins
 
@@ -463,9 +677,58 @@ To change page orientation within a document, add a page break with the new page
 }
 ```
 
+#### Dynamically control page breaks, for instance to avoid orphan childs
+
+Can be specify a `pageBreakBefore` function, which can determine if a page break should be inserted before the page break. To implement a 'no orphan child' rule, this could like like this:
+
+``` javascript
+var dd = {
+    content: [
+       {text: '1 Headline', headlineLevel: 1},
+       'Some long text of variable length ...',
+       {text: '2 Headline', headlineLevel: 1},
+       'Some long text of variable length ...',
+       {text: '3 Headline', headlineLevel: 1},
+       'Some long text of variable length ...',
+    ],
+  pageBreakBefore: function(currentNode, followingNodesOnPage, nodesOnNextPage, previousNodesOnPage) {
+     return currentNode.headlineLevel === 1 && followingNodesOnPage.length === 0;
+  }
+}
+```
+
+If `pageBreakBefore` returns true, a page break will be added before the `currentNode`. Current node has the following information attached:
+
+``` javascript
+{
+   id: '<as specified in doc definition>', 
+   headlineLevel: '<as specified in doc definition>',
+   text: '<as specified in doc definition>', 
+   ul: '<as specified in doc definition>', 
+   ol: '<as specified in doc definition>', 
+   table: '<as specified in doc definition>', 
+   image: '<as specified in doc definition>', 
+   qr: '<as specified in doc definition>', 
+   canvas: '<as specified in doc definition>', 
+   columns: '<as specified in doc definition>', 
+   style: '<as specified in doc definition>', 
+   pageOrientation '<as specified in doc definition>',
+   pageNumbers: [2, 3], // The pages this element is visible on (e.g. multi-line text could be on more than one page)
+   pages: 6, // the total number of pages of this document
+   stack: false, // if this is an element which encapsulates multiple sub-objects
+   startPosition: {
+     pageNumber: 2, // the page this node starts on
+     pageOrientation: 'landscape', // the orientation of this page
+     left: 60, // the left position
+     right: 60, // the right position
+     verticalRatio: 0.2, // the ratio of space used vertically in this document (excluding margins)
+     horizontalRatio: 0.0  // the ratio of space used horizontally in this document (excluding margins)
+   }
+}
+```
+
 #### Document Metadata
 
-(From PdfKit Guide)
 PDF documents can have various metadata associated with them, such as the title, or author
 of the document. You can add that information by adding it to the document definition
 
@@ -481,15 +744,50 @@ var docDefinition = {
 }
 ```
 
+Standard properties:
+* **title** - the title of the document
+* **author** - the name of the author
+* **subject** - the subject of the document
+* **keywords** - keywords associated with the document
+* **creator** - the creator of the document (default is 'pdfmake')
+* **producer** - the producer of the document (default is 'pdfmake')
+* **creationDate** - the date the document was created (added automatically by pdfmake)
+* **modDate** - the date the document was last modified
+* **trapped** - the trapped flag in a PDF document indicates whether the document has been "trapped"
+
+Custom properties:
+
+You can add custom properties. Key of property not contain spaces.
+
+
+#### Compression
+
+Compression of PDF is enabled by default, use `compress: false` for disable:
+
+```js
+var docDefinition = {
+  compress: false,
+
+  content: (...)
+};
+```
+
 ## Building from sources
 
+using npm:
 ```
 git clone https://github.com/bpampuch/pdfmake.git
 cd pdfmake
 npm install
-npm install gulp-cli
-git submodule update --init  libs/FileSaver.js
-gulp build
+npm run build
+```
+
+using yarn:
+```
+git clone https://github.com/bpampuch/pdfmake.git
+cd pdfmake
+yarn
+yarn run build
 ```
 
 ## Coming soon
@@ -506,8 +804,10 @@ There's one thing on the roadmap for v2 (no deadline however) - make the library
 ## License
 MIT
 
--------
+## Authors
+* [@bpampuch](https://github.com/bpampuch) (founder)
+* [@liborm85](https://github.com/liborm85)
 
-pdfmake is based on a truly amazing library pdfkit.org - credits to @devongovett
+pdfmake is based on a truly amazing library [pdfkit](https://github.com/devongovett/pdfkit) (credits to [@devongovett](https://github.com/devongovett)).
 
-big thanks to @yelouafi for making this library even better
+Thanks to all contributors.

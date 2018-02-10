@@ -1,6 +1,6 @@
+'use strict';
+
 var assert = require('assert');
-var _ = require('lodash');
-var sizes = require('../../src/standardPageSizes');
 
 var integrationTestHelper = require('./integrationTestHelper');
 

@@ -3,7 +3,7 @@ var fonts = {
 		normal: 'fonts/Roboto-Regular.ttf',
 		bold: 'fonts/Roboto-Medium.ttf',
 		italics: 'fonts/Roboto-Italic.ttf',
-		bolditalics: 'fonts/Roboto-Italic.ttf'
+		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
 	}
 };
 
@@ -17,7 +17,7 @@ var docDefinition = {
 		{
 			stack: [
 				'This header has both top and bottom margins defined',
-				{ text: 'This is a subheader', style: 'subheader' },
+				{text: 'This is a subheader', style: 'subheader'},
 			],
 			style: 'header'
 		},
@@ -33,13 +33,13 @@ var docDefinition = {
 		},
 		{
 			stack: [
-				{ text: [
+				{text: [
 						'This line begins a stack of paragraphs. The whole stack uses a ',
-						{ text: 'superMargin', italics: true },
+						{text: 'superMargin', italics: true},
 						' style (with margin and fontSize properties).',
-						]
+					]
 				},
-				{ text: ['When you look at the', { text: ' document definition', italics: true }, ', you will notice that fontSize is inherited by all paragraphs inside the stack.' ]},
+				{text: ['When you look at the', {text: ' document definition', italics: true}, ', you will notice that fontSize is inherited by all paragraphs inside the stack.']},
 				'Margin however is only applied once (to the whole stack).'
 			],
 			style: 'superMargin'
@@ -52,7 +52,7 @@ var docDefinition = {
 					text: [
 						'Currently margins for ',
 						/* the following margin definition doesn't change anything */
-						{ text: 'inlines', margin: 20 },
+						{text: 'inlines', margin: 20},
 						' are ignored\n\n'
 					],
 				},
@@ -63,7 +63,7 @@ var docDefinition = {
 				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit, officiis viveremus aeternum superstitio suspicor alia nostram, quando nostros congressus susceperant concederetur leguntur iam, vigiliae democritea tantopere causae, atilii plerumque ipsas potitur pertineant multis rem quaeri pro, legendum didicisse credere ex maluisset per videtis. Cur discordans praetereat aliae ruinae dirigentur orestem eodem, praetermittenda divinum. Collegisti, deteriora malint loquuntur officii cotidie finitas referri doleamus ambigua acute. Adhaesiones ratione beate arbitraretur detractis perdiscere, constituant hostis polyaeno. Diu concederetur.\n',
 				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit, officiis viveremus aeternum superstitio suspicor alia nostram, quando nostros congressus susceperant concederetur leguntur iam, vigiliae democritea tantopere causae, atilii plerumque ipsas potitur pertineant multis rem quaeri pro, legendum didicisse credere ex maluisset per videtis. Cur discordans praetereat aliae ruinae dirigentur orestem eodem, praetermittenda divinum. Collegisti, deteriora malint loquuntur officii cotidie finitas referri doleamus ambigua acute. Adhaesiones ratione beate arbitraretur detractis perdiscere, constituant hostis polyaeno. Diu concederetur.\n',
 				'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Malit profecta versatur nomine ocurreret multavit, officiis viveremus aeternum superstitio suspicor alia nostram, quando nostros congressus susceperant concederetur leguntur iam, vigiliae democritea tantopere causae, atilii plerumque ipsas potitur pertineant multis rem quaeri pro, legendum didicisse credere ex maluisset per videtis. Cur discordans praetereat aliae ruinae dirigentur orestem eodem, praetermittenda divinum. Collegisti, deteriora malint loquuntur officii cotidie finitas referri doleamus ambigua acute. Adhaesiones ratione beate arbitraretur detractis perdiscere, constituant hostis polyaeno. Diu concederetur.\n',
-				],
+			],
 			margin: [0, 20, 0, 0],
 			alignment: 'justify'
 		}
@@ -73,14 +73,14 @@ var docDefinition = {
 			fontSize: 18,
 			bold: true,
 			alignment: 'right',
-			margin: [0,190,0,80]
+			margin: [0, 190, 0, 80]
 		},
 		subheader: {
 			fontSize: 14
 		},
 		superMargin: {
 			margin: [20, 0, 40, 0],
-			fontSize: 15,
+			fontSize: 15
 		}
 	}
 };

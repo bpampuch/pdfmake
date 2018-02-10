@@ -1,16 +1,21 @@
-/* jslint node: true */
+/*eslint no-unused-vars: ["error", {"args": "none"}]*/
+
 'use strict';
 
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
 var ColumnCalculator = require('./columnCalculator');
+var isString = require('./helpers').isString;
+var isNumber = require('./helpers').isNumber;
+var isObject = require('./helpers').isObject;
+var isArray = require('./helpers').isArray;
 var fontStringify = require('./helpers').fontStringify;
 var pack = require('./helpers').pack;
 var qrEncoder = require('./qrEnc.js');
 
 /**
-* @private
-*/
+ * @private
+ */
 function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts, images) {
 	this.textTools = new TextTools(fontProvider);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
@@ -21,32 +26,20 @@ function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, t
 }
 
 /**
-* Measures all nodes and sets min/max-width properties required for the second
-* layout-pass.
-* @param  {Object} docStructure document-definition-object
-* @return {Object}              document-measurement-object
-*/
-DocMeasure.prototype.measureDocument = function(docStructure) {
+ * Measures all nodes and sets min/max-width properties required for the second
+ * layout-pass.
+ * @param  {Object} docStructure document-definition-object
+ * @return {Object}              document-measurement-object
+ */
+DocMeasure.prototype.measureDocument = function (docStructure) {
 	return this.measureNode(docStructure);
 };
 
-DocMeasure.prototype.measureNode = function(node) {
-	// expand shortcuts
-	if (node instanceof Array) {
-		node = { stack: node };
-	} else if (typeof node == 'string' || node instanceof String) {
-		node = { text: node };
-	}
-	
-	// Deal with empty nodes to prevent crash in getNodeMargin
-	if (Object.keys(node).length === 0) {
-		// A warning could be logged: console.warn('pdfmake: Empty node, ignoring it');
-		node = { text: '' };
-	}
+DocMeasure.prototype.measureNode = function (node) {
 
 	var self = this;
 
-	return this.styleStack.auto(node, function() {
+	return this.styleStack.auto(node, function () {
 		// TODO: refactor + rethink whether this is the proper way to handle margins
 		node._margin = getNodeMargin(node);
 
@@ -55,13 +48,15 @@ DocMeasure.prototype.measureNode = function(node) {
 		} else if (node.stack) {
 			return extendMargins(self.measureVerticalContainer(node));
 		} else if (node.ul) {
-			return extendMargins(self.measureList(false, node));
+			return extendMargins(self.measureUnorderedList(node));
 		} else if (node.ol) {
-			return extendMargins(self.measureList(true, node));
+			return extendMargins(self.measureOrderedList(node));
 		} else if (node.table) {
 			return extendMargins(self.measureTable(node));
 		} else if (node.text !== undefined) {
 			return extendMargins(self.measureLeaf(node));
+		} else if (node.toc) {
+			return extendMargins(self.measureToc(node));
 		} else if (node.image) {
 			return extendMargins(self.measureImage(node));
 		} else if (node.canvas) {
@@ -86,25 +81,25 @@ DocMeasure.prototype.measureNode = function(node) {
 
 	function getNodeMargin() {
 
-		function processSingleMargins(node, currentMargin){
+		function processSingleMargins(node, currentMargin) {
 			if (node.marginLeft || node.marginTop || node.marginRight || node.marginBottom) {
 				return [
 					node.marginLeft || currentMargin[0] || 0,
 					node.marginTop || currentMargin[1] || 0,
-					node.marginRight || currentMargin[2]  || 0,
-					node.marginBottom || currentMargin[3]  || 0
+					node.marginRight || currentMargin[2] || 0,
+					node.marginBottom || currentMargin[3] || 0
 				];
 			}
 			return currentMargin;
 		}
 
-		function flattenStyleArray(styleArray){
+		function flattenStyleArray(styleArray) {
 			var flattenedStyles = {};
 			for (var i = styleArray.length - 1; i >= 0; i--) {
 				var styleName = styleArray[i];
 				var style = self.styleStack.styleDictionary[styleName];
-				for(var key in style){
-					if(style.hasOwnProperty(key)){
+				for (var key in style) {
+					if (style.hasOwnProperty(key)) {
 						flattenedStyles[key] = style[key];
 					}
 				}
@@ -113,11 +108,11 @@ DocMeasure.prototype.measureNode = function(node) {
 		}
 
 		function convertMargin(margin) {
-			if (typeof margin === 'number' || margin instanceof Number) {
-				margin = [ margin, margin, margin, margin ];
-			} else if (margin instanceof Array) {
+			if (isNumber(margin)) {
+				margin = [margin, margin, margin, margin];
+			} else if (isArray(margin)) {
 				if (margin.length === 2) {
-					margin = [ margin[0], margin[1], margin[0], margin[1] ];
+					margin = [margin[0], margin[1], margin[0], margin[1]];
 				}
 			}
 			return margin;
@@ -125,26 +120,26 @@ DocMeasure.prototype.measureNode = function(node) {
 
 		var margin = [undefined, undefined, undefined, undefined];
 
-		if(node.style) {
-			var styleArray = (node.style instanceof Array) ? node.style : [node.style];
+		if (node.style) {
+			var styleArray = isArray(node.style) ? node.style : [node.style];
 			var flattenedStyleArray = flattenStyleArray(styleArray);
 
-			if(flattenedStyleArray) {
+			if (flattenedStyleArray) {
 				margin = processSingleMargins(flattenedStyleArray, margin);
 			}
 
-			if(flattenedStyleArray.margin){
+			if (flattenedStyleArray.margin) {
 				margin = convertMargin(flattenedStyleArray.margin);
 			}
 		}
-		
+
 		margin = processSingleMargins(node, margin);
 
-		if(node.margin){
+		if (node.margin) {
 			margin = convertMargin(node.margin);
 		}
 
-		if(margin[0] === undefined && margin[1] === undefined && margin[2] === undefined && margin[3] === undefined) {
+		if (margin[0] === undefined && margin[1] === undefined && margin[2] === undefined && margin[3] === undefined) {
 			return null;
 		} else {
 			return margin;
@@ -152,15 +147,15 @@ DocMeasure.prototype.measureNode = function(node) {
 	}
 };
 
-DocMeasure.prototype.convertIfBase64Image = function(node) {
+DocMeasure.prototype.convertIfBase64Image = function (node) {
 	if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) {
 		var label = '$$pdfmake$$' + this.autoImageIndex++;
 		this.images[label] = node.image;
 		node.image = label;
-}
+	}
 };
 
-DocMeasure.prototype.measureImage = function(node) {
+DocMeasure.prototype.measureImage = function (node) {
 	if (this.images) {
 		this.convertIfBase64Image(node);
 	}
@@ -174,13 +169,37 @@ DocMeasure.prototype.measureImage = function(node) {
 	} else {
 		node._width = node._minWidth = node._maxWidth = node.width || imageSize.width;
 		node._height = node.height || (imageSize.height * node._width / imageSize.width);
+
+		if (isNumber(node.maxWidth) && node.maxWidth < node._width) {
+			node._width = node._minWidth = node._maxWidth = node.maxWidth;
+			node._height = node._width * imageSize.height / imageSize.width;
+		}
+
+		if (isNumber(node.maxHeight) && node.maxHeight < node._height) {
+			node._height = node.maxHeight;
+			node._width = node._minWidth = node._maxWidth = node._height * imageSize.width / imageSize.height;
+		}
+
+		if (isNumber(node.minWidth) && node.minWidth > node._width) {
+			node._width = node._minWidth = node._maxWidth = node.minWidth;
+			node._height = node._width * imageSize.height / imageSize.width;
+		}
+
+		if (isNumber(node.minHeight) && node.minHeight > node._height) {
+			node._height = node.minHeight;
+			node._width = node._minWidth = node._maxWidth = node._height * imageSize.width / imageSize.height;
+		}
 	}
 
 	node._alignment = this.styleStack.getProperty('alignment');
 	return node;
 };
 
-DocMeasure.prototype.measureLeaf = function(node) {
+DocMeasure.prototype.measureLeaf = function (node) {
+
+	if (node._textRef && node._textRef._nodeRef.text) {
+		node.text = node._textRef._nodeRef.text;
+	}
 
 	// Make sure style properties of the node itself are considered when building inlines.
 	// We could also just pass [node] to buildInlines, but that fails for bullet points.
@@ -196,13 +215,47 @@ DocMeasure.prototype.measureLeaf = function(node) {
 	return node;
 };
 
-DocMeasure.prototype.measureVerticalContainer = function(node) {
+DocMeasure.prototype.measureToc = function (node) {
+	if (node.toc.title) {
+		node.toc.title = this.measureNode(node.toc.title);
+	}
+
+	var body = [];
+	var textStyle = node.toc.textStyle || {};
+	var numberStyle = node.toc.numberStyle || textStyle;
+	var textMargin = node.toc.textMargin || [0, 0, 0, 0];
+	for (var i = 0, l = node.toc._items.length; i < l; i++) {
+		var item = node.toc._items[i];
+		var lineStyle = node.toc._items[i].tocStyle || textStyle;
+		var lineMargin = node.toc._items[i].tocMargin || textMargin;
+		body.push([
+			{text: item.text, alignment: 'left', style: lineStyle, margin: lineMargin},
+			{text: '00000', alignment: 'right', _tocItemRef: item, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]}
+		]);
+	}
+
+
+	node.toc._table = {
+		table: {
+			dontBreakRows: true,
+			widths: ['*', 'auto'],
+			body: body
+		},
+		layout: 'noBorders'
+	};
+
+	node.toc._table = this.measureNode(node.toc._table);
+
+	return node;
+};
+
+DocMeasure.prototype.measureVerticalContainer = function (node) {
 	var items = node.stack;
 
 	node._minWidth = 0;
 	node._maxWidth = 0;
 
-	for(var i = 0, l = items.length; i < l; i++) {
+	for (var i = 0, l = items.length; i < l; i++) {
 		items[i] = this.measureNode(items[i]);
 
 		node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
@@ -212,34 +265,76 @@ DocMeasure.prototype.measureVerticalContainer = function(node) {
 	return node;
 };
 
-DocMeasure.prototype.gapSizeForList = function(isOrderedList, listItems) {
-	if (isOrderedList) {
-		var longestNo = (listItems.length).toString().replace(/./g, '9');
-		return this.textTools.sizeOfString(longestNo + '. ', this.styleStack);
-	} else {
-		return this.textTools.sizeOfString('9. ', this.styleStack);
-	}
+DocMeasure.prototype.gapSizeForList = function () {
+	return this.textTools.sizeOfString('9. ', this.styleStack);
 };
 
-DocMeasure.prototype.buildMarker = function(isOrderedList, counter, styleStack, gapSize) {
-	var marker;
-
-	if (isOrderedList) {
-		marker = { _inlines: this.textTools.buildInlines(counter, styleStack).items };
-	}
-	else {
+DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type) {
+	function buildDisc(gapSize, color) {
 		// TODO: ascender-based calculations
 		var radius = gapSize.fontSize / 6;
-		marker = {
-			canvas: [ {
-				x: radius,
-				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
-				r1: radius,
-				r2: radius,
-				type: 'ellipse',
-				color: 'black'
-			} ]
+		return {
+			canvas: [{
+					x: radius,
+					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+					r1: radius,
+					r2: radius,
+					type: 'ellipse',
+					color: color
+				}]
 		};
+	}
+
+	function buildSquare(gapSize, color) {
+		// TODO: ascender-based calculations
+		var size = gapSize.fontSize / 3;
+		return {
+			canvas: [{
+					x: 0,
+					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - (gapSize.fontSize / 3) - (size / 2),
+					h: size,
+					w: size,
+					type: 'rect',
+					color: color
+				}]
+		};
+	}
+
+	function buildCircle(gapSize, color) {
+		// TODO: ascender-based calculations
+		var radius = gapSize.fontSize / 6;
+		return {
+			canvas: [{
+					x: radius,
+					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+					r1: radius,
+					r2: radius,
+					type: 'ellipse',
+					lineColor: color
+				}]
+		};
+	}
+
+	var marker;
+	var color = styleStack.getProperty('markerColor') || styleStack.getProperty('color') || 'black';
+
+	switch (type) {
+		case 'circle':
+			marker = buildCircle(gapSize, color);
+			break;
+
+		case 'square':
+			marker = buildSquare(gapSize, color);
+			break;
+
+		case 'none':
+			marker = {};
+			break;
+
+		case 'disc':
+		default:
+			marker = buildDisc(gapSize, color);
+			break;
 	}
 
 	marker._minWidth = marker._maxWidth = gapSize.width;
@@ -248,24 +343,108 @@ DocMeasure.prototype.buildMarker = function(isOrderedList, counter, styleStack, 
 	return marker;
 };
 
-DocMeasure.prototype.measureList = function(isOrdered, node) {
-	var style = this.styleStack.clone();
+DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack, type, separator) {
+	function prepareAlpha(counter) {
+		function toAlpha(num) {
+			return (num >= 26 ? toAlpha((num / 26 >> 0) - 1) : '') + 'abcdefghijklmnopqrstuvwxyz'[num % 26 >> 0];
+		}
 
-	var items = isOrdered ? node.ol : node.ul;
-	node._gapSize = this.gapSizeForList(isOrdered, items);
+		if (counter < 1) {
+			return counter.toString();
+		}
+
+		return toAlpha(counter - 1);
+	}
+
+	function prepareRoman(counter) {
+		if (counter < 1 || counter > 4999) {
+			return counter.toString();
+		}
+		var num = counter;
+		var lookup = {M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1}, roman = '', i;
+		for (i in lookup) {
+			while (num >= lookup[i]) {
+				roman += i;
+				num -= lookup[i];
+			}
+		}
+		return roman;
+	}
+
+	function prepareDecimal(counter) {
+		return counter.toString();
+	}
+
+	var counterText;
+	switch (type) {
+		case 'none':
+			counterText = null;
+			break;
+
+		case 'upper-alpha':
+			counterText = prepareAlpha(counter).toUpperCase();
+			break;
+
+		case 'lower-alpha':
+			counterText = prepareAlpha(counter);
+			break;
+
+		case 'upper-roman':
+			counterText = prepareRoman(counter);
+			break;
+
+		case 'lower-roman':
+			counterText = prepareRoman(counter).toLowerCase();
+			break;
+
+		case 'decimal':
+		default:
+			counterText = prepareDecimal(counter);
+			break;
+	}
+
+	if (counterText === null) {
+		return {};
+	}
+
+	if (separator) {
+		if (isArray(separator)) {
+			if (separator[0]) {
+				counterText = separator[0] + counterText;
+			}
+
+			if (separator[1]) {
+				counterText += separator[1];
+			}
+			counterText += ' ';
+		} else {
+			counterText += separator + ' ';
+		}
+	}
+
+	var textArray = {text: counterText};
+	var markerColor = styleStack.getProperty('markerColor');
+	if (markerColor) {
+		textArray.color = markerColor;
+	}
+
+	return {_inlines: this.textTools.buildInlines(textArray, styleStack).items};
+};
+
+DocMeasure.prototype.measureUnorderedList = function (node) {
+	var style = this.styleStack.clone();
+	var items = node.ul;
+	node.type = node.type || 'disc';
+	node._gapSize = this.gapSizeForList();
 	node._minWidth = 0;
 	node._maxWidth = 0;
 
-	var counter = 1;
+	for (var i = 0, l = items.length; i < l; i++) {
+		var item = items[i] = this.measureNode(items[i]);
 
-	for(var i = 0, l = items.length; i < l; i++) {
-		var nextItem = items[i] = this.measureNode(items[i]);
-
-		var marker = counter++ + '. ';
-
-		if (!nextItem.ol && !nextItem.ul) {
-			nextItem.listMarker = this.buildMarker(isOrdered, nextItem.counter || marker, style, node._gapSize);
-		}  // TODO: else - nested lists numbering
+		if (!item.ol && !item.ul) {
+			item.listMarker = this.buildUnorderedMarker(style, node._gapSize, item.listType || node.type);
+		}
 
 		node._minWidth = Math.max(node._minWidth, items[i]._minWidth + node._gapSize.width);
 		node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth + node._gapSize.width);
@@ -274,23 +453,71 @@ DocMeasure.prototype.measureList = function(isOrdered, node) {
 	return node;
 };
 
-DocMeasure.prototype.measureColumns = function(node) {
+DocMeasure.prototype.measureOrderedList = function (node) {
+	var style = this.styleStack.clone();
+	var items = node.ol;
+	node.type = node.type || 'decimal';
+	node.separator = node.separator || '.';
+	node.reversed = node.reversed || false;
+	if (!node.start) {
+		node.start = node.reversed ? items.length : 1;
+	}
+	node._gapSize = this.gapSizeForList();
+	node._minWidth = 0;
+	node._maxWidth = 0;
+
+	var counter = node.start;
+	for (var i = 0, l = items.length; i < l; i++) {
+		var item = items[i] = this.measureNode(items[i]);
+
+		if (!item.ol && !item.ul) {
+			item.listMarker = this.buildOrderedMarker(item.counter || counter, style, item.listType || node.type, node.separator);
+			if (item.listMarker._inlines) {
+				node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
+			}
+		}  // TODO: else - nested lists numbering
+
+		node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
+		node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth);
+
+		if (node.reversed) {
+			counter--;
+		} else {
+			counter++;
+		}
+	}
+
+	node._minWidth += node._gapSize.width;
+	node._maxWidth += node._gapSize.width;
+
+	for (var i = 0, l = items.length; i < l; i++) {
+		var item = items[i];
+		if (!item.ol && !item.ul) {
+			item.listMarker._minWidth = item.listMarker._maxWidth = node._gapSize.width;
+		}
+	}
+
+	return node;
+};
+
+DocMeasure.prototype.measureColumns = function (node) {
 	var columns = node.columns;
 	node._gap = this.styleStack.getProperty('columnGap') || 0;
 
-	for(var i = 0, l = columns.length; i < l; i++) {
+	for (var i = 0, l = columns.length; i < l; i++) {
 		columns[i] = this.measureNode(columns[i]);
 	}
 
 	var measures = ColumnCalculator.measureMinMax(columns);
 
-	node._minWidth = measures.min + node._gap * (columns.length - 1);
-	node._maxWidth = measures.max + node._gap * (columns.length - 1);
+	var numGaps = (columns.length > 0) ? (columns.length - 1) : 0;
+	node._minWidth = measures.min + node._gap * numGaps;
+	node._maxWidth = measures.max + node._gap * numGaps;
 
 	return node;
 };
 
-DocMeasure.prototype.measureTable = function(node) {
+DocMeasure.prototype.measureTable = function (node) {
 	extendTableWidths(node);
 	node._layout = getLayout(this.tableLayouts);
 	node._offsets = getOffsets(node._layout);
@@ -298,25 +525,28 @@ DocMeasure.prototype.measureTable = function(node) {
 	var colSpans = [];
 	var col, row, cols, rows;
 
-	for(col = 0, cols = node.table.body[0].length; col < cols; col++) {
+	for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
 		var c = node.table.widths[col];
 		c._minWidth = 0;
 		c._maxWidth = 0;
 
-		for(row = 0, rows = node.table.body.length; row < rows; row++) {
+		for (row = 0, rows = node.table.body.length; row < rows; row++) {
 			var rowData = node.table.body[row];
 			var data = rowData[col];
-			if(data === undefined){
+			if (data === undefined) {
 				console.error('Malformed table row ', rowData, 'in node ', node);
 				throw 'Malformed table row, a cell is undefined.';
 			}
+			if (data === null) { // transform to object
+				data = '';
+			}
+
 			if (!data._span) {
-				var _this = this;
 				data = rowData[col] = this.styleStack.auto(data, measureCb(this, data));
 
 				if (data.colSpan && data.colSpan > 1) {
 					markSpans(rowData, col, data.colSpan);
-					colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
+					colSpans.push({col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth});
 				} else {
 					c._minWidth = Math.max(c._minWidth, data._minWidth);
 					c._maxWidth = Math.max(c._maxWidth, data._maxWidth);
@@ -339,8 +569,8 @@ DocMeasure.prototype.measureTable = function(node) {
 	return node;
 
 	function measureCb(_this, data) {
-		return function() {
-			if (data !== null && typeof data === 'object') {
+		return function () {
+			if (isObject(data)) {
 				data.fillColor = _this.styleStack.getProperty('fillColor');
 			}
 			return _this.measureNode(data);
@@ -350,19 +580,39 @@ DocMeasure.prototype.measureTable = function(node) {
 	function getLayout(tableLayouts) {
 		var layout = node.layout;
 
-		if (typeof node.layout === 'string' || node instanceof String) {
+		if (isString(layout)) {
 			layout = tableLayouts[layout];
 		}
 
 		var defaultLayout = {
-			hLineWidth: function(i, node) { return 1; }, //return node.table.headerRows && i === node.table.headerRows && 3 || 0; },
-			vLineWidth: function(i, node) { return 1; },
-			hLineColor: function(i, node) { return 'black'; },
-			vLineColor: function(i, node) { return 'black'; },
-			paddingLeft: function(i, node) { return 4; }, //i && 4 || 0; },
-			paddingRight: function(i, node) { return 4; }, //(i < node.table.widths.length - 1) ? 4 : 0; },
-			paddingTop: function(i, node) { return 2; },
-			paddingBottom: function(i, node) { return 2; }
+			hLineWidth: function (i, node) {
+				return 1;
+			},
+			vLineWidth: function (i, node) {
+				return 1;
+			},
+			hLineColor: function (i, node) {
+				return 'black';
+			},
+			vLineColor: function (i, node) {
+				return 'black';
+			},
+			paddingLeft: function (i, node) {
+				return 4;
+			},
+			paddingRight: function (i, node) {
+				return 4;
+			},
+			paddingTop: function (i, node) {
+				return 2;
+			},
+			paddingBottom: function (i, node) {
+				return 2;
+			},
+			fillColor: function (i, node) {
+				return null;
+			},
+			defaultBorder: true
 		};
 
 		return pack(defaultLayout, layout);
@@ -373,7 +623,7 @@ DocMeasure.prototype.measureTable = function(node) {
 		var totalOffset = 0;
 		var prevRightPadding = 0;
 
-		for(var i = 0, l = node.table.widths.length; i < l; i++) {
+		for (var i = 0, l = node.table.widths.length; i < l; i++) {
 			var lOffset = prevRightPadding + layout.vLineWidth(i, node) + layout.paddingLeft(i, node);
 			offsets.push(lOffset);
 			totalOffset += lOffset;
@@ -401,7 +651,7 @@ DocMeasure.prototype.measureTable = function(node) {
 			if (minDifference > 0) {
 				q = minDifference / span.span;
 
-				for(j = 0; j < span.span; j++) {
+				for (j = 0; j < span.span; j++) {
 					node.table.widths[span.col + j]._minWidth += q;
 				}
 			}
@@ -409,7 +659,7 @@ DocMeasure.prototype.measureTable = function(node) {
 			if (maxDifference > 0) {
 				q = maxDifference / span.span;
 
-				for(j = 0; j < span.span; j++) {
+				for (j = 0; j < span.span; j++) {
 					node.table.widths[span.col + j]._maxWidth += q;
 				}
 			}
@@ -417,11 +667,11 @@ DocMeasure.prototype.measureTable = function(node) {
 	}
 
 	function getMinMax(col, span, offsets) {
-		var result = { minWidth: 0, maxWidth: 0 };
+		var result = {minWidth: 0, maxWidth: 0};
 
-		for(var i = 0; i < span; i++) {
-			result.minWidth += node.table.widths[col + i]._minWidth + (i? offsets.offsets[col + i] : 0);
-			result.maxWidth += node.table.widths[col + i]._maxWidth + (i? offsets.offsets[col + i] : 0);
+		for (var i = 0; i < span; i++) {
+			result.minWidth += node.table.widths[col + i]._minWidth + (i ? offsets.offsets[col + i] : 0);
+			result.maxWidth += node.table.widths[col + i]._maxWidth + (i ? offsets.offsets[col + i] : 0);
 		}
 
 		return result;
@@ -454,58 +704,59 @@ DocMeasure.prototype.measureTable = function(node) {
 			node.table.widths = 'auto';
 		}
 
-		if (typeof node.table.widths === 'string' || node.table.widths instanceof String) {
-			node.table.widths = [ node.table.widths ];
+		if (isString(node.table.widths)) {
+			node.table.widths = [node.table.widths];
 
-			while(node.table.widths.length < node.table.body[0].length) {
+			while (node.table.widths.length < node.table.body[0].length) {
 				node.table.widths.push(node.table.widths[node.table.widths.length - 1]);
 			}
 		}
 
-		for(var i = 0, l = node.table.widths.length; i < l; i++) {
+		for (var i = 0, l = node.table.widths.length; i < l; i++) {
 			var w = node.table.widths[i];
-			if (typeof w === 'number' || w instanceof Number || typeof w === 'string' || w instanceof String) {
-				node.table.widths[i] = { width: w };
+			if (isNumber(w) || isString(w)) {
+				node.table.widths[i] = {width: w};
 			}
 		}
 	}
 };
 
-DocMeasure.prototype.measureCanvas = function(node) {
+DocMeasure.prototype.measureCanvas = function (node) {
 	var w = 0, h = 0;
 
-	for(var i = 0, l = node.canvas.length; i < l; i++) {
+	for (var i = 0, l = node.canvas.length; i < l; i++) {
 		var vector = node.canvas[i];
 
-		switch(vector.type) {
-		case 'ellipse':
-			w = Math.max(w, vector.x + vector.r1);
-			h = Math.max(h, vector.y + vector.r2);
-			break;
-		case 'rect':
-			w = Math.max(w, vector.x + vector.w);
-			h = Math.max(h, vector.y + vector.h);
-			break;
-		case 'line':
-			w = Math.max(w, vector.x1, vector.x2);
-			h = Math.max(h, vector.y1, vector.y2);
-			break;
-		case 'polyline':
-			for(var i2 = 0, l2 = vector.points.length; i2 < l2; i2++) {
-				w = Math.max(w, vector.points[i2].x);
-				h = Math.max(h, vector.points[i2].y);
-			}
-			break;
+		switch (vector.type) {
+			case 'ellipse':
+				w = Math.max(w, vector.x + vector.r1);
+				h = Math.max(h, vector.y + vector.r2);
+				break;
+			case 'rect':
+				w = Math.max(w, vector.x + vector.w);
+				h = Math.max(h, vector.y + vector.h);
+				break;
+			case 'line':
+				w = Math.max(w, vector.x1, vector.x2);
+				h = Math.max(h, vector.y1, vector.y2);
+				break;
+			case 'polyline':
+				for (var i2 = 0, l2 = vector.points.length; i2 < l2; i2++) {
+					w = Math.max(w, vector.points[i2].x);
+					h = Math.max(h, vector.points[i2].y);
+				}
+				break;
 		}
 	}
 
 	node._minWidth = node._maxWidth = w;
 	node._minHeight = node._maxHeight = h;
+	node._alignment = this.styleStack.getProperty('alignment');
 
 	return node;
 };
 
-DocMeasure.prototype.measureQr = function(node) {
+DocMeasure.prototype.measureQr = function (node) {
 	node = qrEncoder.measure(node);
 	node._alignment = this.styleStack.getProperty('alignment');
 	return node;

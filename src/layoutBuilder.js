@@ -1,14 +1,15 @@
-/* jslint node: true */
 'use strict';
 
-var _ = require('lodash');
 var TraversalTracker = require('./traversalTracker');
+var DocPreprocessor = require('./docPreprocessor');
 var DocMeasure = require('./docMeasure');
 var DocumentContext = require('./documentContext');
 var PageElementWriter = require('./pageElementWriter');
 var ColumnCalculator = require('./columnCalculator');
 var TableProcessor = require('./tableProcessor');
 var Line = require('./line');
+var isString = require('./helpers').isString;
+var isArray = require('./helpers').isArray;
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 var fontStringify = require('./helpers').fontStringify;
@@ -16,10 +17,10 @@ var isFunction = require('./helpers').isFunction;
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
 
-function addAll(target, otherArray){
-  _.each(otherArray, function(item){
-    target.push(item);
-  });
+function addAll(target, otherArray) {
+	otherArray.forEach(function (item) {
+		target.push(item);
+	});
 }
 
 /**
@@ -33,12 +34,12 @@ function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
 	this.pageSize = pageSize;
 	this.pageMargins = pageMargins;
 	this.tracker = new TraversalTracker();
-    this.imageMeasure = imageMeasure;
-    this.tableLayouts = {};
+	this.imageMeasure = imageMeasure;
+	this.tableLayouts = {};
 }
 
 LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
-  this.tableLayouts = pack(this.tableLayouts, tableLayouts);
+	this.tableLayouts = pack(this.tableLayouts, tableLayouts);
 };
 
 /**
@@ -53,288 +54,349 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
  */
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
 
-  function addPageBreaksIfNecessary(linearNodeList, pages) {
+	function addPageBreaksIfNecessary(linearNodeList, pages) {
 
-		if(!isFunction(pageBreakBeforeFct)){
+		if (!isFunction(pageBreakBeforeFct)) {
 			return false;
 		}
 
-    linearNodeList = _.reject(linearNodeList, function(node){
-      return _.isEmpty(node.positions);
-    });
+		linearNodeList = linearNodeList.filter(function (node) {
+			return node.positions.length > 0;
+		});
 
-    _.each(linearNodeList, function(node) {
-      var nodeInfo = _.pick(node, [
-        'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
-        'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
-        'width', 'height'
-      ]);
-      nodeInfo.startPosition = _.first(node.positions);
-      nodeInfo.pageNumbers = _.chain(node.positions).map('pageNumber').uniq().value();
-      nodeInfo.pages = pages.length;
-      nodeInfo.stack = _.isArray(node.stack);
+		linearNodeList.forEach(function (node) {
+			var nodeInfo = {};
+			[
+				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
+				'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
+				'width', 'height'
+			].forEach(function (key) {
+				if (node[key] !== undefined) {
+					nodeInfo[key] = node[key];
+				}
+			});
+			nodeInfo.startPosition = node.positions[0];
+			nodeInfo.pageNumbers = node.positions.map(function (node) {
+				return node.pageNumber;
+			}).filter(function (element, position, array) {
+				return array.indexOf(element) === position;
+			});
+			nodeInfo.pages = pages.length;
+			nodeInfo.stack = isArray(node.stack);
 
-      node.nodeInfo = nodeInfo;
-    });
+			node.nodeInfo = nodeInfo;
+		});
 
-    return _.any(linearNodeList, function (node, index, followingNodeList) {
-      if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
-        node.pageBreakCalculated = true;
-        var pageNumber = _.first(node.nodeInfo.pageNumbers);
+		return linearNodeList.some(function (node, index, followingNodeList) {
+			if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
+				node.pageBreakCalculated = true;
+				var pageNumber = node.nodeInfo.pageNumbers[0];
 
-				var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
-          return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
-        }).value();
+				var followingNodesOnPage = followingNodeList.slice(index + 1).filter(function (node0) {
+					return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
+				});
 
-        var nodesOnNextPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
-          return _.contains(node0.nodeInfo.pageNumbers, pageNumber + 1);
-        }).value();
+				var nodesOnNextPage = followingNodeList.slice(index + 1).filter(function (node0) {
+					return node0.nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1;
+				});
 
-        var previousNodesOnPage = _.chain(followingNodeList).take(index).filter(function (node0) {
-          return _.contains(node0.nodeInfo.pageNumbers, pageNumber);
-        }).value();
+				var previousNodesOnPage = followingNodeList.slice(0, index).filter(function (node0) {
+					return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
+				});
 
-        if (pageBreakBeforeFct(node.nodeInfo,
-          _.map(followingNodesOnPage, 'nodeInfo'),
-          _.map(nodesOnNextPage, 'nodeInfo'),
-          _.map(previousNodesOnPage, 'nodeInfo'))) {
-          node.pageBreak = 'before';
-          return true;
-        }
-      }
-    });
-  }
+				if (
+					pageBreakBeforeFct(
+						node.nodeInfo,
+						followingNodesOnPage.map(function (node) {
+							return node.nodeInfo;
+						}),
+						nodesOnNextPage.map(function (node) {
+							return node.nodeInfo;
+						}),
+						previousNodesOnPage.map(function (node) {
+							return node.nodeInfo;
+						}))) {
+					node.pageBreak = 'before';
+					return true;
+				}
+			}
+		});
+	}
 
-  this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
+	this.docPreprocessor = new DocPreprocessor();
+	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
 
 
-  function resetXYs(result) {
-    _.each(result.linearNodeList, function (node) {
-      node.resetXY();
-    });
-  }
+	function resetXYs(result) {
+		result.linearNodeList.forEach(function (node) {
+			node.resetXY();
+		});
+	}
 
-  var result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
-  while(addPageBreaksIfNecessary(result.linearNodeList, result.pages)){
-    resetXYs(result);
-    result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
-  }
+	var result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+	while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
+		resetXYs(result);
+		result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+	}
 
 	return result.pages;
 };
 
 LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
 
-  this.linearNodeList = [];
-  docStructure = this.docMeasure.measureDocument(docStructure);
+	this.linearNodeList = [];
+	docStructure = this.docPreprocessor.preprocessDocument(docStructure);
+	docStructure = this.docMeasure.measureDocument(docStructure);
 
-  this.writer = new PageElementWriter(
-    new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
+	this.writer = new PageElementWriter(
+		new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
-  var _this = this;
-  this.writer.context().tracker.startTracking('pageAdded', function() {
-    _this.addBackground(background);
-  });
+	var _this = this;
+	this.writer.context().tracker.startTracking('pageAdded', function () {
+		_this.addBackground(background);
+	});
 
-  this.addBackground(background);
-  this.processNode(docStructure);
-  this.addHeadersAndFooters(header, footer);
-  /* jshint eqnull:true */
-  if(watermark != null)
-    this.addWatermark(watermark, fontProvider);
+	this.addBackground(background);
+	this.processNode(docStructure);
+	this.addHeadersAndFooters(header, footer);
+	if (watermark != null) {
+		this.addWatermark(watermark, fontProvider, defaultStyle);
+	}
 
-  return {pages: this.writer.context().pages, linearNodeList: this.linearNodeList};
+	return {pages: this.writer.context().pages, linearNodeList: this.linearNodeList};
 };
 
 
-LayoutBuilder.prototype.addBackground = function(background) {
-    var backgroundGetter = isFunction(background) ? background : function() { return background; };
+LayoutBuilder.prototype.addBackground = function (background) {
+	var backgroundGetter = isFunction(background) ? background : function () {
+		return background;
+	};
 
-    var pageBackground = backgroundGetter(this.writer.context().page + 1);
+	var pageBackground = backgroundGetter(this.writer.context().page + 1);
 
-    if (pageBackground) {
-      var pageSize = this.writer.context().getCurrentPage().pageSize;
-      this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
-      this.processNode(this.docMeasure.measureDocument(pageBackground));
-      this.writer.commitUnbreakableBlock(0, 0);
-    }
+	if (pageBackground) {
+		var pageSize = this.writer.context().getCurrentPage().pageSize;
+		this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
+		pageBackground = this.docPreprocessor.preprocessDocument(pageBackground);
+		this.processNode(this.docMeasure.measureDocument(pageBackground));
+		this.writer.commitUnbreakableBlock(0, 0);
+		this.writer.context().hasBackground = true;
+	}
 };
 
-LayoutBuilder.prototype.addStaticRepeatable = function(headerOrFooter, sizeFunction) {
-  this.addDynamicRepeatable(function() { return headerOrFooter; }, sizeFunction);
+LayoutBuilder.prototype.addStaticRepeatable = function (headerOrFooter, sizeFunction) {
+	this.addDynamicRepeatable(function () {
+		return JSON.parse(JSON.stringify(headerOrFooter)); // copy to new object
+	}, sizeFunction);
 };
 
-LayoutBuilder.prototype.addDynamicRepeatable = function(nodeGetter, sizeFunction) {
-  var pages = this.writer.context().pages;
+LayoutBuilder.prototype.addDynamicRepeatable = function (nodeGetter, sizeFunction) {
+	var pages = this.writer.context().pages;
 
-  for(var pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
-    this.writer.context().page = pageIndex;
+	for (var pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
+		this.writer.context().page = pageIndex;
 
-    var node = nodeGetter(pageIndex + 1, l);
+		var node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
 
-    if (node) {
-      var sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
-      this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
-      this.processNode(this.docMeasure.measureDocument(node));
-      this.writer.commitUnbreakableBlock(sizes.x, sizes.y);
-    }
-  }
+		if (node) {
+			var sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
+			this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
+			node = this.docPreprocessor.preprocessDocument(node);
+			this.processNode(this.docMeasure.measureDocument(node));
+			this.writer.commitUnbreakableBlock(sizes.x, sizes.y);
+		}
+	}
 };
 
-LayoutBuilder.prototype.addHeadersAndFooters = function(header, footer) {
-  var headerSizeFct = function(pageSize, pageMargins){
-    return {
-      x: 0,
-      y: 0,
-      width: pageSize.width,
-      height: pageMargins.top
-    };
-  };
+LayoutBuilder.prototype.addHeadersAndFooters = function (header, footer) {
+	var headerSizeFct = function (pageSize, pageMargins) {
+		return {
+			x: 0,
+			y: 0,
+			width: pageSize.width,
+			height: pageMargins.top
+		};
+	};
 
-  var footerSizeFct = function (pageSize, pageMargins) {
-    return {
-      x: 0,
-      y: pageSize.height - pageMargins.bottom,
-      width: pageSize.width,
-      height: pageMargins.bottom
-    };
-  };
+	var footerSizeFct = function (pageSize, pageMargins) {
+		return {
+			x: 0,
+			y: pageSize.height - pageMargins.bottom,
+			width: pageSize.width,
+			height: pageMargins.bottom
+		};
+	};
 
-  if(isFunction(header)) {
-    this.addDynamicRepeatable(header, headerSizeFct);
-  } else if(header) {
-    this.addStaticRepeatable(header, headerSizeFct);
-  }
+	if (isFunction(header)) {
+		this.addDynamicRepeatable(header, headerSizeFct);
+	} else if (header) {
+		this.addStaticRepeatable(header, headerSizeFct);
+	}
 
-  if(isFunction(footer)) {
-    this.addDynamicRepeatable(footer, footerSizeFct);
-  } else if(footer) {
-    this.addStaticRepeatable(footer, footerSizeFct);
-  }
+	if (isFunction(footer)) {
+		this.addDynamicRepeatable(footer, footerSizeFct);
+	} else if (footer) {
+		this.addStaticRepeatable(footer, footerSizeFct);
+	}
 };
 
-LayoutBuilder.prototype.addWatermark = function(watermark, fontProvider){
-  var defaultFont = Object.getOwnPropertyNames(fontProvider.fonts)[0]; // TODO allow selection of other font
-  var watermarkObject = {
-    text: watermark,
-    font: fontProvider.provideFont(defaultFont, false, false),
-    size: getSize(this.pageSize, watermark, fontProvider)
-  };
+LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaultStyle) {
+	if (isString(watermark)) {
+		watermark = {'text': watermark};
+	}
 
-  var pages = this.writer.context().pages;
-  for(var i = 0, l = pages.length; i < l; i++) {
-    pages[i].watermark = watermarkObject;
-  }
+	if (!watermark.text) { // empty watermark text
+		return;
+	}
 
-  function getSize(pageSize, watermark, fontProvider){
-    var width = pageSize.width;
-    var height = pageSize.height;
-    var targetWidth = Math.sqrt(width*width + height*height)*0.8; /* page diagnoal * sample factor */
-    var textTools = new TextTools(fontProvider);
-    var styleContextStack = new StyleContextStack();
-    var size;
+	watermark.font = watermark.font || defaultStyle.font || 'Roboto';
+	watermark.color = watermark.color || 'black';
+	watermark.opacity = watermark.opacity || 0.6;
+	watermark.bold = watermark.bold || false;
+	watermark.italics = watermark.italics || false;
 
-    /**
-     * Binary search the best font size.
-     * Initial bounds [0, 1000]
-     * Break when range < 1
-     */
-    var a = 0;
-    var b = 1000;
-    var c = (a+b)/2;
-    while(Math.abs(a - b) > 1){
-      styleContextStack.push({
-        fontSize: c
-      });
-      size = textTools.sizeOfString(watermark, styleContextStack);
-      if(size.width > targetWidth){
-        b = c;
-        c = (a+b)/2;
-      }
-      else if(size.width < targetWidth){
-        a = c;
-        c = (a+b)/2;
-      }
-      styleContextStack.pop();
-    }
-    /*
-      End binary search
-     */
-    return {size: size, fontSize: c};
-  }
+	var watermarkObject = {
+		text: watermark.text,
+		font: fontProvider.provideFont(watermark.font, watermark.bold, watermark.italics),
+		size: getSize(this.pageSize, watermark, fontProvider),
+		color: watermark.color,
+		opacity: watermark.opacity
+	};
+
+	var pages = this.writer.context().pages;
+	for (var i = 0, l = pages.length; i < l; i++) {
+		pages[i].watermark = watermarkObject;
+	}
+
+	function getSize(pageSize, watermark, fontProvider) {
+		var width = pageSize.width;
+		var height = pageSize.height;
+		var targetWidth = Math.sqrt(width * width + height * height) * 0.8; /* page diagonal * sample factor */
+		var textTools = new TextTools(fontProvider);
+		var styleContextStack = new StyleContextStack(null, {font: watermark.font, bold: watermark.bold, italics: watermark.italics});
+		var size;
+
+		/**
+		 * Binary search the best font size.
+		 * Initial bounds [0, 1000]
+		 * Break when range < 1
+		 */
+		var a = 0;
+		var b = 1000;
+		var c = (a + b) / 2;
+		while (Math.abs(a - b) > 1) {
+			styleContextStack.push({
+				fontSize: c
+			});
+			size = textTools.sizeOfString(watermark.text, styleContextStack);
+			if (size.width > targetWidth) {
+				b = c;
+				c = (a + b) / 2;
+			} else if (size.width < targetWidth) {
+				a = c;
+				c = (a + b) / 2;
+			}
+			styleContextStack.pop();
+		}
+		/*
+		 End binary search
+		 */
+		return {size: size, fontSize: c};
+	}
 };
 
-function decorateNode(node){
-  var x = node.x, y = node.y;
-  node.positions = [];
+function decorateNode(node) {
+	var x = node.x, y = node.y;
+	node.positions = [];
 
-  _.each(node.canvas, function(vector){
-    var x = vector.x, y = vector.y, x1 = vector.x1, y1 = vector.y1, x2 = vector.x2, y2 = vector.y2;
-    vector.resetXY = function(){
-      vector.x = x;
-      vector.y = y;
-			vector.x1 = x1;
-			vector.y1 = y1;
-			vector.x2 = x2;
-			vector.y2 = y2;
-    };
-  });
+	if (isArray(node.canvas)) {
+		node.canvas.forEach(function (vector) {
+			var x = vector.x, y = vector.y, x1 = vector.x1, y1 = vector.y1, x2 = vector.x2, y2 = vector.y2;
+			vector.resetXY = function () {
+				vector.x = x;
+				vector.y = y;
+				vector.x1 = x1;
+				vector.y1 = y1;
+				vector.x2 = x2;
+				vector.y2 = y2;
+			};
+		});
+	}
 
-  node.resetXY = function(){
-    node.x = x;
-    node.y = y;
-    _.each(node.canvas, function(vector){
-      vector.resetXY();
-    });
-  };
+	node.resetXY = function () {
+		node.x = x;
+		node.y = y;
+		if (isArray(node.canvas)) {
+			node.canvas.forEach(function (vector) {
+				vector.resetXY();
+			});
+		}
+	};
 }
 
-LayoutBuilder.prototype.processNode = function(node) {
-  var self = this;
+LayoutBuilder.prototype.processNode = function (node) {
+	var self = this;
 
-  this.linearNodeList.push(node);
-  decorateNode(node);
+	this.linearNodeList.push(node);
+	decorateNode(node);
 
-  applyMargins(function() {
-    var absPosition = node.absolutePosition;
-    if(absPosition){
-      self.writer.context().beginDetachedBlock();
-      self.writer.context().moveTo(absPosition.x || 0, absPosition.y || 0);
-    }
-
-    if (node.stack) {
-      self.processVerticalContainer(node);
-    } else if (node.columns) {
-      self.processColumns(node);
-    } else if (node.ul) {
-      self.processList(false, node);
-    } else if (node.ol) {
-      self.processList(true, node);
-    } else if (node.table) {
-      self.processTable(node);
-    } else if (node.text !== undefined) {
-      self.processLeaf(node);
-    } else if (node.image) {
-      self.processImage(node);
-    } else if (node.canvas) {
-      self.processCanvas(node);
-    } else if (node.qr) {
-      self.processQr(node);
-    }else if (!node._span) {
-		throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+	applyMargins(function () {
+		var unbreakable = node.unbreakable;
+		if (unbreakable) {
+			self.writer.beginUnbreakableBlock();
 		}
 
-    if(absPosition){
-      self.writer.context().endDetachedBlock();
-    }
+		var absPosition = node.absolutePosition;
+		if (absPosition) {
+			self.writer.context().beginDetachedBlock();
+			self.writer.context().moveTo(absPosition.x || 0, absPosition.y || 0);
+		}
+
+		var relPosition = node.relativePosition;
+		if (relPosition) {
+			self.writer.context().beginDetachedBlock();
+			self.writer.context().moveTo((relPosition.x || 0) + self.writer.context().x, (relPosition.y || 0) + self.writer.context().y);
+		}
+
+		if (node.stack) {
+			self.processVerticalContainer(node);
+		} else if (node.columns) {
+			self.processColumns(node);
+		} else if (node.ul) {
+			self.processList(false, node);
+		} else if (node.ol) {
+			self.processList(true, node);
+		} else if (node.table) {
+			self.processTable(node);
+		} else if (node.text !== undefined) {
+			self.processLeaf(node);
+		} else if (node.toc) {
+			self.processToc(node);
+		} else if (node.image) {
+			self.processImage(node);
+		} else if (node.canvas) {
+			self.processCanvas(node);
+		} else if (node.qr) {
+			self.processQr(node);
+		} else if (!node._span) {
+			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+		}
+
+		if (absPosition || relPosition) {
+			self.writer.context().endDetachedBlock();
+		}
+
+		if (unbreakable) {
+			self.writer.commitUnbreakableBlock();
+		}
 	});
 
 	function applyMargins(callback) {
 		var margin = node._margin;
 
-    if (node.pageBreak === 'before') {
-        self.writer.moveToNextPage(node.pageOrientation);
-    }
+		if (node.pageBreak === 'before') {
+			self.writer.moveToNextPage(node.pageOrientation);
+		}
 
 		if (margin) {
 			self.writer.context().moveDown(margin[1]);
@@ -343,21 +405,21 @@ LayoutBuilder.prototype.processNode = function(node) {
 
 		callback();
 
-		if(margin) {
+		if (margin) {
 			self.writer.context().addMargin(-margin[0], -margin[2]);
 			self.writer.context().moveDown(margin[3]);
 		}
 
-    if (node.pageBreak === 'after') {
-        self.writer.moveToNextPage(node.pageOrientation);
-    }
+		if (node.pageBreak === 'after') {
+			self.writer.moveToNextPage(node.pageOrientation);
+		}
 	}
 };
 
 // vertical container
-LayoutBuilder.prototype.processVerticalContainer = function(node) {
+LayoutBuilder.prototype.processVerticalContainer = function (node) {
 	var self = this;
-	node.stack.forEach(function(item) {
+	node.stack.forEach(function (item) {
 		self.processNode(item);
 		addAll(node.positions, item.positions);
 
@@ -366,25 +428,29 @@ LayoutBuilder.prototype.processVerticalContainer = function(node) {
 };
 
 // columns
-LayoutBuilder.prototype.processColumns = function(columnNode) {
+LayoutBuilder.prototype.processColumns = function (columnNode) {
 	var columns = columnNode.columns;
 	var availableWidth = this.writer.context().availableWidth;
 	var gaps = gapArray(columnNode._gap);
 
-	if (gaps) availableWidth -= (gaps.length - 1) * columnNode._gap;
+	if (gaps) {
+		availableWidth -= (gaps.length - 1) * columnNode._gap;
+	}
 
 	ColumnCalculator.buildColumnWidths(columns, availableWidth);
 	var result = this.processRow(columns, columns, gaps);
-    addAll(columnNode.positions, result.positions);
+	addAll(columnNode.positions, result.positions);
 
 
 	function gapArray(gap) {
-		if (!gap) return null;
+		if (!gap) {
+			return null;
+		}
 
 		var gaps = [];
 		gaps.push(0);
 
-		for(var i = columns.length - 1; i > 0; i--) {
+		for (var i = columns.length - 1; i > 0; i--) {
 			gaps.push(gap);
 		}
 
@@ -392,90 +458,94 @@ LayoutBuilder.prototype.processColumns = function(columnNode) {
 	}
 };
 
-LayoutBuilder.prototype.processRow = function(columns, widths, gaps, tableBody, tableRow) {
-  var self = this;
-  var pageBreaks = [], positions = [];
+LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, height) {
+	var self = this;
+	var pageBreaks = [], positions = [];
 
-  this.tracker.auto('pageChanged', storePageBreakData, function() {
-    widths = widths || columns;
+	this.tracker.auto('pageChanged', storePageBreakData, function () {
+		widths = widths || columns;
 
-    self.writer.context().beginColumnGroup();
+		self.writer.context().beginColumnGroup();
 
-    for(var i = 0, l = columns.length; i < l; i++) {
-      var column = columns[i];
-      var width = widths[i]._calcWidth;
-      var leftOffset = colLeftOffset(i);
+		for (var i = 0, l = columns.length; i < l; i++) {
+			var column = columns[i];
+			var width = widths[i]._calcWidth;
+			var leftOffset = colLeftOffset(i);
 
-      if (column.colSpan && column.colSpan > 1) {
-          for(var j = 1; j < column.colSpan; j++) {
-              width += widths[++i]._calcWidth + gaps[i];
-          }
-      }
+			if (column.colSpan && column.colSpan > 1) {
+				for (var j = 1; j < column.colSpan; j++) {
+					width += widths[++i]._calcWidth + gaps[i];
+				}
+			}
 
-      self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
-      if (!column._span) {
-        self.processNode(column);
-        addAll(positions, column.positions);
-      } else if (column._columnEndingContext) {
-        // row-span ending
-        self.writer.context().markEnding(column);
-      }
-    }
+			self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
+			if (!column._span) {
+				self.processNode(column);
+				addAll(positions, column.positions);
+			} else if (column._columnEndingContext) {
+				// row-span ending
+				self.writer.context().markEnding(column);
+			}
+		}
 
-    self.writer.context().completeColumnGroup();
-  });
+		self.writer.context().completeColumnGroup(height);
+	});
 
-  return {pageBreaks: pageBreaks, positions: positions};
+	return {pageBreaks: pageBreaks, positions: positions};
 
-  function storePageBreakData(data) {
-    var pageDesc;
+	function storePageBreakData(data) {
+		var pageDesc;
 
-    for(var i = 0, l = pageBreaks.length; i < l; i++) {
-      var desc = pageBreaks[i];
-      if (desc.prevPage === data.prevPage) {
-        pageDesc = desc;
-        break;
-      }
-    }
+		for (var i = 0, l = pageBreaks.length; i < l; i++) {
+			var desc = pageBreaks[i];
+			if (desc.prevPage === data.prevPage) {
+				pageDesc = desc;
+				break;
+			}
+		}
 
-    if (!pageDesc) {
-      pageDesc = data;
-      pageBreaks.push(pageDesc);
-    }
-    pageDesc.prevY = Math.max(pageDesc.prevY, data.prevY);
-    pageDesc.y = Math.min(pageDesc.y, data.y);
-  }
+		if (!pageDesc) {
+			pageDesc = data;
+			pageBreaks.push(pageDesc);
+		}
+		pageDesc.prevY = Math.max(pageDesc.prevY, data.prevY);
+		pageDesc.y = Math.min(pageDesc.y, data.y);
+	}
 
 	function colLeftOffset(i) {
-		if (gaps && gaps.length > i) return gaps[i];
+		if (gaps && gaps.length > i) {
+			return gaps[i];
+		}
 		return 0;
 	}
 
-  function getEndingCell(column, columnIndex) {
-    if (column.rowSpan && column.rowSpan > 1) {
-      var endingRow = tableRow + column.rowSpan - 1;
-      if (endingRow >= tableBody.length) throw 'Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count';
-      return tableBody[endingRow][columnIndex];
-    }
+	function getEndingCell(column, columnIndex) {
+		if (column.rowSpan && column.rowSpan > 1) {
+			var endingRow = tableRow + column.rowSpan - 1;
+			if (endingRow >= tableBody.length) {
+				throw 'Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count';
+			}
+			return tableBody[endingRow][columnIndex];
+		}
 
-    return null;
-  }
+		return null;
+	}
 };
 
 // lists
-LayoutBuilder.prototype.processList = function(orderedList, node) {
+LayoutBuilder.prototype.processList = function (orderedList, node) {
 	var self = this,
-      items = orderedList ? node.ol : node.ul,
-      gapSize = node._gapSize;
+		items = orderedList ? node.ol : node.ul,
+		gapSize = node._gapSize;
 
 	this.writer.context().addMargin(gapSize.width);
 
 	var nextMarker;
-	this.tracker.auto('lineAdded', addMarkerToFirstLeaf, function() {
-		items.forEach(function(item) {
+	this.tracker.auto('lineAdded', addMarkerToFirstLeaf, function () {
+		items.forEach(function (item) {
 			nextMarker = item.listMarker;
 			self.processNode(item);
-            addAll(node.positions, item.positions);
+			addAll(node.positions, item.positions);
 		});
 	});
 
@@ -493,7 +563,7 @@ LayoutBuilder.prototype.processList = function(orderedList, node) {
 
 				offsetVector(vector, -marker._minWidth, 0);
 				self.writer.addVector(vector);
-			} else {
+			} else if (marker._inlines) {
 				var markerLine = new Line(self.pageSize.width);
 				markerLine.addInline(marker._inlines[0]);
 				markerLine.x = -marker._minWidth;
@@ -505,46 +575,108 @@ LayoutBuilder.prototype.processList = function(orderedList, node) {
 };
 
 // tables
-LayoutBuilder.prototype.processTable = function(tableNode) {
-  var processor = new TableProcessor(tableNode);
+LayoutBuilder.prototype.processTable = function (tableNode) {
+	var processor = new TableProcessor(tableNode);
 
-  processor.beginTable(this.writer);
+	processor.beginTable(this.writer);
 
-  for(var i = 0, l = tableNode.table.body.length; i < l; i++) {
-    processor.beginRow(i, this.writer);
+	var rowHeights = tableNode.table.heights;
+	for (var i = 0, l = tableNode.table.body.length; i < l; i++) {
+		processor.beginRow(i, this.writer);
 
-    var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i);
-    addAll(tableNode.positions, result.positions);
+		var height;
+		if (isFunction(rowHeights)) {
+			height = rowHeights(i);
+		} else if (isArray(rowHeights)) {
+			height = rowHeights[i];
+		} else {
+			height = rowHeights;
+		}
 
-    processor.endRow(i, this.writer, result.pageBreaks);
-  }
+		if (height === 'auto') {
+			height = undefined;
+		}
 
-  processor.endTable(this.writer);
+		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
+		addAll(tableNode.positions, result.positions);
+
+		processor.endRow(i, this.writer, result.pageBreaks);
+	}
+
+	processor.endTable(this.writer);
 };
 
 // leafs (texts)
-LayoutBuilder.prototype.processLeaf = function(node) {
+LayoutBuilder.prototype.processLeaf = function (node) {
 	var line = this.buildNextLine(node);
-  var currentHeight = (line) ? line.getHeight() : 0;
-  var maxHeight = node.maxHeight || -1;
+	var currentHeight = (line) ? line.getHeight() : 0;
+	var maxHeight = node.maxHeight || -1;
 
-  while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
-    var positions = this.writer.addLine(line);
-    node.positions.push(positions);
-    line = this.buildNextLine(node);
-    if (line) {
-      currentHeight += line.getHeight();
-    }
+	if (node._tocItemRef) {
+		line._pageNodeRef = node._tocItemRef;
+	}
+
+	if (node._pageRef) {
+		line._pageNodeRef = node._pageRef._nodeRef;
+	}
+
+	while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
+		var positions = this.writer.addLine(line);
+		node.positions.push(positions);
+		line = this.buildNextLine(node);
+		if (line) {
+			currentHeight += line.getHeight();
+		}
 	}
 };
 
-LayoutBuilder.prototype.buildNextLine = function(textNode) {
-	if (!textNode._inlines || textNode._inlines.length === 0) return null;
+LayoutBuilder.prototype.processToc = function (node) {
+	if (node.toc.title) {
+		this.processNode(node.toc.title);
+	}
+	this.processNode(node.toc._table);
+};
+
+LayoutBuilder.prototype.buildNextLine = function (textNode) {
+
+	function cloneInline(inline) {
+		var newInline = inline.constructor();
+		for (var key in inline) {
+			newInline[key] = inline[key];
+		}
+		return newInline;
+	}
+
+	if (!textNode._inlines || textNode._inlines.length === 0) {
+		return null;
+	}
 
 	var line = new Line(this.writer.context().availableWidth);
+	var textTools = new TextTools(null);
 
-	while(textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
-		line.addInline(textNode._inlines.shift());
+	while (textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
+		var inline = textNode._inlines.shift();
+
+		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.maxWidth) {
+			var widthPerChar = inline.width / inline.text.length;
+			var maxChars = Math.floor(line.maxWidth / widthPerChar);
+			if (maxChars < 1) {
+				maxChars = 1;
+			}
+			if (maxChars < inline.text.length) {
+				var newInline = cloneInline(inline);
+
+				newInline.text = inline.text.substr(maxChars);
+				inline.text = inline.text.substr(0, maxChars);
+
+				newInline.width = textTools.widthOfString(newInline.text, newInline.font, newInline.fontSize, newInline.characterSpacing, newInline.fontFeatures);
+				inline.width = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
+
+				textNode._inlines.unshift(newInline);
+			}
+		}
+
+		line.addInline(inline);
 	}
 
 	line.lastLineInParagraph = textNode._inlines.length === 0;
@@ -553,32 +685,34 @@ LayoutBuilder.prototype.buildNextLine = function(textNode) {
 };
 
 // images
-LayoutBuilder.prototype.processImage = function(node) {
-    var position = this.writer.addImage(node);
-    node.positions.push(position);
+LayoutBuilder.prototype.processImage = function (node) {
+	var position = this.writer.addImage(node);
+	node.positions.push(position);
 };
 
-LayoutBuilder.prototype.processCanvas = function(node) {
+LayoutBuilder.prototype.processCanvas = function (node) {
 	var height = node._minHeight;
 
-	if (this.writer.context().availableHeight < height) {
+	if (node.absolutePosition === undefined && this.writer.context().availableHeight < height) {
 		// TODO: support for canvas larger than a page
 		// TODO: support for other overflow methods
 
 		this.writer.moveToNextPage();
 	}
 
-	node.canvas.forEach(function(vector) {
+	this.writer.alignCanvas(node);
+
+	node.canvas.forEach(function (vector) {
 		var position = this.writer.addVector(vector);
-        node.positions.push(position);
+		node.positions.push(position);
 	}, this);
 
 	this.writer.context().moveDown(height);
 };
 
-LayoutBuilder.prototype.processQr = function(node) {
+LayoutBuilder.prototype.processQr = function (node) {
 	var position = this.writer.addQr(node);
-    node.positions.push(position);
+	node.positions.push(position);
 };
 
 module.exports = LayoutBuilder;
