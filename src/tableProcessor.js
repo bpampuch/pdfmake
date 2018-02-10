@@ -40,7 +40,7 @@ class TableProcessor {
 		function getTableInnerContentWidth() {
 			var width = 0;
 
-			tableNode.table.widths.forEach(function (w) {
+			tableNode.table.widths.forEach((w) => {
 				width += w._calcWidth;
 			});
 
@@ -120,7 +120,7 @@ class TableProcessor {
 
 	onRowBreak(rowIndex, writer) {
 		var self = this;
-		return function () {
+		return () => {
 			var offset = self.rowPaddingTop + (!self.headerRows ? self.topLineWidth : 0);
 			writer.context().availableHeight -= self.reservedAtBottom;
 			writer.context().moveDown(offset);
@@ -366,12 +366,12 @@ class TableProcessor {
 
 		if (this.dontBreakRows) {
 			writer.tracker.auto('pageChanged',
-				function () {
+				() => {
 					if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
 						self.drawHorizontalLine(rowIndex, writer);
 					}
 				},
-				function () {
+				() => {
 					writer.commitUnbreakableBlock();
 				}
 			);

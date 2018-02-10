@@ -11,7 +11,7 @@ function buildColumnWidths(columns, availableWidth) {
 		fixedColumns = [],
 		initial_availableWidth = availableWidth;
 
-	columns.forEach(function (column) {
+	columns.forEach((column) => {
 		if (isAutoColumn(column)) {
 			autoColumns.push(column);
 			autoMin += column._minWidth;
@@ -25,7 +25,7 @@ function buildColumnWidths(columns, availableWidth) {
 		}
 	});
 
-	fixedColumns.forEach(function (col) {
+	fixedColumns.forEach((col) => {
 		// width specified as %
 		if (isString(col.width) && /\d+%/.test(col.width)) {
 			col.width = parseFloat(col.width) * initial_availableWidth / 100;
@@ -49,17 +49,17 @@ function buildColumnWidths(columns, availableWidth) {
 		// that's actually pretty bad situation with PDF as we have no horizontal scroll
 		// no easy workaround (unless we decide, in the future, to split single words)
 		// currently we simply use minWidths for all columns
-		autoColumns.forEach(function (col) {
+		autoColumns.forEach((col) => {
 			col._calcWidth = col._minWidth;
 		});
 
-		starColumns.forEach(function (col) {
+		starColumns.forEach((col) => {
 			col._calcWidth = starMaxMin; // starMaxMin already contains padding
 		});
 	} else {
 		if (maxW < availableWidth) {
 			// case 2 - we can fit rest of the table within available space
-			autoColumns.forEach(function (col) {
+			autoColumns.forEach((col) => {
 				col._calcWidth = col._maxWidth;
 				availableWidth -= col._calcWidth;
 			});
@@ -68,7 +68,7 @@ function buildColumnWidths(columns, availableWidth) {
 			var W = availableWidth - minW;
 			var D = maxW - minW;
 
-			autoColumns.forEach(function (col) {
+			autoColumns.forEach((col) => {
 				var d = col._maxWidth - col._minWidth;
 				col._calcWidth = col._minWidth + d * W / D;
 				availableWidth -= col._calcWidth;
@@ -78,7 +78,7 @@ function buildColumnWidths(columns, availableWidth) {
 		if (starColumns.length > 0) {
 			var starSize = availableWidth / starColumns.length;
 
-			starColumns.forEach(function (col) {
+			starColumns.forEach((col) => {
 				col._calcWidth = starSize;
 			});
 		}

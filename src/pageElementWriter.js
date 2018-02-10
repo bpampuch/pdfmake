@@ -19,21 +19,15 @@ class PageElementWriter {
 	}
 
 	addLine(line, dontUpdateContextPosition, index) {
-		return fitOnPage(this, function (self) {
-			return self.writer.addLine(line, dontUpdateContextPosition, index);
-		});
+		return fitOnPage(this, (self) => self.writer.addLine(line, dontUpdateContextPosition, index));
 	}
 
 	addImage(image, index) {
-		return fitOnPage(this, function (self) {
-			return self.writer.addImage(image, index);
-		});
+		return fitOnPage(this, (self) => self.writer.addImage(image, index));
 	}
 
 	addQr(qr, index) {
-		return fitOnPage(this, function (self) {
-			return self.writer.addQr(qr, index);
-		});
+		return fitOnPage(this, (self) => self.writer.addQr(qr, index));
 	}
 
 	addVector(vector, ignoreContextX, ignoreContextY, index) {
@@ -127,7 +121,7 @@ class PageElementWriter {
 		var unbreakableContext = this.writer.context;
 		var rep = {items: []};
 
-		unbreakableContext.pages[0].items.forEach(function (item) {
+		unbreakableContext.pages[0].items.forEach((item) => {
 			rep.items.push(item);
 		});
 

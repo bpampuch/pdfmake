@@ -36,7 +36,7 @@ class TextTools {
 			maxWidth = 0,
 			currentLineWidth;
 
-		measured.forEach(function (inline) {
+		measured.forEach((inline) => {
 			minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);
 
 			if (!currentLineWidth) {
@@ -147,7 +147,7 @@ function copyStyle(source, destination) {
 
 function normalizeTextArray(array, styleContextStack) {
 	function flatten(array) {
-		return array.reduce(function (prev, cur) {
+		return array.reduce((prev, cur) => {
 			var current = isArray(cur.text) ? flatten(cur.text) : cur;
 			var more = [].concat(current).some(Array.isArray);
 			return prev.concat(more ? flatten(current) : current);
@@ -217,7 +217,7 @@ function getStyleProperty(item, styleContextStack, property, defaultValue) {
 		return defaultValue;
 	}
 
-	styleContextStack.auto(item, function () {
+	styleContextStack.auto(item, () => {
 		value = styleContextStack.getProperty(property);
 	});
 
@@ -240,7 +240,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		}
 	}
 
-	normalized.forEach(function (item) {
+	normalized.forEach(item => {
 		var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
 		var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
 		var fontFeatures = getStyleProperty(item, styleContextStack, 'fontFeatures', null);

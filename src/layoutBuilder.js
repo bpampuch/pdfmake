@@ -18,7 +18,7 @@ var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
 
 function addAll(target, otherArray) {
-	otherArray.forEach(function (item) {
+	otherArray.forEach((item) => {
 		target.push(item);
 	});
 }
@@ -75,62 +75,44 @@ class LayoutBuilder {
 				return false;
 			}
 
-			linearNodeList = linearNodeList.filter(function (node) {
-				return node.positions.length > 0;
-			});
+			linearNodeList = linearNodeList.filter(node => node.positions.length > 0);
 
-			linearNodeList.forEach(function (node) {
+			linearNodeList.forEach(node => {
 				var nodeInfo = {};
 				[
 					'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
 					'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
 					'width', 'height'
-				].forEach(function (key) {
+				].forEach(key => {
 					if (node[key] !== undefined) {
 						nodeInfo[key] = node[key];
 					}
 				});
 				nodeInfo.startPosition = node.positions[0];
-				nodeInfo.pageNumbers = node.positions.map(function (node) {
-					return node.pageNumber;
-				}).filter(function (element, position, array) {
-					return array.indexOf(element) === position;
-				});
+				nodeInfo.pageNumbers = node.positions.map((node) => node.pageNumber).filter((element, position, array) => array.indexOf(element) === position);
 				nodeInfo.pages = pages.length;
 				nodeInfo.stack = isArray(node.stack);
 
 				node.nodeInfo = nodeInfo;
 			});
 
-			return linearNodeList.some(function (node, index, followingNodeList) {
+			return linearNodeList.some((node, index, followingNodeList) => {
 				if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 					node.pageBreakCalculated = true;
 					var pageNumber = node.nodeInfo.pageNumbers[0];
 
-					var followingNodesOnPage = followingNodeList.slice(index + 1).filter(function (node0) {
-						return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
-					});
+					var followingNodesOnPage = followingNodeList.slice(index + 1).filter((node0) => node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1);
 
-					var nodesOnNextPage = followingNodeList.slice(index + 1).filter(function (node0) {
-						return node0.nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1;
-					});
+					var nodesOnNextPage = followingNodeList.slice(index + 1).filter((node0) => node0.nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1);
 
-					var previousNodesOnPage = followingNodeList.slice(0, index).filter(function (node0) {
-						return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
-					});
+					var previousNodesOnPage = followingNodeList.slice(0, index).filter((node0) => node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1);
 
 					if (
 						pageBreakBeforeFct(
 							node.nodeInfo,
-							followingNodesOnPage.map(function (node) {
-								return node.nodeInfo;
-							}),
-							nodesOnNextPage.map(function (node) {
-								return node.nodeInfo;
-							}),
-							previousNodesOnPage.map(function (node) {
-								return node.nodeInfo;
-							}))) {
+							followingNodesOnPage.map(node => node.nodeInfo),
+							nodesOnNextPage.map(node => node.nodeInfo),
+							previousNodesOnPage.map(node => node.nodeInfo))) {
 						node.pageBreak = 'before';
 						return true;
 					}
@@ -143,7 +125,7 @@ class LayoutBuilder {
 
 
 		function resetXYs(result) {
-			result.linearNodeList.forEach(function (node) {
+			result.linearNodeList.forEach(node => {
 				node.resetXY();
 			});
 		}
@@ -157,18 +139,7 @@ class LayoutBuilder {
 		return result.pages;
 	}
 
-	tryLayoutDocument(
-		docStructure,
-		fontProvider,
-		styleDictionary,
-		defaultStyle,
-		background,
-		header,
-		footer,
-		images,
-		watermark,
-		pageBreakBeforeFct
-		) {
+	tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
 
 		this.linearNodeList = [];
 		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
@@ -178,7 +149,7 @@ class LayoutBuilder {
 			new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
 		var _this = this;
-		this.writer.context().tracker.startTracking('pageAdded', function () {
+		this.writer.context().tracker.startTracking('pageAdded', () => {
 			_this.addBackground(background);
 		});
 
@@ -193,9 +164,7 @@ class LayoutBuilder {
 	}
 
 	addBackground(background) {
-		var backgroundGetter = isFunction(background) ? background : function () {
-			return background;
-		};
+		var backgroundGetter = isFunction(background) ? background : () => background;
 
 		var pageBackground = backgroundGetter(this.writer.context().page + 1);
 
@@ -210,9 +179,8 @@ class LayoutBuilder {
 	}
 
 	addStaticRepeatable(headerOrFooter, sizeFunction) {
-		this.addDynamicRepeatable(function () {
-			return JSON.parse(JSON.stringify(headerOrFooter)); // copy to new object
-		}, sizeFunction);
+		this.addDynamicRepeatable(() => // copy to new object
+        JSON.parse(JSON.stringify(headerOrFooter)), sizeFunction);
 	}
 
 	addDynamicRepeatable(nodeGetter, sizeFunction) {
@@ -234,23 +202,19 @@ class LayoutBuilder {
 	}
 
 	addHeadersAndFooters(header, footer) {
-		var headerSizeFct = function (pageSize, pageMargins) {
-			return {
-				x: 0,
-				y: 0,
-				width: pageSize.width,
-				height: pageMargins.top
-			};
-		};
+		var headerSizeFct = (pageSize, pageMargins) => ({
+            x: 0,
+            y: 0,
+            width: pageSize.width,
+            height: pageMargins.top
+        });
 
-		var footerSizeFct = function (pageSize, pageMargins) {
-			return {
-				x: 0,
-				y: pageSize.height - pageMargins.bottom,
-				width: pageSize.width,
-				height: pageMargins.bottom
-			};
-		};
+		var footerSizeFct = (pageSize, pageMargins) => ({
+            x: 0,
+            y: pageSize.height - pageMargins.bottom,
+            width: pageSize.width,
+            height: pageMargins.bottom
+        });
 
 		if (isFunction(header)) {
 			this.addDynamicRepeatable(header, headerSizeFct);
@@ -336,7 +300,7 @@ class LayoutBuilder {
 		this.linearNodeList.push(node);
 		decorateNode(node);
 
-		applyMargins(function () {
+		applyMargins(() => {
 			var unbreakable = node.unbreakable;
 			if (unbreakable) {
 				self.writer.beginUnbreakableBlock();
@@ -415,7 +379,7 @@ class LayoutBuilder {
 	// vertical container
 	processVerticalContainer(node) {
 		var self = this;
-		node.stack.forEach(function (item) {
+		node.stack.forEach(item => {
 			self.processNode(item);
 			addAll(node.positions, item.positions);
 
@@ -458,7 +422,7 @@ class LayoutBuilder {
 		var self = this;
 		var pageBreaks = [], positions = [];
 
-		this.tracker.auto('pageChanged', storePageBreakData, function () {
+		this.tracker.auto('pageChanged', storePageBreakData, () => {
 			widths = widths || columns;
 
 			self.writer.context().beginColumnGroup();
@@ -537,8 +501,8 @@ class LayoutBuilder {
 		this.writer.context().addMargin(gapSize.width);
 
 		var nextMarker;
-		this.tracker.auto('lineAdded', addMarkerToFirstLeaf, function () {
-			items.forEach(function (item) {
+		this.tracker.auto('lineAdded', addMarkerToFirstLeaf, () => {
+			items.forEach(item => {
 				nextMarker = item.listMarker;
 				self.processNode(item);
 				addAll(node.positions, item.positions);
@@ -717,9 +681,9 @@ function decorateNode(node) {
 	node.positions = [];
 
 	if (isArray(node.canvas)) {
-		node.canvas.forEach(function (vector) {
+		node.canvas.forEach(vector => {
 			var x = vector.x, y = vector.y, x1 = vector.x1, y1 = vector.y1, x2 = vector.x2, y2 = vector.y2;
-			vector.resetXY = function () {
+			vector.resetXY = () => {
 				vector.x = x;
 				vector.y = y;
 				vector.x1 = x1;
@@ -730,11 +694,11 @@ function decorateNode(node) {
 		});
 	}
 
-	node.resetXY = function () {
+	node.resetXY = () => {
 		node.x = x;
 		node.y = y;
 		if (isArray(node.canvas)) {
-			node.canvas.forEach(function (vector) {
+			node.canvas.forEach(vector => {
 				vector.resetXY();
 			});
 		}

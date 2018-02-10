@@ -27,7 +27,7 @@ class StyleContextStack {
 	clone() {
 		var stack = new StyleContextStack(this.styleDictionary, this.defaultStyle);
 
-		this.styleOverrides.forEach(function (item) {
+		this.styleOverrides.forEach((item) => {
 			stack.styleOverrides.push(item);
 		});
 
@@ -50,13 +50,11 @@ class StyleContextStack {
 	 * @param {Number} howMany - optional number of elements to be popped (if not specified,
 	 *                           one element will be removed from the stack)
 	 */
-	pop(howMany) {
-		howMany = howMany || 1;
-
-		while (howMany-- > 0) {
+	pop(howMany = 1) {
+        while (howMany-- > 0) {
 			this.styleOverrides.pop();
 		}
-	}
+    }
 
 	/**
 	 * Creates a set of named styles or/and a style-overrides-object based on the item,
@@ -114,7 +112,7 @@ class StyleContextStack {
 		var styleOverrideObject = {};
 		var pushStyleOverrideObject = false;
 
-		styleProperties.forEach(function (key) {
+		styleProperties.forEach((key) => {
 			if (!isUndefined(item[key]) && !isNull(item[key])) {
 				styleOverrideObject[key] = item[key];
 				pushStyleOverrideObject = true;

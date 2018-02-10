@@ -261,7 +261,7 @@ function pageOrientation(pageOrientationString, currentPageOrientation) {
 	}
 }
 
-var getPageSize = function (currentPage, newPageOrientation) {
+var getPageSize = (currentPage, newPageOrientation) => {
 
 	newPageOrientation = pageOrientation(newPageOrientation, currentPage.pageSize.orientation);
 
