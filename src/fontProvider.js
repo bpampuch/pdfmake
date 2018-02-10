@@ -47,7 +47,7 @@ class FontProvider {
 			if (!isArray(def)) {
 				def = [def];
 			}
-			this.fontCache[familyName][type] = this.pdfKitDoc.font.apply(this.pdfKitDoc, def)._font;
+			this.fontCache[familyName][type] = this.pdfKitDoc.font(...def)._font;
 		}
 
 		return this.fontCache[familyName][type];
