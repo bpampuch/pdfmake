@@ -1,17 +1,13 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
-import FontProvider from './fontProvider';
 
+import {isFunction, isString, isNumber, isBoolean, isArray} from './helpers';
+import FontProvider from './fontProvider';
 import LayoutBuilder from './layoutBuilder';
-import PdfKit from 'pdfkit';
 import sizes from './standardPageSizes';
 import ImageMeasure from './imageMeasure';
 import textDecorator from './textDecorator';
 import TextTools from './textTools';
-import {isFunction} from './helpers';
-import {isString} from './helpers';
-import {isNumber} from './helpers';
-import {isBoolean} from './helpers';
-import {isArray} from './helpers';
+import PdfKit from 'pdfkit';
 
 ////////////////////////////////////////
 // PdfPrinter

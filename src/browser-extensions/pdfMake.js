@@ -1,7 +1,6 @@
-import PdfPrinter from '../printer';
 import {isFunction} from '../helpers';
-import FileSaver from 'file-saver';
-var saveAs = FileSaver.saveAs;
+import PdfPrinter from '../printer';
+import {saveAs} from 'file-saver';
 
 var defaultClientFonts = {
 	Roboto: {

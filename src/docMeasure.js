@@ -1,15 +1,9 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 
+import {isString, isNumber, isObject, isArray, fontStringify, pack} from './helpers';
 import TextTools from './textTools';
-
 import StyleContextStack from './styleContextStack';
 import ColumnCalculator from './columnCalculator';
-import {isString} from './helpers';
-import {isNumber} from './helpers';
-import {isObject} from './helpers';
-import {isArray} from './helpers';
-import {fontStringify} from './helpers';
-import {pack} from './helpers';
 import qrEncoder from './qrEnc.js';
 
 class DocMeasure {

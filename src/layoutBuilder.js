@@ -1,3 +1,4 @@
+import {isString, isArray, isFunction, fontStringify, pack, offsetVector} from './helpers';
 import TraversalTracker from './traversalTracker';
 import DocPreprocessor from './docPreprocessor';
 import DocMeasure from './docMeasure';
@@ -6,12 +7,6 @@ import PageElementWriter from './pageElementWriter';
 import ColumnCalculator from './columnCalculator';
 import TableProcessor from './tableProcessor';
 import Line from './line';
-import {isString} from './helpers';
-import {isArray} from './helpers';
-import {pack} from './helpers';
-import {offsetVector} from './helpers';
-import {fontStringify} from './helpers';
-import {isFunction} from './helpers';
 import TextTools from './textTools';
 import StyleContextStack from './styleContextStack';
 

@@ -1,7 +1,4 @@
-import {isString} from './helpers';
-import {isArray} from './helpers';
-import {isUndefined} from './helpers';
-import {isNull} from './helpers';
+import {isString, isArray, isUndefined, isNull} from './helpers';
 
 /**
  * Used for style inheritance and style overrides
@@ -9,11 +6,11 @@ import {isNull} from './helpers';
 class StyleContextStack {
 
 	/**
-	 * @param {Object} named styles dictionary
-	 * @param {Object} optional default style definition
+	 * @param {Object} styleDictionary named styles dictionary
+	 * @param {Object} defaultStyle optional default style definition
 	 */
-	constructor(styleDictionary, defaultStyle) {
-		this.defaultStyle = defaultStyle || {};
+	constructor(styleDictionary, defaultStyle = {}) {
+		this.defaultStyle = defaultStyle;
 		this.styleDictionary = styleDictionary;
 		this.styleOverrides = [];
 	}
