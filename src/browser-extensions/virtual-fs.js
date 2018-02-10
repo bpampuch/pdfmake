@@ -9,7 +9,7 @@ class VirtualFileSystem {
 
 		var base64content = this.baseSystem[filename];
 		if (base64content) {
-			return new Buffer(base64content, 'base64');
+			return Buffer.from(base64content, 'base64');
 		}
 
 		var content = this.fileSystem[filename];
