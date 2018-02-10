@@ -1,7 +1,5 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 
-'use strict';
-
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
 var ColumnCalculator = require('./columnCalculator');

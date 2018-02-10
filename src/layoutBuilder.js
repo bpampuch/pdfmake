@@ -1,5 +1,3 @@
-'use strict';
-
 var TraversalTracker = require('./traversalTracker');
 var DocPreprocessor = require('./docPreprocessor');
 var DocMeasure = require('./docMeasure');

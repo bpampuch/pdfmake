@@ -1,5 +1,3 @@
-'use strict';
-
 var PDFImage = require('pdfkit/js/image');
 
 class ImageMeasure {

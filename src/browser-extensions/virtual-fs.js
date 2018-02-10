@@ -1,5 +1,3 @@
-'use strict';
-
 class VirtualFileSystem {
 	constructor() {
 		this.fileSystem = {};

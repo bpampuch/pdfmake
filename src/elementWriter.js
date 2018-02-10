@@ -1,5 +1,3 @@
-'use strict';
-
 var Line = require('./line');
 var isNumber = require('./helpers').isNumber;
 var pack = require('./helpers').pack;

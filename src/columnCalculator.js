@@ -1,5 +1,3 @@
-'use strict';
-
 var isString = require('./helpers').isString;
 
 function buildColumnWidths(columns, availableWidth) {

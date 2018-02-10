@@ -1,5 +1,3 @@
-'use strict';
-
 var ElementWriter = require('./elementWriter');
 
 /**
