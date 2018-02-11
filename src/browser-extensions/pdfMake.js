@@ -151,9 +151,8 @@ class Document {
 		if (!cb) {
 			throw 'getBlob is an async method and needs a callback argument';
 		}
-		var that = this;
 		this.getBuffer((result) => {
-			var blob = that._bufferToBlob(result);
+			var blob = this._bufferToBlob(result);
 			cb(blob);
 		}, options);
 	}

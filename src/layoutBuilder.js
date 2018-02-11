@@ -141,9 +141,8 @@ class LayoutBuilder {
 		this.writer = new PageElementWriter(
 			new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
-		var _this = this;
 		this.writer.context().tracker.startTracking('pageAdded', () => {
-			_this.addBackground(background);
+			this.addBackground(background);
 		});
 
 		this.addBackground(background);
