@@ -31,13 +31,13 @@ class Document {
 		var chunks = [];
 		var result;
 
-		doc.on('readable', function () {
+		doc.on('readable', () => {
 			var chunk;
 			while ((chunk = doc.read(9007199254740991)) !== null) {
 				chunks.push(chunk);
 			}
 		});
-		doc.on('end', function () {
+		doc.on('end', () => {
 			result = Buffer.concat(chunks);
 			callback(result, doc._pdfMakePages);
 		});
@@ -48,7 +48,7 @@ class Document {
 		if (!cb) {
 			throw '_getPages is an async method and needs a callback argument';
 		}
-		this._createDoc(options, function (ignoreBuffer, pages) {
+		this._createDoc(options, (ignoreBuffer, pages) => {
 			cb(pages);
 		});
 	}
@@ -88,7 +88,7 @@ class Document {
 			win = this._openWindow();
 		}
 		try {
-			this.getBlob(function (result) {
+			this.getBlob((result) => {
 				var urlCreator = window.URL || window.webkitURL;
 				var pdfUrl = urlCreator.createObjectURL(result);
 				win.location.href = pdfUrl;
@@ -120,7 +120,7 @@ class Document {
 		}
 
 		defaultFileName = defaultFileName || 'file.pdf';
-		this.getBlob(function (result) {
+		this.getBlob((result) => {
 			saveAs(result, defaultFileName);
 
 			if (isFunction(cb)) {
@@ -133,7 +133,7 @@ class Document {
 		if (!cb) {
 			throw 'getBase64 is an async method and needs a callback argument';
 		}
-		this.getBuffer(function (buffer) {
+		this.getBuffer((buffer) => {
 			cb(buffer.toString('base64'));
 		}, options);
 	}
@@ -142,7 +142,7 @@ class Document {
 		if (!cb) {
 			throw 'getDataUrl is an async method and needs a callback argument';
 		}
-		this.getBuffer(function (buffer) {
+		this.getBuffer((buffer) => {
 			cb('data:application/pdf;base64,' + buffer.toString('base64'));
 		}, options);
 	}
@@ -152,7 +152,7 @@ class Document {
 			throw 'getBlob is an async method and needs a callback argument';
 		}
 		var that = this;
-		this.getBuffer(function (result) {
+		this.getBuffer((result) => {
 			var blob = that._bufferToBlob(result);
 			cb(blob);
 		}, options);
@@ -162,7 +162,7 @@ class Document {
 		if (!cb) {
 			throw 'getBuffer is an async method and needs a callback argument';
 		}
-		this._createDoc(options, function (buffer) {
+		this._createDoc(options, (buffer) => {
 			cb(buffer);
 		});
 	}
