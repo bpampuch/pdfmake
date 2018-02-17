@@ -2,9 +2,9 @@
 
 var assert = require('assert');
 
-var DocPreprocessor = require('../src/docPreprocessor');
-var DocMeasure = require('../src/docMeasure');
-var StyleContextStack = require('../src/styleContextStack');
+var DocPreprocessor = require('../js/docPreprocessor').default;
+var DocMeasure = require('../js/docMeasure').default;
+var StyleContextStack = require('../js/styleContextStack').default;
 
 var sampleTestProvider = {
 	provideFont: function (familyName, bold, italics) {

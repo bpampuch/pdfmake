@@ -1,7 +1,7 @@
 'use strict';
 
 var assert = require('assert');
-var sizes = require('../../src/standardPageSizes');
+var sizes = require('../../js/standardPageSizes').default;
 var integrationTestHelper = require('./integrationTestHelper');
 
 describe('Integration test: alignment', function () {
