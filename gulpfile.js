@@ -9,6 +9,7 @@ var eslint = require('gulp-eslint');
 var each = require('gulp-each');
 var fc2json = require('gulp-file-contents-to-json');
 var header = require('gulp-header');
+var babel = require("gulp-babel");
 var log = require('fancy-log');
 var PluginError = require('plugin-error');
 var DEBUG = process.env.NODE_ENV === 'debug',
@@ -25,7 +26,25 @@ var uglifyOptions = {
 	}
 };
 
-gulp.task('build', function () {
+gulp.task('buildNode', function () {
+	return gulp.src('src/**/*.js')
+		.pipe(babel({
+			presets: [
+				[
+					"@babel/preset-env",
+					{
+						targets: {
+							node: "6"
+						},
+						loose: true
+					}
+				]
+			]
+		}))
+		.pipe(gulp.dest("js"));
+});
+
+gulp.task('buildBrowser', function () {
 	var pkg = require('./package.json');
 	return gulp.src('src/browser-extensions/pdfMake.js')
 		.pipe(webpack(require('./webpack.config.js'), null, reportWebPackErrors))
@@ -81,4 +100,6 @@ gulp.task('watch', function () {
 	gulp.watch('./tests/**', ['test']);
 });
 
-gulp.task('default', gulp.series(/*'lint',*/ 'test', 'build', 'buildFonts'));
+gulp.task('build', gulp.series('buildNode', 'buildBrowser'));
+
+gulp.task('default', gulp.series(/*'lint',*/ 'build', 'buildFonts', 'test'));
