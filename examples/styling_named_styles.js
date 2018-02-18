@@ -7,9 +7,8 @@ var fonts = {
 	}
 };
 
-var PdfPrinter = require('../src/printer');
-var printer = new PdfPrinter(fonts);
-var fs = require('fs');
+var pdfMake = require('../js/pdfMake');
+pdfMake.addFonts(fonts);
 
 
 var docDefinition = {
@@ -55,6 +54,9 @@ var docDefinition = {
 	}
 };
 
-var pdfDoc = printer.createPdfKitDocument(docDefinition);
-pdfDoc.pipe(fs.createWriteStream('pdfs/named_styles.pdf'));
-pdfDoc.end();
+var now = new Date();
+
+var pdf = pdfMake.createPdf(docDefinition);
+pdf.write('pdfs/named_styles.pdf');
+
+console.log(new Date() - now);

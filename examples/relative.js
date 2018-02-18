@@ -7,9 +7,8 @@ var fonts = {
 	}
 };
 
-var PdfPrinter = require('../src/printer');
-var printer = new PdfPrinter(fonts);
-var fs = require('fs');
+var pdfMake = require('../js/pdfMake');
+pdfMake.addFonts(fonts);
 
 var left = 20;
 var width = 130;
@@ -26,7 +25,7 @@ var chart = [{stack: chartText}, {canvas: chartLines}];
 buildXAxis();
 buildYAxis();
 
-var documentDefinition = {content: [
+var docDefinition = {content: [
 		{text: 'We sometimes don\'t know the absolute position of text', margin: [10, 0, 0, 50]},
 		{columns: [
 				{width: '50%', text: 'horizontal position is not known either'},
@@ -34,9 +33,13 @@ var documentDefinition = {content: [
 			]}
 	]};
 
-var pdfDoc = printer.createPdfKitDocument(documentDefinition);
-pdfDoc.pipe(fs.createWriteStream('pdfs/relative.pdf'));
-pdfDoc.end();
+var now = new Date();
+
+var pdf = pdfMake.createPdf(docDefinition);
+pdf.write('pdfs/relative.pdf');
+
+console.log(new Date() - now);
+
 
 function buildXAxis() {
 	var xTicks = [

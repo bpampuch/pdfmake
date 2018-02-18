@@ -7,9 +7,8 @@ var fonts = {
 	}
 };
 
-var PdfPrinter = require('../src/printer');
-var printer = new PdfPrinter(fonts);
-var fs = require('fs');
+var pdfMake = require('../js/pdfMake');
+pdfMake.addFonts(fonts);
 
 var docDefinition = {
 	content: [
@@ -18,6 +17,9 @@ var docDefinition = {
 	]
 };
 
-var pdfDoc = printer.createPdfKitDocument(docDefinition);
-pdfDoc.pipe(fs.createWriteStream('pdfs/basics.pdf'));
-pdfDoc.end();
+var now = new Date();
+
+var pdf = pdfMake.createPdf(docDefinition);
+pdf.write('pdfs/basics.pdf');
+
+console.log(new Date() - now);
