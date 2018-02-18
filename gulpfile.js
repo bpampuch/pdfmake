@@ -68,7 +68,7 @@ gulp.task('buildFonts', function () {
 			var newContent = new Buffer(content).toString('base64');
 			callback(null, newContent);
 		}, 'buffer'))
-		.pipe(fc2json('vfs_fonts.js'))
+		.pipe(fc2json('vfs_fonts.js', {flat: true}))
 		.pipe(each(function (content, file, callback) {
 			var newContent = 'this.pdfMake = this.pdfMake || {}; this.pdfMake.vfs = ' + content + ';';
 			callback(null, newContent);
