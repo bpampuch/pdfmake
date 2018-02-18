@@ -11,7 +11,7 @@ module.exports = {
 	},
 	resolve: {
 		alias: {
-			fs: path.join(__dirname, './src/browser-extensions/virtual-fs.js')
+			fs: path.join(__dirname, './src/browser-extensions/virtual-fs-cjs.js')
 		}
 	},
 	module: {

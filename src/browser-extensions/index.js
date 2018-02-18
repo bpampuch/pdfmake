@@ -1,5 +1,6 @@
 import PdfMakeBase from '../base';
 import DocumentBrowser from './documentBrowser';
+import fs from 'fs';
 
 let defaultClientFonts = {
 	Roboto: {
@@ -21,7 +22,7 @@ class PdfMake extends PdfMakeBase {
 	}
 
 	addVirtualFileSystem(vfs) {
-		require('fs').bindFS(vfs); // bind virtual file system to file system
+		fs.bindFS(vfs); // bind virtual file system to file system
 	}
 
 	_transformToDocument(doc) {
