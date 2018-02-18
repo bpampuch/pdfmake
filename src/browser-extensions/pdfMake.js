@@ -1,7 +1,7 @@
 import PdfMakeBase from '../base';
 import DocumentBrowser from './documentBrowser';
 
-var defaultClientFonts = {
+let defaultClientFonts = {
 	Roboto: {
 		normal: 'Roboto-Regular.ttf',
 		bold: 'Roboto-Medium.ttf',

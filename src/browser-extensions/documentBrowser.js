@@ -10,7 +10,7 @@ export default class DocumentBrowser extends DocumentBase {
 		}
 
 		this.getBuffer((buffer) => {
-			var blob = this._bufferToBlob(buffer);
+			let blob = this._bufferToBlob(buffer);
 			callback(blob);
 		});
 	}
@@ -31,8 +31,8 @@ export default class DocumentBrowser extends DocumentBase {
 		}
 		try {
 			this.getBlob((result) => {
-				var urlCreator = window.URL || window.webkitURL;
-				var pdfUrl = urlCreator.createObjectURL(result);
+				let urlCreator = window.URL || window.webkitURL;
+				let pdfUrl = urlCreator.createObjectURL(result);
 				win.location.href = pdfUrl;
 			});
 		} catch (e) {
@@ -47,13 +47,13 @@ export default class DocumentBrowser extends DocumentBase {
 	}
 
 	_bufferToBlob(buffer) {
-		var blob;
+		let blob;
 		try {
 			blob = new Blob([buffer], {type: 'application/pdf'});
 		} catch (e) {
 			// Old browser which can't handle it without making it an byte array (ie10)
 			if (e.name === 'InvalidStateError') {
-				var byteArray = new Uint8Array(buffer);
+				let byteArray = new Uint8Array(buffer);
 				blob = new Blob([byteArray.buffer], {type: 'application/pdf'});
 			}
 		}
@@ -68,7 +68,7 @@ export default class DocumentBrowser extends DocumentBase {
 	_openWindow() {
 		// we have to open the window immediately and store the reference
 		// otherwise popup blockers will stop us
-		var win = window.open('', '_blank');
+		let win = window.open('', '_blank');
 		if (win === null) {
 			throw 'Open PDF in new window blocked by browser';
 		}

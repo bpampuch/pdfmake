@@ -7,12 +7,12 @@ class VirtualFileSystem {
 	readFileSync(filename) {
 		filename = fixFilename(filename);
 
-		var base64content = this.baseSystem[filename];
+		let base64content = this.baseSystem[filename];
 		if (base64content) {
 			return Buffer.from(base64content, 'base64');
 		}
 
-		var content = this.fileSystem[filename];
+		let content = this.fileSystem[filename];
 		if (content) {
 			return content;
 		}

@@ -31,13 +31,13 @@ export function isUndefined(variable) {
 }
 
 export function pack(...args) {
-	var result = {};
+	let result = {};
 
-	for (var i = 0, l = args.length; i < l; i++) {
-		var obj = args[i];
+	for (let i = 0, l = args.length; i < l; i++) {
+		let obj = args[i];
 
 		if (obj) {
-			for (var key in obj) {
+			for (let key in obj) {
 				if (obj.hasOwnProperty(key)) {
 					result[key] = obj[key];
 				}
@@ -62,7 +62,7 @@ export function offsetVector(vector, x, y) {
 			vector.y2 += y;
 			break;
 		case 'polyline':
-			for (var i = 0, l = vector.points.length; i < l; i++) {
+			for (let i = 0, l = vector.points.length; i < l; i++) {
 				vector.points[i].x += x;
 				vector.points[i].y += y;
 			}

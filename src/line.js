@@ -12,7 +12,7 @@ class Line {
 	}
 
 	getAscenderHeight() {
-		var y = 0;
+		let y = 0;
 
 		this.inlines.forEach((inline) => {
 			y = Math.max(y, inline.font.ascender / 1000 * inline.fontSize);
@@ -56,7 +56,7 @@ class Line {
 	 * @return {Number}
 	 */
 	getHeight() {
-		var max = 0;
+		let max = 0;
 
 		this.inlines.forEach((item) => {
 			max = Math.max(max, item.height || 0);

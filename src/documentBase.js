@@ -14,10 +14,10 @@ export default class DocumentBase {
 			throw 'getBuffer is an async method and needs a callback argument';
 		}
 
-		var chunks = [];
-		var result;
+		let chunks = [];
+		let result;
 		this.getStream().on('readable', () => {
-			var chunk;
+			let chunk;
 			while ((chunk = this.getStream().read(this.bufferSize)) !== null) {
 				chunks.push(chunk);
 			}
@@ -50,7 +50,7 @@ export default class DocumentBase {
 	}
 
 	setOpenActionAsPrint() {
-		var printActionRef = this.pdfKitDoc.ref({
+		let printActionRef = this.pdfKitDoc.ref({
 			Type: 'Action',
 			S: 'Named',
 			N: 'Print'

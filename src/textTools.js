@@ -1,8 +1,8 @@
 import {isString, isNumber, isObject, isArray} from './helpers';
 import LineBreaker from 'linebreak';
 
-var LEADING = /^(\s)+/g;
-var TRAILING = /(\s)+$/g;
+let LEADING = /^(\s)+/g;
+let TRAILING = /(\s)+$/g;
 
 /**
  * Text measurement utility
@@ -25,11 +25,11 @@ class TextTools {
 	 * @return {Object}                   collection of inlines, minWidth, maxWidth
 	 */
 	buildInlines(textArray, styleContextStack) {
-		var measured = measure(this.fontProvider, textArray, styleContextStack);
+		let measured = measure(this.fontProvider, textArray, styleContextStack);
 
-		var minWidth = 0;
-		var maxWidth = 0;
-		var currentLineWidth;
+		let minWidth = 0;
+		let maxWidth = 0;
+		let currentLineWidth;
 
 		measured.forEach((inline) => {
 			minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);
@@ -73,15 +73,15 @@ class TextTools {
 		text = text ? text.toString().replace(/\t/g, '    ') : '';
 
 		//TODO: refactor - extract from measure
-		var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
-		var fontSize = getStyleProperty({}, styleContextStack, 'fontSize', 12);
-		var fontFeatures = getStyleProperty({}, styleContextStack, 'fontFeatures', null);
-		var bold = getStyleProperty({}, styleContextStack, 'bold', false);
-		var italics = getStyleProperty({}, styleContextStack, 'italics', false);
-		var lineHeight = getStyleProperty({}, styleContextStack, 'lineHeight', 1);
-		var characterSpacing = getStyleProperty({}, styleContextStack, 'characterSpacing', 0);
+		let fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
+		let fontSize = getStyleProperty({}, styleContextStack, 'fontSize', 12);
+		let fontFeatures = getStyleProperty({}, styleContextStack, 'fontFeatures', null);
+		let bold = getStyleProperty({}, styleContextStack, 'bold', false);
+		let italics = getStyleProperty({}, styleContextStack, 'italics', false);
+		let lineHeight = getStyleProperty({}, styleContextStack, 'lineHeight', 1);
+		let characterSpacing = getStyleProperty({}, styleContextStack, 'characterSpacing', 0);
 
-		var font = this.fontProvider.provideFont(fontName, bold, italics);
+		let font = this.fontProvider.provideFont(fontName, bold, italics);
 
 		return {
 			width: widthOfString(text, font, fontSize, characterSpacing, fontFeatures),
@@ -99,7 +99,7 @@ class TextTools {
 }
 
 function splitWords(text, noWrap) {
-	var results = [];
+	let results = [];
 	text = text.replace(/\t/g, '    ');
 
 	if (noWrap) {
@@ -107,12 +107,12 @@ function splitWords(text, noWrap) {
 		return results;
 	}
 
-	var breaker = new LineBreaker(text);
-	var last = 0;
-	var bk;
+	let breaker = new LineBreaker(text);
+	let last = 0;
+	let bk;
 
 	while (bk = breaker.nextBreak()) {
-		var word = text.slice(last, bk.position);
+		let word = text.slice(last, bk.position);
 
 		if (bk.required || word.match(/\r?\n$|\r$/)) { // new line
 			word = word.replace(/\r?\n$|\r$/, '');
@@ -130,7 +130,7 @@ function splitWords(text, noWrap) {
 function copyStyle(source = {}, destination = {}) {
 	//TODO: default style for source variable
 
-	for (var key in source) {
+	for (let key in source) {
 		if (key != 'text' && source.hasOwnProperty(key)) {
 			destination[key] = source[key];
 		}
@@ -142,13 +142,13 @@ function copyStyle(source = {}, destination = {}) {
 function normalizeTextArray(array, styleContextStack) {
 	function flatten(array) {
 		return array.reduce((prev, cur) => {
-			var current = isArray(cur.text) ? flatten(cur.text) : cur;
-			var more = [].concat(current).some(Array.isArray);
+			let current = isArray(cur.text) ? flatten(cur.text) : cur;
+			let more = [].concat(current).some(Array.isArray);
 			return prev.concat(more ? flatten(current) : current);
 		}, []);
 	}
 
-	var results = [];
+	let results = [];
 
 	if (!isArray(array)) {
 		array = [array];
@@ -156,12 +156,12 @@ function normalizeTextArray(array, styleContextStack) {
 
 	array = flatten(array);
 
-	for (var i = 0, l = array.length; i < l; i++) {
-		var item = array[i];
-		var style = null;
-		var words;
+	for (let i = 0, l = array.length; i < l; i++) {
+		let item = array[i];
+		let style = null;
+		let words;
 
-		var noWrap = getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
+		let noWrap = getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 		if (isObject(item)) {
 			words = splitWords(normalizeString(item.text), noWrap);
 			style = copyStyle(item);
@@ -169,8 +169,8 @@ function normalizeTextArray(array, styleContextStack) {
 			words = splitWords(normalizeString(item), noWrap);
 		}
 
-		for (var i2 = 0, l2 = words.length; i2 < l2; i2++) {
-			var result = {
+		for (let i2 = 0, l2 = words.length; i2 < l2; i2++) {
+			let result = {
 				text: words[i2].text
 			};
 
@@ -200,7 +200,7 @@ function normalizeString(value) {
 }
 
 function getStyleProperty(item, styleContextStack, property, defaultValue) {
-	var value;
+	let value;
 
 	if (item[property] !== undefined && item[property] !== null) {
 		// item defines this property
@@ -223,10 +223,10 @@ function getStyleProperty(item, styleContextStack, property, defaultValue) {
 }
 
 function measure(fontProvider, textArray, styleContextStack) {
-	var normalized = normalizeTextArray(textArray, styleContextStack);
+	let normalized = normalizeTextArray(textArray, styleContextStack);
 
 	if (normalized.length) {
-		var leadingIndent = getStyleProperty(normalized[0], styleContextStack, 'leadingIndent', 0);
+		let leadingIndent = getStyleProperty(normalized[0], styleContextStack, 'leadingIndent', 0);
 
 		if (leadingIndent) {
 			normalized[0].leadingCut = -leadingIndent;
@@ -235,29 +235,29 @@ function measure(fontProvider, textArray, styleContextStack) {
 	}
 
 	normalized.forEach(item => {
-		var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
-		var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
-		var fontFeatures = getStyleProperty(item, styleContextStack, 'fontFeatures', null);
-		var bold = getStyleProperty(item, styleContextStack, 'bold', false);
-		var italics = getStyleProperty(item, styleContextStack, 'italics', false);
-		var color = getStyleProperty(item, styleContextStack, 'color', 'black');
-		var decoration = getStyleProperty(item, styleContextStack, 'decoration', null);
-		var decorationColor = getStyleProperty(item, styleContextStack, 'decorationColor', null);
-		var decorationStyle = getStyleProperty(item, styleContextStack, 'decorationStyle', null);
-		var background = getStyleProperty(item, styleContextStack, 'background', null);
-		var lineHeight = getStyleProperty(item, styleContextStack, 'lineHeight', 1);
-		var characterSpacing = getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
-		var link = getStyleProperty(item, styleContextStack, 'link', null);
-		var linkToPage = getStyleProperty(item, styleContextStack, 'linkToPage', null);
-		var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', null);
-		var preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
+		let fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
+		let fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
+		let fontFeatures = getStyleProperty(item, styleContextStack, 'fontFeatures', null);
+		let bold = getStyleProperty(item, styleContextStack, 'bold', false);
+		let italics = getStyleProperty(item, styleContextStack, 'italics', false);
+		let color = getStyleProperty(item, styleContextStack, 'color', 'black');
+		let decoration = getStyleProperty(item, styleContextStack, 'decoration', null);
+		let decorationColor = getStyleProperty(item, styleContextStack, 'decorationColor', null);
+		let decorationStyle = getStyleProperty(item, styleContextStack, 'decorationStyle', null);
+		let background = getStyleProperty(item, styleContextStack, 'background', null);
+		let lineHeight = getStyleProperty(item, styleContextStack, 'lineHeight', 1);
+		let characterSpacing = getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
+		let link = getStyleProperty(item, styleContextStack, 'link', null);
+		let linkToPage = getStyleProperty(item, styleContextStack, 'linkToPage', null);
+		let noWrap = getStyleProperty(item, styleContextStack, 'noWrap', null);
+		let preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
 
-		var font = fontProvider.provideFont(fontName, bold, italics);
+		let font = fontProvider.provideFont(fontName, bold, italics);
 
 		item.width = widthOfString(item.text, font, fontSize, characterSpacing, fontFeatures);
 		item.height = font.lineHeight(fontSize) * lineHeight;
 
-		var leadingSpaces = item.text.match(LEADING);
+		let leadingSpaces = item.text.match(LEADING);
 
 		if (!item.leadingCut) {
 			item.leadingCut = 0;
@@ -267,7 +267,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 			item.leadingCut += widthOfString(leadingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
 		}
 
-		var trailingSpaces = item.text.match(TRAILING);
+		let trailingSpaces = item.text.match(TRAILING);
 		if (trailingSpaces) {
 			item.trailingCut = widthOfString(trailingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
 		} else {

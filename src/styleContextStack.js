@@ -20,7 +20,7 @@ class StyleContextStack {
 	 * @return {StyleContextStack} current stack snapshot
 	 */
 	clone() {
-		var stack = new StyleContextStack(this.styleDictionary, this.defaultStyle);
+		let stack = new StyleContextStack(this.styleDictionary, this.defaultStyle);
 
 		this.styleOverrides.forEach((item) => {
 			stack.styleOverrides.push(item);
@@ -64,7 +64,7 @@ class StyleContextStack {
 			return 0;
 		}
 
-		var styleNames = [];
+		let styleNames = [];
 
 		if (item.style) {
 			if (isArray(item.style)) {
@@ -74,11 +74,11 @@ class StyleContextStack {
 			}
 		}
 
-		for (var i = 0, l = styleNames.length; i < l; i++) {
+		for (let i = 0, l = styleNames.length; i < l; i++) {
 			this.push(styleNames[i]);
 		}
 
-		var styleProperties = [
+		let styleProperties = [
 			'font',
 			'fontSize',
 			'fontFeatures',
@@ -104,8 +104,8 @@ class StyleContextStack {
 				// 'evenRowCellBorder',
 				// 'tableBorder'
 		];
-		var styleOverrideObject = {};
-		var pushStyleOverrideObject = false;
+		let styleOverrideObject = {};
+		let pushStyleOverrideObject = false;
 
 		styleProperties.forEach((key) => {
 			if (!isUndefined(item[key]) && !isNull(item[key])) {
@@ -130,8 +130,8 @@ class StyleContextStack {
 	 * @return {Object} value returned by callback
 	 */
 	auto(item, callback) {
-		var pushedItems = this.autopush(item);
-		var result = callback();
+		let pushedItems = this.autopush(item);
+		let result = callback();
 
 		if (pushedItems > 0) {
 			this.pop(pushedItems);
@@ -148,12 +148,12 @@ class StyleContextStack {
 	 */
 	getProperty(property) {
 		if (this.styleOverrides) {
-			for (var i = this.styleOverrides.length - 1; i >= 0; i--) {
-				var item = this.styleOverrides[i];
+			for (let i = this.styleOverrides.length - 1; i >= 0; i--) {
+				let item = this.styleOverrides[i];
 
 				if (isString(item)) {
 					// named-style-override
-					var style = this.styleDictionary[item];
+					let style = this.styleDictionary[item];
 					if (style && !isUndefined(style[property]) && !isNull(style[property])) {
 						return style[property];
 					}

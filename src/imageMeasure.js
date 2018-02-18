@@ -7,8 +7,8 @@ class ImageMeasure {
 	}
 
 	measureImage(src) {
-		var image;
-		var label;
+		let image;
+		let label;
 		var that = this;
 
 		if (!this.pdfKitDoc._imageRegistry[src]) {
@@ -30,13 +30,13 @@ class ImageMeasure {
 		return {width: image.width, height: image.height};
 
 		function realImageSrc(src) {
-			var img = that.imageDictionary[src];
+			let img = that.imageDictionary[src];
 
 			if (!img) {
 				return src;
 			}
 
-			var index = img.indexOf('base64,');
+			let index = img.indexOf('base64,');
 			if (index < 0) {
 				return that.imageDictionary[src];
 			}

@@ -1,7 +1,7 @@
 import {isArray} from './helpers';
 
 function typeName(bold, italics) {
-	var type = 'normal';
+	let type = 'normal';
 	if (bold && italics) {
 		type = 'bolditalics';
 	} else if (bold) {
@@ -18,9 +18,9 @@ class FontProvider {
 		this.pdfKitDoc = pdfKitDoc;
 		this.fontCache = {};
 
-		for (var font in fontDescriptors) {
+		for (let font in fontDescriptors) {
 			if (fontDescriptors.hasOwnProperty(font)) {
-				var fontDef = fontDescriptors[font];
+				let fontDef = fontDescriptors[font];
 
 				this.fonts[font] = {
 					normal: fontDef.normal,
@@ -33,7 +33,7 @@ class FontProvider {
 	}
 
 	provideFont(familyName, bold, italics) {
-		var type = typeName(bold, italics);
+		let type = typeName(bold, italics);
 		if (!this.fonts[familyName] || !this.fonts[familyName][type]) {
 			throw new Error(`Font '${familyName}' in style '${type}' is not defined in the font section of the document definition.`);
 		}
@@ -41,7 +41,7 @@ class FontProvider {
 		this.fontCache[familyName] = this.fontCache[familyName] || {};
 
 		if (!this.fontCache[familyName][type]) {
-			var def = this.fonts[familyName][type];
+			let def = this.fonts[familyName][type];
 			if (!isArray(def)) {
 				def = [def];
 			}

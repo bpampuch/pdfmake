@@ -24,12 +24,12 @@ export default class PdfMake {
 	}
 
 	createPdf(docDefinition) {
-		var options = {};
+		let options = {};
 		options.progressCallback = this.progressCallback;
 		options.tableLayouts = this.tableLayouts;
 
-		var printer = new PdfPrinter(this.fonts);
-		var doc = printer.createPdfKitDocument(docDefinition, options);
+		let printer = new PdfPrinter(this.fonts);
+		let doc = printer.createPdfKitDocument(docDefinition, options);
 
 		return this._transformToDocument(doc);
 	}

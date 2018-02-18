@@ -14,10 +14,10 @@ class ElementWriter {
 	}
 
 	addLine(line, dontUpdateContextPosition, index) {
-		var height = line.getHeight();
-		var context = this.context;
-		var page = context.getCurrentPage();
-		var position = this.getCurrentPositionOnPage();
+		let height = line.getHeight();
+		let context = this.context;
+		let page = context.getCurrentPage();
+		let position = this.getCurrentPositionOnPage();
 
 		if (context.availableHeight < height || !page) {
 			return false;
@@ -42,12 +42,12 @@ class ElementWriter {
 	}
 
 	alignLine(line) {
-		var width = this.context.availableWidth;
-		var lineWidth = line.getWidth();
+		let width = this.context.availableWidth;
+		let lineWidth = line.getWidth();
 
-		var alignment = line.inlines && line.inlines.length > 0 && line.inlines[0].alignment;
+		let alignment = line.inlines && line.inlines.length > 0 && line.inlines[0].alignment;
 
-		var offset = 0;
+		let offset = 0;
 		switch (alignment) {
 			case 'right':
 				offset = width - lineWidth;
@@ -65,9 +65,9 @@ class ElementWriter {
 			!line.newLineForced &&
 			!line.lastLineInParagraph &&
 			line.inlines.length > 1) {
-			var additionalSpacing = (width - lineWidth) / (line.inlines.length - 1);
+			let additionalSpacing = (width - lineWidth) / (line.inlines.length - 1);
 
-			for (var i = 1, l = line.inlines.length; i < l; i++) {
+			for (let i = 1, l = line.inlines.length; i < l; i++) {
 				offset = i * additionalSpacing;
 
 				line.inlines[i].x += offset;
@@ -77,9 +77,9 @@ class ElementWriter {
 	}
 
 	addImage(image, index) {
-		var context = this.context;
-		var page = context.getCurrentPage();
-		var position = this.getCurrentPositionOnPage();
+		let context = this.context;
+		let page = context.getCurrentPage();
+		let position = this.getCurrentPositionOnPage();
 
 		if (!page || (image.absolutePosition === undefined && context.availableHeight < image._height && page.items.length > 0)) {
 			return false;
@@ -105,9 +105,9 @@ class ElementWriter {
 	}
 
 	addQr(qr, index) {
-		var context = this.context;
-		var page = context.getCurrentPage();
-		var position = this.getCurrentPositionOnPage();
+		let context = this.context;
+		let page = context.getCurrentPage();
+		let position = this.getCurrentPositionOnPage();
 
 		if (!page || (qr.absolutePosition === undefined && context.availableHeight < qr._height)) {
 			return false;
@@ -122,8 +122,8 @@ class ElementWriter {
 
 		this.alignImage(qr);
 
-		for (var i = 0, l = qr._canvas.length; i < l; i++) {
-			var vector = qr._canvas[i];
+		for (let i = 0, l = qr._canvas.length; i < l; i++) {
+			let vector = qr._canvas[i];
 			vector.x += qr.x;
 			vector.y += qr.y;
 			this.addVector(vector, true, true, index);
@@ -135,9 +135,9 @@ class ElementWriter {
 	}
 
 	alignImage(image) {
-		var width = this.context.availableWidth;
-		var imageWidth = image._minWidth;
-		var offset = 0;
+		let width = this.context.availableWidth;
+		let imageWidth = image._minWidth;
+		let offset = 0;
 		switch (image._alignment) {
 			case 'right':
 				offset = width - imageWidth;
@@ -153,9 +153,9 @@ class ElementWriter {
 	}
 
 	alignCanvas(node) {
-		var width = this.context.availableWidth;
-		var canvasWidth = node._minWidth;
-		var offset = 0;
+		let width = this.context.availableWidth;
+		let canvasWidth = node._minWidth;
+		let offset = 0;
 		switch (node._alignment) {
 			case 'right':
 				offset = width - canvasWidth;
@@ -172,9 +172,9 @@ class ElementWriter {
 	}
 
 	addVector(vector, ignoreContextX, ignoreContextY, index) {
-		var context = this.context;
-		var page = context.getCurrentPage();
-		var position = this.getCurrentPositionOnPage();
+		let context = this.context;
+		let page = context.getCurrentPage();
+		let position = this.getCurrentPositionOnPage();
 
 		if (page) {
 			offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
@@ -187,8 +187,8 @@ class ElementWriter {
 	}
 
 	beginClip(width, height) {
-		var ctx = this.context;
-		var page = ctx.getCurrentPage();
+		let ctx = this.context;
+		let page = ctx.getCurrentPage();
 		page.items.push({
 			type: 'beginClip',
 			item: {x: ctx.x, y: ctx.y, width: width, height: height}
@@ -197,8 +197,8 @@ class ElementWriter {
 	}
 
 	endClip() {
-		var ctx = this.context;
-		var page = ctx.getCurrentPage();
+		let ctx = this.context;
+		let page = ctx.getCurrentPage();
 		page.items.push({
 			type: 'endClip'
 		});
@@ -206,8 +206,8 @@ class ElementWriter {
 	}
 
 	addFragment(block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-		var ctx = this.context;
-		var page = ctx.getCurrentPage();
+		let ctx = this.context;
+		let page = ctx.getCurrentPage();
 
 		if (!useBlockXOffset && block.height > ctx.availableHeight) {
 			return false;
@@ -216,7 +216,7 @@ class ElementWriter {
 		block.items.forEach((item) => {
 			switch (item.type) {
 				case 'line':
-					var l = cloneLine(item.item);
+					let l = cloneLine(item.item);
 
 					l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 					l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
@@ -228,7 +228,7 @@ class ElementWriter {
 					break;
 
 				case 'vector':
-					var v = pack(item.item);
+					let v = pack(item.item);
 
 					offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 					page.items.push({
@@ -238,7 +238,7 @@ class ElementWriter {
 					break;
 
 				case 'image':
-					var img = pack(item.item);
+					let img = pack(item.item);
 
 					img.x = (img.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 					img.y = (img.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
@@ -297,9 +297,9 @@ function addPageItem(page, item, index) {
 }
 
 function cloneLine(line) {
-	var result = new Line(line.maxWidth);
+	let result = new Line(line.maxWidth);
 
-	for (var key in line) {
+	for (let key in line) {
 		if (line.hasOwnProperty(key)) {
 			result[key] = line[key];
 		}
@@ -307,6 +307,5 @@ function cloneLine(line) {
 
 	return result;
 }
-
 
 export default ElementWriter;
