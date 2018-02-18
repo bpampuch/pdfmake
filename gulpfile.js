@@ -16,6 +16,8 @@ var DEBUG = process.env.NODE_ENV === 'debug',
 	CI = process.env.CI === 'true';
 
 var banner = '/*! <%= pkg.name %> v<%= pkg.version %>, @license <%= pkg.license %>, @link <%= pkg.homepage %> */\n';
+var vfsBefore = "var vfs = ";
+var vfsAfter = "; if (typeof this.pdfMake !== 'undefined' && typeof this.pdfMake.addVirtualFileSystem !== 'undefined') { this.pdfMake.addVirtualFileSystem(vfs); } if (typeof module !== 'undefined') { module.exports = vfs; }";
 
 var uglifyOptions = {
 	compress: {
@@ -89,7 +91,7 @@ gulp.task('buildFonts', function () {
 		}, 'buffer'))
 		.pipe(fc2json('vfs_fonts.js', {flat: true}))
 		.pipe(each(function (content, file, callback) {
-			var newContent = 'this.pdfMake = this.pdfMake || {}; this.pdfMake.vfs = ' + content + ';';
+			var newContent = vfsBefore + content + vfsAfter;
 			callback(null, newContent);
 		}, 'buffer'))
 		.pipe(gulp.dest('build'));
