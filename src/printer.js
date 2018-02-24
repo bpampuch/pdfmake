@@ -112,15 +112,6 @@ class PdfPrinter {
 
 		renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
 
-		if (options.autoPrint) {
-			let printActionRef = this.pdfKitDoc.ref({
-				Type: 'Action',
-				S: 'Named',
-				N: 'Print'
-			});
-			this.pdfKitDoc._root.data.OpenAction = printActionRef;
-			printActionRef.end();
-		}
 		return this.pdfKitDoc;
 	}
 }
