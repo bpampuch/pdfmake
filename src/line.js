@@ -19,7 +19,7 @@ Line.prototype.getAscenderHeight = function () {
 	var y = 0;
 
 	this.inlines.forEach(function (inline) {
-		y = Math.max(y, inline.font.ascender / 1000 * inline.fontSize);
+		y = Math.max(y, inline.font.ascender / 1000 * (inline.image ? inline._height : inline.fontSize));
 	});
 	return y;
 };

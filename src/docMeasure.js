@@ -17,7 +17,7 @@ var qrEncoder = require('./qrEnc.js');
  * @private
  */
 function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts, images) {
-	this.textTools = new TextTools(fontProvider);
+	this.textTools = new TextTools(fontProvider, this);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 	this.imageMeasure = imageMeasure;
 	this.tableLayouts = tableLayouts;

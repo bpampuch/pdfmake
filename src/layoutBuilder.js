@@ -657,7 +657,7 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 	while (textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
 		var inline = textNode._inlines.shift();
 
-		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.maxWidth) {
+		if (!inline.noWrap && (!inline.text || inline.text.length > 1) && inline.width > line.maxWidth) {
 			var widthPerChar = inline.width / inline.text.length;
 			var maxChars = Math.floor(line.maxWidth / widthPerChar);
 			if (maxChars < 1) {
