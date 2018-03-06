@@ -48,10 +48,12 @@ Document.prototype._createDoc = function (options, callback) {
 			chunks.push(chunk);
 		}
 	});
+	
 	doc.on('end', function () {
 		result = Buffer.concat(chunks);
-		callback(result, doc._pdfMakePages);
+		callback(result, doc);
 	});
+	
 	doc.end();
 };
 
@@ -59,8 +61,8 @@ Document.prototype._getPages = function (options, cb) {
 	if (!cb) {
 		throw '_getPages is an async method and needs a callback argument';
 	}
-	this._createDoc(options, function (ignoreBuffer, pages) {
-		cb(pages);
+	this._createDoc(options, function (ignoreBuffer, doc) {
+		cb(doc._pdfMakePages);
 	});
 };
 
@@ -178,6 +180,15 @@ Document.prototype.getBuffer = function (cb, options) {
 	}
 	this._createDoc(options, function (buffer) {
 		cb(buffer);
+	});
+};
+
+Document.prototype.getPDF = function (cb, options) {
+	if (!cb) {
+		throw 'getPDFDocument is an async method and needs a callback argument';
+	}
+	this._createDoc(options, function (buffer, doc) {
+		cb(buffer, doc);
 	});
 };
 
