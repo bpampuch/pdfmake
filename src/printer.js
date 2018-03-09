@@ -86,8 +86,9 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 
 	var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 	var compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
+	var bufferPages = options.bufferPages || false;
 
-	this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], autoFirstPage: false, compress: compressPdf});
+	this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], bufferPages: bufferPages, autoFirstPage: false, compress: compressPdf});
 	setMetadata(docDefinition, this.pdfKitDoc);
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
