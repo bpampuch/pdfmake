@@ -1,6 +1,6 @@
 {
   "name": "pdfmake",
-  "version": "0.1.35",
+  "version": "0.1.36",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/printer.js",
   "directories": {
@@ -28,16 +28,16 @@
     "gulp-rename": "^1.2.2",
     "gulp-replace": "^0.6.1",
     "gulp-sourcemaps": "^2.6.4",
-    "gulp-spawn-mocha": "^5.0.0",
+    "gulp-spawn-mocha": "^5.0.1",
     "gulp-uglify": "^3.0.0",
-    "mocha": "^5.0.0",
+    "mocha": "^5.0.1",
     "plugin-error": "^1.0.1",
     "rewire": "^3.0.2",
-    "sinon": "^4.2.2",
+    "sinon": "^4.4.1",
     "string-replace-webpack-plugin": "^0.1.3",
     "transform-loader": "^0.2.4",
-    "webpack": "^3.10.0",
-    "webpack-stream": "^4.0.0"
+    "webpack": "^3.11.0",
+    "webpack-stream": "^4.0.2"
   },
   "scripts": {
     "build": "gulp build",
