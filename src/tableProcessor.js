@@ -311,7 +311,7 @@ class TableProcessor {
 				if (i < l - 1) {
 					let fillColor = body[rowIndex][colIndex].fillColor;
 					if (!fillColor) {
-						fillColor = isFunction(this.layout.fillColor) ? this.layout.fillColor(rowIndex, this.tableNode, colIndex) : this.layout.fillColor;
+						fillColor = isFunction(this.layout.fillColor) ? this.layout.fillColor(rowIndex, colIndex, this.tableNode) : this.layout.fillColor;
 					}
 					if (fillColor) {
 						let wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;

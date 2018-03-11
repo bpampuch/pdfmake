@@ -34,7 +34,7 @@ describe('TableProcessor', function () {
 			paddingBottom: function (i, node) {
 				return 2;
 			},
-			fillColor: function (i, node) {
+			fillColor: function (rowIndex, columnIndex, node) {
 				return null;
 			},
 			defaultBorder: true

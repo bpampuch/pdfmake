@@ -605,7 +605,7 @@ class DocMeasure {
 				paddingBottom(i, node) {
 					return 2;
 				},
-				fillColor(i, node) {
+				fillColor(rowIndex, columnIndex, node) {
 					return null;
 				},
 				defaultBorder: true
