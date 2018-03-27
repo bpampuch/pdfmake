@@ -21,9 +21,6 @@
 
 Client/server side PDF printing in pure JavaScript
 
-## Website pdfmake.org is down, please use temporary mirror http://liborm85.github.io/pdfmake 
-(see [issue #1321](https://github.com/bpampuch/pdfmake/issues/1321))
-
 Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) and [examples](https://github.com/bpampuch/pdfmake/tree/master/examples).
 
 ### Features
