@@ -235,7 +235,7 @@ pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 For Ionic and Angular see [issue](https://github.com/bpampuch/pdfmake/issues/1030).
 
-When is throwed error **Cannot read property 'TYPED_ARRAY_SUPPORT' of undefined** add to config in webpack:
+If a **Cannot read property 'TYPED_ARRAY_SUPPORT' of undefined** error is thrown, add this to webpack config:
 ```
 exclude: [ /node_modules/, /pdfmake.js$/ ]
 ```
