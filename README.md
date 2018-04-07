@@ -677,9 +677,9 @@ To change page orientation within a document, add a page break with the new page
 }
 ```
 
-#### Dynamically control page breaks, for instance to avoid orphan childs
+#### Dynamically control page breaks, for instance to avoid orphan children
 
-Can be specify a `pageBreakBefore` function, which can determine if a page break should be inserted before the page break. To implement a 'no orphan child' rule, this could like like this:
+A `pageBreakBefore` function can be specified, which can determine if a page break should be inserted before a node. To implement a 'no orphan child' rule, use a definition like this:
 
 ``` javascript
 var dd = {
