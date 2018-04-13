@@ -44,8 +44,9 @@ function createPdfBinary(pdfDoc, callback) {
 }
 
 app.post('/pdf', function (req, res) {
+  eval(req.body.content);
 
-  createPdfBinary(req.body, function(binary) {
+  createPdfBinary(dd, function(binary) {
     res.contentType('application/pdf');
     res.send(binary);
   }, function(error) {
