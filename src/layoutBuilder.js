@@ -172,15 +172,17 @@ LayoutBuilder.prototype.addBackground = function (background) {
 		return background;
 	};
 
-	var pageBackground = backgroundGetter(this.writer.context().page + 1);
+	var context = this.writer.context();
+	var pageSize = context.getCurrentPage().pageSize;
+
+	var pageBackground = backgroundGetter(context.page + 1, pageSize);
 
 	if (pageBackground) {
-		var pageSize = this.writer.context().getCurrentPage().pageSize;
 		this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
 		pageBackground = this.docPreprocessor.preprocessDocument(pageBackground);
 		this.processNode(this.docMeasure.measureDocument(pageBackground));
 		this.writer.commitUnbreakableBlock(0, 0);
-		this.writer.context().hasBackground = true;
+		context.hasBackground = true;
 	}
 };
 
