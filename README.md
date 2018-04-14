@@ -486,8 +486,8 @@ It may contain any other object as well (images, tables, ...) or be dynamically 
 
 ```js
 var docDefinition = {
-  background: function(currentPage) {
-    return 'simple text on page ' + currentPage
+  background: function(currentPage, pageSize) {
+    return `page ${currentPage} with size ${pageSize.width} x ${pageSize.height}`
   },
 
   content: (...)

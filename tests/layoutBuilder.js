@@ -1620,18 +1620,44 @@ describe('LayoutBuilder', function () {
 			styleDictionary = {};
 		});
 
-		it('should provide the page size', function () {
+		it('should provide the current page, page count and page size', function () {
 			docStructure = ['Text'];
 			header = sinon.spy();
 			footer = sinon.spy();
+			background = sinon.spy();
 
 			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
 			var pageSize = {width: 400, height: 800, orientation: 'portrait'};
+			assert.equal(header.getCall(0).args[0], 1);
+			assert.equal(header.getCall(0).args[1], 1);
 			assert.deepEqual(header.getCall(0).args[2], pageSize);
+
+			assert.equal(footer.getCall(0).args[0], 1);
+			assert.equal(footer.getCall(0).args[1], 1);
 			assert.deepEqual(footer.getCall(0).args[2], pageSize);
 		});
 	});
+
+  describe('dynamic background', function () {
+    var docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction;
+
+    beforeEach(function () {
+      fontProvider = sampleTestProvider;
+      styleDictionary = {};
+    });
+
+    it('should provide the current page and page size', function () {
+      docStructure = ['Text'];
+      background = sinon.spy();
+
+      builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+
+      var pageSize = {width: 400, height: 800, orientation: 'portrait'};
+      assert.equal(background.getCall(0).args[0], 1);
+      assert.deepEqual(background.getCall(0).args[1], pageSize);
+    });
+  });
 
 	describe('dynamic page break control', function () {
 
