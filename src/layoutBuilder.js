@@ -157,8 +157,9 @@ class LayoutBuilder {
 
 	addBackground(background) {
 		let backgroundGetter = isFunction(background) ? background : () => background;
-
-		let pageBackground = backgroundGetter(this.writer.context().page + 1);
+		let context = this.writer.context();
+		let pageSize = context.getCurrentPage().pageSize;
+		let pageBackground = backgroundGetter(context.page + 1, pageSize);
 
 		if (pageBackground) {
 			let pageSize = this.writer.context().getCurrentPage().pageSize;
@@ -166,7 +167,7 @@ class LayoutBuilder {
 			pageBackground = this.docPreprocessor.preprocessDocument(pageBackground);
 			this.processNode(this.docMeasure.measureDocument(pageBackground));
 			this.writer.commitUnbreakableBlock(0, 0);
-			this.writer.context().hasBackground = true;
+			context.hasBackground = true;
 		}
 	}
 

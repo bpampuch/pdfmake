@@ -21,9 +21,6 @@
 
 Client/server side PDF printing in pure JavaScript
 
-## Website pdfmake.org is down, please use temporary mirror http://liborm85.github.io/pdfmake 
-(see [issue #1321](https://github.com/bpampuch/pdfmake/issues/1321))
-
 Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) and [examples](https://github.com/bpampuch/pdfmake/tree/master/examples).
 
 ### Features
@@ -238,7 +235,7 @@ pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 For Ionic and Angular see [issue](https://github.com/bpampuch/pdfmake/issues/1030).
 
-When is throwed error **Cannot read property 'TYPED_ARRAY_SUPPORT' of undefined** add to config in webpack:
+If a **Cannot read property 'TYPED_ARRAY_SUPPORT' of undefined** error is thrown, add this to webpack config:
 ```
 exclude: [ /node_modules/, /pdfmake.js$/ ]
 ```
@@ -489,8 +486,8 @@ It may contain any other object as well (images, tables, ...) or be dynamically 
 
 ```js
 var docDefinition = {
-  background: function(currentPage) {
-    return 'simple text on page ' + currentPage
+  background: function(currentPage, pageSize) {
+    return `page ${currentPage} with size ${pageSize.width} x ${pageSize.height}`
   },
 
   content: (...)
@@ -680,9 +677,9 @@ To change page orientation within a document, add a page break with the new page
 }
 ```
 
-#### Dynamically control page breaks, for instance to avoid orphan childs
+#### Dynamically control page breaks, for instance to avoid orphan children
 
-Can be specify a `pageBreakBefore` function, which can determine if a page break should be inserted before the page break. To implement a 'no orphan child' rule, this could like like this:
+A `pageBreakBefore` function can be specified, which can determine if a page break should be inserted before a node. To implement a 'no orphan child' rule, use a definition like this:
 
 ``` javascript
 var dd = {
