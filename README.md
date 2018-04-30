@@ -217,6 +217,22 @@ Parameters:
 * `cb` - callback function
 * `options` _(optional)_
 
+#### Split the PDF and get a stream of documents
+Generate multiple PDF documents, each limited to a configurable amount of pages. Resulting PDF documents can be read from a stream.
+
+There is a memory leak in the underlying pdfkit library preventing you from generating very large document. This function can be used as a workaround for that memory leak. Generate multiple smaller documents and concatenate them together.
+
+```js
+const pdfDocGenerator = pdfMake.createPdf(docDefinition);
+const {documentCount, documentStream} = pdfDocGenerator.getDocumentStream(options);
+```
+Parameters:
+* `options` _(optional)_ - use `pagesPerDocument` to specify the number of pages per document (default: 50)
+
+Returns:
+* `documentCount` - number of documents in the stream
+* `documentStream` - stream of pdfkit documents
+
 #### Using javascript frameworks
 
 ```js
@@ -701,17 +717,17 @@ If `pageBreakBefore` returns true, a page break will be added before the `curren
 
 ``` javascript
 {
-   id: '<as specified in doc definition>', 
+   id: '<as specified in doc definition>',
    headlineLevel: '<as specified in doc definition>',
-   text: '<as specified in doc definition>', 
-   ul: '<as specified in doc definition>', 
-   ol: '<as specified in doc definition>', 
-   table: '<as specified in doc definition>', 
-   image: '<as specified in doc definition>', 
-   qr: '<as specified in doc definition>', 
-   canvas: '<as specified in doc definition>', 
-   columns: '<as specified in doc definition>', 
-   style: '<as specified in doc definition>', 
+   text: '<as specified in doc definition>',
+   ul: '<as specified in doc definition>',
+   ol: '<as specified in doc definition>',
+   table: '<as specified in doc definition>',
+   image: '<as specified in doc definition>',
+   qr: '<as specified in doc definition>',
+   canvas: '<as specified in doc definition>',
+   columns: '<as specified in doc definition>',
+   style: '<as specified in doc definition>',
    pageOrientation '<as specified in doc definition>',
    pageNumbers: [2, 3], // The pages this element is visible on (e.g. multi-line text could be on more than one page)
    pages: 6, // the total number of pages of this document

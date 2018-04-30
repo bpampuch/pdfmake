@@ -181,6 +181,20 @@ Document.prototype.getBuffer = function (cb, options) {
 	});
 };
 
+Document.prototype.getDocumentStream = function (options) {
+	options = options || {};
+	if (this.tableLayouts) {
+		options.tableLayouts = this.tableLayouts;
+	}
+
+	options.pagesPerDocument = options.pagesPerDocument || 50;
+
+	var printer = new PdfPrinter(this.fonts);
+	require('fs').bindFS(this.vfs); // bind virtual file system to file system
+
+	return printer.createPdfKitDocument(this.docDefinition, options);
+};
+
 module.exports = {
 	createPdf: function (docDefinition) {
 		if (!canCreatePdf()) {

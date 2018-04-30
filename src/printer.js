@@ -13,6 +13,7 @@ var isString = require('./helpers').isString;
 var isNumber = require('./helpers').isNumber;
 var isBoolean = require('./helpers').isBoolean;
 var isArray = require('./helpers').isArray;
+var Readable = require('stream').Readable;
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -88,7 +89,12 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	var compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 	var bufferPages = options.bufferPages || false;
 
-	this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], bufferPages: bufferPages, autoFirstPage: false, compress: compressPdf});
+	this.pdfKitDoc = new PdfKit({
+		size: [pageSize.width, pageSize.height],
+		bufferPages: bufferPages,
+		autoFirstPage: false,
+		compress: compressPdf
+	});
 	setMetadata(docDefinition, this.pdfKitDoc);
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
@@ -102,7 +108,10 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		builder.registerTableLayouts(options.tableLayouts);
 	}
 
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
+	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {
+		fontSize: 12,
+		font: 'Roboto'
+	}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
 	var maxNumberPages = docDefinition.maxPagesNumber || -1;
 	if (isNumber(maxNumberPages) && maxNumberPages > -1) {
 		pages = pages.slice(0, maxNumberPages);
@@ -115,19 +124,58 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
 	}
 
-	renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
+	var pagesPerDocument = +options.pagesPerDocument;
+	if (pagesPerDocument !== NaN && pagesPerDocument > 0) {
+		var self = this;
+		var renderPage = 0;
+		var originalFontProvider = this.fontProvider;
+		var documentStream = new Readable({objectMode: true, highWaterMark: 0});
+		documentStream._read = function () {
+			if (renderPage < pages.length) {
+				var pageSubset = pages.slice(renderPage, renderPage + pagesPerDocument);
 
-	if (options.autoPrint) {
-		var printActionRef = this.pdfKitDoc.ref({
-			Type: 'Action',
-			S: 'Named',
-			N: 'Print'
-		});
-		this.pdfKitDoc._root.data.OpenAction = printActionRef;
-		printActionRef.end();
+				var newDoc = self.pdfKitDoc;
+				if (renderPage !== 0) {
+					// For successive documents, clone options from first document and setup meta-data again
+					newDoc = new PdfKit(self.pdfKitDoc.options);
+					setMetadata(docDefinition, newDoc);
+				}
+
+				self.fontProvider = new FontProvider(self.fontDescriptors, newDoc);
+				self.fontProvider.switchFontProvider(originalFontProvider, pageSubset);
+				renderPages(pageSubset, self.fontProvider, newDoc);
+
+				if (options.autoPrint) {
+					this.setAutoPrint(newDoc);
+				}
+
+				renderPage = renderPage + pagesPerDocument;
+				documentStream.push(newDoc);
+			} else {
+				documentStream.push(null);
+			}
+
+		};
+
+		return {documentCount: Math.floor(pages.length / pagesPerDocument) + 1, documentStream: documentStream};
+	} else {
+		renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
+		if (options.autoPrint) {
+			this.setAutoPrint(this.pdfKitDoc);
+		}
+		return this.pdfKitDoc;
 	}
-	return this.pdfKitDoc;
 };
+
+function setAutoPrint(pdfKitDoc) {
+	var printActionRef = this.pdfKitDoc.ref({
+		Type: 'Action',
+		S: 'Named',
+		N: 'Print'
+	});
+	pdfKitDoc._root.data.OpenAction = printActionRef;
+	printActionRef.end();
+}
 
 function setMetadata(docDefinition, pdfKitDoc) {
 	// PDF standard has these properties reserved: Title, Author, Subject, Keywords,
@@ -304,6 +352,7 @@ function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
 
 function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	pdfKitDoc._pdfMakePages = pages;
+	pdfKitDoc.flushPages();
 	pdfKitDoc.addPage();
 
 	var totalItems = 0;
@@ -314,7 +363,8 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	}
 
 	var renderedItems = 0;
-	progressCallback = progressCallback || function () {};
+	progressCallback = progressCallback || function () {
+	};
 
 	for (var i = 0; i < pages.length; i++) {
 		if (i > 0) {
@@ -407,7 +457,10 @@ function renderLine(line, x, y, pdfKitDoc) {
 
 		if (inline.linkToPage) {
 			var _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0]}).end();
-			pdfKitDoc.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, {Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null]});
+			pdfKitDoc.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, {
+				Subtype: 'Link',
+				Dest: [inline.linkToPage - 1, 'XYZ', null, null, null]
+			});
 		}
 
 	}
