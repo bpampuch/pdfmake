@@ -17,4 +17,4 @@ cache:
 
 matrix:
   allow_failures:
-    node: node
+    node: 10
