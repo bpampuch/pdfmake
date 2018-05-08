@@ -15,8 +15,8 @@ gulp.task('build', function (callback) {
 			throw new PluginError("webpack", err);
 		}
 		log("[webpack]", stats.toString({}));
-		callback()
-	})
+		callback();
+	});
 });
 
 
