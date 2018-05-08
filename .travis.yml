@@ -17,4 +17,4 @@ cache:
 
 matrix:
   allow_failures:
-    node: 10
+    node_js: 10
