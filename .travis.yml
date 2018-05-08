@@ -14,7 +14,3 @@ cache:
   yarn: true
   directories:
     - node_modules
-
-matrix:
-  allow_failures:
-    node: node
