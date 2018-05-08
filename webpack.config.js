@@ -62,23 +62,23 @@ module.exports = {
 	plugins: [
 		new StringReplacePlugin(),
 
-    new webpack.optimize.UglifyJsPlugin({
-      include: /\.min\.js$/,
+		new webpack.optimize.UglifyJsPlugin({
+			include: /\.min\.js$/,
 			sourceMap: true,
-      uglifyOptions: {
-        compress: {
-          drop_console: true
-        },
-        mangle: {
-          reserved: ['HeadTable', 'NameTable', 'CmapTable', 'HheaTable', 'MaxpTable', 'HmtxTable', 'PostTable', 'OS2Table', 'LocaTable', 'GlyfTable']
-        }
-      }
-    }),
+			uglifyOptions: {
+				compress: {
+					drop_console: true
+				},
+				mangle: {
+					reserved: ['HeadTable', 'NameTable', 'CmapTable', 'HheaTable', 'MaxpTable', 'HmtxTable', 'PostTable', 'OS2Table', 'LocaTable', 'GlyfTable']
+				}
+			}
+		}),
 
 		new webpack.BannerPlugin({
 			banner: banner,
 			raw: true
 		})
 	],
-  devtool: 'source-map'
+	devtool: 'source-map'
 };

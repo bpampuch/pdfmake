@@ -10,13 +10,13 @@ var DEBUG = process.env.NODE_ENV === 'debug',
 	CI = process.env.CI === 'true';
 
 gulp.task('build', function (callback) {
-  webpack(require('./webpack.config.js'), function (err, stats) {
-    if (err) {
-      throw new PluginError("webpack", err);
-    }
-    log("[webpack]", stats.toString({}));
-    callback()
-  })
+	webpack(require('./webpack.config.js'), function (err, stats) {
+		if (err) {
+			throw new PluginError("webpack", err);
+		}
+		log("[webpack]", stats.toString({}));
+		callback()
+	})
 });
 
 
