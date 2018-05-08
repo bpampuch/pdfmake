@@ -1,12 +1,18 @@
 var path = require('path');
 var StringReplacePlugin = require("string-replace-webpack-plugin");
+var webpack = require('webpack');
+var pkg = require('./package.json');
 
+var banner = '/*! ' + pkg.name + ' v' + pkg.version + ', @license ' + pkg.license + ', @link ' + pkg.homepage + ' */\n';
 
 module.exports = {
-	entry: './src/browser-extensions/pdfMake.js',
+	entry: {
+		'pdfmake': './src/browser-extensions/pdfMake.js',
+		'pdfmake.min': './src/browser-extensions/pdfMake.js'
+	},
 	output: {
 		path: path.join(__dirname, './build'),
-		filename: 'pdfmake.js',
+		filename: '[name].js',
 		libraryTarget: 'umd'
 	},
 	resolve: {
@@ -54,6 +60,25 @@ module.exports = {
 		]
 	},
 	plugins: [
-		new StringReplacePlugin()
-	]
+		new StringReplacePlugin(),
+
+    new webpack.optimize.UglifyJsPlugin({
+      include: /\.min\.js$/,
+			sourceMap: true,
+      uglifyOptions: {
+        compress: {
+          drop_console: true
+        },
+        mangle: {
+          reserved: ['HeadTable', 'NameTable', 'CmapTable', 'HheaTable', 'MaxpTable', 'HmtxTable', 'PostTable', 'OS2Table', 'LocaTable', 'GlyfTable']
+        }
+      }
+    }),
+
+		new webpack.BannerPlugin({
+			banner: banner,
+			raw: true
+		})
+	],
+  devtool: 'source-map'
 };
