@@ -6,8 +6,12 @@ var each = require('gulp-each');
 var fc2json = require('gulp-file-contents-to-json');
 var log = require('fancy-log');
 var PluginError = require('plugin-error');
-var DEBUG = process.env.NODE_ENV === 'debug',
-	CI = process.env.CI === 'true';
+
+var DEBUG = process.env.NODE_ENV === 'debug';
+var CI = process.env.CI === 'true';
+
+var vfsBefore = "this.pdfMake = this.pdfMake || {}; this.pdfMake.vfs = ";
+var vfsAfter = ";";
 
 gulp.task('build', function (callback) {
 	webpack(require('./webpack.config.js'), function (err, stats) {
@@ -43,7 +47,7 @@ gulp.task('buildFonts', function () {
 		}, 'buffer'))
 		.pipe(fc2json('vfs_fonts.js', {flat: true}))
 		.pipe(each(function (content, file, callback) {
-			var newContent = 'this.pdfMake = this.pdfMake || {}; this.pdfMake.vfs = ' + content + ';';
+			var newContent = vfsBefore + content + vfsAfter;
 			callback(null, newContent);
 		}, 'buffer'))
 		.pipe(gulp.dest('build'));
