@@ -499,33 +499,6 @@ function renderVector(vector, pdfKitDoc) {
 			break;
 	}
 
-	switch (vector.function){
-		case 'translate':
-			pdfKitDoc.translate(vector.x, vector.y);
-			break;
-
-		case 'retranslate':
-		case 'reTranslate':
-			pdfKitDoc.translate((-1) * vector.x, (-1) * vector.y);
-			break;
-
-		case 'scale':
-			pdfKitDoc.scale(vector.x, vector.y, vector.options);
-			break;
-
-		case 'rescale':
-		case 'reScale':
-			pdfKitDoc.scale( 1/(vector.x), 1/(vector.y), vector.options);
-			break;
-		case 'rotate':
-			pdfKitDoc.rotate(vector.angle);
-			break;
-		case 'rerotate':
-		case 'reRotate':
-			pdfKitDoc.rotate((-1) * vector.angle);
-			break;
-	}
-
 	if (vector.color && vector.lineColor) {
 		pdfKitDoc.fillColor(vector.color, vector.fillOpacity || 1);
 		pdfKitDoc.strokeColor(vector.lineColor, vector.strokeOpacity || 1);

@@ -106,45 +106,6 @@ var docDefinition = {
 					type: 'rect',
 					x: 10, y: 230, w: 100, h: 10,
 					linearGradient: ['red', 'yellow', 'green', 'blue']
-				},
-				//svg example:
-				//first: transformations
-				{
-					function: 'translate',
-					x: 250,
-					y: 400
-				},
-				{
-					function: 'scale',
-					x: 0.5,
-					y: 0.5
-				},
-				{
-					function: 'rotate',
-					angle: 45
-				},
-				//draw the svg
-				{
-					type: 'path',
-					lineWidth: 1,
-					color: 'blue',
-					lineColor: 'yellow',
-					d: 'M150 0 L75 200 L225 200 Z',
-				},
-				//re-transformation
-				{
-					function: 'reRotate',
-					angle: 45
-				},
-				{
-					function: 'reScale',
-					x: 0.5,
-					y: 0.5
-				},
-				{
-					function: 'reTranslate',
-					x: 250,
-					y: 400
 				}
 			]
 		},
