@@ -1639,25 +1639,25 @@ describe('LayoutBuilder', function () {
 		});
 	});
 
-  describe('dynamic background', function () {
-    var docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction;
+	describe('dynamic background', function () {
+		var docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction;
 
-    beforeEach(function () {
-      fontProvider = sampleTestProvider;
-      styleDictionary = {};
-    });
+		beforeEach(function () {
+			fontProvider = sampleTestProvider;
+			styleDictionary = {};
+		});
 
-    it('should provide the current page and page size', function () {
-      docStructure = ['Text'];
-      background = sinon.spy();
+		it('should provide the current page and page size', function () {
+			docStructure = ['Text'];
+			background = sinon.spy();
 
-      builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
+			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
-      var pageSize = {width: 400, height: 800, orientation: 'portrait'};
-      assert.equal(background.getCall(0).args[0], 1);
-      assert.deepEqual(background.getCall(0).args[1], pageSize);
-    });
-  });
+			var pageSize = {width: 400, height: 800, orientation: 'portrait'};
+			assert.equal(background.getCall(0).args[0], 1);
+			assert.deepEqual(background.getCall(0).args[1], pageSize);
+		});
+	});
 
 	describe('dynamic page break control', function () {
 
