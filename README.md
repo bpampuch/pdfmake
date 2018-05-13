@@ -701,17 +701,17 @@ If `pageBreakBefore` returns true, a page break will be added before the `curren
 
 ``` javascript
 {
-   id: '<as specified in doc definition>', 
+   id: '<as specified in doc definition>',
    headlineLevel: '<as specified in doc definition>',
-   text: '<as specified in doc definition>', 
-   ul: '<as specified in doc definition>', 
-   ol: '<as specified in doc definition>', 
-   table: '<as specified in doc definition>', 
-   image: '<as specified in doc definition>', 
-   qr: '<as specified in doc definition>', 
-   canvas: '<as specified in doc definition>', 
-   columns: '<as specified in doc definition>', 
-   style: '<as specified in doc definition>', 
+   text: '<as specified in doc definition>',
+   ul: '<as specified in doc definition>',
+   ol: '<as specified in doc definition>',
+   table: '<as specified in doc definition>',
+   image: '<as specified in doc definition>',
+   qr: '<as specified in doc definition>',
+   canvas: '<as specified in doc definition>',
+   columns: '<as specified in doc definition>',
+   style: '<as specified in doc definition>',
    pageOrientation '<as specified in doc definition>',
    pageNumbers: [2, 3], // The pages this element is visible on (e.g. multi-line text could be on more than one page)
    pages: 6, // the total number of pages of this document
