@@ -104,9 +104,9 @@
 			function generate() {
 				lastGen = new Date();
 
-				eval(editor.getSession().getValue());
+				var content = editor.getSession().getValue();
 
-				$http.post('/pdf', dd).
+				$http.post('/pdf', {content: content}).
 					success(function(data, status, headers, config) {
 
 						document.getElementById('pdfV').src = data;
