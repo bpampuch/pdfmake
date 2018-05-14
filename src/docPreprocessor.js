@@ -25,10 +25,12 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 		node = {text: node};
 	} else if (isNumber(node) || isBoolean(node)) {
 		node = {text: node.toString()};
-	} else if (node === null) {
+	} else if (node === undefined || node === null) {
 		node = {text: ''};
 	} else if (Object.keys(node).length === 0) { // empty object
 		node = {text: ''};
+	} else if ('text' in node && (node.text === undefined || node.text === null)) {
+		node.text = '';
 	}
 
 	if (node.columns) {
