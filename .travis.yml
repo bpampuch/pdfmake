@@ -11,5 +11,6 @@ os:
 sudo: false
 
 cache:
+  yarn: true
   directories:
     - node_modules
