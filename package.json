@@ -7,27 +7,27 @@
     "test": "tests"
   },
   "dependencies": {
-    "iconv-lite": "^0.4.19",
+    "iconv-lite": "^0.4.23",
     "linebreak": "^0.3.0",
     "pdfkit": "^0.8.3"
   },
   "devDependencies": {
-    "brfs": "^1.5.0",
+    "brfs": "^1.6.1",
     "expose-loader": "^0.7.5",
     "fancy-log": "^1.3.2",
-    "file-saver": "^1.3.3",
+    "file-saver": "^1.3.8",
     "gulp": "^4.0.0",
     "gulp-each": "^0.5.0",
     "gulp-eslint": "^4.0.2",
     "gulp-file-contents-to-json": "^0.2.2",
     "gulp-spawn-mocha": "^5.0.1",
-    "mocha": "^5.0.4",
+    "mocha": "^5.2.0",
     "plugin-error": "^1.0.1",
-    "rewire": "^3.0.2",
-    "sinon": "^4.4.2",
+    "rewire": "^4.0.1",
+    "sinon": "^5.0.7",
     "string-replace-webpack-plugin": "^0.1.3",
     "transform-loader": "^0.2.4",
-    "webpack": "3.7.1"
+    "webpack": "3.11.0"
   },
   "scripts": {
     "build": "gulp build",
