@@ -9,6 +9,7 @@
   "dependencies": {
     "iconv-lite": "^0.4.23",
     "linebreak": "^0.3.0",
+    "lodash.sortby": "^4.7.0",
     "pdfkit": "^0.8.3"
   },
   "devDependencies": {

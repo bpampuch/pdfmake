@@ -12,6 +12,7 @@ var isArray = require('./helpers').isArray;
 var fontStringify = require('./helpers').fontStringify;
 var pack = require('./helpers').pack;
 var qrEncoder = require('./qrEnc.js');
+var sortBy = require('lodash.sortby');
 
 /**
  * @private
@@ -221,24 +222,61 @@ DocMeasure.prototype.measureToc = function (node) {
 	}
 
 	var body = [];
+	var tocId = node.toc.id;
 	var textStyle = node.toc.textStyle || {};
 	var numberStyle = node.toc.numberStyle || textStyle;
 	var textMargin = node.toc.textMargin || [0, 0, 0, 0];
-	for (var i = 0, l = node.toc._items.length; i < l; i++) {
-		var item = node.toc._items[i];
-		var lineStyle = node.toc._items[i].tocStyle || textStyle;
-		var lineMargin = node.toc._items[i].tocMargin || textMargin;
-		body.push([
-			{text: item.text, alignment: 'left', style: lineStyle, margin: lineMargin},
-			{text: '00000', alignment: 'right', _tocItemRef: item, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]}
-		]);
+	var items = node.toc._items;
+	if (node.toc.sort) {
+		items = sortBy(node.toc._items, item => item[tocId].sortBy);
+	}
+	for (var i = 0, l = items.length; i < l; i++) {
+		var item = items[i];
+		var lineStyle = item.tocStyle || textStyle;
+		var lineMargin = item.tocMargin || textMargin;
+		var leftText = item.text;
+		var rightText;
+
+		if (item[tocId] && item[tocId].hasOwnProperty('text')) {
+			var tocText = item[tocId].text;
+			if (typeof tocText === 'string') {
+				leftText = tocText;
+			} else if (tocText.hasOwnProperty('left')) {
+				leftText = tocText.left;
+				if (tocText.hasOwnProperty('right')) {
+					rightText = tocText.right;
+				}
+			}
+
+		}
+
+		var row = [
+			{text: leftText, alignment: 'left', style: lineStyle, margin: lineMargin}
+		];
+
+		if (rightText) {
+			row.push(
+				{text: rightText, alignment: 'left', style: lineStyle, margin: lineMargin}
+			);
+		}
+
+		row.push({
+			text: '00000', alignment: 'right', _tocItemRef: item, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]
+		});
+
+		body.push(row);
 	}
 
+	var widths =['*', 'auto'];
+
+	if (row.length === 3) {
+		widths.unshift('*');
+	}
 
 	node.toc._table = {
 		table: {
 			dontBreakRows: true,
-			widths: ['*', 'auto'],
+			widths: widths,
 			body: body
 		},
 		layout: 'noBorders'
