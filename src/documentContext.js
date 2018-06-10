@@ -25,7 +25,7 @@ function DocumentContext(pageSize, pageMargins) {
 
 	this.addPage(pageSize);
 
-	this.hasBackground = false;
+	this.backgroundLength = [0];
 }
 
 DocumentContext.prototype.beginColumnGroup = function () {

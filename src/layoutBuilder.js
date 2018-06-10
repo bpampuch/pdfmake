@@ -154,6 +154,7 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 	var _this = this;
 	this.writer.context().tracker.startTracking('pageAdded', function () {
 		_this.addBackground(background);
+		_this.writer.context().backgroundLength.push(0);
 	});
 
 	this.addBackground(background);
@@ -182,7 +183,7 @@ LayoutBuilder.prototype.addBackground = function (background) {
 		pageBackground = this.docPreprocessor.preprocessDocument(pageBackground);
 		this.processNode(this.docMeasure.measureDocument(pageBackground));
 		this.writer.commitUnbreakableBlock(0, 0);
-		context.hasBackground = true;
+		context.backgroundLength[context.page]+=pageBackground.positions.length;
 	}
 };
 
