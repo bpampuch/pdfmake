@@ -323,7 +323,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 						h: y2 + this.bottomLineWidth - yf,
 						lineWidth: 0,
 						color: fillColor
-					}, false, true, writer.context().hasBackground ? 1 : 0);
+					}, false, true, writer.context().backgroundLength[writer.context().page]);
 				}
 			}
 		}
