@@ -82,7 +82,7 @@ describe('Integration test: background', function () {
 	-Images
 	-Leafs
 	*/
-	it('background elements remain at the bottom of item list', function () {
+	it('background elements remain at the bottom of item list on every page', function () {
 		var dd = {
 			background: function () {
 				return [
@@ -153,18 +153,45 @@ describe('Integration test: background', function () {
 					image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
 				},
 				{
-					text: 'Leaf'
+					text: 'Leaf',
+					pageBreak: 'after'
+				},
+				{
+					table: {
+						body: [
+							[
+								{
+									text: 'a',
+									fillColor: '#aaa'
+								},
+								{
+									text: 'b',
+									fillColor: '#bbb'
+								},
+								{
+									text: 'c',
+									fillColor: '#ccc'
+								}
+							]
+						]
+					}
 				}
 			]
 		};
 		var pages = testHelper.renderPages('A6', dd);
-		assert.equal(pages.length, 1);
+		assert.equal(pages.length, 2);
 		var first = pages[0].items[0].item;
 		var second = pages[0].items[1].item;
 		var third = pages[0].items[2].item;
+		var first2 = pages[1].items[0].item;
+		var second2 = pages[1].items[1].item;
+		var third2 = pages[1].items[2].item;
 		assert.equal(first.color, 'red');
 		assert.equal(second.color, 'green');
 		assert.equal(third.color, 'blue');
+		assert.equal(first2.color, 'red');
+		assert.equal(second2.color, 'green');
+		assert.equal(third2.color, 'blue');
 	});
 
 });

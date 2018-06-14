@@ -23,9 +23,9 @@ function DocumentContext(pageSize, pageMargins) {
 
 	this.tracker = new TraversalTracker();
 
-	this.addPage(pageSize);
+	this.backgroundLength = [];
 
-	this.backgroundLength = [0];
+	this.addPage(pageSize);
 }
 
 DocumentContext.prototype.beginColumnGroup = function () {
@@ -248,6 +248,7 @@ DocumentContext.prototype.moveToNextPage = function (pageOrientation) {
 DocumentContext.prototype.addPage = function (pageSize) {
 	var page = {items: [], pageSize: pageSize};
 	this.pages.push(page);
+	this.backgroundLength.push(0);
 	this.page = this.pages.length - 1;
 	this.initializePage();
 
