@@ -36,7 +36,6 @@ DocMeasure.prototype.measureDocument = function (docStructure) {
 };
 
 DocMeasure.prototype.measureNode = function (node) {
-
 	var self = this;
 
 	return this.styleStack.auto(node, function () {
@@ -45,6 +44,8 @@ DocMeasure.prototype.measureNode = function (node) {
 
 		if (node.columns) {
 			return extendMargins(self.measureColumns(node));
+		} else if (node.wrapper) {
+			return extendMargins(self.measureWrapper(node));
 		} else if (node.stack) {
 			return extendMargins(self.measureVerticalContainer(node));
 		} else if (node.ul) {
@@ -275,13 +276,13 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 		var radius = gapSize.fontSize / 6;
 		return {
 			canvas: [{
-					x: radius,
-					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
-					r1: radius,
-					r2: radius,
-					type: 'ellipse',
-					color: color
-				}]
+				x: radius,
+				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+				r1: radius,
+				r2: radius,
+				type: 'ellipse',
+				color: color
+			}]
 		};
 	}
 
@@ -290,13 +291,13 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 		var size = gapSize.fontSize / 3;
 		return {
 			canvas: [{
-					x: 0,
-					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - (gapSize.fontSize / 3) - (size / 2),
-					h: size,
-					w: size,
-					type: 'rect',
-					color: color
-				}]
+				x: 0,
+				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - (gapSize.fontSize / 3) - (size / 2),
+				h: size,
+				w: size,
+				type: 'rect',
+				color: color
+			}]
 		};
 	}
 
@@ -305,13 +306,13 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 		var radius = gapSize.fontSize / 6;
 		return {
 			canvas: [{
-					x: radius,
-					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
-					r1: radius,
-					r2: radius,
-					type: 'ellipse',
-					lineColor: color
-				}]
+				x: radius,
+				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+				r1: radius,
+				r2: radius,
+				type: 'ellipse',
+				lineColor: color
+			}]
 		};
 	}
 
@@ -495,6 +496,23 @@ DocMeasure.prototype.measureOrderedList = function (node) {
 		if (!item.ol && !item.ul) {
 			item.listMarker._minWidth = item.listMarker._maxWidth = node._gapSize.width;
 		}
+	}
+
+	return node;
+};
+
+DocMeasure.prototype.measureWrapper = function (node) {
+	var items = node.wrapper.content;
+	node._gap = node.wrapper.columnGap || 6;
+
+	node._minWidth = 0;
+	node._maxWidth = 0;
+
+	for (var i = 0, l = items.length; i < l; i++) {
+		items[i] = this.measureNode(items[i]);
+
+		node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
+		node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth);
 	}
 
 	return node;

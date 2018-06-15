@@ -68,7 +68,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			var nodeInfo = {};
 			[
 				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
-				'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
+				'headlineLevel', 'style', 'pageBreak', 'pageOrientation', 'wrapper',
 				'width', 'height'
 			].forEach(function (key) {
 				if (node[key] !== undefined) {
@@ -363,6 +363,8 @@ LayoutBuilder.prototype.processNode = function (node) {
 
 		if (node.stack) {
 			self.processVerticalContainer(node);
+		} else if (node.wrapper) {
+			self.processWrapper(node);
 		} else if (node.columns) {
 			self.processColumns(node);
 		} else if (node.ul) {
@@ -417,6 +419,26 @@ LayoutBuilder.prototype.processNode = function (node) {
 			self.writer.moveToNextPage(node.pageOrientation);
 		}
 	}
+};
+
+LayoutBuilder.prototype.processWrapper = function (node) {
+	var self = this;
+	var availableWidth = this.writer.context().availableWidth;
+	var columns = node.wrapper.columns;
+	var content = node.wrapper.content;
+
+	var pageBreaks = [],
+		positions = [];
+
+	self.writer.context().beginMultiColumnWrapper(columns, node._gap);
+
+	for (var i = 0, l = content.length; i < l; i++) {
+		self.processNode(content[i]);
+	}
+
+	self.writer.context().completeMultiColumnWrapper();
+
+	return {pageBreaks, positions};
 };
 
 // vertical container

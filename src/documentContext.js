@@ -17,6 +17,12 @@ function DocumentContext(pageSize, pageMargins) {
 	this.availableHeight = 0;
 	this.page = -1;
 
+	this.currentColumn = 0;
+	this.columns = 1;
+	this.columnGap = 0;
+	this.firstColumnHeight = 0;
+	this.firstColumnY = 0;
+
 	this.snapshots = [];
 
 	this.endingCell = null;
@@ -27,6 +33,26 @@ function DocumentContext(pageSize, pageMargins) {
 
 	this.backgroundLength = [0];
 }
+
+DocumentContext.prototype.beginMultiColumnWrapper = function (
+	columns,
+	columnGap
+) {
+	this.snapshots.push({
+		availableWidth: this.availableWidth,
+		columns: this.columns,
+		columnGap: this.columnGap,
+		x: this.x
+	});
+
+	this.firstColumnHeight = this.availableHeight;
+	this.firstColumnY = this.y;
+
+	this.columns = columns;
+	this.availableWidth = (this.availableWidth - (columnGap * (columns - 1))) / columns;
+	this.columnGap = columnGap;
+	this.currentColumn = 0;
+};
 
 DocumentContext.prototype.beginColumnGroup = function () {
 	this.snapshots.push({
@@ -91,6 +117,16 @@ DocumentContext.prototype.saveContextInEndingCell = function (endingCell) {
 		availableWidth: this.availableWidth,
 		lastColumnWidth: this.lastColumnWidth
 	};
+};
+
+DocumentContext.prototype.completeMultiColumnWrapper = function () {
+	var saved = this.snapshots.pop();
+
+	this.columns = saved.columns;
+	this.availableWidth = saved.availableWidth;
+	this.currentColumn = 0;
+	this.columnGap = saved.columnGap;
+	this.x = saved.x;
 };
 
 DocumentContext.prototype.completeColumnGroup = function (height) {
@@ -210,12 +246,32 @@ var getPageSize = function (currentPage, newPageOrientation) {
 			height: currentPage.pageSize.height
 		};
 	}
-
 };
 
+DocumentContext.prototype.moveToNextColumn = function () {
+	var saved = this.snapshots[this.snapshots.length - 1];
+
+	this.currentColumn++;
+
+	this.initializePage();
+
+	if (this.firstColumnHeight > 0) {
+		this.y = this.firstColumnY;
+		this.availableHeight = this.firstColumnHeight;
+		this.firstColumnHeight = this.firstColumnY = 0;
+	}
+
+	this.x += (this.availableWidth + this.columnGap) * this.currentColumn;
+
+	return {
+		y: this.y,
+		column: this.currentColumn
+	};
+};
 
 DocumentContext.prototype.moveToNextPage = function (pageOrientation) {
 	var nextPageIndex = this.page + 1;
+	this.currentColumn = 0;
 
 	var prevPage = this.page;
 	var prevY = this.y;
