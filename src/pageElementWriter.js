@@ -69,24 +69,38 @@ PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, u
 };
 
 PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
+	var ctx = this.writer.context;
 
-	var nextPage = this.writer.context.moveToNextPage(pageOrientation);
+	if (ctx.columns > 1 && ctx.currentColumn < ctx.columns - 1) {
+		var nextColumn = ctx.moveToNextColumn();
 
-	if (nextPage.newPageCreated) {
-		this.repeatables.forEach(function (rep) {
-			this.writer.addFragment(rep, true);
-		}, this);
+		this.writer.tracker.emit("columnChanged", {
+			y: nextColumn.y,
+			column: nextColumn.column
+		});
 	} else {
-		this.repeatables.forEach(function (rep) {
-			this.writer.context.moveDown(rep.height);
-		}, this);
-	}
+		if (ctx.columns > 1) {
+			ctx.x = ctx.pageMargins.left;
+		}
 
-	this.writer.tracker.emit('pageChanged', {
-		prevPage: nextPage.prevPage,
-		prevY: nextPage.prevY,
-		y: nextPage.y
-	});
+		var nextPage = this.writer.context.moveToNextPage(pageOrientation);
+
+		if (nextPage.newPageCreated) {
+			this.repeatables.forEach(function (rep) {
+				this.writer.addFragment(rep, true);
+			}, this);
+		} else {
+			this.repeatables.forEach(function (rep) {
+				this.writer.context.moveDown(rep.height);
+			}, this);
+		}
+
+		this.writer.tracker.emit('pageChanged', {
+			prevPage: nextPage.prevPage,
+			prevY: nextPage.prevY,
+			y: nextPage.y
+		});
+	}
 };
 
 PageElementWriter.prototype.beginUnbreakableBlock = function (width, height) {
