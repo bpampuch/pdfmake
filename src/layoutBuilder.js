@@ -154,7 +154,6 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 	var _this = this;
 	this.writer.context().tracker.startTracking('pageAdded', function () {
 		_this.addBackground(background);
-		_this.writer.context().backgroundLength.push(0);
 	});
 
 	this.addBackground(background);
