@@ -22,9 +22,10 @@ class DocumentContext {
 
 		this.tracker = new TraversalTracker();
 
+		this.backgroundLength = [];
+
 		this.addPage(pageSize);
 
-		this.hasBackground = false;
 	}
 
 	beginColumnGroup() {
@@ -214,6 +215,7 @@ class DocumentContext {
 	addPage(pageSize) {
 		let page = {items: [], pageSize: pageSize};
 		this.pages.push(page);
+		this.backgroundLength.push(0);
 		this.page = this.pages.length - 1;
 		this.initializePage();
 

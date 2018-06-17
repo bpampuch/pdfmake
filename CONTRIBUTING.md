@@ -7,3 +7,5 @@ The issue tracker on GitHub is the preferred channel for bug reports, feature re
 ## Pull requests
 
 **Please do not commit changes in `build` folder.**
+
+**Please do not commit changes in `package.json` and `yarn.lock` files if is not related to the pull request changes.**

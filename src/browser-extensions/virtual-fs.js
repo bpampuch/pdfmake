@@ -1,15 +1,15 @@
 class VirtualFileSystem {
 	constructor() {
 		this.fileSystem = {};
-		this.baseSystem = {};
+		this.dataSystem = {};
 	}
 
 	readFileSync(filename) {
 		filename = fixFilename(filename);
 
-		let base64content = this.baseSystem[filename];
-		if (base64content) {
-			return Buffer.from(base64content, 'base64');
+		let dataContent = this.dataSystem[filename];
+		if (dataContent) {
+			return Buffer.from(dataContent, typeof dataContent === 'string' ? 'base64' : undefined);
 		}
 
 		let content = this.fileSystem[filename];
@@ -25,10 +25,9 @@ class VirtualFileSystem {
 	}
 
 	bindFS(data) {
-		this.baseSystem = data || {};
+		this.dataSystem = data || {};
 	}
 }
-
 
 function fixFilename(filename) {
 	if (filename.indexOf(__dirname) === 0) {
