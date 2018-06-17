@@ -12,8 +12,8 @@
     "pdfkit": "^0.8.3"
   },
   "devDependencies": {
-    "@babel/core": "^7.0.0-beta.42",
-    "@babel/preset-env": "^7.0.0-beta.42",
+    "@babel/core": "^7.0.0-beta.51",
+    "@babel/preset-env": "^7.0.0-beta.51",
     "babel-loader": "^8.0.0-beta.0",
     "brfs": "^1.6.1",
     "expose-loader": "^0.7.5",
