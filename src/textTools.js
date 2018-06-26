@@ -100,10 +100,21 @@ TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpa
 	return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
 };
 
+/**
+ * Go through text. Find out where we need to make a new line. What is returned is
+ * an array of objects. Each object schema:
+ * {text: string, lineEnd?: boolean}
+ * 
+ * For each object, the text property is a word. lineEnd is an optional boolean
+ * property, which tells PdfKit where to break the line.
+ * @param {String} text 
+ * @param {boolean} noWrap 
+ */
 function splitWords(text, noWrap) {
 	var results = [];
 	text = text.replace(/\t/g, '    ');
 
+	// If noWrap, then just return the text as-is.
 	if (noWrap) {
 		results.push({text: text});
 		return results;
@@ -113,6 +124,8 @@ function splitWords(text, noWrap) {
 	var last = 0;
 	var bk;
 
+	// We are breaking on words. If this break is required, then mark
+	// as lineEnd. Regardless, append word to text. 
 	while (bk = breaker.nextBreak()) {
 		var word = text.slice(last, bk.position);
 
@@ -142,6 +155,14 @@ function copyStyle(source, destination) {
 	return destination;
 }
 
+/**
+ * Return an array of word objects. Go through text array, split that text into
+ * an array of words. Go through the words and append to the results. We end up
+ * with an array of all words in the whole text array, with the end-of-lines 
+ * @param {Array<any>} array 
+ * @param {StyleContextStack} styleContextStack 
+ * @returns {Array<{text: string, lineEnd?: boolean}>}
+ */
 function normalizeTextArray(array, styleContextStack) {
 	function flatten(array) {
 		return array.reduce(function (prev, cur) {
@@ -159,12 +180,17 @@ function normalizeTextArray(array, styleContextStack) {
 
 	array = flatten(array);
 
+	// Go through the text array
 	for (var i = 0, l = array.length; i < l; i++) {
 		var item = array[i];
 		var style = null;
 		var words;
 
+		// Is noWrap true or false?
 		var noWrap = getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
+		// text object:
+		// {""} or {text:["",""]}
+		// normalizeString performs some basic data validation
 		if (isObject(item)) {
 			words = splitWords(normalizeString(item.text), noWrap);
 			style = copyStyle(item);
@@ -172,6 +198,7 @@ function normalizeTextArray(array, styleContextStack) {
 			words = splitWords(normalizeString(item), noWrap);
 		}
 
+		// Go through the returned list of word objects
 		for (var i2 = 0, l2 = words.length; i2 < l2; i2++) {
 			var result = {
 				text: words[i2].text
@@ -226,6 +253,8 @@ function getStyleProperty(item, styleContextStack, property, defaultValue) {
 }
 
 function measure(fontProvider, textArray, styleContextStack) {
+	// Go through text array. Clean/validate it. Split on words to find the
+	// end-of-lines (which words mark the end of each line)
 	var normalized = normalizeTextArray(textArray, styleContextStack);
 
 	if (normalized.length) {
@@ -254,6 +283,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var linkToPage = getStyleProperty(item, styleContextStack, 'linkToPage', null);
 		var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', null);
 		var preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
+		var superscript = getStyleProperty(item, styleContextStack, 'sup', false);
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -290,6 +320,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.link = link;
 		item.linkToPage = linkToPage;
 		item.noWrap = noWrap;
+		item.sup = superscript;
 	});
 
 	return normalized;

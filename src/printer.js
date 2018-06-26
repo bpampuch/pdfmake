@@ -403,7 +403,15 @@ function renderLine(line, x, y, pdfKitDoc) {
 
 		pdfKitDoc._font = inline.font;
 		pdfKitDoc.fontSize(inline.fontSize);
-		pdfKitDoc.text(inline.text, x + inline.x, y + shiftToBaseline, options);
+		
+		var newY = y + shiftToBaseline;
+		if (inline.sup){
+			// console.log("Do we have superscript?", inline.sup);
+			// console.log("The text: ", inline.text);
+			newY -= inline.fontSize*0.75;
+		}
+		pdfKitDoc.text(inline.text, x + inline.x, newY, options);
+		
 
 		if (inline.linkToPage) {
 			var _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0]}).end();
