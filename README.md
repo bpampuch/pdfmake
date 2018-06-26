@@ -271,6 +271,28 @@ var docDefinition = {
 };
 ```
 
+We have added a superscript style. 
+
+```js
+var docDefinition = {
+  content: [
+    {
+      text: [
+        {text: "Here is some text", fontSize:12},
+        {text: "1", fontSize:6, sup: true},
+        {text: " and some more text, after the superscript.", fontSize:12}
+      ]
+    }
+  ]
+}
+```
+
+This should render similar to:
+
+> Here is some text<sup>1</sup> and some more text, after the superscript.
+
+
+
 #### Style dictionaries
 It's also possible to define a dictionary of reusable styles:
 
