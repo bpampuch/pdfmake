@@ -7,3 +7,5 @@ doc
 *.ipr
 *.iws
 nbproject
+package-lock.json
+dev-playground/package-lock.json
