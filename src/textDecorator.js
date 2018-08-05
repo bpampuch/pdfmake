@@ -18,8 +18,7 @@ function groupDecorations(line) {
 		for (let ii = 0, ll = decoration.length; ii < ll; ii++) {
 			let decorationItem = decoration[ii];
 			if (!currentGroup || decorationItem !== currentGroup.decoration ||
-				style !== currentGroup.decorationStyle || color !== currentGroup.decorationColor ||
-				decorationItem === 'lineThrough') {
+				style !== currentGroup.decorationStyle || color !== currentGroup.decorationColor) {
 
 				currentGroup = {
 					line: line,
@@ -50,7 +49,8 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 	function width() {
 		let sum = 0;
 		for (let i = 0, l = group.inlines.length; i < l; i++) {
-			sum += group.inlines[i].width;
+			let justifyShift = (group.inlines[i].justifyShift || 0);			
+			sum += group.inlines[i].width + justifyShift;
 		}
 		return sum;
 	}
