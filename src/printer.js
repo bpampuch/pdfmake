@@ -171,13 +171,26 @@ function calculatePageHeight(pages, margins) {
 		}
 	}
 
+	function getBottomPosition(item) {
+		var top = item.item.y;
+		var height = getItemHeight(item);
+		return top + height;
+	}
+
 	var fixedMargins = fixPageMargins(margins || 40);
-	var height = fixedMargins.top + fixedMargins.bottom;
+	var height = fixedMargins.top;
+
 	pages.forEach(function (page) {
 		page.items.forEach(function (item) {
-			height += getItemHeight(item);
+			var bottomPosition = getBottomPosition(item);
+			if (bottomPosition > height) {
+				height = bottomPosition;
+			}
 		});
 	});
+
+	height += fixedMargins.bottom;
+
 	return height;
 }
 
