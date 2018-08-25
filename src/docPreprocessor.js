@@ -149,7 +149,7 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 		if (!this.nodeReferences[node.pageReference]) {
 			this.nodeReferences[node.pageReference] = {_nodeRef: {}, _pseudo: true};
 		}
-		node.text = '00000';
+		node.text = node.text ? node.text: '00000';
 		node._pageRef = this.nodeReferences[node.pageReference];
 	}
 
