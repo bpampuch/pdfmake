@@ -622,6 +622,18 @@ LayoutBuilder.prototype.processLeaf = function (node) {
 		line._pageNodeRef = node._pageRef._nodeRef;
 	}
 
+	if (line && line.inlines && isArray(line.inlines)) {
+		for (var i = 0, l = line.inlines.length; i < l; i++) {
+			if (line.inlines[i]._tocItemRef) {
+				line.inlines[i]._pageNodeRef = line.inlines[i]._tocItemRef;
+			}
+
+			if (line.inlines[i]._pageRef) {
+				line.inlines[i]._pageNodeRef = line.inlines[i]._pageRef._nodeRef;
+			}
+		}
+	}
+
 	while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
 		var positions = this.writer.addLine(line);
 		node.positions.push(positions);

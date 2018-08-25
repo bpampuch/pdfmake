@@ -166,6 +166,9 @@ function normalizeTextArray(array, styleContextStack) {
 
 		var noWrap = getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 		if (isObject(item)) {
+			if (item._textRef && item._textRef._nodeRef.text) {
+				item.text = item._textRef._nodeRef.text;
+			}
 			words = splitWords(normalizeString(item.text), noWrap);
 			style = copyStyle(item);
 		} else {
