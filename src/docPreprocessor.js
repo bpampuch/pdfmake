@@ -164,6 +164,10 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 
 	if (node.text && node.text.text) {
 		node.text = [this.preprocessNode(node.text)];
+	} else if (isArray(node.text)) {
+		for (var i = 0, l = node.text.length; i < l; i++) {
+			node.text[i] = this.preprocessNode(node.text[i]);
+		}
 	}
 
 	return node;
