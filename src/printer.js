@@ -13,6 +13,7 @@ var isString = require('./helpers').isString;
 var isNumber = require('./helpers').isNumber;
 var isBoolean = require('./helpers').isBoolean;
 var isArray = require('./helpers').isArray;
+var isUndefined = require('./helpers').isUndefined;
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -369,6 +370,11 @@ function renderLine(line, x, y, pdfKitDoc) {
 		var newWidth;
 		var diffWidth;
 		var textTools = new TextTools(null);
+
+		if (isUndefined(line._pageNodeRef.positions)) {
+			throw 'Page reference id not found';
+		}
+
 		var pageNumber = line._pageNodeRef.positions[0].pageNumber.toString();
 
 		line.inlines[0].text = pageNumber;
