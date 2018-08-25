@@ -226,8 +226,8 @@ DocMeasure.prototype.measureToc = function (node) {
 	var textMargin = node.toc.textMargin || [0, 0, 0, 0];
 	for (var i = 0, l = node.toc._items.length; i < l; i++) {
 		var item = node.toc._items[i];
-		var lineStyle = node.toc._items[i].tocStyle || textStyle;
-		var lineMargin = node.toc._items[i].tocMargin || textMargin;
+		var lineStyle = item.tocStyle || textStyle;
+		var lineMargin = item.tocMargin || textMargin;
 		body.push([
 			{text: item.text, alignment: 'left', style: lineStyle, margin: lineMargin},
 			{text: '00000', alignment: 'right', _tocItemRef: item, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]}
