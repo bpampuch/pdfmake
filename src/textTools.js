@@ -4,6 +4,7 @@ var isString = require('./helpers').isString;
 var isNumber = require('./helpers').isNumber;
 var isObject = require('./helpers').isObject;
 var isArray = require('./helpers').isArray;
+var isUndefined = require('./helpers').isUndefined;
 var LineBreaker = require('linebreak');
 
 var LEADING = /^(\s)+/g;
@@ -151,6 +152,24 @@ function normalizeTextArray(array, styleContextStack) {
 		}, []);
 	}
 
+	function getOneWord(index, words, noWrap) {
+		if (isUndefined(words[index])) {
+			return null;
+		}
+
+		var word = words[index].text;
+
+		if (noWrap) {
+			var tmpWords = splitWords(normalizeString(word), false);
+			if (isUndefined(tmpWords[tmpWords.length - 1])) {
+				return null;
+			}
+			word = tmpWords[tmpWords.length - 1].text;
+		}
+
+		return word;
+	}
+
 	var results = [];
 
 	if (!isArray(array)) {
@@ -159,6 +178,7 @@ function normalizeTextArray(array, styleContextStack) {
 
 	array = flatten(array);
 
+	var lastWord = null;
 	for (var i = 0, l = array.length; i < l; i++) {
 		var item = array[i];
 		var style = null;
@@ -175,6 +195,15 @@ function normalizeTextArray(array, styleContextStack) {
 			words = splitWords(normalizeString(item), noWrap);
 		}
 
+		if (lastWord && words.length) {
+			var firstWord = getOneWord(0, words, noWrap);
+
+			var wrapWords = splitWords(normalizeString(lastWord + firstWord), false);
+			if (wrapWords.length === 1) {
+				results[results.length - 1].noNewLine = true;
+			}
+		}
+
 		for (var i2 = 0, l2 = words.length; i2 < l2; i2++) {
 			var result = {
 				text: words[i2].text
@@ -187,6 +216,11 @@ function normalizeTextArray(array, styleContextStack) {
 			copyStyle(style, result);
 
 			results.push(result);
+		}
+
+		lastWord = null;
+		if (i + 1 < l) {
+			lastWord = getOneWord(words.length - 1, words, noWrap);
 		}
 	}
 

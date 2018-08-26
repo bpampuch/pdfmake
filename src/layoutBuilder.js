@@ -668,8 +668,12 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 	var line = new Line(this.writer.context().availableWidth);
 	var textTools = new TextTools(null);
 
-	while (textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
+	var isForceContinue = false;
+	while (textNode._inlines && textNode._inlines.length > 0 &&
+		(line.hasEnoughSpaceForInline(textNode._inlines[0], textNode._inlines.slice(1)) || isForceContinue)) {
+		var isHardWrap = false;
 		var inline = textNode._inlines.shift();
+		isForceContinue = false;
 
 		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
 			var widthPerChar = inline.width / inline.text.length;
@@ -687,10 +691,13 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 				inline.width = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
 
 				textNode._inlines.unshift(newInline);
+				isHardWrap = true;
 			}
 		}
 
 		line.addInline(inline);
+
+		isForceContinue = inline.noNewLine && !isHardWrap;
 	}
 
 	line.lastLineInParagraph = textNode._inlines.length === 0;
