@@ -12,6 +12,7 @@ function DocPreprocessor() {
 }
 
 DocPreprocessor.prototype.preprocessDocument = function (docStructure) {
+	this.parentNode = null;
 	this.tocs = [];
 	this.nodeReferences = [];
 	return this.preprocessNode(docStructure);
@@ -128,7 +129,11 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 				this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
 			}
 
-			this.tocs[tocItemId].toc._items.push(node);
+			var tocItemRef = {};
+			tocItemRef._nodeRef = this._getNodeForNodeRef(node);
+			tocItemRef._tocNode = node;
+
+			this.tocs[tocItemId].toc._items.push(tocItemRef);
 		}
 	}
 
@@ -138,10 +143,10 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 				throw "Node id '" + node.id + "' already exists";
 			}
 
-			this.nodeReferences[node.id]._nodeRef = node;
+			this.nodeReferences[node.id]._nodeRef = this._getNodeForNodeRef(node);
 			this.nodeReferences[node.id]._pseudo = false;
 		} else {
-			this.nodeReferences[node.id] = {_nodeRef: node};
+			this.nodeReferences[node.id] = {_nodeRef: this._getNodeForNodeRef(node)};
 		}
 	}
 
@@ -165,8 +170,18 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 	if (node.text && node.text.text) {
 		node.text = [this.preprocessNode(node.text)];
 	} else if (isArray(node.text)) {
+		var isSetParentNode = false;
+		if (this.parentNode === null) {
+			this.parentNode = node;
+			isSetParentNode = true;
+		}
+
 		for (var i = 0, l = node.text.length; i < l; i++) {
 			node.text[i] = this.preprocessNode(node.text[i]);
+		}
+
+		if (isSetParentNode) {
+			this.parentNode = null;
 		}
 	}
 
@@ -208,5 +223,13 @@ DocPreprocessor.prototype.preprocessCanvas = function (node) {
 DocPreprocessor.prototype.preprocessQr = function (node) {
 	return node;
 };
+
+DocPreprocessor.prototype._getNodeForNodeRef = function (node) {
+	if (this.parentNode) {
+		return this.parentNode;
+	}
+
+	return node;
+}
 
 module.exports = DocPreprocessor;
