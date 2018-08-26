@@ -253,19 +253,19 @@ describe('LayoutBuilder', function () {
 			var desc = [{
 					text: [
 						{text: 'a better '},
-						{text: [{text: 'aaaa'}]},
+						{text: [{text: 'style '}]},
 						{text: 'independently '}
 					]
 				}];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, {fontSize: 8});
 
 			assert.equal(pages.length, 1);
 			assert.equal(pages[0].items.length, 1);
 			assert.equal(pages[0].items[0].item.inlines.length, 4);
 			assert.equal(pages[0].items[0].item.inlines[0].text, 'a ');
 			assert.equal(pages[0].items[0].item.inlines[1].text, 'better ');
-			assert.equal(pages[0].items[0].item.inlines[2].text, 'aaaa');
+			assert.equal(pages[0].items[0].item.inlines[2].text, 'style ');
 			assert.equal(pages[0].items[0].item.inlines[3].text, 'independently ');
 		});
 

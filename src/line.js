@@ -55,6 +55,10 @@ Line.prototype.getWidth = function () {
 	return this.inlineWidths - this.leadingCut - this.trailingCut;
 };
 
+Line.prototype.getAvailableWidth = function () {
+	return this.maxWidth - this.getWidth();
+};
+
 /**
  * Returns line height
  * @return {Number}
