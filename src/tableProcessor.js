@@ -211,10 +211,11 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineIndex, wri
 	if (width === 0) {
 		return;
 	}
+        var cx = x + width / 2;
 	writer.addVector({
 		type: 'line',
-		x1: x + width / 2,
-		x2: x + width / 2,
+		x1: cx,
+		x2: cx,
 		y1: y0,
 		y2: y1,
 		lineWidth: width,

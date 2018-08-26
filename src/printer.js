@@ -431,7 +431,11 @@ function renderLine(line, x, y, pdfKitDoc) {
 
 		pdfKitDoc._font = inline.font;
 		pdfKitDoc.fontSize(inline.fontSize);
-		pdfKitDoc.text(inline.text, x + inline.x, y + shiftToBaseline, options);
+                if (inline.image) {
+		        pdfKitDoc.image(inline.image, x + inline.x, y, {width: inline.width});
+                } else {
+		        pdfKitDoc.text(inline.text, x + inline.x, y + shiftToBaseline, options);
+                }
 
 		if (inline.linkToPage) {
 			var _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0]}).end();
