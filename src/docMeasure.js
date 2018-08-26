@@ -197,8 +197,8 @@ DocMeasure.prototype.measureImage = function (node) {
 
 DocMeasure.prototype.measureLeaf = function (node) {
 
-	if (node._textRef && node._textRef._nodeRef.text) {
-		node.text = node._textRef._nodeRef.text;
+	if (node._textRef && node._textRef._textNodeRef.text) {
+		node.text = node._textRef._textNodeRef.text;
 	}
 
 	// Make sure style properties of the node itself are considered when building inlines.
@@ -226,10 +226,10 @@ DocMeasure.prototype.measureToc = function (node) {
 	var textMargin = node.toc.textMargin || [0, 0, 0, 0];
 	for (var i = 0, l = node.toc._items.length; i < l; i++) {
 		var item = node.toc._items[i];
-		var lineStyle = item._tocNode.tocStyle || textStyle;
-		var lineMargin = item._tocNode.tocMargin || textMargin;
+		var lineStyle = item._textNodeRef.tocStyle || textStyle;
+		var lineMargin = item._textNodeRef.tocMargin || textMargin;
 		body.push([
-			{text: item._tocNode.text, alignment: 'left', style: lineStyle, margin: lineMargin},
+			{text: item._textNodeRef.text, alignment: 'left', style: lineStyle, margin: lineMargin},
 			{text: '00000', alignment: 'right', _tocItemRef: item._nodeRef, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]}
 		]);
 	}

@@ -129,10 +129,10 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 				this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
 			}
 
-			var tocItemRef = {};
-			tocItemRef._nodeRef = this._getNodeForNodeRef(node);
-			tocItemRef._tocNode = node;
-
+			var tocItemRef = {
+				_nodeRef: this._getNodeForNodeRef(node),
+				_textNodeRef: node
+			};
 			this.tocs[tocItemId].toc._items.push(tocItemRef);
 		}
 	}
@@ -144,15 +144,23 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 			}
 
 			this.nodeReferences[node.id]._nodeRef = this._getNodeForNodeRef(node);
+			this.nodeReferences[node.id]._textNodeRef = node;
 			this.nodeReferences[node.id]._pseudo = false;
 		} else {
-			this.nodeReferences[node.id] = {_nodeRef: this._getNodeForNodeRef(node)};
+			this.nodeReferences[node.id] = {
+				_nodeRef: this._getNodeForNodeRef(node),
+				_textNodeRef: node
+			};
 		}
 	}
 
 	if (node.pageReference) {
 		if (!this.nodeReferences[node.pageReference]) {
-			this.nodeReferences[node.pageReference] = {_nodeRef: {}, _pseudo: true};
+			this.nodeReferences[node.pageReference] = {
+				_nodeRef: {},
+				_textNodeRef: {},
+				_pseudo: true
+			};
 		}
 		node.text = '00000';
 		node._pageRef = this.nodeReferences[node.pageReference];
