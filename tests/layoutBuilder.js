@@ -1448,7 +1448,7 @@ describe('LayoutBuilder', function () {
 			assert.equal(pages[0].items.length, 1);
 		});
 
-		it('should support not line break if is text inlines', function () {
+		it('should support not line break if is text inlines (#975)', function () {
 			var TEXT = [
 				{text: 'Celestial Circle—'},
 				{text: 'The Faithful Ally', style: 'styled'},
