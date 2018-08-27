@@ -1455,7 +1455,7 @@ describe('LayoutBuilder', function () {
 				{text: ', '},
 				{text: 'Gift of Knowledge', style: 'styled'},
 				{text: ', '},
-				{text: 'Servant of Infallible Location', style: 'styled'},
+				{text: 'Servant of Infallible Locations', style: 'styled'},
 				{text: ', '},
 				{text: 'Swift Spirit of Winged Transportation', style: 'styled'},
 				{text: ', '},
@@ -1474,11 +1474,11 @@ describe('LayoutBuilder', function () {
 				{text: TEXT2}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {styled: {color: 'dodgerblue'}}, {fontSize: 17.6});
+			var pages = builder.layoutDocument(desc, sampleTestProvider, {styled: {color: 'dodgerblue'}}, {fontSize: 16});
 			assert.equal(pages.length, 1);
 			assert.equal(pages[0].items.length, 16);
 			assert.equal(pages[0].items[5].item.inlines.length, 3);
-			assert.equal(pages[0].items[5].item.inlines[0].text, 'Location');
+			assert.equal(pages[0].items[5].item.inlines[0].text, 'Locations');
 			assert.equal(pages[0].items[5].item.inlines[1].text, ', ');
 			assert.equal(pages[0].items[5].item.inlines[2].text, 'Swift ');
 
