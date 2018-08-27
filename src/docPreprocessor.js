@@ -2,6 +2,7 @@ import {isString, isNumber, isBoolean, isArray, isUndefined, fontStringify} from
 
 class DocPreprocessor {
 	preprocessDocument(docStructure) {
+		this.parentNode = null;
 		this.tocs = [];
 		this.nodeReferences = [];
 		return this.preprocessNode(docStructure);
@@ -121,7 +122,11 @@ class DocPreprocessor {
 					this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
 				}
 
-				this.tocs[tocItemId].toc._items.push(node);
+				let tocItemRef = {
+					_nodeRef: this._getNodeForNodeRef(node),
+					_textNodeRef: node
+				};
+				this.tocs[tocItemId].toc._items.push(tocItemRef);
 			}
 		}
 
@@ -131,16 +136,24 @@ class DocPreprocessor {
 					throw `Node id '${node.id}' already exists`;
 				}
 
-				this.nodeReferences[node.id]._nodeRef = node;
+				this.nodeReferences[node.id]._nodeRef = this._getNodeForNodeRef(node);
+				this.nodeReferences[node.id]._textNodeRef = node;
 				this.nodeReferences[node.id]._pseudo = false;
 			} else {
-				this.nodeReferences[node.id] = {_nodeRef: node};
+				this.nodeReferences[node.id] = {
+					_nodeRef: this._getNodeForNodeRef(node),
+					_textNodeRef: node
+				};
 			}
 		}
 
 		if (node.pageReference) {
 			if (!this.nodeReferences[node.pageReference]) {
-				this.nodeReferences[node.pageReference] = {_nodeRef: {}, _pseudo: true};
+				this.nodeReferences[node.pageReference] = {
+					_nodeRef: {},
+					_textNodeRef: {},
+					_pseudo: true
+				};
 			}
 			node.text = '00000';
 			node._pageRef = this.nodeReferences[node.pageReference];
@@ -157,6 +170,20 @@ class DocPreprocessor {
 
 		if (node.text && node.text.text) {
 			node.text = [this.preprocessNode(node.text)];
+		} else if (isArray(node.text)) {
+			let isSetParentNode = false;
+			if (this.parentNode === null) {
+				this.parentNode = node;
+				isSetParentNode = true;
+			}
+
+			for (let i = 0, l = node.text.length; i < l; i++) {
+				node.text[i] = this.preprocessNode(node.text[i]);
+			}
+
+			if (isSetParentNode) {
+				this.parentNode = null;
+			}
 		}
 
 		return node;
@@ -195,6 +222,14 @@ class DocPreprocessor {
 	}
 
 	preprocessQr(node) {
+		return node;
+	}
+
+	_getNodeForNodeRef(node) {
+		if (this.parentNode) {
+			return this.parentNode;
+		}
+
 		return node;
 	}
 }

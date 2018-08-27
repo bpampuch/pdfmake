@@ -1,6 +1,6 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 
-import {isFunction, isString, isNumber, isBoolean, isArray} from './helpers';
+import {isFunction, isString, isNumber, isBoolean, isArray, isUndefined} from './helpers';
 import FontProvider from './fontProvider';
 import LayoutBuilder from './layoutBuilder';
 import sizes from './standardPageSizes';
@@ -159,13 +159,25 @@ function calculatePageHeight(pages, margins) {
 		}
 	}
 
+	function getBottomPosition(item) {
+		let top = item.item.y;
+		let height = getItemHeight(item);
+		return top + height;
+	}
+
 	let fixedMargins = fixPageMargins(margins || 40);
-	let height = fixedMargins.top + fixedMargins.bottom;
+	let height = fixedMargins.top;
 	pages.forEach((page) => {
 		page.items.forEach((item) => {
-			height += getItemHeight(item);
+			var bottomPosition = getBottomPosition(item);
+			if (bottomPosition > height) {
+				height = bottomPosition;
+			}
 		});
 	});
+
+	height += fixedMargins.bottom;
+
 	return height;
 }
 
@@ -341,26 +353,35 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 }
 
 function renderLine(line, x, y, pdfKitDoc) {
-	if (line._pageNodeRef) {
+	function preparePageNodeRefLine(_pageNodeRef, inline) {
 		let newWidth;
 		let diffWidth;
 		let textTools = new TextTools(null);
-		let pageNumber = line._pageNodeRef.positions[0].pageNumber.toString();
 
-		line.inlines[0].text = pageNumber;
-		line.inlines[0].linkToPage = pageNumber;
-		newWidth = textTools.widthOfString(line.inlines[0].text, line.inlines[0].font, line.inlines[0].fontSize, line.inlines[0].characterSpacing, line.inlines[0].fontFeatures);
-		diffWidth = line.inlines[0].width - newWidth;
-		line.inlines[0].width = newWidth;
+		if (isUndefined(_pageNodeRef.positions)) {
+			throw 'Page reference id not found';
+		}
 
-		switch (line.inlines[0].alignment) {
+		let pageNumber = _pageNodeRef.positions[0].pageNumber.toString();
+
+		inline.text = pageNumber;
+		inline.linkToPage = pageNumber;
+		newWidth = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
+		diffWidth = inline.width - newWidth;
+		inline.width = newWidth;
+
+		switch (inline.alignment) {
 			case 'right':
-				line.inlines[0].x += diffWidth;
+				inline.x += diffWidth;
 				break;
 			case 'center':
-				line.inlines[0].x += diffWidth / 2;
+				inline.x += diffWidth / 2;
 				break;
 		}
+	}
+
+	if (line._pageNodeRef) {
+		preparePageNodeRefLine(line._pageNodeRef, line.inlines[0]);
 	}
 
 	x = x || 0;
@@ -376,6 +397,11 @@ function renderLine(line, x, y, pdfKitDoc) {
 	for (let i = 0, l = line.inlines.length; i < l; i++) {
 		let inline = line.inlines[i];
 		let shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
+
+		if (inline._pageNodeRef) {
+			preparePageNodeRefLine(inline._pageNodeRef, inline);
+		}
+
 		let options = {
 			lineBreak: false,
 			textWidth: inline.width,

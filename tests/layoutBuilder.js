@@ -253,19 +253,19 @@ describe('LayoutBuilder', function () {
 			var desc = [{
 					text: [
 						{text: 'a better '},
-						{text: [{text: 'aaaa'}]},
+						{text: [{text: 'style '}]},
 						{text: 'independently '}
 					]
 				}];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, {fontSize: 8});
 
 			assert.equal(pages.length, 1);
 			assert.equal(pages[0].items.length, 1);
 			assert.equal(pages[0].items[0].item.inlines.length, 4);
 			assert.equal(pages[0].items[0].item.inlines[0].text, 'a ');
 			assert.equal(pages[0].items[0].item.inlines[1].text, 'better ');
-			assert.equal(pages[0].items[0].item.inlines[2].text, 'aaaa');
+			assert.equal(pages[0].items[0].item.inlines[2].text, 'style ');
 			assert.equal(pages[0].items[0].item.inlines[3].text, 'independently ');
 		});
 
@@ -276,7 +276,7 @@ describe('LayoutBuilder', function () {
 					text: [
 						{text: 'paragraph', noWrap: true},
 						{
-							text: 'paragraph',
+							text: ' paragraph',
 							fontSize: 4
 						}
 					],
@@ -1446,6 +1446,46 @@ describe('LayoutBuilder', function () {
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages[0].items.length, 1);
+		});
+
+		it('should support not line break if is text inlines (#975)', function () {
+			var TEXT = [
+				{text: 'Celestial Circle—'},
+				{text: 'The Faithful Ally', style: 'styled'},
+				{text: ', '},
+				{text: 'Gift of Knowledge', style: 'styled'},
+				{text: ', '},
+				{text: 'Servant of Infallible Locations', style: 'styled'},
+				{text: ', '},
+				{text: 'Swift Spirit of Winged Transportation', style: 'styled'},
+				{text: ', '},
+				{text: 'Warding the Created Mind', style: 'styled'}
+			];
+
+			var TEXT2 = [
+				{text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod '},
+				{text: 're'},
+				{text: 'mark', style: 'styled'},
+				{text: 'able'}
+			];
+
+			var desc = [
+				{text: TEXT},
+				{text: TEXT2}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider, {styled: {color: 'dodgerblue'}}, {fontSize: 16});
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].items.length, 16);
+			assert.equal(pages[0].items[5].item.inlines.length, 3);
+			assert.equal(pages[0].items[5].item.inlines[0].text, 'Locations');
+			assert.equal(pages[0].items[5].item.inlines[1].text, ', ');
+			assert.equal(pages[0].items[5].item.inlines[2].text, 'Swift ');
+
+			assert.equal(pages[0].items[15].item.inlines.length, 3);
+			assert.equal(pages[0].items[15].item.inlines[0].text, 're');
+			assert.equal(pages[0].items[15].item.inlines[1].text, 'mark');
+			assert.equal(pages[0].items[15].item.inlines[2].text, 'able');
 		});
 
 		it('should support images');

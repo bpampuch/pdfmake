@@ -1,4 +1,4 @@
-import {isString, isNumber, isObject, isArray} from './helpers';
+import {isString, isNumber, isObject, isArray, isUndefined} from './helpers';
 import LineBreaker from 'linebreak';
 
 let LEADING = /^(\s)+/g;
@@ -148,6 +148,24 @@ function normalizeTextArray(array, styleContextStack) {
 		}, []);
 	}
 
+	function getOneWord(index, words, noWrap) {
+		if (isUndefined(words[index])) {
+			return null;
+		}
+
+		let word = words[index].text;
+
+		if (noWrap) {
+			let tmpWords = splitWords(normalizeString(word), false);
+			if (isUndefined(tmpWords[tmpWords.length - 1])) {
+				return null;
+			}
+			word = tmpWords[tmpWords.length - 1].text;
+		}
+
+		return word;
+	}
+
 	let results = [];
 
 	if (!isArray(array)) {
@@ -156,6 +174,7 @@ function normalizeTextArray(array, styleContextStack) {
 
 	array = flatten(array);
 
+	let lastWord = null;
 	for (let i = 0, l = array.length; i < l; i++) {
 		let item = array[i];
 		let style = null;
@@ -163,11 +182,24 @@ function normalizeTextArray(array, styleContextStack) {
 
 		let noWrap = getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 		if (isObject(item)) {
+			if (item._textRef && item._textRef._textNodeRef.text) {
+				item.text = item._textRef._textNodeRef.text;
+			}
 			words = splitWords(normalizeString(item.text), noWrap);
 			style = copyStyle(item);
 		} else {
 			words = splitWords(normalizeString(item), noWrap);
 		}
+
+		if (lastWord && words.length) {
+			let firstWord = getOneWord(0, words, noWrap);
+
+			let wrapWords = splitWords(normalizeString(lastWord + firstWord), false);
+			if (wrapWords.length === 1) {
+				results[results.length - 1].noNewLine = true;
+			}
+		}
+
 
 		for (let i2 = 0, l2 = words.length; i2 < l2; i2++) {
 			let result = {
@@ -181,6 +213,11 @@ function normalizeTextArray(array, styleContextStack) {
 			copyStyle(style, result);
 
 			results.push(result);
+		}
+
+		lastWord = null;
+		if (i + 1 < l) {
+			lastWord = getOneWord(words.length - 1, words, noWrap);
 		}
 	}
 

@@ -574,6 +574,18 @@ class LayoutBuilder {
 			line._pageNodeRef = node._pageRef._nodeRef;
 		}
 
+		if (line && line.inlines && isArray(line.inlines)) {
+			for (let i = 0, l = line.inlines.length; i < l; i++) {
+				if (line.inlines[i]._tocItemRef) {
+					line.inlines[i]._pageNodeRef = line.inlines[i]._tocItemRef;
+				}
+
+				if (line.inlines[i]._pageRef) {
+					line.inlines[i]._pageNodeRef = line.inlines[i]._pageRef._nodeRef;
+				}
+			}
+		}
+
 		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
 			let positions = this.writer.addLine(line);
 			node.positions.push(positions);
@@ -608,12 +620,16 @@ class LayoutBuilder {
 		let line = new Line(this.writer.context().availableWidth);
 		let textTools = new TextTools(null);
 
-		while (textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
+		var isForceContinue = false;
+		while (textNode._inlines && textNode._inlines.length > 0 &&
+			(line.hasEnoughSpaceForInline(textNode._inlines[0], textNode._inlines.slice(1)) || isForceContinue)) {
+			let isHardWrap = false;
 			let inline = textNode._inlines.shift();
+			isForceContinue = false;
 
-			if (!inline.noWrap && inline.text.length > 1 && inline.width > line.maxWidth) {
+			if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
 				let widthPerChar = inline.width / inline.text.length;
-				let maxChars = Math.floor(line.maxWidth / widthPerChar);
+				let maxChars = Math.floor(line.getAvailableWidth() / widthPerChar);
 				if (maxChars < 1) {
 					maxChars = 1;
 				}
@@ -627,10 +643,12 @@ class LayoutBuilder {
 					inline.width = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
 
 					textNode._inlines.unshift(newInline);
+					isHardWrap = true;
 				}
 			}
 
 			line.addInline(inline);
+			isForceContinue = inline.noNewLine && !isHardWrap;
 		}
 
 		line.lastLineInParagraph = textNode._inlines.length === 0;

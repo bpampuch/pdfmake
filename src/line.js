@@ -20,7 +20,7 @@ class Line {
 		return y;
 	}
 
-	hasEnoughSpaceForInline(inline) {
+	hasEnoughSpaceForInline(inline, nextInlines = []) {
 		if (this.inlines.length === 0) {
 			return true;
 		}
@@ -28,7 +28,20 @@ class Line {
 			return false;
 		}
 
-		return this.inlineWidths + inline.width - this.leadingCut - (inline.trailingCut || 0) <= this.maxWidth;
+		let inlineWidth = inline.width;
+		let inlineTrailingCut = inline.trailingCut || 0;
+		if (inline.noNewLine) {
+			for (let i = 0, l = nextInlines.length; i < l; i++) {
+				let nextInline = nextInlines[i];
+				inlineWidth += nextInline.width;
+				inlineTrailingCut += nextInline.trailingCut || 0;
+				if (!nextInline.noNewLine) {
+					break;
+				}
+			}
+		}
+
+		return (this.inlineWidths + inlineWidth - this.leadingCut - inlineTrailingCut) <= this.maxWidth;
 	}
 
 	addInline(inline) {
@@ -49,6 +62,10 @@ class Line {
 
 	getWidth() {
 		return this.inlineWidths - this.leadingCut - this.trailingCut;
+	}
+
+	getAvailableWidth() {
+		return this.maxWidth - this.getWidth();
 	}
 
 	/**

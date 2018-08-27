@@ -188,8 +188,8 @@ class DocMeasure {
 
 	measureLeaf(node) {
 
-		if (node._textRef && node._textRef._nodeRef.text) {
-			node.text = node._textRef._nodeRef.text;
+		if (node._textRef && node._textRef._textNodeRef.text) {
+			node.text = node._textRef._textNodeRef.text;
 		}
 
 		// Make sure style properties of the node itself are considered when building inlines.
@@ -217,11 +217,11 @@ class DocMeasure {
 		let textMargin = node.toc.textMargin || [0, 0, 0, 0];
 		for (let i = 0, l = node.toc._items.length; i < l; i++) {
 			let item = node.toc._items[i];
-			let lineStyle = node.toc._items[i].tocStyle || textStyle;
-			let lineMargin = node.toc._items[i].tocMargin || textMargin;
+			let lineStyle = item._textNodeRef.tocStyle || textStyle;
+			let lineMargin = item._textNodeRef.tocMargin || textMargin;
 			body.push([
-				{text: item.text, alignment: 'left', style: lineStyle, margin: lineMargin},
-				{text: '00000', alignment: 'right', _tocItemRef: item, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]}
+				{text: item._textNodeRef.text, alignment: 'left', style: lineStyle, margin: lineMargin},
+				{text: '00000', alignment: 'right', _tocItemRef: item._nodeRef, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]}
 			]);
 		}
 
