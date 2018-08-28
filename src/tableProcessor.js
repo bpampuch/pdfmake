@@ -26,6 +26,9 @@ TableProcessor.prototype.beginTable = function (writer) {
 	this.headerRows = tableNode.table.headerRows || 0;
 	this.rowsWithoutPageBreak = this.headerRows + (tableNode.table.keepWithHeaderRows || 0);
 	this.dontBreakRows = tableNode.table.dontBreakRows || false;
+	
+	this.additionalHeaderRowFn = tableNode.table.additionalHeaderRow;
+	this.currentRowIndex = 0;
 
 	if (this.rowsWithoutPageBreak) {
 		writer.beginUnbreakableBlock();
@@ -126,7 +129,17 @@ TableProcessor.prototype.onRowBreak = function (rowIndex, writer) {
 	};
 };
 
+TableProcessor.prototype.onAfterAddRepeatedTableHandler = function() {
+	var self = this;
+	return function () {
+		if (isFunction(self.additionalHeaderRowFn)) {
+			self.tableNode.table.insertAdditionHeaderRow(self.additionalHeaderRowFn, self.currentRowIndex);
+		}
+	}
+};
+
 TableProcessor.prototype.beginRow = function (rowIndex, writer) {
+	this.currentRowIndex = rowIndex;
 	this.topLineWidth = this.layout.hLineWidth(rowIndex, this.tableNode);
 	this.rowPaddingTop = this.layout.paddingTop(rowIndex, this.tableNode);
 	this.bottomLineWidth = this.layout.hLineWidth(rowIndex + 1, this.tableNode);
@@ -227,9 +240,13 @@ TableProcessor.prototype.endTable = function (writer) {
 		writer.popFromRepeatables();
 		this.headerRepeatableHeight = null;
 	}
+	
+	if (this.insertAdditionHeaderRow) {
+		writer.tracker.stopTracking('afterAddRepeatedTable', this.insertAdditionHeaderRow);
+	}
 };
 
-TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
+TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks, isAdditionalHeaderRow) {
 	var l, i;
 	var self = this;
 	writer.tracker.stopTracking('pageChanged', this.rowCallback);
@@ -358,7 +375,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 	}
 
 	this.drawHorizontalLine(rowIndex + 1, writer);
-
+	
 	if (this.headerRows && rowIndex === this.headerRows - 1) {
 		this.headerRepeatable = writer.currentBlockToRepeatable();
 	}
@@ -375,11 +392,19 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			}
 		);
 	}
+	
+	if (isAdditionalHeaderRow) {
+		return;
+	}
 
 	if (this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
 		this.headerRepeatableHeight = this.headerRepeatable.height;
 		writer.commitUnbreakableBlock();
 		writer.pushToRepeatables(this.headerRepeatable);
+		
+		this.insertAdditionHeaderRow = this.onAfterAddRepeatedTableHandler();
+		writer.tracker.startTracking('afterAddRepeatedTable', this.insertAdditionHeaderRow);
+		
 		this.cleanUpRepeatables = true;
 		this.headerRepeatable = null;
 	}

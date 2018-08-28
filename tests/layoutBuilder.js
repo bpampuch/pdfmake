@@ -1208,6 +1208,60 @@ describe('LayoutBuilder', function () {
 			});
 		});
 
+		it('should repeat table headers and additional row', function () {
+			var additionalRowTxt = 'Cont..';
+			var tableRows = [];
+			tableRows.push(['h1', 'h2', 'h3']);
+
+			for (var i = 0; i < 590; i++) {
+				tableRows.push(['a', 'b', 'c']);
+			}
+
+			var desc = [{
+				table: {
+					headerRows: 1,
+					widths: 'auto',
+					body: tableRows,
+					additionalHeaderRow: function(rowIdx) {
+						return {
+							table: {
+								widths: 'auto',
+								body: [
+									[
+										{
+											text: additionalRowTxt,
+											colSpan: 3
+										},
+										{}, {}
+									]
+								]
+							}
+						};
+					}
+				},
+				layout: emptyTableLayout
+			}];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 11);
+			for (var pIdx = 0; pIdx < pages.length; pIdx++) {
+				var page = pages[pIdx];
+
+				// Repeated header is rendered
+				assert.equal(page.items[0].item.inlines[0].text, 'h1');
+				assert.equal(page.items[0].item.y, 40);
+				assert.equal(page.items[0].item.x, 40);
+
+				// First page doesn't have additional row
+				if (pIdx === 0) {
+					assert.equal(page.items[3].item.inlines[0].text, 'a');
+				} else {
+					assert.equal(page.items[3].item.inlines[0].text, additionalRowTxt);
+				}
+			}
+		});
+
 		it('should not change x positions of repeated table headers, if context.x has changed (bugfix)', function () {
 			var desc = [{
 					table: {
