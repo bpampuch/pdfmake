@@ -81,6 +81,9 @@ describe('PageElementWriter', function () {
 			type: 'line',
 			item: repLine
 		});
+
+		rep.insertedOnPages = [];
+
 		return rep;
 	}
 
