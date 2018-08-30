@@ -333,6 +333,10 @@ describe('PageElementWriter', function () {
 			assert.equal(ctx.pages[1].items[3].item.y, ctx.pages[1].items[2].item.y + AVAILABLE_HEIGHT / 10);
 		});
 
+		it('should add a repeatable fragment to the top when reusing page only once', function () {
+			// TODO
+		});
+
 		it('should add repeatable fragments in the same order they have been added to the repeatable fragments collection', function () {
 			addOneTenthLines(9);
 			pew.repeatables.push(createRepeatable('rep1', 50));
