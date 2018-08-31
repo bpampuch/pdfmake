@@ -1,20 +1,17 @@
 'use strict';
 
-var PDFImage = require('pdfkit/js/image');
-
 function ImageMeasure(pdfKitDoc, imageDictionary) {
 	this.pdfKitDoc = pdfKitDoc;
 	this.imageDictionary = imageDictionary || {};
 }
 
 ImageMeasure.prototype.measureImage = function (src) {
-	var image, label;
+	var image;
 	var that = this;
 
 	if (!this.pdfKitDoc._imageRegistry[src]) {
-		label = 'I' + (++this.pdfKitDoc._imageCount);
 		try {
-			image = PDFImage.open(realImageSrc(src), label);
+			image = this.pdfKitDoc.openImage(realImageSrc(src));
 		} catch (error) {
 			image = null;
 		}
