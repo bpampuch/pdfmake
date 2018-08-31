@@ -6,7 +6,8 @@ function getEngineInstance() {
 	return PdfKit;
 }
 
-function createPdfDocument(options = {}) {
+function createPdfDocument(options) {
+	options = options || {};
 	return new PdfKit(options);
 }
 
