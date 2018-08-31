@@ -1,3 +1,5 @@
+'use strict';
+
 var PdfKit = require('pdfkit');
 
 function getEngineInstance() {
