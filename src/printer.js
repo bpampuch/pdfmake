@@ -1,9 +1,9 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 'use strict';
 
+var PdfKitEngine = require('./pdfKitEngine');
 var FontProvider = require('./fontProvider');
 var LayoutBuilder = require('./layoutBuilder');
-var PdfKit = require('pdfkit');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
 var textDecorator = require('./textDecorator');
@@ -89,7 +89,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	var compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 	var bufferPages = options.bufferPages || false;
 
-	this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], bufferPages: bufferPages, autoFirstPage: false, compress: compressPdf});
+	this.pdfKitDoc = PdfKitEngine.createPdfDocument({size: [pageSize.width, pageSize.height], bufferPages: bufferPages, autoFirstPage: false, compress: compressPdf});
 	setMetadata(docDefinition, this.pdfKitDoc);
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
