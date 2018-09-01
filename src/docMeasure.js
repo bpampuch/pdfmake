@@ -597,6 +597,12 @@ DocMeasure.prototype.measureTable = function (node) {
 			vLineColor: function (i, node) {
 				return 'black';
 			},
+			hLineStyle: function (i, node) {
+				return null;
+			},
+			vLineStyle: function (i, node) {
+				return null;
+			},
 			paddingLeft: function (i, node) {
 				return 4;
 			},

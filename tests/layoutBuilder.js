@@ -65,6 +65,12 @@ var emptyTableLayout = {
 	vLineColor: function (i) {
 		return 'black';
 	},
+	hLineStyle: function (i, node) {
+		return null;
+	},
+	vLineStyle: function (i, node) {
+		return null;
+	},
 	paddingLeft: function (i) {
 		return 0;
 	},
