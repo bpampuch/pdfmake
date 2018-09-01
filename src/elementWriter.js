@@ -49,6 +49,8 @@ ElementWriter.prototype.addLine = function (line, dontUpdateContextPosition, ind
 		context.moveDown(height);
 	}
 
+	position.height = height;
+
 	return position;
 };
 
@@ -112,6 +114,8 @@ ElementWriter.prototype.addImage = function (image, index) {
 
 	context.moveDown(image._height);
 
+	position.height = image._height;
+
 	return position;
 };
 
@@ -141,6 +145,8 @@ ElementWriter.prototype.addQr = function (qr, index) {
 	}
 
 	context.moveDown(qr._height);
+
+	position.height = qr._height;
 
 	return position;
 };
@@ -193,6 +199,9 @@ ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreCont
 			type: 'vector',
 			item: vector
 		}, index);
+
+		position.height = null;
+
 		return position;
 	}
 };
