@@ -1488,6 +1488,25 @@ describe('LayoutBuilder', function () {
 			assert.equal(pages[0].items[15].item.inlines[2].text, 'able');
 		});
 
+		it('should support line break if is text inlines and is new line', function () {
+			var desc = [
+				{text: 'First line.\n'},
+				{text: 'Second line.'}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].items.length, 2);
+			assert.equal(pages[0].items[0].item.inlines.length, 2);
+			assert.equal(pages[0].items[0].item.inlines[0].text, 'First ');
+			assert.equal(pages[0].items[0].item.inlines[1].text, 'line.');
+
+			assert.equal(pages[0].items[1].item.inlines.length, 2);
+			assert.equal(pages[0].items[1].item.inlines[0].text, 'Second ');
+			assert.equal(pages[0].items[1].item.inlines[1].text, 'line.');
+		});
+
 		it('should support images');
 		it('should align image properly');
 		it('should break pages if image cannot fit on current page');
