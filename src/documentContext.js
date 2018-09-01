@@ -93,7 +93,7 @@ DocumentContext.prototype.saveContextInEndingCell = function (endingCell) {
 	};
 };
 
-DocumentContext.prototype.completeColumnGroup = function (height, rowContentHeight) {
+DocumentContext.prototype.completeColumnGroup = function (height) {
 	var saved = this.snapshots.pop();
 
 	this.calculateBottomMost(saved);
@@ -108,7 +108,7 @@ DocumentContext.prototype.completeColumnGroup = function (height, rowContentHeig
 				y = saved.y + height;
 			}
 		} else {
-			y += height - rowContentHeight;
+			y += height;
 		}
 	}
 

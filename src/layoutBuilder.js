@@ -490,22 +490,10 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 			}
 		}
 
-		var rowContentHeight = getRowContentHeight(positions);
-		self.writer.context().completeColumnGroup(height, rowContentHeight);
+		self.writer.context().completeColumnGroup(height);
 	});
 
 	return {pageBreaks: pageBreaks, positions: positions};
-
-	function getRowContentHeight(positions) {
-		var itemHeight = 0;
-		for (var i = 0, l = positions.length; i < l; i++) {
-			if (positions[i].height && itemHeight < positions[i].height) {
-				itemHeight = positions[i].height;
-			}
-		}
-
-		return itemHeight;
-	}
 
 	function storePageBreakData(data) {
 		var pageDesc;
