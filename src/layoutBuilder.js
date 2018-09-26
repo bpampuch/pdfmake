@@ -457,7 +457,7 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 		availableWidth -= (gaps.length - 1) * columnNode._gap;
 	}
 
-	ColumnCalculator.buildColumnWidths(columns, availableWidth);
+	ColumnCalculator.buildColumnWidths(columns, availableWidth, columnNode.autoStar);
 	var result = this.processRow(columns, columns, gaps);
 	addAll(columnNode.positions, result.positions);
 

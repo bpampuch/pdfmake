@@ -7454,7 +7454,7 @@ module.exports = TextTools;
 
 var isString = __webpack_require__(0).isString;
 
-function buildColumnWidths(columns, availableWidth) {
+function buildColumnWidths(columns, availableWidth, autoStar) {
 	var autoColumns = [],
 		autoMin = 0, autoMax = 0,
 		starColumns = [],
@@ -7510,11 +7510,21 @@ function buildColumnWidths(columns, availableWidth) {
 		});
 	} else {
 		if (maxW < availableWidth) {
-			// case 2 - we can fit rest of the table within available space
-			autoColumns.forEach(function (col) {
-				col._calcWidth = col._maxWidth;
-				availableWidth -= col._calcWidth;
-			});
+		    if (autoStar && starColumns.length > 0) {
+		        //autostar
+		        var W2 = (availableWidth - maxW) / 2;
+		        autoColumns.forEach(function (col) {
+		            //col._calcWidth = col._maxWidth;
+		            col._calcWidth = col._maxWidth + col._maxWidth / autoMax * W2;
+		            availableWidth -= col._calcWidth;
+		        });
+		    } else {
+		        // case 2 - we can fit rest of the table within available space
+		        autoColumns.forEach(function (col) {
+		            col._calcWidth = col._maxWidth;
+		            availableWidth -= col._calcWidth;
+		        });
+		    }
 		} else {
 			// maxW is too large, but minW fits within available width
 			var W = availableWidth - minW;
@@ -46941,7 +46951,25 @@ LayoutBuilder.prototype.processNode = function (node) {
 	});
 
 	function applyMargins(callback) {
-		var margin = node._margin;
+
+	    var margin = node._margin;
+
+	    //snap image to bottom, autoflow continues after image
+		if (node.image && node.snapToBottom) {
+		    if (!margin) {
+		        node._margin = margin = [0, 0, 0, 0]
+		    }
+		    var gap = 0
+		    if (self.writer.writer.context.availableHeight >= node.height + margin[3]) {
+		        gap = self.writer.writer.context.availableHeight - node.height - margin[3]
+		        margin[1] = gap
+		    } else {
+		        node.pageBreak = 'before'
+		        var cleanPageHeight = self.writer.writer.context.availableHeight + self.writer.writer.context.y
+		        var gap = cleanPageHeight - self.writer.writer.context.pageMargins.top - node.height - margin[3]
+		        margin[1] = gap
+		    }
+		}
 
 		if (node.pageBreak === 'before') {
 			self.writer.moveToNextPage(node.pageOrientation);
@@ -46986,7 +47014,7 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 		availableWidth -= (gaps.length - 1) * columnNode._gap;
 	}
 
-	ColumnCalculator.buildColumnWidths(columns, availableWidth);
+	ColumnCalculator.buildColumnWidths(columns, availableWidth, columnNode.autoStar);
 	var result = this.processRow(columns, columns, gaps);
 	addAll(columnNode.positions, result.positions);
 
@@ -48140,6 +48168,12 @@ DocMeasure.prototype.measureTable = function (node) {
 			vLineColor: function (i, node) {
 				return 'black';
 			},
+			hLineStyle: function (i, node) {
+				return null;
+			},
+			vLineStyle: function (i, node) {
+				return null;
+			},
 			paddingLeft: function (i, node) {
 				return 4;
 			},
@@ -49198,7 +49232,7 @@ PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
 	this.writer.tracker.emit('pageChanged', {
 		prevPage: nextPage.prevPage,
 		prevY: nextPage.prevY,
-		y: nextPage.y
+		y: this.writer.context.y
 	});
 };
 
@@ -49623,7 +49657,7 @@ TableProcessor.prototype.beginTable = function (writer) {
 	this.layout = tableNode._layout;
 
 	availableWidth = writer.context().availableWidth - this.offsets.total;
-	ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth);
+	ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth,tableNode.autoStar);
 
 	this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
 	this.rowSpanData = prepareRowSpanData();
@@ -49754,6 +49788,12 @@ TableProcessor.prototype.beginRow = function (rowIndex, writer) {
 TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overrideY) {
 	var lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode);
 	if (lineWidth) {
+		var style = this.layout.hLineStyle(lineIndex, this.tableNode);
+		var dash;
+		if (style && style.dash) {
+			dash = style.dash;
+		}
+
 		var offset = lineWidth / 2;
 		var currentLine = null;
 		var body = this.tableNode.table.body;
@@ -49801,6 +49841,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 						y1: y,
 						y2: y,
 						lineWidth: lineWidth,
+						dash: dash,
 						lineColor: isFunction(this.layout.hLineColor) ? this.layout.hLineColor(lineIndex, this.tableNode) : this.layout.hLineColor
 					}, false, overrideY);
 					currentLine = null;
@@ -49817,6 +49858,11 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineIndex, wri
 	if (width === 0) {
 		return;
 	}
+	var style = this.layout.vLineStyle(vLineIndex, this.tableNode);
+	var dash;
+	if (style && style.dash) {
+		dash = style.dash;
+	}
 	writer.addVector({
 		type: 'line',
 		x1: x + width / 2,
@@ -49824,6 +49870,7 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineIndex, wri
 		y1: y0,
 		y2: y1,
 		lineWidth: width,
+		dash: dash,
 		lineColor: isFunction(this.layout.vLineColor) ? this.layout.vLineColor(vLineIndex, this.tableNode) : this.layout.vLineColor
 	}, false, true);
 };
@@ -49831,7 +49878,6 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineIndex, wri
 TableProcessor.prototype.endTable = function (writer) {
 	if (this.cleanUpRepeatables) {
 		writer.popFromRepeatables();
-		this.headerRepeatableHeight = null;
 	}
 };
 
@@ -49863,10 +49909,6 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			ys[ys.length - 1].y1 = pageBreak.prevY;
 
 			ys.push({y0: pageBreak.y, page: pageBreak.prevPage + 1});
-
-			if (this.headerRepeatableHeight) {
-				ys[ys.length - 1].y0 += this.headerRepeatableHeight;
-			}
 		}
 	}
 
@@ -49983,7 +50025,6 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 	}
 
 	if (this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
-		this.headerRepeatableHeight = this.headerRepeatable.height;
 		writer.commitUnbreakableBlock();
 		writer.pushToRepeatables(this.headerRepeatable);
 		this.cleanUpRepeatables = true;
