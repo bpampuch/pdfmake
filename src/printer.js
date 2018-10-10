@@ -405,17 +405,55 @@ function renderLine(line, x, y, pdfKitDoc) {
 		pdfKitDoc.fontSize(inline.fontSize);
 		
 		var newY = y + shiftToBaseline;
-		if (inline.sup){
-			// console.log("Do we have superscript?", inline.sup);
-			// console.log("The text: ", inline.text);
-			newY -= inline.fontSize*0.75;
+		var fontSize = inline.fontSize;
+		if (inline.sup === true){
+			console.log('sup given as boolean')
+			fontSize *= 0.70833;
+			newY -= fontSize*0.2;
+			// Word default: 12pt font subscript is 8.5pt; 8.5/12 ~ 0.70833
+		} else if (inline.sup.hasOwnProperty('offset')) {
+			console.log('sup given as offset');
+			if (inline.sup.hasOwnProperty('fontSize')) {
+				console.log('font size a');
+				fontSize = +inline.sup.fontSize;
+			} else {
+				console.log('font size b');
+				fontSize *= 0.70833;
+			}
+
+			if (inline.sup.offset.slice(inline.sup.offset.length - 1) === '%') {
+				console.log('offset given as %');
+				newY -= fontSize * (+inline.sup.offset.slice(0, inline.sup.offset.length - 1)/100);
+			} else if (inline.sup.offset.slice(inline.sup.offset.length - 2) === 'pt') {
+				console.log('offset given as pt');
+				newY -= +inline.sup.offset.slice(0, inline.sup.offset.length - 2);
+			}
+			
 		}
+		if (inline.sub === true) {
+			fontSize *= 0.70833;
+			newY += inline.fontSize*0.35;
+		} else if (inline.sub.hasOwnProperty('offset')) {
+			if (inline.sub.hasOwnProperty('fontSize')) {
+				fontSize = inline.sub.fontSize;
+			} else {
+				fontSize *= 0.70833;
+			}
+
+			if (inline.sub.offset.slice(inline.sub.offset.length - 1) === '%') {
+				// default offset is 0.35. The user-specified offset will start near there and go down.
+				newY += fontSize * ((+inline.sub.offset.slice(0, inline.sub.offset.length - 1)/100) + 0.35);
+			} else if (inline.sub.offset.slice(inline.sub.offset.length - 2) === 'pt') {
+				newY += inline.sub.offset.slice(0,inline.sub.offset.length - 2);
+			}
+		}
+		pdfKitDoc.fontSize(fontSize);
 		pdfKitDoc.text(inline.text, x + inline.x, newY, options);
 		
 
 		if (inline.linkToPage) {
 			var _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0]}).end();
-			pdfKitDoc.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, {Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null]});
+			pdfKitDoc.annotate(x + inline.x, newY, inline.width, inline.height, {Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null]});
 		}
 
 	}

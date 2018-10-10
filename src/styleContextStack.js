@@ -103,7 +103,8 @@ StyleContextStack.prototype.autopush = function (item) {
 		'noWrap',
 		'markerColor',
 		'leadingIndent',
-		'sup'
+		'sup',
+		'sub'
 			//'tableCellPadding'
 			// 'cellBorder',
 			// 'headerCellBorder',
@@ -150,6 +151,7 @@ StyleContextStack.prototype.auto = function (item, callback) {
 /**
  * Evaluates stack and returns value of a named property
  *
+ * 
  * @param {String} property - property name
  * @return property value or null if not found
  */
