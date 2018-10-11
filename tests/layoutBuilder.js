@@ -687,27 +687,35 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
+			var fontSize = 12;
 			var pages = builder.layoutDocument(desc, sampleTestProvider, {
 				header: {
 					italics: true,
-					fontSize: 50
+					fontSize: fontSize
 				}
 			});
 
 			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 5);
+			assert.equal(pages[0].items.length, 10);
+
 			assert.equal(pages[0].items[0].item.x, pages[0].items[1].item.x);
 			assert.equal(pages[0].items[1].item.x, pages[0].items[2].item.x);
 
-			assert.equal(pages[0].items[0].item.y, pages[0].items[3].item.y);
-			assert.equal(pages[0].items[0].item.y, pages[0].items[4].item.y);
+			assert.equal(pages[0].items[0].item.y, pages[0].items[6].item.y);
+			assert.equal(pages[0].items[0].item.y, pages[0].items[8].item.y);
 
-			assert.equal(pages[0].items[0].item.inlines[0].width, 9 * 50 * 1.5);
-			assert.equal(pages[0].items[1].item.inlines[0].width, 10 * 50 * 1.5);
+			assert.equal(pages[0].items[0].item.inlines[0].width, 5 * fontSize * 1.5);
+			assert.equal(pages[0].items[1].item.inlines[0].width, 4 * fontSize * 1.5);
+			assert.equal(pages[0].items[2].item.inlines[0].width, 5 * fontSize * 1.5);
+			assert.equal(pages[0].items[3].item.inlines[0].width, 5 * fontSize * 1.5);
+			assert.equal(pages[0].items[4].item.inlines[0].width, 8 * fontSize);
+			assert.equal(pages[0].items[5].item.inlines[0].width, 2 * fontSize);
 
-			assert.equal(pages[0].items[2].item.inlines[0].width, 10 * 50);
-			assert.equal(pages[0].items[3].item.inlines[0].width, 8 * 50);
-			assert.equal(pages[0].items[4].item.inlines[0].width, 6 * 50);
+			assert.equal(pages[0].items[6].item.inlines[0].width, 8 * fontSize);
+			assert.equal(pages[0].items[7].item.inlines[0].width, 6 * fontSize);
+
+			assert.equal(pages[0].items[8].item.inlines[0].width, 6 * fontSize);
+			assert.equal(pages[0].items[9].item.inlines[0].width, 6 * fontSize);
 		});
 
 		it('should support unordered lists', function () {
@@ -1418,6 +1426,20 @@ describe('LayoutBuilder', function () {
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages[0].items.length, 3);
 		});
+
+		it('should support wrap long word in columns', function () {
+			var desc = [
+				{ columns: [
+					{ width: "*",
+						text: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
+					}
+				]}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+			assert.equal(pages[0].items.length, 3);
+		});
+
 
 		it('should support wrap long word with big font size', function () {
 			var desc = [

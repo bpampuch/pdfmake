@@ -76,7 +76,8 @@ describe('ColumnCalculator', function () {
 			});
 		});
 
-		it('should set calcWidth of star columns to largest star min-width if there is not enough space for the table', function () {
+		it('should set calcWidth of star columns to availableSpace distributed across star'+
+			'columns if there is not enough space for the table', function () {
 			var columns = [
 				{width: 'auto', _minWidth: 300, _maxWidth: 410},
 				{width: '*', _minWidth: 301, _maxWidth: 420},
@@ -85,8 +86,8 @@ describe('ColumnCalculator', function () {
 
 			ColumnCalculator.buildColumnWidths(columns, 320);
 			assert.equal(columns[0]._calcWidth, columns[0]._minWidth);
-			assert.equal(columns[1]._calcWidth, 303);
-			assert.equal(columns[2]._calcWidth, 303);
+			assert.equal(columns[1]._calcWidth, 10);
+			assert.equal(columns[2]._calcWidth, 10);
 		});
 
 		it('should make columns wider proportionally if table can fit within the available space', function () {

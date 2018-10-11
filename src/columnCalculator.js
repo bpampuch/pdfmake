@@ -43,18 +43,25 @@ function buildColumnWidths(columns, availableWidth) {
 	// http://www.w3.org/TR/CSS2/tables.html#width-layout
 	// http://dev.w3.org/csswg/css3-tables-algorithms/Overview.src.htm
 	var minW = autoMin + starMaxMin * starColumns.length;
+	var availableMinW = Math.floor((availableWidth - autoMin) / starColumns.length);
 	var maxW = autoMax + starMaxMax * starColumns.length;
 	if (minW >= availableWidth) {
 		// case 1 - there's no way to fit all columns within available width
 		// that's actually pretty bad situation with PDF as we have no horizontal scroll
-		// no easy workaround (unless we decide, in the future, to split single words)
-		// currently we simply use minWidths for all columns
+		// we leave auto columns with their minWidth
 		autoColumns.forEach(function (col) {
 			col._calcWidth = col._minWidth;
 		});
 
+		// for star columns we go down to the bare minimum
+		// if noWrap isn't set, then we can break single words
+		// otherwise we simply use minWidths for all star columns
 		starColumns.forEach(function (col) {
-			col._calcWidth = starMaxMin; // starMaxMin already contains padding
+			if (col.noWrap) {
+				col._calcWidth = starMaxMin; // starMaxMin already contains padding
+			} else {
+				col._calcWidth = availableMinW;
+			}
 		});
 	} else {
 		if (maxW < availableWidth) {
