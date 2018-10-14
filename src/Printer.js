@@ -76,6 +76,8 @@ class Printer {
 
 		docDefinition.pageMargins = getPageMargins(docDefinition.pageMargins) || pageMargins;
 		docDefinition.images = docDefinition.images || {};
+		docDefinition.styles = docDefinition.styles || {};
+		docDefinition.defaultStyle = docDefinition.defaultStyle || { font: defaults.font, fontSize: defaults.fontSize };
 
 		let pageSize = getPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 		let pdfOptions = {

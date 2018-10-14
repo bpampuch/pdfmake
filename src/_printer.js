@@ -81,25 +81,25 @@ class PdfPrinter {
 	 * @return {Object} a pdfKit document object which can be saved or encode to data-url
 	 */
 	createPdfKitDocument(docDefinition, options = {}) {
-		let pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
+//		let pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 		let compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 		let bufferPages = options.bufferPages || false;
 
 		this.pdfKitDoc = PdfKitEngine.createPdfDocument({size: [pageSize.width, pageSize.height], autoFirstPage: false, compress: compressPdf, bufferPages: bufferPages});
 		setMetadata(docDefinition, this.pdfKitDoc);
 
-		this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
+//		this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
-		docDefinition.images = docDefinition.images || {};
+//		docDefinition.images = docDefinition.images || {};
 
-		let builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
+		let builder = new LayoutBuilder(pageSize, /*fixPageMargins(*/docDefinition.pageMargins /*|| 40)*//*, new ImageMeasure(this.pdfKitDoc, docDefinition.images)*/);
 
 		registerDefaultTableLayouts(builder);
 		if (options.tableLayouts) {
 			builder.registerTableLayouts(options.tableLayouts);
 		}
 
-		let pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
+		let pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles /*|| {}*/, docDefinition.defaultStyle /*|| {fontSize: 12, font: 'Roboto'}*/, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
 		let maxNumberPages = docDefinition.maxPagesNumber || -1;
 		if (isNumber(maxNumberPages) && maxNumberPages > -1) {
 			pages = pages.slice(0, maxNumberPages);
