@@ -1,14 +1,9 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 
-import {isFunction, isString, isNumber, isBoolean, isArray, isUndefined} from './helpers';
-import FontProvider from './fontProvider';
+import {isUndefined} from './helpers';
 import LayoutBuilder from './layoutBuilder';
-import sizes from './standardPageSizes';
-import ImageMeasure from './imageMeasure';
 import textDecorator from './textDecorator';
 import TextTools from './textTools';
-import PdfKitEngine from 'pdfKitEngine';
-
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -91,10 +86,6 @@ class PdfPrinter {
 		}
 
 		let pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles /*|| {}*/, docDefinition.defaultStyle /*|| {fontSize: 12, font: 'Roboto'}*/, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
-		let maxNumberPages = docDefinition.maxPagesNumber || -1;
-		if (isNumber(maxNumberPages) && maxNumberPages > -1) {
-			pages = pages.slice(0, maxNumberPages);
-		}
 
 		renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
 

@@ -191,6 +191,11 @@ class Printer {
 		let builder = new LayoutBuilderClass(this.pdfDocument, pageSize, docDefinition.pageMargins);
 		let pages = builder.buildDocument(docDefinition.content, docDefinition.styles, docDefinition.defaultStyle);
 
+		var maxNumberPages = docDefinition.maxPagesNumber || -1;
+		if (isNumber(maxNumberPages) && maxNumberPages > -1) {
+			pages = pages.slice(0, maxNumberPages);
+		}
+
 		// if pageSize.height is set to Infinity, calculate the actual height of the page that
 		// was laid out using the height of each of the items in the page.
 		if (pageSize.height === Infinity) {
