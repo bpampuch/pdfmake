@@ -7,24 +7,10 @@ import TraversalTracker from './traversalTracker';
  */
 class DocumentContext {
 	constructor(pageSize, pageMargins) {
-		this.pages = [];
-
-		this.pageMargins = pageMargins;
-
-		this.x = pageMargins.left;
-		this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
-		this.availableHeight = 0;
-		this.page = -1;
-
-		this.snapshots = [];
 
 		this.endingCell = null;
 
 		this.tracker = new TraversalTracker();
-
-		this.backgroundLength = [];
-
-		this.addPage(pageSize);
 
 	}
 
@@ -120,43 +106,6 @@ class DocumentContext {
 			this.availableHeight -= (y - saved.bottomMost.y);
 		}
 		this.lastColumnWidth = saved.lastColumnWidth;
-	}
-
-	addMargin(left, right) {
-		this.x += left;
-		this.availableWidth -= left + (right || 0);
-	}
-
-	moveDown(offset) {
-		this.y += offset;
-		this.availableHeight -= offset;
-
-		return this.availableHeight > 0;
-	}
-
-	initializePage() {
-		this.y = this.pageMargins.top;
-		this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-		this.pageSnapshot().availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
-	}
-
-	pageSnapshot() {
-		if (this.snapshots[0]) {
-			return this.snapshots[0];
-		} else {
-			return this;
-		}
-	}
-
-	moveTo(x, y) {
-		if (x !== undefined && x !== null) {
-			this.x = x;
-			this.availableWidth = this.getCurrentPage().pageSize.width - this.x - this.pageMargins.right;
-		}
-		if (y !== undefined && y !== null) {
-			this.y = y;
-			this.availableHeight = this.getCurrentPage().pageSize.height - this.y - this.pageMargins.bottom;
-		}
 	}
 
 	beginDetachedBlock() {
