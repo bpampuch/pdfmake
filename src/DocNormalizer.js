@@ -33,30 +33,61 @@ class DocNormalizer {
 	}
 
 	normalizeNode(node) {
-		for (let shortcut of this.shortcuts) {
-			node = shortcut.callback(node);
-		}
+		node = this.processAllWithoutCondition(this.shortcuts, node);
+		node = this.processFirst(this.nodeTypes, node);
+		node = this.processAll(this.properties, node);
 
-		let nodeTypeFound = false;
-		for (let nodeType of this.nodeTypes) {
-			if (nodeType.condition(node)) { // only first match
-				node = nodeType.callback(node);
-				nodeTypeFound = true;
-				break;
-			}
-		}
+		return node;
+	}
 
-		if (!nodeTypeFound) {
-			throw 'Unrecognized document structure: ' + stringifyNode(node);
-		}
-
-		for (let property of this.properties) {
-			if (property.condition(node)) { // all matches
-				node = property.callback(node);
+	/**
+	 * Process all items with condition
+	 *
+	 * @param {Array} items
+	 * @param {object} node
+	 * @return {object}
+	 */
+	processAll(items, node) {
+		for (let item of items) {
+			if (item.condition(node)) {
+				node = item.callback(node);
 			}
 		}
 
 		return node;
+	}
+
+	/**
+	 * Process all items without condition
+	 *
+	 * @param {Array} items
+	 * @param {object} node
+	 * @return {object}
+	 */
+	processAllWithoutCondition(items, node) {
+		for (let item of items) {
+			node = item.callback(node);
+		}
+
+		return node;
+	}
+
+	/**
+	 * Process only first item with condition
+	 *
+	 * @param {Array} items
+	 * @param {object} node
+	 * @return {object}
+	 */
+	processFirst(items, node) {
+		for (let item of items) {
+			if (item.condition(node)) {
+				node = item.callback(node);
+				return node;
+			}
+		}
+
+		throw 'Unrecognized document structure: ' + stringifyNode(node);
 	}
 
 }
