@@ -1,5 +1,4 @@
 import {isString} from './helpers';
-import TraversalTracker from './traversalTracker';
 
 /**
  * A store for current x, y positions and available width/height.
@@ -9,8 +8,6 @@ class DocumentContext {
 	constructor(pageSize, pageMargins) {
 
 		this.endingCell = null;
-
-		this.tracker = new TraversalTracker();
 
 	}
 
@@ -161,42 +158,6 @@ class DocumentContext {
 		};
 	}
 
-	addPage(pageSize) {
-		let page = {items: [], pageSize: pageSize};
-		this.pages.push(page);
-		this.backgroundLength.push(0);
-		this.page = this.pages.length - 1;
-		this.initializePage();
-
-		this.tracker.emit('pageAdded');
-
-		return page;
-	}
-
-	getCurrentPage() {
-		if (this.page < 0 || this.page >= this.pages.length) {
-			return null;
-		}
-
-		return this.pages[this.page];
-	}
-
-	getCurrentPosition() {
-		let pageSize = this.getCurrentPage().pageSize;
-		let innerHeight = pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-		let innerWidth = pageSize.width - this.pageMargins.left - this.pageMargins.right;
-
-		return {
-			pageNumber: this.page + 1,
-			pageOrientation: pageSize.orientation,
-			pageInnerHeight: innerHeight,
-			pageInnerWidth: innerWidth,
-			left: this.x,
-			top: this.y,
-			verticalRatio: ((this.y - this.pageMargins.top) / innerHeight),
-			horizontalRatio: ((this.x - this.pageMargins.left) / innerWidth)
-		};
-	}
 }
 
 function pageOrientation(pageOrientationString, currentPageOrientation) {

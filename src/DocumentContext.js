@@ -1,4 +1,5 @@
 import { isString, isValue } from './helpers/variableType';
+import { EventEmitter } from 'events';
 
 const getPageSize = function (currentPage, newPageOrientation) {
 	newPageOrientation = getPageOrientation(newPageOrientation, currentPage.pageSize.orientation);
@@ -47,6 +48,8 @@ class DocumentContext {
 		this.availableHeight = 0;
 		this.page = -1;
 
+		this.events = new EventEmitter();
+
 		this.addPage(pageSize);
 	}
 
@@ -73,7 +76,7 @@ class DocumentContext {
 		this.page = this.pages.length - 1;
 		this.initializePage();
 
-		//this.tracker.emit('pageAdded'); // TODO
+		this.events.emit('pageAdded');
 
 		return page;
 	}
