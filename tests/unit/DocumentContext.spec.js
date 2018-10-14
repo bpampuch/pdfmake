@@ -63,7 +63,25 @@ describe('DocumentContext', function () {
 	});
 
 	describe('moveToNextPage', function () {
-		// TODO
+		it('should add new page in portrait', function () {
+			context.moveToNextPage();
+
+			assert.equal(context.pages[0].pageSize.orientation, 'portrait');
+			assert.equal(context.pages[1].pageSize.orientation, 'portrait');
+		});
+
+		it('should add a new page in the same orientation as the previous one', function () {
+			context.moveToNextPage('landscape');
+			context.moveToNextPage();
+			context.moveToNextPage('portrait');
+			context.moveToNextPage();
+
+			assert.equal(context.pages[0].pageSize.orientation, 'portrait');
+			assert.equal(context.pages[1].pageSize.orientation, 'landscape');
+			assert.equal(context.pages[2].pageSize.orientation, 'landscape');
+			assert.equal(context.pages[3].pageSize.orientation, 'portrait');
+			assert.equal(context.pages[4].pageSize.orientation, 'portrait');
+		});
 	});
 
 	describe('addPage', function () {
