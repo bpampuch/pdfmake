@@ -6,6 +6,8 @@ describe('StyleContextStack', function () {
 
 	var defaultStyle = { fontSize: 12, bold: false, font: 'Helvetica' };
 
+	var styleStack = new StyleContextStack({}, { font: 'Times New Roman' });
+
 	var stackWithDefaultStyle;
 	var fullStack;
 
@@ -141,12 +143,48 @@ describe('StyleContextStack', function () {
 	});
 
 	describe('getStyleProperty', function () {
-		//console.log(StyleContextStack.getStyleProperty({}, null, 'font', 'Roboto'));
-		// TODO
+
+		it('should return default property value', function () {
+			assert.equal(StyleContextStack.getStyleProperty({}, null, 'font', 'Arial'), 'Arial');
+			assert.equal(StyleContextStack.getStyleProperty({}, styleStack, 'fontSize', 20), 20);
+			assert.equal(StyleContextStack.getStyleProperty({ bold: true }, styleStack, 'fontSize', 20), 20);
+			assert.equal(StyleContextStack.getStyleProperty({ bold: true }, null, 'fontSize', 20), 20);
+		});
+
+		it('should return value from style stack', function () {
+			assert.equal(StyleContextStack.getStyleProperty({}, styleStack, 'font', 'Arial'), 'Times New Roman');
+			assert.equal(StyleContextStack.getStyleProperty({ bold: true }, styleStack, 'font', 'Arial'), 'Times New Roman');
+		});
+
+		it('should return value from node', function () {
+			assert.equal(StyleContextStack.getStyleProperty({ font: 'ZapfDingbats' }, styleStack, 'font', 'Arial'), 'ZapfDingbats');
+			assert.equal(StyleContextStack.getStyleProperty({ font: 'ZapfDingbats', bold: true }, null, 'font', 'Arial'), 'ZapfDingbats');
+		});
+
 	});
 
 	describe('copyStyle', function () {
-		// TODO
+
+		it('should copy style from text node to new node', function () {
+			var sourceNode = { text: 'text node', font: 'Arial', fontSize: 20, bold: true };
+			var result = StyleContextStack.copyStyle(sourceNode);
+			assert.equal(result.text, undefined);
+			assert.equal(result.font, 'Arial');
+			assert.equal(result.fontSize, 20);
+			assert.equal(result.bold, true);
+		});
+
+		it('should copy style from text node to another node', function () {
+			var sourceNode = { text: 'text node', font: 'Arial', fontSize: 20, bold: true };
+			var destinationNode = { text: 'destination node', font: 'Roboto', italics: true };
+			StyleContextStack.copyStyle(sourceNode, destinationNode);
+			assert.equal(destinationNode.text, 'destination node');
+			assert.equal(destinationNode.font, 'Arial');
+			assert.equal(destinationNode.fontSize, 20);
+			assert.equal(destinationNode.bold, true);
+			assert.equal(destinationNode.italics, true);
+		});
+
 	});
 
 });
