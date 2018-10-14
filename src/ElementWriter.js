@@ -1,4 +1,5 @@
 import { isNumber, isValue } from './helpers/variableType';
+import { offsetVector, pack } from './helpers/tools';
 import { EventEmitter } from 'events';
 import DocumentContext from './DocumentContext';
 import Line from './Line';
@@ -91,6 +92,16 @@ class ElementWriter extends EventEmitter {
 						item: l
 					});
 					break;
+
+				case 'vector':
+					var v = pack(item.item);
+
+					offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+					page.items.push({
+						type: 'vector',
+						item: v
+					});
+					break;
 			}
 		});
 
@@ -127,6 +138,21 @@ class ElementWriter extends EventEmitter {
 		}
 
 		return position;
+	}
+
+	addVector(vector, ignoreContextX, ignoreContextY, index) {
+		let context = this.context;
+		let page = context.getCurrentPage();
+		let position = this.getCurrentPositionOnPage();
+
+		if (page) {
+			offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
+			addPageItem(page, {
+				type: 'vector',
+				item: vector
+			}, index);
+			return position;
+		}
 	}
 
 	/**
