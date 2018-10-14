@@ -23,10 +23,10 @@ class DocPreprocessor {
 			return this.preprocessText(node);
 		} else if (node.toc) {
 			return this.preprocessToc(node);
-		} else if (node.image) {
-			return this.preprocessImage(node);
-		} else if (node.canvas) {
-			return this.preprocessCanvas(node);
+//		} else if (node.image) {
+//			return this.preprocessImage(node);
+//		} else if (node.canvas) {
+//			return this.preprocessCanvas(node);
 		} else if (node.qr) {
 			return this.preprocessQr(node);
 		} else if (node.pageReference || node.textReference) {
@@ -182,17 +182,6 @@ class DocPreprocessor {
 
 		this.tocs[node.toc.id] = node;
 
-		return node;
-	}
-
-	preprocessImage(node) {
-		if (!isUndefined(node.image.type) && !isUndefined(node.image.data) && (node.image.type === 'Buffer') && isArray(node.image.data)) {
-			node.image = Buffer.from(node.image.data);
-		}
-		return node;
-	}
-
-	preprocessCanvas(node) {
 		return node;
 	}
 
