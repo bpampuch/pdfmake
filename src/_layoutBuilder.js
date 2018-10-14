@@ -287,23 +287,7 @@ class LayoutBuilder {
 		this.linearNodeList.push(node);
 		decorateNode(node);
 
-		applyMargins(() => {
-			let unbreakable = node.unbreakable;
-			if (unbreakable) {
-				self.writer.beginUnbreakableBlock();
-			}
 
-			let absPosition = node.absolutePosition;
-			if (absPosition) {
-				self.writer.context().beginDetachedBlock();
-				self.writer.context().moveTo(absPosition.x || 0, absPosition.y || 0);
-			}
-
-			let relPosition = node.relativePosition;
-			if (relPosition) {
-				self.writer.context().beginDetachedBlock();
-				self.writer.context().moveTo((relPosition.x || 0) + self.writer.context().x, (relPosition.y || 0) + self.writer.context().y);
-			}
 
 			if (node.stack) {
 				self.processVerticalContainer(node);
@@ -329,50 +313,8 @@ class LayoutBuilder {
 				throw `Unrecognized document structure: ${JSON.stringify(node, fontStringify)}`;
 			}
 
-			if (absPosition || relPosition) {
-				self.writer.context().endDetachedBlock();
-			}
-
-			if (unbreakable) {
-				self.writer.commitUnbreakableBlock();
-			}
-		});
-
-		function applyMargins(callback) {
-			let margin = node._margin;
-
-			if (node.pageBreak === 'before') {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
-
-			if (margin) {
-				self.writer.context().moveDown(margin[1]);
-				self.writer.context().addMargin(margin[0], margin[2]);
-			}
-
-			callback();
-
-			if (margin) {
-				self.writer.context().addMargin(-margin[0], -margin[2]);
-				self.writer.context().moveDown(margin[3]);
-			}
-
-			if (node.pageBreak === 'after') {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
-		}
 	}
 
-	// vertical container
-	processVerticalContainer(node) {
-		var self = this;
-		node.stack.forEach(item => {
-			self.processNode(item);
-			addAll(node.positions, item.positions);
-
-			//TODO: paragraph gap
-		});
-	}
 
 	// columns
 	processColumns(columnNode) {
