@@ -15,5 +15,6 @@ export default {
 	linkToPage: null,
 	noWrap: false,
 	preserveLeadingSpaces: false,
-	alignment: 'left'
+	alignment: 'left',
+	leadingIndent: 0
 };

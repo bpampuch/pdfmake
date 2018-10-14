@@ -1,9 +1,3 @@
-import {isString, isNumber, isObject, isArray, isUndefined} from './helpers';
-import LineBreaker from 'linebreak';
-
-let LEADING = /^(\s)+/g;
-let TRAILING = /(\s)+$/g;
-
 /**
  * Text measurement utility
  */
@@ -70,7 +64,6 @@ class TextTools {
 	 * @return {Object}                   size of the specified string
 	 */
 	sizeOfString(text, styleContextStack) {
-		text = text ? text.toString().replace(/\t/g, '    ') : '';
 
 		//TODO: refactor - extract from measure
 		let fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
@@ -93,99 +86,6 @@ class TextTools {
 		};
 	}
 
-	widthOfString(text, font, fontSize, characterSpacing, fontFeatures) {
-		return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
-	}
-}
-function normalizeTextArray(array, styleContextStack) {
-	function flatten(array) {
-		return array.reduce((prev, cur) => {
-			let current = isArray(cur.text) ? flatten(cur.text) : cur;
-			let more = [].concat(current).some(Array.isArray);
-			return prev.concat(more ? flatten(current) : current);
-		}, []);
-	}
-
-	// ...
-
-	array = flatten(array);
-
-	// ...
-
-}
-
-function measure(fontProvider, textArray, styleContextStack) {
-	let normalized = normalizeTextArray(textArray, styleContextStack);
-
-	if (normalized.length) {
-		let leadingIndent = getStyleProperty(normalized[0], styleContextStack, 'leadingIndent', 0);
-
-		if (leadingIndent) {
-			normalized[0].leadingCut = -leadingIndent;
-			normalized[0].leadingIndent = leadingIndent;
-		}
-	}
-
-	normalized.forEach(item => {
-		let fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
-		let fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
-		let fontFeatures = getStyleProperty(item, styleContextStack, 'fontFeatures', null);
-		let bold = getStyleProperty(item, styleContextStack, 'bold', false);
-		let italics = getStyleProperty(item, styleContextStack, 'italics', false);
-		let color = getStyleProperty(item, styleContextStack, 'color', 'black');
-		let decoration = getStyleProperty(item, styleContextStack, 'decoration', null);
-		let decorationColor = getStyleProperty(item, styleContextStack, 'decorationColor', null);
-		let decorationStyle = getStyleProperty(item, styleContextStack, 'decorationStyle', null);
-		let background = getStyleProperty(item, styleContextStack, 'background', null);
-		let lineHeight = getStyleProperty(item, styleContextStack, 'lineHeight', 1);
-		let characterSpacing = getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
-		let link = getStyleProperty(item, styleContextStack, 'link', null);
-		let linkToPage = getStyleProperty(item, styleContextStack, 'linkToPage', null);
-		let noWrap = getStyleProperty(item, styleContextStack, 'noWrap', null);
-		let preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
-
-		let font = fontProvider.provideFont(fontName, bold, italics);
-
-		item.width = widthOfString(item.text, font, fontSize, characterSpacing, fontFeatures);
-		item.height = font.lineHeight(fontSize) * lineHeight;
-
-		let leadingSpaces = item.text.match(LEADING);
-
-		if (!item.leadingCut) {
-			item.leadingCut = 0;
-		}
-
-		if (leadingSpaces && !preserveLeadingSpaces) {
-			item.leadingCut += widthOfString(leadingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
-		}
-
-		let trailingSpaces = item.text.match(TRAILING);
-		if (trailingSpaces) {
-			item.trailingCut = widthOfString(trailingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
-		} else {
-			item.trailingCut = 0;
-		}
-
-		item.alignment = getStyleProperty(item, styleContextStack, 'alignment', 'left');
-		item.font = font;
-		item.fontSize = fontSize;
-		item.fontFeatures = fontFeatures;
-		item.characterSpacing = characterSpacing;
-		item.color = color;
-		item.decoration = decoration;
-		item.decorationColor = decorationColor;
-		item.decorationStyle = decorationStyle;
-		item.background = background;
-		item.link = link;
-		item.linkToPage = linkToPage;
-		item.noWrap = noWrap;
-	});
-
-	return normalized;
-}
-
-function widthOfString(text, font, fontSize, characterSpacing, fontFeatures) {
-	return font.widthOfString(text, fontSize, fontFeatures) + ((characterSpacing || 0) * (text.length - 1));
 }
 
 export default TextTools;

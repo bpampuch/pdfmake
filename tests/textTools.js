@@ -23,15 +23,8 @@ var sampleTestProvider = {
 
 
 var textTools = new TextTools.default(sampleTestProvider);
-var docPreprocessor = new DocPreprocessor();
 
 describe('TextTools', function () {
-	var plainTextArray = [
-		'Imię: ',
-		'Jan   ',
-		'   Nazwisko:',
-		' Nowak\nDodatkowe informacje:'
-	];
 
 	var plainTextArrayWithoutNewLines = [
 		'Imię: ',
@@ -103,82 +96,6 @@ describe('TextTools', function () {
 			font: 'Helvetica'
 		});
 	var styleStackNoWrap = new StyleContextStack({}, {noWrap: true});
-
-	describe('measure', function () {
-		// width + positioning
-		it('should set width', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, plainTextArray);
-			assert.notEqual(result, null);
-			assert.notEqual(result.length, 0);
-			assert.notEqual(result[0].width, null);
-		});
-
-		it('should measure text widths', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, plainTextArray);
-			assert.equal(result[0].width, 72);
-			assert.equal(result[2].width, 36);
-			assert.equal(result[3].width, 108);
-		});
-
-		it('should calculate leading and trailing cuts', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, plainTextArray);
-			assert.equal(result[0].trailingCut, 12);
-			assert.equal(result[0].leadingCut, 0);
-		});
-
-		it('should set the same value for leading and trailing cuts for whitespace-only strings', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, plainTextArray);
-			assert.equal(result[2].trailingCut, 36);
-			assert.equal(result[2].leadingCut, 36);
-		});
-
-		it('should set leading and trailing cuts to 0 if texts cannot be trimmed', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, plainTextArray);
-			assert.equal(result[6].trailingCut, 0);
-			assert.equal(result[6].leadingCut, 0);
-		});
-
-		// styling
-		it('should use default style', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, 'Imię', styleStack);
-			assert.equal(result[0].width, 4 * 15);
-		});
-
-		it('should use overriden styles from styleStack', function () {
-			styleStack.push('header');
-			var result = TextTools.__get__('measure')(sampleTestProvider, 'Imię', styleStack);
-			assert.equal(result[0].width, 4 * 150);
-			styleStack.pop();
-		});
-
-		it('should support style overrides at text definition level', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', fontSize: 20}], styleStack);
-			assert.equal(result[0].width, 4 * 20);
-		});
-
-		it('should support named styles at text definition level', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', style: 'header'}], styleStack);
-			assert.equal(result[0].width, 4 * 150);
-		});
-
-		it('should support multiple named styles at text definition level', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', style: ['header', 'small']}], styleStack);
-			assert.equal(result[0].width, 4 * 8);
-		});
-
-		it('should obey named styles order', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', style: ['header', 'small']}], styleStack);
-			assert.equal(result[0].width, 4 * 8);
-
-			result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', style: ['small', 'header']}], styleStack);
-			assert.equal(result[0].width, 4 * 150);
-		});
-
-		it('should not take values from named styles if style-overrides have been providede', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', fontSize: 123, style: 'header'}], styleStack);
-			assert.equal(result[0].width, 4 * 123);
-		});
-	});
 
 	describe('buildInlines', function () {
 		it('should return an object containing a collection of inlines and calculated minWidth/maxWidth', function () {
