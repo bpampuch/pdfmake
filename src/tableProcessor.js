@@ -1,4 +1,4 @@
-import {isFunction} from './helpers';
+import { isFunction } from './helpers';
 import ColumnCalculator from './columnCalculator';
 
 class TableProcessor {
@@ -50,7 +50,7 @@ class TableProcessor {
 			let x = 0;
 			let lastWidth = 0;
 
-			rsd.push({left: 0, rowSpan: 0});
+			rsd.push({ left: 0, rowSpan: 0 });
 
 			for (let i = 0, l = self.tableNode.table.body[0].length; i < l; i++) {
 				let paddings = self.layout.paddingLeft(i, self.tableNode) + self.layout.paddingRight(i, self.tableNode);
@@ -58,7 +58,7 @@ class TableProcessor {
 				lastWidth = paddings + lBorder + self.tableNode.table.widths[i]._calcWidth;
 				rsd[rsd.length - 1].width = lastWidth;
 				x += lastWidth;
-				rsd.push({left: x, rowSpan: 0, width: 0});
+				rsd.push({ left: x, rowSpan: 0, width: 0 });
 			}
 
 			return rsd;
@@ -178,7 +178,7 @@ class TableProcessor {
 				}
 
 				if (!currentLine && shouldDrawLine) {
-					currentLine = {left: data.left, width: 0};
+					currentLine = { left: data.left, width: 0 };
 				}
 
 				if (shouldDrawLine) {
@@ -259,149 +259,150 @@ class TableProcessor {
 				let pageBreak = pageBreaks[i];
 				ys[ys.length - 1].y1 = pageBreak.prevY;
 
-				ys.push({y0: pageBreak.y, page: pageBreak.prevPage + 1});
+				ys.push({ y0: pageBreak.y, page: pageBreak.prevPage + 1 });
 
-		}
-
-		ys[ys.length - 1].y1 = endingY;
-
-		let skipOrphanePadding = (ys[0].y1 - ys[0].y0 === this.rowPaddingTop);
-		for (let yi = (skipOrphanePadding ? 1 : 0), yl = ys.length; yi < yl; yi++) {
-			let willBreak = yi < ys.length - 1;
-			let rowBreakWithoutHeader = (yi > 0 && !this.headerRows);
-			let hzLineOffset = rowBreakWithoutHeader ? 0 : this.topLineWidth;
-			let y1 = ys[yi].y0;
-			let y2 = ys[yi].y1;
-
-			if (willBreak) {
-				y2 = y2 + this.rowPaddingBottom;
 			}
 
-			if (writer.context().page != ys[yi].page) {
-				writer.context().page = ys[yi].page;
+			ys[ys.length - 1].y1 = endingY;
 
-				//TODO: buggy, availableHeight should be updated on every pageChanged event
-				// TableProcessor should be pageChanged listener, instead of processRow
-				this.reservedAtBottom = 0;
-			}
+			let skipOrphanePadding = (ys[0].y1 - ys[0].y0 === this.rowPaddingTop);
+			for (let yi = (skipOrphanePadding ? 1 : 0), yl = ys.length; yi < yl; yi++) {
+				let willBreak = yi < ys.length - 1;
+				let rowBreakWithoutHeader = (yi > 0 && !this.headerRows);
+				let hzLineOffset = rowBreakWithoutHeader ? 0 : this.topLineWidth;
+				let y1 = ys[yi].y0;
+				let y2 = ys[yi].y1;
 
-			for (i = 0, l = xs.length; i < l; i++) {
-				let leftBorder = false;
-				let rightBorder = false;
-				let colIndex = xs[i].index;
-
-				// the current cell
-				if (colIndex < body[rowIndex].length) {
-					let cell = body[rowIndex][colIndex];
-					leftBorder = cell.border ? cell.border[0] : this.layout.defaultBorder;
+				if (willBreak) {
+					y2 = y2 + this.rowPaddingBottom;
 				}
 
-				// the cell from before column
-				if (colIndex > 0) {
-					let cell = body[rowIndex][colIndex - 1];
-					rightBorder = cell.border ? cell.border[2] : this.layout.defaultBorder;
+				if (writer.context().page != ys[yi].page) {
+					writer.context().page = ys[yi].page;
+
+					//TODO: buggy, availableHeight should be updated on every pageChanged event
+					// TableProcessor should be pageChanged listener, instead of processRow
+					this.reservedAtBottom = 0;
 				}
 
-				if (leftBorder || rightBorder) {
-					this.drawVerticalLine(xs[i].x, y1 - hzLineOffset, y2 + this.bottomLineWidth, xs[i].index, writer);
-				}
+				for (i = 0, l = xs.length; i < l; i++) {
+					let leftBorder = false;
+					let rightBorder = false;
+					let colIndex = xs[i].index;
 
-				if (i < l - 1) {
-					let fillColor = body[rowIndex][colIndex].fillColor;
-					if (!fillColor) {
-						fillColor = isFunction(this.layout.fillColor) ? this.layout.fillColor(rowIndex, colIndex, this.tableNode) : this.layout.fillColor;
+					// the current cell
+					if (colIndex < body[rowIndex].length) {
+						let cell = body[rowIndex][colIndex];
+						leftBorder = cell.border ? cell.border[0] : this.layout.defaultBorder;
 					}
-					if (fillColor) {
-						let wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
-						let xf = xs[i].x + wBorder;
-						let yf = this.dontBreakRows ? y1 : y1 - hzLineOffset;
-						writer.addVector({
-							type: 'rect',
-							x: xf,
-							y: yf,
-							w: xs[i + 1].x - xf,
-							h: y2 + this.bottomLineWidth - yf,
-							lineWidth: 0,
-							color: fillColor
-						}, false, true, writer.context().backgroundLength[writer.context().page]);
+
+					// the cell from before column
+					if (colIndex > 0) {
+						let cell = body[rowIndex][colIndex - 1];
+						rightBorder = cell.border ? cell.border[2] : this.layout.defaultBorder;
 					}
-				}
-			}
 
-			if (willBreak && this.layout.hLineWhenBroken !== false) {
-				this.drawHorizontalLine(rowIndex + 1, writer, y2);
-			}
-			if (rowBreakWithoutHeader && this.layout.hLineWhenBroken !== false) {
-				this.drawHorizontalLine(rowIndex, writer, y1);
-			}
-		}
+					if (leftBorder || rightBorder) {
+						this.drawVerticalLine(xs[i].x, y1 - hzLineOffset, y2 + this.bottomLineWidth, xs[i].index, writer);
+					}
 
-		writer.context().page = endingPage;
-		writer.context().y = endingY;
-
-		let row = this.tableNode.table.body[rowIndex];
-		for (i = 0, l = row.length; i < l; i++) {
-			if (row[i].rowSpan) {
-				this.rowSpanData[i].rowSpan = row[i].rowSpan;
-
-				// fix colSpans
-				if (row[i].colSpan && row[i].colSpan > 1) {
-					for (let j = 1; j < row[i].rowSpan; j++) {
-						this.tableNode.table.body[rowIndex + j][i]._colSpan = row[i].colSpan;
+					if (i < l - 1) {
+						let fillColor = body[rowIndex][colIndex].fillColor;
+						if (!fillColor) {
+							fillColor = isFunction(this.layout.fillColor) ? this.layout.fillColor(rowIndex, colIndex, this.tableNode) : this.layout.fillColor;
+						}
+						if (fillColor) {
+							let wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
+							let xf = xs[i].x + wBorder;
+							let yf = this.dontBreakRows ? y1 : y1 - hzLineOffset;
+							writer.addVector({
+								type: 'rect',
+								x: xf,
+								y: yf,
+								w: xs[i + 1].x - xf,
+								h: y2 + this.bottomLineWidth - yf,
+								lineWidth: 0,
+								color: fillColor
+							}, false, true, writer.context().backgroundLength[writer.context().page]);
+						}
 					}
 				}
-			}
 
-			if (this.rowSpanData[i].rowSpan > 0) {
-				this.rowSpanData[i].rowSpan--;
-			}
-		}
-
-		this.drawHorizontalLine(rowIndex + 1, writer);
-
-		if (this.headerRows && rowIndex === this.headerRows - 1) {
-			this.headerRepeatable = writer.currentBlockToRepeatable();
-		}
-
-		if (this.dontBreakRows) {
-			writer.tracker.auto('pageChanged',
-				() => {
-				if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
-					self.drawHorizontalLine(rowIndex, writer);
+				if (willBreak && this.layout.hLineWhenBroken !== false) {
+					this.drawHorizontalLine(rowIndex + 1, writer, y2);
 				}
-			},
-				() => {
+				if (rowBreakWithoutHeader && this.layout.hLineWhenBroken !== false) {
+					this.drawHorizontalLine(rowIndex, writer, y1);
+				}
+			}
+
+			writer.context().page = endingPage;
+			writer.context().y = endingY;
+
+			let row = this.tableNode.table.body[rowIndex];
+			for (i = 0, l = row.length; i < l; i++) {
+				if (row[i].rowSpan) {
+					this.rowSpanData[i].rowSpan = row[i].rowSpan;
+
+					// fix colSpans
+					if (row[i].colSpan && row[i].colSpan > 1) {
+						for (let j = 1; j < row[i].rowSpan; j++) {
+							this.tableNode.table.body[rowIndex + j][i]._colSpan = row[i].colSpan;
+						}
+					}
+				}
+
+				if (this.rowSpanData[i].rowSpan > 0) {
+					this.rowSpanData[i].rowSpan--;
+				}
+			}
+
+			this.drawHorizontalLine(rowIndex + 1, writer);
+
+			if (this.headerRows && rowIndex === this.headerRows - 1) {
+				this.headerRepeatable = writer.currentBlockToRepeatable();
+			}
+
+			if (this.dontBreakRows) {
+				writer.tracker.auto('pageChanged',
+					() => {
+						if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
+							self.drawHorizontalLine(rowIndex, writer);
+						}
+					},
+					() => {
+						writer.commitUnbreakableBlock();
+					}
+				);
+			}
+
+			if (this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
 				writer.commitUnbreakableBlock();
-			}
-			);
-		}
-
-		if (this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
-			writer.commitUnbreakableBlock();
-			writer.pushToRepeatables(this.headerRepeatable);
-			this.cleanUpRepeatables = true;
-			this.headerRepeatable = null;
-		}
-
-		function getLineXs() {
-			let result = [];
-			let cols = 0;
-
-			for (let i = 0, l = self.tableNode.table.body[rowIndex].length; i < l; i++) {
-				if (!cols) {
-					result.push({x: self.rowSpanData[i].left, index: i});
-
-					let item = self.tableNode.table.body[rowIndex][i];
-					cols = (item._colSpan || item.colSpan || 0);
-				}
-				if (cols > 0) {
-					cols--;
-				}
+				writer.pushToRepeatables(this.headerRepeatable);
+				this.cleanUpRepeatables = true;
+				this.headerRepeatable = null;
 			}
 
-			result.push({x: self.rowSpanData[self.rowSpanData.length - 1].left, index: self.rowSpanData.length - 1});
+			function getLineXs() {
+				let result = [];
+				let cols = 0;
 
-			return result;
+				for (let i = 0, l = self.tableNode.table.body[rowIndex].length; i < l; i++) {
+					if (!cols) {
+						result.push({ x: self.rowSpanData[i].left, index: i });
+
+						let item = self.tableNode.table.body[rowIndex][i];
+						cols = (item._colSpan || item.colSpan || 0);
+					}
+					if (cols > 0) {
+						cols--;
+					}
+				}
+
+				result.push({ x: self.rowSpanData[self.rowSpanData.length - 1].left, index: self.rowSpanData.length - 1 });
+
+				return result;
+			}
 		}
 	}
 }
