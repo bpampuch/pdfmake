@@ -1,8 +1,8 @@
 'use strict';
 
+
 var sizes = require('../../js/standardPageSizes').default;
-var PdfKit = require('pdfkit');
-var LayoutBuilder = require('../../js/layoutBuilder').default;
+var PdfKitEngine = require('../../src/pdfKitEngine').default;var LayoutBuilder = require('../../js/layoutBuilder').default;
 var FontProvider = require('../../js/fontProvider').default;
 var ImageMeasure = require('../../js/imageMeasure').default;
 
@@ -26,7 +26,7 @@ IntegrationTestHelper.prototype.renderPages = function (sizeName, docDefinition)
 
 	var pageSize = {width: size[0], height: size[1], orientation: 'portrait'};
 
-	var pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], compress: false});
+	var pdfKitDoc = PdfKitEngine.createPdfDocument({size: [pageSize.width, pageSize.height], compress: false});
 	var builder = new LayoutBuilder(
 		pageSize,
 		{left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom},

@@ -619,6 +619,7 @@ class DocMeasure {
 			let totalOffset = 0;
 			let prevRightPadding = 0;
 
+
 			for (let i = 0, l = node.table.widths.length; i < l; i++) {
 				let lOffset = prevRightPadding + layout.vLineWidth(i, node) + layout.paddingLeft(i, node);
 				offsets.push(lOffset);

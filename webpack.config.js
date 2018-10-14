@@ -40,7 +40,7 @@ module.exports = {
 					}
 				}
 			},
-			{test: /pdfkit[/\\]js[/\\]mixins[/\\]fonts.js$/, loader: StringReplacePlugin.replace({
+			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
 					replacements: [
 						{
 							pattern: 'return this.font(\'Helvetica\');',

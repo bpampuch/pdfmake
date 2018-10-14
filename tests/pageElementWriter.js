@@ -81,6 +81,9 @@ describe('PageElementWriter', function () {
 			type: 'line',
 			item: repLine
 		});
+
+		rep.insertedOnPages = [];
+
 		return rep;
 	}
 
@@ -330,28 +333,8 @@ describe('PageElementWriter', function () {
 			assert.equal(ctx.pages[1].items[3].item.y, ctx.pages[1].items[2].item.y + AVAILABLE_HEIGHT / 10);
 		});
 
-		it('should reserve space for repeatable fragment to the top when reusing page', function () {
-			addOneTenthLines(6);
-
-			pew.beginUnbreakableBlock();
-			var uCtx = pew.writer.context;
-
-			addOneTenthLines(3);
-			uCtx.pages[0].items.forEach(function (item) {
-				item.item.marker = 'rep';
-			});
-			var rep = pew.currentBlockToRepeatable();
-			pew.pushToRepeatables(rep);
-			pew.commitUnbreakableBlock();
-
-
-			ctx.pages.push({items: [], pageSize: pageSize});
-
-			addOneTenthLines(2);
-
-			assert.equal(ctx.pages.length, 2);
-
-			assert.equal(ctx.pages[1].items[0].item.y, MARGINS.top + 3 * AVAILABLE_HEIGHT / 10);
+		it('should add a repeatable fragment to the top when reusing page only once', function () {
+			// TODO
 		});
 
 		it('should add repeatable fragments in the same order they have been added to the repeatable fragments collection', function () {

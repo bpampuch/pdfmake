@@ -161,6 +161,7 @@ class TableProcessor {
 					let topBorder = false;
 					let bottomBorder = false;
 
+
 					// the current cell
 					if (lineIndex < body.length) {
 						let cell = body[lineIndex][i];
@@ -203,6 +204,7 @@ class TableProcessor {
 			}
 
 			writer.context().moveDown(lineWidth);
+
 		}
 	}
 
@@ -222,10 +224,10 @@ class TableProcessor {
 		}, false, true);
 	}
 
+
 	endTable(writer) {
 		if (this.cleanUpRepeatables) {
 			writer.popFromRepeatables();
-			this.headerRepeatableHeight = null;
 		}
 	}
 
@@ -259,10 +261,6 @@ class TableProcessor {
 
 				ys.push({y0: pageBreak.y, page: pageBreak.prevPage + 1});
 
-				if (this.headerRepeatableHeight) {
-					ys[ys.length - 1].y0 += this.headerRepeatableHeight;
-				}
-			}
 		}
 
 		ys[ys.length - 1].y1 = endingY;
@@ -379,7 +377,6 @@ class TableProcessor {
 		}
 
 		if (this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
-			this.headerRepeatableHeight = this.headerRepeatable.height;
 			writer.commitUnbreakableBlock();
 			writer.pushToRepeatables(this.headerRepeatable);
 			this.cleanUpRepeatables = true;

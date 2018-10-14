@@ -1,4 +1,6 @@
+import {isUndefined} from './helpers';
 import ElementWriter from './elementWriter';
+
 
 /**
  * An extended ElementWriter which can handle:
@@ -55,15 +57,17 @@ class PageElementWriter {
 
 		let nextPage = this.writer.context.moveToNextPage(pageOrientation);
 
-		if (nextPage.newPageCreated) {
-			this.repeatables.forEach(function (rep) {
-				this.writer.addFragment(rep, true);
-			}, this);
+	// moveToNextPage is called multiple times for table, because is called for each column
+	// and repeatables are inserted only in the first time. If columns are used, is needed
+	// call for table in first column and then for table in the second column (is other repeatables).
+	this.repeatables.forEach(function (rep) {
+		if (isUndefined(rep.insertedOnPages[this.writer.context.page])) {
+			rep.insertedOnPages[this.writer.context.page] = true;
+			this.writer.addFragment(rep, true);
 		} else {
-			this.repeatables.forEach(function (rep) {
-				this.writer.context.moveDown(rep.height);
-			}, this);
+			this.writer.context.moveDown(rep.height);
 		}
+	}, this);
 
 		this.writer.tracker.emit('pageChanged', {
 			prevPage: nextPage.prevPage,
@@ -77,6 +81,7 @@ class PageElementWriter {
 			this.originalX = this.writer.context.x;
 			this.writer.pushContext(width, height);
 		}
+
 	}
 
 	commitUnbreakableBlock(forcedX, forcedY) {
@@ -128,8 +133,11 @@ class PageElementWriter {
 		//TODO: vectors can influence height in some situations
 		rep.height = unbreakableContext.y;
 
+		rep.insertedOnPages = [];
+
 		return rep;
 	}
+
 
 	pushToRepeatables(rep) {
 		this.repeatables.push(rep);

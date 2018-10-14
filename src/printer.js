@@ -7,7 +7,8 @@ import sizes from './standardPageSizes';
 import ImageMeasure from './imageMeasure';
 import textDecorator from './textDecorator';
 import TextTools from './textTools';
-import PdfKit from 'pdfkit';
+import PdfKitEngine from 'pdfKitEngine';
+
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -84,7 +85,7 @@ class PdfPrinter {
 		let compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 		let bufferPages = options.bufferPages || false;
 
-		this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], autoFirstPage: false, compress: compressPdf, bufferPages: bufferPages});
+		this.pdfKitDoc = PdfKitEngine.createPdfDocument({size: [pageSize.width, pageSize.height], autoFirstPage: false, compress: compressPdf, bufferPages: bufferPages});
 		setMetadata(docDefinition, this.pdfKitDoc);
 
 		this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
@@ -528,6 +529,7 @@ function renderVector(vector, pdfKitDoc) {
 }
 
 function renderImage(image, x, y, pdfKitDoc) {
+	pdfKitDoc.opacity(image.opacity || 1);
 	pdfKitDoc.image(image.image, image.x, image.y, {width: image._width, height: image._height});
 	if (image.link) {
 		pdfKitDoc.link(image.x, image.y, image._width, image._height, image.link);

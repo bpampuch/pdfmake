@@ -153,6 +153,10 @@ function normalizeTextArray(array, styleContextStack) {
 			return null;
 		}
 
+		if (words[index].lineEnd) {
+			return null;
+		}
+
 		let word = words[index].text;
 
 		if (noWrap) {

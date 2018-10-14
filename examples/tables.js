@@ -266,6 +266,8 @@ var docDefinition = {
 				vLineColor: function (i, node) {
 					return (i === 0 || i === node.table.widths.length) ? 'black' : 'gray';
 				},
+				// hLineStyle: function (i, node) { return {dash: { length: 10, space: 4 }}; },
+				// vLineStyle: function (i, node) { return {dash: { length: 10, space: 4 }}; },
 				// paddingLeft: function(i, node) { return 4; },
 				// paddingRight: function(i, node) { return 4; },
 				// paddingTop: function(i, node) { return 2; },
@@ -289,6 +291,52 @@ var docDefinition = {
 				fillColor: function (rowIndex, columnIndex, node) {
 					return (rowIndex % 2 === 0) ? '#CCCCCC' : null;
 				}
+			}
+		},
+		{text: 'and can be used dash border', margin: [0, 20, 0, 8]},
+		{
+			style: 'tableExample',
+			table: {
+				headerRows: 1,
+				body: [
+					[{text: 'Header 1', style: 'tableHeader'}, {text: 'Header 2', style: 'tableHeader'}, {text: 'Header 3', style: 'tableHeader'}],
+					['Sample value 1', 'Sample value 2', 'Sample value 3'],
+					['Sample value 1', 'Sample value 2', 'Sample value 3'],
+					['Sample value 1', 'Sample value 2', 'Sample value 3'],
+					['Sample value 1', 'Sample value 2', 'Sample value 3'],
+					['Sample value 1', 'Sample value 2', 'Sample value 3'],
+				]
+			},
+			layout: {
+				hLineWidth: function (i, node) {
+					return (i === 0 || i === node.table.body.length) ? 2 : 1;
+				},
+				vLineWidth: function (i, node) {
+					return (i === 0 || i === node.table.widths.length) ? 2 : 1;
+				},
+				hLineColor: function (i, node) {
+					return 'black';
+				},
+				vLineColor: function (i, node) {
+					return 'black';
+				},
+				hLineStyle: function (i, node) {
+					if (i === 0 || i === node.table.body.length) {
+						return null;
+					}
+					return {dash: {length: 10, space: 4}};
+				},
+				vLineStyle: function (i, node) {
+					if (i === 0 || i === node.table.widths.length) {
+						return null;
+					}
+					return {dash: {length: 4}};
+				},
+				// paddingLeft: function(i, node) { return 4; },
+				// paddingRight: function(i, node) { return 4; },
+				// paddingTop: function(i, node) { return 2; },
+				// paddingBottom: function(i, node) { return 2; },
+				// fillColor: function (i, node) { return null; }
 			}
 		},
 		{text: 'Optional border', fontSize: 14, bold: true, pageBreak: 'before', margin: [0, 0, 0, 8]},
