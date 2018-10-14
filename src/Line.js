@@ -11,16 +11,65 @@ class Line {
 		this.inlines = [];
 	}
 
+	addInline(inline) {
+		if (this.inlines.length === 0) {
+			this.leadingCut = inline.leadingCut || 0;
+		}
+		this.trailingCut = inline.trailingCut || 0;
+
+		inline.x = this.inlineWidths - this.leadingCut;
+
+		this.inlines.push(inline);
+		this.inlineWidths += inline.width;
+
+		if (inline.lineEnd) {
+			this.newLineForced = true;
+		}
+	}
+
+	/**
+	 * @return {number}
+	 */
+	getHeight() {
+		let max = 0;
+
+		this.inlines.forEach(function (item) {
+			max = Math.max(max, item.height || 0);
+		});
+
+		return max;
+	}
+
+	/**
+	 * @return {number}
+	 */
 	getAscenderHeight() {
 		let y = 0;
 
-		this.inlines.forEach((inline) => {
+		this.inlines.forEach(function (inline) {
 			y = Math.max(y, inline.font.ascender / 1000 * inline.fontSize);
 		});
+
 		return y;
 	}
 
-	hasEnoughSpaceForInline(inline, nextInlines = []) {
+	/**
+	 * @return {number}
+	 */
+	getWidth() {
+		return this.inlineWidths - this.leadingCut - this.trailingCut;
+	}
+
+	/**
+	 * @return {number}
+	 */
+	getAvailableWidth() {
+		return this.maxWidth - this.getWidth();
+	}
+
+	hasEnoughSpaceForInline(inline, nextInlines) {
+		nextInlines = nextInlines || [];
+
 		if (this.inlines.length === 0) {
 			return true;
 		}
@@ -44,43 +93,6 @@ class Line {
 		return (this.inlineWidths + inlineWidth - this.leadingCut - inlineTrailingCut) <= this.maxWidth;
 	}
 
-	addInline(inline) {
-		if (this.inlines.length === 0) {
-			this.leadingCut = inline.leadingCut || 0;
-		}
-		this.trailingCut = inline.trailingCut || 0;
-
-		inline.x = this.inlineWidths - this.leadingCut;
-
-		this.inlines.push(inline);
-		this.inlineWidths += inline.width;
-
-		if (inline.lineEnd) {
-			this.newLineForced = true;
-		}
-	}
-
-	getWidth() {
-		return this.inlineWidths - this.leadingCut - this.trailingCut;
-	}
-
-	getAvailableWidth() {
-		return this.maxWidth - this.getWidth();
-	}
-
-	/**
-	 * Returns line height
-	 * @return {Number}
-	 */
-	getHeight() {
-		let max = 0;
-
-		this.inlines.forEach((item) => {
-			max = Math.max(max, item.height || 0);
-		});
-
-		return max;
-	}
 }
 
 export default Line;
