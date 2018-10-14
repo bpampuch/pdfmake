@@ -39,7 +39,23 @@ class TextInlines {
 		this.fontProvider = fontProvider;
 	}
 
+	/**
+	 * Converts an array of strings (or inline-definition-objects) into a collection of inlines
+	 * and calculated minWidth/maxWidth and their min/max widths.
+	 *
+	 * @param {array} textArray  an array of inline-definition-objects (or strings)
+	 * @param {StyleContextStack} styleContextStack  current style stack
+	 * @return {object}  collection of inlines, minWidth, maxWidth
+	 */
 	buildInlines(textArray, styleContextStack) {
+		let getTrimmedWidth = item => {
+			return Math.max(0, item.width - item.leadingCut - item.trailingCut);
+		};
+
+		let minWidth = 0;
+		let maxWidth = 0;
+		let currentLineWidth;
+
 		let flattenText = flattenTextArray(textArray);
 
 		let textBreaker = new TextBreaker();
@@ -47,12 +63,31 @@ class TextInlines {
 
 		let measuredText = this.measure(breakedText, styleContextStack);
 
-		// TODO
+		measuredText.forEach(function (inline) {
+			minWidth = Math.max(minWidth, getTrimmedWidth(inline));
+
+			if (!currentLineWidth) {
+				currentLineWidth = { width: 0, leadingCut: inline.leadingCut, trailingCut: 0 };
+			}
+
+			currentLineWidth.width += inline.width;
+			currentLineWidth.trailingCut = inline.trailingCut;
+
+			maxWidth = Math.max(maxWidth, getTrimmedWidth(currentLineWidth));
+
+			if (inline.lineEnd) {
+				currentLineWidth = null;
+			}
+		});
+
+		if (StyleContextStack.getStyleProperty({}, styleContextStack, 'noWrap', defaults.noWrap)) {
+			minWidth = maxWidth;
+		}
 
 		return {
 			items: measuredText,
-			minWidth: null, // TODO
-			maxWidth: null // TODO
+			minWidth: minWidth,
+			maxWidth: maxWidth
 		};
 	}
 

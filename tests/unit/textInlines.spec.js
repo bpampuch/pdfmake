@@ -27,6 +27,62 @@ describe('TextInlines', function () {
 		' Nowak\nDodatkowe informacje:'
 	];
 
+
+	var plainTextArrayWithoutNewLines = [
+		'Imię: ',
+		'Jan   ',
+		'   Nazwisko:',
+		' Nowak Dodatkowe informacje:'
+	];
+
+	var mixedTextArrayWithoutNewLinesNoWrapLongest = [
+		'Imię: ',
+		'Jan   ',
+		'   Nazwisko:',
+		{ text: ' Nowak Dodatkowe informacje:', noWrap: true }
+	];
+
+	var mixedTextArrayWithoutNewLinesNoWrapShortest = [
+		'Imię: ',
+		{ text: 'Jan   ', noWrap: true },
+		'   Nazwisko:',
+		' Nowak Dodatkowe informacje:'
+	];
+
+	var plainTextArrayWithoutNewLinesWhichRequiresTrimming = [
+		'                          Imię: ',
+		'Jan   ',
+		'   Nazwisko:',
+		' Nowak Dodatkowe informacje: '
+	];
+
+	var textArrayWithNewLines = [
+		'This',
+		' is a sample\n',
+		'text having two lines'
+	];
+
+	var textArrayWithNewLinesWhichRequiresTrimming = [
+		' This',
+		' is a sample  \n',
+		'         text having two lines       '
+	];
+
+	var textWithLeadingIndent = {
+		text:
+			'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut porttitor risus sapien, at commodo eros suscipit ' +
+			'nec. Pellentesque pretium, justo eleifend pulvinar malesuada, lorem arcu pellentesque ex, ac congue arcu erat ' +
+			'id nunc. Morbi facilisis pulvinar nunc, quis laoreet ligula rutrum ut. Mauris at ante imperdiet, vestibulum ' +
+			'libero nec, iaculis justo. Mauris aliquam congue ligula vel convallis. Duis iaculis ornare nulla, id finibus ' +
+			'sapien commodo quis. Sed semper sagittis urna. Nunc aliquam aliquet placerat. Maecenas ac arcu auctor, ' +
+			'bibendum nisl non, bibendum odio. Proin semper lacus faucibus, pretium neque nec, viverra sem. ',
+		leadingIndent: 10
+	};
+
+	var textWithLeadingSpaces = [
+		{ text: '    This is a paragraph', preserveLeadingSpaces: true }
+	];
+
 	var styleStack = new StyleContextStack(
 		{
 			header: {
@@ -43,6 +99,8 @@ describe('TextInlines', function () {
 			font: 'Helvetica'
 		}
 	);
+
+	var styleStackNoWrap = new StyleContextStack({}, { noWrap: true });
 
 	describe('buildInlines', function () {
 
@@ -122,6 +180,80 @@ describe('TextInlines', function () {
 			it('should not take values from named styles if style-overrides have been providede', function () {
 				var result = textInlines.buildInlines([{ text: 'Imię', fontSize: 123, style: 'header' }], styleStack);
 				assert.equal(result.items[0].width, 4 * 123);
+			});
+
+		});
+
+		describe('minWidth and maxWidth', function () {
+			it('should return an object containing a collection of inlines and calculated minWidth/maxWidth', function () {
+				var inlines = textInlines.buildInlines(plainTextArrayWithoutNewLines);
+				assert(inlines.items);
+				assert(inlines.minWidth);
+				assert(inlines.maxWidth);
+			});
+
+
+			it('should set minWidth to the largest inline width', function () {
+				var inlines = textInlines.buildInlines(plainTextArrayWithoutNewLines);
+				assert.equal(inlines.minWidth, 11 * 12);
+			});
+
+			it('should take into account trimming when calculating minWidth', function () {
+				var inlines = textInlines.buildInlines(plainTextArrayWithoutNewLinesWhichRequiresTrimming);
+				assert.equal(inlines.minWidth, 11 * 12);
+			});
+
+			it('should set maxWidth to the sum of all widths if there is no trimming and no newlines', function () {
+				var inlines = textInlines.buildInlines(plainTextArrayWithoutNewLines);
+				assert.equal(inlines.maxWidth, 52 * 12);
+			});
+
+			it('should take into account trimming when calculating maxWidth', function () {
+				var inlines = textInlines.buildInlines(plainTextArrayWithoutNewLinesWhichRequiresTrimming);
+				assert.equal(inlines.maxWidth, 52 * 12);
+			});
+
+			it('should set maxWidth to the width of the largest line if there are new-lines', function () {
+				var inlines = textInlines.buildInlines(textArrayWithNewLines);
+				assert.equal(inlines.maxWidth, 21 * 12);
+			});
+
+			it('should take into account trimming at line level when calculating maxWidth', function () {
+				var inlines = textInlines.buildInlines(textArrayWithNewLinesWhichRequiresTrimming);
+				assert.equal(inlines.maxWidth, 21 * 12);
+			});
+
+			it('should set min width to max when nowrap style is specified', function () {
+				var inlines = textInlines.buildInlines(plainTextArrayWithoutNewLines, styleStackNoWrap);
+				assert.equal(inlines.minWidth, 52 * 12);
+				assert.equal(inlines.maxWidth, 52 * 12);
+			});
+
+			it('should set min width to longest when nowrap style is specified on longest segment', function () {
+				var inlines = textInlines.buildInlines(mixedTextArrayWithoutNewLinesNoWrapLongest);
+				assert.equal(inlines.minWidth, 27 * 12);
+				assert.equal(inlines.maxWidth, 52 * 12);
+			});
+
+			it('should set widths to normal when nowrap style is specified on shortest segment', function () {
+				var inlines = textInlines.buildInlines(mixedTextArrayWithoutNewLinesNoWrapShortest);
+				assert.equal(inlines.minWidth, 11 * 12);
+				assert.equal(inlines.maxWidth, 52 * 12);
+			});
+
+			it('should set set the leading indent only to the first line of a paragraph', function () {
+				var inlines = textInlines.buildInlines(textWithLeadingIndent);
+				assert.equal(inlines.items[0].leadingCut, -10);
+				var countLeadingCut = 0;
+				inlines.items.forEach(function (item) {
+					countLeadingCut += item.leadingCut;
+				});
+				assert.equal(countLeadingCut, -10);
+			});
+
+			it('should preserve leading whitespaces when preserveLeadingSpaces is set', function () {
+				var inlines = textInlines.buildInlines(textWithLeadingSpaces);
+				assert.equal(inlines.maxWidth, 23 * 12);
 			});
 
 		});
