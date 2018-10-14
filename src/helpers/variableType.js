@@ -43,7 +43,7 @@ export function isFunction(variable) {
  * @returns {boolean}
  */
 export function isObject(variable) {
-	return !isNull(variable) && (typeof variable === 'object');
+	return !isNull(variable) && !isArray(variable) && !isString(variable) && !isNumber(variable) && (typeof variable === 'object');
 }
 
 /**
