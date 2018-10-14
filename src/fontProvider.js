@@ -1,6 +1,6 @@
-import {isArray} from './helpers';
+import { isArray } from './helpers/variableType';
 
-function typeName(bold, italics) {
+const typeName = function (bold, italics) {
 	let type = 'normal';
 	if (bold && italics) {
 		type = 'bolditalics';

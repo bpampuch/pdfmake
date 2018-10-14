@@ -1,8 +1,6 @@
-'use strict';
-
 var assert = require('assert');
 
-var FontProvider = require('../js/fontProvider').default;
+var FontProvider = require('../../js/fontProvider').default;
 
 describe('FontProvider', function () {
 	var fontProvider, fontDefinitions, pdfDoc;
