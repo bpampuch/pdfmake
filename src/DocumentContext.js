@@ -86,6 +86,9 @@ class DocumentContext extends EventEmitter {
 		this.pageSnapshot().availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
 	}
 
+	/**
+	 * @return {object}
+	 */
 	getCurrentPosition() {
 		let pageSize = this.getCurrentPage().pageSize;
 		let innerHeight = pageSize.height - this.pageMargins.top - this.pageMargins.bottom;

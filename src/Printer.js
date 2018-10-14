@@ -1,4 +1,4 @@
-import { isString, isBoolean, isValue } from './helpers/variableType';
+import { isString, isBoolean, isArray, isNumber, isValue } from './helpers/variableType';
 import PDFDocument from './PDFDocument';
 import pageSizes from './standardPageSizes';
 import defaults from './defaults';
@@ -74,7 +74,7 @@ class Printer {
 			docDefinition.compress = defaults.compress;
 		}
 
-		docDefinition.pageMargins = getPageMargins(docDefinition.pageMargins) || pageMargins;
+		docDefinition.pageMargins = getPageMargins(docDefinition.pageMargins) || defaults.pageMargins;
 		docDefinition.images = docDefinition.images || {};
 		docDefinition.styles = docDefinition.styles || {};
 		docDefinition.defaultStyle = docDefinition.defaultStyle || { font: defaults.font, fontSize: defaults.fontSize };

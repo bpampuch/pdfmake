@@ -580,14 +580,7 @@ class LayoutBuilder {
 			}
 		}
 
-		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
-			let positions = this.writer.addLine(line);
-			node.positions.push(positions);
-			line = this.buildNextLine(node);
-			if (line) {
-				currentHeight += line.getHeight();
-			}
-		}
+		// ...
 	}
 
 	processToc(node) {
