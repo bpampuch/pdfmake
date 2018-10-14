@@ -21,7 +21,7 @@ const TextBuilder = Base => class extends Base {
 		let maxHeight = node.maxHeight || -1;
 
 		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
-			let positions = this.writer.addLine(line); // TODO writer
+			let positions = this.writer.addLine(line);
 			node.positions.push(positions);
 			line = this._buildNextLine(node);
 			if (line) {
@@ -44,7 +44,7 @@ const TextBuilder = Base => class extends Base {
 		}
 
 		let textInlines = TextInlines(this.pdfDocument);
-		let line = new Line(this.writer.context().availableWidth); // TODO context
+		let line = new Line(this.writer.context().availableWidth);
 
 		let isForceContinue = false;
 		while (textNode._inlines && textNode._inlines.length > 0 &&
