@@ -114,13 +114,10 @@ class DocMeasurer {
 			node._margin = getNodeMargin(node);
 
 			node = processFirstExtenstionsByCondition(this.nodeTypes, node);
+			node = processAllExtenstionsByCondition(this.properties, node);
 
 			return extendMargins(node);
 		});
-
-		node = processAllExtenstionsByCondition(this.properties, node);
-
-		return node;
 	}
 
 }
