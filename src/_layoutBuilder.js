@@ -617,7 +617,7 @@ class LayoutBuilder {
 
 	processCanvas(node) {
 		let height = node._minHeight;
-
+/*
 		if (node.absolutePosition === undefined && this.writer.context().availableHeight < height) {
 			// TODO: support for canvas larger than a page
 			// TODO: support for other overflow methods
@@ -631,7 +631,7 @@ class LayoutBuilder {
 			let position = this.writer.addVector(vector);
 			node.positions.push(position);
 		}, this);
-
+*/
 		this.writer.context().moveDown(height);
 	}
 

@@ -167,6 +167,30 @@ class ElementWriter extends EventEmitter {
 		}
 	}
 
+	addCanvas(canvas, index) {
+		let height = canvas._minHeight;
+		let context = this.context;
+		let page = context.getCurrentPage();
+		let position = this.getCurrentPositionOnPage();
+
+		// TODO: support for canvas larger than a page
+		// TODO: support for other overflow methods
+		if (!page || (canvas.absolutePosition === undefined && context.availableHeight < height)) {
+			return false;
+		}
+
+		this._alignCanvas(canvas);
+
+		canvas.canvas.forEach(function (vector) {
+			let position = this.addVector(vector);
+			canvas.positions.push(position);
+		}, this);
+
+		context.moveDown(height);
+
+		return canvas.positions; // TODO: Or position? Or variable positions and add to canvas after this method?
+	}
+
 	addImage(image, index) {
 		let context = this.context;
 		let page = context.getCurrentPage();
@@ -248,6 +272,25 @@ class ElementWriter extends EventEmitter {
 
 		if (offset) {
 			image.x = (image.x || 0) + offset;
+		}
+	}
+
+	_alignCanvas(canvas) {
+		let width = this.context.availableWidth;
+		let canvasWidth = canvas._minWidth;
+		let offset = 0;
+		switch (canvas._alignment) {
+			case 'right':
+				offset = width - canvasWidth;
+				break;
+			case 'center':
+				offset = (width - canvasWidth) / 2;
+				break;
+		}
+		if (offset) {
+			canvas.canvas.forEach(function (vector) {
+				offsetVector(vector, offset, 0);
+			});
 		}
 	}
 

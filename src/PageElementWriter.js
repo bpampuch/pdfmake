@@ -30,6 +30,12 @@ class PageElementWriter extends ElementWriter {
 		return super.addVector(vector, ignoreContextX, ignoreContextY, index);
 	}
 
+	addCanvas(canvas, index) {
+		return this._fitOnPage(() => {
+			return super.addCanvas(canvas, index);
+		});
+	}
+
 	addImage(image, index) {
 		return this._fitOnPage(() => {
 			return super.addImage(image, index);
