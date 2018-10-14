@@ -1,4 +1,4 @@
-import { isString, isBoolean } from './helpers/variableType';
+import { isString, isBoolean, isValue } from './helpers/variableType';
 import PDFDocument from './PDFDocument';
 import pageSizes from './standardPageSizes';
 import defaults from './defaults';
@@ -62,7 +62,7 @@ class Printer {
 			compress: docDefinition.compress,
 			bufferPages: options.bufferPages || defaults.bufferPages,
 			autoFirstPage: false
-		}
+		};
 
 		this.pdfDocument = new PDFDocument(this.fonts, docDefinition.images, pdfOptions);
 

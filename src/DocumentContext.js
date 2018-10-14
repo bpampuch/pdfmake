@@ -2,6 +2,16 @@ import { isString, isValue } from './helpers/variableType';
 import { EventEmitter } from 'events';
 
 const getPageSize = function (currentPage, newPageOrientation) {
+	const getPageOrientation = function (pageOrientationString, currentPageOrientation) {
+		if (pageOrientationString === undefined) {
+			return currentPageOrientation;
+		} else if (isString(pageOrientationString) && (pageOrientationString.toLowerCase() === 'landscape')) {
+			return 'landscape';
+		} else {
+			return 'portrait';
+		}
+	};
+
 	newPageOrientation = getPageOrientation(newPageOrientation, currentPage.pageSize.orientation);
 
 	if (newPageOrientation !== currentPage.pageSize.orientation) {
@@ -16,16 +26,6 @@ const getPageSize = function (currentPage, newPageOrientation) {
 			width: currentPage.pageSize.width,
 			height: currentPage.pageSize.height
 		};
-	}
-};
-
-function getPageOrientation(pageOrientationString, currentPageOrientation) {
-	if (pageOrientationString === undefined) {
-		return currentPageOrientation;
-	} else if (isString(pageOrientationString) && (pageOrientationString.toLowerCase() === 'landscape')) {
-		return 'landscape';
-	} else {
-		return 'portrait';
 	}
 };
 
