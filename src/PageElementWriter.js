@@ -39,9 +39,9 @@ class PageElementWriter extends ElementWriter {
 		// and repeatables are inserted only in the first time. If columns are used, is needed
 		// call for table in first column and then for table in the second column (is other repeatables).
 		this.repeatables.forEach(function (rep) {
-			if (isUndefined(rep.insertedOnPages[this.writer.context.page])) {
-				rep.insertedOnPages[this.writer.context.page] = true;
-				super.addFragment(rep, true);
+			if (isUndefined(rep.insertedOnPages[this.context.page])) {
+				rep.insertedOnPages[this.context.page] = true;
+				this.addFragment(rep, true);
 			} else {
 				this.context.moveDown(rep.height);
 			}
@@ -50,7 +50,7 @@ class PageElementWriter extends ElementWriter {
 		this.emit('pageChanged', {
 			prevPage: nextPage.prevPage,
 			prevY: nextPage.prevY,
-			y: this.writer.context.y
+			y: this.context.y
 		});
 	}
 
@@ -63,7 +63,7 @@ class PageElementWriter extends ElementWriter {
 
 	commitUnbreakableBlock(forcedX, forcedY) {
 		if (--this.transactionLevel === 0) {
-			let unbreakableContext = this.writer.context;
+			let unbreakableContext = this.context;
 			this.popContext();
 
 			let nbPages = unbreakableContext.pages.length;
@@ -79,7 +79,7 @@ class PageElementWriter extends ElementWriter {
 					if (!isUndefined(forcedX) || !isUndefined(forcedY)) {
 						fragment.height = unbreakableContext.getCurrentPage().pageSize.height - unbreakableContext.pageMargins.top - unbreakableContext.pageMargins.bottom;
 					} else {
-						fragment.height = this.context.getCurrentPage().pageSize.height - this.writer.context.pageMargins.top - this.writer.context.pageMargins.bottom;
+						fragment.height = this.context.getCurrentPage().pageSize.height - this.context.pageMargins.top - this.context.pageMargins.bottom;
 						for (let i = 0, l = this.repeatables.length; i < l; i++) {
 							fragment.height -= this.repeatables[i].height;
 						}
@@ -128,10 +128,10 @@ class PageElementWriter extends ElementWriter {
 	}
 
 	_fitOnPage(addFct) {
-		let position = addFct(self);
+		let position = addFct();
 		if (!position) {
 			this.moveToNextPage();
-			position = addFct(self);
+			position = addFct();
 		}
 		return position;
 	}

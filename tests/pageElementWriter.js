@@ -94,48 +94,6 @@ describe('PageElementWriter', function () {
 		pew = new PageElementWriter(ctx, tracker);
 	});
 
-	describe('addLine', function () {
-		it('should add new lines if there\'s enough space left', function () {
-			var position = addOneTenthLines(10);
-
-			assert.equal(ctx.pages.length, 1);
-			assert.deepEqual(position, {pageNumber: 1, left: MARGINS.left, top: (9 / 10 * AVAILABLE_HEIGHT) + MARGINS.top, verticalRatio: 0.9, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500});
-		});
-
-		it('should add new pages if there\'s not enough space left', function () {
-			var position = addOneTenthLines(11);
-
-			assert.equal(ctx.pages.length, 2);
-			assert.equal(ctx.pages[0].items.length, 10);
-			assert.equal(ctx.pages[1].items.length, 1);
-			assert.deepEqual(position, {pageNumber: 2, left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500});
-		});
-
-		it('should subtract line height from availableHeight when adding a line and update current y position', function () {
-			pew.addLine(buildLine(40));
-
-			assert.equal(ctx.y, MARGINS.top + 40);
-			assert.equal(ctx.availableHeight, AVAILABLE_HEIGHT - 40);
-		});
-
-		it('should add repeatable fragments if they exist and a new page is created before adding the line', function () {
-			addOneTenthLines(10);
-
-			assert.equal(ctx.pages.length, 1);
-
-			var rep = createRepeatable('rep', 30);
-			pew.repeatables.push(rep);
-
-			var anotherLine = buildLine(20);
-			anotherLine.marker = 'another';
-			pew.addLine(anotherLine);
-
-			assert.equal(ctx.pages.length, 2);
-			assert.equal(ctx.pages[1].items[0].item.marker, 'rep');
-			assert.equal(ctx.pages[1].items[1].item.marker, 'another');
-		});
-	});
-
 	describe('addImage', function () {
 		it('should add the image image if something else exists on the page and there\'s enough space left', function () {
 			var lineHeight = 400;
