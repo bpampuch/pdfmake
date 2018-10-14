@@ -9,25 +9,10 @@ class DocPreprocessor {
 	}
 
 	preprocessNode(node) {
-		// expand shortcuts and casting values
-		if (isArray(node)) {
-			node = {stack: node};
-		} else if (isString(node)) {
-			node = {text: node};
-		} else if (isNumber(node) || isBoolean(node)) {
-			node = {text: node.toString()};
-		} else if (node === undefined || node === null) {
-			node = {text: ''};
-		} else if (Object.keys(node).length === 0) { // empty object
-			node = {text: ''};
-		} else if ('text' in node && (node.text === undefined || node.text === null)) {
-			node.text = '';
-		}
-
 		if (node.columns) {
 			return this.preprocessColumns(node);
-		} else if (node.stack) {
-			return this.preprocessVerticalContainer(node);
+//		} else if (node.stack) {
+//			return this.preprocessVerticalContainer(node);
 		} else if (node.ul) {
 			return this.preprocessList(node);
 		} else if (node.ol) {
@@ -56,16 +41,6 @@ class DocPreprocessor {
 
 		for (let i = 0, l = columns.length; i < l; i++) {
 			columns[i] = this.preprocessNode(columns[i]);
-		}
-
-		return node;
-	}
-
-	preprocessVerticalContainer(node) {
-		let items = node.stack;
-
-		for (let i = 0, l = items.length; i < l; i++) {
-			items[i] = this.preprocessNode(items[i]);
 		}
 
 		return node;
