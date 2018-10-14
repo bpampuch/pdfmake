@@ -14,7 +14,7 @@ const getNodeMargin = node => {
 			];
 		}
 		return currentMargin;
-	}
+	};
 
 	const flattenStyleArray = styleArray => {
 		let flattenedStyles = {};
@@ -28,7 +28,7 @@ const getNodeMargin = node => {
 			}
 		}
 		return flattenedStyles;
-	}
+	};
 
 	const convertMargin = margin => {
 		if (isNumber(margin)) {
@@ -39,7 +39,7 @@ const getNodeMargin = node => {
 			}
 		}
 		return margin;
-	}
+	};
 
 	let margin = [undefined, undefined, undefined, undefined];
 
