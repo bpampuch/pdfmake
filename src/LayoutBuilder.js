@@ -26,6 +26,10 @@ class LayoutBuilder {
 		});
 	}
 
+	buildDocument(docStructure, styleDictionary, defaultStyle) {
+
+	}
+
 	tryLayoutDocument() {
 		// TODO
 		this.writer = new PageElementWriter(new DocumentContext(this.pageSize, this.pageMargins));

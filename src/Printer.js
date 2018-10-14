@@ -3,6 +3,23 @@ import PDFDocument from './PDFDocument';
 import pageSizes from './standardPageSizes';
 import defaults from './defaults';
 
+import mixin from './helpers/mixin';
+
+import DocNormalizer from './DocNormalizer';
+import ContainerNormalizer from './extensions/container/containerNormalizer';
+import TextNormalizer from './extensions/text/textNormalizer';
+
+import DocPreprocessor from './DocPreprocessor';
+import ContainerPreprocessor from './extensions/container/containerPreprocessor';
+import TextPreprocessor from './extensions/text/textPreprocessor';
+
+import DocMeasurer from './DocMeasurer';
+import ContainerMeasurer from './extensions/container/containerMeasurer';
+import TextMeasurer from './extensions/text/textMeasurer';
+
+import LayoutBuilder from './LayoutBuilder';
+import ContainerBuilder from './extensions/container/containerBuilder';
+import TextBuilder from './extensions/text/textBuilder';
 
 const getPageSize = function (pageSize, pageOrientation) {
 	const isNeedSwapPageSizes = function (pageOrientation) {
@@ -89,7 +106,26 @@ class Printer {
 
 		this.pdfDocument = new PDFDocument(this.fonts, docDefinition.images, pdfOptions);
 
+		// TODO: refactor creating extended classes
+		const DocNormalizerClass = mixin(DocNormalizer).with(ContainerNormalizer, TextNormalizer);
+		const DocPreprocessorClass = mixin(DocPreprocessor).with(ContainerPreprocessor, TextPreprocessor);
+		const DocMeasurerClass = mixin(DocMeasurer).with(ContainerMeasurer, TextMeasurer);
+		const LayoutBuilderClass = mixin(LayoutBuilder).with(ContainerBuilder, TextBuilder);
 
+		let normalizer = new DocNormalizerClass();
+		docDefinition.content = normalizer.normalizeDocument(docDefinition.content);
+
+		let preprocessor = new DocPreprocessorClass();
+		docDefinition.content = preprocessor.preprocessDocument(docDefinition.content);
+
+		let measurer = new DocMeasurerClass(this.pdfDocument, docDefinition.styles, docDefinition.defaultStyle);
+		docDefinition.content = measurer.measureDocument(docDefinition.content);
+
+		let builder = new LayoutBuilderClass(this.pdfDocument, pageSize, docDefinition.pageMargins);
+		let pages = builder.buildDocument(docDefinition.content, docDefinition.styles, docDefinition.defaultStyle);
+
+		console.log(docDefinition);
+		console.log(pages);
 
 		// TODO
 	}
