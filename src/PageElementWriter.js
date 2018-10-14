@@ -117,7 +117,7 @@ class PageElementWriter extends ElementWriter {
 		let unbreakableContext = this.context;
 		let rep = { items: [] };
 
-		unbreakableContext.pages[0].items.forEach(function (item) {
+		unbreakableContext.pages[0].items.forEach(item => {
 			rep.items.push(item);
 		});
 

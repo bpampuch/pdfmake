@@ -1,7 +1,7 @@
 import { isArray } from './helpers/variableType';
 import PDFKit from 'pdfkit';
 
-const typeName = function (bold, italics) {
+const typeName = (bold, italics) => {
 	let type = 'normal';
 	if (bold && italics) {
 		type = 'bolditalics';

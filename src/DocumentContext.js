@@ -1,8 +1,8 @@
 import { isString, isValue } from './helpers/variableType';
 import { EventEmitter } from 'events';
 
-const getPageSize = function (currentPage, newPageOrientation) {
-	const getPageOrientation = function (pageOrientationString, currentPageOrientation) {
+const getPageSize = (currentPage, newPageOrientation) => {
+	const getPageOrientation = (pageOrientationString, currentPageOrientation) => {
 		if (pageOrientationString === undefined) {
 			return currentPageOrientation;
 		} else if (isString(pageOrientationString) && (pageOrientationString.toLowerCase() === 'landscape')) {

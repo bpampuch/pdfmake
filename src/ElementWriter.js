@@ -4,7 +4,7 @@ import { EventEmitter } from 'events';
 import DocumentContext from './DocumentContext';
 import Line from './Line';
 
-const addPageItem = function (page, item, index) {
+const addPageItem = (page, item, index) => {
 	if (!isValue(index) || index < 0 || index > page.items.length) {
 		page.items.push(item);
 	} else {
@@ -59,7 +59,7 @@ class ElementWriter extends EventEmitter {
 	}
 
 	addFragment(block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-		const cloneLine = function (line) {
+		const cloneLine = line => {
 			let result = new Line(line.maxWidth);
 
 			for (let key in line) {
@@ -78,7 +78,7 @@ class ElementWriter extends EventEmitter {
 			return false;
 		}
 
-		block.items.forEach(function (item) {
+		block.items.forEach(item => {
 			switch (item.type) {
 				case 'line':
 					var l = cloneLine(item.item);
@@ -287,7 +287,7 @@ class ElementWriter extends EventEmitter {
 				break;
 		}
 		if (offset) {
-			canvas.canvas.forEach(function (vector) {
+			canvas.canvas.forEach(vector => {
 				offsetVector(vector, offset, 0);
 			});
 		}

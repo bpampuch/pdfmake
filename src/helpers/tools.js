@@ -3,7 +3,7 @@
  * @param {array} otherArray
  */
 export function addAll(target, otherArray) {
-	otherArray.forEach(function (item) {
+	otherArray.forEach(item => {
 		target.push(item);
 	});
 }

@@ -184,7 +184,7 @@ class StyleContextStack {
 			return defaultValue;
 		}
 
-		styleContextStack.auto(item, function () {
+		styleContextStack.auto(item, () => {
 			value = styleContextStack.getProperty(property);
 		});
 

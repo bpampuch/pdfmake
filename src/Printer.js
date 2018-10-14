@@ -22,8 +22,8 @@ import LayoutBuilder from './LayoutBuilder';
 import ContainerBuilder from './extensions/container/containerBuilder';
 import TextBuilder from './extensions/text/textBuilder';
 
-const getPageSize = function (pageSize, pageOrientation) {
-	const isNeedSwapPageSizes = function (pageOrientation) {
+const getPageSize = (pageSize, pageOrientation) => {
+	const isNeedSwapPageSizes = pageOrientation => {
 		if (isString(pageOrientation)) {
 			pageOrientation = pageOrientation.toLowerCase();
 			return ((pageOrientation === 'portrait') && (size.width > size.height)) ||
@@ -32,7 +32,7 @@ const getPageSize = function (pageSize, pageOrientation) {
 		return false;
 	};
 
-	const pageSizeToWithAndHeight = function (pageSize) {
+	const pageSizeToWithAndHeight = pageSize => {
 		if (isString(pageSize)) {
 			let size = pageSizes[pageSize.toUpperCase()];
 			if (!size) {
@@ -58,7 +58,7 @@ const getPageSize = function (pageSize, pageOrientation) {
 	return size;
 };
 
-const getPageMargins = function (margin) {
+const getPageMargins = margin => {
 	if (!margin) {
 		return null;
 	}
@@ -78,8 +78,8 @@ const getPageMargins = function (margin) {
 	return margin;
 };
 
-const calculatePageHeight = function (pages, margins) {
-	const getItemHeight = function (item) {
+const calculatePageHeight = (pages, margins) => {
+	const getItemHeight = item => {
 		if (isFunction(item.item.getHeight)) {
 			return item.item.getHeight();
 		} else if (item.item._height) {
@@ -91,7 +91,7 @@ const calculatePageHeight = function (pages, margins) {
 		}
 	};
 
-	const getBottomPosition = function (item) {
+	const getBottomPosition = item => {
 		let top = item.item.y;
 		let height = getItemHeight(item);
 		return top + height;
@@ -99,8 +99,8 @@ const calculatePageHeight = function (pages, margins) {
 
 	let height = margins.top;
 
-	pages.forEach(function (page) {
-		page.items.forEach(function (item) {
+	pages.forEach(page => {
+		page.items.forEach(item => {
 			let bottomPosition = getBottomPosition(item);
 			if (bottomPosition > height) {
 				height = bottomPosition;
@@ -113,7 +113,7 @@ const calculatePageHeight = function (pages, margins) {
 	return height;
 };
 
-const setMetadata = function (docDefinition, pdfDocument) {
+const setMetadata = (docDefinition, pdfDocument) => {
 	// PDF standard has these properties reserved: Title, Author, Subject, Keywords,
 	// Creator, Producer, CreationDate, ModDate, Trapped.
 	// To keep the pdfmake api consistent, the info field are defined lowercase.

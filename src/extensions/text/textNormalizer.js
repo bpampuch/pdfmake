@@ -1,6 +1,6 @@
 import { isString, isNumber, isBoolean, isArray, isValue, isEmptyObject } from '../../helpers/variableType';
 
-const convertValueToString = function (value) {
+const convertValueToString = value => {
 	if (isString(value)) {
 		return value;
 	} else if (isNumber(value) || isBoolean(value)) {

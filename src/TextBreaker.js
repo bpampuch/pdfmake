@@ -7,7 +7,7 @@ import StyleContextStack from './StyleContextStack';
  * @param {boolean} noWrap
  * @return {array}
  */
-const splitWords = function (text, noWrap) {
+const splitWords = (text, noWrap) => {
 	let words = [];
 
 	if (noWrap) {
@@ -40,7 +40,7 @@ const splitWords = function (text, noWrap) {
  * @param {boolean} noWrap
  * @return {string|null}
  */
-const getFirstWord = function (words, noWrap) {
+const getFirstWord = (words, noWrap) => {
 	let word = words[0];
 	if (isUndefined(word)) {
 		return null;
@@ -62,7 +62,7 @@ const getFirstWord = function (words, noWrap) {
  * @param {boolean} noWrap
  * @return {string|null}
  */
-const getLastWord = function (words, noWrap) {
+const getLastWord = (words, noWrap) => {
 	let word = words[words.length - 1];
 	if (isUndefined(word)) {
 		return null;

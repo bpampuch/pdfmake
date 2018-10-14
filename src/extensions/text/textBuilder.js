@@ -31,7 +31,7 @@ const TextBuilder = Base => class extends Base {
 	}
 
 	_buildNextLine(textNode) {
-		const cloneInline = function (inline) {
+		const cloneInline = inline => {
 			let newInline = inline.constructor();
 			for (let key in inline) {
 				newInline[key] = inline[key];

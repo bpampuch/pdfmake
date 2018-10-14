@@ -10,9 +10,9 @@ const TRAILING = /(\s)+$/g;
  * @param {array} textArray
  * @return {array}
  */
-const flattenTextArray = function (array) {
+const flattenTextArray = array => {
 	function flatten(array) {
-		return array.reduce(function (prev, cur) {
+		return array.reduce((prev, cur) => {
 			var current = isArray(cur.text) ? flatten(cur.text) : cur;
 			var more = [].concat(current).some(Array.isArray);
 			return prev.concat(more ? flatten(current) : current);
@@ -63,7 +63,7 @@ class TextInlines {
 
 		let measuredText = this.measure(breakedText, styleContextStack);
 
-		measuredText.forEach(function (inline) {
+		measuredText.forEach(inline => {
 			minWidth = Math.max(minWidth, getTrimmedWidth(inline));
 
 			if (!currentLineWidth) {
