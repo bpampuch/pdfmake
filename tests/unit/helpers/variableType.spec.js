@@ -1,7 +1,7 @@
 const assert = require('assert');
 const util = require('util');
 
-const { isString, isNumber, isBoolean, isArray, isFunction, isObject, isEmptyObject, isNull, isUndefined, isValue } = require('../../js/helpers/variableType');
+const { isString, isNumber, isBoolean, isArray, isFunction, isObject, isEmptyObject, isNull, isUndefined, isValue } = require('../../../js/helpers/variableType');
 
 const variableCheckMap = [
 	{
