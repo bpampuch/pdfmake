@@ -1,4 +1,4 @@
-import { isString, isNumber, isBoolean, isArray, isNull, isUndefined, isValue, isEmptyObject } from '../../helpers/variableType';
+import { isString, isNumber, isBoolean, isArray, isValue, isEmptyObject } from '../../helpers/variableType';
 
 const convertValueToString = function (value) {
 	if (isString(value)) {

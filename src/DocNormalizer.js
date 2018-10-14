@@ -46,7 +46,7 @@ class DocNormalizer {
 			if (property.condition(node)) { // all matches
 				node = property.callback(node);
 			}
-		};
+		}
 
 		return node;
 	}
