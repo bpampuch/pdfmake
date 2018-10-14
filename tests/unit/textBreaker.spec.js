@@ -10,6 +10,29 @@ describe('TextBreaker', function () {
 	var sampleText = 'Przyklad, bez nowych linii,   ale !!!! rozne!!!konstrukcje i ..blablablabla.';
 	var sampleText2 = 'Przyklad, z nowy\nmi liniami\n, \n \n  ale\n\n !!!! rozne!!!konstrukcje i ..blablablabla.';
 
+	var plainText = 'Imię: Jan      Nazwisko: Nowak\nDodatkowe informacje:';
+
+	var plainTextArray = [
+		'Imię: ',
+		'Jan   ',
+		'   Nazwisko:',
+		' Nowak\nDodatkowe informacje:'
+	];
+
+	var mixedTextArray = [
+		{ text: 'Imię: ', bold: true },
+		'Jan   ',
+		{ text: '   Nazwisko:', bold: true },
+		{ text: ' Nowak\nDodatkowe informacje:', bold: true }
+	];
+
+	var mixedTextArrayWithUnknownStyleDefinitions = [
+		{ text: 'Imię: ', bold: true },
+		'Jan   ',
+		{ text: '   Nazwisko:', bold: true },
+		{ text: ' Nowak\nDodatkowe informacje:', bold: true, unknownStyle: 123 }
+	];
+
 	var styleStackNoWrap = new StyleContextStack({}, { noWrap: true });
 	var styleStackWrap = new StyleContextStack({}, { noWrap: false });
 
@@ -154,6 +177,49 @@ describe('TextBreaker', function () {
 			assert.equal(result.length, 2);
 			assert.equal(result[0].noNewLine, undefined);
 			assert.equal(result[1].noNewLine, undefined);
+		});
+
+		it('should support plain strings', function () {
+			var result = textBreaker.getBreaks(plainText);
+			assert.equal(result.length, 6);
+		});
+
+		it('should support plain strings with new-lines', function () {
+			var result = textBreaker.getBreaks(plainText);
+			assert(result[3].lineEnd);
+		});
+
+		it('should support an array of plain strings', function () {
+			var result = textBreaker.getBreaks(plainTextArray);
+			assert.equal(result.length, 7);
+		});
+
+		it('should support an array of plain strings with new-lines', function () {
+			var result = textBreaker.getBreaks(plainTextArray);
+			assert.equal(result[4].lineEnd, true);
+		});
+
+		it('should support arrays with style definition', function () {
+			var result = textBreaker.getBreaks(mixedTextArray);
+
+			assert.equal(result.length, 7);
+		});
+
+		it('should keep style definitions after splitting new-lines', function () {
+			var result = textBreaker.getBreaks(mixedTextArray);
+
+			[0, 2, 3, 4, 5, 6].forEach(function (i) {
+				assert.equal(result[i].bold, true);
+			});
+
+			assert(!result[1].bold);
+		});
+
+		it('should keep unknown style fields after splitting new-lines', function () {
+			var result = textBreaker.getBreaks(mixedTextArrayWithUnknownStyleDefinitions);
+			assert.equal(result.length, 7);
+			assert.equal(result[5].unknownStyle, 123);
+			assert.equal(result[6].unknownStyle, 123);
 		});
 
 	});

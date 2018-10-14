@@ -26,30 +26,11 @@ var textTools = new TextTools.default(sampleTestProvider);
 var docPreprocessor = new DocPreprocessor();
 
 describe('TextTools', function () {
-	var sampleText = 'Przyklad, bez nowych linii,   ale !!!! rozne!!!konstrukcje i ..blablablabla.';
-	var sampleText2 = 'Przyklad, z nowy\nmi liniami\n, \n \n  ale\n\n !!!! rozne!!!konstrukcje i ..blablablabla.';
-
-	var plainText = 'Imię: Jan      Nazwisko: Nowak\nDodatkowe informacje:';
-
 	var plainTextArray = [
 		'Imię: ',
 		'Jan   ',
 		'   Nazwisko:',
 		' Nowak\nDodatkowe informacje:'
-	];
-
-	var mixedTextArray = [
-		{text: 'Imię: ', bold: true},
-		'Jan   ',
-		{text: '   Nazwisko:', bold: true},
-		{text: ' Nowak\nDodatkowe informacje:', bold: true}
-	];
-
-	var mixedTextArrayWithUnknownStyleDefinitions = [
-		{text: 'Imię: ', bold: true},
-		'Jan   ',
-		{text: '   Nazwisko:', bold: true},
-		{text: ' Nowak\nDodatkowe informacje:', bold: true, unknownStyle: 123}
 	];
 
 	var plainTextArrayWithoutNewLines = [
@@ -107,19 +88,6 @@ describe('TextTools', function () {
 		{text: '    This is a paragraph', preserveLeadingSpaces: true}
 	];
 
-	var mixedTextArrayWithVariousTypes = [
-		{text: ''},
-		{text: null},
-		{text: 2016},
-		{text: true},
-		{text: false},
-		'',
-		null,
-		2016,
-		true,
-		false
-	];
-
 	var styleStack = new StyleContextStack({
 		header: {
 			fontSize: 150,
@@ -135,62 +103,6 @@ describe('TextTools', function () {
 			font: 'Helvetica'
 		});
 	var styleStackNoWrap = new StyleContextStack({}, {noWrap: true});
-
-	describe('normalizeTextArray', function () {
-		it('should support plain strings', function () {
-			var result = TextTools.__get__('normalizeTextArray')(plainText, styleStack);
-			assert.equal(result.length, 6);
-		});
-
-		it('should support plain strings with new-lines', function () {
-			var result = TextTools.__get__('normalizeTextArray')(plainText, styleStack);
-			assert(result[3].lineEnd);
-		});
-
-		it('should support an array of plain strings', function () {
-			var result = TextTools.__get__('normalizeTextArray')(plainTextArray, styleStack);
-			assert.equal(result.length, 7);
-		});
-
-		it('should support an array of plain strings with new-lines', function () {
-			var result = TextTools.__get__('normalizeTextArray')(plainTextArray, styleStack);
-			assert.equal(result[4].lineEnd, true);
-		});
-
-		it('should support arrays with style definition', function () {
-			var result = TextTools.__get__('normalizeTextArray')(mixedTextArray, styleStack);
-			assert.equal(result.length, 7);
-		});
-
-		it('should keep style definitions after splitting new-lines', function () {
-			var result = TextTools.__get__('normalizeTextArray')(mixedTextArray, styleStack);
-			[0, 2, 3, 4, 5, 6].forEach(function (i) {
-				assert.equal(result[i].bold, true);
-			});
-
-			assert(!result[1].bold);
-		});
-
-		it('should keep unknown style fields after splitting new-lines', function () {
-			var result = TextTools.__get__('normalizeTextArray')(mixedTextArrayWithUnknownStyleDefinitions, styleStack);
-			assert.equal(result.length, 7);
-			assert.equal(result[5].unknownStyle, 123);
-			assert.equal(result[6].unknownStyle, 123);
-		});
-
-		it('should support cast to text', function () {
-			var node = docPreprocessor.preprocessNode(mixedTextArrayWithVariousTypes);
-			var result = TextTools.__get__('normalizeTextArray')(node.stack, styleStack);
-			assert.equal(result.length, 6);
-			assert.equal(result[0].text, '2016');
-			assert.equal(result[1].text, 'true');
-			assert.equal(result[2].text, 'false');
-			assert.equal(result[3].text, '2016');
-			assert.equal(result[4].text, 'true');
-			assert.equal(result[5].text, 'false');
-		});
-
-	});
 
 	describe('measure', function () {
 		// width + positioning
