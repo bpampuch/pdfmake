@@ -86,6 +86,7 @@ class DocMeasurer {
 		this.nodeTypes = [];
 		this.properties = [];
 
+		this.pdfDocument = pdfDocument;
 		this.textInlines = new TextInlines(pdfDocument);
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 	}

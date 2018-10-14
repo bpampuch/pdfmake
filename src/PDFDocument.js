@@ -56,7 +56,7 @@ class PDFDocument extends PDFKit {
 	}
 
 	provideImage(src) {
-		const realImageSrc = function (src) {
+		const realImageSrc = src => {
 			let image = this.images[src];
 
 			if (!image) {
@@ -80,6 +80,7 @@ class PDFDocument extends PDFKit {
 		try {
 			image = this.openImage(realImageSrc(src));
 		} catch (error) {
+			// TODO: Show error
 			image = null;
 		}
 		if (image === null || image === undefined) {

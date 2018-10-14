@@ -9,18 +9,22 @@ import mixin from './helpers/mixin';
 import DocNormalizer from './DocNormalizer';
 import ContainerNormalizer from './extensions/container/containerNormalizer';
 import TextNormalizer from './extensions/text/textNormalizer';
+import ImageNormalizer from './extensions/image/imageNormalizer';
 
 import DocPreprocessor from './DocPreprocessor';
 import ContainerPreprocessor from './extensions/container/containerPreprocessor';
 import TextPreprocessor from './extensions/text/textPreprocessor';
+import ImagePreprocessor from './extensions/image/imagePreprocessor';
 
 import DocMeasurer from './DocMeasurer';
 import ContainerMeasurer from './extensions/container/containerMeasurer';
 import TextMeasurer from './extensions/text/textMeasurer';
+import ImageMeasurer from './extensions/image/imageMeasurer';
 
 import LayoutBuilder from './LayoutBuilder';
 import ContainerBuilder from './extensions/container/containerBuilder';
 import TextBuilder from './extensions/text/textBuilder';
+import ImageBuilder from './extensions/image/imageBuilder';
 
 const getPageSize = (pageSize, pageOrientation) => {
 	const isNeedSwapPageSizes = pageOrientation => {
@@ -174,10 +178,10 @@ class Printer {
 		setMetadata(docDefinition, this.pdfDocument);
 
 		// TODO: refactor creating extended classes
-		const DocNormalizerClass = mixin(DocNormalizer).with(ContainerNormalizer, TextNormalizer);
-		const DocPreprocessorClass = mixin(DocPreprocessor).with(ContainerPreprocessor, TextPreprocessor);
-		const DocMeasurerClass = mixin(DocMeasurer).with(ContainerMeasurer, TextMeasurer);
-		const LayoutBuilderClass = mixin(LayoutBuilder).with(ContainerBuilder, TextBuilder);
+		const DocNormalizerClass = mixin(DocNormalizer).with(ContainerNormalizer, TextNormalizer, ImageNormalizer);
+		const DocPreprocessorClass = mixin(DocPreprocessor).with(ContainerPreprocessor, TextPreprocessor, ImagePreprocessor);
+		const DocMeasurerClass = mixin(DocMeasurer).with(ContainerMeasurer, TextMeasurer, ImageMeasurer);
+		const LayoutBuilderClass = mixin(LayoutBuilder).with(ContainerBuilder, TextBuilder, ImageBuilder);
 
 		let normalizer = new DocNormalizerClass();
 		docDefinition.content = normalizer.normalizeDocument(docDefinition.content);
