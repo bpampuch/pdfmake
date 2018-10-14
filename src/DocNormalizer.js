@@ -1,13 +1,13 @@
 class DocNormalizer {
 
 	constructor() {
-		this.cleanups = [];
+		this.shortcuts = [];
 		this.nodeTypes = [];
 		this.properties = [];
 	}
 
-	registerCleanup(callback) {
-		this.cleanups.push({
+	registerShortcut(callback) {
+		this.shortcuts.push({
 			callback: callback
 		});
 	}
@@ -31,8 +31,8 @@ class DocNormalizer {
 	}
 
 	normalizeNode(node) {
-		for (let cleanup of this.cleanups) {
-			node = cleanup.callback(node);
+		for (let shortcut of this.shortcuts) {
+			node = shortcut.callback(node);
 		}
 
 		for (let nodeType of this.nodeTypes) {

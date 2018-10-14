@@ -8,8 +8,8 @@ const ContainerNormalizer = Base => class extends Base {
 	constructor() {
 		super();
 
-		this.registerCleanup(
-			node => this.cleanupVerticalContainer(node)
+		this.registerShortcut(
+			node => this.shortcutVerticalContainer(node)
 		);
 
 		this.registerNodeType(
@@ -18,7 +18,7 @@ const ContainerNormalizer = Base => class extends Base {
 		);
 	}
 
-	cleanupVerticalContainer(node) {
+	shortcutVerticalContainer(node) {
 		if (isArray(node)) { // stack defined as array
 			node = { stack: node };
 		}

@@ -22,8 +22,8 @@ const TextNormalizer = Base => class extends Base {
 	constructor() {
 		super();
 
-		this.registerCleanup(
-			node => this.cleanupText(node)
+		this.registerShortcut(
+			node => this.shortcutText(node)
 		);
 
 		this.registerNodeType(
@@ -32,7 +32,7 @@ const TextNormalizer = Base => class extends Base {
 		);
 	}
 
-	cleanupText(node) {
+	shortcutText(node) {
 		if (isString(node) || isNumber(node) || isBoolean(node) || !isValue(node) || isEmptyObject(node)) { // text node defined as value
 			node = { text: convertValueToString(node) };
 		} else if ('text' in node) { // cast value in text property
