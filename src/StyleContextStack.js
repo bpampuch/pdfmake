@@ -1,4 +1,4 @@
-import { isString, isArray, isValue } from './helpers/variableType'
+import { isString, isArray, isValue } from './helpers/variableType';
 
 /**
  * Class for style inheritance and style overrides
@@ -189,6 +189,23 @@ class StyleContextStack {
 		});
 
 		return isValue(value) ? value : defaultValue;
+	}
+
+	/**
+	 * @param {object} source
+	 * @param {object} destination
+	 * @return {object}
+	 */
+	static copyStyle(source = {}, destination = {}) {
+		// TODO: default style to source
+
+		for (var key in source) {
+			if (key != 'text' && source.hasOwnProperty(key)) {
+				destination[key] = source[key];
+			}
+		}
+
+		return destination;
 	}
 
 }

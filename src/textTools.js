@@ -127,18 +127,6 @@ function splitWords(text, noWrap) {
 	return results;
 }
 
-function copyStyle(source = {}, destination = {}) {
-	//TODO: default style for source variable
-
-	for (let key in source) {
-		if (key != 'text' && source.hasOwnProperty(key)) {
-			destination[key] = source[key];
-		}
-	}
-
-	return destination;
-}
-
 function normalizeTextArray(array, styleContextStack) {
 	function flatten(array) {
 		return array.reduce((prev, cur) => {

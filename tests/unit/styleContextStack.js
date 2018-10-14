@@ -145,4 +145,8 @@ describe('StyleContextStack', function () {
 		// TODO
 	});
 
+	describe('copyStyle', function () {
+		// TODO
+	});
+
 });
