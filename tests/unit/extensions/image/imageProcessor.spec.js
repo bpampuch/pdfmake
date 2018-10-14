@@ -2,7 +2,7 @@ var assert = require('assert');
 
 // TODO: refactor importing class with extended mixins
 const mixin = require('../../../../js/helpers/mixin').default;
-const DocProcessor = require('../../../../js/docProcessor').default;
+const DocProcessor = require('../../../../js/DocProcessor').default;
 const ContainerProcessor = require('../../../../js/extensions/container/containerProcessor').default;
 const ImageProcessor = require('../../../../js/extensions/image/imageProcessor').default;
 

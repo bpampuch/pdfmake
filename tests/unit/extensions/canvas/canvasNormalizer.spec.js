@@ -2,7 +2,7 @@ var assert = require('assert');
 
 // TODO: refactor importing class with extended mixins
 const mixin = require('../../../../js/helpers/mixin').default;
-const DocNormalizer = require('../../../../js/docNormalizer').default;
+const DocNormalizer = require('../../../../js/DocNormalizer').default;
 const ContainerNormalizer = require('../../../../js/extensions/container/containerNormalizer').default;
 const CanvasNormalizer = require('../../../../js/extensions/canvas/canvasNormalizer').default;
 

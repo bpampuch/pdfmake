@@ -2,7 +2,7 @@ var assert = require('assert');
 
 // TODO: refactor importing class with extended mixins
 const mixin = require('../../../../js/helpers/mixin').default;
-const DocMeasurer = require('../../../../js/docMeasurer').default;
+const DocMeasurer = require('../../../../js/DocMeasurer').default;
 const ContainerMeasurer = require('../../../../js/extensions/container/containerMeasurer').default;
 const TextMeasurer = require('../../../../js/extensions/text/TextMeasurer').default;
 

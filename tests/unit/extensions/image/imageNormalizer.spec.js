@@ -3,7 +3,7 @@ var fs = require('fs');
 
 // TODO: refactor importing class with extended mixins
 const mixin = require('../../../../js/helpers/mixin').default;
-const DocNormalizer = require('../../../../js/docNormalizer').default;
+const DocNormalizer = require('../../../../js/DocNormalizer').default;
 const ContainerNormalizer = require('../../../../js/extensions/container/containerNormalizer').default;
 const ImageNormalizer = require('../../../../js/extensions/image/imageNormalizer').default;
 
