@@ -22,13 +22,18 @@ class Renderer {
 						this.renderLine(item.item, item.item.x, item.item.y);
 						break;
 
-					// TODO
+					case 'image':
+						this.renderImage(item.item, item.item.x, item.item.y);
+						break;
+
+					case 'vector':
+						this.renderVector(item.item);
+						break;
 
 					default:
-						throw 'Type not implemented'; // TODO
+						throw `Item type '${item.type}' not supported.`;
 				}
 			}
-
 		}
 	}
 
@@ -68,6 +73,94 @@ class Renderer {
 				this.pdfDocument.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
 			}
 
+		}
+	}
+
+	renderImage(image, x, y) {
+		this.pdfDocument.opacity(image.opacity || 1);
+		this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+		if (image.link) {
+			this.pdfDocument.link(image.x, image.y, image._width, image._height, image.link);
+		}
+	}
+
+	renderVector(vector) {
+		//TODO: pdf optimization (there's no need to write all properties everytime)
+		this.pdfDocument.lineWidth(vector.lineWidth || 1);
+		if (vector.dash) {
+			this.pdfDocument.dash(vector.dash.length, { space: vector.dash.space || vector.dash.length, phase: vector.dash.phase || 0 });
+		} else {
+			this.pdfDocument.undash();
+		}
+		this.pdfDocument.lineJoin(vector.lineJoin || 'miter');
+		this.pdfDocument.lineCap(vector.lineCap || 'butt');
+
+		//TODO: clipping
+
+		switch (vector.type) {
+			case 'ellipse':
+				this.pdfDocument.ellipse(vector.x, vector.y, vector.r1, vector.r2);
+				break;
+
+			case 'rect':
+				if (vector.r) {
+					this.pdfDocument.roundedRect(vector.x, vector.y, vector.w, vector.h, vector.r);
+				} else {
+					this.pdfDocument.rect(vector.x, vector.y, vector.w, vector.h);
+				}
+
+				if (vector.linearGradient) {
+					let gradient = this.pdfDocument.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
+					let step = 1 / (vector.linearGradient.length - 1);
+
+					for (let i = 0; i < vector.linearGradient.length; i++) {
+						gradient.stop(i * step, vector.linearGradient[i]);
+					}
+
+					vector.color = gradient;
+				}
+				break;
+
+			case 'line':
+				this.pdfDocument.moveTo(vector.x1, vector.y1);
+				this.pdfDocument.lineTo(vector.x2, vector.y2);
+				break;
+
+			case 'polyline':
+				if (vector.points.length === 0) {
+					break;
+				}
+
+				this.pdfDocument.moveTo(vector.points[0].x, vector.points[0].y);
+				for (let i = 1, l = vector.points.length; i < l; i++) {
+					this.pdfDocument.lineTo(vector.points[i].x, vector.points[i].y);
+				}
+
+				if (vector.points.length > 1) {
+					let p1 = vector.points[0];
+					let pn = vector.points[vector.points.length - 1];
+
+					if (vector.closePath || p1.x === pn.x && p1.y === pn.y) {
+						this.pdfDocument.closePath();
+					}
+				}
+				break;
+
+			case 'path':
+				this.pdfDocument.path(vector.d);
+				break;
+		}
+
+		if (vector.color && vector.lineColor) {
+			this.pdfDocument.fillColor(vector.color, vector.fillOpacity || 1);
+			this.pdfDocument.strokeColor(vector.lineColor, vector.strokeOpacity || 1);
+			this.pdfDocument.fillAndStroke();
+		} else if (vector.color) {
+			this.pdfDocument.fillColor(vector.color, vector.fillOpacity || 1);
+			this.pdfDocument.fill();
+		} else {
+			this.pdfDocument.strokeColor(vector.lineColor || 'black', vector.strokeOpacity || 1);
+			this.pdfDocument.stroke();
 		}
 	}
 

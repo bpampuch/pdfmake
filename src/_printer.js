@@ -184,23 +184,7 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 		let page = pages[i];
 		for (let ii = 0, il = page.items.length; ii < il; ii++) {
 			let item = page.items[ii];
-			switch (item.type) {
-				case 'vector':
-					renderVector(item.item, pdfKitDoc);
-					break;
-		/*		case 'line':
-					renderLine(item.item, item.item.x, item.item.y, pdfKitDoc);
-					break;*/
-				case 'image':
-					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
-					break;
-				case 'beginClip':
-					beginClip(item.item, pdfKitDoc);
-					break;
-				case 'endClip':
-					endClip(pdfKitDoc);
-					break;
-			}
+
 			renderedItems++;
 			progressCallback(renderedItems / totalItems);
 		}
@@ -306,100 +290,6 @@ function renderWatermark(page, pdfKitDoc) {
 	pdfKitDoc.fontSize(watermark.size.fontSize);
 	pdfKitDoc.text(watermark.text, x, y, {lineBreak: false});
 
-	pdfKitDoc.restore();
-}
-
-function renderVector(vector, pdfKitDoc) {
-	//TODO: pdf optimization (there's no need to write all properties everytime)
-	pdfKitDoc.lineWidth(vector.lineWidth || 1);
-	if (vector.dash) {
-		pdfKitDoc.dash(vector.dash.length, {space: vector.dash.space || vector.dash.length, phase: vector.dash.phase || 0});
-	} else {
-		pdfKitDoc.undash();
-	}
-	pdfKitDoc.lineJoin(vector.lineJoin || 'miter');
-	pdfKitDoc.lineCap(vector.lineCap || 'butt');
-
-	//TODO: clipping
-
-	switch (vector.type) {
-		case 'ellipse':
-			pdfKitDoc.ellipse(vector.x, vector.y, vector.r1, vector.r2);
-			break;
-		case 'rect':
-			if (vector.r) {
-				pdfKitDoc.roundedRect(vector.x, vector.y, vector.w, vector.h, vector.r);
-			} else {
-				pdfKitDoc.rect(vector.x, vector.y, vector.w, vector.h);
-			}
-
-			if (vector.linearGradient) {
-				let gradient = pdfKitDoc.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
-				let step = 1 / (vector.linearGradient.length - 1);
-
-				for (let i = 0; i < vector.linearGradient.length; i++) {
-					gradient.stop(i * step, vector.linearGradient[i]);
-				}
-
-				vector.color = gradient;
-			}
-			break;
-		case 'line':
-			pdfKitDoc.moveTo(vector.x1, vector.y1);
-			pdfKitDoc.lineTo(vector.x2, vector.y2);
-			break;
-		case 'polyline':
-			if (vector.points.length === 0) {
-				break;
-			}
-
-			pdfKitDoc.moveTo(vector.points[0].x, vector.points[0].y);
-			for (let i = 1, l = vector.points.length; i < l; i++) {
-				pdfKitDoc.lineTo(vector.points[i].x, vector.points[i].y);
-			}
-
-			if (vector.points.length > 1) {
-				let p1 = vector.points[0];
-				let pn = vector.points[vector.points.length - 1];
-
-				if (vector.closePath || p1.x === pn.x && p1.y === pn.y) {
-					pdfKitDoc.closePath();
-				}
-			}
-			break;
-		case 'path':
-			pdfKitDoc.path(vector.d);
-			break;
-	}
-
-	if (vector.color && vector.lineColor) {
-		pdfKitDoc.fillColor(vector.color, vector.fillOpacity || 1);
-		pdfKitDoc.strokeColor(vector.lineColor, vector.strokeOpacity || 1);
-		pdfKitDoc.fillAndStroke();
-	} else if (vector.color) {
-		pdfKitDoc.fillColor(vector.color, vector.fillOpacity || 1);
-		pdfKitDoc.fill();
-	} else {
-		pdfKitDoc.strokeColor(vector.lineColor || 'black', vector.strokeOpacity || 1);
-		pdfKitDoc.stroke();
-	}
-}
-
-function renderImage(image, x, y, pdfKitDoc) {
-	pdfKitDoc.opacity(image.opacity || 1);
-	pdfKitDoc.image(image.image, image.x, image.y, {width: image._width, height: image._height});
-	if (image.link) {
-		pdfKitDoc.link(image.x, image.y, image._width, image._height, image.link);
-	}
-}
-
-function beginClip(rect, pdfKitDoc) {
-	pdfKitDoc.save();
-	pdfKitDoc.addContent('' + rect.x + ' ' + rect.y + ' ' + rect.width + ' ' + rect.height + ' re');
-	pdfKitDoc.clip();
-}
-
-function endClip(pdfKitDoc) {
 	pdfKitDoc.restore();
 }
 

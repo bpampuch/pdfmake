@@ -47,5 +47,5 @@ export function processFirstExtenstionsByCondition(extensions, node) {
 		}
 	}
 
-	throw 'Unrecognized document structure: ' + stringifyNode(node);
+	throw `Unrecognized document structure: ${stringifyNode(node)}`;
 }
