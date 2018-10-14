@@ -45,7 +45,7 @@ gulp.task('buildBrowser', function (callback) {
 
 
 gulp.task('test', function () {
-	return gulp.src(['./tests/**/*.js'])
+	return gulp.src(['./tests/**/*.spec.js'])
 		.pipe(mocha({
 			debugBrk: DEBUG,
 			R: CI ? 'spec' : 'nyan'
