@@ -81,16 +81,10 @@ class PdfPrinter {
 	 * @return {Object} a pdfKit document object which can be saved or encode to data-url
 	 */
 	createPdfKitDocument(docDefinition, options = {}) {
-//		let pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
-		let compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
-		let bufferPages = options.bufferPages || false;
 
 		this.pdfKitDoc = PdfKitEngine.createPdfDocument({size: [pageSize.width, pageSize.height], autoFirstPage: false, compress: compressPdf, bufferPages: bufferPages});
 		setMetadata(docDefinition, this.pdfKitDoc);
 
-//		this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
-
-//		docDefinition.images = docDefinition.images || {};
 
 		let builder = new LayoutBuilder(pageSize, /*fixPageMargins(*/docDefinition.pageMargins /*|| 40)*//*, new ImageMeasure(this.pdfKitDoc, docDefinition.images)*/);
 
@@ -236,18 +230,6 @@ function registerDefaultTableLayouts(layoutBuilder) {
 			}
 		}
 	});
-}
-
-function pageSize2widthAndHeight(pageSize) {
-	if (isString(pageSize)) {
-		let size = sizes[pageSize.toUpperCase()];
-		if (!size) {
-			throw `Page size ${pageSize} not recognized`;
-		}
-		return {width: size[0], height: size[1]};
-	}
-
-	return pageSize;
 }
 
 function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
