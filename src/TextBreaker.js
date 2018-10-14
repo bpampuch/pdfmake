@@ -1,6 +1,6 @@
 import LineBreaker from 'linebreak';
 import { isArray, isObject, isUndefined } from './helpers/variableType';
-import StyleContextStack from './styleContextStack';
+import StyleContextStack from './StyleContextStack';
 
 /**
  * @param {string} text

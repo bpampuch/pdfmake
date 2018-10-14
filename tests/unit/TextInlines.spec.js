@@ -1,7 +1,7 @@
 const assert = require('assert');
 
-const TextInlines = require('../../js/textInlines').default;
-const StyleContextStack = require('../../js/styleContextStack').default;
+const TextInlines = require('../../js/TextInlines').default;
+const StyleContextStack = require('../../js/StyleContextStack').default;
 
 var sampleTestProvider = {
 	provideFont: function (familyName, bold, italics) {

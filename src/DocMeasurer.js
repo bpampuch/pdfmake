@@ -1,7 +1,7 @@
 import { processAllExtenstionsByCondition, processFirstExtenstionsByCondition } from './helpers/extensionsRunner';
 import { isNumber, isArray, isUndefined } from './helpers/variableType';
-import TextInlines from './textInlines';
-import StyleContextStack from './styleContextStack';
+import TextInlines from './TextInlines';
+import StyleContextStack from './StyleContextStack';
 
 const getNodeMargin = node => {
 	const processSingleMargins = (node, currentMargin) => {

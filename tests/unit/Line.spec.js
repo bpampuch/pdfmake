@@ -1,6 +1,6 @@
 var assert = require('assert');
 
-var Line = require('../../js/line').default;
+var Line = require('../../js/Line').default;
 
 describe('Line', function () {
 

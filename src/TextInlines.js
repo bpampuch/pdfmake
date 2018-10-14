@@ -1,6 +1,6 @@
 import { isArray } from './helpers/variableType';
-import TextBreaker from './textBreaker';
-import StyleContextStack from './styleContextStack';
+import TextBreaker from './TextBreaker';
+import StyleContextStack from './StyleContextStack';
 import defaults from './defaults';
 
 const LEADING = /^(\s)+/g;
