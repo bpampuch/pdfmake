@@ -10,7 +10,7 @@ const typeName = function (bold, italics) {
 		type = 'italics';
 	}
 	return type;
-}
+};
 
 class FontProvider {
 	constructor(fontDescriptors, pdfKitDoc) {
