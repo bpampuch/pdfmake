@@ -33,9 +33,10 @@ function getPageOrientation(pageOrientationString, currentPageOrientation) {
  * A store for current x, y positions and available width/height.
  * It facilitates column divisions and vertical sync
  */
-class DocumentContext {
+class DocumentContext extends EventEmitter {
 
 	constructor(pageSize, pageMargins) {
+		super();
 		this.pages = [];
 		this.snapshots = [];
 		this.backgroundLength = [];
@@ -47,8 +48,6 @@ class DocumentContext {
 		this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
 		this.availableHeight = 0;
 		this.page = -1;
-
-		this.events = new EventEmitter();
 
 		this.addPage(pageSize);
 	}
@@ -76,7 +75,7 @@ class DocumentContext {
 		this.page = this.pages.length - 1;
 		this.initializePage();
 
-		this.events.emit('pageAdded');
+		this.emit('pageAdded');
 
 		return page;
 	}

@@ -16,6 +16,18 @@ describe('DocumentContext', function () {
 		assert.equal(context.availableHeight, 800 - 60 - 60);
 	});
 
+	it('should emit pageAdded event after page added', function () {
+		var callCount = 0;
+		context.on('pageAdded', () => {
+			callCount++;
+		});
+
+		context.addPage({ width: 400, height: 800, orientation: 'portrait' });
+		context.addPage({ width: 400, height: 800, orientation: 'portrait' });
+
+		assert.equal(callCount, 2);
+	});
+
 	describe('addMargin', function () {
 		it('should change both x and availableWidth', function () {
 			var x = context.x;
