@@ -212,7 +212,7 @@ class Printer {
 		let builder = new LayoutBuilderClass(this.pdfDocument, pageSize, docDefinition.pageMargins);
 		let pages = builder.buildDocument(docDefinition.content, docDefinition.styles, docDefinition.defaultStyle);
 
-		var maxNumberPages = docDefinition.maxPagesNumber || -1;
+		let maxNumberPages = docDefinition.maxPagesNumber || -1;
 		if (isNumber(maxNumberPages) && maxNumberPages > -1) {
 			pages = pages.slice(0, maxNumberPages);
 		}
@@ -226,10 +226,6 @@ class Printer {
 
 		let renderer = new Renderer(this.pdfDocument, options.progressCallback);
 		renderer.renderPages(pages);
-
-		//		console.log(docDefinition);
-		//		console.log(pages);
-		// TODO
 
 		return this.pdfDocument;
 	}
