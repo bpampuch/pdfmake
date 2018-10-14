@@ -118,7 +118,7 @@ class DocumentContext {
 			this.x = x;
 			this.availableWidth = this.getCurrentPage().pageSize.width - this.x - this.pageMargins.right;
 		}
-		if (ixValue(y)) {
+		if (isValue(y)) {
 			this.y = y;
 			this.availableHeight = this.getCurrentPage().pageSize.height - this.y - this.pageMargins.bottom;
 		}
@@ -153,7 +153,6 @@ class DocumentContext {
 			y: this.y
 		};
 	}
-
 
 }
 
