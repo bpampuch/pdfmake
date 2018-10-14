@@ -18,6 +18,12 @@ import TextPreprocessor from './extensions/text/textPreprocessor';
 import ImagePreprocessor from './extensions/image/imagePreprocessor';
 import CanvasPreprocessor from './extensions/canvas/canvasPreprocessor';
 
+import DocProcessor from './DocProcessor';
+import ContainerProcessor from './extensions/container/containerProcessor';
+import TextProcessor from './extensions/text/textProcessor';
+import ImageProcessor from './extensions/image/imageProcessor';
+import CanvasProcessor from './extensions/canvas/canvasProcessor';
+
 import DocMeasurer from './DocMeasurer';
 import ContainerMeasurer from './extensions/container/containerMeasurer';
 import TextMeasurer from './extensions/text/textMeasurer';
@@ -184,6 +190,7 @@ class Printer {
 		// TODO: refactor creating extended classes
 		const DocNormalizerClass = mixin(DocNormalizer).with(ContainerNormalizer, TextNormalizer, ImageNormalizer, CanvasNormalizer);
 		const DocPreprocessorClass = mixin(DocPreprocessor).with(ContainerPreprocessor, TextPreprocessor, ImagePreprocessor, CanvasPreprocessor);
+		const DocProcessorClass = mixin(DocProcessor).with(ContainerProcessor, TextProcessor, ImageProcessor, CanvasProcessor);
 		const DocMeasurerClass = mixin(DocMeasurer).with(ContainerMeasurer, TextMeasurer, ImageMeasurer, CanvasMeasurer);
 		const LayoutBuilderClass = mixin(LayoutBuilder).with(ContainerBuilder, TextBuilder, ImageBuilder, CanvasBuilder);
 
@@ -192,6 +199,9 @@ class Printer {
 
 		let preprocessor = new DocPreprocessorClass();
 		docDefinition.content = preprocessor.preprocessDocument(docDefinition.content);
+
+		let processor = new DocProcessorClass();
+		docDefinition.content = processor.processDocument(docDefinition.content);
 
 		let measurer = new DocMeasurerClass(this.pdfDocument, docDefinition.styles, docDefinition.defaultStyle);
 		docDefinition.content = measurer.measureDocument(docDefinition.content);
