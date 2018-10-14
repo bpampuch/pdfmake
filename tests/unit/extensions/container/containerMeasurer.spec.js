@@ -4,7 +4,7 @@ var assert = require('assert');
 const mixin = require('../../../../js/helpers/mixin').default;
 const DocMeasurer = require('../../../../js/DocMeasurer').default;
 const ContainerMeasurer = require('../../../../js/extensions/container/containerMeasurer').default;
-const TextMeasurer = require('../../../../js/extensions/text/TextMeasurer').default;
+const TextMeasurer = require('../../../../js/extensions/text/textMeasurer').default;
 
 const DocMeasurerClass = mixin(DocMeasurer).with(ContainerMeasurer, TextMeasurer);
 
