@@ -119,21 +119,7 @@ describe('LayoutBuilder', function () {
 		});
 
 		it('should support text in nested object', function () {
-			var desc = [{
-					text: {
-						text: {
-							text: 'hello, world'
-						}
-					}
-				}];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider);
-
-			assert.equal(pages.length, 1);
-			assert.equal(pages[0].items.length, 1);
-			assert.equal(pages[0].items[0].item.inlines.length, 2);
-			assert.equal(pages[0].items[0].item.inlines[0].text, 'hello, ');
-			assert.equal(pages[0].items[0].item.inlines[1].text, 'world');
 		});
 
 		it('should split lines with new-line character (bugfix)', function () {
