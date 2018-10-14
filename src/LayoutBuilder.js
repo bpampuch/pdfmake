@@ -27,16 +27,24 @@ class LayoutBuilder {
 	}
 
 	buildDocument(docStructure, styleDictionary, defaultStyle) {
-
+		// TODO
+		return this.tryLayoutDocument(docStructure);
 	}
 
-	tryLayoutDocument() {
-		// TODO
+	tryLayoutDocument(docStructure) {
 		this.writer = new PageElementWriter(new DocumentContext(this.pageSize, this.pageMargins));
-		// TODO
+
+		this.buildNode(docStructure);
+
+		//TODO
+
+		return this.writer.context.pages; // TODO
 	}
 
 	buildNode(node) {
+		//TODO: implement "decorate" node
+		node.positions = [];
+
 		node = processFirstExtenstionsByCondition(this.nodeTypes, node);
 		node = processAllExtenstionsByCondition(this.properties, node);
 

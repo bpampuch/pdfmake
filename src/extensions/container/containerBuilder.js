@@ -16,7 +16,7 @@ const ContainerBuilder = Base => class extends Base {
 
 	buildVerticalContainer(node) {
 		node.stack.forEach(function (item) {
-			self.buildNode(item);
+			this.buildNode(item);
 			addAll(node.positions, item.positions);
 
 			//TODO: paragraph gap

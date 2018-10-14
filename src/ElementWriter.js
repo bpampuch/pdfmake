@@ -26,7 +26,6 @@ class ElementWriter extends EventEmitter {
 		this.contextStack = [];
 	}
 
-
 	/**
 	 * Pushes the provided context onto the stack or creates a new one
 	 *

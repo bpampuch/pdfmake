@@ -43,8 +43,8 @@ const TextBuilder = Base => class extends Base {
 			return null;
 		}
 
-		let textInlines = TextInlines(this.pdfDocument);
-		let line = new Line(this.writer.context().availableWidth);
+		let textInlines = new TextInlines(this.pdfDocument);
+		let line = new Line(this.writer.context.availableWidth);
 
 		let isForceContinue = false;
 		while (textNode._inlines && textNode._inlines.length > 0 &&

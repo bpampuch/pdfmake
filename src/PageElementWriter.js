@@ -139,10 +139,6 @@ class PageElementWriter extends ElementWriter {
 		this.repeatables.pop();
 	}
 
-	context() {
-		return this.context;
-	}
-
 	_fitOnPage(addFct) {
 		let position = addFct();
 		if (!position) {
