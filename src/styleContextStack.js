@@ -1,13 +1,13 @@
-import {isString, isArray, isUndefined, isNull} from './helpers';
+import { isString, isArray, isValue } from './helpers/variableType'
 
 /**
- * Used for style inheritance and style overrides
+ * Class for style inheritance and style overrides
  */
 class StyleContextStack {
 
 	/**
-	 * @param {Object} styleDictionary named styles dictionary
-	 * @param {Object} defaultStyle optional default style definition
+	 * @param {object} styleDictionary named styles dictionary
+	 * @param {object} defaultStyle optional default style definition
 	 */
 	constructor(styleDictionary, defaultStyle = {}) {
 		this.defaultStyle = defaultStyle;
@@ -17,6 +17,7 @@ class StyleContextStack {
 
 	/**
 	 * Creates cloned version of current stack
+	 *
 	 * @return {StyleContextStack} current stack snapshot
 	 */
 	clone() {
@@ -32,7 +33,7 @@ class StyleContextStack {
 	/**
 	 * Pushes style-name or style-overrides-object onto the stack for future evaluation
 	 *
-	 * @param {String|Object} styleNameOrOverride style-name (referring to styleDictionary) or
+	 * @param {string|object} styleNameOrOverride style-name (referring to styleDictionary) or
 	 *                                            a new dictionary defining overriding properties
 	 */
 	push(styleNameOrOverride) {
@@ -97,18 +98,18 @@ class StyleContextStack {
 			'noWrap',
 			'markerColor',
 			'leadingIndent'
-				//'tableCellPadding'
-				// 'cellBorder',
-				// 'headerCellBorder',
-				// 'oddRowCellBorder',
-				// 'evenRowCellBorder',
-				// 'tableBorder'
+			//'tableCellPadding'
+			// 'cellBorder',
+			// 'headerCellBorder',
+			// 'oddRowCellBorder',
+			// 'evenRowCellBorder',
+			// 'tableBorder'
 		];
 		let styleOverrideObject = {};
 		let pushStyleOverrideObject = false;
 
 		styleProperties.forEach((key) => {
-			if (!isUndefined(item[key]) && !isNull(item[key])) {
+			if (isValue(item[key])) {
 				styleOverrideObject[key] = item[key];
 				pushStyleOverrideObject = true;
 			}
@@ -151,14 +152,12 @@ class StyleContextStack {
 			for (let i = this.styleOverrides.length - 1; i >= 0; i--) {
 				let item = this.styleOverrides[i];
 
-				if (isString(item)) {
-					// named-style-override
+				if (isString(item)) { // named-style-override
 					let style = this.styleDictionary[item];
-					if (style && !isUndefined(style[property]) && !isNull(style[property])) {
+					if (style && isValue(style[property])) {
 						return style[property];
 					}
-				} else if (!isUndefined(item[property]) && !isNull(item[property])) {
-					// style-overrides-object
+				} else if (isValue(item[property])) { // style-overrides-object
 					return item[property];
 				}
 			}
@@ -166,6 +165,7 @@ class StyleContextStack {
 
 		return this.defaultStyle && this.defaultStyle[property];
 	}
+
 }
 
 export default StyleContextStack;
