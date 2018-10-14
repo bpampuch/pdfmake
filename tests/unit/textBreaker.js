@@ -6,8 +6,8 @@ describe('TextBreaker', function () {
 
 	var textBreaker = new TextBreaker();
 
-	var sampleText = { text: 'Przyklad, bez nowych linii,   ale !!!! rozne!!!konstrukcje i ..blablablabla.' };
-	var sampleText2 = { text: 'Przyklad, z nowy\nmi liniami\n, \n \n  ale\n\n !!!! rozne!!!konstrukcje i ..blablablabla.' };
+	var sampleText = 'Przyklad, bez nowych linii,   ale !!!! rozne!!!konstrukcje i ..blablablabla.';
+	var sampleText2 = 'Przyklad, z nowy\nmi liniami\n, \n \n  ale\n\n !!!! rozne!!!konstrukcje i ..blablablabla.';
 
 	describe('getBreaks', function () {
 
@@ -42,21 +42,21 @@ describe('TextBreaker', function () {
 		});
 
 		it('should split ZERO WIDTH SPACE character', function () {
-			var result = textBreaker.getBreaks({ text: 'first line\u200Bsecond line\u200Bthird line' });
+			var result = textBreaker.getBreaks('first line\u200Bsecond line\u200Bthird line');
 			assert.equal(result.length, 6);
 		});
 
 		it('should split basic Chinese text', function () {
-			var result = textBreaker.getBreaks({ text: '起来！不愿做奴隶的人们！' });
+			var result = textBreaker.getBreaks('起来！不愿做奴隶的人们！');
 			assert.equal(result.length, 10);
 		});
 
 		it('should split Chinese text into lines if there are new-line chars', function () {
-			var result = textBreaker.getBreaks({ text: '中华民族到了最危险的时候，\n每个人被迫着发出最后的吼声。\n起来！起来！起来！' });
+			var result = textBreaker.getBreaks('中华民族到了最危险的时候，\n每个人被迫着发出最后的吼声。\n起来！起来！起来！');
 			assert.equal(result.length, 31);
 		});
 
-		it('should split an array of text', function () {
+		it('should split an array of inline texts', function () {
 			var arrayText = [
 				{ text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ' },
 				{ text: 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.' }

@@ -1,5 +1,5 @@
 import LineBreaker from 'linebreak';
-import { isArray, isUndefined } from './helpers/variableType';
+import { isArray, isObject, isUndefined } from './helpers/variableType';
 import StyleContextStack from './styleContextStack';
 
 /**
@@ -106,9 +106,13 @@ class TextBreaker {
 			let style = null;
 			let words;
 
-			let noWrap = StyleContextStack.getStyleProperty(item, styleContextStack, 'noWrap', false);
-			words = splitWords(item.text, noWrap);
-			style = StyleContextStack.copyStyle(item);
+			let noWrap = StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
+			if (isObject(item)) {
+				words = splitWords(item.text, noWrap);
+				style = StyleContextStack.copyStyle(item);
+			} else {
+				words = splitWords(item, noWrap);
+			}
 
 			if (lastWord && words.length) {
 				let firstWord = getFirstWord(words, noWrap);
