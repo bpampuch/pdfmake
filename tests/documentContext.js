@@ -13,12 +13,6 @@ describe('DocumentContext', function () {
 		// pc.addPage();
 	});
 
-	it('should set initial values based on pageSize and pageMargins', function () {
-		assert.equal(pc.x, 40);
-		assert.equal(pc.y, 60);
-		assert.equal(pc.availableWidth, 400 - 40 - 40);
-		assert.equal(pc.availableHeight, 800 - 60 - 60);
-	});
 
 	describe('beginColumnGroup', function () {
 		it('should save current settings', function () {
@@ -180,47 +174,7 @@ describe('DocumentContext', function () {
 		});
 	});
 
-	describe('addMargin', function () {
-		it('should change both x and availableWidth', function () {
-			var x = pc.x;
-			var aWidth = pc.availableWidth;
 
-			pc.addMargin(10);
-
-			assert.equal(pc.x, x + 10);
-			assert.equal(pc.availableWidth, aWidth - 10);
-		});
-
-		it('should support left and right margins', function () {
-			var x = pc.x;
-			var aWidth = pc.availableWidth;
-
-			pc.addMargin(10, 15);
-
-			assert.equal(pc.x, x + 10);
-			assert.equal(pc.availableWidth, aWidth - 10 - 15);
-		});
-	});
-
-	describe('moveDown', function () {
-		it('should change both y and availableHeight', function () {
-			var y = pc.y;
-			var ah = pc.availableHeight;
-
-			pc.moveDown(123);
-
-			assert.equal(pc.y, y + 123);
-			assert.equal(pc.availableHeight, ah - 123);
-		});
-
-		it('should return true if there is still some space left on the page', function () {
-			assert(pc.moveDown(123));
-		});
-
-		it('should return false if there\'s no space left after the operation', function () {
-			assert(!pc.moveDown(1200));
-		});
-	});
 
 	describe('moveToNext page', function () {
 
@@ -254,30 +208,6 @@ describe('DocumentContext', function () {
 			pageSize = {width: 200, height: 400, orientation: 'landscape'};
 		});
 
-		it('should add a new page', function () {
-
-			pc.addPage(pageSize);
-
-			assert.equal(pc.pages.length, 2);
-		});
-
-
-		it('should return added page', function () {
-			var page = pc.addPage(pageSize);
-
-			assert.equal(page, pc.pages[pc.pages.length - 1]);
-		});
-
-		it('should set y, availableHeight and availableWidth on page to initial values', function () {
-			pc.y = 123;
-			pc.availableHeight = 123;
-
-			pc.initializePage();
-
-			assert.equal(pc.y, 60);
-			assert.equal(pc.availableHeight, 800 - 60 - 60);
-			assert.equal(pc.availableWidth, 400 - 40 - 40);
-		});
 
 		it('should keep column width when in column group, but set page width', function () {
 			pc.beginColumnGroup();
