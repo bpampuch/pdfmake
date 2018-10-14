@@ -136,20 +136,6 @@ describe('TextTools', function () {
 		});
 	var styleStackNoWrap = new StyleContextStack({}, {noWrap: true});
 
-	describe('splitWords', function () {
-
-
-		it('should replace tab with 4 spaces', function () {
-			var txt = 'A\ttest';
-
-			assert.equal(txt.length, 6);
-			var result = TextTools.__get__('splitWords')(txt);
-			assert.equal(result[0].text, 'A    ');
-			assert.equal(result[1].text, 'test');
-		});
-
-	});
-
 	describe('normalizeTextArray', function () {
 		it('should support plain strings', function () {
 			var result = TextTools.__get__('normalizeTextArray')(plainText, styleStack);

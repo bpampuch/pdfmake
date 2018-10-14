@@ -43,6 +43,10 @@ const TextNormalizer = Base => class extends Base {
 	}
 
 	normalizeText(node) {
+		if (!isArray(node.text)) {
+			node.text = node.text.replace(/\t/g, '    ');
+		}
+
 		if (node.text && node.text.text) {
 			node.text = [this.normalizeNode(node.text)];
 		} else if (isArray(node.text)) {
