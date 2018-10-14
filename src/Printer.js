@@ -92,7 +92,7 @@ class Printer {
 			docDefinition.compress = defaults.compress;
 		}
 
-		docDefinition.pageMargins = getPageMargins(docDefinition.pageMargins) || defaults.pageMargins;
+		docDefinition.pageMargins = getPageMargins(docDefinition.pageMargins || defaults.pageMargins);
 		docDefinition.images = docDefinition.images || {};
 		docDefinition.styles = docDefinition.styles || {};
 		docDefinition.defaultStyle = docDefinition.defaultStyle || { font: defaults.font, fontSize: defaults.fontSize };
@@ -128,8 +128,8 @@ class Printer {
 		let renderer = new Renderer(this.pdfDocument);
 		renderer.renderPages(pages);
 
-		console.log(docDefinition);
-		console.log(pages);
+		//		console.log(docDefinition);
+		//		console.log(pages);
 		// TODO
 
 		return this.pdfDocument;
