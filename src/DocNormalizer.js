@@ -35,11 +35,17 @@ class DocNormalizer {
 			node = shortcut.callback(node);
 		}
 
+		let nodeTypeFound = false;
 		for (let nodeType of this.nodeTypes) {
 			if (nodeType.condition(node)) { // only first match
 				node = nodeType.callback(node);
+				nodeTypeFound = true;
 				break;
 			}
+		}
+
+		if (!nodeTypeFound) {
+			throw 'Unrecognized document structure: ' + JSON.stringify(node/*, fontStringify*/);
 		}
 
 		for (let property of this.properties) {
