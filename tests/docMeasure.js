@@ -56,33 +56,6 @@ var docMeasure = new DocMeasure(sampleTestProvider);
 var docPreprocessor = new DocPreprocessor();
 
 describe('DocMeasure', function () {
-	describe('measureLeaf', function () {
-		it('should call textTools.buildInlines and set _inlines, _minWidth, _maxWidth and return node', function () {
-			var dm = new DocMeasure(sampleTestProvider);
-			var called = false;
-			var node = {text: 'abc'};
-
-			dm.textTools = {
-				buildInlines: function () {
-					called = true;
-					return {items: ['abc'], minWidth: 1, maxWidth: 10};
-				}
-			};
-
-			docPreprocessor.preprocessText(node);
-			var result = dm.measureLeaf(node);
-			assert(called);
-			assert(node._inlines);
-			assert(node._minWidth);
-			assert(node._maxWidth);
-
-			assert.equal(node._inlines.length, 1);
-			assert.equal(node._minWidth, 1);
-			assert.equal(node._maxWidth, 10);
-
-			assert.equal(node, result);
-		});
-	});
 
 	describe('measureColumns', function () {
 		it('should extend document-definition-object if text columns are used', function () {
