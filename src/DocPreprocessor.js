@@ -1,4 +1,4 @@
-import { processAllExtenstions, processAllExtenstionsByCondition, processFirstExtenstionsByCondition } from './helpers/extensionsRunner';
+import { processAllExtenstionsByCondition, processFirstExtenstionsByCondition } from './helpers/extensionsRunner';
 
 class DocPreprocessor {
 

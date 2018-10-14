@@ -28,7 +28,7 @@ const flattenTextArray = function (array) {
 	array = flatten(array);
 
 	return array;
-}
+};
 
 class TextInlines {
 
@@ -145,7 +145,7 @@ class TextInlines {
 			}
 		}, this);
 
-		return array
+		return array;
 	}
 
 	/**
@@ -179,7 +179,7 @@ class TextInlines {
 		let font = this.fontProvider.provideFont(fontName, bold, italics);
 
 		return {
-			width: widthOfText(text, { font: font, fontSize: fontSize, characterSpacing: characterSpacing, fontFeatures: fontFeatures }),
+			width: this.widthOfText(text, { font: font, fontSize: fontSize, characterSpacing: characterSpacing, fontFeatures: fontFeatures }),
 			height: font.lineHeight(fontSize) * lineHeight,
 			fontSize: fontSize,
 			lineHeight: lineHeight,
