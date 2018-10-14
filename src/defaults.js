@@ -4,7 +4,7 @@ export default {
 	fontFeatures: null,
 	bold: false,
 	italics: false,
-	color: black,
+	color: 'black',
 	decoration: null,
 	decorationColor: null,
 	decorationStyle: null,
@@ -16,4 +16,4 @@ export default {
 	noWrap: false,
 	preserveLeadingSpaces: false,
 	alignment: 'left'
-}
+};
