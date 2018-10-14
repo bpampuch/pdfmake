@@ -1,4 +1,5 @@
 import { isArray } from './helpers/variableType';
+import PDFKit from 'pdfkit';
 
 const typeName = function (bold, italics) {
 	let type = 'normal';
@@ -12,15 +13,16 @@ const typeName = function (bold, italics) {
 	return type;
 };
 
-class FontProvider {
-	constructor(fontDescriptors, pdfKitDoc) {
+class PDFDocument extends PDFKit {
+
+	constructor(fonts, options = {}) {
+		super(options);
 		this.fonts = {};
-		this.pdfKitDoc = pdfKitDoc;
 		this.fontCache = {};
 
-		for (let font in fontDescriptors) {
-			if (fontDescriptors.hasOwnProperty(font)) {
-				let fontDef = fontDescriptors[font];
+		for (let font in fonts) {
+			if (fonts.hasOwnProperty(font)) {
+				let fontDef = fonts[font];
 
 				this.fonts[font] = {
 					normal: fontDef.normal,
@@ -50,6 +52,7 @@ class FontProvider {
 
 		return this.fontCache[familyName][type];
 	}
+
 }
 
-export default FontProvider;
+export default PDFDocument;

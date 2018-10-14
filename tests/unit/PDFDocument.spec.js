@@ -1,21 +1,20 @@
 var assert = require('assert');
 
-var FontProvider = require('../../js/fontProvider').default;
+var PDFDocument = require('../../js/PDFDocument').default;
 
-describe('FontProvider', function () {
-	var fontProvider, fontDefinitions, pdfDoc;
+describe('PDFDocument', function () {
+	var pdfDocument, fontDefinitions;
 
 	beforeEach(function () {
 		fontDefinitions = {};
-		pdfDoc = {};
-		fontProvider = new FontProvider(fontDefinitions, pdfDoc);
+		pdfDocument = new PDFDocument(fontDefinitions);
 	});
 
 	describe('provideFont', function () {
 
 		it('throws error when given font not present', function () {
 			assert.throws(function () {
-				fontProvider.provideFont('Arial', true, false);
+				pdfDocument.provideFont('Arial', true, false);
 			}, function (error) {
 				assert.equal(error.message, 'Font \'Arial\' in style \'bold\' is not defined in the font section of the document definition.');
 				return true;
