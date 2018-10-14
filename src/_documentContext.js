@@ -105,91 +105,9 @@ class DocumentContext {
 		this.lastColumnWidth = saved.lastColumnWidth;
 	}
 
-	beginDetachedBlock() {
-		this.snapshots.push({
-			x: this.x,
-			y: this.y,
-			availableHeight: this.availableHeight,
-			availableWidth: this.availableWidth,
-			page: this.page,
-			endingCell: this.endingCell,
-			lastColumnWidth: this.lastColumnWidth
-		});
-	}
 
-	endDetachedBlock() {
-		let saved = this.snapshots.pop();
-
-		this.x = saved.x;
-		this.y = saved.y;
-		this.availableWidth = saved.availableWidth;
-		this.availableHeight = saved.availableHeight;
-		this.page = saved.page;
-		this.endingCell = saved.endingCell;
-		this.lastColumnWidth = saved.lastColumnWidth;
-	}
-
-	moveToNextPage(pageOrientation) {
-		let nextPageIndex = this.page + 1;
-		let prevPage = this.page;
-		let prevY = this.y;
-
-		let createNewPage = nextPageIndex >= this.pages.length;
-		if (createNewPage) {
-			let currentAvailableWidth = this.availableWidth;
-			let currentPageOrientation = this.getCurrentPage().pageSize.orientation;
-
-			let pageSize = getPageSize(this.getCurrentPage(), pageOrientation);
-			this.addPage(pageSize);
-
-			if (currentPageOrientation === pageSize.orientation) {
-				this.availableWidth = currentAvailableWidth;
-			}
-		} else {
-			this.page = nextPageIndex;
-			this.initializePage();
-		}
-
-		return {
-			newPageCreated: createNewPage,
-			prevPage: prevPage,
-			prevY: prevY,
-			y: this.y
-		};
-	}
 
 }
-
-function pageOrientation(pageOrientationString, currentPageOrientation) {
-	if (pageOrientationString === undefined) {
-		return currentPageOrientation;
-	} else if (isString(pageOrientationString) && (pageOrientationString.toLowerCase() === 'landscape')) {
-		return 'landscape';
-	} else {
-		return 'portrait';
-	}
-}
-
-var getPageSize = (currentPage, newPageOrientation) => {
-
-	newPageOrientation = pageOrientation(newPageOrientation, currentPage.pageSize.orientation);
-
-	if (newPageOrientation !== currentPage.pageSize.orientation) {
-		return {
-			orientation: newPageOrientation,
-			width: currentPage.pageSize.height,
-			height: currentPage.pageSize.width
-		};
-	} else {
-		return {
-			orientation: currentPage.pageSize.orientation,
-			width: currentPage.pageSize.width,
-			height: currentPage.pageSize.height
-		};
-	}
-
-};
-
 
 function bottomMostContext(c1, c2) {
 	let r;

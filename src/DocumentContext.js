@@ -159,6 +159,30 @@ class DocumentContext extends EventEmitter {
 		};
 	}
 
+	beginDetachedBlock() {
+		this.snapshots.push({
+			x: this.x,
+			y: this.y,
+			availableHeight: this.availableHeight,
+			availableWidth: this.availableWidth,
+			page: this.page,
+			endingCell: this.endingCell,
+			lastColumnWidth: this.lastColumnWidth
+		});
+	}
+
+	endDetachedBlock() {
+		let saved = this.snapshots.pop();
+
+		this.x = saved.x;
+		this.y = saved.y;
+		this.availableWidth = saved.availableWidth;
+		this.availableHeight = saved.availableHeight;
+		this.page = saved.page;
+		this.endingCell = saved.endingCell;
+		this.lastColumnWidth = saved.lastColumnWidth;
+	};
+
 }
 
 export default DocumentContext;
