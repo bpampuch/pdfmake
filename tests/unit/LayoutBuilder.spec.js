@@ -1,6 +1,6 @@
 var assert = require('assert');
 
-describe('DoctBuilder', function () {
+describe('LayoutBuilder', function () {
 
 	// TODO
 

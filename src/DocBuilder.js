@@ -1,6 +1,4 @@
 import { processAllExtenstionsByCondition, processFirstExtenstionsByCondition } from './helpers/extensionsRunner';
-import PageElementWriter from './PageElementWriter';
-import DocumentContext from './DocumentContext';
 
 const decorateNode = (node) => {
 	let x = node.x;
@@ -16,12 +14,11 @@ const decorateNode = (node) => {
 	// TODO: canvas
 };
 
-class LayoutBuilder {
+class DocBuilder {
 
-	constructor(pdfDocument, pageSize, pageMargins) {
+	constructor(pdfDocument, pageElementWriter) {
 		this.pdfDocument = pdfDocument;
-		this.pageSize = pageSize;
-		this.pageMargins = pageMargins;
+		this.writer = pageElementWriter;
 		this.nodeTypes = [];
 		this.properties = [];
 	}
@@ -41,18 +38,7 @@ class LayoutBuilder {
 	}
 
 	buildDocument(docStructure, styleDictionary, defaultStyle) {
-		// TODO
-		return this.tryLayoutDocument(docStructure);
-	}
-
-	tryLayoutDocument(docStructure) {
-		this.writer = new PageElementWriter(new DocumentContext(this.pageSize, this.pageMargins));
-
-		this.buildNode(docStructure);
-
-		//TODO
-
-		return this.writer.context.pages; // TODO
+		return this.buildNode(docStructure);
 	}
 
 	buildNode(node) {
@@ -111,4 +97,4 @@ class LayoutBuilder {
 
 }
 
-export default LayoutBuilder;
+export default DocBuilder;

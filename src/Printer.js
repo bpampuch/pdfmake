@@ -2,42 +2,8 @@ import { isString, isBoolean, isArray, isNumber, isValue, isFunction } from './h
 import PDFDocument from './PDFDocument';
 import pageSizes from './standardPageSizes';
 import defaults from './defaults';
-import Renderer from './Renderer';
-
-import mixin from './helpers/mixin';
-
-import DocNormalizer from './DocNormalizer';
-import ContainerNormalizer from './extensions/container/containerNormalizer';
-import TextNormalizer from './extensions/text/textNormalizer';
-import ReferenceNormalizer from './extensions/reference/referenceNormalizer';
-import ImageNormalizer from './extensions/image/imageNormalizer';
-import CanvasNormalizer from './extensions/canvas/canvasNormalizer';
-
-import DocPreprocessor from './DocPreprocessor';
-import ContainerPreprocessor from './extensions/container/containerPreprocessor';
-import TextPreprocessor from './extensions/text/textPreprocessor';
-import ReferencePreprocessor from './extensions/reference/referencePreprocessor';
-import ImagePreprocessor from './extensions/image/imagePreprocessor';
-import CanvasPreprocessor from './extensions/canvas/canvasPreprocessor';
-
-import DocProcessor from './DocProcessor';
-import ContainerProcessor from './extensions/container/containerProcessor';
-import TextProcessor from './extensions/text/textProcessor';
-import ReferenceProcessor from './extensions/reference/referenceProcessor';
-import ImageProcessor from './extensions/image/imageProcessor';
-import CanvasProcessor from './extensions/canvas/canvasProcessor';
-
-import DocMeasurer from './DocMeasurer';
-import ContainerMeasurer from './extensions/container/containerMeasurer';
-import TextMeasurer from './extensions/text/textMeasurer';
-import ImageMeasurer from './extensions/image/imageMeasurer';
-import CanvasMeasurer from './extensions/canvas/canvasMeasurer';
-
 import LayoutBuilder from './LayoutBuilder';
-import ContainerBuilder from './extensions/container/containerBuilder';
-import TextBuilder from './extensions/text/textBuilder';
-import ImageBuilder from './extensions/image/imageBuilder';
-import CanvasBuilder from './extensions/canvas/canvasBuilder';
+import Renderer from './Renderer';
 
 const getPageSize = (pageSize, pageOrientation) => {
 	const isNeedSwapPageSizes = pageOrientation => {
@@ -190,27 +156,8 @@ class Printer {
 		this.pdfDocument = new PDFDocument(this.fonts, docDefinition.images, pdfOptions);
 		setMetadata(docDefinition, this.pdfDocument);
 
-		// TODO: refactor creating extended classes
-		const DocNormalizerClass = mixin(DocNormalizer).with(ContainerNormalizer, TextNormalizer, ReferenceNormalizer, ImageNormalizer, CanvasNormalizer);
-		const DocPreprocessorClass = mixin(DocPreprocessor).with(ContainerPreprocessor, TextPreprocessor, ReferencePreprocessor, ImagePreprocessor, CanvasPreprocessor);
-		const DocProcessorClass = mixin(DocProcessor).with(ContainerProcessor, TextProcessor, ReferenceProcessor, ImageProcessor, CanvasProcessor);
-		const DocMeasurerClass = mixin(DocMeasurer).with(ContainerMeasurer, TextMeasurer, ImageMeasurer, CanvasMeasurer);
-		const LayoutBuilderClass = mixin(LayoutBuilder).with(ContainerBuilder, TextBuilder, ImageBuilder, CanvasBuilder);
-
-		let normalizer = new DocNormalizerClass();
-		docDefinition.content = normalizer.normalizeDocument(docDefinition.content);
-
-		let preprocessor = new DocPreprocessorClass();
-		docDefinition.content = preprocessor.preprocessDocument(docDefinition.content);
-
-		let processor = new DocProcessorClass();
-		docDefinition.content = processor.processDocument(docDefinition.content);
-
-		let measurer = new DocMeasurerClass(this.pdfDocument, docDefinition.styles, docDefinition.defaultStyle);
-		docDefinition.content = measurer.measureDocument(docDefinition.content);
-
-		let builder = new LayoutBuilderClass(this.pdfDocument, pageSize, docDefinition.pageMargins);
-		let pages = builder.buildDocument(docDefinition.content, docDefinition.styles, docDefinition.defaultStyle);
+		let builder = new LayoutBuilder(this.pdfDocument, pageSize, docDefinition.pageMargins);
+		let pages = builder.buildDocument(docDefinition);
 
 		let maxNumberPages = docDefinition.maxPagesNumber || -1;
 		if (isNumber(maxNumberPages) && maxNumberPages > -1) {
