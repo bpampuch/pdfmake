@@ -1,12 +1,9 @@
-'use strict';
-
 var assert = require('assert');
 
-var integrationTestHelper = require('./integrationTestHelper');
+var IntegrationTestHelper = require('./IntegrationTestHelper');
 
-describe('Integration Test: images', function () {
-
-	var testHelper = new integrationTestHelper();
+describe('Integration test: image', function () {
+	var testHelper = new IntegrationTestHelper();
 
 	var INLINE_TEST_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAGAQMAAADNIO3CAAAAA1BMVEUAAN7GEcIJAAAAAWJLR0QAiAUdSAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB98DBREbA3IZ3d8AAAALSURBVAjXY2BABwAAEgAB74lUpAAAAABJRU5ErkJggg==';
 

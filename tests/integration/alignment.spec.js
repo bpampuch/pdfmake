@@ -1,15 +1,12 @@
-'use strict';
-
 var assert = require('assert');
 var sizes = require('../../js/standardPageSizes').default;
-var integrationTestHelper = require('./integrationTestHelper');
+
+var IntegrationTestHelper = require('./IntegrationTestHelper');
 
 describe('Integration test: alignment', function () {
-
-	var testHelper = new integrationTestHelper();
+	var testHelper = new IntegrationTestHelper();
 
 	it('renders text right aligned', function () {
-
 		var dd = {
 			content: [
 				{
@@ -45,7 +42,6 @@ describe('Integration test: alignment', function () {
 	});
 
 	it('renders text center aligned', function () {
-
 		var dd = {
 			content: [
 				{
@@ -81,7 +77,6 @@ describe('Integration test: alignment', function () {
 	});
 
 	it('renders text justify aligned', function () {
-
 		var dd = {
 			content: [
 				{
