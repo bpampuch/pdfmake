@@ -97,36 +97,6 @@ class TextTools {
 		return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
 	}
 }
-
-function splitWords(text, noWrap) {
-	let results = [];
-	text = text.replace(/\t/g, '    ');
-
-	if (noWrap) {
-		results.push({text: text});
-		return results;
-	}
-
-	let breaker = new LineBreaker(text);
-	let last = 0;
-	let bk;
-
-	while (bk = breaker.nextBreak()) {
-		let word = text.slice(last, bk.position);
-
-		if (bk.required || word.match(/\r?\n$|\r$/)) { // new line
-			word = word.replace(/\r?\n$|\r$/, '');
-			results.push({text: word, lineEnd: true});
-		} else {
-			results.push({text: word});
-		}
-
-		last = bk.position;
-	}
-
-	return results;
-}
-
 function normalizeTextArray(array, styleContextStack) {
 	function flatten(array) {
 		return array.reduce((prev, cur) => {
