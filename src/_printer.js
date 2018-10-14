@@ -82,8 +82,6 @@ class PdfPrinter {
 	 */
 	createPdfKitDocument(docDefinition, options = {}) {
 
-		setMetadata(docDefinition, this.pdfKitDoc);
-
 
 		let builder = new LayoutBuilder(pageSize, /*fixPageMargins(*/docDefinition.pageMargins /*|| 40)*//*, new ImageMeasure(this.pdfKitDoc, docDefinition.images)*/);
 
@@ -101,36 +99,6 @@ class PdfPrinter {
 		renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
 
 		return this.pdfKitDoc;
-	}
-}
-
-function setMetadata(docDefinition, pdfKitDoc) {
-	// PDF standard has these properties reserved: Title, Author, Subject, Keywords,
-	// Creator, Producer, CreationDate, ModDate, Trapped.
-	// To keep the pdfmake api consistent, the info field are defined lowercase.
-	// Custom properties don't contain a space.
-	function standardizePropertyKey(key) {
-		let standardProperties = ['Title', 'Author', 'Subject', 'Keywords',
-			'Creator', 'Producer', 'CreationDate', 'ModDate', 'Trapped'];
-		let standardizedKey = key.charAt(0).toUpperCase() + key.slice(1);
-		if (standardProperties.indexOf(standardizedKey) !== -1) {
-			return standardizedKey;
-		}
-
-		return key.replace(/\s+/g, '');
-	}
-
-	pdfKitDoc.info.Producer = 'pdfmake';
-	pdfKitDoc.info.Creator = 'pdfmake';
-
-	if (docDefinition.info) {
-		for (let key in docDefinition.info) {
-			let value = docDefinition.info[key];
-			if (value) {
-				key = standardizePropertyKey(key);
-				pdfKitDoc.info[key] = value;
-			}
-		}
 	}
 }
 

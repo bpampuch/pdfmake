@@ -111,7 +111,38 @@ const calculatePageHeight = function (pages, margins) {
 	height += margins.bottom;
 
 	return height;
+};
+
+const setMetadata = function (docDefinition, pdfDocument) {
+	// PDF standard has these properties reserved: Title, Author, Subject, Keywords,
+	// Creator, Producer, CreationDate, ModDate, Trapped.
+	// To keep the pdfmake api consistent, the info field are defined lowercase.
+	// Custom properties don't contain a space.
+	function standardizePropertyKey(key) {
+		let standardProperties = ['Title', 'Author', 'Subject', 'Keywords',
+			'Creator', 'Producer', 'CreationDate', 'ModDate', 'Trapped'];
+		let standardizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+		if (standardProperties.indexOf(standardizedKey) !== -1) {
+			return standardizedKey;
+		}
+
+		return key.replace(/\s+/g, '');
+	}
+
+	pdfDocument.info.Producer = 'pdfmake';
+	pdfDocument.info.Creator = 'pdfmake';
+
+	if (docDefinition.info) {
+		for (let key in docDefinition.info) {
+			let value = docDefinition.info[key];
+			if (value) {
+				key = standardizePropertyKey(key);
+				pdfDocument.info[key] = value;
+			}
+		}
+	}
 }
+
 
 class Printer {
 
@@ -141,6 +172,7 @@ class Printer {
 		};
 
 		this.pdfDocument = new PDFDocument(this.fonts, docDefinition.images, pdfOptions);
+		setMetadata(docDefinition, this.pdfDocument);
 
 		// TODO: refactor creating extended classes
 		const DocNormalizerClass = mixin(DocNormalizer).with(ContainerNormalizer, TextNormalizer);
