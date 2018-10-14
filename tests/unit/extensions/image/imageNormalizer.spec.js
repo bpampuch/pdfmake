@@ -13,10 +13,20 @@ describe('ImageNormalizer', function () {
 
 	const normalizer = new DocNormalizerClass();
 
+	it('has been registered image node to normalizer', function () {
+		var ddContent = {
+			image: 'imaginaryImage.png'
+		};
+
+		assert.doesNotThrow(function () {
+			normalizer.normalizeNode(ddContent)
+		});
+	});
+
 	it('should support image Buffer conversion in static document definition (eg. header, footer)', function () {
 		var ddContentStatic = [
 			{
-				image: fs.readFileSync("tests/images/sampleImage.jpg")
+				image: fs.readFileSync('tests/images/sampleImage.jpg')
 			}
 		];
 

@@ -13,6 +13,16 @@ describe('TextNormalizer', function () {
 
 	const normalizer = new DocNormalizerClass();
 
+	it('has been registered text node to normalizer', function () {
+		var ddContent = {
+			text: 'text'
+		};
+
+		assert.doesNotThrow(function () {
+			normalizer.normalizeNode(ddContent)
+		});
+	});
+
 	it('should expand shortcut to text and normalize', function () {
 		var ddContent = [
 			'Abc123',

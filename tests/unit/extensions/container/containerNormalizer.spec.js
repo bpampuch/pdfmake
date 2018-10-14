@@ -12,6 +12,16 @@ describe('ContainerNormalizer', function () {
 
 	const normalizer = new DocNormalizerClass();
 
+	it('has been registered stack node to normalizer', function () {
+		var ddContent = {
+			stack: []
+		};
+
+		assert.doesNotThrow(function () {
+			normalizer.normalizeNode(ddContent)
+		});
+	});
+
 	it('should expand shortcut from empty array to stack', function () {
 		var ddContent = [];
 		var result = normalizer.normalizeNode(ddContent);
