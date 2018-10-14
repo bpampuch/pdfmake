@@ -1,6 +1,7 @@
 const assert = require('assert');
 
 const TextBreaker = require('../../js/textBreaker').default;
+const StyleContextStack = require('../../js/styleContextStack').default;
 
 describe('TextBreaker', function () {
 
@@ -8,6 +9,9 @@ describe('TextBreaker', function () {
 
 	var sampleText = 'Przyklad, bez nowych linii,   ale !!!! rozne!!!konstrukcje i ..blablablabla.';
 	var sampleText2 = 'Przyklad, z nowy\nmi liniami\n, \n \n  ale\n\n !!!! rozne!!!konstrukcje i ..blablablabla.';
+
+	var styleStackNoWrap = new StyleContextStack({}, { noWrap: true });
+	var styleStackWrap = new StyleContextStack({}, { noWrap: false });
 
 	describe('getBreaks', function () {
 
@@ -65,7 +69,68 @@ describe('TextBreaker', function () {
 			assert.equal(result.length, 52);
 		});
 
-		// TODO: Tests for line break in text array
+		it('should support keep noWrap from style', function () {
+			var result = textBreaker.getBreaks([{ text: 'very long text' }], styleStackNoWrap);
+			assert.equal(result.length, 1);
+		});
+
+		it('should support disable noWrap in text', function () {
+			var result = textBreaker.getBreaks([{ text: 'very long text', noWrap: false }], styleStackNoWrap);
+			assert.equal(result.length, 3);
+		});
+
+		it('should support enable noWrap in text', function () {
+			var result = textBreaker.getBreaks([{ text: 'very long text', noWrap: true }], styleStackWrap);
+			assert.equal(result.length, 1);
+		});
+
+		it('should support not line break if is text inlines', function () {
+			var arrayText = [
+				{ text: 'Celestial Circle—' },
+				{ text: 'The Faithful Ally' },
+				{ text: ', ' },
+				{ text: 'Gift of Knowledge' },
+			];
+			var result = textBreaker.getBreaks(arrayText);
+			assert.equal(result.length, 10);
+			assert.equal(result[5].text, 'Ally');
+			assert.equal(result[5].noNewLine, true);
+		});
+
+		it('should support not line break if is text inlines as one word', function () {
+			var arrayText = [
+				{ text: 're' },
+				{ text: 'mark' },
+				{ text: 'able' }
+			];
+			var result = textBreaker.getBreaks(arrayText);
+			assert.equal(result.length, 3);
+			assert.equal(result[0].noNewLine, true);
+			assert.equal(result[1].noNewLine, true);
+		});
+
+		it('should support line break if is text inlines and is new line on end', function () {
+			var arrayText = [
+				{ text: 'First line.\n' },
+				{ text: 'Second line.' }
+			];
+			var result = textBreaker.getBreaks(arrayText);
+			assert.equal(result.length, 4);
+			assert.equal(result[1].lineEnd, true);
+			assert.equal(result[1].noNewLine, undefined);
+		});
+
+		it('should support line break if is text inlines and is new line on begin', function () {
+			var arrayText = [
+				{ text: 'First line.' },
+				{ text: '\nSecond line.' }
+			];
+			var result = textBreaker.getBreaks(arrayText);
+			assert.equal(result.length, 5);
+			assert.equal(result[1].noNewLine, true);
+			assert.equal(result[2].lineEnd, true);
+			assert.equal(result[2].noNewLine, undefined);
+		});
 
 	});
 
