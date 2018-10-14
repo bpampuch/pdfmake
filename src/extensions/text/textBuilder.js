@@ -1,4 +1,3 @@
-import { addAll } from '../../helpers/tools';
 import Line from '../../Line';
 import TextInlines from '../../TextInlines';
 
@@ -17,9 +16,18 @@ const TextBuilder = Base => class extends Base {
 	}
 
 	buildText(node) {
+		let line = this._buildNextLine(node);
+		let currentHeight = (line) ? line.getHeight() : 0;
+		let maxHeight = node.maxHeight || -1;
 
-		// TODO
-
+		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
+			let positions = this.writer.addLine(line); // TODO writer
+			node.positions.push(positions);
+			line = this._buildNextLine(node);
+			if (line) {
+				currentHeight += line.getHeight();
+			}
+		}
 	}
 
 	_buildNextLine(textNode) {
