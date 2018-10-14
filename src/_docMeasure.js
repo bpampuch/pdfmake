@@ -36,8 +36,8 @@ class DocMeasure {
 
 			if (node.columns) {
 				return extendMargins(self.measureColumns(node));
-			} else if (node.stack) {
-				return extendMargins(self.measureVerticalContainer(node));
+//			} else if (node.stack) {
+//				return extendMargins(self.measureVerticalContainer(node));
 			} else if (node.ul) {
 				return extendMargins(self.measureUnorderedList(node));
 			} else if (node.ol) {
@@ -192,18 +192,7 @@ class DocMeasure {
 			node.text = node._textRef._textNodeRef.text;
 		}
 
-		// Make sure style properties of the node itself are considered when building inlines.
-		// We could also just pass [node] to buildInlines, but that fails for bullet points.
-		let styleStack = this.styleStack.clone();
-		styleStack.push(node);
-
-		let data = this.textTools.buildInlines(node.text, styleStack);
-
-		node._inlines = data.items;
-		node._minWidth = data.minWidth;
-		node._maxWidth = data.maxWidth;
-
-		return node;
+		// ...
 	}
 
 	measureToc(node) {
@@ -236,22 +225,6 @@ class DocMeasure {
 		};
 
 		node.toc._table = this.measureNode(node.toc._table);
-
-		return node;
-	}
-
-	measureVerticalContainer(node) {
-		let items = node.stack;
-
-		node._minWidth = 0;
-		node._maxWidth = 0;
-
-		for (let i = 0, l = items.length; i < l; i++) {
-			items[i] = this.measureNode(items[i]);
-
-			node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
-			node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth);
-		}
 
 		return node;
 	}
