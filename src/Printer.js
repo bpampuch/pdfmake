@@ -2,6 +2,7 @@ import { isString, isBoolean, isArray, isNumber, isValue } from './helpers/varia
 import PDFDocument from './PDFDocument';
 import pageSizes from './standardPageSizes';
 import defaults from './defaults';
+import Renderer from './Renderer';
 
 import mixin from './helpers/mixin';
 
@@ -124,10 +125,14 @@ class Printer {
 		let builder = new LayoutBuilderClass(this.pdfDocument, pageSize, docDefinition.pageMargins);
 		let pages = builder.buildDocument(docDefinition.content, docDefinition.styles, docDefinition.defaultStyle);
 
+		let renderer = new Renderer(this.pdfDocument);
+		renderer.renderPages(pages);
+
 		console.log(docDefinition);
 		console.log(pages);
-
 		// TODO
+
+		return this.pdfDocument;
 	}
 }
 

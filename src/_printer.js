@@ -82,7 +82,6 @@ class PdfPrinter {
 	 */
 	createPdfKitDocument(docDefinition, options = {}) {
 
-		this.pdfKitDoc = PdfKitEngine.createPdfDocument({size: [pageSize.width, pageSize.height], autoFirstPage: false, compress: compressPdf, bufferPages: bufferPages});
 		setMetadata(docDefinition, this.pdfKitDoc);
 
 
@@ -232,15 +231,6 @@ function registerDefaultTableLayouts(layoutBuilder) {
 	});
 }
 
-function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
-	let previousPageOrientation = pdfKitDoc.options.size[0] > pdfKitDoc.options.size[1] ? 'landscape' : 'portrait';
-
-	if (currentPage.pageSize.orientation !== previousPageOrientation) {
-		let width = pdfKitDoc.options.size[0];
-		let height = pdfKitDoc.options.size[1];
-		pdfKitDoc.options.size = [height, width];
-	}
-}
 
 function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	pdfKitDoc._pdfMakePages = pages;
@@ -270,9 +260,9 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 				case 'vector':
 					renderVector(item.item, pdfKitDoc);
 					break;
-				case 'line':
+		/*		case 'line':
 					renderLine(item.item, item.item.x, item.item.y, pdfKitDoc);
-					break;
+					break;*/
 				case 'image':
 					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
 					break;
@@ -323,25 +313,25 @@ function renderLine(line, x, y, pdfKitDoc) {
 	if (line._pageNodeRef) {
 		preparePageNodeRefLine(line._pageNodeRef, line.inlines[0]);
 	}
-
+/*
 	x = x || 0;
 	y = y || 0;
 
 	let lineHeight = line.getHeight();
 	let ascenderHeight = line.getAscenderHeight();
 	let descent = lineHeight - ascenderHeight;
-
+*/
 	textDecorator.drawBackground(line, x, y, pdfKitDoc);
-
+/*
 	//TODO: line.optimizeInlines();
 	for (let i = 0, l = line.inlines.length; i < l; i++) {
 		let inline = line.inlines[i];
 		let shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
-
+*/
 		if (inline._pageNodeRef) {
 			preparePageNodeRefLine(inline._pageNodeRef, inline);
 		}
-
+/*
 		let options = {
 			lineBreak: false,
 			textWidth: inline.width,
@@ -366,7 +356,7 @@ function renderLine(line, x, y, pdfKitDoc) {
 		}
 
 	}
-
+*/
 	textDecorator.drawDecorations(line, x, y, pdfKitDoc);
 }
 
