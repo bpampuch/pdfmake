@@ -50,6 +50,14 @@ export function isObject(variable) {
  * @param {mixed} variable
  * @returns {boolean}
  */
+export function isEmptyObject(variable) {
+	return isObject(variable) && (Object.keys(variable).length === 0);
+}
+
+/**
+ * @param {mixed} variable
+ * @returns {boolean}
+ */
 export function isNull(variable) {
 	return variable === null;
 }
