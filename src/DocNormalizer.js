@@ -1,4 +1,4 @@
-import { stringifyNode } from './helpers/node';
+import { processAllExtenstions, processAllExtenstionsByCondition, processFirstExtenstionsByCondition } from './helpers/extensionsRunner';
 
 class DocNormalizer {
 
@@ -33,61 +33,11 @@ class DocNormalizer {
 	}
 
 	normalizeNode(node) {
-		node = this.processAllWithoutCondition(this.shortcuts, node);
-		node = this.processFirst(this.nodeTypes, node);
-		node = this.processAll(this.properties, node);
+		node = processAllExtenstions(this.shortcuts, node);
+		node = processFirstExtenstionsByCondition(this.nodeTypes, node);
+		node = processAllExtenstionsByCondition(this.properties, node);
 
 		return node;
-	}
-
-	/**
-	 * Process all items with condition
-	 *
-	 * @param {Array} items
-	 * @param {object} node
-	 * @return {object}
-	 */
-	processAll(items, node) {
-		for (let item of items) {
-			if (item.condition(node)) {
-				node = item.callback(node);
-			}
-		}
-
-		return node;
-	}
-
-	/**
-	 * Process all items without condition
-	 *
-	 * @param {Array} items
-	 * @param {object} node
-	 * @return {object}
-	 */
-	processAllWithoutCondition(items, node) {
-		for (let item of items) {
-			node = item.callback(node);
-		}
-
-		return node;
-	}
-
-	/**
-	 * Process only first item with condition
-	 *
-	 * @param {Array} items
-	 * @param {object} node
-	 * @return {object}
-	 */
-	processFirst(items, node) {
-		for (let item of items) {
-			if (item.condition(node)) {
-				node = item.callback(node);
-				return node;
-			}
-		}
-
-		throw 'Unrecognized document structure: ' + stringifyNode(node);
 	}
 
 }
