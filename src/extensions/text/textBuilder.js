@@ -1,5 +1,20 @@
+import { isArray } from '../../helpers/variableType';
 import Line from '../../Line';
 import TextInlines from '../../TextInlines';
+
+const appendTextNodeReference = (node, line) => {
+	if (node._pageRef) {
+		line._pageNodeRef = node._pageRef._nodeRef;
+	}
+
+	if (line && line.inlines && isArray(line.inlines)) {
+		for (let i = 0, l = line.inlines.length; i < l; i++) {
+			if (line.inlines[i]._pageRef) {
+				line.inlines[i]._pageNodeRef = line.inlines[i]._pageRef._nodeRef;
+			}
+		}
+	}
+};
 
 /**
  * @mixin
@@ -19,6 +34,8 @@ const TextBuilder = Base => class extends Base {
 		let line = this._buildNextLine(node);
 		let currentHeight = (line) ? line.getHeight() : 0;
 		let maxHeight = node.maxHeight || -1;
+
+		appendTextNodeReference(node, line);
 
 		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
 			let positions = this.writer.addLine(line);

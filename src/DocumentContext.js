@@ -181,7 +181,7 @@ class DocumentContext extends EventEmitter {
 		this.page = saved.page;
 		this.endingCell = saved.endingCell;
 		this.lastColumnWidth = saved.lastColumnWidth;
-	};
+	}
 
 }
 

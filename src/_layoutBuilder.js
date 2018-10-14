@@ -498,17 +498,12 @@ class LayoutBuilder {
 
 	// leafs (texts)
 	processLeaf(node) {
-		let line = this.buildNextLine(node);
-		let currentHeight = (line) ? line.getHeight() : 0;
-		let maxHeight = node.maxHeight || -1;
 
 		if (node._tocItemRef) {
 			line._pageNodeRef = node._tocItemRef;
 		}
 
-		if (node._pageRef) {
-			line._pageNodeRef = node._pageRef._nodeRef;
-		}
+
 
 		if (line && line.inlines && isArray(line.inlines)) {
 			for (let i = 0, l = line.inlines.length; i < l; i++) {
@@ -516,9 +511,6 @@ class LayoutBuilder {
 					line.inlines[i]._pageNodeRef = line.inlines[i]._tocItemRef;
 				}
 
-				if (line.inlines[i]._pageRef) {
-					line.inlines[i]._pageNodeRef = line.inlines[i]._pageRef._nodeRef;
-				}
 			}
 		}
 

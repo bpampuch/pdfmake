@@ -9,18 +9,21 @@ import mixin from './helpers/mixin';
 import DocNormalizer from './DocNormalizer';
 import ContainerNormalizer from './extensions/container/containerNormalizer';
 import TextNormalizer from './extensions/text/textNormalizer';
+import ReferenceNormalizer from './extensions/reference/referenceNormalizer';
 import ImageNormalizer from './extensions/image/imageNormalizer';
 import CanvasNormalizer from './extensions/canvas/canvasNormalizer';
 
 import DocPreprocessor from './DocPreprocessor';
 import ContainerPreprocessor from './extensions/container/containerPreprocessor';
 import TextPreprocessor from './extensions/text/textPreprocessor';
+import ReferencePreprocessor from './extensions/reference/referencePreprocessor';
 import ImagePreprocessor from './extensions/image/imagePreprocessor';
 import CanvasPreprocessor from './extensions/canvas/canvasPreprocessor';
 
 import DocProcessor from './DocProcessor';
 import ContainerProcessor from './extensions/container/containerProcessor';
 import TextProcessor from './extensions/text/textProcessor';
+import ReferenceProcessor from './extensions/reference/referenceProcessor';
 import ImageProcessor from './extensions/image/imageProcessor';
 import CanvasProcessor from './extensions/canvas/canvasProcessor';
 
@@ -188,9 +191,9 @@ class Printer {
 		setMetadata(docDefinition, this.pdfDocument);
 
 		// TODO: refactor creating extended classes
-		const DocNormalizerClass = mixin(DocNormalizer).with(ContainerNormalizer, TextNormalizer, ImageNormalizer, CanvasNormalizer);
-		const DocPreprocessorClass = mixin(DocPreprocessor).with(ContainerPreprocessor, TextPreprocessor, ImagePreprocessor, CanvasPreprocessor);
-		const DocProcessorClass = mixin(DocProcessor).with(ContainerProcessor, TextProcessor, ImageProcessor, CanvasProcessor);
+		const DocNormalizerClass = mixin(DocNormalizer).with(ContainerNormalizer, TextNormalizer, ReferenceNormalizer, ImageNormalizer, CanvasNormalizer);
+		const DocPreprocessorClass = mixin(DocPreprocessor).with(ContainerPreprocessor, TextPreprocessor, ReferencePreprocessor, ImagePreprocessor, CanvasPreprocessor);
+		const DocProcessorClass = mixin(DocProcessor).with(ContainerProcessor, TextProcessor, ReferenceProcessor, ImageProcessor, CanvasProcessor);
 		const DocMeasurerClass = mixin(DocMeasurer).with(ContainerMeasurer, TextMeasurer, ImageMeasurer, CanvasMeasurer);
 		const LayoutBuilderClass = mixin(LayoutBuilder).with(ContainerBuilder, TextBuilder, ImageBuilder, CanvasBuilder);
 

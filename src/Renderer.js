@@ -1,3 +1,6 @@
+import { isUndefined } from './helpers/variableType';
+import TextInlines from './TextInlines';
+
 class Renderer {
 
 	constructor(pdfDocument, progressCallback) {
@@ -53,6 +56,37 @@ class Renderer {
 	}
 
 	renderLine(line, x, y) {
+		const preparePageNodeRefLine = (_pageNodeRef, inline) => {
+			let newWidth;
+			let diffWidth;
+			let textInlines = new TextInlines(this.pdfDocument);
+
+			if (isUndefined(_pageNodeRef.positions)) {
+				throw 'Page reference id not found';
+			}
+
+			let pageNumber = _pageNodeRef.positions[0].pageNumber.toString();
+
+			inline.text = pageNumber;
+			inline.linkToPage = pageNumber;
+			newWidth = textInlines.widthOfText(inline.text, inline);
+			diffWidth = inline.width - newWidth;
+			inline.width = newWidth;
+
+			switch (inline.alignment) {
+				case 'right':
+					inline.x += diffWidth;
+					break;
+				case 'center':
+					inline.x += diffWidth / 2;
+					break;
+			}
+		}
+
+		if (line._pageNodeRef) {
+			preparePageNodeRefLine(line._pageNodeRef, line.inlines[0]);
+		}
+
 		x = x || 0;
 		y = y || 0;
 
@@ -64,6 +98,10 @@ class Renderer {
 		for (let i = 0, l = line.inlines.length; i < l; i++) {
 			let inline = line.inlines[i];
 			let shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
+
+			if (inline._pageNodeRef) {
+				preparePageNodeRefLine(inline._pageNodeRef, inline);
+			}
 
 			let options = {
 				lineBreak: false,

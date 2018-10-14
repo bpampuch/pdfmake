@@ -19,8 +19,8 @@ class DocPreprocessor {
 			return this.preprocessList(node);
 		} else if (node.table) {
 			return this.preprocessTable(node);
-		} else if (node.text !== undefined) {
-			return this.preprocessText(node);
+//		} else if (node.text !== undefined) {
+//			return this.preprocessText(node);
 		} else if (node.toc) {
 			return this.preprocessToc(node);
 //		} else if (node.image) {
@@ -29,8 +29,8 @@ class DocPreprocessor {
 //			return this.preprocessCanvas(node);
 		} else if (node.qr) {
 			return this.preprocessQr(node);
-		} else if (node.pageReference || node.textReference) {
-			return this.preprocessText(node);
+//		} else if (node.pageReference || node.textReference) {
+//			return this.preprocessText(node);
 		} else {
 			throw `Unrecognized document structure: ${JSON.stringify(node, fontStringify)}`;
 		}
@@ -104,64 +104,7 @@ class DocPreprocessor {
 				this.tocs[tocItemId].toc._items.push(tocItemRef);
 			}
 		}
-
-		if (node.id) {
-			if (this.nodeReferences[node.id]) {
-				if (!this.nodeReferences[node.id]._pseudo) {
-					throw `Node id '${node.id}' already exists`;
-				}
-
-				this.nodeReferences[node.id]._nodeRef = this._getNodeForNodeRef(node);
-				this.nodeReferences[node.id]._textNodeRef = node;
-				this.nodeReferences[node.id]._pseudo = false;
-			} else {
-				this.nodeReferences[node.id] = {
-					_nodeRef: this._getNodeForNodeRef(node),
-					_textNodeRef: node
-				};
-			}
-		}
-
-		if (node.pageReference) {
-			if (!this.nodeReferences[node.pageReference]) {
-				this.nodeReferences[node.pageReference] = {
-					_nodeRef: {},
-					_textNodeRef: {},
-					_pseudo: true
-				};
-			}
-			node.text = '00000';
-			node._pageRef = this.nodeReferences[node.pageReference];
-		}
-
-		if (node.textReference) {
-			if (!this.nodeReferences[node.textReference]) {
-				this.nodeReferences[node.textReference] = {_nodeRef: {}, _pseudo: true};
-			}
-
-			node.text = '';
-			node._textRef = this.nodeReferences[node.textReference];
-		}
-
-		if (node.text && node.text.text) {
-			node.text = [this.preprocessNode(node.text)];
-		} else if (isArray(node.text)) {
-			let isSetParentNode = false;
-			if (this.parentNode === null) {
-				this.parentNode = node;
-				isSetParentNode = true;
-			}
-
-			for (let i = 0, l = node.text.length; i < l; i++) {
-				node.text[i] = this.preprocessNode(node.text[i]);
-			}
-
-			if (isSetParentNode) {
-				this.parentNode = null;
-			}
-		}
-
-		return node;
+		// ...
 	}
 
 	preprocessToc(node) {
@@ -189,13 +132,6 @@ class DocPreprocessor {
 		return node;
 	}
 
-	_getNodeForNodeRef(node) {
-		if (this.parentNode) {
-			return this.parentNode;
-		}
-
-		return node;
-	}
 }
 
 export default DocPreprocessor;

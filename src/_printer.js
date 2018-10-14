@@ -162,80 +162,11 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 }
 
 function renderLine(line, x, y, pdfKitDoc) {
-	function preparePageNodeRefLine(_pageNodeRef, inline) {
-		let newWidth;
-		let diffWidth;
-		let textTools = new TextTools(null);
 
-		if (isUndefined(_pageNodeRef.positions)) {
-			throw 'Page reference id not found';
-		}
-
-		let pageNumber = _pageNodeRef.positions[0].pageNumber.toString();
-
-		inline.text = pageNumber;
-		inline.linkToPage = pageNumber;
-		newWidth = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
-		diffWidth = inline.width - newWidth;
-		inline.width = newWidth;
-
-		switch (inline.alignment) {
-			case 'right':
-				inline.x += diffWidth;
-				break;
-			case 'center':
-				inline.x += diffWidth / 2;
-				break;
-		}
-	}
-
-	if (line._pageNodeRef) {
-		preparePageNodeRefLine(line._pageNodeRef, line.inlines[0]);
-	}
-/*
-	x = x || 0;
-	y = y || 0;
-
-	let lineHeight = line.getHeight();
-	let ascenderHeight = line.getAscenderHeight();
-	let descent = lineHeight - ascenderHeight;
-*/
 	textDecorator.drawBackground(line, x, y, pdfKitDoc);
-/*
-	//TODO: line.optimizeInlines();
-	for (let i = 0, l = line.inlines.length; i < l; i++) {
-		let inline = line.inlines[i];
-		let shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
-*/
-		if (inline._pageNodeRef) {
-			preparePageNodeRefLine(inline._pageNodeRef, inline);
-		}
-/*
-		let options = {
-			lineBreak: false,
-			textWidth: inline.width,
-			characterSpacing: inline.characterSpacing,
-			wordCount: 1,
-			link: inline.link
-		};
 
-		if (inline.fontFeatures) {
-			options.features = inline.fontFeatures;
-		}
+	// ...
 
-		pdfKitDoc.fill(inline.color || 'black');
-
-		pdfKitDoc._font = inline.font;
-		pdfKitDoc.fontSize(inline.fontSize);
-		pdfKitDoc.text(inline.text, x + inline.x, y + shiftToBaseline, options);
-
-		if (inline.linkToPage) {
-			let _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0]}).end();
-			pdfKitDoc.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, {Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null]});
-		}
-
-	}
-*/
 	textDecorator.drawDecorations(line, x, y, pdfKitDoc);
 }
 
