@@ -16,5 +16,10 @@ export default {
 	noWrap: false,
 	preserveLeadingSpaces: false,
 	alignment: 'left',
-	leadingIndent: 0
+	leadingIndent: 0,
+
+	pageSize: 'A4',
+
+	compress: true,
+	bufferPages: false
 };

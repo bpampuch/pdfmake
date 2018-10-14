@@ -182,28 +182,6 @@ function calculatePageHeight(pages, margins) {
 	return height;
 }
 
-function fixPageSize(pageSize, pageOrientation) {
-	function isNeedSwapPageSizes(pageOrientation) {
-		if (isString(pageOrientation)) {
-			pageOrientation = pageOrientation.toLowerCase();
-			return ((pageOrientation === 'portrait') && (size.width > size.height)) ||
-				((pageOrientation === 'landscape') && (size.width < size.height));
-		}
-		return false;
-	}
-
-	// if pageSize.height is set to auto, set the height to infinity so there are no page breaks.
-	if (pageSize && pageSize.height === 'auto') {
-		pageSize.height = Infinity;
-	}
-
-	let size = pageSize2widthAndHeight(pageSize || 'A4');
-	if (isNeedSwapPageSizes(pageOrientation)) { // swap page sizes
-		size = {width: size.height, height: size.width};
-	}
-	size.orientation = size.width > size.height ? 'landscape' : 'portrait';
-	return size;
-}
 
 function fixPageMargins(margin) {
 	if (!margin) {
