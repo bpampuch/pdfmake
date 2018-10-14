@@ -20,6 +20,8 @@ describe('PageElementWriter', function () {
 	var AVAILABLE_HEIGHT = 1000;
 	var AVAILABLE_WIDTH = 500;
 
+	var INLINE_TEST_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAGAQMAAADNIO3CAAAAA1BMVEUAAN7GEcIJAAAAAWJLR0QAiAUdSAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB98DBREbA3IZ3d8AAAALSURBVAjXY2BABwAAEgAB74lUpAAAAABJRU5ErkJggg==';
+
 	const buildLine = function (height, alignment, x, y) {
 		return {
 			getHeight: function () {
@@ -71,6 +73,18 @@ describe('PageElementWriter', function () {
 		return rep;
 	}
 
+	const buildImage = function (height) {
+		return {
+			image: INLINE_TEST_IMAGE,
+			_margin: null,
+			_maxWidth: 100,
+			_minWidth: 100,
+			_width: 100,
+			_height: height,
+			positions: []
+		};
+	};
+
 	beforeEach(function () {
 		pageSize = { width: DOCUMENT_WIDTH, height: DOCUMENT_HEIGHT, orientation: DOCUMENT_ORIENTATION };
 		context = new DocumentContext(pageSize, MARGINS);
@@ -119,6 +133,48 @@ describe('PageElementWriter', function () {
 			assert.equal(context.pages[1].items[1].item.marker, 'another');
 		});
 
+	});
+
+	describe('addImage', function () {
+		it('should add the image image if something else exists on the page and there\'s enough space left', function () {
+			var lineHeight = 400;
+			pageElementWriter.addLine(buildLine(lineHeight));
+
+			var position = pageElementWriter.addImage(buildImage(300));
+
+			assert.equal(context.pages.length, 1);
+			assert.deepEqual(position, { pageNumber: 1, left: MARGINS.left, top: lineHeight + MARGINS.top, verticalRatio: 0.4, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500 });
+		});
+
+		it('should add a new page if something else exists on the page and there\'s not enough space left', function () {
+			var lineHeight = 900;
+			pageElementWriter.addLine(buildLine(lineHeight));
+
+			var position = pageElementWriter.addImage(buildImage(300));
+
+			assert.equal(context.pages.length, 2);
+			assert.equal(context.pages[0].items.length, 1);
+			assert.equal(context.pages[1].items.length, 1);
+			assert.deepEqual(position, { pageNumber: 2, left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500 });
+		});
+
+		it('should write into the current page if it\'s a large image and nothing else exists on the page', function () {
+			var position = pageElementWriter.addImage(buildImage(2000));
+
+			assert.equal(context.pages.length, 1);
+			assert.equal(context.pages[0].items.length, 1);
+			assert.deepEqual(position, { pageNumber: 1, left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500 });
+		});
+
+		it('should write into the a new page page if it\'s a large image and something else does exist on the page', function () {
+			pageElementWriter.addLine(buildLine(1));
+			var position = pageElementWriter.addImage(buildImage(2000));
+
+			assert.equal(context.pages.length, 2);
+			assert.equal(context.pages[0].items.length, 1);
+			assert.equal(context.pages[1].items.length, 1);
+			assert.deepEqual(position, { pageNumber: 2, left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500 });
+		});
 	});
 
 	describe('beginUnbreakableBlock', function () {

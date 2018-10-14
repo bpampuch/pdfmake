@@ -27,7 +27,13 @@ class PageElementWriter extends ElementWriter {
 	}
 
 	addVector(vector, ignoreContextX, ignoreContextY, index) {
-		return suler.addVector(vector, ignoreContextX, ignoreContextY, index);
+		return super.addVector(vector, ignoreContextX, ignoreContextY, index);
+	}
+
+	addImage(image, index) {
+		return this._fitOnPage(() => {
+			return super.addImage(image, index);
+		});
 	}
 
 	addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
