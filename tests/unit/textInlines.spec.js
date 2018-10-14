@@ -260,4 +260,12 @@ describe('TextInlines', function () {
 
 	});
 
+	describe('widthOfText', function () {
+		// TODO
+	});
+
+	describe('sizeOfText', function () {
+		// TODO
+	});
+
 });

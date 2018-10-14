@@ -148,8 +148,44 @@ class TextInlines {
 		return array
 	}
 
+	/**
+	 * Width of text
+	 *
+	 * @param {string} text
+	 * @param {object} inline
+	 * @return {integer}
+	 */
 	widthOfText(text, inline) {
 		return inline.font.widthOfString(text, inline.fontSize, inline.fontFeatures) + ((inline.characterSpacing || 0) * (text.length - 1));
+	}
+
+	/**
+	 * Returns size of the specified string (without breaking it) using the current style
+	 *
+	 * @param {string} text  text to be measured
+	 * @param {StyleContextStack} styleContextStack  current style stack
+	 * @return {object}  size of the specified string
+	 */
+	sizeOfText(text, styleContextStack) {
+		//TODO: refactor - extract from measure
+		let fontName = StyleContextStack.getStyleProperty({}, styleContextStack, 'font', defaults.font);
+		let fontSize = StyleContextStack.getStyleProperty({}, styleContextStack, 'fontSize', defaults.fontSize);
+		let fontFeatures = StyleContextStack.getStyleProperty({}, styleContextStack, 'fontFeatures', defaults.fontFeatures);
+		let bold = StyleContextStack.getStyleProperty({}, styleContextStack, 'bold', defaults.bold);
+		let italics = StyleContextStack.getStyleProperty({}, styleContextStack, 'italics', defaults.italics);
+		let lineHeight = StyleContextStack.getStyleProperty({}, styleContextStack, 'lineHeight', defaults.lineHeight);
+		let characterSpacing = StyleContextStack.getStyleProperty({}, styleContextStack, 'characterSpacing', defaults.characterSpacing);
+
+		let font = this.fontProvider.provideFont(fontName, bold, italics);
+
+		return {
+			width: widthOfText(text, { font: font, fontSize: fontSize, characterSpacing: characterSpacing, fontFeatures: fontFeatures }),
+			height: font.lineHeight(fontSize) * lineHeight,
+			fontSize: fontSize,
+			lineHeight: lineHeight,
+			ascender: font.ascender / 1000 * fontSize,
+			descender: font.descender / 1000 * fontSize
+		};
 	}
 
 }
