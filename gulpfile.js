@@ -78,6 +78,6 @@ gulp.task('watch', function () {
 	gulp.watch('./tests/**', ['test']);
 });
 
-gulp.task('build', gulp.series('buildNode', 'buildBrowser'));
+gulp.task('build', gulp.series('buildNode'/*, 'buildBrowser'*/));
 
-gulp.task('default', gulp.series(/*'lint',*/ 'build', 'buildFonts', 'test'));
+gulp.task('default', gulp.series(/*'lint',*/ 'build', /*'buildFonts',*/ 'test'));
