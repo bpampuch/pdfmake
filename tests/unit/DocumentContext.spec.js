@@ -59,7 +59,31 @@ describe('DocumentContext', function () {
 	});
 
 	describe('moveTo', function () {
-		// TODO
+		it('should move to X coord', function () {
+			context.moveTo(50);
+
+			assert.equal(context.x, 50);
+			assert.equal(context.availableWidth, 400 - 50 - 40);
+			assert.equal(context.availableHeight, 800 - 60 - 60);
+		});
+
+		it('should move to Y coord', function () {
+			context.moveTo(null, 50);
+
+			assert.equal(context.y, 50);
+			assert.equal(context.availableWidth, 400 - 40 - 40);
+			assert.equal(context.availableHeight, 800 - 50 - 60);
+		});
+
+		it('should move to X, Y coords', function () {
+			context.moveTo(50, 50);
+
+			assert.equal(context.x, 50);
+			assert.equal(context.y, 50);
+			assert.equal(context.availableWidth, 400 - 50 - 40);
+			assert.equal(context.availableHeight, 800 - 50 - 60);
+		});
+
 	});
 
 	describe('moveToNextPage', function () {
