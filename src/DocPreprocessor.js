@@ -34,4 +34,4 @@ class DocPreprocessor {
 
 }
 
-export default DocNormalizer;
+export default DocPreprocessor;
