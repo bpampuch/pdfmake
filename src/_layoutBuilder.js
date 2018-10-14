@@ -584,9 +584,9 @@ class LayoutBuilder {
 }
 
 function decorateNode(node) {
-	let x = node.x;
-	let y = node.y;
-	node.positions = [];
+//	let x = node.x;
+//	let y = node.y;
+//	node.positions = [];
 
 	if (isArray(node.canvas)) {
 		node.canvas.forEach(vector => {
@@ -608,8 +608,8 @@ function decorateNode(node) {
 	}
 
 	node.resetXY = () => {
-		node.x = x;
-		node.y = y;
+//		node.x = x;
+//		node.y = y;
 		if (isArray(node.canvas)) {
 			node.canvas.forEach(vector => {
 				vector.resetXY();

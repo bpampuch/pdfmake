@@ -3,8 +3,17 @@ import PageElementWriter from './PageElementWriter';
 import DocumentContext from './DocumentContext';
 
 const decorateNode = (node) => {
+	let x = node.x;
+	let y = node.y;
+
 	node.positions = [];
-	// TODO
+
+	node.resetXY = () => {
+		node.x = x;
+		node.y = y;
+	};
+
+	// TODO: canvas
 };
 
 class LayoutBuilder {
