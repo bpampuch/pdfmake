@@ -1,6 +1,3 @@
-import Line from '../../Line';
-import TextInlines from '../../TextInlines';
-
 /**
  * @mixin
  */
