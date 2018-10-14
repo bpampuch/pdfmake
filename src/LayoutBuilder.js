@@ -1,9 +1,13 @@
 import { processAllExtenstionsByCondition, processFirstExtenstionsByCondition } from './helpers/extensionsRunner';
+import PageElementWriter from './PageElementWriter';
+import DocumentContext from './DocumentContext';
 
 class LayoutBuilder {
 
-	constructor(pdfDocument) {
+	constructor(pdfDocument, pageSize, pageMargins) {
 		this.pdfDocument = pdfDocument;
+		this.pageSize = pageSize;
+		this.pageMargins = pageMargins;
 		this.nodeTypes = [];
 		this.properties = [];
 	}
@@ -20,6 +24,12 @@ class LayoutBuilder {
 			condition: condition,
 			callback: callback
 		});
+	}
+
+	tryLayoutDocument() {
+		// TODO
+		this.writer = new PageElementWriter(new DocumentContext(this.pageSize, this.pageMargins));
+		// TODO
 	}
 
 	buildNode(node) {
