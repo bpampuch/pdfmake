@@ -240,29 +240,6 @@ function normalizeString(value) {
 	}
 }
 
-function getStyleProperty(item, styleContextStack, property, defaultValue) {
-	let value;
-
-	if (item[property] !== undefined && item[property] !== null) {
-		// item defines this property
-		return item[property];
-	}
-
-	if (!styleContextStack) {
-		return defaultValue;
-	}
-
-	styleContextStack.auto(item, () => {
-		value = styleContextStack.getProperty(property);
-	});
-
-	if (value !== null && value !== undefined) {
-		return value;
-	} else {
-		return defaultValue;
-	}
-}
-
 function measure(fontProvider, textArray, styleContextStack) {
 	let normalized = normalizeTextArray(textArray, styleContextStack);
 

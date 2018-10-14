@@ -166,6 +166,31 @@ class StyleContextStack {
 		return this.defaultStyle && this.defaultStyle[property];
 	}
 
+	/**
+	 * @param {object} item
+	 * @param {StyleContextStack} styleContextStack
+	 * @param {string} property
+	 * @param {mixed} defaultValue
+	 * @return {mixed}
+	 */
+	static getStyleProperty(item, styleContextStack, property, defaultValue) {
+		let value;
+
+		if (isValue(item[property])) { // item defines this property
+			return item[property];
+		}
+
+		if (!styleContextStack) {
+			return defaultValue;
+		}
+
+		styleContextStack.auto(item, function () {
+			value = styleContextStack.getProperty(property);
+		});
+
+		return isValue(value) ? value : defaultValue;
+	}
+
 }
 
 export default StyleContextStack;

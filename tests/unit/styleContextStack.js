@@ -140,4 +140,9 @@ describe('StyleContextStack', function () {
 		});
 	});
 
+	describe('getStyleProperty', function () {
+		//console.log(StyleContextStack.getStyleProperty({}, null, 'font', 'Roboto'));
+		// TODO
+	});
+
 });
