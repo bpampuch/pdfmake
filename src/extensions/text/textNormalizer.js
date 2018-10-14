@@ -22,19 +22,27 @@ const TextNormalizer = Base => class extends Base {
 	constructor() {
 		super();
 
+		this.registerCleanup(
+			node => this.cleanupText(node)
+		);
+
 		this.registerNode(
 			node => node.text,
-			node => node.normalizeText(node)
+			node => this.normalizeText(node)
 		);
 	}
 
-	normalizeText(node) {
+	cleanupText(node) {
 		if (isString(node) || isNumber(node) || isBoolean(node) || !isValue(node) || isEmptyObject(node)) { // text node defined as value
 			node = { text: convertValueToString(node) };
 		} else if ('text' in node) { // cast value in text property
 			node.text = convertValueToString(node.text);
 		}
 
+		return node;
+	}
+
+	normalizeText(node) {
 		if (node.text && node.text.text) {
 			node.text = [this.normalizeNode(node.text)];
 		} else if (isArray(node.text)) {

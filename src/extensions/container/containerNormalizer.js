@@ -1,3 +1,4 @@
+import { isArray } from '../../helpers/variableType';
 
 /**
  * @mixin
@@ -7,17 +8,25 @@ const ContainerNormalizer = Base => class extends Base {
 	constructor() {
 		super();
 
+		this.registerCleanup(
+			node => this.cleanupVerticalContainer(node)
+		);
+
 		this.registerNode(
 			node => node.stack,
-			node => node.normalizeVerticalContainer(node)
+			node => this.normalizeVerticalContainer(node)
 		);
 	}
 
-	normalizeVerticalContainer(node) {
+	cleanupVerticalContainer(node) {
 		if (isArray(node)) { // stack defined as array
 			node = { stack: node };
 		}
 
+		return node;
+	}
+
+	normalizeVerticalContainer(node) {
 		let items = node.stack;
 
 		for (let i = 0, l = items.length; i < l; i++) {

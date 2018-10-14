@@ -1,8 +1,15 @@
 class DocNormalizer {
 
 	constructor() {
+		this.cleanups = [];
 		this.nodes = [];
 		this.properties = [];
+	}
+
+	registerCleanup(callback) {
+		this.cleanups.push({
+			callback: callback
+		});
 	}
 
 	registerNode(condition, callback) {
@@ -24,18 +31,22 @@ class DocNormalizer {
 	}
 
 	normalizeNode(node) {
-		this.nodes.forEach((nodeExtension) => {
+		for (let cleanup of this.cleanups) {
+			node = cleanup.callback(node);
+		}
+
+		for (let nodeExtension of this.nodes) {
 			if (nodeExtension.condition(node)) { // only first match
 				node = nodeExtension.callback(node);
-				//				break;  TODO break
+				break;
 			}
-		});
+		}
 
-		this.properties.forEach((nodeExtension) => {
-			if (nodeExtension.condition(node)) { // all matches
-				node = nodeExtension.callback(node);
+		for (let property of this.properties) {
+			if (property.condition(node)) { // all matches
+				node = property.callback(node);
 			}
-		});
+		};
 
 		return node;
 	}
