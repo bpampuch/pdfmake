@@ -19,8 +19,8 @@ const convertValueToString = function (value) {
  */
 const TextNormalizer = Base => class extends Base {
 
-	constructor() {
-		super();
+	constructor(...args) {
+		super(...args);
 
 		this.registerShortcut(
 			node => this.shortcutText(node)

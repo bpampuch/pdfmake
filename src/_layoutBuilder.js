@@ -10,12 +10,6 @@ import Line from './line';
 import TextTools from './textTools';
 import StyleContextStack from './styleContextStack';
 
-function addAll(target, otherArray) {
-	otherArray.forEach((item) => {
-		target.push(item);
-	});
-}
-
 /**
  * Layout engine which turns document-definition-object into a set of pages,
  * lines, inlines and vectors ready to be rendered into a PDF

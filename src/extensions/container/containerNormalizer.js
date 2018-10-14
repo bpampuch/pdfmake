@@ -5,8 +5,8 @@ import { isArray } from '../../helpers/variableType';
  */
 const ContainerNormalizer = Base => class extends Base {
 
-	constructor() {
-		super();
+	constructor(...args) {
+		super(...args);
 
 		this.registerShortcut(
 			node => this.shortcutVerticalContainer(node)

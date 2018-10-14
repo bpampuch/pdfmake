@@ -5,8 +5,8 @@ import { isArray } from '../../helpers/variableType';
  */
 const TextPreprocessor = Base => class extends Base {
 
-	constructor() {
-		super();
+	constructor(...args) {
+		super(...args);
 
 		this.registerNodeType(
 			node => 'text' in node,

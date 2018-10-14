@@ -2,7 +2,8 @@ import { processAllExtenstionsByCondition, processFirstExtenstionsByCondition } 
 
 class LayoutBuilder {
 
-	constructor() {
+	constructor(pdfDocument) {
+		this.pdfDocument = pdfDocument;
 		this.nodeTypes = [];
 		this.properties = [];
 	}

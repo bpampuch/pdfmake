@@ -5,8 +5,8 @@ import { addAll } from '../../helpers/tools';
  */
 const ContainerBuilder = Base => class extends Base {
 
-	constructor() {
-		super();
+	constructor(...args) {
+		super(...args);
 
 		this.registerNodeType(
 			node => 'stack' in node,

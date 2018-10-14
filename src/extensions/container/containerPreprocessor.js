@@ -3,8 +3,8 @@
  */
 const ContainerPreprocessor = Base => class extends Base {
 
-	constructor() {
-		super();
+	constructor(...args) {
+		super(...args);
 
 		this.registerNodeType(
 			node => 'stack' in node,
