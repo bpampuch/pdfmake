@@ -98,13 +98,6 @@ class PdfPrinter {
 			pages = pages.slice(0, maxNumberPages);
 		}
 
-		// if pageSize.height is set to Infinity, calculate the actual height of the page that
-		// was laid out using the height of each of the items in the page.
-		if (pageSize.height === Infinity) {
-			let pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
-			this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
-		}
-
 		renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
 
 		return this.pdfKitDoc;
@@ -141,39 +134,6 @@ function setMetadata(docDefinition, pdfKitDoc) {
 	}
 }
 
-function calculatePageHeight(pages, margins) {
-	function getItemHeight(item) {
-		if (isFunction(item.item.getHeight)) {
-			return item.item.getHeight();
-		} else if (item.item._height) {
-			return item.item._height;
-		} else {
-			// TODO: add support for next item types
-			return 0;
-		}
-	}
-
-	function getBottomPosition(item) {
-		let top = item.item.y;
-		let height = getItemHeight(item);
-		return top + height;
-	}
-
-	let fixedMargins = fixPageMargins(margins || 40);
-	let height = fixedMargins.top;
-	pages.forEach((page) => {
-		page.items.forEach((item) => {
-			var bottomPosition = getBottomPosition(item);
-			if (bottomPosition > height) {
-				height = bottomPosition;
-			}
-		});
-	});
-
-	height += fixedMargins.bottom;
-
-	return height;
-}
 
 function registerDefaultTableLayouts(layoutBuilder) {
 	layoutBuilder.registerTableLayouts({

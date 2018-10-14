@@ -78,6 +78,41 @@ const getPageMargins = function (margin) {
 	return margin;
 };
 
+const calculatePageHeight = function (pages, margins) {
+	const getItemHeight = function (item) {
+		if (isFunction(item.item.getHeight)) {
+			return item.item.getHeight();
+		} else if (item.item._height) {
+			return item.item._height;
+		} else {
+			// TODO: add support for next item types
+			// TODO: Throw error?
+			return 0;
+		}
+	}
+
+	const getBottomPosition = function (item) {
+		let top = item.item.y;
+		let height = getItemHeight(item);
+		return top + height;
+	}
+
+	let height = margins.top;
+
+	pages.forEach(function (page) {
+		page.items.forEach(function (item) {
+			let bottomPosition = getBottomPosition(item);
+			if (bottomPosition > height) {
+				height = bottomPosition;
+			}
+		});
+	});
+
+	height += margins.bottom;
+
+	return height;
+}
+
 class Printer {
 
 	/**
@@ -124,6 +159,13 @@ class Printer {
 
 		let builder = new LayoutBuilderClass(this.pdfDocument, pageSize, docDefinition.pageMargins);
 		let pages = builder.buildDocument(docDefinition.content, docDefinition.styles, docDefinition.defaultStyle);
+
+		// if pageSize.height is set to Infinity, calculate the actual height of the page that
+		// was laid out using the height of each of the items in the page.
+		if (pageSize.height === Infinity) {
+			let pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
+			this.pdfDocument.options.size = [pageSize.width, pageHeight];
+		}
 
 		let renderer = new Renderer(this.pdfDocument);
 		renderer.renderPages(pages);
