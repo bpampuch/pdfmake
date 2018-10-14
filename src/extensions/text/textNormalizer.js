@@ -27,7 +27,7 @@ const TextNormalizer = Base => class extends Base {
 		);
 
 		this.registerNodeType(
-			node => node.text,
+			node => 'text' in node,
 			node => this.normalizeText(node)
 		);
 	}

@@ -13,7 +13,7 @@ const ContainerNormalizer = Base => class extends Base {
 		);
 
 		this.registerNodeType(
-			node => node.stack,
+			node => 'stack' in node,
 			node => this.normalizeVerticalContainer(node)
 		);
 	}
