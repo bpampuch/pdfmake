@@ -12,7 +12,7 @@ const ContainerNormalizer = Base => class extends Base {
 			node => this.cleanupVerticalContainer(node)
 		);
 
-		this.registerNode(
+		this.registerNodeType(
 			node => node.stack,
 			node => this.normalizeVerticalContainer(node)
 		);

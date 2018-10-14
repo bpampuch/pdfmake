@@ -2,7 +2,7 @@ class DocNormalizer {
 
 	constructor() {
 		this.cleanups = [];
-		this.nodes = [];
+		this.nodeTypes = [];
 		this.properties = [];
 	}
 
@@ -12,8 +12,8 @@ class DocNormalizer {
 		});
 	}
 
-	registerNode(condition, callback) {
-		this.nodes.push({
+	registerNodeType(condition, callback) {
+		this.nodeTypes.push({
 			condition: condition,
 			callback: callback
 		});
@@ -35,9 +35,9 @@ class DocNormalizer {
 			node = cleanup.callback(node);
 		}
 
-		for (let nodeExtension of this.nodes) {
-			if (nodeExtension.condition(node)) { // only first match
-				node = nodeExtension.callback(node);
+		for (let nodeType of this.nodeTypes) {
+			if (nodeType.condition(node)) { // only first match
+				node = nodeType.callback(node);
 				break;
 			}
 		}

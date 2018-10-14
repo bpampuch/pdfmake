@@ -26,7 +26,7 @@ const TextNormalizer = Base => class extends Base {
 			node => this.cleanupText(node)
 		);
 
-		this.registerNode(
+		this.registerNodeType(
 			node => node.text,
 			node => this.normalizeText(node)
 		);
