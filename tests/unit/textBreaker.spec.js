@@ -132,6 +132,30 @@ describe('TextBreaker', function () {
 			assert.equal(result[2].noNewLine, undefined);
 		});
 
+		it('should support line break with noWrap', function () {
+			var arrayText = [
+				{ text: 'First line', noWrap: true },
+				{ text: 'second line', noWrap: true }
+			];
+
+			var result = textBreaker.getBreaks(arrayText);
+			assert.equal(result.length, 2);
+			assert.equal(result[0].noNewLine, true);
+			assert.equal(result[1].noNewLine, undefined);
+		});
+
+		it('should support no line break if is text inlines and is space on begin', function () {
+			var arrayText = [
+				{ text: 'First line', noWrap: true },
+				{ text: ' Second line', noWrap: true }
+			];
+
+			var result = textBreaker.getBreaks(arrayText);
+			assert.equal(result.length, 2);
+			assert.equal(result[0].noNewLine, undefined);
+			assert.equal(result[1].noNewLine, undefined);
+		});
+
 	});
 
 });

@@ -46,7 +46,15 @@ const getFirstWord = function (words, noWrap) {
 		return null;
 	}
 
-	return getOneWord(word, noWrap);
+	if (noWrap) { // text was not wrapped, we need only first word
+		let tmpWords = splitWords(word.text, false);
+		if (isUndefined(tmpWords[0])) {
+			return null;
+		}
+		word = tmpWords[0];
+	}
+
+	return word.text;
 };
 
 /**
@@ -64,26 +72,15 @@ const getLastWord = function (words, noWrap) {
 		return null;
 	}
 
-	return getOneWord(word, noWrap);
-};
-
-/**
- * @param {object} word
- * @param {boolean} noWrap
- * @return {string|null}
- */
-const getOneWord = function (word, noWrap) {
-	word = word.text;
-
 	if (noWrap) { // text was not wrapped, we need only last word
-		let tmpWords = splitWords(word, false);
+		let tmpWords = splitWords(word.text, false);
 		if (isUndefined(tmpWords[tmpWords.length - 1])) {
 			return null;
 		}
-		word = tmpWords[tmpWords.length - 1].text;
+		word = tmpWords[tmpWords.length - 1];
 	}
 
-	return word;
+	return word.text;
 };
 
 class TextBreaker {
