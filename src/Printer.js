@@ -1,4 +1,4 @@
-import { isString, isBoolean, isArray, isNumber, isValue } from './helpers/variableType';
+import { isString, isBoolean, isArray, isNumber, isValue, isFunction } from './helpers/variableType';
 import PDFDocument from './PDFDocument';
 import pageSizes from './standardPageSizes';
 import defaults from './defaults';
@@ -89,13 +89,13 @@ const calculatePageHeight = function (pages, margins) {
 			// TODO: Throw error?
 			return 0;
 		}
-	}
+	};
 
 	const getBottomPosition = function (item) {
 		let top = item.item.y;
 		let height = getItemHeight(item);
 		return top + height;
-	}
+	};
 
 	let height = margins.top;
 
@@ -141,8 +141,7 @@ const setMetadata = function (docDefinition, pdfDocument) {
 			}
 		}
 	}
-}
-
+};
 
 class Printer {
 

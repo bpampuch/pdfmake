@@ -10,7 +10,7 @@ class Renderer {
 
 		for (let i = 0; i < pages.length; i++) {
 			if (i > 0) {
-				updatePageOrientationInOptions(pages[i]);
+				this._updatePageOrientationInOptions(pages[i]);
 				this.pdfDocument.addPage(this.pdfDocument.options);
 			}
 
@@ -25,7 +25,7 @@ class Renderer {
 					// TODO
 
 					default:
-						throw 'Type not implemented'// TODO
+						throw 'Type not implemented'; // TODO
 				}
 			}
 
@@ -64,7 +64,7 @@ class Renderer {
 			this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);
 
 			if (inline.linkToPage) {
-				let _ref = this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
+				this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
 				this.pdfDocument.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
 			}
 
