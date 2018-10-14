@@ -82,11 +82,11 @@ const extendMargins = node => {
 
 class DocMeasurer {
 
-	constructor(fontProvider, styleDictionary, defaultStyle) {
+	constructor(pdfDocument, styleDictionary, defaultStyle) {
 		this.nodeTypes = [];
 		this.properties = [];
 
-		this.textInlines = new TextInlines(fontProvider);
+		this.textInlines = new TextInlines(pdfDocument);
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 	}
 

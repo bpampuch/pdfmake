@@ -33,10 +33,10 @@ const flattenTextArray = function (array) {
 class TextInlines {
 
 	/**
-	 * @param {FontProvider} fontProvider
+	 * @param {PDFDocument} pdfDocument
 	 */
-	constructor(fontProvider) {
-		this.fontProvider = fontProvider;
+	constructor(pdfDocument) {
+		this.pdfDocument = pdfDocument;
 	}
 
 	/**
@@ -105,7 +105,7 @@ class TextInlines {
 			let bold = StyleContextStack.getStyleProperty(item, styleContextStack, 'bold', defaults.bold);
 			let italics = StyleContextStack.getStyleProperty(item, styleContextStack, 'italics', defaults.italics);
 
-			item.font = this.fontProvider.provideFont(font, bold, italics);
+			item.font = this.pdfDocument.provideFont(font, bold, italics);
 
 			item.alignment = StyleContextStack.getStyleProperty(item, styleContextStack, 'alignment', defaults.alignment);
 			item.fontSize = StyleContextStack.getStyleProperty(item, styleContextStack, 'fontSize', defaults.fontSize);
@@ -176,7 +176,7 @@ class TextInlines {
 		let lineHeight = StyleContextStack.getStyleProperty({}, styleContextStack, 'lineHeight', defaults.lineHeight);
 		let characterSpacing = StyleContextStack.getStyleProperty({}, styleContextStack, 'characterSpacing', defaults.characterSpacing);
 
-		let font = this.fontProvider.provideFont(fontName, bold, italics);
+		let font = this.pdfDocument.provideFont(fontName, bold, italics);
 
 		return {
 			width: this.widthOfText(text, { font: font, fontSize: fontSize, characterSpacing: characterSpacing, fontFeatures: fontFeatures }),
