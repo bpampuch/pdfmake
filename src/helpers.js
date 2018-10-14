@@ -1,35 +1,3 @@
-export function isString(variable) {
-	return typeof variable === 'string' || variable instanceof String;
-}
-
-export function isNumber(variable) {
-	return typeof variable === 'number' || variable instanceof Number;
-}
-
-export function isBoolean(variable) {
-	return typeof variable === 'boolean';
-}
-
-export function isArray(variable) {
-	return Array.isArray(variable);
-}
-
-export function isFunction(variable) {
-	return typeof variable === 'function';
-}
-
-export function isObject(variable) {
-	return variable !== null && typeof variable === 'object';
-}
-
-export function isNull(variable) {
-	return variable === null;
-}
-
-export function isUndefined(variable) {
-	return variable === undefined;
-}
-
 export function pack(...args) {
 	let result = {};
 
