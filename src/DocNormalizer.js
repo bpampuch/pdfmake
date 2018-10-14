@@ -1,3 +1,5 @@
+import { stringifyNode } from './helpers/node';
+
 class DocNormalizer {
 
 	constructor() {
@@ -45,7 +47,7 @@ class DocNormalizer {
 		}
 
 		if (!nodeTypeFound) {
-			throw 'Unrecognized document structure: ' + JSON.stringify(node/*, fontStringify*/);
+			throw 'Unrecognized document structure: ' + stringifyNode(node);
 		}
 
 		for (let property of this.properties) {
