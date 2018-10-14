@@ -2,6 +2,11 @@ import { processAllExtenstionsByCondition, processFirstExtenstionsByCondition } 
 import PageElementWriter from './PageElementWriter';
 import DocumentContext from './DocumentContext';
 
+const decorateNode = (node) => {
+	node.positions = [];
+	// TODO
+};
+
 class LayoutBuilder {
 
 	constructor(pdfDocument, pageSize, pageMargins) {
@@ -42,8 +47,7 @@ class LayoutBuilder {
 	}
 
 	buildNode(node) {
-		//TODO: implement "decorate" node
-		node.positions = [];
+		decorateNode(node);
 
 		node = processFirstExtenstionsByCondition(this.nodeTypes, node);
 		node = processAllExtenstionsByCondition(this.properties, node);
