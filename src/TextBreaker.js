@@ -19,7 +19,7 @@ const splitWords = function (text, noWrap) {
 	let last = 0;
 	let bk;
 
-	while (bk = breaker.nextBreak()) {
+	while ((bk = breaker.nextBreak())) {
 		let word = text.slice(last, bk.position);
 
 		if (bk.required || word.match(/\r?\n$|\r$/)) { // new line
@@ -33,7 +33,7 @@ const splitWords = function (text, noWrap) {
 	}
 
 	return words;
-}
+};
 
 /**
  * @param {array} words
@@ -47,7 +47,7 @@ const getFirstWord = function (words, noWrap) {
 	}
 
 	return getOneWord(word, noWrap);
-}
+};
 
 /**
  * @param {array} words
@@ -65,7 +65,7 @@ const getLastWord = function (words, noWrap) {
 	}
 
 	return getOneWord(word, noWrap);
-}
+};
 
 /**
  * @param {object} word
@@ -84,7 +84,7 @@ const getOneWord = function (word, noWrap) {
 	}
 
 	return word;
-}
+};
 
 class TextBreaker {
 
