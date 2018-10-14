@@ -182,27 +182,6 @@ function calculatePageHeight(pages, margins) {
 	return height;
 }
 
-
-function fixPageMargins(margin) {
-	if (!margin) {
-		return null;
-	}
-
-	if (isNumber(margin)) {
-		margin = {left: margin, right: margin, top: margin, bottom: margin};
-	} else if (isArray(margin)) {
-		if (margin.length === 2) {
-			margin = {left: margin[0], top: margin[1], right: margin[0], bottom: margin[1]};
-		} else if (margin.length === 4) {
-			margin = {left: margin[0], top: margin[1], right: margin[2], bottom: margin[3]};
-		} else {
-			throw 'Invalid pageMargins definition';
-		}
-	}
-
-	return margin;
-}
-
 function registerDefaultTableLayouts(layoutBuilder) {
 	layoutBuilder.registerTableLayouts({
 		noBorders: {

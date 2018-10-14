@@ -19,6 +19,7 @@ export default {
 	leadingIndent: 0,
 
 	pageSize: 'A4',
+	pageMargins: 40,
 
 	compress: true,
 	bufferPages: false
