@@ -1,5 +1,6 @@
 import { isUndefined } from './helpers/variableType';
 import TextInlines from './TextInlines';
+import TextDecorator from './TextDecorator';
 
 class Renderer {
 
@@ -81,7 +82,7 @@ class Renderer {
 					inline.x += diffWidth / 2;
 					break;
 			}
-		}
+		};
 
 		if (line._pageNodeRef) {
 			preparePageNodeRefLine(line._pageNodeRef, line.inlines[0]);
@@ -93,6 +94,9 @@ class Renderer {
 		let lineHeight = line.getHeight();
 		let ascenderHeight = line.getAscenderHeight();
 		let descent = lineHeight - ascenderHeight;
+
+		let textDecorator = new TextDecorator(this.pdfDocument);
+		textDecorator.drawBackground(line, x, y);
 
 		// TODO: line.optimizeInlines();
 		for (let i = 0, l = line.inlines.length; i < l; i++) {
@@ -125,8 +129,9 @@ class Renderer {
 				this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
 				this.pdfDocument.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
 			}
-
 		}
+
+		textDecorator.drawDecorations(line, x, y);
 	}
 
 	renderImage(image, x, y) {

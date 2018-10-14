@@ -114,8 +114,8 @@ class DocMeasurer {
 			// TODO: refactor + rethink whether this is the proper way to handle margins
 			node._margin = getNodeMargin(node);
 
-			node = processFirstExtenstionsByCondition(this.nodeTypes, node);
 			node = processAllExtenstionsByCondition(this.properties, node);
+			node = processFirstExtenstionsByCondition(this.nodeTypes, node);
 
 			return extendMargins(node);
 		});

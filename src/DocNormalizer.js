@@ -34,8 +34,8 @@ class DocNormalizer {
 
 	normalizeNode(node) {
 		node = processAllExtenstions(this.shortcuts, node);
-		node = processFirstExtenstionsByCondition(this.nodeTypes, node);
 		node = processAllExtenstionsByCondition(this.properties, node);
+		node = processFirstExtenstionsByCondition(this.nodeTypes, node);
 
 		return node;
 	}

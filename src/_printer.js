@@ -161,15 +161,6 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	}
 }
 
-function renderLine(line, x, y, pdfKitDoc) {
-
-	textDecorator.drawBackground(line, x, y, pdfKitDoc);
-
-	// ...
-
-	textDecorator.drawDecorations(line, x, y, pdfKitDoc);
-}
-
 function renderWatermark(page, pdfKitDoc) {
 	let watermark = page.watermark;
 
