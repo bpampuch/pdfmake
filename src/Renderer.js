@@ -1,11 +1,20 @@
 class Renderer {
 
-	constructor(pdfDocument) {
+	constructor(pdfDocument, progressCallback) {
 		this.pdfDocument = pdfDocument;
+		this.progressCallback = progressCallback;
 	}
 
 	renderPages(pages) {
-		//this.pdfDocument._pdfMakePages = pages;
+		let totalItems = 0;
+		var renderedItems = 0;
+		if (this.progressCallback) {
+			pages.forEach((page) => {
+				totalItems += page.items.length;
+			});
+		}
+
+		//this.pdfDocument._pdfMakePages = pages; // TODO: Why?
 		this.pdfDocument.addPage();
 
 		for (let i = 0; i < pages.length; i++) {
@@ -32,6 +41,12 @@ class Renderer {
 
 					default:
 						throw `Item type '${item.type}' not supported.`;
+				}
+
+				renderedItems++;
+
+				if (this.progressCallback) {
+					this.progressCallback(renderedItems / totalItems);
 				}
 			}
 		}

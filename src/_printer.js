@@ -87,7 +87,7 @@ class PdfPrinter {
 
 		let pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles /*|| {}*/, docDefinition.defaultStyle /*|| {fontSize: 12, font: 'Roboto'}*/, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
 
-		renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
+		renderPages(pages, this.fontProvider, this.pdfKitDoc/*, options.progressCallback*/);
 
 		return this.pdfKitDoc;
 	}
@@ -152,33 +152,9 @@ function registerDefaultTableLayouts(layoutBuilder) {
 
 
 function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
-	pdfKitDoc._pdfMakePages = pages;
-	pdfKitDoc.addPage();
-
-	let totalItems = 0;
-	if (progressCallback) {
-		pages.forEach((page) => {
-			totalItems += page.items.length;
-		});
-	}
-
-	let renderedItems = 0;
-	progressCallback = progressCallback || (() => {
-	});
 
 	for (let i = 0; i < pages.length; i++) {
-		if (i > 0) {
-			updatePageOrientationInOptions(pages[i], pdfKitDoc);
-			pdfKitDoc.addPage(pdfKitDoc.options);
-		}
 
-		let page = pages[i];
-		for (let ii = 0, il = page.items.length; ii < il; ii++) {
-			let item = page.items[ii];
-
-			renderedItems++;
-			progressCallback(renderedItems / totalItems);
-		}
 		if (page.watermark) {
 			renderWatermark(page, pdfKitDoc);
 		}

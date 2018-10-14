@@ -203,7 +203,7 @@ class Printer {
 			this.pdfDocument.options.size = [pageSize.width, pageHeight];
 		}
 
-		let renderer = new Renderer(this.pdfDocument);
+		let renderer = new Renderer(this.pdfDocument, options.progressCallback);
 		renderer.renderPages(pages);
 
 		//		console.log(docDefinition);
