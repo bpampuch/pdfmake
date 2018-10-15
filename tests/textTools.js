@@ -107,6 +107,10 @@ describe('TextTools', function () {
 		{text: '    This is a paragraph', preserveLeadingSpaces: true}
 	];
 
+	var textWithTrailingSpaces = [
+		{text: 'This is a paragraph    ', preserveTrailingSpaces: true}
+	];
+
 	var mixedTextArrayWithVariousTypes = [
 		{text: ''},
 		{text: null},
@@ -407,6 +411,11 @@ describe('TextTools', function () {
 
 		it('should preserve leading whitespaces when preserveLeadingSpaces is set', function () {
 			var inlines = textTools.buildInlines(textWithLeadingSpaces);
+			assert.equal(inlines.maxWidth, 23 * 12);
+		});
+
+		it('should preserve trailing whitespaces when preserveTrailingSpaces is set', function () {
+			var inlines = textTools.buildInlines(textWithTrailingSpaces);
 			assert.equal(inlines.maxWidth, 23 * 12);
 		});
 	});
