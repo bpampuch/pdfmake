@@ -301,13 +301,12 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.width = widthOfString(item.text, font, fontSize, characterSpacing, fontFeatures);
 		item.height = font.lineHeight(fontSize) * lineHeight;
 
-		var leadingSpaces = item.text.match(LEADING);
-
 		if (!item.leadingCut) {
 			item.leadingCut = 0;
 		}
 
-		if (leadingSpaces && !preserveLeadingSpaces) {
+		var leadingSpaces;
+		if (!preserveLeadingSpaces && (leadingSpaces = item.text.match(LEADING))) {
 			item.leadingCut += widthOfString(leadingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
 		}
 
