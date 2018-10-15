@@ -1,5 +1,6 @@
 'use strict';
 
+var fs = require('fs');
 var PdfPrinter = require('../printer');
 var isFunction = require('../helpers').isFunction;
 var FileSaver = require('file-saver');
@@ -36,7 +37,7 @@ Document.prototype._createDoc = function (options, callback) {
 	}
 
 	var printer = new PdfPrinter(this.fonts);
-	require('fs').bindFS(this.vfs); // bind virtual file system to file system
+	fs.bindFS(this.vfs); // bind virtual file system to file system
 
 	var doc = printer.createPdfKitDocument(this.docDefinition, options);
 	var chunks = [];
@@ -187,5 +188,6 @@ module.exports = {
 			throw 'Your browser does not provide the level of support needed';
 		}
 		return new Document(docDefinition, global.pdfMake.tableLayouts, global.pdfMake.fonts, global.pdfMake.vfs);
-	}
+	},
+	fs: fs
 };
