@@ -12,7 +12,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: false }));
 
-function createPdfBinary(pdfDoc, callback) {
+async function createPdfBinary(pdfDoc, callback) {
 
 	var fontDescriptors = {
 		Roboto: {
@@ -24,6 +24,13 @@ function createPdfBinary(pdfDoc, callback) {
 	};
 
 	var printer = new pdfMakePrinter(fontDescriptors);
+
+	// Resolve remote images (http/https) before creating the pdfKit document
+	if (typeof printer.createPdfKitDocumentAsync === 'function') {
+		try {
+			await printer.resolveRemoteImages(pdfDoc);
+		} catch (err) { /* eslint-disable-line no-unused-vars */ }
+	}
 
 	var doc = printer.createPdfKitDocument(pdfDoc);
 
@@ -41,15 +48,16 @@ function createPdfBinary(pdfDoc, callback) {
 
 }
 
-app.post('/pdf', function (req, res) {
+app.post('/pdf', async function (req, res) {
 	const dd = new Function(req.body.content + '; return dd;')();
-
-	createPdfBinary(dd, function (binary) {
+	try {
+		await createPdfBinary(dd, function (binary) {
 		res.contentType('application/pdf');
 		res.send(binary);
-	}, function (error) {
-		res.send('ERROR:' + error);
-	});
+		});
+	} catch (error) {
+		res.status(500).send('ERROR:' + error);
+	}
 
 });
 

@@ -1,7 +1,6 @@
-/*eslint no-unused-vars: ["error", {"args": "none"}]*/
-/*eslint no-redeclare: "off"*/
-
+/* jslint node: true */
 'use strict';
+/*jshint -W004 */
 /* qr.js -- QR code generator in Javascript (revision 2011-01-19)
  * Written by Kang Seonghoon <public+qrjs@mearie.org>.
  *
@@ -743,13 +742,11 @@ function buildCanvas(data, options) {
 	var canvas = [];
 	var background = options.background || '#fff';
 	var foreground = options.foreground || '#000';
-	var padding = options.padding || 0;
 	//var margin = options.margin || 4;
 	var matrix = generateFrame(data, options);
 	var n = matrix.length;
 	var modSize = Math.floor(options.fit ? options.fit / n : 5);
-	var size = (n * modSize) + (modSize * padding * 2);
-	var paddingXY = modSize * padding;
+	var size = n * modSize;
 
 	canvas.push({
 		type: 'rect',
@@ -761,8 +758,8 @@ function buildCanvas(data, options) {
 			if (matrix[i][j]) {
 				canvas.push({
 					type: 'rect',
-					x: modSize * j + paddingXY,
-					y: modSize * i + paddingXY,
+					x: modSize * j,
+					y: modSize * i,
 					w: modSize,
 					h: modSize,
 					lineWidth: 0,

@@ -1,3 +1,4 @@
+/* jslint node: true */
 'use strict';
 
 var TraversalTracker = require('./traversalTracker');
@@ -6,10 +7,12 @@ var isString = require('./helpers').isString;
 /**
  * Creates an instance of DocumentContext - a store for current x, y positions and available width/height.
  * It facilitates column divisions and vertical sync
+ *
+ * @param {object} pageSize - current page size including width, height, orientation
+ * @param {object} pageMargins - normalized page margins with top/right/bottom/left
  */
 function DocumentContext(pageSize, pageMargins) {
 	this.pages = [];
-
 	this.pageMargins = pageMargins;
 
 	this.x = pageMargins.left;
@@ -19,21 +22,24 @@ function DocumentContext(pageSize, pageMargins) {
 
 	this.snapshots = [];
 
-	this.tracker = new TraversalTracker();
+	this.endingCell = null;
 
+	this.tracker = new TraversalTracker();
 	this.backgroundLength = [];
+	this.marginXTopParent = null;
 
 	this.addPage(pageSize);
 }
 
-DocumentContext.prototype.beginColumnGroup = function (marginXTopParent, bottomByPage = {}) {
+DocumentContext.prototype.beginColumnGroup = function (marginXTopParent, bottomByPage) {
+	bottomByPage = bottomByPage || {};
 	this.snapshots.push({
 		x: this.x,
 		y: this.y,
 		availableHeight: this.availableHeight,
 		availableWidth: this.availableWidth,
 		page: this.page,
-		bottomByPage: bottomByPage ? bottomByPage : {},
+		bottomByPage: bottomByPage,
 		bottomMost: {
 			x: this.x,
 			y: this.y,
@@ -41,7 +47,9 @@ DocumentContext.prototype.beginColumnGroup = function (marginXTopParent, bottomB
 			availableWidth: this.availableWidth,
 			page: this.page
 		},
-		lastColumnWidth: this.lastColumnWidth
+		endingCell: this.endingCell,
+		lastColumnWidth: this.lastColumnWidth,
+		marginXTopParent: this.marginXTopParent
 	});
 
 	this.lastColumnWidth = 0;
@@ -51,9 +59,12 @@ DocumentContext.prototype.beginColumnGroup = function (marginXTopParent, bottomB
 };
 
 DocumentContext.prototype.updateBottomByPage = function () {
-	const lastSnapshot = this.snapshots[this.snapshots.length - 1];
-	const lastPage = this.page;
-	let previousBottom = -Number.MIN_VALUE;
+	if (!this.snapshots.length) {
+		return;
+	}
+	var lastSnapshot = this.snapshots[this.snapshots.length - 1];
+	var lastPage = this.page;
+	var previousBottom = -Number.MIN_VALUE;
 	if (lastSnapshot.bottomByPage[lastPage]) {
 		previousBottom = lastSnapshot.bottomByPage[lastPage];
 	}
@@ -64,29 +75,67 @@ DocumentContext.prototype.resetMarginXTopParent = function () {
 	this.marginXTopParent = null;
 };
 
-DocumentContext.prototype.beginColumn = function (width, offset, endingCell) {
+DocumentContext.prototype.beginColumn = function (width, offset, endingCell, heightOffset) {
 	var saved = this.snapshots[this.snapshots.length - 1];
-
-	this.calculateBottomMost(saved, endingCell);
-
+	
+	// If starting a NEW spanning column, capture its context NOW (before we reset)
+	if (endingCell && !this.endingCell) {
+		// First spanning column - save current context before we reset
+		endingCell._columnEndingContext = {
+			page: this.page,
+			x: this.x,
+			y: this.y,
+			availableHeight: this.availableHeight,
+			availableWidth: this.availableWidth,
+			lastColumnWidth: this.lastColumnWidth
+		};
+	}
+	
+	// Process the PREVIOUS column's endingCell and/or update bottomMost
+	this.calculateBottomMost(saved, this.endingCell, endingCell);
+	
+	this.endingCell = endingCell;
 	this.page = saved.page;
 	this.x = this.x + this.lastColumnWidth + (offset || 0);
 	this.y = saved.y;
 	this.availableWidth = width;	//saved.availableWidth - offset;
-	this.availableHeight = saved.availableHeight;
+	this.availableHeight = saved.availableHeight - (heightOffset || 0);
 
 	this.lastColumnWidth = width;
 };
 
-DocumentContext.prototype.calculateBottomMost = function (destContext, endingCell) {
-	if (endingCell) {
-		this.saveContextInEndingCell(endingCell);
-	} else {
-		destContext.bottomMost = bottomMostContext(this, destContext.bottomMost);
+DocumentContext.prototype.calculateBottomMost = function (destContext, previousEndingCell, currentEndingCell) {
+	// If the previous column had an endingCell (spanning), save its context now
+	if (previousEndingCell) {
+		if (!previousEndingCell._columnEndingContext) {
+			// First spanning column: save current context
+			this.saveContextInEndingCell(previousEndingCell);
+		}
+		// Clear the endingCell reference
+		this.endingCell = null;
+	}
+	
+	// Update bottomMost if the current column is NOT spanning
+	if (!currentEndingCell) {
+		var bottomMost = destContext.bottomMost ? destContext.bottomMost : destContext;
+		destContext.bottomMost = bottomMostContext(this, bottomMost);
+	} else if (previousEndingCell) {
+		// Current column IS spanning, but previous was also spanning
+		// Save bottomMost (shortest of non-spanning columns so far) to current endingCell
+		currentEndingCell._columnEndingContext = {
+			page: destContext.bottomMost.page,
+			x: destContext.bottomMost.x,
+			y: destContext.bottomMost.y,
+			availableHeight: destContext.bottomMost.availableHeight,
+			availableWidth: destContext.bottomMost.availableWidth,
+			lastColumnWidth: destContext.bottomMost.lastColumnWidth
+		};
 	}
 };
 
 DocumentContext.prototype.markEnding = function (endingCell, originalXOffset, discountY) {
+	originalXOffset = originalXOffset || 0;
+	discountY = discountY || 0;
 	this.page = endingCell._columnEndingContext.page;
 	this.x = endingCell._columnEndingContext.x + originalXOffset;
 	this.y = endingCell._columnEndingContext.y - discountY;
@@ -109,11 +158,28 @@ DocumentContext.prototype.saveContextInEndingCell = function (endingCell) {
 DocumentContext.prototype.completeColumnGroup = function (height, endingCell) {
 	var saved = this.snapshots.pop();
 
-	this.calculateBottomMost(saved, endingCell);
+	// Process any remaining endingCell from the last column
+	// This handles the case where the last column is spanning and needs its context saved
+	if (this.endingCell && !this.endingCell._columnEndingContext) {
+		// Last column is spanning and hasn't been saved yet - save it now
+		this.saveContextInEndingCell(this.endingCell);
+	}
+	this.calculateBottomMost(saved, null, null);
 
+	var hasSpanningColumn = !!(endingCell || this.endingCell);
+	this.endingCell = null;
 	this.x = saved.x;
-
-	var y = saved.bottomMost.y;
+	
+	var y;
+	if (hasSpanningColumn) {
+		// If there's a spanning column, use the current y position
+		// The bottomMost was saved to the endingCell, but we continue at current y
+		y = this.y;
+	} else {
+		// No spanning column, use the bottomMost
+		y = saved.bottomMost.y;
+	}
+	
 	if (height) {
 		if (saved.page === saved.bottomMost.page) {
 			if ((saved.y + height) > y) {
@@ -126,12 +192,15 @@ DocumentContext.prototype.completeColumnGroup = function (height, endingCell) {
 
 	this.y = y;
 	this.page = saved.bottomMost.page;
-	this.availableWidth = saved.availableWidth;
+	this.height = saved.bottomMost.y - saved.y;
 	this.availableHeight = saved.bottomMost.availableHeight;
 	if (height) {
 		this.availableHeight -= (y - saved.bottomMost.y);
 	}
+	this.availableWidth = saved.availableWidth;
 	this.lastColumnWidth = saved.lastColumnWidth;
+	this.marginXTopParent = saved.marginXTopParent;
+
 	return saved.bottomByPage;
 };
 
@@ -150,9 +219,11 @@ DocumentContext.prototype.moveDown = function (offset) {
 DocumentContext.prototype.initializePage = function () {
 	this.y = this.pageMargins.top;
 	this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-	const { pageCtx, isSnapshot } = this.pageSnapshot();
+	this.fullHeight = this.availableHeight;
+	var snapshot = this.pageSnapshot();
+	var pageCtx = snapshot.pageCtx;
 	pageCtx.availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
-	if (isSnapshot && this.marginXTopParent) {
+	if (snapshot.isSnapshot && this.marginXTopParent) {
 		pageCtx.availableWidth -= this.marginXTopParent[0];
 		pageCtx.availableWidth -= this.marginXTopParent[1];
 	}
@@ -160,9 +231,9 @@ DocumentContext.prototype.initializePage = function () {
 
 DocumentContext.prototype.pageSnapshot = function () {
 	if (this.snapshots[0]) {
-		return { pageCtx: this.snapshots[0], isSnapshot: true };
+		return {pageCtx: this.snapshots[0], isSnapshot: true};
 	} else {
-		return { pageCtx: this, isSnapshot: false };
+		return {pageCtx: this, isSnapshot: false};
 	}
 };
 
@@ -193,7 +264,9 @@ DocumentContext.prototype.beginDetachedBlock = function () {
 		availableHeight: this.availableHeight,
 		availableWidth: this.availableWidth,
 		page: this.page,
-		lastColumnWidth: this.lastColumnWidth
+		endingCell: this.endingCell,
+		lastColumnWidth: this.lastColumnWidth,
+		marginXTopParent: this.marginXTopParent
 	});
 };
 
@@ -205,7 +278,9 @@ DocumentContext.prototype.endDetachedBlock = function () {
 	this.availableWidth = saved.availableWidth;
 	this.availableHeight = saved.availableHeight;
 	this.page = saved.page;
+	this.endingCell = saved.endingCell;
 	this.lastColumnWidth = saved.lastColumnWidth;
+	this.marginXTopParent = saved.marginXTopParent;
 };
 
 function pageOrientation(pageOrientationString, currentPageOrientation) {
@@ -244,13 +319,9 @@ DocumentContext.prototype.moveToNextPage = function (pageOrientation) {
 
 	var prevPage = this.page;
 	var prevY = this.y;
-
-	// If we are in a column group
 	if (this.snapshots.length > 0) {
 		var lastSnapshot = this.snapshots[this.snapshots.length - 1];
-		// We have to update prevY accordingly by also taking into consideration
-		// the 'y' of cells that don't break page
-		if (lastSnapshot.bottomMost && lastSnapshot.bottomMost.y) {
+		if (lastSnapshot.bottomMost && lastSnapshot.bottomMost.y !== undefined) {
 			prevY = Math.max(this.y, lastSnapshot.bottomMost.y);
 		}
 	}
@@ -281,7 +352,7 @@ DocumentContext.prototype.moveToNextPage = function (pageOrientation) {
 
 
 DocumentContext.prototype.addPage = function (pageSize) {
-	var page = { items: [], pageSize: pageSize };
+	var page = {items: [], pageSize: pageSize};
 	this.pages.push(page);
 	this.backgroundLength.push(0);
 	this.page = this.pages.length - 1;
@@ -336,5 +407,9 @@ function bottomMostContext(c1, c2) {
 		availableWidth: r.availableWidth
 	};
 }
+
+/****TESTS**** (add a leading '/' to uncomment)
+ DocumentContext.bottomMostContext = bottomMostContext;
+ // */
 
 module.exports = DocumentContext;

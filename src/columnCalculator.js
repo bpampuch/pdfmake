@@ -1,8 +1,16 @@
+/* jslint node: true */
 'use strict';
 
-var isString = require('./helpers').isString;
+var helpers = require('./helpers');
+var isString = helpers && helpers.isString ? helpers.isString : function (value) {
+	return typeof value === 'string' || value instanceof String;
+};
 
-function buildColumnWidths(columns, availableWidth, offsetTotal = 0, tableNode) {
+function buildColumnWidths(columns, availableWidth, offsetTotal, tableNode) {
+	if (offsetTotal === undefined) {
+		offsetTotal = 0;
+	}
+
 	var autoColumns = [],
 		autoMin = 0, autoMax = 0,
 		starColumns = [],
@@ -28,7 +36,6 @@ function buildColumnWidths(columns, availableWidth, offsetTotal = 0, tableNode) 
 	fixedColumns.forEach(function (col, colIndex) {
 		// width specified as %
 		if (isString(col.width) && /\d+%/.test(col.width)) {
-			// In tables we have to take into consideration the reserved width for paddings and borders
 			var reservedWidth = 0;
 			if (tableNode) {
 				var paddingLeft = tableNode._layout.paddingLeft(colIndex, tableNode);
@@ -116,9 +123,9 @@ function isStarColumn(column) {
 
 //TODO: refactor and reuse in measureTable
 function measureMinMax(columns) {
-	var result = { min: 0, max: 0 };
+	var result = {min: 0, max: 0};
 
-	var maxStar = { min: 0, max: 0 };
+	var maxStar = {min: 0, max: 0};
 	var starCount = 0;
 
 	for (var i = 0, l = columns.length; i < l; i++) {

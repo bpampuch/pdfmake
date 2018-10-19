@@ -1,3 +1,4 @@
+/* jslint node: true */
 'use strict';
 
 var fs = require('fs');
@@ -15,10 +16,10 @@ ImageMeasure.prototype.measureImage = function (src) {
 		try {
 			image = this.pdfKitDoc.openImage(realImageSrc(src));
 			if (!image) {
-				throw 'No image';
+				throw new Error('No image');
 			}
 		} catch (error) {
-			throw 'Invalid image: ' + error.toString() + '\nImages dictionary should contain dataURL entries (or local file paths in node.js)';
+			throw new Error('Invalid image: ' + error.toString() + '\nImages dictionary should contain dataURL entries (or local file paths in node.js)');
 		}
 		image.embed(this.pdfKitDoc);
 		this.pdfKitDoc._imageRegistry[src] = image;
@@ -42,8 +43,16 @@ ImageMeasure.prototype.measureImage = function (src) {
 			return src;
 		}
 
+		if (Buffer.isBuffer && Buffer.isBuffer(img)) {
+			return img;
+		}
+
+		if (img instanceof Uint8Array) {
+			return Buffer.from(img);
+		}
+
 		if (typeof img === 'object') {
-			throw 'Not supported image definition: ' + JSON.stringify(img);
+			throw new Error('Not supported image definition: ' + JSON.stringify(img));
 		}
 
 		if (fs.existsSync(img)) {

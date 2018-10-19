@@ -1,6 +1,6 @@
 {
-  "name": "pdfmake",
-  "version": "0.2.20",
+  "name": "@newpheeraphatflowaccount/pdfmake",
+  "version": "0.2.20-local.1760619513",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/printer.js",
   "browser": "build/pdfmake.js",
@@ -8,10 +8,13 @@
     "test": "tests"
   },
   "dependencies": {
+    "@flowaccount/node-icu-tokenizer": "2.0.0",
     "@foliojs-fork/linebreak": "^1.1.2",
     "@foliojs-fork/pdfkit": "^0.15.3",
     "iconv-lite": "^0.6.3",
-    "xmldoc": "^2.0.1"
+    "lodash": "^4.17.4",
+    "xmldoc": "^2.0.1",
+    "pdfkit": "^0.8.3"
   },
   "devDependencies": {
     "@babel/cli": "^7.27.2",
@@ -32,6 +35,8 @@
     "globals": "^16.1.0",
     "mocha": "^11.2.2",
     "npm-run-all": "^4.1.5",
+    "path-browserify": "^1.0.1",
+    "prettier": "^3.6.2",
     "process": "^0.11.10",
     "rewire": "^7.0.0",
     "shx": "^0.4.0",
@@ -59,7 +64,15 @@
     "build:examples": "node build-examples.js",
     "lint": "eslint \"./src/**/*.js\" \"./tests/**/*.js\" \"./examples/**/*.js\"",
     "mocha": "mocha --reporter spec \"./tests/**/*.js\"",
-    "playground": "node dev-playground/server.js"
+    "playground": "node dev-playground/server.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "publish:local": "cp .npmrc.local .npmrc && npm version 0.2.20-local.$(date +%s) --no-git-tag-version && npm publish --registry=http://localhost:4872",
+    "publish:staging": "npm run build && npm run test && npm version prerelease --preid=staging --no-git-tag-version && npm publish --tag staging --access public",
+    "publish:production": "npm run build && npm run test && npm publish --access public",
+    "version:patch": "npm version patch",
+    "version:minor": "npm version minor",
+    "version:major": "npm version major"
   },
   "repository": {
     "type": "git",
@@ -71,7 +84,7 @@
     "printing",
     "layout"
   ],
-  "author": "Bartek Pampuch <bartosz.pampuch@gmail.com>",
+  "author": "FlowAccount Co., Ltd. <voravit@flowaccount.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/bpampuch/pdfmake/issues"
@@ -85,5 +98,14 @@
         "tests"
       ]
     }
-  }
+  },
+  "files": [
+    "src/",
+    "build/pdfmake.js",
+    "build/pdfmake.min.js",
+    "build/pdfmake.min.js.map",
+    "build/vfs_fonts.js",
+    "README.md",
+    "LICENSE"
+  ]
 }

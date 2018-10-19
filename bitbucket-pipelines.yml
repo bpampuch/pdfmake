@@ -1,0 +1,13 @@
+pipelines:
+  branches: 
+    preprod:
+      - step:
+          name: NPM Package Deploy
+          image: node:8.10
+          script:
+            - export packageVersion=${MAJOR_NUMBER}.${MINOR_NUMBER}.${BITBUCKET_BUILD_NUMBER}
+            - echo $packageVersion
+            - sed -i -e s/packageVersion/${packageVersion}/g package.json
+            - cat package.json
+            - printf "//`node -p \"require('url').parse(process.env.NPM_REGISTRY_URL || 'https://registry.npmjs.org').host\"`/:_authToken=${NPM_TOKEN}\nregistry=${NPM_REGISTRY_URL:-https://registry.npmjs.org}\n" >> ~/.npmrc
+            - npm publish

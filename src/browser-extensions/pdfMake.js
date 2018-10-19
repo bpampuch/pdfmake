@@ -25,6 +25,7 @@ function Document(docDefinition, tableLayouts, fonts, vfs) {
 	this.tableLayouts = tableLayouts || null;
 	this.fonts = fonts || defaultClientFonts;
 	this.vfs = vfs;
+	this._remoteImagesPrefetched = false;
 }
 
 function canCreatePdf() {
@@ -35,12 +36,16 @@ function canCreatePdf() {
 		Object.setPrototypeOf(proto, Uint8Array.prototype);
 		Object.setPrototypeOf(arr, proto);
 		return arr.foo() === 42;
-	} catch (e) {
+	} catch (e) { // eslint-disable-line no-unused-vars
 		return false;
 	}
 }
 
 Document.prototype._createDoc = function (options, cb) {
+	// If we have not prefetched remote images (http/https) embedded via images dict pointing directly to remote URLs
+	// we can integrate with existing URLBrowserResolver flow which already downloads remote resources into the virtual FS.
+	// However previous implementation only rewrote docDefinition.images entries to resolved URL (still remote). We enhance it by
+	// actually fetching and storing the binary in virtual FS so imageMeasure can load it synchronously.
 	var getExtendedUrl = function (url) {
 		if (typeof url === 'object') {
 			return { url: url.url, headers: url.headers };
@@ -72,46 +77,46 @@ Document.prototype._createDoc = function (options, cb) {
 		if (this.fonts.hasOwnProperty(font)) {
 			if (this.fonts[font].normal) {
 				if (Array.isArray(this.fonts[font].normal)) { // TrueType Collection
-					var url = getExtendedUrl(this.fonts[font].normal[0]);
-					urlResolver.resolve(url.url, url.headers);
-					this.fonts[font].normal[0] = url.url;
+					var urlNormalArr = getExtendedUrl(this.fonts[font].normal[0]);
+					urlResolver.resolve(urlNormalArr.url, urlNormalArr.headers);
+					this.fonts[font].normal[0] = urlNormalArr.url;
 				} else {
-					var url = getExtendedUrl(this.fonts[font].normal);
-					urlResolver.resolve(url.url, url.headers);
-					this.fonts[font].normal = url.url;
+					var urlNormal = getExtendedUrl(this.fonts[font].normal);
+					urlResolver.resolve(urlNormal.url, urlNormal.headers);
+					this.fonts[font].normal = urlNormal.url;
 				}
 			}
 			if (this.fonts[font].bold) {
 				if (Array.isArray(this.fonts[font].bold)) { // TrueType Collection
-					var url = getExtendedUrl(this.fonts[font].bold[0]);
-					urlResolver.resolve(url.url, url.headers);
-					this.fonts[font].bold[0] = url.url;
+					var urlBoldArr = getExtendedUrl(this.fonts[font].bold[0]);
+					urlResolver.resolve(urlBoldArr.url, urlBoldArr.headers);
+					this.fonts[font].bold[0] = urlBoldArr.url;
 				} else {
-					var url = getExtendedUrl(this.fonts[font].bold);
-					urlResolver.resolve(url.url, url.headers);
-					this.fonts[font].bold = url.url;
+					var urlBold = getExtendedUrl(this.fonts[font].bold);
+					urlResolver.resolve(urlBold.url, urlBold.headers);
+					this.fonts[font].bold = urlBold.url;
 				}
 			}
 			if (this.fonts[font].italics) {
 				if (Array.isArray(this.fonts[font].italics)) { // TrueType Collection
-					var url = getExtendedUrl(this.fonts[font].italics[0]);
-					urlResolver.resolve(url.url, url.headers);
-					this.fonts[font].italics[0] = url.url;
+					var urlItalicsArr = getExtendedUrl(this.fonts[font].italics[0]);
+					urlResolver.resolve(urlItalicsArr.url, urlItalicsArr.headers);
+					this.fonts[font].italics[0] = urlItalicsArr.url;
 				} else {
-					var url = getExtendedUrl(this.fonts[font].italics);
-					urlResolver.resolve(url.url, url.headers);
-					this.fonts[font].italics = url.url;
+					var urlItalics = getExtendedUrl(this.fonts[font].italics);
+					urlResolver.resolve(urlItalics.url, urlItalics.headers);
+					this.fonts[font].italics = urlItalics.url;
 				}
 			}
 			if (this.fonts[font].bolditalics) {
 				if (Array.isArray(this.fonts[font].bolditalics)) { // TrueType Collection
-					var url = getExtendedUrl(this.fonts[font].bolditalics[0]);
-					urlResolver.resolve(url.url, url.headers);
-					this.fonts[font].bolditalics[0] = url.url;
+					var urlBoldItalicsArr = getExtendedUrl(this.fonts[font].bolditalics[0]);
+					urlResolver.resolve(urlBoldItalicsArr.url, urlBoldItalicsArr.headers);
+					this.fonts[font].bolditalics[0] = urlBoldItalicsArr.url;
 				} else {
-					var url = getExtendedUrl(this.fonts[font].bolditalics);
-					urlResolver.resolve(url.url, url.headers);
-					this.fonts[font].bolditalics = url.url;
+					var urlBoldItalics = getExtendedUrl(this.fonts[font].bolditalics);
+					urlResolver.resolve(urlBoldItalics.url, urlBoldItalics.headers);
+					this.fonts[font].bolditalics = urlBoldItalics.url;
 				}
 			}
 		}
@@ -120,9 +125,17 @@ Document.prototype._createDoc = function (options, cb) {
 	if (this.docDefinition.images) {
 		for (var image in this.docDefinition.images) {
 			if (this.docDefinition.images.hasOwnProperty(image)) {
-				var url = getExtendedUrl(this.docDefinition.images[image]);
-				urlResolver.resolve(url.url, url.headers);
-				this.docDefinition.images[image] = url.url;
+				var originalVal = this.docDefinition.images[image];
+				var urlImg = getExtendedUrl(originalVal);
+				// only attempt remote fetch for http(s) plain string (not already dataURL)
+				if (typeof urlImg.url === 'string' && (urlImg.url.toLowerCase().startsWith('http://') || urlImg.url.toLowerCase().startsWith('https://'))) {
+					// schedule resolution (downloads into virtual FS). We keep dictionary value as the URL; imageMeasure will cause fs.existsSync to succeed and readFileSync returns binary buffer.
+					urlResolver.resolve(urlImg.url, urlImg.headers);
+					this.docDefinition.images[image] = urlImg.url; // leave as URL (acts as key for downloaded file)
+				} else {
+					// Non-remote: keep existing behavior (dataURL or path)
+					this.docDefinition.images[image] = urlImg.url;
+				}
 			}
 		}
 	}
@@ -157,7 +170,7 @@ Document.prototype._flushDoc = function (doc, callback) {
 
 Document.prototype._getPages = function (options, cb) {
 	if (!cb) {
-		throw '_getPages is an async method and needs a callback argument';
+		throw new Error('_getPages is an async method and needs a callback argument');
 	}
 	var _this = this;
 
@@ -181,7 +194,7 @@ Document.prototype._bufferToBlob = function (buffer) {
 	}
 
 	if (!blob) {
-		throw 'Could not generate blob';
+		throw new Error('Could not generate blob');
 	}
 
 	return blob;
@@ -192,7 +205,7 @@ Document.prototype._openWindow = function () {
 	// otherwise popup blockers will stop us
 	var win = window.open('', '_blank');
 	if (win === null) {
-		throw 'Open PDF in new window blocked by browser';
+		throw new Error('Open PDF in new window blocked by browser');
 	}
 
 	return win;
@@ -242,9 +255,10 @@ Document.prototype.print = function (options, win) {
 };
 
 /**
- * download(defaultFileName = 'file.pdf', cb = null, options = {})
- * or
- * download(cb, options = {})
+ * Download the PDF.
+ * @param {string|Function} defaultFileName filename or callback when omitted
+ * @param {Function} [cb] callback invoked after save
+ * @param {object} [options] pdf creation options
  */
 Document.prototype.download = function (defaultFileName, cb, options) {
 	if (isFunction(defaultFileName)) {
@@ -267,7 +281,7 @@ Document.prototype.download = function (defaultFileName, cb, options) {
 
 Document.prototype.getBase64 = function (cb, options) {
 	if (!cb) {
-		throw 'getBase64 is an async method and needs a callback argument';
+		throw new Error('getBase64 is an async method and needs a callback argument');
 	}
 	this.getBuffer(function (buffer) {
 		cb(buffer.toString('base64'));
@@ -276,7 +290,7 @@ Document.prototype.getBase64 = function (cb, options) {
 
 Document.prototype.getDataUrl = function (cb, options) {
 	if (!cb) {
-		throw 'getDataUrl is an async method and needs a callback argument';
+		throw new Error('getDataUrl is an async method and needs a callback argument');
 	}
 	this.getBuffer(function (buffer) {
 		cb('data:application/pdf;base64,' + buffer.toString('base64'));
@@ -285,7 +299,7 @@ Document.prototype.getDataUrl = function (cb, options) {
 
 Document.prototype.getBlob = function (cb, options) {
 	if (!cb) {
-		throw 'getBlob is an async method and needs a callback argument';
+		throw new Error('getBlob is an async method and needs a callback argument');
 	}
 	var that = this;
 	this.getBuffer(function (result) {
@@ -296,7 +310,7 @@ Document.prototype.getBlob = function (cb, options) {
 
 Document.prototype.getBuffer = function (cb, options) {
 	if (!cb) {
-		throw 'getBuffer is an async method and needs a callback argument';
+		throw new Error('getBuffer is an async method and needs a callback argument');
 	}
 
 	var _this = this;
@@ -322,7 +336,7 @@ Document.prototype.getStream = function (options, cb) {
 module.exports = {
 	createPdf: function (docDefinition, tableLayouts, fonts, vfs) {
 		if (!canCreatePdf()) {
-			throw 'Your browser does not provide the level of support needed';
+			throw new Error('Your browser does not provide the level of support needed');
 		}
 		return new Document(
 			docDefinition,

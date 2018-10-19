@@ -2,26 +2,112 @@
 
 var assert = require('assert');
 var sinon = require('sinon');
+var http = require('http');
 
-var PdfKitEngine = require('../src/pdfKitEngine');
+var PdfKit = require('@foliojs-fork/pdfkit'); // Use same PdfKit that printer.js uses
 var Printer = require('../src/printer.js');
-
-var PdfKit = PdfKitEngine.getEngineInstance();
 
 describe('Printer', function () {
 
 	var SHORT_SIDE = 1000, LONG_SIDE = 2000;
 	var fontDescriptors, printer;
+	var sandbox;
 
 	beforeEach(function () {
+		sandbox = sinon.createSandbox();
 		fontDescriptors = {
 			Roboto: {
 				normal: 'tests/fonts/Roboto-Regular.ttf'
 			}
 		};
-		PdfKit.prototype.addPage = sinon.spy(PdfKit.prototype.addPage);
-
+		sandbox.spy(PdfKit.prototype, 'addPage');
 	});
+
+	afterEach(function () {
+		sandbox.restore();
+	});
+
+		describe('remote images', function () {
+			var server;
+			var serverUrl;
+			var requestCount;
+			var imageBuffer = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAwAAAAGAQMAAADNIO3CAAAAA1BMVEUAAN7GEcIJAAAAAWJLR0QAiAUdSAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB98DBREbA3IZ3d8AAAALSURBVAjXY2BABwAAEgAB74lUpAAAAABJRU5ErkJggg==', 'base64');
+
+			function startServer() {
+				requestCount = 0;
+				return new Promise(function (resolve) {
+					server = http.createServer(function (req, res) {
+						requestCount++;
+						res.writeHead(200, { 'Content-Type': 'image/png' });
+						res.end(imageBuffer);
+					});
+					server.listen(0, '127.0.0.1', function () {
+						var address = server.address();
+						serverUrl = 'http://' + address.address + ':' + address.port + '/image.png';
+						resolve();
+					});
+				});
+			}
+
+			function stopServer() {
+				if (!server) {
+					return Promise.resolve();
+				}
+
+				return new Promise(function (resolve) {
+					server.close(function () {
+						server = null;
+						resolve();
+					});
+				});
+			}
+
+			afterEach(function () {
+				return stopServer();
+			});
+
+			it('downloads remote images via resolveRemoteImages and caches result', async function () {
+				await startServer();
+				printer = new Printer(fontDescriptors);
+
+				var docDefinitionA = {
+					content: [{ image: serverUrl, width: 80 }],
+					images: {}
+				};
+
+				await printer.resolveRemoteImages(docDefinitionA);
+				assert(Buffer.isBuffer(docDefinitionA.images[serverUrl]));
+				assert.strictEqual(docDefinitionA.images[serverUrl].equals(imageBuffer), true);
+				assert.strictEqual(requestCount, 1);
+
+				var docDefinitionB = {
+					content: [{ image: serverUrl, width: 40 }],
+					images: {}
+				};
+
+				await printer.resolveRemoteImages(docDefinitionB);
+				assert(Buffer.isBuffer(docDefinitionB.images[serverUrl]));
+				assert.strictEqual(docDefinitionB.images[serverUrl].equals(imageBuffer), true);
+				assert.strictEqual(requestCount, 1, 'remote image should be served from cache on second doc');
+
+				var pdfDoc = printer.createPdfKitDocument(docDefinitionB);
+				pdfDoc.end();
+			});
+
+			it('createPdfKitDocumentAsync resolves remote images automatically', async function () {
+				await startServer();
+				printer = new Printer(fontDescriptors);
+
+				var docDefinition = {
+					content: [{ image: serverUrl, width: 50 }]
+				};
+
+				var pdfDoc = await printer.createPdfKitDocumentAsync(docDefinition, { remoteImageTimeout: 2000 });
+				assert(Buffer.isBuffer(docDefinition.images[serverUrl]));
+				assert.strictEqual(requestCount, 1);
+				pdfDoc.end();
+			});
+		});
 
 	it('should pass switched width and height to pdfkit if page orientation changes from default portrait to landscape', function () {
 		printer = new Printer(fontDescriptors);
@@ -150,7 +236,7 @@ describe('Printer', function () {
 				}
 			]
 		};
-		PdfKit.prototype.ellipse = sinon.spy(PdfKit.prototype.ellipse);
+		sandbox.spy(PdfKit.prototype, 'ellipse');
 
 		printer.createPdfKitDocument(docDefinition);
 

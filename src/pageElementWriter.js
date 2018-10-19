@@ -1,3 +1,4 @@
+/* jslint node: true */
 'use strict';
 
 var isUndefined = require('./helpers').isUndefined;
@@ -11,6 +12,9 @@ var ElementWriter = require('./elementWriter');
  *                         a page-break occurs)
  * - transactions (used for unbreakable-blocks when we want to make sure
  *                 whole block will be rendered on the same page)
+ *
+ * @param {object} context Active document context.
+ * @param {object} tracker Tracker to emit layout events.
  */
 function PageElementWriter(context, tracker) {
 	this.transactionLevel = 0;
@@ -65,36 +69,87 @@ PageElementWriter.prototype.endClip = function () {
 };
 
 PageElementWriter.prototype.alignCanvas = function (node) {
-	this.writer.alignCanvas(node);
+	return this.writer.alignCanvas(node);
 };
 
-PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-	if (!this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition)) {
+var newPageFooterBreak = true;
+
+PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
+	var result = this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+	if (isFooter) {
+		if (result && isFooter === 1) {
+			newPageFooterBreak = false;
+			return true;
+		}
+		if (!result && isFooter === 2 && newPageFooterBreak) {
+			this.moveToNextPage();
+			return this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+		}
+		if (!result && isFooter === 1) {
+			this.moveToNextPage();
+			return this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+		}
+		return result;
+	}
+
+	if (!result) {
 		this.moveToNextPage();
-		this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition);
+		return this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+	}
+
+	return true;
+};
+
+PageElementWriter.prototype.addFragment_test = function (fragment) {
+
+	if (fragment.height > this.writer.context.availableHeight) {
+		//console.log('PageBreak');
+		return false;
+	} else {
+		//console.log('None PageBreak');
+		return true;
 	}
 };
 
+PageElementWriter.prototype.removeBeginClip = function(item) {
+	return this.writer.removeBeginClip(item);
+};
+
+PageElementWriter.prototype.beginVerticalAlign = function(verticalAlign) {
+	return this.writer.beginVerticalAlign(verticalAlign);
+};
+
+PageElementWriter.prototype.endVerticalAlign = function(verticalAlign) {
+	return this.writer.endVerticalAlign(verticalAlign);
+};
+
 PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
+	newPageFooterBreak = true;
+	var context = this.writer.context;
+	var currentPage = context.pages[context.page];
+	this.writer.tracker.emit('beforePageChanged', {
+		prevPage: currentPage.prevPage,
+		prevY: currentPage.prevY,
+		y: currentPage.y
+	});
 
-	var nextPage = this.writer.context.moveToNextPage(pageOrientation);
-
-	// moveToNextPage is called multiple times for table, because is called for each column
-	// and repeatables are inserted only in the first time. If columns are used, is needed
-	// call for table in first column and then for table in the second column (is other repeatables).
+	var nextPage = context.moveToNextPage(pageOrientation);
 	this.repeatables.forEach(function (rep) {
-		if (isUndefined(rep.insertedOnPages[this.writer.context.page])) {
-			rep.insertedOnPages[this.writer.context.page] = true;
+		if (isUndefined(rep.insertedOnPages)) {
+			rep.insertedOnPages = [];
+		}
+		if (isUndefined(rep.insertedOnPages[context.page])) {
+			rep.insertedOnPages[context.page] = true;
 			this.writer.addFragment(rep, true);
 		} else {
-			this.writer.context.moveDown(rep.height);
+			context.moveDown(rep.height);
 		}
 	}, this);
 
 	this.writer.tracker.emit('pageChanged', {
 		prevPage: nextPage.prevPage,
 		prevY: nextPage.prevY,
-		y: this.writer.context.y
+		y: context.y
 	});
 };
 
@@ -105,9 +160,10 @@ PageElementWriter.prototype.beginUnbreakableBlock = function (width, height) {
 	}
 };
 
-PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY) {
+PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY, isFooter) {
 	if (--this.transactionLevel === 0) {
 		var unbreakableContext = this.writer.context;
+
 		this.writer.popContext();
 
 		var nbPages = unbreakableContext.pages.length;
@@ -135,15 +191,36 @@ PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY)
 			if (forcedX !== undefined || forcedY !== undefined) {
 				this.writer.addFragment(fragment, true, true, true);
 			} else {
-				this.addFragment(fragment);
+				return this.addFragment(fragment,undefined,undefined,undefined,isFooter);
 			}
+		}
+	}
+};
+
+PageElementWriter.prototype.commitUnbreakableBlock_test = function (forcedX, forcedY) {
+	if (--this.transactionLevel === 0) {
+		var unbreakableContext = this.writer.context;
+		this.writer.popContext();
+
+		var nbPages = unbreakableContext.pages.length;
+		if (nbPages > 0) {
+			// no support for multi-page unbreakableBlocks
+			var fragment = unbreakableContext.pages[0];
+			fragment.xOffset = forcedX;
+			fragment.yOffset = forcedY;
+
+			fragment.height = unbreakableContext.y;
+
+			var res = this.addFragment_test(fragment);
+
+			return res;
 		}
 	}
 };
 
 PageElementWriter.prototype.currentBlockToRepeatable = function () {
 	var unbreakableContext = this.writer.context;
-	var rep = { items: [] };
+	var rep = {items: []};
 
 	unbreakableContext.pages[0].items.forEach(function (item) {
 		rep.items.push(item);
@@ -153,13 +230,15 @@ PageElementWriter.prototype.currentBlockToRepeatable = function () {
 
 	//TODO: vectors can influence height in some situations
 	rep.height = unbreakableContext.y;
-
 	rep.insertedOnPages = [];
 
 	return rep;
 };
 
 PageElementWriter.prototype.pushToRepeatables = function (rep) {
+	if (isUndefined(rep.insertedOnPages)) {
+		rep.insertedOnPages = [];
+	}
 	this.repeatables.push(rep);
 };
 

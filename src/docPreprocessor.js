@@ -1,11 +1,23 @@
+/* jslint node: true */
 'use strict';
 
-var isString = require('./helpers').isString;
-var isNumber = require('./helpers').isNumber;
-var isBoolean = require('./helpers').isBoolean;
-var isArray = require('./helpers').isArray;
-var isUndefined = require('./helpers').isUndefined;
-var fontStringify = require('./helpers').fontStringify;
+var helpers = require('./helpers');
+var fontStringify = helpers.fontStringify;
+var isString = helpers.isString || function (value) {
+	return typeof value === 'string' || value instanceof String;
+};
+var isNumber = helpers.isNumber || function (value) {
+	return typeof value === 'number' || value instanceof Number;
+};
+var isBoolean = helpers.isBoolean || function (value) {
+	return typeof value === 'boolean' || value instanceof Boolean;
+};
+var isArray = helpers.isArray || function (value) {
+	return Array.isArray(value);
+};
+var isUndefined = helpers.isUndefined || function (value) {
+	return typeof value === 'undefined';
+};
 
 function DocPreprocessor() {
 
@@ -13,31 +25,35 @@ function DocPreprocessor() {
 
 DocPreprocessor.prototype.preprocessDocument = function (docStructure) {
 	this.parentNode = null;
-	this.tocs = [];
-	this.nodeReferences = [];
+	this.tocs = {};
+	this.nodeReferences = {};
 	return this.preprocessNode(docStructure);
 };
 
 DocPreprocessor.prototype.preprocessNode = function (node) {
 	// expand shortcuts and casting values
 	if (isArray(node)) {
-		node = { stack: node };
+		node = {stack: node};
 	} else if (isString(node)) {
-		node = { text: node };
+		node = {text: node};
 	} else if (isNumber(node) || isBoolean(node)) {
-		node = { text: node.toString() };
-	} else if (node === undefined || node === null) {
-		node = { text: '' };
-	} else if (Object.keys(node).length === 0) { // empty object
-		node = { text: '' };
-	} else if ('text' in node && (node.text === undefined || node.text === null)) {
-		node.text = '';
+		node = {text: node.toString()};
+	} else if (isUndefined(node) || node === null) {
+		node = {text: ''};
+	} else if (typeof node === 'object') {
+		if (Object.keys(node).length === 0) { // empty object
+			node = {text: ''};
+		} else if ('text' in node && (node.text === undefined || node.text === null)) {
+			node.text = '';
+		}
 	}
 
 	if (node.columns) {
 		return this.preprocessColumns(node);
 	} else if (node.stack) {
 		return this.preprocessVerticalContainer(node);
+	} else if (node.layers) {
+		return this.preprocessLayers(node);
 	} else if (node.ul) {
 		return this.preprocessList(node);
 	} else if (node.ol) {
@@ -58,9 +74,9 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 		return this.preprocessQr(node);
 	} else if (node.pageReference || node.textReference) {
 		return this.preprocessText(node);
-	} else {
-		throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 	}
+
+	throw new Error('Unrecognized document structure: ' + JSON.stringify(node, fontStringify));
 };
 
 DocPreprocessor.prototype.preprocessColumns = function (node) {
@@ -83,6 +99,16 @@ DocPreprocessor.prototype.preprocessVerticalContainer = function (node) {
 	return node;
 };
 
+DocPreprocessor.prototype.preprocessLayers = function (node) {
+	var items = node.layers;
+
+	for (var i = 0, l = items.length; i < l; i++) {
+		items[i] = this.preprocessNode(items[i]);
+	}
+
+	return node;
+};
+
 DocPreprocessor.prototype.preprocessList = function (node) {
 	var items = node.ul || node.ol;
 
@@ -94,7 +120,14 @@ DocPreprocessor.prototype.preprocessList = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessTable = function (node) {
-	var col, row, cols, rows;
+	var col;
+	var row;
+	var cols;
+	var rows;
+
+	if (!node.table.body || !node.table.body[0]) {
+		return node;
+	}
 
 	for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
 		for (row = 0, rows = node.table.body.length; row < rows; row++) {
@@ -115,12 +148,15 @@ DocPreprocessor.prototype.preprocessTable = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessText = function (node) {
+	var i;
+	var l;
+
 	if (node.tocItem) {
 		if (!isArray(node.tocItem)) {
 			node.tocItem = [node.tocItem];
 		}
 
-		for (var i = 0, l = node.tocItem.length; i < l; i++) {
+		for (i = 0, l = node.tocItem.length; i < l; i++) {
 			if (!isString(node.tocItem[i])) {
 				node.tocItem[i] = '_default_';
 			}
@@ -128,7 +164,7 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 			var tocItemId = node.tocItem[i];
 
 			if (!this.tocs[tocItemId]) {
-				this.tocs[tocItemId] = { toc: { _items: [], _pseudo: true } };
+				this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
 			}
 
 			if (!node.id) {
@@ -146,7 +182,7 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 	if (node.id) {
 		if (this.nodeReferences[node.id]) {
 			if (!this.nodeReferences[node.id]._pseudo) {
-				throw "Node id '" + node.id + "' already exists";
+				throw new Error("Node id '" + node.id + "' already exists");
 			}
 
 			this.nodeReferences[node.id]._nodeRef = this._getNodeForNodeRef(node);
@@ -175,7 +211,10 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 
 	if (node.textReference) {
 		if (!this.nodeReferences[node.textReference]) {
-			this.nodeReferences[node.textReference] = { _nodeRef: {}, _pseudo: true };
+			this.nodeReferences[node.textReference] = {
+				_nodeRef: {},
+				_pseudo: true
+			};
 		}
 
 		node.text = '';
@@ -192,7 +231,7 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 			isSetParentNode = true;
 		}
 
-		for (var i = 0, l = node.text.length; i < l; i++) {
+		for (i = 0, l = node.text.length; i < l; i++) {
 			node.text[i] = this.preprocessNode(node.text[i]);
 		}
 
@@ -214,7 +253,7 @@ DocPreprocessor.prototype.preprocessToc = function (node) {
 
 	if (this.tocs[node.toc.id]) {
 		if (!this.tocs[node.toc.id].toc._pseudo) {
-			throw "TOC '" + node.toc.id + "' already exists";
+			throw new Error("TOC '" + node.toc.id + "' already exists");
 		}
 
 		node.toc._items = this.tocs[node.toc.id].toc._items;
@@ -226,7 +265,7 @@ DocPreprocessor.prototype.preprocessToc = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessImage = function (node) {
-	if (!isUndefined(node.image.type) && !isUndefined(node.image.data) && (node.image.type === 'Buffer') && isArray(node.image.data)) {
+	if (typeof Buffer !== 'undefined' && node.image && node.image.type === 'Buffer' && !isUndefined(node.image.data) && isArray(node.image.data)) {
 		node.image = Buffer.from(node.image.data);
 	}
 	return node;

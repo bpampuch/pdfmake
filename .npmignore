@@ -13,3 +13,5 @@ webpack-standardfonts.config.js
 .editorconfig
 eslint.config.mjs
 build-examples.js
+.npmrc
+.npmrc.local
