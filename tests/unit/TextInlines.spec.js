@@ -87,6 +87,10 @@ describe('TextInlines', function () {
 		{ text: 'This is a paragraph    ', preserveTrailingSpaces: true }
 	];
 
+	var textWithLeadingAndTrailingSpaces = [
+		{ text: '    This is a paragraph    ', preserveLeadingSpaces: true, preserveTrailingSpaces: true }
+	];
+
 	var styleStack = new StyleContextStack(
 		{
 			header: {
@@ -263,6 +267,11 @@ describe('TextInlines', function () {
 			it('should preserve trailing whitespaces when preserveTrailingSpaces is set', function () {
 				var inlines = textInlines.buildInlines(textWithTrailingSpaces);
 				assert.equal(inlines.maxWidth, 23 * 12);
+			});
+
+			it('should preserve leading and trailing whitespaces when preserveLeadingSpaces and preserveTrailingSpaces are set', function () {
+				var inlines = textInlines.buildInlines(textWithLeadingAndTrailingSpaces);
+				assert.equal(inlines.maxWidth, 27 * 12);
 			});
 
 		});
