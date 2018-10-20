@@ -1,6 +1,6 @@
-import {isFunction} from '../helpers';
+import { isFunction } from '../helpers/variableType';
 import DocumentBase from '../documentBase';
-import {saveAs} from 'file-saver';
+import { saveAs } from 'file-saver';
 
 export default class DocumentBrowser extends DocumentBase {
 
@@ -49,12 +49,12 @@ export default class DocumentBrowser extends DocumentBase {
 	_bufferToBlob(buffer) {
 		let blob;
 		try {
-			blob = new Blob([buffer], {type: 'application/pdf'});
+			blob = new Blob([buffer], { type: 'application/pdf' });
 		} catch (e) {
 			// Old browser which can't handle it without making it an byte array (ie10)
 			if (e.name === 'InvalidStateError') {
 				let byteArray = new Uint8Array(buffer);
-				blob = new Blob([byteArray.buffer], {type: 'application/pdf'});
+				blob = new Blob([byteArray.buffer], { type: 'application/pdf' });
 			}
 		}
 

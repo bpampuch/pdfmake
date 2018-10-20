@@ -1,5 +1,5 @@
-import {pack} from './helpers';
-import PdfPrinter from './printer';
+import { pack } from './helpers/tools';
+import Printer from './Printer';
 
 export default class PdfMake {
 
@@ -28,7 +28,7 @@ export default class PdfMake {
 		options.progressCallback = this.progressCallback;
 		options.tableLayouts = this.tableLayouts;
 
-		let printer = new PdfPrinter(this.fonts);
+		let printer = new Printer(this.fonts);
 		let doc = printer.createPdfKitDocument(docDefinition, options);
 
 		return this._transformToDocument(doc);
