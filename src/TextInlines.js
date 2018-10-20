@@ -137,11 +137,14 @@ class TextInlines {
 				}
 			}
 
-			let trailingSpaces = item.text.match(TRAILING);
-			if (trailingSpaces) {
-				item.trailingCut = this.widthOfText(trailingSpaces[0], item);
-			} else {
-				item.trailingCut = 0;
+			item.trailingCut = 0;
+
+			let preserveTrailingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', defaults.preserveTrailingSpaces);
+			if (!preserveTrailingSpaces) {
+				let trailingSpaces = item.text.match(TRAILING);
+				if (trailingSpaces) {
+					item.trailingCut = this.widthOfText(trailingSpaces[0], item);
+				}
 			}
 		}, this);
 

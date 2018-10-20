@@ -15,6 +15,7 @@ export default {
 	linkToPage: null,
 	noWrap: false,
 	preserveLeadingSpaces: false,
+	preserveTrailingSpaces: false,
 	alignment: 'left',
 	leadingIndent: 0,
 
