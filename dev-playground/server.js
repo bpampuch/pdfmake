@@ -58,9 +58,7 @@ app.post('/pdf', function (req, res) {
 
 app.post('/schema', function (req, res){
   eval(req.body.content);
-
   var schema = schemaparser.convert(dd);
-  console.log(schema)
   res.contentType('application/json');
   res.send(schema);
 });
