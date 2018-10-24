@@ -120,7 +120,20 @@
 		}
 
 		$scope.generateJSONSchema = function generateJSONSchema(){
-			alert("sample");
+			var content = editor.getSession().getValue();
+			$http.post('/schema', {content: content}).
+				success(function(data, status, headers, config) {
+					var schema = JSON.stringify(data, null , "  ");
+					var blob = new Blob([schema], {type : "application/json"});
+					var a = document.createElement('a');
+					a.download = "schema.json";
+					a.target   = '_blank';
+					a.href = window.webkitURL.createObjectURL(blob);
+					a.click();
+				}).
+				error(function(data, status, headers, config) {
+					console.log('ERROR', data);
+				});
 		}
 	};
 </script>

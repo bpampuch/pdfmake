@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "dependencies": {
     "body-parser": "^1.18.2",
-    "express": "^4.16.2"
+    "express": "^4.16.2",
+    "json-to-json-schema": "0.0.4"
   }
 }

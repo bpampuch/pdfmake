@@ -5,6 +5,7 @@ var path = require('path');
 var bodyParser = require('body-parser');
 
 var pdfMakePrinter = require('../src/printer');
+var schemaparser = require('json-to-json-schema');
 
 var app = express();
 
@@ -53,6 +54,15 @@ app.post('/pdf', function (req, res) {
     res.send('ERROR:' + error);
   });
 
+});
+
+app.post('/schema', function (req, res){
+  eval(req.body.content);
+
+  var schema = schemaparser.convert(dd);
+  console.log(schema)
+  res.contentType('application/json');
+  res.send(schema);
 });
 
 var server = http.createServer(app);
