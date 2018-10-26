@@ -95,6 +95,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
 	docDefinition.images = docDefinition.images || {};
+	docDefinition.pageOffset = isNaN(docDefinition.pageOffset) ? 0 : +(docDefinition.pageOffset);
 
 	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
 
@@ -116,7 +117,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
 	}
 
-	renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
+	renderPages(pages, this.fontProvider, docDefinition.pageOffset, this.pdfKitDoc, options.progressCallback);
 
 	if (options.autoPrint) {
 		var printActionRef = this.pdfKitDoc.ref({
@@ -316,7 +317,7 @@ function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
 	}
 }
 
-function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
+function renderPages(pages, fontProvider, pageOffset, pdfKitDoc, progressCallback, ) {
 	pdfKitDoc._pdfMakePages = pages;
 	pdfKitDoc.addPage();
 
@@ -344,7 +345,7 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 					renderVector(item.item, pdfKitDoc);
 					break;
 				case 'line':
-					renderLine(item.item, item.item.x, item.item.y, pdfKitDoc);
+					renderLine(item.item, item.item.x, item.item.y, pageOffset, pdfKitDoc);
 					break;
 				case 'image':
 					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
@@ -365,7 +366,7 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	}
 }
 
-function renderLine(line, x, y, pdfKitDoc) {
+function renderLine(line, x, y, pageOffset, pdfKitDoc) {
 	function preparePageNodeRefLine(_pageNodeRef, inline) {
 		var newWidth;
 		var diffWidth;
@@ -377,8 +378,8 @@ function renderLine(line, x, y, pdfKitDoc) {
 
 		var pageNumber = _pageNodeRef.positions[0].pageNumber.toString();
 
-		inline.text = pageNumber;
-		inline.linkToPage = pageNumber;
+		inline.text = (_pageNodeRef.positions[0].pageNumber + pageOffset).toString();
+		inline.linkToPage = _pageNodeRef.positions[0].pageNumber.toString();
 		newWidth = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
 		diffWidth = inline.width - newWidth;
 		inline.width = newWidth;
