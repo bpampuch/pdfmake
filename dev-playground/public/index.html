@@ -30,6 +30,7 @@
 <div class='playground'>
 	<div class='container'>
 		<ul id='exampleList'>
+
 			<li ng-repeat='e in examples' ng-click='e.activate()'>{{e.name}}</li>
 			<li ng-click='generateJSONSchema()'>Get Schema</li>
 		</ul>
@@ -53,8 +54,6 @@
 <script type="text/javascript" charset="utf-8">
 	function PlaygroundController($scope, $http) {
 		$scope.examples = [];
-
-		
 
 		var editor = ace.edit('editor');
 		setupEditor(editor);
