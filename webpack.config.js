@@ -20,6 +20,10 @@ module.exports = {
 			fs: path.join(__dirname, './src/browser-extensions/virtual-fs.js')
 		}
 	},
+	node: {
+		// Prevent webpack from injecting setImmediate polyfill, which includes a "new Function" through a global polyfill - which cannot be used in a CSP environment with sane defaults:
+		setImmediate: 'empty'
+  },
 	module: {
 		rules: [
 			{test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
