@@ -317,7 +317,7 @@ function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
 	}
 }
 
-function renderPages(pages, fontProvider, pageOffset, pdfKitDoc, progressCallback, ) {
+function renderPages(pages, fontProvider, pageOffset, pdfKitDoc, progressCallback) {
 	pdfKitDoc._pdfMakePages = pages;
 	pdfKitDoc.addPage();
 
