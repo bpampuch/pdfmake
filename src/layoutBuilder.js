@@ -394,7 +394,25 @@ LayoutBuilder.prototype.processNode = function (node) {
 	});
 
 	function applyMargins(callback) {
-		var margin = node._margin;
+
+	    var margin = node._margin;
+
+	    //snap image to bottom, autoflow continues after image
+		if (node.image && node.snapToBottom) {
+		    if (!margin) {
+		        node._margin = margin = [0, 0, 0, 0]
+		    }
+		    var gap = 0
+		    if (self.writer.writer.context.availableHeight >= node.height + margin[3]) {
+		        gap = self.writer.writer.context.availableHeight - node.height - margin[3]
+		        margin[1] = gap
+		    } else {
+		        node.pageBreak = 'before'
+		        var cleanPageHeight = self.writer.writer.context.availableHeight + self.writer.writer.context.y
+		        var gap = cleanPageHeight - self.writer.writer.context.pageMargins.top - node.height - margin[3]
+		        margin[1] = gap
+		    }
+		}
 
 		if (node.pageBreak === 'before') {
 			self.writer.moveToNextPage(node.pageOrientation);
@@ -439,7 +457,7 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 		availableWidth -= (gaps.length - 1) * columnNode._gap;
 	}
 
-	ColumnCalculator.buildColumnWidths(columns, availableWidth);
+	ColumnCalculator.buildColumnWidths(columns, availableWidth, columnNode.autoStar);
 	var result = this.processRow(columns, columns, gaps);
 	addAll(columnNode.positions, result.positions);
 

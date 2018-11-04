@@ -17,7 +17,7 @@ TableProcessor.prototype.beginTable = function (writer) {
 	this.layout = tableNode._layout;
 
 	availableWidth = writer.context().availableWidth - this.offsets.total;
-	ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth);
+	ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth,tableNode.autoStar);
 
 	this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
 	this.rowSpanData = prepareRowSpanData();

@@ -2,7 +2,7 @@
 
 var isString = require('./helpers').isString;
 
-function buildColumnWidths(columns, availableWidth) {
+function buildColumnWidths(columns, availableWidth, autoStar) {
 	var autoColumns = [],
 		autoMin = 0, autoMax = 0,
 		starColumns = [],
@@ -58,11 +58,21 @@ function buildColumnWidths(columns, availableWidth) {
 		});
 	} else {
 		if (maxW < availableWidth) {
-			// case 2 - we can fit rest of the table within available space
-			autoColumns.forEach(function (col) {
-				col._calcWidth = col._maxWidth;
-				availableWidth -= col._calcWidth;
-			});
+		    if (autoStar && starColumns.length > 0) {
+		        //autostar
+		        var W2 = (availableWidth - maxW) / 2;
+		        autoColumns.forEach(function (col) {
+		            //col._calcWidth = col._maxWidth;
+		            col._calcWidth = col._maxWidth + col._maxWidth / autoMax * W2;
+		            availableWidth -= col._calcWidth;
+		        });
+		    } else {
+		        // case 2 - we can fit rest of the table within available space
+		        autoColumns.forEach(function (col) {
+		            col._calcWidth = col._maxWidth;
+		            availableWidth -= col._calcWidth;
+		        });
+		    }
 		} else {
 			// maxW is too large, but minW fits within available width
 			var W = availableWidth - minW;
