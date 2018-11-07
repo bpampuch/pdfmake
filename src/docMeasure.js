@@ -15,6 +15,7 @@ var qrEncoder = require('./qrEnc.js');
 
 /**
  * @private
+ * Dang, this class ONLY measures the horizontal properties; max and min widths.
  */
 function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts, images) {
 	this.textTools = new TextTools(fontProvider);
@@ -197,8 +198,8 @@ DocMeasure.prototype.measureImage = function (node) {
 
 DocMeasure.prototype.measureLeaf = function (node) {
 
-	if (node._textRef && node._textRef._textNodeRef.text) {
-		node.text = node._textRef._textNodeRef.text;
+	if (node._textRef && node._textRef._nodeRef.text) {
+		node.text = node._textRef._nodeRef.text;
 	}
 
 	// Make sure style properties of the node itself are considered when building inlines.
@@ -226,11 +227,11 @@ DocMeasure.prototype.measureToc = function (node) {
 	var textMargin = node.toc.textMargin || [0, 0, 0, 0];
 	for (var i = 0, l = node.toc._items.length; i < l; i++) {
 		var item = node.toc._items[i];
-		var lineStyle = item._textNodeRef.tocStyle || textStyle;
-		var lineMargin = item._textNodeRef.tocMargin || textMargin;
+		var lineStyle = node.toc._items[i].tocStyle || textStyle;
+		var lineMargin = node.toc._items[i].tocMargin || textMargin;
 		body.push([
-			{text: item._textNodeRef.text, alignment: 'left', style: lineStyle, margin: lineMargin},
-			{text: '00000', alignment: 'right', _tocItemRef: item._nodeRef, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]}
+			{text: item.text, alignment: 'left', style: lineStyle, margin: lineMargin},
+			{text: '00000', alignment: 'right', _tocItemRef: item, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]}
 		]);
 	}
 
@@ -269,6 +270,9 @@ DocMeasure.prototype.gapSizeForList = function () {
 	return this.textTools.sizeOfString('9. ', this.styleStack);
 };
 
+/**
+ * Can place something here, in order to choose different bullet symbols
+ */
 DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type) {
 	function buildDisc(gapSize, color) {
 		// TODO: ascender-based calculations
@@ -300,6 +304,43 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 		};
 	}
 
+	function buildCarat(gapSize, color, direction) {
+		// direction is one of 'left', 'right', 'up', 'down'
+		var size = gapSize.fontSize / 2; // height of carrot.
+		// will draw angles of 45 degrees to start
+		// s moves the carat downward. Bigger 's' means lower.
+		const s = ( (gapSize.height / gapSize.lineHeight) + gapSize.descender) - (gapSize.fontSize / 1.75);
+		if (direction === 'right') {
+			return {
+				canvas: [
+					{
+						type: 'polyline',
+						points: [
+							{ x: 0, y: s },
+							{ x: size / (2 * Math.sqrt(2)), y: s + (size / 2) },
+							{ x: 0, y: s + size }
+						],
+						lineColor: color
+					}
+				]
+			}
+		} else if (direction === 'left') {
+			return {
+				canvas: [
+					{
+						type: 'polyline',
+						points: [
+							{ x: size / (2 * Math.sqrt(2)), y: s },
+							{ x: 0, y: s + (size / 2) },
+							{ x: size / (2 * Math.sqrt(2)), y: s + size }
+						],
+						lineColor: color
+					}
+				]
+			}
+		}
+	}
+
 	function buildCircle(gapSize, color) {
 		// TODO: ascender-based calculations
 		var radius = gapSize.fontSize / 6;
@@ -313,6 +354,18 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 					lineColor: color
 				}]
 		};
+	}
+
+	function buildDash(gapSize, color) {
+		var radius = gapSize.fontSize / 3;
+		return {
+			canvas: [{
+				type: 'line',
+				x1: 0, y1: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+				x2: radius, y2: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+				lineColor: color
+			}]
+		}
 	}
 
 	var marker;
@@ -329,6 +382,19 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 
 		case 'none':
 			marker = {};
+			break;
+
+		case 'carat':
+		case 'right-carat':
+			marker = buildCarat(gapSize, color, 'right');
+			break;
+
+		case 'left-carat':
+			marker = buildCarat(gapSize, color, 'left');
+			break;
+
+		case 'dash':
+			marker = buildDash(gapSize, color);
 			break;
 
 		case 'disc':
@@ -596,12 +662,6 @@ DocMeasure.prototype.measureTable = function (node) {
 			},
 			vLineColor: function (i, node) {
 				return 'black';
-			},
-			hLineStyle: function (i, node) {
-				return null;
-			},
-			vLineStyle: function (i, node) {
-				return null;
 			},
 			paddingLeft: function (i, node) {
 				return 4;

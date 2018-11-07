@@ -53,6 +53,7 @@ Document.prototype._createDoc = function (options, callback) {
 		callback(result, doc._pdfMakePages);
 	});
 	doc.end();
+	return doc;
 };
 
 Document.prototype._getPages = function (options, cb) {
@@ -109,6 +110,23 @@ Document.prototype._openPdf = function (options, win) {
 		throw e;
 	}
 };
+
+/**
+ * #measure() function does not require any parameters. It lays out the document
+ * and returns the PdfKit document after all measurements have been taken. This
+ * allows for automatic fixes. One use case is to measure the height of the right-
+ * hand column and automatically adjust the <code>textWrapHeight</code> property
+ * to properly adjust the word wrap.
+ * 
+ * @param {*} onEndFn - callback run once the document has been finished
+ * @param {*} options - standard (?) pdfMake/pdfKit options object
+ */
+Document.prototype.measure = function(onEndFn, options) {
+	onEndFn = onEndFn || function() { };
+	options = options || {};
+	
+	return this._createDoc(options, onEndFn);
+}
 
 Document.prototype.open = function (options, win) {
 	options = options || {};

@@ -1,27 +1,27 @@
-# pdfmake [![Build Status][travis_img]][travis_url] [![GitHub][github_img]][github_url] [![npm][npm_img]][npm_url] [![Bower][bower_img]][bower_url] [![Packagist][packagist_img]][packagist_url] [![CDNJS][cdnjs_img]][cndjs_url]
+# D3 PdfMake
 
-[travis_img]: https://travis-ci.org/bpampuch/pdfmake.svg?branch=master
-[travis_url]: https://travis-ci.org/bpampuch/pdfmake
+Client/server side PDF printing in pure JavaScript. To build the source JS to include in your project, run
 
-[github_img]: https://img.shields.io/github/release/bpampuch/pdfmake.svg
-[github_url]: https://github.com/bpampuch/pdfmake/releases/latest
+```
+gulp build
+```
 
-[npm_img]: https://img.shields.io/npm/v/pdfmake.svg?colorB=0E7FBF
-[npm_url]: https://www.npmjs.com/package/pdfmake
+This will put files into the `build/` directory. You can copy the pdfmake.js or pdfmake.min.js into your project, include it into a `<script>` tag, or within the `angular.js` "scripts" array, and you're up and running! 
 
-[bower_img]: https://img.shields.io/bower/v/pdfmake.svg?colorB=0E7FBF
-[bower_url]: https://github.com/bpampuch/pdfmake
+To use in an Angular project, declare the variable along with any other imports:
 
-[packagist_img]: https://img.shields.io/packagist/v/bpampuch/pdfmake.svg?colorB=0E7FBF
-[packagist_url]: https://packagist.org/packages/bpampuch/pdfmake
+```javascript
+declare var pdfMake: any;
+```
 
-[cdnjs_img]: https://img.shields.io/cdnjs/v/pdfmake.svg?colorB=0E7FBF
-[cndjs_url]: https://cdnjs.com/libraries/pdfmake
+Then, we can use `pdfMake` as a global variable (within this class). For example, to create and download a PDF:
 
-
-Client/server side PDF printing in pure JavaScript
-
-Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) and [examples](https://github.com/bpampuch/pdfmake/tree/master/examples).
+```javascript
+const docDef = {...};
+pdfMake.fonts = {...}; // load some custom fonts in here
+pdfMake.layouts = {myCustomLayout: {...} }; // load custom table layouts
+pdfMake.createPdf(docDef).download();
+```
 
 ### Features
 
@@ -242,11 +242,6 @@ exclude: [ /node_modules/, /pdfmake.js$/ ]
 (see [issue](https://github.com/bpampuch/pdfmake/issues/1100#issuecomment-336728521))
 
 
-#### Units
-
-All numbers are in points (pt) unit (sometimes labeled as PDF/PostScript points).
-
-
 #### Server side
 
 see [examples](https://github.com/bpampuch/pdfmake/tree/master/examples) and [dev-playground server script](https://github.com/bpampuch/pdfmake/blob/master/dev-playground/server.js)
@@ -275,28 +270,6 @@ var docDefinition = {
   ]
 };
 ```
-
-We have added a superscript style. 
-
-```js
-var docDefinition = {
-  content: [
-    {
-      text: [
-        {text: "Here is some text", fontSize:12},
-        {text: "1", fontSize:6, sup: true},
-        {text: " and some more text, after the superscript.", fontSize:12}
-      ]
-    }
-  ]
-}
-```
-
-This should render similar to:
-
-> Here is some text<sup>1</sup> and some more text, after the superscript.
-
-
 
 #### Style dictionaries
 It's also possible to define a dictionary of reusable styles:
@@ -368,6 +341,39 @@ var docDefinition = {
 ```
 
 Column content is not limited to a simple text. It can actually contain any valid pdfmake element. Make sure to look at the COLUMNS example in playground.
+
+The column node type now supports a limited form of word wrapping! The image / thing we want to wrap around must be on the right side. We specify a height beyond which, the text / whatever text nodes are in the left-column will span across the entire page width. So it only works for a two-column node, for now. An quick example with an image:
+
+```js
+var docDefinition = {
+  {
+    text: 'This is a regular paragraph.'
+  },
+  {
+    columns: [
+      {
+        width: '*',
+        ul: [
+          {
+            text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque maximus sollicitudin quam, in ultricies orci tincidunt convallis. Nullam consequat eget neque ac feugiat. Quisque faucibus quis nisi ac aliquet. Mauris vehicula libero id varius placerat.'
+          },
+          {
+            text: 'Nulla facilisi. Nunc eu leo eu eros vehicula laoreet. Nunc in orci at magna bibendum maximus id non lorem. Morbi convallis tincidunt blandit. Sed auctor sed risus et ullamcorper. Pellentesque urna diam, facilisis quis est ac, convallis tincidunt metus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur finibus lectus vel dui egestas, nec sodales mauris vestibulum.'
+          }
+        ],
+        textWrapHeight: 60
+      },
+      {
+        width: '*',
+        image: 'image_data',
+        fit: [50, 50]
+      }
+    ]
+  }
+}
+```
+
+This example will have a 50x50 pixel image in the right-hand column. The left column has two paragraphs, and we specify the `textWrapHeight` property to be 60 pixels. After 60 pixels (the extra 10 pixels is to give the image a little bit of a margin), the text will start to span the width of the page.
 
 #### Tables
 
@@ -458,6 +464,54 @@ var docDefinition = {
   ]
 };
 ```
+
+Unordered lists can support the a number of marker types. They are specified with the `listType` property. The supported types, and their type keywords are:
+
+1. Filled circles ('disk', or don't specify anything)
+2. Empty circles ('circle')
+3. Filled squares ('square')
+4. No marker ('none')
+5. Right carat ('right-carat' or 'carat')
+6. Left carat ('left-carat')
+7. Hyphen ('dash')
+
+To use:
+
+```js
+var docDefinition = {
+  content: [
+    'Bulleted list example:',
+    {
+      // to treat a paragraph as a bulleted list, set an array of items under the ul key
+      ul: [
+        { text: 'Item 1', listStyle: 'circle' },
+        { text: 'Item 2', listStyle: 'right-carat' },
+        ( text: 'Item 3', listStyle: 'dash' },
+        { text: 'Item 4', bold: true },
+      ]
+    }
+  ]
+};
+```
+
+The markers can also be colored. This is done with the `markerColor` property, and it changes the color of all of the markers. There is currently no support to change the marker colors individually.
+
+```js
+var docDefinition = {
+  content: [
+    'Bulleted list example:',
+    {
+      markerColor: 'red',
+      ul: [
+        ...
+      ]
+    }
+  ]
+};
+```
+
+Ordered lists can use integers, upper- or lower-case roman numerals, and can be delimited with a custom symbol (e.g., lists with `1)`, instead of `1.`). See the PDFMake playground "Lists" example for an example.
+
 
 #### Headers and footers
 

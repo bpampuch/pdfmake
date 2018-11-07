@@ -339,6 +339,11 @@ function decorateNode(node) {
 LayoutBuilder.prototype.processNode = function (node) {
 	var self = this;
 
+	if (self.writer.context()['textWrapHeight']) {
+		// console.dir(node, { depth: 1 });
+		// console.dir(node, { depth: 1 });
+	}
+
 	this.linearNodeList.push(node);
 	decorateNode(node);
 
@@ -463,35 +468,41 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, height) {
 	var self = this;
 	var pageBreaks = [], positions = [];
-
-	this.tracker.auto('pageChanged', storePageBreakData, function () {
-		widths = widths || columns;
-
-		self.writer.context().beginColumnGroup();
-
-		for (var i = 0, l = columns.length; i < l; i++) {
-			var column = columns[i];
-			var width = widths[i]._calcWidth;
-			var leftOffset = colLeftOffset(i);
-
-			if (column.colSpan && column.colSpan > 1) {
-				for (var j = 1; j < column.colSpan; j++) {
-					width += widths[++i]._calcWidth + gaps[i];
-				}
-			}
-
-			self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
-			if (!column._span) {
-				self.processNode(column);
-				addAll(positions, column.positions);
-			} else if (column._columnEndingContext) {
-				// row-span ending
-				self.writer.context().markEnding(column);
-			}
+	var textWrapping;
+	// Go through columns, see if we want to do a text wrapping. ONLY WORKS FOR
+	// TWO COLUMNS for now, very manual text wrapping
+	for (var i = 0, l = columns.length; i < l; i++) {
+		var column = columns[i];
+		if (column.hasOwnProperty('textWrapHeight')) {
+			textWrapping = column['textWrapHeight'];
 		}
+	}
 
-		self.writer.context().completeColumnGroup(height);
-	});
+	var fn;
+	if (textWrapping) {
+		// copy the context
+		// fn = wrapTextRow(self.writer.context(), true, true);
+		// fn();
+
+		// Go through all of the nodes and reset X and Y? How do I deal with the context business?
+
+		// console.log('\n\n\n\nHELLO, DO I HAVE THE FINAL HEIGHT?', textWrapping, '\n\n\n');
+
+		fn = wrapTextRow;
+	} else {
+		fn = normalRowProcess;
+	}
+
+	// Need a copy of the context and stuff ....
+
+	/**
+	 * Listen to the pageChanged event. In the event of a page change, run the
+	 * storePageBreakData callback function, defined below.
+	 * 
+	 * In the meantime, run the anonymous function -- the third argument here.
+	 * 
+	 */
+	this.tracker.auto('pageChanged', storePageBreakData, fn);
 
 	return {pageBreaks: pageBreaks, positions: positions};
 
@@ -531,6 +542,81 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 		}
 
 		return null;
+	}
+
+	function normalRowProcess() {
+		widths = widths || columns;
+
+		self.writer.context().beginColumnGroup();
+
+		for (var i = 0, l = columns.length; i < l; i++) {
+			var column = columns[i]; // remember: the data INSIDE THE COLUMNS PROPERTY
+			
+			var width = widths[i]._calcWidth;
+			var leftOffset = colLeftOffset(i);
+
+			if (column.colSpan && column.colSpan > 1) {
+				for (var j = 1; j < column.colSpan; j++) {
+					width += widths[++i]._calcWidth + gaps[i];
+				}
+			}
+
+			
+			self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
+			if (!column._span) {
+				self.processNode(column);
+				addAll(positions, column.positions);
+			} else if (column._columnEndingContext) {
+				// row-span ending
+				self.writer.context().markEnding(column);
+			}
+		}
+
+		self.writer.context().completeColumnGroup(height);
+	}
+
+	function wrapTextRow() {
+		widths = widths || columns;
+
+		self.writer.context().beginColumnGroup();
+
+		for (var i = 0, l = columns.length; i < l; i++) {
+			var column = columns[i]; // remember: the data INSIDE THE COLUMNS PROPERTY
+
+			var width = widths[i]._calcWidth;
+			var leftOffset = colLeftOffset(i);
+
+			if (column.colSpan && column.colSpan > 1) {
+				for (var j = 1; j < column.colSpan; j++) {
+					width += widths[++i]._calcWidth + gaps[i];
+				}
+			}
+			
+			// Add extra argument to pass the textWrapHeight into the document context, to be referenced later
+			if (textWrapping) {
+				self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i), column.textWrapHeight);
+			} else {
+				self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
+			}
+			
+
+			if (!column._span) {
+				self.processNode(column);
+				addAll(positions, column.positions);
+			} else if (column._columnEndingContext) {
+				// row-span ending
+				self.writer.context().markEnding(column);
+			}
+			self.writer.context().endColumn();
+		}
+
+		// if (resetAfter) {
+		// 	self.writer.context().resetState();
+		// } else {
+		// 	self.writer.context().completeColumnGroup(height);
+		// }
+		self.writer.context().completeColumnGroup(height);
+		// console.log('\n\nFINAL CONTEXT AFTER ALL COLUMNS', context);
 	}
 };
 
@@ -622,18 +708,6 @@ LayoutBuilder.prototype.processLeaf = function (node) {
 		line._pageNodeRef = node._pageRef._nodeRef;
 	}
 
-	if (line && line.inlines && isArray(line.inlines)) {
-		for (var i = 0, l = line.inlines.length; i < l; i++) {
-			if (line.inlines[i]._tocItemRef) {
-				line.inlines[i]._pageNodeRef = line.inlines[i]._tocItemRef;
-			}
-
-			if (line.inlines[i]._pageRef) {
-				line.inlines[i]._pageNodeRef = line.inlines[i]._pageRef._nodeRef;
-			}
-		}
-	}
-
 	while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
 		var positions = this.writer.addLine(line);
 		node.positions.push(positions);
@@ -652,6 +726,20 @@ LayoutBuilder.prototype.processToc = function (node) {
 };
 
 LayoutBuilder.prototype.buildNextLine = function (textNode) {
+	var wrap;
+	var thisPos;
+	if (this.writer.context().textWrapHeight) {
+		wrap = this.writer.context().textWrapHeight;
+
+		if (textNode.positions && textNode.positions.length > 0) {
+			var prevTop = textNode.positions[textNode.positions.length - 1].top;
+
+			if (textNode._inlines && textNode._inlines.length > 0) {
+				thisPos = prevTop + textNode._inlines[0].height;
+			}
+		}
+		
+	}
 
 	function cloneInline(inline) {
 		var newInline = inline.constructor();
@@ -661,23 +749,44 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 		return newInline;
 	}
 
+	/**
+	 * Used for word wrapping -- if the line is beyond a certain point (found in the context),
+	 * then make the Line's maxWidth the width of the whole page. Otherwise, use the pre-
+	 * computed available width.
+	 *
+	 * @param {*} context DocumentContext
+	 * @param {*} wrap object from DocumentContext, specifying word wrap details
+	 * @param {*} thisTop position of this line
+	 */
+	function getNewLineWidth(context, _wrap, _thisPos) {
+		if (_wrap) {
+			if (_thisPos && _thisPos > _wrap.maxHeight) {
+				return _wrap.pageSpanWidth;
+				// line = new Line(this.writer.context().availableWidth);
+			} else if (context.y > _wrap.maxHeight) {
+				return _wrap.pageSpanWidth;
+			} else {
+				return context.availableWidth;
+			}
+		} else {
+			return context.availableWidth;
+		}
+	}
+
 	if (!textNode._inlines || textNode._inlines.length === 0) {
 		return null;
 	}
 
-	var line = new Line(this.writer.context().availableWidth);
+	var line = new Line(getNewLineWidth(this.writer.context(), wrap, thisPos));
+	
 	var textTools = new TextTools(null);
 
-	var isForceContinue = false;
-	while (textNode._inlines && textNode._inlines.length > 0 &&
-		(line.hasEnoughSpaceForInline(textNode._inlines[0], textNode._inlines.slice(1)) || isForceContinue)) {
-		var isHardWrap = false;
+	while (textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
 		var inline = textNode._inlines.shift();
-		isForceContinue = false;
 
-		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
+		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.maxWidth) {
 			var widthPerChar = inline.width / inline.text.length;
-			var maxChars = Math.floor(line.getAvailableWidth() / widthPerChar);
+			var maxChars = Math.floor(line.maxWidth / widthPerChar);
 			if (maxChars < 1) {
 				maxChars = 1;
 			}
@@ -691,13 +800,10 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 				inline.width = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
 
 				textNode._inlines.unshift(newInline);
-				isHardWrap = true;
 			}
 		}
 
 		line.addInline(inline);
-
-		isForceContinue = inline.noNewLine && !isHardWrap;
 	}
 
 	line.lastLineInParagraph = textNode._inlines.length === 0;

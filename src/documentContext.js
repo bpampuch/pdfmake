@@ -29,7 +29,7 @@ function DocumentContext(pageSize, pageMargins) {
 }
 
 DocumentContext.prototype.beginColumnGroup = function () {
-	this.snapshots.push({
+	var snap = {
 		x: this.x,
 		y: this.y,
 		availableHeight: this.availableHeight,
@@ -44,15 +44,29 @@ DocumentContext.prototype.beginColumnGroup = function () {
 		},
 		endingCell: this.endingCell,
 		lastColumnWidth: this.lastColumnWidth
-	});
+	};
+	this.snapshots.push(snap);
 
 	this.lastColumnWidth = 0;
 };
 
-DocumentContext.prototype.beginColumn = function (width, offset, endingCell) {
+DocumentContext.prototype.beginColumn = function (width, offset, endingCell, textWrapHeight) {
 	var saved = this.snapshots[this.snapshots.length - 1];
 
+	// Save the textWrapHeight (which is a number) onto the context, with relevant information
+	// If textWrapHeight has not already been set somewhere else.
+	// console.log('Does textWrapHeight already exist?', this.textWrapHeight);
+	if (!this.textWrapHeight && textWrapHeight && textWrapHeight > 0) {
+		// maxHeight = largest acceptable pixel value; max specified height + column start
+		this.textWrapHeight = {
+			maxHeight: textWrapHeight + saved.y,
+			currentHeight: saved.y,
+			pageSpanWidth: saved.availableWidth
+		};
+		// console.log(this.textWrapHeight);
+	}
 	this.calculateBottomMost(saved);
+	this.startHeight = saved.y;
 
 	this.endingCell = endingCell;
 	this.page = saved.page;
@@ -63,6 +77,37 @@ DocumentContext.prototype.beginColumn = function (width, offset, endingCell) {
 
 	this.lastColumnWidth = width;
 };
+
+DocumentContext.prototype.endColumn = function() {
+	// remove textWrapHeight, if applicable, so we don't confuse other tables/columns	
+	if (this.textWrapHeight) {
+		delete this.textWrapHeight;
+	}
+}
+
+DocumentContext.prototype.resetState = function() {
+	// Here, we reset the Document context back to before the column group
+	// console.log('previous y', this.y);
+	var oldHeight = this.y;
+	// this.pages = []; ????
+	var prevState = this.snapshots[this.snapshots.length - 1];
+	this.x = prevState.x;
+	this.y = prevState.y;
+	this.availableHeight = prevState.availableHeight;
+	this.availableWidth = prevState.availableWidth;
+	this.endingCell = null;
+	this.page = prevState.page;
+	this.lastColumnWidth = prevState.lastColumnWidth;
+	
+	this.textWrapHeight = {
+		maxHeight: oldHeight, //prevState.y, // max height is THIS y
+		currentHeight: prevState.y,
+		pageSpanWidth: prevState.availableWidth
+	};
+	// Remove this previous snapshot, because we're going to do it ALL OVER AGAIN!!
+	this.snapshots.pop();
+	// console.log('FINAL STATE', this);
+}
 
 DocumentContext.prototype.calculateBottomMost = function (destContext) {
 	if (this.endingCell) {
@@ -97,7 +142,6 @@ DocumentContext.prototype.completeColumnGroup = function (height) {
 	var saved = this.snapshots.pop();
 
 	this.calculateBottomMost(saved);
-
 	this.endingCell = null;
 	this.x = saved.x;
 
