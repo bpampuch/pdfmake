@@ -23,6 +23,15 @@ gulp.task('build', function (callback) {
 	});
 });
 
+gulp.task('buildWithStandardFonts', function (callback) {
+	webpack(require('./webpack-standardfonts.config.js'), function (err, stats) {
+		if (err) {
+			throw new PluginError("webpack", err);
+		}
+		log("[webpack]", stats.toString({}));
+		callback();
+	});
+});
 
 gulp.task('test', function () {
 	return gulp.src(['./tests/**/*.js'])

@@ -23,7 +23,7 @@ module.exports = {
 	module: {
 		rules: [
 			{test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
-			{test: /pdfkit[/\\]js[/\\]mixins[/\\]fonts.js$/, loader: StringReplacePlugin.replace({
+			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
 					replacements: [
 						{
 							pattern: 'return this.font(\'Helvetica\');',

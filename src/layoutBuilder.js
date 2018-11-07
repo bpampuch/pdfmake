@@ -622,6 +622,18 @@ LayoutBuilder.prototype.processLeaf = function (node) {
 		line._pageNodeRef = node._pageRef._nodeRef;
 	}
 
+	if (line && line.inlines && isArray(line.inlines)) {
+		for (var i = 0, l = line.inlines.length; i < l; i++) {
+			if (line.inlines[i]._tocItemRef) {
+				line.inlines[i]._pageNodeRef = line.inlines[i]._tocItemRef;
+			}
+
+			if (line.inlines[i]._pageRef) {
+				line.inlines[i]._pageNodeRef = line.inlines[i]._pageRef._nodeRef;
+			}
+		}
+	}
+
 	while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
 		var positions = this.writer.addLine(line);
 		node.positions.push(positions);
@@ -656,12 +668,16 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 	var line = new Line(this.writer.context().availableWidth);
 	var textTools = new TextTools(null);
 
-	while (textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
+	var isForceContinue = false;
+	while (textNode._inlines && textNode._inlines.length > 0 &&
+		(line.hasEnoughSpaceForInline(textNode._inlines[0], textNode._inlines.slice(1)) || isForceContinue)) {
+		var isHardWrap = false;
 		var inline = textNode._inlines.shift();
+		isForceContinue = false;
 
-		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.maxWidth) {
+		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
 			var widthPerChar = inline.width / inline.text.length;
-			var maxChars = Math.floor(line.maxWidth / widthPerChar);
+			var maxChars = Math.floor(line.getAvailableWidth() / widthPerChar);
 			if (maxChars < 1) {
 				maxChars = 1;
 			}
@@ -675,10 +691,13 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 				inline.width = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
 
 				textNode._inlines.unshift(newInline);
+				isHardWrap = true;
 			}
 		}
 
 		line.addInline(inline);
+
+		isForceContinue = inline.noNewLine && !isHardWrap;
 	}
 
 	line.lastLineInParagraph = textNode._inlines.length === 0;
