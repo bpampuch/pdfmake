@@ -53,7 +53,6 @@ Document.prototype._createDoc = function (options, callback) {
 		callback(result, doc._pdfMakePages);
 	});
 	doc.end();
-	return doc;
 };
 
 Document.prototype._getPages = function (options, cb) {

@@ -198,8 +198,8 @@ DocMeasure.prototype.measureImage = function (node) {
 
 DocMeasure.prototype.measureLeaf = function (node) {
 
-	if (node._textRef && node._textRef._nodeRef.text) {
-		node.text = node._textRef._nodeRef.text;
+	if (node._textRef && node._textRef._textNodeRef.text) {
+		node.text = node._textRef._textNodeRef.text;
 	}
 
 	// Make sure style properties of the node itself are considered when building inlines.
@@ -662,6 +662,12 @@ DocMeasure.prototype.measureTable = function (node) {
 			},
 			vLineColor: function (i, node) {
 				return 'black';
+			},
+			hLineStyle: function (i, node) {
+				return null;
+			},
+			vLineStyle: function (i, node) {
+				return null;
 			},
 			paddingLeft: function (i, node) {
 				return 4;
