@@ -7390,6 +7390,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var decoration = getStyleProperty(item, styleContextStack, 'decoration', null);
 		var decorationColor = getStyleProperty(item, styleContextStack, 'decorationColor', null);
 		var decorationStyle = getStyleProperty(item, styleContextStack, 'decorationStyle', null);
+		var decorationHeight = getStyleProperty(item, styleContextStack, 'decorationHeight', 1);
 		var background = getStyleProperty(item, styleContextStack, 'background', null);
 		var lineHeight = getStyleProperty(item, styleContextStack, 'lineHeight', 1);
 		var characterSpacing = getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
@@ -7429,6 +7430,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.decoration = decoration;
 		item.decorationColor = decorationColor;
 		item.decorationStyle = decorationStyle;
+		item.decorationHeight = decorationHeight;
 		item.background = background;
 		item.link = link;
 		item.linkToPage = linkToPage;
@@ -12308,6 +12310,7 @@ StyleContextStack.prototype.autopush = function (item) {
 		'fillColor',
 		'decoration',
 		'decorationStyle',
+		'decorationHeight',
 		'decorationColor',
 		'background',
 		'lineHeight',
@@ -48140,6 +48143,12 @@ DocMeasure.prototype.measureTable = function (node) {
 			vLineColor: function (i, node) {
 				return 'black';
 			},
+			hLineStyle: function (i, node) {
+				return null;
+			},
+			vLineStyle: function (i, node) {
+				return null;
+			},
 			paddingLeft: function (i, node) {
 				return 4;
 			},
@@ -49198,7 +49207,7 @@ PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
 	this.writer.tracker.emit('pageChanged', {
 		prevPage: nextPage.prevPage,
 		prevY: nextPage.prevY,
-		y: nextPage.y
+		y: this.writer.context.y
 	});
 };
 
@@ -49754,6 +49763,12 @@ TableProcessor.prototype.beginRow = function (rowIndex, writer) {
 TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overrideY) {
 	var lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode);
 	if (lineWidth) {
+		var style = this.layout.hLineStyle(lineIndex, this.tableNode);
+		var dash;
+		if (style && style.dash) {
+			dash = style.dash;
+		}
+
 		var offset = lineWidth / 2;
 		var currentLine = null;
 		var body = this.tableNode.table.body;
@@ -49801,6 +49816,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 						y1: y,
 						y2: y,
 						lineWidth: lineWidth,
+						dash: dash,
 						lineColor: isFunction(this.layout.hLineColor) ? this.layout.hLineColor(lineIndex, this.tableNode) : this.layout.hLineColor
 					}, false, overrideY);
 					currentLine = null;
@@ -49817,6 +49833,11 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineIndex, wri
 	if (width === 0) {
 		return;
 	}
+	var style = this.layout.vLineStyle(vLineIndex, this.tableNode);
+	var dash;
+	if (style && style.dash) {
+		dash = style.dash;
+	}
 	writer.addVector({
 		type: 'line',
 		x1: x + width / 2,
@@ -49824,6 +49845,7 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineIndex, wri
 		y1: y0,
 		y2: y1,
 		lineWidth: width,
+		dash: dash,
 		lineColor: isFunction(this.layout.vLineColor) ? this.layout.vLineColor(vLineIndex, this.tableNode) : this.layout.vLineColor
 	}, false, true);
 };
@@ -49831,7 +49853,6 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineIndex, wri
 TableProcessor.prototype.endTable = function (writer) {
 	if (this.cleanUpRepeatables) {
 		writer.popFromRepeatables();
-		this.headerRepeatableHeight = null;
 	}
 };
 
@@ -49863,10 +49884,6 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			ys[ys.length - 1].y1 = pageBreak.prevY;
 
 			ys.push({y0: pageBreak.y, page: pageBreak.prevPage + 1});
-
-			if (this.headerRepeatableHeight) {
-				ys[ys.length - 1].y0 += this.headerRepeatableHeight;
-			}
 		}
 	}
 
@@ -49983,7 +50000,6 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 	}
 
 	if (this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
-		this.headerRepeatableHeight = this.headerRepeatable.height;
 		writer.commitUnbreakableBlock();
 		writer.pushToRepeatables(this.headerRepeatable);
 		this.cleanUpRepeatables = true;
@@ -50152,6 +50168,7 @@ function groupDecorations(line) {
 		}
 		var color = inline.decorationColor || inline.color || 'black';
 		var style = inline.decorationStyle || 'solid';
+		var decorationHeight = inline.decorationHeight || 1;
 		for (var ii = 0, ll = decoration.length; ii < ll; ii++) {
 			var decorationItem = decoration[ii];
 			if (!currentGroup || decorationItem !== currentGroup.decoration ||
@@ -50161,6 +50178,7 @@ function groupDecorations(line) {
 					line: line,
 					decoration: decorationItem,
 					decorationColor: color,
+					decorationHeight: decorationHeight,
 					decorationStyle: style,
 					inlines: [inline]
 				};
@@ -50199,7 +50217,7 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 		height = biggerInline.height,
 		descent = height - ascent;
 
-	var lw = 0.5 + Math.floor(Math.max(biggerInline.fontSize - 8, 0) / 2) * 0.12;
+	var lw = 0.5 + Math.floor(Math.max(biggerInline.fontSize - 8, 0) / 2) * 0.12*group.decorationHeight;
 
 	switch (group.decoration) {
 		case 'underline':

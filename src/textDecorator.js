@@ -16,6 +16,7 @@ function groupDecorations(line) {
 		}
 		var color = inline.decorationColor || inline.color || 'black';
 		var style = inline.decorationStyle || 'solid';
+		var decorationHeight = inline.decorationHeight || 1;
 		for (var ii = 0, ll = decoration.length; ii < ll; ii++) {
 			var decorationItem = decoration[ii];
 			if (!currentGroup || decorationItem !== currentGroup.decoration ||
@@ -25,6 +26,7 @@ function groupDecorations(line) {
 					line: line,
 					decoration: decorationItem,
 					decorationColor: color,
+					decorationHeight: decorationHeight,
 					decorationStyle: style,
 					inlines: [inline]
 				};
@@ -63,7 +65,7 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 		height = biggerInline.height,
 		descent = height - ascent;
 
-	var lw = 0.5 + Math.floor(Math.max(biggerInline.fontSize - 8, 0) / 2) * 0.12;
+	var lw = 0.5 + Math.floor(Math.max(biggerInline.fontSize - 8, 0) / 2) * 0.12*group.decorationHeight;
 
 	switch (group.decoration) {
 		case 'underline':

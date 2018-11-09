@@ -288,6 +288,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var decoration = getStyleProperty(item, styleContextStack, 'decoration', null);
 		var decorationColor = getStyleProperty(item, styleContextStack, 'decorationColor', null);
 		var decorationStyle = getStyleProperty(item, styleContextStack, 'decorationStyle', null);
+		var decorationHeight = getStyleProperty(item, styleContextStack, 'decorationHeight', 1);
 		var background = getStyleProperty(item, styleContextStack, 'background', null);
 		var lineHeight = getStyleProperty(item, styleContextStack, 'lineHeight', 1);
 		var characterSpacing = getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
@@ -327,6 +328,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.decoration = decoration;
 		item.decorationColor = decorationColor;
 		item.decorationStyle = decorationStyle;
+		item.decorationHeight = decorationHeight;
 		item.background = background;
 		item.link = link;
 		item.linkToPage = linkToPage;
