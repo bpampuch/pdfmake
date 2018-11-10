@@ -242,6 +242,11 @@ exclude: [ /node_modules/, /pdfmake.js$/ ]
 (see [issue](https://github.com/bpampuch/pdfmake/issues/1100#issuecomment-336728521))
 
 
+#### Units
+
+All numbers are in points (pt) unit (sometimes labeled as PDF/PostScript points).
+
+
 #### Server side
 
 see [examples](https://github.com/bpampuch/pdfmake/tree/master/examples) and [dev-playground server script](https://github.com/bpampuch/pdfmake/blob/master/dev-playground/server.js)
