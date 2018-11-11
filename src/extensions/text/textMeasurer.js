@@ -15,10 +15,10 @@ const TextMeasurer = Base => class extends Base {
 	measureText(node) {
 		// Make sure style properties of the node itself are considered when building inlines.
 		// We could also just pass [node] to buildInlines, but that fails for bullet points.
-		var styleStack = this.styleStack.clone();
+		let styleStack = this.styleStack.clone();
 		styleStack.push(node);
 
-		var data = this.textInlines.buildInlines(node.text, styleStack);
+		let data = this.textInlines.buildInlines(node.text, styleStack);
 
 		node._inlines = data.items;
 		node._minWidth = data.minWidth;

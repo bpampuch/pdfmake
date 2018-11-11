@@ -24,7 +24,7 @@ const TextPreprocessor = Base => class extends Base {
 				isSetParentTextNode = true;
 			}
 
-			for (var i = 0, l = node.text.length; i < l; i++) {
+			for (let i = 0, l = node.text.length; i < l; i++) {
 				node.text[i] = this.preprocessNode(node.text[i]);
 			}
 

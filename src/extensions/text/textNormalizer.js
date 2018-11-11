@@ -48,7 +48,7 @@ const TextNormalizer = Base => class extends Base {
 		} else if (node.text && node.text.text) {
 			node.text = [this.normalizeNode(node.text)];
 		} else if (isArray(node.text)) {
-			for (var i = 0, l = node.text.length; i < l; i++) {
+			for (let i = 0, l = node.text.length; i < l; i++) {
 				node.text[i] = this.normalizeNode(node.text[i]);
 			}
 		}
