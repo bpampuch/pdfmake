@@ -29,7 +29,7 @@ export default class PdfMake {
 		options.tableLayouts = this.tableLayouts;
 
 		let printer = new Printer(this.fonts);
-		let doc = printer.createPdfKitDocument(docDefinition, options);
+		let doc = printer.print(docDefinition, options);
 
 		return this._transformToDocument(doc);
 	}
