@@ -15,151 +15,6 @@ var isBoolean = require('./helpers').isBoolean;
 var isArray = require('./helpers').isArray;
 var isUndefined = require('./helpers').isUndefined;
 
-////////////////////////////////////////
-// PdfPrinter
-
-/**
- * @class Creates an instance of a PdfPrinter which turns document definition into a pdf
- *
- * @param {Object} fontDescriptors font definition dictionary
- *
- * @example
- * var fontDescriptors = {
- *	Roboto: {
- *		normal: 'fonts/Roboto-Regular.ttf',
- *		bold: 'fonts/Roboto-Medium.ttf',
- *		italics: 'fonts/Roboto-Italic.ttf',
- *		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
- *	}
- * };
- *
- * var printer = new PdfPrinter(fontDescriptors);
- */
-function PdfPrinter(fontDescriptors) {
-	this.fontDescriptors = fontDescriptors;
-}
-
-/**
- * Executes layout engine for the specified document and renders it into a pdfkit document
- * ready to be saved.
- *
- * @param {Object} docDefinition document definition
- * @param {Object} docDefinition.content an array describing the pdf structure (for more information take a look at the examples in the /examples folder)
- * @param {Object} [docDefinition.defaultStyle] default (implicit) style definition
- * @param {Object} [docDefinition.styles] dictionary defining all styles which can be used in the document
- * @param {Object} [docDefinition.pageSize] page size (pdfkit units, A4 dimensions by default)
- * @param {Number} docDefinition.pageSize.width width
- * @param {Number} docDefinition.pageSize.height height
- * @param {Object} [docDefinition.pageMargins] page margins (pdfkit units)
- * @param {Number} docDefinition.maxPagesNumber maximum number of pages to render
- *
- * @example
- *
- * var docDefinition = {
- * 	info: {
- *		title: 'awesome Document',
- *		author: 'john doe',
- *		subject: 'subject of document',
- *		keywords: 'keywords for document',
- * 	},
- *	content: [
- *		'First paragraph',
- *		'Second paragraph, this time a little bit longer',
- *		{ text: 'Third paragraph, slightly bigger font size', fontSize: 20 },
- *		{ text: 'Another paragraph using a named style', style: 'header' },
- *		{ text: ['playing with ', 'inlines' ] },
- *		{ text: ['and ', { text: 'restyling ', bold: true }, 'them'] },
- *	],
- *	styles: {
- *		header: { fontSize: 30, bold: true }
- *	}
- * }
- *
- * var pdfKitDoc = printer.createPdfKitDocument(docDefinition);
- *
- * pdfKitDoc.pipe(fs.createWriteStream('sample.pdf'));
- * pdfKitDoc.end();
- *
- * @return {Object} a pdfKit document object which can be saved or encode to data-url
- */
-PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
-	options = options || {};
-
-	var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
-	var compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
-	var bufferPages = options.bufferPages || false;
-
-	this.pdfKitDoc = PdfKitEngine.createPdfDocument({size: [pageSize.width, pageSize.height], bufferPages: bufferPages, autoFirstPage: false, compress: compressPdf});
-	setMetadata(docDefinition, this.pdfKitDoc);
-
-	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
-
-	docDefinition.images = docDefinition.images || {};
-
-	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
-
-	registerDefaultTableLayouts(builder);
-	if (options.tableLayouts) {
-		builder.registerTableLayouts(options.tableLayouts);
-	}
-
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
-	var maxNumberPages = docDefinition.maxPagesNumber || -1;
-	if (isNumber(maxNumberPages) && maxNumberPages > -1) {
-		pages = pages.slice(0, maxNumberPages);
-	}
-
-	// if pageSize.height is set to Infinity, calculate the actual height of the page that
-	// was laid out using the height of each of the items in the page.
-	if (pageSize.height === Infinity) {
-		var pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
-		this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
-	}
-
-	renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
-
-	if (options.autoPrint) {
-		var printActionRef = this.pdfKitDoc.ref({
-			Type: 'Action',
-			S: 'Named',
-			N: 'Print'
-		});
-		this.pdfKitDoc._root.data.OpenAction = printActionRef;
-		printActionRef.end();
-	}
-	return this.pdfKitDoc;
-};
-
-function setMetadata(docDefinition, pdfKitDoc) {
-	// PDF standard has these properties reserved: Title, Author, Subject, Keywords,
-	// Creator, Producer, CreationDate, ModDate, Trapped.
-	// To keep the pdfmake api consistent, the info field are defined lowercase.
-	// Custom properties don't contain a space.
-	function standardizePropertyKey(key) {
-		var standardProperties = ['Title', 'Author', 'Subject', 'Keywords',
-			'Creator', 'Producer', 'CreationDate', 'ModDate', 'Trapped'];
-		var standardizedKey = key.charAt(0).toUpperCase() + key.slice(1);
-		if (standardProperties.indexOf(standardizedKey) !== -1) {
-			return standardizedKey;
-		}
-
-		return key.replace(/\s+/g, '');
-	}
-
-	pdfKitDoc.info.Producer = 'pdfmake';
-	pdfKitDoc.info.Creator = 'pdfmake';
-
-	if (docDefinition.info) {
-		for (var key in docDefinition.info) {
-			var value = docDefinition.info[key];
-			if (value) {
-				key = standardizePropertyKey(key);
-				pdfKitDoc.info[key] = value;
-			}
-		}
-	}
-}
-
 function calculatePageHeight(pages, margins) {
 	function getItemHeight(item) {
 		if (isFunction(item.item.getHeight)) {
@@ -193,6 +48,36 @@ function calculatePageHeight(pages, margins) {
 	height += fixedMargins.bottom;
 
 	return height;
+}
+
+function setMetadata(docDefinition, pdfKitDoc) {
+  // PDF standard has these properties reserved: Title, Author, Subject, Keywords,
+  // Creator, Producer, CreationDate, ModDate, Trapped.
+  // To keep the pdfmake api consistent, the info field are defined lowercase.
+  // Custom properties don't contain a space.
+  function standardizePropertyKey(key) {
+    var standardProperties = ['Title', 'Author', 'Subject', 'Keywords',
+      'Creator', 'Producer', 'CreationDate', 'ModDate', 'Trapped'];
+    var standardizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+    if (standardProperties.indexOf(standardizedKey) !== -1) {
+      return standardizedKey;
+    }
+
+    return key.replace(/\s+/g, '');
+  }
+
+  pdfKitDoc.info.Producer = 'pdfmake';
+  pdfKitDoc.info.Creator = 'pdfmake';
+
+  if (docDefinition.info) {
+    for (var key in docDefinition.info) {
+      var value = docDefinition.info[key];
+      if (value) {
+        key = standardizePropertyKey(key);
+        pdfKitDoc.info[key] = value;
+      }
+    }
+  }
 }
 
 function fixPageSize(pageSize, pageOrientation) {
@@ -556,6 +441,140 @@ function beginClip(rect, pdfKitDoc) {
 
 function endClip(pdfKitDoc) {
 	pdfKitDoc.restore();
+}
+
+////////////////////////////////////////
+// PdfPrinter
+
+/**
+ * @class Creates an instance of a PdfPrinter which turns document definition into a pdf
+ *
+ * @param {Object} fontDescriptors font definition dictionary
+ *
+ * @example
+ * var fontDescriptors = {
+ *	Roboto: {
+ *		normal: 'fonts/Roboto-Regular.ttf',
+ *		bold: 'fonts/Roboto-Medium.ttf',
+ *		italics: 'fonts/Roboto-Italic.ttf',
+ *		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
+ *	}
+ * };
+ *
+ * var printer = new PdfPrinter(fontDescriptors);
+ */
+class PdfPrinter {
+    /**
+   * @class Creates an instance of a PdfPrinter which turns document definition into a pdf
+   *
+   * @param {Object} fontDescriptors font definition dictionary
+   *
+   * @example
+   * var fontDescriptors = {
+   *	Roboto: {
+   *		normal: 'fonts/Roboto-Regular.ttf',
+  *		bold: 'fonts/Roboto-Medium.ttf',
+  *		italics: 'fonts/Roboto-Italic.ttf',
+  *		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
+  *	}
+  * };
+  *
+  * var printer = new PdfPrinter(fontDescriptors);
+  */
+  constructor(fontDescriptors) {
+    this.fontDescriptors = fontDescriptors;
+  }
+
+  /**
+  * Executes layout engine for the specified document and renders it into a pdfkit document
+  * ready to be saved.
+  *
+  * @param {Object} docDefinition document definition
+  * @param {Object} docDefinition.content an array describing the pdf structure (for more information take a look at the examples in the /examples folder)
+  * @param {Object} [docDefinition.defaultStyle] default (implicit) style definition
+  * @param {Object} [docDefinition.styles] dictionary defining all styles which can be used in the document
+  * @param {Object} [docDefinition.pageSize] page size (pdfkit units, A4 dimensions by default)
+  * @param {Number} docDefinition.pageSize.width width
+  * @param {Number} docDefinition.pageSize.height height
+  * @param {Object} [docDefinition.pageMargins] page margins (pdfkit units)
+  * @param {Number} docDefinition.maxPagesNumber maximum number of pages to render
+  *
+  * @example
+  *
+  * var docDefinition = {
+  * 	info: {
+  *		title: 'awesome Document',
+  *		author: 'john doe',
+  *		subject: 'subject of document',
+  *		keywords: 'keywords for document',
+  * 	},
+  *	content: [
+  *		'First paragraph',
+  *		'Second paragraph, this time a little bit longer',
+  *		{ text: 'Third paragraph, slightly bigger font size', fontSize: 20 },
+  *		{ text: 'Another paragraph using a named style', style: 'header' },
+  *		{ text: ['playing with ', 'inlines' ] },
+  *		{ text: ['and ', { text: 'restyling ', bold: true }, 'them'] },
+  *	],
+  *	styles: {
+  *		header: { fontSize: 30, bold: true }
+  *	}
+  * }
+  *
+  * var pdfKitDoc = printer.createPdfKitDocument(docDefinition);
+  *
+  * pdfKitDoc.pipe(fs.createWriteStream('sample.pdf'));
+  * pdfKitDoc.end();
+  *
+  * @return {Object} a pdfKit document object which can be saved or encode to data-url
+  */
+  createPdfKitDocument(docDefinition, options) {
+    options = options || {};
+
+    var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
+    var compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
+    var bufferPages = options.bufferPages || false;
+
+    this.pdfKitDoc = PdfKitEngine.createPdfDocument({size: [pageSize.width, pageSize.height], bufferPages: bufferPages, autoFirstPage: false, compress: compressPdf});
+    setMetadata(docDefinition, this.pdfKitDoc);
+
+    this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
+
+    docDefinition.images = docDefinition.images || {};
+
+    var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
+
+    registerDefaultTableLayouts(builder);
+    if (options.tableLayouts) {
+      builder.registerTableLayouts(options.tableLayouts);
+    }
+
+    var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
+    var maxNumberPages = docDefinition.maxPagesNumber || -1;
+    if (isNumber(maxNumberPages) && maxNumberPages > -1) {
+      pages = pages.slice(0, maxNumberPages);
+    }
+
+    // if pageSize.height is set to Infinity, calculate the actual height of the page that
+    // was laid out using the height of each of the items in the page.
+    if (pageSize.height === Infinity) {
+      var pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
+      this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
+    }
+
+    renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
+
+    if (options.autoPrint) {
+      var printActionRef = this.pdfKitDoc.ref({
+        Type: 'Action',
+        S: 'Named',
+        N: 'Print'
+      });
+      this.pdfKitDoc._root.data.OpenAction = printActionRef;
+      printActionRef.end();
+    }
+    return this.pdfKitDoc;
+  }
 }
 
 module.exports = PdfPrinter;
