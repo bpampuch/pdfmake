@@ -574,7 +574,7 @@ class DocMeasure {
 		}
 	
 		function getLayout(tableLayouts) {
-			const layout = node.layout;
+			let layout = node.layout;
 	
 			if (isString(layout)) {
 				layout = tableLayouts[layout];
