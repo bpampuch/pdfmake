@@ -19,7 +19,7 @@
 //
 // the number in this table (in particular, [0]) does not exactly match with
 // the numbers in the specficiation. see augumenteccs below for the reason.
-var VERSIONS = [
+const VERSIONS = [
 	null,
 	[[10, 7, 17, 13], [1, 1, 1, 1], []],
 	[[16, 10, 28, 22], [1, 1, 1, 1], [4, 16]],
@@ -63,21 +63,21 @@ var VERSIONS = [
 	[[28, 30, 30, 30], [49, 25, 81, 68], [4, 28, 56, 84, 112, 140, 168]]];
 
 // mode constants (cf. Table 2 in JIS X 0510:2004 p. 16)
-var MODE_TERMINATOR = 0;
-var MODE_NUMERIC = 1, MODE_ALPHANUMERIC = 2, MODE_OCTET = 4, MODE_KANJI = 8;
+const MODE_TERMINATOR = 0;
+const MODE_NUMERIC = 1, MODE_ALPHANUMERIC = 2, MODE_OCTET = 4, MODE_KANJI = 8;
 
 // validation regexps
-var NUMERIC_REGEXP = /^\d*$/;
-var ALPHANUMERIC_REGEXP = /^[A-Za-z0-9 $%*+\-./:]*$/;
-var ALPHANUMERIC_OUT_REGEXP = /^[A-Z0-9 $%*+\-./:]*$/;
+const NUMERIC_REGEXP = /^\d*$/;
+const ALPHANUMERIC_REGEXP = /^[A-Za-z0-9 $%*+\-./:]*$/;
+const ALPHANUMERIC_OUT_REGEXP = /^[A-Z0-9 $%*+\-./:]*$/;
 
 // ECC levels (cf. Table 22 in JIS X 0510:2004 p. 45)
-var ECCLEVEL_L = 1, ECCLEVEL_M = 0, ECCLEVEL_Q = 3, ECCLEVEL_H = 2;
+const ECCLEVEL_L = 1, ECCLEVEL_M = 0, ECCLEVEL_Q = 3, ECCLEVEL_H = 2;
 
 // GF(2^8)-to-integer mapping with a reducing polynomial x^8+x^4+x^3+x^2+1
 // invariant: GF256_MAP[GF256_INVMAP[i]] == i for all i in [1,256)
-var GF256_MAP = [], GF256_INVMAP = [-1];
-for (var i = 0, v = 1; i < 255; ++i) {
+const GF256_MAP = [], GF256_INVMAP = [-1];
+for (let i = 0, v = 1; i < 255; ++i) {
 	GF256_MAP.push(v);
 	GF256_INVMAP[v] = i;
 	v = (v * 2) ^ (v >= 128 ? 0x11d : 0);
@@ -90,27 +90,27 @@ for (var i = 0, v = 1; i < 255; ++i) {
 // ..., (x-\alpha^(K-1)). by convention, we omit the K-th coefficient (always 1)
 // from the result; also other coefficients are written in terms of the exponent
 // to \alpha to avoid the redundant calculation. (see also calculateecc below.)
-var GF256_GENPOLY = [[]];
-for (var i = 0; i < 30; ++i) {
-	var prevpoly = GF256_GENPOLY[i], poly = [];
-	for (var j = 0; j <= i; ++j) {
-		var a = (j < i ? GF256_MAP[prevpoly[j]] : 0);
-		var b = GF256_MAP[(i + (prevpoly[j - 1] || 0)) % 255];
+const GF256_GENPOLY = [[]];
+for (let i = 0; i < 30; ++i) {
+	const prevpoly = GF256_GENPOLY[i], poly = [];
+	for (let j = 0; j <= i; ++j) {
+		const a = (j < i ? GF256_MAP[prevpoly[j]] : 0);
+		const b = GF256_MAP[(i + (prevpoly[j - 1] || 0)) % 255];
 		poly.push(GF256_INVMAP[a ^ b]);
 	}
 	GF256_GENPOLY.push(poly);
 }
 
 // alphanumeric character mapping (cf. Table 5 in JIS X 0510:2004 p. 19)
-var ALPHANUMERIC_MAP = {};
-for (var i = 0; i < 45; ++i) {
+const ALPHANUMERIC_MAP = {};
+for (let i = 0; i < 45; ++i) {
 	ALPHANUMERIC_MAP['0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:'.charAt(i)] = i;
 }
 
 // mask functions in terms of row # and column #
 // (cf. Table 20 in JIS X 0510:2004 p. 42)
 /*jshint unused: false */
-var MASKFUNCS = [
+const MASKFUNCS = [
 	function (i, j) {
 		return (i + j) % 2 === 0;
 	},
@@ -137,17 +137,17 @@ var MASKFUNCS = [
 	}];
 
 // returns true when the version information has to be embeded.
-var needsverinfo = function (ver) {
+const needsverinfo = function (ver) {
 	return ver > 6;
 };
 
 // returns the size of entire QR code for given version.
-var getsizebyver = function (ver) {
+const getsizebyver = function (ver) {
 	return 4 * ver + 17;
 };
 
 // returns the number of bits available for code words in this version.
-var nfullbits = function (ver) {
+const nfullbits = function (ver) {
 	/*
 	 * |<--------------- n --------------->|
 	 * |        |<----- n-17 ---->|        |
@@ -181,8 +181,8 @@ var nfullbits = function (ver) {
 	 *   if any, but 10m-20 (= 2(m-2)x5) of them overlaps with
 	 *   timing patterns.
 	 */
-	var v = VERSIONS[ver];
-	var nbits = 16 * ver * ver + 128 * ver + 64; // finder, timing and format info.
+	const v = VERSIONS[ver];
+	let nbits = 16 * ver * ver + 128 * ver + 64; // finder, timing and format info.
 	if (needsverinfo(ver))
 		nbits -= 36; // version information
 	if (v[2].length) { // alignment patterns
@@ -193,16 +193,16 @@ var nfullbits = function (ver) {
 
 // returns the number of bits available for data portions (i.e. excludes ECC
 // bits but includes mode and length bits) in this version and ECC level.
-var ndatabits = function (ver, ecclevel) {
-	var nbits = nfullbits(ver) & ~7; // no sub-octet code words
-	var v = VERSIONS[ver];
+const ndatabits = function (ver, ecclevel) {
+	let nbits = nfullbits(ver) & ~7; // no sub-octet code words
+	const v = VERSIONS[ver];
 	nbits -= 8 * v[0][ecclevel] * v[1][ecclevel]; // ecc bits
 	return nbits;
 };
 
 // returns the number of bits required for the length of data.
 // (cf. Table 3 in JIS X 0510:2004 p. 16)
-var ndatalenbits = function (ver, mode) {
+const ndatalenbits = function (ver, mode) {
 	switch (mode) {
 		case MODE_NUMERIC:
 			return (ver < 10 ? 10 : ver < 27 ? 12 : 14);
@@ -216,8 +216,8 @@ var ndatalenbits = function (ver, mode) {
 };
 
 // returns the maximum length of data possible in given configuration.
-var getmaxdatalen = function (ver, mode, ecclevel) {
-	var nbits = ndatabits(ver, ecclevel) - 4 - ndatalenbits(ver, mode); // 4 for mode bits
+const getmaxdatalen = function (ver, mode, ecclevel) {
+	const nbits = ndatabits(ver, ecclevel) - 4 - ndatalenbits(ver, mode); // 4 for mode bits
 	switch (mode) {
 		case MODE_NUMERIC:
 			return ((nbits / 10) | 0) * 3 + (nbits % 10 < 4 ? 0 : nbits % 10 < 7 ? 1 : 2);
@@ -236,7 +236,7 @@ var getmaxdatalen = function (ver, mode, ecclevel) {
 //
 // this function does not check the length of data; it is a duty of
 // encode function below (as it depends on the version and ECC level too).
-var validatedata = function (mode, data) {
+const validatedata = function (mode, data) {
 	switch (mode) {
 		case MODE_NUMERIC:
 			if (!data.match(NUMERIC_REGEXP))
@@ -250,9 +250,9 @@ var validatedata = function (mode, data) {
 
 		case MODE_OCTET:
 			if (typeof data === 'string') { // encode as utf-8 string
-				var newdata = [];
-				for (var i = 0; i < data.length; ++i) {
-					var ch = data.charCodeAt(i);
+				const newdata = [];
+				for (let i = 0; i < data.length; ++i) {
+					const ch = data.charCodeAt(i);
 					if (ch < 0x80) {
 						newdata.push(ch);
 					} else if (ch < 0x800) {
@@ -279,13 +279,13 @@ var validatedata = function (mode, data) {
 // returns the code words (sans ECC bits) for given data and configurations.
 // requires data to be preprocessed by validatedata. no length check is
 // performed, and everything has to be checked before calling this function.
-var encode = function (ver, mode, data, maxbuflen) {
-	var buf = [];
-	var bits = 0, remaining = 8;
-	var datalen = data.length;
+const encode = function (ver, mode, data, maxbuflen) {
+	const buf = [];
+	let bits = 0, remaining = 8;
+	const datalen = data.length;
 
 	// this function is intentionally no-op when n=0.
-	var pack = function (x, n) {
+	const pack = function (x, n) {
 		if (n >= remaining) {
 			buf.push(bits | (x >> (n -= remaining)));
 			while (n >= 8)
@@ -297,20 +297,20 @@ var encode = function (ver, mode, data, maxbuflen) {
 			bits |= (x & ((1 << n) - 1)) << (remaining -= n);
 	};
 
-	var nlenbits = ndatalenbits(ver, mode);
+	const nlenbits = ndatalenbits(ver, mode);
 	pack(mode, 4);
 	pack(datalen, nlenbits);
 
 	switch (mode) {
 		case MODE_NUMERIC:
-			for (var i = 2; i < datalen; i += 3) {
+			for (let i = 2; i < datalen; i += 3) {
 				pack(parseInt(data.substring(i - 2, i + 1), 10), 10);
 			}
 			pack(parseInt(data.substring(i - 2), 10), [0, 4, 7][datalen % 3]);
 			break;
 
 		case MODE_ALPHANUMERIC:
-			for (var i = 1; i < datalen; i += 2) {
+			for (let i = 1; i < datalen; i += 2) {
 				pack(ALPHANUMERIC_MAP[data.charAt(i - 1)] * 45 +
 					ALPHANUMERIC_MAP[data.charAt(i)], 11);
 			}
@@ -320,7 +320,7 @@ var encode = function (ver, mode, data, maxbuflen) {
 			break;
 
 		case MODE_OCTET:
-			for (var i = 0; i < datalen; ++i) {
+			for (let i = 0; i < datalen; ++i) {
 				pack(data[i], 8);
 			}
 			break;
@@ -350,15 +350,15 @@ var encode = function (ver, mode, data, maxbuflen) {
 // zero-augumented polynomial by the generator polynomial. the only difference
 // is that Reed-Solomon uses GF(2^8), instead of CRC's GF(2), and Reed-Solomon
 // uses the different generator polynomial than CRC's.
-var calculateecc = function (poly, genpoly) {
-	var modulus = poly.slice(0);
-	var polylen = poly.length, genpolylen = genpoly.length;
-	for (var i = 0; i < genpolylen; ++i)
+const calculateecc = function (poly, genpoly) {
+	const modulus = poly.slice(0);
+	const polylen = poly.length, genpolylen = genpoly.length;
+	for (let i = 0; i < genpolylen; ++i)
 		modulus.push(0);
-	for (var i = 0; i < polylen; ) {
-		var quotient = GF256_INVMAP[modulus[i++]];
+	for (let i = 0; i < polylen; ) {
+		const quotient = GF256_INVMAP[modulus[i++]];
 		if (quotient >= 0) {
-			for (var j = 0; j < genpolylen; ++j) {
+			for (let j = 0; j < genpolylen; ++j) {
 				modulus[i + j] ^= GF256_MAP[(quotient + genpoly[j]) % 255];
 			}
 		}
@@ -373,37 +373,37 @@ var calculateecc = function (poly, genpoly) {
 // the code is simplified using the fact that the size of each code & ECC
 // blocks is almost same; for example, when we have 4 blocks and 46 data words
 // the number of code words in those blocks are 11, 11, 12, 12 respectively.
-var augumenteccs = function (poly, nblocks, genpoly) {
-	var subsizes = [];
-	var subsize = (poly.length / nblocks) | 0, subsize0 = 0;
-	var pivot = nblocks - poly.length % nblocks;
-	for (var i = 0; i < pivot; ++i) {
+const augumenteccs = function (poly, nblocks, genpoly) {
+	const subsizes = [];
+	let subsize = (poly.length / nblocks) | 0, subsize0 = 0;
+	const pivot = nblocks - poly.length % nblocks;
+	for (let i = 0; i < pivot; ++i) {
 		subsizes.push(subsize0);
 		subsize0 += subsize;
 	}
-	for (var i = pivot; i < nblocks; ++i) {
+	for (let i = pivot; i < nblocks; ++i) {
 		subsizes.push(subsize0);
 		subsize0 += subsize + 1;
 	}
 	subsizes.push(subsize0);
 
-	var eccs = [];
-	for (var i = 0; i < nblocks; ++i) {
+	const eccs = [];
+	for (let i = 0; i < nblocks; ++i) {
 		eccs.push(calculateecc(poly.slice(subsizes[i], subsizes[i + 1]), genpoly));
 	}
 
-	var result = [];
-	var nitemsperblock = (poly.length / nblocks) | 0;
-	for (var i = 0; i < nitemsperblock; ++i) {
-		for (var j = 0; j < nblocks; ++j) {
+	const result = [];
+	const nitemsperblock = (poly.length / nblocks) | 0;
+	for (let i = 0; i < nitemsperblock; ++i) {
+		for (let j = 0; j < nblocks; ++j) {
 			result.push(poly[subsizes[j] + i]);
 		}
 	}
-	for (var j = pivot; j < nblocks; ++j) {
+	for (let j = pivot; j < nblocks; ++j) {
 		result.push(poly[subsizes[j + 1] - 1]);
 	}
-	for (var i = 0; i < genpoly.length; ++i) {
-		for (var j = 0; j < nblocks; ++j) {
+	for (let i = 0; i < genpoly.length; ++i) {
+		for (let j = 0; j < nblocks; ++j) {
 			result.push(eccs[j][i]);
 		}
 	}
@@ -417,9 +417,9 @@ var augumenteccs = function (poly, nblocks, genpoly) {
 // actual polynomials used for this procedure are as follows:
 // - p=10, q=5, genpoly=x^10+x^8+x^5+x^4+x^2+x+1 (JIS X 0510:2004 Appendix C)
 // - p=18, q=6, genpoly=x^12+x^11+x^10+x^9+x^8+x^5+x^2+1 (ibid. Appendix D)
-var augumentbch = function (poly, p, genpoly, q) {
-	var modulus = poly << q;
-	for (var i = p - 1; i >= 0; --i) {
+const augumentbch = function (poly, p, genpoly, q) {
+	let modulus = poly << q;
+	for (let i = p - 1; i >= 0; --i) {
 		if ((modulus >> (q + i)) & 1)
 			modulus ^= genpoly << i;
 	}
@@ -433,17 +433,17 @@ var augumentbch = function (poly, p, genpoly, q) {
 // some entries in the matrix may be undefined, rather than 0 or 1. this is
 // intentional (no initialization needed!), and putdata below will fill
 // the remaining ones.
-var makebasematrix = function (ver) {
-	var v = VERSIONS[ver], n = getsizebyver(ver);
-	var matrix = [], reserved = [];
-	for (var i = 0; i < n; ++i) {
+const makebasematrix = function (ver) {
+	const v = VERSIONS[ver], n = getsizebyver(ver);
+	const matrix = [], reserved = [];
+	for (let i = 0; i < n; ++i) {
 		matrix.push([]);
 		reserved.push([]);
 	}
 
-	var blit = function (y, x, h, w, bits) {
-		for (var i = 0; i < h; ++i) {
-			for (var j = 0; j < w; ++j) {
+	const blit = function (y, x, h, w, bits) {
+		for (let i = 0; i < h; ++i) {
+			for (let j = 0; j < w; ++j) {
 				matrix[y + i][x + j] = (bits[i] >> j) & 1;
 				reserved[y + i][x + j] = 1;
 			}
@@ -457,26 +457,26 @@ var makebasematrix = function (ver) {
 	blit(0, n - 8, 9, 8, [0xfe, 0x82, 0xba, 0xba, 0xba, 0x82, 0xfe, 0x00, 0x00]);
 
 	// the rest of timing patterns
-	for (var i = 9; i < n - 8; ++i) {
+	for (let i = 9; i < n - 8; ++i) {
 		matrix[6][i] = matrix[i][6] = ~i & 1;
 		reserved[6][i] = reserved[i][6] = 1;
 	}
 
 	// alignment patterns
-	var aligns = v[2], m = aligns.length;
-	for (var i = 0; i < m; ++i) {
-		var minj = (i === 0 || i === m - 1 ? 1 : 0), maxj = (i === 0 ? m - 1 : m);
-		for (var j = minj; j < maxj; ++j) {
+	const aligns = v[2], m = aligns.length;
+	for (let i = 0; i < m; ++i) {
+		const minj = (i === 0 || i === m - 1 ? 1 : 0), maxj = (i === 0 ? m - 1 : m);
+		for (let j = minj; j < maxj; ++j) {
 			blit(aligns[i], aligns[j], 5, 5, [0x1f, 0x11, 0x15, 0x11, 0x1f]);
 		}
 	}
 
 	// version information
 	if (needsverinfo(ver)) {
-		var code = augumentbch(ver, 6, 0x1f25, 12);
-		var k = 0;
-		for (var i = 0; i < 6; ++i) {
-			for (var j = 0; j < 3; ++j) {
+		const code = augumentbch(ver, 6, 0x1f25, 12);
+		const k = 0;
+		for (let i = 0; i < 6; ++i) {
+			for (let j = 0; j < 3; ++j) {
 				matrix[i][(n - 11) + j] = matrix[(n - 11) + j][i] = (code >> k++) & 1;
 				reserved[i][(n - 11) + j] = reserved[(n - 11) + j][i] = 1;
 			}
@@ -489,15 +489,15 @@ var makebasematrix = function (ver) {
 // fills the data portion (i.e. unmarked in reserved) of the matrix with given
 // code words. the size of code words should be no more than available bits,
 // and remaining bits are padded to 0 (cf. JIS X 0510:2004 sec 8.7.3).
-var putdata = function (matrix, reserved, buf) {
-	var n = matrix.length;
-	var k = 0, dir = -1;
-	for (var i = n - 1; i >= 0; i -= 2) {
+const putdata = function (matrix, reserved, buf) {
+	const n = matrix.length;
+	let k = 0, dir = -1;
+	for (let i = n - 1; i >= 0; i -= 2) {
 		if (i == 6)
 			--i; // skip the entire timing pattern column
-		var jj = (dir < 0 ? n - 1 : 0);
-		for (var j = 0; j < n; ++j) {
-			for (var ii = i; ii > i - 2; --ii) {
+		let jj = (dir < 0 ? n - 1 : 0);
+		for (let j = 0; j < n; ++j) {
+			for (let ii = i; ii > i - 2; --ii) {
 				if (!reserved[jj][ii]) {
 					// may overflow, but (undefined >> x)
 					// is 0 so it will auto-pad to zero.
@@ -514,11 +514,11 @@ var putdata = function (matrix, reserved, buf) {
 
 // XOR-masks the data portion of the matrix. repeating the call with the same
 // arguments will revert the prior call (convenient in the matrix evaluation).
-var maskdata = function (matrix, reserved, mask) {
-	var maskf = MASKFUNCS[mask];
-	var n = matrix.length;
-	for (var i = 0; i < n; ++i) {
-		for (var j = 0; j < n; ++j) {
+const maskdata = function (matrix, reserved, mask) {
+	const maskf = MASKFUNCS[mask];
+	const n = matrix.length;
+	for (let i = 0; i < n; ++i) {
+		for (let j = 0; j < n; ++j) {
 			if (!reserved[i][j])
 				matrix[i][j] ^= maskf(i, j);
 		}
@@ -527,12 +527,12 @@ var maskdata = function (matrix, reserved, mask) {
 };
 
 // puts the format information.
-var putformatinfo = function (matrix, reserved, ecclevel, mask) {
-	var n = matrix.length;
-	var code = augumentbch((ecclevel << 3) | mask, 5, 0x537, 10) ^ 0x5412;
-	for (var i = 0; i < 15; ++i) {
-		var r = [0, 1, 2, 3, 4, 5, 7, 8, n - 7, n - 6, n - 5, n - 4, n - 3, n - 2, n - 1][i];
-		var c = [n - 1, n - 2, n - 3, n - 4, n - 5, n - 6, n - 7, n - 8, 7, 5, 4, 3, 2, 1, 0][i];
+const putformatinfo = function (matrix, reserved, ecclevel, mask) {
+	const n = matrix.length;
+	const code = augumentbch((ecclevel << 3) | mask, 5, 0x537, 10) ^ 0x5412;
+	for (let i = 0; i < 15; ++i) {
+		const r = [0, 1, 2, 3, 4, 5, 7, 8, n - 7, n - 6, n - 5, n - 4, n - 3, n - 2, n - 1][i];
+		const c = [n - 1, n - 2, n - 3, n - 4, n - 5, n - 6, n - 7, n - 8, 7, 5, 4, 3, 2, 1, 0][i];
 		matrix[r][8] = matrix[8][c] = (code >> i) & 1;
 		// we don't have to mark those bits reserved; always done
 		// in makebasematrix above.
@@ -550,29 +550,29 @@ var putformatinfo = function (matrix, reserved, ecclevel, mask) {
 //
 // note: zxing seems to use the same procedure and in many cases its choice
 // agrees to ours, but sometimes it does not. practically it doesn't matter.
-var evaluatematrix = function (matrix) {
+const evaluatematrix = function (matrix) {
 	// N1+(k-5) points for each consecutive row of k same-colored modules,
 	// where k >= 5. no overlapping row counts.
-	var PENALTY_CONSECUTIVE = 3;
+	const PENALTY_CONSECUTIVE = 3;
 	// N2 points for each 2x2 block of same-colored modules.
 	// overlapping block does count.
-	var PENALTY_TWOBYTWO = 3;
+	const PENALTY_TWOBYTWO = 3;
 	// N3 points for each pattern with >4W:1B:1W:3B:1W:1B or
 	// 1B:1W:3B:1W:1B:>4W, or their multiples (e.g. highly unlikely,
 	// but 13W:3B:3W:9B:3W:3B counts).
-	var PENALTY_FINDERLIKE = 40;
+	const PENALTY_FINDERLIKE = 40;
 	// N4*k points for every (5*k)% deviation from 50% black density.
 	// i.e. k=1 for 55~60% and 40~45%, k=2 for 60~65% and 35~40%, etc.
-	var PENALTY_DENSITY = 10;
+	const PENALTY_DENSITY = 10;
 
-	var evaluategroup = function (groups) { // assumes [W,B,W,B,W,...,B,W]
-		var score = 0;
-		for (var i = 0; i < groups.length; ++i) {
+	const evaluategroup = function (groups) { // assumes [W,B,W,B,W,...,B,W]
+		let score = 0;
+		for (let i = 0; i < groups.length; ++i) {
 			if (groups[i] >= 5)
 				score += PENALTY_CONSECUTIVE + (groups[i] - 5);
 		}
-		for (var i = 5; i < groups.length; i += 2) {
-			var p = groups[i];
+		for (let i = 5; i < groups.length; i += 2) {
+			const p = groups[i];
 			if (groups[i - 1] == p && groups[i - 2] == 3 * p && groups[i - 3] == p &&
 				groups[i - 4] == p && (groups[i - 5] >= 4 * p || groups[i + 1] >= 4 * p)) {
 				// this part differs from zxing...
@@ -582,16 +582,16 @@ var evaluatematrix = function (matrix) {
 		return score;
 	};
 
-	var n = matrix.length;
-	var score = 0, nblacks = 0;
-	for (var i = 0; i < n; ++i) {
-		var row = matrix[i];
-		var groups;
+	const n = matrix.length;
+	let score = 0, nblacks = 0;
+	for (let i = 0; i < n; ++i) {
+		const row = matrix[i];
+		let groups;
 
 		// evaluate the current row
 		groups = [0]; // the first empty group of white
-		for (var j = 0; j < n; ) {
-			var k;
+		for (let j = 0; j < n; ) {
+			let k;
 			for (k = 0; j < n && row[j]; ++k)
 				++j;
 			groups.push(k);
@@ -603,8 +603,8 @@ var evaluatematrix = function (matrix) {
 
 		// evaluate the current column
 		groups = [0];
-		for (var j = 0; j < n; ) {
-			var k;
+		for (let j = 0; j < n; ) {
+			let k;
 			for (k = 0; j < n && matrix[j][i]; ++k)
 				++j;
 			groups.push(k);
@@ -615,10 +615,10 @@ var evaluatematrix = function (matrix) {
 		score += evaluategroup(groups);
 
 		// check the 2x2 box and calculate the density
-		var nextrow = matrix[i + 1] || [];
+		const nextrow = matrix[i + 1] || [];
 		nblacks += row[0];
-		for (var j = 1; j < n; ++j) {
-			var p = row[j];
+		for (let j = 1; j < n; ++j) {
+			const p = row[j];
 			nblacks += p;
 			// at least comparison with next row should be strict...
 			if (row[j - 1] == p && nextrow[j] === p && nextrow[j - 1] === p) {
@@ -633,25 +633,25 @@ var evaluatematrix = function (matrix) {
 
 // returns the fully encoded QR code matrix which contains given data.
 // it also chooses the best mask automatically when mask is -1.
-var generate = function (data, ver, mode, ecclevel, mask) {
-	var v = VERSIONS[ver];
-	var buf = encode(ver, mode, data, ndatabits(ver, ecclevel) >> 3);
+const generate = function (data, ver, mode, ecclevel, mask) {
+	const v = VERSIONS[ver];
+	let buf = encode(ver, mode, data, ndatabits(ver, ecclevel) >> 3);
 	buf = augumenteccs(buf, v[1][ecclevel], GF256_GENPOLY[v[0][ecclevel]]);
 
-	var result = makebasematrix(ver);
-	var matrix = result.matrix, reserved = result.reserved;
+	const result = makebasematrix(ver);
+	const matrix = result.matrix, reserved = result.reserved;
 	putdata(matrix, reserved, buf);
 
 	if (mask < 0) {
 		// find the best mask
 		maskdata(matrix, reserved, 0);
 		putformatinfo(matrix, reserved, ecclevel, 0);
-		var bestmask = 0, bestscore = evaluatematrix(matrix);
+		let bestmask = 0, bestscore = evaluatematrix(matrix);
 		maskdata(matrix, reserved, 0);
 		for (mask = 1; mask < 8; ++mask) {
 			maskdata(matrix, reserved, mask);
 			putformatinfo(matrix, reserved, ecclevel, mask);
-			var score = evaluatematrix(matrix);
+			const score = evaluatematrix(matrix);
 			if (bestscore > score) {
 				bestscore = score;
 				bestmask = mask;
@@ -677,16 +677,16 @@ var generate = function (data, ver, mode, ecclevel, mask) {
 //
 
 function generateFrame(data, options) {
-	var MODES = {'numeric': MODE_NUMERIC, 'alphanumeric': MODE_ALPHANUMERIC,
+	const MODES = {'numeric': MODE_NUMERIC, 'alphanumeric': MODE_ALPHANUMERIC,
 		'octet': MODE_OCTET};
-	var ECCLEVELS = {'L': ECCLEVEL_L, 'M': ECCLEVEL_M, 'Q': ECCLEVEL_Q,
+	const ECCLEVELS = {'L': ECCLEVEL_L, 'M': ECCLEVEL_M, 'Q': ECCLEVEL_Q,
 		'H': ECCLEVEL_H};
 
 	options = options || {};
-	var ver = options.version || -1;
-	var ecclevel = ECCLEVELS[(options.eccLevel || 'L').toUpperCase()];
-	var mode = options.mode ? MODES[options.mode.toLowerCase()] : -1;
-	var mask = 'mask' in options ? options.mask : -1;
+	let ver = options.version || -1;
+	const ecclevel = ECCLEVELS[(options.eccLevel || 'L').toUpperCase()];
+	let mode = options.mode ? MODES[options.mode.toLowerCase()] : -1;
+	const mask = 'mask' in options ? options.mask : -1;
 
 	if (mode < 0) {
 		if (typeof data === 'string') {
@@ -740,22 +740,22 @@ function generateFrame(data, options) {
 //   you're doing.
 function buildCanvas(data, options) {
 
-	var canvas = [];
-	var background = options.background || '#fff';
-	var foreground = options.foreground || '#000';
-	//var margin = options.margin || 4;
-	var matrix = generateFrame(data, options);
-	var n = matrix.length;
-	var modSize = Math.floor(options.fit ? options.fit / n : 5);
-	var size = n * modSize;
+	const canvas = [];
+	const background = options.background || '#fff';
+	const foreground = options.foreground || '#000';
+	//const margin = options.margin || 4;
+	const matrix = generateFrame(data, options);
+	const n = matrix.length;
+	const modSize = Math.floor(options.fit ? options.fit / n : 5);
+	const size = n * modSize;
 
 	canvas.push({
 		type: 'rect',
 		x: 0, y: 0, w: size, h: size, lineWidth: 0, color: background
 	});
 
-	for (var i = 0; i < n; ++i) {
-		for (var j = 0; j < n; ++j) {
+	for (let i = 0; i < n; ++i) {
+		for (let j = 0; j < n; ++j) {
 			if (matrix[i][j]) {
 				canvas.push({
 					type: 'rect',
@@ -778,7 +778,7 @@ function buildCanvas(data, options) {
 }
 
 function measure(node) {
-	var cd = buildCanvas(node.qr, node);
+	const cd = buildCanvas(node.qr, node);
 	node._canvas = cd.canvas;
 	node._width = node._height = node._minWidth = node._maxWidth = node._minHeight = node._maxHeight = cd.size;
 	return node;
