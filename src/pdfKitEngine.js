@@ -4,7 +4,7 @@ function _interopDefault(ex) {
 	return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex;
 }
 
-var PdfKit = _interopDefault(require('pdfkit'));
+const PdfKit = _interopDefault(require('pdfkit'));
 
 function getEngineInstance() {
 	return PdfKit;
