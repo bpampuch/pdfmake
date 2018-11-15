@@ -204,7 +204,7 @@ class LayoutBuilder {
 		const context = this.writer.context();
 		const pageSize = context.getCurrentPage().pageSize;
 	
-		const pageBackground = backgroundGetter(context.page + 1, pageSize);
+		let pageBackground = backgroundGetter(context.page + 1, pageSize);
 	
 		if (pageBackground) {
 			this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);

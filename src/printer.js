@@ -95,7 +95,7 @@ function fixPageSize(pageSize, pageOrientation) {
 		pageSize.height = Infinity;
 	}
 
-	const size = pageSize2widthAndHeight(pageSize || 'A4');
+	let size = pageSize2widthAndHeight(pageSize || 'A4');
 	if (isNeedSwapPageSizes(pageOrientation)) { // swap page sizes
 		size = {width: size.height, height: size.width};
 	}
@@ -205,7 +205,7 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	pdfKitDoc._pdfMakePages = pages;
 	pdfKitDoc.addPage();
 
-	const totalItems = 0;
+	let totalItems = 0;
 	if (progressCallback) {
 		pages.forEach(function (page) {
 			totalItems += page.items.length;
