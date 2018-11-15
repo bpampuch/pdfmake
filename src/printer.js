@@ -1,19 +1,19 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 'use strict';
 
-var PdfKitEngine = require('./pdfKitEngine');
-var FontProvider = require('./fontProvider');
-var LayoutBuilder = require('./layoutBuilder');
-var sizes = require('./standardPageSizes');
-var ImageMeasure = require('./imageMeasure');
-var textDecorator = require('./textDecorator');
-var TextTools = require('./textTools');
-var isFunction = require('./helpers').isFunction;
-var isString = require('./helpers').isString;
-var isNumber = require('./helpers').isNumber;
-var isBoolean = require('./helpers').isBoolean;
-var isArray = require('./helpers').isArray;
-var isUndefined = require('./helpers').isUndefined;
+const PdfKitEngine = require('./pdfKitEngine');
+const FontProvider = require('./fontProvider');
+const LayoutBuilder = require('./layoutBuilder');
+const sizes = require('./standardPageSizes');
+const ImageMeasure = require('./imageMeasure');
+const textDecorator = require('./textDecorator');
+const TextTools = require('./textTools');
+const isFunction = require('./helpers').isFunction;
+const isString = require('./helpers').isString;
+const isNumber = require('./helpers').isNumber;
+const isBoolean = require('./helpers').isBoolean;
+const isArray = require('./helpers').isArray;
+const isUndefined = require('./helpers').isUndefined;
 
 function calculatePageHeight(pages, margins) {
 	function getItemHeight(item) {
@@ -28,17 +28,17 @@ function calculatePageHeight(pages, margins) {
 	}
 
 	function getBottomPosition(item) {
-		var top = item.item.y;
-		var height = getItemHeight(item);
+		const top = item.item.y;
+		const height = getItemHeight(item);
 		return top + height;
 	}
 
-	var fixedMargins = fixPageMargins(margins || 40);
-	var height = fixedMargins.top;
+	const fixedMargins = fixPageMargins(margins || 40);
+	let height = fixedMargins.top;
 
 	pages.forEach(function (page) {
 		page.items.forEach(function (item) {
-			var bottomPosition = getBottomPosition(item);
+			const bottomPosition = getBottomPosition(item);
 			if (bottomPosition > height) {
 				height = bottomPosition;
 			}
@@ -56,9 +56,9 @@ function setMetadata(docDefinition, pdfKitDoc) {
   // To keep the pdfmake api consistent, the info field are defined lowercase.
   // Custom properties don't contain a space.
   function standardizePropertyKey(key) {
-    var standardProperties = ['Title', 'Author', 'Subject', 'Keywords',
+    const standardProperties = ['Title', 'Author', 'Subject', 'Keywords',
       'Creator', 'Producer', 'CreationDate', 'ModDate', 'Trapped'];
-    var standardizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+    const standardizedKey = key.charAt(0).toUpperCase() + key.slice(1);
     if (standardProperties.indexOf(standardizedKey) !== -1) {
       return standardizedKey;
     }
@@ -70,8 +70,8 @@ function setMetadata(docDefinition, pdfKitDoc) {
   pdfKitDoc.info.Creator = 'pdfmake';
 
   if (docDefinition.info) {
-    for (var key in docDefinition.info) {
-      var value = docDefinition.info[key];
+    for (let key in docDefinition.info) {
+      const value = docDefinition.info[key];
       if (value) {
         key = standardizePropertyKey(key);
         pdfKitDoc.info[key] = value;
@@ -95,7 +95,7 @@ function fixPageSize(pageSize, pageOrientation) {
 		pageSize.height = Infinity;
 	}
 
-	var size = pageSize2widthAndHeight(pageSize || 'A4');
+	const size = pageSize2widthAndHeight(pageSize || 'A4');
 	if (isNeedSwapPageSizes(pageOrientation)) { // swap page sizes
 		size = {width: size.height, height: size.width};
 	}
@@ -181,7 +181,7 @@ function registerDefaultTableLayouts(layoutBuilder) {
 
 function pageSize2widthAndHeight(pageSize) {
 	if (isString(pageSize)) {
-		var size = sizes[pageSize.toUpperCase()];
+		const size = sizes[pageSize.toUpperCase()];
 		if (!size) {
 			throw 'Page size ' + pageSize + ' not recognized';
 		}
@@ -192,11 +192,11 @@ function pageSize2widthAndHeight(pageSize) {
 }
 
 function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
-	var previousPageOrientation = pdfKitDoc.options.size[0] > pdfKitDoc.options.size[1] ? 'landscape' : 'portrait';
+	const previousPageOrientation = pdfKitDoc.options.size[0] > pdfKitDoc.options.size[1] ? 'landscape' : 'portrait';
 
 	if (currentPage.pageSize.orientation !== previousPageOrientation) {
-		var width = pdfKitDoc.options.size[0];
-		var height = pdfKitDoc.options.size[1];
+		const width = pdfKitDoc.options.size[0];
+		const height = pdfKitDoc.options.size[1];
 		pdfKitDoc.options.size = [height, width];
 	}
 }
@@ -205,25 +205,25 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	pdfKitDoc._pdfMakePages = pages;
 	pdfKitDoc.addPage();
 
-	var totalItems = 0;
+	const totalItems = 0;
 	if (progressCallback) {
 		pages.forEach(function (page) {
 			totalItems += page.items.length;
 		});
 	}
 
-	var renderedItems = 0;
+	let renderedItems = 0;
 	progressCallback = progressCallback || function () {};
 
-	for (var i = 0; i < pages.length; i++) {
+	for (let i = 0; i < pages.length; i++) {
 		if (i > 0) {
 			updatePageOrientationInOptions(pages[i], pdfKitDoc);
 			pdfKitDoc.addPage(pdfKitDoc.options);
 		}
 
-		var page = pages[i];
-		for (var ii = 0, il = page.items.length; ii < il; ii++) {
-			var item = page.items[ii];
+		const page = pages[i];
+		for (let ii = 0, il = page.items.length; ii < il; ii++) {
+			const item = page.items[ii];
 			switch (item.type) {
 				case 'vector':
 					renderVector(item.item, pdfKitDoc);
@@ -252,15 +252,15 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 
 function renderLine(line, x, y, pdfKitDoc) {
 	function preparePageNodeRefLine(_pageNodeRef, inline) {
-		var newWidth;
-		var diffWidth;
-		var textTools = new TextTools(null);
+		let newWidth;
+		let diffWidth;
+		const textTools = new TextTools(null);
 
 		if (isUndefined(_pageNodeRef.positions)) {
 			throw 'Page reference id not found';
 		}
 
-		var pageNumber = _pageNodeRef.positions[0].pageNumber.toString();
+		const pageNumber = _pageNodeRef.positions[0].pageNumber.toString();
 
 		inline.text = pageNumber;
 		inline.linkToPage = pageNumber;
@@ -285,22 +285,22 @@ function renderLine(line, x, y, pdfKitDoc) {
 	x = x || 0;
 	y = y || 0;
 
-	var lineHeight = line.getHeight();
-	var ascenderHeight = line.getAscenderHeight();
-	var descent = lineHeight - ascenderHeight;
+	const lineHeight = line.getHeight();
+	const ascenderHeight = line.getAscenderHeight();
+	const descent = lineHeight - ascenderHeight;
 
 	textDecorator.drawBackground(line, x, y, pdfKitDoc);
 
 	//TODO: line.optimizeInlines();
-	for (var i = 0, l = line.inlines.length; i < l; i++) {
-		var inline = line.inlines[i];
-		var shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
+	for (let i = 0, l = line.inlines.length; i < l; i++) {
+		const inline = line.inlines[i];
+		const shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
 
 		if (inline._pageNodeRef) {
 			preparePageNodeRefLine(inline._pageNodeRef, inline);
 		}
 
-		var options = {
+		const options = {
 			lineBreak: false,
 			textWidth: inline.width,
 			characterSpacing: inline.characterSpacing,
@@ -319,7 +319,7 @@ function renderLine(line, x, y, pdfKitDoc) {
 		pdfKitDoc.text(inline.text, x + inline.x, y + shiftToBaseline, options);
 
 		if (inline.linkToPage) {
-			var _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0]}).end();
+			const _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0]}).end();
 			pdfKitDoc.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, {Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null]});
 		}
 
@@ -329,18 +329,18 @@ function renderLine(line, x, y, pdfKitDoc) {
 }
 
 function renderWatermark(page, pdfKitDoc) {
-	var watermark = page.watermark;
+	const watermark = page.watermark;
 
 	pdfKitDoc.fill(watermark.color);
 	pdfKitDoc.opacity(watermark.opacity);
 
 	pdfKitDoc.save();
 
-	var angle = Math.atan2(pdfKitDoc.page.height, pdfKitDoc.page.width) * -180 / Math.PI;
+	const angle = Math.atan2(pdfKitDoc.page.height, pdfKitDoc.page.width) * -180 / Math.PI;
 	pdfKitDoc.rotate(angle, {origin: [pdfKitDoc.page.width / 2, pdfKitDoc.page.height / 2]});
 
-	var x = pdfKitDoc.page.width / 2 - watermark.size.size.width / 2;
-	var y = pdfKitDoc.page.height / 2 - watermark.size.size.height / 4;
+	const x = pdfKitDoc.page.width / 2 - watermark.size.size.width / 2;
+	const y = pdfKitDoc.page.height / 2 - watermark.size.size.height / 4;
 
 	pdfKitDoc._font = watermark.font;
 	pdfKitDoc.fontSize(watermark.size.fontSize);
@@ -374,10 +374,10 @@ function renderVector(vector, pdfKitDoc) {
 			}
 
 			if (vector.linearGradient) {
-				var gradient = pdfKitDoc.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
-				var step = 1 / (vector.linearGradient.length - 1);
+				const gradient = pdfKitDoc.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
+				const step = 1 / (vector.linearGradient.length - 1);
 
-				for (var i = 0; i < vector.linearGradient.length; i++) {
+				for (let i = 0; i < vector.linearGradient.length; i++) {
 					gradient.stop(i * step, vector.linearGradient[i]);
 				}
 
@@ -394,13 +394,13 @@ function renderVector(vector, pdfKitDoc) {
 			}
 
 			pdfKitDoc.moveTo(vector.points[0].x, vector.points[0].y);
-			for (var i = 1, l = vector.points.length; i < l; i++) {
+			for (let i = 1, l = vector.points.length; i < l; i++) {
 				pdfKitDoc.lineTo(vector.points[i].x, vector.points[i].y);
 			}
 
 			if (vector.points.length > 1) {
-				var p1 = vector.points[0];
-				var pn = vector.points[vector.points.length - 1];
+				const p1 = vector.points[0];
+				const pn = vector.points[vector.points.length - 1];
 
 				if (vector.closePath || p1.x === pn.x && p1.y === pn.y) {
 					pdfKitDoc.closePath();
@@ -452,7 +452,7 @@ function endClip(pdfKitDoc) {
  * @param {Object} fontDescriptors font definition dictionary
  *
  * @example
- * var fontDescriptors = {
+ * const fontDescriptors = {
  *	Roboto: {
  *		normal: 'fonts/Roboto-Regular.ttf',
  *		bold: 'fonts/Roboto-Medium.ttf',
@@ -461,7 +461,7 @@ function endClip(pdfKitDoc) {
  *	}
  * };
  *
- * var printer = new PdfPrinter(fontDescriptors);
+ * const printer = new PdfPrinter(fontDescriptors);
  */
 class PdfPrinter {
     /**
@@ -470,7 +470,7 @@ class PdfPrinter {
    * @param {Object} fontDescriptors font definition dictionary
    *
    * @example
-   * var fontDescriptors = {
+   * const fontDescriptors = {
    *	Roboto: {
    *		normal: 'fonts/Roboto-Regular.ttf',
   *		bold: 'fonts/Roboto-Medium.ttf',
@@ -479,7 +479,7 @@ class PdfPrinter {
   *	}
   * };
   *
-  * var printer = new PdfPrinter(fontDescriptors);
+  * const printer = new PdfPrinter(fontDescriptors);
   */
   constructor(fontDescriptors) {
     this.fontDescriptors = fontDescriptors;
@@ -501,7 +501,7 @@ class PdfPrinter {
   *
   * @example
   *
-  * var docDefinition = {
+  * const docDefinition = {
   * 	info: {
   *		title: 'awesome Document',
   *		author: 'john doe',
@@ -521,7 +521,7 @@ class PdfPrinter {
   *	}
   * }
   *
-  * var pdfKitDoc = printer.createPdfKitDocument(docDefinition);
+  * const pdfKitDoc = printer.createPdfKitDocument(docDefinition);
   *
   * pdfKitDoc.pipe(fs.createWriteStream('sample.pdf'));
   * pdfKitDoc.end();
@@ -531,9 +531,9 @@ class PdfPrinter {
   createPdfKitDocument(docDefinition, options) {
     options = options || {};
 
-    var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
-    var compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
-    var bufferPages = options.bufferPages || false;
+    const pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
+    const compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
+    const bufferPages = options.bufferPages || false;
 
     this.pdfKitDoc = PdfKitEngine.createPdfDocument({size: [pageSize.width, pageSize.height], bufferPages: bufferPages, autoFirstPage: false, compress: compressPdf});
     setMetadata(docDefinition, this.pdfKitDoc);
@@ -542,15 +542,15 @@ class PdfPrinter {
 
     docDefinition.images = docDefinition.images || {};
 
-    var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
+    const builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
 
     registerDefaultTableLayouts(builder);
     if (options.tableLayouts) {
       builder.registerTableLayouts(options.tableLayouts);
     }
 
-    var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
-    var maxNumberPages = docDefinition.maxPagesNumber || -1;
+    let pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
+    const maxNumberPages = docDefinition.maxPagesNumber || -1;
     if (isNumber(maxNumberPages) && maxNumberPages > -1) {
       pages = pages.slice(0, maxNumberPages);
     }
@@ -558,14 +558,14 @@ class PdfPrinter {
     // if pageSize.height is set to Infinity, calculate the actual height of the page that
     // was laid out using the height of each of the items in the page.
     if (pageSize.height === Infinity) {
-      var pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
+      const pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
       this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
     }
 
     renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
 
     if (options.autoPrint) {
-      var printActionRef = this.pdfKitDoc.ref({
+      const printActionRef = this.pdfKitDoc.ref({
         Type: 'Action',
         S: 'Named',
         N: 'Print'
