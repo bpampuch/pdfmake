@@ -12,6 +12,12 @@
     "pdfkit": "^0.8.3"
   },
   "devDependencies": {
+    "@babel/cli": "^7.1.5",
+    "@babel/core": "^7.1.6",
+    "@babel/node": "^7.0.0",
+    "@babel/preset-env": "^7.1.6",
+    "@babel/register": "^7.0.0",
+    "babel-loader": "^8.0.4",
     "brfs": "^2.0.1",
     "expose-loader": "^0.7.5",
     "fancy-log": "^1.3.2",
@@ -27,7 +33,8 @@
     "sinon": "^6.1.5",
     "string-replace-webpack-plugin": "^0.1.3",
     "transform-loader": "^0.2.4",
-    "webpack": "3.11.0"
+    "webpack": "^4.25.1",
+    "webpack-cli": "^3.1.2"
   },
   "scripts": {
     "build": "gulp build",

@@ -22,6 +22,11 @@ module.exports = {
 	},
 	module: {
 		rules: [
+			{
+				test: /\.js$/,
+				exclude: /node_modules/,
+				use: ['babel-loader']
+			},
 			{test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
 			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
 					replacements: [
@@ -61,19 +66,6 @@ module.exports = {
 	},
 	plugins: [
 		new StringReplacePlugin(),
-
-		new webpack.optimize.UglifyJsPlugin({
-			include: /\.min\.js$/,
-			sourceMap: true,
-			uglifyOptions: {
-				compress: {
-					drop_console: true
-				},
-				mangle: {
-					reserved: ['HeadTable', 'NameTable', 'CmapTable', 'HheaTable', 'MaxpTable', 'HmtxTable', 'PostTable', 'OS2Table', 'LocaTable', 'GlyfTable']
-				}
-			}
-		}),
 
 		new webpack.BannerPlugin({
 			banner: banner,
