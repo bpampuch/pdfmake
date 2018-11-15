@@ -1,11 +1,11 @@
 'use strict';
 
-var isString = require('./helpers').isString;
-var isNumber = require('./helpers').isNumber;
-var isBoolean = require('./helpers').isBoolean;
-var isArray = require('./helpers').isArray;
-var isUndefined = require('./helpers').isUndefined;
-var fontStringify = require('./helpers').fontStringify;
+const isString = require('./helpers').isString;
+const isNumber = require('./helpers').isNumber;
+const isBoolean = require('./helpers').isBoolean;
+const isArray = require('./helpers').isArray;
+const isUndefined = require('./helpers').isUndefined;
+const fontStringify = require('./helpers').fontStringify;
 
 class DocPreprocessor {
 	preprocessDocument(docStructure) {
@@ -59,9 +59,9 @@ class DocPreprocessor {
 	}
 
 	preprocessColumns(node) {
-		var columns = node.columns;
+		const columns = node.columns;
 	
-		for (var i = 0, l = columns.length; i < l; i++) {
+		for (let i = 0, l = columns.length; i < l; i++) {
 			columns[i] = this.preprocessNode(columns[i]);
 		}
 	
@@ -69,9 +69,9 @@ class DocPreprocessor {
 	}
 
 	preprocessVerticalContainer(node) {
-		var items = node.stack;
+		const items = node.stack;
 	
-		for (var i = 0, l = items.length; i < l; i++) {
+		for (let i = 0, l = items.length; i < l; i++) {
 			items[i] = this.preprocessNode(items[i]);
 		}
 	
@@ -79,9 +79,9 @@ class DocPreprocessor {
 	}
 
 	preprocessList(node) {
-		var items = node.ul || node.ol;
+		const items = node.ul || node.ol;
 	
-		for (var i = 0, l = items.length; i < l; i++) {
+		for (let i = 0, l = items.length; i < l; i++) {
 			items[i] = this.preprocessNode(items[i]);
 		}
 	
@@ -89,12 +89,12 @@ class DocPreprocessor {
 	}
 
 	preprocessTable(node) {
-		var col, row, cols, rows;
+		let col, row, cols, rows;
 	
 		for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
 			for (row = 0, rows = node.table.body.length; row < rows; row++) {
-				var rowData = node.table.body[row];
-				var data = rowData[col];
+				const rowData = node.table.body[row];
+				const data = rowData[col];
 				if (data !== undefined) {
 					if (data === null) { // transform to object
 						data = '';
@@ -115,18 +115,18 @@ class DocPreprocessor {
 				node.tocItem = [node.tocItem];
 			}
 	
-			for (var i = 0, l = node.tocItem.length; i < l; i++) {
+			for (let i = 0, l = node.tocItem.length; i < l; i++) {
 				if (!isString(node.tocItem[i])) {
 					node.tocItem[i] = '_default_';
 				}
 	
-				var tocItemId = node.tocItem[i];
+				const tocItemId = node.tocItem[i];
 	
 				if (!this.tocs[tocItemId]) {
 					this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
 				}
 	
-				var tocItemRef = {
+				const tocItemRef = {
 					_nodeRef: this._getNodeForNodeRef(node),
 					_textNodeRef: node
 				};
@@ -175,13 +175,13 @@ class DocPreprocessor {
 		if (node.text && node.text.text) {
 			node.text = [this.preprocessNode(node.text)];
 		} else if (isArray(node.text)) {
-			var isSetParentNode = false;
+			let isSetParentNode = false;
 			if (this.parentNode === null) {
 				this.parentNode = node;
 				isSetParentNode = true;
 			}
 	
-			for (var i = 0, l = node.text.length; i < l; i++) {
+			for (let i = 0, l = node.text.length; i < l; i++) {
 				node.text[i] = this.preprocessNode(node.text[i]);
 			}
 	
