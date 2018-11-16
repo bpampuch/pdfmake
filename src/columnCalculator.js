@@ -1,15 +1,17 @@
 'use strict';
 
-var isString = require('./helpers').isString;
+const isString = require('./helpers').isString;
 
 function buildColumnWidths(columns, availableWidth) {
-	var autoColumns = [],
-		autoMin = 0, autoMax = 0,
-		starColumns = [],
-		starMaxMin = 0,
-		starMaxMax = 0,
+	const autoColumns = [],
 		fixedColumns = [],
-		initial_availableWidth = availableWidth;
+		starColumns = []
+	let autoMin = 0, 
+		autoMax = 0,
+		starMaxMin = 0,
+		starMaxMax = 0
+		
+	const initial_availableWidth = availableWidth;
 
 	columns.forEach(function (column) {
 		if (isAutoColumn(column)) {
@@ -42,8 +44,8 @@ function buildColumnWidths(columns, availableWidth) {
 	// http://www.freesoft.org/CIE/RFC/1942/18.htm
 	// http://www.w3.org/TR/CSS2/tables.html#width-layout
 	// http://dev.w3.org/csswg/css3-tables-algorithms/Overview.src.htm
-	var minW = autoMin + starMaxMin * starColumns.length;
-	var maxW = autoMax + starMaxMax * starColumns.length;
+	const minW = autoMin + starMaxMin * starColumns.length;
+	const maxW = autoMax + starMaxMax * starColumns.length;
 	if (minW >= availableWidth) {
 		// case 1 - there's no way to fit all columns within available width
 		// that's actually pretty bad situation with PDF as we have no horizontal scroll
@@ -65,18 +67,18 @@ function buildColumnWidths(columns, availableWidth) {
 			});
 		} else {
 			// maxW is too large, but minW fits within available width
-			var W = availableWidth - minW;
-			var D = maxW - minW;
+			const W = availableWidth - minW;
+			const D = maxW - minW;
 
 			autoColumns.forEach(function (col) {
-				var d = col._maxWidth - col._minWidth;
+				const d = col._maxWidth - col._minWidth;
 				col._calcWidth = col._minWidth + d * W / D;
 				availableWidth -= col._calcWidth;
 			});
 		}
 
 		if (starColumns.length > 0) {
-			var starSize = availableWidth / starColumns.length;
+			const starSize = availableWidth / starColumns.length;
 
 			starColumns.forEach(function (col) {
 				col._calcWidth = starSize;
@@ -95,13 +97,13 @@ function isStarColumn(column) {
 
 //TODO: refactor and reuse in measureTable
 function measureMinMax(columns) {
-	var result = {min: 0, max: 0};
+	const result = {min: 0, max: 0};
 
-	var maxStar = {min: 0, max: 0};
-	var starCount = 0;
+	const maxStar = {min: 0, max: 0};
+	let starCount = 0;
 
-	for (var i = 0, l = columns.length; i < l; i++) {
-		var c = columns[i];
+	for (let i = 0, l = columns.length; i < l; i++) {
+		const c = columns[i];
 
 		if (isStarColumn(c)) {
 			maxStar.min = Math.max(maxStar.min, c._minWidth);
