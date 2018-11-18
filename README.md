@@ -299,10 +299,26 @@ var docDefinition = {
     }
   }
 };
-
 ```
 
 To have a deeper understanding of styling in pdfmake, style inheritance and local-style-overrides check STYLES1, STYLES2 and STYLES3 examples in playground.
+
+#### Default style
+
+And is also possible define default style:
+
+```js
+var docDefinition = {
+  content: [
+    'Text styled by default style'
+  ],
+
+  defaultStyle: {
+    fontSize: 15,
+    bold: true
+  }
+};
+```
 
 #### Columns
 
