@@ -6,6 +6,7 @@ node_js:
   - node
 
 os:
+  - windows
   - linux
   - osx
 
