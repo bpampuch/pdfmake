@@ -8,8 +8,6 @@ var pdfMakePrinter = require('../src/printer');
 
 var app = express();
 
-var rootDir = path.resolve(path.dirname('.'));
-
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: false }));
