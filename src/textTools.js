@@ -296,6 +296,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', null);
 		var preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
 		var preserveTrailingSpaces = getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
+		var opacity = getStyleProperty(item, styleContextStack, 'opacity', 1);
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -331,6 +332,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.link = link;
 		item.linkToPage = linkToPage;
 		item.noWrap = noWrap;
+		item.opacity = opacity;
 	});
 
 	return normalized;
