@@ -60,18 +60,6 @@ module.exports = {
 						}
 					]})
 			},
-			/* hack for Web Worker support */
-			{test: /FileSaver.js$/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: 'doc.createElementNS("http://www.w3.org/1999/xhtml", "a")',
-							replacement: function () {
-								return 'doc ? doc.createElementNS("http://www.w3.org/1999/xhtml", "a") : []';
-							}
-						}
-					]})
-			},
-			{enforce: 'post', test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
 			{enforce: 'post', test: /fontkit[/\\]index.js$/, loader: "transform-loader?brfs"},
 			{enforce: 'post', test: /unicode-properties[/\\]index.js$/, loader: "transform-loader?brfs"},
 			{enforce: 'post', test: /linebreak[/\\]src[/\\]linebreaker.js/, loader: "transform-loader?brfs"}

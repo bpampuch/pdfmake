@@ -119,6 +119,7 @@ class Renderer {
 				options.features = inline.fontFeatures;
 			}
 
+            this.pdfDocument.opacity(inline.opacity || 1);
 			this.pdfDocument.fill(inline.color || 'black');
 
 			this.pdfDocument._font = inline.font;
