@@ -23,5 +23,9 @@ export default {
 	pageMargins: 40,
 
 	compress: true,
-	bufferPages: false
+	bufferPages: false,
+
+	ol_type: 'decimal',
+	ol_separator: '.',
+	ol_reversed: false
 };

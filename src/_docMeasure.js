@@ -104,11 +104,11 @@ class DocMeasure {
 
 		return node;
 	}
-
+/*
 	gapSizeForList() {
 		return this.textTools.sizeOfString('9. ', this.styleStack);
 	}
-
+*/
 	buildUnorderedMarker(styleStack, gapSize, type) {
 		function buildDisc(gapSize, color) {
 			// TODO: ascender-based calculations
@@ -184,7 +184,7 @@ class DocMeasure {
 	}
 
 	buildOrderedMarker(counter, styleStack, type, separator) {
-		function prepareAlpha(counter) {
+	/*	function prepareAlpha(counter) {
 			function toAlpha(num) {
 				return (num >= 26 ? toAlpha((num / 26 >> 0) - 1) : '') + 'abcdefghijklmnopqrstuvwxyz'[num % 26 >> 0];
 			}
@@ -215,7 +215,7 @@ class DocMeasure {
 
 		function prepareDecimal(counter) {
 			return counter.toString();
-		}
+		}*/
 
 		let counterText;
 		switch (type) {
@@ -296,21 +296,21 @@ class DocMeasure {
 	}
 
 	measureOrderedList(node) {
-		let style = this.styleStack.clone();
-		let items = node.ol;
-		node.type = node.type || 'decimal';
-		node.separator = node.separator || '.';
-		node.reversed = node.reversed || false;
-		if (!node.start) {
-			node.start = node.reversed ? items.length : 1;
-		}
-		node._gapSize = this.gapSizeForList();
+		//let style = this.styleStack.clone();
+		//let items = node.ol;
+		//node.type = node.type || 'decimal';
+		//node.separator = node.separator || '.';
+		//node.reversed = node.reversed || false;
+		//if (!node.start) {
+		//	node.start = node.reversed ? items.length : 1;
+		//}
+		/*node._gapSize = this.gapSizeForList();
 		node._minWidth = 0;
 		node._maxWidth = 0;
 
-		let counter = node.start;
+		let counter = node.start;*/
 		for (let i = 0, l = items.length; i < l; i++) {
-			let item = items[i] = this.measureNode(items[i]);
+//			let item = items[i] = this.measureNode(items[i]);
 
 			if (!item.ol && !item.ul) {
 				item.listMarker = this.buildOrderedMarker(item.counter || counter, style, item.listType || node.type, node.separator);
