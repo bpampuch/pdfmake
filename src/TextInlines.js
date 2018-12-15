@@ -119,7 +119,7 @@ class TextInlines {
 			item.link = StyleContextStack.getStyleProperty(item, styleContextStack, 'link', defaults.link);
 			item.linkToPage = StyleContextStack.getStyleProperty(item, styleContextStack, 'linkToPage', defaults.linkToPage);
 			item.noWrap = StyleContextStack.getStyleProperty(item, styleContextStack, 'noWrap', defaults.noWrap);
-            item.opacity = StyleContextStack.getStyleProperty(item, styleContextStack, 'opacity', 1);
+            item.opacity = StyleContextStack.getStyleProperty(item, styleContextStack, 'opacity', defaults.opacity);
 
 			let lineHeight = StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeight', defaults.lineHeight);
 

@@ -18,6 +18,7 @@ export default {
 	preserveTrailingSpaces: false,
 	alignment: 'left',
 	leadingIndent: 0,
+	opacity: 1,
 
 	pageSize: 'A4',
 	pageMargins: 40,
