@@ -182,10 +182,15 @@ Document.prototype.getBuffer = function (cb, options) {
 };
 
 module.exports = {
-	createPdf: function (docDefinition) {
+	createPdf: function (docDefinition, tableLayouts, fonts, vfs) {
 		if (!canCreatePdf()) {
 			throw 'Your browser does not provide the level of support needed';
 		}
-		return new Document(docDefinition, global.pdfMake.tableLayouts, global.pdfMake.fonts, global.pdfMake.vfs);
+		return new Document(
+			docDefinition,
+			tableLayouts || global.pdfMake.tableLayouts,
+			fonts || global.pdfMake.fonts,
+			vfs || global.pdfMake.vfs
+		);
 	}
 };
