@@ -85,11 +85,22 @@ function PdfPrinter(fontDescriptors) {
 PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	options = options || {};
 
-	var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
-	var compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
-	var bufferPages = options.bufferPages || false;
+	docDefinition.version = docDefinition.version || '1.3';
+	docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 
-	this.pdfKitDoc = PdfKitEngine.createPdfDocument({size: [pageSize.width, pageSize.height], bufferPages: bufferPages, autoFirstPage: false, compress: compressPdf});
+	var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
+
+	var pdfOptions = {
+		size: [pageSize.width, pageSize.height],
+		pdfVersion: docDefinition.version,
+		compress: docDefinition.compress,
+		userPassword: docDefinition.userPassword,
+		ownerPassword: docDefinition.ownerPassword,
+		permissions: docDefinition.permissions,
+		bufferPages: options.bufferPages || false,
+		autoFirstPage: false
+	};
+	this.pdfKitDoc = PdfKitEngine.createPdfDocument(pdfOptions);
 	setMetadata(docDefinition, this.pdfKitDoc);
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
