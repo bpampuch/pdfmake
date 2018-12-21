@@ -242,6 +242,11 @@ exclude: [ /node_modules/, /pdfmake.js$/ ]
 (see [issue](https://github.com/bpampuch/pdfmake/issues/1100#issuecomment-336728521))
 
 
+#### Units
+
+All numbers are in points (pt) unit (sometimes labeled as PDF/PostScript points).
+
+
 #### Server side
 
 see [examples](https://github.com/bpampuch/pdfmake/tree/master/examples) and [dev-playground server script](https://github.com/bpampuch/pdfmake/blob/master/dev-playground/server.js)
@@ -294,10 +299,26 @@ var docDefinition = {
     }
   }
 };
-
 ```
 
 To have a deeper understanding of styling in pdfmake, style inheritance and local-style-overrides check STYLES1, STYLES2 and STYLES3 examples in playground.
+
+#### Default style
+
+And is also possible define default style:
+
+```js
+var docDefinition = {
+  content: [
+    'Text styled by default style'
+  ],
+
+  defaultStyle: {
+    fontSize: 15,
+    bold: true
+  }
+};
+```
 
 #### Columns
 
@@ -397,6 +418,17 @@ pdfMake.tableLayouts = {
 
 // download the PDF
 pdfMake.createPdf(docDefinition).download();
+```
+
+Alternatively, you can pass the tableLayouts directly to `createPdf` without changing the global value:
+
+```js
+pdfMake.createPdf(docDefinition, tableLayouts).download();
+
+// The full signature of createPdf looks like this.
+// tableLayouts, fonts and vfs are all optional - falsy values will cause
+// pdfMake.tableLayouts, pdfMake.fonts or pdfMake.vfs to be used.
+pdfMake.createPdf(docDefinition, tableLayouts, fonts, vfs)
 ```
 
 All concepts related to tables are covered by TABLES example in playground.

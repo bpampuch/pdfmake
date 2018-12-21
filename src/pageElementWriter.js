@@ -1,5 +1,6 @@
 'use strict';
 
+var isUndefined = require('./helpers').isUndefined;
 var ElementWriter = require('./elementWriter');
 
 /**
@@ -72,20 +73,22 @@ PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
 
 	var nextPage = this.writer.context.moveToNextPage(pageOrientation);
 
-	if (nextPage.newPageCreated) {
-		this.repeatables.forEach(function (rep) {
+	// moveToNextPage is called multiple times for table, because is called for each column
+	// and repeatables are inserted only in the first time. If columns are used, is needed
+	// call for table in first column and then for table in the second column (is other repeatables).
+	this.repeatables.forEach(function (rep) {
+		if (isUndefined(rep.insertedOnPages[this.writer.context.page])) {
+			rep.insertedOnPages[this.writer.context.page] = true;
 			this.writer.addFragment(rep, true);
-		}, this);
-	} else {
-		this.repeatables.forEach(function (rep) {
+		} else {
 			this.writer.context.moveDown(rep.height);
-		}, this);
-	}
+		}
+	}, this);
 
 	this.writer.tracker.emit('pageChanged', {
 		prevPage: nextPage.prevPage,
 		prevY: nextPage.prevY,
-		y: nextPage.y
+		y: this.writer.context.y
 	});
 };
 
@@ -144,6 +147,8 @@ PageElementWriter.prototype.currentBlockToRepeatable = function () {
 
 	//TODO: vectors can influence height in some situations
 	rep.height = unbreakableContext.y;
+
+	rep.insertedOnPages = [];
 
 	return rep;
 };

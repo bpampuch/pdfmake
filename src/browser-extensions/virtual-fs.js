@@ -2,15 +2,15 @@
 
 function VirtualFileSystem() {
 	this.fileSystem = {};
-	this.baseSystem = {};
+	this.dataSystem = {};
 }
 
 VirtualFileSystem.prototype.readFileSync = function (filename) {
 	filename = fixFilename(filename);
 
-	var base64content = this.baseSystem[filename];
-	if (base64content) {
-		return new Buffer(base64content, 'base64');
+	var dataContent = this.dataSystem[filename];
+	if (dataContent) {
+		return new Buffer(dataContent, typeof dataContent === 'string' ? 'base64' : undefined);
 	}
 
 	var content = this.fileSystem[filename];
@@ -26,7 +26,7 @@ VirtualFileSystem.prototype.writeFileSync = function (filename, content) {
 };
 
 VirtualFileSystem.prototype.bindFS = function (data) {
-	this.baseSystem = data || {};
+	this.dataSystem = data || {};
 };
 
 

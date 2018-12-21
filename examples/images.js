@@ -47,6 +47,12 @@ var docDefinition = {
 			image: 'bee',
 			width: 200
 		},
+		'and opacity is supported:',
+		{
+			image: 'fonts/sampleImage.jpg',
+			width: 150,
+			opacity: 0.5
+		},
 	],
 	images: {
 		bee: testImageDataUrl

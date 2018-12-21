@@ -4,6 +4,7 @@ var isString = require('./helpers').isString;
 var isNumber = require('./helpers').isNumber;
 var isObject = require('./helpers').isObject;
 var isArray = require('./helpers').isArray;
+var isUndefined = require('./helpers').isUndefined;
 var LineBreaker = require('linebreak');
 
 var LEADING = /^(\s)+/g;
@@ -151,6 +152,28 @@ function normalizeTextArray(array, styleContextStack) {
 		}, []);
 	}
 
+	function getOneWord(index, words, noWrap) {
+		if (isUndefined(words[index])) {
+			return null;
+		}
+
+		if (words[index].lineEnd) {
+			return null;
+		}
+
+		var word = words[index].text;
+
+		if (noWrap) {
+			var tmpWords = splitWords(normalizeString(word), false);
+			if (isUndefined(tmpWords[tmpWords.length - 1])) {
+				return null;
+			}
+			word = tmpWords[tmpWords.length - 1].text;
+		}
+
+		return word;
+	}
+
 	var results = [];
 
 	if (!isArray(array)) {
@@ -159,6 +182,7 @@ function normalizeTextArray(array, styleContextStack) {
 
 	array = flatten(array);
 
+	var lastWord = null;
 	for (var i = 0, l = array.length; i < l; i++) {
 		var item = array[i];
 		var style = null;
@@ -166,10 +190,22 @@ function normalizeTextArray(array, styleContextStack) {
 
 		var noWrap = getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 		if (isObject(item)) {
+			if (item._textRef && item._textRef._textNodeRef.text) {
+				item.text = item._textRef._textNodeRef.text;
+			}
 			words = splitWords(normalizeString(item.text), noWrap);
 			style = copyStyle(item);
 		} else {
 			words = splitWords(normalizeString(item), noWrap);
+		}
+
+		if (lastWord && words.length) {
+			var firstWord = getOneWord(0, words, noWrap);
+
+			var wrapWords = splitWords(normalizeString(lastWord + firstWord), false);
+			if (wrapWords.length === 1) {
+				results[results.length - 1].noNewLine = true;
+			}
 		}
 
 		for (var i2 = 0, l2 = words.length; i2 < l2; i2++) {
@@ -184,6 +220,11 @@ function normalizeTextArray(array, styleContextStack) {
 			copyStyle(style, result);
 
 			results.push(result);
+		}
+
+		lastWord = null;
+		if (i + 1 < l) {
+			lastWord = getOneWord(words.length - 1, words, noWrap);
 		}
 	}
 
@@ -254,24 +295,25 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var linkToPage = getStyleProperty(item, styleContextStack, 'linkToPage', null);
 		var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', null);
 		var preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
+		var preserveTrailingSpaces = getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
+		var opacity = getStyleProperty(item, styleContextStack, 'opacity', 1);
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
 		item.width = widthOfString(item.text, font, fontSize, characterSpacing, fontFeatures);
 		item.height = font.lineHeight(fontSize) * lineHeight;
 
-		var leadingSpaces = item.text.match(LEADING);
-
 		if (!item.leadingCut) {
 			item.leadingCut = 0;
 		}
 
-		if (leadingSpaces && !preserveLeadingSpaces) {
+		var leadingSpaces;
+		if (!preserveLeadingSpaces && (leadingSpaces = item.text.match(LEADING))) {
 			item.leadingCut += widthOfString(leadingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
 		}
 
-		var trailingSpaces = item.text.match(TRAILING);
-		if (trailingSpaces) {
+		var trailingSpaces;
+		if (!preserveTrailingSpaces && (trailingSpaces = item.text.match(TRAILING))) {
 			item.trailingCut = widthOfString(trailingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
 		} else {
 			item.trailingCut = 0;
@@ -290,6 +332,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.link = link;
 		item.linkToPage = linkToPage;
 		item.noWrap = noWrap;
+		item.opacity = opacity;
 	});
 
 	return normalized;

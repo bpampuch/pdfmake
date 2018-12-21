@@ -3,7 +3,7 @@ var StringReplacePlugin = require("string-replace-webpack-plugin");
 var webpack = require('webpack');
 var pkg = require('./package.json');
 
-var banner = '/*! ' + pkg.name + ' v' + pkg.version + ', @license ' + pkg.license + ', @link ' + pkg.homepage + ' */\n';
+var banner = '/*! ' + pkg.name + ' v' + pkg.version + ', @license ' + pkg.license + ', @link ' + pkg.homepage + ' */';
 
 module.exports = {
 	entry: {
@@ -23,7 +23,7 @@ module.exports = {
 	module: {
 		rules: [
 			{test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
-			{test: /pdfkit[/\\]js[/\\]mixins[/\\]fonts.js$/, loader: StringReplacePlugin.replace({
+			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
 					replacements: [
 						{
 							pattern: 'return this.font(\'Helvetica\');',
@@ -39,17 +39,6 @@ module.exports = {
 							pattern: /fs\./g,
 							replacement: function () {
 								return 'require(\'fs\').';
-							}
-						}
-					]})
-			},
-			/* hack for Web Worker support */
-			{test: /FileSaver.js$/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: 'doc.createElementNS("http://www.w3.org/1999/xhtml", "a")',
-							replacement: function () {
-								return 'doc ? doc.createElementNS("http://www.w3.org/1999/xhtml", "a") : []';
 							}
 						}
 					]})
