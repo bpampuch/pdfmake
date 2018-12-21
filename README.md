@@ -420,6 +420,17 @@ pdfMake.tableLayouts = {
 pdfMake.createPdf(docDefinition).download();
 ```
 
+Alternatively, you can pass the tableLayouts directly to `createPdf` without changing the global value:
+
+```js
+pdfMake.createPdf(docDefinition, tableLayouts).download();
+
+// The full signature of createPdf looks like this.
+// tableLayouts, fonts and vfs are all optional - falsy values will cause
+// pdfMake.tableLayouts, pdfMake.fonts or pdfMake.vfs to be used.
+pdfMake.createPdf(docDefinition, tableLayouts, fonts, vfs)
+```
+
 All concepts related to tables are covered by TABLES example in playground.
 
 #### Lists
