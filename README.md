@@ -249,6 +249,8 @@ All numbers are in points (pt) unit (sometimes labeled as PDF/PostScript points)
 
 #### Server side
 
+Supported Node.js versions: 6 LTS, 8 LTS, 10 LTS
+
 Example:
 ```js
 // Define font files
