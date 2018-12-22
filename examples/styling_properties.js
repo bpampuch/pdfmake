@@ -35,7 +35,13 @@ var docDefinition = {
 		{text: 'Hello World 1234567890', fontFeatures: ['smcp']},
 		{text: 'Hello World 1234567890', fontFeatures: ['c2sc']},
 		{text: 'Hello World 1234567890', fontFeatures: ['onum']},
-		{text: 'Hello World 1234567890', fontFeatures: ['onum', 'c2sc']}
+		{text: 'Hello World 1234567890', fontFeatures: ['onum', 'c2sc']},
+		'\n\nText opacity:',
+		{text: 'Hello World', opacity: 0.8},
+		{text: 'Hello World', opacity: 0.6},
+		{text: 'Hello World', opacity: 0.4},
+		{text: 'Hello World', opacity: 0.2},
+		{text: 'Hello World', opacity: 0.1},     
 	]
 };
 
