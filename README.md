@@ -249,7 +249,10 @@ All numbers are in points (pt) unit (sometimes labeled as PDF/PostScript points)
 
 #### Server side
 
-Supported Node.js versions: 6 LTS, 8 LTS, 10 LTS
+Supported Node.js versions:
+* 6 LTS (End-of-life: April 2019)
+* 8 LTS
+* 10 LTS
 
 Example:
 ```js
