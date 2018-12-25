@@ -23,6 +23,10 @@ Client/server side PDF printing in pure JavaScript
 
 Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) and [examples](https://github.com/bpampuch/pdfmake/tree/master/examples).
 
+### New documentation: https://pdfmake.github.io/docs/
+
+For discussion about new documentation use [issue #1238](https://github.com/bpampuch/pdfmake/issues/1238)
+
 ### Features
 
 * line-wrapping,
