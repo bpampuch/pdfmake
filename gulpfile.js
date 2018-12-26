@@ -1,4 +1,5 @@
 var gulp = require('gulp');
+var babel = require("gulp-babel");
 var webpack = require('webpack');
 var mocha = require('gulp-spawn-mocha');
 var eslint = require('gulp-eslint');
@@ -13,7 +14,25 @@ var CI = process.env.CI === 'true';
 var vfsBefore = "this.pdfMake = this.pdfMake || {}; this.pdfMake.vfs = ";
 var vfsAfter = ";";
 
-gulp.task('build', function (callback) {
+gulp.task('buildNode', function () {
+	return gulp.src('src/**/*.js')
+		.pipe(babel({
+			presets: [
+				[
+					"@babel/preset-env",
+					{
+						targets: {
+							node: "6.10"
+						},
+						loose: true
+					}
+				]
+			]
+		}))
+		.pipe(gulp.dest("js"));
+});
+
+gulp.task('buildBrowser', function (callback) {
 	webpack(require('./webpack.config.js'), function (err, stats) {
 		if (err) {
 			throw new PluginError("webpack", err);
@@ -66,5 +85,7 @@ gulp.task('watch', function () {
 	gulp.watch('./src/**', ['test', 'build']);
 	gulp.watch('./tests/**', ['test']);
 });
+
+gulp.task('build', gulp.series('buildNode', 'buildBrowser'));
 
 gulp.task('default', gulp.series(/*'lint',*/ 'test', 'build', 'buildFonts'));
