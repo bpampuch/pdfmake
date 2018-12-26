@@ -372,7 +372,7 @@ class LayoutBuilder {
 			} else if (node.qr) {
 				self.processQr(node);
 			} else if (!node._span) {
-				throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+				throw `Unrecognized document structure: ${JSON.stringify(node, fontStringify)}`;
 			}
 
 			if (absPosition || relPosition) {
@@ -516,7 +516,7 @@ class LayoutBuilder {
 			if (column.rowSpan && column.rowSpan > 1) {
 				var endingRow = tableRow + column.rowSpan - 1;
 				if (endingRow >= tableBody.length) {
-					throw 'Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count';
+					throw `Row span for column ${columnIndex} (with indexes starting from 0) exceeded row count`;
 				}
 				return tableBody[endingRow][columnIndex];
 			}

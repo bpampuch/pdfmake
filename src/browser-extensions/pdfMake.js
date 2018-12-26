@@ -147,7 +147,7 @@ class Document {
 			throw 'getDataUrl is an async method and needs a callback argument';
 		}
 		this.getBuffer(function (buffer) {
-			cb('data:application/pdf;base64,' + buffer.toString('base64'));
+			cb(`data:application/pdf;base64,${buffer.toString('base64')}`);
 		}, options);
 	}
 

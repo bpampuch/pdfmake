@@ -298,7 +298,7 @@ function pageSize2widthAndHeight(pageSize) {
 	if (isString(pageSize)) {
 		var size = sizes[pageSize.toUpperCase()];
 		if (!size) {
-			throw 'Page size ' + pageSize + ' not recognized';
+			throw `Page size ${pageSize} not recognized`;
 		}
 		return {width: size[0], height: size[1]};
 	}
@@ -551,7 +551,7 @@ function renderImage(image, x, y, pdfKitDoc) {
 
 function beginClip(rect, pdfKitDoc) {
 	pdfKitDoc.save();
-	pdfKitDoc.addContent('' + rect.x + ' ' + rect.y + ' ' + rect.width + ' ' + rect.height + ' re');
+	pdfKitDoc.addContent(`${rect.x} ${rect.y} ${rect.width} ${rect.height} re`);
 	pdfKitDoc.clip();
 }
 

@@ -70,7 +70,7 @@ class DocMeasure {
 			} else if (node.qr) {
 				return extendMargins(self.measureQr(node));
 			} else {
-				throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+				throw `Unrecognized document structure: ${JSON.stringify(node, fontStringify)}`;
 			}
 		});
 
@@ -155,7 +155,7 @@ class DocMeasure {
 
 	convertIfBase64Image(node) {
 		if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) {
-			var label = '$$pdfmake$$' + this.autoImageIndex++;
+			var label = `$$pdfmake$$${this.autoImageIndex++}`;
 			this.images[label] = node.image;
 			node.image = label;
 		}
@@ -424,7 +424,7 @@ class DocMeasure {
 				}
 				counterText += ' ';
 			} else {
-				counterText += separator + ' ';
+				counterText += `${separator} `;
 			}
 		}
 
