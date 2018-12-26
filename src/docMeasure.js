@@ -591,37 +591,37 @@ class DocMeasure {
 			}
 
 			var defaultLayout = {
-				hLineWidth: function (i, node) {
+				hLineWidth(i, node) {
 					return 1;
 				},
-				vLineWidth: function (i, node) {
+				vLineWidth(i, node) {
 					return 1;
 				},
-				hLineColor: function (i, node) {
+				hLineColor(i, node) {
 					return 'black';
 				},
-				vLineColor: function (i, node) {
+				vLineColor(i, node) {
 					return 'black';
 				},
-				hLineStyle: function (i, node) {
+				hLineStyle(i, node) {
 					return null;
 				},
-				vLineStyle: function (i, node) {
+				vLineStyle(i, node) {
 					return null;
 				},
-				paddingLeft: function (i, node) {
+				paddingLeft(i, node) {
 					return 4;
 				},
-				paddingRight: function (i, node) {
+				paddingRight(i, node) {
 					return 4;
 				},
-				paddingTop: function (i, node) {
+				paddingTop(i, node) {
 					return 2;
 				},
-				paddingBottom: function (i, node) {
+				paddingBottom(i, node) {
 					return 2;
 				},
-				fillColor: function (i, node) {
+				fillColor(i, node) {
 					return null;
 				},
 				defaultBorder: true

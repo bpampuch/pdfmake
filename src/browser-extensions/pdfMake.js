@@ -181,7 +181,7 @@ function canCreatePdf() {
 }
 
 module.exports = {
-	createPdf: function (docDefinition, tableLayouts, fonts, vfs) {
+	createPdf(docDefinition, tableLayouts, fonts, vfs) {
 		if (!canCreatePdf()) {
 			throw 'Your browser does not provide the level of support needed';
 		}
