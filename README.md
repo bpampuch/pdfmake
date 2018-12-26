@@ -856,17 +856,6 @@ yarn
 yarn run build
 ```
 
-## Coming soon
-Hmmm... let me know what you need ;)
-
-The goal is quite simple - make pdfmake useful for a looooooooot of people and help building responsive HTML5 apps with printing support.
-
-There's one thing on the roadmap for v2 (no deadline however) - make the library hackable, so you can write plugins to:
-* extend document-definition-model (with things like { chart: ... }),
-* add syntax translators (like the provided [ ... ] -> { stack: [ ... ] }
-* build custom DSLs on top of document-definition-model (this is actually possible at the moment).
-
-
 ## License
 MIT
 
