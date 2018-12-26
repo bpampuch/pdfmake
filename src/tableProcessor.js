@@ -164,7 +164,8 @@ class TableProcessor {
 				// draw only if the current cell requires a top border or the cell in the
 				// row above requires a bottom border
 				if (shouldDrawLine && i < l - 1) {
-					var topBorder = false, bottomBorder = false;
+					var topBorder = false;
+					var bottomBorder = false;
 
 					// the current cell
 					if (lineIndex < body.length) {
@@ -241,7 +242,8 @@ class TableProcessor {
 	}
 
 	endRow(rowIndex, writer, pageBreaks) {
-		var l, i;
+		var l;
+		var i;
 		var self = this;
 		writer.tracker.stopTracking('pageChanged', this.rowCallback);
 		writer.context().moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
@@ -294,7 +296,8 @@ class TableProcessor {
 			}
 
 			for (i = 0, l = xs.length; i < l; i++) {
-				var leftBorder = false, rightBorder = false;
+				var leftBorder = false;
+				var rightBorder = false;
 				var colIndex = xs[i].index;
 
 				// the current cell

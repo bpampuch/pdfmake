@@ -18,8 +18,8 @@ class ElementWriter {
 	addLine(line, dontUpdateContextPosition, index) {
 		var height = line.getHeight();
 		var context = this.context;
-		var page = context.getCurrentPage(),
-			position = this.getCurrentPositionOnPage();
+		var page = context.getCurrentPage();
+		var position = this.getCurrentPositionOnPage();
 
 		if (context.availableHeight < height || !page) {
 			return false;
@@ -80,8 +80,8 @@ class ElementWriter {
 
 	addImage(image, index) {
 		var context = this.context;
-		var page = context.getCurrentPage(),
-			position = this.getCurrentPositionOnPage();
+		var page = context.getCurrentPage();
+		var position = this.getCurrentPositionOnPage();
 
 		if (!page || (image.absolutePosition === undefined && context.availableHeight < image._height && page.items.length > 0)) {
 			return false;
@@ -108,8 +108,8 @@ class ElementWriter {
 
 	addQr(qr, index) {
 		var context = this.context;
-		var page = context.getCurrentPage(),
-			position = this.getCurrentPositionOnPage();
+		var page = context.getCurrentPage();
+		var position = this.getCurrentPositionOnPage();
 
 		if (!page || (qr.absolutePosition === undefined && context.availableHeight < qr._height)) {
 			return false;
@@ -175,8 +175,8 @@ class ElementWriter {
 
 	addVector(vector, ignoreContextX, ignoreContextY, index) {
 		var context = this.context;
-		var page = context.getCurrentPage(),
-			position = this.getCurrentPositionOnPage();
+		var page = context.getCurrentPage();
+		var position = this.getCurrentPositionOnPage();
 
 		if (page) {
 			offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);

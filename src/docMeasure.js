@@ -367,7 +367,9 @@ class DocMeasure {
 				return counter.toString();
 			}
 			var num = counter;
-			var lookup = {M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1}, roman = '', i;
+			var lookup = {M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1};
+			var roman = '';
+			var i;
 			for (i in lookup) {
 				while (num >= lookup[i]) {
 					roman += i;
@@ -529,7 +531,10 @@ class DocMeasure {
 		node._offsets = getOffsets(node._layout);
 
 		var colSpans = [];
-		var col, row, cols, rows;
+		var col;
+		var row;
+		var cols;
+		var rows;
 
 		for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
 			var c = node.table.widths[col];
@@ -651,7 +656,8 @@ class DocMeasure {
 		}
 
 		function extendWidthsForColSpans() {
-			var q, j;
+			var q;
+			var j;
 
 			for (var i = 0, l = colSpans.length; i < l; i++) {
 				var span = colSpans[i];
@@ -734,7 +740,8 @@ class DocMeasure {
 	}
 
 	measureCanvas(node) {
-		var w = 0, h = 0;
+		var w = 0;
+		var h = 0;
 
 		for (var i = 0, l = node.canvas.length; i < l; i++) {
 			var vector = node.canvas[i];
