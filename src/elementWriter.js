@@ -167,7 +167,7 @@ class ElementWriter {
 				break;
 		}
 		if (offset) {
-			node.canvas.forEach(function (vector) {
+			node.canvas.forEach(vector => {
 				offsetVector(vector, offset, 0);
 			});
 		}
@@ -215,7 +215,7 @@ class ElementWriter {
 			return false;
 		}
 
-		block.items.forEach(function (item) {
+		block.items.forEach(item => {
 			switch (item.type) {
 				case 'line':
 					var l = cloneLine(item.item);

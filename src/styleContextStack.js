@@ -25,7 +25,7 @@ class StyleContextStack {
 	clone() {
 		var stack = new StyleContextStack(this.styleDictionary, this.defaultStyle);
 
-		this.styleOverrides.forEach(function (item) {
+		this.styleOverrides.forEach(item => {
 			stack.styleOverrides.push(item);
 		});
 
@@ -112,7 +112,7 @@ class StyleContextStack {
 		var styleOverrideObject = {};
 		var pushStyleOverrideObject = false;
 
-		styleProperties.forEach(function (key) {
+		styleProperties.forEach(key => {
 			if (!isUndefined(item[key]) && !isNull(item[key])) {
 				styleOverrideObject[key] = item[key];
 				pushStyleOverrideObject = true;

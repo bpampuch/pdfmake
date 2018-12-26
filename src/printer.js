@@ -181,8 +181,8 @@ function calculatePageHeight(pages, margins) {
 	var fixedMargins = fixPageMargins(margins || 40);
 	var height = fixedMargins.top;
 
-	pages.forEach(function (page) {
-		page.items.forEach(function (item) {
+	pages.forEach(page => {
+		page.items.forEach(item => {
 			var bottomPosition = getBottomPosition(item);
 			if (bottomPosition > height) {
 				height = bottomPosition;
@@ -322,13 +322,13 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 
 	var totalItems = 0;
 	if (progressCallback) {
-		pages.forEach(function (page) {
+		pages.forEach(page => {
 			totalItems += page.items.length;
 		});
 	}
 
 	var renderedItems = 0;
-	progressCallback = progressCallback || function () {};
+	progressCallback = progressCallback || (() => {});
 
 	for (var i = 0; i < pages.length; i++) {
 		if (i > 0) {

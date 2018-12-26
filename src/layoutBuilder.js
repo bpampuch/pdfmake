@@ -16,7 +16,7 @@ var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
 
 function addAll(target, otherArray) {
-	otherArray.forEach(function (item) {
+	otherArray.forEach(item => {
 		target.push(item);
 	});
 }
@@ -70,25 +70,25 @@ class LayoutBuilder {
 				return false;
 			}
 
-			linearNodeList = linearNodeList.filter(function (node) {
+			linearNodeList = linearNodeList.filter(node => {
 				return node.positions.length > 0;
 			});
 
-			linearNodeList.forEach(function (node) {
+			linearNodeList.forEach(node => {
 				var nodeInfo = {};
 				[
 					'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
 					'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
 					'width', 'height'
-				].forEach(function (key) {
+				].forEach(key => {
 					if (node[key] !== undefined) {
 						nodeInfo[key] = node[key];
 					}
 				});
 				nodeInfo.startPosition = node.positions[0];
-				nodeInfo.pageNumbers = node.positions.map(function (node) {
+				nodeInfo.pageNumbers = node.positions.map(node => {
 					return node.pageNumber;
-				}).filter(function (element, position, array) {
+				}).filter((element, position, array) => {
 					return array.indexOf(element) === position;
 				});
 				nodeInfo.pages = pages.length;
@@ -97,33 +97,33 @@ class LayoutBuilder {
 				node.nodeInfo = nodeInfo;
 			});
 
-			return linearNodeList.some(function (node, index, followingNodeList) {
+			return linearNodeList.some((node, index, followingNodeList) => {
 				if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 					node.pageBreakCalculated = true;
 					var pageNumber = node.nodeInfo.pageNumbers[0];
 
-					var followingNodesOnPage = followingNodeList.slice(index + 1).filter(function (node0) {
+					var followingNodesOnPage = followingNodeList.slice(index + 1).filter(node0 => {
 						return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
 					});
 
-					var nodesOnNextPage = followingNodeList.slice(index + 1).filter(function (node0) {
+					var nodesOnNextPage = followingNodeList.slice(index + 1).filter(node0 => {
 						return node0.nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1;
 					});
 
-					var previousNodesOnPage = followingNodeList.slice(0, index).filter(function (node0) {
+					var previousNodesOnPage = followingNodeList.slice(0, index).filter(node0 => {
 						return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
 					});
 
 					if (
 						pageBreakBeforeFct(
 							node.nodeInfo,
-							followingNodesOnPage.map(function (node) {
+							followingNodesOnPage.map(node => {
 								return node.nodeInfo;
 							}),
-							nodesOnNextPage.map(function (node) {
+							nodesOnNextPage.map(node => {
 								return node.nodeInfo;
 							}),
-							previousNodesOnPage.map(function (node) {
+							previousNodesOnPage.map(node => {
 								return node.nodeInfo;
 							}))) {
 						node.pageBreak = 'before';
@@ -138,7 +138,7 @@ class LayoutBuilder {
 
 
 		function resetXYs(result) {
-			result.linearNodeList.forEach(function (node) {
+			result.linearNodeList.forEach(node => {
 				node.resetXY();
 			});
 		}
@@ -173,7 +173,7 @@ class LayoutBuilder {
 			new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
 		var _this = this;
-		this.writer.context().tracker.startTracking('pageAdded', function () {
+		this.writer.context().tracker.startTracking('pageAdded', () => {
 			_this.addBackground(background);
 		});
 
@@ -188,7 +188,7 @@ class LayoutBuilder {
 	}
 
 	addBackground(background) {
-		var backgroundGetter = isFunction(background) ? background : function () {
+		var backgroundGetter = isFunction(background) ? background : () => {
 			return background;
 		};
 
@@ -207,7 +207,7 @@ class LayoutBuilder {
 	}
 
 	addStaticRepeatable(headerOrFooter, sizeFunction) {
-		this.addDynamicRepeatable(function () {
+		this.addDynamicRepeatable(() => {
 			return JSON.parse(JSON.stringify(headerOrFooter)); // copy to new object
 		}, sizeFunction);
 	}
@@ -231,7 +231,7 @@ class LayoutBuilder {
 	}
 
 	addHeadersAndFooters(header, footer) {
-		var headerSizeFct = function (pageSize, pageMargins) {
+		var headerSizeFct = (pageSize, pageMargins) => {
 			return {
 				x: 0,
 				y: 0,
@@ -240,7 +240,7 @@ class LayoutBuilder {
 			};
 		};
 
-		var footerSizeFct = function (pageSize, pageMargins) {
+		var footerSizeFct = (pageSize, pageMargins) => {
 			return {
 				x: 0,
 				y: pageSize.height - pageMargins.bottom,
@@ -333,7 +333,7 @@ class LayoutBuilder {
 		this.linearNodeList.push(node);
 		decorateNode(node);
 
-		applyMargins(function () {
+		applyMargins(() => {
 			var unbreakable = node.unbreakable;
 			if (unbreakable) {
 				self.writer.beginUnbreakableBlock();
@@ -412,7 +412,7 @@ class LayoutBuilder {
 	// vertical container
 	processVerticalContainer(node) {
 		var self = this;
-		node.stack.forEach(function (item) {
+		node.stack.forEach(item => {
 			self.processNode(item);
 			addAll(node.positions, item.positions);
 
@@ -455,7 +455,7 @@ class LayoutBuilder {
 		var self = this;
 		var pageBreaks = [], positions = [];
 
-		this.tracker.auto('pageChanged', storePageBreakData, function () {
+		this.tracker.auto('pageChanged', storePageBreakData, () => {
 			widths = widths || columns;
 
 			self.writer.context().beginColumnGroup();
@@ -534,8 +534,8 @@ class LayoutBuilder {
 		this.writer.context().addMargin(gapSize.width);
 
 		var nextMarker;
-		this.tracker.auto('lineAdded', addMarkerToFirstLeaf, function () {
-			items.forEach(function (item) {
+		this.tracker.auto('lineAdded', addMarkerToFirstLeaf, () => {
+			items.forEach(item => {
 				nextMarker = item.listMarker;
 				self.processNode(item);
 				addAll(node.positions, item.positions);
@@ -733,9 +733,9 @@ function decorateNode(node) {
 	node.positions = [];
 
 	if (isArray(node.canvas)) {
-		node.canvas.forEach(function (vector) {
+		node.canvas.forEach(vector => {
 			var x = vector.x, y = vector.y, x1 = vector.x1, y1 = vector.y1, x2 = vector.x2, y2 = vector.y2;
-			vector.resetXY = function () {
+			vector.resetXY = () => {
 				vector.x = x;
 				vector.y = y;
 				vector.x1 = x1;
@@ -746,11 +746,11 @@ function decorateNode(node) {
 		});
 	}
 
-	node.resetXY = function () {
+	node.resetXY = () => {
 		node.x = x;
 		node.y = y;
 		if (isArray(node.canvas)) {
-			node.canvas.forEach(function (vector) {
+			node.canvas.forEach(vector => {
 				vector.resetXY();
 			});
 		}

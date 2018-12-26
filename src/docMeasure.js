@@ -45,7 +45,7 @@ class DocMeasure {
 
 		var self = this;
 
-		return this.styleStack.auto(node, function () {
+		return this.styleStack.auto(node, () => {
 			// TODO: refactor + rethink whether this is the proper way to handle margins
 			node._margin = getNodeMargin(node);
 
@@ -575,7 +575,7 @@ class DocMeasure {
 		return node;
 
 		function measureCb(_this, data) {
-			return function () {
+			return () => {
 				if (isObject(data)) {
 					data.fillColor = _this.styleStack.getProperty('fillColor');
 				}
