@@ -23,6 +23,7 @@ module.exports = {
 	module: {
 		rules: [
 			{
+				enforce: 'pre', 
 				test: /\.js$/,
 				exclude: /(node_modules|bower_components)/,
 				use: {
@@ -40,6 +41,7 @@ module.exports = {
 					}
 				}
 			},
+			{test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
 			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
 					replacements: [
 						{
@@ -59,8 +61,7 @@ module.exports = {
 							}
 						}
 					]})
-			},
-			{enforce: 'post', test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
+			},			
 			{enforce: 'post', test: /fontkit[/\\]index.js$/, loader: "transform-loader?brfs"},
 			{enforce: 'post', test: /unicode-properties[/\\]index.js$/, loader: "transform-loader?brfs"},
 			{enforce: 'post', test: /linebreak[/\\]src[/\\]linebreaker.js/, loader: "transform-loader?brfs"}
