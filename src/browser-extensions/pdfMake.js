@@ -1,5 +1,3 @@
-'use strict';
-
 var PdfPrinter = require('../printer');
 var isFunction = require('../helpers').isFunction;
 var FileSaver = require('file-saver');

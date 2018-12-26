@@ -1,5 +1,3 @@
-'use strict';
-
 var isString = require('./helpers').isString;
 var isArray = require('./helpers').isArray;
 var isUndefined = require('./helpers').isUndefined;

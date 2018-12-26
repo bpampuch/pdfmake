@@ -1,5 +1,3 @@
-'use strict';
-
 var isUndefined = require('./helpers').isUndefined;
 var ElementWriter = require('./elementWriter');
 

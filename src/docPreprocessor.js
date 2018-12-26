@@ -1,5 +1,3 @@
-'use strict';
-
 var isString = require('./helpers').isString;
 var isNumber = require('./helpers').isNumber;
 var isBoolean = require('./helpers').isBoolean;

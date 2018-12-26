@@ -1,5 +1,3 @@
-'use strict';
-
 class TraversalTracker {
 	constructor() {
 		this.events = {};

@@ -1,6 +1,4 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
-'use strict';
-
 var PdfKitEngine = require('./pdfKitEngine');
 var FontProvider = require('./fontProvider');
 var LayoutBuilder = require('./layoutBuilder');

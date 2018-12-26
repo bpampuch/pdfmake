@@ -1,5 +1,3 @@
-'use strict';
-
 var isArray = require('./helpers').isArray;
 
 function typeName(bold, italics) {

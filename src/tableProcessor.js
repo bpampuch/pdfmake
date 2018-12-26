@@ -1,5 +1,3 @@
-'use strict';
-
 var ColumnCalculator = require('./columnCalculator');
 var isFunction = require('./helpers').isFunction;
 

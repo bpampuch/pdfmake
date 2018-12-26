@@ -1,5 +1,3 @@
-'use strict';
-
 var TraversalTracker = require('./traversalTracker');
 var isString = require('./helpers').isString;
 

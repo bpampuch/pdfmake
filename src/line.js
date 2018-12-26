@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Creates an instance of Line
  *

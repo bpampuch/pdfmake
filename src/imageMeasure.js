@@ -1,5 +1,3 @@
-'use strict';
-
 class ImageMeasure {
 	constructor(pdfKitDoc, imageDictionary) {
 		this.pdfKitDoc = pdfKitDoc;
