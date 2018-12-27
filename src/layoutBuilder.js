@@ -65,9 +65,7 @@ class LayoutBuilder {
 				return false;
 			}
 
-			linearNodeList = linearNodeList.filter(node => {
-				return node.positions.length > 0;
-			});
+			linearNodeList = linearNodeList.filter(node => node.positions.length > 0);
 
 			linearNodeList.forEach(node => {
 				var nodeInfo = {};
@@ -81,11 +79,7 @@ class LayoutBuilder {
 					}
 				});
 				nodeInfo.startPosition = node.positions[0];
-				nodeInfo.pageNumbers = node.positions.map(node => {
-					return node.pageNumber;
-				}).filter((element, position, array) => {
-					return array.indexOf(element) === position;
-				});
+				nodeInfo.pageNumbers = node.positions.map(node => node.pageNumber).filter((element, position, array) => array.indexOf(element) === position);
 				nodeInfo.pages = pages.length;
 				nodeInfo.stack = isArray(node.stack);
 
@@ -97,30 +91,18 @@ class LayoutBuilder {
 					node.pageBreakCalculated = true;
 					var pageNumber = node.nodeInfo.pageNumbers[0];
 
-					var followingNodesOnPage = followingNodeList.slice(index + 1).filter(node0 => {
-						return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
-					});
+					var followingNodesOnPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1);
 
-					var nodesOnNextPage = followingNodeList.slice(index + 1).filter(node0 => {
-						return node0.nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1;
-					});
+					var nodesOnNextPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1);
 
-					var previousNodesOnPage = followingNodeList.slice(0, index).filter(node0 => {
-						return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
-					});
+					var previousNodesOnPage = followingNodeList.slice(0, index).filter(node0 => node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1);
 
 					if (
 						pageBreakBeforeFct(
 							node.nodeInfo,
-							followingNodesOnPage.map(node => {
-								return node.nodeInfo;
-							}),
-							nodesOnNextPage.map(node => {
-								return node.nodeInfo;
-							}),
-							previousNodesOnPage.map(node => {
-								return node.nodeInfo;
-							}))) {
+							followingNodesOnPage.map(node => node.nodeInfo),
+							nodesOnNextPage.map(node => node.nodeInfo),
+							previousNodesOnPage.map(node => node.nodeInfo))) {
 						node.pageBreak = 'before';
 						return true;
 					}
@@ -183,9 +165,7 @@ class LayoutBuilder {
 	}
 
 	addBackground(background) {
-		var backgroundGetter = isFunction(background) ? background : () => {
-			return background;
-		};
+		var backgroundGetter = isFunction(background) ? background : () => background;
 
 		var context = this.writer.context();
 		var pageSize = context.getCurrentPage().pageSize;
@@ -202,9 +182,8 @@ class LayoutBuilder {
 	}
 
 	addStaticRepeatable(headerOrFooter, sizeFunction) {
-		this.addDynamicRepeatable(() => {
-			return JSON.parse(JSON.stringify(headerOrFooter)); // copy to new object
-		}, sizeFunction);
+		this.addDynamicRepeatable(() => // copy to new object
+        JSON.parse(JSON.stringify(headerOrFooter)), sizeFunction);
 	}
 
 	addDynamicRepeatable(nodeGetter, sizeFunction) {
@@ -226,23 +205,19 @@ class LayoutBuilder {
 	}
 
 	addHeadersAndFooters(header, footer) {
-		var headerSizeFct = (pageSize, pageMargins) => {
-			return {
-				x: 0,
-				y: 0,
-				width: pageSize.width,
-				height: pageMargins.top
-			};
-		};
+		var headerSizeFct = (pageSize, pageMargins) => ({
+            x: 0,
+            y: 0,
+            width: pageSize.width,
+            height: pageMargins.top
+        });
 
-		var footerSizeFct = (pageSize, pageMargins) => {
-			return {
-				x: 0,
-				y: pageSize.height - pageMargins.bottom,
-				width: pageSize.width,
-				height: pageMargins.bottom
-			};
-		};
+		var footerSizeFct = (pageSize, pageMargins) => ({
+            x: 0,
+            y: pageSize.height - pageMargins.bottom,
+            width: pageSize.width,
+            height: pageMargins.bottom
+        });
 
 		if (isFunction(header)) {
 			this.addDynamicRepeatable(header, headerSizeFct);

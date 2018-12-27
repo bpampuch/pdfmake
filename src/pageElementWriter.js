@@ -19,21 +19,15 @@ class PageElementWriter {
 	}
 
 	addLine(line, dontUpdateContextPosition, index) {
-		return fitOnPage(this, self => {
-			return self.writer.addLine(line, dontUpdateContextPosition, index);
-		});
+		return fitOnPage(this, self => self.writer.addLine(line, dontUpdateContextPosition, index));
 	}
 
 	addImage(image, index) {
-		return fitOnPage(this, self => {
-			return self.writer.addImage(image, index);
-		});
+		return fitOnPage(this, self => self.writer.addImage(image, index));
 	}
 
 	addQr(qr, index) {
-		return fitOnPage(this, self => {
-			return self.writer.addQr(qr, index);
-		});
+		return fitOnPage(this, self => self.writer.addQr(qr, index));
 	}
 
 	addVector(vector, ignoreContextX, ignoreContextY, index) {
