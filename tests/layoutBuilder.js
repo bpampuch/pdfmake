@@ -3,15 +3,15 @@
 var assert = require('assert');
 var sinon = require('sinon');
 
-var Line = require('../src/line');
-var LayoutBuilder = require('../src/layoutBuilder');
-var StyleContextStack = require('../src/styleContextStack');
-var ColumnCalculator = require('../src/columnCalculator');
-var PageElementWriter = require('../src/pageElementWriter');
-var DocumentContext = require('../src/documentContext');
-var DocMeasure = require('../src/docMeasure');
+var Line = require('../js/line').default;
+var LayoutBuilder = require('../js/layoutBuilder').default;
+var StyleContextStack = require('../js/styleContextStack').default;
+var ColumnCalculator = require('../js/columnCalculator').default;
+var PageElementWriter = require('../js/pageElementWriter').default;
+var DocumentContext = require('../js/documentContext').default;
+var DocMeasure = require('../js/docMeasure').default;
 
-// var TraversalTracker = require('../src/traversalTracker');
+// var TraversalTracker = require('../js/traversalTracker').default;
 
 // var TextTools = pdfMake.TextTools;
 // var Block = pdfMake.Block;

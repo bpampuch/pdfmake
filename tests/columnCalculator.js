@@ -2,7 +2,7 @@
 
 var assert = require('assert');
 
-var ColumnCalculator = require('../src/columnCalculator');
+var ColumnCalculator = require('../js/columnCalculator').default;
 
 describe('ColumnCalculator', function () {
 	describe('buildColumnWidths', function () {

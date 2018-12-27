@@ -3,9 +3,9 @@
 var assert = require('assert');
 var rewire = require("rewire");
 
-var TextTools = rewire('../src/textTools');
-var StyleContextStack = require('../src/styleContextStack');
-var DocPreprocessor = require('../src/docPreprocessor');
+var TextTools = rewire('../js/textTools');
+var StyleContextStack = require('../js/styleContextStack').default;
+var DocPreprocessor = require('../js/docPreprocessor').default;
 
 var sampleTestProvider = {
 	provideFont: function (familyName, bold, italics) {
@@ -22,7 +22,7 @@ var sampleTestProvider = {
 
 
 
-var textTools = new TextTools(sampleTestProvider);
+var textTools = new TextTools.default(sampleTestProvider);
 var docPreprocessor = new DocPreprocessor();
 
 describe('TextTools', function () {

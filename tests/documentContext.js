@@ -3,13 +3,13 @@
 var assert = require('assert');
 var rewire = require("rewire");
 
-var DocumentContext = rewire('../src/documentContext');
+var DocumentContext = rewire('../js/documentContext');
 
 describe('DocumentContext', function () {
 	var pc;
 
 	beforeEach(function () {
-		pc = new DocumentContext({width: 400, height: 800, orientation: 'portrait'}, {left: 40, right: 40, top: 60, bottom: 60});
+		pc = new DocumentContext.default({width: 400, height: 800, orientation: 'portrait'}, {left: 40, right: 40, top: 60, bottom: 60});
 		// pc.addPage();
 	});
 

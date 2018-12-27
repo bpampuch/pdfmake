@@ -88,4 +88,4 @@ gulp.task('watch', function () {
 
 gulp.task('build', gulp.series('buildNode', 'buildBrowser'));
 
-gulp.task('default', gulp.series(/*'lint',*/ 'test', 'build', 'buildFonts'));
+gulp.task('default', gulp.series(/*'lint',*/ 'build', 'buildFonts', 'test'));

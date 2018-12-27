@@ -3,8 +3,8 @@
 var assert = require('assert');
 var sinon = require('sinon');
 
-var PdfKitEngine = require('../src/pdfKitEngine');
-var Printer = require('../src/printer.js');
+var PdfKitEngine = require('../js/pdfKitEngine').default;
+var Printer = require('../js/printer.js').default;
 
 var PdfKit = PdfKitEngine.getEngineInstance();
 

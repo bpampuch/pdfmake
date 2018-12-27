@@ -1,10 +1,10 @@
 'use strict';
 
-var PdfKitEngine = require('../../src/pdfKitEngine');
-var sizes = require('../../src/standardPageSizes');
-var LayoutBuilder = require('../../src/layoutBuilder');
-var FontProvider = require('../../src/fontProvider');
-var ImageMeasure = require('../../src/imageMeasure');
+var PdfKitEngine = require('../../js/pdfKitEngine').default;
+var sizes = require('../../js/standardPageSizes').default;
+var LayoutBuilder = require('../../js/layoutBuilder').default;
+var FontProvider = require('../../js/fontProvider').default;
+var ImageMeasure = require('../../js/imageMeasure').default;
 
 function IntegrationTestHelper() {
 	this.MARGINS = {top: 40, left: 40, right: 40, bottom: 40};

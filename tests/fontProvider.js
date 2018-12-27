@@ -2,7 +2,7 @@
 
 var assert = require('assert');
 
-var FontProvider = require('../src/fontProvider');
+var FontProvider = require('../js/fontProvider').default;
 
 describe('FontProvider', function () {
 	var fontProvider, fontDefinitions, pdfDoc;
