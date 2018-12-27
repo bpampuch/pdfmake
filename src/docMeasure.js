@@ -4,7 +4,7 @@ import TextTools from './textTools';
 
 import StyleContextStack from './styleContextStack';
 import ColumnCalculator from './columnCalculator';
-import {isString, isNumber, isObject, isArray, fontStringify, pack} from './helpers';
+import { isString, isNumber, isObject, isArray, fontStringify, pack } from './helpers';
 import qrEncoder from './qrEnc.js';
 
 /**
@@ -231,8 +231,8 @@ class DocMeasure {
 			var lineStyle = item._textNodeRef.tocStyle || textStyle;
 			var lineMargin = item._textNodeRef.tocMargin || textMargin;
 			body.push([
-				{text: item._textNodeRef.text, alignment: 'left', style: lineStyle, margin: lineMargin},
-				{text: '00000', alignment: 'right', _tocItemRef: item._nodeRef, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]}
+				{ text: item._textNodeRef.text, alignment: 'left', style: lineStyle, margin: lineMargin },
+				{ text: '00000', alignment: 'right', _tocItemRef: item._nodeRef, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
 			]);
 		}
 
@@ -277,13 +277,13 @@ class DocMeasure {
 			var radius = gapSize.fontSize / 6;
 			return {
 				canvas: [{
-						x: radius,
-						y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
-						r1: radius,
-						r2: radius,
-						type: 'ellipse',
-						color: color
-					}]
+					x: radius,
+					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+					r1: radius,
+					r2: radius,
+					type: 'ellipse',
+					color: color
+				}]
 			};
 		}
 
@@ -292,13 +292,13 @@ class DocMeasure {
 			var size = gapSize.fontSize / 3;
 			return {
 				canvas: [{
-						x: 0,
-						y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - (gapSize.fontSize / 3) - (size / 2),
-						h: size,
-						w: size,
-						type: 'rect',
-						color: color
-					}]
+					x: 0,
+					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - (gapSize.fontSize / 3) - (size / 2),
+					h: size,
+					w: size,
+					type: 'rect',
+					color: color
+				}]
 			};
 		}
 
@@ -307,13 +307,13 @@ class DocMeasure {
 			var radius = gapSize.fontSize / 6;
 			return {
 				canvas: [{
-						x: radius,
-						y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
-						r1: radius,
-						r2: radius,
-						type: 'ellipse',
-						lineColor: color
-					}]
+					x: radius,
+					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+					r1: radius,
+					r2: radius,
+					type: 'ellipse',
+					lineColor: color
+				}]
 			};
 		}
 
@@ -363,7 +363,7 @@ class DocMeasure {
 				return counter.toString();
 			}
 			var num = counter;
-			var lookup = {M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1};
+			var lookup = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
 			var roman = '';
 			var i;
 			for (i in lookup) {
@@ -426,13 +426,13 @@ class DocMeasure {
 			}
 		}
 
-		var textArray = {text: counterText};
+		var textArray = { text: counterText };
 		var markerColor = styleStack.getProperty('markerColor');
 		if (markerColor) {
 			textArray.color = markerColor;
 		}
 
-		return {_inlines: this.textTools.buildInlines(textArray, styleStack).items};
+		return { _inlines: this.textTools.buildInlines(textArray, styleStack).items };
 	}
 
 	measureUnorderedList(node) {
@@ -553,7 +553,7 @@ class DocMeasure {
 
 					if (data.colSpan && data.colSpan > 1) {
 						markSpans(rowData, col, data.colSpan);
-						colSpans.push({col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth});
+						colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
 					} else {
 						c._minWidth = Math.max(c._minWidth, data._minWidth);
 						c._maxWidth = Math.max(c._maxWidth, data._maxWidth);
@@ -681,7 +681,7 @@ class DocMeasure {
 		}
 
 		function getMinMax(col, span, offsets) {
-			var result = {minWidth: 0, maxWidth: 0};
+			var result = { minWidth: 0, maxWidth: 0 };
 
 			for (var i = 0; i < span; i++) {
 				result.minWidth += node.table.widths[col + i]._minWidth + (i ? offsets.offsets[col + i] : 0);
@@ -729,7 +729,7 @@ class DocMeasure {
 			for (var i = 0, l = node.table.widths.length; i < l; i++) {
 				var w = node.table.widths[i];
 				if (isNumber(w) || isString(w)) {
-					node.table.widths[i] = {width: w};
+					node.table.widths[i] = { width: w };
 				}
 			}
 		}

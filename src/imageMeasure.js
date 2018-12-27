@@ -23,7 +23,7 @@ class ImageMeasure {
 			image = this.pdfKitDoc._imageRegistry[src];
 		}
 
-		return {width: image.width, height: image.height};
+		return { width: image.width, height: image.height };
 
 		function realImageSrc(src) {
 			var img = that.imageDictionary[src];

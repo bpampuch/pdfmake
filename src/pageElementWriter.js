@@ -1,4 +1,4 @@
-import {isUndefined} from './helpers';
+import { isUndefined } from './helpers';
 import ElementWriter from './elementWriter';
 
 /**
@@ -121,7 +121,7 @@ class PageElementWriter {
 
 	currentBlockToRepeatable() {
 		var unbreakableContext = this.writer.context;
-		var rep = {items: []};
+		var rep = { items: [] };
 
 		unbreakableContext.pages[0].items.forEach(item => {
 			rep.items.push(item);

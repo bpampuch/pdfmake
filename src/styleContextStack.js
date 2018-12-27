@@ -1,4 +1,4 @@
-import {isString, isArray, isUndefined, isNull} from './helpers';
+import { isString, isArray, isUndefined, isNull } from './helpers';
 
 /**
  * Creates an instance of StyleContextStack used for style inheritance and style overrides
@@ -99,12 +99,12 @@ class StyleContextStack {
 			'noWrap',
 			'markerColor',
 			'leadingIndent'
-				//'tableCellPadding'
-				// 'cellBorder',
-				// 'headerCellBorder',
-				// 'oddRowCellBorder',
-				// 'evenRowCellBorder',
-				// 'tableBorder'
+			//'tableCellPadding'
+			// 'cellBorder',
+			// 'headerCellBorder',
+			// 'oddRowCellBorder',
+			// 'evenRowCellBorder',
+			// 'tableBorder'
 		];
 		var styleOverrideObject = {};
 		var pushStyleOverrideObject = false;

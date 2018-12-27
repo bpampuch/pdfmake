@@ -1,4 +1,4 @@
-import {isArray} from './helpers';
+import { isArray } from './helpers';
 
 function typeName(bold, italics) {
 	var type = 'normal';

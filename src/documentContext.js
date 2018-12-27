@@ -1,5 +1,5 @@
 import TraversalTracker from './traversalTracker';
-import {isString} from './helpers';
+import { isString } from './helpers';
 
 /**
  * Creates an instance of DocumentContext - a store for current x, y positions and available width/height.
@@ -213,7 +213,7 @@ class DocumentContext {
 	}
 
 	addPage(pageSize) {
-		var page = {items: [], pageSize: pageSize};
+		var page = { items: [], pageSize: pageSize };
 		this.pages.push(page);
 		this.backgroundLength.push(0);
 		this.page = this.pages.length - 1;

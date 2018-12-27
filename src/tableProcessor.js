@@ -1,5 +1,5 @@
 import ColumnCalculator from './columnCalculator';
-import {isFunction} from './helpers';
+import { isFunction } from './helpers';
 
 class TableProcessor {
 	constructor(tableNode) {
@@ -50,7 +50,7 @@ class TableProcessor {
 			var x = 0;
 			var lastWidth = 0;
 
-			rsd.push({left: 0, rowSpan: 0});
+			rsd.push({ left: 0, rowSpan: 0 });
 
 			for (var i = 0, l = self.tableNode.table.body[0].length; i < l; i++) {
 				var paddings = self.layout.paddingLeft(i, self.tableNode) + self.layout.paddingRight(i, self.tableNode);
@@ -58,7 +58,7 @@ class TableProcessor {
 				lastWidth = paddings + lBorder + self.tableNode.table.widths[i]._calcWidth;
 				rsd[rsd.length - 1].width = lastWidth;
 				x += lastWidth;
-				rsd.push({left: x, rowSpan: 0, width: 0});
+				rsd.push({ left: x, rowSpan: 0, width: 0 });
 			}
 
 			return rsd;
@@ -183,7 +183,7 @@ class TableProcessor {
 				}
 
 				if (!currentLine && shouldDrawLine) {
-					currentLine = {left: data.left, width: 0};
+					currentLine = { left: data.left, width: 0 };
 				}
 
 				if (shouldDrawLine) {
@@ -269,7 +269,7 @@ class TableProcessor {
 				var pageBreak = pageBreaks[i];
 				ys[ys.length - 1].y1 = pageBreak.prevY;
 
-				ys.push({y0: pageBreak.y, page: pageBreak.prevPage + 1});
+				ys.push({ y0: pageBreak.y, page: pageBreak.prevPage + 1 });
 			}
 		}
 
@@ -399,7 +399,7 @@ class TableProcessor {
 
 			for (var i = 0, l = self.tableNode.table.body[rowIndex].length; i < l; i++) {
 				if (!cols) {
-					result.push({x: self.rowSpanData[i].left, index: i});
+					result.push({ x: self.rowSpanData[i].left, index: i });
 
 					var item = self.tableNode.table.body[rowIndex][i];
 					cols = (item._colSpan || item.colSpan || 0);
@@ -409,7 +409,7 @@ class TableProcessor {
 				}
 			}
 
-			result.push({x: self.rowSpanData[self.rowSpanData.length - 1].left, index: self.rowSpanData.length - 1});
+			result.push({ x: self.rowSpanData[self.rowSpanData.length - 1].left, index: self.rowSpanData.length - 1 });
 
 			return result;
 		}

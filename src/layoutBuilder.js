@@ -6,7 +6,7 @@ import PageElementWriter from './pageElementWriter';
 import ColumnCalculator from './columnCalculator';
 import TableProcessor from './tableProcessor';
 import Line from './line';
-import {isString, isArray, pack, offsetVector, fontStringify, isFunction} from './helpers';
+import { isString, isArray, pack, offsetVector, fontStringify, isFunction } from './helpers';
 import TextTools from './textTools';
 import StyleContextStack from './styleContextStack';
 
@@ -161,7 +161,7 @@ class LayoutBuilder {
 			this.addWatermark(watermark, fontProvider, defaultStyle);
 		}
 
-		return {pages: this.writer.context().pages, linearNodeList: this.linearNodeList};
+		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
 	}
 
 	addBackground(background) {
@@ -183,7 +183,7 @@ class LayoutBuilder {
 
 	addStaticRepeatable(headerOrFooter, sizeFunction) {
 		this.addDynamicRepeatable(() => // copy to new object
-        JSON.parse(JSON.stringify(headerOrFooter)), sizeFunction);
+			JSON.parse(JSON.stringify(headerOrFooter)), sizeFunction);
 	}
 
 	addDynamicRepeatable(nodeGetter, sizeFunction) {
@@ -206,18 +206,18 @@ class LayoutBuilder {
 
 	addHeadersAndFooters(header, footer) {
 		var headerSizeFct = (pageSize, pageMargins) => ({
-            x: 0,
-            y: 0,
-            width: pageSize.width,
-            height: pageMargins.top
-        });
+			x: 0,
+			y: 0,
+			width: pageSize.width,
+			height: pageMargins.top
+		});
 
 		var footerSizeFct = (pageSize, pageMargins) => ({
-            x: 0,
-            y: pageSize.height - pageMargins.bottom,
-            width: pageSize.width,
-            height: pageMargins.bottom
-        });
+			x: 0,
+			y: pageSize.height - pageMargins.bottom,
+			width: pageSize.width,
+			height: pageMargins.bottom
+		});
 
 		if (isFunction(header)) {
 			this.addDynamicRepeatable(header, headerSizeFct);
@@ -234,7 +234,7 @@ class LayoutBuilder {
 
 	addWatermark(watermark, fontProvider, defaultStyle) {
 		if (isString(watermark)) {
-			watermark = {'text': watermark};
+			watermark = { 'text': watermark };
 		}
 
 		if (!watermark.text) { // empty watermark text
@@ -265,7 +265,7 @@ class LayoutBuilder {
 			var height = pageSize.height;
 			var targetWidth = Math.sqrt(width * width + height * height) * 0.8; /* page diagonal * sample factor */
 			var textTools = new TextTools(fontProvider);
-			var styleContextStack = new StyleContextStack(null, {font: watermark.font, bold: watermark.bold, italics: watermark.italics});
+			var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
 			var size;
 
 			/**
@@ -293,7 +293,7 @@ class LayoutBuilder {
 			/*
 			 End binary search
 			 */
-			return {size: size, fontSize: c};
+			return { size: size, fontSize: c };
 		}
 	}
 
@@ -455,7 +455,7 @@ class LayoutBuilder {
 			self.writer.context().completeColumnGroup(height);
 		});
 
-		return {pageBreaks: pageBreaks, positions: positions};
+		return { pageBreaks: pageBreaks, positions: positions };
 
 		function storePageBreakData(data) {
 			var pageDesc;

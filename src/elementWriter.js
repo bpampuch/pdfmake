@@ -1,5 +1,5 @@
 import Line from './line';
-import {isNumber, pack, offsetVector} from './helpers';
+import { isNumber, pack, offsetVector } from './helpers';
 import DocumentContext from './documentContext';
 
 /**
@@ -191,7 +191,7 @@ class ElementWriter {
 		var page = ctx.getCurrentPage();
 		page.items.push({
 			type: 'beginClip',
-			item: {x: ctx.x, y: ctx.y, width: width, height: height}
+			item: { x: ctx.x, y: ctx.y, width: width, height: height }
 		});
 		return true;
 	}
@@ -272,7 +272,7 @@ class ElementWriter {
 		}
 
 		if (isNumber(contextOrWidth)) {
-			contextOrWidth = new DocumentContext({width: contextOrWidth, height: height}, {left: 0, right: 0, top: 0, bottom: 0});
+			contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
 		}
 
 		this.contextStack.push(this.context);
