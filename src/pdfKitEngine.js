@@ -8,8 +8,7 @@ function getEngineInstance() {
 	return PdfKit;
 }
 
-function createPdfDocument(options) {
-	options = options || {};
+function createPdfDocument(options = {}) {
 	return new PdfKit(options);
 }
 

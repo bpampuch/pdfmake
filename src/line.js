@@ -23,9 +23,7 @@ class Line {
 		return y;
 	}
 
-	hasEnoughSpaceForInline(inline, nextInlines) {
-		nextInlines = nextInlines || [];
-
+	hasEnoughSpaceForInline(inline, nextInlines = []) {
 		if (this.inlines.length === 0) {
 			return true;
 		}

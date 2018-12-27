@@ -45,9 +45,7 @@ class StyleContextStack {
 	 * @param {Number} howMany - optional number of elements to be popped (if not specified,
 	 *                           one element will be removed from the stack)
 	 */
-	pop(howMany) {
-		howMany = howMany || 1;
-
+	pop(howMany = 1) {
 		while (howMany-- > 0) {
 			this.styleOverrides.pop();
 		}

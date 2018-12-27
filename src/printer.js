@@ -77,9 +77,7 @@ class PdfPrinter {
 	 *
 	 * @return {Object} a pdfKit document object which can be saved or encode to data-url
 	 */
-	createPdfKitDocument(docDefinition, options) {
-		options = options || {};
-
+	createPdfKitDocument(docDefinition, options = {}) {
 		var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 		var compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 		var bufferPages = options.bufferPages || false;

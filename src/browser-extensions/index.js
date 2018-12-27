@@ -21,8 +21,7 @@ class Document {
 		this.vfs = vfs;
 	}
 
-	_createDoc(options, callback) {
-		options = options || {};
+	_createDoc(options = {}, callback) {
 		if (this.tableLayouts) {
 			options.tableLayouts = this.tableLayouts;
 		}
@@ -102,16 +101,14 @@ class Document {
 		}
 	}
 
-	open(options, win) {
-		options = options || {};
+	open(options = {}, win) {
 		options.autoPrint = false;
 		win = win || null;
 
 		this._openPdf(options, win);
 	}
 
-	print(options, win) {
-		options = options || {};
+	print(options = {}, win) {
 		options.autoPrint = true;
 		win = win || null;
 
