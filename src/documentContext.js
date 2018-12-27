@@ -1,5 +1,5 @@
-var TraversalTracker = require('./traversalTracker');
-var isString = require('./helpers').isString;
+import TraversalTracker from './traversalTracker';
+import {isString} from './helpers';
 
 /**
  * Creates an instance of DocumentContext - a store for current x, y positions and available width/height.
@@ -301,4 +301,4 @@ function bottomMostContext(c1, c2) {
 	};
 }
 
-module.exports = DocumentContext;
+export default DocumentContext;

@@ -1,4 +1,4 @@
-var isArray = require('./helpers').isArray;
+import {isArray} from './helpers';
 
 function groupDecorations(line) {
 	var groups = [];
@@ -145,7 +145,7 @@ function drawBackground(line, x, y, pdfKitDoc) {
 	}
 }
 
-module.exports = {
+export default {
 	drawBackground: drawBackground,
 	drawDecorations: drawDecorations
 };

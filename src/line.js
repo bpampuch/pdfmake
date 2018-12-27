@@ -88,4 +88,4 @@ class Line {
 	}
 }
 
-module.exports = Line;
+export default Line;

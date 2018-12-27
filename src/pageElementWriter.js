@@ -1,5 +1,5 @@
-var isUndefined = require('./helpers').isUndefined;
-var ElementWriter = require('./elementWriter');
+import {isUndefined} from './helpers';
+import ElementWriter from './elementWriter';
 
 /**
  * Creates an instance of PageElementWriter - an extended ElementWriter
@@ -165,4 +165,4 @@ function fitOnPage(self, addFct) {
 	return position;
 }
 
-module.exports = PageElementWriter;
+export default PageElementWriter;

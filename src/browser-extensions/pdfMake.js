@@ -1,6 +1,6 @@
-var PdfPrinter = require('../printer');
-var isFunction = require('../helpers').isFunction;
-var FileSaver = require('file-saver');
+import PdfPrinter from '../printer';
+import {isFunction} from '../helpers';
+import FileSaver from 'file-saver';
 var saveAs = FileSaver.saveAs;
 
 var defaultClientFonts = {
@@ -180,7 +180,7 @@ function canCreatePdf() {
 	return true;
 }
 
-module.exports = {
+export default {
 	createPdf(docDefinition, tableLayouts, fonts, vfs) {
 		if (!canCreatePdf()) {
 			throw 'Your browser does not provide the level of support needed';

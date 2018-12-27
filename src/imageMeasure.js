@@ -42,4 +42,4 @@ class ImageMeasure {
 	}
 }
 
-module.exports = ImageMeasure;
+export default ImageMeasure;

@@ -1,4 +1,4 @@
-var isArray = require('./helpers').isArray;
+import {isArray} from './helpers';
 
 function typeName(bold, italics) {
 	var type = 'normal';
@@ -52,4 +52,4 @@ class FontProvider {
 	}
 }
 
-module.exports = FontProvider;
+export default FontProvider;

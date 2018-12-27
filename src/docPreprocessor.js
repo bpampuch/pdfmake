@@ -1,9 +1,9 @@
-var isString = require('./helpers').isString;
-var isNumber = require('./helpers').isNumber;
-var isBoolean = require('./helpers').isBoolean;
-var isArray = require('./helpers').isArray;
-var isUndefined = require('./helpers').isUndefined;
-var fontStringify = require('./helpers').fontStringify;
+import {isString} from './helpers';
+import {isNumber} from './helpers';
+import {isBoolean} from './helpers';
+import {isArray} from './helpers';
+import {isUndefined} from './helpers';
+import {fontStringify} from './helpers';
 
 class DocPreprocessor {
 	preprocessDocument(docStructure) {
@@ -239,4 +239,4 @@ class DocPreprocessor {
 	}
 }
 
-module.exports = DocPreprocessor;
+export default DocPreprocessor;

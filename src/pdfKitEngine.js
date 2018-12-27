@@ -13,7 +13,7 @@ function createPdfDocument(options) {
 	return new PdfKit(options);
 }
 
-module.exports = {
+export default {
 	getEngineInstance: getEngineInstance,
 	createPdfDocument: createPdfDocument
 };

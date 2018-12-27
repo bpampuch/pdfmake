@@ -77,7 +77,7 @@ function fontStringify(key, val) {
 	return val;
 }
 
-module.exports = {
+export default {
 	isString: isString,
 	isNumber: isNumber,
 	isBoolean: isBoolean,

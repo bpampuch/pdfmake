@@ -1,8 +1,8 @@
-var Line = require('./line');
-var isNumber = require('./helpers').isNumber;
-var pack = require('./helpers').pack;
-var offsetVector = require('./helpers').offsetVector;
-var DocumentContext = require('./documentContext');
+import Line from './line';
+import {isNumber} from './helpers';
+import {pack} from './helpers';
+import {offsetVector} from './helpers';
+import DocumentContext from './documentContext';
 
 /**
  * Creates an instance of ElementWriter - a line/vector writer, which adds
@@ -311,4 +311,4 @@ function cloneLine(line) {
 }
 
 
-module.exports = ElementWriter;
+export default ElementWriter;
