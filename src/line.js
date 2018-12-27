@@ -1,11 +1,7 @@
-/**
- * Creates an instance of Line
- *
- * @constructor
- * @this {Line}
- * @param {Number} Maximum width this line can have
- */
 class Line {
+	/**
+	 * @param {Number} Maximum width this line can have
+	 */
 	constructor(maxWidth) {
 		this.maxWidth = maxWidth;
 		this.leadingCut = 0;

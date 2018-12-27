@@ -5,12 +5,13 @@ var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;
 
 /**
- * Creates an instance of TextTools - text measurement utility
- *
- * @constructor
- * @param {PDFDocument} pdfDocument
+ * Text measurement utility
  */
 class TextTools {
+
+	/**
+	 * @param {PDFDocument} pdfDocument
+	 */
 	constructor(pdfDocument) {
 		this.pdfDocument = pdfDocument;
 	}
@@ -21,7 +22,7 @@ class TextTools {
 	 * and their min/max widths
 	 * @param  {Object} textArray - an array of inline-definition-objects (or strings)
 	 * @param  {Object} styleContextStack current style stack
-	 * @return {Object}				   collection of inlines, minWidth, maxWidth
+	 * @return {Object} collection of inlines, minWidth, maxWidth
 	 */
 	buildInlines(textArray, styleContextStack) {
 		var measured = measure(this.pdfDocument, textArray, styleContextStack);

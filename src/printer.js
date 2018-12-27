@@ -6,13 +6,8 @@ import textDecorator from './textDecorator';
 import TextTools from './textTools';
 import { isFunction, isString, isNumber, isBoolean, isArray, isUndefined } from './helpers';
 
-////////////////////////////////////////
-// PdfPrinter
-
 /**
- * @class Creates an instance of a PdfPrinter which turns document definition into a pdf
- *
- * @param {Object} fontDescriptors font definition dictionary
+ * Printer which turns document definition into a pdf
  *
  * @example
  * var fontDescriptors = {
@@ -27,6 +22,10 @@ import { isFunction, isString, isNumber, isBoolean, isArray, isUndefined } from 
  * var printer = new PdfPrinter(fontDescriptors);
  */
 class PdfPrinter {
+
+	/**
+	 * @param {Object} fontDescriptors font definition dictionary
+	 */
 	constructor(fontDescriptors) {
 		this.fontDescriptors = fontDescriptors;
 	}

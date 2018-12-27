@@ -3,8 +3,8 @@ import { isNumber, pack, offsetVector } from './helpers';
 import DocumentContext from './documentContext';
 
 /**
- * Creates an instance of ElementWriter - a line/vector writer, which adds
- * elements to current page and sets their positions based on the context
+ * A line/vector writer, which adds elements to current page and sets
+ * their positions based on the context
  */
 class ElementWriter {
 	constructor(context, tracker) {

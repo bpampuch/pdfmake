@@ -2,7 +2,7 @@ import TraversalTracker from './traversalTracker';
 import { isString } from './helpers';
 
 /**
- * Creates an instance of DocumentContext - a store for current x, y positions and available width/height.
+ * A store for current x, y positions and available width/height.
  * It facilitates column divisions and vertical sync
  */
 class DocumentContext {

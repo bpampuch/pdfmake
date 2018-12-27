@@ -17,13 +17,14 @@ function addAll(target, otherArray) {
 }
 
 /**
- * Creates an instance of LayoutBuilder - layout engine which turns document-definition-object
- * into a set of pages, lines, inlines and vectors ready to be rendered into a PDF
- *
- * @param {Object} pageSize - an object defining page width and height
- * @param {Object} pageMargins - an object defining top, left, right and bottom margins
+ * Layout engine which turns document-definition-object into a set of pages, lines, inlines
+ * and vectors ready to be rendered into a PDF
  */
 class LayoutBuilder {
+	/**
+   * @param {Object} pageSize - an object defining page width and height
+   * @param {Object} pageMargins - an object defining top, left, right and bottom margins
+	 */
 	constructor(pageSize, pageMargins) {
 		this.pageSize = pageSize;
 		this.pageMargins = pageMargins;

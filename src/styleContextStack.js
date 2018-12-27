@@ -1,14 +1,14 @@
 import { isString, isArray, isUndefined, isNull } from './helpers';
 
 /**
- * Creates an instance of StyleContextStack used for style inheritance and style overrides
- *
- * @constructor
- * @this {StyleContextStack}
- * @param {Object} named styles dictionary
- * @param {Object} optional default style definition
+ * Used for style inheritance and style overrides
  */
 class StyleContextStack {
+
+	/**
+	 * @param {Object} styleDictionary named styles dictionary
+	 * @param {Object} defaultStyle optional default style definition
+	 */
 	constructor(styleDictionary, defaultStyle) {
 		this.defaultStyle = defaultStyle || {};
 		this.styleDictionary = styleDictionary;
@@ -125,7 +125,7 @@ class StyleContextStack {
 	 * Automatically pushes elements onto the stack, using autopush based on item,
 	 * executes callback and then pops elements back. Returns value returned by callback
 	 *
-	 * @param  {Object}   item - an object with optional style property and/or style overrides
+	 * @param  {Object} item - an object with optional style property and/or style overrides
 	 * @param  {Function} function to be called between autopush and pop
 	 * @return {Object} value returned by callback
 	 */

@@ -125,7 +125,6 @@ function measureMinMax(columns) {
 
 /**
  * Calculates column widths
- * @private
  */
 export default {
 	buildColumnWidths: buildColumnWidths,

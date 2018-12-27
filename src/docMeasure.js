@@ -1,15 +1,11 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 
 import TextTools from './textTools';
-
 import StyleContextStack from './styleContextStack';
 import ColumnCalculator from './columnCalculator';
 import { isString, isNumber, isObject, isArray, fontStringify, pack } from './helpers';
 import qrEncoder from './qrEnc.js';
 
-/**
- * @private
- */
 class DocMeasure {
 	constructor(
 		pdfDocument,
@@ -28,7 +24,7 @@ class DocMeasure {
 	 * Measures all nodes and sets min/max-width properties required for the second
 	 * layout-pass.
 	 * @param  {Object} docStructure document-definition-object
-	 * @return {Object}			  document-measurement-object
+	 * @return {Object} document-measurement-object
 	 */
 	measureDocument(docStructure) {
 		return this.measureNode(docStructure);

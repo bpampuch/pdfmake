@@ -2,8 +2,7 @@ import { isUndefined } from './helpers';
 import ElementWriter from './elementWriter';
 
 /**
- * Creates an instance of PageElementWriter - an extended ElementWriter
- * which can handle:
+ * An extended ElementWriter which can handle:
  * - page-breaks (it adds new pages when there's not enough space left),
  * - repeatable fragments (like table-headers, which are repeated everytime
  *                         a page-break occurs)
