@@ -7,7 +7,7 @@ var fonts = {
 	}
 };
 
-var PdfPrinter = require('../src/printer');
+var PdfPrinter = require('../js/index');
 var printer = new PdfPrinter(fonts);
 var fs = require('fs');
 
