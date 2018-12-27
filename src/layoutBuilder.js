@@ -24,11 +24,10 @@ function addAll(target, otherArray) {
  * @param {Object} pageMargins - an object defining top, left, right and bottom margins
  */
 class LayoutBuilder {
-	constructor(pageSize, pageMargins, imageMeasure) {
+	constructor(pageSize, pageMargins) {
 		this.pageSize = pageSize;
 		this.pageMargins = pageMargins;
 		this.tracker = new TraversalTracker();
-		this.imageMeasure = imageMeasure;
 		this.tableLayouts = {};
 	}
 
@@ -54,7 +53,6 @@ class LayoutBuilder {
 		background,
 		header,
 		footer,
-		images,
 		watermark,
 		pageBreakBeforeFct
 	) {
@@ -111,7 +109,7 @@ class LayoutBuilder {
 		}
 
 		this.docPreprocessor = new DocPreprocessor();
-		this.docMeasure = new DocMeasure(pdfDocument, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
+		this.docMeasure = new DocMeasure(pdfDocument, styleDictionary, defaultStyle, this.tableLayouts);
 
 
 		function resetXYs(result) {
@@ -120,10 +118,10 @@ class LayoutBuilder {
 			});
 		}
 
-		var result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+		var result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
 		while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
 			resetXYs(result);
-			result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+			result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
 		}
 
 		return result.pages;
@@ -137,7 +135,6 @@ class LayoutBuilder {
 		background,
 		header,
 		footer,
-		images,
 		watermark,
 		pageBreakBeforeFct
 	) {

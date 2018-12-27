@@ -51,4 +51,10 @@ describe('PDFDocument', function () {
 		});
 
 	});
+
+	describe('provideImage', function () {
+
+		// TODO
+
+	});
 });

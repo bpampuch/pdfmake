@@ -15,15 +15,12 @@ class DocMeasure {
 		pdfDocument,
 		styleDictionary,
 		defaultStyle,
-		imageMeasure,
-		tableLayouts,
-		images
+		tableLayouts
 	) {
+		this.pdfDocument = pdfDocument;
 		this.textTools = new TextTools(pdfDocument);
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
-		this.imageMeasure = imageMeasure;
 		this.tableLayouts = tableLayouts;
-		this.images = images;
 		this.autoImageIndex = 1;
 	}
 
@@ -150,19 +147,18 @@ class DocMeasure {
 	}
 
 	convertIfBase64Image(node) {
-		if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) {
-			var label = `$$pdfmake$$${this.autoImageIndex++}`;
-			this.images[label] = node.image;
+		if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) { // base64 image
+			let label = `$$pdfmake$$${this.autoImageIndex++}`;
+			this.pdfDocument.images[label] = node.image;
 			node.image = label;
 		}
 	}
 
 	measureImage(node) {
-		if (this.images) {
-			this.convertIfBase64Image(node);
-		}
+		this.convertIfBase64Image(node);
 
-		var imageSize = this.imageMeasure.measureImage(node.image);
+		let image = this.pdfDocument.provideImage(node.image);
+		let imageSize = { width: image.width, height: image.height };
 
 		if (node.fit) {
 			var factor = (imageSize.width / imageSize.height > node.fit[0] / node.fit[1]) ? node.fit[0] / imageSize.width : node.fit[1] / imageSize.height;

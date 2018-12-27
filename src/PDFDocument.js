@@ -14,11 +14,11 @@ const typeName = (bold, italics) => {
 };
 
 class PDFDocument extends PDFKit {
-	constructor(fonts = {}, options = {}) {
+	constructor(fonts = {}, images = {}, options = {}) {
 		super(options);
+
 		this.fonts = {};
 		this.fontCache = {};
-
 		for (let font in fonts) {
 			if (fonts.hasOwnProperty(font)) {
 				let fontDef = fonts[font];
@@ -31,6 +31,8 @@ class PDFDocument extends PDFKit {
 				};
 			}
 		}
+
+		this.images = images;
 	}
 
 	provideFont(familyName, bold, italics) {
@@ -50,6 +52,43 @@ class PDFDocument extends PDFKit {
 		}
 
 		return this.fontCache[familyName][type];
+	}
+
+	provideImage(src) {
+		const realImageSrc = src => {
+			let image = this.images[src];
+
+			if (!image) {
+				return src;
+			}
+
+			let index = image.indexOf('base64,');
+			if (index < 0) {
+				return this.images[src];
+			}
+
+			return Buffer.from(image.substring(index + 7), 'base64');
+		};
+
+		if (this._imageRegistry[src]) {
+			return this._imageRegistry[src];
+		}
+
+		let image;
+
+		try {
+			image = this.openImage(realImageSrc(src));
+		} catch (error) {
+			// TODO: propagate error upper
+			image = null;
+		}
+		if (image === null || image === undefined) {
+			throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
+		}
+		image.embed(this);
+		this._imageRegistry[src] = image;
+
+		return image;
 	}
 
 }

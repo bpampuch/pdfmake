@@ -3,7 +3,6 @@
 var PDFDocument = require('../../js/PDFDocument').default;
 var sizes = require('../../js/standardPageSizes').default;
 var LayoutBuilder = require('../../js/layoutBuilder').default;
-var ImageMeasure = require('../../js/imageMeasure').default;
 
 class IntegrationTestHelper {
 	constructor() {
@@ -26,12 +25,8 @@ class IntegrationTestHelper {
 
 		var pageSize = { width: size[0], height: size[1], orientation: 'portrait' };
 
-		this.pdfDocument = new PDFDocument(fontDescriptors, { size: [pageSize.width, pageSize.height], compress: false });
-		var builder = new LayoutBuilder(
-			pageSize,
-			{ left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom },
-			new ImageMeasure(this.pdfDocument, docDefinition.images)
-		);
+		this.pdfDocument = new PDFDocument(fontDescriptors, docDefinition.images, { size: [pageSize.width, pageSize.height], compress: false });
+		var builder = new LayoutBuilder(pageSize, { left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom });
 
 		return builder.layoutDocument(
 			docDefinition.content,
