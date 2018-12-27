@@ -7,12 +7,7 @@ import sizes from './standardPageSizes';
 import ImageMeasure from './imageMeasure';
 import textDecorator from './textDecorator';
 import TextTools from './textTools';
-import {isFunction} from './helpers';
-import {isString} from './helpers';
-import {isNumber} from './helpers';
-import {isBoolean} from './helpers';
-import {isArray} from './helpers';
-import {isUndefined} from './helpers';
+import {isFunction, isString, isNumber, isBoolean, isArray, isUndefined} from './helpers';
 
 ////////////////////////////////////////
 // PdfPrinter

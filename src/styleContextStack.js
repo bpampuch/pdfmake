@@ -1,7 +1,4 @@
-import {isString} from './helpers';
-import {isArray} from './helpers';
-import {isUndefined} from './helpers';
-import {isNull} from './helpers';
+import {isString, isArray, isUndefined, isNull} from './helpers';
 
 /**
  * Creates an instance of StyleContextStack used for style inheritance and style overrides
