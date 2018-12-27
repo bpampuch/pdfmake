@@ -91,11 +91,11 @@ class LayoutBuilder {
 					node.pageBreakCalculated = true;
 					var pageNumber = node.nodeInfo.pageNumbers[0];
 
-					var followingNodesOnPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1);
+					var followingNodesOnPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber));
 
-					var nodesOnNextPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1);
+					var nodesOnNextPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber + 1));
 
-					var previousNodesOnPage = followingNodeList.slice(0, index).filter(node0 => node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1);
+					var previousNodesOnPage = followingNodeList.slice(0, index).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber));
 
 					if (
 						pageBreakBeforeFct(

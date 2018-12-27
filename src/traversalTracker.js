@@ -6,7 +6,7 @@ class TraversalTracker {
 	startTracking(event, callback) {
 		var callbacks = this.events[event] || (this.events[event] = []);
 
-		if (callbacks.indexOf(callback) < 0) {
+		if (!callbacks.includes(callback)) {
 			callbacks.push(callback);
 		}
 	}

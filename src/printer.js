@@ -133,7 +133,7 @@ function setMetadata(docDefinition, pdfKitDoc) {
 		var standardProperties = ['Title', 'Author', 'Subject', 'Keywords',
 			'Creator', 'Producer', 'CreationDate', 'ModDate', 'Trapped'];
 		var standardizedKey = key.charAt(0).toUpperCase() + key.slice(1);
-		if (standardProperties.indexOf(standardizedKey) !== -1) {
+		if (standardProperties.includes(standardizedKey)) {
 			return standardizedKey;
 		}
 
