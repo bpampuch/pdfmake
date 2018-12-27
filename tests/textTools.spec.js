@@ -39,17 +39,17 @@ describe('TextTools', function () {
 	];
 
 	var mixedTextArray = [
-		{text: 'Imię: ', bold: true},
+		{ text: 'Imię: ', bold: true },
 		'Jan   ',
-		{text: '   Nazwisko:', bold: true},
-		{text: ' Nowak\nDodatkowe informacje:', bold: true}
+		{ text: '   Nazwisko:', bold: true },
+		{ text: ' Nowak\nDodatkowe informacje:', bold: true }
 	];
 
 	var mixedTextArrayWithUnknownStyleDefinitions = [
-		{text: 'Imię: ', bold: true},
+		{ text: 'Imię: ', bold: true },
 		'Jan   ',
-		{text: '   Nazwisko:', bold: true},
-		{text: ' Nowak\nDodatkowe informacje:', bold: true, unknownStyle: 123}
+		{ text: '   Nazwisko:', bold: true },
+		{ text: ' Nowak\nDodatkowe informacje:', bold: true, unknownStyle: 123 }
 	];
 
 	var plainTextArrayWithoutNewLines = [
@@ -63,12 +63,12 @@ describe('TextTools', function () {
 		'Imię: ',
 		'Jan   ',
 		'   Nazwisko:',
-		{text: ' Nowak Dodatkowe informacje:', noWrap: true}
+		{ text: ' Nowak Dodatkowe informacje:', noWrap: true }
 	];
 
 	var mixedTextArrayWithoutNewLinesNoWrapShortest = [
 		'Imię: ',
-		{text: 'Jan   ', noWrap: true},
+		{ text: 'Jan   ', noWrap: true },
 		'   Nazwisko:',
 		' Nowak Dodatkowe informacje:'
 	];
@@ -104,19 +104,19 @@ describe('TextTools', function () {
 	};
 
 	var textWithLeadingSpaces = [
-		{text: '    This is a paragraph', preserveLeadingSpaces: true}
+		{ text: '    This is a paragraph', preserveLeadingSpaces: true }
 	];
 
 	var textWithTrailingSpaces = [
-		{text: 'This is a paragraph    ', preserveTrailingSpaces: true}
+		{ text: 'This is a paragraph    ', preserveTrailingSpaces: true }
 	];
 
 	var mixedTextArrayWithVariousTypes = [
-		{text: ''},
-		{text: null},
-		{text: 2016},
-		{text: true},
-		{text: false},
+		{ text: '' },
+		{ text: null },
+		{ text: 2016 },
+		{ text: true },
+		{ text: false },
 		'',
 		null,
 		2016,
@@ -138,7 +138,7 @@ describe('TextTools', function () {
 			bold: false,
 			font: 'Helvetica'
 		});
-	var styleStackNoWrap = new StyleContextStack({}, {noWrap: true});
+	var styleStackNoWrap = new StyleContextStack({}, { noWrap: true });
 
 	describe('splitWords', function () {
 		it('should do basic splitting', function () {
@@ -251,17 +251,17 @@ describe('TextTools', function () {
 		});
 
 		it('should support keep noWrap from style', function () {
-			var result = TextTools.__get__('normalizeTextArray')([{text: 'very long text'}], styleStackNoWrap);
+			var result = TextTools.__get__('normalizeTextArray')([{ text: 'very long text' }], styleStackNoWrap);
 			assert.equal(result.length, 1);
 		});
 
 		it('should support disable noWrap in text', function () {
-			var result = TextTools.__get__('normalizeTextArray')([{text: 'very long text', noWrap: false}], styleStackNoWrap);
+			var result = TextTools.__get__('normalizeTextArray')([{ text: 'very long text', noWrap: false }], styleStackNoWrap);
 			assert.equal(result.length, 3);
 		});
 
 		it('should support enable noWrap in text', function () {
-			var result = TextTools.__get__('normalizeTextArray')([{text: 'very long text', noWrap: true}], styleStack);
+			var result = TextTools.__get__('normalizeTextArray')([{ text: 'very long text', noWrap: true }], styleStack);
 			assert.equal(result.length, 1);
 		});
 
@@ -315,30 +315,30 @@ describe('TextTools', function () {
 		});
 
 		it('should support style overrides at text definition level', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', fontSize: 20}], styleStack);
+			var result = TextTools.__get__('measure')(sampleTestProvider, [{ text: 'Imię', fontSize: 20 }], styleStack);
 			assert.equal(result[0].width, 4 * 20);
 		});
 
 		it('should support named styles at text definition level', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', style: 'header'}], styleStack);
+			var result = TextTools.__get__('measure')(sampleTestProvider, [{ text: 'Imię', style: 'header' }], styleStack);
 			assert.equal(result[0].width, 4 * 150);
 		});
 
 		it('should support multiple named styles at text definition level', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', style: ['header', 'small']}], styleStack);
+			var result = TextTools.__get__('measure')(sampleTestProvider, [{ text: 'Imię', style: ['header', 'small'] }], styleStack);
 			assert.equal(result[0].width, 4 * 8);
 		});
 
 		it('should obey named styles order', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', style: ['header', 'small']}], styleStack);
+			var result = TextTools.__get__('measure')(sampleTestProvider, [{ text: 'Imię', style: ['header', 'small'] }], styleStack);
 			assert.equal(result[0].width, 4 * 8);
 
-			result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', style: ['small', 'header']}], styleStack);
+			result = TextTools.__get__('measure')(sampleTestProvider, [{ text: 'Imię', style: ['small', 'header'] }], styleStack);
 			assert.equal(result[0].width, 4 * 150);
 		});
 
 		it('should not take values from named styles if style-overrides have been providede', function () {
-			var result = TextTools.__get__('measure')(sampleTestProvider, [{text: 'Imię', fontSize: 123, style: 'header'}], styleStack);
+			var result = TextTools.__get__('measure')(sampleTestProvider, [{ text: 'Imię', fontSize: 123, style: 'header' }], styleStack);
 			assert.equal(result[0].width, 4 * 123);
 		});
 	});

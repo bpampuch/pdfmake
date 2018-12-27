@@ -9,7 +9,7 @@ describe('DocumentContext', function () {
 	var pc;
 
 	beforeEach(function () {
-		pc = new DocumentContext.default({width: 400, height: 800, orientation: 'portrait'}, {left: 40, right: 40, top: 60, bottom: 60});
+		pc = new DocumentContext.default({ width: 400, height: 800, orientation: 'portrait' }, { left: 40, right: 40, top: 60, bottom: 60 });
 		// pc.addPage();
 	});
 
@@ -251,7 +251,7 @@ describe('DocumentContext', function () {
 		var pageSize;
 
 		beforeEach(function () {
-			pageSize = {width: 200, height: 400, orientation: 'landscape'};
+			pageSize = { width: 200, height: 400, orientation: 'landscape' };
 		});
 
 		it('should add a new page', function () {
@@ -294,13 +294,13 @@ describe('DocumentContext', function () {
 
 	describe('bottomMostContext', function () {
 		it('should return context with larger page if pages are different', function () {
-			var result = DocumentContext.__get__('bottomMostContext')({page: 2, y: 10}, {page: 3, y: 5});
+			var result = DocumentContext.__get__('bottomMostContext')({ page: 2, y: 10 }, { page: 3, y: 5 });
 			assert.equal(result.page, 3);
 			assert.equal(result.y, 5);
 		});
 
 		it('should return context with larger y if both contexts have the same page', function () {
-			var result = DocumentContext.__get__('bottomMostContext')({page: 3, y: 100}, {page: 3, y: 50});
+			var result = DocumentContext.__get__('bottomMostContext')({ page: 3, y: 100 }, { page: 3, y: 50 });
 			assert.equal(result.page, 3);
 			assert.equal(result.y, 100);
 		});

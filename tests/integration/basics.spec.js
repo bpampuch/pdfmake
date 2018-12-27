@@ -21,10 +21,10 @@ describe('Integration test: basics', function () {
 		assert.equal(pages[0].items.length, 4);
 		assert.deepEqual(pages[0].items.map(node => node.item).map(item => item.x), [testHelper.MARGINS.left, testHelper.MARGINS.left, testHelper.MARGINS.left, testHelper.MARGINS.left]);
 		assert.deepEqual(pages[0].items.map(node => node.item).map(item => item.y), [testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT, testHelper.MARGINS.top + 2 * testHelper.LINE_HEIGHT, testHelper.MARGINS.top + 3 * testHelper.LINE_HEIGHT]);
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}), ['First ', 'paragraph']);
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}), ['Second ', 'paragraph ', 'on ']);
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 2}), ['three ', 'lines ', 'because ', 'it ', 'is ']);
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 3}), ['longer']);
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 0 }), ['First ', 'paragraph']);
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 1 }), ['Second ', 'paragraph ', 'on ']);
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 2 }), ['three ', 'lines ', 'because ', 'it ', 'is ']);
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 3 }), ['longer']);
 	});
 
 	it('renders text with margin', function () {
@@ -32,13 +32,13 @@ describe('Integration test: basics', function () {
 		var anotherCustomMargin = 13;
 		var dd = {
 			content: [
-				{text: 'has margin', margin: customMargin},
-				{text: 'has only top/bottom margin', margin: [0, customMargin]},
+				{ text: 'has margin', margin: customMargin },
+				{ text: 'has only top/bottom margin', margin: [0, customMargin] },
 				{
 					text: 'has single set margin',
 					margin: [anotherCustomMargin, anotherCustomMargin, anotherCustomMargin, anotherCustomMargin]
 				},
-				{text: 'has only right margin', alignment: 'right', marginRight: 20}
+				{ text: 'has only right margin', alignment: 'right', marginRight: 20 }
 			]
 		};
 

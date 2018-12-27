@@ -39,7 +39,7 @@ describe('Integration test: tables', function () {
 		};
 
 		var pages = testHelper.renderPages('A6', dd);
-		var lines = getCells(pages, {pageNumber: 0});
+		var lines = getCells(pages, { pageNumber: 0 });
 
 		assert.equal(pages.length, 1);
 		assert.equal(lines.length, 4);
@@ -55,11 +55,11 @@ describe('Integration test: tables', function () {
 			testHelper.MARGINS.top + TABLE_LINE_HEIGHT, testHelper.MARGINS.top + TABLE_LINE_HEIGHT
 		]);
 
-		assert.deepEqual(getColumnText(lines, {cell: 0}), 'Column 1');
-		assert.deepEqual(getColumnText(lines, {cell: 1}), 'Column 2');
+		assert.deepEqual(getColumnText(lines, { cell: 0 }), 'Column 1');
+		assert.deepEqual(getColumnText(lines, { cell: 1 }), 'Column 2');
 
-		assert.deepEqual(getColumnText(lines, {cell: 2}), 'Value 1');
-		assert.deepEqual(getColumnText(lines, {cell: 3}), 'Value 2');
+		assert.deepEqual(getColumnText(lines, { cell: 2 }), 'Value 1');
+		assert.deepEqual(getColumnText(lines, { cell: 3 }), 'Value 2');
 	});
 
 	it('renders a table with nested list', function () {
@@ -69,7 +69,7 @@ describe('Integration test: tables', function () {
 					body: [
 						['Column 1'],
 						[
-							{ul: ['item 1', 'item 2']}
+							{ ul: ['item 1', 'item 2'] }
 						]
 					]
 				}
@@ -77,7 +77,7 @@ describe('Integration test: tables', function () {
 		};
 
 		var pages = testHelper.renderPages('A6', dd);
-		var lines = getCells(pages, {pageNumber: 0});
+		var lines = getCells(pages, { pageNumber: 0 });
 
 		assert.equal(pages.length, 1);
 		assert.equal(lines.length, 3);
@@ -96,9 +96,9 @@ describe('Integration test: tables', function () {
 			testHelper.MARGINS.top + TABLE_LINE_HEIGHT + testHelper.LINE_HEIGHT
 		]);
 
-		assert.deepEqual(getColumnText(lines, {cell: 0}), 'Column 1');
-		assert.deepEqual(getColumnText(lines, {cell: 1}), 'item 1');
-		assert.deepEqual(getColumnText(lines, {cell: 2}), 'item 2');
+		assert.deepEqual(getColumnText(lines, { cell: 0 }), 'Column 1');
+		assert.deepEqual(getColumnText(lines, { cell: 1 }), 'item 1');
+		assert.deepEqual(getColumnText(lines, { cell: 2 }), 'item 2');
 	});
 
 	it('renders a table with nested table', function () {
@@ -123,7 +123,7 @@ describe('Integration test: tables', function () {
 		};
 
 		var pages = testHelper.renderPages('A6', dd);
-		var lines = getCells(pages, {pageNumber: 0});
+		var lines = getCells(pages, { pageNumber: 0 });
 
 		assert.equal(pages.length, 1);
 		assert.equal(lines.length, 5);
@@ -153,13 +153,13 @@ describe('Integration test: tables', function () {
 			testHelper.MARGINS.top + TABLE_LINE_HEIGHT
 		]);
 
-		assert.deepEqual(getColumnText(lines, {cell: 0}), 'Column 1');
-		assert.deepEqual(getColumnText(lines, {cell: 1}), 'Column 2');
+		assert.deepEqual(getColumnText(lines, { cell: 0 }), 'Column 1');
+		assert.deepEqual(getColumnText(lines, { cell: 1 }), 'Column 2');
 
-		assert.deepEqual(getColumnText(lines, {cell: 2}), 'C1');
-		assert.deepEqual(getColumnText(lines, {cell: 3}), 'C2');
+		assert.deepEqual(getColumnText(lines, { cell: 2 }), 'C1');
+		assert.deepEqual(getColumnText(lines, { cell: 3 }), 'C2');
 
-		assert.deepEqual(getColumnText(lines, {cell: 4}), 'Some Value');
+		assert.deepEqual(getColumnText(lines, { cell: 4 }), 'Some Value');
 	});
 
 	it('renders a simple table with star width', function () {
@@ -176,7 +176,7 @@ describe('Integration test: tables', function () {
 		};
 
 		var pages = testHelper.renderPages('A6', dd);
-		var lines = getCells(pages, {pageNumber: 0});
+		var lines = getCells(pages, { pageNumber: 0 });
 
 		assert.equal(pages.length, 1);
 		assert.equal(lines.length, 2);
@@ -193,8 +193,8 @@ describe('Integration test: tables', function () {
 			startY
 		]);
 
-		assert.deepEqual(getColumnText(lines, {cell: 0}), 'C1');
-		assert.deepEqual(getColumnText(lines, {cell: 1}), 'C2');
+		assert.deepEqual(getColumnText(lines, { cell: 0 }), 'C1');
+		assert.deepEqual(getColumnText(lines, { cell: 1 }), 'C2');
 
 		var starWidth = sizes.A6[0] - (testHelper.MARGINS.left + testHelper.MARGINS.right) - definedWidth - 4 * TABLE_PADDING_X - 3 * TABLE_BORDER_STRENGTH;
 		assert.equal(lines[1].item.maxWidth, starWidth);
@@ -214,7 +214,7 @@ describe('Integration test: tables', function () {
 		};
 
 		var pages = testHelper.renderPages('A6', dd);
-		var lines = getCells(pages, {pageNumber: 0});
+		var lines = getCells(pages, { pageNumber: 0 });
 
 		assert.equal(pages.length, 1);
 		assert.equal(lines.length, 2);
@@ -231,8 +231,8 @@ describe('Integration test: tables', function () {
 			startY
 		]);
 
-		assert.deepEqual(getColumnText(lines, {cell: 0}), 'C1');
-		assert.deepEqual(getColumnText(lines, {cell: 1}), 'Column 2');
+		assert.deepEqual(getColumnText(lines, { cell: 0 }), 'C1');
+		assert.deepEqual(getColumnText(lines, { cell: 1 }), 'Column 2');
 
 		var autoWidth = testHelper.getWidthOfString('Column 2');
 		assert.equal(lines[1].item.maxWidth, autoWidth);
@@ -243,14 +243,14 @@ describe('Integration test: tables', function () {
 			content: {
 				table: {
 					body: [
-						[{text: 'Column 1 with colspan 2', colSpan: 2}, {text: 'is not rendered at all'}, {text: 'Column 2'}]
+						[{ text: 'Column 1 with colspan 2', colSpan: 2 }, { text: 'is not rendered at all' }, { text: 'Column 2' }]
 					]
 				}
 			}
 		};
 
 		var pages = testHelper.renderPages('A6', dd);
-		var lines = getCells(pages, {pageNumber: 0});
+		var lines = getCells(pages, { pageNumber: 0 });
 
 		assert.equal(pages.length, 1);
 		assert.equal(lines.length, 2);
@@ -258,8 +258,8 @@ describe('Integration test: tables', function () {
 		assert.deepEqual(lines.map(node => node.item).map(item => item.x)[0], startX);
 		assert.deepEqual(lines.map(node => node.item).map(item => item.y)[0], startY);
 
-		assert.deepEqual(getColumnText(lines, {cell: 0}), 'Column 1 with colspan 2');
-		assert.deepEqual(getColumnText(lines, {cell: 1}), 'Column 2');
+		assert.deepEqual(getColumnText(lines, { cell: 0 }), 'Column 1 with colspan 2');
+		assert.deepEqual(getColumnText(lines, { cell: 1 }), 'Column 2');
 	});
 
 	it('renders a simple table with rowspan', function () {
@@ -267,16 +267,16 @@ describe('Integration test: tables', function () {
 			content: {
 				table: {
 					body: [
-						[{text: 'Row 1 with rowspan 2', rowSpan: 2}],
-						[{text: 'is not rendered at all'}],
-						[{text: 'Row 2'}]
+						[{ text: 'Row 1 with rowspan 2', rowSpan: 2 }],
+						[{ text: 'is not rendered at all' }],
+						[{ text: 'Row 2' }]
 					]
 				}
 			}
 		};
 
 		var pages = testHelper.renderPages('A6', dd);
-		var lines = getCells(pages, {pageNumber: 0});
+		var lines = getCells(pages, { pageNumber: 0 });
 
 		assert.equal(pages.length, 1);
 		assert.equal(lines.length, 2);
@@ -284,8 +284,8 @@ describe('Integration test: tables', function () {
 		assert.deepEqual(lines.map(node => node.item).map(item => item.x)[0], startX);
 		assert.deepEqual(lines.map(node => node.item).map(item => item.y)[0], startY);
 
-		assert.deepEqual(getColumnText(lines, {cell: 0}), 'Row 1 with rowspan 2');
-		assert.deepEqual(getColumnText(lines, {cell: 1}), 'Row 2');
+		assert.deepEqual(getColumnText(lines, { cell: 0 }), 'Row 1 with rowspan 2');
+		assert.deepEqual(getColumnText(lines, { cell: 1 }), 'Row 2');
 	});
 
 });

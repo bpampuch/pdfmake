@@ -24,7 +24,7 @@ describe('Printer', function () {
 	it('should pass switched width and height to pdfkit if page orientation changes from default portrait to landscape', function () {
 		printer = new Printer(fontDescriptors);
 		var docDefinition = {
-			pageSize: {width: SHORT_SIDE, height: LONG_SIDE},
+			pageSize: { width: SHORT_SIDE, height: LONG_SIDE },
 			content: [
 				{
 					text: 'Page 1'
@@ -48,7 +48,7 @@ describe('Printer', function () {
 		printer = new Printer(fontDescriptors);
 		var docDefinition = {
 			pageOrientation: 'portrait',
-			pageSize: {width: SHORT_SIDE, height: LONG_SIDE},
+			pageSize: { width: SHORT_SIDE, height: LONG_SIDE },
 			content: [
 				{
 					text: 'Page 1'
@@ -73,7 +73,7 @@ describe('Printer', function () {
 
 		var docDefinition = {
 			pageOrientation: 'landscape',
-			pageSize: {width: SHORT_SIDE, height: LONG_SIDE},
+			pageSize: { width: SHORT_SIDE, height: LONG_SIDE },
 			content: [
 				{
 					text: 'Page 1'
@@ -103,7 +103,7 @@ describe('Printer', function () {
 		printer = new Printer(fontDescriptors);
 		var docDefinition = {
 			pageOrientation: 'portrait',
-			pageSize: {width: SHORT_SIDE, height: LONG_SIDE},
+			pageSize: { width: SHORT_SIDE, height: LONG_SIDE },
 			content: [
 				{
 					text: 'Page 1'
@@ -134,14 +134,14 @@ describe('Printer', function () {
 		printer = new Printer(fontDescriptors);
 		var docDefinition = {
 			pageOrientation: 'portrait',
-			pageSize: {width: SHORT_SIDE, height: LONG_SIDE},
+			pageSize: { width: SHORT_SIDE, height: LONG_SIDE },
 			content: [
 				{
 					"stack": [
 						{
 							"ul": [
-								{"text": "item1"},
-								{"text": "item2"}
+								{ "text": "item1" },
+								{ "text": "item2" }
 							]
 						}
 					]
@@ -227,7 +227,7 @@ describe('Printer', function () {
 
 		printer = new Printer(fontDescriptors);
 
-		var progressCallback = sinon.spy(function (progress) {});
+		var progressCallback = sinon.spy(function (progress) { });
 
 		var docDefinition = {
 			pageSize: 'A4',
@@ -243,16 +243,16 @@ describe('Printer', function () {
 				},
 				{
 					canvas: [{
-							type: 'rect',
-							x: 0,
-							y: 0,
-							w: 310,
-							h: 260
-						}]
+						type: 'rect',
+						x: 0,
+						y: 0,
+						w: 310,
+						h: 260
+					}]
 				}]
 		};
 
-		printer.createPdfKitDocument(docDefinition, {progressCallback: progressCallback});
+		printer.createPdfKitDocument(docDefinition, { progressCallback: progressCallback });
 
 		assert(progressCallback.withArgs(0.25).calledOnce);
 		assert(progressCallback.withArgs(0.5).calledOnce);
@@ -265,7 +265,7 @@ describe('Printer', function () {
 
 		var docDefinition = {
 			pageSize: 'A4',
-			content: [{text: 'Text item 1'}]
+			content: [{ text: 'Text item 1' }]
 		};
 
 		assert.doesNotThrow(function () {
