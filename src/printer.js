@@ -1,7 +1,5 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 import PDFDocument from './PDFDocument';
-
-import FontProvider from './fontProvider';
 import LayoutBuilder from './layoutBuilder';
 import sizes from './standardPageSizes';
 import ImageMeasure from './imageMeasure';
@@ -82,10 +80,8 @@ class PdfPrinter {
 		var compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 		var bufferPages = options.bufferPages || false;
 
-		this.pdfKitDoc = new PDFDocument({ size: [pageSize.width, pageSize.height], bufferPages: bufferPages, autoFirstPage: false, compress: compressPdf });
+		this.pdfKitDoc = new PDFDocument(this.fontDescriptors,{ size: [pageSize.width, pageSize.height], bufferPages: bufferPages, autoFirstPage: false, compress: compressPdf });
 		setMetadata(docDefinition, this.pdfKitDoc);
-
-		this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
 		docDefinition.images = docDefinition.images || {};
 
@@ -96,7 +92,7 @@ class PdfPrinter {
 			builder.registerTableLayouts(options.tableLayouts);
 		}
 
-		var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
+		var pages = builder.layoutDocument(docDefinition.content, this.pdfKitDoc, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
 		var maxNumberPages = docDefinition.maxPagesNumber || -1;
 		if (isNumber(maxNumberPages) && maxNumberPages > -1) {
 			pages = pages.slice(0, maxNumberPages);
@@ -109,7 +105,7 @@ class PdfPrinter {
 			this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
 		}
 
-		renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
+		renderPages(pages, this.pdfKitDoc, this.pdfKitDoc, options.progressCallback);
 
 		if (options.autoPrint) {
 			var printActionRef = this.pdfKitDoc.ref({
@@ -310,7 +306,7 @@ function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
 	}
 }
 
-function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
+function renderPages(pages, pdfDocument, pdfKitDoc, progressCallback) {
 	pdfKitDoc._pdfMakePages = pages;
 	pdfKitDoc.addPage();
 

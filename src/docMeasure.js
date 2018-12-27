@@ -12,14 +12,14 @@ import qrEncoder from './qrEnc.js';
  */
 class DocMeasure {
 	constructor(
-		fontProvider,
+		pdfDocument,
 		styleDictionary,
 		defaultStyle,
 		imageMeasure,
 		tableLayouts,
 		images
 	) {
-		this.textTools = new TextTools(fontProvider);
+		this.textTools = new TextTools(pdfDocument);
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 		this.imageMeasure = imageMeasure;
 		this.tableLayouts = tableLayouts;

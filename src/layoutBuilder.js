@@ -41,14 +41,14 @@ class LayoutBuilder {
 	 * containing positioned Blocks, Lines and inlines
 	 *
 	 * @param {Object} docStructure document-definition-object
-	 * @param {Object} fontProvider font provider
+	 * @param {Object} pdfDocument pdfkit document
 	 * @param {Object} styleDictionary dictionary with style definitions
 	 * @param {Object} defaultStyle default style definition
 	 * @return {Array} an array of pages
 	 */
 	layoutDocument(
 		docStructure,
-		fontProvider,
+		pdfDocument,
 		styleDictionary,
 		defaultStyle,
 		background,
@@ -111,7 +111,7 @@ class LayoutBuilder {
 		}
 
 		this.docPreprocessor = new DocPreprocessor();
-		this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
+		this.docMeasure = new DocMeasure(pdfDocument, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
 
 
 		function resetXYs(result) {
@@ -120,10 +120,10 @@ class LayoutBuilder {
 			});
 		}
 
-		var result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+		var result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, images, watermark);
 		while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
 			resetXYs(result);
-			result = this.tryLayoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark);
+			result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, images, watermark);
 		}
 
 		return result.pages;
@@ -131,7 +131,7 @@ class LayoutBuilder {
 
 	tryLayoutDocument(
 		docStructure,
-		fontProvider,
+		pdfDocument,
 		styleDictionary,
 		defaultStyle,
 		background,
@@ -158,7 +158,7 @@ class LayoutBuilder {
 		this.processNode(docStructure);
 		this.addHeadersAndFooters(header, footer);
 		if (watermark != null) {
-			this.addWatermark(watermark, fontProvider, defaultStyle);
+			this.addWatermark(watermark, pdfDocument, defaultStyle);
 		}
 
 		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
@@ -232,7 +232,7 @@ class LayoutBuilder {
 		}
 	}
 
-	addWatermark(watermark, fontProvider, defaultStyle) {
+	addWatermark(watermark, pdfDocument, defaultStyle) {
 		if (isString(watermark)) {
 			watermark = { 'text': watermark };
 		}
@@ -249,8 +249,8 @@ class LayoutBuilder {
 
 		var watermarkObject = {
 			text: watermark.text,
-			font: fontProvider.provideFont(watermark.font, watermark.bold, watermark.italics),
-			size: getSize(this.pageSize, watermark, fontProvider),
+			font: pdfDocument.provideFont(watermark.font, watermark.bold, watermark.italics),
+			size: getSize(this.pageSize, watermark, pdfDocument),
 			color: watermark.color,
 			opacity: watermark.opacity
 		};
@@ -260,11 +260,11 @@ class LayoutBuilder {
 			pages[i].watermark = watermarkObject;
 		}
 
-		function getSize(pageSize, watermark, fontProvider) {
+		function getSize(pageSize, watermark, pdfDocument) {
 			var width = pageSize.width;
 			var height = pageSize.height;
 			var targetWidth = Math.sqrt(width * width + height * height) * 0.8; /* page diagonal * sample factor */
-			var textTools = new TextTools(fontProvider);
+			var textTools = new TextTools(pdfDocument);
 			var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
 			var size;
 

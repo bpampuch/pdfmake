@@ -3,7 +3,6 @@
 var PDFDocument = require('../../js/PDFDocument').default;
 var sizes = require('../../js/standardPageSizes').default;
 var LayoutBuilder = require('../../js/layoutBuilder').default;
-var FontProvider = require('../../js/fontProvider').default;
 var ImageMeasure = require('../../js/imageMeasure').default;
 
 class IntegrationTestHelper {
@@ -27,17 +26,16 @@ class IntegrationTestHelper {
 
 		var pageSize = { width: size[0], height: size[1], orientation: 'portrait' };
 
-		var pdfKitDoc = new PDFDocument({ size: [pageSize.width, pageSize.height], compress: false });
+		this.pdfDocument = new PDFDocument(fontDescriptors, { size: [pageSize.width, pageSize.height], compress: false });
 		var builder = new LayoutBuilder(
 			pageSize,
 			{ left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom },
-			new ImageMeasure(pdfKitDoc, docDefinition.images)
+			new ImageMeasure(this.pdfDocument, docDefinition.images)
 		);
-		this.fontProvider = new FontProvider(fontDescriptors, pdfKitDoc);
 
 		return builder.layoutDocument(
 			docDefinition.content,
-			this.fontProvider, docDefinition.styles || {},
+			this.pdfDocument, docDefinition.styles || {},
 			docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' },
 			docDefinition.background,
 			docDefinition.header,
@@ -53,7 +51,7 @@ class IntegrationTestHelper {
 	}
 
 	getWidthOfString(inlines) {
-		return this.fontProvider.fontCache['Roboto'].normal.widthOfString(inlines, 12);
+		return this.pdfDocument.fontCache['Roboto'].normal.widthOfString(inlines, 12);
 	}
 }
 

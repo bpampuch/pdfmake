@@ -8,11 +8,11 @@ var TRAILING = /(\s)+$/g;
  * Creates an instance of TextTools - text measurement utility
  *
  * @constructor
- * @param {FontProvider} fontProvider
+ * @param {PDFDocument} pdfDocument
  */
 class TextTools {
-	constructor(fontProvider) {
-		this.fontProvider = fontProvider;
+	constructor(pdfDocument) {
+		this.pdfDocument = pdfDocument;
 	}
 
 	/**
@@ -24,7 +24,7 @@ class TextTools {
 	 * @return {Object}				   collection of inlines, minWidth, maxWidth
 	 */
 	buildInlines(textArray, styleContextStack) {
-		var measured = measure(this.fontProvider, textArray, styleContextStack);
+		var measured = measure(this.pdfDocument, textArray, styleContextStack);
 
 		var minWidth = 0;
 		var maxWidth = 0;
@@ -80,7 +80,7 @@ class TextTools {
 		var lineHeight = getStyleProperty({}, styleContextStack, 'lineHeight', 1);
 		var characterSpacing = getStyleProperty({}, styleContextStack, 'characterSpacing', 0);
 
-		var font = this.fontProvider.provideFont(fontName, bold, italics);
+		var font = this.pdfDocument.provideFont(fontName, bold, italics);
 
 		return {
 			width: widthOfString(text, font, fontSize, characterSpacing, fontFeatures),
@@ -259,7 +259,7 @@ function getStyleProperty(item, styleContextStack, property, defaultValue) {
 	}
 }
 
-function measure(fontProvider, textArray, styleContextStack) {
+function measure(pdfDocument, textArray, styleContextStack) {
 	var normalized = normalizeTextArray(textArray, styleContextStack);
 
 	if (normalized.length) {
@@ -291,7 +291,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var preserveTrailingSpaces = getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
 		var opacity = getStyleProperty(item, styleContextStack, 'opacity', 1);
 
-		var font = fontProvider.provideFont(fontName, bold, italics);
+		var font = pdfDocument.provideFont(fontName, bold, italics);
 
 		item.width = widthOfString(item.text, font, fontSize, characterSpacing, fontFeatures);
 		item.height = font.lineHeight(fontSize) * lineHeight;
