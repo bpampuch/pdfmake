@@ -23,7 +23,7 @@ module.exports = {
 	module: {
 		rules: [
 			{
-				enforce: 'pre', 
+				enforce: 'pre',
 				test: /\.js$/,
 				exclude: /(node_modules|bower_components)/,
 				use: {
@@ -61,7 +61,7 @@ module.exports = {
 							}
 						}
 					]})
-			},			
+			},
 			{enforce: 'post', test: /fontkit[/\\]index.js$/, loader: "transform-loader?brfs"},
 			{enforce: 'post', test: /unicode-properties[/\\]index.js$/, loader: "transform-loader?brfs"},
 			{enforce: 'post', test: /linebreak[/\\]src[/\\]linebreaker.js/, loader: "transform-loader?brfs"}
