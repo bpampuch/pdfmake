@@ -74,13 +74,19 @@ class PdfPrinter {
 	 * @return {Object} a pdfKit document object which can be saved or encode to data-url
 	 */
 	createPdfKitDocument(docDefinition, options = {}) {
-		var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
-		var compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
-		var bufferPages = options.bufferPages || false;
-
+		docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 		docDefinition.images = docDefinition.images || {};
 
-		this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, { size: [pageSize.width, pageSize.height], bufferPages: bufferPages, autoFirstPage: false, compress: compressPdf });
+		let pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
+
+		let pdfOptions = {
+			size: [pageSize.width, pageSize.height],
+			compress: docDefinition.compress,
+			bufferPages: options.bufferPages || false,
+			autoFirstPage: false
+		};
+
+		this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, pdfOptions);
 		setMetadata(docDefinition, this.pdfKitDoc);
 
 		var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40));
