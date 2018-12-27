@@ -1,5 +1,5 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
-import PdfKitEngine from './pdfKitEngine';
+import PDFDocument from './PDFDocument';
 
 import FontProvider from './fontProvider';
 import LayoutBuilder from './layoutBuilder';
@@ -82,7 +82,7 @@ class PdfPrinter {
 		var compressPdf = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 		var bufferPages = options.bufferPages || false;
 
-		this.pdfKitDoc = PdfKitEngine.createPdfDocument({ size: [pageSize.width, pageSize.height], bufferPages: bufferPages, autoFirstPage: false, compress: compressPdf });
+		this.pdfKitDoc = new PDFDocument({ size: [pageSize.width, pageSize.height], bufferPages: bufferPages, autoFirstPage: false, compress: compressPdf });
 		setMetadata(docDefinition, this.pdfKitDoc);
 
 		this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);

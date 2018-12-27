@@ -3,10 +3,8 @@
 var assert = require('assert');
 var sinon = require('sinon');
 
-var PdfKitEngine = require('../js/pdfKitEngine').default;
+var PDFDocument = require('../js/PDFDocument').default;
 var Printer = require('../js/printer.js').default;
-
-var PdfKit = PdfKitEngine.getEngineInstance();
 
 describe('Printer', function () {
 
@@ -19,7 +17,7 @@ describe('Printer', function () {
 				normal: 'tests/fonts/Roboto-Regular.ttf'
 			}
 		};
-		PdfKit.prototype.addPage = sinon.spy(PdfKit.prototype.addPage);
+		PDFDocument.prototype.addPage = sinon.spy(PDFDocument.prototype.addPage);
 
 	});
 
@@ -40,10 +38,10 @@ describe('Printer', function () {
 		};
 		printer.createPdfKitDocument(docDefinition);
 
-		assert(PdfKit.prototype.addPage.callCount === 2);
+		assert(PDFDocument.prototype.addPage.callCount === 2);
 
-		assert.equal(PdfKit.prototype.addPage.firstCall.args[0], undefined);
-		assert.deepEqual(PdfKit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
+		assert.equal(PDFDocument.prototype.addPage.firstCall.args[0], undefined);
+		assert.deepEqual(PDFDocument.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
 	});
 
 	it('should pass switched width and height to pdfkit if page orientation changes from portrait to landscape', function () {
@@ -64,10 +62,10 @@ describe('Printer', function () {
 		};
 		printer.createPdfKitDocument(docDefinition);
 
-		assert(PdfKit.prototype.addPage.callCount === 2);
+		assert(PDFDocument.prototype.addPage.callCount === 2);
 
-		assert.equal(PdfKit.prototype.addPage.firstCall.args[0], undefined);
-		assert.deepEqual(PdfKit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
+		assert.equal(PDFDocument.prototype.addPage.firstCall.args[0], undefined);
+		assert.deepEqual(PDFDocument.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
 	});
 
 	it('should pass switched width and height to pdfkit if page orientation changes from landscape to portrait', function () {
@@ -93,11 +91,11 @@ describe('Printer', function () {
 		};
 		printer.createPdfKitDocument(docDefinition);
 
-		assert(PdfKit.prototype.addPage.callCount === 3);
+		assert(PDFDocument.prototype.addPage.callCount === 3);
 
-		assert.equal(PdfKit.prototype.addPage.firstCall.args[0], undefined);
-		assert.deepEqual(PdfKit.prototype.addPage.secondCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
-		assert.deepEqual(PdfKit.prototype.addPage.thirdCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
+		assert.equal(PDFDocument.prototype.addPage.firstCall.args[0], undefined);
+		assert.deepEqual(PDFDocument.prototype.addPage.secondCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
+		assert.deepEqual(PDFDocument.prototype.addPage.thirdCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
 	});
 
 
@@ -124,12 +122,12 @@ describe('Printer', function () {
 		};
 		printer.createPdfKitDocument(docDefinition);
 
-		assert.equal(PdfKit.prototype.addPage.callCount, 3);
+		assert.equal(PDFDocument.prototype.addPage.callCount, 3);
 
 
-		assert.equal(PdfKit.prototype.addPage.firstCall.args[0], undefined);
-		assert.deepEqual(PdfKit.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
-		assert.deepEqual(PdfKit.prototype.addPage.thirdCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
+		assert.equal(PDFDocument.prototype.addPage.firstCall.args[0], undefined);
+		assert.deepEqual(PDFDocument.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
+		assert.deepEqual(PDFDocument.prototype.addPage.thirdCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
 	});
 
 	it('should print bullet vectors as ellipses', function () {
@@ -150,7 +148,7 @@ describe('Printer', function () {
 				}
 			]
 		};
-		PdfKit.prototype.ellipse = sinon.spy(PdfKit.prototype.ellipse);
+		PDFDocument.prototype.ellipse = sinon.spy(PDFDocument.prototype.ellipse);
 
 		printer.createPdfKitDocument(docDefinition);
 
@@ -171,10 +169,10 @@ describe('Printer', function () {
 			assert(!isNaN(firstEllipse.r2));
 		}
 
-		assert.equal(PdfKit.prototype.ellipse.callCount, 2);
+		assert.equal(PDFDocument.prototype.ellipse.callCount, 2);
 
-		assertEllipse(PdfKit.prototype.ellipse.firstCall.args);
-		assertEllipse(PdfKit.prototype.ellipse.secondCall.args);
+		assertEllipse(PDFDocument.prototype.ellipse.firstCall.args);
+		assertEllipse(PDFDocument.prototype.ellipse.secondCall.args);
 
 	});
 
@@ -197,7 +195,7 @@ describe('Printer', function () {
 
 		printer.createPdfKitDocument(docDefinition);
 
-		assert(PdfKit.prototype.addPage.callCount === 1);
+		assert(PDFDocument.prototype.addPage.callCount === 1);
 	});
 
 	it('should print all pages when maxPagesNumber is undefined', function () {
@@ -222,7 +220,7 @@ describe('Printer', function () {
 
 		printer.createPdfKitDocument(docDefinition);
 
-		assert(PdfKit.prototype.addPage.callCount === 3);
+		assert(PDFDocument.prototype.addPage.callCount === 3);
 	});
 
 	it('should report progress on each rendered item when a progressCallback is passed', function () {
