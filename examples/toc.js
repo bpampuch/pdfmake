@@ -20,17 +20,17 @@ var docDefinition = {
 		},
 		{
 			toc: {
-				title: {text: 'INDEX', style: 'header'},
+				title: { text: 'INDEX', style: 'header' },
 				//textMargin: [0, 0, 0, 0],
 				//textStyle: {italics: true},
-				numberStyle: {bold: true}
+				numberStyle: { bold: true }
 			}
 		},
 		{
 			text: 'This is a header, using header style',
 			style: 'header',
 			tocItem: true,
-			tocStyle: {bold: true},
+			tocStyle: { bold: true },
 			tocMargin: [0, 10, 0, 0],
 			pageBreak: 'before'
 		},

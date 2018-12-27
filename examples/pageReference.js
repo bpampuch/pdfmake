@@ -20,11 +20,11 @@ var docDefinition = {
 		{
 			table: {
 				body: [
-					[{text: 'page #', bold: true}, {text: 'title', bold: true}],
-					[{pageReference: 'header1', alignment: 'right'}, 'Header one'],
-					[{pageReference: 'subheader1', alignment: 'right'}, 'Subheader one'],
-					[{pageReference: 'subheader2', alignment: 'right'}, 'Subheader two'],
-					[{pageReference: 'subheader3', alignment: 'right'}, 'Subheader three']
+					[{ text: 'page #', bold: true }, { text: 'title', bold: true }],
+					[{ pageReference: 'header1', alignment: 'right' }, 'Header one'],
+					[{ pageReference: 'subheader1', alignment: 'right' }, 'Subheader one'],
+					[{ pageReference: 'subheader2', alignment: 'right' }, 'Subheader two'],
+					[{ pageReference: 'subheader3', alignment: 'right' }, 'Subheader three']
 				]
 			}
 		},
@@ -34,11 +34,11 @@ var docDefinition = {
 		{
 			table: {
 				body: [
-					[{text: 'page #', bold: true}, {text: 'title', bold: true}],
-					[{pageReference: 'header1', alignment: 'right'}, {textReference: 'header1'}],
-					[{pageReference: 'subheader1', alignment: 'right'}, {textReference: 'subheader1'}],
-					[{pageReference: 'subheader2', alignment: 'right'}, {textReference: 'subheader2'}],
-					[{pageReference: 'subheader3', alignment: 'right'}, {textReference: 'subheader3'}]
+					[{ text: 'page #', bold: true }, { text: 'title', bold: true }],
+					[{ pageReference: 'header1', alignment: 'right' }, { textReference: 'header1' }],
+					[{ pageReference: 'subheader1', alignment: 'right' }, { textReference: 'subheader1' }],
+					[{ pageReference: 'subheader2', alignment: 'right' }, { textReference: 'subheader2' }],
+					[{ pageReference: 'subheader3', alignment: 'right' }, { textReference: 'subheader3' }]
 				]
 			}
 		},
@@ -48,33 +48,33 @@ var docDefinition = {
 		{
 			text: [
 				'Chapter "',
-				{textReference: 'header1'},
+				{ textReference: 'header1' },
 				'" is on page number ',
-				{pageReference: 'header1'}
+				{ pageReference: 'header1' }
 			]
 		},
 		{
 			text: [
 				'Chapter "',
-				{textReference: 'subheader1'},
+				{ textReference: 'subheader1' },
 				'" is on page number ',
-				{pageReference: 'subheader1'}
+				{ pageReference: 'subheader1' }
 			]
 		},
 		{
 			text: [
 				'Chapter "',
-				{textReference: 'subheader2'},
+				{ textReference: 'subheader2' },
 				'" is on page number ',
-				{pageReference: 'subheader2'}
+				{ pageReference: 'subheader2' }
 			]
 		},
 		{
 			text: [
 				'Chapter "',
-				{textReference: 'subheader3'},
+				{ textReference: 'subheader3' },
 				'" is on page number ',
-				{pageReference: 'subheader3'}
+				{ pageReference: 'subheader3' }
 			]
 		},
 		{
