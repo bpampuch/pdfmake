@@ -81,6 +81,9 @@ module.exports = {
 				include: /\.min\.js$/,
 				sourceMap: true,
 				uglifyOptions: {
+					output: {
+						comments: /^! pdfmake/
+					},
 					compress: {
 						drop_console: true
 					},
