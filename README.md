@@ -55,11 +55,11 @@ For discussion about new documentation use [issue #1238](https://github.com/bpam
 
 Documentation URL: https://pdfmake.github.io/docs/
 
-## Building from sources
+## Building from sources version 0.1.x
 
 using npm:
 ```
-git clone https://github.com/bpampuch/pdfmake.git
+git clone --branch 0.1 https://github.com/bpampuch/pdfmake.git
 cd pdfmake
 npm install
 npm run build
@@ -67,7 +67,7 @@ npm run build
 
 using yarn:
 ```
-git clone https://github.com/bpampuch/pdfmake.git
+git clone --branch 0.1 https://github.com/bpampuch/pdfmake.git
 cd pdfmake
 yarn
 yarn run build
