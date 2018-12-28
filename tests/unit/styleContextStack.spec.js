@@ -4,19 +4,6 @@ var assert = require('assert');
 
 var StyleContextStack = require('../../js/styleContextStack').default;
 
-var sampleTestProvider = {
-	provideFont: function (familyName, bold, italics) {
-		return {
-			widthOfString: function (text, size) {
-				return text.length * size * (bold ? 1.5 : 1) * (italics ? 1.1 : 1);
-			},
-			lineHeight: function (size) {
-				return size;
-			}
-		};
-	}
-};
-
 describe('StyleContextStack', function () {
 
 	var defaultStyle = { fontSize: 12, bold: false, font: 'Helvetica' };
