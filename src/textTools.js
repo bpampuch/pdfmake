@@ -1,4 +1,4 @@
-import { isString, isNumber, isObject, isArray, isUndefined } from './helpers';
+import { isString, isNumber, isObject, isArray, isUndefined } from './helpers/variableType';
 import LineBreaker from 'linebreak';
 
 var LEADING = /^(\s)+/g;

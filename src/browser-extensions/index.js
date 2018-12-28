@@ -1,5 +1,5 @@
 import PdfPrinter from '../printer';
-import { isFunction } from '../helpers';
+import { isFunction } from '../helpers/variableType';
 import FileSaver from 'file-saver';
 import fs from 'fs';
 var saveAs = FileSaver.saveAs;

@@ -4,7 +4,7 @@ import LayoutBuilder from './layoutBuilder';
 import sizes from './standardPageSizes';
 import textDecorator from './textDecorator';
 import TextTools from './textTools';
-import { isFunction, isString, isNumber, isBoolean, isArray, isUndefined } from './helpers';
+import { isFunction, isString, isNumber, isBoolean, isArray, isUndefined } from './helpers/variableType';
 
 /**
  * Printer which turns document definition into a pdf

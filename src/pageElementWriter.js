@@ -1,4 +1,4 @@
-import { isUndefined } from './helpers';
+import { isUndefined } from './helpers/variableType';
 import ElementWriter from './elementWriter';
 
 /**

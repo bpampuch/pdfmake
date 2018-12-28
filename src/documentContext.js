@@ -1,5 +1,5 @@
 import TraversalTracker from './traversalTracker';
-import { isString } from './helpers';
+import { isString } from './helpers/variableType';
 
 /**
  * A store for current x, y positions and available width/height.

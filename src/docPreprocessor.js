@@ -1,4 +1,5 @@
-import { isString, isNumber, isBoolean, isArray, isUndefined, fontStringify } from './helpers';
+import { isString, isNumber, isBoolean, isArray, isUndefined } from './helpers/variableType';
+import { fontStringify } from './helpers';
 
 class DocPreprocessor {
 	preprocessDocument(docStructure) {

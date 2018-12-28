@@ -1,5 +1,5 @@
 import ColumnCalculator from './columnCalculator';
-import { isFunction } from './helpers';
+import { isFunction } from './helpers/variableType';
 
 class TableProcessor {
 	constructor(tableNode) {

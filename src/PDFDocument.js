@@ -1,5 +1,5 @@
 import PDFKit from 'pdfkit';
-import { isArray } from './helpers';
+import { isArray } from './helpers/variableType';
 
 const typeName = (bold, italics) => {
 	let type = 'normal';

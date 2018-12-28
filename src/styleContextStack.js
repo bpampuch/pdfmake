@@ -1,4 +1,4 @@
-import { isString, isArray, isUndefined, isNull } from './helpers';
+import { isString, isArray, isUndefined, isNull } from './helpers/variableType';
 
 /**
  * Used for style inheritance and style overrides

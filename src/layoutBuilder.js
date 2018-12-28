@@ -6,7 +6,8 @@ import PageElementWriter from './pageElementWriter';
 import ColumnCalculator from './columnCalculator';
 import TableProcessor from './tableProcessor';
 import Line from './line';
-import { isString, isArray, pack, offsetVector, fontStringify, isFunction } from './helpers';
+import { isString, isArray, isFunction } from './helpers/variableType';
+import { pack, offsetVector, fontStringify } from './helpers';
 import TextTools from './textTools';
 import StyleContextStack from './styleContextStack';
 

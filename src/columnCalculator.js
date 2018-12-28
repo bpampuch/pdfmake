@@ -1,4 +1,4 @@
-import { isString } from './helpers';
+import { isString } from './helpers/variableType';
 
 function buildColumnWidths(columns, availableWidth) {
 	var autoColumns = [];

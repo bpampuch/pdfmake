@@ -1,4 +1,4 @@
-import { isArray } from './helpers';
+import { isArray } from './helpers/variableType';
 
 function groupDecorations(line) {
 	var groups = [];
