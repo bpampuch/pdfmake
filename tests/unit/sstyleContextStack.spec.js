@@ -2,7 +2,7 @@
 
 var assert = require('assert');
 
-var StyleContextStack = require('../../js/styleContextStack').default;
+var StyleContextStack = require('../../js/StyleContextStack').default;
 
 describe('StyleContextStack', function () {
 
