@@ -2,7 +2,7 @@
 
 var assert = require('assert');
 
-var PDFDocument = require('../js/PDFDocument').default;
+var PDFDocument = require('../../js/PDFDocument').default;
 
 describe('PDFDocument', function () {
 	var pdfDocument;

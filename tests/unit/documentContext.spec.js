@@ -3,7 +3,7 @@
 var assert = require('assert');
 var rewire = require("rewire");
 
-var DocumentContext = rewire('../js/documentContext');
+var DocumentContext = rewire('../../js/documentContext');
 
 describe('DocumentContext', function () {
 	var pc;

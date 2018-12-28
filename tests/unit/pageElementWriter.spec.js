@@ -3,8 +3,8 @@
 var assert = require('assert');
 var sinon = require('sinon');
 
-var DocumentContext = require('../js/documentContext').default;
-var PageElementWriter = require('../js/pageElementWriter').default;
+var DocumentContext = require('../../js/documentContext').default;
+var PageElementWriter = require('../../js/pageElementWriter').default;
 
 describe('PageElementWriter', function () {
 	var pew, ctx, tracker, pageSize;

@@ -2,7 +2,7 @@
 
 var assert = require('assert');
 
-var Line = require('../js/line').default;
+var Line = require('../../js/line').default;
 
 describe('Line', function () {
 	describe('hasEnoughSpaceForInline', function () {

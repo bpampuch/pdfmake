@@ -3,8 +3,8 @@
 var assert = require('assert');
 var sinon = require('sinon');
 
-var PDFDocument = require('../js/PDFDocument').default;
-var Printer = require('../js/printer.js').default;
+var PDFDocument = require('../../js/PDFDocument').default;
+var Printer = require('../../js/printer.js').default;
 
 describe('Printer', function () {
 

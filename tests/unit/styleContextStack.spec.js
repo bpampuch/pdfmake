@@ -2,7 +2,7 @@
 
 var assert = require('assert');
 
-var StyleContextStack = require('../js/styleContextStack').default;
+var StyleContextStack = require('../../js/styleContextStack').default;
 
 var sampleTestProvider = {
 	provideFont: function (familyName, bold, italics) {
