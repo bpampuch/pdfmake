@@ -1,6 +1,6 @@
 import { isArray } from './helpers/variableType';
 import TextBreaker from './TextBreaker';
-import StyleContextStack from './styleContextStack';
+import StyleContextStack from './StyleContextStack';
 
 var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;

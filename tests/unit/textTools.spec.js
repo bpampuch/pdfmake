@@ -4,7 +4,7 @@ var assert = require('assert');
 var rewire = require("rewire");
 
 var TextTools = rewire('../../js/textTools');
-var StyleContextStack = require('../../js/styleContextStack').default;
+var StyleContextStack = require('../../js/StyleContextStack').default;
 var DocPreprocessor = require('../../js/docPreprocessor').default;
 
 var sampleTestProvider = {

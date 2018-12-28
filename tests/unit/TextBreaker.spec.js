@@ -1,7 +1,7 @@
 const assert = require('assert');
 
 const TextBreaker = require('../../js/TextBreaker').default;
-const StyleContextStack = require('../../js/styleContextStack').default;
+const StyleContextStack = require('../../js/StyleContextStack').default;
 
 describe('TextBreaker', function () {
 

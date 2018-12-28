@@ -5,7 +5,7 @@ var sinon = require('sinon');
 
 var Line = require('../../js/line').default;
 var LayoutBuilder = require('../../js/layoutBuilder').default;
-var StyleContextStack = require('../../js/styleContextStack').default;
+var StyleContextStack = require('../../js/StyleContextStack').default;
 var ColumnCalculator = require('../../js/columnCalculator').default;
 var PageElementWriter = require('../../js/pageElementWriter').default;
 var DocumentContext = require('../../js/documentContext').default;

@@ -10,7 +10,7 @@ import { isString, isArray, isFunction } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
 import { pack, offsetVector } from './helpers/tools';
 import TextTools from './textTools';
-import StyleContextStack from './styleContextStack';
+import StyleContextStack from './StyleContextStack';
 
 function addAll(target, otherArray) {
 	otherArray.forEach(item => {

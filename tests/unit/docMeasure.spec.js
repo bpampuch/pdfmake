@@ -4,7 +4,7 @@ var assert = require('assert');
 
 var DocPreprocessor = require('../../js/docPreprocessor').default;
 var DocMeasure = require('../../js/docMeasure').default;
-var StyleContextStack = require('../../js/styleContextStack').default;
+var StyleContextStack = require('../../js/StyleContextStack').default;
 
 var sampleTestProvider = {
 	provideFont: function (familyName, bold, italics) {

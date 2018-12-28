@@ -1,7 +1,7 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 
 import TextTools from './textTools';
-import StyleContextStack from './styleContextStack';
+import StyleContextStack from './StyleContextStack';
 import ColumnCalculator from './columnCalculator';
 import { isString, isNumber, isObject, isArray } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
