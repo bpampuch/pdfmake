@@ -5,7 +5,7 @@ import StyleContextStack from './styleContextStack';
 import ColumnCalculator from './columnCalculator';
 import { isString, isNumber, isObject, isArray } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
-import { pack } from './helpers';
+import { pack } from './helpers/tools';
 import qrEncoder from './qrEnc.js';
 
 class DocMeasure {

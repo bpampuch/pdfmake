@@ -8,7 +8,7 @@ import TableProcessor from './tableProcessor';
 import Line from './line';
 import { isString, isArray, isFunction } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
-import { pack, offsetVector } from './helpers';
+import { pack, offsetVector } from './helpers/tools';
 import TextTools from './textTools';
 import StyleContextStack from './styleContextStack';
 
