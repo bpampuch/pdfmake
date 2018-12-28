@@ -26,9 +26,6 @@ var textTools = new TextTools.default(sampleTestProvider);
 var docPreprocessor = new DocPreprocessor();
 
 describe('TextTools', function () {
-	var sampleText = 'Przyklad, bez nowych linii,   ale !!!! rozne!!!konstrukcje i ..blablablabla.';
-	var sampleText2 = 'Przyklad, z nowy\nmi liniami\n, \n \n  ale\n\n !!!! rozne!!!konstrukcje i ..blablablabla.';
-
 	var plainText = 'Imię: Jan      Nazwisko: Nowak\nDodatkowe informacje:';
 
 	var plainTextArray = [
@@ -139,53 +136,6 @@ describe('TextTools', function () {
 			font: 'Helvetica'
 		});
 	var styleStackNoWrap = new StyleContextStack({}, { noWrap: true });
-
-	describe('splitWords', function () {
-		it('should do basic splitting', function () {
-			var result = TextTools.__get__('splitWords')(sampleText);
-			assert.equal(result.length, 8);
-		});
-
-		it('should not set lineEnd on inlines if there are no new-lines', function () {
-			var result = TextTools.__get__('splitWords')(sampleText);
-
-			result.forEach(function (item) {
-				assert.notEqual(item.lineEnd, true);
-			});
-		});
-
-		it('should split into lines if there are new-line chars', function () {
-			var result = TextTools.__get__('splitWords')(sampleText2);
-			assert.equal(result.length, 14);
-		});
-
-		it('should split properly when adjacent newlines appear', function () {
-			var result = TextTools.__get__('splitWords')(sampleText2);
-			assert.equal(result[9].text.length, 0);
-			assert.equal(result[9].lineEnd, true);
-		});
-
-		it('should support whitespace-only lines', function () {
-			var result = TextTools.__get__('splitWords')(sampleText2);
-			assert.equal(result[6].text, ' ');
-			assert.equal(result[6].lineEnd, true);
-		});
-
-		it('should split ZERO WIDTH SPACE character', function () {
-			var result = TextTools.__get__('splitWords')('first line\u200Bsecond line\u200Bthird line');
-			assert.equal(result.length, 6);
-		});
-
-		it('should split basic Chinese text', function () {
-			var result = TextTools.__get__('splitWords')('起来！不愿做奴隶的人们！');
-			assert.equal(result.length, 10);
-		});
-
-		it('should split Chinese text into lines if there are new-line chars', function () {
-			var result = TextTools.__get__('splitWords')('中华民族到了最危险的时候，\n每个人被迫着发出最后的吼声。\n起来！起来！起来！');
-			assert.equal(result.length, 31);
-		});
-	});
 
 	describe('normalizeTextArray', function () {
 		it('should support plain strings', function () {

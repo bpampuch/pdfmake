@@ -1,6 +1,6 @@
-import { isString, isNumber, isObject, isArray, isUndefined } from './helpers/variableType';
+import { isArray } from './helpers/variableType';
+import TextBreaker from './TextBreaker';
 import StyleContextStack from './styleContextStack';
-import LineBreaker from 'linebreak';
 
 var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;
@@ -99,35 +99,6 @@ class TextTools {
 	}
 }
 
-function splitWords(text, noWrap) {
-	var results = [];
-	//text = text.replace(/\t/g, '    ');
-
-	if (noWrap) {
-		results.push({ text: text });
-		return results;
-	}
-
-	var breaker = new LineBreaker(text);
-	var last = 0;
-	var bk;
-
-	while ((bk = breaker.nextBreak())) {
-		var word = text.slice(last, bk.position);
-
-		if (bk.required || word.match(/\r?\n$|\r$/)) { // new line
-			word = word.replace(/\r?\n$|\r$/, '');
-			results.push({ text: word, lineEnd: true });
-		} else {
-			results.push({ text: word });
-		}
-
-		last = bk.position;
-	}
-
-	return results;
-}
-
 function normalizeTextArray(array, styleContextStack) {
 	function flatten(array) {
 		return array.reduce((prev, cur) => {
@@ -137,95 +108,16 @@ function normalizeTextArray(array, styleContextStack) {
 		}, []);
 	}
 
-	function getOneWord(index, words, noWrap) {
-		if (isUndefined(words[index])) {
-			return null;
-		}
-
-		if (words[index].lineEnd) {
-			return null;
-		}
-
-		var word = words[index].text;
-
-		if (noWrap) {
-			var tmpWords = splitWords(normalizeString(word), false);
-			if (isUndefined(tmpWords[tmpWords.length - 1])) {
-				return null;
-			}
-			word = tmpWords[tmpWords.length - 1].text;
-		}
-
-		return word;
-	}
-
-	var results = [];
-
 	if (!isArray(array)) {
 		array = [array];
 	}
 
+	// TODO: Styling in nested text (issue: https://github.com/bpampuch/pdfmake/issues/1174)
+
 	array = flatten(array);
 
-	var lastWord = null;
-	for (var i = 0, l = array.length; i < l; i++) {
-		var item = array[i];
-		var style = null;
-		var words;
-
-		var noWrap = StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
-		if (isObject(item)) {
-			if (item._textRef && item._textRef._textNodeRef.text) {
-				item.text = item._textRef._textNodeRef.text;
-			}
-			words = splitWords(normalizeString(item.text), noWrap);
-			style = StyleContextStack.copyStyle(item);
-		} else {
-			words = splitWords(normalizeString(item), noWrap);
-		}
-
-		if (lastWord && words.length) {
-			var firstWord = getOneWord(0, words, noWrap);
-
-			var wrapWords = splitWords(normalizeString(lastWord + firstWord), false);
-			if (wrapWords.length === 1) {
-				results[results.length - 1].noNewLine = true;
-			}
-		}
-
-		for (var i2 = 0, l2 = words.length; i2 < l2; i2++) {
-			var result = {
-				text: words[i2].text
-			};
-
-			if (words[i2].lineEnd) {
-				result.lineEnd = true;
-			}
-
-			StyleContextStack.copyStyle(style, result);
-
-			results.push(result);
-		}
-
-		lastWord = null;
-		if (i + 1 < l) {
-			lastWord = getOneWord(words.length - 1, words, noWrap);
-		}
-	}
-
-	return results;
-}
-
-function normalizeString(value) {
-	if (value === undefined || value === null) {
-		return '';
-	} else if (isNumber(value)) {
-		return value.toString();
-	} else if (isString(value)) {
-		return value;
-	} else {
-		return value.toString();
-	}
+	let textBreaker = new TextBreaker();
+	return textBreaker.getBreaks(array, styleContextStack);
 }
 
 function measure(pdfDocument, textArray, styleContextStack) {
