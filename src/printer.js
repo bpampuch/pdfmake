@@ -74,6 +74,7 @@ class PdfPrinter {
 	 * @return {Object} a pdfKit document object which can be saved or encode to data-url
 	 */
 	createPdfKitDocument(docDefinition, options = {}) {
+		docDefinition.version = docDefinition.version || '1.3';
 		docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 		docDefinition.images = docDefinition.images || {};
 
@@ -81,7 +82,11 @@ class PdfPrinter {
 
 		let pdfOptions = {
 			size: [pageSize.width, pageSize.height],
+			pdfVersion: docDefinition.version,
 			compress: docDefinition.compress,
+			userPassword: docDefinition.userPassword,
+			ownerPassword: docDefinition.ownerPassword,
+			permissions: docDefinition.permissions,
 			bufferPages: options.bufferPages || false,
 			autoFirstPage: false
 		};
