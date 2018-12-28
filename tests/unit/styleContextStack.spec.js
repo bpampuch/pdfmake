@@ -7,7 +7,7 @@ var StyleContextStack = require('../../js/styleContextStack').default;
 describe('StyleContextStack', function () {
 
 	var defaultStyle = { fontSize: 12, bold: false, font: 'Helvetica' };
-
+	var styleStack = new StyleContextStack({}, { font: 'Times New Roman' });
 	var stackWithDefaultStyle;
 	var fullStack;
 
@@ -141,4 +141,24 @@ describe('StyleContextStack', function () {
 			assert.equal(fullStack.styleOverrides[3].fontSize, 123);
 		});
 	});
+
+	describe('getStyleProperty', function () {
+		it('should return default property value', function () {
+			assert.equal(StyleContextStack.getStyleProperty({}, null, 'font', 'Arial'), 'Arial');
+			assert.equal(StyleContextStack.getStyleProperty({}, styleStack, 'fontSize', 20), 20);
+			assert.equal(StyleContextStack.getStyleProperty({ bold: true }, styleStack, 'fontSize', 20), 20);
+			assert.equal(StyleContextStack.getStyleProperty({ bold: true }, null, 'fontSize', 20), 20);
+		});
+
+		it('should return value from style stack', function () {
+			assert.equal(StyleContextStack.getStyleProperty({}, styleStack, 'font', 'Arial'), 'Times New Roman');
+			assert.equal(StyleContextStack.getStyleProperty({ bold: true }, styleStack, 'font', 'Arial'), 'Times New Roman');
+		});
+
+		it('should return value from node', function () {
+			assert.equal(StyleContextStack.getStyleProperty({ font: 'ZapfDingbats' }, styleStack, 'font', 'Arial'), 'ZapfDingbats');
+			assert.equal(StyleContextStack.getStyleProperty({ font: 'ZapfDingbats', bold: true }, null, 'font', 'Arial'), 'ZapfDingbats');
+		});
+	});
+
 });

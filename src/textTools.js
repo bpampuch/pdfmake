@@ -1,4 +1,5 @@
 import { isString, isNumber, isObject, isArray, isUndefined } from './helpers/variableType';
+import StyleContextStack from './styleContextStack';
 import LineBreaker from 'linebreak';
 
 var LEADING = /^(\s)+/g;
@@ -48,7 +49,7 @@ class TextTools {
 			}
 		});
 
-		if (getStyleProperty({}, styleContextStack, 'noWrap', false)) {
+		if (StyleContextStack.getStyleProperty({}, styleContextStack, 'noWrap', false)) {
 			minWidth = maxWidth;
 		}
 
@@ -73,13 +74,13 @@ class TextTools {
 		text = text ? text.toString().replace(/\t/g, '    ') : '';
 
 		//TODO: refactor - extract from measure
-		var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
-		var fontSize = getStyleProperty({}, styleContextStack, 'fontSize', 12);
-		var fontFeatures = getStyleProperty({}, styleContextStack, 'fontFeatures', null);
-		var bold = getStyleProperty({}, styleContextStack, 'bold', false);
-		var italics = getStyleProperty({}, styleContextStack, 'italics', false);
-		var lineHeight = getStyleProperty({}, styleContextStack, 'lineHeight', 1);
-		var characterSpacing = getStyleProperty({}, styleContextStack, 'characterSpacing', 0);
+		var fontName = StyleContextStack.getStyleProperty({}, styleContextStack, 'font', 'Roboto');
+		var fontSize = StyleContextStack.getStyleProperty({}, styleContextStack, 'fontSize', 12);
+		var fontFeatures = StyleContextStack.getStyleProperty({}, styleContextStack, 'fontFeatures', null);
+		var bold = StyleContextStack.getStyleProperty({}, styleContextStack, 'bold', false);
+		var italics = StyleContextStack.getStyleProperty({}, styleContextStack, 'italics', false);
+		var lineHeight = StyleContextStack.getStyleProperty({}, styleContextStack, 'lineHeight', 1);
+		var characterSpacing = StyleContextStack.getStyleProperty({}, styleContextStack, 'characterSpacing', 0);
 
 		var font = this.pdfDocument.provideFont(fontName, bold, italics);
 
@@ -182,7 +183,7 @@ function normalizeTextArray(array, styleContextStack) {
 		var style = null;
 		var words;
 
-		var noWrap = getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
+		var noWrap = StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 		if (isObject(item)) {
 			if (item._textRef && item._textRef._textNodeRef.text) {
 				item.text = item._textRef._textNodeRef.text;
@@ -237,34 +238,11 @@ function normalizeString(value) {
 	}
 }
 
-function getStyleProperty(item, styleContextStack, property, defaultValue) {
-	var value;
-
-	if (item[property] !== undefined && item[property] !== null) {
-		// item defines this property
-		return item[property];
-	}
-
-	if (!styleContextStack) {
-		return defaultValue;
-	}
-
-	styleContextStack.auto(item, () => {
-		value = styleContextStack.getProperty(property);
-	});
-
-	if (value !== null && value !== undefined) {
-		return value;
-	} else {
-		return defaultValue;
-	}
-}
-
 function measure(pdfDocument, textArray, styleContextStack) {
 	var normalized = normalizeTextArray(textArray, styleContextStack);
 
 	if (normalized.length) {
-		var leadingIndent = getStyleProperty(normalized[0], styleContextStack, 'leadingIndent', 0);
+		var leadingIndent = StyleContextStack.getStyleProperty(normalized[0], styleContextStack, 'leadingIndent', 0);
 
 		if (leadingIndent) {
 			normalized[0].leadingCut = -leadingIndent;
@@ -273,24 +251,24 @@ function measure(pdfDocument, textArray, styleContextStack) {
 	}
 
 	normalized.forEach(item => {
-		var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
-		var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
-		var fontFeatures = getStyleProperty(item, styleContextStack, 'fontFeatures', null);
-		var bold = getStyleProperty(item, styleContextStack, 'bold', false);
-		var italics = getStyleProperty(item, styleContextStack, 'italics', false);
-		var color = getStyleProperty(item, styleContextStack, 'color', 'black');
-		var decoration = getStyleProperty(item, styleContextStack, 'decoration', null);
-		var decorationColor = getStyleProperty(item, styleContextStack, 'decorationColor', null);
-		var decorationStyle = getStyleProperty(item, styleContextStack, 'decorationStyle', null);
-		var background = getStyleProperty(item, styleContextStack, 'background', null);
-		var lineHeight = getStyleProperty(item, styleContextStack, 'lineHeight', 1);
-		var characterSpacing = getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
-		var link = getStyleProperty(item, styleContextStack, 'link', null);
-		var linkToPage = getStyleProperty(item, styleContextStack, 'linkToPage', null);
-		var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', null);
-		var preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
-		var preserveTrailingSpaces = getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
-		var opacity = getStyleProperty(item, styleContextStack, 'opacity', 1);
+		var fontName = StyleContextStack.getStyleProperty(item, styleContextStack, 'font', 'Roboto');
+		var fontSize = StyleContextStack.getStyleProperty(item, styleContextStack, 'fontSize', 12);
+		var fontFeatures = StyleContextStack.getStyleProperty(item, styleContextStack, 'fontFeatures', null);
+		var bold = StyleContextStack.getStyleProperty(item, styleContextStack, 'bold', false);
+		var italics = StyleContextStack.getStyleProperty(item, styleContextStack, 'italics', false);
+		var color = StyleContextStack.getStyleProperty(item, styleContextStack, 'color', 'black');
+		var decoration = StyleContextStack.getStyleProperty(item, styleContextStack, 'decoration', null);
+		var decorationColor = StyleContextStack.getStyleProperty(item, styleContextStack, 'decorationColor', null);
+		var decorationStyle = StyleContextStack.getStyleProperty(item, styleContextStack, 'decorationStyle', null);
+		var background = StyleContextStack.getStyleProperty(item, styleContextStack, 'background', null);
+		var lineHeight = StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeight', 1);
+		var characterSpacing = StyleContextStack.getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
+		var link = StyleContextStack.getStyleProperty(item, styleContextStack, 'link', null);
+		var linkToPage = StyleContextStack.getStyleProperty(item, styleContextStack, 'linkToPage', null);
+		var noWrap = StyleContextStack.getStyleProperty(item, styleContextStack, 'noWrap', null);
+		var preserveLeadingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
+		var preserveTrailingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
+		var opacity = StyleContextStack.getStyleProperty(item, styleContextStack, 'opacity', 1);
 
 		var font = pdfDocument.provideFont(fontName, bold, italics);
 
@@ -313,7 +291,7 @@ function measure(pdfDocument, textArray, styleContextStack) {
 			item.trailingCut = 0;
 		}
 
-		item.alignment = getStyleProperty(item, styleContextStack, 'alignment', 'left');
+		item.alignment = StyleContextStack.getStyleProperty(item, styleContextStack, 'alignment', 'left');
 		item.font = font;
 		item.fontSize = fontSize;
 		item.fontFeatures = fontFeatures;
