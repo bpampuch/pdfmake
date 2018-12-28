@@ -229,11 +229,10 @@ function normalizeString(value) {
 }
 
 function measure(pdfDocument, textArray, styleContextStack) {
-	var normalized = normalizeTextArray(textArray, styleContextStack);
+	let normalized = normalizeTextArray(textArray, styleContextStack);
 
 	if (normalized.length) {
-		var leadingIndent = StyleContextStack.getStyleProperty(normalized[0], styleContextStack, 'leadingIndent', 0);
-
+		let leadingIndent = StyleContextStack.getStyleProperty(normalized[0], styleContextStack, 'leadingIndent', 0);
 		if (leadingIndent) {
 			normalized[0].leadingCut = -leadingIndent;
 			normalized[0].leadingIndent = leadingIndent;
@@ -241,60 +240,52 @@ function measure(pdfDocument, textArray, styleContextStack) {
 	}
 
 	normalized.forEach(item => {
-		var fontName = StyleContextStack.getStyleProperty(item, styleContextStack, 'font', 'Roboto');
-		var fontSize = StyleContextStack.getStyleProperty(item, styleContextStack, 'fontSize', 12);
-		var fontFeatures = StyleContextStack.getStyleProperty(item, styleContextStack, 'fontFeatures', null);
-		var bold = StyleContextStack.getStyleProperty(item, styleContextStack, 'bold', false);
-		var italics = StyleContextStack.getStyleProperty(item, styleContextStack, 'italics', false);
-		var color = StyleContextStack.getStyleProperty(item, styleContextStack, 'color', 'black');
-		var decoration = StyleContextStack.getStyleProperty(item, styleContextStack, 'decoration', null);
-		var decorationColor = StyleContextStack.getStyleProperty(item, styleContextStack, 'decorationColor', null);
-		var decorationStyle = StyleContextStack.getStyleProperty(item, styleContextStack, 'decorationStyle', null);
-		var background = StyleContextStack.getStyleProperty(item, styleContextStack, 'background', null);
-		var lineHeight = StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeight', 1);
-		var characterSpacing = StyleContextStack.getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
-		var link = StyleContextStack.getStyleProperty(item, styleContextStack, 'link', null);
-		var linkToPage = StyleContextStack.getStyleProperty(item, styleContextStack, 'linkToPage', null);
-		var noWrap = StyleContextStack.getStyleProperty(item, styleContextStack, 'noWrap', null);
-		var preserveLeadingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
-		var preserveTrailingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
-		var opacity = StyleContextStack.getStyleProperty(item, styleContextStack, 'opacity', 1);
+		let font = StyleContextStack.getStyleProperty(item, styleContextStack, 'font', 'Roboto');
+		let bold = StyleContextStack.getStyleProperty(item, styleContextStack, 'bold', false);
+		let italics = StyleContextStack.getStyleProperty(item, styleContextStack, 'italics', false);
 
-		var font = pdfDocument.provideFont(fontName, bold, italics);
+		item.font = pdfDocument.provideFont(font, bold, italics);
 
-		item.width = widthOfString(item.text, font, fontSize, characterSpacing, fontFeatures);
-		item.height = font.lineHeight(fontSize) * lineHeight;
+		item.alignment = StyleContextStack.getStyleProperty(item, styleContextStack, 'alignment', 'left');
+		item.fontSize = StyleContextStack.getStyleProperty(item, styleContextStack, 'fontSize', 12);
+		item.fontFeatures = StyleContextStack.getStyleProperty(item, styleContextStack, 'fontFeatures', null);
+		item.characterSpacing = StyleContextStack.getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
+		item.color = StyleContextStack.getStyleProperty(item, styleContextStack, 'color', 'black');
+		item.decoration = StyleContextStack.getStyleProperty(item, styleContextStack, 'decoration', null);
+		item.decorationColor = StyleContextStack.getStyleProperty(item, styleContextStack, 'decorationColor', null);
+		item.decorationStyle = StyleContextStack.getStyleProperty(item, styleContextStack, 'decorationStyle', null);
+		item.background = StyleContextStack.getStyleProperty(item, styleContextStack, 'background', null);
+		item.link = StyleContextStack.getStyleProperty(item, styleContextStack, 'link', null);
+		item.linkToPage = StyleContextStack.getStyleProperty(item, styleContextStack, 'linkToPage', null);
+		item.noWrap = StyleContextStack.getStyleProperty(item, styleContextStack, 'noWrap', null);
+		item.opacity = StyleContextStack.getStyleProperty(item, styleContextStack, 'opacity', 1);
+
+		let lineHeight = StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeight', 1);
+
+		item.width = widthOfString(item.text, item.font, item.fontSize, item.characterSpacing, item.fontFeatures);
+		item.height = item.font.lineHeight(item.fontSize) * lineHeight;
 
 		if (!item.leadingCut) {
 			item.leadingCut = 0;
 		}
 
-		var leadingSpaces;
-		if (!preserveLeadingSpaces && (leadingSpaces = item.text.match(LEADING))) {
-			item.leadingCut += widthOfString(leadingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
+		let preserveLeadingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
+		if (!preserveLeadingSpaces) {
+			let leadingSpaces = item.text.match(LEADING);
+			if (leadingSpaces) {
+				item.leadingCut += widthOfString(leadingSpaces[0], item.font, item.fontSize, item.characterSpacing, item.fontFeatures);
+			}
 		}
 
-		var trailingSpaces;
-		if (!preserveTrailingSpaces && (trailingSpaces = item.text.match(TRAILING))) {
-			item.trailingCut = widthOfString(trailingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
-		} else {
-			item.trailingCut = 0;
-		}
+		item.trailingCut = 0;
 
-		item.alignment = StyleContextStack.getStyleProperty(item, styleContextStack, 'alignment', 'left');
-		item.font = font;
-		item.fontSize = fontSize;
-		item.fontFeatures = fontFeatures;
-		item.characterSpacing = characterSpacing;
-		item.color = color;
-		item.decoration = decoration;
-		item.decorationColor = decorationColor;
-		item.decorationStyle = decorationStyle;
-		item.background = background;
-		item.link = link;
-		item.linkToPage = linkToPage;
-		item.noWrap = noWrap;
-		item.opacity = opacity;
+		let preserveTrailingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
+		if (!preserveTrailingSpaces) {
+			let trailingSpaces = item.text.match(TRAILING);
+			if (trailingSpaces) {
+				item.trailingCut = widthOfString(trailingSpaces[0], item.font, item.fontSize, item.characterSpacing, item.fontFeatures);
+			}
+		}
 	});
 
 	return normalized;
