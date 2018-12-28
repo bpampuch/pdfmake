@@ -1,5 +1,19 @@
-import { isString, isNumber, isBoolean, isArray, isUndefined } from './helpers/variableType';
+import { isString, isNumber, isBoolean, isArray, isUndefined, isValue, isEmptyObject } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
+
+const convertValueToString = value => {
+	if (isString(value)) {
+		return value;
+	} else if (isNumber(value) || isBoolean(value)) {
+		return value.toString();
+	} else if (!isValue(value) || isEmptyObject(value)) {
+		return '';
+	}
+
+	// TODO: throw exception ?
+
+	return value;
+};
 
 class DocPreprocessor {
 	preprocessDocument(docStructure) {
@@ -13,16 +27,10 @@ class DocPreprocessor {
 		// expand shortcuts and casting values
 		if (isArray(node)) {
 			node = { stack: node };
-		} else if (isString(node)) {
-			node = { text: node };
-		} else if (isNumber(node) || isBoolean(node)) {
-			node = { text: node.toString() };
-		} else if (node === undefined || node === null) {
-			node = { text: '' };
-		} else if (Object.keys(node).length === 0) { // empty object
-			node = { text: '' };
-		} else if ('text' in node && (node.text === undefined || node.text === null)) {
-			node.text = '';
+		} else if (isString(node) || isNumber(node) || isBoolean(node) || !isValue(node) || isEmptyObject(node)) { // text node defined as value
+			node = { text: convertValueToString(node) };
+		} else if ('text' in node) { // cast value in text property
+			node.text = convertValueToString(node.text);
 		}
 
 		if (node.columns) {
