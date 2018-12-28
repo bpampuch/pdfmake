@@ -4,7 +4,8 @@ import TextTools from './textTools';
 import StyleContextStack from './styleContextStack';
 import ColumnCalculator from './columnCalculator';
 import { isString, isNumber, isObject, isArray } from './helpers/variableType';
-import { fontStringify, pack } from './helpers';
+import { stringifyNode } from './helpers/node';
+import { pack } from './helpers';
 import qrEncoder from './qrEnc.js';
 
 class DocMeasure {
@@ -60,7 +61,7 @@ class DocMeasure {
 			} else if (node.qr) {
 				return extendMargins(self.measureQr(node));
 			} else {
-				throw `Unrecognized document structure: ${JSON.stringify(node, fontStringify)}`;
+				throw `Unrecognized document structure: ${stringifyNode(node)}`;
 			}
 		});
 

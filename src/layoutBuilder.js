@@ -7,7 +7,8 @@ import ColumnCalculator from './columnCalculator';
 import TableProcessor from './tableProcessor';
 import Line from './line';
 import { isString, isArray, isFunction } from './helpers/variableType';
-import { pack, offsetVector, fontStringify } from './helpers';
+import { stringifyNode } from './helpers/node';
+import { pack, offsetVector } from './helpers';
 import TextTools from './textTools';
 import StyleContextStack from './styleContextStack';
 
@@ -341,7 +342,7 @@ class LayoutBuilder {
 			} else if (node.qr) {
 				self.processQr(node);
 			} else if (!node._span) {
-				throw `Unrecognized document structure: ${JSON.stringify(node, fontStringify)}`;
+				throw `Unrecognized document structure: ${stringifyNode(node)}`;
 			}
 
 			if (absPosition || relPosition) {

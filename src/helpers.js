@@ -37,10 +37,3 @@ export function offsetVector(vector, x, y) {
 			break;
 	}
 }
-
-export function fontStringify(key, val) {
-	if (key === 'font') {
-		return 'font';
-	}
-	return val;
-}

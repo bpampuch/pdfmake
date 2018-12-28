@@ -1,5 +1,5 @@
 import { isString, isNumber, isBoolean, isArray, isUndefined } from './helpers/variableType';
-import { fontStringify } from './helpers';
+import { stringifyNode } from './helpers/node';
 
 class DocPreprocessor {
 	preprocessDocument(docStructure) {
@@ -48,7 +48,7 @@ class DocPreprocessor {
 		} else if (node.pageReference || node.textReference) {
 			return this.preprocessText(node);
 		} else {
-			throw `Unrecognized document structure: ${JSON.stringify(node, fontStringify)}`;
+			throw `Unrecognized document structure: ${stringifyNode(node)}`;
 		}
 	}
 
