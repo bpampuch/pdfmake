@@ -189,6 +189,24 @@ class StyleContextStack {
 
 		return isValue(value) ? value : defaultValue;
 	}
+
+	/**
+	 * @param {object} source
+	 * @param {object} destination
+	 * @return {object}
+	 */
+	static copyStyle(source = {}, destination = {}) {
+		// TODO: default style to source
+
+		for (let key in source) {
+			if (key != 'text' && source.hasOwnProperty(key)) {
+				destination[key] = source[key];
+			}
+		}
+
+		return destination;
+	}
+
 }
 
 export default StyleContextStack;

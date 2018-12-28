@@ -128,16 +128,6 @@ function splitWords(text, noWrap) {
 	return results;
 }
 
-function copyStyle(source = {}, destination = {}) {
-	for (var key in source) {
-		if (key != 'text' && source.hasOwnProperty(key)) {
-			destination[key] = source[key];
-		}
-	}
-
-	return destination;
-}
-
 function normalizeTextArray(array, styleContextStack) {
 	function flatten(array) {
 		return array.reduce((prev, cur) => {
@@ -189,7 +179,7 @@ function normalizeTextArray(array, styleContextStack) {
 				item.text = item._textRef._textNodeRef.text;
 			}
 			words = splitWords(normalizeString(item.text), noWrap);
-			style = copyStyle(item);
+			style = StyleContextStack.copyStyle(item);
 		} else {
 			words = splitWords(normalizeString(item), noWrap);
 		}
@@ -212,7 +202,7 @@ function normalizeTextArray(array, styleContextStack) {
 				result.lineEnd = true;
 			}
 
-			copyStyle(style, result);
+			StyleContextStack.copyStyle(style, result);
 
 			results.push(result);
 		}

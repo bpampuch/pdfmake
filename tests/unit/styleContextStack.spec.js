@@ -161,4 +161,26 @@ describe('StyleContextStack', function () {
 		});
 	});
 
+	describe('copyStyle', function () {
+		it('should copy style from text node to new node', function () {
+			var sourceNode = { text: 'text node', font: 'Arial', fontSize: 20, bold: true };
+			var result = StyleContextStack.copyStyle(sourceNode);
+			assert.equal(result.text, undefined);
+			assert.equal(result.font, 'Arial');
+			assert.equal(result.fontSize, 20);
+			assert.equal(result.bold, true);
+		});
+
+		it('should copy style from text node to another node', function () {
+			var sourceNode = { text: 'text node', font: 'Arial', fontSize: 20, bold: true };
+			var destinationNode = { text: 'destination node', font: 'Roboto', italics: true };
+			StyleContextStack.copyStyle(sourceNode, destinationNode);
+			assert.equal(destinationNode.text, 'destination node');
+			assert.equal(destinationNode.font, 'Arial');
+			assert.equal(destinationNode.fontSize, 20);
+			assert.equal(destinationNode.bold, true);
+			assert.equal(destinationNode.italics, true);
+		});
+	});
+
 });
