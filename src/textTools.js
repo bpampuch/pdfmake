@@ -71,7 +71,7 @@ class TextTools {
 	 * @return {Object}				   size of the specified string
 	 */
 	sizeOfString(text, styleContextStack) {
-		text = text ? text.toString().replace(/\t/g, '    ') : '';
+		//text = text ? text.toString().replace(/\t/g, '    ') : '';
 
 		//TODO: refactor - extract from measure
 		var fontName = StyleContextStack.getStyleProperty({}, styleContextStack, 'font', 'Roboto');
@@ -101,7 +101,7 @@ class TextTools {
 
 function splitWords(text, noWrap) {
 	var results = [];
-	text = text.replace(/\t/g, '    ');
+	//text = text.replace(/\t/g, '    ');
 
 	if (noWrap) {
 		results.push({ text: text });

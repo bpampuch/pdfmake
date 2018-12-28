@@ -3,7 +3,7 @@ import { stringifyNode } from './helpers/node';
 
 const convertValueToString = value => {
 	if (isString(value)) {
-		return value;
+		return value.replace(/\t/g, '    '); // expand tab as spaces
 	} else if (isNumber(value) || isBoolean(value)) {
 		return value.toString();
 	} else if (!isValue(value) || isEmptyObject(value)) {

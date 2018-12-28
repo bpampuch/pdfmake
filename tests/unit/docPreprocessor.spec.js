@@ -133,6 +133,31 @@ describe('TextNormalizer', function () {
 		assert.equal(result.stack[21].text, 'undefined');
 	});
 
+	it('should replace tab as 4 spaces', function () {
+		var ddContent = [
+			'a\tb',
+			{ text: 'a\tb' },
+			'a\tb\tc',
+			{ text: 'a\tb\tc' },
+			{
+				text: [
+					'A\tB',
+					{ text: 'A\tB' },
+				]
+			}
+		];
+		var result = docPreprocessor.preprocessNode(ddContent);
+
+		assert.equal(Array.isArray(result.stack), true);
+		assert.equal(result.stack.length, 5);
+		assert.equal(result.stack[0].text, 'a    b');
+		assert.equal(result.stack[1].text, 'a    b');
+		assert.equal(result.stack[2].text, 'a    b    c');
+		assert.equal(result.stack[3].text, 'a    b    c');
+		assert.equal(result.stack[4].text[0].text, 'A    B');
+		assert.equal(result.stack[4].text[1].text, 'A    B');
+	});
+
 	it('should support text in nested nodes', function () {
 		var ddContent = [
 			{
