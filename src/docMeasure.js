@@ -66,7 +66,7 @@ class DocMeasure {
 		});
 
 		function extendMargins(node) {
-			var margin = node._margin;
+			let margin = node._margin;
 
 			if (margin) {
 				node._minWidth += margin[0] + margin[2];
@@ -91,11 +91,11 @@ class DocMeasure {
 			}
 
 			function flattenStyleArray(styleArray) {
-				var flattenedStyles = {};
-				for (var i = styleArray.length - 1; i >= 0; i--) {
-					var styleName = styleArray[i];
-					var style = self.styleStack.styleDictionary[styleName];
-					for (var key in style) {
+				let flattenedStyles = {};
+				for (let i = styleArray.length - 1; i >= 0; i--) {
+					let styleName = styleArray[i];
+					let style = self.styleStack.styleDictionary[styleName];
+					for (let key in style) {
 						if (style.hasOwnProperty(key)) {
 							flattenedStyles[key] = style[key];
 						}
@@ -115,11 +115,11 @@ class DocMeasure {
 				return margin;
 			}
 
-			var margin = [undefined, undefined, undefined, undefined];
+			let margin = [undefined, undefined, undefined, undefined];
 
 			if (node.style) {
-				var styleArray = isArray(node.style) ? node.style : [node.style];
-				var flattenedStyleArray = flattenStyleArray(styleArray);
+				let styleArray = isArray(node.style) ? node.style : [node.style];
+				let flattenedStyleArray = flattenStyleArray(styleArray);
 
 				if (flattenedStyleArray) {
 					margin = processSingleMargins(flattenedStyleArray, margin);
@@ -159,7 +159,7 @@ class DocMeasure {
 		let imageSize = { width: image.width, height: image.height };
 
 		if (node.fit) {
-			var factor = (imageSize.width / imageSize.height > node.fit[0] / node.fit[1]) ? node.fit[0] / imageSize.width : node.fit[1] / imageSize.height;
+			let factor = (imageSize.width / imageSize.height > node.fit[0] / node.fit[1]) ? node.fit[0] / imageSize.width : node.fit[1] / imageSize.height;
 			node._width = node._minWidth = node._maxWidth = imageSize.width * factor;
 			node._height = imageSize.height * factor;
 		} else {
@@ -199,10 +199,10 @@ class DocMeasure {
 
 		// Make sure style properties of the node itself are considered when building inlines.
 		// We could also just pass [node] to buildInlines, but that fails for bullet points.
-		var styleStack = this.styleStack.clone();
+		let styleStack = this.styleStack.clone();
 		styleStack.push(node);
 
-		var data = this.textInlines.buildInlines(node.text, styleStack);
+		let data = this.textInlines.buildInlines(node.text, styleStack);
 
 		node._inlines = data.items;
 		node._minWidth = data.minWidth;
@@ -216,14 +216,14 @@ class DocMeasure {
 			node.toc.title = this.measureNode(node.toc.title);
 		}
 
-		var body = [];
-		var textStyle = node.toc.textStyle || {};
-		var numberStyle = node.toc.numberStyle || textStyle;
-		var textMargin = node.toc.textMargin || [0, 0, 0, 0];
-		for (var i = 0, l = node.toc._items.length; i < l; i++) {
-			var item = node.toc._items[i];
-			var lineStyle = item._textNodeRef.tocStyle || textStyle;
-			var lineMargin = item._textNodeRef.tocMargin || textMargin;
+		let body = [];
+		let textStyle = node.toc.textStyle || {};
+		let numberStyle = node.toc.numberStyle || textStyle;
+		let textMargin = node.toc.textMargin || [0, 0, 0, 0];
+		for (let i = 0, l = node.toc._items.length; i < l; i++) {
+			let item = node.toc._items[i];
+			let lineStyle = item._textNodeRef.tocStyle || textStyle;
+			let lineMargin = item._textNodeRef.tocMargin || textMargin;
 			body.push([
 				{ text: item._textNodeRef.text, alignment: 'left', style: lineStyle, margin: lineMargin },
 				{ text: '00000', alignment: 'right', _tocItemRef: item._nodeRef, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
@@ -246,12 +246,12 @@ class DocMeasure {
 	}
 
 	measureVerticalContainer(node) {
-		var items = node.stack;
+		let items = node.stack;
 
 		node._minWidth = 0;
 		node._maxWidth = 0;
 
-		for (var i = 0, l = items.length; i < l; i++) {
+		for (let i = 0, l = items.length; i < l; i++) {
 			items[i] = this.measureNode(items[i]);
 
 			node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
@@ -268,7 +268,7 @@ class DocMeasure {
 	buildUnorderedMarker(styleStack, gapSize, type) {
 		function buildDisc(gapSize, color) {
 			// TODO: ascender-based calculations
-			var radius = gapSize.fontSize / 6;
+			let radius = gapSize.fontSize / 6;
 			return {
 				canvas: [{
 					x: radius,
@@ -283,7 +283,7 @@ class DocMeasure {
 
 		function buildSquare(gapSize, color) {
 			// TODO: ascender-based calculations
-			var size = gapSize.fontSize / 3;
+			let size = gapSize.fontSize / 3;
 			return {
 				canvas: [{
 					x: 0,
@@ -298,7 +298,7 @@ class DocMeasure {
 
 		function buildCircle(gapSize, color) {
 			// TODO: ascender-based calculations
-			var radius = gapSize.fontSize / 6;
+			let radius = gapSize.fontSize / 6;
 			return {
 				canvas: [{
 					x: radius,
@@ -311,8 +311,8 @@ class DocMeasure {
 			};
 		}
 
-		var marker;
-		var color = styleStack.getProperty('markerColor') || styleStack.getProperty('color') || 'black';
+		let marker;
+		let color = styleStack.getProperty('markerColor') || styleStack.getProperty('color') || 'black';
 
 		switch (type) {
 			case 'circle':
@@ -356,11 +356,10 @@ class DocMeasure {
 			if (counter < 1 || counter > 4999) {
 				return counter.toString();
 			}
-			var num = counter;
-			var lookup = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
-			var roman = '';
-			var i;
-			for (i in lookup) {
+			let num = counter;
+			let lookup = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
+			let roman = '';
+			for (let i in lookup) {
 				while (num >= lookup[i]) {
 					roman += i;
 					num -= lookup[i];
@@ -373,7 +372,7 @@ class DocMeasure {
 			return counter.toString();
 		}
 
-		var counterText;
+		let counterText;
 		switch (type) {
 			case 'none':
 				counterText = null;
@@ -420,8 +419,8 @@ class DocMeasure {
 			}
 		}
 
-		var textArray = { text: counterText };
-		var markerColor = styleStack.getProperty('markerColor');
+		let textArray = { text: counterText };
+		let markerColor = styleStack.getProperty('markerColor');
 		if (markerColor) {
 			textArray.color = markerColor;
 		}
@@ -430,15 +429,15 @@ class DocMeasure {
 	}
 
 	measureUnorderedList(node) {
-		var style = this.styleStack.clone();
-		var items = node.ul;
+		let style = this.styleStack.clone();
+		let items = node.ul;
 		node.type = node.type || 'disc';
 		node._gapSize = this.gapSizeForList();
 		node._minWidth = 0;
 		node._maxWidth = 0;
 
-		for (var i = 0, l = items.length; i < l; i++) {
-			var item = items[i] = this.measureNode(items[i]);
+		for (let i = 0, l = items.length; i < l; i++) {
+			let item = items[i] = this.measureNode(items[i]);
 
 			if (!item.ol && !item.ul) {
 				item.listMarker = this.buildUnorderedMarker(style, node._gapSize, item.listType || node.type);
@@ -452,8 +451,8 @@ class DocMeasure {
 	}
 
 	measureOrderedList(node) {
-		var style = this.styleStack.clone();
-		var items = node.ol;
+		let style = this.styleStack.clone();
+		let items = node.ol;
 		node.type = node.type || 'decimal';
 		node.separator = node.separator || '.';
 		node.reversed = node.reversed || false;
@@ -464,9 +463,9 @@ class DocMeasure {
 		node._minWidth = 0;
 		node._maxWidth = 0;
 
-		var counter = node.start;
-		for (var i = 0, l = items.length; i < l; i++) {
-			var item = items[i] = this.measureNode(items[i]);
+		let counter = node.start;
+		for (let i = 0, l = items.length; i < l; i++) {
+			let item = items[i] = this.measureNode(items[i]);
 
 			if (!item.ol && !item.ul) {
 				item.listMarker = this.buildOrderedMarker(item.counter || counter, style, item.listType || node.type, node.separator);
@@ -488,8 +487,8 @@ class DocMeasure {
 		node._minWidth += node._gapSize.width;
 		node._maxWidth += node._gapSize.width;
 
-		for (var i = 0, l = items.length; i < l; i++) {
-			var item = items[i];
+		for (let i = 0, l = items.length; i < l; i++) {
+			let item = items[i];
 			if (!item.ol && !item.ul) {
 				item.listMarker._minWidth = item.listMarker._maxWidth = node._gapSize.width;
 			}
@@ -499,16 +498,16 @@ class DocMeasure {
 	}
 
 	measureColumns(node) {
-		var columns = node.columns;
+		let columns = node.columns;
 		node._gap = this.styleStack.getProperty('columnGap') || 0;
 
-		for (var i = 0, l = columns.length; i < l; i++) {
+		for (let i = 0, l = columns.length; i < l; i++) {
 			columns[i] = this.measureNode(columns[i]);
 		}
 
-		var measures = ColumnCalculator.measureMinMax(columns);
+		let measures = ColumnCalculator.measureMinMax(columns);
 
-		var numGaps = (columns.length > 0) ? (columns.length - 1) : 0;
+		let numGaps = (columns.length > 0) ? (columns.length - 1) : 0;
 		node._minWidth = measures.min + node._gap * numGaps;
 		node._maxWidth = measures.max + node._gap * numGaps;
 
@@ -520,20 +519,20 @@ class DocMeasure {
 		node._layout = getLayout(this.tableLayouts);
 		node._offsets = getOffsets(node._layout);
 
-		var colSpans = [];
-		var col;
-		var row;
-		var cols;
-		var rows;
+		let colSpans = [];
+		let col;
+		let row;
+		let cols;
+		let rows;
 
 		for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
-			var c = node.table.widths[col];
+			let c = node.table.widths[col];
 			c._minWidth = 0;
 			c._maxWidth = 0;
 
 			for (row = 0, rows = node.table.body.length; row < rows; row++) {
-				var rowData = node.table.body[row];
-				var data = rowData[col];
+				let rowData = node.table.body[row];
+				let data = rowData[col];
 				if (data === undefined) {
 					console.error('Malformed table row ', rowData, 'in node ', node);
 					throw 'Malformed table row, a cell is undefined.';
@@ -562,7 +561,7 @@ class DocMeasure {
 
 		extendWidthsForColSpans();
 
-		var measures = ColumnCalculator.measureMinMax(node.table.widths);
+		let measures = ColumnCalculator.measureMinMax(node.table.widths);
 
 		node._minWidth = measures.min + node._offsets.total;
 		node._maxWidth = measures.max + node._offsets.total;
@@ -579,13 +578,13 @@ class DocMeasure {
 		}
 
 		function getLayout(tableLayouts) {
-			var layout = node.layout;
+			let layout = node.layout;
 
 			if (isString(layout)) {
 				layout = tableLayouts[layout];
 			}
 
-			var defaultLayout = {
+			let defaultLayout = {
 				hLineWidth(i, node) {
 					return 1;
 				},
@@ -626,12 +625,12 @@ class DocMeasure {
 		}
 
 		function getOffsets(layout) {
-			var offsets = [];
-			var totalOffset = 0;
-			var prevRightPadding = 0;
+			let offsets = [];
+			let totalOffset = 0;
+			let prevRightPadding = 0;
 
-			for (var i = 0, l = node.table.widths.length; i < l; i++) {
-				var lOffset = prevRightPadding + layout.vLineWidth(i, node) + layout.paddingLeft(i, node);
+			for (let i = 0, l = node.table.widths.length; i < l; i++) {
+				let lOffset = prevRightPadding + layout.vLineWidth(i, node) + layout.paddingLeft(i, node);
 				offsets.push(lOffset);
 				totalOffset += lOffset;
 				prevRightPadding = layout.paddingRight(i, node);
@@ -646,15 +645,15 @@ class DocMeasure {
 		}
 
 		function extendWidthsForColSpans() {
-			var q;
-			var j;
+			let q;
+			let j;
 
-			for (var i = 0, l = colSpans.length; i < l; i++) {
-				var span = colSpans[i];
+			for (let i = 0, l = colSpans.length; i < l; i++) {
+				let span = colSpans[i];
 
-				var currentMinMax = getMinMax(span.col, span.span, node._offsets);
-				var minDifference = span.minWidth - currentMinMax.minWidth;
-				var maxDifference = span.maxWidth - currentMinMax.maxWidth;
+				let currentMinMax = getMinMax(span.col, span.span, node._offsets);
+				let minDifference = span.minWidth - currentMinMax.minWidth;
+				let maxDifference = span.maxWidth - currentMinMax.maxWidth;
 
 				if (minDifference > 0) {
 					q = minDifference / span.span;
@@ -675,9 +674,9 @@ class DocMeasure {
 		}
 
 		function getMinMax(col, span, offsets) {
-			var result = { minWidth: 0, maxWidth: 0 };
+			let result = { minWidth: 0, maxWidth: 0 };
 
-			for (var i = 0; i < span; i++) {
+			for (let i = 0; i < span; i++) {
 				result.minWidth += node.table.widths[col + i]._minWidth + (i ? offsets.offsets[col + i] : 0);
 				result.maxWidth += node.table.widths[col + i]._maxWidth + (i ? offsets.offsets[col + i] : 0);
 			}
@@ -686,7 +685,7 @@ class DocMeasure {
 		}
 
 		function markSpans(rowData, col, span) {
-			for (var i = 1; i < span; i++) {
+			for (let i = 1; i < span; i++) {
 				rowData[col + i] = {
 					_span: true,
 					_minWidth: 0,
@@ -697,7 +696,7 @@ class DocMeasure {
 		}
 
 		function markVSpans(table, row, col, span) {
-			for (var i = 1; i < span; i++) {
+			for (let i = 1; i < span; i++) {
 				table.body[row + i][col] = {
 					_span: true,
 					_minWidth: 0,
@@ -720,8 +719,8 @@ class DocMeasure {
 				}
 			}
 
-			for (var i = 0, l = node.table.widths.length; i < l; i++) {
-				var w = node.table.widths[i];
+			for (let i = 0, l = node.table.widths.length; i < l; i++) {
+				let w = node.table.widths[i];
 				if (isNumber(w) || isString(w)) {
 					node.table.widths[i] = { width: w };
 				}
@@ -730,11 +729,11 @@ class DocMeasure {
 	}
 
 	measureCanvas(node) {
-		var w = 0;
-		var h = 0;
+		let w = 0;
+		let h = 0;
 
-		for (var i = 0, l = node.canvas.length; i < l; i++) {
-			var vector = node.canvas[i];
+		for (let i = 0, l = node.canvas.length; i < l; i++) {
+			let vector = node.canvas[i];
 
 			switch (vector.type) {
 				case 'ellipse':
@@ -750,7 +749,7 @@ class DocMeasure {
 					h = Math.max(h, vector.y1, vector.y2);
 					break;
 				case 'polyline':
-					for (var i2 = 0, l2 = vector.points.length; i2 < l2; i2++) {
+					for (let i2 = 0, l2 = vector.points.length; i2 < l2; i2++) {
 						w = Math.max(w, vector.points[i2].x);
 						h = Math.max(h, vector.points[i2].y);
 					}

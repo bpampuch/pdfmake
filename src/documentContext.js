@@ -49,7 +49,7 @@ class DocumentContext {
 	}
 
 	beginColumn(width, offset, endingCell) {
-		var saved = this.snapshots[this.snapshots.length - 1];
+		let saved = this.snapshots[this.snapshots.length - 1];
 
 		this.calculateBottomMost(saved);
 
@@ -93,14 +93,14 @@ class DocumentContext {
 	}
 
 	completeColumnGroup(height) {
-		var saved = this.snapshots.pop();
+		let saved = this.snapshots.pop();
 
 		this.calculateBottomMost(saved);
 
 		this.endingCell = null;
 		this.x = saved.x;
 
-		var y = saved.bottomMost.y;
+		let y = saved.bottomMost.y;
 		if (height) {
 			if (saved.page === saved.bottomMost.page) {
 				if ((saved.y + height) > y) {
@@ -171,7 +171,7 @@ class DocumentContext {
 	}
 
 	endDetachedBlock() {
-		var saved = this.snapshots.pop();
+		let saved = this.snapshots.pop();
 
 		this.x = saved.x;
 		this.y = saved.y;
@@ -183,17 +183,16 @@ class DocumentContext {
 	}
 
 	moveToNextPage(pageOrientation) {
-		var nextPageIndex = this.page + 1;
+		let nextPageIndex = this.page + 1;
+		let prevPage = this.page;
+		let prevY = this.y;
 
-		var prevPage = this.page;
-		var prevY = this.y;
-
-		var createNewPage = nextPageIndex >= this.pages.length;
+		let createNewPage = nextPageIndex >= this.pages.length;
 		if (createNewPage) {
-			var currentAvailableWidth = this.availableWidth;
-			var currentPageOrientation = this.getCurrentPage().pageSize.orientation;
+			let currentAvailableWidth = this.availableWidth;
+			let currentPageOrientation = this.getCurrentPage().pageSize.orientation;
 
-			var pageSize = getPageSize(this.getCurrentPage(), pageOrientation);
+			let pageSize = getPageSize(this.getCurrentPage(), pageOrientation);
 			this.addPage(pageSize);
 
 			if (currentPageOrientation === pageSize.orientation) {
@@ -213,7 +212,7 @@ class DocumentContext {
 	}
 
 	addPage(pageSize) {
-		var page = { items: [], pageSize: pageSize };
+		let page = { items: [], pageSize: pageSize };
 		this.pages.push(page);
 		this.backgroundLength.push(0);
 		this.page = this.pages.length - 1;
@@ -233,9 +232,9 @@ class DocumentContext {
 	}
 
 	getCurrentPosition() {
-		var pageSize = this.getCurrentPage().pageSize;
-		var innerHeight = pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-		var innerWidth = pageSize.width - this.pageMargins.left - this.pageMargins.right;
+		let pageSize = this.getCurrentPage().pageSize;
+		let innerHeight = pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+		let innerWidth = pageSize.width - this.pageMargins.left - this.pageMargins.right;
 
 		return {
 			pageNumber: this.page + 1,
@@ -260,7 +259,7 @@ function pageOrientation(pageOrientationString, currentPageOrientation) {
 	}
 }
 
-var getPageSize = (currentPage, newPageOrientation) => {
+const getPageSize = (currentPage, newPageOrientation) => {
 
 	newPageOrientation = pageOrientation(newPageOrientation, currentPage.pageSize.orientation);
 
@@ -282,7 +281,7 @@ var getPageSize = (currentPage, newPageOrientation) => {
 
 
 function bottomMostContext(c1, c2) {
-	var r;
+	let r;
 
 	if (c1.page > c2.page) {
 		r = c1;

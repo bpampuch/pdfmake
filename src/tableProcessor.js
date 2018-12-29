@@ -7,8 +7,8 @@ class TableProcessor {
 	}
 
 	beginTable(writer) {
-		var tableNode;
-		var availableWidth;
+		let tableNode;
+		let availableWidth;
 		var self = this;
 
 		tableNode = this.tableNode;
@@ -36,7 +36,7 @@ class TableProcessor {
 		this.drawHorizontalLine(0, writer);
 
 		function getTableInnerContentWidth() {
-			var width = 0;
+			let width = 0;
 
 			tableNode.table.widths.forEach(w => {
 				width += w._calcWidth;
@@ -46,15 +46,15 @@ class TableProcessor {
 		}
 
 		function prepareRowSpanData() {
-			var rsd = [];
-			var x = 0;
-			var lastWidth = 0;
+			let rsd = [];
+			let x = 0;
+			let lastWidth = 0;
 
 			rsd.push({ left: 0, rowSpan: 0 });
 
-			for (var i = 0, l = self.tableNode.table.body[0].length; i < l; i++) {
-				var paddings = self.layout.paddingLeft(i, self.tableNode) + self.layout.paddingRight(i, self.tableNode);
-				var lBorder = self.layout.vLineWidth(i, self.tableNode);
+			for (let i = 0, l = self.tableNode.table.body[0].length; i < l; i++) {
+				let paddings = self.layout.paddingLeft(i, self.tableNode) + self.layout.paddingRight(i, self.tableNode);
+				let lBorder = self.layout.vLineWidth(i, self.tableNode);
 				lastWidth = paddings + lBorder + self.tableNode.table.widths[i]._calcWidth;
 				rsd[rsd.length - 1].width = lastWidth;
 				x += lastWidth;
@@ -70,17 +70,17 @@ class TableProcessor {
 		// line-drawing loops draws lines for a single cell, not for an entire
 		// rowSpan/colSpan.
 		function prepareCellBorders(body) {
-			for (var rowIndex = 0; rowIndex < body.length; rowIndex++) {
-				var row = body[rowIndex];
+			for (let rowIndex = 0; rowIndex < body.length; rowIndex++) {
+				let row = body[rowIndex];
 
-				for (var colIndex = 0; colIndex < row.length; colIndex++) {
-					var cell = row[colIndex];
+				for (let colIndex = 0; colIndex < row.length; colIndex++) {
+					let cell = row[colIndex];
 
 					if (cell.border) {
-						var rowSpan = cell.rowSpan || 1;
-						var colSpan = cell.colSpan || 1;
+						let rowSpan = cell.rowSpan || 1;
+						let colSpan = cell.colSpan || 1;
 
-						for (var rowOffset = 0; rowOffset < rowSpan; rowOffset++) {
+						for (let rowOffset = 0; rowOffset < rowSpan; rowOffset++) {
 							// set left border
 							if (cell.border[0] !== undefined && rowOffset > 0) {
 								setBorder(rowIndex + rowOffset, colIndex, 0, cell.border[0]);
@@ -92,7 +92,7 @@ class TableProcessor {
 							}
 						}
 
-						for (var colOffset = 0; colOffset < colSpan; colOffset++) {
+						for (let colOffset = 0; colOffset < colSpan; colOffset++) {
 							// set top border
 							if (cell.border[1] !== undefined && colOffset > 0) {
 								setBorder(rowIndex, colIndex + colOffset, 1, cell.border[1]);
@@ -109,7 +109,7 @@ class TableProcessor {
 
 			// helper function to set the border for a given cell
 			function setBorder(rowIndex, colIndex, borderIndex, borderValue) {
-				var cell = body[rowIndex][colIndex];
+				let cell = body[rowIndex][colIndex];
 				cell.border = cell.border || {};
 				cell.border[borderIndex] = borderValue;
 			}
@@ -119,7 +119,7 @@ class TableProcessor {
 	onRowBreak(rowIndex, writer) {
 		var self = this;
 		return () => {
-			var offset = self.rowPaddingTop + (!self.headerRows ? self.topLineWidth : 0);
+			let offset = self.rowPaddingTop + (!self.headerRows ? self.topLineWidth : 0);
 			writer.context().availableHeight -= self.reservedAtBottom;
 			writer.context().moveDown(offset);
 		};
@@ -145,37 +145,37 @@ class TableProcessor {
 	}
 
 	drawHorizontalLine(lineIndex, writer, overrideY) {
-		var lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode);
+		let lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode);
 		if (lineWidth) {
-			var style = this.layout.hLineStyle(lineIndex, this.tableNode);
-			var dash;
+			let style = this.layout.hLineStyle(lineIndex, this.tableNode);
+			let dash;
 			if (style && style.dash) {
 				dash = style.dash;
 			}
 
-			var offset = lineWidth / 2;
-			var currentLine = null;
-			var body = this.tableNode.table.body;
+			let offset = lineWidth / 2;
+			let currentLine = null;
+			let body = this.tableNode.table.body;
 
-			for (var i = 0, l = this.rowSpanData.length; i < l; i++) {
-				var data = this.rowSpanData[i];
-				var shouldDrawLine = !data.rowSpan;
+			for (let i = 0, l = this.rowSpanData.length; i < l; i++) {
+				let data = this.rowSpanData[i];
+				let shouldDrawLine = !data.rowSpan;
 
 				// draw only if the current cell requires a top border or the cell in the
 				// row above requires a bottom border
 				if (shouldDrawLine && i < l - 1) {
-					var topBorder = false;
-					var bottomBorder = false;
+					let topBorder = false;
+					let bottomBorder = false;
 
 					// the current cell
 					if (lineIndex < body.length) {
-						var cell = body[lineIndex][i];
+						let cell = body[lineIndex][i];
 						topBorder = cell.border ? cell.border[1] : this.layout.defaultBorder;
 					}
 
 					// the cell in the row above
 					if (lineIndex > 0) {
-						var cellAbove = body[lineIndex - 1][i];
+						let cellAbove = body[lineIndex - 1][i];
 						bottomBorder = cellAbove.border ? cellAbove.border[3] : this.layout.defaultBorder;
 					}
 
@@ -190,7 +190,7 @@ class TableProcessor {
 					currentLine.width += (data.width || 0);
 				}
 
-				var y = (overrideY || 0) + offset;
+				let y = (overrideY || 0) + offset;
 
 				if (!shouldDrawLine || i === l - 1) {
 					if (currentLine && currentLine.width) {
@@ -214,12 +214,12 @@ class TableProcessor {
 	}
 
 	drawVerticalLine(x, y0, y1, vLineIndex, writer) {
-		var width = this.layout.vLineWidth(vLineIndex, this.tableNode);
+		let width = this.layout.vLineWidth(vLineIndex, this.tableNode);
 		if (width === 0) {
 			return;
 		}
-		var style = this.layout.vLineStyle(vLineIndex, this.tableNode);
-		var dash;
+		let style = this.layout.vLineStyle(vLineIndex, this.tableNode);
+		let dash;
 		if (style && style.dash) {
 			dash = style.dash;
 		}
@@ -242,22 +242,22 @@ class TableProcessor {
 	}
 
 	endRow(rowIndex, writer, pageBreaks) {
-		var l;
-		var i;
+		let l;
+		let i;
 		var self = this;
 		writer.tracker.stopTracking('pageChanged', this.rowCallback);
 		writer.context().moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
 		writer.context().availableHeight += this.reservedAtBottom;
 
-		var endingPage = writer.context().page;
-		var endingY = writer.context().y;
+		let endingPage = writer.context().page;
+		let endingY = writer.context().y;
 
-		var xs = getLineXs();
+		let xs = getLineXs();
 
-		var ys = [];
+		let ys = [];
 
-		var hasBreaks = pageBreaks && pageBreaks.length > 0;
-		var body = this.tableNode.table.body;
+		let hasBreaks = pageBreaks && pageBreaks.length > 0;
+		let body = this.tableNode.table.body;
 
 		ys.push({
 			y0: this.rowTopY,
@@ -266,7 +266,7 @@ class TableProcessor {
 
 		if (hasBreaks) {
 			for (i = 0, l = pageBreaks.length; i < l; i++) {
-				var pageBreak = pageBreaks[i];
+				let pageBreak = pageBreaks[i];
 				ys[ys.length - 1].y1 = pageBreak.prevY;
 
 				ys.push({ y0: pageBreak.y, page: pageBreak.prevPage + 1 });
@@ -275,13 +275,13 @@ class TableProcessor {
 
 		ys[ys.length - 1].y1 = endingY;
 
-		var skipOrphanePadding = (ys[0].y1 - ys[0].y0 === this.rowPaddingTop);
-		for (var yi = (skipOrphanePadding ? 1 : 0), yl = ys.length; yi < yl; yi++) {
-			var willBreak = yi < ys.length - 1;
-			var rowBreakWithoutHeader = (yi > 0 && !this.headerRows);
-			var hzLineOffset = rowBreakWithoutHeader ? 0 : this.topLineWidth;
-			var y1 = ys[yi].y0;
-			var y2 = ys[yi].y1;
+		let skipOrphanePadding = (ys[0].y1 - ys[0].y0 === this.rowPaddingTop);
+		for (let yi = (skipOrphanePadding ? 1 : 0), yl = ys.length; yi < yl; yi++) {
+			let willBreak = yi < ys.length - 1;
+			let rowBreakWithoutHeader = (yi > 0 && !this.headerRows);
+			let hzLineOffset = rowBreakWithoutHeader ? 0 : this.topLineWidth;
+			let y1 = ys[yi].y0;
+			let y2 = ys[yi].y1;
 
 			if (willBreak) {
 				y2 = y2 + this.rowPaddingBottom;
@@ -296,19 +296,19 @@ class TableProcessor {
 			}
 
 			for (i = 0, l = xs.length; i < l; i++) {
-				var leftBorder = false;
-				var rightBorder = false;
-				var colIndex = xs[i].index;
+				let leftBorder = false;
+				let rightBorder = false;
+				let colIndex = xs[i].index;
 
 				// the current cell
 				if (colIndex < body[rowIndex].length) {
-					var cell = body[rowIndex][colIndex];
+					let cell = body[rowIndex][colIndex];
 					leftBorder = cell.border ? cell.border[0] : this.layout.defaultBorder;
 				}
 
 				// the cell from before column
 				if (colIndex > 0) {
-					var cell = body[rowIndex][colIndex - 1];
+					let cell = body[rowIndex][colIndex - 1];
 					rightBorder = cell.border ? cell.border[2] : this.layout.defaultBorder;
 				}
 
@@ -317,14 +317,14 @@ class TableProcessor {
 				}
 
 				if (i < l - 1) {
-					var fillColor = body[rowIndex][colIndex].fillColor;
+					let fillColor = body[rowIndex][colIndex].fillColor;
 					if (!fillColor) {
 						fillColor = isFunction(this.layout.fillColor) ? this.layout.fillColor(rowIndex, this.tableNode, colIndex) : this.layout.fillColor;
 					}
 					if (fillColor) {
-						var wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
-						var xf = xs[i].x + wBorder;
-						var yf = this.dontBreakRows ? y1 : y1 - hzLineOffset;
+						let wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
+						let xf = xs[i].x + wBorder;
+						let yf = this.dontBreakRows ? y1 : y1 - hzLineOffset;
 						writer.addVector({
 							type: 'rect',
 							x: xf,
@@ -349,14 +349,14 @@ class TableProcessor {
 		writer.context().page = endingPage;
 		writer.context().y = endingY;
 
-		var row = this.tableNode.table.body[rowIndex];
-		for (i = 0, l = row.length; i < l; i++) {
+		let row = this.tableNode.table.body[rowIndex];
+		for (let i = 0, l = row.length; i < l; i++) {
 			if (row[i].rowSpan) {
 				this.rowSpanData[i].rowSpan = row[i].rowSpan;
 
 				// fix colSpans
 				if (row[i].colSpan && row[i].colSpan > 1) {
-					for (var j = 1; j < row[i].rowSpan; j++) {
+					for (let j = 1; j < row[i].rowSpan; j++) {
 						this.tableNode.table.body[rowIndex + j][i]._colSpan = row[i].colSpan;
 					}
 				}
@@ -394,14 +394,14 @@ class TableProcessor {
 		}
 
 		function getLineXs() {
-			var result = [];
-			var cols = 0;
+			let result = [];
+			let cols = 0;
 
-			for (var i = 0, l = self.tableNode.table.body[rowIndex].length; i < l; i++) {
+			for (let i = 0, l = self.tableNode.table.body[rowIndex].length; i < l; i++) {
 				if (!cols) {
 					result.push({ x: self.rowSpanData[i].left, index: i });
 
-					var item = self.tableNode.table.body[rowIndex][i];
+					let item = self.tableNode.table.body[rowIndex][i];
 					cols = (item._colSpan || item.colSpan || 0);
 				}
 				if (cols > 0) {

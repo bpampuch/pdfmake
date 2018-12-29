@@ -54,7 +54,7 @@ class PageElementWriter {
 
 	moveToNextPage(pageOrientation) {
 
-		var nextPage = this.writer.context.moveToNextPage(pageOrientation);
+		let nextPage = this.writer.context.moveToNextPage(pageOrientation);
 
 		// moveToNextPage is called multiple times for table, because is called for each column
 		// and repeatables are inserted only in the first time. If columns are used, is needed
@@ -84,13 +84,13 @@ class PageElementWriter {
 
 	commitUnbreakableBlock(forcedX, forcedY) {
 		if (--this.transactionLevel === 0) {
-			var unbreakableContext = this.writer.context;
+			let unbreakableContext = this.writer.context;
 			this.writer.popContext();
 
-			var nbPages = unbreakableContext.pages.length;
+			let nbPages = unbreakableContext.pages.length;
 			if (nbPages > 0) {
 				// no support for multi-page unbreakableBlocks
-				var fragment = unbreakableContext.pages[0];
+				let fragment = unbreakableContext.pages[0];
 				fragment.xOffset = forcedX;
 				fragment.yOffset = forcedY;
 
@@ -101,7 +101,7 @@ class PageElementWriter {
 						fragment.height = unbreakableContext.getCurrentPage().pageSize.height - unbreakableContext.pageMargins.top - unbreakableContext.pageMargins.bottom;
 					} else {
 						fragment.height = this.writer.context.getCurrentPage().pageSize.height - this.writer.context.pageMargins.top - this.writer.context.pageMargins.bottom;
-						for (var i = 0, l = this.repeatables.length; i < l; i++) {
+						for (let i = 0, l = this.repeatables.length; i < l; i++) {
 							fragment.height -= this.repeatables[i].height;
 						}
 					}
@@ -119,8 +119,8 @@ class PageElementWriter {
 	}
 
 	currentBlockToRepeatable() {
-		var unbreakableContext = this.writer.context;
-		var rep = { items: [] };
+		let unbreakableContext = this.writer.context;
+		let rep = { items: [] };
 
 		unbreakableContext.pages[0].items.forEach(item => {
 			rep.items.push(item);
@@ -150,7 +150,7 @@ class PageElementWriter {
 }
 
 function fitOnPage(self, addFct) {
-	var position = addFct(self);
+	let position = addFct(self);
 	if (!position) {
 		self.moveToNextPage();
 		position = addFct(self);

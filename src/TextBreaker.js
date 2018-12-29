@@ -96,7 +96,7 @@ class TextBreaker {
 		}
 
 		let lastWord = null;
-		for (var i = 0, l = texts.length; i < l; i++) {
+		for (let i = 0, l = texts.length; i < l; i++) {
 			let item = texts[i];
 			let style = null;
 			let words;
@@ -112,14 +112,14 @@ class TextBreaker {
 			if (lastWord && words.length) {
 				let firstWord = getFirstWord(words, noWrap);
 
-				var wrapWords = splitWords(lastWord + firstWord, false);
+				let wrapWords = splitWords(lastWord + firstWord, false);
 				if (wrapWords.length === 1) {
 					results[results.length - 1].noNewLine = true;
 				}
 			}
 
-			for (var i2 = 0, l2 = words.length; i2 < l2; i2++) {
-				var result = {
+			for (let i2 = 0, l2 = words.length; i2 < l2; i2++) {
+				let result = {
 					text: words[i2].text
 				};
 

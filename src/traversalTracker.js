@@ -4,7 +4,7 @@ class TraversalTracker {
 	}
 
 	startTracking(event, callback) {
-		var callbacks = this.events[event] || (this.events[event] = []);
+		let callbacks = this.events[event] || (this.events[event] = []);
 
 		if (!callbacks.includes(callback)) {
 			callbacks.push(callback);
@@ -12,21 +12,21 @@ class TraversalTracker {
 	}
 
 	stopTracking(event, callback) {
-		var callbacks = this.events[event];
+		let callbacks = this.events[event];
 
 		if (!callbacks) {
 			return;
 		}
 
-		var index = callbacks.indexOf(callback);
+		let index = callbacks.indexOf(callback);
 		if (index >= 0) {
 			callbacks.splice(index, 1);
 		}
 	}
 
 	emit(event) {
-		var args = Array.prototype.slice.call(arguments, 1);
-		var callbacks = this.events[event];
+		let args = Array.prototype.slice.call(arguments, 1);
+		let callbacks = this.events[event];
 
 		if (!callbacks) {
 			return;

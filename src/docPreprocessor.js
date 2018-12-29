@@ -61,9 +61,9 @@ class DocPreprocessor {
 	}
 
 	preprocessColumns(node) {
-		var columns = node.columns;
+		let columns = node.columns;
 
-		for (var i = 0, l = columns.length; i < l; i++) {
+		for (let i = 0, l = columns.length; i < l; i++) {
 			columns[i] = this.preprocessNode(columns[i]);
 		}
 
@@ -71,9 +71,9 @@ class DocPreprocessor {
 	}
 
 	preprocessVerticalContainer(node) {
-		var items = node.stack;
+		let items = node.stack;
 
-		for (var i = 0, l = items.length; i < l; i++) {
+		for (let i = 0, l = items.length; i < l; i++) {
 			items[i] = this.preprocessNode(items[i]);
 		}
 
@@ -81,9 +81,9 @@ class DocPreprocessor {
 	}
 
 	preprocessList(node) {
-		var items = node.ul || node.ol;
+		let items = node.ul || node.ol;
 
-		for (var i = 0, l = items.length; i < l; i++) {
+		for (let i = 0, l = items.length; i < l; i++) {
 			items[i] = this.preprocessNode(items[i]);
 		}
 
@@ -91,15 +91,15 @@ class DocPreprocessor {
 	}
 
 	preprocessTable(node) {
-		var col;
-		var row;
-		var cols;
-		var rows;
+		let col;
+		let row;
+		let cols;
+		let rows;
 
 		for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
 			for (row = 0, rows = node.table.body.length; row < rows; row++) {
-				var rowData = node.table.body[row];
-				var data = rowData[col];
+				let rowData = node.table.body[row];
+				let data = rowData[col];
 				if (data !== undefined) {
 					if (data === null) { // transform to object
 						data = '';
@@ -120,18 +120,18 @@ class DocPreprocessor {
 				node.tocItem = [node.tocItem];
 			}
 
-			for (var i = 0, l = node.tocItem.length; i < l; i++) {
+			for (let i = 0, l = node.tocItem.length; i < l; i++) {
 				if (!isString(node.tocItem[i])) {
 					node.tocItem[i] = '_default_';
 				}
 
-				var tocItemId = node.tocItem[i];
+				let tocItemId = node.tocItem[i];
 
 				if (!this.tocs[tocItemId]) {
 					this.tocs[tocItemId] = { toc: { _items: [], _pseudo: true } };
 				}
 
-				var tocItemRef = {
+				let tocItemRef = {
 					_nodeRef: this._getNodeForNodeRef(node),
 					_textNodeRef: node
 				};
@@ -180,13 +180,13 @@ class DocPreprocessor {
 		if (node.text && node.text.text) {
 			node.text = [this.preprocessNode(node.text)];
 		} else if (isArray(node.text)) {
-			var isSetParentNode = false;
+			let isSetParentNode = false;
 			if (this.parentNode === null) {
 				this.parentNode = node;
 				isSetParentNode = true;
 			}
 
-			for (var i = 0, l = node.text.length; i < l; i++) {
+			for (let i = 0, l = node.text.length; i < l; i++) {
 				node.text[i] = this.preprocessNode(node.text[i]);
 			}
 

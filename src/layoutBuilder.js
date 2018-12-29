@@ -69,7 +69,7 @@ class LayoutBuilder {
 			linearNodeList = linearNodeList.filter(node => node.positions.length > 0);
 
 			linearNodeList.forEach(node => {
-				var nodeInfo = {};
+				let nodeInfo = {};
 				[
 					'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
 					'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
@@ -90,13 +90,10 @@ class LayoutBuilder {
 			return linearNodeList.some((node, index, followingNodeList) => {
 				if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 					node.pageBreakCalculated = true;
-					var pageNumber = node.nodeInfo.pageNumbers[0];
-
-					var followingNodesOnPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber));
-
-					var nodesOnNextPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber + 1));
-
-					var previousNodesOnPage = followingNodeList.slice(0, index).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber));
+					let pageNumber = node.nodeInfo.pageNumbers[0];
+					let followingNodesOnPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber));
+					let nodesOnNextPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber + 1));
+					let previousNodesOnPage = followingNodeList.slice(0, index).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber));
 
 					if (
 						pageBreakBeforeFct(
@@ -114,14 +111,13 @@ class LayoutBuilder {
 		this.docPreprocessor = new DocPreprocessor();
 		this.docMeasure = new DocMeasure(pdfDocument, styleDictionary, defaultStyle, this.tableLayouts);
 
-
 		function resetXYs(result) {
 			result.linearNodeList.forEach(node => {
 				node.resetXY();
 			});
 		}
 
-		var result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
+		let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
 		while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
 			resetXYs(result);
 			result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
@@ -165,12 +161,12 @@ class LayoutBuilder {
 	}
 
 	addBackground(background) {
-		var backgroundGetter = isFunction(background) ? background : () => background;
+		let backgroundGetter = isFunction(background) ? background : () => background;
 
-		var context = this.writer.context();
-		var pageSize = context.getCurrentPage().pageSize;
+		let context = this.writer.context();
+		let pageSize = context.getCurrentPage().pageSize;
 
-		var pageBackground = backgroundGetter(context.page + 1, pageSize);
+		let pageBackground = backgroundGetter(context.page + 1, pageSize);
 
 		if (pageBackground) {
 			this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
@@ -187,15 +183,15 @@ class LayoutBuilder {
 	}
 
 	addDynamicRepeatable(nodeGetter, sizeFunction) {
-		var pages = this.writer.context().pages;
+		let pages = this.writer.context().pages;
 
-		for (var pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
+		for (let pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
 			this.writer.context().page = pageIndex;
 
-			var node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
+			let node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
 
 			if (node) {
-				var sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
+				let sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
 				this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
 				node = this.docPreprocessor.preprocessDocument(node);
 				this.processNode(this.docMeasure.measureDocument(node));
@@ -205,14 +201,14 @@ class LayoutBuilder {
 	}
 
 	addHeadersAndFooters(header, footer) {
-		var headerSizeFct = (pageSize, pageMargins) => ({
+		const headerSizeFct = (pageSize, pageMargins) => ({
 			x: 0,
 			y: 0,
 			width: pageSize.width,
 			height: pageMargins.top
 		});
 
-		var footerSizeFct = (pageSize, pageMargins) => ({
+		const footerSizeFct = (pageSize, pageMargins) => ({
 			x: 0,
 			y: pageSize.height - pageMargins.bottom,
 			width: pageSize.width,
@@ -247,7 +243,7 @@ class LayoutBuilder {
 		watermark.bold = watermark.bold || false;
 		watermark.italics = watermark.italics || false;
 
-		var watermarkObject = {
+		let watermarkObject = {
 			text: watermark.text,
 			font: pdfDocument.provideFont(watermark.font, watermark.bold, watermark.italics),
 			size: getSize(this.pageSize, watermark, pdfDocument),
@@ -255,27 +251,27 @@ class LayoutBuilder {
 			opacity: watermark.opacity
 		};
 
-		var pages = this.writer.context().pages;
-		for (var i = 0, l = pages.length; i < l; i++) {
+		let pages = this.writer.context().pages;
+		for (let i = 0, l = pages.length; i < l; i++) {
 			pages[i].watermark = watermarkObject;
 		}
 
 		function getSize(pageSize, watermark, pdfDocument) {
-			var width = pageSize.width;
-			var height = pageSize.height;
-			var targetWidth = Math.sqrt(width * width + height * height) * 0.8; /* page diagonal * sample factor */
-			var textInlines = new TextInlines(pdfDocument);
-			var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
-			var size;
+			let width = pageSize.width;
+			let height = pageSize.height;
+			let targetWidth = Math.sqrt(width * width + height * height) * 0.8; /* page diagonal * sample factor */
+			let textInlines = new TextInlines(pdfDocument);
+			let styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
+			let size;
 
 			/**
 			 * Binary search the best font size.
 			 * Initial bounds [0, 1000]
 			 * Break when range < 1
 			 */
-			var a = 0;
-			var b = 1000;
-			var c = (a + b) / 2;
+			let a = 0;
+			let b = 1000;
+			let c = (a + b) / 2;
 			while (Math.abs(a - b) > 1) {
 				styleContextStack.push({
 					fontSize: c
@@ -304,18 +300,18 @@ class LayoutBuilder {
 		decorateNode(node);
 
 		applyMargins(() => {
-			var unbreakable = node.unbreakable;
+			let unbreakable = node.unbreakable;
 			if (unbreakable) {
 				self.writer.beginUnbreakableBlock();
 			}
 
-			var absPosition = node.absolutePosition;
+			let absPosition = node.absolutePosition;
 			if (absPosition) {
 				self.writer.context().beginDetachedBlock();
 				self.writer.context().moveTo(absPosition.x || 0, absPosition.y || 0);
 			}
 
-			var relPosition = node.relativePosition;
+			let relPosition = node.relativePosition;
 			if (relPosition) {
 				self.writer.context().beginDetachedBlock();
 				self.writer.context().moveTo((relPosition.x || 0) + self.writer.context().x, (relPosition.y || 0) + self.writer.context().y);
@@ -355,7 +351,7 @@ class LayoutBuilder {
 		});
 
 		function applyMargins(callback) {
-			var margin = node._margin;
+			let margin = node._margin;
 
 			if (node.pageBreak === 'before') {
 				self.writer.moveToNextPage(node.pageOrientation);
@@ -392,16 +388,16 @@ class LayoutBuilder {
 
 	// columns
 	processColumns(columnNode) {
-		var columns = columnNode.columns;
-		var availableWidth = this.writer.context().availableWidth;
-		var gaps = gapArray(columnNode._gap);
+		let columns = columnNode.columns;
+		let availableWidth = this.writer.context().availableWidth;
+		let gaps = gapArray(columnNode._gap);
 
 		if (gaps) {
 			availableWidth -= (gaps.length - 1) * columnNode._gap;
 		}
 
 		ColumnCalculator.buildColumnWidths(columns, availableWidth);
-		var result = this.processRow(columns, columns, gaps);
+		let result = this.processRow(columns, columns, gaps);
 		addAll(columnNode.positions, result.positions);
 
 
@@ -410,10 +406,10 @@ class LayoutBuilder {
 				return null;
 			}
 
-			var gaps = [];
+			let gaps = [];
 			gaps.push(0);
 
-			for (var i = columns.length - 1; i > 0; i--) {
+			for (let i = columns.length - 1; i > 0; i--) {
 				gaps.push(gap);
 			}
 
@@ -423,21 +419,21 @@ class LayoutBuilder {
 
 	processRow(columns, widths, gaps, tableBody, tableRow, height) {
 		var self = this;
-		var pageBreaks = [];
-		var positions = [];
+		let pageBreaks = [];
+		let positions = [];
 
 		this.tracker.auto('pageChanged', storePageBreakData, () => {
 			widths = widths || columns;
 
 			self.writer.context().beginColumnGroup();
 
-			for (var i = 0, l = columns.length; i < l; i++) {
-				var column = columns[i];
-				var width = widths[i]._calcWidth;
-				var leftOffset = colLeftOffset(i);
+			for (let i = 0, l = columns.length; i < l; i++) {
+				let column = columns[i];
+				let width = widths[i]._calcWidth;
+				let leftOffset = colLeftOffset(i);
 
 				if (column.colSpan && column.colSpan > 1) {
-					for (var j = 1; j < column.colSpan; j++) {
+					for (let j = 1; j < column.colSpan; j++) {
 						width += widths[++i]._calcWidth + gaps[i];
 					}
 				}
@@ -458,10 +454,10 @@ class LayoutBuilder {
 		return { pageBreaks: pageBreaks, positions: positions };
 
 		function storePageBreakData(data) {
-			var pageDesc;
+			let pageDesc;
 
-			for (var i = 0, l = pageBreaks.length; i < l; i++) {
-				var desc = pageBreaks[i];
+			for (let i = 0, l = pageBreaks.length; i < l; i++) {
+				let desc = pageBreaks[i];
 				if (desc.prevPage === data.prevPage) {
 					pageDesc = desc;
 					break;
@@ -485,7 +481,7 @@ class LayoutBuilder {
 
 		function getEndingCell(column, columnIndex) {
 			if (column.rowSpan && column.rowSpan > 1) {
-				var endingRow = tableRow + column.rowSpan - 1;
+				let endingRow = tableRow + column.rowSpan - 1;
 				if (endingRow >= tableBody.length) {
 					throw `Row span for column ${columnIndex} (with indexes starting from 0) exceeded row count`;
 				}
@@ -499,12 +495,12 @@ class LayoutBuilder {
 	// lists
 	processList(orderedList, node) {
 		var self = this;
-		var items = orderedList ? node.ol : node.ul;
-		var gapSize = node._gapSize;
+		let items = orderedList ? node.ol : node.ul;
+		let gapSize = node._gapSize;
 
 		this.writer.context().addMargin(gapSize.width);
 
-		var nextMarker;
+		let nextMarker;
 		this.tracker.auto('lineAdded', addMarkerToFirstLeaf, () => {
 			items.forEach(item => {
 				nextMarker = item.listMarker;
@@ -519,16 +515,16 @@ class LayoutBuilder {
 			// I'm not very happy with the way list processing is implemented
 			// (both code and algorithm should be rethinked)
 			if (nextMarker) {
-				var marker = nextMarker;
+				let marker = nextMarker;
 				nextMarker = null;
 
 				if (marker.canvas) {
-					var vector = marker.canvas[0];
+					let vector = marker.canvas[0];
 
 					offsetVector(vector, -marker._minWidth, 0);
 					self.writer.addVector(vector);
 				} else if (marker._inlines) {
-					var markerLine = new Line(self.pageSize.width);
+					let markerLine = new Line(self.pageSize.width);
 					markerLine.addInline(marker._inlines[0]);
 					markerLine.x = -marker._minWidth;
 					markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
@@ -540,15 +536,15 @@ class LayoutBuilder {
 
 	// tables
 	processTable(tableNode) {
-		var processor = new TableProcessor(tableNode);
+		let processor = new TableProcessor(tableNode);
 
 		processor.beginTable(this.writer);
 
-		var rowHeights = tableNode.table.heights;
-		for (var i = 0, l = tableNode.table.body.length; i < l; i++) {
+		let rowHeights = tableNode.table.heights;
+		for (let i = 0, l = tableNode.table.body.length; i < l; i++) {
 			processor.beginRow(i, this.writer);
 
-			var height;
+			let height;
 			if (isFunction(rowHeights)) {
 				height = rowHeights(i);
 			} else if (isArray(rowHeights)) {
@@ -561,7 +557,7 @@ class LayoutBuilder {
 				height = undefined;
 			}
 
-			var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
+			let result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
 			addAll(tableNode.positions, result.positions);
 
 			processor.endRow(i, this.writer, result.pageBreaks);
@@ -572,9 +568,9 @@ class LayoutBuilder {
 
 	// leafs (texts)
 	processLeaf(node) {
-		var line = this.buildNextLine(node);
-		var currentHeight = (line) ? line.getHeight() : 0;
-		var maxHeight = node.maxHeight || -1;
+		let line = this.buildNextLine(node);
+		let currentHeight = (line) ? line.getHeight() : 0;
+		let maxHeight = node.maxHeight || -1;
 
 		if (node._tocItemRef) {
 			line._pageNodeRef = node._tocItemRef;
@@ -585,7 +581,7 @@ class LayoutBuilder {
 		}
 
 		if (line && line.inlines && isArray(line.inlines)) {
-			for (var i = 0, l = line.inlines.length; i < l; i++) {
+			for (let i = 0, l = line.inlines.length; i < l; i++) {
 				if (line.inlines[i]._tocItemRef) {
 					line.inlines[i]._pageNodeRef = line.inlines[i]._tocItemRef;
 				}
@@ -597,7 +593,7 @@ class LayoutBuilder {
 		}
 
 		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
-			var positions = this.writer.addLine(line);
+			let positions = this.writer.addLine(line);
 			node.positions.push(positions);
 			line = this.buildNextLine(node);
 			if (line) {
@@ -616,8 +612,8 @@ class LayoutBuilder {
 	buildNextLine(textNode) {
 
 		function cloneInline(inline) {
-			var newInline = inline.constructor();
-			for (var key in inline) {
+			let newInline = inline.constructor();
+			for (let key in inline) {
 				newInline[key] = inline[key];
 			}
 			return newInline;
@@ -627,24 +623,24 @@ class LayoutBuilder {
 			return null;
 		}
 
-		var line = new Line(this.writer.context().availableWidth);
-		var textInlines = new TextInlines(null);
+		let line = new Line(this.writer.context().availableWidth);
+		const textInlines = new TextInlines(null);
 
-		var isForceContinue = false;
+		let isForceContinue = false;
 		while (textNode._inlines && textNode._inlines.length > 0 &&
 			(line.hasEnoughSpaceForInline(textNode._inlines[0], textNode._inlines.slice(1)) || isForceContinue)) {
-			var isHardWrap = false;
-			var inline = textNode._inlines.shift();
+			let isHardWrap = false;
+			let inline = textNode._inlines.shift();
 			isForceContinue = false;
 
 			if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
-				var widthPerChar = inline.width / inline.text.length;
-				var maxChars = Math.floor(line.getAvailableWidth() / widthPerChar);
+				let widthPerChar = inline.width / inline.text.length;
+				let maxChars = Math.floor(line.getAvailableWidth() / widthPerChar);
 				if (maxChars < 1) {
 					maxChars = 1;
 				}
 				if (maxChars < inline.text.length) {
-					var newInline = cloneInline(inline);
+					let newInline = cloneInline(inline);
 
 					newInline.text = inline.text.substr(maxChars);
 					inline.text = inline.text.substr(0, maxChars);
@@ -669,12 +665,12 @@ class LayoutBuilder {
 
 	// images
 	processImage(node) {
-		var position = this.writer.addImage(node);
+		let position = this.writer.addImage(node);
 		node.positions.push(position);
 	}
 
 	processCanvas(node) {
-		var height = node._minHeight;
+		let height = node._minHeight;
 
 		if (node.absolutePosition === undefined && this.writer.context().availableHeight < height) {
 			// TODO: support for canvas larger than a page
@@ -686,7 +682,7 @@ class LayoutBuilder {
 		this.writer.alignCanvas(node);
 
 		node.canvas.forEach(function (vector) {
-			var position = this.writer.addVector(vector);
+			let position = this.writer.addVector(vector);
 			node.positions.push(position);
 		}, this);
 
@@ -694,24 +690,24 @@ class LayoutBuilder {
 	}
 
 	processQr(node) {
-		var position = this.writer.addQr(node);
+		let position = this.writer.addQr(node);
 		node.positions.push(position);
 	}
 }
 
 function decorateNode(node) {
-	var x = node.x;
-	var y = node.y;
+	let x = node.x;
+	let y = node.y;
 	node.positions = [];
 
 	if (isArray(node.canvas)) {
 		node.canvas.forEach(vector => {
-			var x = vector.x;
-			var y = vector.y;
-			var x1 = vector.x1;
-			var y1 = vector.y1;
-			var x2 = vector.x2;
-			var y2 = vector.y2;
+			let x = vector.x;
+			let y = vector.y;
+			let x1 = vector.x1;
+			let y1 = vector.y1;
+			let x2 = vector.x2;
+			let y2 = vector.y2;
 			vector.resetXY = () => {
 				vector.x = x;
 				vector.y = y;
