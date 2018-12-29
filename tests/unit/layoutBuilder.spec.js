@@ -146,7 +146,7 @@ describe('LayoutBuilder', function () {
 			assert(pages[0].items.length, 3);
 		});
 
-		it.skip('should span text into lines if theres not enough horizontal space', function () {
+		it('should span text into lines if theres not enough horizontal space', function () {
 			var desc = [
 				'first paragraph',
 				'another paragraph, this time a little bit longer though, we want to force this line to be broken into several lines'
