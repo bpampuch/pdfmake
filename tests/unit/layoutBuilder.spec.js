@@ -13,7 +13,7 @@ var DocMeasure = require('../../js/docMeasure').default;
 
 // var TraversalTracker = require('../../js/traversalTracker').default;
 
-// var TextTools = pdfMake.TextTools;
+// var TextInlines = pdfMake.TextInlines;
 // var Block = pdfMake.Block;
 // var BlockSet = pdfMake.BlockSet;
 // var ColumnSet = pdfMake.ColumnSet;

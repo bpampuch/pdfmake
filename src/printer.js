@@ -3,7 +3,7 @@ import PDFDocument from './PDFDocument';
 import LayoutBuilder from './layoutBuilder';
 import sizes from './standardPageSizes';
 import textDecorator from './textDecorator';
-import TextTools from './textTools';
+import TextInlines from './TextInlines';
 import { isFunction, isString, isNumber, isBoolean, isArray, isUndefined } from './helpers/variableType';
 
 /**
@@ -368,7 +368,7 @@ function renderLine(line, x, y, pdfKitDoc) {
 	function preparePageNodeRefLine(_pageNodeRef, inline) {
 		var newWidth;
 		var diffWidth;
-		var textTools = new TextTools(null);
+		var textInlines = new TextInlines(null);
 
 		if (isUndefined(_pageNodeRef.positions)) {
 			throw 'Page reference id not found';
@@ -378,7 +378,7 @@ function renderLine(line, x, y, pdfKitDoc) {
 
 		inline.text = pageNumber;
 		inline.linkToPage = pageNumber;
-		newWidth = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
+		newWidth = textInlines.widthOfText(inline.text, inline);
 		diffWidth = inline.width - newWidth;
 		inline.width = newWidth;
 

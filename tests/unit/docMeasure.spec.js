@@ -57,12 +57,12 @@ var docPreprocessor = new DocPreprocessor();
 
 describe('DocMeasure', function () {
 	describe('measureLeaf', function () {
-		it('should call textTools.buildInlines and set _inlines, _minWidth, _maxWidth and return node', function () {
+		it('should call textInlines.buildInlines and set _inlines, _minWidth, _maxWidth and return node', function () {
 			var dm = new DocMeasure(sampleTestProvider);
 			var called = false;
 			var node = { text: 'abc' };
 
-			dm.textTools = {
+			dm.textInlines = {
 				buildInlines: function () {
 					called = true;
 					return { items: ['abc'], minWidth: 1, maxWidth: 10 };

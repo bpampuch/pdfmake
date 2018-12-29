@@ -1,6 +1,6 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 
-import TextTools from './textTools';
+import TextInlines from './TextInlines';
 import StyleContextStack from './StyleContextStack';
 import ColumnCalculator from './columnCalculator';
 import { isString, isNumber, isObject, isArray } from './helpers/variableType';
@@ -16,7 +16,7 @@ class DocMeasure {
 		tableLayouts
 	) {
 		this.pdfDocument = pdfDocument;
-		this.textTools = new TextTools(pdfDocument);
+		this.textInlines = new TextInlines(pdfDocument);
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 		this.tableLayouts = tableLayouts;
 		this.autoImageIndex = 1;
@@ -202,7 +202,7 @@ class DocMeasure {
 		var styleStack = this.styleStack.clone();
 		styleStack.push(node);
 
-		var data = this.textTools.buildInlines(node.text, styleStack);
+		var data = this.textInlines.buildInlines(node.text, styleStack);
 
 		node._inlines = data.items;
 		node._minWidth = data.minWidth;
@@ -262,7 +262,7 @@ class DocMeasure {
 	}
 
 	gapSizeForList() {
-		return this.textTools.sizeOfString('9. ', this.styleStack);
+		return this.textInlines.sizeOfText('9. ', this.styleStack);
 	}
 
 	buildUnorderedMarker(styleStack, gapSize, type) {
@@ -426,7 +426,7 @@ class DocMeasure {
 			textArray.color = markerColor;
 		}
 
-		return { _inlines: this.textTools.buildInlines(textArray, styleStack).items };
+		return { _inlines: this.textInlines.buildInlines(textArray, styleStack).items };
 	}
 
 	measureUnorderedList(node) {

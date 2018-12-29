@@ -9,7 +9,7 @@ import Line from './Line';
 import { isString, isArray, isFunction } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
 import { pack, offsetVector } from './helpers/tools';
-import TextTools from './textTools';
+import TextInlines from './TextInlines';
 import StyleContextStack from './StyleContextStack';
 
 function addAll(target, otherArray) {
@@ -264,7 +264,7 @@ class LayoutBuilder {
 			var width = pageSize.width;
 			var height = pageSize.height;
 			var targetWidth = Math.sqrt(width * width + height * height) * 0.8; /* page diagonal * sample factor */
-			var textTools = new TextTools(pdfDocument);
+			var textInlines = new TextInlines(pdfDocument);
 			var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
 			var size;
 
@@ -280,7 +280,7 @@ class LayoutBuilder {
 				styleContextStack.push({
 					fontSize: c
 				});
-				size = textTools.sizeOfString(watermark.text, styleContextStack);
+				size = textInlines.sizeOfText(watermark.text, styleContextStack);
 				if (size.width > targetWidth) {
 					b = c;
 					c = (a + b) / 2;
@@ -628,7 +628,7 @@ class LayoutBuilder {
 		}
 
 		var line = new Line(this.writer.context().availableWidth);
-		var textTools = new TextTools(null);
+		var textInlines = new TextInlines(null);
 
 		var isForceContinue = false;
 		while (textNode._inlines && textNode._inlines.length > 0 &&
@@ -649,8 +649,8 @@ class LayoutBuilder {
 					newInline.text = inline.text.substr(maxChars);
 					inline.text = inline.text.substr(0, maxChars);
 
-					newInline.width = textTools.widthOfString(newInline.text, newInline.font, newInline.fontSize, newInline.characterSpacing, newInline.fontFeatures);
-					inline.width = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
+					newInline.width = textInlines.widthOfText(newInline.text, newInline);
+					inline.width = textInlines.widthOfText(inline.text, inline);
 
 					textNode._inlines.unshift(newInline);
 					isHardWrap = true;
