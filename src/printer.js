@@ -114,7 +114,7 @@ class PdfPrinter {
 			this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
 		}
 
-		renderPages(pages, this.pdfKitDoc, this.pdfKitDoc, options.progressCallback);
+		renderPages(pages, this.pdfKitDoc, options.progressCallback);
 
 		if (options.autoPrint) {
 			let printActionRef = this.pdfKitDoc.ref({
@@ -315,7 +315,7 @@ function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
 	}
 }
 
-function renderPages(pages, pdfDocument, pdfKitDoc, progressCallback) {
+function renderPages(pages, pdfKitDoc, progressCallback) {
 	pdfKitDoc._pdfMakePages = pages;
 	pdfKitDoc.addPage();
 
