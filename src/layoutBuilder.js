@@ -145,9 +145,8 @@ class LayoutBuilder {
 		this.writer = new PageElementWriter(
 			new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
-		var _this = this;
 		this.writer.context().tracker.startTracking('pageAdded', () => {
-			_this.addBackground(background);
+			this.addBackground(background);
 		});
 
 		this.addBackground(background);
@@ -377,13 +376,12 @@ class LayoutBuilder {
 
 	// vertical container
 	processVerticalContainer(node) {
-		var self = this;
 		node.stack.forEach(item => {
-			self.processNode(item);
+			this.processNode(item);
 			addAll(node.positions, item.positions);
 
 			//TODO: paragraph gap
-		});
+		}, this);
 	}
 
 	// columns
@@ -418,14 +416,13 @@ class LayoutBuilder {
 	}
 
 	processRow(columns, widths, gaps, tableBody, tableRow, height) {
-		var self = this;
 		let pageBreaks = [];
 		let positions = [];
 
 		this.tracker.auto('pageChanged', storePageBreakData, () => {
 			widths = widths || columns;
 
-			self.writer.context().beginColumnGroup();
+			this.writer.context().beginColumnGroup();
 
 			for (let i = 0, l = columns.length; i < l; i++) {
 				let column = columns[i];
@@ -438,17 +435,17 @@ class LayoutBuilder {
 					}
 				}
 
-				self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
+				this.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
 				if (!column._span) {
-					self.processNode(column);
+					this.processNode(column);
 					addAll(positions, column.positions);
 				} else if (column._columnEndingContext) {
 					// row-span ending
-					self.writer.context().markEnding(column);
+					this.writer.context().markEnding(column);
 				}
 			}
 
-			self.writer.context().completeColumnGroup(height);
+			this.writer.context().completeColumnGroup(height);
 		});
 
 		return { pageBreaks: pageBreaks, positions: positions };

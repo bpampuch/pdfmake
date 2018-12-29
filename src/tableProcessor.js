@@ -117,10 +117,9 @@ class TableProcessor {
 	}
 
 	onRowBreak(rowIndex, writer) {
-		var self = this;
 		return () => {
-			let offset = self.rowPaddingTop + (!self.headerRows ? self.topLineWidth : 0);
-			writer.context().availableHeight -= self.reservedAtBottom;
+			let offset = this.rowPaddingTop + (!this.headerRows ? this.topLineWidth : 0);
+			writer.context().availableHeight -= this.reservedAtBottom;
 			writer.context().moveDown(offset);
 		};
 	}
