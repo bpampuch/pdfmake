@@ -2,7 +2,7 @@
 import PDFDocument from './PDFDocument';
 import LayoutBuilder from './layoutBuilder';
 import sizes from './standardPageSizes';
-import textDecorator from './textDecorator';
+import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
 import { isFunction, isString, isNumber, isBoolean, isArray, isUndefined } from './helpers/variableType';
 
@@ -403,7 +403,9 @@ function renderLine(line, x, y, pdfKitDoc) {
 	var ascenderHeight = line.getAscenderHeight();
 	var descent = lineHeight - ascenderHeight;
 
-	textDecorator.drawBackground(line, x, y, pdfKitDoc);
+	const textDecorator = new TextDecorator(pdfKitDoc);
+
+	textDecorator.drawBackground(line, x, y);
 
 	//TODO: line.optimizeInlines();
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
@@ -440,7 +442,7 @@ function renderLine(line, x, y, pdfKitDoc) {
 
 	}
 
-	textDecorator.drawDecorations(line, x, y, pdfKitDoc);
+	textDecorator.drawDecorations(line, x, y);
 }
 
 function renderWatermark(page, pdfKitDoc) {
