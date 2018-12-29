@@ -3,7 +3,7 @@
 var assert = require('assert');
 var sinon = require('sinon');
 
-var Line = require('../../js/line').default;
+var Line = require('../../js/Line').default;
 var LayoutBuilder = require('../../js/layoutBuilder').default;
 var StyleContextStack = require('../../js/StyleContextStack').default;
 var ColumnCalculator = require('../../js/columnCalculator').default;

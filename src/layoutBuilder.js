@@ -5,7 +5,7 @@ import DocumentContext from './documentContext';
 import PageElementWriter from './pageElementWriter';
 import ColumnCalculator from './columnCalculator';
 import TableProcessor from './tableProcessor';
-import Line from './line';
+import Line from './Line';
 import { isString, isArray, isFunction } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
 import { pack, offsetVector } from './helpers/tools';

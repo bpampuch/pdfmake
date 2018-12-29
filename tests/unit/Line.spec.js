@@ -2,54 +2,9 @@
 
 var assert = require('assert');
 
-var Line = require('../../js/line').default;
+var Line = require('../../js/Line').default;
 
 describe('Line', function () {
-	describe('hasEnoughSpaceForInline', function () {
-		it('should return true if there is enough space left', function () {
-			var line = new Line(100);
-			assert(line.hasEnoughSpaceForInline({ width: 50 }));
-		});
-
-		it('should return true if line is empty, even if there is not enough space left', function () {
-			var line = new Line(100);
-			assert(line.hasEnoughSpaceForInline({ width: 170 }));
-		});
-
-		it('should return false if there is not enough space', function () {
-			var line = new Line(100);
-			line.addInline({ width: 70 });
-			assert(!line.hasEnoughSpaceForInline({ width: 40 }));
-		});
-
-		it('should take into account first inline leadingCut (left-trimming) when deciding if theres enough space', function () {
-			var line = new Line(100);
-			line.addInline({ width: 70, leadingCut: 20 });
-			assert(line.hasEnoughSpaceForInline({ width: 40 }));
-		});
-
-		it('should not take into account following inline leadingCuts (left-trimming) when deciding if theres enough space', function () {
-			var line = new Line(100);
-			line.addInline({ width: 70, leadingCut: 20 });
-			line.addInline({ width: 20, leadingCut: 10 });
-			line.addInline({ width: 20, leadingCut: 10 });
-			assert(!line.hasEnoughSpaceForInline({ width: 20, leadingCut: 10 }));
-		});
-
-		it('should take into account last inline trailingCut (right-trimming) when deciding if theres enough space', function () {
-			var line = new Line(100);
-			line.addInline({ width: 30 });
-			line.addInline({ width: 40 });
-			assert(line.hasEnoughSpaceForInline({ width: 50, trailingCut: 20 }));
-		});
-		it('should not take into account previous inline trailingCuts (right-trimming) when deciding if theres enough space', function () {
-			var line = new Line(100);
-			line.addInline({ width: 40, trailingCut: 20 });
-			line.addInline({ width: 30, trailingCut: 20 });
-			assert(!line.hasEnoughSpaceForInline({ width: 31 }));
-		});
-	});
-
 	describe('addInline', function () {
 		it('should set leadingCut when adding first inline', function () {
 			var line = new Line(100);
@@ -131,6 +86,25 @@ describe('Line', function () {
 		});
 	});
 
+	describe('getHeight', function () {
+
+		// TODO
+
+		/*
+		it('should return highest inline height when baselines are equal', function () {
+		});
+
+		it('should take into account baseline offsets', function () {
+		});
+		*/
+	});
+
+	describe('getAscenderHeight', function () {
+
+		// TODO
+
+	});
+
 	describe('getWidth', function () {
 		it('should return sum of all inline widths', function () {
 			var line = new Line(100);
@@ -157,11 +131,57 @@ describe('Line', function () {
 		});
 	});
 
-	describe.skip('getHeight', function () {
-		it('should return highest inline height when baselines are equal', function () {
+	describe('getAvailableWidth', function () {
+
+		// TODO
+
+	});
+
+	describe('hasEnoughSpaceForInline', function () {
+		it('should return true if there is enough space left', function () {
+			var line = new Line(100);
+			assert(line.hasEnoughSpaceForInline({ width: 50 }));
 		});
 
-		it('should take into account baseline offsets', function () {
+		it('should return true if line is empty, even if there is not enough space left', function () {
+			var line = new Line(100);
+			assert(line.hasEnoughSpaceForInline({ width: 170 }));
 		});
+
+		it('should return false if there is not enough space', function () {
+			var line = new Line(100);
+			line.addInline({ width: 70 });
+			assert(!line.hasEnoughSpaceForInline({ width: 40 }));
+		});
+
+		it('should take into account first inline leadingCut (left-trimming) when deciding if theres enough space', function () {
+			var line = new Line(100);
+			line.addInline({ width: 70, leadingCut: 20 });
+			assert(line.hasEnoughSpaceForInline({ width: 40 }));
+		});
+
+		it('should not take into account following inline leadingCuts (left-trimming) when deciding if theres enough space', function () {
+			var line = new Line(100);
+			line.addInline({ width: 70, leadingCut: 20 });
+			line.addInline({ width: 20, leadingCut: 10 });
+			line.addInline({ width: 20, leadingCut: 10 });
+			assert(!line.hasEnoughSpaceForInline({ width: 20, leadingCut: 10 }));
+		});
+
+		it('should take into account last inline trailingCut (right-trimming) when deciding if theres enough space', function () {
+			var line = new Line(100);
+			line.addInline({ width: 30 });
+			line.addInline({ width: 40 });
+			assert(line.hasEnoughSpaceForInline({ width: 50, trailingCut: 20 }));
+		});
+
+		it('should not take into account previous inline trailingCuts (right-trimming) when deciding if theres enough space', function () {
+			var line = new Line(100);
+			line.addInline({ width: 40, trailingCut: 20 });
+			line.addInline({ width: 30, trailingCut: 20 });
+			assert(!line.hasEnoughSpaceForInline({ width: 31 }));
+		});
+
+		// TODO: test for nextInlines with noNewLine
 	});
 });

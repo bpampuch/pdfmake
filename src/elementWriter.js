@@ -1,4 +1,4 @@
-import Line from './line';
+import Line from './Line';
 import { isNumber } from './helpers/variableType';
 import { pack, offsetVector } from './helpers/tools';
 import DocumentContext from './documentContext';
