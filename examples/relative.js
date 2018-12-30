@@ -7,9 +7,8 @@ var fonts = {
 	}
 };
 
-var PdfPrinter = require('../js/index');
-var printer = new PdfPrinter(fonts);
-var fs = require('fs');
+var pdfmake = require('../js/index');
+pdfmake.setFonts(fonts);
 
 var left = 20;
 var width = 130;
@@ -38,9 +37,12 @@ var documentDefinition = {
 	]
 };
 
-var pdfDoc = printer.createPdfKitDocument(documentDefinition);
-pdfDoc.pipe(fs.createWriteStream('pdfs/relative.pdf'));
-pdfDoc.end();
+var now = new Date();
+
+var pdf = pdfmake.createPdf(docDefinition);
+pdf.write('pdfs/relative.pdf');
+
+console.log(new Date() - now);
 
 function buildXAxis() {
 	var xTicks = [

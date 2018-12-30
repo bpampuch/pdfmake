@@ -7,9 +7,8 @@ var fonts = {
 	}
 };
 
-var PdfPrinter = require('../js/index');
-var printer = new PdfPrinter(fonts);
-var fs = require('fs');
+var pdfmake = require('../js/index');
+pdfmake.setFonts(fonts);
 
 
 var docDefinition = {
@@ -408,8 +407,8 @@ var docDefinition = {
 };
 
 var now = new Date();
-var pdfDoc = printer.createPdfKitDocument(docDefinition);
-pdfDoc.pipe(fs.createWriteStream('pdfs/lists.pdf'));
-pdfDoc.end();
+
+var pdf = pdfmake.createPdf(docDefinition);
+pdf.write('pdfs/lists.pdf');
 
 console.log(new Date() - now);

@@ -13,9 +13,8 @@ var fonts = {
 	}
 };
 
-var PdfPrinter = require('../js/index');
-var printer = new PdfPrinter(fonts);
-var fs = require('fs');
+var pdfmake = require('../js/index');
+pdfmake.setFonts(fonts);
 
 var greeting = 'Can you see me';
 var url = 'http://pdfmake.org';
@@ -49,6 +48,9 @@ var docDefinition = {
 	]
 }
 
-var pdfDoc = printer.createPdfKitDocument(docDefinition);
-pdfDoc.pipe(fs.createWriteStream(mp('./pdfs/qrCode.pdf')));
-pdfDoc.end();
+var now = new Date();
+
+var pdf = pdfmake.createPdf(docDefinition);
+pdf.write('pdfs/qrCode.pdf');
+
+console.log(new Date() - now);
