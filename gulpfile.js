@@ -6,6 +6,8 @@ var each = require('gulp-each');
 var fc2json = require('gulp-file-contents-to-json');
 var log = require('fancy-log');
 var PluginError = require('plugin-error');
+var exec = require('child_process').exec;
+const fs = require('fs');
 
 var DEBUG = process.env.NODE_ENV === 'debug';
 var CI = process.env.CI === 'true';
@@ -65,6 +67,24 @@ gulp.task('buildFonts', function () {
 gulp.task('watch', function () {
 	gulp.watch('./src/**', ['test', 'build']);
 	gulp.watch('./tests/**', ['test']);
+});
+
+gulp.task('generateExamples', function (cb) {
+	process.chdir('examples');
+
+	const files = fs.readdirSync('.');
+	files.forEach(function (file) {
+		if (file.substring(file.length - 3, file.length) === '.js') {
+			exec(`node ${file}`, function (err, stdout, stderr) {
+				console.log('FILE:', file);
+
+				console.log(stdout);
+				console.log(stderr);
+			});
+		}
+	});
+
+	cb();
 });
 
 gulp.task('default', gulp.series(/*'lint',*/ 'test', 'build', 'buildFonts'));
