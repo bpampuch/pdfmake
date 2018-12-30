@@ -11,8 +11,8 @@ var PluginError = require('plugin-error');
 var DEBUG = process.env.NODE_ENV === 'debug';
 var CI = process.env.CI === 'true';
 
-var vfsBefore = "this.pdfMake = this.pdfMake || {}; this.pdfMake.vfs = ";
-var vfsAfter = ";";
+var vfsBefore = "var vfs = ";
+var vfsAfter = "; if (typeof this.pdfMake !== 'undefined' && typeof this.pdfMake.addVirtualFileSystem !== 'undefined') { this.pdfMake.addVirtualFileSystem(vfs); } if (typeof module !== 'undefined') { module.exports = vfs; }";
 
 gulp.task('buildNode', function () {
 	return gulp.src('src/**/*.js')
