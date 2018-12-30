@@ -1,15 +1,9 @@
-var path = require("path");
-
-function mp(relFontPath) {
-	return path.resolve(__dirname, relFontPath)
-}
-
 var fonts = {
 	Roboto: {
-		normal: mp('./fonts/Roboto-Regular.ttf'),
-		bold: mp('./fonts/Roboto-Medium.ttf'),
-		italics: mp('./fonts/Roboto-Italic.ttf'),
-		bolditalics: mp('./fonts/Roboto-MediumItalic.ttf')
+		normal: 'fonts/Roboto-Regular.ttf',
+		bold: 'fonts/Roboto-Medium.ttf',
+		italics: 'fonts/Roboto-Italic.ttf',
+		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
 	}
 };
 
