@@ -230,7 +230,6 @@ class DocMeasure {
 			]);
 		}
 
-
 		node.toc._table = {
 			table: {
 				dontBreakRows: true,
@@ -534,7 +533,7 @@ class DocMeasure {
 				let rowData = node.table.body[row];
 				let data = rowData[col];
 				if (data === undefined) {
-					console.error('Malformed table row ', rowData, 'in node ', node);
+					console.error('Malformed table row ', rowData, ' in node ', node);
 					throw 'Malformed table row, a cell is undefined.';
 				}
 				if (data === null) { // transform to object
