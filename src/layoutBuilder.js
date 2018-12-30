@@ -397,7 +397,6 @@ class LayoutBuilder {
 		let result = this.processRow(columns, columns, gaps);
 		addAll(columnNode.positions, result.positions);
 
-
 		function gapArray(gap) {
 			if (!gap) {
 				return null;

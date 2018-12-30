@@ -309,5 +309,4 @@ function cloneLine(line) {
 	return result;
 }
 
-
 export default ElementWriter;
