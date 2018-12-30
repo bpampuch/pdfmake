@@ -70,21 +70,32 @@ gulp.task('watch', function () {
 });
 
 gulp.task('generateExamples', function (cb) {
+	var errCount = 0;
+	var position = 0;
 	process.chdir('examples');
 
-	const files = fs.readdirSync('.');
+	const items = fs.readdirSync('.');
+	const files = items.filter(file => file.substring(file.length - 3, file.length) === '.js');
+
 	files.forEach(function (file) {
-		if (file.substring(file.length - 3, file.length) === '.js') {
-			exec(`node ${file}`, function (err, stdout, stderr) {
-				console.log('FILE:', file);
+		exec(`node ${file}`, function (err, stdout, stderr) {
+			position++;
+			log('FILE: ', file, ` (${position}/${files.length})`);
+			log(stdout);
 
-				console.log(stdout);
-				console.log(stderr);
-			});
-		}
+			if (err) {
+				errCount++;
+				log(stderr);
+			}
+
+			if (position === files.length) {
+				if (errCount) {
+					log('Errors count: ', errCount);
+				}
+				cb();
+			}
+		});
 	});
-
-	cb();
 });
 
 gulp.task('default', gulp.series(/*'lint',*/ 'test', 'build', 'buildFonts'));
