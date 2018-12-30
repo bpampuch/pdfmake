@@ -134,8 +134,7 @@ class LayoutBuilder {
 		background,
 		header,
 		footer,
-		watermark,
-		pageBreakBeforeFct
+		watermark
 	) {
 
 		this.linearNodeList = [];
