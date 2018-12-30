@@ -9,7 +9,7 @@ class Renderer {
 	}
 
 	renderPages(pages) {
-		this.pdfDocument._pdfMakePages = pages;
+		this.pdfDocument._pdfMakePages = pages; // TODO: Why?
 		this.pdfDocument.addPage();
 
 		let totalItems = 0;
