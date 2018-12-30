@@ -22,12 +22,20 @@ class pdfmake {
 		this.tableLayouts = pack(this.tableLayouts, tableLayouts);
 	}
 
+	setTableLayouts(tableLayouts) {
+		this.tableLayouts = tableLayouts;
+	}
+
 	clearTableLayouts() {
 		this.tableLayouts = {};
 	}
 
 	addFonts(fonts) {
 		this.fonts = pack(this.fonts, fonts);
+	}
+
+	setFonts(fonts) {
+		this.fonts = fonts;
 	}
 
 	clearFonts() {
