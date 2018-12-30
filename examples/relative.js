@@ -25,7 +25,7 @@ var chart = [{ stack: chartText }, { canvas: chartLines }];
 buildXAxis();
 buildYAxis();
 
-var documentDefinition = {
+var docDefinition = {
 	content: [
 		{ text: 'We sometimes don\'t know the absolute position of text', margin: [10, 0, 0, 50] },
 		{
