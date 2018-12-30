@@ -20,7 +20,6 @@ class Renderer {
 		}
 
 		let renderedItems = 0;
-		this.progressCallback = this.progressCallback || (() => { });
 
 		for (let i = 0; i < pages.length; i++) {
 			if (i > 0) {
@@ -49,7 +48,9 @@ class Renderer {
 						break;
 				}
 				renderedItems++;
-				this.progressCallback(renderedItems / totalItems);
+				if (this.progressCallback) {
+					this.progressCallback(renderedItems / totalItems);
+				}
 			}
 			if (page.watermark) {
 				this.renderWatermark(page);
