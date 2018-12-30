@@ -1,9 +1,9 @@
 const pdfmakeBase = require('./base').default;
-const OutputDocumentNode = require('./OutputDocumentNode').default;
+const OutputDocumentServer = require('./OutputDocumentServer').default;
 
 class pdfmake extends pdfmakeBase {
 	_transformToDocument(doc) {
-		return new OutputDocumentNode(doc);
+		return new OutputDocumentServer(doc);
 	}
 }
 
