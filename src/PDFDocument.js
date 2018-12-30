@@ -91,6 +91,15 @@ class PDFDocument extends PDFKit {
 		return image;
 	}
 
+	setOpenActionAsPrint() {
+		let printActionRef = this.ref({
+			Type: 'Action',
+			S: 'Named',
+			N: 'Print'
+		});
+		this._root.data.OpenAction = printActionRef;
+		printActionRef.end();
+	}
 }
 
 export default PDFDocument;

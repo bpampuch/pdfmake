@@ -71,7 +71,7 @@ class OutputDocumentBrowser extends OutputDocument {
 	}
 
 	print(win = null) {
-		this.setOpenActionAsPrint();
+		this.getStream().setOpenActionAsPrint();
 		this.open(win);
 	}
 }

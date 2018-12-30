@@ -47,16 +47,6 @@ class OutputDocument {
 			callback('data:application/pdf;base64,' + data);
 		});
 	}
-
-	setOpenActionAsPrint() {
-		let printActionRef = this.pdfKitDoc.ref({
-			Type: 'Action',
-			S: 'Named',
-			N: 'Print'
-		});
-		this.pdfKitDocument._root.data.OpenAction = printActionRef;
-		printActionRef.end();
-	}
 }
 
 export default OutputDocument;
