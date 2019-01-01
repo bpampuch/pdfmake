@@ -241,8 +241,6 @@ class TableProcessor {
 	}
 
 	endRow(rowIndex, writer, pageBreaks) {
-		let l;
-		let i;
 		var self = this;
 		writer.tracker.stopTracking('pageChanged', this.rowCallback);
 		writer.context().moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
@@ -264,7 +262,7 @@ class TableProcessor {
 		});
 
 		if (hasBreaks) {
-			for (i = 0, l = pageBreaks.length; i < l; i++) {
+			for (let i = 0, l = pageBreaks.length; i < l; i++) {
 				let pageBreak = pageBreaks[i];
 				ys[ys.length - 1].y1 = pageBreak.prevY;
 
@@ -294,7 +292,7 @@ class TableProcessor {
 				this.reservedAtBottom = 0;
 			}
 
-			for (i = 0, l = xs.length; i < l; i++) {
+			for (let i = 0, l = xs.length; i < l; i++) {
 				let leftBorder = false;
 				let rightBorder = false;
 				let colIndex = xs[i].index;
