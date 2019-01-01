@@ -414,41 +414,7 @@ class LayoutBuilder {
 	}
 
 	processRow(columns, widths, gaps, tableBody, tableRow, height) {
-		let pageBreaks = [];
-		let positions = [];
-
-		this.tracker.auto('pageChanged', storePageBreakData, () => {
-			widths = widths || columns;
-
-			this.writer.context().beginColumnGroup();
-
-			for (let i = 0, l = columns.length; i < l; i++) {
-				let column = columns[i];
-				let width = widths[i]._calcWidth;
-				let leftOffset = colLeftOffset(i);
-
-				if (column.colSpan && column.colSpan > 1) {
-					for (let j = 1; j < column.colSpan; j++) {
-						width += widths[++i]._calcWidth + gaps[i];
-					}
-				}
-
-				this.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
-				if (!column._span) {
-					this.processNode(column);
-					addAll(positions, column.positions);
-				} else if (column._columnEndingContext) {
-					// row-span ending
-					this.writer.context().markEnding(column);
-				}
-			}
-
-			this.writer.context().completeColumnGroup(height);
-		});
-
-		return { pageBreaks: pageBreaks, positions: positions };
-
-		function storePageBreakData(data) {
+		const storePageBreakData = data => {
 			let pageDesc;
 
 			for (let i = 0, l = pageBreaks.length; i < l; i++) {
@@ -466,6 +432,42 @@ class LayoutBuilder {
 			pageDesc.prevY = Math.max(pageDesc.prevY, data.prevY);
 			pageDesc.y = Math.min(pageDesc.y, data.y);
 		}
+
+		let pageBreaks = [];
+		let positions = [];
+
+		this.tracker.startTracking('pageChanged', storePageBreakData);
+
+		widths = widths || columns;
+
+		this.writer.context().beginColumnGroup();
+
+		for (let i = 0, l = columns.length; i < l; i++) {
+			let column = columns[i];
+			let width = widths[i]._calcWidth;
+			let leftOffset = colLeftOffset(i);
+
+			if (column.colSpan && column.colSpan > 1) {
+				for (let j = 1; j < column.colSpan; j++) {
+					width += widths[++i]._calcWidth + gaps[i];
+				}
+			}
+
+			this.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
+			if (!column._span) {
+				this.processNode(column);
+				addAll(positions, column.positions);
+			} else if (column._columnEndingContext) {
+				// row-span ending
+				this.writer.context().markEnding(column);
+			}
+		}
+
+		this.writer.context().completeColumnGroup(height);
+
+		this.tracker.stopTracking('pageChanged', storePageBreakData);
+
+		return { pageBreaks: pageBreaks, positions: positions };
 
 		function colLeftOffset(i) {
 			if (gaps && gaps.length > i) {
@@ -489,24 +491,7 @@ class LayoutBuilder {
 
 	// lists
 	processList(orderedList, node) {
-		var self = this;
-		let items = orderedList ? node.ol : node.ul;
-		let gapSize = node._gapSize;
-
-		this.writer.context().addMargin(gapSize.width);
-
-		let nextMarker;
-		this.tracker.auto('lineAdded', addMarkerToFirstLeaf, () => {
-			items.forEach(item => {
-				nextMarker = item.listMarker;
-				self.processNode(item);
-				addAll(node.positions, item.positions);
-			});
-		});
-
-		this.writer.context().addMargin(-gapSize.width);
-
-		function addMarkerToFirstLeaf(line) {
+		const addMarkerToFirstLeaf = line => {
 			// I'm not very happy with the way list processing is implemented
 			// (both code and algorithm should be rethinked)
 			if (nextMarker) {
@@ -526,7 +511,27 @@ class LayoutBuilder {
 					self.writer.addLine(markerLine, true);
 				}
 			}
-		}
+		};
+
+		var self = this;
+		let items = orderedList ? node.ol : node.ul;
+		let gapSize = node._gapSize;
+
+		this.writer.context().addMargin(gapSize.width);
+
+		let nextMarker;
+
+		this.tracker.startTracking('lineAdded', addMarkerToFirstLeaf);
+
+		items.forEach(item => {
+			nextMarker = item.listMarker;
+			self.processNode(item);
+			addAll(node.positions, item.positions);
+		});
+
+		this.tracker.stopTracking('lineAdded', addMarkerToFirstLeaf);
+
+		this.writer.context().addMargin(-gapSize.width);
 	}
 
 	// tables

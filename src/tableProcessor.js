@@ -371,16 +371,17 @@ class TableProcessor {
 		}
 
 		if (this.dontBreakRows) {
-			writer.tracker.auto('pageChanged',
-				() => {
-					if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
-						self.drawHorizontalLine(rowIndex, writer);
-					}
-				},
-				() => {
-					writer.commitUnbreakableBlock();
+			const pageChangedCallback = () => {
+				if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
+					self.drawHorizontalLine(rowIndex, writer);
 				}
-			);
+			};
+
+			writer.tracker.startTracking('pageChanged', pageChangedCallback);
+
+			writer.commitUnbreakableBlock();
+
+			writer.tracker.stopTracking('pageChanged', pageChangedCallback);
 		}
 
 		if (this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
