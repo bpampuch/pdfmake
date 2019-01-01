@@ -502,18 +502,17 @@ class LayoutBuilder {
 					let vector = marker.canvas[0];
 
 					offsetVector(vector, -marker._minWidth, 0);
-					self.writer.addVector(vector);
+					this.writer.addVector(vector);
 				} else if (marker._inlines) {
-					let markerLine = new Line(self.pageSize.width);
+					let markerLine = new Line(this.pageSize.width);
 					markerLine.addInline(marker._inlines[0]);
 					markerLine.x = -marker._minWidth;
 					markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
-					self.writer.addLine(markerLine, true);
+					this.writer.addLine(markerLine, true);
 				}
 			}
 		};
 
-		var self = this;
 		let items = orderedList ? node.ol : node.ul;
 		let gapSize = node._gapSize;
 
@@ -525,7 +524,7 @@ class LayoutBuilder {
 
 		items.forEach(item => {
 			nextMarker = item.listMarker;
-			self.processNode(item);
+			this.processNode(item);
 			addAll(node.positions, item.positions);
 		});
 
