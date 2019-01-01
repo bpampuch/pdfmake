@@ -242,7 +242,7 @@ class ElementWriter {
 		block.items.forEach(item => {
 			switch (item.type) {
 				case 'line':
-					var l = cloneLine(item.item);
+					var l = item.item.clone();
 
 					l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 					l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
@@ -320,18 +320,6 @@ function addPageItem(page, item, index) {
 	} else {
 		page.items.splice(index, 0, item);
 	}
-}
-
-function cloneLine(line) {
-	let result = new Line(line.maxWidth);
-
-	for (let key in line) {
-		if (line.hasOwnProperty(key)) {
-			result[key] = line[key];
-		}
-	}
-
-	return result;
 }
 
 export default ElementWriter;

@@ -39,6 +39,17 @@ describe('ElementWriter', function () {
 			getWidth: function () {
 				return 60;
 			},
+			clone: function () {
+				let result = {};
+
+				for (let key in this) {
+					if (this.hasOwnProperty(key)) {
+						result[key] = this[key];
+					}
+				}
+
+				return result;
+			},
 			inlines: [
 				{
 					alignment: alignment,

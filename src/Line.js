@@ -96,6 +96,18 @@ class Line {
 
 		return (this.inlineWidths + inlineWidth - this.leadingCut - inlineTrailingCut) <= this.maxWidth;
 	}
+
+	clone() {
+		let result = new Line(this.maxWidth);
+
+		for (let key in this) {
+			if (this.hasOwnProperty(key)) {
+				result[key] = this[key];
+			}
+		}
+
+		return result;
+	}
 }
 
 export default Line;
