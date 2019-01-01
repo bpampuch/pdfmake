@@ -18,19 +18,19 @@ class PageElementWriter extends ElementWriter {
 	}
 
 	addLine(line, dontUpdateContextPosition, index) {
-		return fitOnPage(this, () => super.addLine(line, dontUpdateContextPosition, index));
+		return this._fitOnPage(() => super.addLine(line, dontUpdateContextPosition, index));
 	}
 
 	addImage(image, index) {
-		return fitOnPage(this, () => super.addImage(image, index));
+		return this._fitOnPage(() => super.addImage(image, index));
 	}
 
 	addCanvas(image, index) {
-		return fitOnPage(this, () => super.addCanvas(image, index));
+		return this._fitOnPage(() => super.addCanvas(image, index));
 	}
 
 	addQr(qr, index) {
-		return fitOnPage(this, () => super.addQr(qr, index));
+		return this._fitOnPage(() => super.addQr(qr, index));
 	}
 
 	addVector(vector, ignoreContextX, ignoreContextY, index) {
@@ -46,7 +46,7 @@ class PageElementWriter extends ElementWriter {
 	}
 
 	addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-		return fitOnPage(this, () => super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition));
+		return this._fitOnPage(() => super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition));
 	}
 
 	moveToNextPage(pageOrientation) {
@@ -140,15 +140,15 @@ class PageElementWriter extends ElementWriter {
 		this.repeatables.pop();
 	}
 
-}
-
-function fitOnPage(self, addFct) {
-	let position = addFct(self);
-	if (!position) {
-		self.moveToNextPage();
-		position = addFct(self);
+	_fitOnPage(addFct) {
+		let position = addFct();
+		if (!position) {
+			this.moveToNextPage();
+			position = addFct();
+		}
+		return position;
 	}
-	return position;
+
 }
 
 export default PageElementWriter;
