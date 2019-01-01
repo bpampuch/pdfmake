@@ -665,23 +665,8 @@ class LayoutBuilder {
 	}
 
 	processCanvas(node) {
-		let height = node._minHeight;
-
-		if (node.absolutePosition === undefined && this.writer.context().availableHeight < height) {
-			// TODO: support for canvas larger than a page
-			// TODO: support for other overflow methods
-
-			this.writer.moveToNextPage();
-		}
-
-		this.writer.alignCanvas(node);
-
-		node.canvas.forEach(function (vector) {
-			let position = this.writer.addVector(vector);
-			node.positions.push(position);
-		}, this);
-
-		this.writer.context().moveDown(height);
+		let positions = this.writer.addCanvas(node);
+		addAll(node.positions, positions);
 	}
 
 	processQr(node) {

@@ -25,6 +25,10 @@ class PageElementWriter {
 		return fitOnPage(this, self => self.writer.addImage(image, index));
 	}
 
+	addCanvas(image, index) {
+		return fitOnPage(this, self => self.writer.addCanvas(image, index));
+	}
+
 	addQr(qr, index) {
 		return fitOnPage(this, self => self.writer.addQr(qr, index));
 	}
@@ -39,10 +43,6 @@ class PageElementWriter {
 
 	endClip() {
 		return this.writer.endClip();
-	}
-
-	alignCanvas(node) {
-		this.writer.alignCanvas(node);
 	}
 
 	addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {

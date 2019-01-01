@@ -105,6 +105,31 @@ class ElementWriter {
 		return position;
 	}
 
+	addCanvas(node, index) {
+		let context = this.context;
+		let page = context.getCurrentPage();
+		let positions = [];
+		let height = node._minHeight;
+
+		if (!page || (node.absolutePosition === undefined && context.availableHeight < height)) {
+			// TODO: support for canvas larger than a page
+			// TODO: support for other overflow methods
+
+			return false;
+		}
+
+		this.alignCanvas(node);
+
+		node.canvas.forEach(function (vector) {
+			let position = this.addVector(vector);
+			positions.push(position);
+		}, this);
+
+		context.moveDown(height);
+
+		return positions;
+	}
+
 	addQr(qr, index) {
 		let context = this.context;
 		let page = context.getCurrentPage();
