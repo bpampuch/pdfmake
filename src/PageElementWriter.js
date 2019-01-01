@@ -46,10 +46,7 @@ class PageElementWriter extends ElementWriter {
 	}
 
 	addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-		if (!super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition)) {
-			this.moveToNextPage();
-			super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition);
-		}
+		return fitOnPage(this, () => super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition));
 	}
 
 	moveToNextPage(pageOrientation) {
