@@ -204,7 +204,7 @@ describe('PageElementWriter', function () {
 			pew.beginUnbreakableBlock();
 			pew.addLine(buildLine(30));
 			pew.addLine(buildLine(30));
-			var uCtx = pew.writer.context;
+			var uCtx = pew.context();
 
 			assert.equal(ctx.pages.length, 1);
 			assert.equal(ctx.pages[0].items.length, 0);
@@ -317,7 +317,7 @@ describe('PageElementWriter', function () {
 			addOneTenthLines(6);
 
 			pew.beginUnbreakableBlock();
-			var uCtx = pew.writer.context;
+			var uCtx = pew.context();
 
 			addOneTenthLines(3);
 			uCtx.pages[0].items.forEach(function (item) {

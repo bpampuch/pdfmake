@@ -9,83 +9,82 @@ import ElementWriter from './ElementWriter';
  * - transactions (used for unbreakable-blocks when we want to make sure
  *                 whole block will be rendered on the same page)
  */
-class PageElementWriter {
+class PageElementWriter extends ElementWriter {
 	constructor(context, tracker) {
+		super(context, tracker);
 		this.transactionLevel = 0;
 		this.repeatables = [];
 		this.tracker = tracker;
-		this.writer = new ElementWriter(context, tracker);
 	}
 
 	addLine(line, dontUpdateContextPosition, index) {
-		return fitOnPage(this, self => self.writer.addLine(line, dontUpdateContextPosition, index));
+		return fitOnPage(this, () => super.addLine(line, dontUpdateContextPosition, index));
 	}
 
 	addImage(image, index) {
-		return fitOnPage(this, self => self.writer.addImage(image, index));
+		return fitOnPage(this, () => super.addImage(image, index));
 	}
 
 	addCanvas(image, index) {
-		return fitOnPage(this, self => self.writer.addCanvas(image, index));
+		return fitOnPage(this, () => super.addCanvas(image, index));
 	}
 
 	addQr(qr, index) {
-		return fitOnPage(this, self => self.writer.addQr(qr, index));
+		return fitOnPage(this, () => super.addQr(qr, index));
 	}
 
 	addVector(vector, ignoreContextX, ignoreContextY, index) {
-		return this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
+		return super.addVector(vector, ignoreContextX, ignoreContextY, index);
 	}
 
 	beginClip(width, height) {
-		return this.writer.beginClip(width, height);
+		return super.beginClip(width, height);
 	}
 
 	endClip() {
-		return this.writer.endClip();
+		return super.endClip();
 	}
 
 	addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-		if (!this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition)) {
+		if (!super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition)) {
 			this.moveToNextPage();
-			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition);
+			super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition);
 		}
 	}
 
 	moveToNextPage(pageOrientation) {
-
-		let nextPage = this.writer.context.moveToNextPage(pageOrientation);
+		let nextPage = this.context().moveToNextPage(pageOrientation);
 
 		// moveToNextPage is called multiple times for table, because is called for each column
 		// and repeatables are inserted only in the first time. If columns are used, is needed
 		// call for table in first column and then for table in the second column (is other repeatables).
 		this.repeatables.forEach(function (rep) {
-			if (isUndefined(rep.insertedOnPages[this.writer.context.page])) {
-				rep.insertedOnPages[this.writer.context.page] = true;
-				this.writer.addFragment(rep, true);
+			if (isUndefined(rep.insertedOnPages[this.context().page])) {
+				rep.insertedOnPages[this.context().page] = true;
+				this.addFragment(rep, true);
 			} else {
-				this.writer.context.moveDown(rep.height);
+				this.context().moveDown(rep.height);
 			}
 		}, this);
 
-		this.writer.tracker.emit('pageChanged', {
+		this.tracker.emit('pageChanged', {
 			prevPage: nextPage.prevPage,
 			prevY: nextPage.prevY,
-			y: this.writer.context.y
+			y: this.context().y
 		});
 	}
 
 	beginUnbreakableBlock(width, height) {
 		if (this.transactionLevel++ === 0) {
-			this.originalX = this.writer.context.x;
-			this.writer.pushContext(width, height);
+			this.originalX = this.context().x;
+			this.pushContext(width, height);
 		}
 	}
 
 	commitUnbreakableBlock(forcedX, forcedY) {
 		if (--this.transactionLevel === 0) {
-			let unbreakableContext = this.writer.context;
-			this.writer.popContext();
+			let unbreakableContext = this.context();
+			this.popContext();
 
 			let nbPages = unbreakableContext.pages.length;
 			if (nbPages > 0) {
@@ -100,7 +99,7 @@ class PageElementWriter {
 					if (forcedX !== undefined || forcedY !== undefined) {
 						fragment.height = unbreakableContext.getCurrentPage().pageSize.height - unbreakableContext.pageMargins.top - unbreakableContext.pageMargins.bottom;
 					} else {
-						fragment.height = this.writer.context.getCurrentPage().pageSize.height - this.writer.context.pageMargins.top - this.writer.context.pageMargins.bottom;
+						fragment.height = this.context().getCurrentPage().pageSize.height - this.context().pageMargins.top - this.context().pageMargins.bottom;
 						for (let i = 0, l = this.repeatables.length; i < l; i++) {
 							fragment.height -= this.repeatables[i].height;
 						}
@@ -110,7 +109,7 @@ class PageElementWriter {
 				}
 
 				if (forcedX !== undefined || forcedY !== undefined) {
-					this.writer.addFragment(fragment, true, true, true);
+					super.addFragment(fragment, true, true, true);
 				} else {
 					this.addFragment(fragment);
 				}
@@ -119,7 +118,7 @@ class PageElementWriter {
 	}
 
 	currentBlockToRepeatable() {
-		let unbreakableContext = this.writer.context;
+		let unbreakableContext = this.context();
 		let rep = { items: [] };
 
 		unbreakableContext.pages[0].items.forEach(item => {
@@ -144,9 +143,6 @@ class PageElementWriter {
 		this.repeatables.pop();
 	}
 
-	context() {
-		return this.writer.context;
-	}
 }
 
 function fitOnPage(self, addFct) {

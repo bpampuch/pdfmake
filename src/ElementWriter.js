@@ -8,14 +8,18 @@ import DocumentContext from './documentContext';
  */
 class ElementWriter {
 	constructor(context, tracker) {
-		this.context = context;
+		this._context = context;
 		this.contextStack = [];
 		this.tracker = tracker;
 	}
 
+	context() {
+		return this._context;
+	}
+
 	addLine(line, dontUpdateContextPosition, index) {
 		let height = line.getHeight();
-		let context = this.context;
+		let context = this.context();
 		let page = context.getCurrentPage();
 		let position = this.getCurrentPositionOnPage();
 
@@ -42,7 +46,7 @@ class ElementWriter {
 	}
 
 	alignLine(line) {
-		let width = this.context.availableWidth;
+		let width = this.context().availableWidth;
 		let lineWidth = line.getWidth();
 
 		let alignment = line.inlines && line.inlines.length > 0 && line.inlines[0].alignment;
@@ -77,7 +81,7 @@ class ElementWriter {
 	}
 
 	addImage(image, index) {
-		let context = this.context;
+		let context = this.context();
 		let page = context.getCurrentPage();
 		let position = this.getCurrentPositionOnPage();
 
@@ -105,7 +109,7 @@ class ElementWriter {
 	}
 
 	addCanvas(node, index) {
-		let context = this.context;
+		let context = this.context();
 		let page = context.getCurrentPage();
 		let positions = [];
 		let height = node._minHeight;
@@ -130,7 +134,7 @@ class ElementWriter {
 	}
 
 	addQr(qr, index) {
-		let context = this.context;
+		let context = this.context();
 		let page = context.getCurrentPage();
 		let position = this.getCurrentPositionOnPage();
 
@@ -160,7 +164,7 @@ class ElementWriter {
 	}
 
 	alignImage(image) {
-		let width = this.context.availableWidth;
+		let width = this.context().availableWidth;
 		let imageWidth = image._minWidth;
 		let offset = 0;
 		switch (image._alignment) {
@@ -178,7 +182,7 @@ class ElementWriter {
 	}
 
 	alignCanvas(node) {
-		let width = this.context.availableWidth;
+		let width = this.context().availableWidth;
 		let canvasWidth = node._minWidth;
 		let offset = 0;
 		switch (node._alignment) {
@@ -197,7 +201,7 @@ class ElementWriter {
 	}
 
 	addVector(vector, ignoreContextX, ignoreContextY, index) {
-		let context = this.context;
+		let context = this.context();
 		let page = context.getCurrentPage();
 		let position = this.getCurrentPositionOnPage();
 
@@ -212,7 +216,7 @@ class ElementWriter {
 	}
 
 	beginClip(width, height) {
-		let ctx = this.context;
+		let ctx = this.context();
 		let page = ctx.getCurrentPage();
 		page.items.push({
 			type: 'beginClip',
@@ -222,7 +226,7 @@ class ElementWriter {
 	}
 
 	endClip() {
-		let ctx = this.context;
+		let ctx = this.context();
 		let page = ctx.getCurrentPage();
 		page.items.push({
 			type: 'endClip'
@@ -231,7 +235,7 @@ class ElementWriter {
 	}
 
 	addFragment(block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-		let ctx = this.context;
+		let ctx = this.context();
 		let page = ctx.getCurrentPage();
 
 		if (!useBlockXOffset && block.height > ctx.availableHeight) {
@@ -292,24 +296,24 @@ class ElementWriter {
 	 */
 	pushContext(contextOrWidth, height) {
 		if (contextOrWidth === undefined) {
-			height = this.context.getCurrentPage().height - this.context.pageMargins.top - this.context.pageMargins.bottom;
-			contextOrWidth = this.context.availableWidth;
+			height = this.context().getCurrentPage().height - this.context().pageMargins.top - this.context().pageMargins.bottom;
+			contextOrWidth = this.context().availableWidth;
 		}
 
 		if (isNumber(contextOrWidth)) {
 			contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
 		}
 
-		this.contextStack.push(this.context);
-		this.context = contextOrWidth;
+		this.contextStack.push(this.context());
+		this._context = contextOrWidth;
 	}
 
 	popContext() {
-		this.context = this.contextStack.pop();
+		this._context = this.contextStack.pop();
 	}
 
 	getCurrentPositionOnPage() {
-		return (this.contextStack[0] || this.context).getCurrentPosition();
+		return (this.contextStack[0] || this.context()).getCurrentPosition();
 	}
 }
 
