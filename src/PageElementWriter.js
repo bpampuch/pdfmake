@@ -1,5 +1,5 @@
 import { isUndefined } from './helpers/variableType';
-import ElementWriter from './elementWriter';
+import ElementWriter from './ElementWriter';
 
 /**
  * An extended ElementWriter which can handle:

@@ -2,7 +2,7 @@ import TraversalTracker from './traversalTracker';
 import DocPreprocessor from './docPreprocessor';
 import DocMeasure from './docMeasure';
 import DocumentContext from './documentContext';
-import PageElementWriter from './pageElementWriter';
+import PageElementWriter from './PageElementWriter';
 import ColumnCalculator from './columnCalculator';
 import TableProcessor from './tableProcessor';
 import Line from './Line';

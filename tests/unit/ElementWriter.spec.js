@@ -2,7 +2,7 @@
 
 var assert = require('assert');
 
-var ElementWriter = require('../../js/elementWriter').default;
+var ElementWriter = require('../../js/ElementWriter').default;
 
 describe('ElementWriter', function () {
 	var ew, ctx, page, tracker, fakePosition;

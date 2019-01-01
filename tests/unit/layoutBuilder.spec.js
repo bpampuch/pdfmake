@@ -7,7 +7,7 @@ var Line = require('../../js/Line').default;
 var LayoutBuilder = require('../../js/layoutBuilder').default;
 var StyleContextStack = require('../../js/StyleContextStack').default;
 var ColumnCalculator = require('../../js/columnCalculator').default;
-var PageElementWriter = require('../../js/pageElementWriter').default;
+var PageElementWriter = require('../../js/PageElementWriter').default;
 var DocumentContext = require('../../js/documentContext').default;
 var DocMeasure = require('../../js/docMeasure').default;
 
