@@ -44,4 +44,5 @@ var server = http.createServer(app);
 var port = process.env.PORT || 1234;
 server.listen(port);
 
-console.log('http server listening on %d', port);
+console.log('http server listening on port %d', port);
+console.log('dev-playground is available at http://localhost:%d', port);
