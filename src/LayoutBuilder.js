@@ -23,8 +23,8 @@ function addAll(target, otherArray) {
  */
 class LayoutBuilder {
 	/**
-   * @param {Object} pageSize - an object defining page width and height
-   * @param {Object} pageMargins - an object defining top, left, right and bottom margins
+	 * @param {Object} pageSize - an object defining page width and height
+	 * @param {Object} pageMargins - an object defining top, left, right and bottom margins
 	 */
 	constructor(pageSize, pageMargins) {
 		this.pageSize = pageSize;

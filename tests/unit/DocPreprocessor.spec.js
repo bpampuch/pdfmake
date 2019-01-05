@@ -32,7 +32,7 @@ describe('TextNormalizer', function () {
 			false,
 			'true',
 			'false',
-			[],	// is stack
+			[], // is stack
 			'[]',
 			[1, 2, 3], // is stack
 			{},

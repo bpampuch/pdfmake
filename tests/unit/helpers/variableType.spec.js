@@ -73,7 +73,8 @@ const variableCheckMap = [
 		type: [isArray, isValue]
 	},
 	{
-		value: () => { },
+		value: () => {
+		},
 		type: [isFunction, isValue]
 	},
 	{
