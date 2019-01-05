@@ -1,4 +1,4 @@
-import Printer from './printer';
+import Printer from './Printer';
 import { pack } from './helpers/tools';
 
 class pdfmake {

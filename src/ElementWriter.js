@@ -1,6 +1,6 @@
 import { isNumber } from './helpers/variableType';
 import { pack, offsetVector } from './helpers/tools';
-import DocumentContext from './documentContext';
+import DocumentContext from './DocumentContext';
 import { EventEmitter } from 'events';
 
 /**

@@ -4,7 +4,7 @@ var express = require('express');
 var path = require('path');
 var bodyParser = require('body-parser');
 
-var pdfMakePrinter = require('../src/printer');
+var pdfMakePrinter = require('../src/Printer');
 
 var app = express();
 

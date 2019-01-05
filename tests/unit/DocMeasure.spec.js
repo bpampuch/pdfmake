@@ -2,8 +2,8 @@
 
 var assert = require('assert');
 
-var DocPreprocessor = require('../../js/docPreprocessor').default;
-var DocMeasure = require('../../js/docMeasure').default;
+var DocPreprocessor = require('../../js/DocPreprocessor').default;
+var DocMeasure = require('../../js/DocMeasure').default;
 var StyleContextStack = require('../../js/StyleContextStack').default;
 
 var sampleTestProvider = {

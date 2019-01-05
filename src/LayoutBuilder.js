@@ -1,9 +1,9 @@
-import DocPreprocessor from './docPreprocessor';
-import DocMeasure from './docMeasure';
-import DocumentContext from './documentContext';
+import DocPreprocessor from './DocPreprocessor';
+import DocMeasure from './DocMeasure';
+import DocumentContext from './DocumentContext';
 import PageElementWriter from './PageElementWriter';
 import ColumnCalculator from './columnCalculator';
-import TableProcessor from './tableProcessor';
+import TableProcessor from './TableProcessor';
 import Line from './Line';
 import { isString, isArray, isFunction } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';

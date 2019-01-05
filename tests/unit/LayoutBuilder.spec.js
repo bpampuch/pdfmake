@@ -4,12 +4,12 @@ var assert = require('assert');
 var sinon = require('sinon');
 
 var Line = require('../../js/Line').default;
-var LayoutBuilder = require('../../js/layoutBuilder').default;
+var LayoutBuilder = require('../../js/LayoutBuilder').default;
 var StyleContextStack = require('../../js/StyleContextStack').default;
 var ColumnCalculator = require('../../js/columnCalculator').default;
 var PageElementWriter = require('../../js/PageElementWriter').default;
-var DocumentContext = require('../../js/documentContext').default;
-var DocMeasure = require('../../js/docMeasure').default;
+var DocumentContext = require('../../js/DocumentContext').default;
+var DocMeasure = require('../../js/DocMeasure').default;
 
 // var TextInlines = pdfMake.TextInlines;
 // var Block = pdfMake.Block;

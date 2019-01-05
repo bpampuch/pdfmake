@@ -3,7 +3,7 @@
 var assert = require('assert');
 var sinon = require('sinon');
 
-var DocumentContext = require('../../js/documentContext').default;
+var DocumentContext = require('../../js/DocumentContext').default;
 var PageElementWriter = require('../../js/PageElementWriter').default;
 
 describe('PageElementWriter', function () {

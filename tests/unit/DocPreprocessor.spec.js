@@ -1,7 +1,7 @@
 
 const assert = require('assert');
 
-const DocPreprocessor = require('../../js/docPreprocessor').default;
+const DocPreprocessor = require('../../js/DocPreprocessor').default;
 
 describe('TextNormalizer', function () {
 

@@ -1,6 +1,6 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 import PDFDocument from './PDFDocument';
-import LayoutBuilder from './layoutBuilder';
+import LayoutBuilder from './LayoutBuilder';
 import sizes from './standardPageSizes';
 import Renderer from './Renderer';
 import { isFunction, isString, isNumber, isBoolean, isArray } from './helpers/variableType';

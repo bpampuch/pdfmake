@@ -2,7 +2,7 @@
 
 var assert = require('assert');
 var sinon = require('sinon');
-var TableProcessor = require('../../js/tableProcessor').default;
+var TableProcessor = require('../../js/TableProcessor').default;
 
 describe('TableProcessor', function () {
 

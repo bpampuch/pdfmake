@@ -2,7 +2,7 @@
 
 var PDFDocument = require('../../js/PDFDocument').default;
 var sizes = require('../../js/standardPageSizes').default;
-var LayoutBuilder = require('../../js/layoutBuilder').default;
+var LayoutBuilder = require('../../js/LayoutBuilder').default;
 
 class IntegrationTestHelper {
 	constructor() {
