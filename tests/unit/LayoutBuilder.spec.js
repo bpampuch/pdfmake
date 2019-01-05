@@ -3,7 +3,6 @@
 var assert = require('assert');
 var sinon = require('sinon');
 
-var Line = require('../../js/Line').default;
 var LayoutBuilder = require('../../js/LayoutBuilder').default;
 var StyleContextStack = require('../../js/StyleContextStack').default;
 var ColumnCalculator = require('../../js/columnCalculator').default;
@@ -49,7 +48,7 @@ var sampleTestProvider = {
 			descender: -50
 		};
 	},
-	provideImage(src) {
+	provideImage(src) { // eslint-disable-line no-unused-vars
 		return {
 			width: 1,
 			height: 1
@@ -58,34 +57,34 @@ var sampleTestProvider = {
 };
 
 var emptyTableLayout = {
-	hLineWidth: function (i) {
+	hLineWidth: function (i) { // eslint-disable-line no-unused-vars
 		return 0;
 	},
-	vLineWidth: function (i) {
+	vLineWidth: function (i) { // eslint-disable-line no-unused-vars
 		return 0;
 	},
-	hLineColor: function (i) {
+	hLineColor: function (i) { // eslint-disable-line no-unused-vars
 		return 'black';
 	},
-	vLineColor: function (i) {
+	vLineColor: function (i) { // eslint-disable-line no-unused-vars
 		return 'black';
 	},
-	hLineStyle: function (i, node) {
+	hLineStyle: function (i, node) { // eslint-disable-line no-unused-vars
 		return null;
 	},
-	vLineStyle: function (i, node) {
+	vLineStyle: function (i, node) { // eslint-disable-line no-unused-vars
 		return null;
 	},
-	paddingLeft: function (i) {
+	paddingLeft: function (i) { // eslint-disable-line no-unused-vars
 		return 0;
 	},
-	paddingRight: function (i) {
+	paddingRight: function (i) { // eslint-disable-line no-unused-vars
 		return 0;
 	},
-	paddingTop: function (i) {
+	paddingTop: function (i) { // eslint-disable-line no-unused-vars
 		return 0;
 	},
-	paddingBottom: function (i) {
+	paddingBottom: function (i) { // eslint-disable-line no-unused-vars
 		return 0;
 	}
 };
@@ -1738,7 +1737,7 @@ describe('LayoutBuilder', function () {
 				{ text: 'Text 1', id: 'text1' },
 				{ text: 'Text 2', id: 'text2' }
 			];
-			pageBreakBeforeFunction = function (node, otherNodesOnPage) {
+			pageBreakBeforeFunction = function (node) {
 				return node.id === 'text1';
 			};
 

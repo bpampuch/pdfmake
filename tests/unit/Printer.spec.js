@@ -227,7 +227,7 @@ describe('Printer', function () {
 
 		printer = new Printer(fontDescriptors);
 
-		var progressCallback = sinon.spy(function (progress) { });
+		var progressCallback = sinon.spy(function () { });
 
 		var docDefinition = {
 			pageSize: 'A4',

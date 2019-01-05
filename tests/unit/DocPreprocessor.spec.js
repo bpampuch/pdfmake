@@ -13,7 +13,7 @@ describe('TextNormalizer', function () {
 		};
 
 		assert.doesNotThrow(function () {
-			docPreprocessor.preprocessNode(ddContent)
+			docPreprocessor.preprocessNode(ddContent);
 		});
 	});
 

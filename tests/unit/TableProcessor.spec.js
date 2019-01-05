@@ -6,45 +6,47 @@ var TableProcessor = require('../../js/TableProcessor').default;
 
 describe('TableProcessor', function () {
 
-	var defaultLayout, contextFake, writerFake;
+	var defaultLayout, addVectorCallCount, contextFake, writerFake;
 
 	beforeEach(function () {
 		defaultLayout = {
-			hLineWidth: function (i, node) {
+			hLineWidth: function (i, node) { // eslint-disable-line no-unused-vars
 				return 1;
 			},
-			vLineWidth: function (i, node) {
+			vLineWidth: function (i, node) { // eslint-disable-line no-unused-vars
 				return 1;
 			},
-			hLineColor: function (i, node) {
+			hLineColor: function (i, node) { // eslint-disable-line no-unused-vars
 				return 'black';
 			},
-			vLineColor: function (i, node) {
+			vLineColor: function (i, node) { // eslint-disable-line no-unused-vars
 				return 'black';
 			},
-			hLineStyle: function (i, node) {
+			hLineStyle: function (i, node) { // eslint-disable-line no-unused-vars
 				return null;
 			},
-			vLineStyle: function (i, node) {
+			vLineStyle: function (i, node) { // eslint-disable-line no-unused-vars
 				return null;
 			},
-			paddingLeft: function (i, node) {
+			paddingLeft: function (i, node) { // eslint-disable-line no-unused-vars
 				return 4;
 			},
-			paddingRight: function (i, node) {
+			paddingRight: function (i, node) { // eslint-disable-line no-unused-vars
 				return 4;
 			},
-			paddingTop: function (i, node) {
+			paddingTop: function (i, node) { // eslint-disable-line no-unused-vars
 				return 2;
 			},
-			paddingBottom: function (i, node) {
+			paddingBottom: function (i, node) { // eslint-disable-line no-unused-vars
 				return 2;
 			},
-			fillColor: function (i, node) {
+			fillColor: function (i, node) { // eslint-disable-line no-unused-vars
 				return null;
 			},
 			defaultBorder: true
 		};
+
+		addVectorCallCount = 0;
 
 		contextFake = {
 			moveDown: function () { }
@@ -54,7 +56,7 @@ describe('TableProcessor', function () {
 			context: function () {
 				return contextFake;
 			},
-			addVector: function (vector, ignoreContextX, ignoreContextY, index) {
+			addVector: function (vector, ignoreContextX, ignoreContextY, index) { // eslint-disable-line no-unused-vars
 				assert.equal(vector.lineColor, 'nice shiny color');
 				addVectorCallCount++;
 			},
@@ -66,9 +68,6 @@ describe('TableProcessor', function () {
 
 
 	it('should use the line colors function (regression #161)', function () {
-
-		var addVectorCallCount = 0;
-
 		writerFake.addVector = function (vector) {
 			assert.equal(vector.lineColor, 'nice shiny color');
 			addVectorCallCount++;
@@ -101,9 +100,6 @@ describe('TableProcessor', function () {
 	});
 
 	it('should use the line colors constants (regression #161)', function () {
-
-		var addVectorCallCount = 0;
-
 		writerFake.addVector = function (vector) {
 			assert.equal(vector.lineColor, 'nice shiny color');
 			addVectorCallCount++;

@@ -180,7 +180,7 @@ describe('TextInlines', function () {
 				var result = textInlines.buildInlines([{ text: 'Imię', style: ['header', 'small'] }], styleStack);
 				assert.equal(result.items[0].width, 4 * 8);
 
-				var result = textInlines.buildInlines([{ text: 'Imię', style: ['small', 'header'] }], styleStack);
+				result = textInlines.buildInlines([{ text: 'Imię', style: ['small', 'header'] }], styleStack);
 				assert.equal(result.items[0].width, 4 * 150);
 			});
 

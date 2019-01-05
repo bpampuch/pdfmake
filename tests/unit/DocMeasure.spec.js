@@ -4,7 +4,6 @@ var assert = require('assert');
 
 var DocPreprocessor = require('../../js/DocPreprocessor').default;
 var DocMeasure = require('../../js/DocMeasure').default;
-var StyleContextStack = require('../../js/StyleContextStack').default;
 
 var sampleTestProvider = {
 	provideFont: function (familyName, bold, italics) {
@@ -20,34 +19,34 @@ var sampleTestProvider = {
 };
 
 var emptyTableLayout = {
-	hLineWidth: function (i) {
+	hLineWidth: function (i) { // eslint-disable-line no-unused-vars
 		return 0;
 	},
-	vLineWidth: function (i) {
+	vLineWidth: function (i) { // eslint-disable-line no-unused-vars
 		return 0;
 	},
-	hLineColor: function (i) {
+	hLineColor: function (i) { // eslint-disable-line no-unused-vars
 		return 'black';
 	},
-	vLineColor: function (i) {
+	vLineColor: function (i) { // eslint-disable-line no-unused-vars
 		return 'black';
 	},
-	hLineStyle: function (i, node) {
+	hLineStyle: function (i, node) { // eslint-disable-line no-unused-vars
 		return null;
 	},
-	vLineStyle: function (i, node) {
+	vLineStyle: function (i, node) { // eslint-disable-line no-unused-vars
 		return null;
 	},
-	paddingLeft: function (i) {
+	paddingLeft: function (i) { // eslint-disable-line no-unused-vars
 		return 0;
 	},
-	paddingRight: function (i) {
+	paddingRight: function (i) { // eslint-disable-line no-unused-vars
 		return 0;
 	},
-	paddingTop: function (i) {
+	paddingTop: function (i) { // eslint-disable-line no-unused-vars
 		return 0;
 	},
-	paddingBottom: function (i) {
+	paddingBottom: function (i) { // eslint-disable-line no-unused-vars
 		return 0;
 	}
 };
@@ -108,7 +107,7 @@ describe('DocMeasure', function () {
 		it('should set _minWidth and _maxWidth to the sum of inner min/max widths', function () {
 			var node = { columns: [{ text: 'this is a test', width: 'auto' }, { text: 'another one', width: 'auto' }], columnGap: 0 };
 			docPreprocessor.preprocessColumns(node);
-			var result = docMeasure.measureColumns(node);
+			docMeasure.measureColumns(node);
 
 			assert.equal(node._minWidth, 4 * 12 + 7 * 12);
 			assert.equal(node._maxWidth, 14 * 12 + 11 * 12);
@@ -117,7 +116,7 @@ describe('DocMeasure', function () {
 		it('should set _minWidth and _maxWidth properly when star columns are defined', function () {
 			var node = { columns: ['this is a test', 'another one'], columnGap: 0 };
 			docPreprocessor.preprocessColumns(node);
-			var result = docMeasure.measureColumns(node);
+			docMeasure.measureColumns(node);
 
 			assert.equal(node._minWidth, 7 * 12 + 7 * 12);
 			assert.equal(node._maxWidth, 14 * 12 + 14 * 12);
@@ -149,7 +148,7 @@ describe('DocMeasure', function () {
 		it('should set _minWidth and _maxWidth to the max of inner min/max widths', function () {
 			var node = { stack: ['this is a test', 'another one'] };
 			docPreprocessor.preprocessVerticalContainer(node);
-			var result = docMeasure.measureVerticalContainer(node);
+			docMeasure.measureVerticalContainer(node);
 
 			assert.equal(node._minWidth, 7 * 12);
 			assert.equal(node._maxWidth, 14 * 12);
@@ -305,7 +304,7 @@ describe('DocMeasure', function () {
 
 		it.skip('should set _minWidth and _maxWidth to the sum of column min/max widths', function () {
 			docPreprocessor.preprocessTable(tableNode);
-			var result = docMeasure.measureTable(tableNode);
+			docMeasure.measureTable(tableNode);
 
 			assert.equal(tableNode._minWidth, 150 + 6 * 12 + 4 * 12 + 6 * 12);
 			assert.equal(tableNode._maxWidth, 912);

@@ -8,7 +8,7 @@ describe('helpers/node', function () {
 		it('should be correctly stringify node', function () {
 			var node = { text: 'Text', font: 'XXX', fontSize: 12 };
 
-			result = stringifyNode(node);
+			var result = stringifyNode(node);
 			assert.equal(result, '{"text":"Text","font":"font","fontSize":12}');
 		});
 	});
