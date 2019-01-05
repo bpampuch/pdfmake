@@ -1,5 +1,3 @@
-/*eslint no-unused-vars: ["error", {"args": "none"}]*/
-
 import TextInlines from './TextInlines';
 import StyleContextStack from './StyleContextStack';
 import ColumnCalculator from './columnCalculator';
@@ -584,37 +582,37 @@ class DocMeasure {
 			}
 
 			let defaultLayout = {
-				hLineWidth(i, node) {
+				hLineWidth(i, node) { // eslint-disable-line no-unused-vars
 					return 1;
 				},
-				vLineWidth(i, node) {
+				vLineWidth(i, node) { // eslint-disable-line no-unused-vars
 					return 1;
 				},
-				hLineColor(i, node) {
+				hLineColor(i, node) { // eslint-disable-line no-unused-vars
 					return 'black';
 				},
-				vLineColor(i, node) {
+				vLineColor(i, node) { // eslint-disable-line no-unused-vars
 					return 'black';
 				},
-				hLineStyle(i, node) {
+				hLineStyle(i, node) { // eslint-disable-line no-unused-vars
 					return null;
 				},
-				vLineStyle(i, node) {
+				vLineStyle(i, node) { // eslint-disable-line no-unused-vars
 					return null;
 				},
-				paddingLeft(i, node) {
+				paddingLeft(i, node) { // eslint-disable-line no-unused-vars
 					return 4;
 				},
-				paddingRight(i, node) {
+				paddingRight(i, node) { // eslint-disable-line no-unused-vars
 					return 4;
 				},
-				paddingTop(i, node) {
+				paddingTop(i, node) { // eslint-disable-line no-unused-vars
 					return 2;
 				},
-				paddingBottom(i, node) {
+				paddingBottom(i, node) { // eslint-disable-line no-unused-vars
 					return 2;
 				},
-				fillColor(i, node) {
+				fillColor(i, node) { // eslint-disable-line no-unused-vars
 					return null;
 				},
 				defaultBorder: true

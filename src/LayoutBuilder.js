@@ -429,7 +429,7 @@ class LayoutBuilder {
 			}
 			pageDesc.prevY = Math.max(pageDesc.prevY, data.prevY);
 			pageDesc.y = Math.min(pageDesc.y, data.y);
-		}
+		};
 
 		let pageBreaks = [];
 		let positions = [];

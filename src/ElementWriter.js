@@ -9,7 +9,7 @@ import { EventEmitter } from 'events';
  */
 class ElementWriter extends EventEmitter {
 	constructor(context) {
-		super()
+		super();
 		this._context = context;
 		this.contextStack = [];
 	}
