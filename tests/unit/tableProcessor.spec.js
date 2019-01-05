@@ -58,10 +58,8 @@ describe('TableProcessor', function () {
 				assert.equal(vector.lineColor, 'nice shiny color');
 				addVectorCallCount++;
 			},
-			tracker: {
-				startTracking: function () { },
-				stopTracking: function () { }
-			}
+			addListener: function () { },
+			removeListener: function () { }
 		};
 
 	});
@@ -179,9 +177,7 @@ describe('TableProcessor', function () {
 					};
 				},
 				repeatables: [],
-				tracker: {
-					stopTracking: function () { }
-				},
+				removeListener: function () { },
 				addVector: function () { },
 				popFromRepeatables: sinon.spy(),
 				pushToRepeatables: function (repeatable) {

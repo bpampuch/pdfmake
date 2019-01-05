@@ -7,7 +7,7 @@ var DocumentContext = require('../../js/documentContext').default;
 var PageElementWriter = require('../../js/PageElementWriter').default;
 
 describe('PageElementWriter', function () {
-	var pew, ctx, tracker, pageSize;
+	var pew, ctx, pageSize;
 
 	var DOCUMENT_WIDTH = 600;
 	var DOCUMENT_HEIGHT = 1100;
@@ -101,8 +101,10 @@ describe('PageElementWriter', function () {
 	beforeEach(function () {
 		pageSize = { width: DOCUMENT_WIDTH, height: DOCUMENT_HEIGHT, orientation: DOCUMENT_ORIENTATION };
 		ctx = new DocumentContext(pageSize, MARGINS);
-		tracker = { emit: sinon.spy() };
-		pew = new PageElementWriter(ctx, tracker);
+
+		PageElementWriter.prototype.emit = sinon.spy(PageElementWriter.prototype.emit);
+
+		pew = new PageElementWriter(ctx);
 	});
 
 	describe('addLine', function () {
@@ -412,8 +414,8 @@ describe('PageElementWriter', function () {
 			assert.equal(ctx.y, MARGINS.top);
 			assert.equal(ctx.availableHeight, AVAILABLE_HEIGHT);
 			assert.equal(ctx.availableWidth, AVAILABLE_WIDTH);
-			assert.equal(tracker.emit.callCount, 2); // move to first page to write a line, and then move to next page
-			assert.deepEqual(tracker.emit.getCall(1).args, ['pageChanged', { prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top }]);
+			assert.equal(pew.emit.callCount, 2); // move to first page to write a line, and then move to next page
+			assert.deepEqual(pew.emit.getCall(1).args, ['pageChanged', { prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top }]);
 		});
 
 		it('should use existing page', function () {
@@ -428,8 +430,8 @@ describe('PageElementWriter', function () {
 			assert.equal(ctx.y, MARGINS.top);
 			assert.equal(ctx.availableHeight, AVAILABLE_HEIGHT);
 			assert.equal(ctx.availableWidth, AVAILABLE_WIDTH);
-			assert.equal(tracker.emit.callCount, 2);
-			assert.deepEqual(tracker.emit.getCall(1).args, ['pageChanged', { prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top }]);
+			assert.equal(pew.emit.callCount, 2);
+			assert.deepEqual(pew.emit.getCall(1).args, ['pageChanged', { prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top }]);
 		});
 	});
 });

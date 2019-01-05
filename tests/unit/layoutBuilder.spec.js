@@ -11,8 +11,6 @@ var PageElementWriter = require('../../js/PageElementWriter').default;
 var DocumentContext = require('../../js/documentContext').default;
 var DocMeasure = require('../../js/docMeasure').default;
 
-// var TraversalTracker = require('../../js/traversalTracker').default;
-
 // var TextInlines = pdfMake.TextInlines;
 // var Block = pdfMake.Block;
 // var BlockSet = pdfMake.BlockSet;
@@ -1622,7 +1620,7 @@ describe('LayoutBuilder', function () {
 			var pageMargins = { left: 40, top: 40, bottom: 40, right: 40 };
 
 			builder2 = new LayoutBuilder(pageSize, pageMargins, {});
-			builder2.writer = new PageElementWriter(new DocumentContext(pageSize, pageMargins, true), builder2.tracker);
+			builder2.writer = new PageElementWriter(new DocumentContext(pageSize, pageMargins, true));
 			builder2.linearNodeList = [];
 		});
 

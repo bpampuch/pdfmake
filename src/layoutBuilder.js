@@ -1,4 +1,3 @@
-import TraversalTracker from './traversalTracker';
 import DocPreprocessor from './docPreprocessor';
 import DocMeasure from './docMeasure';
 import DocumentContext from './documentContext';
@@ -30,7 +29,6 @@ class LayoutBuilder {
 	constructor(pageSize, pageMargins) {
 		this.pageSize = pageSize;
 		this.pageMargins = pageMargins;
-		this.tracker = new TraversalTracker();
 		this.tableLayouts = {};
 	}
 
@@ -142,9 +140,9 @@ class LayoutBuilder {
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
 		this.writer = new PageElementWriter(
-			new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
+			new DocumentContext(this.pageSize, this.pageMargins));
 
-		this.writer.context().tracker.startTracking('pageAdded', () => {
+		this.writer.context().addListener('pageAdded', () => {
 			this.addBackground(background);
 		});
 
@@ -436,7 +434,7 @@ class LayoutBuilder {
 		let pageBreaks = [];
 		let positions = [];
 
-		this.tracker.startTracking('pageChanged', storePageBreakData);
+		this.writer.addListener('pageChanged', storePageBreakData);
 
 		widths = widths || columns;
 
@@ -465,7 +463,7 @@ class LayoutBuilder {
 
 		this.writer.context().completeColumnGroup(height);
 
-		this.tracker.stopTracking('pageChanged', storePageBreakData);
+		this.writer.removeListener('pageChanged', storePageBreakData);
 
 		return { pageBreaks: pageBreaks, positions: positions };
 
@@ -520,7 +518,7 @@ class LayoutBuilder {
 
 		let nextMarker;
 
-		this.tracker.startTracking('lineAdded', addMarkerToFirstLeaf);
+		this.writer.addListener('lineAdded', addMarkerToFirstLeaf);
 
 		items.forEach(item => {
 			nextMarker = item.listMarker;
@@ -528,7 +526,7 @@ class LayoutBuilder {
 			addAll(node.positions, item.positions);
 		});
 
-		this.tracker.stopTracking('lineAdded', addMarkerToFirstLeaf);
+		this.writer.removeListener('lineAdded', addMarkerToFirstLeaf);
 
 		this.writer.context().addMargin(-gapSize.width);
 	}

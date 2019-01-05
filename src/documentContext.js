@@ -1,12 +1,13 @@
-import TraversalTracker from './traversalTracker';
 import { isString } from './helpers/variableType';
+import { EventEmitter } from 'events';
 
 /**
  * A store for current x, y positions and available width/height.
  * It facilitates column divisions and vertical sync
  */
-class DocumentContext {
+class DocumentContext extends EventEmitter {
 	constructor(pageSize, pageMargins) {
+		super();
 		this.pages = [];
 
 		this.pageMargins = pageMargins;
@@ -17,11 +18,7 @@ class DocumentContext {
 		this.page = -1;
 
 		this.snapshots = [];
-
 		this.endingCell = null;
-
-		this.tracker = new TraversalTracker();
-
 		this.backgroundLength = [];
 
 		this.addPage(pageSize);
@@ -218,7 +215,7 @@ class DocumentContext {
 		this.page = this.pages.length - 1;
 		this.initializePage();
 
-		this.tracker.emit('pageAdded');
+		this.emit('pageAdded');
 
 		return page;
 	}

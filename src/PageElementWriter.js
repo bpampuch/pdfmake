@@ -10,11 +10,10 @@ import ElementWriter from './ElementWriter';
  *                 whole block will be rendered on the same page)
  */
 class PageElementWriter extends ElementWriter {
-	constructor(context, tracker) {
-		super(context, tracker);
+	constructor(context) {
+		super(context);
 		this.transactionLevel = 0;
 		this.repeatables = [];
-		this.tracker = tracker;
 	}
 
 	addLine(line, dontUpdateContextPosition, index) {
@@ -64,7 +63,7 @@ class PageElementWriter extends ElementWriter {
 			}
 		}, this);
 
-		this.tracker.emit('pageChanged', {
+		this.emit('pageChanged', {
 			prevPage: nextPage.prevPage,
 			prevY: nextPage.prevY,
 			y: this.context().y

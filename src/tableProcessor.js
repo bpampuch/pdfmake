@@ -131,7 +131,7 @@ class TableProcessor {
 		this.rowPaddingBottom = this.layout.paddingBottom(rowIndex, this.tableNode);
 
 		this.rowCallback = this.onRowBreak(rowIndex, writer);
-		writer.tracker.startTracking('pageChanged', this.rowCallback);
+		writer.addListener('pageChanged', this.rowCallback);
 		if (this.dontBreakRows) {
 			writer.beginUnbreakableBlock();
 		}
@@ -242,7 +242,7 @@ class TableProcessor {
 
 	endRow(rowIndex, writer, pageBreaks) {
 		var self = this;
-		writer.tracker.stopTracking('pageChanged', this.rowCallback);
+		writer.removeListener('pageChanged', this.rowCallback);
 		writer.context().moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
 		writer.context().availableHeight += this.reservedAtBottom;
 
@@ -377,11 +377,11 @@ class TableProcessor {
 				}
 			};
 
-			writer.tracker.startTracking('pageChanged', pageChangedCallback);
+			writer.addListener('pageChanged', pageChangedCallback);
 
 			writer.commitUnbreakableBlock();
 
-			writer.tracker.stopTracking('pageChanged', pageChangedCallback);
+			writer.removeListener('pageChanged', pageChangedCallback);
 		}
 
 		if (this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {

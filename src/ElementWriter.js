@@ -1,16 +1,17 @@
 import { isNumber } from './helpers/variableType';
 import { pack, offsetVector } from './helpers/tools';
 import DocumentContext from './documentContext';
+import { EventEmitter } from 'events';
 
 /**
  * A line/vector writer, which adds elements to current page and sets
  * their positions based on the context
  */
-class ElementWriter {
-	constructor(context, tracker) {
+class ElementWriter extends EventEmitter {
+	constructor(context) {
+		super()
 		this._context = context;
 		this.contextStack = [];
-		this.tracker = tracker;
 	}
 
 	context() {
@@ -36,7 +37,7 @@ class ElementWriter {
 			type: 'line',
 			item: line
 		}, index);
-		this.tracker.emit('lineAdded', line);
+		this.emit('lineAdded', line);
 
 		if (!dontUpdateContextPosition) {
 			context.moveDown(height);

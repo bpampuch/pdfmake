@@ -5,7 +5,7 @@ var assert = require('assert');
 var ElementWriter = require('../../js/ElementWriter').default;
 
 describe('ElementWriter', function () {
-	var ew, ctx, page, tracker, fakePosition;
+	var ew, ctx, page, fakePosition;
 
 	beforeEach(function () {
 		fakePosition = { fake: 'position' };
@@ -26,8 +26,7 @@ describe('ElementWriter', function () {
 				ctx.availableHeight -= offset;
 			}
 		};
-		tracker = { emit: function () { } };
-		ew = new ElementWriter(ctx, tracker);
+		ew = new ElementWriter(ctx);
 
 	});
 
