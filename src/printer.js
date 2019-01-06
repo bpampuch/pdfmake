@@ -90,7 +90,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 
 	var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 
-	let pdfOptions = {
+	var pdfOptions = {
 		size: [pageSize.width, pageSize.height],
 		compress: docDefinition.compress,
 		bufferPages: options.bufferPages || false,
