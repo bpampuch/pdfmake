@@ -281,6 +281,67 @@ describe('Integration test: lists', function () {
 		assert.equal(item5.bullet.inlines.map(inline => inline.text).join(''), '54. ');
 	});
 
+	it('renders a ordered list with start value zero', function () {
+		var dd = {
+			content: [
+				{
+					start: 0,
+					ol: [
+						'item 1',
+						'item 2',
+						'item 3',
+						'item 4',
+						'item 5'
+					]
+				}
+			]
+		};
+
+		var pages = testHelper.renderPages('A6', dd);
+
+		assert.equal(pages.length, 1);
+
+		var item1 = getBulletListLine(pages, { pageNumber: 0, itemNumber: 1 });
+		assert.equal(item1.content.inlines.map(inline => inline.text).join(''), 'item 1');
+		assert.equal(item1.bullet.inlines.map(inline => inline.text).join(''), '0. ');
+
+		var item5 = getBulletListLine(pages, { pageNumber: 0, itemNumber: 5 });
+		assert.equal(item5.content.inlines.map(inline => inline.text).join(''), 'item 5');
+		assert.equal(item5.bullet.inlines.map(inline => inline.text).join(''), '4. ');
+	});
+
+	it('renders a ordered list with counter values', function () {
+		var dd = {
+			content: [
+				{
+					ol: [
+						{ text: 'item 1', counter: 0 },
+						{ text: 'item 2', counter: 10 },
+						'item 3',
+						'item 4',
+						'item 5'
+					]
+				}
+			]
+		};
+
+		var pages = testHelper.renderPages('A6', dd);
+
+		assert.equal(pages.length, 1);
+
+		var item1 = getBulletListLine(pages, { pageNumber: 0, itemNumber: 1 });
+		assert.equal(item1.content.inlines.map(inline => inline.text).join(''), 'item 1');
+		assert.equal(item1.bullet.inlines.map(inline => inline.text).join(''), '0. ');
+
+		var item2 = getBulletListLine(pages, { pageNumber: 0, itemNumber: 2 });
+		assert.equal(item2.content.inlines.map(inline => inline.text).join(''), 'item 2');
+		assert.equal(item2.bullet.inlines.map(inline => inline.text).join(''), '10. ');
+
+		var item5 = getBulletListLine(pages, { pageNumber: 0, itemNumber: 5 });
+		assert.equal(item5.content.inlines.map(inline => inline.text).join(''), 'item 5');
+		assert.equal(item5.bullet.inlines.map(inline => inline.text).join(''), '5. ');
+	});
+
 	it('renders a reversed ordered list', function () {
 		var dd = {
 			content: [

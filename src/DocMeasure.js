@@ -453,7 +453,7 @@ class DocMeasure {
 		node.type = node.type || 'decimal';
 		node.separator = node.separator || '.';
 		node.reversed = node.reversed || false;
-		if (!node.start) {
+		if (!isNumber(node.start)) {
 			node.start = node.reversed ? items.length : 1;
 		}
 		node._gapSize = this.gapSizeForList();
@@ -465,7 +465,8 @@ class DocMeasure {
 			let item = items[i] = this.measureNode(items[i]);
 
 			if (!item.ol && !item.ul) {
-				item.listMarker = this.buildOrderedMarker(item.counter || counter, style, item.listType || node.type, node.separator);
+				let counterValue = isNumber(item.counter) ? item.counter : counter;
+				item.listMarker = this.buildOrderedMarker(counterValue, style, item.listType || node.type, node.separator);
 				if (item.listMarker._inlines) {
 					node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
 				}
