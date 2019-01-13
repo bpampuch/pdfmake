@@ -532,8 +532,7 @@ class DocMeasure {
 				let rowData = node.table.body[row];
 				let data = rowData[col];
 				if (data === undefined) {
-					console.error('Malformed table row ', rowData, ' in node ', node);
-					throw new Error('Malformed table row, a cell is undefined.');
+					throw new Error(`Malformed table row, a cell is undefined.\nRow index: ${row}\nColumn index: ${col}\nRow data: ${stringifyNode(rowData)}`);
 				}
 				if (data === null) { // transform to object
 					data = '';
