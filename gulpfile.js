@@ -119,4 +119,4 @@ gulp.task('generateExamples', function (cb) {
 
 gulp.task('build', gulp.series('buildNode', 'buildBrowser'));
 
-gulp.task('default', gulp.series(/*'lint',*/ 'build', 'buildFonts', 'test'));
+gulp.task('default', gulp.series('build', 'buildFonts', 'test', 'lint'));
