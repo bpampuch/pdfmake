@@ -38,7 +38,7 @@ class Renderer {
 						this.renderLine(item.item, item.item.x, item.item.y);
 						break;
 					case 'image':
-						this.renderImage(item.item, item.item.x, item.item.y);
+						this.renderImage(item.item);
 						break;
 					case 'beginClip':
 						this.beginClip(item.item);
@@ -215,7 +215,7 @@ class Renderer {
 		}
 	}
 
-	renderImage(image, x, y) {
+	renderImage(image) {
 		this.pdfDocument.opacity(image.opacity || 1);
 		this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
 		if (image.link) {
