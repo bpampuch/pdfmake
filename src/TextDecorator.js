@@ -104,7 +104,7 @@ class TextDecorator {
 				y += lineAscent - (ascent * 0.25);
 				break;
 			default:
-				throw `Unkown decoration : ${group.decoration}`;
+				throw new Error(`Unkown decoration : ${group.decoration}`);
 		}
 		this.pdfDocument.save();
 

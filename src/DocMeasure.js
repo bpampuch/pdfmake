@@ -59,7 +59,7 @@ class DocMeasure {
 			} else if (node.qr) {
 				return extendMargins(self.measureQr(node));
 			} else {
-				throw `Unrecognized document structure: ${stringifyNode(node)}`;
+				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
 		});
 
@@ -533,7 +533,7 @@ class DocMeasure {
 				let data = rowData[col];
 				if (data === undefined) {
 					console.error('Malformed table row ', rowData, ' in node ', node);
-					throw 'Malformed table row, a cell is undefined.';
+					throw new Error('Malformed table row, a cell is undefined.');
 				}
 				if (data === null) { // transform to object
 					data = '';

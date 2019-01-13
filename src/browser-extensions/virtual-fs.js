@@ -17,7 +17,7 @@ class VirtualFileSystem {
 			return content;
 		}
 
-		throw `File '${filename}' not found in virtual file system`;
+		throw new Error(`File '${filename}' not found in virtual file system`);
 	}
 
 	writeFileSync(filename, content) {

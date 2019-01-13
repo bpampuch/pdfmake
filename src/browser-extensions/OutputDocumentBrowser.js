@@ -15,7 +15,7 @@ const bufferToBlob = buffer => {
 	}
 
 	if (!blob) {
-		throw 'Could not generate blob';
+		throw new Error('Could not generate blob');
 	}
 
 	return blob;
@@ -26,7 +26,7 @@ const openWindow = () => {
 	// otherwise popup blockers will stop us
 	let win = window.open('', '_blank');
 	if (win === null) {
-		throw 'Open PDF in new window blocked by browser';
+		throw new Error('Open PDF in new window blocked by browser');
 	}
 
 	return win;
@@ -35,7 +35,7 @@ const openWindow = () => {
 class OutputDocumentBrowser extends OutputDocument {
 	getBlob(callback) {
 		if (!callback) {
-			throw 'getBlob is an async method and needs a callback argument';
+			throw new Error('getBlob is an async method and needs a callback argument');
 		}
 
 		this.getBuffer(buffer => {

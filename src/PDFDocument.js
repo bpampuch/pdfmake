@@ -83,7 +83,7 @@ class PDFDocument extends PDFKit {
 			image = null;
 		}
 		if (image === null || image === undefined) {
-			throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
+			throw new Error('invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)');
 		}
 		image.embed(this);
 		this._imageRegistry[src] = image;

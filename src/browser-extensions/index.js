@@ -27,7 +27,7 @@ class pdfmake extends pdfmakeBase {
 
 	createPdf(docDefinition) {
 		if (!isBrowserSupported()) {
-			throw 'Your browser does not provide the level of support needed';
+			throw new Error('Your browser does not provide the level of support needed');
 		}
 
 		return super.createPdf(docDefinition);

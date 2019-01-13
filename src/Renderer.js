@@ -65,7 +65,7 @@ class Renderer {
 			let textInlines = new TextInlines(null);
 
 			if (isUndefined(_pageNodeRef.positions)) {
-				throw 'Page reference id not found';
+				throw new Error('Page reference id not found');
 			}
 
 			let pageNumber = _pageNodeRef.positions[0].pageNumber.toString();

@@ -1,5 +1,6 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 /*eslint no-redeclare: "off"*/
+/*eslint no-throw-literal: "off"*/
 
 'use strict';
 /* qr.js -- QR code generator in Javascript (revision 2011-01-19)

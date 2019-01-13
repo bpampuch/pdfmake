@@ -10,7 +10,7 @@ class OutputDocument {
 
 	getBuffer(callback) {
 		if (!callback) {
-			throw 'getBuffer is an async method and needs a callback argument';
+			throw new Error('getBuffer is an async method and needs a callback argument');
 		}
 
 		let chunks = [];
@@ -30,7 +30,7 @@ class OutputDocument {
 
 	getBase64(callback) {
 		if (!callback) {
-			throw 'getBase64 is an async method and needs a callback argument';
+			throw new Error('getBase64 is an async method and needs a callback argument');
 		}
 
 		this.getBuffer(buffer => {
@@ -40,7 +40,7 @@ class OutputDocument {
 
 	getDataUrl(callback) {
 		if (!callback) {
-			throw 'getDataUrl is an async method and needs a callback argument';
+			throw new Error('getDataUrl is an async method and needs a callback argument');
 		}
 
 		this.getBase64(data => {
