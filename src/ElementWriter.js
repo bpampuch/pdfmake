@@ -125,8 +125,11 @@ class ElementWriter extends EventEmitter {
 		this.alignCanvas(node);
 
 		node.canvas.forEach(function (vector) {
-			let position = this.addVector(vector);
+			let position = this.addVector(vector, false, false, index);
 			positions.push(position);
+			if (index !== undefined) {
+				index++;
+			}
 		}, this);
 
 		context.moveDown(height);
