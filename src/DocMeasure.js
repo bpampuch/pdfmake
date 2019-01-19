@@ -222,9 +222,10 @@ class DocMeasure {
 			let item = node.toc._items[i];
 			let lineStyle = item._textNodeRef.tocStyle || textStyle;
 			let lineMargin = item._textNodeRef.tocMargin || textMargin;
+			let lineNumberStyle = item._textNodeRef.tocNumberStyle || numberStyle;
 			body.push([
 				{ text: item._textNodeRef.text, alignment: 'left', style: lineStyle, margin: lineMargin },
-				{ text: '00000', alignment: 'right', _tocItemRef: item._nodeRef, style: numberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
+				{ text: '00000', alignment: 'right', _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
 			]);
 		}
 
