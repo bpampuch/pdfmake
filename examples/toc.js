@@ -30,8 +30,9 @@ var docDefinition = {
 			text: 'This is a header, using header style',
 			style: 'header',
 			tocItem: true,
-			tocStyle: {bold: true},
+			tocStyle: {italics: true},
 			tocMargin: [0, 10, 0, 0],
+			tocNumberStyle: {italics: true, decoration: 'underline'},
 			pageBreak: 'before'
 		},
 		'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Confectum ponit legam, perferendis nomine miserum, animi. Moveat nesciunt triari naturam.\n\n',
