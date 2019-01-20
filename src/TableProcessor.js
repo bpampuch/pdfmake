@@ -7,35 +7,7 @@ class TableProcessor {
 	}
 
 	beginTable(writer) {
-		let tableNode;
-		let availableWidth;
-		var self = this;
-
-		tableNode = this.tableNode;
-		this.offsets = tableNode._offsets;
-		this.layout = tableNode._layout;
-
-		availableWidth = writer.context().availableWidth - this.offsets.total;
-		ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth);
-
-		this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
-		this.rowSpanData = prepareRowSpanData();
-		this.cleanUpRepeatables = false;
-
-		this.headerRows = tableNode.table.headerRows || 0;
-		this.rowsWithoutPageBreak = this.headerRows + (tableNode.table.keepWithHeaderRows || 0);
-		this.dontBreakRows = tableNode.table.dontBreakRows || false;
-
-		if (this.rowsWithoutPageBreak) {
-			writer.beginUnbreakableBlock();
-		}
-
-		// update the border properties of all cells before drawing any lines
-		prepareCellBorders(this.tableNode.table.body);
-
-		this.drawHorizontalLine(0, writer);
-
-		function getTableInnerContentWidth() {
+		const getTableInnerContentWidth = () => {
 			let width = 0;
 
 			tableNode.table.widths.forEach(w => {
@@ -43,33 +15,33 @@ class TableProcessor {
 			});
 
 			return width;
-		}
+		};
 
-		function prepareRowSpanData() {
+		const prepareRowSpanData = () => {
 			let rsd = [];
 			let x = 0;
 			let lastWidth = 0;
 
 			rsd.push({ left: 0, rowSpan: 0 });
 
-			for (let i = 0, l = self.tableNode.table.body[0].length; i < l; i++) {
-				let paddings = self.layout.paddingLeft(i, self.tableNode) + self.layout.paddingRight(i, self.tableNode);
-				let lBorder = self.layout.vLineWidth(i, self.tableNode);
-				lastWidth = paddings + lBorder + self.tableNode.table.widths[i]._calcWidth;
+			for (let i = 0, l = this.tableNode.table.body[0].length; i < l; i++) {
+				let paddings = this.layout.paddingLeft(i, this.tableNode) + this.layout.paddingRight(i, this.tableNode);
+				let lBorder = this.layout.vLineWidth(i, this.tableNode);
+				lastWidth = paddings + lBorder + this.tableNode.table.widths[i]._calcWidth;
 				rsd[rsd.length - 1].width = lastWidth;
 				x += lastWidth;
 				rsd.push({ left: x, rowSpan: 0, width: 0 });
 			}
 
 			return rsd;
-		}
+		};
 
 		// Iterate through all cells. If the current cell is the start of a
 		// rowSpan/colSpan, update the border property of the cells on its
 		// bottom/right accordingly. This is needed since each iteration of the
 		// line-drawing loops draws lines for a single cell, not for an entire
 		// rowSpan/colSpan.
-		function prepareCellBorders(body) {
+		const prepareCellBorders = body => {
 			for (let rowIndex = 0; rowIndex < body.length; rowIndex++) {
 				let row = body[rowIndex];
 
@@ -113,7 +85,34 @@ class TableProcessor {
 				cell.border = cell.border || {};
 				cell.border[borderIndex] = borderValue;
 			}
+		};
+
+		let tableNode;
+		let availableWidth;
+
+		tableNode = this.tableNode;
+		this.offsets = tableNode._offsets;
+		this.layout = tableNode._layout;
+
+		availableWidth = writer.context().availableWidth - this.offsets.total;
+		ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth);
+
+		this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
+		this.rowSpanData = prepareRowSpanData();
+		this.cleanUpRepeatables = false;
+
+		this.headerRows = tableNode.table.headerRows || 0;
+		this.rowsWithoutPageBreak = this.headerRows + (tableNode.table.keepWithHeaderRows || 0);
+		this.dontBreakRows = tableNode.table.dontBreakRows || false;
+
+		if (this.rowsWithoutPageBreak) {
+			writer.beginUnbreakableBlock();
 		}
+
+		// update the border properties of all cells before drawing any lines
+		prepareCellBorders(this.tableNode.table.body);
+
+		this.drawHorizontalLine(0, writer);
 	}
 
 	onRowBreak(rowIndex, writer) {
