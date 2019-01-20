@@ -3,7 +3,7 @@ import StyleContextStack from './StyleContextStack';
 import ColumnCalculator from './columnCalculator';
 import { defaultTableLayout } from './tableLayouts';
 import { isString, isNumber, isObject, isArray } from './helpers/variableType';
-import { stringifyNode } from './helpers/node';
+import { stringifyNode, getNodeMargin } from './helpers/node';
 import { pack } from './helpers/tools';
 import qrEncoder from './qrEnc.js';
 
@@ -32,33 +32,30 @@ class DocMeasure {
 	}
 
 	measureNode(node) {
-
-		var self = this;
-
 		return this.styleStack.auto(node, () => {
 			// TODO: refactor + rethink whether this is the proper way to handle margins
-			node._margin = getNodeMargin(node);
+			node._margin = getNodeMargin(node, this.styleStack);
 
 			if (node.columns) {
-				return extendMargins(self.measureColumns(node));
+				return extendMargins(this.measureColumns(node));
 			} else if (node.stack) {
-				return extendMargins(self.measureVerticalContainer(node));
+				return extendMargins(this.measureVerticalContainer(node));
 			} else if (node.ul) {
-				return extendMargins(self.measureUnorderedList(node));
+				return extendMargins(this.measureUnorderedList(node));
 			} else if (node.ol) {
-				return extendMargins(self.measureOrderedList(node));
+				return extendMargins(this.measureOrderedList(node));
 			} else if (node.table) {
-				return extendMargins(self.measureTable(node));
+				return extendMargins(this.measureTable(node));
 			} else if (node.text !== undefined) {
-				return extendMargins(self.measureLeaf(node));
+				return extendMargins(this.measureLeaf(node));
 			} else if (node.toc) {
-				return extendMargins(self.measureToc(node));
+				return extendMargins(this.measureToc(node));
 			} else if (node.image) {
-				return extendMargins(self.measureImage(node));
+				return extendMargins(this.measureImage(node));
 			} else if (node.canvas) {
-				return extendMargins(self.measureCanvas(node));
+				return extendMargins(this.measureCanvas(node));
 			} else if (node.qr) {
-				return extendMargins(self.measureQr(node));
+				return extendMargins(this.measureQr(node));
 			} else {
 				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
@@ -73,73 +70,6 @@ class DocMeasure {
 			}
 
 			return node;
-		}
-
-		function getNodeMargin() {
-
-			function processSingleMargins(node, currentMargin) {
-				if (node.marginLeft || node.marginTop || node.marginRight || node.marginBottom) {
-					return [
-						node.marginLeft || currentMargin[0] || 0,
-						node.marginTop || currentMargin[1] || 0,
-						node.marginRight || currentMargin[2] || 0,
-						node.marginBottom || currentMargin[3] || 0
-					];
-				}
-				return currentMargin;
-			}
-
-			function flattenStyleArray(styleArray) {
-				let flattenedStyles = {};
-				for (let i = styleArray.length - 1; i >= 0; i--) {
-					let styleName = styleArray[i];
-					let style = self.styleStack.styleDictionary[styleName];
-					for (let key in style) {
-						if (style.hasOwnProperty(key)) {
-							flattenedStyles[key] = style[key];
-						}
-					}
-				}
-				return flattenedStyles;
-			}
-
-			function convertMargin(margin) {
-				if (isNumber(margin)) {
-					margin = [margin, margin, margin, margin];
-				} else if (isArray(margin)) {
-					if (margin.length === 2) {
-						margin = [margin[0], margin[1], margin[0], margin[1]];
-					}
-				}
-				return margin;
-			}
-
-			let margin = [undefined, undefined, undefined, undefined];
-
-			if (node.style) {
-				let styleArray = isArray(node.style) ? node.style : [node.style];
-				let flattenedStyleArray = flattenStyleArray(styleArray);
-
-				if (flattenedStyleArray) {
-					margin = processSingleMargins(flattenedStyleArray, margin);
-				}
-
-				if (flattenedStyleArray.margin) {
-					margin = convertMargin(flattenedStyleArray.margin);
-				}
-			}
-
-			margin = processSingleMargins(node, margin);
-
-			if (node.margin) {
-				margin = convertMargin(node.margin);
-			}
-
-			if (margin[0] === undefined && margin[1] === undefined && margin[2] === undefined && margin[3] === undefined) {
-				return null;
-			} else {
-				return margin;
-			}
 		}
 	}
 
