@@ -30,7 +30,7 @@ export function offsetVector(vector, x, y) {
 			vector.y2 += y;
 			break;
 		case 'polyline':
-			for (var i = 0, l = vector.points.length; i < l; i++) {
+			for (let i = 0, l = vector.points.length; i < l; i++) {
 				vector.points[i].x += x;
 				vector.points[i].y += y;
 			}
