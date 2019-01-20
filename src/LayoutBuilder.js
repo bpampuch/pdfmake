@@ -290,7 +290,29 @@ class LayoutBuilder {
 	}
 
 	processNode(node) {
-		var self = this;
+		const applyMargins = callback => {
+			let margin = node._margin;
+
+			if (node.pageBreak === 'before') {
+				this.writer.moveToNextPage(node.pageOrientation);
+			}
+
+			if (margin) {
+				this.writer.context().moveDown(margin[1]);
+				this.writer.context().addMargin(margin[0], margin[2]);
+			}
+
+			callback();
+
+			if (margin) {
+				this.writer.context().addMargin(-margin[0], -margin[2]);
+				this.writer.context().moveDown(margin[3]);
+			}
+
+			if (node.pageBreak === 'after') {
+				this.writer.moveToNextPage(node.pageOrientation);
+			}
+		};
 
 		this.linearNodeList.push(node);
 		decorateNode(node);
@@ -298,77 +320,53 @@ class LayoutBuilder {
 		applyMargins(() => {
 			let unbreakable = node.unbreakable;
 			if (unbreakable) {
-				self.writer.beginUnbreakableBlock();
+				this.writer.beginUnbreakableBlock();
 			}
 
 			let absPosition = node.absolutePosition;
 			if (absPosition) {
-				self.writer.context().beginDetachedBlock();
-				self.writer.context().moveTo(absPosition.x || 0, absPosition.y || 0);
+				this.writer.context().beginDetachedBlock();
+				this.writer.context().moveTo(absPosition.x || 0, absPosition.y || 0);
 			}
 
 			let relPosition = node.relativePosition;
 			if (relPosition) {
-				self.writer.context().beginDetachedBlock();
-				self.writer.context().moveTo((relPosition.x || 0) + self.writer.context().x, (relPosition.y || 0) + self.writer.context().y);
+				this.writer.context().beginDetachedBlock();
+				this.writer.context().moveTo((relPosition.x || 0) + this.writer.context().x, (relPosition.y || 0) + this.writer.context().y);
 			}
 
 			if (node.stack) {
-				self.processVerticalContainer(node);
+				this.processVerticalContainer(node);
 			} else if (node.columns) {
-				self.processColumns(node);
+				this.processColumns(node);
 			} else if (node.ul) {
-				self.processList(false, node);
+				this.processList(false, node);
 			} else if (node.ol) {
-				self.processList(true, node);
+				this.processList(true, node);
 			} else if (node.table) {
-				self.processTable(node);
+				this.processTable(node);
 			} else if (node.text !== undefined) {
-				self.processLeaf(node);
+				this.processLeaf(node);
 			} else if (node.toc) {
-				self.processToc(node);
+				this.processToc(node);
 			} else if (node.image) {
-				self.processImage(node);
+				this.processImage(node);
 			} else if (node.canvas) {
-				self.processCanvas(node);
+				this.processCanvas(node);
 			} else if (node.qr) {
-				self.processQr(node);
+				this.processQr(node);
 			} else if (!node._span) {
 				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
 
 			if (absPosition || relPosition) {
-				self.writer.context().endDetachedBlock();
+				this.writer.context().endDetachedBlock();
 			}
 
 			if (unbreakable) {
-				self.writer.commitUnbreakableBlock();
+				this.writer.commitUnbreakableBlock();
 			}
 		});
-
-		function applyMargins(callback) {
-			let margin = node._margin;
-
-			if (node.pageBreak === 'before') {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
-
-			if (margin) {
-				self.writer.context().moveDown(margin[1]);
-				self.writer.context().addMargin(margin[0], margin[2]);
-			}
-
-			callback();
-
-			if (margin) {
-				self.writer.context().addMargin(-margin[0], -margin[2]);
-				self.writer.context().moveDown(margin[3]);
-			}
-
-			if (node.pageBreak === 'after') {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
-		}
 	}
 
 	// vertical container
