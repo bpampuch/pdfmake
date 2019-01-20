@@ -1,7 +1,7 @@
 import PDFDocument from './PDFDocument';
 import LayoutBuilder from './LayoutBuilder';
 import sizes from './standardPageSizes';
-import defaultTableLayouts from './tableLayouts';
+import { tableLayouts } from './tableLayouts';
 import Renderer from './Renderer';
 import { isFunction, isString, isNumber, isBoolean, isArray } from './helpers/variableType';
 
@@ -95,7 +95,7 @@ class PdfPrinter {
 
 		const builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40));
 
-		builder.registerTableLayouts(defaultTableLayouts);
+		builder.registerTableLayouts(tableLayouts);
 		if (options.tableLayouts) {
 			builder.registerTableLayouts(options.tableLayouts);
 		}

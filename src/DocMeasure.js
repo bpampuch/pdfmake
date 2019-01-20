@@ -1,6 +1,7 @@
 import TextInlines from './TextInlines';
 import StyleContextStack from './StyleContextStack';
 import ColumnCalculator from './columnCalculator';
+import { defaultTableLayout } from './tableLayouts';
 import { isString, isNumber, isObject, isArray } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
 import { pack } from './helpers/tools';
@@ -582,44 +583,7 @@ class DocMeasure {
 				layout = tableLayouts[layout];
 			}
 
-			let defaultLayout = {
-				hLineWidth(i, node) { // eslint-disable-line no-unused-vars
-					return 1;
-				},
-				vLineWidth(i, node) { // eslint-disable-line no-unused-vars
-					return 1;
-				},
-				hLineColor(i, node) { // eslint-disable-line no-unused-vars
-					return 'black';
-				},
-				vLineColor(i, node) { // eslint-disable-line no-unused-vars
-					return 'black';
-				},
-				hLineStyle(i, node) { // eslint-disable-line no-unused-vars
-					return null;
-				},
-				vLineStyle(i, node) { // eslint-disable-line no-unused-vars
-					return null;
-				},
-				paddingLeft(i, node) { // eslint-disable-line no-unused-vars
-					return 4;
-				},
-				paddingRight(i, node) { // eslint-disable-line no-unused-vars
-					return 4;
-				},
-				paddingTop(i, node) { // eslint-disable-line no-unused-vars
-					return 2;
-				},
-				paddingBottom(i, node) { // eslint-disable-line no-unused-vars
-					return 2;
-				},
-				fillColor(i, node) { // eslint-disable-line no-unused-vars
-					return null;
-				},
-				defaultBorder: true
-			};
-
-			return pack(defaultLayout, layout);
+			return pack(defaultTableLayout, layout);
 		}
 
 		function getOffsets(layout) {

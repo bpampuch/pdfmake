@@ -1,6 +1,11 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 
-export default {
+export {
+	tableLayouts,
+	defaultTableLayout
+};
+
+const tableLayouts = {
 	noBorders: {
 		hLineWidth(i) {
 			return 0;
@@ -52,4 +57,41 @@ export default {
 			return (i === node.table.widths.length - 1) ? 0 : 8;
 		}
 	}
+};
+
+const defaultTableLayout = {
+	hLineWidth(i, node) {
+		return 1;
+	},
+	vLineWidth(i, node) {
+		return 1;
+	},
+	hLineColor(i, node) {
+		return 'black';
+	},
+	vLineColor(i, node) {
+		return 'black';
+	},
+	hLineStyle(i, node) {
+		return null;
+	},
+	vLineStyle(i, node) {
+		return null;
+	},
+	paddingLeft(i, node) {
+		return 4;
+	},
+	paddingRight(i, node) {
+		return 4;
+	},
+	paddingTop(i, node) {
+		return 2;
+	},
+	paddingBottom(i, node) {
+		return 2;
+	},
+	fillColor(i, node) {
+		return null;
+	},
+	defaultBorder: true
 };
