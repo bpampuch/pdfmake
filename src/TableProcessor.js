@@ -241,7 +241,27 @@ class TableProcessor {
 	}
 
 	endRow(rowIndex, writer, pageBreaks) {
-		var self = this;
+		const getLineXs = () => {
+			let result = [];
+			let cols = 0;
+
+			for (let i = 0, l = this.tableNode.table.body[rowIndex].length; i < l; i++) {
+				if (!cols) {
+					result.push({ x: this.rowSpanData[i].left, index: i });
+
+					let item = this.tableNode.table.body[rowIndex][i];
+					cols = (item._colSpan || item.colSpan || 0);
+				}
+				if (cols > 0) {
+					cols--;
+				}
+			}
+
+			result.push({ x: this.rowSpanData[this.rowSpanData.length - 1].left, index: this.rowSpanData.length - 1 });
+
+			return result;
+		};
+
 		writer.removeListener('pageChanged', this.rowCallback);
 		writer.context().moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
 		writer.context().availableHeight += this.reservedAtBottom;
@@ -372,8 +392,8 @@ class TableProcessor {
 
 		if (this.dontBreakRows) {
 			const pageChangedCallback = () => {
-				if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
-					self.drawHorizontalLine(rowIndex, writer);
+				if (!this.headerRows && this.layout.hLineWhenBroken !== false) {
+					this.drawHorizontalLine(rowIndex, writer);
 				}
 			};
 
@@ -389,27 +409,6 @@ class TableProcessor {
 			writer.pushToRepeatables(this.headerRepeatable);
 			this.cleanUpRepeatables = true;
 			this.headerRepeatable = null;
-		}
-
-		function getLineXs() {
-			let result = [];
-			let cols = 0;
-
-			for (let i = 0, l = self.tableNode.table.body[rowIndex].length; i < l; i++) {
-				if (!cols) {
-					result.push({ x: self.rowSpanData[i].left, index: i });
-
-					let item = self.tableNode.table.body[rowIndex][i];
-					cols = (item._colSpan || item.colSpan || 0);
-				}
-				if (cols > 0) {
-					cols--;
-				}
-			}
-
-			result.push({ x: self.rowSpanData[self.rowSpanData.length - 1].left, index: self.rowSpanData.length - 1 });
-
-			return result;
 		}
 	}
 }
