@@ -29,7 +29,7 @@ function canCreatePdf() {
 	return true;
 }
 
-Document.prototype._createDoc = function (options, callback) {
+Document.prototype._createDoc = function (options) {
 	options = options || {};
 	if (this.tableLayouts) {
 		options.tableLayouts = this.tableLayouts;
@@ -39,6 +39,11 @@ Document.prototype._createDoc = function (options, callback) {
 	require('fs').bindFS(this.vfs); // bind virtual file system to file system
 
 	var doc = printer.createPdfKitDocument(this.docDefinition, options);
+
+	return doc;
+};
+
+Document.prototype._flushDoc = function (doc, callback) {
 	var chunks = [];
 	var result;
 
@@ -59,7 +64,8 @@ Document.prototype._getPages = function (options, cb) {
 	if (!cb) {
 		throw '_getPages is an async method and needs a callback argument';
 	}
-	this._createDoc(options, function (ignoreBuffer, pages) {
+	var doc = this._createDoc(options);
+	this._flushDoc(doc, function (ignoreBuffer, pages) {
 		cb(pages);
 	});
 };
@@ -176,9 +182,15 @@ Document.prototype.getBuffer = function (cb, options) {
 	if (!cb) {
 		throw 'getBuffer is an async method and needs a callback argument';
 	}
-	this._createDoc(options, function (buffer) {
+	var doc = this._createDoc(options);
+	this._flushDoc(doc, function (buffer) {
 		cb(buffer);
 	});
+};
+
+Document.prototype.getStream = function (options) {
+	var doc = this._createDoc(options);
+	return doc;
 };
 
 module.exports = {
