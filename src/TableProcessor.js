@@ -340,9 +340,9 @@ class TableProcessor {
 					if (fillColor) {
 						let wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
 						let x1f = xs[i].x + wBorder;
-						let y1f = this.dontBreakRows ? y1 : y1 - hzLineOffset;
+						let y1f = this.dontBreakRows ? y1 : y1 - (hzLineOffset / 2);
 						let x2f = xs[i + 1].x;
-						let y2f = y2 + this.bottomLineWidth;
+						let y2f = y2 + (this.bottomLineWidth / 2);
 						writer.addVector({
 							type: 'rect',
 							x: x1f,
