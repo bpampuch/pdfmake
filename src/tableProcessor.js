@@ -295,22 +295,30 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 		}
 
 		for (i = 0, l = xs.length; i < l; i++) {
-			var leftBorder = false, rightBorder = false;
+			var leftCellBorder = false;
+			var rightCellBorder = false;
 			var colIndex = xs[i].index;
 
-			// the current cell
+			// current cell
 			if (colIndex < body[rowIndex].length) {
 				var cell = body[rowIndex][colIndex];
-				leftBorder = cell.border ? cell.border[0] : this.layout.defaultBorder;
+				leftCellBorder = cell.border ? cell.border[0] : this.layout.defaultBorder;
+				rightCellBorder = cell.border ? cell.border[2] : this.layout.defaultBorder;
 			}
 
-			// the cell from before column
-			if (colIndex > 0) {
+			// before cell
+			if (colIndex > 0 && !leftCellBorder) {
 				var cell = body[rowIndex][colIndex - 1];
-				rightBorder = cell.border ? cell.border[2] : this.layout.defaultBorder;
+				leftCellBorder = cell.border ? cell.border[2] : this.layout.defaultBorder;
 			}
 
-			if (leftBorder || rightBorder) {
+			// after cell
+			if (colIndex + 1 < body[rowIndex].length && !rightCellBorder) {
+				var cell = body[rowIndex][colIndex + 1];
+				rightCellBorder = cell.border ? cell.border[0] : this.layout.defaultBorder;
+			}
+
+			if (leftCellBorder) {
 				this.drawVerticalLine(xs[i].x, y1 - hzLineOffset, y2 + this.bottomLineWidth, xs[i].index, writer);
 			}
 
@@ -320,10 +328,19 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 					fillColor = isFunction(this.layout.fillColor) ? this.layout.fillColor(rowIndex, this.tableNode, colIndex) : this.layout.fillColor;
 				}
 				if (fillColor) {
-					var wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
-					var x1f = xs[i].x + wBorder;
+					var widthLeftBorder = leftCellBorder ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
+					var widthRightBorder;
+					if (colIndex + 1 == body[rowIndex].length && !rightCellBorder) {
+						widthRightBorder = this.layout.vLineWidth(colIndex + 1, this.tableNode);
+					} else if (rightCellBorder) {
+						widthRightBorder = this.layout.vLineWidth(colIndex + 1, this.tableNode) / 2;
+					} else {
+						widthRightBorder = 0;
+					}
+
+					var x1f = xs[i].x + (widthLeftBorder / 2);
 					var y1f = this.dontBreakRows ? y1 : y1 - (hzLineOffset / 2);
-					var x2f = xs[i + 1].x;
+					var x2f = xs[i + 1].x + widthRightBorder;
 					var y2f = y2 + (this.bottomLineWidth / 2);
 					writer.addVector({
 						type: 'rect',
