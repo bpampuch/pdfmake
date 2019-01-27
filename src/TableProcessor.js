@@ -339,14 +339,16 @@ class TableProcessor {
 					}
 					if (fillColor) {
 						let wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
-						let xf = xs[i].x + wBorder;
-						let yf = this.dontBreakRows ? y1 : y1 - hzLineOffset;
+						let x1f = xs[i].x + wBorder;
+						let y1f = this.dontBreakRows ? y1 : y1 - hzLineOffset;
+						let x2f = xs[i + 1].x;
+						let y2f = y2 + this.bottomLineWidth;
 						writer.addVector({
 							type: 'rect',
-							x: xf,
-							y: yf,
-							w: xs[i + 1].x - xf,
-							h: y2 + this.bottomLineWidth - yf,
+							x: x1f,
+							y: y1f,
+							w: x2f - x1f,
+							h: y2f - y1f,
 							lineWidth: 0,
 							color: fillColor
 						}, false, true, writer.context().backgroundLength[writer.context().page]);
