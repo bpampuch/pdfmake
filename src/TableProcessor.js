@@ -347,7 +347,7 @@ class TableProcessor {
 					if (fillColor) {
 						let widthLeftBorder = leftCellBorder ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
 						let widthRightBorder;
-						if (colIndex + 1 == body[rowIndex].length && !rightCellBorder) {
+						if ((colIndex === 0 || colIndex + 1 == body[rowIndex].length) && !rightCellBorder) {
 							widthRightBorder = this.layout.vLineWidth(colIndex + 1, this.tableNode);
 						} else if (rightCellBorder) {
 							widthRightBorder = this.layout.vLineWidth(colIndex + 1, this.tableNode) / 2;
