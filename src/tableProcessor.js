@@ -322,9 +322,9 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 				if (fillColor) {
 					var wBorder = (leftBorder || rightBorder) ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
 					var x1f = xs[i].x + wBorder;
-					var y1f = this.dontBreakRows ? y1 : y1 - hzLineOffset;
+					var y1f = this.dontBreakRows ? y1 : y1 - (hzLineOffset / 2);
 					var x2f = xs[i + 1].x;
-					var y2f = y2 + this.bottomLineWidth;
+					var y2f = y2 + (this.bottomLineWidth / 2);
 					writer.addVector({
 						type: 'rect',
 						x: x1f,
