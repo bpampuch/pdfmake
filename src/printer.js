@@ -85,6 +85,7 @@ function PdfPrinter(fontDescriptors) {
 PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	options = options || {};
 
+	docDefinition.version = docDefinition.version || '1.3';
 	docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 	docDefinition.images = docDefinition.images || {};
 
@@ -92,7 +93,11 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 
 	var pdfOptions = {
 		size: [pageSize.width, pageSize.height],
+		pdfVersion: docDefinition.version,
 		compress: docDefinition.compress,
+		userPassword: docDefinition.userPassword,
+		ownerPassword: docDefinition.ownerPassword,
+		permissions: docDefinition.permissions,
 		bufferPages: options.bufferPages || false,
 		autoFirstPage: false
 	};
@@ -206,7 +211,7 @@ function fixPageSize(pageSize, pageOrientation) {
 		if (isString(pageOrientation)) {
 			pageOrientation = pageOrientation.toLowerCase();
 			return ((pageOrientation === 'portrait') && (size.width > size.height)) ||
-				((pageOrientation === 'landscape') && (size.width < size.height));
+							((pageOrientation === 'landscape') && (size.width < size.height));
 		}
 		return false;
 	}
