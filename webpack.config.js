@@ -53,6 +53,45 @@ module.exports = {
 					}
 				}
 			},
+			{
+				enforce: 'pre',
+				test: /\.js$/,
+				include: /(pdfkit|saslprep)/,
+				use: {
+					loader: 'babel-loader',
+					options: {
+						presets: [
+							[
+								"@babel/preset-env",
+								{
+									debug: true,
+									targets: {
+										"ie": "10"
+									},
+									modules: false,
+									useBuiltIns: 'usage',
+									loose: true
+								}
+							]
+						]
+					}
+				}
+			},
+			// Workaround for @babel/preset-env bug in useBuiltIns: 'usage' (always use import instead of require)
+			{
+				test: /\.js$/,
+				include: /saslprep/,
+				loader: StringReplacePlugin.replace({
+					replacements: [
+						{
+							pattern: /import "([\S]*)";/g,
+							replacement: function (match, p1) {
+								return 'require("' + p1 + '");';
+							}
+						}
+					]
+				})
+			},
 			{ test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')] },
 			{
 				test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
