@@ -64,7 +64,6 @@ module.exports = {
 							[
 								"@babel/preset-env",
 								{
-									debug: true,
 									targets: {
 										"ie": "10"
 									},
