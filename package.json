@@ -25,7 +25,6 @@
     "gulp-file-contents-to-json": "^0.2.2",
     "gulp-spawn-mocha": "^5.0.1",
     "mocha": "^5.2.0",
-    "plugin-error": "^1.0.1",
     "rewire": "^4.0.1",
     "sinon": "^7.2.3",
     "string-replace-webpack-plugin": "^0.1.3",
