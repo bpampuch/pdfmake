@@ -103,6 +103,9 @@ class TextBreaker {
 
 			let noWrap = StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 			if (isObject(item)) {
+				if (item._textRef && item._textRef._textNodeRef.text) {
+					item.text = item._textRef._textNodeRef.text;
+				}
 				words = splitWords(item.text, noWrap);
 				style = StyleContextStack.copyStyle(item);
 			} else {
