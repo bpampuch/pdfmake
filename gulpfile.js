@@ -6,7 +6,6 @@ var eslint = require('gulp-eslint');
 var each = require('gulp-each');
 var fc2json = require('gulp-file-contents-to-json');
 var log = require('fancy-log');
-var PluginError = require('plugin-error');
 var exec = require('child_process').exec;
 const fs = require('fs');
 
@@ -37,9 +36,14 @@ gulp.task('buildNode', function () {
 gulp.task('buildBrowser', function (callback) {
 	webpack(require('./webpack.config.js'), function (err, stats) {
 		if (err) {
-			throw new PluginError("webpack", err);
+			callback(err);
+			return;
 		}
 		log("[webpack]", stats.toString({}));
+		if (stats.compilation.errors && stats.compilation.errors.length) {
+			callback(stats.compilation.errors);
+			return;
+		}
 		callback();
 	});
 });
@@ -47,9 +51,14 @@ gulp.task('buildBrowser', function (callback) {
 gulp.task('buildWithStandardFonts', function (callback) {
 	webpack(require('./webpack-standardfonts.config.js'), function (err, stats) {
 		if (err) {
-			throw new PluginError("webpack", err);
+			callback(err);
+			return;
 		}
 		log("[webpack]", stats.toString({}));
+		if (stats.compilation.errors && stats.compilation.errors.length) {
+			callback(stats.compilation.errors);
+			return;
+		}
 		callback();
 	});
 });
