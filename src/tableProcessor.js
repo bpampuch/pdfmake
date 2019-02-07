@@ -3,6 +3,8 @@
 var ColumnCalculator = require('./columnCalculator');
 var isFunction = require('./helpers').isFunction;
 
+var TABLE_FILL_CORRECTION = 0.5;
+
 function TableProcessor(tableNode) {
 	this.tableNode = tableNode;
 }
@@ -344,10 +346,10 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 					var y2f = y2 + (this.bottomLineWidth / 2);
 					writer.addVector({
 						type: 'rect',
-						x: x1f,
-						y: y1f,
-						w: x2f - x1f,
-						h: y2f - y1f,
+						x: x1f - TABLE_FILL_CORRECTION,
+						y: y1f - TABLE_FILL_CORRECTION,
+						w: x2f - x1f + TABLE_FILL_CORRECTION,
+						h: y2f - y1f + TABLE_FILL_CORRECTION,
 						lineWidth: 0,
 						color: fillColor
 					}, false, true, writer.context().backgroundLength[writer.context().page]);
