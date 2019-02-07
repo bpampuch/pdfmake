@@ -19,6 +19,7 @@ class DocMeasure {
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 		this.tableLayouts = tableLayouts;
 		this.autoImageIndex = 1;
+		this.olParent = 1;
 	}
 
 	/**
@@ -268,7 +269,7 @@ class DocMeasure {
 		return marker;
 	}
 
-	buildOrderedMarker(counter, styleStack, type, separator) {
+	buildOrderedMarker(olParent, counter, styleStack, type, separator) {
 		function prepareAlpha(counter) {
 			function toAlpha(num) {
 				return (num >= 26 ? toAlpha((num / 26 >> 0) - 1) : '') + 'abcdefghijklmnopqrstuvwxyz'[num % 26 >> 0];
@@ -321,6 +322,11 @@ class DocMeasure {
 
 			case 'lower-roman':
 				counterText = prepareRoman(counter).toLowerCase();
+				break;
+
+			case 'decimal-parent':
+				counterText = prepareDecimal(counter);
+				counterText = olParent + '.'+counterText;
 				break;
 
 			case 'decimal':
@@ -398,12 +404,12 @@ class DocMeasure {
 
 			if (!item.ol && !item.ul) {
 				let counterValue = isNumber(item.counter) ? item.counter : counter;
-				item.listMarker = this.buildOrderedMarker(counterValue, style, item.listType || node.type, node.separator);
+				item.listMarker = this.buildOrderedMarker(this.olParent,counterValue, style, item.listType || node.type, node.separator);
 				if (item.listMarker._inlines) {
 					node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
 				}
-			}  // TODO: else - nested lists numbering
-
+			}
+			
 			node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
 			node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth);
 
@@ -413,7 +419,10 @@ class DocMeasure {
 				counter++;
 			}
 		}
-
+		if(node.type == 'decimal-parent'){
+			this.olParent++;
+		}
+		
 		node._minWidth += node._gapSize.width;
 		node._maxWidth += node._gapSize.width;
 
