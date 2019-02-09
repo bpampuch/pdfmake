@@ -341,7 +341,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 					var x1f = xs[i].x + (widthLeftBorder / 2);
 					var y1f = this.dontBreakRows ? y1 : y1 - (hzLineOffset / 2);
 					var x2f = xs[i + 1].x + widthRightBorder;
-					var y2f = y2 + (this.bottomLineWidth / 2);
+					var y2f = this.dontBreakRows ? y2 + this.bottomLineWidth : y2 + (this.bottomLineWidth / 2);
 					writer.addVector({
 						type: 'rect',
 						x: x1f,
