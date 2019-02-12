@@ -53,7 +53,7 @@ TableProcessor.prototype.beginTable = function (writer) {
 		var x = 0;
 		var lastWidth = 0;
 
-		rsd.push({left: 0, rowSpan: 0});
+		rsd.push({ left: 0, rowSpan: 0 });
 
 		for (var i = 0, l = self.tableNode.table.body[0].length; i < l; i++) {
 			var paddings = self.layout.paddingLeft(i, self.tableNode) + self.layout.paddingRight(i, self.tableNode);
@@ -61,7 +61,7 @@ TableProcessor.prototype.beginTable = function (writer) {
 			lastWidth = paddings + lBorder + self.tableNode.table.widths[i]._calcWidth;
 			rsd[rsd.length - 1].width = lastWidth;
 			x += lastWidth;
-			rsd.push({left: x, rowSpan: 0, width: 0});
+			rsd.push({ left: x, rowSpan: 0, width: 0 });
 		}
 
 		return rsd;
@@ -185,7 +185,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 			}
 
 			if (!currentLine && shouldDrawLine) {
-				currentLine = {left: data.left, width: 0};
+				currentLine = { left: data.left, width: 0 };
 			}
 
 			if (shouldDrawLine) {
@@ -270,7 +270,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			var pageBreak = pageBreaks[i];
 			ys[ys.length - 1].y1 = pageBreak.prevY;
 
-			ys.push({y0: pageBreak.y, page: pageBreak.prevPage + 1});
+			ys.push({ y0: pageBreak.y, page: pageBreak.prevPage + 1 });
 		}
 	}
 
@@ -294,6 +294,15 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			//TODO: buggy, availableHeight should be updated on every pageChanged event
 			// TableProcessor should be pageChanged listener, instead of processRow
 			this.reservedAtBottom = 0;
+		}
+
+		var lastIndex = -1;
+
+		// l = xs.length - 1 to avoid considering last table inexisting element
+		for (i = 0, l = xs.length - 1; i < l; i++) {
+			if (xs[i].index > lastIndex) {
+				lastIndex = xs[i].index;
+			}
 		}
 
 		for (i = 0, l = xs.length; i < l; i++) {
@@ -344,12 +353,18 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 					var y1f = this.dontBreakRows ? y1 : y1 - (hzLineOffset / 2);
 					var x2f = xs[i + 1].x + widthRightBorder;
 					var y2f = y2 + (this.bottomLineWidth / 2);
+
+					// If the current cell is the first and last cell, don't add any correction
+					// But if this is the last cell, just add left correction
+					// Else, add left and right corrections
+					var wCorrection = (lastIndex === 0 ? 0 : colIndex === lastIndex ? TABLE_FILL_CORRECTION : 2 * TABLE_FILL_CORRECTION);
+
 					writer.addVector({
-						type: 'rect',
-						x: x1f - TABLE_FILL_CORRECTION,
+						type: "rect",
+						x: x1f - (colIndex === 0 ? 0 : TABLE_FILL_CORRECTION),
 						y: y1f - TABLE_FILL_CORRECTION,
-						w: x2f - x1f + TABLE_FILL_CORRECTION,
-						h: y2f - y1f + TABLE_FILL_CORRECTION,
+						w: x2f - x1f + wCorrection,
+						h: y2f - y1f + 2 * TABLE_FILL_CORRECTION,
 						lineWidth: 0,
 						color: fillColor
 					}, false, true, writer.context().backgroundLength[writer.context().page]);
@@ -418,7 +433,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 
 		for (var i = 0, l = self.tableNode.table.body[rowIndex].length; i < l; i++) {
 			if (!cols) {
-				result.push({x: self.rowSpanData[i].left, index: i});
+				result.push({ x: self.rowSpanData[i].left, index: i });
 
 				var item = self.tableNode.table.body[rowIndex][i];
 				cols = (item._colSpan || item.colSpan || 0);
@@ -428,7 +443,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			}
 		}
 
-		result.push({x: self.rowSpanData[self.rowSpanData.length - 1].left, index: self.rowSpanData.length - 1});
+		result.push({ x: self.rowSpanData[self.rowSpanData.length - 1].left, index: self.rowSpanData.length - 1 });
 
 		return result;
 	}
