@@ -352,12 +352,12 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 					var x1f = this.dontBreakRows ? xs[i].x + widthLeftBorder : xs[i].x + (widthLeftBorder / 2);
 					var y1f = this.dontBreakRows ? y1 : y1 - (hzLineOffset / 2);
 					var x2f = xs[i + 1].x + widthRightBorder;
-				  var y2f = this.dontBreakRows ? y2 + this.bottomLineWidth : y2 + (this.bottomLineWidth / 2);
+					var y2f = this.dontBreakRows ? y2 + this.bottomLineWidth : y2 + (this.bottomLineWidth / 2);
 
 					// If the current cell is the first and last cell, don't add any correction
-					// But if this is the last cell, just add left correction
+					// But if this is the last cell or the first cell, just add left or right correction
 					// Else, add left and right corrections
-					var wCorrection = (lastIndex === 0 ? 0 : colIndex === lastIndex ? TABLE_FILL_CORRECTION : 2 * TABLE_FILL_CORRECTION);
+					var wCorrection = (lastIndex === 0 ? 0 : colIndex === lastIndex || colIndex === 0 ? TABLE_FILL_CORRECTION : 2 * TABLE_FILL_CORRECTION);
           
 					writer.addVector({
 						type: "rect",
