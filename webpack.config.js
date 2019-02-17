@@ -84,6 +84,31 @@ module.exports = {
 						}
 					]})
 			},
+
+			/* temporary bugfix for pdfkit version 0.9.0 - issue https://github.com/foliojs/pdfkit/issues/923 */
+			/* waiting to release included PR https://github.com/foliojs/pdfkit/pull/925 */
+			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
+				replacements: [
+					{
+						pattern: "stringBuffer = swapBytes(new Buffer(",
+						replacement: function () {
+							return "stringBuffer = swapBytes(Buffer.from(";
+						}
+					}
+				]})
+			},
+			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
+				replacements: [
+					{
+						pattern: "stringBuffer = new Buffer(string, 'ascii');",
+						replacement: function () {
+							return "stringBuffer = Buffer.from(string.valueOf(), 'ascii');";
+						}
+					}
+				]})
+			},
+			/* *** */
+
 			{enforce: 'post', test: /fontkit[/\\]index.js$/, loader: "transform-loader?brfs"},
 			{enforce: 'post', test: /unicode-properties[/\\]index.js$/, loader: "transform-loader?brfs"},
 			{enforce: 'post', test: /linebreak[/\\]src[/\\]linebreaker.js/, loader: "transform-loader?brfs"}
