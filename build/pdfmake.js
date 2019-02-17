@@ -1,4 +1,4 @@
-/*! pdfmake v0.1.51, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.1.52, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -944,7 +944,7 @@ module.exports = {
 /* 2 */
 /***/ (function(module, exports) {
 
-var core = module.exports = { version: '2.6.4' };
+var core = module.exports = { version: '2.6.5' };
 if (typeof __e == 'number') __e = core; // eslint-disable-line no-undef
 
 
@@ -5449,7 +5449,7 @@ __webpack_require__(119)(String, 'String', function (iterated) {
 /* 51 */
 /***/ (function(module, exports) {
 
-var core = module.exports = { version: '2.6.4' };
+var core = module.exports = { version: '2.6.5' };
 if (typeof __e == 'number') __e = core; // eslint-disable-line no-undef
 
 
@@ -19152,9 +19152,9 @@ var PDFObject = function () {
         var stringBuffer = void 0;
 
         if (isUnicode) {
-          stringBuffer = swapBytes(new Buffer("\uFEFF" + string, 'utf16le'));
+          stringBuffer = swapBytes(Buffer.from("\uFEFF" + string, 'utf16le'));
         } else {
-          stringBuffer = new Buffer(string, 'ascii');
+          stringBuffer = Buffer.from(string.valueOf(), 'ascii');
         } // Encrypt the string when necessary
 
 
