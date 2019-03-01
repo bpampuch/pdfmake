@@ -157,6 +157,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 		var offset = lineWidth / 2;
 		var currentLine = null;
 		var body = this.tableNode.table.body;
+		var cellAbove;
 
 		for (var i = 0, l = this.rowSpanData.length; i < l; i++) {
 			var data = this.rowSpanData[i];
@@ -170,7 +171,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 
 				// the cell in the row above
 				if (lineIndex > 0) {
-					var cellAbove = body[lineIndex - 1][i];
+					cellAbove = body[lineIndex - 1][i];
 					bottomBorder = cellAbove.border ? cellAbove.border[3] : this.layout.defaultBorder;
 					if (cellAbove.borderColor) {
 						borderColor = cellAbove.borderColor[3];
@@ -179,14 +180,18 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 
 				// the current cell
 				if (lineIndex < body.length) {
-					var cell = body[lineIndex][i];
-					topBorder = cell.border ? cell.border[1] : this.layout.defaultBorder;
-					if (borderColor == null && cell.borderColor) {
-						borderColor = cell.borderColor[1];
+					var currentCell = body[lineIndex][i];
+					topBorder = currentCell.border ? currentCell.border[1] : this.layout.defaultBorder;
+					if (borderColor == null && currentCell.borderColor) {
+						borderColor = currentCell.borderColor[1];
 					}
 				}
 
 				shouldDrawLine = topBorder || bottomBorder;
+			}
+
+			if (borderColor == null) {
+				borderColor = isFunction(this.layout.hLineColor) ? this.layout.hLineColor(lineIndex, this.tableNode, i) : this.layout.hLineColor;
 			}
 
 			if (!currentLine && shouldDrawLine) {
@@ -194,14 +199,20 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 			}
 
 			if (shouldDrawLine) {
-				currentLine.width += (data.width || 0);
+				var colSpanIndex = 0
+				if (cellAbove && cellAbove.colSpan) {
+					while(cellAbove.colSpan > colSpanIndex) {
+						currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
+					}
+					i += colSpanIndex - 1
+				}
+				else {
+					currentLine.width += (this.rowSpanData[i].width || 0);
+				}
 			}
 
 			var y = (overrideY || 0) + offset;
 
-			if (borderColor == null) {
-				borderColor = isFunction(this.layout.hLineColor) ? this.layout.hLineColor(lineIndex, this.tableNode, i) : this.layout.hLineColor;
-			}
 
 			if (shouldDrawLine) {
 				if (currentLine && currentLine.width) {
@@ -217,6 +228,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 					}, false, overrideY);
 					currentLine = null;
 					borderColor = null;
+					cellAbove = null;
 				}
 			}
 		}
@@ -225,7 +237,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 	}
 };
 
-TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, writer, vLineRowIndex) {
+TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, writer, vLineRowIndex, beforeVLineColIndex) {
 	var width = this.layout.vLineWidth(vLineColIndex, this.tableNode);
 	if (width === 0) {
 		return;
@@ -241,7 +253,7 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 
 	// the cell in the col before
 	if (vLineColIndex > 0) {
-		var cellBefore = body[vLineRowIndex][vLineColIndex - 1];
+		var cellBefore = body[vLineRowIndex][beforeVLineColIndex];
 		if (cellBefore && cellBefore.borderColor) {
 			borderColor = cellBefore.borderColor[2];
 		}
@@ -355,7 +367,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			}
 
 			if (leftCellBorder) {
-				this.drawVerticalLine(xs[i].x, y1 - hzLineOffset, y2 + this.bottomLineWidth, xs[i].index, writer, rowIndex);
+				this.drawVerticalLine(xs[i].x, y1 - hzLineOffset, y2 + this.bottomLineWidth, xs[i].index, writer, rowIndex, xs[i-1] ? xs[i-1].index : null);
 			}
 
 			if (i < l - 1) {
