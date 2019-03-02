@@ -25,10 +25,6 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) an
 
 #### This is unstable master branch for version 0.2.x, for stable version 0.1.x see [branch 0.1](https://github.com/bpampuch/pdfmake/tree/0.1).
 
-### New documentation: https://pdfmake.github.io/docs/
-
-For discussion about new documentation use [issue #1238](https://github.com/bpampuch/pdfmake/issues/1238)
-
 ### Features
 
 * line-wrapping,
