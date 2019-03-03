@@ -58,7 +58,7 @@ class StyleContextStack {
 	 * of elements pushed, so they can be easily poped then.
 	 *
 	 * @param {Object} item - an object with optional style property and/or style overrides
-	 * @returns the number of items pushed onto the stack
+	 * @returns {number} the number of items pushed onto the stack
 	 */
 	autopush(item) {
 		if (isString(item)) {
@@ -145,7 +145,7 @@ class StyleContextStack {
 	 * Evaluates stack and returns value of a named property
 	 *
 	 * @param {string} property - property name
-	 * @returns property value or null if not found
+	 * @returns {?any} property value or null if not found
 	 */
 	getProperty(property) {
 		if (this.styleOverrides) {

@@ -297,6 +297,9 @@ class ElementWriter extends EventEmitter {
 	 * pushContext(context) - pushes the provided context and makes it current
 	 * pushContext(width, height) - creates and pushes a new context with the specified width and height
 	 * pushContext() - creates a new context for unbreakable blocks (with current availableWidth and full-page-height)
+	 *
+	 * @param {Object|number} contextOrWidth
+	 * @param {number} height
 	 */
 	pushContext(contextOrWidth, height) {
 		if (contextOrWidth === undefined) {

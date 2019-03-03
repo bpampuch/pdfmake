@@ -44,6 +44,11 @@ class LayoutBuilder {
 	 * @param {Object} pdfDocument pdfkit document
 	 * @param {Object} styleDictionary dictionary with style definitions
 	 * @param {Object} defaultStyle default style definition
+	 * @param {Object} background
+	 * @param {Object} header
+	 * @param {Object} footer
+	 * @param {Object} watermark
+	 * @param {Object} pageBreakBeforeFct
 	 * @returns {Array} an array of pages
 	 */
 	layoutDocument(

@@ -72,6 +72,7 @@ class Line {
 	/**
 	 * @param {Object} inline
 	 * @param {Array} nextInlines
+	 * @returns {boolean}
 	 */
 	hasEnoughSpaceForInline(inline, nextInlines = []) {
 		if (this.inlines.length === 0) {
