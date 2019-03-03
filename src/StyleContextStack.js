@@ -170,8 +170,8 @@ class StyleContextStack {
 	 * @param {Object} item
 	 * @param {StyleContextStack} styleContextStack
 	 * @param {string} property
-	 * @param {*} defaultValue
-	 * @returns {*}
+	 * @param {any} defaultValue
+	 * @returns {any}
 	 */
 	static getStyleProperty(item, styleContextStack, property, defaultValue) {
 		let value;

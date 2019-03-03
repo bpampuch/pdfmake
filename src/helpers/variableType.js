@@ -1,5 +1,5 @@
 /**
- * @param {*} variable
+ * @param {any} variable
  * @returns {boolean}
  */
 export function isString(variable) {
@@ -7,7 +7,7 @@ export function isString(variable) {
 }
 
 /**
- * @param {*} variable
+ * @param {any} variable
  * @returns {boolean}
  */
 export function isNumber(variable) {
@@ -15,7 +15,7 @@ export function isNumber(variable) {
 }
 
 /**
- * @param {*} variable
+ * @param {any} variable
  * @returns {boolean}
  */
 export function isBoolean(variable) {
@@ -23,7 +23,7 @@ export function isBoolean(variable) {
 }
 
 /**
- * @param {*} variable
+ * @param {any} variable
  * @returns {boolean}
  */
 export function isArray(variable) {
@@ -31,7 +31,7 @@ export function isArray(variable) {
 }
 
 /**
- * @param {*} variable
+ * @param {any} variable
  * @returns {boolean}
  */
 export function isFunction(variable) {
@@ -39,7 +39,7 @@ export function isFunction(variable) {
 }
 
 /**
- * @param {*} variable
+ * @param {any} variable
  * @returns {boolean}
  */
 export function isObject(variable) {
@@ -47,7 +47,7 @@ export function isObject(variable) {
 }
 
 /**
- * @param {*} variable
+ * @param {any} variable
  * @returns {boolean}
  */
 export function isEmptyObject(variable) {
@@ -55,7 +55,7 @@ export function isEmptyObject(variable) {
 }
 
 /**
- * @param {*} variable
+ * @param {any} variable
  * @returns {boolean}
  */
 export function isNull(variable) {
@@ -63,7 +63,7 @@ export function isNull(variable) {
 }
 
 /**
- * @param {*} variable
+ * @param {any} variable
  * @returns {boolean}
  */
 export function isUndefined(variable) {
@@ -71,7 +71,7 @@ export function isUndefined(variable) {
 }
 
 /**
- * @param {*} variable
+ * @param {any} variable
  * @returns {boolean}
  */
 export function isValue(variable) {
