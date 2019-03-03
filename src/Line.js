@@ -1,6 +1,6 @@
 class Line {
 	/**
-	 * @param {Number} maxWidth Maximum width this line can have
+	 * @param {number} maxWidth Maximum width this line can have
 	 */
 	constructor(maxWidth) {
 		this.maxWidth = maxWidth;

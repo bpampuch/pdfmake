@@ -43,7 +43,7 @@ class StyleContextStack {
 	/**
 	 * Removes last style-name or style-overrides-object from the stack
 	 *
-	 * @param {Number} howMany optional number of elements to be popped (if not specified,
+	 * @param {number} howMany optional number of elements to be popped (if not specified,
 	 *                         one element will be removed from the stack)
 	 */
 	pop(howMany = 1) {
