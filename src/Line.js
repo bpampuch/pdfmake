@@ -11,7 +11,7 @@ class Line {
 	}
 
 	/**
-	 * @param {object} inline
+	 * @param {Object} inline
 	 */
 	addInline(inline) {
 		if (this.inlines.length === 0) {
@@ -70,7 +70,7 @@ class Line {
 	}
 
 	/**
-	 * @param {object} inline
+	 * @param {Object} inline
 	 * @param {Array} nextInlines
 	 */
 	hasEnoughSpaceForInline(inline, nextInlines = []) {

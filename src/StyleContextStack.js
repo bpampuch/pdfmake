@@ -166,7 +166,7 @@ class StyleContextStack {
 	}
 
 	/**
-	 * @param {object} item
+	 * @param {Object} item
 	 * @param {StyleContextStack} styleContextStack
 	 * @param {string} property
 	 * @param {*} defaultValue
@@ -191,9 +191,9 @@ class StyleContextStack {
 	}
 
 	/**
-	 * @param {object} source
-	 * @param {object} destination
-	 * @return {object}
+	 * @param {Object} source
+	 * @param {Object} destination
+	 * @return {Object}
 	 */
 	static copyStyle(source = {}, destination = {}) {
 		// TODO: default style to source

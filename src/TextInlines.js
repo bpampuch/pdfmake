@@ -158,7 +158,7 @@ class TextInlines {
 	 * Width of text
 	 *
 	 * @param {string} text
-	 * @param {object} inline
+	 * @param {Object} inline
 	 * @return {integer}
 	 */
 	widthOfText(text, inline) {
