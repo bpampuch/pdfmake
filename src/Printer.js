@@ -33,43 +33,8 @@ class PdfPrinter {
 	 * Executes layout engine for the specified document and renders it into a pdfkit document
 	 * ready to be saved.
 	 *
-	 * @param {Object} docDefinition document definition
-	 * @param {Object} docDefinition.content an array describing the pdf structure (for more information take a look at the examples in the /examples folder)
-	 * @param {Object} [docDefinition.defaultStyle] default (implicit) style definition
-	 * @param {Object} [docDefinition.styles] dictionary defining all styles which can be used in the document
-	 * @param {Object} [docDefinition.pageSize] page size (pdfkit units, A4 dimensions by default)
-	 * @param {Number} docDefinition.pageSize.width width
-	 * @param {Number} docDefinition.pageSize.height height
-	 * @param {Object} [docDefinition.pageMargins] page margins (pdfkit units)
-	 * @param {Number} docDefinition.maxPagesNumber maximum number of pages to render
-	 *
-	 * @example
-	 *
-	 * var docDefinition = {
-	 * 	info: {
-	 *		title: 'awesome Document',
-	 *		author: 'john doe',
-	 *		subject: 'subject of document',
-	 *		keywords: 'keywords for document',
-	 * 	},
-	 *	content: [
-	 *		'First paragraph',
-	 *		'Second paragraph, this time a little bit longer',
-	 *		{ text: 'Third paragraph, slightly bigger font size', fontSize: 20 },
-	 *		{ text: 'Another paragraph using a named style', style: 'header' },
-	 *		{ text: ['playing with ', 'inlines' ] },
-	 *		{ text: ['and ', { text: 'restyling ', bold: true }, 'them'] },
-	 *	],
-	 *	styles: {
-	 *		header: { fontSize: 30, bold: true }
-	 *	}
-	 * };
-	 *
-	 * var pdfKitDoc = printer.createPdfKitDocument(docDefinition);
-	 *
-	 * pdfKitDoc.pipe(fs.createWriteStream('sample.pdf'));
-	 * pdfKitDoc.end();
-	 *
+	 * @param {Object} docDefinition
+	 * @param {Object} options
 	 * @returns {Object} a pdfKit document object which can be saved or encode to data-url
 	 */
 	createPdfKitDocument(docDefinition, options = {}) {
