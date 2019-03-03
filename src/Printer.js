@@ -87,7 +87,8 @@ class PdfPrinter {
 			ownerPassword: docDefinition.ownerPassword,
 			permissions: docDefinition.permissions,
 			bufferPages: options.bufferPages || false,
-			autoFirstPage: false
+			autoFirstPage: false,
+			font: null
 		};
 
 		this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, pdfOptions);
