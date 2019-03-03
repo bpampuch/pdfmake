@@ -44,7 +44,7 @@ class LayoutBuilder {
 	 * @param {Object} pdfDocument pdfkit document
 	 * @param {Object} styleDictionary dictionary with style definitions
 	 * @param {Object} defaultStyle default style definition
-	 * @return {Array} an array of pages
+	 * @returns {Array} an array of pages
 	 */
 	layoutDocument(
 		docStructure,

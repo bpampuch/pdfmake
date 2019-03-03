@@ -5,7 +5,7 @@ import StyleContextStack from './StyleContextStack';
 /**
  * @param {string} text
  * @param {boolean} noWrap
- * @return {Array}
+ * @returns {Array}
  */
 const splitWords = (text, noWrap) => {
 	let words = [];
@@ -38,7 +38,7 @@ const splitWords = (text, noWrap) => {
 /**
  * @param {Array} words
  * @param {boolean} noWrap
- * @return {?string}
+ * @returns {?string}
  */
 const getFirstWord = (words, noWrap) => {
 	let word = words[0];
@@ -60,7 +60,7 @@ const getFirstWord = (words, noWrap) => {
 /**
  * @param {Array} words
  * @param {boolean} noWrap
- * @return {?string}
+ * @returns {?string}
  */
 const getLastWord = (words, noWrap) => {
 	let word = words[words.length - 1];

@@ -70,7 +70,7 @@ class PdfPrinter {
 	 * pdfKitDoc.pipe(fs.createWriteStream('sample.pdf'));
 	 * pdfKitDoc.end();
 	 *
-	 * @return {Object} a pdfKit document object which can be saved or encode to data-url
+	 * @returns {Object} a pdfKit document object which can be saved or encode to data-url
 	 */
 	createPdfKitDocument(docDefinition, options = {}) {
 		docDefinition.version = docDefinition.version || '1.3';

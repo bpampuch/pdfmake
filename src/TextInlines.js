@@ -7,7 +7,7 @@ const TRAILING = /(\s)+$/g;
 
 /**
  * @param {Array} array
- * @return {Array}
+ * @returns {Array}
  */
 const flattenTextArray = array => {
 	function flatten(array) {
@@ -48,7 +48,7 @@ class TextInlines {
 	 *
 	 * @param  {Array} textArray an array of inline-definition-objects (or strings)
 	 * @param  {StyleContextStack} styleContextStack current style stack
-	 * @return {Object} collection of inlines, minWidth, maxWidth
+	 * @returns {Object} collection of inlines, minWidth, maxWidth
 	 */
 	buildInlines(textArray, styleContextStack) {
 		const getTrimmedWidth = item => {
@@ -160,7 +160,7 @@ class TextInlines {
 	 *
 	 * @param {string} text
 	 * @param {Object} inline
-	 * @return {number}
+	 * @returns {number}
 	 */
 	widthOfText(text, inline) {
 		return inline.font.widthOfString(text, inline.fontSize, inline.fontFeatures) + ((inline.characterSpacing || 0) * (text.length - 1));
@@ -171,7 +171,7 @@ class TextInlines {
 	 *
 	 * @param  {string} text text to be measured
 	 * @param  {Object} styleContextStack current style stack
-	 * @return {Object} size of the specified string
+	 * @returns {Object} size of the specified string
 	 */
 	sizeOfText(text, styleContextStack) {
 		//TODO: refactor - extract from measure

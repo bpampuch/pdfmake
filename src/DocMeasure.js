@@ -26,7 +26,7 @@ class DocMeasure {
 	 * layout-pass.
 	 *
 	 * @param  {Object} docStructure document-definition-object
-	 * @return {Object} document-measurement-object
+	 * @returns {Object} document-measurement-object
 	 */
 	measureDocument(docStructure) {
 		return this.measureNode(docStructure);

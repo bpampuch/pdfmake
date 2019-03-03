@@ -11,7 +11,7 @@ function fontStringify(key, val) {
  * Convert node to readable string
  *
  * @param {Object} node
- * @return {string}
+ * @returns {string}
  */
 export function stringifyNode(node) {
 	return JSON.stringify(node, fontStringify);
@@ -20,7 +20,7 @@ export function stringifyNode(node) {
 /**
  * @param {Object} node
  * @param {StyleContextStack} styleStack
- * @return {?Array}
+ * @returns {?Array}
  */
 export function getNodeMargin(node, styleStack) {
 	function processSingleMargins(node, currentMargin) {

@@ -18,7 +18,7 @@ class StyleContextStack {
 	/**
 	 * Creates cloned version of current stack
 	 *
-	 * @return {StyleContextStack} current stack snapshot
+	 * @returns {StyleContextStack} current stack snapshot
 	 */
 	clone() {
 		let stack = new StyleContextStack(this.styleDictionary, this.defaultStyle);
@@ -58,7 +58,7 @@ class StyleContextStack {
 	 * of elements pushed, so they can be easily poped then.
 	 *
 	 * @param {Object} item - an object with optional style property and/or style overrides
-	 * @return the number of items pushed onto the stack
+	 * @returns the number of items pushed onto the stack
 	 */
 	autopush(item) {
 		if (isString(item)) {
@@ -128,7 +128,7 @@ class StyleContextStack {
 	 *
 	 * @param  {Object} item - an object with optional style property and/or style overrides
 	 * @param  {Function} callback to be called between autopush and pop
-	 * @return {Object} value returned by callback
+	 * @returns {Object} value returned by callback
 	 */
 	auto(item, callback) {
 		let pushedItems = this.autopush(item);
@@ -145,7 +145,7 @@ class StyleContextStack {
 	 * Evaluates stack and returns value of a named property
 	 *
 	 * @param {string} property - property name
-	 * @return property value or null if not found
+	 * @returns property value or null if not found
 	 */
 	getProperty(property) {
 		if (this.styleOverrides) {
@@ -171,7 +171,7 @@ class StyleContextStack {
 	 * @param {StyleContextStack} styleContextStack
 	 * @param {string} property
 	 * @param {*} defaultValue
-	 * @return {*}
+	 * @returns {*}
 	 */
 	static getStyleProperty(item, styleContextStack, property, defaultValue) {
 		let value;
@@ -194,7 +194,7 @@ class StyleContextStack {
 	/**
 	 * @param {Object} source
 	 * @param {Object} destination
-	 * @return {Object}
+	 * @returns {Object}
 	 */
 	static copyStyle(source = {}, destination = {}) {
 		// TODO: default style to source

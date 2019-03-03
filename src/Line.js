@@ -30,7 +30,7 @@ class Line {
 	}
 
 	/**
-	 * @return {number}
+	 * @returns {number}
 	 */
 	getHeight() {
 		let max = 0;
@@ -43,7 +43,7 @@ class Line {
 	}
 
 	/**
-	 * @return {number}
+	 * @returns {number}
 	 */
 	getAscenderHeight() {
 		let y = 0;
@@ -56,14 +56,14 @@ class Line {
 	}
 
 	/**
-	 * @return {number}
+	 * @returns {number}
 	 */
 	getWidth() {
 		return this.inlineWidths - this.leadingCut - this.trailingCut;
 	}
 
 	/**
-	 * @return {number}
+	 * @returns {number}
 	 */
 	getAvailableWidth() {
 		return this.maxWidth - this.getWidth();
