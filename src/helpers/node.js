@@ -20,7 +20,7 @@ export function stringifyNode(node) {
 /**
  * @param {Object} node
  * @param {StyleContextStack} styleStack
- * @return {array|null}
+ * @return {?Array}
  */
 export function getNodeMargin(node, styleStack) {
 	function processSingleMargins(node, currentMargin) {

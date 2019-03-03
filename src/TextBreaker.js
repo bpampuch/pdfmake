@@ -38,7 +38,7 @@ const splitWords = (text, noWrap) => {
 /**
  * @param {Array} words
  * @param {boolean} noWrap
- * @return {string|null}
+ * @return {?string}
  */
 const getFirstWord = (words, noWrap) => {
 	let word = words[0];
