@@ -17,6 +17,7 @@ class StyleContextStack {
 
 	/**
 	 * Creates cloned version of current stack
+	 *
 	 * @return {StyleContextStack} current stack snapshot
 	 */
 	clone() {
@@ -32,7 +33,7 @@ class StyleContextStack {
 	/**
 	 * Pushes style-name or style-overrides-object onto the stack for future evaluation
 	 *
-	 * @param {String|Object} styleNameOrOverride style-name (referring to styleDictionary) or
+	 * @param {string|Object} styleNameOrOverride style-name (referring to styleDictionary) or
 	 *                                            a new dictionary defining overriding properties
 	 */
 	push(styleNameOrOverride) {
@@ -126,7 +127,7 @@ class StyleContextStack {
 	 * executes callback and then pops elements back. Returns value returned by callback
 	 *
 	 * @param  {Object} item - an object with optional style property and/or style overrides
-	 * @param  {Function} function to be called between autopush and pop
+	 * @param  {Function} callback to be called between autopush and pop
 	 * @return {Object} value returned by callback
 	 */
 	auto(item, callback) {

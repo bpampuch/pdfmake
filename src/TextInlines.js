@@ -45,6 +45,7 @@ class TextInlines {
 	/**
 	 * Converts an array of strings (or inline-definition-objects) into a collection
 	 * of inlines and calculated minWidth/maxWidth and their min/max widths
+	 *
 	 * @param  {Array} textArray an array of inline-definition-objects (or strings)
 	 * @param  {StyleContextStack} styleContextStack current style stack
 	 * @return {Object} collection of inlines, minWidth, maxWidth
@@ -167,6 +168,7 @@ class TextInlines {
 
 	/**
 	 * Returns size of the specified string (without breaking it) using the current style
+	 *
 	 * @param  {string} text text to be measured
 	 * @param  {Object} styleContextStack current style stack
 	 * @return {Object} size of the specified string
