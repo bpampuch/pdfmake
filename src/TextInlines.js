@@ -159,7 +159,7 @@ class TextInlines {
 	 *
 	 * @param {string} text
 	 * @param {Object} inline
-	 * @return {integer}
+	 * @return {number}
 	 */
 	widthOfText(text, inline) {
 		return inline.font.widthOfString(text, inline.fontSize, inline.fontFeatures) + ((inline.characterSpacing || 0) * (text.length - 1));
