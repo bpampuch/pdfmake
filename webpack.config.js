@@ -64,6 +64,9 @@ module.exports = {
 					]})
 			},
 			{test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
+
+ 			/* Can be removed after new pdfkit release */
+			/* waiting to release included PR https://github.com/foliojs/pdfkit/pull/934 */
 			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
 					replacements: [
 						{
