@@ -143,7 +143,7 @@ class StyleContextStack {
 	/**
 	 * Evaluates stack and returns value of a named property
 	 *
-	 * @param {String} property - property name
+	 * @param {string} property - property name
 	 * @return property value or null if not found
 	 */
 	getProperty(property) {

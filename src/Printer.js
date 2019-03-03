@@ -63,7 +63,7 @@ class PdfPrinter {
 	 *	styles: {
 	 *		header: { fontSize: 30, bold: true }
 	 *	}
-	 * }
+	 * };
 	 *
 	 * var pdfKitDoc = printer.createPdfKitDocument(docDefinition);
 	 *

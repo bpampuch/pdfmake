@@ -6,7 +6,7 @@ const LEADING = /^(\s)+/g;
 const TRAILING = /(\s)+$/g;
 
 /**
- * @param {Array} textArray
+ * @param {Array} array
  * @return {Array}
  */
 const flattenTextArray = array => {
@@ -167,7 +167,7 @@ class TextInlines {
 
 	/**
 	 * Returns size of the specified string (without breaking it) using the current style
-	 * @param  {String} text text to be measured
+	 * @param  {string} text text to be measured
 	 * @param  {Object} styleContextStack current style stack
 	 * @return {Object} size of the specified string
 	 */

@@ -60,7 +60,7 @@ const getFirstWord = (words, noWrap) => {
 /**
  * @param {Array} words
  * @param {boolean} noWrap
- * @return {string|null}
+ * @return {?string}
  */
 const getLastWord = (words, noWrap) => {
 	let word = words[words.length - 1];
@@ -85,7 +85,7 @@ const getLastWord = (words, noWrap) => {
 
 class TextBreaker {
 	/**
-	 * @param {string|array} texts
+	 * @param {string|Array} texts
 	 * @param {StyleContextStack} styleContextStack
 	 */
 	getBreaks(texts, styleContextStack) {
