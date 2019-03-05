@@ -158,6 +158,8 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 		var currentLine = null;
 		var body = this.tableNode.table.body;
 		var cellAbove;
+		var currentCell;
+		var rowCellAbove;
 
 		for (var i = 0, l = this.rowSpanData.length; i < l; i++) {
 			var data = this.rowSpanData[i];
@@ -180,7 +182,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 
 				// the current cell
 				if (lineIndex < body.length) {
-					var currentCell = body[lineIndex][i];
+					currentCell = body[lineIndex][i];
 					topBorder = currentCell.border ? currentCell.border[1] : this.layout.defaultBorder;
 					if (borderColor == null && currentCell.borderColor) {
 						borderColor = currentCell.borderColor[1];
@@ -188,6 +190,13 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 				}
 
 				shouldDrawLine = topBorder || bottomBorder;
+			}
+
+			if(cellAbove && cellAbove._rowSpanCurrentOffset) {
+				rowCellAbove = body[lineIndex - 1 - cellAbove._rowSpanCurrentOffset][i];
+				if (rowCellAbove.borderColor) {
+					borderColor = rowCellAbove.borderColor[3];
+				}
 			}
 
 			if (borderColor == null) {
@@ -199,9 +208,21 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 			}
 
 			if (shouldDrawLine) {
-				var colSpanIndex = 0
-				if (cellAbove && cellAbove.colSpan) {
+				var colSpanIndex = 0;
+				if (rowCellAbove && rowCellAbove.colSpan) {
+					while(rowCellAbove.colSpan > colSpanIndex) {
+						currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
+					}
+					i += colSpanIndex - 1
+				}
+				else if (cellAbove && cellAbove.colSpan) {
 					while(cellAbove.colSpan > colSpanIndex) {
+						currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
+					}
+					i += colSpanIndex - 1
+				}
+				else if (currentCell && currentCell.colSpan) {
+					while(currentCell.colSpan > colSpanIndex) {
 						currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
 					}
 					i += colSpanIndex - 1
@@ -229,6 +250,8 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 					currentLine = null;
 					borderColor = null;
 					cellAbove = null;
+					currentCell = null;
+					rowCellAbove = null;
 				}
 			}
 		}
@@ -249,11 +272,13 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 	}
 
 	var body = this.tableNode.table.body;
+	var cellBefore;
+	var currentCell;
 	var borderColor;
 
 	// the cell in the col before
 	if (vLineColIndex > 0) {
-		var cellBefore = body[vLineRowIndex][beforeVLineColIndex];
+		cellBefore = body[vLineRowIndex][beforeVLineColIndex];
 		if (cellBefore && cellBefore.borderColor) {
 			borderColor = cellBefore.borderColor[2];
 		}
@@ -261,12 +286,26 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 
 	// the current cell
 	if (borderColor == null && vLineColIndex < body.length) {
-		var cell = body[vLineRowIndex][vLineColIndex];
-		if (cell && cell.borderColor) {
-			borderColor = cell.borderColor[0];
+		currentCell = body[vLineRowIndex][vLineColIndex];
+		if (currentCell && currentCell.borderColor) {
+			borderColor = currentCell.borderColor[0];
 		}
-
 	}
+
+	if(borderColor == null && cellBefore && cellBefore._rowSpanCurrentOffset) {
+		var rowCellBeforeAbove = body[vLineRowIndex - cellBefore._rowSpanCurrentOffset][beforeVLineColIndex];
+		if (rowCellBeforeAbove.borderColor) {
+			borderColor = rowCellBeforeAbove.borderColor[2];
+		}
+	}
+
+	if (borderColor == null && currentCell && currentCell._rowSpanCurrentOffset) {
+		var rowCurrentCellAbove = body[vLineRowIndex - currentCell._rowSpanCurrentOffset][vLineColIndex];
+		if (rowCurrentCellAbove.borderColor) {
+			borderColor = rowCurrentCellAbove.borderColor[2];
+		}
+	}
+
 	if(borderColor == null) {
 		borderColor = isFunction(this.layout.vLineColor) ? this.layout.vLineColor(vLineColIndex, this.tableNode, vLineRowIndex) : this.layout.vLineColor;
 	}
@@ -280,6 +319,8 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 		dash: dash,
 		lineColor: borderColor
 	}, false, true);
+	cellBefore = null;
+	currentCell = null;
 	borderColor = null;
 };
 
@@ -423,6 +464,12 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			if (row[i].colSpan && row[i].colSpan > 1) {
 				for (var j = 1; j < row[i].rowSpan; j++) {
 					this.tableNode.table.body[rowIndex + j][i]._colSpan = row[i].colSpan;
+				}
+			}
+			// fix rowSpans
+			if (row[i].rowSpan && row[i].rowSpan > 1) {
+				for (var j = 1; j < row[i].rowSpan; j++) {
+					this.tableNode.table.body[rowIndex + j][i]._rowSpanCurrentOffset = j
 				}
 			}
 		}
