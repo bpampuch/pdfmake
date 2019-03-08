@@ -1,6 +1,5 @@
 'use strict';
 
-var PdfPrinter = require('../printer');
 var isFunction = require('../helpers').isFunction;
 var FileSaver = require('file-saver');
 var saveAs = FileSaver.saveAs;
@@ -23,7 +22,7 @@ function Document(docDefinition, tableLayouts, fonts, vfs) {
 
 function canCreatePdf() {
 	// Ensure the browser provides the level of support needed
-	if (!Object.keys) {
+	if (!Object.keys || typeof Uint16Array === 'undefined') {
 		return false;
 	}
 	return true;
@@ -34,6 +33,8 @@ Document.prototype._createDoc = function (options) {
 	if (this.tableLayouts) {
 		options.tableLayouts = this.tableLayouts;
 	}
+
+	var PdfPrinter = require('../printer');
 
 	var printer = new PdfPrinter(this.fonts);
 	require('fs').bindFS(this.vfs); // bind virtual file system to file system
