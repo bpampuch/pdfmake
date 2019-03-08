@@ -1,5 +1,5 @@
 import pdfmakeBase from '../base';
-import OutputDocumentBrowser from './OutputDocumentBrowser';
+import OutputDocumentBrowser from './OutputDocumentBrowser'; // TODO: Lazy loading for support on unsupported browsers (see issue https://github.com/bpampuch/pdfmake/issues/1663)
 import fs from 'fs';
 
 let defaultClientFonts = {
@@ -13,7 +13,7 @@ let defaultClientFonts = {
 
 const isBrowserSupported = () => {
 	// Ensure the browser provides the level of support needed
-	if (!Object.keys) {
+	if (!Object.keys || typeof Uint16Array === 'undefined') {
 		return false;
 	}
 	return true;

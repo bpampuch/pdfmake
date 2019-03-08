@@ -119,6 +119,19 @@ module.exports = {
 					]
 				})
 			},
+
+			/* temporary bugfix for FileSaver: added hack for Web Worker and device support, see https://github.com/bpampuch/pdfmake/issues/1664 */
+			{test: /FileSaver.min.js$/, loader: StringReplacePlugin.replace({
+					replacements: [
+						{
+							pattern: '"download"in HTMLAnchorElement.prototype',
+							replacement: function () {
+								return '(typeof HTMLAnchorElement !== "undefined" && "download" in HTMLAnchorElement.prototype)';
+							}
+						}
+					]})
+			},
+
 			{ enforce: 'post', test: /fontkit[/\\]index.js$/, loader: "transform-loader?brfs" },
 			{ enforce: 'post', test: /unicode-properties[/\\]index.js$/, loader: "transform-loader?brfs" },
 			{ enforce: 'post', test: /linebreak[/\\]src[/\\]linebreaker.js/, loader: "transform-loader?brfs" }
