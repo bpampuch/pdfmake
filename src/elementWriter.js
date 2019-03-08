@@ -241,6 +241,9 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 			case 'line':
 				var l = cloneLine(item.item);
 
+				if (l._node) {
+					l._node.positions[0].pageNumber = ctx.page + 1;
+				}
 				l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 				l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
