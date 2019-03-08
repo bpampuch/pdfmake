@@ -569,6 +569,9 @@ class LayoutBuilder {
 	// leafs (texts)
 	processLeaf(node) {
 		let line = this.buildNextLine(node);
+		if (line && (node.tocItem || node.id)) {
+			line._node = node;
+		}
 		let currentHeight = (line) ? line.getHeight() : 0;
 		let maxHeight = node.maxHeight || -1;
 

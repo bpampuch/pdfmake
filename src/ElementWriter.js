@@ -251,6 +251,9 @@ class ElementWriter extends EventEmitter {
 				case 'line':
 					var l = item.item.clone();
 
+					if (l._node) {
+						l._node.positions[0].pageNumber = ctx.page + 1;
+					}
 					l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 					l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
