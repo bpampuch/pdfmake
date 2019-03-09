@@ -111,8 +111,8 @@ module.exports = {
 					]})
 			},
 			/* *** */
-			
-			/* temporary bugfix for FileSaver: added hack for Web Worker and device support, see https://github.com/bpampuch/pdfmake/issues/1664 */
+
+			/* temporary bugfix for FileSaver: added hack for mobile device support, see https://github.com/bpampuch/pdfmake/issues/1664 */
 			{test: /FileSaver.min.js$/, loader: StringReplacePlugin.replace({
 					replacements: [
 						{
