@@ -65,7 +65,7 @@ module.exports = {
 			},
 			{test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
 
- 			/* Can be removed after new pdfkit release */
+			/* Can be removed after new pdfkit release */
 			/* waiting to release included PR https://github.com/foliojs/pdfkit/pull/934 */
 			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
 					replacements: [
@@ -91,24 +91,24 @@ module.exports = {
 			/* temporary bugfix for pdfkit version 0.9.0 - issue https://github.com/foliojs/pdfkit/issues/923 */
 			/* waiting to release included PR https://github.com/foliojs/pdfkit/pull/925 */
 			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
-				replacements: [
-					{
-						pattern: "stringBuffer = swapBytes(new Buffer(",
-						replacement: function () {
-							return "stringBuffer = swapBytes(Buffer.from(";
+					replacements: [
+						{
+							pattern: "stringBuffer = swapBytes(new Buffer(",
+							replacement: function () {
+								return "stringBuffer = swapBytes(Buffer.from(";
+							}
 						}
-					}
-				]})
+					]})
 			},
 			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
-				replacements: [
-					{
-						pattern: "stringBuffer = new Buffer(string, 'ascii');",
-						replacement: function () {
-							return "stringBuffer = Buffer.from(string.valueOf(), 'ascii');";
+					replacements: [
+						{
+							pattern: "stringBuffer = new Buffer(string, 'ascii');",
+							replacement: function () {
+								return "stringBuffer = Buffer.from(string.valueOf(), 'ascii');";
+							}
 						}
-					}
-				]})
+					]})
 			},
 			/* *** */
 			
