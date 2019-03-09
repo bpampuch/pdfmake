@@ -98,6 +98,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		userPassword: docDefinition.userPassword,
 		ownerPassword: docDefinition.ownerPassword,
 		permissions: docDefinition.permissions,
+		layoutCache: isBoolean(options.layoutCache) ? options.layoutCache : true,
 		bufferPages: options.bufferPages || false,
 		autoFirstPage: false,
 		font: null
