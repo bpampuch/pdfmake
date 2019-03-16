@@ -26,8 +26,21 @@ module.exports = {
 	},
 	module: {
 		rules: [
+			// for fs don't use babel _interopDefault command
 			{
 				enforce: 'pre',
+				test: /pdfkit[/\\]js[/\\]/,
+				loader: StringReplacePlugin.replace({
+					replacements: [
+						{
+							pattern: "import fs from 'fs';",
+							replacement: function () {
+								return "var fs = require('fs');";
+							}
+						}
+					]})
+			},
+			{
 				test: /\.js$/,
 				include: /(pdfkit|saslprep)/,
 				use: {
@@ -45,23 +58,10 @@ module.exports = {
 									loose: true
 								}
 							]
-						]
+						],
+						plugins: ["@babel/plugin-transform-modules-commonjs"]
 					}
 				}
-			},
-			// Workaround for @babel/preset-env bug in useBuiltIns: 'usage' (always use import instead of require)
-			{
-				test: /\.js$/,
-				include: /saslprep/,
-				loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: /import "([\S]*)";/g,
-							replacement: function (match, p1) {
-								return 'require("' + p1 + '");';
-							}
-						}
-					]})
 			},
 			{test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
 
