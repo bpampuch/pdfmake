@@ -192,7 +192,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 				shouldDrawLine = topBorder || bottomBorder;
 			}
 
-			if(cellAbove && cellAbove._rowSpanCurrentOffset) {
+			if (cellAbove && cellAbove._rowSpanCurrentOffset) {
 				rowCellAbove = body[lineIndex - 1 - cellAbove._rowSpanCurrentOffset][i];
 				if (rowCellAbove.borderColor) {
 					borderColor = rowCellAbove.borderColor[3];
@@ -210,24 +210,21 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 			if (shouldDrawLine) {
 				var colSpanIndex = 0;
 				if (rowCellAbove && rowCellAbove.colSpan) {
-					while(rowCellAbove.colSpan > colSpanIndex) {
+					while (rowCellAbove.colSpan > colSpanIndex) {
 						currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
 					}
 					i += colSpanIndex - 1
-				}
-				else if (cellAbove && cellAbove.colSpan) {
-					while(cellAbove.colSpan > colSpanIndex) {
+				} else if (cellAbove && cellAbove.colSpan) {
+					while (cellAbove.colSpan > colSpanIndex) {
 						currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
 					}
 					i += colSpanIndex - 1
-				}
-				else if (currentCell && currentCell.colSpan) {
-					while(currentCell.colSpan > colSpanIndex) {
+				} else if (currentCell && currentCell.colSpan) {
+					while (currentCell.colSpan > colSpanIndex) {
 						currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
 					}
 					i += colSpanIndex - 1
-				}
-				else {
+				} else {
 					currentLine.width += (this.rowSpanData[i].width || 0);
 				}
 			}
@@ -292,7 +289,7 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 		}
 	}
 
-	if(borderColor == null && cellBefore && cellBefore._rowSpanCurrentOffset) {
+	if (borderColor == null && cellBefore && cellBefore._rowSpanCurrentOffset) {
 		var rowCellBeforeAbove = body[vLineRowIndex - cellBefore._rowSpanCurrentOffset][beforeVLineColIndex];
 		if (rowCellBeforeAbove.borderColor) {
 			borderColor = rowCellBeforeAbove.borderColor[2];
@@ -306,7 +303,7 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 		}
 	}
 
-	if(borderColor == null) {
+	if (borderColor == null) {
 		borderColor = isFunction(this.layout.vLineColor) ? this.layout.vLineColor(vLineColIndex, this.tableNode, vLineRowIndex) : this.layout.vLineColor;
 	}
 	writer.addVector({
@@ -408,7 +405,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			}
 
 			if (leftCellBorder) {
-				this.drawVerticalLine(xs[i].x, y1 - hzLineOffset, y2 + this.bottomLineWidth, xs[i].index, writer, rowIndex, xs[i-1] ? xs[i-1].index : null);
+				this.drawVerticalLine(xs[i].x, y1 - hzLineOffset, y2 + this.bottomLineWidth, xs[i].index, writer, rowIndex, xs[i - 1] ? xs[i - 1].index : null);
 			}
 
 			if (i < l - 1) {
@@ -487,14 +484,14 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 
 	if (this.dontBreakRows) {
 		writer.tracker.auto('pageChanged',
-			function () {
-				if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
-					self.drawHorizontalLine(rowIndex, writer);
-				}
-			},
-			function () {
-				writer.commitUnbreakableBlock();
-			}
+						function () {
+							if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
+								self.drawHorizontalLine(rowIndex, writer);
+							}
+						},
+						function () {
+							writer.commitUnbreakableBlock();
+						}
 		);
 	}
 
