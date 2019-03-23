@@ -210,17 +210,17 @@ class TableProcessor {
 						while (rowCellAbove.colSpan > colSpanIndex) {
 							currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
 						}
-						i += colSpanIndex - 1
+						i += colSpanIndex - 1;
 					} else if (cellAbove && cellAbove.colSpan) {
 						while (cellAbove.colSpan > colSpanIndex) {
 							currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
 						}
-						i += colSpanIndex - 1
+						i += colSpanIndex - 1;
 					} else if (currentCell && currentCell.colSpan) {
 						while (currentCell.colSpan > colSpanIndex) {
 							currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
 						}
-						i += colSpanIndex - 1
+						i += colSpanIndex - 1;
 					} else {
 						currentLine.width += (this.rowSpanData[i].width || 0);
 					}
@@ -483,7 +483,7 @@ class TableProcessor {
 				// fix rowSpans
 				if (row[i].rowSpan && row[i].rowSpan > 1) {
 					for (var j = 1; j < row[i].rowSpan; j++) {
-						this.tableNode.table.body[rowIndex + j][i]._rowSpanCurrentOffset = j
+						this.tableNode.table.body[rowIndex + j][i]._rowSpanCurrentOffset = j;
 					}
 				}
 			}
