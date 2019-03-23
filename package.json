@@ -3,6 +3,7 @@
   "version": "0.2.0-alpha.0",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/index.js",
+  "browser": "build/pdfmake.js",
   "directories": {
     "test": "tests"
   },
