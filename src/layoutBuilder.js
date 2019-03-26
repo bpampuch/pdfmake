@@ -376,6 +376,8 @@ LayoutBuilder.prototype.processNode = function (node) {
 			self.processToc(node);
 		} else if (node.image) {
 			self.processImage(node);
+		} else if (node.svg) {
+			self.processSVG(node);
 		} else if (node.canvas) {
 			self.processCanvas(node);
 		} else if (node.qr) {
@@ -711,6 +713,11 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 // images
 LayoutBuilder.prototype.processImage = function (node) {
 	var position = this.writer.addImage(node);
+	node.positions.push(position);
+};
+
+LayoutBuilder.prototype.processSVG = function (node) {
+	var position = this.writer.addSVG(node);
 	node.positions.push(position);
 };
 

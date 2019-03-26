@@ -362,6 +362,9 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 				case 'image':
 					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
 					break;
+				case 'svg':
+					renderSVG(item.item, item.item.x, item.item.y, pdfKitDoc);
+					break;
 				case 'beginClip':
 					beginClip(item.item, pdfKitDoc);
 					break;
@@ -560,6 +563,14 @@ function renderImage(image, x, y, pdfKitDoc) {
 	if (image.link) {
 		pdfKitDoc.link(image.x, image.y, image._width, image._height, image.link);
 	}
+}
+
+function renderSVG(svg, x, y, pdfKitDoc) {
+	var SVGtoPDF = require('svg-to-pdfkit');
+	if (!SVGtoPDF) {
+		throw new Error('Please run "npm install svg-to-pdfkit --save"');
+	}
+	SVGtoPDF(pdfKitDoc, svg.svg, svg.x, svg.y, Object.assign({width: svg._width, height: svg._height}, svg.options));
 }
 
 function beginClip(rect, pdfKitDoc) {

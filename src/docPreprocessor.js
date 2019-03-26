@@ -50,6 +50,8 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 		return this.preprocessToc(node);
 	} else if (node.image) {
 		return this.preprocessImage(node);
+	} else if (node.svg) {
+		return this.preprocessSVG(node);
 	} else if (node.canvas) {
 		return this.preprocessCanvas(node);
 	} else if (node.qr) {
@@ -221,6 +223,10 @@ DocPreprocessor.prototype.preprocessImage = function (node) {
 	if (!isUndefined(node.image.type) && !isUndefined(node.image.data) && (node.image.type === 'Buffer') && isArray(node.image.data)) {
 		node.image = Buffer.from(node.image.data);
 	}
+	return node;
+};
+
+DocPreprocessor.prototype.preprocessSVG = function (node) {
 	return node;
 };
 
