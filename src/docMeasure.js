@@ -16,10 +16,11 @@ var qrEncoder = require('./qrEnc.js');
 /**
  * @private
  */
-function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts, images) {
+function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, svgMeasure, tableLayouts, images) {
 	this.textTools = new TextTools(fontProvider);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 	this.imageMeasure = imageMeasure;
+	this.svgMeasure = svgMeasure;
 	this.tableLayouts = tableLayouts;
 	this.images = images;
 	this.autoImageIndex = 1;
@@ -204,14 +205,9 @@ DocMeasure.prototype.measureImage = function (node) {
 
 DocMeasure.prototype.measureSVG = function (node) {
 
-	if (!node.width || !node.height) {
-		throw new Error('SVG node must have height and width defined')
-	}
+	var dimensions = this.svgMeasure.measureSVG(node.svg);
 
-	this.measureImageWithDimensions(node, {
-		width: node.width,
-		height: node.height,
-	});
+	this.measureImageWithDimensions(node, dimensions);
 
 	return node;
 };

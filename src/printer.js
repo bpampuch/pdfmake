@@ -6,6 +6,7 @@ var FontProvider = require('./fontProvider');
 var LayoutBuilder = require('./layoutBuilder');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
+var SVGMeasure = require('./svgMeasure');
 var textDecorator = require('./textDecorator');
 var TextTools = require('./textTools');
 var isFunction = require('./helpers').isFunction;
@@ -14,6 +15,7 @@ var isNumber = require('./helpers').isNumber;
 var isBoolean = require('./helpers').isBoolean;
 var isArray = require('./helpers').isArray;
 var isUndefined = require('./helpers').isUndefined;
+var SVGtoPDF = require('svg-to-pdfkit');
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -109,7 +111,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
-	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
+	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images), new SVGMeasure());
 
 	registerDefaultTableLayouts(builder);
 	if (options.tableLayouts) {
@@ -566,10 +568,6 @@ function renderImage(image, x, y, pdfKitDoc) {
 }
 
 function renderSVG(svg, x, y, pdfKitDoc) {
-	var SVGtoPDF = require('svg-to-pdfkit');
-	if (!SVGtoPDF) {
-		throw new Error('Please run "npm install svg-to-pdfkit --save"');
-	}
 	SVGtoPDF(pdfKitDoc, svg.svg, svg.x, svg.y, Object.assign({width: svg._width, height: svg._height}, svg.options));
 }
 
