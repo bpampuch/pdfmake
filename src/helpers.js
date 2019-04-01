@@ -79,6 +79,30 @@ function fontStringify(key, val) {
 	return val;
 }
 
+function spreadify (fn, fnThis) {
+	return function (/* accepts unlimited arguments */) {
+			// Holds the processed arguments for use by `fn`
+			var spreadArgs = [ ];
+
+			// Caching length
+			var length = arguments.length;
+
+			var currentArg;
+
+			for (var i = 0; i < length; i++) {
+					currentArg = arguments[i];
+
+					if (Array.isArray(currentArg)) {
+							spreadArgs = spreadArgs.concat(currentArg);
+					} else {
+							spreadArgs.push(currentArg);
+					}
+			}
+
+			return fn.apply(fnThis, spreadArgs);
+	};
+}
+
 module.exports = {
 	isString: isString,
 	isNumber: isNumber,
@@ -90,5 +114,6 @@ module.exports = {
 	isUndefined: isUndefined,
 	pack: pack,
 	fontStringify: fontStringify,
-	offsetVector: offsetVector
+	offsetVector: offsetVector,
+	spreadify: spreadify
 };

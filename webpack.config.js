@@ -1,23 +1,32 @@
-var path = require('path');
+var path = require("path");
 var StringReplacePlugin = require("string-replace-webpack-plugin");
-var webpack = require('webpack');
-var pkg = require('./package.json');
+var webpack = require("webpack");
+var pkg = require("./package.json");
 
-var banner = '/*! ' + pkg.name + ' v' + pkg.version + ', @license ' + pkg.license + ', @link ' + pkg.homepage + ' */';
+var banner =
+	"/*! " +
+	pkg.name +
+	" v" +
+	pkg.version +
+	", @license " +
+	pkg.license +
+	", @link " +
+	pkg.homepage +
+	" */";
 
 module.exports = {
 	entry: {
-		'pdfmake': './src/browser-extensions/pdfMake.js',
-		'pdfmake.min': './src/browser-extensions/pdfMake.js'
+		pdfmake: "./src/browser-extensions/pdfMake.js",
+		"pdfmake.min": "./src/browser-extensions/pdfMake.js"
 	},
 	output: {
-		path: path.join(__dirname, './build'),
-		filename: '[name].js',
-		libraryTarget: 'umd'
+		path: path.join(__dirname, "./build"),
+		filename: "[name].js",
+		libraryTarget: "umd"
 	},
 	resolve: {
 		alias: {
-			fs: path.join(__dirname, './src/browser-extensions/virtual-fs.js')
+			fs: path.join(__dirname, "./src/browser-extensions/virtual-fs.js")
 		}
 	},
 	node: {
@@ -27,22 +36,23 @@ module.exports = {
 	module: {
 		rules: [
 			{
-				enforce: 'pre',
+				enforce: "pre",
 				test: /\.js$/,
 				include: /(pdfkit|saslprep)/,
 				use: {
-					loader: 'babel-loader',
+					loader: "babel-loader",
 					options: {
 						presets: [
 							[
 								"@babel/preset-env",
 								{
 									targets: {
-										"ie": "10"
+										ie: "10"
 									},
 									modules: false,
-									useBuiltIns: 'usage',
-									loose: true
+									useBuiltIns: "usage",
+									loose: true,
+									corejs: 3
 								}
 							]
 						]
@@ -57,61 +67,90 @@ module.exports = {
 					replacements: [
 						{
 							pattern: /import "([\S]*)";/g,
-							replacement: function (match, p1) {
+							replacement: function(match, p1) {
 								return 'require("' + p1 + '");';
 							}
 						}
-					]})
+					]
+				})
 			},
-			{test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
-			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
+			{
+				test: /pdfMake.js$/,
+				loader: "expose-loader?pdfMake",
+				include: [path.join(__dirname, "./src/browser-extensions")]
+			},
+			{
+				test: /pdfkit[/\\]js[/\\]/,
+				loader: StringReplacePlugin.replace({
 					replacements: [
 						{
-							pattern: 'return this.font(\'Helvetica\');',
-							replacement: function () {
-								return '';
+							pattern: "return this.font('Helvetica');",
+							replacement: function() {
+								return "";
 							}
 						}
-					]})
+					]
+				})
 			},
-			{test: /fontkit[/\\]index.js$/, loader: StringReplacePlugin.replace({
+			{
+				test: /fontkit[/\\]index.js$/,
+				loader: StringReplacePlugin.replace({
 					replacements: [
 						{
 							pattern: /fs\./g,
-							replacement: function () {
-								return 'require(\'fs\').';
+							replacement: function() {
+								return "require('fs').";
 							}
 						}
-					]})
+					]
+				})
 			},
 
 			/* temporary bugfix for pdfkit version 0.9.0 - issue https://github.com/foliojs/pdfkit/issues/923 */
 			/* waiting to release included PR https://github.com/foliojs/pdfkit/pull/925 */
-			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
-				replacements: [
-					{
-						pattern: "stringBuffer = swapBytes(new Buffer(",
-						replacement: function () {
-							return "stringBuffer = swapBytes(Buffer.from(";
+			{
+				test: /pdfkit[/\\]js[/\\]/,
+				loader: StringReplacePlugin.replace({
+					replacements: [
+						{
+							pattern: "stringBuffer = swapBytes(new Buffer(",
+							replacement: function() {
+								return "stringBuffer = swapBytes(Buffer.from(";
+							}
 						}
-					}
-				]})
+					]
+				})
 			},
-			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
-				replacements: [
-					{
-						pattern: "stringBuffer = new Buffer(string, 'ascii');",
-						replacement: function () {
-							return "stringBuffer = Buffer.from(string.valueOf(), 'ascii');";
+			{
+				test: /pdfkit[/\\]js[/\\]/,
+				loader: StringReplacePlugin.replace({
+					replacements: [
+						{
+							pattern: "stringBuffer = new Buffer(string, 'ascii');",
+							replacement: function() {
+								return "stringBuffer = Buffer.from(string.valueOf(), 'ascii');";
+							}
 						}
-					}
-				]})
+					]
+				})
 			},
 			/* *** */
 
-			{enforce: 'post', test: /fontkit[/\\]index.js$/, loader: "transform-loader?brfs"},
-			{enforce: 'post', test: /unicode-properties[/\\]index.js$/, loader: "transform-loader?brfs"},
-			{enforce: 'post', test: /linebreak[/\\]src[/\\]linebreaker.js/, loader: "transform-loader?brfs"}
+			{
+				enforce: "post",
+				test: /fontkit[/\\]index.js$/,
+				loader: "transform-loader?brfs"
+			},
+			{
+				enforce: "post",
+				test: /unicode-properties[/\\]index.js$/,
+				loader: "transform-loader?brfs"
+			},
+			{
+				enforce: "post",
+				test: /linebreak[/\\]src[/\\]linebreaker.js/,
+				loader: "transform-loader?brfs"
+			}
 		]
 	},
 	plugins: [
@@ -125,7 +164,18 @@ module.exports = {
 					drop_console: true
 				},
 				mangle: {
-					reserved: ['HeadTable', 'NameTable', 'CmapTable', 'HheaTable', 'MaxpTable', 'HmtxTable', 'PostTable', 'OS2Table', 'LocaTable', 'GlyfTable']
+					reserved: [
+						"HeadTable",
+						"NameTable",
+						"CmapTable",
+						"HheaTable",
+						"MaxpTable",
+						"HmtxTable",
+						"PostTable",
+						"OS2Table",
+						"LocaTable",
+						"GlyfTable"
+					]
 				}
 			}
 		}),
@@ -135,5 +185,5 @@ module.exports = {
 			raw: true
 		})
 	],
-	devtool: 'source-map'
+	devtool: "source-map"
 };

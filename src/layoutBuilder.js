@@ -14,8 +14,10 @@ var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 var fontStringify = require('./helpers').fontStringify;
 var isFunction = require('./helpers').isFunction;
+var spreadify = require('./helpers').spreadify;
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
+var bidi = require("./twitter-cldr/bidi");
 
 function addAll(target, otherArray) {
 	otherArray.forEach(function (item) {
@@ -30,12 +32,13 @@ function addAll(target, otherArray) {
  * @param {Object} pageSize - an object defining page width and height
  * @param {Object} pageMargins - an object defining top, left, right and bottom margins
  */
-function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
+function LayoutBuilder(pageSize, pageMargins, imageMeasure, fontProvider) {
 	this.pageSize = pageSize;
 	this.pageMargins = pageMargins;
 	this.tracker = new TraversalTracker();
 	this.imageMeasure = imageMeasure;
 	this.tableLayouts = {};
+	this.fontProvider = fontProvider;
 }
 
 LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
@@ -145,6 +148,8 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
 
 	this.linearNodeList = [];
+	this.styleDictionary = styleDictionary;
+	this.defaultStyle = defaultStyle;
 	docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 	docStructure = this.docMeasure.measureDocument(docStructure);
 
@@ -334,6 +339,122 @@ function decorateNode(node) {
 			});
 		}
 	};
+}
+
+/**
+ * Takes an array of codepoints and returns that array grouped by words.
+ * @param {string} lineAsArrayOfCodepoints a line to be rendered to the PDF as an array of codepoints
+ */
+function convertWordsToCodepoints(lineAsArrayOfCodepoints) {
+		// Contains the codepoints for each word in the line.
+		var arrayOfCodePoints = [];
+
+		// The word being extracted in the form of codepoints from the 
+		// transformed line.
+		var currentWord = [];
+
+		// Loop over each codepoint in the transformed line and extract the words
+		// as codepoints.
+		for (var index = 0; index < lineAsArrayOfCodepoints.length; index++) {
+			// if we encounter a space and this is not the first codepoint
+			if (lineAsArrayOfCodepoints[index] === 32 && currentWord.length) {
+				arrayOfCodePoints.push(currentWord);
+				currentWord = [];
+				// Spaces are leading in RTL so prepending them to the "next" word
+				// preserves the integrity of the RTL string.
+				currentWord.push(lineAsArrayOfCodepoints[index]);
+			// if this is the last character
+			} else if (index + 1 === lineAsArrayOfCodepoints.length) {
+				currentWord.push(lineAsArrayOfCodepoints[index]);
+				arrayOfCodePoints.push(currentWord);
+				currentWord = [];
+			} else {
+				currentWord.push(lineAsArrayOfCodepoints[index]);
+			}
+		}
+
+		return arrayOfCodePoints;
+}
+
+/**
+ * Takes a line of input containing RTL text, runs it through a BIDI algorithm
+ * to correctly the order the line and then re-runs each word through the BIDI
+ * algorithm to ensure characters appear in the correct direction.
+ * @param {object} line the line to be rendered in the PDF that requires transforming
+ * @param {object} styleStack the styles to be applied to the text in the line
+ * @param {object} textTools contains various utilities for building parts of the PDF
+ * @param {object} textNode original node object representing the current paragraph
+ */
+function transformLineForRtl(line, styleStack, textTools, textNode) {
+	var inlinesBeforeTransformation = line.inlines;
+
+		// Extract each word (aka inline) from the line and string it together
+		// to form the line as a string
+		var lineElementsAsString = inlinesBeforeTransformation.map(function(element) {
+			return element.text;
+		}).join("");
+		
+		// Run the line as a string through the BIDI algorithm
+		// This will resolve the ordering of the words in the sentence
+		// but will flip the characters in each RTL word.
+		var bidiString = bidi.from_string(lineElementsAsString, { "direction": "RTL" });
+		bidiString.reorder_visually();
+
+		// With the line in the correct order, we need to resolve the
+		// individual RTL words as they will be reversed at the character
+		// level.
+
+		// Contains the codepoints for each word in the line.
+		var arrayOfCodePoints = convertWordsToCodepoints(bidiString.string_arr);
+
+		// Contains the strings for each word in the line.
+		var arrayOfTransformedWords = [];
+
+		// With the line converted to an array of words, with the words represented as
+		// codepoints, the words must be individually re-run through the BIDI algorithm
+		// to reverse the characters in each RTL (as the initial BIDI process reverses each
+		// character in the RTL words).
+
+		// Pass the codepoints for each word through String.fromCharCode 
+		for (var groupIndex =  0; groupIndex < arrayOfCodePoints.length; groupIndex++) {
+			// Get current word as a string
+			var groupString = spreadify(String.fromCharCode, String)(arrayOfCodePoints[groupIndex]);
+			// Run the word through BIDI to reorder the characters
+			var bidiWord = bidi.from_string(groupString, { "direction": "RTL" });
+			bidiWord.reorder_visually();
+
+			// Push the word to what will be the final line array
+			arrayOfTransformedWords.push(bidiWord.toString());
+		}
+
+		// Pass the transformed words, as a single string, through the buildInlines utility.
+		// Include original styling of the node as a whole e.g. if the whole body of text is bold
+		// then make sure this gets passed through.
+		var updatedInlines = textTools.buildInlines([{ text: arrayOfTransformedWords.join(""), style: textNode.style}], styleStack);
+
+		// Wipe the existing words (inlines) from this line ...
+		line.inlines = [];
+
+		// ... and replace them with our new BIDI-ified, reversed inlines
+		updatedInlines.items.forEach(function(inline, index) {
+			// Where the BIDI algorithm has appropriately transformed the content
+			// we can be confident that the postions of the words have been reversed.
+			// For example, a word that was at position 0 prior to the transformation will
+			// now likely be at the end of the array. This gives us a way of extracting the
+			// styling for each word before it was transformed and apply it to the
+			// transformed word.
+
+			// TODO I don't know how this will stack up again LTR words. Will need
+			// to evaluate once we have mixed fonts support.
+			var oldInline = inlinesBeforeTransformation[inlinesBeforeTransformation.length - 1 - index];
+			var newInline = inline;
+			newInline.style = oldInline.style;
+			newInline.background = oldInline.background;
+			newInline.font = oldInline.font;
+			newInline.decoration = oldInline.decoration;
+			newInline.decorationColor = oldInline.decorationColor;
+			return line.addInline(newInline);
+		});
 }
 
 LayoutBuilder.prototype.processNode = function (node) {
@@ -666,7 +787,7 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 	}
 
 	var line = new Line(this.writer.context().availableWidth);
-	var textTools = new TextTools(null);
+	var textTools = new TextTools(this.fontProvider);
 
 	var isForceContinue = false;
 	while (textNode._inlines && textNode._inlines.length > 0 &&
@@ -698,6 +819,18 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 		line.addInline(inline);
 
 		isForceContinue = inline.noNewLine && !isHardWrap;
+	}
+
+	// RTL text has to be transformed before being rendered to the PDF
+	// to ensure the validity of the output.
+	if (textNode.rtl) {
+		// The styleStack tells the buildInlines utility how to style
+		// each inline.
+		var styleStack = new StyleContextStack(this.styleDictionary, this.defaultStyle);
+		styleStack.push(textNode);
+		styleStack.push({ font: "NotoSansArabic", alignment: "right" });
+
+		transformLineForRtl(line, styleStack, textTools, textNode);
 	}
 
 	line.lastLineInParagraph = textNode._inlines.length === 0;

@@ -1,19 +1,19 @@
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
-'use strict';
+"use strict";
 
-var PdfKitEngine = require('./pdfKitEngine');
-var FontProvider = require('./fontProvider');
-var LayoutBuilder = require('./layoutBuilder');
-var sizes = require('./standardPageSizes');
-var ImageMeasure = require('./imageMeasure');
-var textDecorator = require('./textDecorator');
-var TextTools = require('./textTools');
-var isFunction = require('./helpers').isFunction;
-var isString = require('./helpers').isString;
-var isNumber = require('./helpers').isNumber;
-var isBoolean = require('./helpers').isBoolean;
-var isArray = require('./helpers').isArray;
-var isUndefined = require('./helpers').isUndefined;
+var PdfKitEngine = require("./pdfKitEngine");
+var FontProvider = require("./fontProvider");
+var LayoutBuilder = require("./layoutBuilder");
+var sizes = require("./standardPageSizes");
+var ImageMeasure = require("./imageMeasure");
+var textDecorator = require("./textDecorator");
+var TextTools = require("./textTools");
+var isFunction = require("./helpers").isFunction;
+var isString = require("./helpers").isString;
+var isNumber = require("./helpers").isNumber;
+var isBoolean = require("./helpers").isBoolean;
+var isArray = require("./helpers").isArray;
+var isUndefined = require("./helpers").isUndefined;
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -82,14 +82,19 @@ function PdfPrinter(fontDescriptors) {
  *
  * @return {Object} a pdfKit document object which can be saved or encode to data-url
  */
-PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
+PdfPrinter.prototype.createPdfKitDocument = function(docDefinition, options) {
 	options = options || {};
 
-	docDefinition.version = docDefinition.version || '1.3';
-	docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
+	docDefinition.version = docDefinition.version || "1.3";
+	docDefinition.compress = isBoolean(docDefinition.compress)
+		? docDefinition.compress
+		: true;
 	docDefinition.images = docDefinition.images || {};
 
-	var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
+	var pageSize = fixPageSize(
+		docDefinition.pageSize,
+		docDefinition.pageOrientation
+	);
 
 	var pdfOptions = {
 		size: [pageSize.width, pageSize.height],
@@ -107,14 +112,25 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
-	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
+	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images), this.fontProvider);
 
 	registerDefaultTableLayouts(builder);
 	if (options.tableLayouts) {
 		builder.registerTableLayouts(options.tableLayouts);
 	}
 
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
+	var pages = builder.layoutDocument(
+		docDefinition.content,
+		this.fontProvider,
+		docDefinition.styles || {},
+		docDefinition.defaultStyle || { fontSize: 12, font: "Roboto" },
+		docDefinition.background,
+		docDefinition.header,
+		docDefinition.footer,
+		docDefinition.images,
+		docDefinition.watermark,
+		docDefinition.pageBreakBefore
+	);
 	var maxNumberPages = docDefinition.maxPagesNumber || -1;
 	if (isNumber(maxNumberPages) && maxNumberPages > -1) {
 		pages = pages.slice(0, maxNumberPages);
@@ -127,13 +143,18 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
 	}
 
-	renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
+	renderPages(
+		pages,
+		this.fontProvider,
+		this.pdfKitDoc,
+		options.progressCallback
+	);
 
 	if (options.autoPrint) {
 		var printActionRef = this.pdfKitDoc.ref({
-			Type: 'Action',
-			S: 'Named',
-			N: 'Print'
+			Type: "Action",
+			S: "Named",
+			N: "Print"
 		});
 		this.pdfKitDoc._root.data.OpenAction = printActionRef;
 		printActionRef.end();
@@ -147,18 +168,27 @@ function setMetadata(docDefinition, pdfKitDoc) {
 	// To keep the pdfmake api consistent, the info field are defined lowercase.
 	// Custom properties don't contain a space.
 	function standardizePropertyKey(key) {
-		var standardProperties = ['Title', 'Author', 'Subject', 'Keywords',
-			'Creator', 'Producer', 'CreationDate', 'ModDate', 'Trapped'];
+		var standardProperties = [
+			"Title",
+			"Author",
+			"Subject",
+			"Keywords",
+			"Creator",
+			"Producer",
+			"CreationDate",
+			"ModDate",
+			"Trapped"
+		];
 		var standardizedKey = key.charAt(0).toUpperCase() + key.slice(1);
 		if (standardProperties.indexOf(standardizedKey) !== -1) {
 			return standardizedKey;
 		}
 
-		return key.replace(/\s+/g, '');
+		return key.replace(/\s+/g, "");
 	}
 
-	pdfKitDoc.info.Producer = 'pdfmake';
-	pdfKitDoc.info.Creator = 'pdfmake';
+	pdfKitDoc.info.Producer = "pdfmake";
+	pdfKitDoc.info.Creator = "pdfmake";
 
 	if (docDefinition.info) {
 		for (var key in docDefinition.info) {
@@ -192,8 +222,8 @@ function calculatePageHeight(pages, margins) {
 	var fixedMargins = fixPageMargins(margins || 40);
 	var height = fixedMargins.top;
 
-	pages.forEach(function (page) {
-		page.items.forEach(function (item) {
+	pages.forEach(function(page) {
+		page.items.forEach(function(item) {
 			var bottomPosition = getBottomPosition(item);
 			if (bottomPosition > height) {
 				height = bottomPosition;
@@ -210,22 +240,25 @@ function fixPageSize(pageSize, pageOrientation) {
 	function isNeedSwapPageSizes(pageOrientation) {
 		if (isString(pageOrientation)) {
 			pageOrientation = pageOrientation.toLowerCase();
-			return ((pageOrientation === 'portrait') && (size.width > size.height)) ||
-							((pageOrientation === 'landscape') && (size.width < size.height));
+			return (
+				(pageOrientation === "portrait" && size.width > size.height) ||
+				(pageOrientation === "landscape" && size.width < size.height)
+			);
 		}
 		return false;
 	}
 
 	// if pageSize.height is set to auto, set the height to infinity so there are no page breaks.
-	if (pageSize && pageSize.height === 'auto') {
+	if (pageSize && pageSize.height === "auto") {
 		pageSize.height = Infinity;
 	}
 
-	var size = pageSize2widthAndHeight(pageSize || 'A4');
-	if (isNeedSwapPageSizes(pageOrientation)) { // swap page sizes
-		size = {width: size.height, height: size.width};
+	var size = pageSize2widthAndHeight(pageSize || "A4");
+	if (isNeedSwapPageSizes(pageOrientation)) {
+		// swap page sizes
+		size = { width: size.height, height: size.width };
 	}
-	size.orientation = size.width > size.height ? 'landscape' : 'portrait';
+	size.orientation = size.width > size.height ? "landscape" : "portrait";
 	return size;
 }
 
@@ -235,14 +268,24 @@ function fixPageMargins(margin) {
 	}
 
 	if (isNumber(margin)) {
-		margin = {left: margin, right: margin, top: margin, bottom: margin};
+		margin = { left: margin, right: margin, top: margin, bottom: margin };
 	} else if (isArray(margin)) {
 		if (margin.length === 2) {
-			margin = {left: margin[0], top: margin[1], right: margin[0], bottom: margin[1]};
+			margin = {
+				left: margin[0],
+				top: margin[1],
+				right: margin[0],
+				bottom: margin[1]
+			};
 		} else if (margin.length === 4) {
-			margin = {left: margin[0], top: margin[1], right: margin[2], bottom: margin[3]};
+			margin = {
+				left: margin[0],
+				top: margin[1],
+				right: margin[2],
+				bottom: margin[3]
+			};
 		} else {
-			throw 'Invalid pageMargins definition';
+			throw "Invalid pageMargins definition";
 		}
 	}
 
@@ -252,54 +295,54 @@ function fixPageMargins(margin) {
 function registerDefaultTableLayouts(layoutBuilder) {
 	layoutBuilder.registerTableLayouts({
 		noBorders: {
-			hLineWidth: function (i) {
+			hLineWidth: function(i) {
 				return 0;
 			},
-			vLineWidth: function (i) {
+			vLineWidth: function(i) {
 				return 0;
 			},
-			paddingLeft: function (i) {
-				return i && 4 || 0;
+			paddingLeft: function(i) {
+				return (i && 4) || 0;
 			},
-			paddingRight: function (i, node) {
-				return (i < node.table.widths.length - 1) ? 4 : 0;
+			paddingRight: function(i, node) {
+				return i < node.table.widths.length - 1 ? 4 : 0;
 			}
 		},
 		headerLineOnly: {
-			hLineWidth: function (i, node) {
+			hLineWidth: function(i, node) {
 				if (i === 0 || i === node.table.body.length) {
 					return 0;
 				}
-				return (i === node.table.headerRows) ? 2 : 0;
+				return i === node.table.headerRows ? 2 : 0;
 			},
-			vLineWidth: function (i) {
+			vLineWidth: function(i) {
 				return 0;
 			},
-			paddingLeft: function (i) {
+			paddingLeft: function(i) {
 				return i === 0 ? 0 : 8;
 			},
-			paddingRight: function (i, node) {
-				return (i === node.table.widths.length - 1) ? 0 : 8;
+			paddingRight: function(i, node) {
+				return i === node.table.widths.length - 1 ? 0 : 8;
 			}
 		},
 		lightHorizontalLines: {
-			hLineWidth: function (i, node) {
+			hLineWidth: function(i, node) {
 				if (i === 0 || i === node.table.body.length) {
 					return 0;
 				}
-				return (i === node.table.headerRows) ? 2 : 1;
+				return i === node.table.headerRows ? 2 : 1;
 			},
-			vLineWidth: function (i) {
+			vLineWidth: function(i) {
 				return 0;
 			},
-			hLineColor: function (i) {
-				return i === 1 ? 'black' : '#aaa';
+			hLineColor: function(i) {
+				return i === 1 ? "black" : "#aaa";
 			},
-			paddingLeft: function (i) {
+			paddingLeft: function(i) {
 				return i === 0 ? 0 : 8;
 			},
-			paddingRight: function (i, node) {
-				return (i === node.table.widths.length - 1) ? 0 : 8;
+			paddingRight: function(i, node) {
+				return i === node.table.widths.length - 1 ? 0 : 8;
 			}
 		}
 	});
@@ -309,16 +352,19 @@ function pageSize2widthAndHeight(pageSize) {
 	if (isString(pageSize)) {
 		var size = sizes[pageSize.toUpperCase()];
 		if (!size) {
-			throw 'Page size ' + pageSize + ' not recognized';
+			throw "Page size " + pageSize + " not recognized";
 		}
-		return {width: size[0], height: size[1]};
+		return { width: size[0], height: size[1] };
 	}
 
 	return pageSize;
 }
 
 function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
-	var previousPageOrientation = pdfKitDoc.options.size[0] > pdfKitDoc.options.size[1] ? 'landscape' : 'portrait';
+	var previousPageOrientation =
+		pdfKitDoc.options.size[0] > pdfKitDoc.options.size[1]
+			? "landscape"
+			: "portrait";
 
 	if (currentPage.pageSize.orientation !== previousPageOrientation) {
 		var width = pdfKitDoc.options.size[0];
@@ -333,13 +379,13 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 
 	var totalItems = 0;
 	if (progressCallback) {
-		pages.forEach(function (page) {
+		pages.forEach(function(page) {
 			totalItems += page.items.length;
 		});
 	}
 
 	var renderedItems = 0;
-	progressCallback = progressCallback || function () {};
+	progressCallback = progressCallback || function() {};
 
 	for (var i = 0; i < pages.length; i++) {
 		if (i > 0) {
@@ -351,19 +397,19 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 		for (var ii = 0, il = page.items.length; ii < il; ii++) {
 			var item = page.items[ii];
 			switch (item.type) {
-				case 'vector':
+				case "vector":
 					renderVector(item.item, pdfKitDoc);
 					break;
-				case 'line':
+				case "line":
 					renderLine(item.item, item.item.x, item.item.y, pdfKitDoc);
 					break;
-				case 'image':
+				case "image":
 					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
 					break;
-				case 'beginClip':
+				case "beginClip":
 					beginClip(item.item, pdfKitDoc);
 					break;
-				case 'endClip':
+				case "endClip":
 					endClip(pdfKitDoc);
 					break;
 			}
@@ -383,22 +429,28 @@ function renderLine(line, x, y, pdfKitDoc) {
 		var textTools = new TextTools(null);
 
 		if (isUndefined(_pageNodeRef.positions)) {
-			throw 'Page reference id not found';
+			throw "Page reference id not found";
 		}
 
 		var pageNumber = _pageNodeRef.positions[0].pageNumber.toString();
 
 		inline.text = pageNumber;
 		inline.linkToPage = pageNumber;
-		newWidth = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
+		newWidth = textTools.widthOfString(
+			inline.text,
+			inline.font,
+			inline.fontSize,
+			inline.characterSpacing,
+			inline.fontFeatures
+		);
 		diffWidth = inline.width - newWidth;
 		inline.width = newWidth;
 
 		switch (inline.alignment) {
-			case 'right':
+			case "right":
 				inline.x += diffWidth;
 				break;
-			case 'center':
+			case "center":
 				inline.x += diffWidth / 2;
 				break;
 		}
@@ -417,10 +469,11 @@ function renderLine(line, x, y, pdfKitDoc) {
 
 	textDecorator.drawBackground(line, x, y, pdfKitDoc);
 
-	//TODO: line.optimizeInlines();
+	// TODO: line.optimizeInlines();
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
-		var shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
+		var shiftToBaseline =
+			lineHeight - (inline.font.ascender / 1000) * inline.fontSize - descent;
 
 		if (inline._pageNodeRef) {
 			preparePageNodeRefLine(inline._pageNodeRef, inline);
@@ -439,17 +492,28 @@ function renderLine(line, x, y, pdfKitDoc) {
 		}
 
 		pdfKitDoc.opacity(inline.opacity || 1);
-		pdfKitDoc.fill(inline.color || 'black');
+		pdfKitDoc.fill(inline.color || "black");
 
 		pdfKitDoc._font = inline.font;
 		pdfKitDoc.fontSize(inline.fontSize);
+		// If we ran `inline.text` through the BIDI algo here, would that work?
 		pdfKitDoc.text(inline.text, x + inline.x, y + shiftToBaseline, options);
 
 		if (inline.linkToPage) {
-			var _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0]}).end();
-			pdfKitDoc.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, {Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null]});
+			var _ref = pdfKitDoc
+				.ref({ Type: "Action", S: "GoTo", D: [inline.linkToPage, 0, 0] })
+				.end();
+			pdfKitDoc.annotate(
+				x + inline.x,
+				y + shiftToBaseline,
+				inline.width,
+				inline.height,
+				{
+					Subtype: "Link",
+					Dest: [inline.linkToPage - 1, "XYZ", null, null, null]
+				}
+			);
 		}
-
 	}
 
 	textDecorator.drawDecorations(line, x, y, pdfKitDoc);
@@ -463,15 +527,18 @@ function renderWatermark(page, pdfKitDoc) {
 
 	pdfKitDoc.save();
 
-	var angle = Math.atan2(pdfKitDoc.page.height, pdfKitDoc.page.width) * -180 / Math.PI;
-	pdfKitDoc.rotate(angle, {origin: [pdfKitDoc.page.width / 2, pdfKitDoc.page.height / 2]});
+	var angle =
+		(Math.atan2(pdfKitDoc.page.height, pdfKitDoc.page.width) * -180) / Math.PI;
+	pdfKitDoc.rotate(angle, {
+		origin: [pdfKitDoc.page.width / 2, pdfKitDoc.page.height / 2]
+	});
 
 	var x = pdfKitDoc.page.width / 2 - watermark.size.size.width / 2;
 	var y = pdfKitDoc.page.height / 2 - watermark.size.size.height / 4;
 
 	pdfKitDoc._font = watermark.font;
 	pdfKitDoc.fontSize(watermark.size.fontSize);
-	pdfKitDoc.text(watermark.text, x, y, {lineBreak: false});
+	pdfKitDoc.text(watermark.text, x, y, { lineBreak: false });
 
 	pdfKitDoc.restore();
 }
@@ -480,20 +547,23 @@ function renderVector(vector, pdfKitDoc) {
 	//TODO: pdf optimization (there's no need to write all properties everytime)
 	pdfKitDoc.lineWidth(vector.lineWidth || 1);
 	if (vector.dash) {
-		pdfKitDoc.dash(vector.dash.length, {space: vector.dash.space || vector.dash.length, phase: vector.dash.phase || 0});
+		pdfKitDoc.dash(vector.dash.length, {
+			space: vector.dash.space || vector.dash.length,
+			phase: vector.dash.phase || 0
+		});
 	} else {
 		pdfKitDoc.undash();
 	}
-	pdfKitDoc.lineJoin(vector.lineJoin || 'miter');
-	pdfKitDoc.lineCap(vector.lineCap || 'butt');
+	pdfKitDoc.lineJoin(vector.lineJoin || "miter");
+	pdfKitDoc.lineCap(vector.lineCap || "butt");
 
 	//TODO: clipping
 
 	switch (vector.type) {
-		case 'ellipse':
+		case "ellipse":
 			pdfKitDoc.ellipse(vector.x, vector.y, vector.r1, vector.r2);
 			break;
-		case 'rect':
+		case "rect":
 			if (vector.r) {
 				pdfKitDoc.roundedRect(vector.x, vector.y, vector.w, vector.h, vector.r);
 			} else {
@@ -501,7 +571,12 @@ function renderVector(vector, pdfKitDoc) {
 			}
 
 			if (vector.linearGradient) {
-				var gradient = pdfKitDoc.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
+				var gradient = pdfKitDoc.linearGradient(
+					vector.x,
+					vector.y,
+					vector.x + vector.w,
+					vector.y
+				);
 				var step = 1 / (vector.linearGradient.length - 1);
 
 				for (var i = 0; i < vector.linearGradient.length; i++) {
@@ -511,11 +586,11 @@ function renderVector(vector, pdfKitDoc) {
 				vector.color = gradient;
 			}
 			break;
-		case 'line':
+		case "line":
 			pdfKitDoc.moveTo(vector.x1, vector.y1);
 			pdfKitDoc.lineTo(vector.x2, vector.y2);
 			break;
-		case 'polyline':
+		case "polyline":
 			if (vector.points.length === 0) {
 				break;
 			}
@@ -529,12 +604,12 @@ function renderVector(vector, pdfKitDoc) {
 				var p1 = vector.points[0];
 				var pn = vector.points[vector.points.length - 1];
 
-				if (vector.closePath || p1.x === pn.x && p1.y === pn.y) {
+				if (vector.closePath || (p1.x === pn.x && p1.y === pn.y)) {
 					pdfKitDoc.closePath();
 				}
 			}
 			break;
-		case 'path':
+		case "path":
 			pdfKitDoc.path(vector.d);
 			break;
 	}
@@ -547,14 +622,20 @@ function renderVector(vector, pdfKitDoc) {
 		pdfKitDoc.fillColor(vector.color, vector.fillOpacity || 1);
 		pdfKitDoc.fill();
 	} else {
-		pdfKitDoc.strokeColor(vector.lineColor || 'black', vector.strokeOpacity || 1);
+		pdfKitDoc.strokeColor(
+			vector.lineColor || "black",
+			vector.strokeOpacity || 1
+		);
 		pdfKitDoc.stroke();
 	}
 }
 
 function renderImage(image, x, y, pdfKitDoc) {
 	pdfKitDoc.opacity(image.opacity || 1);
-	pdfKitDoc.image(image.image, image.x, image.y, {width: image._width, height: image._height});
+	pdfKitDoc.image(image.image, image.x, image.y, {
+		width: image._width,
+		height: image._height
+	});
 	if (image.link) {
 		pdfKitDoc.link(image.x, image.y, image._width, image._height, image.link);
 	}
@@ -562,7 +643,9 @@ function renderImage(image, x, y, pdfKitDoc) {
 
 function beginClip(rect, pdfKitDoc) {
 	pdfKitDoc.save();
-	pdfKitDoc.addContent('' + rect.x + ' ' + rect.y + ' ' + rect.width + ' ' + rect.height + ' re');
+	pdfKitDoc.addContent(
+		"" + rect.x + " " + rect.y + " " + rect.width + " " + rect.height + " re"
+	);
 	pdfKitDoc.clip();
 }
 

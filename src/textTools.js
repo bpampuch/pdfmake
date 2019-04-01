@@ -116,7 +116,6 @@ function splitWords(text, noWrap) {
 
 	while (bk = breaker.nextBreak()) {
 		var word = text.slice(last, bk.position);
-
 		if (bk.required || word.match(/\r?\n$|\r$/)) { // new line
 			word = word.replace(/\r?\n$|\r$/, '');
 			results.push({text: word, lineEnd: true});
