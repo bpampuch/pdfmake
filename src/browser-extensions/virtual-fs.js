@@ -4,10 +4,14 @@ class VirtualFileSystem {
 		this.dataSystem = {};
 	}
 
-	readFileSync(filename) {
+	readFileSync(filename, options = null) {
 		filename = fixFilename(filename);
 
 		let dataContent = this.dataSystem[filename];
+		if (typeof dataContent === 'string' && options === 'utf8') {
+			return dataContent;
+		}
+
 		if (dataContent) {
 			return new Buffer(dataContent, typeof dataContent === 'string' ? 'base64' : undefined);
 		}
