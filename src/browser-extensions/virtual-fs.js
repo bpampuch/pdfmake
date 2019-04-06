@@ -5,11 +5,11 @@ function VirtualFileSystem() {
 	this.dataSystem = {};
 }
 
-VirtualFileSystem.prototype.readFileSync = function (filename, option) {
+VirtualFileSystem.prototype.readFileSync = function (filename, options) {
 	filename = fixFilename(filename);
 
 	var dataContent = this.dataSystem[filename];
-	if (typeof dataContent === 'string' && option === 'utf8') {
+	if (typeof dataContent === 'string' && options === 'utf8') {
 		return dataContent;
 	}
 
