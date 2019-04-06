@@ -8,11 +8,11 @@ function VirtualFileSystem() {
 VirtualFileSystem.prototype.readFileSync = function (filename, option) {
 	filename = fixFilename(filename);
 
-  var dataContent = this.dataSystem[filename];
-  if (typeof dataContent === 'string' && option === 'utf8') {
-    return dataContent;
+	var dataContent = this.dataSystem[filename];
+	if (typeof dataContent === 'string' && option === 'utf8') {
+		return dataContent;
 	}
-	
+
 	if (dataContent) {
 		return new Buffer(dataContent, typeof dataContent === 'string' ? 'base64' : undefined);
 	}
