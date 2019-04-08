@@ -209,6 +209,12 @@ DocMeasure.prototype.measureSVG = function (node) {
 
 	this.measureImageWithDimensions(node, dimensions);
 
+	// scale SVG based on final dimension
+	node.svg = this.svgMeasure.writeDimensions(node.svg, {
+		width: node._width,
+		height: node._height
+	});
+
 	return node;
 };
 

@@ -61966,6 +61966,12 @@ DocMeasure.prototype.measureSVG = function (node) {
 
 	this.measureImageWithDimensions(node, dimensions);
 
+	// scale SVG based on final dimension
+	node.svg = this.svgMeasure.writeDimensions(node.svg, {
+		width: node._width,
+		height: node._height
+	});
+
 	return node;
 };
 
@@ -64509,36 +64515,70 @@ var xml2js = __webpack_require__(459);
 
 function SVGMeasure() {}
 
-SVGMeasure.prototype.measureSVG = function (src) {
+var xmlToJson = function (xml) {
+	var svg = {};
 
-	var result = {};
-
-	xml2js.parseString(src, {mergeAttrs: true, explicitArray: false}, function (err, svgJson) {
-		if (err || !svgJson.svg) {
+	xml2js.parseString(xml, {mergeAttrs: true, explicitArray: false}, function (err, json) {
+		if (err || !json.svg) {
 			throw new Error('Unable to parse SVG')
 		}
 
-		// <svg width="w" height="h">...</svg>
-		var svgWidth = svgJson.svg.width;
-		var svgHeight = svgJson.svg.height;
-		if (svgWidth && svgHeight) {
-			result = {width: svgWidth, height: svgHeight};
-		}
-
-		// <svg viewBox="x y w h">...</svg>
-		if (svgJson.svg.viewBox) {
-			var viewBoxEntries = svgJson.svg.viewBox.split(' ');
-
-			var viewBoxWidth = viewBoxEntries[2];
-			var viewBoxHeight = viewBoxEntries[3];
-
-			result = {width: viewBoxWidth, height: viewBoxHeight}
-		}
-
+		svg = json.svg;
 	});
 
+	return svg;
+};
 
-	return result;
+SVGMeasure.prototype.measureSVG = function (svgString) {
+
+	var svg = xmlToJson(svgString);
+
+	// <svg width="w" height="h">...</svg>
+	var svgWidth = svg.width;
+	var svgHeight = svg.height;
+	if (svgWidth && svgHeight) {
+		return {width: svgWidth, height: svgHeight};
+	}
+
+	// <svg viewBox="x y w h">...</svg>
+	if (svg.viewBox) {
+		var viewBoxEntries = svg.viewBox.split(' ');
+
+		var viewBoxWidth = viewBoxEntries[2];
+		var viewBoxHeight = viewBoxEntries[3];
+
+		return {width: viewBoxWidth, height: viewBoxHeight}
+	}
+
+	return {};
+};
+
+SVGMeasure.prototype.writeDimensions = function (svgString, dimensions) {
+
+	// remove newlines
+	svgString = svgString.replace(/\r?\n|\r/g, "");
+
+	var svgNodeMatches = svgString.match(/<svg(.*?)>/);
+
+	if (svgNodeMatches) {
+		// extract svg node <svg ... >
+		var svgNode = svgNodeMatches[0];
+
+		var widthMatches = svgNode.match(/width="[0-9]*"/);
+		if (widthMatches && dimensions.width) {
+			svgNode = svgNode.replace(widthMatches[0], 'width="'+dimensions.width+'"')
+		}
+
+		var heightMatches = svgNode.match(/height="[0-9]*"/);
+		if (heightMatches && dimensions.height) {
+			svgNode = svgNode.replace(heightMatches[0], 'height="'+dimensions.height+'"')
+		}
+
+		// insert updated svg node
+		return svgString.replace(/<svg(.*?)>/, svgNode);
+	}
+
+	return svgString;
 };
 
 module.exports = SVGMeasure;
