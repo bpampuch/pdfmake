@@ -64564,14 +64564,12 @@ SVGMeasure.prototype.writeDimensions = function (svgString, dimensions) {
 		// extract svg node <svg ... >
 		var svgNode = svgNodeMatches[0];
 
-		var widthMatches = svgNode.match(/width="[0-9]*"/);
-		if (widthMatches && dimensions.width) {
-			svgNode = svgNode.replace(widthMatches[0], 'width="'+dimensions.width+'"')
+		if (dimensions.width) {
+			svgNode = svgNode.replace(/width="[0-9]*"/, 'width="'+dimensions.width+'"')
 		}
 
-		var heightMatches = svgNode.match(/height="[0-9]*"/);
-		if (heightMatches && dimensions.height) {
-			svgNode = svgNode.replace(heightMatches[0], 'height="'+dimensions.height+'"')
+		if (dimensions.height) {
+			svgNode = svgNode.replace(/height="[0-9]*"/, 'height="'+dimensions.height+'"')
 		}
 
 		// insert updated svg node
