@@ -448,11 +448,13 @@ function transformLineForRtl(line, styleStack, textTools, textNode) {
 			// to evaluate once we have mixed fonts support.
 			var oldInline = inlinesBeforeTransformation[inlinesBeforeTransformation.length - 1 - index];
 			var newInline = inline;
-			newInline.style = oldInline.style;
-			newInline.background = oldInline.background;
-			newInline.font = oldInline.font;
-			newInline.decoration = oldInline.decoration;
-			newInline.decorationColor = oldInline.decorationColor;
+			if (oldInline) {
+				newInline.style = oldInline.style;
+				newInline.background = oldInline.background;
+				newInline.font = oldInline.font;
+				newInline.decoration = oldInline.decoration;
+				newInline.decorationColor = oldInline.decorationColor;
+			}
 			return line.addInline(newInline);
 		});
 }
