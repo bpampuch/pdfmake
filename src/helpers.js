@@ -79,6 +79,24 @@ function fontStringify(key, val) {
 	return val;
 }
 
+function getNodeId(node) {
+	if (node.id) {
+		return node.id;
+	}
+
+	if (isArray(node.text)) {
+		for (var i = 0, l = node.text.length; i < l; i++) {
+			var n = node.text[i];
+			var nodeId = getNodeId(n);
+			if (nodeId) {
+				return nodeId;
+			}
+		}
+	}
+
+	return null;
+}
+
 module.exports = {
 	isString: isString,
 	isNumber: isNumber,
@@ -90,5 +108,6 @@ module.exports = {
 	isUndefined: isUndefined,
 	pack: pack,
 	fontStringify: fontStringify,
-	offsetVector: offsetVector
+	offsetVector: offsetVector,
+	getNodeId: getNodeId
 };

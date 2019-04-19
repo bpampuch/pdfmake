@@ -125,6 +125,10 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 
 			var tocItemId = node.tocItem[i];
 
+			if (!node.id) {
+				node.id = 'toc-' + tocItemId + '-' + this.tocs[tocItemId].toc._items.length;
+			}
+
 			if (!this.tocs[tocItemId]) {
 				this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
 			}
@@ -163,6 +167,7 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 			};
 		}
 		node.text = '00000';
+		node.linkToDestination = node.pageReference;
 		node._pageRef = this.nodeReferences[node.pageReference];
 	}
 
@@ -172,6 +177,7 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 		}
 
 		node.text = '';
+		node.linkToDestination = node.textReference;
 		node._textRef = this.nodeReferences[node.textReference];
 	}
 

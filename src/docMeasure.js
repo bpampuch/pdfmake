@@ -10,6 +10,7 @@ var isNumber = require('./helpers').isNumber;
 var isObject = require('./helpers').isObject;
 var isArray = require('./helpers').isArray;
 var fontStringify = require('./helpers').fontStringify;
+var getNodeId = require('./helpers').getNodeId;
 var pack = require('./helpers').pack;
 var qrEncoder = require('./qrEnc.js');
 
@@ -229,9 +230,10 @@ DocMeasure.prototype.measureToc = function (node) {
 		var lineStyle = item._textNodeRef.tocStyle || textStyle;
 		var lineMargin = item._textNodeRef.tocMargin || textMargin;
 		var lineNumberStyle = item._textNodeRef.tocNumberStyle || numberStyle;
+		var destination = getNodeId(item._nodeRef);
 		body.push([
-			{text: item._textNodeRef.text, alignment: 'left', style: lineStyle, margin: lineMargin},
-			{text: '00000', alignment: 'right', _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]}
+			{text: item._textNodeRef.text, linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin},
+			{text: '00000', linkToDestination: destination, alignment: 'right', _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]}
 		]);
 	}
 

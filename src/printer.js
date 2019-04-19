@@ -391,7 +391,10 @@ function renderLine(line, x, y, pdfKitDoc) {
 		var pageNumber = _pageNodeRef.positions[0].pageNumber.toString();
 
 		inline.text = pageNumber;
-		inline.linkToPage = pageNumber;
+		// TODO: Remove after release new pdfkit version with PR https://github.com/foliojs/pdfkit/pull/947
+		if (typeof pdfKitDoc.addNamedDestination != 'function') {
+			inline.linkToPage = pageNumber;
+		}
 		newWidth = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
 		diffWidth = inline.width - newWidth;
 		inline.width = newWidth;

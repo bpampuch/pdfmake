@@ -13,6 +13,7 @@ var isArray = require('./helpers').isArray;
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 var fontStringify = require('./helpers').fontStringify;
+var getNodeId = require('./helpers').getNodeId;
 var isFunction = require('./helpers').isFunction;
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
@@ -617,8 +618,11 @@ LayoutBuilder.prototype.processLeaf = function (node) {
 	var currentHeight = (line) ? line.getHeight() : 0;
 	var maxHeight = node.maxHeight || -1;
 
-	if (line && node.id) {
-		line.id = node.id;
+	if (line) {
+		var nodeId = getNodeId(node);
+		if (nodeId) {
+			line.id = nodeId;
+		}
 	}
 
 	if (node._tocItemRef) {
