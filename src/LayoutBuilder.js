@@ -575,6 +575,10 @@ class LayoutBuilder {
 		let currentHeight = (line) ? line.getHeight() : 0;
 		let maxHeight = node.maxHeight || -1;
 
+		if (line && node.id) {
+			line.id = node.id;
+		}
+
 		if (node._tocItemRef) {
 			line._pageNodeRef = node._tocItemRef;
 		}

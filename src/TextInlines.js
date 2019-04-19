@@ -121,6 +121,7 @@ class TextInlines {
 			item.background = StyleContextStack.getStyleProperty(item, styleContextStack, 'background', null);
 			item.link = StyleContextStack.getStyleProperty(item, styleContextStack, 'link', null);
 			item.linkToPage = StyleContextStack.getStyleProperty(item, styleContextStack, 'linkToPage', null);
+			item.linkToDestination = StyleContextStack.getStyleProperty(item, styleContextStack, 'linkToDestination', null);
 			item.noWrap = StyleContextStack.getStyleProperty(item, styleContextStack, 'noWrap', null);
 			item.opacity = StyleContextStack.getStyleProperty(item, styleContextStack, 'opacity', 1);
 
