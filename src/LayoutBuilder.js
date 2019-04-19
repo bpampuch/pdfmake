@@ -6,7 +6,7 @@ import ColumnCalculator from './columnCalculator';
 import TableProcessor from './TableProcessor';
 import Line from './Line';
 import { isString, isArray, isFunction } from './helpers/variableType';
-import { stringifyNode } from './helpers/node';
+import { stringifyNode, getNodeId } from './helpers/node';
 import { pack, offsetVector } from './helpers/tools';
 import TextInlines from './TextInlines';
 import StyleContextStack from './StyleContextStack';
@@ -575,8 +575,11 @@ class LayoutBuilder {
 		let currentHeight = (line) ? line.getHeight() : 0;
 		let maxHeight = node.maxHeight || -1;
 
-		if (line && node.id) {
-			line.id = node.id;
+		if (line) {
+			let nodeId = getNodeId(node);
+			if (nodeId) {
+				line.id = nodeId;
+			}
 		}
 
 		if (node._tocItemRef) {

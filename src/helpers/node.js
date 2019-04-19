@@ -19,6 +19,27 @@ export function stringifyNode(node) {
 
 /**
  * @param {Object} node
+ * @returns {?string}
+ */
+export function getNodeId(node) {
+	if (node.id) {
+		return node.id;
+	}
+
+	if (isArray(node.text)) {
+		for (let n of node.text) {
+			let nodeId = getNodeId(n);
+			if (nodeId) {
+				return nodeId;
+			}
+		}
+	}
+
+	return null;
+}
+
+/**
+ * @param {Object} node
  * @param {StyleContextStack} styleStack
  * @returns {?Array}
  */

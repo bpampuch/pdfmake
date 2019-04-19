@@ -71,7 +71,6 @@ class Renderer {
 			let pageNumber = _pageNodeRef.positions[0].pageNumber.toString();
 
 			inline.text = pageNumber;
-			inline.linkToPage = pageNumber;
 			newWidth = textInlines.widthOfText(inline.text, inline);
 			diffWidth = inline.width - newWidth;
 			inline.width = newWidth;
