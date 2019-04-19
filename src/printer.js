@@ -436,6 +436,14 @@ function renderLine(line, x, y, pdfKitDoc) {
 			link: inline.link
 		};
 
+		if (inline.linkToDestination) {
+			options.goTo = inline.linkToDestination;
+		}
+
+		 if (line.id && i === 0) {
+			options.destination = line.id;
+		}
+
 		if (inline.fontFeatures) {
 			options.features = inline.fontFeatures;
 		}
