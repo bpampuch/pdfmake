@@ -13,12 +13,12 @@
     "pdfkit": "^0.9.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.3.4",
-    "@babel/plugin-transform-modules-commonjs": "^7.2.0",
-    "@babel/preset-env": "^7.3.4",
+    "@babel/core": "^7.4.3",
+    "@babel/plugin-transform-modules-commonjs": "^7.4.3",
+    "@babel/preset-env": "^7.4.3",
     "babel-loader": "^8.0.5",
     "brfs": "^2.0.2",
-    "eslint-plugin-jsdoc": "^4.4.2",
+    "eslint-plugin-jsdoc": "^4.8.3",
     "expose-loader": "^0.7.5",
     "fancy-log": "^1.3.3",
     "file-saver": "^2.0.1",
@@ -27,9 +27,9 @@
     "gulp-eslint": "^5.0.0",
     "gulp-file-contents-to-json": "^0.2.2",
     "gulp-spawn-mocha": "^5.0.1",
-    "mocha": "^6.0.2",
+    "mocha": "^6.1.4",
     "rewire": "^4.0.1",
-    "sinon": "^7.2.7",
+    "sinon": "^7.3.2",
     "string-replace-webpack-plugin": "^0.1.3",
     "transform-loader": "^0.2.4",
     "webpack": "3.11.0"
