@@ -5,6 +5,7 @@ var sizes = require('../../src/standardPageSizes');
 var LayoutBuilder = require('../../src/layoutBuilder');
 var FontProvider = require('../../src/fontProvider');
 var ImageMeasure = require('../../src/imageMeasure');
+var SVGMeasure = require('../../src/svgMeasure');
 
 function IntegrationTestHelper() {
 	this.MARGINS = {top: 40, left: 40, right: 40, bottom: 40};
@@ -30,7 +31,8 @@ IntegrationTestHelper.prototype.renderPages = function (sizeName, docDefinition)
 	var builder = new LayoutBuilder(
 		pageSize,
 		{left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom},
-		new ImageMeasure(pdfKitDoc, docDefinition.images)
+		new ImageMeasure(pdfKitDoc, docDefinition.images),
+		new SVGMeasure()
 		);
 	this.fontProvider = new FontProvider(fontDescriptors, pdfKitDoc);
 
