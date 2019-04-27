@@ -1,42 +1,45 @@
 'use strict';
-var xml2js = require('xml2js');
 
 function SVGMeasure() {}
 
-var xmlToJson = function (xml) {
-	var svg = {};
-
-	xml2js.parseString(xml, {mergeAttrs: true, explicitArray: false}, function (err, json) {
-		if (err || !json.svg) {
-			throw new Error('Unable to parse SVG')
-		}
-
-		svg = json.svg;
-	});
-
-	return svg;
-};
-
 SVGMeasure.prototype.measureSVG = function (svgString) {
 
-	var svg = xmlToJson(svgString);
+	// remove newlines
+	svgString = svgString.replace(/\r?\n|\r/g, "");
 
-	// <svg width="w" height="h">...</svg>
-	var svgWidth = svg.width;
-	var svgHeight = svg.height;
-	if (svgWidth && svgHeight) {
-		return {width: svgWidth, height: svgHeight};
+	var svgNodeMatches = svgString.match(/<svg(.*?)>/);
+
+	if (svgNodeMatches) {
+		// extract svg node <svg ... >
+		var svgNode = svgNodeMatches[0];
+
+		var widthMatches = svgNode.match(/width="([0-9]*)"/);
+		var heightMatches = svgNode.match(/height="([0-9]*)"/);
+
+		if (widthMatches && heightMatches) {
+			return {width: widthMatches[1], height: heightMatches[1]};
+		}
+
+		var viewboxMatches = svgNode.match(/viewBox="([0-9\s]*)"/);
+		if (viewboxMatches) {
+			var viewboxStr = viewboxMatches[1];
+			var allVieboxEntries = viewboxStr.split(" ");
+
+			var viewboxEntries = []; // weeding out empty strings
+			for (var i = 0; i < allVieboxEntries.length; i++) {
+				if (allVieboxEntries[i]) {
+					viewboxEntries.push(allVieboxEntries[i]);
+				}
+			}
+
+			if (viewboxEntries.length === 4) {
+				return {width: viewboxEntries[2], height: viewboxEntries[3]};
+			}
+
+			throw new Error("Unexpected svg viewbox format, should have 4 entries but found: '" + viewboxStr + "'");
+		}
 	}
 
-	// <svg viewBox="x y w h">...</svg>
-	if (svg.viewBox) {
-		var viewBoxEntries = svg.viewBox.split(' ');
-
-		var viewBoxWidth = viewBoxEntries[2];
-		var viewBoxHeight = viewBoxEntries[3];
-
-		return {width: viewBoxWidth, height: viewBoxHeight}
-	}
 
 	return {};
 };
@@ -53,11 +56,11 @@ SVGMeasure.prototype.writeDimensions = function (svgString, dimensions) {
 		var svgNode = svgNodeMatches[0];
 
 		if (dimensions.width) {
-			svgNode = svgNode.replace(/width="[0-9]*"/, 'width="'+dimensions.width+'"')
+			svgNode = svgNode.replace(/width="[0-9]*"/, 'width="' + dimensions.width + '"');
 		}
 
 		if (dimensions.height) {
-			svgNode = svgNode.replace(/height="[0-9]*"/, 'height="'+dimensions.height+'"')
+			svgNode = svgNode.replace(/height="[0-9]*"/, 'height="' + dimensions.height + '"');
 		}
 
 		// insert updated svg node
