@@ -38,7 +38,7 @@ var docDefinition = {
 
 var now = new Date();
 var pdfDoc = printer.createPdfKitDocument(docDefinition);
-pdfDoc.pipe(fs.createWriteStream('pdfs/lists.pdf'));
+pdfDoc.pipe(fs.createWriteStream('pdfs/links.pdf'));
 pdfDoc.end();
 
 console.log(new Date() - now);
