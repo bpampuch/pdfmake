@@ -1,52 +1,71 @@
 class OutputDocument {
+
+	/**
+	 * @param {Object} pdfDocument
+	 */
 	constructor(pdfDocument) {
 		this.bufferSize = 9007199254740991;
 		this.pdfDocument = pdfDocument;
 	}
 
+	/**
+	 * @returns {Object}
+	 */
 	getStream() {
 		return this.pdfDocument;
 	}
 
-	getBuffer(callback) {
-		if (!callback) {
-			throw new Error('getBuffer is an async method and needs a callback argument');
-		}
-
-		let chunks = [];
-		let result;
-		this.getStream().on('readable', () => {
-			let chunk;
-			while ((chunk = this.getStream().read(this.bufferSize)) !== null) {
-				chunks.push(chunk);
+	/**
+	 * @returns {Promise}
+	 */
+	getBuffer() {
+		return new Promise((resolve, reject) => {
+			try {
+				let chunks = [];
+				let result;
+				this.getStream().on('readable', () => {
+					let chunk;
+					while ((chunk = this.getStream().read(this.bufferSize)) !== null) {
+						chunks.push(chunk);
+					}
+				});
+				this.getStream().on('end', () => {
+					result = Buffer.concat(chunks);
+					resolve(result);
+				});
+				this.getStream().end();
+			} catch (e) {
+				reject(e);
 			}
 		});
-		this.getStream().on('end', () => {
-			result = Buffer.concat(chunks);
-			callback(result, this.getStream()._pdfMakePages);
-		});
-		this.getStream().end();
 	}
 
-	getBase64(callback) {
-		if (!callback) {
-			throw new Error('getBase64 is an async method and needs a callback argument');
-		}
-
-		this.getBuffer(buffer => {
-			callback(buffer.toString('base64'));
+	/**
+	 * @returns {Promise}
+	 */
+	getBase64() {
+		return new Promise((resolve, reject) => {
+			this.getBuffer().then(buffer => {
+				resolve(buffer.toString('base64'));
+			}, result => {
+				reject(result);
+			});
 		});
 	}
 
-	getDataUrl(callback) {
-		if (!callback) {
-			throw new Error('getDataUrl is an async method and needs a callback argument');
-		}
-
-		this.getBase64(data => {
-			callback('data:application/pdf;base64,' + data);
+	/**
+	 * @returns {Promise}
+	 */
+	getDataUrl() {
+		return new Promise((resolve, reject) => {
+			this.getBase64().then(data => {
+				resolve('data:application/pdf;base64,' + data);
+			}, result => {
+				reject(result);
+			});
 		});
 	}
+
 }
 
 export default OutputDocument;

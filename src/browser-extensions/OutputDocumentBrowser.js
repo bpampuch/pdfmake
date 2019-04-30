@@ -1,5 +1,4 @@
 import OutputDocument from '../OutputDocument';
-import { isFunction } from '../helpers/variableType';
 import { saveAs } from 'file-saver';
 
 const bufferToBlob = buffer => {
@@ -33,47 +32,70 @@ const openWindow = () => {
 };
 
 class OutputDocumentBrowser extends OutputDocument {
-	getBlob(callback) {
-		if (!callback) {
-			throw new Error('getBlob is an async method and needs a callback argument');
-		}
 
-		this.getBuffer(buffer => {
-			let blob = bufferToBlob(buffer);
-			callback(blob);
-		});
-	}
-
-	download(fileName = 'file.pdf', callback) {
-		this.getBlob(blob => {
-			saveAs(blob, fileName);
-
-			if (isFunction(callback)) {
-				callback();
-			}
-		});
-	}
-
-	open(win = null) {
-		if (!win) {
-			win = openWindow();
-		}
-		try {
-			this.getBlob(result => {
-				let urlCreator = window.URL || window.webkitURL;
-				let pdfUrl = urlCreator.createObjectURL(result);
-				win.location.href = pdfUrl;
+	/**
+	 * @returns {Promise}
+	 */
+	getBlob() {
+		return new Promise((resolve, reject) => {
+			this.getBuffer().then(buffer => {
+				let blob = bufferToBlob(buffer);
+				resolve(blob);
+			}, result => {
+				reject(result);
 			});
-		} catch (e) {
-			win.close();
-			throw e;
-		}
+		});
 	}
 
+	/**
+	 * @param {string} filename
+	 * @returns {Promise}
+	 */
+	download(filename = 'file.pdf') {
+		return new Promise((resolve, reject) => {
+			this.getBlob().then(blob => {
+				saveAs(blob, filename);
+				resolve();
+			}, result => {
+				reject(result);
+			});
+		});
+	}
+
+	/**
+	 * @param {Window} win
+	 * @returns {Promise}
+	 */
+	open(win = null) {
+		return new Promise((resolve, reject) => {
+			if (!win) {
+				win = openWindow();
+			}
+			this.getBlob().then(blob => {
+				try {
+					let urlCreator = window.URL || window.webkitURL;
+					let pdfUrl = urlCreator.createObjectURL(blob);
+					win.location.href = pdfUrl;
+					resolve();
+				} catch (e) {
+					win.close();
+					throw e;
+				}
+			}, result => {
+				reject(result);
+			});
+		});
+	}
+
+	/**
+	 * @param {Window} win
+	 * @returns {Promise}
+	 */
 	print(win = null) {
 		this.getStream().setOpenActionAsPrint();
-		this.open(win);
+		return this.open(win);
 	}
+
 }
 
 export default OutputDocumentBrowser;
