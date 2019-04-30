@@ -1,6 +1,7 @@
 'use strict';
 
 var isFunction = require('../helpers').isFunction;
+var isUndefined = require('../helpers').isUndefined;
 var FileSaver = require('file-saver');
 var saveAs = FileSaver.saveAs;
 
@@ -134,8 +135,16 @@ Document.prototype.print = function (options, win) {
 	this._openPdf(options, win);
 };
 
+/**
+ * download(defaultFileName = 'file.pdf', cb = null, options = {})
+ * or
+ * download(cb, options = {})
+ */
 Document.prototype.download = function (defaultFileName, cb, options) {
 	if (isFunction(defaultFileName)) {
+		if (!isUndefined(cb)) {
+			options = cb;
+		}
 		cb = defaultFileName;
 		defaultFileName = null;
 	}
