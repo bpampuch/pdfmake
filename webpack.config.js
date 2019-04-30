@@ -68,19 +68,6 @@ module.exports = {
 				}
 			},
 			{test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
-
-			/* Can be removed after new pdfkit release */
-			/* waiting to release included PR https://github.com/foliojs/pdfkit/pull/934 */
-			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: 'return this.font(\'Helvetica\');',
-							replacement: function () {
-								return '';
-							}
-						}
-					]})
-			},
 			{test: /fontkit[/\\]index.js$/, loader: StringReplacePlugin.replace({
 					replacements: [
 						{
@@ -91,30 +78,6 @@ module.exports = {
 						}
 					]})
 			},
-
-			/* temporary bugfix for pdfkit version 0.9.0 - issue https://github.com/foliojs/pdfkit/issues/923 */
-			/* waiting to release included PR https://github.com/foliojs/pdfkit/pull/925 */
-			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: "stringBuffer = swapBytes(new Buffer(",
-							replacement: function () {
-								return "stringBuffer = swapBytes(Buffer.from(";
-							}
-						}
-					]})
-			},
-			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: "stringBuffer = new Buffer(string, 'ascii');",
-							replacement: function () {
-								return "stringBuffer = Buffer.from(string.valueOf(), 'ascii');";
-							}
-						}
-					]})
-			},
-			/* *** */
 
 			/* temporary bugfix for FileSaver: added hack for mobile device support, see https://github.com/bpampuch/pdfmake/issues/1664 */
 			/* waiting to merge and release PR https://github.com/eligrey/FileSaver.js/pull/533 */
