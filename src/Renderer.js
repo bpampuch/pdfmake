@@ -160,9 +160,15 @@ class Renderer {
 
 		//TODO: clipping
 
+		let gradient = null;
+
 		switch (vector.type) {
 			case 'ellipse':
 				this.pdfDocument.ellipse(vector.x, vector.y, vector.r1, vector.r2);
+
+				if (vector.linearGradient) {
+					gradient = this.pdfDocument.linearGradient(vector.x - vector.r1, vector.y, vector.x + vector.r1, vector.y);
+				}
 				break;
 			case 'rect':
 				if (vector.r) {
@@ -172,14 +178,7 @@ class Renderer {
 				}
 
 				if (vector.linearGradient) {
-					let gradient = this.pdfDocument.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
-					let step = 1 / (vector.linearGradient.length - 1);
-
-					for (let i = 0; i < vector.linearGradient.length; i++) {
-						gradient.stop(i * step, vector.linearGradient[i]);
-					}
-
-					vector.color = gradient;
+					gradient = this.pdfDocument.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
 				}
 				break;
 			case 'line':
@@ -208,6 +207,16 @@ class Renderer {
 			case 'path':
 				this.pdfDocument.path(vector.d);
 				break;
+		}
+
+		if (vector.linearGradient && gradient) {
+			let step = 1 / (vector.linearGradient.length - 1);
+
+			for (let i = 0; i < vector.linearGradient.length; i++) {
+				gradient.stop(i * step, vector.linearGradient[i]);
+			}
+
+			vector.color = gradient;
 		}
 
 		if (vector.color && vector.lineColor) {
