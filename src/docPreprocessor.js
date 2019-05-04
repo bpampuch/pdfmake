@@ -125,12 +125,12 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 
 			var tocItemId = node.tocItem[i];
 
-			if (!node.id) {
-				node.id = 'toc-' + tocItemId + '-' + this.tocs[tocItemId].toc._items.length;
-			}
-
 			if (!this.tocs[tocItemId]) {
 				this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
+			}
+
+			if (!node.id) {
+				node.id = 'toc-' + tocItemId + '-' + this.tocs[tocItemId].toc._items.length;
 			}
 
 			var tocItemRef = {
