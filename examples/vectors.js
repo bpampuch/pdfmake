@@ -106,7 +106,13 @@ var docDefinition = {
 					type: 'rect',
 					x: 10, y: 230, w: 100, h: 10,
 					linearGradient: ['red', 'yellow', 'green', 'blue']
-				}
+				},
+				{
+					type: 'ellipse',
+					x: 260, y: 140,
+					r1: 30, r2: 20,
+					linearGradient: ['red', 'green', 'blue', 'red'],
+				},
 			]
 		},
 		'This text should be rendered under canvas',

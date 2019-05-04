@@ -502,9 +502,15 @@ function renderVector(vector, pdfKitDoc) {
 
 	//TODO: clipping
 
+	var gradient = null;
+
 	switch (vector.type) {
 		case 'ellipse':
 			pdfKitDoc.ellipse(vector.x, vector.y, vector.r1, vector.r2);
+
+			if (vector.linearGradient) {
+				gradient = pdfKitDoc.linearGradient(vector.x - vector.r1, vector.y, vector.x + vector.r1, vector.y);
+			}
 			break;
 		case 'rect':
 			if (vector.r) {
@@ -514,14 +520,7 @@ function renderVector(vector, pdfKitDoc) {
 			}
 
 			if (vector.linearGradient) {
-				var gradient = pdfKitDoc.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
-				var step = 1 / (vector.linearGradient.length - 1);
-
-				for (var i = 0; i < vector.linearGradient.length; i++) {
-					gradient.stop(i * step, vector.linearGradient[i]);
-				}
-
-				vector.color = gradient;
+				gradient = pdfKitDoc.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
 			}
 			break;
 		case 'line':
@@ -550,6 +549,16 @@ function renderVector(vector, pdfKitDoc) {
 		case 'path':
 			pdfKitDoc.path(vector.d);
 			break;
+	}
+
+	if (vector.linearGradient && gradient) {
+		var step = 1 / (vector.linearGradient.length - 1);
+
+		for (var i = 0; i < vector.linearGradient.length; i++) {
+			gradient.stop(i * step, vector.linearGradient[i]);
+		}
+
+		vector.color = gradient;
 	}
 
 	if (vector.color && vector.lineColor) {
