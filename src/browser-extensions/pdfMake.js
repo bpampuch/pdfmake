@@ -2,6 +2,7 @@
 
 var isFunction = require('../helpers').isFunction;
 var isUndefined = require('../helpers').isUndefined;
+var isNull = require('../helpers').isNull;
 var FileSaver = require('file-saver');
 var saveAs = FileSaver.saveAs;
 
@@ -111,6 +112,14 @@ Document.prototype._openPdf = function (options, win) {
 			var urlCreator = window.URL || window.webkitURL;
 			var pdfUrl = urlCreator.createObjectURL(result);
 			win.location.href = pdfUrl;
+
+			if (win !== window) {
+				setTimeout(function () {
+					if (isNull(win.window)) { // is closed by AdBlock
+						window.location.href = pdfUrl; // open in actual window
+					}
+				}, 500);
+			}
 		}, options);
 	} catch (e) {
 		win.close();
