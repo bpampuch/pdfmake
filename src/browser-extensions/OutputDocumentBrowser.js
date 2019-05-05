@@ -1,4 +1,5 @@
 import OutputDocument from '../OutputDocument';
+import { isNull } from '../helpers/variableType';
 import { saveAs } from 'file-saver';
 
 const bufferToBlob = buffer => {
@@ -76,7 +77,17 @@ class OutputDocumentBrowser extends OutputDocument {
 					let urlCreator = window.URL || window.webkitURL;
 					let pdfUrl = urlCreator.createObjectURL(blob);
 					win.location.href = pdfUrl;
-					resolve();
+
+					if (win === window) {
+						resolve();
+					} else {
+						setTimeout(() => {
+							if (isNull(win.window)) { // is closed by AdBlock
+								window.location.href = pdfUrl; // open in actual window
+							}
+							resolve();
+						}, 500);
+					}
 				} catch (e) {
 					win.close();
 					throw e;
