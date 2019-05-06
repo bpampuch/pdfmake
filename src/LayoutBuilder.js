@@ -107,7 +107,7 @@ class LayoutBuilder {
               nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
             }
           }
-          for (var ii = 0; ii < index; ii++) {
+          for (ii = 0; ii < index; ii++) {
             if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
               previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
             }
