@@ -159,6 +159,15 @@ DocumentContext.prototype.moveTo = function (x, y) {
 	}
 };
 
+DocumentContext.prototype.moveToRelative = function (x, y) {
+	if (x !== undefined && x !== null) {
+		this.x = this.x + x;
+	}
+	if (y !== undefined && y !== null) {
+		this.y = this.y + y;
+	}
+};
+
 DocumentContext.prototype.beginDetachedBlock = function () {
 	this.snapshots.push({
 		x: this.x,
