@@ -91,35 +91,35 @@ class LayoutBuilder {
 			});
 
 			var isBreak = false;
-      for (var index = 0; index < linearNodeList.length; index++) {
-        var node = linearNodeList[index];
-        if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
-          node.pageBreakCalculated = true;
-          var pageNumber = node.nodeInfo.pageNumbers[0];
-          var followingNodesOnPage = [];
-          var nodesOnNextPage = [];
-          var previousNodesOnPage = [];
-          for (var ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
-            if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-              followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
-            }
-            if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber+1) > -1) {
-              nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
-            }
-          }
-          for (ii = 0; ii < index; ii++) {
-            if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-              previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
-            }
-          }
-          if (pageBreakBeforeFct(node.nodeInfo, followingNodesOnPage, nodesOnNextPage, previousNodesOnPage)) {
-            node.pageBreak = 'before';
-            isBreak = true;
-            break;
-          }
-        }
-      }
-      return isBreak;
+			for (var index = 0; index < linearNodeList.length; index++) {
+				var node = linearNodeList[index];
+				if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
+					node.pageBreakCalculated = true;
+					var pageNumber = node.nodeInfo.pageNumbers[0];
+					var followingNodesOnPage = [];
+					var nodesOnNextPage = [];
+					var previousNodesOnPage = [];
+					for (var ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
+						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+							followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
+						}
+						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
+							nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
+						}
+					}
+					for (ii = 0; ii < index; ii++) {
+						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+							previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
+						}
+					}
+					if (pageBreakBeforeFct(node.nodeInfo, followingNodesOnPage, nodesOnNextPage, previousNodesOnPage)) {
+						node.pageBreak = 'before';
+						isBreak = true;
+						break;
+					}
+				}
+			}
+			return isBreak;
 		}
 
 		this.docPreprocessor = new DocPreprocessor();
