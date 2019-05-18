@@ -1,5 +1,5 @@
 import OutputDocument from '../OutputDocument';
-import { isNull } from '../helpers/variableType';
+//import { isNull } from '../helpers/variableType';
 import { saveAs } from 'file-saver';
 
 const bufferToBlob = buffer => {
@@ -78,6 +78,9 @@ class OutputDocumentBrowser extends OutputDocument {
 					let pdfUrl = urlCreator.createObjectURL(blob);
 					win.location.href = pdfUrl;
 
+					//
+					resolve();
+					/* temporarily disabled
 					if (win === window) {
 						resolve();
 					} else {
@@ -88,6 +91,7 @@ class OutputDocumentBrowser extends OutputDocument {
 							resolve();
 						}, 500);
 					}
+					*/
 				} catch (e) {
 					win.close();
 					throw e;
