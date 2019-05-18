@@ -113,6 +113,7 @@ Document.prototype._openPdf = function (options, win) {
 			var pdfUrl = urlCreator.createObjectURL(result);
 			win.location.href = pdfUrl;
 
+			/* temporarily disabled
 			if (win !== window) {
 				setTimeout(function () {
 					if (isNull(win.window)) { // is closed by AdBlock
@@ -120,6 +121,7 @@ Document.prototype._openPdf = function (options, win) {
 					}
 				}, 500);
 			}
+			*/
 		}, options);
 	} catch (e) {
 		win.close();
