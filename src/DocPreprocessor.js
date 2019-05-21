@@ -96,7 +96,7 @@ class DocPreprocessor {
 		let cols;
 		let rows;
 
-		if(node && node.table && Array.isArray(node.table.body) && node.table.body.length ){
+		if(node && node.table && isArray(node.table.body) && node.table.body.length ){
 				for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
 				for (row = 0, rows = node.table.body.length; row < rows; row++) {
 					let rowData = node.table.body[row];
