@@ -246,6 +246,17 @@ describe('DocumentContext', function () {
 
 	});
 
+	describe('moveToRelative', function () {
+		it('should change coordinates', function () {
+			pc.x = 100;
+			pc.y = 200;
+			pc.moveToRelative(50, 100);
+
+			assert.equal(pc.x, 150);
+			assert.equal(pc.y, 300);
+		});
+	});
+
 	describe('addPage', function () {
 
 		var pageSize;
