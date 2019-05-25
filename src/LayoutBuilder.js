@@ -337,7 +337,7 @@ class LayoutBuilder {
 			let relPosition = node.relativePosition;
 			if (relPosition) {
 				this.writer.context().beginDetachedBlock();
-				this.writer.context().moveTo((relPosition.x || 0) + this.writer.context().x, (relPosition.y || 0) + this.writer.context().y);
+				this.writer.context().moveToRelative(relPosition.x || 0, relPosition.y || 0);
 			}
 
 			if (node.stack) {
