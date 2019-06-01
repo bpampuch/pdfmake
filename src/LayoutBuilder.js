@@ -90,16 +90,16 @@ class LayoutBuilder {
 				node.nodeInfo = nodeInfo;
 			});
 
-			var isBreak = false;
-			for (var index = 0; index < linearNodeList.length; index++) {
-				var node = linearNodeList[index];
+			let isBreak = false;
+			for (let index = 0; index < linearNodeList.length; index++) {
+				let node = linearNodeList[index];
 				if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 					node.pageBreakCalculated = true;
-					var pageNumber = node.nodeInfo.pageNumbers[0];
-					var followingNodesOnPage = [];
-					var nodesOnNextPage = [];
-					var previousNodesOnPage = [];
-					for (var ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
+					let pageNumber = node.nodeInfo.pageNumbers[0];
+					let followingNodesOnPage = [];
+					let nodesOnNextPage = [];
+					let previousNodesOnPage = [];
+					for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
 						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
 							followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
 						}
@@ -107,7 +107,7 @@ class LayoutBuilder {
 							nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
 						}
 					}
-					for (ii = 0; ii < index; ii++) {
+					for (let ii = 0; ii < index; ii++) {
 						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
 							previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
 						}
