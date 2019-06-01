@@ -90,7 +90,6 @@ class LayoutBuilder {
 				node.nodeInfo = nodeInfo;
 			});
 
-			let isBreak = false;
 			for (let index = 0; index < linearNodeList.length; index++) {
 				let node = linearNodeList[index];
 				if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
@@ -114,12 +113,12 @@ class LayoutBuilder {
 					}
 					if (pageBreakBeforeFct(node.nodeInfo, followingNodesOnPage, nodesOnNextPage, previousNodesOnPage)) {
 						node.pageBreak = 'before';
-						isBreak = true;
-						break;
+						return true;
 					}
 				}
 			}
-			return isBreak;
+
+			return false;
 		}
 
 		this.docPreprocessor = new DocPreprocessor();
