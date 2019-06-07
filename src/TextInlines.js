@@ -66,7 +66,7 @@ class TextInlines {
 
 		let measuredText = this.measure(breakedText, styleContextStack);
 		
-		let maxLines = StyleContextStack.getStyleProperty({}, styleContextStack, "maxLines", false)
+		let maxLines = StyleContextStack.getStyleProperty({}, styleContextStack, "maxLines", false);
 		if (typeof maxLines === "number" && maxLines > 0) {
 		     measuredText = measuredText.slice(0, maxLines);
 		}
