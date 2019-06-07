@@ -48,7 +48,7 @@ class TextInlines {
 	 *
 	 * @param  {Array} textArray an array of inline-definition-objects (or strings)
 	 * @param  {StyleContextStack} styleContextStack current style stack
-	 * @returns {Object} collection of inlines, minWidth, maxWidth
+	 * @returns {object} collection of inlines, minWidth, maxWidth
 	 */
 	buildInlines(textArray, styleContextStack) {
 		const getTrimmedWidth = item => {
@@ -160,7 +160,7 @@ class TextInlines {
 	 * Width of text
 	 *
 	 * @param {string} text
-	 * @param {Object} inline
+	 * @param {object} inline
 	 * @returns {number}
 	 */
 	widthOfText(text, inline) {
@@ -171,8 +171,8 @@ class TextInlines {
 	 * Returns size of the specified string (without breaking it) using the current style
 	 *
 	 * @param  {string} text text to be measured
-	 * @param  {Object} styleContextStack current style stack
-	 * @returns {Object} size of the specified string
+	 * @param  {object} styleContextStack current style stack
+	 * @returns {object} size of the specified string
 	 */
 	sizeOfText(text, styleContextStack) {
 		//TODO: refactor - extract from measure

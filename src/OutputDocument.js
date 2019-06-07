@@ -1,7 +1,7 @@
 class OutputDocument {
 
 	/**
-	 * @param {Object} pdfDocument
+	 * @param {object} pdfDocument
 	 */
 	constructor(pdfDocument) {
 		this.bufferSize = 9007199254740991;
@@ -9,7 +9,7 @@ class OutputDocument {
 	}
 
 	/**
-	 * @returns {Object}
+	 * @returns {object}
 	 */
 	getStream() {
 		return this.pdfDocument;

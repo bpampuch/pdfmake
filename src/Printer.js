@@ -23,7 +23,7 @@ import { isFunction, isString, isNumber, isBoolean, isArray } from './helpers/va
 class PdfPrinter {
 
 	/**
-	 * @param {Object} fontDescriptors font definition dictionary
+	 * @param {object} fontDescriptors font definition dictionary
 	 */
 	constructor(fontDescriptors) {
 		this.fontDescriptors = fontDescriptors;
@@ -33,9 +33,9 @@ class PdfPrinter {
 	 * Executes layout engine for the specified document and renders it into a pdfkit document
 	 * ready to be saved.
 	 *
-	 * @param {Object} docDefinition
-	 * @param {Object} options
-	 * @returns {Object} a pdfKit document object which can be saved or encode to data-url
+	 * @param {object} docDefinition
+	 * @param {object} options
+	 * @returns {object} a pdfKit document object which can be saved or encode to data-url
 	 */
 	createPdfKitDocument(docDefinition, options = {}) {
 		docDefinition.version = docDefinition.version || '1.3';

@@ -10,7 +10,7 @@ function fontStringify(key, val) {
 /**
  * Convert node to readable string
  *
- * @param {Object} node
+ * @param {object} node
  * @returns {string}
  */
 export function stringifyNode(node) {
@@ -18,7 +18,7 @@ export function stringifyNode(node) {
 }
 
 /**
- * @param {Object} node
+ * @param {object} node
  * @returns {?string}
  */
 export function getNodeId(node) {
@@ -39,7 +39,7 @@ export function getNodeId(node) {
 }
 
 /**
- * @param {Object} node
+ * @param {object} node
  * @param {StyleContextStack} styleStack
  * @returns {?Array}
  */

@@ -23,8 +23,8 @@ function addAll(target, otherArray) {
  */
 class LayoutBuilder {
 	/**
-	 * @param {Object} pageSize - an object defining page width and height
-	 * @param {Object} pageMargins - an object defining top, left, right and bottom margins
+	 * @param {object} pageSize - an object defining page width and height
+	 * @param {object} pageMargins - an object defining top, left, right and bottom margins
 	 */
 	constructor(pageSize, pageMargins) {
 		this.pageSize = pageSize;
@@ -40,15 +40,15 @@ class LayoutBuilder {
 	 * Executes layout engine on document-definition-object and creates an array of pages
 	 * containing positioned Blocks, Lines and inlines
 	 *
-	 * @param {Object} docStructure document-definition-object
-	 * @param {Object} pdfDocument pdfkit document
-	 * @param {Object} styleDictionary dictionary with style definitions
-	 * @param {Object} defaultStyle default style definition
-	 * @param {Object} background
-	 * @param {Object} header
-	 * @param {Object} footer
-	 * @param {Object} watermark
-	 * @param {Object} pageBreakBeforeFct
+	 * @param {object} docStructure document-definition-object
+	 * @param {object} pdfDocument pdfkit document
+	 * @param {object} styleDictionary dictionary with style definitions
+	 * @param {object} defaultStyle default style definition
+	 * @param {object} background
+	 * @param {object} header
+	 * @param {object} footer
+	 * @param {object} watermark
+	 * @param {object} pageBreakBeforeFct
 	 * @returns {Array} an array of pages
 	 */
 	layoutDocument(
