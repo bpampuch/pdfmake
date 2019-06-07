@@ -36,7 +36,7 @@ const flattenTextArray = array => {
 class TextInlines {
 
 	/**
-	 * @param {PDFDocument} pdfDocument
+	 * @param {object} pdfDocument object is instance of PDFDocument
 	 */
 	constructor(pdfDocument) {
 		this.pdfDocument = pdfDocument;

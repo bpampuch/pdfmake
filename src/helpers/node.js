@@ -40,7 +40,7 @@ export function getNodeId(node) {
 
 /**
  * @param {object} node
- * @param {StyleContextStack} styleStack
+ * @param {object} styleStack object is instance of PDFDocument
  * @returns {?Array}
  */
 export function getNodeMargin(node, styleStack) {
