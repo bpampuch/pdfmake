@@ -33,7 +33,7 @@ class StyleContextStack {
 	/**
 	 * Pushes style-name or style-overrides-object onto the stack for future evaluation
 	 *
-	 * @param {string|Object} styleNameOrOverride style-name (referring to styleDictionary) or
+	 * @param {string|object} styleNameOrOverride style-name (referring to styleDictionary) or
 	 *                                            a new dictionary defining overriding properties
 	 */
 	push(styleNameOrOverride) {

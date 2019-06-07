@@ -87,6 +87,7 @@ class TextBreaker {
 	/**
 	 * @param {string|Array} texts
 	 * @param {StyleContextStack} styleContextStack
+	 * @returns {Array}
 	 */
 	getBreaks(texts, styleContextStack) {
 		let results = [];
