@@ -25,6 +25,7 @@ var docDefinition = {
 			]
 		},
 		{ text: 'Go to page 2', linkToPage: 2, decoration: 'underline' },
+		{ text: 'Link to header 2', linkToDestination: 'header2', decoration: 'underline' },
 		'Links are also supported with images:',
 		{ image: 'fonts/sampleImage.jpg', width: 150, link: 'http://pdfmake.org' },
 		{ text: 'Header on page 2', fontSize: 18, bold: true, pageBreak: 'before' },
