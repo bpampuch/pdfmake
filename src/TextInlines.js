@@ -68,7 +68,7 @@ class TextInlines {
 		
 		let maxLines = StyleContextStack.getStyleProperty({}, styleContextStack, "maxLines", false);
 		if (typeof maxLines === "number" && maxLines > 0) {
-		     measuredText = measuredText.slice(0, maxLines);
+				measuredText = measuredText.slice(0, maxLines);
 		}
 
 		measuredText.forEach(inline => {
