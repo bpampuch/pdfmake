@@ -1388,6 +1388,60 @@ describe('LayoutBuilder', function () {
 			assert.equal(pages.length, 1);
 		});
 
+		it('should use the relativePosition attribute to position in relativePosition coordinates', function () {
+			var desc = [
+					{
+						text: 'text 1',
+						relativePosition: { x: 123, y: 200 }
+					},
+					{
+						text: 'text 2',
+						relativePosition: { x: 0, y: 0 }
+					}
+				]
+			;
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages[0].items[0].item.x, 163);
+			assert.equal(pages[0].items[0].item.y, 240);
+			assert.equal(pages[0].items[1].item.x, 40);
+			assert.equal(pages[0].items[1].item.y, 40);
+		});
+
+		it('should use the relativePosition attribute to position in relativePosition coordinates in a table cell', function () {
+			var desc = [
+				{
+					table: {
+						widths: [200, 200],
+						body: [
+							[
+								{
+									text: 'text 1',
+									style: {
+										alignment: 'center',
+									},
+									relativePosition: { x: 10, y: 200 },
+								},
+								{
+									text: 'text 2',
+									relativePosition: { x: 0, y: 0 }
+								}
+							],
+						],
+					},
+					layout: emptyTableLayout,
+				},
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider, {});
+
+			assert.equal(pages[0].items[0].item.x, 114);
+			assert.equal(pages[0].items[0].item.y, 240);
+			assert.equal(pages[0].items[1].item.x, 240);
+			assert.equal(pages[0].items[1].item.y, 40);
+		});
+
 		it('should not break nodes across multiple pages when unbreakable attribute is passed', function () {
 			var desc = [
 				{

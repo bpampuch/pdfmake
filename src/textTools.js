@@ -293,6 +293,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var characterSpacing = getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
 		var link = getStyleProperty(item, styleContextStack, 'link', null);
 		var linkToPage = getStyleProperty(item, styleContextStack, 'linkToPage', null);
+		var linkToDestination = getStyleProperty(item, styleContextStack, 'linkToDestination', null);
 		var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', null);
 		var preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
 		var preserveTrailingSpaces = getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
@@ -331,6 +332,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.background = background;
 		item.link = link;
 		item.linkToPage = linkToPage;
+		item.linkToDestination = linkToDestination;
 		item.noWrap = noWrap;
 		item.opacity = opacity;
 	});

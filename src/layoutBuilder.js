@@ -13,6 +13,7 @@ var isArray = require('./helpers').isArray;
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 var fontStringify = require('./helpers').fontStringify;
+var getNodeId = require('./helpers').getNodeId;
 var isFunction = require('./helpers').isFunction;
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
@@ -358,7 +359,7 @@ LayoutBuilder.prototype.processNode = function (node) {
 		var relPosition = node.relativePosition;
 		if (relPosition) {
 			self.writer.context().beginDetachedBlock();
-			self.writer.context().moveTo((relPosition.x || 0) + self.writer.context().x, (relPosition.y || 0) + self.writer.context().y);
+			self.writer.context().moveToRelative(relPosition.x || 0, relPosition.y || 0);
 		}
 
 		if (node.stack) {
@@ -619,6 +620,13 @@ LayoutBuilder.prototype.processLeaf = function (node) {
 	}
 	var currentHeight = (line) ? line.getHeight() : 0;
 	var maxHeight = node.maxHeight || -1;
+
+	if (line) {
+		var nodeId = getNodeId(node);
+		if (nodeId) {
+			line.id = nodeId;
+		}
+	}
 
 	if (node._tocItemRef) {
 		line._pageNodeRef = node._tocItemRef;

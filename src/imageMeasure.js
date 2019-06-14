@@ -12,11 +12,11 @@ ImageMeasure.prototype.measureImage = function (src) {
 	if (!this.pdfKitDoc._imageRegistry[src]) {
 		try {
 			image = this.pdfKitDoc.openImage(realImageSrc(src));
+			if (!image) {
+				throw 'No image';
+			}
 		} catch (error) {
-			image = null;
-		}
-		if (image === null || image === undefined) {
-			throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
+			throw 'Invalid image: ' + error.toString() + '\nImages dictionary should contain dataURL entries (or local file paths in node.js)';
 		}
 		image.embed(this.pdfKitDoc);
 		this.pdfKitDoc._imageRegistry[src] = image;

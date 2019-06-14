@@ -1,6 +1,8 @@
 'use strict';
 
 var isFunction = require('../helpers').isFunction;
+var isUndefined = require('../helpers').isUndefined;
+var isNull = require('../helpers').isNull;
 var FileSaver = require('file-saver');
 var saveAs = FileSaver.saveAs;
 
@@ -110,6 +112,16 @@ Document.prototype._openPdf = function (options, win) {
 			var urlCreator = window.URL || window.webkitURL;
 			var pdfUrl = urlCreator.createObjectURL(result);
 			win.location.href = pdfUrl;
+
+			/* temporarily disabled
+			if (win !== window) {
+				setTimeout(function () {
+					if (isNull(win.window)) { // is closed by AdBlock
+						window.location.href = pdfUrl; // open in actual window
+					}
+				}, 500);
+			}
+			*/
 		}, options);
 	} catch (e) {
 		win.close();
@@ -134,8 +146,16 @@ Document.prototype.print = function (options, win) {
 	this._openPdf(options, win);
 };
 
+/**
+ * download(defaultFileName = 'file.pdf', cb = null, options = {})
+ * or
+ * download(cb, options = {})
+ */
 Document.prototype.download = function (defaultFileName, cb, options) {
 	if (isFunction(defaultFileName)) {
+		if (!isUndefined(cb)) {
+			options = cb;
+		}
 		cb = defaultFileName;
 		defaultFileName = null;
 	}
