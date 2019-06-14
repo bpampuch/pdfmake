@@ -20,7 +20,7 @@ var getSvgToPDF = function() {
 	try {
 		// optional dependency to support svg nodes
 		return require('svg-to-pdfkit');
-	} catch (er) {
+	} catch (e) {
 		throw new Error('Please install svg-to-pdfkit to enable svg nodes');
 	}
 };
