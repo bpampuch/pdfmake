@@ -166,7 +166,7 @@ class TableProcessor {
 				// draw only if the current cell requires a top border or the cell in the
 				// row above requires a bottom border
 				if (shouldDrawLine && i < l - 1) {
-					var topBorder = false, bottomBorder = false;
+					var topBorder = false, bottomBorder = false, rowBottomBorder = false;
 
 					// the cell in the row above
 					if (lineIndex > 0) {
@@ -191,6 +191,7 @@ class TableProcessor {
 
 				if (cellAbove && cellAbove._rowSpanCurrentOffset) {
 					rowCellAbove = body[lineIndex - 1 - cellAbove._rowSpanCurrentOffset][i];
+					rowBottomBorder = rowCellAbove.border ? rowCellAbove.border[3] : this.layout.defaultBorder;
 					if (rowCellAbove.borderColor) {
 						borderColor = rowCellAbove.borderColor[3];
 					}
@@ -206,17 +207,17 @@ class TableProcessor {
 
 				if (shouldDrawLine) {
 					var colSpanIndex = 0;
-					if (rowCellAbove && rowCellAbove.colSpan) {
+					if (rowCellAbove && rowCellAbove.colSpan && rowBottomBorder) {
 						while (rowCellAbove.colSpan > colSpanIndex) {
 							currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
 						}
 						i += colSpanIndex - 1;
-					} else if (cellAbove && cellAbove.colSpan) {
+					} else if (cellAbove && cellAbove.colSpan && bottomBorder) {
 						while (cellAbove.colSpan > colSpanIndex) {
 							currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
 						}
 						i += colSpanIndex - 1;
-					} else if (currentCell && currentCell.colSpan) {
+					} else if (currentCell && currentCell.colSpan && topBorder) {
 						while (currentCell.colSpan > colSpanIndex) {
 							currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
 						}
