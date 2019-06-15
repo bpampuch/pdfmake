@@ -159,11 +159,11 @@ DocumentContext.prototype.pageSnapshot = function () {
 DocumentContext.prototype.moveTo = function (x, y) {
 	if (x !== undefined && x !== null) {
 		this.x = x;
-		this.availableWidth = this.getCurrentPage().pageSize.width - this.x - this.pageMargins.right;
+		this.availableWidth = this.getCurrentPage().pageSize.width - this.x - this.getCurrentPage().pageMargins.right;
 	}
 	if (y !== undefined && y !== null) {
 		this.y = y;
-		this.availableHeight = this.getCurrentPage().pageSize.height - this.y - this.pageMargins.bottom;
+		this.availableHeight = this.getCurrentPage().pageSize.height - this.y - this.getCurrentPage().pageMargins.bottom;
 	}
 };
 
