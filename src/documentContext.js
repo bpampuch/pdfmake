@@ -10,10 +10,10 @@ var isString = require('./helpers').isString;
 function DocumentContext(pageSize, pageMargins) {
 	this.pages = [];
 
-	this.pageMargins = typeof pageMargins === 'function' ? pageMargins : function () {return pageMargins};
+	this.pageMargins = pageMargins;
 
-	this.x = pageMargins.left;
-	this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
+	this.x = pageMargins(1).left;
+	this.availableWidth = pageSize.width - pageMargins(1).left - pageMargins(1).right;
 	this.availableHeight = 0;
 	this.page = -1;
 
@@ -271,7 +271,7 @@ DocumentContext.prototype.addPage = function (pageSize) {
 	this.backgroundLength.push(0);
 	this.page = this.pages.length - 1;
 
-    this.initializePage();
+	this.initializePage();
 
 	this.tracker.emit('pageAdded');
 
