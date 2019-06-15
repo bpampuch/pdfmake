@@ -298,7 +298,7 @@ ElementWriter.prototype.pushContext = function (contextOrWidth, height) {
 	}
 
 	if (isNumber(contextOrWidth)) {
-		contextOrWidth = new DocumentContext({width: contextOrWidth, height: height}, {left: 0, right: 0, top: 0, bottom: 0});
+		contextOrWidth = new DocumentContext({width: contextOrWidth, height: height}, function () {return {left: 0, right: 0, top: 0, bottom: 0}});
 	}
 
 	this.contextStack.push(this.context);
