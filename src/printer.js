@@ -109,7 +109,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
-	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
+	var builder = new LayoutBuilder(pageSize, pageMarginsFn(docDefinition.pageMargins, 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
 
 	registerDefaultTableLayouts(builder);
 	if (options.tableLayouts) {
@@ -231,13 +231,13 @@ function fixPageSize(pageSize, pageOrientation) {
 	return size;
 }
 
-function pageMarginsFn(margin) {
+function pageMarginsFn(margin, def) {
 	if(!isFunction(margin)) margin = function () {
 		return margin;
 	};
 	
 	return function (currentPage) {
-		return fixPageMargins(margin(currentPage))
+		return fixPageMargins(margin(currentPage)) || def;
 	}
 }
 
