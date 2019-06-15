@@ -12,12 +12,12 @@ function DocumentContext(pageSize, pageMargins) {
 
 	this.pageMargins = pageMargins;
 
-    if (typeof pageMargins === 'function') {
-        this.pageMarginsFn = pageMargins;
-        this.pageMargins = pageMargins(1)
-    }
+	if (typeof pageMargins === 'function') {
+		this.pageMarginsFn = pageMargins;
+		this.pageMargins = pageMargins(1)
+	}
 
-    this.x = pageMargins.left;
+	this.x = pageMargins.left;
 	this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
 	this.availableHeight = 0;
 	this.page = -1;
@@ -269,7 +269,7 @@ DocumentContext.prototype.moveToNextPage = function (pageOrientation) {
 DocumentContext.prototype.addPage = function (pageSize) {
 	var page = {items: [], pageSize: pageSize};
 
-    if (this.pageMarginsFn) page.pageMargins = this.pageMarginsFn(this.pages.length);
+	if (this.pageMarginsFn) page.pageMargins = this.pageMarginsFn(this.pages.length);
 
 	this.pages.push(page);
 	this.backgroundLength.push(0);
