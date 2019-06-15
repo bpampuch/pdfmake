@@ -10,12 +10,7 @@ var isString = require('./helpers').isString;
 function DocumentContext(pageSize, pageMargins) {
 	this.pages = [];
 
-	this.pageMargins = pageMargins;
-
-	if (typeof pageMargins === 'function') {
-		this.pageMarginsFn = pageMargins;
-		this.pageMargins = pageMargins(1)
-	}
+	this.pageMargins = typeof pageMargins === 'function' ? pageMargins : function () {return pageMargins};
 
 	this.x = pageMargins.left;
 	this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
@@ -267,10 +262,11 @@ DocumentContext.prototype.moveToNextPage = function (pageOrientation) {
 };
 
 DocumentContext.prototype.addPage = function (pageSize) {
-	var page = {items: [], pageSize: pageSize};
-
-	if (this.pageMarginsFn) page.pageMargins = this.pageMarginsFn(this.pages.length);
-
+	var page = {
+		items: [],
+		pageSize: pageSize,
+		pageMargins: this.pageMargins(this.pages.length)
+	};
 	this.pages.push(page);
 	this.backgroundLength.push(0);
 	this.page = this.pages.length - 1;
@@ -296,7 +292,7 @@ DocumentContext.prototype.getCurrentPosition = function () {
 	var innerWidth = pageSize.width - this.getCurrentPage().pageMargins.left - this.getCurrentPage().pageMargins.right;
 
 	return {
-        pageMargins: this.getCurrentPage().pageMargins,
+		pageMargins: this.getCurrentPage().pageMargins,
 		pageNumber: this.page + 1,
 		pageOrientation: pageSize.orientation,
 		pageInnerHeight: innerHeight,
