@@ -231,6 +231,16 @@ function fixPageSize(pageSize, pageOrientation) {
 	return size;
 }
 
+function pageMarginsFn(margin) {
+	if(!isFunction(margin)) margin = function () {
+		return margin;
+	};
+	
+	return function (currentPage) {
+		return fixPageMargins(margin(currentPage))
+	}
+}
+
 function fixPageMargins(margin) {
 	if (!margin) {
 		return null;
