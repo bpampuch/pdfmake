@@ -265,7 +265,7 @@ DocumentContext.prototype.addPage = function (pageSize) {
 	var page = {
 		items: [],
 		pageSize: pageSize,
-		pageMargins: this.pageMargins(this.pages.length)
+		pageMargins: this.pageMargins(this.pages.length + 1)
 	};
 	this.pages.push(page);
 	this.backgroundLength.push(0);
