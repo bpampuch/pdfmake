@@ -237,7 +237,7 @@ function pageMarginsFn(margin, def) {
 	};
 	
 	return function (currentPage) {
-		return fixPageMargins(margin(currentPage)) || def;
+		return fixPageMargins(margin(currentPage) ||  def);
 	}
 }
 
