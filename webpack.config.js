@@ -70,7 +70,7 @@ module.exports = {
 			},
 			{
 				test: /\.js$/,
-				include: /(pdfkit|saslprep)/,
+				include: /(pdfkit|saslprep|unicode-trie|unicode-properties|dfa)/,
 				use: {
 					loader: 'babel-loader',
 					options: {
