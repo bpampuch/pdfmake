@@ -31,11 +31,12 @@ function addAll(target, otherArray) {
  * @param {Object} pageSize - an object defining page width and height
  * @param {Object} pageMargins - an object defining top, left, right and bottom margins
  */
-function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
+function LayoutBuilder(pageSize, pageMargins, imageMeasure, svgMeasure) {
 	this.pageSize = pageSize;
 	this.pageMargins = pageMargins;
 	this.tracker = new TraversalTracker();
 	this.imageMeasure = imageMeasure;
+	this.svgMeasure = svgMeasure;
 	this.tableLayouts = {};
 }
 
@@ -125,7 +126,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 	}
 
 	this.docPreprocessor = new DocPreprocessor();
-	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
+	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.svgMeasure, this.tableLayouts, images);
 
 
 	function resetXYs(result) {
@@ -377,6 +378,8 @@ LayoutBuilder.prototype.processNode = function (node) {
 			self.processToc(node);
 		} else if (node.image) {
 			self.processImage(node);
+		} else if (node.svg) {
+			self.processSVG(node);
 		} else if (node.canvas) {
 			self.processCanvas(node);
 		} else if (node.qr) {
@@ -719,6 +722,11 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 // images
 LayoutBuilder.prototype.processImage = function (node) {
 	var position = this.writer.addImage(node);
+	node.positions.push(position);
+};
+
+LayoutBuilder.prototype.processSVG = function (node) {
+	var position = this.writer.addSVG(node);
 	node.positions.push(position);
 };
 

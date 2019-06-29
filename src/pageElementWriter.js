@@ -40,6 +40,12 @@ PageElementWriter.prototype.addImage = function (image, index) {
 	});
 };
 
+PageElementWriter.prototype.addSVG = function (image, index) {
+	return fitOnPage(this, function (self) {
+		return self.writer.addSVG(image, index);
+	});
+};
+
 PageElementWriter.prototype.addQr = function (qr, index) {
 	return fitOnPage(this, function (self) {
 		return self.writer.addQr(qr, index);

@@ -87,7 +87,7 @@ ElementWriter.prototype.alignLine = function (line) {
 	}
 };
 
-ElementWriter.prototype.addImage = function (image, index) {
+ElementWriter.prototype.addImage = function (image, index, type) {
 	var context = this.context;
 	var page = context.getCurrentPage(),
 		position = this.getCurrentPositionOnPage();
@@ -106,13 +106,17 @@ ElementWriter.prototype.addImage = function (image, index) {
 	this.alignImage(image);
 
 	addPageItem(page, {
-		type: 'image',
+		type: type || 'image',
 		item: image
 	}, index);
 
 	context.moveDown(image._height);
 
 	return position;
+};
+
+ElementWriter.prototype.addSVG = function (image, index) {
+		return this.addImage(image, index, 'svg')
 };
 
 ElementWriter.prototype.addQr = function (qr, index) {

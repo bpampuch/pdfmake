@@ -17,10 +17,11 @@ var qrEncoder = require('./qrEnc.js');
 /**
  * @private
  */
-function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, tableLayouts, images) {
+function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, svgMeasure, tableLayouts, images) {
 	this.textTools = new TextTools(fontProvider);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 	this.imageMeasure = imageMeasure;
+	this.svgMeasure = svgMeasure;
 	this.tableLayouts = tableLayouts;
 	this.images = images;
 	this.autoImageIndex = 1;
@@ -60,6 +61,8 @@ DocMeasure.prototype.measureNode = function (node) {
 			return extendMargins(self.measureToc(node));
 		} else if (node.image) {
 			return extendMargins(self.measureImage(node));
+		} else if (node.svg) {
+			return extendMargins(self.measureSVG(node));
 		} else if (node.canvas) {
 			return extendMargins(self.measureCanvas(node));
 		} else if (node.qr) {
@@ -156,43 +159,63 @@ DocMeasure.prototype.convertIfBase64Image = function (node) {
 	}
 };
 
+DocMeasure.prototype.measureImageWithDimensions = function(node, dimensions) {
+	if (node.fit) {
+		var factor = (dimensions.width / dimensions.height > node.fit[0] / node.fit[1]) ? node.fit[0] / dimensions.width : node.fit[1] / dimensions.height;
+		node._width = node._minWidth = node._maxWidth = dimensions.width * factor;
+		node._height = dimensions.height * factor;
+	} else {
+		node._width = node._minWidth = node._maxWidth = node.width || dimensions.width;
+		node._height = node.height || (dimensions.height * node._width / dimensions.width);
+
+		if (isNumber(node.maxWidth) && node.maxWidth < node._width) {
+			node._width = node._minWidth = node._maxWidth = node.maxWidth;
+			node._height = node._width * dimensions.height / dimensions.width;
+		}
+
+		if (isNumber(node.maxHeight) && node.maxHeight < node._height) {
+			node._height = node.maxHeight;
+			node._width = node._minWidth = node._maxWidth = node._height * dimensions.width / dimensions.height;
+		}
+
+		if (isNumber(node.minWidth) && node.minWidth > node._width) {
+			node._width = node._minWidth = node._maxWidth = node.minWidth;
+			node._height = node._width * dimensions.height / dimensions.width;
+		}
+
+		if (isNumber(node.minHeight) && node.minHeight > node._height) {
+			node._height = node.minHeight;
+			node._width = node._minWidth = node._maxWidth = node._height * dimensions.width / dimensions.height;
+		}
+	}
+
+	node._alignment = this.styleStack.getProperty('alignment');
+};
+
 DocMeasure.prototype.measureImage = function (node) {
 	if (this.images) {
 		this.convertIfBase64Image(node);
 	}
 
-	var imageSize = this.imageMeasure.measureImage(node.image);
+	var dimensions = this.imageMeasure.measureImage(node.image);
 
-	if (node.fit) {
-		var factor = (imageSize.width / imageSize.height > node.fit[0] / node.fit[1]) ? node.fit[0] / imageSize.width : node.fit[1] / imageSize.height;
-		node._width = node._minWidth = node._maxWidth = imageSize.width * factor;
-		node._height = imageSize.height * factor;
-	} else {
-		node._width = node._minWidth = node._maxWidth = node.width || imageSize.width;
-		node._height = node.height || (imageSize.height * node._width / imageSize.width);
+	this.measureImageWithDimensions(node, dimensions);
 
-		if (isNumber(node.maxWidth) && node.maxWidth < node._width) {
-			node._width = node._minWidth = node._maxWidth = node.maxWidth;
-			node._height = node._width * imageSize.height / imageSize.width;
-		}
+	return node;
+};
 
-		if (isNumber(node.maxHeight) && node.maxHeight < node._height) {
-			node._height = node.maxHeight;
-			node._width = node._minWidth = node._maxWidth = node._height * imageSize.width / imageSize.height;
-		}
+DocMeasure.prototype.measureSVG = function (node) {
 
-		if (isNumber(node.minWidth) && node.minWidth > node._width) {
-			node._width = node._minWidth = node._maxWidth = node.minWidth;
-			node._height = node._width * imageSize.height / imageSize.width;
-		}
+	var dimensions = this.svgMeasure.measureSVG(node.svg);
 
-		if (isNumber(node.minHeight) && node.minHeight > node._height) {
-			node._height = node.minHeight;
-			node._width = node._minWidth = node._maxWidth = node._height * imageSize.width / imageSize.height;
-		}
-	}
+	this.measureImageWithDimensions(node, dimensions);
 
-	node._alignment = this.styleStack.getProperty('alignment');
+	// scale SVG based on final dimension
+	node.svg = this.svgMeasure.writeDimensions(node.svg, {
+		width: node._width,
+		height: node._height
+	});
+
 	return node;
 };
 

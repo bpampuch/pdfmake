@@ -6,6 +6,7 @@ var FontProvider = require('./fontProvider');
 var LayoutBuilder = require('./layoutBuilder');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
+var SVGMeasure = require('./svgMeasure');
 var textDecorator = require('./textDecorator');
 var TextTools = require('./textTools');
 var isFunction = require('./helpers').isFunction;
@@ -14,6 +15,15 @@ var isNumber = require('./helpers').isNumber;
 var isBoolean = require('./helpers').isBoolean;
 var isArray = require('./helpers').isArray;
 var isUndefined = require('./helpers').isUndefined;
+
+var getSvgToPDF = function() {
+	try {
+		// optional dependency to support svg nodes
+		return require('svg-to-pdfkit');
+	} catch (e) {
+		throw new Error('Please install svg-to-pdfkit to enable svg nodes');
+	}
+};
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -109,14 +119,17 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
-	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
+	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images), new SVGMeasure());
 
 	registerDefaultTableLayouts(builder);
 	if (options.tableLayouts) {
 		builder.registerTableLayouts(options.tableLayouts);
 	}
 
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
+	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {
+		fontSize: 12,
+		font: 'Roboto'
+	}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
 	var maxNumberPages = docDefinition.maxPagesNumber || -1;
 	if (isNumber(maxNumberPages) && maxNumberPages > -1) {
 		pages = pages.slice(0, maxNumberPages);
@@ -213,7 +226,7 @@ function fixPageSize(pageSize, pageOrientation) {
 		if (isString(pageOrientation)) {
 			pageOrientation = pageOrientation.toLowerCase();
 			return ((pageOrientation === 'portrait') && (size.width > size.height)) ||
-							((pageOrientation === 'landscape') && (size.width < size.height));
+				((pageOrientation === 'landscape') && (size.width < size.height));
 		}
 		return false;
 	}
@@ -341,7 +354,8 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	}
 
 	var renderedItems = 0;
-	progressCallback = progressCallback || function () {};
+	progressCallback = progressCallback || function () {
+	};
 
 	for (var i = 0; i < pages.length; i++) {
 		if (i > 0) {
@@ -361,6 +375,9 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 					break;
 				case 'image':
 					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
+					break;
+				case 'svg':
+					renderSVG(item.item, item.item.x, item.item.y, pdfKitDoc);
 					break;
 				case 'beginClip':
 					beginClip(item.item, pdfKitDoc);
@@ -456,7 +473,10 @@ function renderLine(line, x, y, pdfKitDoc) {
 
 		if (inline.linkToPage) {
 			var _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0]}).end();
-			pdfKitDoc.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, {Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null]});
+			pdfKitDoc.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, {
+				Subtype: 'Link',
+				Dest: [inline.linkToPage - 1, 'XYZ', null, null, null]
+			});
 		}
 
 	}
@@ -576,6 +596,10 @@ function renderImage(image, x, y, pdfKitDoc) {
 	if (image.link) {
 		pdfKitDoc.link(image.x, image.y, image._width, image._height, image.link);
 	}
+}
+
+function renderSVG(svg, x, y, pdfKitDoc) {
+	getSvgToPDF()(pdfKitDoc, svg.svg, svg.x, svg.y, Object.assign({width: svg._width, height: svg._height}, svg.options));
 }
 
 function beginClip(rect, pdfKitDoc) {
