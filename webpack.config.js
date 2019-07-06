@@ -46,7 +46,7 @@ module.exports = {
 			},
 			{
 				test: /\.js$/,
-				include: /(pdfkit|saslprep|unicode-trie|unicode-properties|dfa)/,
+				include: /(pdfkit|saslprep|unicode-trie|unicode-properties|dfa|linebreak)/,
 				use: {
 					loader: 'babel-loader',
 					options: {
