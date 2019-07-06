@@ -49,6 +49,8 @@ class DocPreprocessor {
 			return this.preprocessToc(node);
 		} else if (node.image) {
 			return this.preprocessImage(node);
+		} else if (node.svg) {
+			return this.preprocessSVG(node);
 		} else if (node.canvas) {
 			return this.preprocessCanvas(node);
 		} else if (node.qr) {
@@ -233,6 +235,10 @@ class DocPreprocessor {
 	}
 
 	preprocessCanvas(node) {
+		return node;
+	}
+
+	preprocessSVG(node) {
 		return node;
 	}
 

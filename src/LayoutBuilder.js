@@ -25,10 +25,12 @@ class LayoutBuilder {
 	/**
 	 * @param {object} pageSize - an object defining page width and height
 	 * @param {object} pageMargins - an object defining top, left, right and bottom margins
+	 * @param {object} svgMeasure
 	 */
-	constructor(pageSize, pageMargins) {
+	constructor(pageSize, pageMargins, svgMeasure) {
 		this.pageSize = pageSize;
 		this.pageMargins = pageMargins;
+		this.svgMeasure = svgMeasure;
 		this.tableLayouts = {};
 	}
 
@@ -112,7 +114,7 @@ class LayoutBuilder {
 		}
 
 		this.docPreprocessor = new DocPreprocessor();
-		this.docMeasure = new DocMeasure(pdfDocument, styleDictionary, defaultStyle, this.tableLayouts);
+		this.docMeasure = new DocMeasure(pdfDocument, styleDictionary, defaultStyle, this.svgMeasure, this.tableLayouts);
 
 		function resetXYs(result) {
 			result.linearNodeList.forEach(node => {
@@ -356,6 +358,8 @@ class LayoutBuilder {
 				this.processToc(node);
 			} else if (node.image) {
 				this.processImage(node);
+			} else if (node.svg) {
+				this.processSVG(node);
 			} else if (node.canvas) {
 				this.processCanvas(node);
 			} else if (node.qr) {
@@ -682,6 +686,11 @@ class LayoutBuilder {
 	processCanvas(node) {
 		let positions = this.writer.addCanvas(node);
 		addAll(node.positions, positions);
+	}
+
+	processSVG(node) {
+		var position = this.writer.addSVG(node);
+		node.positions.push(position);
 	}
 
 	processQr(node) {

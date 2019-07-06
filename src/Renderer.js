@@ -2,6 +2,15 @@ import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
 import { isUndefined } from './helpers/variableType';
 
+var getSvgToPDF = function () {
+	try {
+		// optional dependency to support svg nodes
+		return require('svg-to-pdfkit');
+	} catch (e) {
+		throw new Error('Please install svg-to-pdfkit to enable svg nodes');
+	}
+};
+
 class Renderer {
 	constructor(pdfDocument, progressCallback) {
 		this.pdfDocument = pdfDocument;
@@ -39,6 +48,9 @@ class Renderer {
 						break;
 					case 'image':
 						this.renderImage(item.item);
+						break;
+					case 'svg':
+						this.renderSVG(item.item);
 						break;
 					case 'beginClip':
 						this.beginClip(item.item);
@@ -238,6 +250,10 @@ class Renderer {
 		if (image.link) {
 			this.pdfDocument.link(image.x, image.y, image._width, image._height, image.link);
 		}
+	}
+
+	renderSVG(svg) {
+		getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, Object.assign({ width: svg._width, height: svg._height }, svg.options));
 	}
 
 	beginClip(rect) {

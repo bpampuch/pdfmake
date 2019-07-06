@@ -1,5 +1,6 @@
 import PDFDocument from './PDFDocument';
 import LayoutBuilder from './LayoutBuilder';
+import SVGMeasure from './SVGMeasure';
 import sizes from './standardPageSizes';
 import { tableLayouts } from './tableLayouts';
 import Renderer from './Renderer';
@@ -60,7 +61,7 @@ class PdfPrinter {
 		this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, pdfOptions);
 		setMetadata(docDefinition, this.pdfKitDoc);
 
-		const builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40));
+		const builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new SVGMeasure());
 
 		builder.registerTableLayouts(tableLayouts);
 		if (options.tableLayouts) {

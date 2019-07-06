@@ -12,11 +12,13 @@ class DocMeasure {
 		pdfDocument,
 		styleDictionary,
 		defaultStyle,
+		svgMeasure,
 		tableLayouts
 	) {
 		this.pdfDocument = pdfDocument;
 		this.textInlines = new TextInlines(pdfDocument);
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
+		this.svgMeasure = svgMeasure;
 		this.tableLayouts = tableLayouts;
 		this.autoImageIndex = 1;
 	}
@@ -53,6 +55,8 @@ class DocMeasure {
 				return extendMargins(this.measureToc(node));
 			} else if (node.image) {
 				return extendMargins(this.measureImage(node));
+			} else if (node.svg) {
+				return extendMargins(this.measureSVG(node));
 			} else if (node.canvas) {
 				return extendMargins(this.measureCanvas(node));
 			} else if (node.qr) {
@@ -74,6 +78,39 @@ class DocMeasure {
 		}
 	}
 
+	measureImageWithDimensions(node, dimensions) {
+		if (node.fit) {
+			let factor = (dimensions.width / dimensions.height > node.fit[0] / node.fit[1]) ? node.fit[0] / dimensions.width : node.fit[1] / dimensions.height;
+			node._width = node._minWidth = node._maxWidth = dimensions.width * factor;
+			node._height = dimensions.height * factor;
+		} else {
+			node._width = node._minWidth = node._maxWidth = node.width || dimensions.width;
+			node._height = node.height || (dimensions.height * node._width / dimensions.width);
+
+			if (isNumber(node.maxWidth) && node.maxWidth < node._width) {
+				node._width = node._minWidth = node._maxWidth = node.maxWidth;
+				node._height = node._width * dimensions.height / dimensions.width;
+			}
+
+			if (isNumber(node.maxHeight) && node.maxHeight < node._height) {
+				node._height = node.maxHeight;
+				node._width = node._minWidth = node._maxWidth = node._height * dimensions.width / dimensions.height;
+			}
+
+			if (isNumber(node.minWidth) && node.minWidth > node._width) {
+				node._width = node._minWidth = node._maxWidth = node.minWidth;
+				node._height = node._width * dimensions.height / dimensions.width;
+			}
+
+			if (isNumber(node.minHeight) && node.minHeight > node._height) {
+				node._height = node.minHeight;
+				node._width = node._minWidth = node._maxWidth = node._height * dimensions.width / dimensions.height;
+			}
+		}
+
+		node._alignment = this.styleStack.getProperty('alignment');
+	}
+
 	convertIfBase64Image(node) {
 		if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) { // base64 image
 			let label = `$$pdfmake$$${this.autoImageIndex++}`;
@@ -88,36 +125,19 @@ class DocMeasure {
 		let image = this.pdfDocument.provideImage(node.image);
 		let imageSize = { width: image.width, height: image.height };
 
-		if (node.fit) {
-			let factor = (imageSize.width / imageSize.height > node.fit[0] / node.fit[1]) ? node.fit[0] / imageSize.width : node.fit[1] / imageSize.height;
-			node._width = node._minWidth = node._maxWidth = imageSize.width * factor;
-			node._height = imageSize.height * factor;
-		} else {
-			node._width = node._minWidth = node._maxWidth = node.width || imageSize.width;
-			node._height = node.height || (imageSize.height * node._width / imageSize.width);
+		this.measureImageWithDimensions(node, imageSize);
 
-			if (isNumber(node.maxWidth) && node.maxWidth < node._width) {
-				node._width = node._minWidth = node._maxWidth = node.maxWidth;
-				node._height = node._width * imageSize.height / imageSize.width;
-			}
+		return node;
+	}
 
-			if (isNumber(node.maxHeight) && node.maxHeight < node._height) {
-				node._height = node.maxHeight;
-				node._width = node._minWidth = node._maxWidth = node._height * imageSize.width / imageSize.height;
-			}
+	measureSVG(node) {
+		var dimensions = this.svgMeasure.measureSVG(node.svg);
 
-			if (isNumber(node.minWidth) && node.minWidth > node._width) {
-				node._width = node._minWidth = node._maxWidth = node.minWidth;
-				node._height = node._width * imageSize.height / imageSize.width;
-			}
+		this.measureImageWithDimensions(node, dimensions);
 
-			if (isNumber(node.minHeight) && node.minHeight > node._height) {
-				node._height = node.minHeight;
-				node._width = node._minWidth = node._maxWidth = node._height * imageSize.width / imageSize.height;
-			}
-		}
+		// scale SVG based on final dimension
+		node.svg = this.svgMeasure.writeDimensions(node.svg, { width: node._width, height: node._height });
 
-		node._alignment = this.styleStack.getProperty('alignment');
 		return node;
 	}
 

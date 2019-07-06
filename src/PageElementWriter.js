@@ -28,6 +28,10 @@ class PageElementWriter extends ElementWriter {
 		return this._fitOnPage(() => super.addCanvas(image, index));
 	}
 
+	addSVG(image, index) {
+		return this._fitOnPage(() => super.addSVG(image, index));
+	}
+
 	addQr(qr, index) {
 		return this._fitOnPage(() => super.addQr(qr, index));
 	}

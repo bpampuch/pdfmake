@@ -52,12 +52,12 @@ describe('Integration Test: images', function () {
 
 			assert.equal(pages.length, 1);
 
-			var someElementAfterImage = pages[0].items[0].item;
+			var someElementBeforeImage = pages[0].items[0].item;
 			var image = pages[0].items[1].item;
 
 
-			assert.equal(someElementAfterImage.x, testHelper.MARGINS.left);
-			assert.equal(someElementAfterImage.y, testHelper.MARGINS.top);
+			assert.equal(someElementBeforeImage.x, testHelper.MARGINS.left);
+			assert.equal(someElementBeforeImage.y, testHelper.MARGINS.top);
 
 			assert.equal(image.x, testHelper.MARGINS.left);
 			assert.equal(image.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT);

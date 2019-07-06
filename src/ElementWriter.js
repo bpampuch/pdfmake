@@ -137,6 +137,35 @@ class ElementWriter extends EventEmitter {
 		return positions;
 	}
 
+	addSVG(image, index) {
+		// TODO: same as addImage
+		let context = this.context();
+		let page = context.getCurrentPage();
+		let position = this.getCurrentPositionOnPage();
+
+		if (!page || (image.absolutePosition === undefined && context.availableHeight < image._height && page.items.length > 0)) {
+			return false;
+		}
+
+		if (image._x === undefined) {
+			image._x = image.x || 0;
+		}
+
+		image.x = context.x + image._x;
+		image.y = context.y;
+
+		this.alignImage(image);
+
+		addPageItem(page, {
+			type: 'svg',
+			item: image
+		}, index);
+
+		context.moveDown(image._height);
+
+		return position;
+	}
+
 	addQr(qr, index) {
 		let context = this.context();
 		let page = context.getCurrentPage();
