@@ -159,7 +159,7 @@ DocMeasure.prototype.convertIfBase64Image = function (node) {
 	}
 };
 
-DocMeasure.prototype.measureImageWithDimensions = function(node, dimensions) {
+DocMeasure.prototype.measureImageWithDimensions = function (node, dimensions) {
 	if (node.fit) {
 		var factor = (dimensions.width / dimensions.height > node.fit[0] / node.fit[1]) ? node.fit[0] / dimensions.width : node.fit[1] / dimensions.height;
 		node._width = node._minWidth = node._maxWidth = dimensions.width * factor;
@@ -255,8 +255,8 @@ DocMeasure.prototype.measureToc = function (node) {
 		var lineNumberStyle = item._textNodeRef.tocNumberStyle || numberStyle;
 		var destination = getNodeId(item._nodeRef);
 		body.push([
-			{text: item._textNodeRef.text, linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin},
-			{text: '00000', linkToDestination: destination, alignment: 'right', _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]]}
+			{ text: item._textNodeRef.text, linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin },
+			{ text: '00000', linkToDestination: destination, alignment: 'right', _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
 		]);
 	}
 
@@ -301,13 +301,13 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 		var radius = gapSize.fontSize / 6;
 		return {
 			canvas: [{
-					x: radius,
-					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
-					r1: radius,
-					r2: radius,
-					type: 'ellipse',
-					color: color
-				}]
+				x: radius,
+				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+				r1: radius,
+				r2: radius,
+				type: 'ellipse',
+				color: color
+			}]
 		};
 	}
 
@@ -316,13 +316,13 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 		var size = gapSize.fontSize / 3;
 		return {
 			canvas: [{
-					x: 0,
-					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - (gapSize.fontSize / 3) - (size / 2),
-					h: size,
-					w: size,
-					type: 'rect',
-					color: color
-				}]
+				x: 0,
+				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - (gapSize.fontSize / 3) - (size / 2),
+				h: size,
+				w: size,
+				type: 'rect',
+				color: color
+			}]
 		};
 	}
 
@@ -331,13 +331,13 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 		var radius = gapSize.fontSize / 6;
 		return {
 			canvas: [{
-					x: radius,
-					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
-					r1: radius,
-					r2: radius,
-					type: 'ellipse',
-					lineColor: color
-				}]
+				x: radius,
+				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+				r1: radius,
+				r2: radius,
+				type: 'ellipse',
+				lineColor: color
+			}]
 		};
 	}
 
@@ -387,7 +387,7 @@ DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack, type, s
 			return counter.toString();
 		}
 		var num = counter;
-		var lookup = {M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1}, roman = '', i;
+		var lookup = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 }, roman = '', i;
 		for (i in lookup) {
 			while (num >= lookup[i]) {
 				roman += i;
@@ -448,13 +448,13 @@ DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack, type, s
 		}
 	}
 
-	var textArray = {text: counterText};
+	var textArray = { text: counterText };
 	var markerColor = styleStack.getProperty('markerColor');
 	if (markerColor) {
 		textArray.color = markerColor;
 	}
 
-	return {_inlines: this.textTools.buildInlines(textArray, styleStack).items};
+	return { _inlines: this.textTools.buildInlines(textArray, styleStack).items };
 };
 
 DocMeasure.prototype.measureUnorderedList = function (node) {
@@ -573,7 +573,7 @@ DocMeasure.prototype.measureTable = function (node) {
 
 				if (data.colSpan && data.colSpan > 1) {
 					markSpans(rowData, col, data.colSpan);
-					colSpans.push({col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth});
+					colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
 				} else {
 					c._minWidth = Math.max(c._minWidth, data._minWidth);
 					c._maxWidth = Math.max(c._maxWidth, data._maxWidth);
@@ -700,7 +700,7 @@ DocMeasure.prototype.measureTable = function (node) {
 	}
 
 	function getMinMax(col, span, offsets) {
-		var result = {minWidth: 0, maxWidth: 0};
+		var result = { minWidth: 0, maxWidth: 0 };
 
 		for (var i = 0; i < span; i++) {
 			result.minWidth += node.table.widths[col + i]._minWidth + (i ? offsets.offsets[col + i] : 0);
@@ -748,7 +748,7 @@ DocMeasure.prototype.measureTable = function (node) {
 		for (var i = 0, l = node.table.widths.length; i < l; i++) {
 			var w = node.table.widths[i];
 			if (isNumber(w) || isString(w)) {
-				node.table.widths[i] = {width: w};
+				node.table.widths[i] = { width: w };
 			}
 		}
 	}

@@ -21,15 +21,15 @@ DocPreprocessor.prototype.preprocessDocument = function (docStructure) {
 DocPreprocessor.prototype.preprocessNode = function (node) {
 	// expand shortcuts and casting values
 	if (isArray(node)) {
-		node = {stack: node};
+		node = { stack: node };
 	} else if (isString(node)) {
-		node = {text: node};
+		node = { text: node };
 	} else if (isNumber(node) || isBoolean(node)) {
-		node = {text: node.toString()};
+		node = { text: node.toString() };
 	} else if (node === undefined || node === null) {
-		node = {text: ''};
+		node = { text: '' };
 	} else if (Object.keys(node).length === 0) { // empty object
-		node = {text: ''};
+		node = { text: '' };
 	} else if ('text' in node && (node.text === undefined || node.text === null)) {
 		node.text = '';
 	}
@@ -128,7 +128,7 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 			var tocItemId = node.tocItem[i];
 
 			if (!this.tocs[tocItemId]) {
-				this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
+				this.tocs[tocItemId] = { toc: { _items: [], _pseudo: true } };
 			}
 
 			if (!node.id) {
@@ -175,7 +175,7 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 
 	if (node.textReference) {
 		if (!this.nodeReferences[node.textReference]) {
-			this.nodeReferences[node.textReference] = {_nodeRef: {}, _pseudo: true};
+			this.nodeReferences[node.textReference] = { _nodeRef: {}, _pseudo: true };
 		}
 
 		node.text = '';

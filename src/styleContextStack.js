@@ -103,12 +103,12 @@ StyleContextStack.prototype.autopush = function (item) {
 		'noWrap',
 		'markerColor',
 		'leadingIndent'
-			//'tableCellPadding'
-			// 'cellBorder',
-			// 'headerCellBorder',
-			// 'oddRowCellBorder',
-			// 'evenRowCellBorder',
-			// 'tableBorder'
+		//'tableCellPadding'
+		// 'cellBorder',
+		// 'headerCellBorder',
+		// 'oddRowCellBorder',
+		// 'evenRowCellBorder',
+		// 'tableBorder'
 	];
 	var styleOverrideObject = {};
 	var pushStyleOverrideObject = false;

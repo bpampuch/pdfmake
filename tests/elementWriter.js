@@ -8,8 +8,8 @@ describe('ElementWriter', function () {
 	var ew, ctx, page, tracker, fakePosition;
 
 	beforeEach(function () {
-		fakePosition = {fake: 'position'};
-		page = {items: []};
+		fakePosition = { fake: 'position' };
+		page = { items: [] };
 		ctx = {
 			x: 10,
 			y: 20,
@@ -26,7 +26,7 @@ describe('ElementWriter', function () {
 				ctx.availableHeight -= offset;
 			}
 		};
-		tracker = {emit: function () {}};
+		tracker = { emit: function () { } };
 		ew = new ElementWriter(ctx, tracker);
 
 	});
@@ -126,15 +126,15 @@ describe('ElementWriter', function () {
 
 	describe('addVector', function () {
 		it('should add vectors to the current page', function () {
-			ew.addVector({type: 'rect', x: 10, y: 10});
+			ew.addVector({ type: 'rect', x: 10, y: 10 });
 			assert.equal(page.items.length, 1);
 		});
 
 		it('should offset vectors to the current position', function () {
-			var rect = {type: 'rect', x: 10, y: 10};
-			var ellipse = {type: 'ellipse', x: 10, y: 10};
-			var line = {type: 'line', x1: 10, x2: 50, y1: 10, y2: 20};
-			var polyline = {type: 'polyline', points: [{x: 0, y: 0}, {x: 20, y: 20}]};
+			var rect = { type: 'rect', x: 10, y: 10 };
+			var ellipse = { type: 'ellipse', x: 10, y: 10 };
+			var line = { type: 'line', x1: 10, x2: 50, y1: 10, y2: 20 };
+			var polyline = { type: 'polyline', points: [{ x: 0, y: 0 }, { x: 20, y: 20 }] };
 
 			ew.addVector(rect);
 			ew.addVector(ellipse);
@@ -175,11 +175,11 @@ describe('ElementWriter', function () {
 					},
 					{
 						type: 'vector',
-						item: {type: 'rect', x: 10, y: 20}
+						item: { type: 'rect', x: 10, y: 20 }
 					},
 					{
 						type: 'vector',
-						item: {type: 'rect', x: 40, y: 60}
+						item: { type: 'rect', x: 40, y: 60 }
 					}
 				]
 			};

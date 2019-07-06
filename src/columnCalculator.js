@@ -95,9 +95,9 @@ function isStarColumn(column) {
 
 //TODO: refactor and reuse in measureTable
 function measureMinMax(columns) {
-	var result = {min: 0, max: 0};
+	var result = { min: 0, max: 0 };
 
-	var maxStar = {min: 0, max: 0};
+	var maxStar = { min: 0, max: 0 };
 	var starCount = 0;
 
 	for (var i = 0, l = columns.length; i < l; i++) {

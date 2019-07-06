@@ -143,7 +143,7 @@ PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY)
 
 PageElementWriter.prototype.currentBlockToRepeatable = function () {
 	var unbreakableContext = this.writer.context;
-	var rep = {items: []};
+	var rep = { items: [] };
 
 	unbreakableContext.pages[0].items.forEach(function (item) {
 		rep.items.push(item);

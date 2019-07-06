@@ -39,7 +39,7 @@ TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
 		minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);
 
 		if (!currentLineWidth) {
-			currentLineWidth = {width: 0, leadingCut: inline.leadingCut, trailingCut: 0};
+			currentLineWidth = { width: 0, leadingCut: inline.leadingCut, trailingCut: 0 };
 		}
 
 		currentLineWidth.width += inline.width;
@@ -106,7 +106,7 @@ function splitWords(text, noWrap) {
 	text = text.replace(/\t/g, '    ');
 
 	if (noWrap) {
-		results.push({text: text});
+		results.push({ text: text });
 		return results;
 	}
 
@@ -119,9 +119,9 @@ function splitWords(text, noWrap) {
 
 		if (bk.required || word.match(/\r?\n$|\r$/)) { // new line
 			word = word.replace(/\r?\n$|\r$/, '');
-			results.push({text: word, lineEnd: true});
+			results.push({ text: word, lineEnd: true });
 		} else {
-			results.push({text: word});
+			results.push({ text: word });
 		}
 
 		last = bk.position;

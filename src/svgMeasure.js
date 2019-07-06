@@ -47,7 +47,7 @@ SVGMeasure.prototype.getViewboxHeightAndWidth = function (svgString) {
 		}
 
 		if (viewboxEntries.length === 4) {
-			return {width: viewboxEntries[2], height: viewboxEntries[3]};
+			return { width: viewboxEntries[2], height: viewboxEntries[3] };
 		}
 
 		throw new Error("Unexpected svg viewbox format, should have 4 entries but found: '" + viewboxStr + "'");

@@ -255,7 +255,7 @@ DocumentContext.prototype.moveToNextPage = function (pageOrientation) {
 
 
 DocumentContext.prototype.addPage = function (pageSize) {
-	var page = {items: [], pageSize: pageSize};
+	var page = { items: [], pageSize: pageSize };
 	this.pages.push(page);
 	this.backgroundLength.push(0);
 	this.page = this.pages.length - 1;

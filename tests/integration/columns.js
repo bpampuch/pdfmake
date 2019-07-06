@@ -33,10 +33,10 @@ describe('Integration test: columns', function () {
 		assert.equal(pages[0].items.length, 4);
 		assert.deepEqual(pages[0].items.map(node => node.item).map(item => item.x), [testHelper.MARGINS.left, testHelper.MARGINS.left, columnSpacing, columnSpacing]);
 		assert.deepEqual(pages[0].items.map(node => node.item).map(item => item.y), [testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT, testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT]);
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}).join(''), 'Lorem ipsum Malit profecta ');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}).join(''), 'versatur');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 2}).join(''), 'and alta adipisicing elit Malit ');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 3}).join(''), 'profecta versatur');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 0 }).join(''), 'Lorem ipsum Malit profecta ');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 1 }).join(''), 'versatur');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 2 }).join(''), 'and alta adipisicing elit Malit ');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 3 }).join(''), 'profecta versatur');
 	});
 
 	it('renders three columns', function () {
@@ -65,9 +65,9 @@ describe('Integration test: columns', function () {
 		assert.equal(pages[0].items.length, 3);
 		assert.deepEqual(pages[0].items.map(node => node.item).map(item => item.x), [testHelper.MARGINS.left, testHelper.MARGINS.left + columnSpacing, testHelper.MARGINS.left + 2 * columnSpacing]);
 		assert.deepEqual(pages[0].items.map(node => node.item).map(item => item.y), [testHelper.MARGINS.top, testHelper.MARGINS.top, testHelper.MARGINS.top]);
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}).join(''), 'dolor sit amet');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}).join(''), 'Diu concederetur.');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 2}).join(''), 'dolor sit amet');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 0 }).join(''), 'dolor sit amet');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 1 }).join(''), 'Diu concederetur.');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 2 }).join(''), 'dolor sit amet');
 	});
 
 	it('renders star column', function () {
@@ -114,12 +114,12 @@ describe('Integration test: columns', function () {
 			definedWidth, definedWidth, definedWidth, definedWidth,
 			starWidth, starWidth
 		]);
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}).join(''), 'Lorem ipsum ');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}).join(''), 'dolor sit amet, ');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 2}).join(''), 'consectetur ');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 3}).join(''), 'adipisicing elit.');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 4}).join(''), 'Lorem ipsum dolor sit amet, consectetur ');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 5}).join(''), 'adipisicing elit.');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 0 }).join(''), 'Lorem ipsum ');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 1 }).join(''), 'dolor sit amet, ');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 2 }).join(''), 'consectetur ');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 3 }).join(''), 'adipisicing elit.');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 4 }).join(''), 'Lorem ipsum dolor sit amet, consectetur ');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 5 }).join(''), 'adipisicing elit.');
 	});
 
 	it('renders auto column', function () {
@@ -175,11 +175,11 @@ describe('Integration test: columns', function () {
 			starWidth, starWidth,
 			definedWidth
 		]);
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}).join(''), 'auto ');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}).join(''), 'column');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 2}).join(''), 'This is a star-sized column. It should get the ');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 3}).join(''), 'remaining space divided by the number');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 4}).join(''), 'this one');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 0 }).join(''), 'auto ');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 1 }).join(''), 'column');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 2 }).join(''), 'This is a star-sized column. It should get the ');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 3 }).join(''), 'remaining space divided by the number');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 4 }).join(''), 'this one');
 	});
 
 	it('renders only needed space for auto columns', function () {
@@ -215,17 +215,17 @@ describe('Integration test: columns', function () {
 		assert.deepEqual(items.map(item => item.x), [leftColumnSpacing, rightColumnSpacing]);
 		assert.deepEqual(items.map(item => item.y), [testHelper.MARGINS.top, testHelper.MARGINS.top]);
 
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}).join(''), 'val');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}).join(''), 'val');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 0 }).join(''), 'val');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 1 }).join(''), 'val');
 	});
 
 	it('renders empty column lists', function () {
 		var dd = {
 			content: [
-				{columns: []},
+				{ columns: [] },
 				{
 					columns: [
-						{text: new Array(80).fill().map(() => 'Lorem ipsum')}
+						{ text: new Array(80).fill().map(() => 'Lorem ipsum') }
 					]
 				}
 			]
@@ -276,11 +276,11 @@ describe('Integration test: columns', function () {
 		]);
 		assert.deepEqual(items.map(item => item.y), [testHelper.MARGINS.top, testHelper.MARGINS.top + testHelper.LINE_HEIGHT, testHelper.MARGINS.top, testHelper.MARGINS.top, testHelper.MARGINS.top]);
 
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 0}).join(''), 'Lorem ipsum ');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 1}).join(''), 'dolor sit amet');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 2}).join(''), 'Lorem ipsum');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 3}).join(''), 'Lorem ipsum');
-		assert.deepEqual(testHelper.getInlineTexts(pages, {page: 0, item: 4}).join(''), 'Lorem ipsum');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 0 }).join(''), 'Lorem ipsum ');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 1 }).join(''), 'dolor sit amet');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 2 }).join(''), 'Lorem ipsum');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 3 }).join(''), 'Lorem ipsum');
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 4 }).join(''), 'Lorem ipsum');
 	});
 
 });

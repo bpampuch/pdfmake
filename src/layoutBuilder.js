@@ -165,7 +165,7 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 		this.addWatermark(watermark, fontProvider, defaultStyle);
 	}
 
-	return {pages: this.writer.context().pages, linearNodeList: this.linearNodeList};
+	return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
 };
 
 
@@ -246,7 +246,7 @@ LayoutBuilder.prototype.addHeadersAndFooters = function (header, footer) {
 
 LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaultStyle) {
 	if (isString(watermark)) {
-		watermark = {'text': watermark};
+		watermark = { 'text': watermark };
 	}
 
 	if (!watermark.text) { // empty watermark text
@@ -277,7 +277,7 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 		var height = pageSize.height;
 		var targetWidth = Math.sqrt(width * width + height * height) * 0.8; /* page diagonal * sample factor */
 		var textTools = new TextTools(fontProvider);
-		var styleContextStack = new StyleContextStack(null, {font: watermark.font, bold: watermark.bold, italics: watermark.italics});
+		var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
 		var size;
 
 		/**
@@ -305,7 +305,7 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 		/*
 		 End binary search
 		 */
-		return {size: size, fontSize: c};
+		return { size: size, fontSize: c };
 	}
 };
 
@@ -497,7 +497,7 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 		self.writer.context().completeColumnGroup(height);
 	});
 
-	return {pageBreaks: pageBreaks, positions: positions};
+	return { pageBreaks: pageBreaks, positions: positions };
 
 	function storePageBreakData(data) {
 		var pageDesc;
