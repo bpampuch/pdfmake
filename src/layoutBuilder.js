@@ -293,10 +293,11 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 				fontSize: c
 			});
 			size = textTools.sizeOfString(watermark.text, styleContextStack);
-			if (size.width > targetWidth) {
+			const adjustedTargetWidth = targetWidth - (size.width * 0.5);
+			if (size.width > adjustedTargetWidth) {
 				b = c;
 				c = (a + b) / 2;
-			} else if (size.width < targetWidth) {
+			} else if (size.width < adjustedTargetWidth) {
 				a = c;
 				c = (a + b) / 2;
 			}
