@@ -118,6 +118,7 @@ class TextInlines {
 			item.decoration = StyleContextStack.getStyleProperty(item, styleContextStack, 'decoration', null);
 			item.decorationColor = StyleContextStack.getStyleProperty(item, styleContextStack, 'decorationColor', null);
 			item.decorationStyle = StyleContextStack.getStyleProperty(item, styleContextStack, 'decorationStyle', null);
+			item.decorationStrokeWidth = StyleContextStack.getStyleProperty(item, styleContextStack, 'decorationStrokeWidth', null);
 			item.background = StyleContextStack.getStyleProperty(item, styleContextStack, 'background', null);
 			item.link = StyleContextStack.getStyleProperty(item, styleContextStack, 'link', null);
 			item.linkToPage = StyleContextStack.getStyleProperty(item, styleContextStack, 'linkToPage', null);

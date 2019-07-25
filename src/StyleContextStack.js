@@ -92,6 +92,7 @@ class StyleContextStack {
 			'decoration',
 			'decorationStyle',
 			'decorationColor',
+			'decorationStrokeWidth',
 			'background',
 			'lineHeight',
 			'characterSpacing',

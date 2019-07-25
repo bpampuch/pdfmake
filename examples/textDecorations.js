@@ -11,7 +11,6 @@ var pdfmake = require('../js/index');
 pdfmake.setFonts(fonts);
 
 var ct = [];
-var lorem = 'Lorem ipsum dolor sit amet';
 
 ct.push({ text: 'Higlighted text', fontSize: 18, background: 'yellow' });
 ct.push(' ');
@@ -31,12 +30,22 @@ ct.push({
 		{ text: 'Wavy style', decoration: 'underline', decorationStyle: 'wavy' }
 	]
 });
-ct.push(' ')
+ct.push(' ');
 ct.push({
 	columns: [
 		{ text: 'Using colors', decoration: 'underline', decorationColor: 'blue' },
 		{ text: 'Using colors', decoration: 'lineThrough', decorationColor: 'red' },
 		{ text: 'Using colors', decoration: 'underline', decorationStyle: 'wavy', decorationColor: 'green' }
+	]
+});
+ct.push(' ');
+ct.push({
+	columns: [
+		{ text: 'Stroke width 3', decoration: 'underline', decorationColor: 'blue', decorationStrokeWidth: 3, decorationStyle: 'dashed' },
+		{ text: 'Stroke width 5', decoration: 'underline', decorationColor: 'red', decorationStrokeWidth: 5, decorationStyle: 'dotted' },
+		{ text: 'Stroke width 2', decoration: 'underline', decorationColor: 'purple', decorationStrokeWidth: 2, decorationStyle: 'wavy' },
+		{ text: 'Stroke width 2', decoration: 'underline', decorationColor: 'black', decorationStrokeWidth: 2, decorationStyle: 'double' },
+		{ text: 'Stroke width 2', decoration: 'lineThrough', decorationColor: 'grey', decorationStrokeWidth: 2 }
 	]
 });
 
