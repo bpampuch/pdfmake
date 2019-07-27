@@ -1627,7 +1627,6 @@ describe('LayoutBuilder', function () {
 			it.skip('should render lines to pdf in a single call if style is the same');
 			it.skip('should support document encryption');
 			it.skip('should support document permissions');
-			it.skip('should support TOC');
 			it.skip('should support in-document-references');
 			it.skip('should support uppercase text transforms');
 			it.skip('should support lowercase text transforms');
@@ -2012,6 +2011,22 @@ describe('LayoutBuilder', function () {
 			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageNumbers, [1]);
 			assert.deepEqual(pageBreakBeforeFunction.getCall(2).args[0].pageNumbers, [1, 2]);
 			assert.deepEqual(pageBreakBeforeFunction.getCall(3).args[0].pageNumbers, [2]);
+		});
+	});
+
+	describe('table of content', function () {
+		it('should render empty ToC', function () {
+			var desc = [
+				{
+					toc: {
+						title: { text: 'INDEX' }
+					}
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 1);
 		});
 	});
 });

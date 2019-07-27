@@ -662,7 +662,9 @@ LayoutBuilder.prototype.processToc = function (node) {
 	if (node.toc.title) {
 		this.processNode(node.toc.title);
 	}
-	this.processNode(node.toc._table);
+	if (node.toc._table) {
+		this.processNode(node.toc._table);
+	}
 };
 
 LayoutBuilder.prototype.buildNextLine = function (textNode) {
