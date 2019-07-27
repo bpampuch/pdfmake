@@ -620,7 +620,9 @@ class LayoutBuilder {
 		if (node.toc.title) {
 			this.processNode(node.toc.title);
 		}
-		this.processNode(node.toc._table);
+		if (node.toc._table) {
+			this.processNode(node.toc._table);
+		}
 	}
 
 	buildNextLine(textNode) {

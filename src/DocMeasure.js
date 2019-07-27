@@ -166,32 +166,34 @@ class DocMeasure {
 			node.toc.title = this.measureNode(node.toc.title);
 		}
 
-		let body = [];
-		let textStyle = node.toc.textStyle || {};
-		let numberStyle = node.toc.numberStyle || textStyle;
-		let textMargin = node.toc.textMargin || [0, 0, 0, 0];
-		for (let i = 0, l = node.toc._items.length; i < l; i++) {
-			let item = node.toc._items[i];
-			let lineStyle = item._textNodeRef.tocStyle || textStyle;
-			let lineMargin = item._textNodeRef.tocMargin || textMargin;
-			let lineNumberStyle = item._textNodeRef.tocNumberStyle || numberStyle;
-			let destination = getNodeId(item._nodeRef);
-			body.push([
-				{ text: item._textNodeRef.text, linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin },
-				{ text: '00000', linkToDestination: destination, alignment: 'right', _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
-			]);
+		if (node.toc._items.length > 0) {
+			let body = [];
+			let textStyle = node.toc.textStyle || {};
+			let numberStyle = node.toc.numberStyle || textStyle;
+			let textMargin = node.toc.textMargin || [0, 0, 0, 0];
+			for (let i = 0, l = node.toc._items.length; i < l; i++) {
+				let item = node.toc._items[i];
+				let lineStyle = item._textNodeRef.tocStyle || textStyle;
+				let lineMargin = item._textNodeRef.tocMargin || textMargin;
+				let lineNumberStyle = item._textNodeRef.tocNumberStyle || numberStyle;
+				let destination = getNodeId(item._nodeRef);
+				body.push([
+					{ text: item._textNodeRef.text, linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin },
+					{ text: '00000', linkToDestination: destination, alignment: 'right', _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
+				]);
+			}
+
+			node.toc._table = {
+				table: {
+					dontBreakRows: true,
+					widths: ['*', 'auto'],
+					body: body
+				},
+				layout: 'noBorders'
+			};
+
+			node.toc._table = this.measureNode(node.toc._table);
 		}
-
-		node.toc._table = {
-			table: {
-				dontBreakRows: true,
-				widths: ['*', 'auto'],
-				body: body
-			},
-			layout: 'noBorders'
-		};
-
-		node.toc._table = this.measureNode(node.toc._table);
 
 		return node;
 	}
