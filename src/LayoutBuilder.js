@@ -5,7 +5,7 @@ import PageElementWriter from './PageElementWriter';
 import ColumnCalculator from './columnCalculator';
 import TableProcessor from './TableProcessor';
 import Line from './Line';
-import { isString, isArray, isFunction } from './helpers/variableType';
+import { isString, isArray, isFunction, isValue } from './helpers/variableType';
 import { stringifyNode, getNodeId } from './helpers/node';
 import { pack, offsetVector } from './helpers/tools';
 import TextInlines from './TextInlines';
@@ -241,17 +241,24 @@ class LayoutBuilder {
 		}
 
 		watermark.font = watermark.font || defaultStyle.font || 'Roboto';
+		watermark.fontSize = watermark.fontSize || 'auto';
 		watermark.color = watermark.color || 'black';
 		watermark.opacity = watermark.opacity || 0.6;
 		watermark.bold = watermark.bold || false;
 		watermark.italics = watermark.italics || false;
+		watermark.angle = isValue(watermark.angle) ? watermark.angle : null;
+
+		if (watermark.angle === null) {
+			watermark.angle = Math.atan2(this.pageSize.height, this.pageSize.width) * -180 / Math.PI;
+		}
 
 		let watermarkObject = {
 			text: watermark.text,
 			font: pdfDocument.provideFont(watermark.font, watermark.bold, watermark.italics),
 			size: getSize(this.pageSize, watermark, pdfDocument),
 			color: watermark.color,
-			opacity: watermark.opacity
+			opacity: watermark.opacity,
+			angle: watermark.angle
 		};
 
 		let pages = this.writer.context().pages;
@@ -260,12 +267,11 @@ class LayoutBuilder {
 		}
 
 		function getSize(pageSize, watermark, pdfDocument) {
-			let width = pageSize.width;
-			let height = pageSize.height;
-			let targetWidth = Math.sqrt(width * width + height * height) * 0.8; /* page diagonal * sample factor */
+			let pageWidth = pageSize.width;
 			let textInlines = new TextInlines(pdfDocument);
 			let styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
 			let size;
+			let rotatedSize;
 
 			/**
 			 * Binary search the best font size.
@@ -280,10 +286,15 @@ class LayoutBuilder {
 					fontSize: c
 				});
 				size = textInlines.sizeOfText(watermark.text, styleContextStack);
-				if (size.width > targetWidth) {
+				rotatedSize = {
+					width: (size.height * Math.sin(watermark.angle * Math.PI / -180)) + (size.width * Math.cos(watermark.angle * Math.PI / -180)),
+					height: (size.width * Math.sin(watermark.angle * Math.PI / -180)) + (size.height * Math.cos(watermark.angle * Math.PI / -180))
+				};
+
+				if (rotatedSize.width > pageWidth) {
 					b = c;
 					c = (a + b) / 2;
-				} else if (size.width < targetWidth) {
+				} else if (rotatedSize.width < pageWidth) {
 					a = c;
 					c = (a + b) / 2;
 				}
@@ -292,7 +303,7 @@ class LayoutBuilder {
 			/*
 			 End binary search
 			 */
-			return { size: size, fontSize: c };
+			return { size: size, rotatedSize: rotatedSize, fontSize: c };
 		}
 	}
 

@@ -274,8 +274,7 @@ class Renderer {
 
 		this.pdfDocument.save();
 
-		let angle = Math.atan2(this.pdfDocument.page.height, this.pdfDocument.page.width) * -180 / Math.PI;
-		this.pdfDocument.rotate(angle, { origin: [this.pdfDocument.page.width / 2, this.pdfDocument.page.height / 2] });
+		this.pdfDocument.rotate(watermark.angle, { origin: [this.pdfDocument.page.width / 2, this.pdfDocument.page.height / 2] });
 
 		let x = this.pdfDocument.page.width / 2 - watermark.size.size.width / 2;
 		let y = this.pdfDocument.page.height / 2 - watermark.size.size.height / 4;
