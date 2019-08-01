@@ -395,6 +395,25 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	}
 }
 
+/**
+ * Shift the "y" height of the text baseline up or down (superscript or subscript,
+ * respectively). The exact shift can / should be changed according to standard
+ * conventions.
+ *
+ * @param {number} y 
+ * @param {any} inline 
+ */
+function offsetText(y, inline) {
+	let newY = y;
+	if (inline.sup) {
+		newY -= inline.fontSize * 0.75;
+	}
+	if (inline.sub) {
+		newY += inline.fontSize * 0.35;
+	}
+	return newY;
+}
+
 function renderLine(line, x, y, pdfKitDoc) {
 	function preparePageNodeRefLine(_pageNodeRef, inline) {
 		var newWidth;
@@ -470,10 +489,7 @@ function renderLine(line, x, y, pdfKitDoc) {
 		pdfKitDoc._font = inline.font;
 		pdfKitDoc.fontSize(inline.fontSize);
 
-		var shiftedY = y + shiftToBaseline;
-		if (inline.sup) {
-			shiftedY -= inline.fontSize * 0.75;
-		}
+		var shiftedY = offsetText(y + shiftToBaseline, inline);
 		pdfKitDoc.text(inline.text, x + inline.x, shiftedY, options);
 
 		if (inline.linkToPage) {

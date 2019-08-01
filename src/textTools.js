@@ -299,6 +299,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var preserveTrailingSpaces = getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
 		var opacity = getStyleProperty(item, styleContextStack, 'opacity', 1);
 		var sup = getStyleProperty(item, styleContextStack, 'sup', false);
+		var sub = getStyleProperty(item, styleContextStack, 'sub', false);
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -337,6 +338,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.noWrap = noWrap;
 		item.opacity = opacity;
 		item.sup = sup;
+		item.sub = sub;
 	});
 
 	return normalized;
