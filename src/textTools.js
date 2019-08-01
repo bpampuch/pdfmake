@@ -298,6 +298,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
 		var preserveTrailingSpaces = getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
 		var opacity = getStyleProperty(item, styleContextStack, 'opacity', 1);
+		var sup = getStyleProperty(item, styleContextStack, 'sup', false);
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -335,6 +336,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.linkToDestination = linkToDestination;
 		item.noWrap = noWrap;
 		item.opacity = opacity;
+		item.sup = sup;
 	});
 
 	return normalized;
