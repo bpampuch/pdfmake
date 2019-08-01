@@ -12,7 +12,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: false }));
 
-function createPdfBinary(docDefinition, callback) {
+function createPdfBinary(docDefinition) {
 	var fonts = {
 		Roboto: {
 			normal: path.join(__dirname, '..', 'examples', '/fonts/Roboto-Regular.ttf'),
@@ -25,13 +25,13 @@ function createPdfBinary(docDefinition, callback) {
 	pdfmake.setFonts(fonts);
 
 	var pdf = pdfmake.createPdf(docDefinition);
-	pdf.getDataUrl(callback);
+	return pdf.getDataUrl();
 }
 
 app.post('/pdf', function (req, res) {
 	eval(req.body.content);
 
-	createPdfBinary(dd, function (binary) {
+	createPdfBinary(dd).then(function (binary) {
 		res.contentType('application/pdf');
 		res.send(binary);
 	}, function (error) {
