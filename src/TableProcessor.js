@@ -191,8 +191,8 @@ class TableProcessor {
 
 				if (cellAbove && cellAbove._rowSpanCurrentOffset) {
 					rowCellAbove = body[lineIndex - 1 - cellAbove._rowSpanCurrentOffset][i];
-					rowBottomBorder = rowCellAbove.border ? rowCellAbove.border[3] : this.layout.defaultBorder;
-					if (rowCellAbove.borderColor) {
+					rowBottomBorder = rowCellAbove && rowCellAbove.border ? rowCellAbove.border[3] : this.layout.defaultBorder;
+					if (rowCellAbove && rowCellAbove.borderColor) {
 						borderColor = rowCellAbove.borderColor[3];
 					}
 				}
