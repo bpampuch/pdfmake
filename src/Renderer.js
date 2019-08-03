@@ -253,7 +253,7 @@ class Renderer {
 	}
 
 	renderSVG(svg) {
-		getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, Object.assign({ width: svg._width, height: svg._height }, svg.options));
+		getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options));
 	}
 
 	beginClip(rect) {
