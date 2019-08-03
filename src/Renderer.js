@@ -276,11 +276,11 @@ class Renderer {
 
 		this.pdfDocument.rotate(watermark.angle, { origin: [this.pdfDocument.page.width / 2, this.pdfDocument.page.height / 2] });
 
-		let x = this.pdfDocument.page.width / 2 - watermark.size.size.width / 2;
-		let y = this.pdfDocument.page.height / 2 - watermark.size.size.height / 4;
+		let x = this.pdfDocument.page.width / 2 - watermark._size.size.width / 2;
+		let y = this.pdfDocument.page.height / 2 - watermark._size.size.height / 4;
 
 		this.pdfDocument._font = watermark.font;
-		this.pdfDocument.fontSize(watermark.size.fontSize);
+		this.pdfDocument.fontSize(watermark.fontSize);
 		this.pdfDocument.text(watermark.text, x, y, { lineBreak: false });
 
 		this.pdfDocument.restore();

@@ -205,7 +205,7 @@ class TextInlines {
 	 * @returns {object} size of the specified string
 	 */
 	sizeOfRotatedText(text, angle, styleContextStack) {
-		size = this.sizeOfText(text, styleContextStack);
+		let size = this.sizeOfText(text, styleContextStack);
 		return {
 			width: (size.height * Math.sin(angle * Math.PI / -180)) + (size.width * Math.cos(angle * Math.PI / -180)),
 			height: (size.width * Math.sin(angle * Math.PI / -180)) + (size.height * Math.cos(angle * Math.PI / -180))

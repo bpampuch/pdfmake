@@ -252,25 +252,43 @@ class LayoutBuilder {
 			watermark.angle = Math.atan2(this.pageSize.height, this.pageSize.width) * -180 / Math.PI;
 		}
 
+		if (watermark.fontSize === 'auto') {
+			watermark.fontSize = getWatermarkFontSize(this.pageSize, watermark, pdfDocument);
+		}
+
 		let watermarkObject = {
 			text: watermark.text,
 			font: pdfDocument.provideFont(watermark.font, watermark.bold, watermark.italics),
-			size: getSize(this.pageSize, watermark, pdfDocument),
+			fontSize: watermark.fontSize,
 			color: watermark.color,
 			opacity: watermark.opacity,
 			angle: watermark.angle
 		};
+
+		watermarkObject._size = getWatermarkSize(watermark, pdfDocument);
 
 		let pages = this.writer.context().pages;
 		for (let i = 0, l = pages.length; i < l; i++) {
 			pages[i].watermark = watermarkObject;
 		}
 
-		function getSize(pageSize, watermark, pdfDocument) {
-			let pageWidth = pageSize.width;
+		function getWatermarkSize(watermark, pdfDocument) {
 			let textInlines = new TextInlines(pdfDocument);
 			let styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
-			let size;
+
+			styleContextStack.push({
+				fontSize: watermark.fontSize
+			});
+
+			let size = textInlines.sizeOfText(watermark.text, styleContextStack);
+			let rotatedSize = textInlines.sizeOfRotatedText(watermark.text, watermark.angle, styleContextStack);
+
+			return { size: size, rotatedSize: rotatedSize };
+		}
+
+		function getWatermarkFontSize(pageSize, watermark, pdfDocument) {
+			let textInlines = new TextInlines(pdfDocument);
+			let styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
 			let rotatedSize;
 
 			/**
@@ -285,13 +303,12 @@ class LayoutBuilder {
 				styleContextStack.push({
 					fontSize: c
 				});
-				size = textInlines.sizeOfText(watermark.text, styleContextStack);
 				rotatedSize = textInlines.sizeOfRotatedText(watermark.text, watermark.angle, styleContextStack);
 
-				if (rotatedSize.width > pageWidth) {
+				if (rotatedSize.width > pageSize.width) {
 					b = c;
 					c = (a + b) / 2;
-				} else if (rotatedSize.width < pageWidth) {
+				} else if (rotatedSize.width < pageSize.width) {
 					a = c;
 					c = (a + b) / 2;
 				}
@@ -300,7 +317,7 @@ class LayoutBuilder {
 			/*
 			 End binary search
 			 */
-			return { size: size, rotatedSize: rotatedSize, fontSize: c };
+			return c;
 		}
 	}
 
