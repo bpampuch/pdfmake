@@ -286,10 +286,7 @@ class LayoutBuilder {
 					fontSize: c
 				});
 				size = textInlines.sizeOfText(watermark.text, styleContextStack);
-				rotatedSize = {
-					width: (size.height * Math.sin(watermark.angle * Math.PI / -180)) + (size.width * Math.cos(watermark.angle * Math.PI / -180)),
-					height: (size.width * Math.sin(watermark.angle * Math.PI / -180)) + (size.height * Math.cos(watermark.angle * Math.PI / -180))
-				};
+				rotatedSize = textInlines.sizeOfRotatedText(watermark.text, watermark.angle, styleContextStack);
 
 				if (rotatedSize.width > pageWidth) {
 					b = c;

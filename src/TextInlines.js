@@ -195,6 +195,22 @@ class TextInlines {
 			descender: font.descender / 1000 * fontSize
 		};
 	}
+
+	/**
+	 * Returns size of the specified rotated string (without breaking it) using the current style
+	 *
+	 * @param  {string} text text to be measured
+	 * @param  {number} angle
+	 * @param  {object} styleContextStack current style stack
+	 * @returns {object} size of the specified string
+	 */
+	sizeOfRotatedText(text, angle, styleContextStack) {
+		size = this.sizeOfText(text, styleContextStack);
+		return {
+			width: (size.height * Math.sin(angle * Math.PI / -180)) + (size.width * Math.cos(angle * Math.PI / -180)),
+			height: (size.width * Math.sin(angle * Math.PI / -180)) + (size.height * Math.cos(angle * Math.PI / -180))
+		};
+	}
 }
 
 export default TextInlines;
