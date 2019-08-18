@@ -21,8 +21,8 @@ class SVGMeasure {
 	getHeightAndWidth(svgString) {
 		var svgNode = this.getSVGNode(svgString);
 
-		var widthMatches = svgNode.match(/width="([0-9]*)"/);
-		var heightMatches = svgNode.match(/height="([0-9]*)"/);
+		var widthMatches = svgNode.match(/width="([0-9]+(\.[0-9]+)?)"/);
+		var heightMatches = svgNode.match(/height="([0-9]+(\.[0-9]+)?)"/);
 
 		if (widthMatches || heightMatches) {
 			return {
@@ -35,7 +35,7 @@ class SVGMeasure {
 	getViewboxHeightAndWidth(svgString) {
 		var svgNode = this.getSVGNode(svgString);
 
-		var viewboxMatches = svgNode.match(/viewBox="([0-9\s]*)"/);
+		var viewboxMatches = svgNode.match(/viewBox="(.*)"/);
 		if (viewboxMatches) {
 			var viewboxStr = viewboxMatches[1];
 			var allVieboxEntries = viewboxStr.split(" ");
@@ -77,7 +77,7 @@ class SVGMeasure {
 
 				if (nodeDimensions && nodeDimensions.width) {
 					// replace existing width
-					svgNode = svgNode.replace(/width="[0-9]*"/, newWidth);
+					svgNode = svgNode.replace(/width="[0-9]+(\.[0-9]+)?"/, newWidth);
 				} else {
 					// insert new width
 					svgNode = svgNode.replace(">", " " + newWidth + ">");
@@ -90,7 +90,7 @@ class SVGMeasure {
 
 				if (nodeDimensions && nodeDimensions.height) {
 					// replace existing height
-					svgNode = svgNode.replace(/height="[0-9]*"/, newHeight);
+					svgNode = svgNode.replace(/height="[0-9]+(\.[0-9]+)?"/, newHeight);
 				} else {
 					// insert new height
 					svgNode = svgNode.replace(">", " " + newHeight + ">");
