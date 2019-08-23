@@ -35,7 +35,7 @@ class SVGMeasure {
 	getViewboxHeightAndWidth(svgString) {
 		var svgNode = this.getSVGNode(svgString);
 
-		var viewboxMatches = svgNode.match(/viewBox="(.*)"/);
+		var viewboxMatches = svgNode.match(/viewBox="(\d+(,|\s+|,\s+)\d+(,|\s+|,\s+)\d+(,|\s+|,\s+)\d+)"/);
 		if (viewboxMatches) {
 			var viewboxStr = viewboxMatches[1];
 			var allVieboxEntries = viewboxStr.split(" ");
