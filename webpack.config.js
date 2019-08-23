@@ -139,5 +139,8 @@ module.exports = {
 			raw: true
 		})
 	],
-	devtool: 'source-map'
+	devtool: 'source-map',
+	externals: {
+		'svg-to-pdfkit': 'svg-to-pdfkit'
+	}
 };
