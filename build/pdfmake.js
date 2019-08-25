@@ -63823,8 +63823,8 @@ function () {
 
   _proto.getHeightAndWidth = function getHeightAndWidth(svgString) {
     var svgNode = this.getSVGNode(svgString);
-    var widthMatches = svgNode.match(/width="([0-9]+(\.[0-9]+)?(em|ex|px|in|cm|mm|pt|pc|%)?)"/);
-    var heightMatches = svgNode.match(/height="([0-9]+(\.[0-9]+)?(em|ex|px|in|cm|mm|pt|pc|%)?)"/);
+    var widthMatches = svgNode.match(/width="([0-9]+(\.[0-9]+)?)(em|ex|px|in|cm|mm|pt|pc|%)?"/);
+    var heightMatches = svgNode.match(/height="([0-9]+(\.[0-9]+)?)(em|ex|px|in|cm|mm|pt|pc|%)?"/);
 
     if (widthMatches || heightMatches) {
       return {
