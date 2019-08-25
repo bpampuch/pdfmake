@@ -77,7 +77,7 @@ class SVGMeasure {
 
 				if (nodeDimensions && nodeDimensions.width) {
 					// replace existing width
-					svgNode = svgNode.replace(/width="[0-9]+(\.[0-9]+)?"/, newWidth);
+					svgNode = svgNode.replace(/width="[0-9]+(\.[0-9]+)?(em|ex|px|in|cm|mm|pt|pc|%)?"/, newWidth);
 				} else {
 					// insert new width
 					svgNode = svgNode.replace(">", " " + newWidth + ">");
@@ -90,7 +90,7 @@ class SVGMeasure {
 
 				if (nodeDimensions && nodeDimensions.height) {
 					// replace existing height
-					svgNode = svgNode.replace(/height="[0-9]+(\.[0-9]+)?"/, newHeight);
+					svgNode = svgNode.replace(/height="[0-9]+(\.[0-9]+)?(em|ex|px|in|cm|mm|pt|pc|%)?"/, newHeight);
 				} else {
 					// insert new height
 					svgNode = svgNode.replace(">", " " + newHeight + ">");
