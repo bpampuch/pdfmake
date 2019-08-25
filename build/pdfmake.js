@@ -63091,7 +63091,7 @@ function () {
       });
       linearNodeList.forEach(function (node) {
         var nodeInfo = {};
-        ['id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns', 'headlineLevel', 'style', 'pageBreak', 'pageOrientation', 'width', 'height'].forEach(function (key) {
+        ['id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns', 'headlineLevel', 'style', 'pageBreak', 'pageOrientation', 'width', 'height'].forEach(function (key) {
           if (node[key] !== undefined) {
             nodeInfo[key] = node[key];
           }
