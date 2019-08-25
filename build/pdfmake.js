@@ -63828,8 +63828,8 @@ function () {
 
     if (widthMatches || heightMatches) {
       return {
-        width: widthMatches ? widthMatches[1] : undefined,
-        height: heightMatches ? heightMatches[1] : undefined
+        width: widthMatches ? +widthMatches[1] : undefined,
+        height: heightMatches ? +heightMatches[1] : undefined
       };
     }
   };
@@ -63851,8 +63851,8 @@ function () {
 
       if (viewboxEntries.length === 4) {
         return {
-          width: viewboxEntries[2],
-          height: viewboxEntries[3]
+          width: +viewboxEntries[2],
+          height: +viewboxEntries[3]
         };
       }
 

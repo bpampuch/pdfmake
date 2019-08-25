@@ -26,8 +26,8 @@ class SVGMeasure {
 
 		if (widthMatches || heightMatches) {
 			return {
-				width: widthMatches ? widthMatches[1] : undefined,
-				height: heightMatches ? heightMatches[1] : undefined
+				width: widthMatches ? +widthMatches[1] : undefined,
+				height: heightMatches ? +heightMatches[1] : undefined
 			};
 		}
 	}
@@ -48,7 +48,7 @@ class SVGMeasure {
 			}
 
 			if (viewboxEntries.length === 4) {
-				return { width: viewboxEntries[2], height: viewboxEntries[3] };
+				return { width: +viewboxEntries[2], height: +viewboxEntries[3] };
 			}
 
 			throw new Error("Unexpected svg viewbox format, should have 4 entries but found: '" + viewboxStr + "'");
