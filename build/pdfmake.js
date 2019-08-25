@@ -63836,7 +63836,7 @@ function () {
 
   _proto.getViewboxHeightAndWidth = function getViewboxHeightAndWidth(svgString) {
     var svgNode = this.getSVGNode(svgString);
-    var viewboxMatches = svgNode.match(/viewBox="(\d+(,|\s+|,\s+)\d+(,|\s+|,\s+)\d+(,|\s+|,\s+)\d+)"/);
+    var viewboxMatches = svgNode.match(/viewBox="([+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+)"/);
 
     if (viewboxMatches) {
       var viewboxStr = viewboxMatches[1];
