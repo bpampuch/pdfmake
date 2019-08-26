@@ -92,19 +92,6 @@ module.exports = {
 				}
 			},
 			{ test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')] },
-			{
-				test: /fontkit[/\\]index.js$/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: /fs\./g,
-							replacement: function () {
-								return 'require(\'fs\').';
-							}
-						}
-					]
-				})
-			},
-
 			/* temporary bugfix for FileSaver: added hack for mobile device support, see https://github.com/bpampuch/pdfmake/issues/1664 */
 			/* waiting to merge and release PR https://github.com/eligrey/FileSaver.js/pull/533 */
 			{
