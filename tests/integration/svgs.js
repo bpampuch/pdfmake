@@ -86,6 +86,23 @@ describe('Integration Test: svg\'s', function () {
 			assert.equal(svgNode._height, 100);
 		});
 
+		it('reads height and width from svg (decimals)', function () {
+			var dd = {
+				content: [
+					{
+						svg: '<svg width="200.15" height="100.35" viewBox="0 0 600 300"></svg>',
+					}
+				]
+			};
+
+			var pages = testHelper.renderPages('A6', dd);
+
+			var svgNode = pages[0].items[0].item;
+
+			assert.equal(Number(svgNode._width).toFixed(2), 200.15);
+			assert.equal(Number(svgNode._height).toFixed(2), 100.35);
+		});
+
 		it('reads height and width from viewBox', function () {
 			var dd = {
 				content: [
@@ -103,6 +120,23 @@ describe('Integration Test: svg\'s', function () {
 			assert.equal(svgNode._height, 300);
 		});
 
+		it('reads height and width from viewBox (decimals)', function () {
+			var dd = {
+				content: [
+					{
+						svg: '<svg viewBox="0 0 600.10 300.20"></svg>',
+					}
+				]
+			};
+
+			var pages = testHelper.renderPages('A6', dd);
+
+			var svgNode = pages[0].items[0].item;
+
+			assert.equal(Number(svgNode._width).toFixed(2), 600.10);
+			assert.equal(Number(svgNode._height).toFixed(2), 300.20);
+		});
+
 		it('writes width and height from definition to svg', function () {
 			var dd = {
 				content: [
@@ -110,6 +144,26 @@ describe('Integration Test: svg\'s', function () {
 						svg: '<svg width="200" height="100" viewBox="0 0 600 300"></svg>',
 						width: 400,
 						height: 800
+					}
+				]
+			};
+
+			var pages = testHelper.renderPages('A6', dd);
+
+			var svgNode = pages[0].items[0].item;
+			var svgDimensions = svgMeasure.getHeightAndWidth(svgNode.svg);
+
+			assert.equal(svgDimensions.width, dd.content[0].width);
+			assert.equal(svgDimensions.height, dd.content[0].height);
+		});
+
+		it('writes width and height from definition to svg (decimals)', function () {
+			var dd = {
+				content: [
+					{
+						svg: '<svg width="200" height="100" viewBox="0 0 600 300"></svg>',
+						width: 400.15,
+						height: 800.35
 					}
 				]
 			};

@@ -620,7 +620,7 @@ function renderImage(image, x, y, pdfKitDoc) {
 }
 
 function renderSVG(svg, x, y, pdfKitDoc) {
-	getSvgToPDF()(pdfKitDoc, svg.svg, svg.x, svg.y, Object.assign({ width: svg._width, height: svg._height }, svg.options));
+	getSvgToPDF()(pdfKitDoc, svg.svg, svg.x, svg.y, Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options));
 }
 
 function beginClip(rect, pdfKitDoc) {
