@@ -1,14 +1,14 @@
 /*! pdfmake v0.2.0-alpha.0, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory((function webpackLoadOptionalExternalModule() { try { return require("svg-to-pdfkit"); } catch(e) {} }()));
+		module.exports = factory();
 	else if(typeof define === 'function' && define.amd)
-		define(["svg-to-pdfkit"], factory);
+		define([], factory);
 	else {
-		var a = typeof exports === 'object' ? factory((function webpackLoadOptionalExternalModule() { try { return require("svg-to-pdfkit"); } catch(e) {} }())) : factory(root["svg-to-pdfkit"]);
+		var a = factory();
 		for(var i in a) (typeof exports === 'object' ? exports : root)[i] = a[i];
 	}
-})(typeof self !== 'undefined' ? self : this, function(__WEBPACK_EXTERNAL_MODULE__430__) {
+})(typeof self !== 'undefined' ? self : this, function() {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -17801,14 +17801,14 @@ var $export = __webpack_require__(5);
 var isObject = __webpack_require__(13);
 var aFunction = __webpack_require__(73);
 var anInstance = __webpack_require__(95);
-var forOf = __webpack_require__(431);
+var forOf = __webpack_require__(430);
 var speciesConstructor = __webpack_require__(103);
 var task = __webpack_require__(211).set;
-var microtask = __webpack_require__(433)();
+var microtask = __webpack_require__(432)();
 var newPromiseCapabilityModule = __webpack_require__(212);
-var perform = __webpack_require__(434);
-var userAgent = __webpack_require__(435);
-var promiseResolve = __webpack_require__(436);
+var perform = __webpack_require__(433);
+var userAgent = __webpack_require__(434);
+var promiseResolve = __webpack_require__(435);
 var PROMISE = 'Promise';
 var TypeError = global.TypeError;
 var process = global.process;
@@ -18085,7 +18085,7 @@ $export($export.S + $export.F * !(USE_NATIVE && __webpack_require__(105)(functio
 /***/ (function(module, exports, __webpack_require__) {
 
 var ctx = __webpack_require__(27);
-var invoke = __webpack_require__(432);
+var invoke = __webpack_require__(431);
 var html = __webpack_require__(152);
 var cel = __webpack_require__(93);
 var global = __webpack_require__(4);
@@ -24815,7 +24815,7 @@ function () {
 /* 220 */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(437).default;
+module.exports = __webpack_require__(436).default;
 
 /***/ }),
 /* 221 */
@@ -25387,8 +25387,7 @@ function toByteArray (b64) {
     ? validLen - 4
     : validLen
 
-  var i
-  for (i = 0; i < len; i += 4) {
+  for (var i = 0; i < len; i += 4) {
     tmp =
       (revLookup[b64.charCodeAt(i)] << 18) |
       (revLookup[b64.charCodeAt(i + 1)] << 12) |
@@ -55809,9 +55808,8 @@ function toByteArray(b64) {
   var curByte = 0; // if there are placeholders, only get up to the last complete 4 chars
 
   var len = placeHoldersLen > 0 ? validLen - 4 : validLen;
-  var i;
 
-  for (i = 0; i < len; i += 4) {
+  for (var i = 0; i < len; i += 4) {
     tmp = revLookup[b64.charCodeAt(i)] << 18 | revLookup[b64.charCodeAt(i + 1)] << 12 | revLookup[b64.charCodeAt(i + 2)] << 6 | revLookup[b64.charCodeAt(i + 3)];
     arr[curByte++] = tmp >> 16 & 0xFF;
     arr[curByte++] = tmp >> 8 & 0xFF;
@@ -57300,8 +57298,7 @@ function toByteArray (b64) {
     ? validLen - 4
     : validLen
 
-  var i
-  for (i = 0; i < len; i += 4) {
+  for (var i = 0; i < len; i += 4) {
     tmp =
       (revLookup[b64.charCodeAt(i)] << 18) |
       (revLookup[b64.charCodeAt(i + 1)] << 12) |
@@ -58757,13 +58754,6 @@ exports.pairTable = [[PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR_BRK, PR
 
 /***/ }),
 /* 430 */
-/***/ (function(module, exports) {
-
-if(typeof __WEBPACK_EXTERNAL_MODULE__430__ === 'undefined') {var e = new Error("Cannot find module 'svg-to-pdfkit'"); e.code = 'MODULE_NOT_FOUND'; throw e;}
-module.exports = __WEBPACK_EXTERNAL_MODULE__430__;
-
-/***/ }),
-/* 431 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var ctx = __webpack_require__(27);
@@ -58794,7 +58784,7 @@ exports.RETURN = RETURN;
 
 
 /***/ }),
-/* 432 */
+/* 431 */
 /***/ (function(module, exports) {
 
 // fast apply, http://jsperf.lnkit.com/fast-apply/5
@@ -58816,7 +58806,7 @@ module.exports = function (fn, args, that) {
 
 
 /***/ }),
-/* 433 */
+/* 432 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var global = __webpack_require__(4);
@@ -58891,7 +58881,7 @@ module.exports = function () {
 
 
 /***/ }),
-/* 434 */
+/* 433 */
 /***/ (function(module, exports) {
 
 module.exports = function (exec) {
@@ -58904,7 +58894,7 @@ module.exports = function (exec) {
 
 
 /***/ }),
-/* 435 */
+/* 434 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var global = __webpack_require__(4);
@@ -58914,7 +58904,7 @@ module.exports = navigator && navigator.userAgent || '';
 
 
 /***/ }),
-/* 436 */
+/* 435 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var anObject = __webpack_require__(11);
@@ -58932,7 +58922,7 @@ module.exports = function (C, x) {
 
 
 /***/ }),
-/* 437 */
+/* 436 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -60871,45 +60861,42 @@ function () {
       node.toc.title = this.measureNode(node.toc.title);
     }
 
-    if (node.toc._items.length > 0) {
-      var body = [];
-      var textStyle = node.toc.textStyle || {};
-      var numberStyle = node.toc.numberStyle || textStyle;
-      var textMargin = node.toc.textMargin || [0, 0, 0, 0];
+    var body = [];
+    var textStyle = node.toc.textStyle || {};
+    var numberStyle = node.toc.numberStyle || textStyle;
+    var textMargin = node.toc.textMargin || [0, 0, 0, 0];
 
-      for (var i = 0, l = node.toc._items.length; i < l; i++) {
-        var item = node.toc._items[i];
-        var lineStyle = item._textNodeRef.tocStyle || textStyle;
-        var lineMargin = item._textNodeRef.tocMargin || textMargin;
-        var lineNumberStyle = item._textNodeRef.tocNumberStyle || numberStyle;
-        var destination = Object(helpers_node["a" /* getNodeId */])(item._nodeRef);
-        body.push([{
-          text: item._textNodeRef.text,
-          linkToDestination: destination,
-          alignment: 'left',
-          style: lineStyle,
-          margin: lineMargin
-        }, {
-          text: '00000',
-          linkToDestination: destination,
-          alignment: 'right',
-          _tocItemRef: item._nodeRef,
-          style: lineNumberStyle,
-          margin: [0, lineMargin[1], 0, lineMargin[3]]
-        }]);
-      }
-
-      node.toc._table = {
-        table: {
-          dontBreakRows: true,
-          widths: ['*', 'auto'],
-          body: body
-        },
-        layout: 'noBorders'
-      };
-      node.toc._table = this.measureNode(node.toc._table);
+    for (var i = 0, l = node.toc._items.length; i < l; i++) {
+      var item = node.toc._items[i];
+      var lineStyle = item._textNodeRef.tocStyle || textStyle;
+      var lineMargin = item._textNodeRef.tocMargin || textMargin;
+      var lineNumberStyle = item._textNodeRef.tocNumberStyle || numberStyle;
+      var destination = Object(helpers_node["a" /* getNodeId */])(item._nodeRef);
+      body.push([{
+        text: item._textNodeRef.text,
+        linkToDestination: destination,
+        alignment: 'left',
+        style: lineStyle,
+        margin: lineMargin
+      }, {
+        text: '00000',
+        linkToDestination: destination,
+        alignment: 'right',
+        _tocItemRef: item._nodeRef,
+        style: lineNumberStyle,
+        margin: [0, lineMargin[1], 0, lineMargin[3]]
+      }]);
     }
 
+    node.toc._table = {
+      table: {
+        dontBreakRows: true,
+        widths: ['*', 'auto'],
+        body: body
+      },
+      layout: 'noBorders'
+    };
+    node.toc._table = this.measureNode(node.toc._table);
     return node;
   };
 
@@ -62065,12 +62052,11 @@ function (_EventEmitter) {
           break;
 
         case 'image':
-        case 'svg':
           var img = pack(item.item);
           img.x = (img.x || 0) + (useBlockXOffset ? block.xOffset || 0 : ctx.x);
           img.y = (img.y || 0) + (useBlockYOffset ? block.yOffset || 0 : ctx.y);
           page.items.push({
-            type: item.type,
+            type: 'image',
             item: img
           });
           break;
@@ -62534,9 +62520,9 @@ function () {
 
         if (cellAbove && cellAbove._rowSpanCurrentOffset) {
           rowCellAbove = body[lineIndex - 1 - cellAbove._rowSpanCurrentOffset][i];
-          rowBottomBorder = rowCellAbove && rowCellAbove.border ? rowCellAbove.border[3] : this.layout.defaultBorder;
+          rowBottomBorder = rowCellAbove.border ? rowCellAbove.border[3] : this.layout.defaultBorder;
 
-          if (rowCellAbove && rowCellAbove.borderColor) {
+          if (rowCellAbove.borderColor) {
             borderColor = rowCellAbove.borderColor[3];
           }
         }
@@ -63092,7 +63078,7 @@ function () {
       });
       linearNodeList.forEach(function (node) {
         var nodeInfo = {};
-        ['id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns', 'headlineLevel', 'style', 'pageBreak', 'pageOrientation', 'width', 'height'].forEach(function (key) {
+        ['id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns', 'headlineLevel', 'style', 'pageBreak', 'pageOrientation', 'width', 'height'].forEach(function (key) {
           if (node[key] !== undefined) {
             nodeInfo[key] = node[key];
           }
@@ -63672,9 +63658,7 @@ function () {
       this.processNode(node.toc.title);
     }
 
-    if (node.toc._table) {
-      this.processNode(node.toc._table);
-    }
+    this.processNode(node.toc._table);
   };
 
   _proto.buildNextLine = function buildNextLine(textNode) {
@@ -63824,20 +63808,20 @@ function () {
 
   _proto.getHeightAndWidth = function getHeightAndWidth(svgString) {
     var svgNode = this.getSVGNode(svgString);
-    var widthMatches = svgNode.match(/width="([0-9]+(\.[0-9]+)?)(em|ex|px|in|cm|mm|pt|pc|%)?"/);
-    var heightMatches = svgNode.match(/height="([0-9]+(\.[0-9]+)?)(em|ex|px|in|cm|mm|pt|pc|%)?"/);
+    var widthMatches = svgNode.match(/width="([0-9]*)"/);
+    var heightMatches = svgNode.match(/height="([0-9]*)"/);
 
     if (widthMatches || heightMatches) {
       return {
-        width: widthMatches ? +widthMatches[1] : undefined,
-        height: heightMatches ? +heightMatches[1] : undefined
+        width: widthMatches ? widthMatches[1] : undefined,
+        height: heightMatches ? heightMatches[1] : undefined
       };
     }
   };
 
   _proto.getViewboxHeightAndWidth = function getViewboxHeightAndWidth(svgString) {
     var svgNode = this.getSVGNode(svgString);
-    var viewboxMatches = svgNode.match(/viewBox="([+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+)"/);
+    var viewboxMatches = svgNode.match(/viewBox="([0-9\s]*)"/);
 
     if (viewboxMatches) {
       var viewboxStr = viewboxMatches[1];
@@ -63852,8 +63836,8 @@ function () {
 
       if (viewboxEntries.length === 4) {
         return {
-          width: +viewboxEntries[2],
-          height: +viewboxEntries[3]
+          width: viewboxEntries[2],
+          height: viewboxEntries[3]
         };
       }
 
@@ -63878,7 +63862,7 @@ function () {
 
         if (nodeDimensions && nodeDimensions.width) {
           // replace existing width
-          svgNode = svgNode.replace(/width="[0-9]+(\.[0-9]+)?(em|ex|px|in|cm|mm|pt|pc|%)?"/, newWidth);
+          svgNode = svgNode.replace(/width="[0-9]*"/, newWidth);
         } else {
           // insert new width
           svgNode = svgNode.replace(">", " " + newWidth + ">");
@@ -63890,7 +63874,7 @@ function () {
 
         if (nodeDimensions && nodeDimensions.height) {
           // replace existing height
-          svgNode = svgNode.replace(/height="[0-9]+(\.[0-9]+)?(em|ex|px|in|cm|mm|pt|pc|%)?"/, newHeight);
+          svgNode = svgNode.replace(/height="[0-9]*"/, newHeight);
         } else {
           // insert new height
           svgNode = svgNode.replace(">", " " + newHeight + ">");
@@ -64157,7 +64141,7 @@ function () {
 var getSvgToPDF = function getSvgToPDF() {
   try {
     // optional dependency to support svg nodes
-    return __webpack_require__(430);
+    return __webpack_require__(!(function webpackMissingModule() { var e = new Error("Cannot find module 'svg-to-pdfkit'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
   } catch (e) {
     throw new Error('Please install svg-to-pdfkit to enable svg nodes');
   }
@@ -64440,8 +64424,7 @@ function () {
   _proto.renderSVG = function renderSVG(svg) {
     getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, Object.assign({
       width: svg._width,
-      height: svg._height,
-      assumePt: true
+      height: svg._height
     }, svg.options));
   };
 
