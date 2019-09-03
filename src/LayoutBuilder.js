@@ -76,7 +76,7 @@ class LayoutBuilder {
 			linearNodeList.forEach(node => {
 				let nodeInfo = {};
 				[
-					'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
+					'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns',
 					'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
 					'width', 'height'
 				].forEach(key => {

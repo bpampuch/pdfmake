@@ -303,13 +303,14 @@ class ElementWriter extends EventEmitter {
 					break;
 
 				case 'image':
+				case 'svg':
 					var img = pack(item.item);
 
 					img.x = (img.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 					img.y = (img.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
 					page.items.push({
-						type: 'image',
+						type: item.type,
 						item: img
 					});
 					break;

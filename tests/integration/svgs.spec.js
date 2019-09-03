@@ -177,6 +177,36 @@ describe('Integration Test: svg\'s', function () {
 			assert.equal(svgDimensions.height, dd.content[0].height);
 		});
 
+		it('writes svg in header', function () {
+			var dd = {
+				content: [],
+				header: {
+						svg: '<svg width="200" height="100" viewBox="0 0 600 300"></svg>',
+
+				}
+			};
+
+			var pages = testHelper.renderPages('A6', dd);
+			assert.equal(pages[0].items[0].type, 'svg');
+		});
+
+		it('writes svg in table', function () {
+			var dd = {
+				content: [
+					{
+						table:{
+							body: [[{svg: '<svg width="200" height="100" viewBox="0 0 600 300"></svg>'}]]
+						}
+					}
+				],
+			};
+
+			var pages = testHelper.renderPages('A6', dd);
+
+			var types = pages[0].items.map(item => item.type);
+			assert.ok(types.includes('svg'));
+		});
+
 	});
 
 });

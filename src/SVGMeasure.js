@@ -21,13 +21,13 @@ class SVGMeasure {
 	getHeightAndWidth(svgString) {
 		var svgNode = this.getSVGNode(svgString);
 
-		var widthMatches = svgNode.match(/width="([0-9]+(\.[0-9]+)?)"/);
-		var heightMatches = svgNode.match(/height="([0-9]+(\.[0-9]+)?)"/);
+		var widthMatches = svgNode.match(/width="([0-9]+(\.[0-9]+)?)(em|ex|px|in|cm|mm|pt|pc|%)?"/);
+		var heightMatches = svgNode.match(/height="([0-9]+(\.[0-9]+)?)(em|ex|px|in|cm|mm|pt|pc|%)?"/);
 
 		if (widthMatches || heightMatches) {
 			return {
-				width: widthMatches ? widthMatches[1] : undefined,
-				height: heightMatches ? heightMatches[1] : undefined
+				width: widthMatches ? +widthMatches[1] : undefined,
+				height: heightMatches ? +heightMatches[1] : undefined
 			};
 		}
 	}
@@ -35,7 +35,7 @@ class SVGMeasure {
 	getViewboxHeightAndWidth(svgString) {
 		var svgNode = this.getSVGNode(svgString);
 
-		var viewboxMatches = svgNode.match(/viewBox="(.*)"/);
+		var viewboxMatches = svgNode.match(/viewBox="([+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+)"/);
 		if (viewboxMatches) {
 			var viewboxStr = viewboxMatches[1];
 			var allVieboxEntries = viewboxStr.split(" ");
@@ -48,7 +48,7 @@ class SVGMeasure {
 			}
 
 			if (viewboxEntries.length === 4) {
-				return { width: viewboxEntries[2], height: viewboxEntries[3] };
+				return { width: +viewboxEntries[2], height: +viewboxEntries[3] };
 			}
 
 			throw new Error("Unexpected svg viewbox format, should have 4 entries but found: '" + viewboxStr + "'");
@@ -77,7 +77,7 @@ class SVGMeasure {
 
 				if (nodeDimensions && nodeDimensions.width) {
 					// replace existing width
-					svgNode = svgNode.replace(/width="[0-9]+(\.[0-9]+)?"/, newWidth);
+					svgNode = svgNode.replace(/width="[0-9]+(\.[0-9]+)?(em|ex|px|in|cm|mm|pt|pc|%)?"/, newWidth);
 				} else {
 					// insert new width
 					svgNode = svgNode.replace(">", " " + newWidth + ">");
@@ -90,7 +90,7 @@ class SVGMeasure {
 
 				if (nodeDimensions && nodeDimensions.height) {
 					// replace existing height
-					svgNode = svgNode.replace(/height="[0-9]+(\.[0-9]+)?"/, newHeight);
+					svgNode = svgNode.replace(/height="[0-9]+(\.[0-9]+)?(em|ex|px|in|cm|mm|pt|pc|%)?"/, newHeight);
 				} else {
 					// insert new height
 					svgNode = svgNode.replace(">", " " + newHeight + ">");
