@@ -69,7 +69,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 		linearNodeList.forEach(function (node) {
 			var nodeInfo = {};
 			[
-				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
+				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns',
 				'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
 				'width', 'height'
 			].forEach(function (key) {
