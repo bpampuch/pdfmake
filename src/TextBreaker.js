@@ -1,5 +1,5 @@
 import LineBreaker from 'linebreak';
-import { isArray, isObject, isUndefined } from './helpers/variableType';
+import { isArray, isObject } from './helpers/variableType';
 import StyleContextStack from './StyleContextStack';
 
 /**
@@ -42,13 +42,13 @@ const splitWords = (text, noWrap) => {
  */
 const getFirstWord = (words, noWrap) => {
 	let word = words[0];
-	if (isUndefined(word)) {
+	if (word === undefined) {
 		return null;
 	}
 
 	if (noWrap) { // text was not wrapped, we need only first word
 		let tmpWords = splitWords(word.text, false);
-		if (isUndefined(tmpWords[0])) {
+		if (tmpWords[0] === undefined) {
 			return null;
 		}
 		word = tmpWords[0];
@@ -64,7 +64,7 @@ const getFirstWord = (words, noWrap) => {
  */
 const getLastWord = (words, noWrap) => {
 	let word = words[words.length - 1];
-	if (isUndefined(word)) {
+	if (word === undefined) {
 		return null;
 	}
 
@@ -74,7 +74,7 @@ const getLastWord = (words, noWrap) => {
 
 	if (noWrap) { // text was not wrapped, we need only last word
 		let tmpWords = splitWords(word.text, false);
-		if (isUndefined(tmpWords[tmpWords.length - 1])) {
+		if (tmpWords[tmpWords.length - 1] === undefined) {
 			return null;
 		}
 		word = tmpWords[tmpWords.length - 1];

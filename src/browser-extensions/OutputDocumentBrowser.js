@@ -1,5 +1,4 @@
 import OutputDocument from '../OutputDocument';
-//import { isNull } from '../helpers/variableType';
 import { saveAs } from 'file-saver';
 
 const bufferToBlob = buffer => {
@@ -85,7 +84,7 @@ class OutputDocumentBrowser extends OutputDocument {
 						resolve();
 					} else {
 						setTimeout(() => {
-							if (isNull(win.window)) { // is closed by AdBlock
+							if (win.window === null) { // is closed by AdBlock
 								window.location.href = pdfUrl; // open in actual window
 							}
 							resolve();

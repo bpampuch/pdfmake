@@ -1,6 +1,5 @@
 import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
-import { isUndefined } from './helpers/variableType';
 
 var getSvgToPDF = function () {
 	try {
@@ -76,7 +75,7 @@ class Renderer {
 			let diffWidth;
 			let textInlines = new TextInlines(null);
 
-			if (isUndefined(_pageNodeRef.positions)) {
+			if (_pageNodeRef.positions === undefined) {
 				throw new Error('Page reference id not found');
 			}
 
