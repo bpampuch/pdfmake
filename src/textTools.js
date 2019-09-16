@@ -97,6 +97,22 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	};
 };
 
+/**
+ * Returns size of the specified rotated string (without breaking it) using the current style
+ *
+ * @param  {string} text text to be measured
+ * @param  {number} angle
+ * @param  {object} styleContextStack current style stack
+ * @returns {object} size of the specified string
+ */
+TextTools.prototype.sizeOfRotatedText = function (text, angle, styleContextStack) {
+	var size = this.sizeOfString(text, styleContextStack);
+	return {
+		width: (size.height * Math.sin(angle * Math.PI / -180)) + (size.width * Math.cos(angle * Math.PI / -180)),
+		height: (size.width * Math.sin(angle * Math.PI / -180)) + (size.height * Math.cos(angle * Math.PI / -180))
+	};
+}
+
 TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpacing, fontFeatures) {
 	return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
 };
