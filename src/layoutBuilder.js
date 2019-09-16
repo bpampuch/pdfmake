@@ -10,6 +10,8 @@ var TableProcessor = require('./tableProcessor');
 var Line = require('./line');
 var isString = require('./helpers').isString;
 var isArray = require('./helpers').isArray;
+var isUndefined = require('./helpers').isUndefined;
+var isNull = require('./helpers').isNull;
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 var fontStringify = require('./helpers').fontStringify;
@@ -69,7 +71,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 		linearNodeList.forEach(function (node) {
 			var nodeInfo = {};
 			[
-				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
+				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns',
 				'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
 				'width', 'height'
 			].forEach(function (key) {
@@ -254,31 +256,55 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 	}
 
 	watermark.font = watermark.font || defaultStyle.font || 'Roboto';
+	watermark.fontSize = watermark.fontSize || 'auto';
 	watermark.color = watermark.color || 'black';
 	watermark.opacity = watermark.opacity || 0.6;
 	watermark.bold = watermark.bold || false;
 	watermark.italics = watermark.italics || false;
+	watermark.angle = !isUndefined(watermark.angle) && !isNull(watermark.angle) ? watermark.angle : null;
+
+	if (watermark.angle === null) {
+		watermark.angle = Math.atan2(this.pageSize.height, this.pageSize.width) * -180 / Math.PI;
+	}
+
+	if (watermark.fontSize === 'auto') {
+		watermark.fontSize = getWatermarkFontSize(this.pageSize, watermark, fontProvider);
+	}
 
 	var watermarkObject = {
 		text: watermark.text,
 		font: fontProvider.provideFont(watermark.font, watermark.bold, watermark.italics),
-		size: getSize(this.pageSize, watermark, fontProvider),
+		fontSize: watermark.fontSize,
 		color: watermark.color,
-		opacity: watermark.opacity
+		opacity: watermark.opacity,
+		angle: watermark.angle
 	};
+
+	watermarkObject._size = getWatermarkSize(watermark, fontProvider);
 
 	var pages = this.writer.context().pages;
 	for (var i = 0, l = pages.length; i < l; i++) {
 		pages[i].watermark = watermarkObject;
 	}
 
-	function getSize(pageSize, watermark, fontProvider) {
-		var width = pageSize.width;
-		var height = pageSize.height;
-		var targetWidth = Math.sqrt(width * width + height * height) * 0.8; /* page diagonal * sample factor */
+	function getWatermarkSize(watermark, fontProvider) {
 		var textTools = new TextTools(fontProvider);
 		var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
-		var size;
+
+		styleContextStack.push({
+			fontSize: watermark.fontSize
+		});
+
+		var size = textTools.sizeOfString(watermark.text, styleContextStack);
+		var rotatedSize = textTools.sizeOfRotatedText(watermark.text, watermark.angle, styleContextStack);
+
+		return { size: size, rotatedSize: rotatedSize };
+	}
+
+	function getWatermarkFontSize(pageSize, watermark, fontProvider) {
+		var textTools = new TextTools(fontProvider);
+		var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
+		var rotatedSize;
 
 		/**
 		 * Binary search the best font size.
@@ -292,11 +318,11 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 			styleContextStack.push({
 				fontSize: c
 			});
-			size = textTools.sizeOfString(watermark.text, styleContextStack);
-			if (size.width > targetWidth) {
+			rotatedSize = textTools.sizeOfRotatedText(watermark.text, watermark.angle, styleContextStack);
+			if (rotatedSize.width > pageSize.width) {
 				b = c;
 				c = (a + b) / 2;
-			} else if (size.width < targetWidth) {
+			} else if (rotatedSize.width < pageSize.width) {
 				a = c;
 				c = (a + b) / 2;
 			}
@@ -305,7 +331,7 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 		/*
 		 End binary search
 		 */
-		return { size: size, fontSize: c };
+		return c;
 	}
 };
 
