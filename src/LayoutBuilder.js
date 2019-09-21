@@ -309,8 +309,13 @@ class LayoutBuilder {
 					b = c;
 					c = (a + b) / 2;
 				} else if (rotatedSize.width < pageSize.width) {
-					a = c;
-					c = (a + b) / 2;
+					if (rotatedSize.height > pageSize.height) {
+						b = c;
+						c = (a + b) / 2;
+					} else {
+						a = c;
+						c = (a + b) / 2;
+					}
 				}
 				styleContextStack.pop();
 			}
