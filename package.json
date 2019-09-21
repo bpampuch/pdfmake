@@ -14,12 +14,12 @@
     "svg-to-pdfkit": "^0.1.7"
   },
   "devDependencies": {
-    "@babel/core": "^7.5.5",
-    "@babel/plugin-transform-modules-commonjs": "^7.5.0",
-    "@babel/preset-env": "^7.5.5",
+    "@babel/core": "^7.6.0",
+    "@babel/plugin-transform-modules-commonjs": "^7.6.0",
+    "@babel/preset-env": "^7.6.0",
     "babel-loader": "^8.0.6",
     "brfs": "^2.0.2",
-    "eslint-plugin-jsdoc": "^15.7.2",
+    "eslint-plugin-jsdoc": "^15.9.2",
     "expose-loader": "^0.7.5",
     "fancy-log": "^1.3.3",
     "file-saver": "^2.0.2",
@@ -30,11 +30,11 @@
     "gulp-spawn-mocha": "^5.0.1",
     "mocha": "^6.2.0",
     "rewire": "^4.0.1",
-    "sinon": "^7.3.2",
+    "sinon": "^7.4.2",
     "string-replace-webpack-plugin": "^0.1.3",
     "transform-loader": "^0.2.4",
-    "uglifyjs-webpack-plugin": "^2.1.3",
-    "webpack": "^4.38.0"
+    "uglifyjs-webpack-plugin": "^2.2.0",
+    "webpack": "^4.40.2"
   },
   "scripts": {
     "build": "gulp build",
