@@ -161,7 +161,7 @@ class TableProcessor {
 			for (let i = 0, l = this.rowSpanData.length; i < l; i++) {
 				let data = this.rowSpanData[i];
 				let shouldDrawLine = !data.rowSpan;
-				let borderColor;
+				let borderColor = null;
 
 				// draw only if the current cell requires a top border or the cell in the
 				// row above requires a bottom border
