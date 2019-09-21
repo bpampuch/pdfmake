@@ -164,7 +164,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 		for (var i = 0, l = this.rowSpanData.length; i < l; i++) {
 			var data = this.rowSpanData[i];
 			var shouldDrawLine = !data.rowSpan;
-			var borderColor;
+			var borderColor = null;
 
 			// draw only if the current cell requires a top border or the cell in the
 			// row above requires a bottom border
