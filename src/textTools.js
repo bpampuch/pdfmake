@@ -106,10 +106,11 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
  * @returns {object} size of the specified string
  */
 TextTools.prototype.sizeOfRotatedText = function (text, angle, styleContextStack) {
+	var angleRad = angle * Math.PI / -180;
 	var size = this.sizeOfString(text, styleContextStack);
 	return {
-		width: (size.height * Math.sin(angle * Math.PI / -180)) + (size.width * Math.cos(angle * Math.PI / -180)),
-		height: (size.width * Math.sin(angle * Math.PI / -180)) + (size.height * Math.cos(angle * Math.PI / -180))
+		width: Math.abs(size.height * Math.sin(angleRad)) + Math.abs(size.width * Math.cos(angleRad)),
+		height: Math.abs(size.width * Math.sin(angleRad)) + Math.abs(size.height * Math.cos(angleRad))
 	};
 }
 
