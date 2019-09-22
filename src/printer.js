@@ -25,6 +25,32 @@ var getSvgToPDF = function () {
 	}
 };
 
+var findFont = function (fonts, requiredFonts, defaultFont) {
+	for (var i = 0; i < requiredFonts.length; i++) {
+		var requiredFont = requiredFonts[i].toLowerCase();
+
+		for (var font in fonts) {
+			if (font.toLowerCase() === requiredFont) {
+				return font;
+			}
+		}
+	}
+
+	return defaultFont;
+};
+
+var typeName = function (bold, italics) {
+	var type = 'normal';
+	if (bold && italics) {
+		type = 'bolditalics';
+	} else if (bold) {
+		type = 'bold';
+	} else if (italics) {
+		type = 'italics';
+	}
+	return type;
+};
+
 ////////////////////////////////////////
 // PdfPrinter
 
@@ -377,7 +403,7 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
 					break;
 				case 'svg':
-					renderSVG(item.item, item.item.x, item.item.y, pdfKitDoc);
+					renderSVG(item.item, item.item.x, item.item.y, pdfKitDoc, fontProvider);
 					break;
 				case 'beginClip':
 					beginClip(item.item, pdfKitDoc);
@@ -597,8 +623,19 @@ function renderImage(image, x, y, pdfKitDoc) {
 	}
 }
 
-function renderSVG(svg, x, y, pdfKitDoc) {
-	getSvgToPDF()(pdfKitDoc, svg.svg, svg.x, svg.y, Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options));
+function renderSVG(svg, x, y, pdfKitDoc, fontProvider) {
+	var options = Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options);
+	options.fontCallback = function (family, bold, italic, fontOptions) {
+		fontOptions.fauxBold = bold;
+		fontOptions.fauxItalic = italic;
+
+		var fontsFamily = family.split(',').map(function (f) { return f.trim().replace(/('|")/g, ''); });
+		var font = findFont(fontProvider.fonts, fontsFamily, 'Roboto'); // TODO: default font from dd
+
+		return fontProvider.fonts[font][typeName(bold, italic)];
+	};
+
+	getSvgToPDF()(pdfKitDoc, svg.svg, svg.x, svg.y, options);
 }
 
 function beginClip(rect, pdfKitDoc) {
