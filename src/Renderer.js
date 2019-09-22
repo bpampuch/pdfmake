@@ -10,6 +10,32 @@ var getSvgToPDF = function () {
 	}
 };
 
+const findFont = (fonts, requiredFonts, defaultFont) => {
+	for (let i = 0; i < requiredFonts.length; i++) {
+		let requiredFont = requiredFonts[i].toLowerCase();
+
+		for (var font in fonts) {
+			if (font.toLowerCase() === requiredFont) {
+				return font;
+			}
+		}
+	}
+
+	return defaultFont;
+};
+
+const typeName = (bold, italics) => {
+	let type = 'normal';
+	if (bold && italics) {
+		type = 'bolditalics';
+	} else if (bold) {
+		type = 'bold';
+	} else if (italics) {
+		type = 'italics';
+	}
+	return type;
+};
+
 class Renderer {
 	constructor(pdfDocument, progressCallback) {
 		this.pdfDocument = pdfDocument;
@@ -252,7 +278,18 @@ class Renderer {
 	}
 
 	renderSVG(svg) {
-		getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options));
+		let options = Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options);
+		options.fontCallback = (family, bold, italic, fontOptions) => {
+			fontOptions.fauxBold = bold;
+			fontOptions.fauxItalic = italic;
+
+			let fontsFamily = family.split(',').map(f => f.trim().replace(/('|")/g, ''));
+			let font = findFont(this.pdfDocument.fonts, fontsFamily, 'Roboto'); // TODO: default font from dd
+
+			return this.pdfDocument.fonts[font][typeName(bold, italic)];
+		};
+
+		getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, options);
 	}
 
 	beginClip(rect) {
