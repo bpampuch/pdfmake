@@ -404,7 +404,7 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
  * @param {any} inline 
  */
 function offsetText(y, inline) {
-	let newY = y;
+	var newY = y;
 	if (inline.sup) {
 		newY -= inline.fontSize * 0.75;
 	}
