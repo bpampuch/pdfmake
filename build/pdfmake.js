@@ -1,4 +1,4 @@
-/*! pdfmake v0.1.60, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.1.61, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -977,7 +977,7 @@ module.exports = {
 /* 2 */
 /***/ (function(module, exports) {
 
-var core = module.exports = { version: '2.6.9' };
+var core = module.exports = { version: '2.6.10' };
 if (typeof __e == 'number') __e = core; // eslint-disable-line no-undef
 
 
@@ -4763,7 +4763,7 @@ module.exports = function (fn, that, length) {
 /* 39 */
 /***/ (function(module, exports) {
 
-var core = module.exports = { version: '2.6.9' };
+var core = module.exports = { version: '2.6.10' };
 if (typeof __e == 'number') __e = core; // eslint-disable-line no-undef
 
 
@@ -19420,6 +19420,32 @@ var getSvgToPDF = function () {
 	}
 };
 
+var findFont = function (fonts, requiredFonts, defaultFont) {
+	for (var i = 0; i < requiredFonts.length; i++) {
+		var requiredFont = requiredFonts[i].toLowerCase();
+
+		for (var font in fonts) {
+			if (font.toLowerCase() === requiredFont) {
+				return font;
+			}
+		}
+	}
+
+	return defaultFont;
+};
+
+var typeName = function (bold, italics) {
+	var type = 'normal';
+	if (bold && italics) {
+		type = 'bolditalics';
+	} else if (bold) {
+		type = 'bold';
+	} else if (italics) {
+		type = 'italics';
+	}
+	return type;
+};
+
 ////////////////////////////////////////
 // PdfPrinter
 
@@ -19772,7 +19798,7 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
 					break;
 				case 'svg':
-					renderSVG(item.item, item.item.x, item.item.y, pdfKitDoc);
+					renderSVG(item.item, item.item.x, item.item.y, pdfKitDoc, fontProvider);
 					break;
 				case 'beginClip':
 					beginClip(item.item, pdfKitDoc);
@@ -19992,8 +20018,19 @@ function renderImage(image, x, y, pdfKitDoc) {
 	}
 }
 
-function renderSVG(svg, x, y, pdfKitDoc) {
-	getSvgToPDF()(pdfKitDoc, svg.svg, svg.x, svg.y, Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options));
+function renderSVG(svg, x, y, pdfKitDoc, fontProvider) {
+	var options = Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options);
+	options.fontCallback = function (family, bold, italic, fontOptions) {
+		fontOptions.fauxBold = bold;
+		fontOptions.fauxItalic = italic;
+
+		var fontsFamily = family.split(',').map(function (f) { return f.trim().replace(/('|")/g, ''); });
+		var font = findFont(fontProvider.fonts, fontsFamily, 'Roboto'); // TODO: default font from dd
+
+		return fontProvider.fonts[font][typeName(bold, italic)];
+	};
+
+	getSvgToPDF()(pdfKitDoc, svg.svg, svg.x, svg.y, options);
 }
 
 function beginClip(rect, pdfKitDoc) {
@@ -63638,7 +63675,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 		for (var i = 0, l = this.rowSpanData.length; i < l; i++) {
 			var data = this.rowSpanData[i];
 			var shouldDrawLine = !data.rowSpan;
-			var borderColor;
+			var borderColor = null;
 
 			// draw only if the current cell requires a top border or the cell in the
 			// row above requires a bottom border
