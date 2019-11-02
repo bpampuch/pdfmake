@@ -272,7 +272,7 @@ class Renderer {
 			fontOptions.fauxItalic = italic;
 
 			let fontsFamily = family.split(',').map(f => f.trim().replace(/('|")/g, ''));
-			let font = findFont(this.pdfDocument.fonts, fontsFamily, 'Roboto'); // TODO: default font from dd
+			let font = findFont(this.pdfDocument.fonts, fontsFamily, svg.font || 'Roboto');
 
 			let fontFile = this.pdfDocument.getFontFile(font, bold, italic);
 			if (fontFile === null) {
