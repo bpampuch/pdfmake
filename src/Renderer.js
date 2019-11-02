@@ -24,18 +24,6 @@ const findFont = (fonts, requiredFonts, defaultFont) => {
 	return defaultFont;
 };
 
-const typeName = (bold, italics) => {
-	let type = 'normal';
-	if (bold && italics) {
-		type = 'bolditalics';
-	} else if (bold) {
-		type = 'bold';
-	} else if (italics) {
-		type = 'italics';
-	}
-	return type;
-};
-
 class Renderer {
 	constructor(pdfDocument, progressCallback) {
 		this.pdfDocument = pdfDocument;
@@ -286,7 +274,13 @@ class Renderer {
 			let fontsFamily = family.split(',').map(f => f.trim().replace(/('|")/g, ''));
 			let font = findFont(this.pdfDocument.fonts, fontsFamily, 'Roboto'); // TODO: default font from dd
 
-			return this.pdfDocument.fonts[font][typeName(bold, italic)];
+			let fontFile = this.pdfDocument.getFontFile(font, bold, italic);
+			if (fontFile === null) {
+				let type = this.pdfDocument.getFontType(bold, italic);
+				throw new Error(`Font '${font}' in style '${type}' is not defined in the font section of the document definition.`);
+			}
+
+			return fontFile;
 		};
 
 		getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, options);

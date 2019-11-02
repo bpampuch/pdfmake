@@ -35,9 +35,22 @@ class PDFDocument extends PDFKit {
 		this.images = images;
 	}
 
-	provideFont(familyName, bold, italics) {
-		let type = typeName(bold, italics);
+	getFontType(bold, italics) {
+		return typeName(bold, italics);
+	}
+
+	getFontFile(familyName, bold, italics) {
+		let type = this.getFontType(bold, italics);
 		if (!this.fonts[familyName] || !this.fonts[familyName][type]) {
+			return null;
+		}
+
+		return this.fonts[familyName][type];
+	}
+
+	provideFont(familyName, bold, italics) {
+		let type = this.getFontType(bold, italics);
+		if (this.getFontFile(familyName, bold, italics) === null) {
 			throw new Error(`Font '${familyName}' in style '${type}' is not defined in the font section of the document definition.`);
 		}
 
