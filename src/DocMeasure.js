@@ -131,7 +131,7 @@ class DocMeasure {
 	}
 
 	measureSVG(node) {
-		var dimensions = this.svgMeasure.measureSVG(node.svg);
+		let dimensions = this.svgMeasure.measureSVG(node.svg);
 
 		this.measureImageWithDimensions(node, dimensions);
 

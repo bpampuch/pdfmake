@@ -8,7 +8,7 @@ class SVGMeasure {
 		// remove newlines
 		svgString = svgString.replace(/\r?\n|\r/g, "");
 
-		var svgNodeMatches = svgString.match(/<svg(.*?)>/);
+		let svgNodeMatches = svgString.match(/<svg(.*?)>/);
 
 		if (svgNodeMatches) {
 			// extract svg node <svg ... >
@@ -19,10 +19,10 @@ class SVGMeasure {
 	}
 
 	getHeightAndWidth(svgString) {
-		var svgNode = this.getSVGNode(svgString);
+		let svgNode = this.getSVGNode(svgString);
 
-		var widthMatches = svgNode.match(/width="([0-9]+(\.[0-9]+)?)(em|ex|px|in|cm|mm|pt|pc|%)?"/);
-		var heightMatches = svgNode.match(/height="([0-9]+(\.[0-9]+)?)(em|ex|px|in|cm|mm|pt|pc|%)?"/);
+		let widthMatches = svgNode.match(/width="([0-9]+(\.[0-9]+)?)(em|ex|px|in|cm|mm|pt|pc|%)?"/);
+		let heightMatches = svgNode.match(/height="([0-9]+(\.[0-9]+)?)(em|ex|px|in|cm|mm|pt|pc|%)?"/);
 
 		if (widthMatches || heightMatches) {
 			return {
@@ -33,15 +33,15 @@ class SVGMeasure {
 	}
 
 	getViewboxHeightAndWidth(svgString) {
-		var svgNode = this.getSVGNode(svgString);
+		let svgNode = this.getSVGNode(svgString);
 
-		var viewboxMatches = svgNode.match(/viewBox="([+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+)"/);
+		let viewboxMatches = svgNode.match(/viewBox="([+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+)"/);
 		if (viewboxMatches) {
-			var viewboxStr = viewboxMatches[1];
-			var allVieboxEntries = viewboxStr.split(" ");
+			let viewboxStr = viewboxMatches[1];
+			let allVieboxEntries = viewboxStr.split(" ");
 
-			var viewboxEntries = []; // weeding out empty strings
-			for (var i = 0; i < allVieboxEntries.length; i++) {
+			let viewboxEntries = []; // weeding out empty strings
+			for (let i = 0; i < allVieboxEntries.length; i++) {
 				if (allVieboxEntries[i]) {
 					viewboxEntries.push(allVieboxEntries[i]);
 				}
@@ -56,24 +56,19 @@ class SVGMeasure {
 	}
 
 	measureSVG(svgString) {
-
-		var heightAndWidth = this.getHeightAndWidth(svgString);
-		var viewboxHeightAndWidth = this.getViewboxHeightAndWidth(svgString);
+		let heightAndWidth = this.getHeightAndWidth(svgString);
+		let viewboxHeightAndWidth = this.getViewboxHeightAndWidth(svgString);
 
 		return heightAndWidth || viewboxHeightAndWidth || {};
 	}
 
 	writeDimensions(svgString, dimensions) {
-
-		var svgNode = this.getSVGNode(svgString);
-
+		let svgNode = this.getSVGNode(svgString);
 		if (svgNode) {
-
-			var nodeDimensions = this.getHeightAndWidth(svgString);
+			let nodeDimensions = this.getHeightAndWidth(svgString);
 
 			if (dimensions.width) {
-
-				var newWidth = 'width="' + dimensions.width + '"';
+				let newWidth = 'width="' + dimensions.width + '"';
 
 				if (nodeDimensions && nodeDimensions.width) {
 					// replace existing width
@@ -85,8 +80,7 @@ class SVGMeasure {
 			}
 
 			if (dimensions.height) {
-
-				var newHeight = 'height="' + dimensions.height + '"';
+				let newHeight = 'height="' + dimensions.height + '"';
 
 				if (nodeDimensions && nodeDimensions.height) {
 					// replace existing height

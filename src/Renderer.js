@@ -14,7 +14,7 @@ const findFont = (fonts, requiredFonts, defaultFont) => {
 	for (let i = 0; i < requiredFonts.length; i++) {
 		let requiredFont = requiredFonts[i].toLowerCase();
 
-		for (var font in fonts) {
+		for (let font in fonts) {
 			if (font.toLowerCase() === requiredFont) {
 				return font;
 			}

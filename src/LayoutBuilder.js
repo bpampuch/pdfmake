@@ -721,7 +721,7 @@ class LayoutBuilder {
 	}
 
 	processSVG(node) {
-		var position = this.writer.addSVG(node);
+		let position = this.writer.addSVG(node);
 		node.positions.push(position);
 	}
 
