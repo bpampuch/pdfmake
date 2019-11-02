@@ -39,18 +39,6 @@ var findFont = function (fonts, requiredFonts, defaultFont) {
 	return defaultFont;
 };
 
-var typeName = function (bold, italics) {
-	var type = 'normal';
-	if (bold && italics) {
-		type = 'bolditalics';
-	} else if (bold) {
-		type = 'bold';
-	} else if (italics) {
-		type = 'italics';
-	}
-	return type;
-};
-
 ////////////////////////////////////////
 // PdfPrinter
 
@@ -632,7 +620,13 @@ function renderSVG(svg, x, y, pdfKitDoc, fontProvider) {
 		var fontsFamily = family.split(',').map(function (f) { return f.trim().replace(/('|")/g, ''); });
 		var font = findFont(fontProvider.fonts, fontsFamily, 'Roboto'); // TODO: default font from dd
 
-		return fontProvider.fonts[font][typeName(bold, italic)];
+		var fontFile = fontProvider.getFontFile(font, bold, italic);
+		if (fontFile === null) {
+			var type = fontProvider.getFontType(bold, italic);
+			throw new Error('Font \'' + font + '\' in style \'' + type + '\' is not defined in the font section of the document definition.');
+		}
+
+		return fontFile;
 	};
 
 	getSvgToPDF()(pdfKitDoc, svg.svg, svg.x, svg.y, options);
