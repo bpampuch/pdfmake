@@ -618,7 +618,7 @@ function renderSVG(svg, x, y, pdfKitDoc, fontProvider) {
 		fontOptions.fauxItalic = italic;
 
 		var fontsFamily = family.split(',').map(function (f) { return f.trim().replace(/('|")/g, ''); });
-		var font = findFont(fontProvider.fonts, fontsFamily, 'Roboto'); // TODO: default font from dd
+		var font = findFont(fontProvider.fonts, fontsFamily, svg.font || 'Roboto');
 
 		var fontFile = fontProvider.getFontFile(font, bold, italic);
 		if (fontFile === null) {

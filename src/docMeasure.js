@@ -210,6 +210,8 @@ DocMeasure.prototype.measureSVG = function (node) {
 
 	this.measureImageWithDimensions(node, dimensions);
 
+	node.font = this.styleStack.getProperty('font');
+
 	// scale SVG based on final dimension
 	node.svg = this.svgMeasure.writeDimensions(node.svg, {
 		width: node._width,
