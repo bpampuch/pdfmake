@@ -1,4 +1,4 @@
-/*! pdfmake v0.1.61, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.1.62, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -19434,18 +19434,6 @@ var findFont = function (fonts, requiredFonts, defaultFont) {
 	return defaultFont;
 };
 
-var typeName = function (bold, italics) {
-	var type = 'normal';
-	if (bold && italics) {
-		type = 'bolditalics';
-	} else if (bold) {
-		type = 'bold';
-	} else if (italics) {
-		type = 'italics';
-	}
-	return type;
-};
-
 ////////////////////////////////////////
 // PdfPrinter
 
@@ -20025,9 +20013,15 @@ function renderSVG(svg, x, y, pdfKitDoc, fontProvider) {
 		fontOptions.fauxItalic = italic;
 
 		var fontsFamily = family.split(',').map(function (f) { return f.trim().replace(/('|")/g, ''); });
-		var font = findFont(fontProvider.fonts, fontsFamily, 'Roboto'); // TODO: default font from dd
+		var font = findFont(fontProvider.fonts, fontsFamily, svg.font || 'Roboto');
 
-		return fontProvider.fonts[font][typeName(bold, italic)];
+		var fontFile = fontProvider.getFontFile(font, bold, italic);
+		if (fontFile === null) {
+			var type = fontProvider.getFontType(bold, italic);
+			throw new Error('Font \'' + font + '\' in style \'' + type + '\' is not defined in the font section of the document definition.');
+		}
+
+		return fontFile;
 	};
 
 	getSvgToPDF()(pdfKitDoc, svg.svg, svg.x, svg.y, options);
@@ -59971,9 +59965,22 @@ function FontProvider(fontDescriptors, pdfKitDoc) {
 	}
 }
 
-FontProvider.prototype.provideFont = function (familyName, bold, italics) {
-	var type = typeName(bold, italics);
+FontProvider.prototype.getFontType = function (bold, italics) {
+	return typeName(bold, italics);
+}
+
+FontProvider.prototype.getFontFile = function (familyName, bold, italics) {
+	var type = this.getFontType(bold, italics);
 	if (!this.fonts[familyName] || !this.fonts[familyName][type]) {
+		return null;
+	}
+
+	return this.fonts[familyName][type];
+}
+
+FontProvider.prototype.provideFont = function (familyName, bold, italics) {
+	var type = this.getFontType(bold, italics);
+	if (this.getFontFile(familyName, bold, italics) === null) {
 		throw new Error('Font \'' + familyName + '\' in style \'' + type + '\' is not defined in the font section of the document definition.');
 	}
 
@@ -61270,6 +61277,8 @@ DocMeasure.prototype.measureSVG = function (node) {
 	var dimensions = this.svgMeasure.measureSVG(node.svg);
 
 	this.measureImageWithDimensions(node, dimensions);
+
+	node.font = this.styleStack.getProperty('font');
 
 	// scale SVG based on final dimension
 	node.svg = this.svgMeasure.writeDimensions(node.svg, {
