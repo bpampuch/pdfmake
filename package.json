@@ -10,7 +10,7 @@
   "dependencies": {
     "iconv-lite": "^0.5.0",
     "linebreak": "^1.0.2",
-    "pdfkit": "^0.10.0",
+    "pdfkit": "^0.11.0",
     "svg-to-pdfkit": "^0.1.8"
   },
   "devDependencies": {
