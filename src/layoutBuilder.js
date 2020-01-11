@@ -433,6 +433,16 @@ LayoutBuilder.prototype.processNode = function (node) {
 
 		if (node.pageBreak === 'before') {
 			self.writer.moveToNextPage(node.pageOrientation);
+		} else if (node.pageBreak === 'beforeOdd') {
+			self.writer.moveToNextPage(node.pageOrientation);
+			if ((self.writer.context().page + 1) % 2 === 1) {
+				self.writer.moveToNextPage(node.pageOrientation);
+			}
+		} else if (node.pageBreak === 'beforeEven') {
+			self.writer.moveToNextPage(node.pageOrientation);
+			if ((self.writer.context().page + 1) % 2 === 0) {
+				self.writer.moveToNextPage(node.pageOrientation);
+			}
 		}
 
 		if (margin) {
@@ -449,6 +459,16 @@ LayoutBuilder.prototype.processNode = function (node) {
 
 		if (node.pageBreak === 'after') {
 			self.writer.moveToNextPage(node.pageOrientation);
+		} else if (node.pageBreak === 'afterOdd') {
+			self.writer.moveToNextPage(node.pageOrientation);
+			if ((self.writer.context().page + 1) % 2 === 1) {
+				self.writer.moveToNextPage(node.pageOrientation);
+			}
+		} else if (node.pageBreak === 'afterEven') {
+			self.writer.moveToNextPage(node.pageOrientation);
+			if ((self.writer.context().page + 1) % 2 === 0) {
+				self.writer.moveToNextPage(node.pageOrientation);
+			}
 		}
 	}
 };
