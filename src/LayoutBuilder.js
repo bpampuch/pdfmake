@@ -332,6 +332,16 @@ class LayoutBuilder {
 
 			if (node.pageBreak === 'before') {
 				this.writer.moveToNextPage(node.pageOrientation);
+			} else if (node.pageBreak === 'beforeOdd') {
+				this.writer.moveToNextPage(node.pageOrientation);
+				if ((this.writer.context().page + 1) % 2 === 1) {
+					this.writer.moveToNextPage(node.pageOrientation);
+				}
+			} else if (node.pageBreak === 'beforeEven') {
+				this.writer.moveToNextPage(node.pageOrientation);
+				if ((this.writer.context().page + 1) % 2 === 0) {
+					this.writer.moveToNextPage(node.pageOrientation);
+				}
 			}
 
 			if (margin) {
@@ -348,6 +358,16 @@ class LayoutBuilder {
 
 			if (node.pageBreak === 'after') {
 				this.writer.moveToNextPage(node.pageOrientation);
+			} else if (node.pageBreak === 'afterOdd') {
+				this.writer.moveToNextPage(node.pageOrientation);
+				if ((this.writer.context().page + 1) % 2 === 1) {
+					this.writer.moveToNextPage(node.pageOrientation);
+				}
+			} else if (node.pageBreak === 'afterEven') {
+				this.writer.moveToNextPage(node.pageOrientation);
+				if ((this.writer.context().page + 1) % 2 === 0) {
+					this.writer.moveToNextPage(node.pageOrientation);
+				}
 			}
 		};
 
