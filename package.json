@@ -1,7 +1,7 @@
 {
-  "name": "pdfmake",
-  "version": "0.2.0-alpha.0",
-  "description": "Client/server side PDF printing in pure JavaScript",
+  "name": "@wisedocnpm/wisepdf",
+  "version": "1.0.3",
+  "description": "A fork from an amazing library, pdfmake. Can create pdf documents at client/server side.",
   "main": "src/index.js",
   "browser": "build/pdfmake.js",
   "directories": {
@@ -42,20 +42,20 @@
     "test": "gulp",
     "playground": "node dev-playground/server.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/bpampuch/pdfmake.git"
-  },
   "keywords": [
     "pdf",
     "javascript",
     "printing",
     "layout"
   ],
-  "author": "Bartek Pampuch <bartosz.pampuch@gmail.com>",
-  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wisedoc-inc/pdfmake.git"
+  },
+  "author": "Wisedoc",
+  "license": "ISC",
   "bugs": {
-    "url": "https://github.com/bpampuch/pdfmake/issues"
+    "url": "https://github.com/wisedoc-inc/pdfmake/issues"
   },
   "homepage": "http://pdfmake.org",
   "config": {
