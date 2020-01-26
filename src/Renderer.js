@@ -267,10 +267,7 @@ class Renderer {
 
 	renderSVG(svg) {
 		let options = Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options);
-		options.fontCallback = (family, bold, italic, fontOptions) => {
-			fontOptions.fauxBold = bold;
-			fontOptions.fauxItalic = italic;
-
+		options.fontCallback = (family, bold, italic) => {
 			let fontsFamily = family.split(',').map(f => f.trim().replace(/('|")/g, ''));
 			let font = findFont(this.pdfDocument.fonts, fontsFamily, svg.font || 'Roboto');
 
