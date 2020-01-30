@@ -1,6 +1,6 @@
 {
   "name": "@wisedocnpm/wisepdf",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A fork from an amazing library, pdfmake. Can create pdf documents at client/server side.",
   "main": "src/index.js",
   "browser": "build/pdfmake.js",
