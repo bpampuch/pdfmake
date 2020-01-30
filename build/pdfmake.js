@@ -1,4 +1,4 @@
-/*! pdfmake v0.2.0-alpha.0, @license MIT, @link http://pdfmake.org */
+/*! @wisedocnpm/wisepdf v1.0.4, @license ISC, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -4545,6 +4545,12 @@ EventEmitter.prototype._maxListeners = undefined;
 // added to it. This is a useful default which helps finding memory leaks.
 var defaultMaxListeners = 10;
 
+function checkListener(listener) {
+  if (typeof listener !== 'function') {
+    throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
+  }
+}
+
 Object.defineProperty(EventEmitter, 'defaultMaxListeners', {
   enumerable: true,
   get: function() {
@@ -4579,14 +4585,14 @@ EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
   return this;
 };
 
-function $getMaxListeners(that) {
+function _getMaxListeners(that) {
   if (that._maxListeners === undefined)
     return EventEmitter.defaultMaxListeners;
   return that._maxListeners;
 }
 
 EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
-  return $getMaxListeners(this);
+  return _getMaxListeners(this);
 };
 
 EventEmitter.prototype.emit = function emit(type) {
@@ -4638,9 +4644,7 @@ function _addListener(target, type, listener, prepend) {
   var events;
   var existing;
 
-  if (typeof listener !== 'function') {
-    throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
-  }
+  checkListener(listener);
 
   events = target._events;
   if (events === undefined) {
@@ -4677,7 +4681,7 @@ function _addListener(target, type, listener, prepend) {
     }
 
     // Check for listener leak
-    m = $getMaxListeners(target);
+    m = _getMaxListeners(target);
     if (m > 0 && existing.length > m && !existing.warned) {
       existing.warned = true;
       // No error code for this since it is a Warning
@@ -4709,12 +4713,12 @@ EventEmitter.prototype.prependListener =
     };
 
 function onceWrapper() {
-  var args = [];
-  for (var i = 0; i < arguments.length; i++) args.push(arguments[i]);
   if (!this.fired) {
     this.target.removeListener(this.type, this.wrapFn);
     this.fired = true;
-    ReflectApply(this.listener, this.target, args);
+    if (arguments.length === 0)
+      return this.listener.call(this.target);
+    return this.listener.apply(this.target, arguments);
   }
 }
 
@@ -4727,18 +4731,14 @@ function _onceWrap(target, type, listener) {
 }
 
 EventEmitter.prototype.once = function once(type, listener) {
-  if (typeof listener !== 'function') {
-    throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
-  }
+  checkListener(listener);
   this.on(type, _onceWrap(this, type, listener));
   return this;
 };
 
 EventEmitter.prototype.prependOnceListener =
     function prependOnceListener(type, listener) {
-      if (typeof listener !== 'function') {
-        throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
-      }
+      checkListener(listener);
       this.prependListener(type, _onceWrap(this, type, listener));
       return this;
     };
@@ -4748,9 +4748,7 @@ EventEmitter.prototype.removeListener =
     function removeListener(type, listener) {
       var list, events, position, i, originalListener;
 
-      if (typeof listener !== 'function') {
-        throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
-      }
+      checkListener(listener);
 
       events = this._events;
       if (events === undefined)
@@ -5220,7 +5218,7 @@ var objectKeys = Object.keys || function (obj) {
 module.exports = Duplex;
 
 /*<replacement>*/
-var util = __webpack_require__(66);
+var util = Object.create(__webpack_require__(66));
 util.inherits = __webpack_require__(56);
 /*</replacement>*/
 
@@ -9658,7 +9656,7 @@ var Duplex;
 Writable.WritableState = WritableState;
 
 /*<replacement>*/
-var util = __webpack_require__(66);
+var util = Object.create(__webpack_require__(66));
 util.inherits = __webpack_require__(56);
 /*</replacement>*/
 
@@ -12855,7 +12853,7 @@ function _isUint8Array(obj) {
 /*</replacement>*/
 
 /*<replacement>*/
-var util = __webpack_require__(66);
+var util = Object.create(__webpack_require__(66));
 util.inherits = __webpack_require__(56);
 /*</replacement>*/
 
@@ -13972,7 +13970,7 @@ module.exports = Transform;
 var Duplex = __webpack_require__(42);
 
 /*<replacement>*/
-var util = __webpack_require__(66);
+var util = Object.create(__webpack_require__(66));
 util.inherits = __webpack_require__(56);
 /*</replacement>*/
 
@@ -26617,7 +26615,7 @@ module.exports = PassThrough;
 var Transform = __webpack_require__(175);
 
 /*<replacement>*/
-var util = __webpack_require__(66);
+var util = Object.create(__webpack_require__(66));
 util.inherits = __webpack_require__(56);
 /*</replacement>*/
 
@@ -65016,6 +65014,12 @@ function () {
       var item = texts[i];
       var style = null;
       var words = void 0;
+
+      if (item.image) {
+        results.push(item);
+        continue;
+      }
+
       var noWrap = src_StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 
       if (Object(variableType["f" /* isObject */])(item)) {
@@ -65105,9 +65109,11 @@ var TextInlines_TextInlines =
 function () {
   /**
    * @param {object} pdfDocument object is instance of PDFDocument
+   * @param {object} docMeasure
    */
-  function TextInlines(pdfDocument) {
+  function TextInlines(pdfDocument, docMeasure) {
     this.pdfDocument = pdfDocument;
+    this.docMeasure = docMeasure;
   }
   /**
    * Converts an array of strings (or inline-definition-objects) into a collection
@@ -65132,7 +65138,7 @@ function () {
     var flattenedTextArray = TextInlines_flattenTextArray(textArray);
     var textBreaker = new src_TextBreaker();
     var breakedText = textBreaker.getBreaks(flattenedTextArray, styleContextStack);
-    var measuredText = this.measure(breakedText, styleContextStack);
+    var measuredText = this.measure(breakedText, styleContextStack, this.docMeasure);
     measuredText.forEach(function (inline) {
       minWidth = Math.max(minWidth, getTrimmedWidth(inline));
 
@@ -65164,7 +65170,7 @@ function () {
     };
   };
 
-  _proto.measure = function measure(array, styleContextStack) {
+  _proto.measure = function measure(array, styleContextStack, docMeasure) {
     var _this = this;
 
     if (array.length) {
@@ -65196,8 +65202,13 @@ function () {
       item.noWrap = src_StyleContextStack.getStyleProperty(item, styleContextStack, 'noWrap', null);
       item.opacity = src_StyleContextStack.getStyleProperty(item, styleContextStack, 'opacity', 1);
       var lineHeight = src_StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeight', 1);
-      item.width = _this.widthOfText(item.text, item);
-      item.height = item.font.lineHeight(item.fontSize) * lineHeight;
+
+      if (item.image) {
+        docMeasure.measureImage(item);
+      } else {
+        item.width = _this.widthOfText(item.text, item);
+        item.height = item.font.lineHeight(item.fontSize) * lineHeight;
+      }
 
       if (!item.leadingCut) {
         item.leadingCut = 0;
@@ -65206,7 +65217,7 @@ function () {
       var preserveLeadingSpaces = src_StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
 
       if (!preserveLeadingSpaces) {
-        var leadingSpaces = item.text.match(LEADING);
+        var leadingSpaces = item.text ? item.text.match(LEADING) : [' '];
 
         if (leadingSpaces) {
           item.leadingCut += _this.widthOfText(leadingSpaces[0], item);
@@ -65217,7 +65228,7 @@ function () {
       var preserveTrailingSpaces = src_StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
 
       if (!preserveTrailingSpaces) {
-        var trailingSpaces = item.text.match(TRAILING);
+        var trailingSpaces = item.text ? item.text.match(TRAILING) : [' '];
 
         if (trailingSpaces) {
           item.trailingCut = _this.widthOfText(trailingSpaces[0], item);
@@ -66410,7 +66421,7 @@ var DocMeasure_DocMeasure =
 function () {
   function DocMeasure(pdfDocument, styleDictionary, defaultStyle, svgMeasure, tableLayouts) {
     this.pdfDocument = pdfDocument;
-    this.textInlines = new src_TextInlines(pdfDocument);
+    this.textInlines = new src_TextInlines(pdfDocument, this);
     this.styleStack = new src_StyleContextStack(styleDictionary, defaultStyle);
     this.svgMeasure = svgMeasure;
     this.tableLayouts = tableLayouts;
@@ -69454,7 +69465,7 @@ function () {
 
       isForceContinue = false;
 
-      if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
+      if (!inline.noWrap && (!inline.text || inline.text.length > 1) && inline.width > line.getAvailableWidth()) {
         var widthPerChar = inline.width / inline.text.length;
         var maxChars = Math.floor(line.getAvailableWidth() / widthPerChar);
 
@@ -70077,7 +70088,14 @@ function () {
       this.pdfDocument.fill(inline.color || 'black');
       this.pdfDocument._font = inline.font;
       this.pdfDocument.fontSize(inline.fontSize);
-      this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);
+
+      if (inline.image) {
+        this.pdfDocument.image(inline.image, x + inline.x, y, {
+          width: inline.width
+        });
+      } else {
+        this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);
+      }
 
       if (inline.linkToPage) {
         this.pdfDocument.ref({
