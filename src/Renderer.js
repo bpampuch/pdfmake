@@ -160,7 +160,13 @@ class Renderer {
 
 			this.pdfDocument._font = inline.font;
 			this.pdfDocument.fontSize(inline.fontSize);
-			this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);
+			if (inline.image) {
+
+				this.pdfDocument.image(inline.image, x + inline.x, y, { width: inline.width });
+			}
+			else {
+				this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);
+			}
 
 			if (inline.linkToPage) {
 				this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();

@@ -16,7 +16,7 @@ class DocMeasure {
 		tableLayouts
 	) {
 		this.pdfDocument = pdfDocument;
-		this.textInlines = new TextInlines(pdfDocument);
+		this.textInlines = new TextInlines(pdfDocument, this);
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = tableLayouts;
