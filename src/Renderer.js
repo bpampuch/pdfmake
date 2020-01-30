@@ -162,7 +162,7 @@ class Renderer {
 			this.pdfDocument.fontSize(inline.fontSize);
 			if (inline.image) {
 
-				this.pdfDocument.image(inline.image, x + inline.x, y, { width: inline.width }); // inline.image, x + inline.x, y, options);
+				this.pdfDocument.image(inline.image, x + inline.x, y, { width: inline.width });
 			}
 			else {
 				this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);
