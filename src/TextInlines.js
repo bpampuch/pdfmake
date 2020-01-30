@@ -37,9 +37,11 @@ class TextInlines {
 
 	/**
 	 * @param {object} pdfDocument object is instance of PDFDocument
+	 * @param {object} docMeasure
 	 */
-	constructor(pdfDocument) {
+	constructor(pdfDocument, docMeasure) {
 		this.pdfDocument = pdfDocument;
+		this.docMeasure = docMeasure;
 	}
 
 	/**
@@ -64,7 +66,7 @@ class TextInlines {
 		const textBreaker = new TextBreaker();
 		let breakedText = textBreaker.getBreaks(flattenedTextArray, styleContextStack);
 
-		let measuredText = this.measure(breakedText, styleContextStack);
+		let measuredText = this.measure(breakedText, styleContextStack, this.docMeasure);
 
 		measuredText.forEach(inline => {
 			minWidth = Math.max(minWidth, getTrimmedWidth(inline));
@@ -94,7 +96,7 @@ class TextInlines {
 		};
 	}
 
-	measure(array, styleContextStack) {
+	measure(array, styleContextStack, docMeasure) {
 		if (array.length) {
 			let leadingIndent = StyleContextStack.getStyleProperty(array[0], styleContextStack, 'leadingIndent', 0);
 			if (leadingIndent) {
@@ -127,8 +129,13 @@ class TextInlines {
 
 			let lineHeight = StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeight', 1);
 
-			item.width = this.widthOfText(item.text, item);
-			item.height = item.font.lineHeight(item.fontSize) * lineHeight;
+			if (item.image) {
+				docMeasure.measureImage(item);
+			}
+			else {
+				item.width = this.widthOfText(item.text, item);
+				item.height = item.font.lineHeight(item.fontSize) * lineHeight;
+			}
 
 			if (!item.leadingCut) {
 				item.leadingCut = 0;
@@ -136,7 +143,7 @@ class TextInlines {
 
 			let preserveLeadingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
 			if (!preserveLeadingSpaces) {
-				let leadingSpaces = item.text.match(LEADING);
+				let leadingSpaces = item.text ? item.text.match(LEADING) : [' '];
 				if (leadingSpaces) {
 					item.leadingCut += this.widthOfText(leadingSpaces[0], item);
 				}
@@ -146,7 +153,7 @@ class TextInlines {
 
 			let preserveTrailingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
 			if (!preserveTrailingSpaces) {
-				let trailingSpaces = item.text.match(TRAILING);
+				let trailingSpaces = item.text ? item.text.match(TRAILING) : [' '];
 				if (trailingSpaces) {
 					item.trailingCut = this.widthOfText(trailingSpaces[0], item);
 				}

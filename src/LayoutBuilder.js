@@ -699,7 +699,7 @@ class LayoutBuilder {
 			let inline = textNode._inlines.shift();
 			isForceContinue = false;
 
-			if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
+			if (!inline.noWrap && (!inline.text || inline.text.length > 1) && inline.width > line.getAvailableWidth()) {
 				let widthPerChar = inline.width / inline.text.length;
 				let maxChars = Math.floor(line.getAvailableWidth() / widthPerChar);
 				if (maxChars < 1) {
