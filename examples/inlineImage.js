@@ -17,12 +17,12 @@ var docDefinition = {
         body: [
           ['spacing  dewudf eufe fj jffewnf i dfewi jbfe jkf uideoq ifbew jiodeqw ejdnend ifdew ',
             {
-              image: 'sampleImage.jpg',
+              image: 'fonts/sampleImage.jpg',
               fit: [50, 50],
             },
             ' spacing ',
             {
-              image: 'sampleImage.jpg',
+              image: 'fonts/sampleImage.jpg',
               fit: [50, 50],
             },
             ' spacing'],
