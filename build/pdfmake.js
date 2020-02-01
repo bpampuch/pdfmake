@@ -1,4 +1,4 @@
-/*! @wisedocnpm/wisepdf v1.0.4, @license ISC, @link http://pdfmake.org */
+/*! @wisedocnpm/wisepdf v1.0.5, @license ISC, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -52305,6 +52305,11 @@ module.exports = {
         "chars": "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя└┴┬├─┼╣║╚╔╩╦╠═╬┐░▒▓│┤№§╗╝┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ "
     },
 
+    "cp720": {
+        "type": "_sbcs",
+        "chars": "\x80\x81éâ\x84à\x86çêëèïî\x8d\x8e\x8f\x90\u0651\u0652ô¤ـûùءآأؤ£إئابةتثجحخدذرزسشص«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀ضطظعغفµقكلمنهوىي≡\u064b\u064c\u064d\u064e\u064f\u0650≈°∙·√ⁿ²■\u00a0"
+    },
+
     // Aliases of generated encodings.
     "ascii8bit": "ascii",
     "usascii": "ascii",
@@ -56223,6 +56228,9 @@ module.exports = function GetIntrinsic(name, allowMissing) {
 		if (value != null) {
 			if ($gOPD && (i + 1) >= parts.length) {
 				var desc = $gOPD(value, parts[i]);
+				if (!allowMissing && !(parts[i] in value)) {
+					throw new $TypeError('base intrinsic for ' + name + ' exists, but the property is not available.');
+				}
 				value = desc ? (desc.get || desc.value) : value[parts[i]];
 			} else {
 				value = value[parts[i]];
