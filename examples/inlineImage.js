@@ -13,24 +13,12 @@ pdfmake.setFonts(fonts);
 var docDefinition = {
   content: [
     {
-      table: {
-        body: [
-          ['spacing  dewudf eufe fj jffewnf i dfewi jbfe jkf uideoq ifbew jiodeqw ejdnend ifdew ',
-            {
-              image: 'fonts/sampleImage.jpg',
-              fit: [50, 50],
-            },
-            ' spacing ',
-            {
-              image: 'fonts/sampleImage.jpg',
-              fit: [50, 50],
-            },
-            ' spacing'],
-        ]
-      },
-      layout: 'noBorders'
-    },
-  ]
+      text: [{ text: 'Hello ' }, { image: 'fonts/sampleImage.jpg', width: 20, height: 30 }, { text: ' World', style: 'em' }
+      ]
+    }],
+  styles: {
+    em: { bold: true }
+  }
 };
 
 var now = new Date();
