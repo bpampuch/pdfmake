@@ -4,7 +4,7 @@ import SVGMeasure from './SVGMeasure';
 import sizes from './standardPageSizes';
 import { tableLayouts } from './tableLayouts';
 import Renderer from './Renderer';
-import { isFunction, isString, isNumber, isBoolean, isArray } from './helpers/variableType';
+import { isFunction, isString, isNumber, isBoolean, isArray, isValue } from './helpers/variableType';
 
 /**
  * Printer which turns document definition into a pdf
@@ -42,6 +42,7 @@ class PdfPrinter {
 		docDefinition.version = docDefinition.version || '1.3';
 		docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 		docDefinition.images = docDefinition.images || {};
+		docDefinition.pageMargins = isValue(docDefinition.pageMargins) ? docDefinition.pageMargins : 40;
 
 		let pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 
@@ -61,7 +62,7 @@ class PdfPrinter {
 		this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, pdfOptions);
 		setMetadata(docDefinition, this.pdfKitDoc);
 
-		const builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new SVGMeasure());
+		const builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins), new SVGMeasure());
 
 		builder.registerTableLayouts(tableLayouts);
 		if (options.tableLayouts) {
@@ -177,10 +178,6 @@ function fixPageSize(pageSize, pageOrientation) {
 }
 
 function fixPageMargins(margin) {
-	if (!margin) {
-		return null;
-	}
-
 	if (isNumber(margin)) {
 		margin = { left: margin, right: margin, top: margin, bottom: margin };
 	} else if (isArray(margin)) {
