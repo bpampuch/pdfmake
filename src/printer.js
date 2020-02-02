@@ -112,6 +112,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	docDefinition.version = docDefinition.version || '1.3';
 	docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 	docDefinition.images = docDefinition.images || {};
+	docDefinition.pageMargins = ((docDefinition.pageMargins !== undefined) && (docDefinition.pageMargins !== null)) ? docDefinition.pageMargins : 40;
 
 	var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 
@@ -133,7 +134,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
-	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images), new SVGMeasure());
+	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins), new ImageMeasure(this.pdfKitDoc, docDefinition.images), new SVGMeasure());
 
 	registerDefaultTableLayouts(builder);
 	if (options.tableLayouts) {
@@ -259,10 +260,6 @@ function fixPageSize(pageSize, pageOrientation) {
 }
 
 function fixPageMargins(margin) {
-	if (!margin) {
-		return null;
-	}
-
 	if (isNumber(margin)) {
 		margin = { left: margin, right: margin, top: margin, bottom: margin };
 	} else if (isArray(margin)) {
