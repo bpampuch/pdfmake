@@ -126,11 +126,12 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		fontLayoutCache: isBoolean(options.fontLayoutCache) ? options.fontLayoutCache : true,
 		bufferPages: options.bufferPages || false,
 		autoFirstPage: false,
-		font: null
+		font: null,
+		info: {}
 	};
 
+	setMetadata(docDefinition, pdfOptions);
 	this.pdfKitDoc = PdfKitEngine.createPdfDocument(pdfOptions);
-	setMetadata(docDefinition, this.pdfKitDoc);
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
