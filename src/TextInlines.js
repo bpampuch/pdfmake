@@ -132,30 +132,33 @@ class TextInlines {
 			if (item.image) {
 				docMeasure.measureImage(item);
 			}
+			else if (item.svg) {
+				docMeasure.measureSVG(item);
+			}
 			else {
 				item.width = this.widthOfText(item.text, item);
 				item.height = item.font.lineHeight(item.fontSize) * lineHeight;
-			}
 
-			if (!item.leadingCut) {
-				item.leadingCut = 0;
-			}
-
-			let preserveLeadingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
-			if (!preserveLeadingSpaces) {
-				let leadingSpaces = item.text ? item.text.match(LEADING) : [' '];
-				if (leadingSpaces) {
-					item.leadingCut += this.widthOfText(leadingSpaces[0], item);
+				if (!item.leadingCut) {
+					item.leadingCut = 0;
 				}
-			}
 
-			item.trailingCut = 0;
+				let preserveLeadingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
+				if (!preserveLeadingSpaces) {
+					let leadingSpaces = item.text ? item.text.match(LEADING) : [' '];
+					if (leadingSpaces) {
+						item.leadingCut += this.widthOfText(leadingSpaces[0], item);
+					}
+				}
 
-			let preserveTrailingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
-			if (!preserveTrailingSpaces) {
-				let trailingSpaces = item.text ? item.text.match(TRAILING) : [' '];
-				if (trailingSpaces) {
-					item.trailingCut = this.widthOfText(trailingSpaces[0], item);
+				item.trailingCut = 0;
+
+				let preserveTrailingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
+				if (!preserveTrailingSpaces) {
+					let trailingSpaces = item.text ? item.text.match(TRAILING) : [' '];
+					if (trailingSpaces) {
+						item.trailingCut = this.widthOfText(trailingSpaces[0], item);
+					}
 				}
 			}
 		}, this);

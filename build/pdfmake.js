@@ -1,4 +1,4 @@
-/*! @wisedocnpm/wisepdf v1.0.5, @license ISC, @link http://pdfmake.org */
+/*! @wisedocnpm/wisepdf v1.0.6, @license ISC, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -65028,6 +65028,11 @@ function () {
         continue;
       }
 
+      if (item.svg) {
+        results.push(item);
+        continue;
+      }
+
       var noWrap = src_StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 
       if (Object(variableType["f" /* isObject */])(item)) {
@@ -65213,33 +65218,35 @@ function () {
 
       if (item.image) {
         docMeasure.measureImage(item);
+      } else if (item.svg) {
+        docMeasure.measureSVG(item);
       } else {
         item.width = _this.widthOfText(item.text, item);
         item.height = item.font.lineHeight(item.fontSize) * lineHeight;
-      }
 
-      if (!item.leadingCut) {
-        item.leadingCut = 0;
-      }
-
-      var preserveLeadingSpaces = src_StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
-
-      if (!preserveLeadingSpaces) {
-        var leadingSpaces = item.text ? item.text.match(LEADING) : [' '];
-
-        if (leadingSpaces) {
-          item.leadingCut += _this.widthOfText(leadingSpaces[0], item);
+        if (!item.leadingCut) {
+          item.leadingCut = 0;
         }
-      }
 
-      item.trailingCut = 0;
-      var preserveTrailingSpaces = src_StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
+        var preserveLeadingSpaces = src_StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
 
-      if (!preserveTrailingSpaces) {
-        var trailingSpaces = item.text ? item.text.match(TRAILING) : [' '];
+        if (!preserveLeadingSpaces) {
+          var leadingSpaces = item.text ? item.text.match(LEADING) : [' '];
 
-        if (trailingSpaces) {
-          item.trailingCut = _this.widthOfText(trailingSpaces[0], item);
+          if (leadingSpaces) {
+            item.leadingCut += _this.widthOfText(leadingSpaces[0], item);
+          }
+        }
+
+        item.trailingCut = 0;
+        var preserveTrailingSpaces = src_StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
+
+        if (!preserveTrailingSpaces) {
+          var trailingSpaces = item.text ? item.text.match(TRAILING) : [' '];
+
+          if (trailingSpaces) {
+            item.trailingCut = _this.widthOfText(trailingSpaces[0], item);
+          }
         }
       }
     }, this);
@@ -68659,7 +68666,7 @@ function () {
   _proto.getAscenderHeight = function getAscenderHeight() {
     var y = 0;
     this.inlines.forEach(function (inline) {
-      y = Math.max(y, inline.font.ascender / 1000 * inline.fontSize);
+      y = Math.max(y, inline.font.ascender / 1000 * inline.fontSize || inline.height / 2);
     });
     return y;
   }
@@ -70058,7 +70065,7 @@ function () {
     x = x || 0;
     y = y || 0;
     var lineHeight = line.getHeight();
-    var ascenderHeight = line.getAscenderHeight();
+    var ascenderHeight = line.getAscenderHeight() || 0;
     var descent = lineHeight - ascenderHeight;
     var textDecorator = new src_TextDecorator(this.pdfDocument);
     textDecorator.drawBackground(line, x, y); //TODO: line.optimizeInlines();
@@ -70101,6 +70108,10 @@ function () {
         this.pdfDocument.image(inline.image, x + inline.x, y, {
           width: inline.width
         });
+      } else if (inline.svg) {
+        inline.x = x + inline.x;
+        inline.y = y;
+        this.renderSVG(inline);
       } else {
         this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);
       }

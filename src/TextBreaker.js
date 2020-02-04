@@ -106,6 +106,10 @@ class TextBreaker {
 				results.push(item);
 				continue;
 			}
+			if (item.svg) {
+				results.push(item);
+				continue;
+			}
 
 			let noWrap = StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 			if (isObject(item)) {

@@ -49,7 +49,7 @@ class Line {
 		let y = 0;
 
 		this.inlines.forEach(inline => {
-			y = Math.max(y, inline.font.ascender / 1000 * inline.fontSize);
+			y = Math.max(y, ((inline.font.ascender / 1000 * inline.fontSize) || (inline.height / 2)));
 		});
 
 		return y;
