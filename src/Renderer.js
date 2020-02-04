@@ -118,7 +118,7 @@ class Renderer {
 		y = y || 0;
 
 		let lineHeight = line.getHeight();
-		let ascenderHeight = line.getAscenderHeight();
+		let ascenderHeight = line.getAscenderHeight() || 0;
 		let descent = lineHeight - ascenderHeight;
 
 		const textDecorator = new TextDecorator(this.pdfDocument);
@@ -163,6 +163,11 @@ class Renderer {
 			if (inline.image) {
 
 				this.pdfDocument.image(inline.image, x + inline.x, y, { width: inline.width });
+			}
+			else if (inline.svg) {
+				inline.x = x + inline.x;
+				inline.y = y;
+				this.renderSVG(inline);
 			}
 			else {
 				this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);
