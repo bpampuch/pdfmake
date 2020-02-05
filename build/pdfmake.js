@@ -1,4 +1,4 @@
-/*! @wisedocnpm/wisepdf v1.0.6, @license ISC, @link http://pdfmake.org */
+/*! @wisedocnpm/wisepdf v1.0.7, @license ISC, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -70110,7 +70110,7 @@ function () {
         });
       } else if (inline.svg) {
         inline.x = x + inline.x;
-        inline.y = y;
+        inline.y = y - 1;
         this.renderSVG(inline);
       } else {
         this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);

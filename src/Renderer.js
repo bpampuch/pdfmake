@@ -166,7 +166,7 @@ class Renderer {
 			}
 			else if (inline.svg) {
 				inline.x = x + inline.x;
-				inline.y = y;
+				inline.y = y - 1;
 				this.renderSVG(inline);
 			}
 			else {
