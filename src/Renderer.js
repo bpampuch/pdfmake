@@ -1,5 +1,6 @@
 import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
+import {isNumber} from './helpers/variableType';
 
 var getSvgToPDF = function () {
 	try {
@@ -154,8 +155,9 @@ class Renderer {
 			if (inline.fontFeatures) {
 				options.features = inline.fontFeatures;
 			}
-
-			this.pdfDocument.opacity(inline.opacity || 1);
+                        
+			var opacity = isNumber(inline.opacity) ? inline.opacity : 1;
+			this.pdfDocument.opacity(opacity);
 			this.pdfDocument.fill(inline.color || 'black');
 
 			this.pdfDocument._font = inline.font;
@@ -244,21 +246,25 @@ class Renderer {
 			vector.color = gradient;
 		}
 
+		var fillOpacity = isNumber(vector.fillOpacity) ? vector.fillOpacity : 1;
+		var strokeOpacity = isNumber(vector.strokeOpacity) ? vector.strokeOpacity : 1;
+
 		if (vector.color && vector.lineColor) {
-			this.pdfDocument.fillColor(vector.color, vector.fillOpacity || 1);
-			this.pdfDocument.strokeColor(vector.lineColor, vector.strokeOpacity || 1);
+			this.pdfDocument.fillColor(vector.color, fillOpacity);
+			this.pdfDocument.strokeColor(vector.lineColor, strokeOpacity);
 			this.pdfDocument.fillAndStroke();
 		} else if (vector.color) {
-			this.pdfDocument.fillColor(vector.color, vector.fillOpacity || 1);
+			this.pdfDocument.fillColor(vector.color, fillOpacity);
 			this.pdfDocument.fill();
 		} else {
-			this.pdfDocument.strokeColor(vector.lineColor || 'black', vector.strokeOpacity || 1);
+			this.pdfDocument.strokeColor(vector.lineColor || 'black', strokeOpacity);
 			this.pdfDocument.stroke();
 		}
 	}
 
 	renderImage(image) {
-		this.pdfDocument.opacity(image.opacity || 1);
+		var opacity = isNumber(image.opacity) ? image.opacity : 1;
+		this.pdfDocument.opacity(opacity);
 		this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
 		if (image.link) {
 			this.pdfDocument.link(image.x, image.y, image._width, image._height, image.link);
