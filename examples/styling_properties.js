@@ -41,7 +41,30 @@ var docDefinition = {
 		{ text: 'Hello World', opacity: 0.6 },
 		{ text: 'Hello World', opacity: 0.4 },
 		{ text: 'Hello World', opacity: 0.2 },
-		{ text: 'Hello World', opacity: 0.1 },
+    { text: 'Hello World', opacity: 0.1 },
+    '\n\n Subscript, superscript:',
+    { 
+      text: [
+        'Hello World.',
+        {
+          text: '1, 2',
+          sup: true,
+          fontSize: 8
+        },
+        ' Let\'s continue our sentence. Notice the leading space.'
+      ]
+    },
+    { 
+      text: [
+        'Hello',
+        {
+          text: '1, 2',
+          sub: true,
+          fontSize: 8
+        },
+        ' World'
+      ]
+    }
 	]
 };
 
