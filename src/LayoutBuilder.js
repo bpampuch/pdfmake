@@ -5,7 +5,7 @@ import PageElementWriter from './PageElementWriter';
 import ColumnCalculator from './columnCalculator';
 import TableProcessor from './TableProcessor';
 import Line from './Line';
-import { isString, isArray, isFunction, isValue } from './helpers/variableType';
+import { isString, isArray, isFunction, isValue, isNumber } from './helpers/variableType';
 import { stringifyNode, getNodeId } from './helpers/node';
 import { pack, offsetVector } from './helpers/tools';
 import TextInlines from './TextInlines';
@@ -243,7 +243,7 @@ class LayoutBuilder {
 		watermark.font = watermark.font || defaultStyle.font || 'Roboto';
 		watermark.fontSize = watermark.fontSize || 'auto';
 		watermark.color = watermark.color || 'black';
-		watermark.opacity = watermark.opacity || 0.6;
+		watermark.opacity = isNumber(watermark.opacity) ? watermark.opacity : 0.6;
 		watermark.bold = watermark.bold || false;
 		watermark.italics = watermark.italics || false;
 		watermark.angle = isValue(watermark.angle) ? watermark.angle : null;
