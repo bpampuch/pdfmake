@@ -19,6 +19,7 @@ var getNodeId = require('./helpers').getNodeId;
 var isFunction = require('./helpers').isFunction;
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
+var isNumber = require('./helpers').isNumber;
 
 function addAll(target, otherArray) {
 	otherArray.forEach(function (item) {
@@ -258,7 +259,7 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 	watermark.font = watermark.font || defaultStyle.font || 'Roboto';
 	watermark.fontSize = watermark.fontSize || 'auto';
 	watermark.color = watermark.color || 'black';
-	watermark.opacity = watermark.opacity || 0.6;
+	watermark.opacity = isNumber(watermark.opacity) ? watermark.opacity : 0.6;
 	watermark.bold = watermark.bold || false;
 	watermark.italics = watermark.italics || false;
 	watermark.angle = !isUndefined(watermark.angle) && !isNull(watermark.angle) ? watermark.angle : null;

@@ -475,7 +475,8 @@ function renderLine(line, x, y, pdfKitDoc) {
 			options.features = inline.fontFeatures;
 		}
 
-		pdfKitDoc.opacity(inline.opacity || 1);
+		var opacity = isNumber(inline.opacity) ? inline.opacity : 1;
+		pdfKitDoc.opacity(opacity);
 		pdfKitDoc.fill(inline.color || 'black');
 
 		pdfKitDoc._font = inline.font;
@@ -586,22 +587,26 @@ function renderVector(vector, pdfKitDoc) {
 
 		vector.color = gradient;
 	}
+               
+	var fillOpacity = isNumber(vector.fillOpacity) ? vector.fillOpacity : 1;
+	var strokeOpacity = isNumber(vector.strokeOpacity) ? vector.strokeOpacity : 1;
 
 	if (vector.color && vector.lineColor) {
-		pdfKitDoc.fillColor(vector.color, vector.fillOpacity || 1);
-		pdfKitDoc.strokeColor(vector.lineColor, vector.strokeOpacity || 1);
+		pdfKitDoc.fillColor(vector.color, fillOpacity);
+		pdfKitDoc.strokeColor(vector.lineColor, strokeOpacity);
 		pdfKitDoc.fillAndStroke();
 	} else if (vector.color) {
-		pdfKitDoc.fillColor(vector.color, vector.fillOpacity || 1);
+		pdfKitDoc.fillColor(vector.color, fillOpacity);
 		pdfKitDoc.fill();
 	} else {
-		pdfKitDoc.strokeColor(vector.lineColor || 'black', vector.strokeOpacity || 1);
+		pdfKitDoc.strokeColor(vector.lineColor || 'black', strokeOpacity);
 		pdfKitDoc.stroke();
 	}
 }
 
 function renderImage(image, x, y, pdfKitDoc) {
-	pdfKitDoc.opacity(image.opacity || 1);
+	var opacity = isNumber(image.opacity) ? image.opacity : 1;
+	pdfKitDoc.opacity(opacity);
 	pdfKitDoc.image(image.image, image.x, image.y, { width: image._width, height: image._height });
 	if (image.link) {
 		pdfKitDoc.link(image.x, image.y, image._width, image._height, image.link);
