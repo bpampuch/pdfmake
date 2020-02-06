@@ -481,7 +481,7 @@ class DocMeasure {
 		let cols;
 		let rows;
 
-		for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
+		for (col = 0; col < node.table.body[0].length; col++) {
 			let c = node.table.widths[col];
 			c._minWidth = 0;
 			c._maxWidth = 0;
@@ -604,23 +604,23 @@ class DocMeasure {
 
 		function markSpans(rowData, col, span) {
 			for (let i = 1; i < span; i++) {
-				rowData[col + i] = {
+				rowData.splice([col + i], 0, {
 					_span: true,
 					_minWidth: 0,
 					_maxWidth: 0,
 					rowSpan: rowData[col].rowSpan
-				};
+				});
 			}
 		}
 
 		function markVSpans(table, row, col, span) {
 			for (let i = 1; i < span; i++) {
-				table.body[row + i][col] = {
+				table.body[row + i].splice(col, 0, {
 					_span: true,
 					_minWidth: 0,
 					_maxWidth: 0,
 					fillColor: table.body[row][col].fillColor
-				};
+				});
 			}
 		}
 
