@@ -89,6 +89,7 @@ class StyleContextStack {
 			'color',
 			'columnGap',
 			'fillColor',
+			'fillOpacity',
 			'decoration',
 			'decorationStyle',
 			'decorationColor',
