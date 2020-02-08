@@ -1,5 +1,5 @@
 import ColumnCalculator from './columnCalculator';
-import { isFunction } from './helpers/variableType';
+import { isFunction, isNumber } from './helpers/variableType';
 
 class TableProcessor {
 	constructor(tableNode) {
@@ -435,8 +435,12 @@ class TableProcessor {
 
 				if (i < l - 1) {
 					let fillColor = body[rowIndex][colIndex].fillColor;
+					let fillOpacity = body[rowIndex][colIndex].fillOpacity;
 					if (!fillColor) {
 						fillColor = isFunction(this.layout.fillColor) ? this.layout.fillColor(rowIndex, this.tableNode, colIndex) : this.layout.fillColor;
+					}
+					if (!isNumber(fillOpacity)) {
+						fillOpacity = isFunction(this.layout.fillOpacity) ? this.layout.fillOpacity(rowIndex, this.tableNode, colIndex) : this.layout.fillOpacity;
 					}
 					if (fillColor) {
 						let widthLeftBorder = leftCellBorder ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
@@ -460,7 +464,8 @@ class TableProcessor {
 							w: x2f - x1f,
 							h: y2f - y1f,
 							lineWidth: 0,
-							color: fillColor
+							color: fillColor,
+							fillOpacity: fillOpacity
 						}, false, true, writer.context().backgroundLength[writer.context().page]);
 					}
 				}

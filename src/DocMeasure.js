@@ -527,6 +527,7 @@ class DocMeasure {
 			return () => {
 				if (isObject(data)) {
 					data.fillColor = _this.styleStack.getProperty('fillColor');
+					data.fillOpacity = _this.styleStack.getProperty('fillOpacity');
 				}
 				return _this.measureNode(data);
 			};
@@ -619,7 +620,8 @@ class DocMeasure {
 					_span: true,
 					_minWidth: 0,
 					_maxWidth: 0,
-					fillColor: table.body[row][col].fillColor
+					fillColor: table.body[row][col].fillColor,
+					fillOpacity: table.body[row][col].fillOpacity
 				};
 			}
 		}

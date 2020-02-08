@@ -93,5 +93,8 @@ const defaultTableLayout = {
 	fillColor(i, node) {
 		return null;
 	},
+	fillOpacity(i, node) {
+		return 1;
+	},        
 	defaultBorder: true
 };
