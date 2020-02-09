@@ -92,25 +92,35 @@ class LayoutBuilder {
 				node.nodeInfo = nodeInfo;
 			});
 
-			return linearNodeList.some((node, index, followingNodeList) => {
+			for (let index = 0; index < linearNodeList.length; index++) {
+				let node = linearNodeList[index];
 				if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 					node.pageBreakCalculated = true;
 					let pageNumber = node.nodeInfo.pageNumbers[0];
-					let followingNodesOnPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber));
-					let nodesOnNextPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber + 1));
-					let previousNodesOnPage = followingNodeList.slice(0, index).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber));
-
-					if (
-						pageBreakBeforeFct(
-							node.nodeInfo,
-							followingNodesOnPage.map(node => node.nodeInfo),
-							nodesOnNextPage.map(node => node.nodeInfo),
-							previousNodesOnPage.map(node => node.nodeInfo))) {
+					let followingNodesOnPage = [];
+					let nodesOnNextPage = [];
+					let previousNodesOnPage = [];
+					for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
+						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+							followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
+						}
+						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
+							nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
+						}
+					}
+					for (let ii = 0; ii < index; ii++) {
+						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+							previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
+						}
+					}
+					if (pageBreakBeforeFct(node.nodeInfo, followingNodesOnPage, nodesOnNextPage, previousNodesOnPage)) {
 						node.pageBreak = 'before';
 						return true;
 					}
 				}
-			});
+			}
+
+			return false;
 		}
 
 		this.docPreprocessor = new DocPreprocessor();
