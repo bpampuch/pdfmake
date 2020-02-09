@@ -92,40 +92,35 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			node.nodeInfo = nodeInfo;
 		});
 
-		return linearNodeList.some(function (node, index, followingNodeList) {
+		for (var index = 0; index < linearNodeList.length; index++) {
+			var node = linearNodeList[index];
 			if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 				node.pageBreakCalculated = true;
 				var pageNumber = node.nodeInfo.pageNumbers[0];
-
-				var followingNodesOnPage = followingNodeList.slice(index + 1).filter(function (node0) {
-					return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
-				});
-
-				var nodesOnNextPage = followingNodeList.slice(index + 1).filter(function (node0) {
-					return node0.nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1;
-				});
-
-				var previousNodesOnPage = followingNodeList.slice(0, index).filter(function (node0) {
-					return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
-				});
-
-				if (
-					pageBreakBeforeFct(
-						node.nodeInfo,
-						followingNodesOnPage.map(function (node) {
-							return node.nodeInfo;
-						}),
-						nodesOnNextPage.map(function (node) {
-							return node.nodeInfo;
-						}),
-						previousNodesOnPage.map(function (node) {
-							return node.nodeInfo;
-						}))) {
+				var followingNodesOnPage = [];
+				var nodesOnNextPage = [];
+				var previousNodesOnPage = [];
+				for (var ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
+					if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+						followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
+					}
+					if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
+						nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
+					}
+				}
+				for (var ii = 0; ii < index; ii++) {
+					if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+						previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
+					}
+				}
+				if (pageBreakBeforeFct(node.nodeInfo, followingNodesOnPage, nodesOnNextPage, previousNodesOnPage)) {
 					node.pageBreak = 'before';
 					return true;
 				}
 			}
-		});
+		}
+
+		return false;
 	}
 
 	this.docPreprocessor = new DocPreprocessor();
