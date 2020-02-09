@@ -1,8 +1,8 @@
 import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
-import {isNumber} from './helpers/variableType';
+import { isNumber } from './helpers/variableType';
 
-var getSvgToPDF = function () {
+const getSvgToPDF = function () {
 	try {
 		// optional dependency to support svg nodes
 		return require('svg-to-pdfkit');
@@ -155,8 +155,8 @@ class Renderer {
 			if (inline.fontFeatures) {
 				options.features = inline.fontFeatures;
 			}
-                        
-			var opacity = isNumber(inline.opacity) ? inline.opacity : 1;
+
+			let opacity = isNumber(inline.opacity) ? inline.opacity : 1;
 			this.pdfDocument.opacity(opacity);
 			this.pdfDocument.fill(inline.color || 'black');
 
@@ -246,8 +246,8 @@ class Renderer {
 			vector.color = gradient;
 		}
 
-		var fillOpacity = isNumber(vector.fillOpacity) ? vector.fillOpacity : 1;
-		var strokeOpacity = isNumber(vector.strokeOpacity) ? vector.strokeOpacity : 1;
+		let fillOpacity = isNumber(vector.fillOpacity) ? vector.fillOpacity : 1;
+		let strokeOpacity = isNumber(vector.strokeOpacity) ? vector.strokeOpacity : 1;
 
 		if (vector.color && vector.lineColor) {
 			this.pdfDocument.fillColor(vector.color, fillOpacity);
@@ -263,7 +263,7 @@ class Renderer {
 	}
 
 	renderImage(image) {
-		var opacity = isNumber(image.opacity) ? image.opacity : 1;
+		let opacity = isNumber(image.opacity) ? image.opacity : 1;
 		this.pdfDocument.opacity(opacity);
 		this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
 		if (image.link) {

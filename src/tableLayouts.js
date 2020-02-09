@@ -95,6 +95,6 @@ const defaultTableLayout = {
 	},
 	fillOpacity(i, node) {
 		return 1;
-	},        
+	},
 	defaultBorder: true
 };
