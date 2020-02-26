@@ -587,7 +587,7 @@ function renderVector(vector, pdfKitDoc) {
 
 		vector.color = gradient;
 	}
-               
+
 	var fillOpacity = isNumber(vector.fillOpacity) ? vector.fillOpacity : 1;
 	var strokeOpacity = isNumber(vector.strokeOpacity) ? vector.strokeOpacity : 1;
 
@@ -610,6 +610,13 @@ function renderImage(image, x, y, pdfKitDoc) {
 	pdfKitDoc.image(image.image, image.x, image.y, { width: image._width, height: image._height });
 	if (image.link) {
 		pdfKitDoc.link(image.x, image.y, image._width, image._height, image.link);
+	}
+	if (image.linkToPage) {
+		pdfKitDoc.ref({ Type: 'Action', S: 'GoTo', D: [image.linkToPage, 0, 0] }).end();
+		pdfKitDoc.annotate(image.x, image.y, image._width, image._height, { Subtype: 'Link', Dest: [image.linkToPage - 1, 'XYZ', null, null, null] });
+	}
+	if (image.linkToDestination) {
+		pdfKitDoc.goTo(image.x, image.y, image._width, image._height, image.linkToDestination);
 	}
 }
 
