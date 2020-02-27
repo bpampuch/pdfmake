@@ -83,6 +83,25 @@ class Renderer {
 		}
 	}
 
+	// 	
+	//  Shift the "y" height of the text baseline up or down (superscript or subscript,
+	//  respectively). The exact shift can / should be changed according to standard
+	//  conventions.
+	//  
+	//  @param {number} y 
+	//  @param {any} inline 
+	//  
+	offsetText(y, inline) {
+		var newY = y;
+		if (inline.sup) {
+			newY -= inline.fontSize * 0.75;
+		}
+		if (inline.sub) {
+			newY += inline.fontSize * 0.35;
+		}
+		return newY;
+	}
+
 	renderLine(line, x, y) {
 		function preparePageNodeRefLine(_pageNodeRef, inline) {
 			let newWidth;
@@ -160,6 +179,7 @@ class Renderer {
 
 			this.pdfDocument._font = inline.font;
 			this.pdfDocument.fontSize(inline.fontSize);
+			var shiftedY = this.offsetText(y + shiftToBaseline, inline);
 			if (inline.image) {
 
 				this.pdfDocument.image(inline.image, x + inline.x, y, { width: inline.width });
@@ -170,7 +190,7 @@ class Renderer {
 				this.renderSVG(inline);
 			}
 			else {
-				this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);
+				this.pdfDocument.text(inline.text, x + inline.x, shiftedY, options);
 			}
 
 			if (inline.linkToPage) {
