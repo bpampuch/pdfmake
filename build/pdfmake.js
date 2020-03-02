@@ -1,4 +1,4 @@
-/*! @wisedocnpm/wisepdf v1.0.8, @license ISC, @link http://pdfmake.org */
+/*! @wisedocnpm/wisepdf v1.0.9, @license ISC, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -70082,11 +70082,11 @@ function () {
     var newY = y;
 
     if (inline.sup) {
-      newY -= inline.fontSize * 0.75;
+      newY -= inline.fontSize * 0.07;
     }
 
     if (inline.sub) {
-      newY += inline.fontSize * 0.35;
+      newY += inline.fontSize * 0.30;
     }
 
     return newY;
@@ -70164,7 +70164,11 @@ function () {
       this.pdfDocument.opacity(inline.opacity || 1);
       this.pdfDocument.fill(inline.color || 'black');
       this.pdfDocument._font = inline.font;
-      this.pdfDocument.fontSize(inline.fontSize);
+
+      if (inline.sup || inline.sub) {
+        this.pdfDocument.fontSize(inline.fontSize * 0.66);
+      } else this.pdfDocument.fontSize(inline.fontSize);
+
       var shiftedY = this.offsetText(y + shiftToBaseline, inline);
 
       if (inline.image) {

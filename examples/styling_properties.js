@@ -1,4 +1,10 @@
 var fonts = {
+	Times: {
+		normal: "Times-Roman",
+		bold: "Times-Bold",
+		italics: "Times-Italic",
+		bolditalics: "Times-BoldItalic"
+	},
 	Roboto: {
 		normal: 'fonts/Roboto-Regular.ttf',
 		bold: 'fonts/Roboto-Medium.ttf',
@@ -47,8 +53,7 @@ var docDefinition = {
 				'Hello World.',
 				{
 					text: '1, 2',
-					sup: true,
-					fontSize: 8
+					sup: true
 				},
 				' Let\'s continue our sentence. Notice the leading space.'
 			]
@@ -58,13 +63,16 @@ var docDefinition = {
 				'Hello',
 				{
 					text: '1, 2',
-					sub: true,
-					fontSize: 8
+					sub: true
 				},
 				' World'
 			]
 		}
-	]
+	],
+	defaultStyle: {
+		fontSize: 12,
+		font: 'Times'
+	},
 };
 
 var now = new Date();
