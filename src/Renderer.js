@@ -94,10 +94,10 @@ class Renderer {
 	offsetText(y, inline) {
 		var newY = y;
 		if (inline.sup) {
-			newY -= inline.fontSize * 0.75;
+			newY -= inline.fontSize * 0.07;
 		}
 		if (inline.sub) {
-			newY += inline.fontSize * 0.35;
+			newY += inline.fontSize * 0.30;
 		}
 		return newY;
 	}
@@ -178,7 +178,11 @@ class Renderer {
 			this.pdfDocument.fill(inline.color || 'black');
 
 			this.pdfDocument._font = inline.font;
-			this.pdfDocument.fontSize(inline.fontSize);
+			if (inline.sup || inline.sub) {
+				this.pdfDocument.fontSize(inline.fontSize * 0.66);
+			}
+			else
+				this.pdfDocument.fontSize(inline.fontSize);
 			var shiftedY = this.offsetText(y + shiftToBaseline, inline);
 			if (inline.image) {
 
