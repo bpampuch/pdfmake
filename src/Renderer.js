@@ -2,6 +2,7 @@ import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
 import { isNumber } from './helpers/variableType';
 
+// TODO: refactor lazy load init
 const getSvgToPDF = function () {
 	try {
 		// optional dependency to support svg nodes
