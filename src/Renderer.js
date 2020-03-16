@@ -178,11 +178,19 @@ class Renderer {
 			this.pdfDocument.fill(inline.color || 'black');
 
 			this.pdfDocument._font = inline.font;
-			if (inline.sup || inline.sub) {
-				this.pdfDocument.fontSize(inline.fontSize * 0.66);
-			}
-			else
-				this.pdfDocument.fontSize(inline.fontSize);
+
+			/**
+			 * Commenting this code, Since this was giving an unusual space 
+			 * after the super/subscript.
+			 * Users will have to manually specify the font size of the super/subscript 
+			 * It generally is reduced by 66% 
+			 * see url(https://www.pcreview.co.uk/threads/size-of-superscript-and-subscript-characters-relative-to-font-size.897334/)
+			 */
+			// if (inline.sup || inline.sub) {
+			// 	this.pdfDocument.fontSize(inline.fontSize * 0.66);
+			// }
+			// else
+			this.pdfDocument.fontSize(inline.fontSize);
 			var shiftedY = this.offsetText(y + shiftToBaseline, inline);
 			if (inline.image) {
 

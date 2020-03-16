@@ -60,12 +60,13 @@ var docDefinition = {
 		},
 		{
 			text: [
-				'Hello',
+				'H',
 				{
-					text: '1, 2',
-					sub: true
+					text: '2',
+					sub: true,
+					fontSize: 7.92 // should be 0.66% of actual font size
 				},
-				' World'
+				'O'
 			]
 		}
 	],
