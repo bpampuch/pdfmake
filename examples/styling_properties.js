@@ -50,10 +50,11 @@ var docDefinition = {
 		'\n\n Subscript, superscript:',
 		{
 			text: [
-				'Hello World.',
+				'H',
 				{
-					text: '1, 2',
-					sup: true
+					text: '2',
+					sup: true,
+					fontSize: 7.92 // should be 0.66% of actual font size
 				},
 				' Let\'s continue our sentence. Notice the leading space.'
 			]

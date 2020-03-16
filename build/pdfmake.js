@@ -1,4 +1,4 @@
-/*! @wisedocnpm/wisepdf v1.0.10, @license ISC, @link http://pdfmake.org */
+/*! @wisedocnpm/wisepdf v1.0.11, @license ISC, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -70082,7 +70082,7 @@ function () {
     var newY = y;
 
     if (inline.sup) {
-      newY -= inline.fontSize * 0.07;
+      newY -= inline.fontSize * 0.45;
     }
 
     if (inline.sub) {

@@ -94,7 +94,7 @@ class Renderer {
 	offsetText(y, inline) {
 		var newY = y;
 		if (inline.sup) {
-			newY -= inline.fontSize * 0.07;
+			newY -= inline.fontSize * 0.45;
 		}
 		if (inline.sub) {
 			newY += inline.fontSize * 0.30;
