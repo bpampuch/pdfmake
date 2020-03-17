@@ -97,7 +97,7 @@ class Renderer {
 			newY -= inline.fontSize * 0.45;
 		}
 		if (inline.sub) {
-			newY += inline.fontSize * 0.30;
+			newY += inline.fontSize * 0.12;
 		}
 		return newY;
 	}
