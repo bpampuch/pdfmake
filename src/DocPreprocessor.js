@@ -33,7 +33,9 @@ class DocPreprocessor {
 			node.text = convertValueToString(node.text);
 		}
 
-		if (node.columns) {
+		if (node.section) {
+			return this.preprocessSection(node);
+		} else if (node.columns) {
 			return this.preprocessColumns(node);
 		} else if (node.stack) {
 			return this.preprocessVerticalContainer(node);
@@ -60,6 +62,12 @@ class DocPreprocessor {
 		} else {
 			throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 		}
+	}
+
+	preprocessSection(node) {
+		node.section = this.preprocessNode(node.section);
+
+		return node;
 	}
 
 	preprocessColumns(node) {

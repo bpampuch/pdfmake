@@ -404,6 +404,8 @@ class LayoutBuilder {
 
 			if (node.stack) {
 				this.processVerticalContainer(node);
+			} else if (node.section) {
+				this.processSection(node);
 			} else if (node.columns) {
 				this.processColumns(node);
 			} else if (node.ul) {
@@ -446,6 +448,15 @@ class LayoutBuilder {
 
 			//TODO: paragraph gap
 		}, this);
+	}
+
+	// section
+	processSection(sectionNode) {
+		// TODO: properties
+
+		this.writer.moveToNextPage(sectionNode.pageOrientation); // TODO: pageOrientation
+
+		this.processNode(sectionNode.section);
 	}
 
 	// columns
