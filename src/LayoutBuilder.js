@@ -454,7 +454,10 @@ class LayoutBuilder {
 	processSection(sectionNode) {
 		// TODO: properties
 
-		this.writer.moveToNextPage(sectionNode.pageOrientation); // TODO: pageOrientation
+		let page = this.writer.context().getCurrentPage();
+		if (page && page.items.length) { // move to new empty page
+			this.writer.moveToNextPage(sectionNode.pageOrientation);
+		}
 
 		this.processNode(sectionNode.section);
 	}
