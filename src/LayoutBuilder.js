@@ -456,7 +456,7 @@ class LayoutBuilder {
 
 		let page = this.writer.context().getCurrentPage();
 		if (page && page.items.length) { // move to new empty page
-			this.writer.moveToNextPage(sectionNode.pageOrientation);
+			this.writer.addPage(sectionNode.pageSize, sectionNode.pageOrientation);
 		}
 
 		this.processNode(sectionNode.section);
