@@ -10,8 +10,6 @@ os:
   - linux
   - osx
 
-sudo: false
-
 cache:
   directories:
     - node_modules
