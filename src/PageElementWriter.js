@@ -1,5 +1,5 @@
 import ElementWriter from './ElementWriter';
-import { normalizePageSize/*, normalizePageMargin*/ } from './PageSize';
+import { normalizePageSize, normalizePageMargin } from './PageSize';
 
 /**
  * An extended ElementWriter which can handle:
@@ -74,11 +74,11 @@ class PageElementWriter extends ElementWriter {
 		});
 	}
 
-	addPage(pageSize, pageOrientation) {
+	addPage(pageSize, pageOrientation, pageMargin) {
 		let prevPage = this.page;
 		let prevY = this.y;
 
-		this.context().addPage(normalizePageSize(pageSize, pageOrientation));
+		this.context().addPage(normalizePageSize(pageSize, pageOrientation), normalizePageMargin(pageMargin));
 
 		this.emit('pageChanged', {
 			prevPage: prevPage,
