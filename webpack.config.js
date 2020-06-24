@@ -91,7 +91,14 @@ module.exports = {
 					}
 				}
 			},
-			{ test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')] },
+			{
+				test: /pdfMake.js$/,
+				loader: 'expose-loader',
+				options: {
+					exposes: 'pdfMake',
+				},
+				include: [path.join(__dirname, './src/browser-extensions')]
+			},
 			/* temporary bugfix for FileSaver: added hack for mobile device support, see https://github.com/bpampuch/pdfmake/issues/1664 */
 			/* waiting to merge and release PR https://github.com/eligrey/FileSaver.js/pull/533 */
 			{
