@@ -39,6 +39,9 @@
     "uglifyjs-webpack-plugin": "^2.2.0",
     "webpack": "^4.43.0"
   },
+  "engines": {
+    "node": ">=8"
+  },
   "scripts": {
     "build": "gulp build",
     "test": "gulp",
