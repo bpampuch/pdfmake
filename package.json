@@ -20,6 +20,7 @@
     "@babel/preset-env": "^7.10.3",
     "babel-loader": "^8.1.0",
     "brfs": "^2.0.2",
+    "core-js": "^3.6.5",
     "eslint-plugin-jsdoc": "^27.1.2",
     "expose-loader": "^1.0.0",
     "fancy-log": "^1.3.3",

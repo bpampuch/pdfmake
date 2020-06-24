@@ -46,6 +46,8 @@ module.exports = {
 									},
 									modules: false,
 									useBuiltIns: 'usage',
+									// TODO: after fix in babel remove corejs version and remove core-js dependency in package.json
+									corejs: "3.0.0",
 									loose: true
 								}
 							]
@@ -83,6 +85,8 @@ module.exports = {
 									},
 									modules: false,
 									useBuiltIns: 'usage',
+									// TODO: after fix in babel remove corejs version and remove core-js dependency in package.json
+									corejs: "3.0.0",
 									loose: true
 								}
 							]
