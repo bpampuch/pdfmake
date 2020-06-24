@@ -6,8 +6,8 @@ node_js:
   - node
 
 os:
-  - windows
   - linux
+  - windows
   - osx
 
 cache:
