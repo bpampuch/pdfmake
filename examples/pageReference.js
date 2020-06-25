@@ -142,6 +142,6 @@ var docDefinition = {
 var now = new Date();
 
 var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/pageReference.pdf');
-
-console.log(new Date() - now);
+pdf.write('pdfs/pageReference.pdf').then(() => {
+	console.log(new Date() - now);
+});

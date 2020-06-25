@@ -31,6 +31,6 @@ var docDefinition = {
 var now = new Date();
 
 var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/security.pdf');
-
-console.log(new Date() - now);
+pdf.write('pdfs/security.pdf').then(() => {
+	console.log(new Date() - now);
+});

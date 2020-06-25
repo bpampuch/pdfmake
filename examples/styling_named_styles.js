@@ -57,6 +57,6 @@ var docDefinition = {
 var now = new Date();
 
 var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/named_styles.pdf');
-
-console.log(new Date() - now);
+pdf.write('pdfs/named_styles.pdf').then(() => {
+	console.log(new Date() - now);
+});

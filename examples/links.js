@@ -10,8 +10,6 @@ var fonts = {
 var pdfmake = require('../js/index');
 pdfmake.setFonts(fonts);
 
-var now = new Date();
-
 var docDefinition = {
 	content: [
 		{
@@ -39,7 +37,9 @@ var docDefinition = {
 	]
 };
 
-var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/links.pdf');
+var now = new Date();
 
-console.log(new Date() - now);
+var pdf = pdfmake.createPdf(docDefinition);
+pdf.write('pdfs/links.pdf').then(() => {
+	console.log(new Date() - now);
+});

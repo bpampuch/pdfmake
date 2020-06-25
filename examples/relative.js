@@ -69,9 +69,9 @@ var docDefinition = {
 var now = new Date();
 
 var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/relative.pdf');
-
-console.log(new Date() - now);
+pdf.write('pdfs/relative.pdf').then(() => {
+	console.log(new Date() - now);
+});
 
 function buildXAxis() {
 	var xTicks = [

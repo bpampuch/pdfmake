@@ -40,6 +40,6 @@ var docDefinition = {
 var now = new Date();
 
 var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/named_styles_with_overrides.pdf');
-
-console.log(new Date() - now);
+pdf.write('pdfs/named_styles_with_overrides.pdf').then(() => {
+	console.log(new Date() - now);
+});
