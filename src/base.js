@@ -6,21 +6,14 @@ class pdfmake {
 	/**
 	 * @param {object} docDefinition
 	 * @param {?object} options
-	 * @returns {Promise<object>}
+	 * @returns {object}
 	 */
 	createPdf(docDefinition, options = {}) {
-		const pdfDocumentPromise = new Promise((resolve, reject) => {
-			try {
-				options.progressCallback = this.progressCallback;
-				options.tableLayouts = this.tableLayouts;
+		options.progressCallback = this.progressCallback;
+		options.tableLayouts = this.tableLayouts;
 
-				let printer = new Printer(this.fonts);
-				let doc = printer.createPdfKitDocument(docDefinition, options);
-				resolve(doc);
-			} catch (e) {
-				reject(e);
-			}
-		});
+		let printer = new Printer(this.fonts);
+		const pdfDocumentPromise = printer.createPdfKitDocument(docDefinition, options);
 
 		return this._transformToDocument(pdfDocumentPromise);
 	}

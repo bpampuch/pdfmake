@@ -36,56 +36,62 @@ class PdfPrinter {
 	 *
 	 * @param {object} docDefinition
 	 * @param {object} options
-	 * @returns {object} a pdfKit document object which can be saved or encode to data-url
+	 * @returns {Promise<PDFDocument>} resolved promise return a pdfkit document
 	 */
 	createPdfKitDocument(docDefinition, options = {}) {
-		docDefinition.version = docDefinition.version || '1.3';
-		docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
-		docDefinition.images = docDefinition.images || {};
-		docDefinition.pageMargins = isValue(docDefinition.pageMargins) ? docDefinition.pageMargins : 40;
+		return new Promise((resolve, reject) => {
+			try {
+				docDefinition.version = docDefinition.version || '1.3';
+				docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
+				docDefinition.images = docDefinition.images || {};
+				docDefinition.pageMargins = isValue(docDefinition.pageMargins) ? docDefinition.pageMargins : 40;
 
-		let pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
+				let pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 
-		let pdfOptions = {
-			size: [pageSize.width, pageSize.height],
-			pdfVersion: docDefinition.version,
-			compress: docDefinition.compress,
-			userPassword: docDefinition.userPassword,
-			ownerPassword: docDefinition.ownerPassword,
-			permissions: docDefinition.permissions,
-			fontLayoutCache: isBoolean(options.fontLayoutCache) ? options.fontLayoutCache : true,
-			bufferPages: options.bufferPages || false,
-			autoFirstPage: false,
-			font: null
-		};
+				let pdfOptions = {
+					size: [pageSize.width, pageSize.height],
+					pdfVersion: docDefinition.version,
+					compress: docDefinition.compress,
+					userPassword: docDefinition.userPassword,
+					ownerPassword: docDefinition.ownerPassword,
+					permissions: docDefinition.permissions,
+					fontLayoutCache: isBoolean(options.fontLayoutCache) ? options.fontLayoutCache : true,
+					bufferPages: options.bufferPages || false,
+					autoFirstPage: false,
+					font: null
+				};
 
-		this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, pdfOptions);
-		setMetadata(docDefinition, this.pdfKitDoc);
+				this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, pdfOptions);
+				setMetadata(docDefinition, this.pdfKitDoc);
 
-		const builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins), new SVGMeasure());
+				const builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins), new SVGMeasure());
 
-		builder.registerTableLayouts(tableLayouts);
-		if (options.tableLayouts) {
-			builder.registerTableLayouts(options.tableLayouts);
-		}
+				builder.registerTableLayouts(tableLayouts);
+				if (options.tableLayouts) {
+					builder.registerTableLayouts(options.tableLayouts);
+				}
 
-		let pages = builder.layoutDocument(docDefinition.content, this.pdfKitDoc, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.watermark, docDefinition.pageBreakBefore);
-		let maxNumberPages = docDefinition.maxPagesNumber || -1;
-		if (isNumber(maxNumberPages) && maxNumberPages > -1) {
-			pages = pages.slice(0, maxNumberPages);
-		}
+				let pages = builder.layoutDocument(docDefinition.content, this.pdfKitDoc, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.watermark, docDefinition.pageBreakBefore);
+				let maxNumberPages = docDefinition.maxPagesNumber || -1;
+				if (isNumber(maxNumberPages) && maxNumberPages > -1) {
+					pages = pages.slice(0, maxNumberPages);
+				}
 
-		// if pageSize.height is set to Infinity, calculate the actual height of the page that
-		// was laid out using the height of each of the items in the page.
-		if (pageSize.height === Infinity) {
-			let pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
-			this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
-		}
+				// if pageSize.height is set to Infinity, calculate the actual height of the page that
+				// was laid out using the height of each of the items in the page.
+				if (pageSize.height === Infinity) {
+					let pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
+					this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
+				}
 
-		const renderer = new Renderer(this.pdfKitDoc, options.progressCallback);
-		renderer.renderPages(pages);
+				const renderer = new Renderer(this.pdfKitDoc, options.progressCallback);
+				renderer.renderPages(pages);
 
-		return this.pdfKitDoc;
+				resolve(this.pdfKitDoc);
+			} catch (e) {
+				reject(e);
+			}
+		});
 	}
 }
 
