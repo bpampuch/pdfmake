@@ -341,16 +341,16 @@ class LayoutBuilder {
 			let margin = node._margin;
 
 			if (node.pageBreak === 'before') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 			} else if (node.pageBreak === 'beforeOdd') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				if ((this.writer.context().page + 1) % 2 === 1) {
-					this.writer.moveToNextPage(node.pageOrientation);
+					this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				}
 			} else if (node.pageBreak === 'beforeEven') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				if ((this.writer.context().page + 1) % 2 === 0) {
-					this.writer.moveToNextPage(node.pageOrientation);
+					this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				}
 			}
 
@@ -367,16 +367,16 @@ class LayoutBuilder {
 			}
 
 			if (node.pageBreak === 'after') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 			} else if (node.pageBreak === 'afterOdd') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				if ((this.writer.context().page + 1) % 2 === 1) {
-					this.writer.moveToNextPage(node.pageOrientation);
+					this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				}
 			} else if (node.pageBreak === 'afterEven') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				if ((this.writer.context().page + 1) % 2 === 0) {
-					this.writer.moveToNextPage(node.pageOrientation);
+					this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				}
 			}
 		};
@@ -667,7 +667,64 @@ class LayoutBuilder {
 		}
 
 		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
-			let positions = this.writer.addLine(line);
+			let positions;
+			if(node.headingContinutyLevel >= -1) {
+				positions = this.writer.addLine(line,node.headingContinutyLevel);
+				sameNodeCheck = false;
+				if(node.headingContinutyLevel === prevHeaderContinutyLevel){
+					sameNodeCheck = true;
+				}
+				let lineClone = new _Line.default(this.writer.context().availableWidth);
+				lineClone.maxWidth = line.maxWidth;
+				lineClone.leadingCut = line.leadingCut;
+				lineClone.trailingCut = line.trailingCut;
+				lineClone.inlineWidths = line.inlineWidths;
+				const lastLineIndex = line.inlines.length-1;
+				lineClone.inlines = [...line.inlines];
+				const lastline = lineClone.inlines[lastLineIndex]
+				lineClone.inlines[lastLineIndex] = {
+					...lastline,
+					text: lastline.text + ' ' + node.headingContinutyText
+				}
+				lineClone.headingContinutyText = node.headingContinutyText;
+				if(line.hasOwnProperty('newLineForced')){
+					lineClone.newLineForced = line.newLineForced
+				}
+				lineClone.lastLineInParagraph = line.lastLineInParagraph;
+				
+				lineClone.x = line.x;
+				if(line._node){
+					lineClone._node = {...line._node};
+					if(lineClone._node.id){
+						lineClone._node.id = '' 
+					}
+					if(lineClone._node.tocItem){
+						delete lineClone._node.tocItem
+					}
+					if(lineClone._node.tocItem){
+						lineClone._node.positions = []
+					}
+					if(lineClone._node.tocStyle){
+						delete lineClone._node.tocStyle
+					}
+				}
+				
+				lineClone.y = line.y;
+				this.writer.pushToheader({
+					item: lineClone,
+					type: 'line'
+				},node.headingContinutyLevel,sameNodeCheck)
+		
+				prevHeaderContinutyLevel = node.headingContinutyLevel;
+			}else{
+					sameNodeCheck = false;
+					this.writer.pushToheader({
+						item: '',
+						type: 'line'
+					},node.headingContinutyLevel,sameNodeCheck)
+				positions = this.writer.addLine(line,null);
+				prevHeaderContinutyLevel = '';
+			}
 			node.positions.push(positions);
 			line = this.buildNextLine(node);
 			if (line) {
