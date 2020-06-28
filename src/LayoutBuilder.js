@@ -687,12 +687,16 @@ class LayoutBuilder {
 				lineClone.inlineWidths = line.inlineWidths;
 				const lastLineIndex = line.inlines.length-1;
 				lineClone.inlines = [...line.inlines];
-				const lastline = lineClone.inlines[lastLineIndex]
+				const lastline = lineClone.inlines[lastLineIndex];
+				let headingContinutyText = '';
+				if(node.headingContinutyText) {
+
+				}
 				lineClone.inlines[lastLineIndex] = {
 					...lastline,
-					text: lastline.text + ' ' + node.headingContinutyText
+					text: lastline.text + ' ' + headingContinutyText
 				}
-				lineClone.headingContinutyText = node.headingContinutyText;
+				lineClone.headingContinutyText = headingContinutyText;
 				if(line.hasOwnProperty('newLineForced')){
 					lineClone.newLineForced = line.newLineForced
 				}
