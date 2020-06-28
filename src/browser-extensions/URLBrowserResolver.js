@@ -6,9 +6,13 @@ const fetchUrl = url => {
           reject(new Error("HTTP error, status = " + response.status));
         }
         return response.arrayBuffer();
+      }, result => {
+        reject(result);
       })
       .then(function (buffer) {
         resolve(buffer);
+      }, result => {
+        reject(result);
       });
   });
 };
