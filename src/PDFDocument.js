@@ -14,7 +14,7 @@ const typeName = (bold, italics) => {
 };
 
 class PDFDocument extends PDFKit {
-	constructor(fonts = {}, images = {}, options = {}) {
+	constructor(fonts = {}, images = {}, options = {}, virtualfs = null) {
 		super(options);
 
 		this.fonts = {};
@@ -33,6 +33,7 @@ class PDFDocument extends PDFKit {
 		}
 
 		this.images = images;
+		this.virtualfs = virtualfs;
 	}
 
 	getFontType(bold, italics) {
@@ -61,6 +62,11 @@ class PDFDocument extends PDFKit {
 			if (!isArray(def)) {
 				def = [def];
 			}
+
+			if (this.virtualfs && this.virtualfs.existsSync(def[0])) {
+				def[0] = this.virtualfs.readFileSync(def[0]);
+			}
+
 			this.fontCache[familyName][type] = this.font(...def)._font;
 		}
 

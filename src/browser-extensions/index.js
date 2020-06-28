@@ -1,5 +1,6 @@
 import pdfmakeBase from '../base';
 import OutputDocumentBrowser from './OutputDocumentBrowser'; // TODO: Lazy loading for support on unsupported browsers (see issue https://github.com/bpampuch/pdfmake/issues/1663)
+import URLBrowserResolver from './URLBrowserResolver';
 import fs from 'fs';
 
 let defaultClientFonts = {
@@ -22,6 +23,7 @@ const isBrowserSupported = () => {
 class pdfmake extends pdfmakeBase {
 	constructor() {
 		super();
+		this.urlResolver = new URLBrowserResolver(this.virtualfs);
 		this.fonts = defaultClientFonts;
 	}
 

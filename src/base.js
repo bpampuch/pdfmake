@@ -1,7 +1,13 @@
 import Printer from './Printer';
+import virtualfs from './virtual-fs';
 import { pack } from './helpers/tools';
 
 class pdfmake {
+
+	constructor() {
+		this.virtualfs = virtualfs;
+		this.urlResolver = null;
+	}
 
 	/**
 	 * @param {object} docDefinition
@@ -12,7 +18,7 @@ class pdfmake {
 		options.progressCallback = this.progressCallback;
 		options.tableLayouts = this.tableLayouts;
 
-		let printer = new Printer(this.fonts);
+		let printer = new Printer(this.fonts, this.virtualfs, this.urlResolver);
 		const pdfDocumentPromise = printer.createPdfKitDocument(docDefinition, options);
 
 		return this._transformToDocument(pdfDocumentPromise);
