@@ -44,8 +44,8 @@ class PdfPrinter {
 	 */
 	createPdfKitDocument(docDefinition, options = {}) {
 		return new Promise((resolve, reject) => {
-			try {
-				this.resolveUrls().then(() => {
+			this.resolveUrls().then(() => {
+				try {
 					docDefinition.version = docDefinition.version || '1.3';
 					docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 					docDefinition.images = docDefinition.images || {};
@@ -93,12 +93,12 @@ class PdfPrinter {
 					renderer.renderPages(pages);
 
 					resolve(this.pdfKitDoc);
-				}, result => {
-					reject(result);
-				});
-			} catch (e) {
-				reject(e);
-			}
+				} catch (e) {
+					reject(e);
+				}
+			}, result => {
+				reject(result);
+			});
 		});
 	}
 
