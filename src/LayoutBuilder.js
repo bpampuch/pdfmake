@@ -690,7 +690,7 @@ class LayoutBuilder {
 				const lastline = lineClone.inlines[lastLineIndex];
 				let headingContinutyText = '';
 				if(node.headingContinutyText) {
-
+					headingContinutyText = node.headingContinutyText;
 				}
 				lineClone.inlines[lastLineIndex] = {
 					...lastline,
