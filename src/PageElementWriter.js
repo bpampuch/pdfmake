@@ -14,6 +14,7 @@ class PageElementWriter extends ElementWriter {
 		this.transactionLevel = 0;
 		this.repeatables = [];
 		
+		//Code Change - Heading continuty.
 		this.repeatableHeaders = [];
 		this.headings = {};
 		this.sameNodeHeadings = {};
@@ -58,6 +59,11 @@ class PageElementWriter extends ElementWriter {
 	moveToNextPage(pageOrientation, headingLevelCheck) {
 		let nextPage = this.context().moveToNextPage(pageOrientation);
 
+		/*
+		Code Change - Heading continuty.
+
+		Removing headers with greater level than current level.
+		*/
 		if(headingLevelCheck >=0){
 			if(headingLevelCheck === 0){
 			  this.repeatableHeaders = [];        
@@ -71,6 +77,7 @@ class PageElementWriter extends ElementWriter {
 			});
 		};
 		
+		//Similar process as repeatables.
 		let yOffset = 0;
 		this.repeatableHeaders.forEach(function (rep) {
 				  
@@ -174,42 +181,44 @@ class PageElementWriter extends ElementWriter {
 		this.repeatables.pop();
 	}
 
+	//Code Change - Heading continuty:- Function to add incoming headers to headings object. heading levels [0-n] is added and -1 removes all existing headers.
 	pushToheader(header,level,sameNodeCheck){
     
 		if(header && header.item && header.item.inlines[0].text && header.item.x && header.item.y){
 
-      if(sameNodeCheck && this.headings[level].item && header.item){
-        let headingInLine = this.headings[level].item.inlines;
-        let headingText = headingInLine[headingInLine.length-1].text;
-        let headingContinutyText = this.headings[level].item.headingContinutyText;
-        if(headingContinutyText){
-          this.headings[level].item.inlines[headingInLine.length-1].text = headingText.replace(headingContinutyText,'').trim();
-        }
-        this.sameNodeHeadings[level] = header;
-      }else{
-        let keys = Object.keys(this.headings);
+			if(sameNodeCheck && this.headings[level].item && header.item){
+				let headingInLine = this.headings[level].item.inlines;
+				let headingText = headingInLine[headingInLine.length-1].text;
+				let headingContinutyText = this.headings[level].item.headingContinutyText;
+				if(headingContinutyText){
+					this.headings[level].item.inlines[headingInLine.length-1].text = headingText.replace(headingContinutyText,'').trim();
+				}
+				this.sameNodeHeadings[level] = header;
+			}else{
+				let keys = Object.keys(this.headings);
+					
+				if(this.headings[level-1] || level === 0){
+					this.headings[level] = header
+				}
+					
+				keys.forEach(key =>{
+					if(key > level){
+						this.headings[key] = ''
+					}
+				});
 			
-        if(this.headings[level-1] || level === 0){
-          this.headings[level] = header
-        }
-            
-        keys.forEach(key =>{
-          if(key > level){
-          this.headings[key] = ''
-          }
-        });
-    
-        if(level < 0){
-          this.headings = {};
-        }
-      }			
-      
-      this.pushToRepeatableHeaders();
+				if(level < 0){
+					this.headings = {};
+				}
+			}			
+			
+			this.pushToRepeatableHeaders();
 		} 
 		
 	
 	}
 
+	//Code Change - Heading continuty:- Function to push headings to repeatableHeader object and also positioning and building headers for same nodes.
 	pushToRepeatableHeaders() {
 		let currentHeaderHeight = this.context().pageMargins.top;
 		this.repeatableHeaders = [];

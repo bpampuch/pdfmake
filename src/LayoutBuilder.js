@@ -21,6 +21,7 @@ function addAll(target, otherArray) {
  * Layout engine which turns document-definition-object into a set of pages, lines, inlines
  * and vectors ready to be rendered into a PDF
  */
+
 class LayoutBuilder {
 	/**
 	 * @param {object} pageSize - an object defining page width and height
@@ -32,6 +33,10 @@ class LayoutBuilder {
 		this.pageMargins = pageMargins;
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = {};
+
+		//Code Change - Heading continuty. 
+		this.sameNodeCheck = false;
+		this.prevHeaderContinutyLevel = '';
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -667,14 +672,15 @@ class LayoutBuilder {
 		}
 
 		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
+			//Code Change - Heading continuty :- Creating clone of line with "headingContinutyLevel" value
 			let positions;
 			if(node.headingContinutyLevel >= -1) {
 				positions = this.writer.addLine(line,node.headingContinutyLevel);
-				sameNodeCheck = false;
-				if(node.headingContinutyLevel === prevHeaderContinutyLevel){
-					sameNodeCheck = true;
+				this.sameNodeCheck = false;
+				if(node.headingContinutyLevel === this.prevHeaderContinutyLevel){
+					this.sameNodeCheck = true;
 				}
-				let lineClone = new _Line.default(this.writer.context().availableWidth);
+				let lineClone = new Line(this.writer.context().availableWidth);
 				lineClone.maxWidth = line.maxWidth;
 				lineClone.leadingCut = line.leadingCut;
 				lineClone.trailingCut = line.trailingCut;
@@ -713,17 +719,17 @@ class LayoutBuilder {
 				this.writer.pushToheader({
 					item: lineClone,
 					type: 'line'
-				},node.headingContinutyLevel,sameNodeCheck)
+				},node.headingContinutyLevel,this.sameNodeCheck)
 		
-				prevHeaderContinutyLevel = node.headingContinutyLevel;
+				this.prevHeaderContinutyLevel = node.headingContinutyLevel;
 			}else{
-					sameNodeCheck = false;
-					this.writer.pushToheader({
-						item: '',
-						type: 'line'
-					},node.headingContinutyLevel,sameNodeCheck)
+				this.sameNodeCheck = false;
+				this.writer.pushToheader({
+					item: '',
+					type: 'line'
+				},node.headingContinutyLevel,this.sameNodeCheck)
 				positions = this.writer.addLine(line,null);
-				prevHeaderContinutyLevel = '';
+				this.prevHeaderContinutyLevel = '';
 			}
 			node.positions.push(positions);
 			line = this.buildNextLine(node);
