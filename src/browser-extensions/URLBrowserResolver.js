@@ -1,19 +1,42 @@
 const fetchUrl = url => {
   return new Promise((resolve, reject) => {
-    fetch(url)
-      .then(response => {
-        if (!response.ok) {
-          reject(new Error("HTTP error, status = " + response.status));
-        }
-        return response.arrayBuffer();
-      }, result => {
-        reject(result);
-      })
-      .then(function (buffer) {
-        resolve(buffer);
-      }, result => {
-        reject(result);
-      });
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'arraybuffer';
+
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState !== 4) {
+        return;
+      }
+
+      const ok = xhr.status >= 200 && xhr.status < 300;
+      if (!ok) {
+        setTimeout(() => {
+          reject(new TypeError(`Failed to fetch (url: "${url}")`));
+        }, 0);
+      }
+    };
+
+    xhr.onload = () => {
+      const ok = xhr.status >= 200 && xhr.status < 300;
+      if (ok) {
+        resolve(xhr.response);
+      }
+    };
+
+    xhr.onerror = () => {
+      setTimeout(() => {
+        reject(new TypeError(`Network request failed (url: "${url}")`));
+      }, 0);
+    };
+
+    xhr.ontimeout = () => {
+      setTimeout(() => {
+        reject(new TypeError(`Network request failed (url: "${url}")`));
+      }, 0);
+    };
+
+    xhr.send();
   });
 };
 
