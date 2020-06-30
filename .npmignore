@@ -4,6 +4,7 @@ dev-playground/
 docs/
 examples/
 tests/
+build/fonts/
 yarn.lock
 composer.json
 bower.json
