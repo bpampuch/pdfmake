@@ -49,7 +49,7 @@
     "build:fonts": "node build-fonts.js",
     "build:examples": "node build-examples.js",
     "lint": "eslint \"./src/**/*.js\" \"./tests/**/*.js\"",
-    "mocha": "mocha --reporter nyan \"./tests/**/*.spec.js\"",
+    "mocha": "mocha --reporter spec \"./tests/**/*.spec.js\"",
     "playground": "node dev-playground/server.js"
   },
   "repository": {
