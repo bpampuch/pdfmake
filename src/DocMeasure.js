@@ -27,7 +27,7 @@ class DocMeasure {
 	 * Measures all nodes and sets min/max-width properties required for the second
 	 * layout-pass.
 	 *
-	 * @param  {object} docStructure document-definition-object
+	 * @param {object} docStructure document-definition-object
 	 * @returns {object} document-measurement-object
 	 */
 	measureDocument(docStructure) {

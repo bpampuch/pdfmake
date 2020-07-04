@@ -46,8 +46,8 @@ class TextInlines {
 	 * Converts an array of strings (or inline-definition-objects) into a collection
 	 * of inlines and calculated minWidth/maxWidth and their min/max widths
 	 *
-	 * @param  {Array} textArray an array of inline-definition-objects (or strings)
-	 * @param  {StyleContextStack} styleContextStack current style stack
+	 * @param {Array} textArray an array of inline-definition-objects (or strings)
+	 * @param {StyleContextStack} styleContextStack current style stack
 	 * @returns {object} collection of inlines, minWidth, maxWidth
 	 */
 	buildInlines(textArray, styleContextStack) {
@@ -170,8 +170,8 @@ class TextInlines {
 	/**
 	 * Returns size of the specified string (without breaking it) using the current style
 	 *
-	 * @param  {string} text text to be measured
-	 * @param  {object} styleContextStack current style stack
+	 * @param {string} text text to be measured
+	 * @param {object} styleContextStack current style stack
 	 * @returns {object} size of the specified string
 	 */
 	sizeOfText(text, styleContextStack) {
@@ -199,9 +199,9 @@ class TextInlines {
 	/**
 	 * Returns size of the specified rotated string (without breaking it) using the current style
 	 *
-	 * @param  {string} text text to be measured
-	 * @param  {number} angle
-	 * @param  {object} styleContextStack current style stack
+	 * @param {string} text text to be measured
+	 * @param {number} angle
+	 * @param {object} styleContextStack current style stack
 	 * @returns {object} size of the specified string
 	 */
 	sizeOfRotatedText(text, angle, styleContextStack) {
