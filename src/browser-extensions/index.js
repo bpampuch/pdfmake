@@ -35,6 +35,16 @@ class pdfmake extends pdfmakeBase {
 		return super.createPdf(docDefinition);
 	}
 
+	registerFontContainer(fontContainer) {
+		for (let key in fontContainer.vfs) {
+			if (fontContainer.vfs.hasOwnProperty(key)) {
+				fs.writeFileSync(key, fontContainer.vfs[key]);
+			}
+		}
+
+		this.addFonts(fontContainer.fonts);
+	}
+
 	addVirtualFileSystem(vfs) {
 		fs.bindFS(vfs); // bind virtual file system to file system
 	}

@@ -41,13 +41,13 @@
     "node": ">=10"
   },
   "scripts": {
-    "test": "run-s build build:fonts mocha lint",
+    "test": "run-s build build:fonts build:standard-fonts mocha lint",
     "build": "run-s build:node build:browser",
     "build:node": "babel src --out-dir js",
     "build:browser": "webpack",
-    "build:browser-standardfonts": "webpack --config webpack-standardfonts.config.js",
     "build:fonts": "node build-fonts.js",
     "build:examples": "node build-examples.js",
+    "build:standard-fonts": "brfs \"./src/browser-extensions/standard-fonts/Courier.js\" > build/standard-fonts/Courier.js && brfs \"./src/browser-extensions/standard-fonts/Helvetica.js\" > build/standard-fonts/Helvetica.js && brfs \"./src/browser-extensions/standard-fonts/Times.js\" > build/standard-fonts/Times.js && brfs \"./src/browser-extensions/standard-fonts/Symbol.js\" > build/standard-fonts/Symbol.js && brfs \"./src/browser-extensions/standard-fonts/ZapfDingbats.js\" > build/standard-fonts/ZapfDingbats.js",
     "lint": "eslint \"./src/**/*.js\" \"./tests/**/*.js\"",
     "mocha": "mocha --reporter spec \"./tests/**/*.spec.js\"",
     "playground": "node dev-playground/server.js"
