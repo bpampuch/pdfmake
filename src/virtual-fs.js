@@ -15,20 +15,20 @@ class VirtualFileSystem {
 		this.storage = {};
 	}
 
-  /**
-   * @param {string} filename
-   * @returns {boolean}
-   */
+	/**
+	 * @param {string} filename
+	 * @returns {boolean}
+	 */
 	existsSync(filename) {
 		const normalizedFilename = normalizeFilename(filename);
 		return typeof this.storage[normalizedFilename] !== 'undefined';
 	}
 
-  /**
-   * @param {string} filename
-   * @param {?string|?object} options
-   * @returns {string|Buffer}
-   */
+	/**
+	 * @param {string} filename
+	 * @param {?string|?object} options
+	 * @returns {string|Buffer}
+	 */
 	readFileSync(filename, options) {
 		const normalizedFilename = normalizeFilename(filename);
 		const encoding = typeof options === 'object' ? options.encoding : options;
@@ -45,11 +45,11 @@ class VirtualFileSystem {
 		return buffer;
 	}
 
-  /**
-   * @param {string} filename
-   * @param {string|Buffer} content
-   * @param {?string|?object} options
-   */
+	/**
+	 * @param {string} filename
+	 * @param {string|Buffer} content
+	 * @param {?string|?object} options
+	 */
 	writeFileSync(filename, content, options) {
 		const normalizedFilename = normalizeFilename(filename);
 		const encoding = typeof options === 'object' ? options.encoding : options;
