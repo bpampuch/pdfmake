@@ -8,7 +8,7 @@ var fontContainer = {
 		'Roboto-MediumItalic.ttf': { data: fs.readFileSync(__dirname + '/../../../fonts/Roboto/Roboto-MediumItalic.ttf', 'base64'), encoding: 'base64' }
 	},
 	fonts: {
-		Courier: {
+		Roboto: {
 			normal: 'Roboto-Regular.ttf',
 			bold: 'Roboto-Medium.ttf',
 			italics: 'Roboto-Italic.ttf',
