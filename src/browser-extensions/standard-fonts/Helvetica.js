@@ -2,10 +2,10 @@ var fs = require('fs');
 
 var fontContainer = {
 	vfs: {
-		'data/Helvetica.afm': fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Helvetica.afm', 'utf8'),
-		'data/Helvetica-Bold.afm': fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Helvetica-Bold.afm', 'utf8'),
-		'data/Helvetica-Oblique.afm': fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Helvetica-Oblique.afm', 'utf8'),
-		'data/Helvetica-BoldOblique.afm': fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Helvetica-BoldOblique.afm', 'utf8')
+		'data/Helvetica.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Helvetica.afm', 'utf8'), encoding: 'utf8' },
+		'data/Helvetica-Bold.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Helvetica-Bold.afm', 'utf8'), encoding: 'utf8' },
+		'data/Helvetica-Oblique.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Helvetica-Oblique.afm', 'utf8'), encoding: 'utf8' },
+		'data/Helvetica-BoldOblique.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Helvetica-BoldOblique.afm', 'utf8'), encoding: 'utf8' }
 	},
 	fonts: {
 		Helvetica: {

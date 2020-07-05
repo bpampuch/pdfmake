@@ -1,1 +1,1 @@
-module.exports = require('./virtual-fs').default;
+module.exports = require('../virtual-fs').default;

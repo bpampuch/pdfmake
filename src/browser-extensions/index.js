@@ -35,18 +35,26 @@ class pdfmake extends pdfmakeBase {
 		return super.createPdf(docDefinition);
 	}
 
-	registerFontContainer(fontContainer) {
-		for (let key in fontContainer.vfs) {
-			if (fontContainer.vfs.hasOwnProperty(key)) {
-				fs.writeFileSync(key, fontContainer.vfs[key]);
-			}
-		}
-
+	addFontContainer(fontContainer) {
+		this.addVirtualFileSystem(fontContainer.vfs);
 		this.addFonts(fontContainer.fonts);
 	}
 
 	addVirtualFileSystem(vfs) {
-		fs.bindFS(vfs); // bind virtual file system to file system
+		for (let key in vfs) {
+			if (vfs.hasOwnProperty(key)) {
+				let data;
+				let encoding;
+				if (typeof vfs[key] === 'object') {
+					data = vfs[key].data;
+					encoding = vfs[key].encoding || 'base64';
+				} else {
+					data = vfs[key];
+					encoding = 'base64';
+				}
+				fs.writeFileSync(key, data, encoding);
+			}
+		}
 	}
 
 	_transformToDocument(doc) {
