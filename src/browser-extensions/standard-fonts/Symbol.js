@@ -12,7 +12,7 @@ var fontContainer = {
 };
 
 if (typeof this.pdfMake !== 'undefined' && typeof this.pdfMake.addFonts !== 'undefined') {
-	this.pdfMake.registerFontContainer(fontContainer);
+	this.pdfMake.addFontContainer(fontContainer);
 }
 
 if (typeof module !== 'undefined') {
