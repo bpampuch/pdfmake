@@ -30,6 +30,7 @@
     "mocha": "^8.0.1",
     "npm-run-all": "^4.1.5",
     "rewire": "^5.0.0",
+    "shx": "^0.3.2",
     "sinon": "^9.0.2",
     "string-replace-webpack-plugin": "^0.1.3",
     "transform-loader": "^0.2.4",
@@ -47,9 +48,10 @@
     "build:browser": "webpack",
     "build:fonts": "node build-fonts.js",
     "build:examples": "node build-examples.js",
-    "build:standard-fonts": "brfs \"./src/browser-extensions/standard-fonts/Courier.js\" > build/standard-fonts/Courier.js && brfs \"./src/browser-extensions/standard-fonts/Helvetica.js\" > build/standard-fonts/Helvetica.js && brfs \"./src/browser-extensions/standard-fonts/Times.js\" > build/standard-fonts/Times.js && brfs \"./src/browser-extensions/standard-fonts/Symbol.js\" > build/standard-fonts/Symbol.js && brfs \"./src/browser-extensions/standard-fonts/ZapfDingbats.js\" > build/standard-fonts/ZapfDingbats.js",
+    "build:standard-fonts": "shx mkdir -p build/standard-fonts && brfs \"./src/browser-extensions/standard-fonts/Courier.js\" > build/standard-fonts/Courier.js && brfs \"./src/browser-extensions/standard-fonts/Helvetica.js\" > build/standard-fonts/Helvetica.js && brfs \"./src/browser-extensions/standard-fonts/Times.js\" > build/standard-fonts/Times.js && brfs \"./src/browser-extensions/standard-fonts/Symbol.js\" > build/standard-fonts/Symbol.js && brfs \"./src/browser-extensions/standard-fonts/ZapfDingbats.js\" > build/standard-fonts/ZapfDingbats.js",
     "lint": "eslint \"./src/**/*.js\" \"./tests/**/*.js\"",
     "mocha": "mocha --reporter spec \"./tests/**/*.spec.js\"",
+    "clean": "shx rm -rf js",
     "playground": "node dev-playground/server.js"
   },
   "repository": {
