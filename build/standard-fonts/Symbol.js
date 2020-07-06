@@ -11,7 +11,7 @@ var fontContainer = {
 	}
 };
 
-if (typeof this.pdfMake !== 'undefined' && typeof this.pdfMake.addFonts !== 'undefined') {
+if (typeof this.pdfMake !== 'undefined' && typeof this.pdfMake.addFontContainer !== 'undefined') {
 	this.pdfMake.addFontContainer(fontContainer);
 }
 
