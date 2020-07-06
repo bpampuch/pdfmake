@@ -1,3 +1,6 @@
+/*eslint no-unused-vars: ["error", {"args": "none"}]*/
+
+
 var pdfmake = require('../js/index'); // only during development, otherwise use the following line
 //var pdfmake = require('pdfmake');
 

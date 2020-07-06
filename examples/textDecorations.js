@@ -6,7 +6,6 @@ pdfmake.addFonts(Roboto);
 
 
 var ct = [];
-var lorem = 'Lorem ipsum dolor sit amet';
 
 ct.push({ text: 'Higlighted text', fontSize: 18, background: 'yellow' });
 ct.push(' ');
@@ -26,7 +25,7 @@ ct.push({
 		{ text: 'Wavy style', decoration: 'underline', decorationStyle: 'wavy' }
 	]
 });
-ct.push(' ')
+ct.push(' ');
 ct.push({
 	columns: [
 		{ text: 'Using colors', decoration: 'underline', decorationColor: 'blue' },

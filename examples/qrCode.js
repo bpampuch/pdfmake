@@ -6,7 +6,7 @@ pdfmake.addFonts(Roboto);
 
 var greeting = 'Can you see me';
 var url = 'http://pdfmake.org';
-var longText = 'The amount of data that can be stored in the QR code symbol depends on the datatype (mode, or input character set), version (1, …, 40, indicating the overall dimensions of the symbol), and error correction level. The maximum storage capacities occur for 40-L symbols (version 40, error correction level L):'
+var longText = 'The amount of data that can be stored in the QR code symbol depends on the datatype (mode, or input character set), version (1, …, 40, indicating the overall dimensions of the symbol), and error correction level. The maximum storage capacities occur for 40-L symbols (version 40, error correction level L):';
 
 
 function header(text) {
@@ -34,7 +34,7 @@ var docDefinition = {
 		header('same long text with fit = 100 and alignment = right'),
 		{ qr: longText, fit: 150, alignment: 'right' },
 	]
-}
+};
 
 var now = new Date();
 
