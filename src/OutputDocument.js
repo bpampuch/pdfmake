@@ -1,47 +1,49 @@
 class OutputDocument {
 
 	/**
-	 * @param {object} pdfDocument
+	 * @param {Promise<object>} pdfDocumentPromise
 	 */
-	constructor(pdfDocument) {
+	constructor(pdfDocumentPromise) {
 		this.bufferSize = 9007199254740991;
-		this.pdfDocument = pdfDocument;
+		this.pdfDocumentPromise = pdfDocumentPromise;
 	}
 
 	/**
-	 * @returns {object}
+	 * @returns {Promise<object>}
 	 */
 	getStream() {
-		return this.pdfDocument;
+		return this.pdfDocumentPromise;
 	}
 
 	/**
-	 * @returns {Promise}
+	 * @returns {Promise<Buffer>}
 	 */
 	getBuffer() {
 		return new Promise((resolve, reject) => {
-			try {
+			this.getStream().then(stream => {
+
 				let chunks = [];
 				let result;
-				this.getStream().on('readable', () => {
+				stream.on('readable', () => {
 					let chunk;
-					while ((chunk = this.getStream().read(this.bufferSize)) !== null) {
+					while ((chunk = stream.read(this.bufferSize)) !== null) {
 						chunks.push(chunk);
 					}
 				});
-				this.getStream().on('end', () => {
+				stream.on('end', () => {
 					result = Buffer.concat(chunks);
 					resolve(result);
 				});
-				this.getStream().end();
-			} catch (e) {
-				reject(e);
-			}
+				stream.end();
+
+			}, result => {
+				reject(result);
+			});
 		});
 	}
 
 	/**
-	 * @returns {Promise}
+	 * @returns {Promise<string>}
 	 */
 	getBase64() {
 		return new Promise((resolve, reject) => {
@@ -54,7 +56,7 @@ class OutputDocument {
 	}
 
 	/**
-	 * @returns {Promise}
+	 * @returns {Promise<string>}
 	 */
 	getDataUrl() {
 		return new Promise((resolve, reject) => {

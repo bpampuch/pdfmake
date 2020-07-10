@@ -21,10 +21,6 @@
 
 PDF document generation library for server-side and client-side in pure JavaScript.
 
-## Website pdfmake.org is down, please use temporary mirror http://liborm85.github.io/pdfmake 
-(see [issue #1947](https://github.com/bpampuch/pdfmake/issues/1947))
-
-
 Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) and [examples](https://github.com/bpampuch/pdfmake/tree/master/examples).
 
 #### This is unstable master branch for version 0.2.x, for stable version 0.1.x see [branch 0.1](https://github.com/bpampuch/pdfmake/tree/0.1).

@@ -1,5 +1,6 @@
 import pdfmakeBase from '../base';
 import OutputDocumentBrowser from './OutputDocumentBrowser'; // TODO: Lazy loading for support on unsupported browsers (see issue https://github.com/bpampuch/pdfmake/issues/1663)
+import URLBrowserResolver from './URLBrowserResolver';
 import fs from 'fs';
 
 let defaultClientFonts = {
@@ -22,6 +23,7 @@ const isBrowserSupported = () => {
 class pdfmake extends pdfmakeBase {
 	constructor() {
 		super();
+		this.urlResolver = new URLBrowserResolver(this.virtualfs);
 		this.fonts = defaultClientFonts;
 	}
 
@@ -33,8 +35,26 @@ class pdfmake extends pdfmakeBase {
 		return super.createPdf(docDefinition);
 	}
 
+	addFontContainer(fontContainer) {
+		this.addVirtualFileSystem(fontContainer.vfs);
+		this.addFonts(fontContainer.fonts);
+	}
+
 	addVirtualFileSystem(vfs) {
-		fs.bindFS(vfs); // bind virtual file system to file system
+		for (let key in vfs) {
+			if (vfs.hasOwnProperty(key)) {
+				let data;
+				let encoding;
+				if (typeof vfs[key] === 'object') {
+					data = vfs[key].data;
+					encoding = vfs[key].encoding || 'base64';
+				} else {
+					data = vfs[key];
+					encoding = 'base64';
+				}
+				fs.writeFileSync(key, data, encoding);
+			}
+		}
 	}
 
 	_transformToDocument(doc) {

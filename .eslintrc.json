@@ -31,6 +31,7 @@
     "jsdoc/valid-types": 1
   },
   "parserOptions": {
+    "ecmaVersion": 9,
     "sourceType": "module"
   },
   "plugins": [

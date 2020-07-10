@@ -127,8 +127,8 @@ class StyleContextStack {
 	 * Automatically pushes elements onto the stack, using autopush based on item,
 	 * executes callback and then pops elements back. Returns value returned by callback
 	 *
-	 * @param  {object} item - an object with optional style property and/or style overrides
-	 * @param  {Function} callback to be called between autopush and pop
+	 * @param {object} item - an object with optional style property and/or style overrides
+	 * @param {Function} callback to be called between autopush and pop
 	 * @returns {object} value returned by callback
 	 */
 	auto(item, callback) {
