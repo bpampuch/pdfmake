@@ -51,7 +51,7 @@ class PdfPrinter {
 					docDefinition.images = docDefinition.images || {};
 					docDefinition.pageMargins = isValue(docDefinition.pageMargins) ? docDefinition.pageMargins : 40;
 
-		let pageSize = normalizePageSize(docDefinition.pageSize, docDefinition.pageOrientation);
+					let pageSize = normalizePageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 
 					let pdfOptions = {
 						size: [pageSize.width, pageSize.height],
@@ -69,7 +69,7 @@ class PdfPrinter {
 					this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, pdfOptions, this.virtualfs);
 					setMetadata(docDefinition, this.pdfKitDoc);
 
-		const builder = new LayoutBuilder(pageSize, normalizePageMargin(docDefinition.pageMargins), new SVGMeasure());
+					const builder = new LayoutBuilder(pageSize, normalizePageMargin(docDefinition.pageMargins), new SVGMeasure());
 
 					builder.registerTableLayouts(tableLayouts);
 					if (options.tableLayouts) {
