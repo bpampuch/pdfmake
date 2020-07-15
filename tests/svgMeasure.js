@@ -41,77 +41,112 @@ describe('SVGMeasure', function () {
 
     var svgMeasure = new SVGMeasure();
 
-    it('gracefully handles empty input', function () {
-        var dimensions = svgMeasure.measureSVG('');
+    describe('basics', function () {
 
-        assert.equal(typeof dimensions, 'object');
+        it('gracefully handles empty input', function () {
+            var dimensions = svgMeasure.measureSVG('');
+
+            assert.equal(typeof dimensions, 'object');
+        });
+
+        it('gracefully handles gibberish input', function () {
+            var dimensions = svgMeasure.measureSVG('wakka wakka wakka');
+
+            assert.equal(typeof dimensions, 'object');
+        });
     });
 
-    it('gracefully handles gibberish input', function () {
-        var dimensions = svgMeasure.measureSVG('wakka wakka wakka');
+    describe('getSVGNode()', function () {
 
-        assert.equal(typeof dimensions, 'object');
+        it('identifies the svg tag normally', function () {
+            var tag = svgMeasure.getSVGNode(inputBasic);
+
+            assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">');
+        });
+
+        it('ignores fully-formed svg tag inside comment', function () {
+            var tag = svgMeasure.getSVGNode(inputWithComment2);
+
+            assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">');
+        });
+
+        it('spans newline', function () {
+            var tag = svgMeasure.getSVGNode(inputWithNewline);
+
+            assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg"\n    xmlns:xlink="http://www.w3.org/1999/xlink">');
+        });
     });
 
-    it('identifies the svg tag (1)', function () {
-        var tag = svgMeasure.getSVGNode(inputBasic);
+    describe('measureSVG()', function () {
 
-        assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">');
+        it('returns correct dimensions for pts', function () {
+            var dimensions = svgMeasure.measureSVG(inputBasic);
+
+            assert.equal(typeof dimensions, 'object');
+            assert.equal(typeof dimensions.width, 'number');
+            assert.equal(typeof dimensions.height, 'number');
+
+            assert.equal(dimensions.width, 105);
+            assert.equal(dimensions.height, 222);
+        });
+
+        it('correctly handles multi-line svg tags', function () {
+            var dimensions = svgMeasure.measureSVG(inputWithNewline);
+
+            assert.equal(typeof dimensions, 'object');
+            assert.equal(typeof dimensions.width, 'number');
+            assert.equal(typeof dimensions.height, 'number');
+
+            assert.equal(dimensions.width, 105);
+            assert.equal(dimensions.height, 222);
+        });
+
+        it('ignores "svg tags" in comments (1)', function () {
+            var dimensions = svgMeasure.measureSVG(inputWithComment1);
+
+            assert.equal(typeof dimensions, 'object');
+            assert.equal(typeof dimensions.width, 'number');
+            assert.equal(typeof dimensions.height, 'number');
+
+            assert.equal(dimensions.width, 105);
+            assert.equal(dimensions.height, 222);
+        });
+
+        it('ignores "svg tags" in comments (2)', function () {
+            var dimensions = svgMeasure.measureSVG(inputWithComment2);
+
+            assert.equal(typeof dimensions, 'object');
+            assert.equal(typeof dimensions.width, 'number');
+            assert.equal(typeof dimensions.height, 'number');
+
+            assert.equal(dimensions.width, 105);
+            assert.equal(dimensions.height, 222);
+        });
     });
 
-    it('identifies the svg tag (2)', function () {
-        var tag = svgMeasure.getSVGNode(inputWithComment2);
+    describe('writeDimensions()', function () {
 
-        assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">');
-    });
+        var replacementDimensions = {
+            width: 1984,
+            height: 2001
+        };
 
-    it('identifies the svg tag (3)', function () {
-        var tag = svgMeasure.getSVGNode(inputWithNewline);
+        it('updates dimensions', function () {
+            var updatedSVGString = svgMeasure.writeDimensions(inputBasic, replacementDimensions);
+            var updatedDimensions = svgMeasure.measureSVG(updatedSVGString);
 
-        assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg"\n    xmlns:xlink="http://www.w3.org/1999/xlink">');
-    });
+            assert.equal(updatedDimensions.width, replacementDimensions.width);
+            assert.equal(updatedDimensions.height, replacementDimensions.height);
+        });
 
-    it('returns correct dimensions for pts', function () {
-        var dimensions = svgMeasure.measureSVG(inputBasic);
+        it('correctly ignores comments', function () {
+            var updatedSVGString = svgMeasure.writeDimensions(inputWithComment2, replacementDimensions);
+            var updatedDimensions = svgMeasure.measureSVG(updatedSVGString);
 
-        assert.equal(typeof dimensions, 'object');
-        assert.equal(typeof dimensions.width, 'number');
-        assert.equal(typeof dimensions.height, 'number');
+            assert.notEqual(updatedSVGString.indexOf('<svg width="123" height="456">'), -1, 'false tag in comments should remain');
 
-        assert.equal(dimensions.width, 105);
-        assert.equal(dimensions.height, 222);
-    });
-
-    it('correctly handles multi-line svg tags', function () {
-        var dimensions = svgMeasure.measureSVG(inputWithNewline);
-
-        assert.equal(typeof dimensions, 'object');
-        assert.equal(typeof dimensions.width, 'number');
-        assert.equal(typeof dimensions.height, 'number');
-
-        assert.equal(dimensions.width, 105);
-        assert.equal(dimensions.height, 222);
-    });
-
-    it('ignores "svg tags" in comments (1)', function () {
-        var dimensions = svgMeasure.measureSVG(inputWithComment1);
-
-        assert.equal(typeof dimensions, 'object');
-        assert.equal(typeof dimensions.width, 'number');
-        assert.equal(typeof dimensions.height, 'number');
-
-        assert.equal(dimensions.width, 105);
-        assert.equal(dimensions.height, 222);
-    });
-
-    it('ignores "svg tags" in comments (2)', function () {
-        var dimensions = svgMeasure.measureSVG(inputWithComment2);
-
-        assert.equal(typeof dimensions, 'object');
-        assert.equal(typeof dimensions.width, 'number');
-        assert.equal(typeof dimensions.height, 'number');
-
-        assert.equal(dimensions.width, 105);
-        assert.equal(dimensions.height, 222);
+            assert.equal(updatedDimensions.width, replacementDimensions.width);
+            assert.equal(updatedDimensions.height, replacementDimensions.height);
+        });
     });
 })
