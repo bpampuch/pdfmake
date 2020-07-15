@@ -4,18 +4,48 @@ function SVGMeasure() {
 }
 
 SVGMeasure.prototype.getSVGNode = function (svgString) {
-	// remove newlines
-	svgString = svgString.replace(/\r?\n|\r/g, "");
-
-	var svgNodeMatches = svgString.match(/<svg(.*?)>/);
-
-	if (svgNodeMatches) {
-		// extract svg node <svg ... >
-		return svgNodeMatches[0];
+	if (typeof svgString !== 'string') {
+		return "";
 	}
 
-	return "";
-};
+	var idx = 0;
+	var tagStart = -1;
+
+	while (idx < svgString.length) {
+		var nextSVGTagMaybe = svgString.indexOf('<svg', idx);
+		var nextCommentMaybe = svgString.indexOf('<!--', idx);
+
+		if (nextSVGTagMaybe === -1) {
+			break; 
+		}
+
+		if (nextCommentMaybe === -1 || nextCommentMaybe > nextSVGTagMaybe) {
+			// Found!
+			tagStart = nextSVGTagMaybe;
+			break;
+		}
+
+		// Advance to end of comment, continue search
+		var commentEnd = svgString.indexOf('-->', nextCommentMaybe);
+		if (commentEnd === -1) {
+			throw new Error('SVGMeasure: malformed SVG document');
+		}
+
+		idx = commentEnd + 3;
+	}
+
+	if (tagStart === -1) {
+		return ""; // No <svg> tag found
+	}
+
+	var tagEnd = svgString.indexOf('>', tagStart);
+
+	if (tagEnd === -1) {
+		throw new Error('SVGMeasure: malformed SVG document');
+	}
+
+	return svgString.substr(tagStart, tagEnd - tagStart + 1);
+}
 
 SVGMeasure.prototype.getHeightAndWidth = function (svgString) {
 	var svgNode = this.getSVGNode(svgString);

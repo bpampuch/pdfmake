@@ -15,7 +15,7 @@ var inputBasic =
 var inputWithNewline =
     '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n' +
     '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n' +
-    '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg"' +
+    '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg"\n' +
     '    xmlns:xlink="http://www.w3.org/1999/xlink">\n' +
     '    <rect width="105" height="222" fill="none" stroke="black"/>\n' +
     '</svg>\n';
@@ -51,6 +51,24 @@ describe('SVGMeasure', function () {
         var dimensions = svgMeasure.measureSVG('wakka wakka wakka');
 
         assert.equal(typeof dimensions, 'object');
+    });
+
+    it('identifies the svg tag (1)', function () {
+        var tag = svgMeasure.getSVGNode(inputBasic);
+
+        assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">');
+    });
+
+    it('identifies the svg tag (2)', function () {
+        var tag = svgMeasure.getSVGNode(inputWithComment2);
+
+        assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">');
+    });
+
+    it('identifies the svg tag (3)', function () {
+        var tag = svgMeasure.getSVGNode(inputWithNewline);
+
+        assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg"\n    xmlns:xlink="http://www.w3.org/1999/xlink">');
     });
 
     it('returns correct dimensions for pts', function () {
