@@ -31,7 +31,7 @@ var inputWithComment1 =
 var inputWithComment2 =
     '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n' +
     '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n' +
-    '<!-- <svg width="123" height="456"> -->\n' +
+    '<!-- <svg width="123" height="456"> -->\n' + // [ evil laughter intensifies ]
     '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n' +
     '    <rect width="105" height="222" fill="none" stroke="black"/>\n' +
     '</svg>\n';
@@ -59,19 +59,19 @@ describe('SVGMeasure', function () {
     describe('getSVGNode()', function () {
 
         it('identifies the svg tag normally', function () {
-            var tag = svgMeasure.getSVGNode(inputBasic);
+            var tag = svgMeasure.getSVGNode(inputBasic).nodeText;
 
             assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">');
         });
 
         it('ignores fully-formed svg tag inside comment', function () {
-            var tag = svgMeasure.getSVGNode(inputWithComment2);
+            var tag = svgMeasure.getSVGNode(inputWithComment2).nodeText;
 
             assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">');
         });
 
         it('spans newline', function () {
-            var tag = svgMeasure.getSVGNode(inputWithNewline);
+            var tag = svgMeasure.getSVGNode(inputWithNewline).nodeText;
 
             assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg"\n    xmlns:xlink="http://www.w3.org/1999/xlink">');
         });

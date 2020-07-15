@@ -5,7 +5,7 @@ function SVGMeasure() {
 
 SVGMeasure.prototype.getSVGNode = function (svgString) {
 	if (typeof svgString !== 'string') {
-		return "";
+		return { nodeText: "" };
 	}
 
 	var idx = 0;
@@ -16,7 +16,8 @@ SVGMeasure.prototype.getSVGNode = function (svgString) {
 		var nextCommentMaybe = svgString.indexOf('<!--', idx);
 
 		if (nextSVGTagMaybe === -1) {
-			break; 
+			// Missing :(
+			break;
 		}
 
 		if (nextCommentMaybe === -1 || nextCommentMaybe > nextSVGTagMaybe) {
@@ -35,7 +36,7 @@ SVGMeasure.prototype.getSVGNode = function (svgString) {
 	}
 
 	if (tagStart === -1) {
-		return ""; // No <svg> tag found
+		return { nodeText: "" }; // No <svg> tag found
 	}
 
 	var tagEnd = svgString.indexOf('>', tagStart);
@@ -44,11 +45,19 @@ SVGMeasure.prototype.getSVGNode = function (svgString) {
 		throw new Error('SVGMeasure: malformed SVG document');
 	}
 
-	return svgString.substr(tagStart, tagEnd - tagStart + 1);
+	tagEnd++; // Since the '>' is part of the tag
+
+	var nodeText = svgString.substr(tagStart, tagEnd - tagStart);
+
+	return {
+		nodeText: nodeText,
+		startPos: tagStart,
+		endPos: tagEnd
+	};
 }
 
 SVGMeasure.prototype.getHeightAndWidth = function (svgString) {
-	var svgNode = this.getSVGNode(svgString);
+	var svgNode = this.getSVGNode(svgString).nodeText;
 
 	var widthMatches = svgNode.match(/width="([0-9]+(\.[0-9]+)?)(em|ex|px|in|cm|mm|pt|pc|%)?"/);
 	var heightMatches = svgNode.match(/height="([0-9]+(\.[0-9]+)?)(em|ex|px|in|cm|mm|pt|pc|%)?"/);
@@ -62,7 +71,7 @@ SVGMeasure.prototype.getHeightAndWidth = function (svgString) {
 };
 
 SVGMeasure.prototype.getViewboxHeightAndWidth = function (svgString) {
-	var svgNode = this.getSVGNode(svgString);
+	var svgNode = this.getSVGNode(svgString).nodeText;
 
 	var viewboxMatches = svgNode.match(/viewBox="([+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+(,|\s+|,\s+)[+-]?(\d*\.)?\d+)"/);
 	if (viewboxMatches) {
@@ -94,7 +103,8 @@ SVGMeasure.prototype.measureSVG = function (svgString) {
 
 SVGMeasure.prototype.writeDimensions = function (svgString, dimensions) {
 
-	var svgNode = this.getSVGNode(svgString);
+	var nodeDetails = this.getSVGNode(svgString);
+	var svgNode = nodeDetails.nodeText;
 
 	if (svgNode) {
 
@@ -127,7 +137,7 @@ SVGMeasure.prototype.writeDimensions = function (svgString, dimensions) {
 		}
 
 		// insert updated svg node
-		return svgString.replace(/<svg(.*?)>/, svgNode);
+		return (svgString.substr(0,nodeDetails.startPos) + svgNode + svgString.substr(nodeDetails.endPos));
 	}
 
 	return svgString;
