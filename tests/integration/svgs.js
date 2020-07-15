@@ -5,6 +5,8 @@ var assert = require('assert');
 var integrationTestHelper = require('./integrationTestHelper');
 var SVGMeasure = require('../../src/svgMeasure');
 
+// NOTE: more tests for SVGMeasure in ../svgMeasure.js
+
 describe('Integration Test: svg\'s', function () {
 
 	var testHelper = new integrationTestHelper();
