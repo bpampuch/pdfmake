@@ -44,7 +44,7 @@ class PdfPrinter {
 	 */
 	createPdfKitDocument(docDefinition, options = {}) {
 		return new Promise((resolve, reject) => {
-			this.resolveUrls().then(() => {
+			this.resolveUrls(docDefinition).then(() => {
 				try {
 					docDefinition.version = docDefinition.version || '1.3';
 					docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
@@ -103,9 +103,10 @@ class PdfPrinter {
 	}
 
 	/**
+	 * @param {object} docDefinition
 	 * @returns {Promise}
 	 */
-	resolveUrls() {
+	resolveUrls(docDefinition) {
 		return new Promise((resolve, reject) => {
 			if (this.urlResolver === null) {
 				resolve();
@@ -124,6 +125,14 @@ class PdfPrinter {
 					}
 					if (this.fontDescriptors[font].bolditalics) {
 						this.urlResolver.resolve(this.fontDescriptors[font].bolditalics);
+					}
+				}
+			}
+
+			if (docDefinition.images) {
+				for (let image in docDefinition.images) {
+					if (docDefinition.images.hasOwnProperty(image)) {
+						this.urlResolver.resolve(docDefinition.images[image]);
 					}
 				}
 			}
