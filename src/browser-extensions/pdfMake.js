@@ -67,6 +67,14 @@ Document.prototype._createDoc = function (options, cb) {
 		}
 	}
 
+	if (this.docDefinition.images) {
+		for (var image in this.docDefinition.images) {
+			if (this.docDefinition.images.hasOwnProperty(image)) {
+				urlResolver.resolve(this.docDefinition.images[image]);
+			}
+		}
+	}
+
 	var _this = this;
 
 	urlResolver.resolved().then(function () {
