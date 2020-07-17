@@ -41,42 +41,6 @@ describe('SVGMeasure', function () {
 
     var svgMeasure = new SVGMeasure();
 
-    describe('basics', function () {
-
-        it('gracefully handles empty input', function () {
-            var dimensions = svgMeasure.measureSVG('');
-
-            assert.equal(typeof dimensions, 'object');
-        });
-
-        it('gracefully handles gibberish input', function () {
-            var dimensions = svgMeasure.measureSVG('wakka wakka wakka');
-
-            assert.equal(typeof dimensions, 'object');
-        });
-    });
-
-    describe('getSVGNode()', function () {
-
-        it('identifies the svg tag normally', function () {
-            var tag = svgMeasure.getSVGNode(inputBasic).nodeText;
-
-            assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">');
-        });
-
-        it('ignores fully-formed svg tag inside comment', function () {
-            var tag = svgMeasure.getSVGNode(inputWithComment2).nodeText;
-
-            assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">');
-        });
-
-        it('spans newline', function () {
-            var tag = svgMeasure.getSVGNode(inputWithNewline).nodeText;
-
-            assert.equal(tag, '<svg width="105pt" height="222pt" viewBox="0.00 0.00 105.43 222.00" xmlns="http://www.w3.org/2000/svg"\n    xmlns:xlink="http://www.w3.org/1999/xlink">');
-        });
-    });
-
     describe('measureSVG()', function () {
 
         it('returns correct dimensions for pts', function () {
@@ -135,18 +99,16 @@ describe('SVGMeasure', function () {
             var updatedSVGString = svgMeasure.writeDimensions(inputBasic, replacementDimensions);
             var updatedDimensions = svgMeasure.measureSVG(updatedSVGString);
 
-            assert.equal(updatedDimensions.width, replacementDimensions.width);
-            assert.equal(updatedDimensions.height, replacementDimensions.height);
+            assert.equal(updatedDimensions.width, 1984);
+            assert.equal(updatedDimensions.height, 2001);
         });
 
         it('correctly ignores comments', function () {
             var updatedSVGString = svgMeasure.writeDimensions(inputWithComment2, replacementDimensions);
             var updatedDimensions = svgMeasure.measureSVG(updatedSVGString);
 
-            assert.notEqual(updatedSVGString.indexOf('<svg width="123" height="456">'), -1, 'false tag in comments should remain');
-
-            assert.equal(updatedDimensions.width, replacementDimensions.width);
-            assert.equal(updatedDimensions.height, replacementDimensions.height);
+            assert.equal(updatedDimensions.width, 1984);
+            assert.equal(updatedDimensions.height, 2001);
         });
     });
 })

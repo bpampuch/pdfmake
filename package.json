@@ -11,7 +11,8 @@
     "iconv-lite": "^0.6.0",
     "linebreak": "^1.0.2",
     "pdfkit": "^0.11.0",
-    "svg-to-pdfkit": "^0.1.8"
+    "svg-to-pdfkit": "^0.1.8",
+    "xmldoc": "^1.1.2"
   },
   "devDependencies": {
     "@babel/core": "^7.10.3",

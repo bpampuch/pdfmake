@@ -153,10 +153,10 @@ describe('Integration Test: svg\'s', function () {
 			var pages = testHelper.renderPages('A6', dd);
 
 			var svgNode = pages[0].items[0].item;
-			var svgDimensions = svgMeasure.getHeightAndWidth(svgNode.svg);
+			var svgDimensions = svgMeasure.measureSVG(svgNode.svg);
 
-			assert.equal(svgDimensions.width, dd.content[0].width);
-			assert.equal(svgDimensions.height, dd.content[0].height);
+			assert.equal(svgDimensions.width, 400);
+			assert.equal(svgDimensions.height, 800);
 		});
 
 		it('writes width and height from definition to svg (decimals)', function () {
@@ -173,10 +173,10 @@ describe('Integration Test: svg\'s', function () {
 			var pages = testHelper.renderPages('A6', dd);
 
 			var svgNode = pages[0].items[0].item;
-			var svgDimensions = svgMeasure.getHeightAndWidth(svgNode.svg);
+			var svgDimensions = svgMeasure.measureSVG(svgNode.svg);
 
-			assert.equal(svgDimensions.width, dd.content[0].width);
-			assert.equal(svgDimensions.height, dd.content[0].height);
+			assert.equal(svgDimensions.width, 400.15);
+			assert.equal(svgDimensions.height, 800.35);
 		});
 
 		it('writes svg in header', function () {
@@ -207,7 +207,5 @@ describe('Integration Test: svg\'s', function () {
 			var types = pages[0].items.map(item => item.type);
 			assert.ok(types.includes('svg'));
 		});
-
 	});
-
 });
