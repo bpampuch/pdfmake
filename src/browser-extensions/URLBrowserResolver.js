@@ -1,7 +1,9 @@
 'use strict';
 
 // Internet Explorer polyfills
-require('core-js/features/promise');
+if (window && !window.Promise) {
+	require('core-js/features/promise');
+}
 require('core-js/es/object/values');
 
 var fetchUrl = function (url) {
