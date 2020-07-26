@@ -38,4 +38,6 @@ var now = new Date();
 var pdf = pdfmake.createPdf(docDefinition);
 pdf.write('pdfs/standardfonts.pdf').then(() => {
 	console.log(new Date() - now);
+}, err => {
+	throw err;
 });
