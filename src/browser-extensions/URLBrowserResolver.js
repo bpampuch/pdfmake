@@ -1,7 +1,7 @@
 'use strict';
 
 // Internet Explorer polyfills
-if (window && !window.Promise) {
+if (typeof window !== 'undefined' && !window.Promise) {
 	require('core-js/features/promise');
 }
 require('core-js/es/object/values');
