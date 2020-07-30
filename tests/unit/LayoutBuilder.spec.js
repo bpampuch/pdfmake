@@ -1832,7 +1832,7 @@ describe('LayoutBuilder', function () {
 
 			builder.layoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
-			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[1].map(item => item.id), ['text2', 'text3']);
+			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[1].getFollowingNodesOnPage().map(item => item.id), ['text2', 'text3']);
 		});
 
 		it('should provide the list of nodes on the next page', function () {
@@ -1851,7 +1851,7 @@ describe('LayoutBuilder', function () {
 
 			builder.layoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
-			assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[2].map(item => item.id), ['text2', 'text3', 'text4']);
+			assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[1].getNodesOnNextPage().map(item => item.id), ['text2', 'text3', 'text4']);
 		});
 
 		it('should provide the list of previous nodes on the same page', function () {
@@ -1870,7 +1870,7 @@ describe('LayoutBuilder', function () {
 
 			builder.layoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
-			assert.deepEqual(pageBreakBeforeFunction.getCall(4).args[3].map(item => item.id), ['stack', 'text2', 'text3']);
+			assert.deepEqual(pageBreakBeforeFunction.getCall(4).args[1].getPreviousNodesOnPage().map(item => item.id), ['stack', 'text2', 'text3']);
 		});
 
 		it('should provide the pages of the node', function () {
