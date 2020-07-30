@@ -22,5 +22,5 @@ var pdf = pdfmake.createPdf(docDefinition);
 pdf.write('pdfs/watermark.pdf').then(() => {
 	console.log(new Date() - now);
 }, err => {
-	throw err;
+	console.error(err);
 });

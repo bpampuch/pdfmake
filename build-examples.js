@@ -15,9 +15,12 @@ files.forEach(function (file) {
     log('FILE: ', file, ` (${position}/${files.length})`);
     log(stdout);
 
-    if (err) {
+    if (stderr) {
       errCount++;
       log.error(stderr);
+    } else if (err) {
+      errCount++;
+      log.error(err);
     }
 
     if (position === files.length) {
