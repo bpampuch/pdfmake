@@ -1,4 +1,4 @@
-/*! pdfmake v0.1.67, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.1.68, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -75196,7 +75196,7 @@ module.exports = function(module) {
 
 
 // Internet Explorer polyfills
-if (window && !window.Promise) {
+if (typeof window !== 'undefined' && !window.Promise) {
 	__webpack_require__(550);
 }
 __webpack_require__(560);
