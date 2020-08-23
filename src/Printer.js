@@ -182,6 +182,8 @@ function calculatePageHeight(pages, margins) {
 			return item.item.getHeight();
 		} else if (item.item._height) {
 			return item.item._height;
+		} else if (item.type === 'vector') {
+			return item.item.y1 > item.item.y2 ? item.item.y1 : item.item.y2;
 		} else {
 			// TODO: add support for next item types
 			return 0;
@@ -189,7 +191,7 @@ function calculatePageHeight(pages, margins) {
 	}
 
 	function getBottomPosition(item) {
-		let top = item.item.y;
+		let top = item.item.y || 0;
 		let height = getItemHeight(item);
 		return top + height;
 	}
