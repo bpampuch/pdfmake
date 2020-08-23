@@ -81,6 +81,10 @@ class PDFDocument extends PDFKit {
 				return src;
 			}
 
+			if (this.virtualfs && this.virtualfs.existsSync(image)) {
+				return this.virtualfs.readFileSync(image);
+			}
+
 			let index = image.indexOf('base64,');
 			if (index < 0) {
 				return this.images[src];

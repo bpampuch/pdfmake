@@ -40,6 +40,11 @@ var docDefinition = {
 			image: 'bee',
 			width: 200
 		},
+		'or be defined in the "images" dictionary via URL address, which can be referenced by name:',
+		{
+			image: 'snow',
+			height: 200
+		},
 		'and opacity is supported:',
 		{
 			image: 'fonts/sampleImage.jpg',
@@ -48,7 +53,8 @@ var docDefinition = {
 		},
 	],
 	images: {
-		bee: testImageDataUrl
+		bee: testImageDataUrl,
+		snow: 'https://picsum.photos/seed/picsum/200/300',
 	}
 };
 
@@ -57,4 +63,6 @@ var now = new Date();
 var pdf = pdfmake.createPdf(docDefinition);
 pdf.write('pdfs/images.pdf').then(() => {
 	console.log(new Date() - now);
+}, err => {
+	console.error(err);
 });

@@ -6,6 +6,7 @@ class OutputDocument {
 	constructor(pdfDocumentPromise) {
 		this.bufferSize = 9007199254740991;
 		this.pdfDocumentPromise = pdfDocumentPromise;
+		this.bufferPromise = null;
 	}
 
 	/**
@@ -19,27 +20,31 @@ class OutputDocument {
 	 * @returns {Promise<Buffer>}
 	 */
 	getBuffer() {
-		return new Promise((resolve, reject) => {
-			this.getStream().then(stream => {
+		if (this.bufferPromise === null) {
+			this.bufferPromise = new Promise((resolve, reject) => {
+				this.getStream().then(stream => {
 
-				let chunks = [];
-				let result;
-				stream.on('readable', () => {
-					let chunk;
-					while ((chunk = stream.read(this.bufferSize)) !== null) {
-						chunks.push(chunk);
-					}
-				});
-				stream.on('end', () => {
-					result = Buffer.concat(chunks);
-					resolve(result);
-				});
-				stream.end();
+					let chunks = [];
+					let result;
+					stream.on('readable', () => {
+						let chunk;
+						while ((chunk = stream.read(this.bufferSize)) !== null) {
+							chunks.push(chunk);
+						}
+					});
+					stream.on('end', () => {
+						result = Buffer.concat(chunks);
+						resolve(result);
+					});
+					stream.end();
 
-			}, result => {
-				reject(result);
+				}, result => {
+					reject(result);
+				});
 			});
-		});
+		}
+
+		return this.bufferPromise;
 	}
 
 	/**

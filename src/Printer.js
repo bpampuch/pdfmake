@@ -44,7 +44,7 @@ class PdfPrinter {
 	 */
 	createPdfKitDocument(docDefinition, options = {}) {
 		return new Promise((resolve, reject) => {
-			this.resolveUrls().then(() => {
+			this.resolveUrls(docDefinition).then(() => {
 				try {
 					docDefinition.version = docDefinition.version || '1.3';
 					docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
@@ -103,9 +103,10 @@ class PdfPrinter {
 	}
 
 	/**
+	 * @param {object} docDefinition
 	 * @returns {Promise}
 	 */
-	resolveUrls() {
+	resolveUrls(docDefinition) {
 		return new Promise((resolve, reject) => {
 			if (this.urlResolver === null) {
 				resolve();
@@ -124,6 +125,14 @@ class PdfPrinter {
 					}
 					if (this.fontDescriptors[font].bolditalics) {
 						this.urlResolver.resolve(this.fontDescriptors[font].bolditalics);
+					}
+				}
+			}
+
+			if (docDefinition.images) {
+				for (let image in docDefinition.images) {
+					if (docDefinition.images.hasOwnProperty(image)) {
+						this.urlResolver.resolve(docDefinition.images[image]);
 					}
 				}
 			}
@@ -173,6 +182,8 @@ function calculatePageHeight(pages, margins) {
 			return item.item.getHeight();
 		} else if (item.item._height) {
 			return item.item._height;
+		} else if (item.type === 'vector') {
+			return item.item.y1 > item.item.y2 ? item.item.y1 : item.item.y2;
 		} else {
 			// TODO: add support for next item types
 			return 0;
@@ -180,7 +191,7 @@ function calculatePageHeight(pages, margins) {
 	}
 
 	function getBottomPosition(item) {
-		let top = item.item.y;
+		let top = item.item.y || 0;
 		let height = getItemHeight(item);
 		return top + height;
 	}

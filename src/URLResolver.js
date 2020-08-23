@@ -7,9 +7,18 @@ const fetchUrl = url => {
 		const h = (parsedUrl.protocol === 'https:') ? https : http;
 
 		h.get(url, res => {
+			if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) { // redirect url
+				fetchUrl(res.headers.location).then(buffer => {
+					resolve(buffer);
+				}, result => {
+					reject(result);
+				});
+				return;
+			}
+
 			const ok = res.statusCode >= 200 && res.statusCode < 300;
 			if (!ok) {
-				reject(new TypeError(`Failed to fetch (url: "${url}")`));
+				reject(new TypeError(`Failed to fetch (status code: ${res.statusCode}, url: "${url}")`));
 			}
 
 			const chunks = [];
