@@ -77,6 +77,10 @@ class PDFDocument extends PDFKit {
 		const realImageSrc = src => {
 			let image = this.images[src];
 
+			if (image && typeof image === 'object') {
+				image = image.url;
+			}
+
 			if (!image) {
 				return src;
 			}
@@ -87,7 +91,7 @@ class PDFDocument extends PDFKit {
 
 			let index = image.indexOf('base64,');
 			if (index < 0) {
-				return this.images[src];
+				return image;
 			}
 
 			return Buffer.from(image.substring(index + 7), 'base64');
