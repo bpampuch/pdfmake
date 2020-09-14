@@ -62,7 +62,7 @@ class URLBrowserResolver {
 				if (url) {
 					fetchUrl(url, headers).then(buffer => {
 						this.fs.writeFileSync(url, buffer);
-						resolve();
+						resolve(buffer);
 					}, result => {
 						reject(result);
 					});
