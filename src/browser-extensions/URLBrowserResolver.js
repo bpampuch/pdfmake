@@ -1,11 +1,4 @@
 const fetchUrl = (url, headers = {}) => {
-	// return fetch(url, { headers }).then((response) => {
-	// 	if (response.status !== 200) throw Error(`Failed to fetch (status code: ${response.status}, url: "${url}")`);
-  //   return response.arrayBuffer();
-  // }).then((buffer) => {
-  //   return buffer;
-  // });
-
 	return new Promise((resolve, reject) => {
 		const xhr = new XMLHttpRequest();
 		xhr.open('GET', url, true);
