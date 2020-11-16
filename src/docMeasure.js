@@ -210,6 +210,8 @@ DocMeasure.prototype.measureSVG = function (node) {
 
 	this.measureImageWithDimensions(node, dimensions);
 
+	node.font = this.styleStack.getProperty('font');
+
 	// scale SVG based on final dimension
 	node.svg = this.svgMeasure.writeDimensions(node.svg, {
 		width: node._width,
@@ -601,6 +603,7 @@ DocMeasure.prototype.measureTable = function (node) {
 		return function () {
 			if (isObject(data)) {
 				data.fillColor = _this.styleStack.getProperty('fillColor');
+				data.fillOpacity = _this.styleStack.getProperty('fillOpacity');
 			}
 			return _this.measureNode(data);
 		};
@@ -646,6 +649,9 @@ DocMeasure.prototype.measureTable = function (node) {
 			},
 			fillColor: function (i, node) {
 				return null;
+			},
+			fillOpacity: function (i, node) {
+				return 1;
 			},
 			defaultBorder: true
 		};
@@ -729,7 +735,8 @@ DocMeasure.prototype.measureTable = function (node) {
 				_span: true,
 				_minWidth: 0,
 				_maxWidth: 0,
-				fillColor: table.body[row][col].fillColor
+				fillColor: table.body[row][col].fillColor,
+				fillOpacity: table.body[row][col].fillOpacity
 			};
 		}
 	}

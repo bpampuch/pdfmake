@@ -19,6 +19,7 @@ var getNodeId = require('./helpers').getNodeId;
 var isFunction = require('./helpers').isFunction;
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
+var isNumber = require('./helpers').isNumber;
 
 function addAll(target, otherArray) {
 	otherArray.forEach(function (item) {
@@ -91,40 +92,35 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			node.nodeInfo = nodeInfo;
 		});
 
-		return linearNodeList.some(function (node, index, followingNodeList) {
+		for (var index = 0; index < linearNodeList.length; index++) {
+			var node = linearNodeList[index];
 			if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 				node.pageBreakCalculated = true;
 				var pageNumber = node.nodeInfo.pageNumbers[0];
-
-				var followingNodesOnPage = followingNodeList.slice(index + 1).filter(function (node0) {
-					return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
-				});
-
-				var nodesOnNextPage = followingNodeList.slice(index + 1).filter(function (node0) {
-					return node0.nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1;
-				});
-
-				var previousNodesOnPage = followingNodeList.slice(0, index).filter(function (node0) {
-					return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
-				});
-
-				if (
-					pageBreakBeforeFct(
-						node.nodeInfo,
-						followingNodesOnPage.map(function (node) {
-							return node.nodeInfo;
-						}),
-						nodesOnNextPage.map(function (node) {
-							return node.nodeInfo;
-						}),
-						previousNodesOnPage.map(function (node) {
-							return node.nodeInfo;
-						}))) {
+				var followingNodesOnPage = [];
+				var nodesOnNextPage = [];
+				var previousNodesOnPage = [];
+				for (var ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
+					if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+						followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
+					}
+					if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
+						nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
+					}
+				}
+				for (var ii = 0; ii < index; ii++) {
+					if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+						previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
+					}
+				}
+				if (pageBreakBeforeFct(node.nodeInfo, followingNodesOnPage, nodesOnNextPage, previousNodesOnPage)) {
 					node.pageBreak = 'before';
 					return true;
 				}
 			}
-		});
+		}
+
+		return false;
 	}
 
 	this.docPreprocessor = new DocPreprocessor();
@@ -258,7 +254,7 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 	watermark.font = watermark.font || defaultStyle.font || 'Roboto';
 	watermark.fontSize = watermark.fontSize || 'auto';
 	watermark.color = watermark.color || 'black';
-	watermark.opacity = watermark.opacity || 0.6;
+	watermark.opacity = isNumber(watermark.opacity) ? watermark.opacity : 0.6;
 	watermark.bold = watermark.bold || false;
 	watermark.italics = watermark.italics || false;
 	watermark.angle = !isUndefined(watermark.angle) && !isNull(watermark.angle) ? watermark.angle : null;
@@ -323,8 +319,13 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 				b = c;
 				c = (a + b) / 2;
 			} else if (rotatedSize.width < pageSize.width) {
-				a = c;
-				c = (a + b) / 2;
+				if (rotatedSize.height > pageSize.height) {
+					b = c;
+					c = (a + b) / 2;
+				} else {
+					a = c;
+					c = (a + b) / 2;
+				}
 			}
 			styleContextStack.pop();
 		}
@@ -428,6 +429,16 @@ LayoutBuilder.prototype.processNode = function (node) {
 
 		if (node.pageBreak === 'before') {
 			self.writer.moveToNextPage(node.pageOrientation);
+		} else if (node.pageBreak === 'beforeOdd') {
+			self.writer.moveToNextPage(node.pageOrientation);
+			if ((self.writer.context().page + 1) % 2 === 1) {
+				self.writer.moveToNextPage(node.pageOrientation);
+			}
+		} else if (node.pageBreak === 'beforeEven') {
+			self.writer.moveToNextPage(node.pageOrientation);
+			if ((self.writer.context().page + 1) % 2 === 0) {
+				self.writer.moveToNextPage(node.pageOrientation);
+			}
 		}
 
 		if (margin) {
@@ -444,6 +455,16 @@ LayoutBuilder.prototype.processNode = function (node) {
 
 		if (node.pageBreak === 'after') {
 			self.writer.moveToNextPage(node.pageOrientation);
+		} else if (node.pageBreak === 'afterOdd') {
+			self.writer.moveToNextPage(node.pageOrientation);
+			if ((self.writer.context().page + 1) % 2 === 1) {
+				self.writer.moveToNextPage(node.pageOrientation);
+			}
+		} else if (node.pageBreak === 'afterEven') {
+			self.writer.moveToNextPage(node.pageOrientation);
+			if ((self.writer.context().page + 1) % 2 === 0) {
+				self.writer.moveToNextPage(node.pageOrientation);
+			}
 		}
 	}
 };

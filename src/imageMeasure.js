@@ -1,5 +1,7 @@
 'use strict';
 
+var fs = require('fs');
+
 function ImageMeasure(pdfKitDoc, imageDictionary) {
 	this.pdfKitDoc = pdfKitDoc;
 	this.imageDictionary = imageDictionary || {};
@@ -31,6 +33,10 @@ ImageMeasure.prototype.measureImage = function (src) {
 
 		if (!img) {
 			return src;
+		}
+
+		if (fs.existsSync(img)) {
+			return fs.readFileSync(img);
 		}
 
 		var index = img.indexOf('base64,');

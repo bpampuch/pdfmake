@@ -25,6 +25,20 @@ var getSvgToPDF = function () {
 	}
 };
 
+var findFont = function (fonts, requiredFonts, defaultFont) {
+	for (var i = 0; i < requiredFonts.length; i++) {
+		var requiredFont = requiredFonts[i].toLowerCase();
+
+		for (var font in fonts) {
+			if (font.toLowerCase() === requiredFont) {
+				return font;
+			}
+		}
+	}
+
+	return defaultFont;
+};
+
 ////////////////////////////////////////
 // PdfPrinter
 
@@ -98,6 +112,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	docDefinition.version = docDefinition.version || '1.3';
 	docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 	docDefinition.images = docDefinition.images || {};
+	docDefinition.pageMargins = ((docDefinition.pageMargins !== undefined) && (docDefinition.pageMargins !== null)) ? docDefinition.pageMargins : 40;
 
 	var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 
@@ -119,7 +134,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
-	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images), new SVGMeasure());
+	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins), new ImageMeasure(this.pdfKitDoc, docDefinition.images), new SVGMeasure());
 
 	registerDefaultTableLayouts(builder);
 	if (options.tableLayouts) {
@@ -192,6 +207,8 @@ function calculatePageHeight(pages, margins) {
 			return item.item.getHeight();
 		} else if (item.item._height) {
 			return item.item._height;
+		} else if (item.type === 'vector') {
+			return item.item.y1 > item.item.y2 ? item.item.y1 : item.item.y2;
 		} else {
 			// TODO: add support for next item types
 			return 0;
@@ -199,7 +216,7 @@ function calculatePageHeight(pages, margins) {
 	}
 
 	function getBottomPosition(item) {
-		var top = item.item.y;
+		var top = item.item.y || 0;
 		var height = getItemHeight(item);
 		return top + height;
 	}
@@ -245,10 +262,6 @@ function fixPageSize(pageSize, pageOrientation) {
 }
 
 function fixPageMargins(margin) {
-	if (!margin) {
-		return null;
-	}
-
 	if (isNumber(margin)) {
 		margin = { left: margin, right: margin, top: margin, bottom: margin };
 	} else if (isArray(margin)) {
@@ -377,7 +390,7 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
 					break;
 				case 'svg':
-					renderSVG(item.item, item.item.x, item.item.y, pdfKitDoc);
+					renderSVG(item.item, item.item.x, item.item.y, pdfKitDoc, fontProvider);
 					break;
 				case 'beginClip':
 					beginClip(item.item, pdfKitDoc);
@@ -483,7 +496,8 @@ function renderLine(line, x, y, pdfKitDoc) {
 			options.features = inline.fontFeatures;
 		}
 
-		pdfKitDoc.opacity(inline.opacity || 1);
+		var opacity = isNumber(inline.opacity) ? inline.opacity : 1;
+		pdfKitDoc.opacity(opacity);
 		pdfKitDoc.fill(inline.color || 'black');
 
 		pdfKitDoc._font = inline.font;
@@ -597,29 +611,54 @@ function renderVector(vector, pdfKitDoc) {
 		vector.color = gradient;
 	}
 
+	var fillOpacity = isNumber(vector.fillOpacity) ? vector.fillOpacity : 1;
+	var strokeOpacity = isNumber(vector.strokeOpacity) ? vector.strokeOpacity : 1;
+
 	if (vector.color && vector.lineColor) {
-		pdfKitDoc.fillColor(vector.color, vector.fillOpacity || 1);
-		pdfKitDoc.strokeColor(vector.lineColor, vector.strokeOpacity || 1);
+		pdfKitDoc.fillColor(vector.color, fillOpacity);
+		pdfKitDoc.strokeColor(vector.lineColor, strokeOpacity);
 		pdfKitDoc.fillAndStroke();
 	} else if (vector.color) {
-		pdfKitDoc.fillColor(vector.color, vector.fillOpacity || 1);
+		pdfKitDoc.fillColor(vector.color, fillOpacity);
 		pdfKitDoc.fill();
 	} else {
-		pdfKitDoc.strokeColor(vector.lineColor || 'black', vector.strokeOpacity || 1);
+		pdfKitDoc.strokeColor(vector.lineColor || 'black', strokeOpacity);
 		pdfKitDoc.stroke();
 	}
 }
 
 function renderImage(image, x, y, pdfKitDoc) {
-	pdfKitDoc.opacity(image.opacity || 1);
+	var opacity = isNumber(image.opacity) ? image.opacity : 1;
+	pdfKitDoc.opacity(opacity);
 	pdfKitDoc.image(image.image, image.x, image.y, { width: image._width, height: image._height });
 	if (image.link) {
 		pdfKitDoc.link(image.x, image.y, image._width, image._height, image.link);
 	}
+	if (image.linkToPage) {
+		pdfKitDoc.ref({ Type: 'Action', S: 'GoTo', D: [image.linkToPage, 0, 0] }).end();
+		pdfKitDoc.annotate(image.x, image.y, image._width, image._height, { Subtype: 'Link', Dest: [image.linkToPage - 1, 'XYZ', null, null, null] });
+	}
+	if (image.linkToDestination) {
+		pdfKitDoc.goTo(image.x, image.y, image._width, image._height, image.linkToDestination);
+	}
 }
 
-function renderSVG(svg, x, y, pdfKitDoc) {
-	getSvgToPDF()(pdfKitDoc, svg.svg, svg.x, svg.y, Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options));
+function renderSVG(svg, x, y, pdfKitDoc, fontProvider) {
+	var options = Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options);
+	options.fontCallback = function (family, bold, italic) {
+		var fontsFamily = family.split(',').map(function (f) { return f.trim().replace(/('|")/g, ''); });
+		var font = findFont(fontProvider.fonts, fontsFamily, svg.font || 'Roboto');
+
+		var fontFile = fontProvider.getFontFile(font, bold, italic);
+		if (fontFile === null) {
+			var type = fontProvider.getFontType(bold, italic);
+			throw new Error('Font \'' + font + '\' in style \'' + type + '\' is not defined in the font section of the document definition.');
+		}
+
+		return fontFile;
+	};
+
+	getSvgToPDF()(pdfKitDoc, svg.svg, svg.x, svg.y, options);
 }
 
 function beginClip(rect, pdfKitDoc) {

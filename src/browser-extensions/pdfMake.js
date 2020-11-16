@@ -30,7 +30,7 @@ function canCreatePdf() {
 	return true;
 }
 
-Document.prototype._createDoc = function (options) {
+Document.prototype._createDoc = function (options, cb) {
 	options = options || {};
 	if (this.tableLayouts) {
 		options.tableLayouts = this.tableLayouts;
@@ -41,9 +41,49 @@ Document.prototype._createDoc = function (options) {
 	var printer = new PdfPrinter(this.fonts);
 	require('fs').bindFS(this.vfs); // bind virtual file system to file system
 
-	var doc = printer.createPdfKitDocument(this.docDefinition, options);
+	if (!isFunction(cb)) {
+		var doc = printer.createPdfKitDocument(this.docDefinition, options);
 
-	return doc;
+		return doc;
+	}
+
+	var URLBrowserResolver = require('./URLBrowserResolver');
+	var urlResolver = new URLBrowserResolver(require('fs'));
+
+	for (var font in this.fonts) {
+		if (this.fonts.hasOwnProperty(font)) {
+			if (this.fonts[font].normal) {
+				urlResolver.resolve(this.fonts[font].normal);
+			}
+			if (this.fonts[font].bold) {
+				urlResolver.resolve(this.fonts[font].bold);
+			}
+			if (this.fonts[font].italics) {
+				urlResolver.resolve(this.fonts[font].italics);
+			}
+			if (this.fonts[font].bolditalics) {
+				urlResolver.resolve(this.fonts[font].bolditalics);
+			}
+		}
+	}
+
+	if (this.docDefinition.images) {
+		for (var image in this.docDefinition.images) {
+			if (this.docDefinition.images.hasOwnProperty(image)) {
+				urlResolver.resolve(this.docDefinition.images[image]);
+			}
+		}
+	}
+
+	var _this = this;
+
+	urlResolver.resolved().then(function () {
+		var doc = printer.createPdfKitDocument(_this.docDefinition, options);
+
+		cb(doc);
+	}, function (result) {
+		throw result;
+	});
 };
 
 Document.prototype._flushDoc = function (doc, callback) {
@@ -67,9 +107,12 @@ Document.prototype._getPages = function (options, cb) {
 	if (!cb) {
 		throw '_getPages is an async method and needs a callback argument';
 	}
-	var doc = this._createDoc(options);
-	this._flushDoc(doc, function (ignoreBuffer, pages) {
-		cb(pages);
+	var _this = this;
+
+	this._createDoc(options, function (doc) {
+		_this._flushDoc(doc, function (ignoreBuffer, pages) {
+			cb(pages);
+		});
 	});
 };
 
@@ -203,15 +246,25 @@ Document.prototype.getBuffer = function (cb, options) {
 	if (!cb) {
 		throw 'getBuffer is an async method and needs a callback argument';
 	}
-	var doc = this._createDoc(options);
-	this._flushDoc(doc, function (buffer) {
-		cb(buffer);
+
+	var _this = this;
+
+	this._createDoc(options, function (doc) {
+		_this._flushDoc(doc, function (buffer) {
+			cb(buffer);
+		});
 	});
 };
 
-Document.prototype.getStream = function (options) {
-	var doc = this._createDoc(options);
-	return doc;
+Document.prototype.getStream = function (options, cb) {
+	if (!isFunction(cb)) {
+		var doc = this._createDoc(options);
+		return doc;
+	}
+
+	this._createDoc(options, function (doc) {
+		cb(doc);
+	});
 };
 
 module.exports = {
