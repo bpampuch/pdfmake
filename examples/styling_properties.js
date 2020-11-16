@@ -49,7 +49,6 @@ var docDefinition = {
         {
           text: '1, 2',
           sup: true,
-          fontSize: 8
         },
         ' Let\'s continue our sentence. Notice the leading space.'
       ]
@@ -60,7 +59,6 @@ var docDefinition = {
         {
           text: '1, 2',
           sub: true,
-          fontSize: 8
         },
         ' World'
       ]
