@@ -315,6 +315,13 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
 		var preserveTrailingSpaces = getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
 		var opacity = getStyleProperty(item, styleContextStack, 'opacity', 1);
+		var sup = getStyleProperty(item, styleContextStack, 'sup', false);
+		var sub = getStyleProperty(item, styleContextStack, 'sub', false);
+
+		if ((sup || sub) && item.fontSize === undefined) {
+			// font size reduction taken from here: https://en.wikipedia.org/wiki/Subscript_and_superscript#Desktop_publishing
+			fontSize *= 0.58
+		}
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -352,6 +359,8 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.linkToDestination = linkToDestination;
 		item.noWrap = noWrap;
 		item.opacity = opacity;
+		item.sup = sup;
+		item.sub = sub;
 	});
 
 	return normalized;
