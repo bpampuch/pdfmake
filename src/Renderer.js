@@ -26,6 +26,26 @@ const findFont = (fonts, requiredFonts, defaultFont) => {
 	return defaultFont;
 };
 
+/**
+ * Shift the "y" height of the text baseline up or down (superscript or subscript,
+ * respectively). The exact shift can / should be changed according to standard
+ * conventions.
+ *
+ * @param {number} y
+ * @param {object} inline
+ * @returns {number}
+ */
+const offsetText = (y, inline) => {
+	var newY = y;
+	if (inline.sup) {
+		newY -= inline.fontSize * 0.75;
+	}
+	if (inline.sub) {
+		newY += inline.fontSize * 0.35;
+	}
+	return newY;
+};
+
 class Renderer {
 	constructor(pdfDocument, progressCallback) {
 		this.pdfDocument = pdfDocument;
@@ -163,14 +183,17 @@ class Renderer {
 
 			this.pdfDocument._font = inline.font;
 			this.pdfDocument.fontSize(inline.fontSize);
-			this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);
+
+			let shiftedY = offsetText(y + shiftToBaseline, inline);
+			this.pdfDocument.text(inline.text, x + inline.x, shiftedY, options);
 
 			if (inline.linkToPage) {
 				this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
-				this.pdfDocument.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
+				this.pdfDocument.annotate(x + inline.x, shiftedY, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
 			}
 		}
 
+		// Decorations won't draw correctly for superscript
 		textDecorator.drawDecorations(line, x, y);
 	}
 
