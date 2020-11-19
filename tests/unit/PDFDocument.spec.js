@@ -16,7 +16,17 @@ describe('PDFDocument', function () {
 				bolditalics: 'tests/fonts/Roboto-MediumItalic.ttf'
 			}
 		};
-		pdfDocument = new PDFDocument(fontDefinitions);
+
+		var images = {
+			mystringimage: 'tests/fonts/sampleImage.jpg',
+			myobjectimage: {
+				url: 'tests/fonts/sampleImage.jpg',
+				headers: {
+					auth: '123',
+				}
+			}
+		};
+		pdfDocument = new PDFDocument(fontDefinitions, images);
 	});
 
 	describe('provideFont', function () {
@@ -54,7 +64,24 @@ describe('PDFDocument', function () {
 
 	describe('provideImage', function () {
 
-		// TODO
+		it('should provide a string path image', function () {
+			var result = pdfDocument.provideImage('mystringimage');
+			assert.equal(result.constructor.name, 'JPEG');
+		});
+
+		it('should provide an object path image', function () {
+			var result = pdfDocument.provideImage('myobjectimage');
+			assert.equal(result.constructor.name, 'JPEG');
+		});
+
+		it('should throw an error if no image is found', function () {
+			assert.throws(function () {
+				pdfDocument.provideImage('mymissingimage');
+			}, function (error) {
+				assert.equal(error.message.includes('Invalid image'), true);
+				return true;
+			});
+		});
 
 	});
 });

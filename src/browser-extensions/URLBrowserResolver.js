@@ -1,7 +1,10 @@
-const fetchUrl = url => {
+const fetchUrl = (url, headers = {}) => {
 	return new Promise((resolve, reject) => {
 		const xhr = new XMLHttpRequest();
 		xhr.open('GET', url, true);
+		Object.keys(headers).map((headerName) => {
+			xhr.setRequestHeader(headerName, headers[headerName]);
+		});
 		xhr.responseType = 'arraybuffer';
 
 		xhr.onreadystatechange = () => {
@@ -46,13 +49,20 @@ class URLBrowserResolver {
 		this.resolving = {};
 	}
 
-	resolve(url) {
+	resolve(unresolvedFile) {
+		let url = unresolvedFile;
+		let headers = {};
+		if (unresolvedFile && typeof unresolvedFile === 'object') {
+			url = unresolvedFile.url;
+			headers = unresolvedFile.headers || {};
+		}
+
 		if (!this.resolving[url]) {
 			this.resolving[url] = new Promise((resolve, reject) => {
-				if (url.toLowerCase().indexOf('https://') === 0 || url.toLowerCase().indexOf('http://') === 0) {
-					fetchUrl(url).then(buffer => {
+				if (url) {
+					fetchUrl(url, headers).then(buffer => {
 						this.fs.writeFileSync(url, buffer);
-						resolve();
+						resolve(buffer);
 					}, result => {
 						reject(result);
 					});
