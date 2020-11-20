@@ -5,6 +5,10 @@ node_js:
   - 14
   - node
 
+jobs:
+  allow_failures:
+    - node_js: node
+
 os:
   - linux
   - windows
