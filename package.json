@@ -30,7 +30,7 @@
     "gulp-eslint": "^6.0.0",
     "gulp-file-contents-to-json": "^0.2.2",
     "gulp-spawn-mocha": "^6.0.0",
-    "mocha": "^8.2.1",
+    "mocha": "7.2.0",
     "rewire": "^5.0.0",
     "sinon": "^9.2.1",
     "string-replace-webpack-plugin": "^0.1.3",
