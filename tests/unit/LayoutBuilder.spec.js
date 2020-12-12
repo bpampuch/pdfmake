@@ -1209,6 +1209,35 @@ describe('LayoutBuilder', function () {
 			});
 		});
 
+		it('should repeat be able to handle table page breaks externally', function () {
+			const pageBreaks = [];
+
+			var desc = [{
+				table: {
+					headerRows: 1,
+					widths: 'auto',
+					onPageBreak: function (pageInfo) {
+						pageBreaks.push(pageInfo);
+					},
+					body: [
+						['h1', 'h2', 'h3']
+					]
+				},
+				layout: emptyTableLayout
+			}];
+
+			for (var i = 0; i < 590; i++) {
+				desc[0].table.body.push(['a', 'b', 'c']);
+			}
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 10);
+			const expectedPageChanges = 9;
+			const columns = 3;
+			assert.equal(pageBreaks.length, expectedPageChanges * columns);
+		});
+
 		it('should not change x positions of repeated table headers, if context.x has changed (bugfix)', function () {
 			var desc = [{
 				table: {

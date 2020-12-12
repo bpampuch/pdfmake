@@ -671,6 +671,46 @@ var docDefinition = {
 					],
 				],
 			},
+		},
+		{ text: 'onPageBreak action', pageBreak: 'before', style: 'subheader' },
+		{
+			table: {
+				dontBreakRows: true, // important for the current implementation -> onPageBreak only called once
+				onPageBreak: function (pageInfo, tableInfo, processor, layoutBuilder) {
+					var tableNode = processor.tableNode;
+
+					var additionalRowWrapper = layoutBuilder.docMeasure.measureTable({
+						table: {
+							widths: ['*', '*', '*'],
+							body: [
+								[{
+									text: 'Additional row on break',
+									colSpan: 3,
+								}]
+							]
+						}
+					});
+
+					var additionalRow = additionalRowWrapper.table.body[0];
+
+					tableNode.table.body.splice(tableInfo.rowPosition, 0, additionalRow);
+
+					layoutBuilder.insertTableRow(tableInfo.rowPosition, additionalRow, processor);
+					tableInfo.rowPosition++;
+				},
+				headerRows: 1,
+				widths: ['*', '*', '*'],
+				body: [
+					['Title', 'Title', 'Title'],
+					...(function () {
+						var rows = [];
+						for (var i = 0; i < 40; i++) {
+							rows.push(['Row ' + i, 'Row ' + i, 'Row ' + i]);
+						}
+						return rows;
+					})()
+				],
+			},
 		}
 	],
 	styles: {
