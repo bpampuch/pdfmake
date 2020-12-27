@@ -1,5 +1,5 @@
 var path = require('path');
-var UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+var TerserPlugin = require('terser-webpack-plugin');
 var StringReplacePlugin = require("string-replace-webpack-plugin");
 var webpack = require('webpack');
 var pkg = require('./package.json');
@@ -125,19 +125,24 @@ module.exports = {
 	},
 	optimization: {
 		minimizer: [
-			new UglifyJsPlugin({
+			new TerserPlugin({
 				include: /\.min\.js$/,
 				sourceMap: true,
-				uglifyOptions: {
+				extractComments: false,
+				terserOptions: {
+					format: {
+						preamble: banner,
+						comments: false,
+					},
 					output: {
-						comments: /^! pdfmake/
+						preamble: banner,
+						comments: false,
 					},
 					compress: {
 						drop_console: true
 					},
-					mangle: {
-						reserved: ['HeadTable', 'NameTable', 'CmapTable', 'HheaTable', 'MaxpTable', 'HmtxTable', 'PostTable', 'OS2Table', 'LocaTable', 'GlyfTable']
-					}
+					keep_classnames: true,
+					keep_fnames: true
 				}
 			})
 		]
