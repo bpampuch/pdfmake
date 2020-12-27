@@ -413,8 +413,8 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
  * respectively). The exact shift can / should be changed according to standard
  * conventions.
  *
- * @param {number} y 
- * @param {any} inline 
+ * @param {number} y
+ * @param {any} inline
  */
 function offsetText(y, inline) {
 	var newY = y;
@@ -630,7 +630,18 @@ function renderVector(vector, pdfKitDoc) {
 function renderImage(image, x, y, pdfKitDoc) {
 	var opacity = isNumber(image.opacity) ? image.opacity : 1;
 	pdfKitDoc.opacity(opacity);
-	pdfKitDoc.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+	if (image.cover) {
+		var align = image.cover.align || 'center';
+		var valign = image.cover.valign || 'center';
+		var width = image.cover.width ? image.cover.width : image.width;
+		var height = image.cover.height ? image.cover.height : image.height;
+		pdfKitDoc.save();
+		pdfKitDoc.rect(image.x, image.y, width, height).clip();
+		pdfKitDoc.image(image.image, image.x, image.y, { cover: [width, height], align, valign });
+		pdfKitDoc.restore();
+	} else {
+		pdfKitDoc.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+	}
 	if (image.link) {
 		pdfKitDoc.link(image.x, image.y, image._width, image._height, image.link);
 	}
