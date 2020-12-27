@@ -124,7 +124,11 @@ module.exports = {
 		]
 	},
 	plugins: [
-		new StringReplacePlugin()
+		new StringReplacePlugin(),
+		new webpack.BannerPlugin({
+			banner: banner,
+			raw: true
+		})
 	],
 	devtool: 'source-map'
 };
