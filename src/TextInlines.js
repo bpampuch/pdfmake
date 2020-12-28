@@ -46,8 +46,8 @@ class TextInlines {
 	 * Converts an array of strings (or inline-definition-objects) into a collection
 	 * of inlines and calculated minWidth/maxWidth and their min/max widths
 	 *
-	 * @param  {Array} textArray an array of inline-definition-objects (or strings)
-	 * @param  {StyleContextStack} styleContextStack current style stack
+	 * @param {Array} textArray an array of inline-definition-objects (or strings)
+	 * @param {StyleContextStack} styleContextStack current style stack
 	 * @returns {object} collection of inlines, minWidth, maxWidth
 	 */
 	buildInlines(textArray, styleContextStack) {
@@ -124,6 +124,13 @@ class TextInlines {
 			item.linkToDestination = StyleContextStack.getStyleProperty(item, styleContextStack, 'linkToDestination', null);
 			item.noWrap = StyleContextStack.getStyleProperty(item, styleContextStack, 'noWrap', null);
 			item.opacity = StyleContextStack.getStyleProperty(item, styleContextStack, 'opacity', 1);
+			item.sup = StyleContextStack.getStyleProperty(item, styleContextStack, 'sup', false);
+			item.sub = StyleContextStack.getStyleProperty(item, styleContextStack, 'sub', false);
+
+			if (item.sup || item.sub) {
+				// font size reduction taken from here: https://en.wikipedia.org/wiki/Subscript_and_superscript#Desktop_publishing
+				item.fontSize *= 0.58;
+			}
 
 			let lineHeight = StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeight', 1);
 
@@ -170,8 +177,8 @@ class TextInlines {
 	/**
 	 * Returns size of the specified string (without breaking it) using the current style
 	 *
-	 * @param  {string} text text to be measured
-	 * @param  {object} styleContextStack current style stack
+	 * @param {string} text text to be measured
+	 * @param {object} styleContextStack current style stack
 	 * @returns {object} size of the specified string
 	 */
 	sizeOfText(text, styleContextStack) {
@@ -199,9 +206,9 @@ class TextInlines {
 	/**
 	 * Returns size of the specified rotated string (without breaking it) using the current style
 	 *
-	 * @param  {string} text text to be measured
-	 * @param  {number} angle
-	 * @param  {object} styleContextStack current style stack
+	 * @param {string} text text to be measured
+	 * @param {number} angle
+	 * @param {object} styleContextStack current style stack
 	 * @returns {object} size of the specified string
 	 */
 	sizeOfRotatedText(text, angle, styleContextStack) {

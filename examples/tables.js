@@ -1,14 +1,12 @@
-var fonts = {
-	Roboto: {
-		normal: 'fonts/Roboto-Regular.ttf',
-		bold: 'fonts/Roboto-Medium.ttf',
-		italics: 'fonts/Roboto-Italic.ttf',
-		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
-	}
-};
+/*eslint no-unused-vars: ["error", {"args": "none"}]*/
 
-var pdfmake = require('../js/index');
-pdfmake.setFonts(fonts);
+
+var pdfmake = require('../js/index'); // only during development, otherwise use the following line
+//var pdfmake = require('pdfmake');
+
+var Roboto = require('../fonts/Roboto');
+pdfmake.addFonts(Roboto);
+
 
 var docDefinition = {
 	content: [
@@ -309,7 +307,7 @@ var docDefinition = {
 					['Sample value 1', 'Sample value 2', 'Sample value 3']
 				]
 			},
-		},	
+		},
 		{ text: '... using a custom styler and overriding it in the second row', margin: [0, 20, 0, 8] },
 		{
 			style: 'tableOpacityExample',
@@ -708,6 +706,8 @@ var docDefinition = {
 var now = new Date();
 
 var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/tables.pdf');
-
-console.log(new Date() - now);
+pdf.write('pdfs/tables.pdf').then(() => {
+	console.log(new Date() - now);
+}, err => {
+	console.error(err);
+});

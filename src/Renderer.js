@@ -26,6 +26,26 @@ const findFont = (fonts, requiredFonts, defaultFont) => {
 	return defaultFont;
 };
 
+/**
+ * Shift the "y" height of the text baseline up or down (superscript or subscript,
+ * respectively). The exact shift can / should be changed according to standard
+ * conventions.
+ *
+ * @param {number} y
+ * @param {object} inline
+ * @returns {number}
+ */
+const offsetText = (y, inline) => {
+	var newY = y;
+	if (inline.sup) {
+		newY -= inline.fontSize * 0.75;
+	}
+	if (inline.sub) {
+		newY += inline.fontSize * 0.35;
+	}
+	return newY;
+};
+
 class Renderer {
 	constructor(pdfDocument, progressCallback) {
 		this.pdfDocument = pdfDocument;
@@ -163,14 +183,17 @@ class Renderer {
 
 			this.pdfDocument._font = inline.font;
 			this.pdfDocument.fontSize(inline.fontSize);
-			this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);
+
+			let shiftedY = offsetText(y + shiftToBaseline, inline);
+			this.pdfDocument.text(inline.text, x + inline.x, shiftedY, options);
 
 			if (inline.linkToPage) {
 				this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
-				this.pdfDocument.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
+				this.pdfDocument.annotate(x + inline.x, shiftedY, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
 			}
 		}
 
+		// Decorations won't draw correctly for superscript
 		textDecorator.drawDecorations(line, x, y);
 	}
 
@@ -265,7 +288,18 @@ class Renderer {
 	renderImage(image) {
 		let opacity = isNumber(image.opacity) ? image.opacity : 1;
 		this.pdfDocument.opacity(opacity);
-		this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+		if (image.cover) {
+			const align = image.cover.align || 'center';
+			const valign = image.cover.valign || 'center';
+			const width = image.cover.width ? image.cover.width : image.width;
+			const height = image.cover.height ? image.cover.height : image.height;
+			this.pdfDocument.save();
+			this.pdfDocument.rect(image.x, image.y, width, height).clip();
+			this.pdfDocument.image(image.image, image.x, image.y, { cover: [width, height], align, valign });
+			this.pdfDocument.restore();
+		} else {
+			this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+		}
 		if (image.link) {
 			this.pdfDocument.link(image.x, image.y, image._width, image._height, image.link);
 		}

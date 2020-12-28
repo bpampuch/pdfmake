@@ -5,6 +5,8 @@ var assert = require('assert');
 var integrationTestHelper = require('./integrationTestHelper');
 var SVGMeasure = require('../../js/SVGMeasure').default;
 
+// NOTE: more tests for SVGMeasure in ../SVGMeasure.js
+
 describe('Integration Test: svg\'s', function () {
 
 	var testHelper = new integrationTestHelper();
@@ -151,10 +153,10 @@ describe('Integration Test: svg\'s', function () {
 			var pages = testHelper.renderPages('A6', dd);
 
 			var svgNode = pages[0].items[0].item;
-			var svgDimensions = svgMeasure.getHeightAndWidth(svgNode.svg);
+			var svgDimensions = svgMeasure.measureSVG(svgNode.svg);
 
-			assert.equal(svgDimensions.width, dd.content[0].width);
-			assert.equal(svgDimensions.height, dd.content[0].height);
+			assert.equal(svgDimensions.width, 400);
+			assert.equal(svgDimensions.height, 800);
 		});
 
 		it('writes width and height from definition to svg (decimals)', function () {
@@ -171,18 +173,17 @@ describe('Integration Test: svg\'s', function () {
 			var pages = testHelper.renderPages('A6', dd);
 
 			var svgNode = pages[0].items[0].item;
-			var svgDimensions = svgMeasure.getHeightAndWidth(svgNode.svg);
+			var svgDimensions = svgMeasure.measureSVG(svgNode.svg);
 
-			assert.equal(svgDimensions.width, dd.content[0].width);
-			assert.equal(svgDimensions.height, dd.content[0].height);
+			assert.equal(svgDimensions.width, 400.15);
+			assert.equal(svgDimensions.height, 800.35);
 		});
 
 		it('writes svg in header', function () {
 			var dd = {
 				content: [],
 				header: {
-						svg: '<svg width="200" height="100" viewBox="0 0 600 300"></svg>',
-
+					svg: '<svg width="200" height="100" viewBox="0 0 600 300"></svg>',
 				}
 			};
 
@@ -194,8 +195,10 @@ describe('Integration Test: svg\'s', function () {
 			var dd = {
 				content: [
 					{
-						table:{
-							body: [[{svg: '<svg width="200" height="100" viewBox="0 0 600 300"></svg>'}]]
+						table: {
+							body: [
+								[{ svg: '<svg width="200" height="100" viewBox="0 0 600 300"></svg>' }]
+							]
 						}
 					}
 				],

@@ -102,23 +102,38 @@ class LayoutBuilder {
 				if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 					node.pageBreakCalculated = true;
 					let pageNumber = node.nodeInfo.pageNumbers[0];
-					let followingNodesOnPage = [];
-					let nodesOnNextPage = [];
-					let previousNodesOnPage = [];
-					for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
-						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-							followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
-						}
-						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
-							nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
-						}
-					}
-					for (let ii = 0; ii < index; ii++) {
-						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-							previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
-						}
-					}
-					if (pageBreakBeforeFct(node.nodeInfo, followingNodesOnPage, nodesOnNextPage, previousNodesOnPage)) {
+
+					if (
+						pageBreakBeforeFct(node.nodeInfo, {
+							getFollowingNodesOnPage: () => {
+								let followingNodesOnPage = [];
+								for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
+									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+										followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
+									}
+								}
+								return followingNodesOnPage;
+							},
+							getNodesOnNextPage: () => {
+								let nodesOnNextPage = [];
+								for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
+									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
+										nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
+									}
+								}
+								return nodesOnNextPage;
+							},
+							getPreviousNodesOnPage: () => {
+								let previousNodesOnPage = [];
+								for (let ii = 0; ii < index; ii++) {
+									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+										previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
+									}
+								}
+								return previousNodesOnPage;
+							},
+						})
+					) {
 						node.pageBreak = 'before';
 						return true;
 					}

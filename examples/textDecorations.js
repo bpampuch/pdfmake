@@ -1,17 +1,11 @@
-var fonts = {
-	Roboto: {
-		normal: 'fonts/Roboto-Regular.ttf',
-		bold: 'fonts/Roboto-Medium.ttf',
-		italics: 'fonts/Roboto-Italic.ttf',
-		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
-	}
-};
+var pdfmake = require('../js/index'); // only during development, otherwise use the following line
+//var pdfmake = require('pdfmake');
 
-var pdfmake = require('../js/index');
-pdfmake.setFonts(fonts);
+var Roboto = require('../fonts/Roboto');
+pdfmake.addFonts(Roboto);
+
 
 var ct = [];
-var lorem = 'Lorem ipsum dolor sit amet';
 
 ct.push({ text: 'Higlighted text', fontSize: 18, background: 'yellow' });
 ct.push(' ');
@@ -31,7 +25,7 @@ ct.push({
 		{ text: 'Wavy style', decoration: 'underline', decorationStyle: 'wavy' }
 	]
 });
-ct.push(' ')
+ct.push(' ');
 ct.push({
 	columns: [
 		{ text: 'Using colors', decoration: 'underline', decorationColor: 'blue' },
@@ -49,6 +43,8 @@ var docDefinition = {
 var now = new Date();
 
 var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/textDecorations.pdf');
-
-console.log(new Date() - now);
+pdf.write('pdfs/textDecorations.pdf').then(() => {
+	console.log(new Date() - now);
+}, err => {
+	console.error(err);
+});

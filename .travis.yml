@@ -1,13 +1,17 @@
 language: node_js
 node_js:
-  - 8
   - 10
   - 12
+  - 14
   - node
 
+jobs:
+  allow_failures:
+    - node_js: node
+
 os:
-  - windows
   - linux
+  - windows
   - osx
 
 cache:

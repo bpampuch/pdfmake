@@ -1,16 +1,8 @@
-var fonts = {
-	Roboto: {
-		normal: 'fonts/Roboto-Regular.ttf',
-		bold: 'fonts/Roboto-Medium.ttf',
-		italics: 'fonts/Roboto-Italic.ttf',
-		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
-	}
-};
+var pdfmake = require('../js/index'); // only during development, otherwise use the following line
+//var pdfmake = require('pdfmake');
 
-var pdfmake = require('../js/index');
-pdfmake.setFonts(fonts);
-
-var now = new Date();
+var Roboto = require('../fonts/Roboto');
+pdfmake.addFonts(Roboto);
 
 var docDefinition = {
 	content: [
@@ -39,7 +31,11 @@ var docDefinition = {
 	]
 };
 
-var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/links.pdf');
+var now = new Date();
 
-console.log(new Date() - now);
+var pdf = pdfmake.createPdf(docDefinition);
+pdf.write('pdfs/links.pdf').then(() => {
+	console.log(new Date() - now);
+}, err => {
+	console.error(err);
+});
