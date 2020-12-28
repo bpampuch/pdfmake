@@ -10,6 +10,8 @@ var TableProcessor = require('./tableProcessor');
 var Line = require('./line');
 var isString = require('./helpers').isString;
 var isArray = require('./helpers').isArray;
+var isUndefined = require('./helpers').isUndefined;
+var isNull = require('./helpers').isNull;
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 var fontStringify = require('./helpers').fontStringify;
@@ -17,6 +19,7 @@ var getNodeId = require('./helpers').getNodeId;
 var isFunction = require('./helpers').isFunction;
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
+var isNumber = require('./helpers').isNumber;
 
 function addAll(target, otherArray) {
 	otherArray.forEach(function (item) {
@@ -31,11 +34,12 @@ function addAll(target, otherArray) {
  * @param {Object} pageSize - an object defining page width and height
  * @param {Object} pageMargins - an object defining top, left, right and bottom margins
  */
-function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
+function LayoutBuilder(pageSize, pageMargins, imageMeasure, svgMeasure) {
 	this.pageSize = pageSize;
 	this.pageMargins = pageMargins;
 	this.tracker = new TraversalTracker();
 	this.imageMeasure = imageMeasure;
+	this.svgMeasure = svgMeasure;
 	this.tableLayouts = {};
 }
 
@@ -68,7 +72,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 		linearNodeList.forEach(function (node) {
 			var nodeInfo = {};
 			[
-				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
+				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns',
 				'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
 				'width', 'height'
 			].forEach(function (key) {
@@ -88,44 +92,39 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			node.nodeInfo = nodeInfo;
 		});
 
-		return linearNodeList.some(function (node, index, followingNodeList) {
+		for (var index = 0; index < linearNodeList.length; index++) {
+			var node = linearNodeList[index];
 			if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 				node.pageBreakCalculated = true;
 				var pageNumber = node.nodeInfo.pageNumbers[0];
-
-				var followingNodesOnPage = followingNodeList.slice(index + 1).filter(function (node0) {
-					return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
-				});
-
-				var nodesOnNextPage = followingNodeList.slice(index + 1).filter(function (node0) {
-					return node0.nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1;
-				});
-
-				var previousNodesOnPage = followingNodeList.slice(0, index).filter(function (node0) {
-					return node0.nodeInfo.pageNumbers.indexOf(pageNumber) > -1;
-				});
-
-				if (
-					pageBreakBeforeFct(
-						node.nodeInfo,
-						followingNodesOnPage.map(function (node) {
-							return node.nodeInfo;
-						}),
-						nodesOnNextPage.map(function (node) {
-							return node.nodeInfo;
-						}),
-						previousNodesOnPage.map(function (node) {
-							return node.nodeInfo;
-						}))) {
+				var followingNodesOnPage = [];
+				var nodesOnNextPage = [];
+				var previousNodesOnPage = [];
+				for (var ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
+					if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+						followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
+					}
+					if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
+						nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
+					}
+				}
+				for (var ii = 0; ii < index; ii++) {
+					if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+						previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
+					}
+				}
+				if (pageBreakBeforeFct(node.nodeInfo, followingNodesOnPage, nodesOnNextPage, previousNodesOnPage)) {
 					node.pageBreak = 'before';
 					return true;
 				}
 			}
-		});
+		}
+
+		return false;
 	}
 
 	this.docPreprocessor = new DocPreprocessor();
-	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
+	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.svgMeasure, this.tableLayouts, images);
 
 
 	function resetXYs(result) {
@@ -164,7 +163,7 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 		this.addWatermark(watermark, fontProvider, defaultStyle);
 	}
 
-	return {pages: this.writer.context().pages, linearNodeList: this.linearNodeList};
+	return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
 };
 
 
@@ -245,7 +244,7 @@ LayoutBuilder.prototype.addHeadersAndFooters = function (header, footer) {
 
 LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaultStyle) {
 	if (isString(watermark)) {
-		watermark = {'text': watermark};
+		watermark = { 'text': watermark };
 	}
 
 	if (!watermark.text) { // empty watermark text
@@ -253,31 +252,55 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 	}
 
 	watermark.font = watermark.font || defaultStyle.font || 'Roboto';
+	watermark.fontSize = watermark.fontSize || 'auto';
 	watermark.color = watermark.color || 'black';
-	watermark.opacity = watermark.opacity || 0.6;
+	watermark.opacity = isNumber(watermark.opacity) ? watermark.opacity : 0.6;
 	watermark.bold = watermark.bold || false;
 	watermark.italics = watermark.italics || false;
+	watermark.angle = !isUndefined(watermark.angle) && !isNull(watermark.angle) ? watermark.angle : null;
+
+	if (watermark.angle === null) {
+		watermark.angle = Math.atan2(this.pageSize.height, this.pageSize.width) * -180 / Math.PI;
+	}
+
+	if (watermark.fontSize === 'auto') {
+		watermark.fontSize = getWatermarkFontSize(this.pageSize, watermark, fontProvider);
+	}
 
 	var watermarkObject = {
 		text: watermark.text,
 		font: fontProvider.provideFont(watermark.font, watermark.bold, watermark.italics),
-		size: getSize(this.pageSize, watermark, fontProvider),
+		fontSize: watermark.fontSize,
 		color: watermark.color,
-		opacity: watermark.opacity
+		opacity: watermark.opacity,
+		angle: watermark.angle
 	};
+
+	watermarkObject._size = getWatermarkSize(watermark, fontProvider);
 
 	var pages = this.writer.context().pages;
 	for (var i = 0, l = pages.length; i < l; i++) {
 		pages[i].watermark = watermarkObject;
 	}
 
-	function getSize(pageSize, watermark, fontProvider) {
-		var width = pageSize.width;
-		var height = pageSize.height;
-		var targetWidth = Math.sqrt(width * width + height * height) * 0.8; /* page diagonal * sample factor */
+	function getWatermarkSize(watermark, fontProvider) {
 		var textTools = new TextTools(fontProvider);
-		var styleContextStack = new StyleContextStack(null, {font: watermark.font, bold: watermark.bold, italics: watermark.italics});
-		var size;
+		var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
+
+		styleContextStack.push({
+			fontSize: watermark.fontSize
+		});
+
+		var size = textTools.sizeOfString(watermark.text, styleContextStack);
+		var rotatedSize = textTools.sizeOfRotatedText(watermark.text, watermark.angle, styleContextStack);
+
+		return { size: size, rotatedSize: rotatedSize };
+	}
+
+	function getWatermarkFontSize(pageSize, watermark, fontProvider) {
+		var textTools = new TextTools(fontProvider);
+		var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
+		var rotatedSize;
 
 		/**
 		 * Binary search the best font size.
@@ -291,20 +314,25 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 			styleContextStack.push({
 				fontSize: c
 			});
-			size = textTools.sizeOfString(watermark.text, styleContextStack);
-			if (size.width > targetWidth) {
+			rotatedSize = textTools.sizeOfRotatedText(watermark.text, watermark.angle, styleContextStack);
+			if (rotatedSize.width > pageSize.width) {
 				b = c;
 				c = (a + b) / 2;
-			} else if (size.width < targetWidth) {
-				a = c;
-				c = (a + b) / 2;
+			} else if (rotatedSize.width < pageSize.width) {
+				if (rotatedSize.height > pageSize.height) {
+					b = c;
+					c = (a + b) / 2;
+				} else {
+					a = c;
+					c = (a + b) / 2;
+				}
 			}
 			styleContextStack.pop();
 		}
 		/*
 		 End binary search
 		 */
-		return {size: size, fontSize: c};
+		return c;
 	}
 };
 
@@ -377,6 +405,8 @@ LayoutBuilder.prototype.processNode = function (node) {
 			self.processToc(node);
 		} else if (node.image) {
 			self.processImage(node);
+		} else if (node.svg) {
+			self.processSVG(node);
 		} else if (node.canvas) {
 			self.processCanvas(node);
 		} else if (node.qr) {
@@ -399,6 +429,16 @@ LayoutBuilder.prototype.processNode = function (node) {
 
 		if (node.pageBreak === 'before') {
 			self.writer.moveToNextPage(node.pageOrientation);
+		} else if (node.pageBreak === 'beforeOdd') {
+			self.writer.moveToNextPage(node.pageOrientation);
+			if ((self.writer.context().page + 1) % 2 === 1) {
+				self.writer.moveToNextPage(node.pageOrientation);
+			}
+		} else if (node.pageBreak === 'beforeEven') {
+			self.writer.moveToNextPage(node.pageOrientation);
+			if ((self.writer.context().page + 1) % 2 === 0) {
+				self.writer.moveToNextPage(node.pageOrientation);
+			}
 		}
 
 		if (margin) {
@@ -415,6 +455,16 @@ LayoutBuilder.prototype.processNode = function (node) {
 
 		if (node.pageBreak === 'after') {
 			self.writer.moveToNextPage(node.pageOrientation);
+		} else if (node.pageBreak === 'afterOdd') {
+			self.writer.moveToNextPage(node.pageOrientation);
+			if ((self.writer.context().page + 1) % 2 === 1) {
+				self.writer.moveToNextPage(node.pageOrientation);
+			}
+		} else if (node.pageBreak === 'afterEven') {
+			self.writer.moveToNextPage(node.pageOrientation);
+			if ((self.writer.context().page + 1) % 2 === 0) {
+				self.writer.moveToNextPage(node.pageOrientation);
+			}
 		}
 	}
 };
@@ -494,7 +544,7 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 		self.writer.context().completeColumnGroup(height);
 	});
 
-	return {pageBreaks: pageBreaks, positions: positions};
+	return { pageBreaks: pageBreaks, positions: positions };
 
 	function storePageBreakData(data) {
 		var pageDesc;
@@ -659,7 +709,9 @@ LayoutBuilder.prototype.processToc = function (node) {
 	if (node.toc.title) {
 		this.processNode(node.toc.title);
 	}
-	this.processNode(node.toc._table);
+	if (node.toc._table) {
+		this.processNode(node.toc._table);
+	}
 };
 
 LayoutBuilder.prototype.buildNextLine = function (textNode) {
@@ -719,6 +771,11 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 // images
 LayoutBuilder.prototype.processImage = function (node) {
 	var position = this.writer.addImage(node);
+	node.positions.push(position);
+};
+
+LayoutBuilder.prototype.processSVG = function (node) {
+	var position = this.writer.addSVG(node);
 	node.positions.push(position);
 };
 

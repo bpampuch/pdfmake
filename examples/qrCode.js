@@ -23,29 +23,29 @@ var longText = 'The amount of data that can be stored in the QR code symbol depe
 
 
 function header(text) {
-	return {text: text, margins: [0, 0, 0, 8]};
+	return { text: text, margins: [0, 0, 0, 8] };
 }
 
 var docDefinition = {
 	pageMargins: [10, 10, 10, 10],
 	content: [
 		header(greeting),
-		{qr: greeting},
+		{ qr: greeting },
 		'\n',
 
 		header('Colored QR'),
-		{qr: greeting, foreground: 'red', background: 'yellow'},
+		{ qr: greeting, foreground: 'red', background: 'yellow' },
 		'\n',
 
 		header(url),
-		{qr: url},
+		{ qr: url },
 		'\n',
 
 		header('A very long text (' + longText.length + ' chars)'),
-		{qr: longText},
+		{ qr: longText },
 		'\n',
 		header('same long text with fit = 100 and alignment = right'),
-		{qr: longText, fit: 150, alignment: 'right'},
+		{ qr: longText, fit: 150, alignment: 'right' },
 	]
 }
 

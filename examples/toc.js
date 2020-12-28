@@ -20,19 +20,19 @@ var docDefinition = {
 		},
 		{
 			toc: {
-				title: {text: 'INDEX', style: 'header'},
+				title: { text: 'INDEX', style: 'header' },
 				//textMargin: [0, 0, 0, 0],
 				//textStyle: {italics: true},
-				numberStyle: {bold: true}
+				numberStyle: { bold: true }
 			}
 		},
 		{
 			text: 'This is a header, using header style',
 			style: 'header',
 			tocItem: true,
-			tocStyle: {italics: true},
+			tocStyle: { italics: true },
 			tocMargin: [0, 10, 0, 0],
-			tocNumberStyle: {italics: true, decoration: 'underline'},
+			tocNumberStyle: { italics: true, decoration: 'underline' },
 			pageBreak: 'before'
 		},
 		'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Confectum ponit legam, perferendis nomine miserum, animi. Moveat nesciunt triari naturam.\n\n',

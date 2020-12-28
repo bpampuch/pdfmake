@@ -18,31 +18,31 @@ var docDefinition = {
 			image: 'bee',
 			width: 50,
 			height: 50,
-			absolutePosition: {x: 100, y: 100}
+			absolutePosition: { x: 100, y: 100 }
 		},
 		{
 			image: 'bee',
 			width: 50,
 			height: 50,
-			absolutePosition: {x: 150, y: 150}
+			absolutePosition: { x: 150, y: 150 }
 		},
 		{
 			image: 'bee',
 			width: 50,
 			height: 50,
-			absolutePosition: {x: 200, y: 200}
+			absolutePosition: { x: 200, y: 200 }
 		},
 		{
 			image: 'bee',
 			width: 50,
 			height: 50,
-			absolutePosition: {x: 250, y: 150}
+			absolutePosition: { x: 250, y: 150 }
 		},
 		{
 			image: 'bee',
 			width: 50,
 			height: 50,
-			absolutePosition: {x: 300, y: 100}
+			absolutePosition: { x: 300, y: 100 }
 		},
 
 		{
@@ -52,23 +52,23 @@ var docDefinition = {
 
 		{
 			text: 'As',
-			absolutePosition: {x: 100, y: 100}
+			absolutePosition: { x: 100, y: 100 }
 		},
 		{
 			text: 'well',
-			absolutePosition: {x: 150, y: 150}
+			absolutePosition: { x: 150, y: 150 }
 		},
 		{
 			text: 'as',
-			absolutePosition: {x: 200, y: 200}
+			absolutePosition: { x: 200, y: 200 }
 		},
 		{
 			text: 'text',
-			absolutePosition: {x: 250, y: 150}
+			absolutePosition: { x: 250, y: 150 }
 		},
 		{
 			text: '!!!',
-			absolutePosition: {x: 300, y: 100},
+			absolutePosition: { x: 300, y: 100 },
 			pageBreak: 'after'
 		},
 
@@ -79,10 +79,10 @@ var docDefinition = {
 			image: 'bee',
 			width: 100,
 			height: 100,
-			absolutePosition: {x: 100, y: 100}
+			absolutePosition: { x: 100, y: 100 }
 		},
 		{
-			absolutePosition: {x: 100, y: 100},
+			absolutePosition: { x: 100, y: 100 },
 			style: 'tableExample',
 			table: {
 				body: [
@@ -112,10 +112,11 @@ var docDefinition = {
 								},
 							}
 						],
-						{text: [
+						{
+							text: [
 								'Inlines can be ',
-								{text: 'styled\n', italics: true},
-								{text: 'easily as everywhere else', fontSize: 10}]
+								{ text: 'styled\n', italics: true },
+								{ text: 'easily as everywhere else', fontSize: 10 }]
 						}
 					]
 				]

@@ -43,11 +43,14 @@ describe('TableProcessor', function () {
 			fillColor: function (i, node) {
 				return null;
 			},
+                        fillOpacity: function (i, node) {
+				return 1;
+			},
 			defaultBorder: true
 		};
 
 		contextFake = {
-			moveDown: function () {}
+			moveDown: function () { }
 		};
 
 		writerFake = {
@@ -59,8 +62,8 @@ describe('TableProcessor', function () {
 				addVectorCallCount++;
 			},
 			tracker: {
-				startTracking: function () {},
-				stopTracking: function () {}
+				startTracking: function () { },
+				stopTracking: function () { }
 			}
 		};
 
@@ -94,7 +97,7 @@ describe('TableProcessor', function () {
 			return 'nice shiny color';
 		};
 		processor.layout = defaultLayout;
-		processor.rowSpanData = [{left: 0, rowSpan: 0}, {left: 0, rowSpan: 0}];
+		processor.rowSpanData = [{ left: 0, rowSpan: 0 }, { left: 0, rowSpan: 0 }];
 
 		processor.beginRow(0, writerFake);
 		processor.endRow(0, writerFake, []);
@@ -125,7 +128,7 @@ describe('TableProcessor', function () {
 		defaultLayout.vLineColor = 'nice shiny color';
 		defaultLayout.hLineColor = 'nice shiny color';
 		processor.layout = defaultLayout;
-		processor.rowSpanData = [{left: 0, rowSpan: 0}, {left: 0, rowSpan: 0}];
+		processor.rowSpanData = [{ left: 0, rowSpan: 0 }, { left: 0, rowSpan: 0 }];
 
 		processor.beginRow(0, writerFake);
 		processor.endRow(0, writerFake, []);
@@ -142,19 +145,20 @@ describe('TableProcessor', function () {
 						// since extendTableWidths is not called from out tests
 						// we can't use the doc-definition syntax for widths
 						// so instead of '*' we
-						widths: [{width: '*'}]
+						widths: [{ width: '*' }]
 					},
 					_offsets: {
 						total: 56472
 					},
 					_layout: {
-						paddingLeft: function () {},
-						paddingRight: function () {},
-						paddingBottom: function () {},
-						paddingTop: function () {},
-						vLineWidth: function () {},
-						hLineWidth: function () {},
-						fillColor: function () {}
+						paddingLeft: function () { },
+						paddingRight: function () { },
+						paddingBottom: function () { },
+						paddingTop: function () { },
+						vLineWidth: function () { },
+						hLineWidth: function () { },
+						fillColor: function () { },
+						fillOpacity: function () { }
 					}
 				};
 			};
@@ -175,23 +179,23 @@ describe('TableProcessor', function () {
 				context: function () {
 					return {
 						availableWidth: 56473,
-						moveDown: function () {}
+						moveDown: function () { }
 					};
 				},
 				repeatables: [],
 				tracker: {
-					stopTracking: function () {}
+					stopTracking: function () { }
 				},
-				addVector: function () {},
+				addVector: function () { },
 				popFromRepeatables: sinon.spy(),
 				pushToRepeatables: function (repeatable) {
 					assert.equal(repeatable, header);
 				},
-				beginUnbreakableBlock: function () {},
+				beginUnbreakableBlock: function () { },
 				currentBlockToRepeatable: function () {
 					return header;
 				},
-				commitUnbreakableBlock: function () {}
+				commitUnbreakableBlock: function () { }
 			};
 
 			var pageBreaks = [];

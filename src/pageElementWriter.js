@@ -40,6 +40,12 @@ PageElementWriter.prototype.addImage = function (image, index) {
 	});
 };
 
+PageElementWriter.prototype.addSVG = function (image, index) {
+	return fitOnPage(this, function (self) {
+		return self.writer.addSVG(image, index);
+	});
+};
+
 PageElementWriter.prototype.addQr = function (qr, index) {
 	return fitOnPage(this, function (self) {
 		return self.writer.addQr(qr, index);
@@ -137,7 +143,7 @@ PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY)
 
 PageElementWriter.prototype.currentBlockToRepeatable = function () {
 	var unbreakableContext = this.writer.context;
-	var rep = {items: []};
+	var rep = { items: [] };
 
 	unbreakableContext.pages[0].items.forEach(function (item) {
 		rep.items.push(item);

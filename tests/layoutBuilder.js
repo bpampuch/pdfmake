@@ -98,9 +98,9 @@ describe('LayoutBuilder', function () {
 	};
 
 	beforeEach(function () {
-		builder = new LayoutBuilder({width: 400, height: 800, orientation: 'portrait'}, {left: 40, right: 40, top: 40, bottom: 40}, imageMeasure);
+		builder = new LayoutBuilder({ width: 400, height: 800, orientation: 'portrait' }, { left: 40, right: 40, top: 40, bottom: 40 }, imageMeasure);
 		builder.pages = [];
-		builder.context = [{page: -1, availableWidth: 320, availableHeight: 0}];
+		builder.context = [{ page: -1, availableWidth: 320, availableHeight: 0 }];
 		builder.styleStack = new StyleContextStack();
 	});
 
@@ -120,12 +120,12 @@ describe('LayoutBuilder', function () {
 
 		it('should support text in nested object', function () {
 			var desc = [{
+				text: {
 					text: {
-						text: {
-							text: 'hello, world'
-						}
+						text: 'hello, world'
 					}
-				}];
+				}
+			}];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
@@ -162,9 +162,9 @@ describe('LayoutBuilder', function () {
 
 		it('should respect maxHeight', function () {
 			var desc = [{
-					text: 'another paragraph, this time a little bit longer though, we want to force this line to be broken into several lines',
-					maxHeight: 15
-				}];
+				text: 'another paragraph, this time a little bit longer though, we want to force this line to be broken into several lines',
+				maxHeight: 15
+			}];
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 			assert.equal(pages.length, 1);
 			assert.equal(pages[0].items.length, 1);
@@ -202,17 +202,17 @@ describe('LayoutBuilder', function () {
 				{
 					fontSize: 72,
 					stack: [
-						{text: 'paragraph', noWrap: true},
-						{text: 'paragraph', noWrap: true},
-						{text: 'paragraph', noWrap: true},
-						{text: 'paragraph', noWrap: true},
-						{text: 'paragraph', noWrap: true},
-						{text: 'paragraph', noWrap: true},
-						{text: 'paragraph', noWrap: true},
-						{text: 'paragraph', noWrap: true},
-						{text: 'paragraph', noWrap: true},
-						{text: 'paragraph', noWrap: true},
-						{text: 'paragraph', noWrap: true}
+						{ text: 'paragraph', noWrap: true },
+						{ text: 'paragraph', noWrap: true },
+						{ text: 'paragraph', noWrap: true },
+						{ text: 'paragraph', noWrap: true },
+						{ text: 'paragraph', noWrap: true },
+						{ text: 'paragraph', noWrap: true },
+						{ text: 'paragraph', noWrap: true },
+						{ text: 'paragraph', noWrap: true },
+						{ text: 'paragraph', noWrap: true },
+						{ text: 'paragraph', noWrap: true },
+						{ text: 'paragraph', noWrap: true }
 					]
 				}
 			];
@@ -231,7 +231,7 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}});
+			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 70 } });
 
 			assert.equal(pages[0].items[0].item.getWidth(), 9 * 12);
 			assert.equal(pages[0].items[1].item.getWidth(), 9 * 70);
@@ -249,7 +249,7 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 15}});
+			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 15 } });
 
 			assert.equal(pages.length, 1);
 			assert.equal(pages[0].items.length, 2);
@@ -257,14 +257,14 @@ describe('LayoutBuilder', function () {
 
 		it('should support inline text in nested arrays', function () {
 			var desc = [{
-					text: [
-						{text: 'a better '},
-						{text: [{text: 'style '}]},
-						{text: 'independently '}
-					]
-				}];
+				text: [
+					{ text: 'a better ' },
+					{ text: [{ text: 'style ' }] },
+					{ text: 'independently ' }
+				]
+			}];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, {fontSize: 8});
+			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, { fontSize: 8 });
 
 			assert.equal(pages.length, 1);
 			assert.equal(pages[0].items.length, 1);
@@ -280,7 +280,7 @@ describe('LayoutBuilder', function () {
 				'paragraph',
 				{
 					text: [
-						{text: 'paragraph', noWrap: true},
+						{ text: 'paragraph', noWrap: true },
 						{
 							text: ' paragraph',
 							fontSize: 4
@@ -290,7 +290,7 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}});
+			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 70 } });
 
 			assert.equal(pages[0].items[0].item.getWidth(), 9 * 12);
 			assert.equal(pages[0].items[1].item.getWidth(), 9 * 70);
@@ -300,10 +300,10 @@ describe('LayoutBuilder', function () {
 		it('should support multiple styles (last property wins)', function () {
 			var desc = [
 				'paragraph',
-				{text: 'paragraph', style: ['header', 'small']}
+				{ text: 'paragraph', style: ['header', 'small'] }
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}, small: {fontSize: 35}});
+			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 70 }, small: { fontSize: 35 } });
 
 			assert.equal(pages[0].items[0].item.getWidth(), 9 * 12);
 			assert.equal(pages[0].items[1].item.getWidth(), 9 * 35);
@@ -312,10 +312,10 @@ describe('LayoutBuilder', function () {
 		it('should support style-overrides', function () {
 			var desc = [
 				'paragraph',
-				{text: 'paragraph', fontSize: 40, noWrap: true}
+				{ text: 'paragraph', fontSize: 40, noWrap: true }
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}});
+			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 70 } });
 
 			assert.equal(pages[0].items[0].item.getWidth(), 9 * 12);
 			assert.equal(pages[0].items[1].item.getWidth(), 9 * 40);
@@ -324,10 +324,10 @@ describe('LayoutBuilder', function () {
 		it('style-overrides should take precedence over named styles', function () {
 			var desc = [
 				'paragraph',
-				{text: 'paragraph', fontSize: 40, style: 'header', noWrap: true}
+				{ text: 'paragraph', fontSize: 40, style: 'header', noWrap: true }
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 70}});
+			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 70 } });
 
 			assert.equal(pages[0].items[1].item.getWidth(), 9 * 40);
 		});
@@ -338,7 +338,7 @@ describe('LayoutBuilder', function () {
 				'text2'
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, {fontSize: 50});
+			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, { fontSize: 50 });
 			assert.equal(pages[0].items[0].item.getWidth(), 4 * 50);
 		});
 
@@ -420,7 +420,7 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 20}});
+			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 20 } });
 			assert.equal(pages[0].items.length, 2);
 			assert.equal(pages[0].items[0].item.getWidth(), 8 * 20);
 			assert.equal(pages[0].items[1].item.getWidth(), 8 * 20);
@@ -442,7 +442,7 @@ describe('LayoutBuilder', function () {
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {header: {fontSize: 20}});
+			var pages = builder.layoutDocument(desc, sampleTestProvider, { header: { fontSize: 20 } });
 			assert.equal(pages[0].items.length, 2);
 			assert.equal(pages[0].items[0].item.getWidth(), 8 * 8);
 		});
@@ -453,8 +453,8 @@ describe('LayoutBuilder', function () {
 					fontSize: 8,
 					columnGap: 23,
 					columns: [
-						{text: 'column 1', width: 100},
-						{text: 'column 2', width: 100}
+						{ text: 'column 1', width: 100 },
+						{ text: 'column 2', width: 100 }
 					]
 				}
 			];
@@ -471,13 +471,13 @@ describe('LayoutBuilder', function () {
 				{
 					fontSize: 8,
 					columns: [
-						{text: 'column 1', width: 100},
-						{text: 'column 2', width: 100}
+						{ text: 'column 1', width: 100 },
+						{ text: 'column 2', width: 100 }
 					]
 				}
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, {columnGap: 25});
+			var pages = builder.layoutDocument(desc, sampleTestProvider, {}, { columnGap: 25 });
 			assert.equal(pages[0].items[1].item.x, 40 + 100 + 25);
 		});
 
@@ -675,8 +675,8 @@ describe('LayoutBuilder', function () {
 							bold: true,
 							stack: [
 								'paragraph',
-								{text: 'paragraph2'},
-								{text: 'paragraph3', bold: false}
+								{ text: 'paragraph2' },
+								{ text: 'paragraph3', bold: false }
 							]
 						},
 						'another column',
@@ -832,8 +832,8 @@ describe('LayoutBuilder', function () {
 					ul: [
 						{
 							text: [
-								{text: 'line ', noWrap: true},
-								{text: '1'}
+								{ text: 'line ', noWrap: true },
+								{ text: '1' }
 							]
 						}
 					]
@@ -868,7 +868,7 @@ describe('LayoutBuilder', function () {
 				{
 					fontSize: 5,
 					ol: [
-						{text: 'item 1', fontSize: 15},
+						{ text: 'item 1', fontSize: 15 },
 					]
 				}
 			];
@@ -912,10 +912,10 @@ describe('LayoutBuilder', function () {
 				{
 					ol: [
 						'item 1',
-						{fontSize: 40, text: 'item 2'},
-						{text: ['item 3', {text: 'next inline', fontSize: 30}]},
+						{ fontSize: 40, text: 'item 2' },
+						{ text: ['item 3', { text: 'next inline', fontSize: 30 }] },
 						'item 4\nhaving two lines',
-						{text: ['item 5', {text: 'next inline\nand next line', fontSize: 30}]}
+						{ text: ['item 5', { text: 'next inline\nand next line', fontSize: 30 }] }
 					]
 				}
 			];
@@ -938,10 +938,10 @@ describe('LayoutBuilder', function () {
 				{
 					ol: [
 						'item 1',
-						{fontSize: 40, text: 'item 2'},
-						{text: ['item 3', {text: 'next inline', fontSize: 30}]},
+						{ fontSize: 40, text: 'item 2' },
+						{ text: ['item 3', { text: 'next inline', fontSize: 30 }] },
 						'item 4\nhaving two lines',
-						{text: ['item 5', {text: 'next inline\nand next line', fontSize: 30}]}
+						{ text: ['item 5', { text: 'next inline\nand next line', fontSize: 30 }] }
 					]
 				}
 			];
@@ -1034,7 +1034,7 @@ describe('LayoutBuilder', function () {
 						widths: [30, 50, 40],
 						body: [
 							['a', 'b', 'c'],
-							[{text: 'aaa', noWrap: true}, {text: 'bbb', noWrap: true}, {text: 'ccc', noWrap: true}]
+							[{ text: 'aaa', noWrap: true }, { text: 'bbb', noWrap: true }, { text: 'ccc', noWrap: true }]
 						]
 					},
 					layout: emptyTableLayout
@@ -1093,12 +1093,12 @@ describe('LayoutBuilder', function () {
 
 		it('should support tables spanning across pages', function () {
 			var desc = [{
-					table: {
-						widths: 'auto',
-						body: []
-					},
-					layout: emptyTableLayout
-				}];
+				table: {
+					widths: 'auto',
+					body: []
+				},
+				layout: emptyTableLayout
+			}];
 
 			for (var i = 0; i < 80; i++) {
 				desc[0].table.body.push(['a', 'b', 'c']);
@@ -1111,12 +1111,12 @@ describe('LayoutBuilder', function () {
 
 		it('should support table-cell spanning across pages', function () {
 			var desc = [{
-					table: {
-						widths: 'auto',
-						body: []
-					},
-					layout: emptyTableLayout
-				}];
+				table: {
+					widths: 'auto',
+					body: []
+				},
+				layout: emptyTableLayout
+			}];
 
 			for (var i = 0; i < 59; i++) {
 				desc[0].table.body.push(['a', 'b', 'c']);
@@ -1190,15 +1190,15 @@ describe('LayoutBuilder', function () {
 
 		it('should repeat table headers', function () {
 			var desc = [{
-					table: {
-						headerRows: 1,
-						widths: 'auto',
-						body: [
-							['h1', 'h2', 'h3']
-						]
-					},
-					layout: emptyTableLayout
-				}];
+				table: {
+					headerRows: 1,
+					widths: 'auto',
+					body: [
+						['h1', 'h2', 'h3']
+					]
+				},
+				layout: emptyTableLayout
+			}];
 
 			for (var i = 0; i < 590; i++) {
 				desc[0].table.body.push(['a', 'b', 'c']);
@@ -1216,18 +1216,20 @@ describe('LayoutBuilder', function () {
 
 		it('should not change x positions of repeated table headers, if context.x has changed (bugfix)', function () {
 			var desc = [{
-					table: {
-						headerRows: 1,
-						widths: 'auto',
-						body: [
-							['h1', 'h2', 'h3'],
-							[{ul: [
+				table: {
+					headerRows: 1,
+					widths: 'auto',
+					body: [
+						['h1', 'h2', 'h3'],
+						[{
+							ul: [
 
-									]}, 'b', 'c']
-						]
-					},
-					layout: emptyTableLayout
-				}];
+							]
+						}, 'b', 'c']
+					]
+				},
+				layout: emptyTableLayout
+			}];
 
 			for (var i = 0; i < 100; i++) {
 				desc[0].table.body[1][0].ul.push('item');
@@ -1244,7 +1246,7 @@ describe('LayoutBuilder', function () {
 		it('should throw an exception if unrecognized structure is detected', function () {
 			assert.throws(
 				function () {
-					builder.layoutDocument([{ol: ['item', {abc: 'test'}]}], sampleTestProvider);
+					builder.layoutDocument([{ ol: ['item', { abc: 'test' }] }], sampleTestProvider);
 				}
 			);
 		});
@@ -1298,11 +1300,11 @@ describe('LayoutBuilder', function () {
 					columns: [
 						{
 							text: 'text 1',
-							absolutePosition: {x: 123, y: 200}
+							absolutePosition: { x: 123, y: 200 }
 						},
 						{
 							text: 'text 2',
-							absolutePosition: {x: 0, y: 0}
+							absolutePosition: { x: 0, y: 0 }
 						}
 					]
 				}
@@ -1316,27 +1318,27 @@ describe('LayoutBuilder', function () {
 		});
 
 		it('should use the absolutePosition attribute without pagebreak in canvas', function () {
-			var builderAP = new LayoutBuilder({width: 841.89, height: 555.28, orientation: 'portrait'}, {left: 40, right: 40, top: 40, bottom: 40}, imageMeasure);
+			var builderAP = new LayoutBuilder({ width: 841.89, height: 555.28, orientation: 'portrait' }, { left: 40, right: 40, top: 40, bottom: 40 }, imageMeasure);
 			builderAP.pages = [];
-			builderAP.context = [{page: -1, availableWidth: 320, availableHeight: 0}];
+			builderAP.context = [{ page: -1, availableWidth: 320, availableHeight: 0 }];
 			builderAP.styleStack = new StyleContextStack();
 			var desc = [
 				{
-					absolutePosition: {x: 0, y: 0},
+					absolutePosition: { x: 0, y: 0 },
 					canvas: [
 						{
 							type: 'polyline',
 							lineWidth: 0,
 							closePath: true,
 							color: '#fce5d4',
-							points: [{x: 530, y: 0}, {x: 650, y: 0}, {x: 841.89, y: 50}, {x: 841.89, y: 270}]
+							points: [{ x: 530, y: 0 }, { x: 650, y: 0 }, { x: 841.89, y: 50 }, { x: 841.89, y: 270 }]
 						},
 						{
 							type: 'polyline',
 							lineWidth: 0,
 							closePath: true,
 							color: '#fce5d4',
-							points: [{x: 0, y: 400}, {x: 300, y: 555.28}, {x: 200, y: 555.28}, {x: 0, y: 500}]
+							points: [{ x: 0, y: 400 }, { x: 300, y: 555.28 }, { x: 200, y: 555.28 }, { x: 0, y: 500 }]
 						}
 					]
 				}
@@ -1347,20 +1349,20 @@ describe('LayoutBuilder', function () {
 		});
 
 		it('should use the absolutePosition attribute without pagebreak in image', function () {
-			var builderAP = new LayoutBuilder({width: 841.89, height: 555.28, orientation: 'portrait'}, {left: 40, right: 40, top: 40, bottom: 40}, imageMeasure);
+			var builderAP = new LayoutBuilder({ width: 841.89, height: 555.28, orientation: 'portrait' }, { left: 40, right: 40, top: 40, bottom: 40 }, imageMeasure);
 			builderAP.pages = [];
-			builderAP.context = [{page: -1, availableWidth: 320, availableHeight: 0}];
+			builderAP.context = [{ page: -1, availableWidth: 320, availableHeight: 0 }];
 			builderAP.styleStack = new StyleContextStack();
 			var desc = [
 				{
 					image: 'sampleImage.jpg',
 					width: 80,
-					absolutePosition: {x: 250, y: 500}
+					absolutePosition: { x: 250, y: 500 }
 				},
 				{
 					image: 'sampleImage.jpg',
 					width: 80,
-					absolutePosition: {x: 450, y: 520}
+					absolutePosition: { x: 450, y: 520 }
 				}
 			];
 
@@ -1369,18 +1371,18 @@ describe('LayoutBuilder', function () {
 		});
 
 		it('should use the absolutePosition attribute without pagebreak in qr', function () {
-			var builderAP = new LayoutBuilder({width: 841.89, height: 555.28, orientation: 'portrait'}, {left: 40, right: 40, top: 40, bottom: 40}, imageMeasure);
+			var builderAP = new LayoutBuilder({ width: 841.89, height: 555.28, orientation: 'portrait' }, { left: 40, right: 40, top: 40, bottom: 40 }, imageMeasure);
 			builderAP.pages = [];
-			builderAP.context = [{page: -1, availableWidth: 320, availableHeight: 0}];
+			builderAP.context = [{ page: -1, availableWidth: 320, availableHeight: 0 }];
 			builderAP.styleStack = new StyleContextStack();
 			var desc = [
 				{
 					qr: 'pdfmake',
-					absolutePosition: {x: 250, y: 500}
+					absolutePosition: { x: 250, y: 500 }
 				},
 				{
 					qr: 'pdfmake',
-					absolutePosition: {x: 450, y: 520}
+					absolutePosition: { x: 450, y: 520 }
 				}
 			];
 
@@ -1390,16 +1392,16 @@ describe('LayoutBuilder', function () {
 
 		it('should use the relativePosition attribute to position in relativePosition coordinates', function () {
 			var desc = [
-					{
-						text: 'text 1',
-						relativePosition: { x: 123, y: 200 }
-					},
-					{
-						text: 'text 2',
-						relativePosition: { x: 0, y: 0 }
-					}
-				]
-			;
+				{
+					text: 'text 1',
+					relativePosition: { x: 123, y: 200 }
+				},
+				{
+					text: 'text 2',
+					relativePosition: { x: 0, y: 0 }
+				}
+			]
+				;
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
 
@@ -1501,7 +1503,7 @@ describe('LayoutBuilder', function () {
 
 		it('should support disable wrap long word by noWrap', function () {
 			var desc = [
-				{text: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890', noWrap: true}
+				{ text: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890', noWrap: true }
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
@@ -1510,31 +1512,31 @@ describe('LayoutBuilder', function () {
 
 		it('should support not line break if is text inlines (#975)', function () {
 			var TEXT = [
-				{text: 'Celestial Circle—'},
-				{text: 'The Faithful Ally', style: 'styled'},
-				{text: ', '},
-				{text: 'Gift of Knowledge', style: 'styled'},
-				{text: ', '},
-				{text: 'Servant of Infallible Locations', style: 'styled'},
-				{text: ', '},
-				{text: 'Swift Spirit of Winged Transportation', style: 'styled'},
-				{text: ', '},
-				{text: 'Warding the Created Mind', style: 'styled'}
+				{ text: 'Celestial Circle—' },
+				{ text: 'The Faithful Ally', style: 'styled' },
+				{ text: ', ' },
+				{ text: 'Gift of Knowledge', style: 'styled' },
+				{ text: ', ' },
+				{ text: 'Servant of Infallible Locations', style: 'styled' },
+				{ text: ', ' },
+				{ text: 'Swift Spirit of Winged Transportation', style: 'styled' },
+				{ text: ', ' },
+				{ text: 'Warding the Created Mind', style: 'styled' }
 			];
 
 			var TEXT2 = [
-				{text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod '},
-				{text: 're'},
-				{text: 'mark', style: 'styled'},
-				{text: 'able'}
+				{ text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod ' },
+				{ text: 're' },
+				{ text: 'mark', style: 'styled' },
+				{ text: 'able' }
 			];
 
 			var desc = [
-				{text: TEXT},
-				{text: TEXT2}
+				{ text: TEXT },
+				{ text: TEXT2 }
 			];
 
-			var pages = builder.layoutDocument(desc, sampleTestProvider, {styled: {color: 'dodgerblue'}}, {fontSize: 16});
+			var pages = builder.layoutDocument(desc, sampleTestProvider, { styled: { color: 'dodgerblue' } }, { fontSize: 16 });
 			assert.equal(pages.length, 1);
 			assert.equal(pages[0].items.length, 16);
 			assert.equal(pages[0].items[5].item.inlines.length, 3);
@@ -1550,8 +1552,8 @@ describe('LayoutBuilder', function () {
 
 		it('should support line break if is text inlines and is new line', function () {
 			var desc = [
-				{text: 'First line.\n'},
-				{text: 'Second line.'}
+				{ text: 'First line.\n' },
+				{ text: 'Second line.' }
 			];
 
 			var pages = builder.layoutDocument(desc, sampleTestProvider);
@@ -1625,7 +1627,6 @@ describe('LayoutBuilder', function () {
 			it.skip('should render lines to pdf in a single call if style is the same');
 			it.skip('should support document encryption');
 			it.skip('should support document permissions');
-			it.skip('should support TOC');
 			it.skip('should support in-document-references');
 			it.skip('should support uppercase text transforms');
 			it.skip('should support lowercase text transforms');
@@ -1649,11 +1650,11 @@ describe('LayoutBuilder', function () {
 			singleRowLines = singleRowLines || 1;
 
 			while (rows--) {
-				var stack1 = {stack: [{text: 'a'}]};
-				var stack2 = {stack: [{text: 'a'}]};
+				var stack1 = { stack: [{ text: 'a' }] };
+				var stack2 = { stack: [{ text: 'a' }] };
 				for (var x = 0; x < singleRowLines; x++) {
-					stack1.stack.push({text: 'a'});
-					stack2.stack.push({text: 'b'});
+					stack1.stack.push({ text: 'a' });
+					stack2.stack.push({ text: 'b' });
 				}
 				if (pageBreakAfter) {
 					stack1.stack[pageBreakAfter - 1].pageBreak = 'after';
@@ -1672,8 +1673,8 @@ describe('LayoutBuilder', function () {
 		}
 
 		beforeEach(function () {
-			var pageSize = {width: 400, height: 800, orientation: 'portrait'};
-			var pageMargins = {left: 40, top: 40, bottom: 40, right: 40};
+			var pageSize = { width: 400, height: 800, orientation: 'portrait' };
+			var pageMargins = { left: 40, top: 40, bottom: 40, right: 40 };
 
 			builder2 = new LayoutBuilder(pageSize, pageMargins, {});
 			builder2.writer = new PageElementWriter(new DocumentContext(pageSize, pageMargins, true), builder2.tracker);
@@ -1747,7 +1748,7 @@ describe('LayoutBuilder', function () {
 
 			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
-			var pageSize = {width: 400, height: 800, orientation: 'portrait'};
+			var pageSize = { width: 400, height: 800, orientation: 'portrait' };
 			assert.equal(header.getCall(0).args[0], 1);
 			assert.equal(header.getCall(0).args[1], 1);
 			assert.deepEqual(header.getCall(0).args[2], pageSize);
@@ -1772,7 +1773,7 @@ describe('LayoutBuilder', function () {
 
 			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
-			var pageSize = {width: 400, height: 800, orientation: 'portrait'};
+			var pageSize = { width: 400, height: 800, orientation: 'portrait' };
 			assert.equal(background.getCall(0).args[0], 1);
 			assert.deepEqual(background.getCall(0).args[1], pageSize);
 		});
@@ -1791,8 +1792,8 @@ describe('LayoutBuilder', function () {
 		it('should create a pageBreak before', function () {
 
 			docStructure = [
-				{text: 'Text 1', id: 'text1'},
-				{text: 'Text 2', id: 'text2'}
+				{ text: 'Text 1', id: 'text1' },
+				{ text: 'Text 2', id: 'text2' }
 			];
 			pageBreakBeforeFunction = function (node, otherNodesOnPage) {
 				return node.id === 'text1';
@@ -1808,8 +1809,8 @@ describe('LayoutBuilder', function () {
 
 			docStructure = {
 				stack: [
-					{text: 'Text 1', id: 'text1'},
-					{text: 'Text 2', id: 'text2', pageBreak: 'before'}
+					{ text: 'Text 1', id: 'text1' },
+					{ text: 'Text 2', id: 'text2', pageBreak: 'before' }
 				],
 				id: 'stack'
 			};
@@ -1820,15 +1821,15 @@ describe('LayoutBuilder', function () {
 
 			assert(pageBreakBeforeFunction.calledTwice);
 			assert.equal(pageBreakBeforeFunction.getCall(0).args[0].id, 'stack');
-			assert.deepEqual({id: pageBreakBeforeFunction.getCall(1).args[0].id, text: pageBreakBeforeFunction.getCall(1).args[0].text}, {id: 'text1', text: 'Text 1'});
+			assert.deepEqual({ id: pageBreakBeforeFunction.getCall(1).args[0].id, text: pageBreakBeforeFunction.getCall(1).args[0].text }, { id: 'text1', text: 'Text 1' });
 		});
 
 		it('should provide the list of following nodes on the same page', function () {
 			docStructure = [
-				{text: 'Text 1 (Page 1)', id: 'text1'},
-				{text: 'Text 2 (Page 1)', id: 'text2'},
-				{text: 'Text 3 (Page 1)', id: 'text3'},
-				{text: 'Text 4 (Page 2)', id: 'text4', pageBreak: 'before'}
+				{ text: 'Text 1 (Page 1)', id: 'text1' },
+				{ text: 'Text 2 (Page 1)', id: 'text2' },
+				{ text: 'Text 3 (Page 1)', id: 'text3' },
+				{ text: 'Text 4 (Page 2)', id: 'text4', pageBreak: 'before' }
 			];
 
 			pageBreakBeforeFunction = sinon.spy();
@@ -1842,10 +1843,10 @@ describe('LayoutBuilder', function () {
 		it('should provide the list of nodes on the next page', function () {
 			docStructure = {
 				stack: [
-					{text: 'Text 1 (Page 1)', id: 'text1', pageBreak: 'after'},
-					{text: 'Text 2 (Page 1)', id: 'text2'},
-					{text: 'Text 3 (Page 1)', id: 'text3'},
-					{text: 'Text 4 (Page 1)', id: 'text4'}
+					{ text: 'Text 1 (Page 1)', id: 'text1', pageBreak: 'after' },
+					{ text: 'Text 2 (Page 1)', id: 'text2' },
+					{ text: 'Text 3 (Page 1)', id: 'text3' },
+					{ text: 'Text 4 (Page 1)', id: 'text4' }
 				],
 				id: 'stack'
 			};
@@ -1861,10 +1862,10 @@ describe('LayoutBuilder', function () {
 		it('should provide the list of previous nodes on the same page', function () {
 			docStructure = {
 				stack: [
-					{text: 'Text 1 (Page 1)', id: 'text1', pageBreak: 'after'},
-					{text: 'Text 2 (Page 1)', id: 'text2'},
-					{text: 'Text 3 (Page 1)', id: 'text3'},
-					{text: 'Text 4 (Page 1)', id: 'text4'}
+					{ text: 'Text 1 (Page 1)', id: 'text1', pageBreak: 'after' },
+					{ text: 'Text 2 (Page 1)', id: 'text2' },
+					{ text: 'Text 3 (Page 1)', id: 'text3' },
+					{ text: 'Text 4 (Page 1)', id: 'text4' }
 				],
 				id: 'stack'
 			};
@@ -1879,10 +1880,10 @@ describe('LayoutBuilder', function () {
 
 		it('should provide the pages of the node', function () {
 			docStructure = [
-				{text: 'Text 1 (Page 1)', id: 'text1'},
-				{text: 'Text 2 (Page 1)', id: 'text2'},
-				{text: 'Text 3 (Page 1)', id: 'text3'},
-				{text: 'Text 4 (Page 2)', id: 'text4', pageBreak: 'before'}
+				{ text: 'Text 1 (Page 1)', id: 'text1' },
+				{ text: 'Text 2 (Page 1)', id: 'text2' },
+				{ text: 'Text 3 (Page 1)', id: 'text3' },
+				{ text: 'Text 4 (Page 2)', id: 'text4', pageBreak: 'before' }
 			];
 
 			pageBreakBeforeFunction = sinon.spy();
@@ -1895,7 +1896,7 @@ describe('LayoutBuilder', function () {
 
 		it('should provide the headlineLevel of the node', function () {
 			docStructure = [
-				{text: 'Text 1 (Page 1)', id: 'text1', headlineLevel: 6}
+				{ text: 'Text 1 (Page 1)', id: 'text1', headlineLevel: 6 }
 			];
 
 			pageBreakBeforeFunction = sinon.spy();
@@ -1907,19 +1908,19 @@ describe('LayoutBuilder', function () {
 
 		it('should provide the position of the node', function () {
 			docStructure = [
-				{text: 'Text 1 (Page 1)', id: 'text1'}
+				{ text: 'Text 1 (Page 1)', id: 'text1' }
 			];
 
 			pageBreakBeforeFunction = sinon.spy();
 
 			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
-			assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].startPosition, {pageNumber: 1, left: 40, top: 40, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 720, pageInnerWidth: 320});
+			assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[0].startPosition, { pageNumber: 1, left: 40, top: 40, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 720, pageInnerWidth: 320 });
 		});
 
 		it('should provide the pageOrientation of the node', function () {
 			docStructure = [
-				{text: 'Text 1 (Page 1)', id: 'text1', pageOrientation: 'landscape', style: 'super-text'}
+				{ text: 'Text 1 (Page 1)', id: 'text1', pageOrientation: 'landscape', style: 'super-text' }
 			];
 
 			pageBreakBeforeFunction = sinon.spy();
@@ -1933,24 +1934,24 @@ describe('LayoutBuilder', function () {
 		it('should work with all specified elements', function () {
 
 			docStructure = [
-				{text: '', id: 'not-called-because-empty'},
-				{text: 'Text 1 (Page 1)', id: 'text'},
+				{ text: '', id: 'not-called-because-empty' },
+				{ text: 'Text 1 (Page 1)', id: 'text' },
 				{
 					id: 'table',
 					table: {
 						body: [
 							[{
-									text: 'Column 1 (Page 1)'
-								}]
+								text: 'Column 1 (Page 1)'
+							}]
 						]
 					}
 				},
-				{id: 'ul', ul: [{text: 'ul Item', id: 'ul-item'}]},
-				{id: 'ol', ol: [{text: 'ol Item', id: 'ol-item'}]},
-				{id: 'image', image: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD//gATQ3JlYXRlZCB3aXRoIEdJTVD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wgARCAABAAEDAREAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACP/EABQBAQAAAAAAAAAAAAAAAAAAAAX/2gAMAwEAAhADEAAAATY4f//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAQUCf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8Bf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8Bf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEABj8Cf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8hf//aAAwDAQACAAMAAAAQn//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8Qf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8Qf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8Qf//Z'},
-				{id: 'qr', qr: 'http://www.thoughtworks.com/join'},
-				{id: 'canvas', canvas: [{type: 'rect', x: 0, y: 0, w: 10, h: 10}]},
-				{id: 'columns', columns: [{text: 'column item', id: 'column-item'}]}
+				{ id: 'ul', ul: [{ text: 'ul Item', id: 'ul-item' }] },
+				{ id: 'ol', ol: [{ text: 'ol Item', id: 'ol-item' }] },
+				{ id: 'image', image: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD//gATQ3JlYXRlZCB3aXRoIEdJTVD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wgARCAABAAEDAREAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACP/EABQBAQAAAAAAAAAAAAAAAAAAAAX/2gAMAwEAAhADEAAAATY4f//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAQUCf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8Bf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8Bf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEABj8Cf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8hf//aAAwDAQACAAMAAAAQn//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8Qf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8Qf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8Qf//Z' },
+				{ id: 'qr', qr: 'http://www.thoughtworks.com/join' },
+				{ id: 'canvas', canvas: [{ type: 'rect', x: 0, y: 0, w: 10, h: 10 }] },
+				{ id: 'columns', columns: [{ text: 'column item', id: 'column-item' }] }
 
 			];
 
@@ -1998,9 +1999,9 @@ describe('LayoutBuilder', function () {
 		it('should provide all page numbers of the node', function () {
 			var eightyLineBreaks = new Array(80).join("\n");
 			docStructure = [
-				{text: 'Text 1 (Page 1)', id: 'text1'},
-				{text: 'Text 2 (Page 1 & 2)' + eightyLineBreaks, id: 'text2'},
-				{text: 'Text 3 (Page 2)', id: 'text3'}
+				{ text: 'Text 1 (Page 1)', id: 'text1' },
+				{ text: 'Text 2 (Page 1 & 2)' + eightyLineBreaks, id: 'text2' },
+				{ text: 'Text 3 (Page 2)', id: 'text3' }
 			];
 
 			pageBreakBeforeFunction = sinon.spy();
@@ -2010,6 +2011,22 @@ describe('LayoutBuilder', function () {
 			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageNumbers, [1]);
 			assert.deepEqual(pageBreakBeforeFunction.getCall(2).args[0].pageNumbers, [1, 2]);
 			assert.deepEqual(pageBreakBeforeFunction.getCall(3).args[0].pageNumbers, [2]);
+		});
+	});
+
+	describe('table of content', function () {
+		it('should render empty ToC', function () {
+			var desc = [
+				{
+					toc: {
+						title: { text: 'INDEX' }
+					}
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 1);
 		});
 	});
 });

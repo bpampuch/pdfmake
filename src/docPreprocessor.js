@@ -21,15 +21,15 @@ DocPreprocessor.prototype.preprocessDocument = function (docStructure) {
 DocPreprocessor.prototype.preprocessNode = function (node) {
 	// expand shortcuts and casting values
 	if (isArray(node)) {
-		node = {stack: node};
+		node = { stack: node };
 	} else if (isString(node)) {
-		node = {text: node};
+		node = { text: node };
 	} else if (isNumber(node) || isBoolean(node)) {
-		node = {text: node.toString()};
+		node = { text: node.toString() };
 	} else if (node === undefined || node === null) {
-		node = {text: ''};
+		node = { text: '' };
 	} else if (Object.keys(node).length === 0) { // empty object
-		node = {text: ''};
+		node = { text: '' };
 	} else if ('text' in node && (node.text === undefined || node.text === null)) {
 		node.text = '';
 	}
@@ -50,6 +50,8 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 		return this.preprocessToc(node);
 	} else if (node.image) {
 		return this.preprocessImage(node);
+	} else if (node.svg) {
+		return this.preprocessSVG(node);
 	} else if (node.canvas) {
 		return this.preprocessCanvas(node);
 	} else if (node.qr) {
@@ -126,7 +128,7 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 			var tocItemId = node.tocItem[i];
 
 			if (!this.tocs[tocItemId]) {
-				this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
+				this.tocs[tocItemId] = { toc: { _items: [], _pseudo: true } };
 			}
 
 			if (!node.id) {
@@ -173,7 +175,7 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 
 	if (node.textReference) {
 		if (!this.nodeReferences[node.textReference]) {
-			this.nodeReferences[node.textReference] = {_nodeRef: {}, _pseudo: true};
+			this.nodeReferences[node.textReference] = { _nodeRef: {}, _pseudo: true };
 		}
 
 		node.text = '';
@@ -227,6 +229,10 @@ DocPreprocessor.prototype.preprocessImage = function (node) {
 	if (!isUndefined(node.image.type) && !isUndefined(node.image.data) && (node.image.type === 'Buffer') && isArray(node.image.data)) {
 		node.image = Buffer.from(node.image.data);
 	}
+	return node;
+};
+
+DocPreprocessor.prototype.preprocessSVG = function (node) {
 	return node;
 };
 

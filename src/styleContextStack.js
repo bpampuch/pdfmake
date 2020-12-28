@@ -94,6 +94,7 @@ StyleContextStack.prototype.autopush = function (item) {
 		'color',
 		'columnGap',
 		'fillColor',
+		'fillOpacity',
 		'decoration',
 		'decorationStyle',
 		'decorationColor',
@@ -102,13 +103,15 @@ StyleContextStack.prototype.autopush = function (item) {
 		'characterSpacing',
 		'noWrap',
 		'markerColor',
-		'leadingIndent'
-			//'tableCellPadding'
-			// 'cellBorder',
-			// 'headerCellBorder',
-			// 'oddRowCellBorder',
-			// 'evenRowCellBorder',
-			// 'tableBorder'
+		'leadingIndent',
+		'sup',
+		'sub'
+		//'tableCellPadding'
+		// 'cellBorder',
+		// 'headerCellBorder',
+		// 'oddRowCellBorder',
+		// 'evenRowCellBorder',
+		// 'tableBorder'
 	];
 	var styleOverrideObject = {};
 	var pushStyleOverrideObject = false;

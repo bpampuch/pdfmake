@@ -39,7 +39,7 @@ TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
 		minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);
 
 		if (!currentLineWidth) {
-			currentLineWidth = {width: 0, leadingCut: inline.leadingCut, trailingCut: 0};
+			currentLineWidth = { width: 0, leadingCut: inline.leadingCut, trailingCut: 0 };
 		}
 
 		currentLineWidth.width += inline.width;
@@ -97,6 +97,23 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	};
 };
 
+/**
+ * Returns size of the specified rotated string (without breaking it) using the current style
+ *
+ * @param  {string} text text to be measured
+ * @param  {number} angle
+ * @param  {object} styleContextStack current style stack
+ * @returns {object} size of the specified string
+ */
+TextTools.prototype.sizeOfRotatedText = function (text, angle, styleContextStack) {
+	var angleRad = angle * Math.PI / -180;
+	var size = this.sizeOfString(text, styleContextStack);
+	return {
+		width: Math.abs(size.height * Math.sin(angleRad)) + Math.abs(size.width * Math.cos(angleRad)),
+		height: Math.abs(size.width * Math.sin(angleRad)) + Math.abs(size.height * Math.cos(angleRad))
+	};
+}
+
 TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpacing, fontFeatures) {
 	return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
 };
@@ -106,7 +123,7 @@ function splitWords(text, noWrap) {
 	text = text.replace(/\t/g, '    ');
 
 	if (noWrap) {
-		results.push({text: text});
+		results.push({ text: text });
 		return results;
 	}
 
@@ -119,9 +136,9 @@ function splitWords(text, noWrap) {
 
 		if (bk.required || word.match(/\r?\n$|\r$/)) { // new line
 			word = word.replace(/\r?\n$|\r$/, '');
-			results.push({text: word, lineEnd: true});
+			results.push({ text: word, lineEnd: true });
 		} else {
-			results.push({text: word});
+			results.push({ text: word });
 		}
 
 		last = bk.position;
@@ -298,6 +315,13 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
 		var preserveTrailingSpaces = getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
 		var opacity = getStyleProperty(item, styleContextStack, 'opacity', 1);
+		var sup = getStyleProperty(item, styleContextStack, 'sup', false);
+		var sub = getStyleProperty(item, styleContextStack, 'sub', false);
+
+		if ((sup || sub) && item.fontSize === undefined) {
+			// font size reduction taken from here: https://en.wikipedia.org/wiki/Subscript_and_superscript#Desktop_publishing
+			fontSize *= 0.58
+		}
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
@@ -335,6 +359,8 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.linkToDestination = linkToDestination;
 		item.noWrap = noWrap;
 		item.opacity = opacity;
+		item.sup = sup;
+		item.sub = sub;
 	});
 
 	return normalized;

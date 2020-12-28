@@ -1,6 +1,6 @@
 var app = angular.module('pdfmake', ['ngRoute']);
 
-app.config(function($routeProvider) {
+app.config(function ($routeProvider) {
 	$routeProvider
 		.when('/', {
 			templateUrl: 'index.html',

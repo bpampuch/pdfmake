@@ -1,16 +1,19 @@
 language: node_js
 node_js:
-  - 6
   - 8
   - 10
+  - 12
+  - 14
   - node
 
-os:
-  - windows
-  - linux
-  - osx
+jobs:
+  allow_failures:
+    - node_js: node
 
-sudo: false
+os:
+  - linux
+  - windows
+  - osx
 
 cache:
   directories:

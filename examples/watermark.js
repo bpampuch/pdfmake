@@ -15,7 +15,7 @@ var lorem = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec id s
 
 var docDefinition = {
 	//watermark: 'test watermark',
-	watermark: {text: 'test watermark', color: 'blue', opacity: 0.3, bold: true, italics: false},
+	watermark: { text: 'test watermark', color: 'blue', opacity: 0.3, bold: true, italics: false },
 	content: [
 		'Test page of watermark.\n\n',
 		lorem

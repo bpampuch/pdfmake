@@ -87,7 +87,7 @@ ElementWriter.prototype.alignLine = function (line) {
 	}
 };
 
-ElementWriter.prototype.addImage = function (image, index) {
+ElementWriter.prototype.addImage = function (image, index, type) {
 	var context = this.context;
 	var page = context.getCurrentPage(),
 		position = this.getCurrentPositionOnPage();
@@ -106,13 +106,17 @@ ElementWriter.prototype.addImage = function (image, index) {
 	this.alignImage(image);
 
 	addPageItem(page, {
-		type: 'image',
+		type: type || 'image',
 		item: image
 	}, index);
 
 	context.moveDown(image._height);
 
 	return position;
+};
+
+ElementWriter.prototype.addSVG = function (image, index) {
+	return this.addImage(image, index, 'svg')
 };
 
 ElementWriter.prototype.addQr = function (qr, index) {
@@ -202,7 +206,7 @@ ElementWriter.prototype.beginClip = function (width, height) {
 	var page = ctx.getCurrentPage();
 	page.items.push({
 		type: 'beginClip',
-		item: {x: ctx.x, y: ctx.y, width: width, height: height}
+		item: { x: ctx.x, y: ctx.y, width: width, height: height }
 	});
 	return true;
 };
@@ -264,13 +268,14 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 				break;
 
 			case 'image':
+			case 'svg':
 				var img = pack(item.item);
 
 				img.x = (img.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 				img.y = (img.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
 				page.items.push({
-					type: 'image',
+					type: item.type,
 					item: img
 				});
 				break;
@@ -298,7 +303,7 @@ ElementWriter.prototype.pushContext = function (contextOrWidth, height) {
 	}
 
 	if (isNumber(contextOrWidth)) {
-		contextOrWidth = new DocumentContext({width: contextOrWidth, height: height}, function () {return {left: 0, right: 0, top: 0, bottom: 0}});
+		contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, function () { return { left: 0, right: 0, top: 0, bottom: 0} });
 	}
 
 	this.contextStack.push(this.context);
