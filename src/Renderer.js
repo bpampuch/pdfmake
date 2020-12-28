@@ -288,7 +288,18 @@ class Renderer {
 	renderImage(image) {
 		let opacity = isNumber(image.opacity) ? image.opacity : 1;
 		this.pdfDocument.opacity(opacity);
-		this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+		if (image.cover) {
+			const align = image.cover.align || 'center';
+			const valign = image.cover.valign || 'center';
+			const width = image.cover.width ? image.cover.width : image.width;
+			const height = image.cover.height ? image.cover.height : image.height;
+			this.pdfDocument.save();
+			this.pdfDocument.rect(image.x, image.y, width, height).clip();
+			this.pdfDocument.image(image.image, image.x, image.y, { cover: [width, height], align, valign });
+			this.pdfDocument.restore();
+		} else {
+			this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+		}
 		if (image.link) {
 			this.pdfDocument.link(image.x, image.y, image._width, image._height, image.link);
 		}
