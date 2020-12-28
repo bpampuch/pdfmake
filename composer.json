@@ -23,6 +23,7 @@
       "/dev-playground",    
       "/examples",
       "tests/",
+      ".github",
       ".npmignore",
       ".editorconfig",
       ".eslintrc.json",
