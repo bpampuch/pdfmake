@@ -124,6 +124,13 @@ class TextInlines {
 			item.linkToDestination = StyleContextStack.getStyleProperty(item, styleContextStack, 'linkToDestination', null);
 			item.noWrap = StyleContextStack.getStyleProperty(item, styleContextStack, 'noWrap', null);
 			item.opacity = StyleContextStack.getStyleProperty(item, styleContextStack, 'opacity', 1);
+			item.sup = StyleContextStack.getStyleProperty(item, styleContextStack, 'sup', false);
+			item.sub = StyleContextStack.getStyleProperty(item, styleContextStack, 'sub', false);
+
+			if (item.sup || item.sub) {
+				// font size reduction taken from here: https://en.wikipedia.org/wiki/Subscript_and_superscript#Desktop_publishing
+				item.fontSize *= 0.58;
+			}
 
 			let lineHeight = StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeight', 1);
 
