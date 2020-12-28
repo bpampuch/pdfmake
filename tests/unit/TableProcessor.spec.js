@@ -43,6 +43,9 @@ describe('TableProcessor', function () {
 			fillColor: function (i, node) { // eslint-disable-line no-unused-vars
 				return null;
 			},
+			fillOpacity: function (i, node) { // eslint-disable-line no-unused-vars
+				return 1;
+			},
 			defaultBorder: true
 		};
 
@@ -148,7 +151,8 @@ describe('TableProcessor', function () {
 						paddingTop: function () { },
 						vLineWidth: function () { },
 						hLineWidth: function () { },
-						fillColor: function () { }
+						fillColor: function () { },
+						fillOpacity: function () { }
 					}
 				};
 			};

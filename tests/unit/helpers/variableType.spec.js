@@ -1,7 +1,7 @@
 const assert = require('assert');
 const util = require('util');
 
-const { isString, isNumber, isBoolean, isArray, isFunction, isObject, isEmptyObject, isNull, isUndefined, isValue } = require('../../../js/helpers/variableType');
+const { isString, isNumber, isBoolean, isArray, isFunction, isObject, isEmptyObject, isValue } = require('../../../js/helpers/variableType');
 
 const variableCheckMap = [
 	{
@@ -90,16 +90,8 @@ const variableCheckMap = [
 		type: [isString, isValue]
 	},
 	{
-		value: null,
-		type: [isNull]
-	},
-	{
 		value: 'null',
 		type: [isString, isValue]
-	},
-	{
-		value: undefined,
-		type: [isUndefined]
 	},
 	{
 		value: 'undefined',
@@ -139,14 +131,6 @@ describe('helpers/variableType', function () {
 
 	it('should be correctly specify object', function () {
 		checkVariables(isObject);
-	});
-
-	it('should be correctly specify null', function () {
-		checkVariables(isNull);
-	});
-
-	it('should be correctly specify undefined', function () {
-		checkVariables(isUndefined);
 	});
 
 	it('should be correctly specify variable with value', function () {

@@ -27,7 +27,7 @@ class DocMeasure {
 	 * Measures all nodes and sets min/max-width properties required for the second
 	 * layout-pass.
 	 *
-	 * @param  {object} docStructure document-definition-object
+	 * @param {object} docStructure document-definition-object
 	 * @returns {object} document-measurement-object
 	 */
 	measureDocument(docStructure) {
@@ -131,9 +131,11 @@ class DocMeasure {
 	}
 
 	measureSVG(node) {
-		var dimensions = this.svgMeasure.measureSVG(node.svg);
+		let dimensions = this.svgMeasure.measureSVG(node.svg);
 
 		this.measureImageWithDimensions(node, dimensions);
+
+		node.font = this.styleStack.getProperty('font');
 
 		// scale SVG based on final dimension
 		node.svg = this.svgMeasure.writeDimensions(node.svg, { width: node._width, height: node._height });
@@ -166,32 +168,34 @@ class DocMeasure {
 			node.toc.title = this.measureNode(node.toc.title);
 		}
 
-		let body = [];
-		let textStyle = node.toc.textStyle || {};
-		let numberStyle = node.toc.numberStyle || textStyle;
-		let textMargin = node.toc.textMargin || [0, 0, 0, 0];
-		for (let i = 0, l = node.toc._items.length; i < l; i++) {
-			let item = node.toc._items[i];
-			let lineStyle = item._textNodeRef.tocStyle || textStyle;
-			let lineMargin = item._textNodeRef.tocMargin || textMargin;
-			let lineNumberStyle = item._textNodeRef.tocNumberStyle || numberStyle;
-			let destination = getNodeId(item._nodeRef);
-			body.push([
-				{ text: item._textNodeRef.text, linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin },
-				{ text: '00000', linkToDestination: destination, alignment: 'right', _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
-			]);
+		if (node.toc._items.length > 0) {
+			let body = [];
+			let textStyle = node.toc.textStyle || {};
+			let numberStyle = node.toc.numberStyle || textStyle;
+			let textMargin = node.toc.textMargin || [0, 0, 0, 0];
+			for (let i = 0, l = node.toc._items.length; i < l; i++) {
+				let item = node.toc._items[i];
+				let lineStyle = item._textNodeRef.tocStyle || textStyle;
+				let lineMargin = item._textNodeRef.tocMargin || textMargin;
+				let lineNumberStyle = item._textNodeRef.tocNumberStyle || numberStyle;
+				let destination = getNodeId(item._nodeRef);
+				body.push([
+					{ text: item._textNodeRef.text, linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin },
+					{ text: '00000', linkToDestination: destination, alignment: 'right', _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
+				]);
+			}
+
+			node.toc._table = {
+				table: {
+					dontBreakRows: true,
+					widths: ['*', 'auto'],
+					body: body
+				},
+				layout: 'noBorders'
+			};
+
+			node.toc._table = this.measureNode(node.toc._table);
 		}
-
-		node.toc._table = {
-			table: {
-				dontBreakRows: true,
-				widths: ['*', 'auto'],
-				body: body
-			},
-			layout: 'noBorders'
-		};
-
-		node.toc._table = this.measureNode(node.toc._table);
 
 		return node;
 	}
@@ -523,6 +527,7 @@ class DocMeasure {
 			return () => {
 				if (isObject(data)) {
 					data.fillColor = _this.styleStack.getProperty('fillColor');
+					data.fillOpacity = _this.styleStack.getProperty('fillOpacity');
 				}
 				return _this.measureNode(data);
 			};
@@ -615,7 +620,8 @@ class DocMeasure {
 					_span: true,
 					_minWidth: 0,
 					_maxWidth: 0,
-					fillColor: table.body[row][col].fillColor
+					fillColor: table.body[row][col].fillColor,
+					fillOpacity: table.body[row][col].fillOpacity
 				};
 			}
 		}

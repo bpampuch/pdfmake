@@ -22,8 +22,8 @@
   "ignore": [
     "**/.*",
     "dev-playground",
-    "gulpfile.js",
     "webpack.config.js",
+    "webpack-standardfonts.config.js",
     "README.md",
     "bower.json",
     "CONTRIBUTING.md",
@@ -34,6 +34,10 @@
     "tests",
     "yarn.lock",
     "composer.json",
-    ".travis.yml"
+    ".github",
+    ".travis.yml",
+    "build-fonts.js",
+    "build-examples.js",
+    "babel.config.json"
   ]
 }

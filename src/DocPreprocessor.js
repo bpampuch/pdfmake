@@ -1,4 +1,4 @@
-import { isString, isNumber, isBoolean, isArray, isUndefined, isValue, isEmptyObject } from './helpers/variableType';
+import { isString, isNumber, isBoolean, isArray, isValue, isEmptyObject } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
 
 const convertValueToString = value => {
@@ -228,7 +228,7 @@ class DocPreprocessor {
 	}
 
 	preprocessImage(node) {
-		if (!isUndefined(node.image.type) && !isUndefined(node.image.data) && (node.image.type === 'Buffer') && isArray(node.image.data)) {
+		if ((node.image.type !== undefined) && (node.image.data !== undefined) && (node.image.type === 'Buffer') && isArray(node.image.data)) {
 			node.image = Buffer.from(node.image.data);
 		}
 		return node;

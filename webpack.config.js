@@ -1,5 +1,5 @@
 var path = require('path');
-var UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+var TerserPlugin = require('terser-webpack-plugin');
 var StringReplacePlugin = require("string-replace-webpack-plugin");
 var webpack = require('webpack');
 var pkg = require('./package.json');
@@ -21,12 +21,15 @@ module.exports = {
 	},
 	resolve: {
 		alias: {
-			fs: path.join(__dirname, './src/browser-extensions/virtual-fs.js')
+			fs: path.join(__dirname, './src/browser-extensions/virtual-fs-cjs.js')
+		},
+		fallback: {
+			buffer: require.resolve('buffer/'),
+			util: require.resolve('util/'),
+			stream: require.resolve('stream-browserify'),
+			zlib: require.resolve('browserify-zlib'),
+			assert: require.resolve('assert/')
 		}
-	},
-	node: {
-		// Prevent webpack from injecting setImmediate polyfill, which includes a "new Function" through a global polyfill - which cannot be used in a CSP environment with sane defaults
-		setImmediate: false
 	},
 	module: {
 		rules: [
@@ -46,6 +49,8 @@ module.exports = {
 									},
 									modules: false,
 									useBuiltIns: 'usage',
+									// TODO: after fix in babel remove corejs version and remove core-js dependency in package.json
+									corejs: "3.0.0",
 									loose: true
 								}
 							]
@@ -57,20 +62,22 @@ module.exports = {
 			{
 				enforce: 'pre',
 				test: /pdfkit[/\\]js[/\\]/,
-				loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: "import fs from 'fs';",
-							replacement: function () {
-								return "var fs = require('fs');";
+				use: {
+					loader: StringReplacePlugin.replace({
+						replacements: [
+							{
+								pattern: "import fs from 'fs';",
+								replacement: function () {
+									return "var fs = require('fs');";
+								}
 							}
-						}
-					]
-				})
+						]
+					})
+				}
 			},
 			{
 				test: /\.js$/,
-				include: /(pdfkit|saslprep|unicode-trie|unicode-properties|dfa|linebreak)/,
+				include: /(pdfkit|saslprep|unicode-trie|unicode-properties|dfa|linebreak|png-js)/,
 				use: {
 					loader: 'babel-loader',
 					options: {
@@ -83,6 +90,8 @@ module.exports = {
 									},
 									modules: false,
 									useBuiltIns: 'usage',
+									// TODO: after fix in babel remove corejs version and remove core-js dependency in package.json
+									corejs: "3.0.0",
 									loose: true
 								}
 							]
@@ -91,60 +100,81 @@ module.exports = {
 					}
 				}
 			},
-			{ test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')] },
 			{
-				test: /fontkit[/\\]index.js$/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: /fs\./g,
-							replacement: function () {
-								return 'require(\'fs\').';
-							}
-						}
-					]
-				})
+				test: /pdfMake.js$/,
+				include: [path.join(__dirname, './src/browser-extensions')],
+				use: {
+					loader: 'expose-loader',
+					options: {
+						exposes: 'pdfMake',
+					},
+				}
 			},
-
 			/* temporary bugfix for FileSaver: added hack for mobile device support, see https://github.com/bpampuch/pdfmake/issues/1664 */
 			/* waiting to merge and release PR https://github.com/eligrey/FileSaver.js/pull/533 */
 			{
-				test: /FileSaver.min.js$/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: '"download"in HTMLAnchorElement.prototype',
-							replacement: function () {
-								return '(typeof HTMLAnchorElement !== "undefined" && "download" in HTMLAnchorElement.prototype)';
+				test: /FileSaver.min.js$/,
+				use: {
+					loader: StringReplacePlugin.replace({
+						replacements: [
+							{
+								pattern: '"download"in HTMLAnchorElement.prototype',
+								replacement: function () {
+									return '(typeof HTMLAnchorElement !== "undefined" && "download" in HTMLAnchorElement.prototype)';
+								}
 							}
-						}
-					]
-				})
+						]
+					})
+				}
 			},
 
-			{ enforce: 'post', test: /fontkit[/\\]index.js$/, loader: "transform-loader?brfs" },
-			{ enforce: 'post', test: /unicode-properties[/\\]index.js$/, loader: "transform-loader?brfs" },
-			{ enforce: 'post', test: /linebreak[/\\]src[/\\]linebreaker.js/, loader: "transform-loader?brfs" }
+			{
+				enforce: 'post',
+				test: /fontkit[/\\]index.js$/,
+				use: {
+					loader: "transform-loader?brfs"
+				}
+			},
+			{
+				enforce: 'post',
+				test: /unicode-properties[/\\]index.js$/,
+				use: {
+					loader: "transform-loader?brfs"
+				}
+			},
+			{
+				enforce: 'post',
+				test: /linebreak[/\\]src[/\\]linebreaker.js/,
+				use: {
+					loader: "transform-loader?brfs"
+				}
+			}
 		]
 	},
 	optimization: {
 		minimizer: [
-			new UglifyJsPlugin({
+			new TerserPlugin({
 				include: /\.min\.js$/,
-				sourceMap: true,
-				uglifyOptions: {
-					output: {
-						comments: /^! pdfmake/
+				extractComments: false,
+				terserOptions: {
+					format: {
+						preamble: banner,
+						comments: false,
 					},
 					compress: {
 						drop_console: true
 					},
-					mangle: {
-						reserved: ['HeadTable', 'NameTable', 'CmapTable', 'HheaTable', 'MaxpTable', 'HmtxTable', 'PostTable', 'OS2Table', 'LocaTable', 'GlyfTable']
-					}
+					keep_classnames: true,
+					keep_fnames: true
 				}
 			})
 		]
 	},
 	plugins: [
+		new webpack.ProvidePlugin({
+			process: 'process/browser', // require "process" library, fix "process is not defined" error, source: https://stackoverflow.com/a/64553486
+			Buffer: ['buffer', 'Buffer'] // require "buffer" library, fix "Buffer is not defined" error, source: https://github.com/webpack/changelog-v5/issues/10#issuecomment-615877593
+		}),
 		new StringReplacePlugin(),
 		new webpack.BannerPlugin({
 			banner: banner,

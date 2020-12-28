@@ -1622,7 +1622,6 @@ describe('LayoutBuilder', function () {
 			it.skip('should render lines to pdf in a single call if style is the same');
 			it.skip('should support document encryption');
 			it.skip('should support document permissions');
-			it.skip('should support TOC');
 			it.skip('should support in-document-references');
 			it.skip('should support uppercase text transforms');
 			it.skip('should support lowercase text transforms');
@@ -1833,7 +1832,7 @@ describe('LayoutBuilder', function () {
 
 			builder.layoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
-			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[1].map(item => item.id), ['text2', 'text3']);
+			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[1].getFollowingNodesOnPage().map(item => item.id), ['text2', 'text3']);
 		});
 
 		it('should provide the list of nodes on the next page', function () {
@@ -1852,7 +1851,7 @@ describe('LayoutBuilder', function () {
 
 			builder.layoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
-			assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[2].map(item => item.id), ['text2', 'text3', 'text4']);
+			assert.deepEqual(pageBreakBeforeFunction.getCall(0).args[1].getNodesOnNextPage().map(item => item.id), ['text2', 'text3', 'text4']);
 		});
 
 		it('should provide the list of previous nodes on the same page', function () {
@@ -1871,7 +1870,7 @@ describe('LayoutBuilder', function () {
 
 			builder.layoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
 
-			assert.deepEqual(pageBreakBeforeFunction.getCall(4).args[3].map(item => item.id), ['stack', 'text2', 'text3']);
+			assert.deepEqual(pageBreakBeforeFunction.getCall(4).args[1].getPreviousNodesOnPage().map(item => item.id), ['stack', 'text2', 'text3']);
 		});
 
 		it('should provide the pages of the node', function () {
@@ -2007,6 +2006,22 @@ describe('LayoutBuilder', function () {
 			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageNumbers, [1]);
 			assert.deepEqual(pageBreakBeforeFunction.getCall(2).args[0].pageNumbers, [1, 2]);
 			assert.deepEqual(pageBreakBeforeFunction.getCall(3).args[0].pageNumbers, [2]);
+		});
+	});
+
+	describe('table of content', function () {
+		it('should render empty ToC', function () {
+			var desc = [
+				{
+					toc: {
+						title: { text: 'INDEX' }
+					}
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 1);
 		});
 	});
 });

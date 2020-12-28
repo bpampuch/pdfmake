@@ -5,7 +5,7 @@ import PageElementWriter from './PageElementWriter';
 import ColumnCalculator from './columnCalculator';
 import TableProcessor from './TableProcessor';
 import Line from './Line';
-import { isString, isArray, isFunction } from './helpers/variableType';
+import { isString, isArray, isFunction, isValue, isNumber } from './helpers/variableType';
 import { stringifyNode, getNodeId } from './helpers/node';
 import { pack, offsetVector } from './helpers/tools';
 import TextInlines from './TextInlines';
@@ -76,7 +76,7 @@ class LayoutBuilder {
 			linearNodeList.forEach(node => {
 				let nodeInfo = {};
 				[
-					'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
+					'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns',
 					'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
 					'width', 'height'
 				].forEach(key => {
@@ -92,25 +92,50 @@ class LayoutBuilder {
 				node.nodeInfo = nodeInfo;
 			});
 
-			return linearNodeList.some((node, index, followingNodeList) => {
+			for (let index = 0; index < linearNodeList.length; index++) {
+				let node = linearNodeList[index];
 				if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 					node.pageBreakCalculated = true;
 					let pageNumber = node.nodeInfo.pageNumbers[0];
-					let followingNodesOnPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber));
-					let nodesOnNextPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber + 1));
-					let previousNodesOnPage = followingNodeList.slice(0, index).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber));
 
 					if (
-						pageBreakBeforeFct(
-							node.nodeInfo,
-							followingNodesOnPage.map(node => node.nodeInfo),
-							nodesOnNextPage.map(node => node.nodeInfo),
-							previousNodesOnPage.map(node => node.nodeInfo))) {
+						pageBreakBeforeFct(node.nodeInfo, {
+							getFollowingNodesOnPage: () => {
+								let followingNodesOnPage = [];
+								for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
+									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+										followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
+									}
+								}
+								return followingNodesOnPage;
+							},
+							getNodesOnNextPage: () => {
+								let nodesOnNextPage = [];
+								for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
+									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
+										nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
+									}
+								}
+								return nodesOnNextPage;
+							},
+							getPreviousNodesOnPage: () => {
+								let previousNodesOnPage = [];
+								for (let ii = 0; ii < index; ii++) {
+									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+										previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
+									}
+								}
+								return previousNodesOnPage;
+							},
+						})
+					) {
 						node.pageBreak = 'before';
 						return true;
 					}
 				}
-			});
+			}
+
+			return false;
 		}
 
 		this.docPreprocessor = new DocPreprocessor();
@@ -241,31 +266,55 @@ class LayoutBuilder {
 		}
 
 		watermark.font = watermark.font || defaultStyle.font || 'Roboto';
+		watermark.fontSize = watermark.fontSize || 'auto';
 		watermark.color = watermark.color || 'black';
-		watermark.opacity = watermark.opacity || 0.6;
+		watermark.opacity = isNumber(watermark.opacity) ? watermark.opacity : 0.6;
 		watermark.bold = watermark.bold || false;
 		watermark.italics = watermark.italics || false;
+		watermark.angle = isValue(watermark.angle) ? watermark.angle : null;
+
+		if (watermark.angle === null) {
+			watermark.angle = Math.atan2(this.pageSize.height, this.pageSize.width) * -180 / Math.PI;
+		}
+
+		if (watermark.fontSize === 'auto') {
+			watermark.fontSize = getWatermarkFontSize(this.pageSize, watermark, pdfDocument);
+		}
 
 		let watermarkObject = {
 			text: watermark.text,
 			font: pdfDocument.provideFont(watermark.font, watermark.bold, watermark.italics),
-			size: getSize(this.pageSize, watermark, pdfDocument),
+			fontSize: watermark.fontSize,
 			color: watermark.color,
-			opacity: watermark.opacity
+			opacity: watermark.opacity,
+			angle: watermark.angle
 		};
+
+		watermarkObject._size = getWatermarkSize(watermark, pdfDocument);
 
 		let pages = this.writer.context().pages;
 		for (let i = 0, l = pages.length; i < l; i++) {
 			pages[i].watermark = watermarkObject;
 		}
 
-		function getSize(pageSize, watermark, pdfDocument) {
-			let width = pageSize.width;
-			let height = pageSize.height;
-			let targetWidth = Math.sqrt(width * width + height * height) * 0.8; /* page diagonal * sample factor */
+		function getWatermarkSize(watermark, pdfDocument) {
 			let textInlines = new TextInlines(pdfDocument);
 			let styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
-			let size;
+
+			styleContextStack.push({
+				fontSize: watermark.fontSize
+			});
+
+			let size = textInlines.sizeOfText(watermark.text, styleContextStack);
+			let rotatedSize = textInlines.sizeOfRotatedText(watermark.text, watermark.angle, styleContextStack);
+
+			return { size: size, rotatedSize: rotatedSize };
+		}
+
+		function getWatermarkFontSize(pageSize, watermark, pdfDocument) {
+			let textInlines = new TextInlines(pdfDocument);
+			let styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
+			let rotatedSize;
 
 			/**
 			 * Binary search the best font size.
@@ -279,20 +328,26 @@ class LayoutBuilder {
 				styleContextStack.push({
 					fontSize: c
 				});
-				size = textInlines.sizeOfText(watermark.text, styleContextStack);
-				if (size.width > targetWidth) {
+				rotatedSize = textInlines.sizeOfRotatedText(watermark.text, watermark.angle, styleContextStack);
+
+				if (rotatedSize.width > pageSize.width) {
 					b = c;
 					c = (a + b) / 2;
-				} else if (size.width < targetWidth) {
-					a = c;
-					c = (a + b) / 2;
+				} else if (rotatedSize.width < pageSize.width) {
+					if (rotatedSize.height > pageSize.height) {
+						b = c;
+						c = (a + b) / 2;
+					} else {
+						a = c;
+						c = (a + b) / 2;
+					}
 				}
 				styleContextStack.pop();
 			}
 			/*
 			 End binary search
 			 */
-			return { size: size, fontSize: c };
+			return c;
 		}
 	}
 
@@ -302,6 +357,16 @@ class LayoutBuilder {
 
 			if (node.pageBreak === 'before') {
 				this.writer.moveToNextPage(node.pageOrientation);
+			} else if (node.pageBreak === 'beforeOdd') {
+				this.writer.moveToNextPage(node.pageOrientation);
+				if ((this.writer.context().page + 1) % 2 === 1) {
+					this.writer.moveToNextPage(node.pageOrientation);
+				}
+			} else if (node.pageBreak === 'beforeEven') {
+				this.writer.moveToNextPage(node.pageOrientation);
+				if ((this.writer.context().page + 1) % 2 === 0) {
+					this.writer.moveToNextPage(node.pageOrientation);
+				}
 			}
 
 			if (margin) {
@@ -318,6 +383,16 @@ class LayoutBuilder {
 
 			if (node.pageBreak === 'after') {
 				this.writer.moveToNextPage(node.pageOrientation);
+			} else if (node.pageBreak === 'afterOdd') {
+				this.writer.moveToNextPage(node.pageOrientation);
+				if ((this.writer.context().page + 1) % 2 === 1) {
+					this.writer.moveToNextPage(node.pageOrientation);
+				}
+			} else if (node.pageBreak === 'afterEven') {
+				this.writer.moveToNextPage(node.pageOrientation);
+				if ((this.writer.context().page + 1) % 2 === 0) {
+					this.writer.moveToNextPage(node.pageOrientation);
+				}
 			}
 		};
 
@@ -620,7 +695,9 @@ class LayoutBuilder {
 		if (node.toc.title) {
 			this.processNode(node.toc.title);
 		}
-		this.processNode(node.toc._table);
+		if (node.toc._table) {
+			this.processNode(node.toc._table);
+		}
 	}
 
 	buildNextLine(textNode) {
@@ -689,7 +766,7 @@ class LayoutBuilder {
 	}
 
 	processSVG(node) {
-		var position = this.writer.addSVG(node);
+		let position = this.writer.addSVG(node);
 		node.positions.push(position);
 	}
 

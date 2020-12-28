@@ -1,14 +1,49 @@
 import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
-import { isUndefined } from './helpers/variableType';
+import { isNumber } from './helpers/variableType';
 
-var getSvgToPDF = function () {
+// TODO: refactor lazy load init
+const getSvgToPDF = function () {
 	try {
 		// optional dependency to support svg nodes
 		return require('svg-to-pdfkit');
 	} catch (e) {
 		throw new Error('Please install svg-to-pdfkit to enable svg nodes');
 	}
+};
+
+const findFont = (fonts, requiredFonts, defaultFont) => {
+	for (let i = 0; i < requiredFonts.length; i++) {
+		let requiredFont = requiredFonts[i].toLowerCase();
+
+		for (let font in fonts) {
+			if (font.toLowerCase() === requiredFont) {
+				return font;
+			}
+		}
+	}
+
+	return defaultFont;
+};
+
+/**
+ * Shift the "y" height of the text baseline up or down (superscript or subscript,
+ * respectively). The exact shift can / should be changed according to standard
+ * conventions.
+ *
+ * @param {number} y
+ * @param {object} inline
+ * @returns {number}
+ */
+const offsetText = (y, inline) => {
+	var newY = y;
+	if (inline.sup) {
+		newY -= inline.fontSize * 0.75;
+	}
+	if (inline.sub) {
+		newY += inline.fontSize * 0.35;
+	}
+	return newY;
 };
 
 class Renderer {
@@ -76,7 +111,7 @@ class Renderer {
 			let diffWidth;
 			let textInlines = new TextInlines(null);
 
-			if (isUndefined(_pageNodeRef.positions)) {
+			if (_pageNodeRef.positions === undefined) {
 				throw new Error('Page reference id not found');
 			}
 
@@ -142,20 +177,23 @@ class Renderer {
 				options.features = inline.fontFeatures;
 			}
 
-			this.pdfDocument.opacity(inline.opacity || 1);
+			let opacity = isNumber(inline.opacity) ? inline.opacity : 1;
+			this.pdfDocument.opacity(opacity);
 			this.pdfDocument.fill(inline.color || 'black');
 
 			this.pdfDocument._font = inline.font;
 			this.pdfDocument.fontSize(inline.fontSize);
-			this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);
+
+			let shiftedY = offsetText(y + shiftToBaseline, inline);
+			this.pdfDocument.text(inline.text, x + inline.x, shiftedY, options);
 
 			if (inline.linkToPage) {
 				this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
-				this.pdfDocument.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
+				this.pdfDocument.annotate(x + inline.x, shiftedY, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
 			}
-
 		}
 
+		// Decorations won't draw correctly for superscript
 		textDecorator.drawDecorations(line, x, y);
 	}
 
@@ -231,29 +269,65 @@ class Renderer {
 			vector.color = gradient;
 		}
 
+		let fillOpacity = isNumber(vector.fillOpacity) ? vector.fillOpacity : 1;
+		let strokeOpacity = isNumber(vector.strokeOpacity) ? vector.strokeOpacity : 1;
+
 		if (vector.color && vector.lineColor) {
-			this.pdfDocument.fillColor(vector.color, vector.fillOpacity || 1);
-			this.pdfDocument.strokeColor(vector.lineColor, vector.strokeOpacity || 1);
+			this.pdfDocument.fillColor(vector.color, fillOpacity);
+			this.pdfDocument.strokeColor(vector.lineColor, strokeOpacity);
 			this.pdfDocument.fillAndStroke();
 		} else if (vector.color) {
-			this.pdfDocument.fillColor(vector.color, vector.fillOpacity || 1);
+			this.pdfDocument.fillColor(vector.color, fillOpacity);
 			this.pdfDocument.fill();
 		} else {
-			this.pdfDocument.strokeColor(vector.lineColor || 'black', vector.strokeOpacity || 1);
+			this.pdfDocument.strokeColor(vector.lineColor || 'black', strokeOpacity);
 			this.pdfDocument.stroke();
 		}
 	}
 
 	renderImage(image) {
-		this.pdfDocument.opacity(image.opacity || 1);
-		this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+		let opacity = isNumber(image.opacity) ? image.opacity : 1;
+		this.pdfDocument.opacity(opacity);
+		if (image.cover) {
+			const align = image.cover.align || 'center';
+			const valign = image.cover.valign || 'center';
+			const width = image.cover.width ? image.cover.width : image.width;
+			const height = image.cover.height ? image.cover.height : image.height;
+			this.pdfDocument.save();
+			this.pdfDocument.rect(image.x, image.y, width, height).clip();
+			this.pdfDocument.image(image.image, image.x, image.y, { cover: [width, height], align, valign });
+			this.pdfDocument.restore();
+		} else {
+			this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+		}
 		if (image.link) {
 			this.pdfDocument.link(image.x, image.y, image._width, image._height, image.link);
+		}
+		if (image.linkToPage) {
+			this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [image.linkToPage, 0, 0] }).end();
+			this.pdfDocument.annotate(image.x, image.y, image._width, image._height, { Subtype: 'Link', Dest: [image.linkToPage - 1, 'XYZ', null, null, null] });
+		}
+		if (image.linkToDestination) {
+			this.pdfDocument.goTo(image.x, image.y, image._width, image._height, image.linkToDestination);
 		}
 	}
 
 	renderSVG(svg) {
-		getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, Object.assign({ width: svg._width, height: svg._height }, svg.options));
+		let options = Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options);
+		options.fontCallback = (family, bold, italic) => {
+			let fontsFamily = family.split(',').map(f => f.trim().replace(/('|")/g, ''));
+			let font = findFont(this.pdfDocument.fonts, fontsFamily, svg.font || 'Roboto');
+
+			let fontFile = this.pdfDocument.getFontFile(font, bold, italic);
+			if (fontFile === null) {
+				let type = this.pdfDocument.getFontType(bold, italic);
+				throw new Error(`Font '${font}' in style '${type}' is not defined in the font section of the document definition.`);
+			}
+
+			return fontFile;
+		};
+
+		getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, options);
 	}
 
 	beginClip(rect) {
@@ -274,14 +348,13 @@ class Renderer {
 
 		this.pdfDocument.save();
 
-		let angle = Math.atan2(this.pdfDocument.page.height, this.pdfDocument.page.width) * -180 / Math.PI;
-		this.pdfDocument.rotate(angle, { origin: [this.pdfDocument.page.width / 2, this.pdfDocument.page.height / 2] });
+		this.pdfDocument.rotate(watermark.angle, { origin: [this.pdfDocument.page.width / 2, this.pdfDocument.page.height / 2] });
 
-		let x = this.pdfDocument.page.width / 2 - watermark.size.size.width / 2;
-		let y = this.pdfDocument.page.height / 2 - watermark.size.size.height / 4;
+		let x = this.pdfDocument.page.width / 2 - watermark._size.size.width / 2;
+		let y = this.pdfDocument.page.height / 2 - watermark._size.size.height / 2;
 
 		this.pdfDocument._font = watermark.font;
-		this.pdfDocument.fontSize(watermark.size.fontSize);
+		this.pdfDocument.fontSize(watermark.fontSize);
 		this.pdfDocument.text(watermark.text, x, y, { lineBreak: false });
 
 		this.pdfDocument.restore();

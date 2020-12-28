@@ -1,4 +1,3 @@
-import { isUndefined } from './helpers/variableType';
 import ElementWriter from './ElementWriter';
 
 /**
@@ -59,7 +58,7 @@ class PageElementWriter extends ElementWriter {
 		// and repeatables are inserted only in the first time. If columns are used, is needed
 		// call for table in first column and then for table in the second column (is other repeatables).
 		this.repeatables.forEach(function (rep) {
-			if (isUndefined(rep.insertedOnPages[this.context().page])) {
+			if (rep.insertedOnPages[this.context().page] === undefined) {
 				rep.insertedOnPages[this.context().page] = true;
 				this.addFragment(rep, true);
 			} else {

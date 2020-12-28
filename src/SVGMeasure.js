@@ -1,107 +1,78 @@
+import xmldoc from 'xmldoc';
+
+/**
+ * Strip unit postfix, parse number, but return undefined instead of NaN for bad input
+ *
+ * @param {string} textVal
+ * @returns {?number}
+ */
+const stripUnits = textVal => {
+	var n = parseFloat(textVal);
+	if (typeof n !== 'number' || isNaN(n)) {
+		return undefined;
+	}
+	return n;
+};
+
+/**
+ * Make sure it's valid XML and the root tage is <svg/>, returns xmldoc DOM
+ *
+ * @param {string} svgString
+ * @returns {object}
+ */
+const parseSVG = (svgString) => {
+	var doc;
+
+	try {
+		doc = new xmldoc.XmlDocument(svgString);
+	} catch (err) {
+		throw new Error('SVGMeasure: ' + err);
+	}
+
+	if (doc.name !== "svg") {
+		throw new Error('SVGMeasure: expected <svg> document');
+	}
+
+	return doc;
+};
 
 class SVGMeasure {
 	constructor() {
 
 	}
 
-	getSVGNode(svgString) {
-		// remove newlines
-		svgString = svgString.replace(/\r?\n|\r/g, "");
-
-		var svgNodeMatches = svgString.match(/<svg(.*?)>/);
-
-		if (svgNodeMatches) {
-			// extract svg node <svg ... >
-			return svgNodeMatches[0];
-		}
-
-		return "";
-	}
-
-	getHeightAndWidth(svgString) {
-		var svgNode = this.getSVGNode(svgString);
-
-		var widthMatches = svgNode.match(/width="([0-9]*)"/);
-		var heightMatches = svgNode.match(/height="([0-9]*)"/);
-
-		if (widthMatches || heightMatches) {
-			return {
-				width: widthMatches ? widthMatches[1] : undefined,
-				height: heightMatches ? heightMatches[1] : undefined
-			};
-		}
-	}
-
-	getViewboxHeightAndWidth(svgString) {
-		var svgNode = this.getSVGNode(svgString);
-
-		var viewboxMatches = svgNode.match(/viewBox="([0-9\s]*)"/);
-		if (viewboxMatches) {
-			var viewboxStr = viewboxMatches[1];
-			var allVieboxEntries = viewboxStr.split(" ");
-
-			var viewboxEntries = []; // weeding out empty strings
-			for (var i = 0; i < allVieboxEntries.length; i++) {
-				if (allVieboxEntries[i]) {
-					viewboxEntries.push(allVieboxEntries[i]);
-				}
-			}
-
-			if (viewboxEntries.length === 4) {
-				return { width: viewboxEntries[2], height: viewboxEntries[3] };
-			}
-
-			throw new Error("Unexpected svg viewbox format, should have 4 entries but found: '" + viewboxStr + "'");
-		}
-	}
-
 	measureSVG(svgString) {
+		let doc = parseSVG(svgString);
 
-		var heightAndWidth = this.getHeightAndWidth(svgString);
-		var viewboxHeightAndWidth = this.getViewboxHeightAndWidth(svgString);
+		let docWidth = stripUnits(doc.attr.width);
+		let docHeight = stripUnits(doc.attr.height);
 
-		return heightAndWidth || viewboxHeightAndWidth || {};
+		if ((docWidth === undefined || docHeight === undefined) && typeof doc.attr.viewBox === 'string') {
+			let viewBoxParts = doc.attr.viewBox.split(/[,\s]+/);
+			if (viewBoxParts.length !== 4) {
+				throw new Error("Unexpected svg viewbox format, should have 4 entries but found: '" + doc.attr.viewBox + "'");
+			}
+			if (docWidth === undefined) {
+				docWidth = stripUnits(viewBoxParts[2]);
+			}
+			if (docHeight === undefined) {
+				docHeight = stripUnits(viewBoxParts[3]);
+			}
+		}
+
+		return {
+			width: docWidth,
+			height: docHeight
+		};
 	}
 
 	writeDimensions(svgString, dimensions) {
+		let doc = parseSVG(svgString);
 
-		var svgNode = this.getSVGNode(svgString);
+		doc.attr.width = "" + dimensions.width;
+		doc.attr.height = "" + dimensions.height;
 
-		if (svgNode) {
-
-			var nodeDimensions = this.getHeightAndWidth(svgString);
-
-			if (dimensions.width) {
-
-				var newWidth = 'width="' + dimensions.width + '"';
-
-				if (nodeDimensions && nodeDimensions.width) {
-					// replace existing width
-					svgNode = svgNode.replace(/width="[0-9]*"/, newWidth);
-				} else {
-					// insert new width
-					svgNode = svgNode.replace(">", " " + newWidth + ">");
-				}
-			}
-
-			if (dimensions.height) {
-
-				var newHeight = 'height="' + dimensions.height + '"';
-
-				if (nodeDimensions && nodeDimensions.height) {
-					// replace existing height
-					svgNode = svgNode.replace(/height="[0-9]*"/, newHeight);
-				} else {
-					// insert new height
-					svgNode = svgNode.replace(">", " " + newHeight + ">");
-				}
-			}
-
-			// insert updated svg node
-			return svgString.replace(/<svg(.*?)>/, svgNode);
-		}
-
-		return svgString;
+		return doc.toString();
 	}
 }
 

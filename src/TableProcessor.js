@@ -1,5 +1,5 @@
 import ColumnCalculator from './columnCalculator';
-import { isFunction } from './helpers/variableType';
+import { isFunction, isNumber } from './helpers/variableType';
 
 class TableProcessor {
 	constructor(tableNode) {
@@ -161,7 +161,7 @@ class TableProcessor {
 			for (let i = 0, l = this.rowSpanData.length; i < l; i++) {
 				let data = this.rowSpanData[i];
 				let shouldDrawLine = !data.rowSpan;
-				let borderColor;
+				let borderColor = null;
 
 				// draw only if the current cell requires a top border or the cell in the
 				// row above requires a bottom border
@@ -172,7 +172,7 @@ class TableProcessor {
 					if (lineIndex > 0) {
 						cellAbove = body[lineIndex - 1][i];
 						bottomBorder = cellAbove.border ? cellAbove.border[3] : this.layout.defaultBorder;
-						if (cellAbove.borderColor) {
+						if (bottomBorder && cellAbove.borderColor) {
 							borderColor = cellAbove.borderColor[3];
 						}
 					}
@@ -181,7 +181,7 @@ class TableProcessor {
 					if (lineIndex < body.length) {
 						currentCell = body[lineIndex][i];
 						topBorder = currentCell.border ? currentCell.border[1] : this.layout.defaultBorder;
-						if (borderColor == null && currentCell.borderColor) {
+						if (topBorder && borderColor == null && currentCell.borderColor) {
 							borderColor = currentCell.borderColor[1];
 						}
 					}
@@ -191,8 +191,8 @@ class TableProcessor {
 
 				if (cellAbove && cellAbove._rowSpanCurrentOffset) {
 					rowCellAbove = body[lineIndex - 1 - cellAbove._rowSpanCurrentOffset][i];
-					rowBottomBorder = rowCellAbove.border ? rowCellAbove.border[3] : this.layout.defaultBorder;
-					if (rowCellAbove.borderColor) {
+					rowBottomBorder = rowCellAbove && rowCellAbove.border ? rowCellAbove.border[3] : this.layout.defaultBorder;
+					if (rowBottomBorder && rowCellAbove && rowCellAbove.borderColor) {
 						borderColor = rowCellAbove.borderColor[3];
 					}
 				}
@@ -206,7 +206,7 @@ class TableProcessor {
 				}
 
 				if (shouldDrawLine) {
-					var colSpanIndex = 0;
+					let colSpanIndex = 0;
 					if (rowCellAbove && rowCellAbove.colSpan && rowBottomBorder) {
 						while (rowCellAbove.colSpan > colSpanIndex) {
 							currentLine.width += (this.rowSpanData[i + colSpanIndex++].width || 0);
@@ -265,16 +265,18 @@ class TableProcessor {
 			dash = style.dash;
 		}
 
-		var body = this.tableNode.table.body;
-		var cellBefore;
-		var currentCell;
-		var borderColor;
+		let body = this.tableNode.table.body;
+		let cellBefore;
+		let currentCell;
+		let borderColor;
 
 		// the cell in the col before
 		if (vLineColIndex > 0) {
 			cellBefore = body[vLineRowIndex][beforeVLineColIndex];
 			if (cellBefore && cellBefore.borderColor) {
-				borderColor = cellBefore.borderColor[2];
+				if (cellBefore.border ? cellBefore.border[2] : this.layout.defaultBorder) {
+					borderColor = cellBefore.borderColor[2];
+				}
 			}
 		}
 
@@ -282,21 +284,27 @@ class TableProcessor {
 		if (borderColor == null && vLineColIndex < body.length) {
 			currentCell = body[vLineRowIndex][vLineColIndex];
 			if (currentCell && currentCell.borderColor) {
-				borderColor = currentCell.borderColor[0];
+				if (currentCell.border ? currentCell.border[0] : this.layout.defaultBorder) {
+					borderColor = currentCell.borderColor[0];
+				}
 			}
 		}
 
 		if (borderColor == null && cellBefore && cellBefore._rowSpanCurrentOffset) {
-			var rowCellBeforeAbove = body[vLineRowIndex - cellBefore._rowSpanCurrentOffset][beforeVLineColIndex];
+			let rowCellBeforeAbove = body[vLineRowIndex - cellBefore._rowSpanCurrentOffset][beforeVLineColIndex];
 			if (rowCellBeforeAbove.borderColor) {
-				borderColor = rowCellBeforeAbove.borderColor[2];
+				if (rowCellBeforeAbove.border ? rowCellBeforeAbove.border[2] : this.layout.defaultBorder) {
+					borderColor = rowCellBeforeAbove.borderColor[2];
+				}
 			}
 		}
 
 		if (borderColor == null && currentCell && currentCell._rowSpanCurrentOffset) {
-			var rowCurrentCellAbove = body[vLineRowIndex - currentCell._rowSpanCurrentOffset][vLineColIndex];
+			let rowCurrentCellAbove = body[vLineRowIndex - currentCell._rowSpanCurrentOffset][vLineColIndex];
 			if (rowCurrentCellAbove.borderColor) {
-				borderColor = rowCurrentCellAbove.borderColor[2];
+				if (rowCurrentCellAbove.border ? rowCurrentCellAbove.border[2] : this.layout.defaultBorder) {
+					borderColor = rowCurrentCellAbove.borderColor[2];
+				}
 			}
 		}
 
@@ -417,7 +425,7 @@ class TableProcessor {
 
 				// after cell
 				if (colIndex + 1 < body[rowIndex].length && !rightCellBorder) {
-					var cell = body[rowIndex][colIndex + 1];
+					let cell = body[rowIndex][colIndex + 1];
 					rightCellBorder = cell.border ? cell.border[0] : this.layout.defaultBorder;
 				}
 
@@ -427,8 +435,12 @@ class TableProcessor {
 
 				if (i < l - 1) {
 					let fillColor = body[rowIndex][colIndex].fillColor;
+					let fillOpacity = body[rowIndex][colIndex].fillOpacity;
 					if (!fillColor) {
 						fillColor = isFunction(this.layout.fillColor) ? this.layout.fillColor(rowIndex, this.tableNode, colIndex) : this.layout.fillColor;
+					}
+					if (!isNumber(fillOpacity)) {
+						fillOpacity = isFunction(this.layout.fillOpacity) ? this.layout.fillOpacity(rowIndex, this.tableNode, colIndex) : this.layout.fillOpacity;
 					}
 					if (fillColor) {
 						let widthLeftBorder = leftCellBorder ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
@@ -452,7 +464,8 @@ class TableProcessor {
 							w: x2f - x1f,
 							h: y2f - y1f,
 							lineWidth: 0,
-							color: fillColor
+							color: fillColor,
+							fillOpacity: fillOpacity
 						}, false, true, writer.context().backgroundLength[writer.context().page]);
 					}
 				}
@@ -483,7 +496,7 @@ class TableProcessor {
 
 				// fix rowSpans
 				if (row[i].rowSpan && row[i].rowSpan > 1) {
-					for (var j = 1; j < row[i].rowSpan; j++) {
+					for (let j = 1; j < row[i].rowSpan; j++) {
 						this.tableNode.table.body[rowIndex + j][i]._rowSpanCurrentOffset = j;
 					}
 				}
