@@ -34,6 +34,7 @@
     "tests",
     "yarn.lock",
     "composer.json",
+    ".github",
     ".travis.yml",
     "build-fonts.js",
     "build-examples.js",
