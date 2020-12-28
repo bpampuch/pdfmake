@@ -43,7 +43,7 @@ export function isFunction(variable) {
  * @returns {boolean}
  */
 export function isObject(variable) {
-	return !isNull(variable) && !isArray(variable) && !isString(variable) && !isNumber(variable) && (typeof variable === 'object');
+	return (variable !== null) && !isArray(variable) && !isString(variable) && !isNumber(variable) && (typeof variable === 'object');
 }
 
 /**
@@ -58,22 +58,6 @@ export function isEmptyObject(variable) {
  * @param {any} variable
  * @returns {boolean}
  */
-export function isNull(variable) {
-	return variable === null;
-}
-
-/**
- * @param {any} variable
- * @returns {boolean}
- */
-export function isUndefined(variable) {
-	return variable === undefined;
-}
-
-/**
- * @param {any} variable
- * @returns {boolean}
- */
 export function isValue(variable) {
-	return !isUndefined(variable) && !isNull(variable);
+	return (variable !== undefined) && (variable !== null);
 }

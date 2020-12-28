@@ -11,7 +11,7 @@ class Line {
 	}
 
 	/**
-	 * @param {Object} inline
+	 * @param {object} inline
 	 */
 	addInline(inline) {
 		if (this.inlines.length === 0) {
@@ -70,7 +70,7 @@ class Line {
 	}
 
 	/**
-	 * @param {Object} inline
+	 * @param {object} inline
 	 * @param {Array} nextInlines
 	 * @returns {boolean}
 	 */

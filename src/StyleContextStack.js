@@ -6,8 +6,8 @@ import { isString, isArray, isValue } from './helpers/variableType';
 class StyleContextStack {
 
 	/**
-	 * @param {Object} styleDictionary named styles dictionary
-	 * @param {Object} defaultStyle optional default style definition
+	 * @param {object} styleDictionary named styles dictionary
+	 * @param {object} defaultStyle optional default style definition
 	 */
 	constructor(styleDictionary, defaultStyle = {}) {
 		this.styleDictionary = styleDictionary;
@@ -33,7 +33,7 @@ class StyleContextStack {
 	/**
 	 * Pushes style-name or style-overrides-object onto the stack for future evaluation
 	 *
-	 * @param {string|Object} styleNameOrOverride style-name (referring to styleDictionary) or
+	 * @param {string|object} styleNameOrOverride style-name (referring to styleDictionary) or
 	 *                                            a new dictionary defining overriding properties
 	 */
 	push(styleNameOrOverride) {
@@ -57,7 +57,7 @@ class StyleContextStack {
 	 * pushes those elements onto the stack for future evaluation and returns the number
 	 * of elements pushed, so they can be easily poped then.
 	 *
-	 * @param {Object} item - an object with optional style property and/or style overrides
+	 * @param {object} item - an object with optional style property and/or style overrides
 	 * @returns {number} the number of items pushed onto the stack
 	 */
 	autopush(item) {
@@ -89,6 +89,7 @@ class StyleContextStack {
 			'color',
 			'columnGap',
 			'fillColor',
+			'fillOpacity',
 			'decoration',
 			'decorationStyle',
 			'decorationColor',
@@ -97,7 +98,9 @@ class StyleContextStack {
 			'characterSpacing',
 			'noWrap',
 			'markerColor',
-			'leadingIndent'
+			'leadingIndent',
+			'sup',
+			'sub'
 			//'tableCellPadding'
 			// 'cellBorder',
 			// 'headerCellBorder',
@@ -126,9 +129,9 @@ class StyleContextStack {
 	 * Automatically pushes elements onto the stack, using autopush based on item,
 	 * executes callback and then pops elements back. Returns value returned by callback
 	 *
-	 * @param  {Object} item - an object with optional style property and/or style overrides
-	 * @param  {Function} callback to be called between autopush and pop
-	 * @returns {Object} value returned by callback
+	 * @param {object} item - an object with optional style property and/or style overrides
+	 * @param {Function} callback to be called between autopush and pop
+	 * @returns {object} value returned by callback
 	 */
 	auto(item, callback) {
 		let pushedItems = this.autopush(item);
@@ -167,7 +170,7 @@ class StyleContextStack {
 	}
 
 	/**
-	 * @param {Object} item
+	 * @param {object} item
 	 * @param {StyleContextStack} styleContextStack
 	 * @param {string} property
 	 * @param {any} defaultValue
@@ -192,9 +195,9 @@ class StyleContextStack {
 	}
 
 	/**
-	 * @param {Object} source
-	 * @param {Object} destination
-	 * @returns {Object}
+	 * @param {object} source
+	 * @param {object} destination
+	 * @returns {object}
 	 */
 	static copyStyle(source = {}, destination = {}) {
 		// TODO: default style to source

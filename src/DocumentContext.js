@@ -155,6 +155,15 @@ class DocumentContext extends EventEmitter {
 		}
 	}
 
+	moveToRelative(x, y) {
+		if (x !== undefined && x !== null) {
+			this.x = this.x + x;
+		}
+		if (y !== undefined && y !== null) {
+			this.y = this.y + y;
+		}
+	}
+
 	beginDetachedBlock() {
 		this.snapshots.push({
 			x: this.x,

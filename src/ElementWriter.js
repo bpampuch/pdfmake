@@ -137,6 +137,35 @@ class ElementWriter extends EventEmitter {
 		return positions;
 	}
 
+	addSVG(image, index) {
+		// TODO: same as addImage
+		let context = this.context();
+		let page = context.getCurrentPage();
+		let position = this.getCurrentPositionOnPage();
+
+		if (!page || (image.absolutePosition === undefined && context.availableHeight < image._height && page.items.length > 0)) {
+			return false;
+		}
+
+		if (image._x === undefined) {
+			image._x = image.x || 0;
+		}
+
+		image.x = context.x + image._x;
+		image.y = context.y;
+
+		this.alignImage(image);
+
+		addPageItem(page, {
+			type: 'svg',
+			item: image
+		}, index);
+
+		context.moveDown(image._height);
+
+		return position;
+	}
+
 	addQr(qr, index) {
 		let context = this.context();
 		let page = context.getCurrentPage();
@@ -274,13 +303,14 @@ class ElementWriter extends EventEmitter {
 					break;
 
 				case 'image':
+				case 'svg':
 					var img = pack(item.item);
 
 					img.x = (img.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 					img.y = (img.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
 					page.items.push({
-						type: 'image',
+						type: item.type,
 						item: img
 					});
 					break;
@@ -301,7 +331,7 @@ class ElementWriter extends EventEmitter {
 	 * pushContext(width, height) - creates and pushes a new context with the specified width and height
 	 * pushContext() - creates a new context for unbreakable blocks (with current availableWidth and full-page-height)
 	 *
-	 * @param {Object|number} contextOrWidth
+	 * @param {object|number} contextOrWidth
 	 * @param {number} height
 	 */
 	pushContext(contextOrWidth, height) {

@@ -27,10 +27,16 @@
       "/dev-playground",
       "/examples",
       "tests/",
+      ".github",
       ".npmignore",
       ".editorconfig",
       ".eslintrc.json",
-      ".travis.yml"
+      ".travis.yml",
+      "webpack.config.js",
+      "webpack-standardfonts.config.js",
+      "build-fonts.js",
+      "build-examples.js",
+      "babel.config.json"
     ]
   }
 }

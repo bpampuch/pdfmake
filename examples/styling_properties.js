@@ -1,14 +1,8 @@
-var fonts = {
-	Roboto: {
-		normal: 'fonts/Roboto-Regular.ttf',
-		bold: 'fonts/Roboto-Medium.ttf',
-		italics: 'fonts/Roboto-Italic.ttf',
-		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
-	}
-};
+var pdfmake = require('../js/index'); // only during development, otherwise use the following line
+//var pdfmake = require('pdfmake');
 
-var pdfmake = require('../js/index');
-pdfmake.setFonts(fonts);
+var Roboto = require('../fonts/Roboto');
+pdfmake.addFonts(Roboto);
 
 
 var docDefinition = {
@@ -41,12 +35,35 @@ var docDefinition = {
 		{ text: 'Hello World', opacity: 0.4 },
 		{ text: 'Hello World', opacity: 0.2 },
 		{ text: 'Hello World', opacity: 0.1 },
+		'\n\n Subscript, superscript:',
+		{
+			text: [
+				'Hello World.',
+				{
+					text: '1, 2',
+					sup: true,
+				},
+				' Let\'s continue our sentence. Notice the leading space.'
+			]
+		},
+		{
+			text: [
+				'Hello',
+				{
+					text: '1, 2',
+					sub: true,
+				},
+				' World'
+			]
+		}
 	]
 };
 
 var now = new Date();
 
 var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/styling_properties.pdf');
-
-console.log(new Date() - now);
+pdf.write('pdfs/styling_properties.pdf').then(() => {
+	console.log(new Date() - now);
+}, err => {
+	console.error(err);
+});

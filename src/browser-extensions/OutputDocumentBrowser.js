@@ -1,7 +1,10 @@
 import OutputDocument from '../OutputDocument';
-//import { isNull } from '../helpers/variableType';
 import { saveAs } from 'file-saver';
 
+/**
+ * @param {Buffer} buffer
+ * @returns {Blob}
+ */
 const bufferToBlob = buffer => {
 	let blob;
 	try {
@@ -21,6 +24,9 @@ const bufferToBlob = buffer => {
 	return blob;
 };
 
+/**
+ * @returns {Window}
+ */
 const openWindow = () => {
 	// we have to open the window immediately and store the reference
 	// otherwise popup blockers will stop us
@@ -35,7 +41,7 @@ const openWindow = () => {
 class OutputDocumentBrowser extends OutputDocument {
 
 	/**
-	 * @returns {Promise}
+	 * @returns {Promise<Blob>}
 	 */
 	getBlob() {
 		return new Promise((resolve, reject) => {
@@ -85,7 +91,7 @@ class OutputDocumentBrowser extends OutputDocument {
 						resolve();
 					} else {
 						setTimeout(() => {
-							if (isNull(win.window)) { // is closed by AdBlock
+							if (win.window === null) { // is closed by AdBlock
 								window.location.href = pdfUrl; // open in actual window
 							}
 							resolve();
@@ -107,8 +113,18 @@ class OutputDocumentBrowser extends OutputDocument {
 	 * @returns {Promise}
 	 */
 	print(win = null) {
-		this.getStream().setOpenActionAsPrint();
-		return this.open(win);
+		return new Promise((resolve, reject) => {
+			this.getStream().then(stream => {
+				stream.setOpenActionAsPrint();
+				return this.open(win).then(() => {
+					resolve();
+				}, result => {
+					reject(result);
+				});
+			}, result => {
+				reject(result);
+			});
+		});
 	}
 
 }

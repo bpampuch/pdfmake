@@ -10,7 +10,7 @@ function fontStringify(key, val) {
 /**
  * Convert node to readable string
  *
- * @param {Object} node
+ * @param {object} node
  * @returns {string}
  */
 export function stringifyNode(node) {
@@ -18,7 +18,7 @@ export function stringifyNode(node) {
 }
 
 /**
- * @param {Object} node
+ * @param {object} node
  * @returns {?string}
  */
 export function getNodeId(node) {
@@ -39,8 +39,8 @@ export function getNodeId(node) {
 }
 
 /**
- * @param {Object} node
- * @param {StyleContextStack} styleStack
+ * @param {object} node
+ * @param {object} styleStack object is instance of PDFDocument
  * @returns {?Array}
  */
 export function getNodeMargin(node, styleStack) {

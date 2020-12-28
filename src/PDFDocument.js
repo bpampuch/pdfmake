@@ -14,7 +14,7 @@ const typeName = (bold, italics) => {
 };
 
 class PDFDocument extends PDFKit {
-	constructor(fonts = {}, images = {}, options = {}) {
+	constructor(fonts = {}, images = {}, options = {}, virtualfs = null) {
 		super(options);
 
 		this.fonts = {};
@@ -33,11 +33,25 @@ class PDFDocument extends PDFKit {
 		}
 
 		this.images = images;
+		this.virtualfs = virtualfs;
+	}
+
+	getFontType(bold, italics) {
+		return typeName(bold, italics);
+	}
+
+	getFontFile(familyName, bold, italics) {
+		let type = this.getFontType(bold, italics);
+		if (!this.fonts[familyName] || !this.fonts[familyName][type]) {
+			return null;
+		}
+
+		return this.fonts[familyName][type];
 	}
 
 	provideFont(familyName, bold, italics) {
-		let type = typeName(bold, italics);
-		if (!this.fonts[familyName] || !this.fonts[familyName][type]) {
+		let type = this.getFontType(bold, italics);
+		if (this.getFontFile(familyName, bold, italics) === null) {
 			throw new Error(`Font '${familyName}' in style '${type}' is not defined in the font section of the document definition.`);
 		}
 
@@ -48,6 +62,11 @@ class PDFDocument extends PDFKit {
 			if (!isArray(def)) {
 				def = [def];
 			}
+
+			if (this.virtualfs && this.virtualfs.existsSync(def[0])) {
+				def[0] = this.virtualfs.readFileSync(def[0]);
+			}
+
 			this.fontCache[familyName][type] = this.font(...def)._font;
 		}
 
@@ -60,6 +79,10 @@ class PDFDocument extends PDFKit {
 
 			if (!image) {
 				return src;
+			}
+
+			if (this.virtualfs && this.virtualfs.existsSync(image)) {
+				return this.virtualfs.readFileSync(image);
 			}
 
 			let index = image.indexOf('base64,');

@@ -21,7 +21,7 @@ describe('Printer', function () {
 
 	});
 
-	it('should pass switched width and height to pdfkit if page orientation changes from default portrait to landscape', function () {
+	it('should pass switched width and height to pdfkit if page orientation changes from default portrait to landscape', async function () {
 		printer = new Printer(fontDescriptors);
 		var docDefinition = {
 			pageSize: { width: SHORT_SIDE, height: LONG_SIDE },
@@ -36,7 +36,7 @@ describe('Printer', function () {
 				}
 			]
 		};
-		printer.createPdfKitDocument(docDefinition);
+		await printer.createPdfKitDocument(docDefinition);
 
 		assert(PDFDocument.prototype.addPage.callCount === 2);
 
@@ -44,7 +44,7 @@ describe('Printer', function () {
 		assert.deepEqual(PDFDocument.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
 	});
 
-	it('should pass switched width and height to pdfkit if page orientation changes from portrait to landscape', function () {
+	it('should pass switched width and height to pdfkit if page orientation changes from portrait to landscape', async function () {
 		printer = new Printer(fontDescriptors);
 		var docDefinition = {
 			pageOrientation: 'portrait',
@@ -60,7 +60,7 @@ describe('Printer', function () {
 				}
 			]
 		};
-		printer.createPdfKitDocument(docDefinition);
+		await printer.createPdfKitDocument(docDefinition);
 
 		assert(PDFDocument.prototype.addPage.callCount === 2);
 
@@ -68,7 +68,7 @@ describe('Printer', function () {
 		assert.deepEqual(PDFDocument.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
 	});
 
-	it('should pass switched width and height to pdfkit if page orientation changes from landscape to portrait', function () {
+	it('should pass switched width and height to pdfkit if page orientation changes from landscape to portrait', async function () {
 		printer = new Printer(fontDescriptors);
 
 		var docDefinition = {
@@ -89,7 +89,7 @@ describe('Printer', function () {
 				}
 			]
 		};
-		printer.createPdfKitDocument(docDefinition);
+		await printer.createPdfKitDocument(docDefinition);
 
 		assert(PDFDocument.prototype.addPage.callCount === 3);
 
@@ -99,7 +99,7 @@ describe('Printer', function () {
 	});
 
 
-	it('should not switch width and height for pdfkit if page orientation changes from landscape to landscape', function () {
+	it('should not switch width and height for pdfkit if page orientation changes from landscape to landscape',async function () {
 		printer = new Printer(fontDescriptors);
 		var docDefinition = {
 			pageOrientation: 'portrait',
@@ -120,7 +120,7 @@ describe('Printer', function () {
 				}
 			]
 		};
-		printer.createPdfKitDocument(docDefinition);
+		await printer.createPdfKitDocument(docDefinition);
 
 		assert.equal(PDFDocument.prototype.addPage.callCount, 3);
 
@@ -130,7 +130,7 @@ describe('Printer', function () {
 		assert.deepEqual(PDFDocument.prototype.addPage.thirdCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
 	});
 
-	it('should print bullet vectors as ellipses', function () {
+	it('should print bullet vectors as ellipses', async function () {
 		printer = new Printer(fontDescriptors);
 		var docDefinition = {
 			pageOrientation: 'portrait',
@@ -150,7 +150,7 @@ describe('Printer', function () {
 		};
 		PDFDocument.prototype.ellipse = sinon.spy(PDFDocument.prototype.ellipse);
 
-		printer.createPdfKitDocument(docDefinition);
+		await printer.createPdfKitDocument(docDefinition);
 
 		function assertEllipse(ellipseCallArgs) {
 			var firstEllipse = {
@@ -176,7 +176,7 @@ describe('Printer', function () {
 
 	});
 
-	it('should print only the require number of pages', function () {
+	it('should print only the require number of pages', async function () {
 		printer = new Printer(fontDescriptors);
 
 		var docDefinition = {
@@ -193,12 +193,12 @@ describe('Printer', function () {
 				}]
 		};
 
-		printer.createPdfKitDocument(docDefinition);
+		await printer.createPdfKitDocument(docDefinition);
 
 		assert(PDFDocument.prototype.addPage.callCount === 1);
 	});
 
-	it('should print all pages when maxPagesNumber is undefined', function () {
+	it('should print all pages when maxPagesNumber is undefined', async function () {
 		printer = new Printer(fontDescriptors);
 
 		var docDefinition = {
@@ -218,12 +218,12 @@ describe('Printer', function () {
 				}]
 		};
 
-		printer.createPdfKitDocument(docDefinition);
+		await printer.createPdfKitDocument(docDefinition);
 
 		assert(PDFDocument.prototype.addPage.callCount === 3);
 	});
 
-	it('should report progress on each rendered item when a progressCallback is passed', function () {
+	it('should report progress on each rendered item when a progressCallback is passed', async function () {
 
 		printer = new Printer(fontDescriptors);
 
@@ -252,7 +252,7 @@ describe('Printer', function () {
 				}]
 		};
 
-		printer.createPdfKitDocument(docDefinition, { progressCallback: progressCallback });
+		await printer.createPdfKitDocument(docDefinition, { progressCallback: progressCallback });
 
 		assert(progressCallback.withArgs(0.25).calledOnce);
 		assert(progressCallback.withArgs(0.5).calledOnce);
@@ -260,7 +260,7 @@ describe('Printer', function () {
 		assert(progressCallback.withArgs(1).calledOnce);
 	});
 
-	it('should work without a progressCallback', function () {
+	it('should work without a progressCallback', async function () {
 		printer = new Printer(fontDescriptors);
 
 		var docDefinition = {
@@ -268,8 +268,8 @@ describe('Printer', function () {
 			content: [{ text: 'Text item 1' }]
 		};
 
-		assert.doesNotThrow(function () {
-			printer.createPdfKitDocument(docDefinition);
+		assert.doesNotThrow(async function () {
+			await printer.createPdfKitDocument(docDefinition);
 		});
 	});
 

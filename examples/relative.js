@@ -1,14 +1,8 @@
-var fonts = {
-	Roboto: {
-		normal: 'fonts/Roboto-Regular.ttf',
-		bold: 'fonts/Roboto-Medium.ttf',
-		italics: 'fonts/Roboto-Italic.ttf',
-		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
-	}
-};
+var pdfmake = require('../js/index'); // only during development, otherwise use the following line
+//var pdfmake = require('pdfmake');
 
-var pdfmake = require('../js/index');
-pdfmake.setFonts(fonts);
+var Roboto = require('../fonts/Roboto');
+pdfmake.addFonts(Roboto);
 
 var left = 20;
 var width = 130;
@@ -33,6 +27,35 @@ var docDefinition = {
 				{ width: '50%', text: 'horizontal position is not known either' },
 				{ width: '50%', stack: chart }
 			]
+		},
+		{ text: 'We can position relative with center and right alignment', margin: [0, 50, 0, 50] },
+		{
+			table: {
+				widths: [100, 100, 100],
+				body: [
+					['Column with a lot of text. Column with a lot of text. Column with a lot of text. Column with a lot of text.',
+						{
+							text: 'I\'m aligned center',
+							style: {
+								alignment: 'center',
+							},
+							relativePosition: {
+								x: 0,
+								y: 25,
+							}
+						},
+						{
+							text: 'I\'m aligned right',
+							style: {
+								alignment: 'right',
+							},
+							relativePosition: {
+								x: 0,
+								y: 25,
+							}
+						}]
+				]
+			}
 		}
 	]
 };
@@ -40,9 +63,11 @@ var docDefinition = {
 var now = new Date();
 
 var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/relative.pdf');
-
-console.log(new Date() - now);
+pdf.write('pdfs/relative.pdf').then(() => {
+	console.log(new Date() - now);
+}, err => {
+	console.error(err);
+});
 
 function buildXAxis() {
 	var xTicks = [
