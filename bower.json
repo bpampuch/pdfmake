@@ -26,7 +26,6 @@
     "webpack-standardfonts.config.js",
     "README.md",
     "bower.json",
-    "CONTRIBUTING.md",
     "examples",
     "node_modules",
     "package.json",

@@ -23,7 +23,6 @@
   "archive": {
     "exclude": [
       "bower.json",
-      "CONTRIBUTING.md",
       "/dev-playground",
       "/examples",
       "tests/",
