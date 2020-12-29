@@ -32,7 +32,6 @@
       ".eslintrc.json",
       ".travis.yml",
       "webpack.config.js",
-      "webpack-standardfonts.config.js",
       "build-fonts.js",
       "build-examples.js",
       "babel.config.json"

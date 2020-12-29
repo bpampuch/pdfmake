@@ -23,7 +23,6 @@
     "**/.*",
     "dev-playground",
     "webpack.config.js",
-    "webpack-standardfonts.config.js",
     "README.md",
     "bower.json",
     "examples",
