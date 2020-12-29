@@ -2,7 +2,11 @@
   "name": "bpampuch/pdfmake",
   "type": "library",
   "description": "Client/server side PDF printing in pure JavaScript",
-  "keywords": ["pdfmake", "pdf", "javascript"],
+  "keywords": [
+    "pdfmake",
+    "pdf",
+    "javascript"
+  ],
   "homepage": "https://github.com/bpampuch/pdfmake",
   "license": "MIT",
   "authors": [
@@ -19,8 +23,7 @@
   "archive": {
     "exclude": [
       "bower.json",
-      "CONTRIBUTING.md",
-      "/dev-playground",    
+      "/dev-playground",
       "/examples",
       "tests/",
       ".github",
