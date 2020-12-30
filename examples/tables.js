@@ -161,6 +161,38 @@ var docDefinition = {
 				]
 			}
 		},
+		{ text: 'Table alignment', pageBreak: 'before', style: 'subheader' },
+		'via tableAlignment property',
+		{
+			style: 'tableExample',
+			tableAlignment: 'left',
+			table: {
+				body: [
+					['Column 1', 'Column 2', 'Column 3'],
+					['One value goes here', 'Another one here', 'OK?']
+				]
+			}
+		},
+		{
+			style: 'tableExample',
+			tableAlignment: 'center',
+			table: {
+				body: [
+					['Column 1', 'Column 2', 'Column 3'],
+					['One value goes here', 'Another one here', 'OK?']
+				]
+			}
+		},
+		{
+			style: 'tableExample',
+			tableAlignment: 'right',
+			table: {
+				body: [
+					['Column 1', 'Column 2', 'Column 3'],
+					['One value goes here', 'Another one here', 'OK?']
+				]
+			}
+		},
 		{ text: 'Headers', pageBreak: 'before', style: 'subheader' },
 		'You can declare how many rows should be treated as a header. Headers are automatically repeated on the following pages',
 		{ text: ['It is also possible to set keepWithHeaderRows to make sure there will be no page-break between the header and these rows. Take a look at the document-definition and play with it. If you set it to one, the following table will automatically start on the next page, since there\'s not enough space for the first row to be rendered here'], color: 'gray', italics: true },
@@ -300,9 +332,9 @@ var docDefinition = {
 				body: [
 					['Sample value 1', 'Sample value 2', 'Sample value 3'],
 					[
-						{text: 'Sample value 1',fillOpacity:0.15,fillColor:'blue'},
-						{text: 'Sample value 2',fillOpacity:0.60,fillColor:'blue'},
-						{text: 'Sample value 3',fillOpacity:0.85,fillColor:'blue'},
+						{ text: 'Sample value 1', fillOpacity: 0.15, fillColor: 'blue' },
+						{ text: 'Sample value 2', fillOpacity: 0.60, fillColor: 'blue' },
+						{ text: 'Sample value 3', fillOpacity: 0.85, fillColor: 'blue' },
 					],
 					['Sample value 1', 'Sample value 2', 'Sample value 3']
 				]
@@ -315,9 +347,9 @@ var docDefinition = {
 				body: [
 					['Sample value 1', 'Sample value 2', 'Sample value 3'],
 					[
-						{text: 'Sample value 1',fillOpacity:0.15},
-						{text: 'Sample value 2',fillOpacity:0.60},
-						{text: 'Sample value 3',fillOpacity:0.85},
+						{ text: 'Sample value 1', fillOpacity: 0.15 },
+						{ text: 'Sample value 2', fillOpacity: 0.60 },
+						{ text: 'Sample value 3', fillOpacity: 0.85 },
 					],
 					['Sample value 1', 'Sample value 2', 'Sample value 3']
 				]
@@ -341,7 +373,7 @@ var docDefinition = {
 			layout: {
 				fillColor: 'blue',
 				fillOpacity: function (rowIndex, node, columnIndex) {
-					return (rowIndex/8+columnIndex/3);
+					return (rowIndex / 8 + columnIndex / 3);
 				}
 			}
 		},
