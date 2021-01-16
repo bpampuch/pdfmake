@@ -637,7 +637,7 @@ function renderImage(image, x, y, pdfKitDoc) {
 		var height = image.cover.height ? image.cover.height : image.height;
 		pdfKitDoc.save();
 		pdfKitDoc.rect(image.x, image.y, width, height).clip();
-		pdfKitDoc.image(image.image, image.x, image.y, { cover: [width, height], align, valign });
+		pdfKitDoc.image(image.image, image.x, image.y, { cover: [width, height], align: align, valign: valign });
 		pdfKitDoc.restore();
 	} else {
 		pdfKitDoc.image(image.image, image.x, image.y, { width: image._width, height: image._height });
