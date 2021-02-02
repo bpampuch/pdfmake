@@ -86,9 +86,8 @@ class PageElementWriter extends ElementWriter {
 			this.popContext();
 
 			let nbPages = unbreakableContext.pages.length;
-			if (nbPages > 0) {
-				// no support for multi-page unbreakableBlocks
-				let fragment = unbreakableContext.pages[0];
+			for (let currentPage = 0; currentPage < nbPages; currentPage++) {
+				let fragment = unbreakableContext.pages[currentPage];
 				fragment.xOffset = forcedX;
 				fragment.yOffset = forcedY;
 
