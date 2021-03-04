@@ -1832,8 +1832,8 @@ describe('LayoutBuilder', function () {
 				{ text: 'Text 4 (Page 2)', id: 'text4', pageBreak: 'before' }
 			];
 
-			pageBreakBeforeFunction = sinon.spy();
-			pageBreakBeforeFunction.length = 2;
+			function functionOfLength2(a,b) {}
+			pageBreakBeforeFunction = sinon.spy(functionOfLength2);
 
 			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
@@ -1851,9 +1851,8 @@ describe('LayoutBuilder', function () {
 				id: 'stack'
 			};
 
-			pageBreakBeforeFunction = sinon.spy();
-			pageBreakBeforeFunction.length = 3;
-
+			function functionOfLength3(a,b,c) {}
+			pageBreakBeforeFunction = sinon.spy(functionOfLength3);
 
 			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
@@ -1871,9 +1870,8 @@ describe('LayoutBuilder', function () {
 				id: 'stack'
 			};
 
-			pageBreakBeforeFunction = sinon.spy();
-			pageBreakBeforeFunction.length = 4;
-
+			function functionOfLength4(a,b,c,d) {}
+			pageBreakBeforeFunction = sinon.spy(functionOfLength4);
 
 			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
