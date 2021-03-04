@@ -1833,7 +1833,7 @@ describe('LayoutBuilder', function () {
 			];
 
 			pageBreakBeforeFunction = sinon.spy();
-
+			pageBreakBeforeFunction.length = 2;
 
 			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
@@ -1852,6 +1852,7 @@ describe('LayoutBuilder', function () {
 			};
 
 			pageBreakBeforeFunction = sinon.spy();
+			pageBreakBeforeFunction.length = 3;
 
 
 			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
@@ -1871,6 +1872,7 @@ describe('LayoutBuilder', function () {
 			};
 
 			pageBreakBeforeFunction = sinon.spy();
+			pageBreakBeforeFunction.length = 4;
 
 
 			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
