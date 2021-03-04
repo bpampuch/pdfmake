@@ -81,7 +81,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 				}
 			});
 			nodeInfo.startPosition = node.positions[0];
-			nodeInfo.pageNumbers = new Set(node.positions.map(function (node) {return node.pageNumber;}));
+			nodeInfo.pageNumbers = Array.from(new Set(node.positions.map(function (node) {return node.pageNumber;})));
 			nodeInfo.pages = pages.length;
 			nodeInfo.stack = isArray(node.stack);
 
