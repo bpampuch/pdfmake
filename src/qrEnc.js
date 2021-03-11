@@ -751,10 +751,8 @@ function buildCanvas(data, options) {
 	//var margin = options.margin || 4;
 	var matrix = generateFrame(data, options);
 	var n = matrix.length;
-	var modSize = Math.floor(options.fit ? options.fit / n : 5);
-
-	console.log("modsize",modSize);
-	var size = n * modSize * 2;
+	var modSize = options.fit ? options.fit / n : 5;
+	var size = n * modSize;
 
 	canvas.push({
 		type: 'rect',
