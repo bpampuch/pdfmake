@@ -85,7 +85,7 @@ class LayoutBuilder {
 					}
 				});
 				nodeInfo.startPosition = node.positions[0];
-				nodeInfo.pageNumbers = node.positions.map(node => node.pageNumber).filter((element, position, array) => array.indexOf(element) === position);
+				nodeInfo.pageNumbers = Array.from(new Set(node.positions.map(node => node.pageNumber)));
 				nodeInfo.pages = pages.length;
 				nodeInfo.stack = isArray(node.stack);
 
