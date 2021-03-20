@@ -10,7 +10,7 @@ bower.json
 .editorconfig
 .eslintrc.json
 .travis.yml
-build-fonts.js
+build-vfs.js
 build-examples.js
 babel.config.json
 webpack.config.js
