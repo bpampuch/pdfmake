@@ -1,5 +1,5 @@
 import pdfmakeBase from '../base';
-import OutputDocumentBrowser from './OutputDocumentBrowser'; // TODO: Lazy loading for support on unsupported browsers (see issue https://github.com/bpampuch/pdfmake/issues/1663)
+import OutputDocumentBrowser from './OutputDocumentBrowser';
 import URLBrowserResolver from './URLBrowserResolver';
 import fs from 'fs';
 import configurator from 'core-js/configurator';
