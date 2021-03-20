@@ -24,7 +24,7 @@
     "babel-loader": "^8.2.2",
     "brfs": "^2.0.2",
     "browserify-zlib": "^0.2.0",
-    "buffer": "^6.0.3",
+    "buffer": "5.7.1",
     "core-js": "^3.9.1",
     "eslint": "^7.22.0",
     "eslint-plugin-jsdoc": "^32.3.0",
