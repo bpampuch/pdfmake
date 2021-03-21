@@ -41,7 +41,6 @@ module.exports = {
 				use: {
 					loader: 'babel-loader',
 					options: {
-						sourceType: "unambiguous", // required for multiple class to module exports in /src/browser-extensions/pdfMake.js file
 						presets: [
 							[
 								"@babel/preset-env",
