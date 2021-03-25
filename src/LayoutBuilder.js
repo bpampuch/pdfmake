@@ -619,30 +619,48 @@ class LayoutBuilder {
 
 		processor.beginTable(this.writer);
 
-		let rowHeights = tableNode.table.heights;
-		for (let i = 0, l = tableNode.table.body.length; i < l; i++) {
-			processor.beginRow(i, this.writer);
+		const tableInfo = {
+			rowPosition: 0
+		};
 
-			let height;
-			if (isFunction(rowHeights)) {
-				height = rowHeights(i);
-			} else if (isArray(rowHeights)) {
-				height = rowHeights[i];
-			} else {
-				height = rowHeights;
-			}
+		const pageBreakAction = (prevPage) => {
+			processor.onPageBreak(prevPage, tableInfo, processor, this);
+		};
 
-			if (height === 'auto') {
-				height = undefined;
-			}
+		this.writer.addListener("pageChanged", pageBreakAction);
 
-			let result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
-			addAll(tableNode.positions, result.positions);
-
-			processor.endRow(i, this.writer, result.pageBreaks);
+		while (tableInfo.rowPosition < tableNode.table.body.length) {
+			let rowContent = tableNode.table.body[tableInfo.rowPosition];
+			this.insertTableRow(tableInfo.rowPosition, rowContent, processor);
+			tableInfo.rowPosition++;
 		}
 
+		this.writer.removeListener("pageChanged", pageBreakAction);
 		processor.endTable(this.writer);
+	}
+
+	insertTableRow(rowPosition, rowContent, processor) {
+		processor.beginRow(rowPosition, this.writer);
+
+		let rowHeights = processor.tableNode.table.heights;
+
+		let height;
+		if (isFunction(rowHeights)) {
+			height = rowHeights(rowPosition);
+		} else if (isArray(rowHeights)) {
+			height = rowHeights[rowPosition];
+		} else {
+			height = rowHeights;
+		}
+
+		if (height === 'auto') {
+			height = undefined;
+		}
+
+		let result = this.processRow(rowContent, processor.tableNode.table.widths, processor.tableNode._offsets.offsets, processor.tableNode.table.body, rowPosition, height);
+		addAll(processor.tableNode.positions, result.positions);
+
+		processor.endRow(rowPosition, this.writer, result.pageBreaks);
 	}
 
 	// leafs (texts)

@@ -105,6 +105,12 @@ class TableProcessor {
 		this.rowsWithoutPageBreak = this.headerRows + (tableNode.table.keepWithHeaderRows || 0);
 		this.dontBreakRows = tableNode.table.dontBreakRows || false;
 
+		this.onPageBreak = () => {
+		};
+		if (tableNode.table && tableNode.table.onPageBreak && isFunction(tableNode.table.onPageBreak)) {
+			this.onPageBreak = tableNode.table.onPageBreak;
+		}
+
 		if (this.rowsWithoutPageBreak) {
 			writer.beginUnbreakableBlock();
 		}
@@ -122,6 +128,7 @@ class TableProcessor {
 			writer.context().moveDown(offset);
 		};
 	}
+
 
 	beginRow(rowIndex, writer) {
 		this.topLineWidth = this.layout.hLineWidth(rowIndex, this.tableNode);
