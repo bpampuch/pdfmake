@@ -18,14 +18,6 @@ export function isNumber(variable) {
  * @param {any} variable
  * @returns {boolean}
  */
-export function isBoolean(variable) {
-	return typeof variable === 'boolean';
-}
-
-/**
- * @param {any} variable
- * @returns {boolean}
- */
 export function isFunction(variable) {
 	return typeof variable === 'function';
 }

@@ -1,10 +1,10 @@
-import { isString, isNumber, isBoolean, isValue, isEmptyObject } from './helpers/variableType';
+import { isString, isNumber, isValue, isEmptyObject } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
 
 const convertValueToString = value => {
 	if (isString(value)) {
 		return value.replace(/\t/g, '    '); // expand tab as spaces
-	} else if (isNumber(value) || isBoolean(value)) {
+	} else if (isNumber(value) || typeof value === 'boolean') {
 		return value.toString();
 	} else if (!isValue(value) || isEmptyObject(value)) {
 		return '';
@@ -27,7 +27,7 @@ class DocPreprocessor {
 		// expand shortcuts and casting values
 		if (Array.isArray(node)) {
 			node = { stack: node };
-		} else if (isString(node) || isNumber(node) || isBoolean(node) || !isValue(node) || isEmptyObject(node)) { // text node defined as value
+		} else if (isString(node) || isNumber(node) || typeof node === 'boolean' || !isValue(node) || isEmptyObject(node)) { // text node defined as value
 			node = { text: convertValueToString(node) };
 		} else if ('text' in node) { // cast value in text property
 			node.text = convertValueToString(node.text);

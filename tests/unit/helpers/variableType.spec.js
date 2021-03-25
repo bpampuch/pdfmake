@@ -1,7 +1,7 @@
 const assert = require('assert');
 const util = require('util');
 
-const { isString, isNumber, isBoolean, isFunction, isObject, isEmptyObject, isValue } = require('../../../js/helpers/variableType');
+const { isString, isNumber, isFunction, isObject, isEmptyObject, isValue } = require('../../../js/helpers/variableType');
 
 const variableCheckMap = [
 	{
@@ -46,11 +46,11 @@ const variableCheckMap = [
 	},
 	{
 		value: true,
-		type: [isBoolean, isValue]
+		type: [isValue]
 	},
 	{
 		value: false,
-		type: [isBoolean, isValue]
+		type: [isValue]
 	},
 	{
 		value: 'true',
@@ -115,10 +115,6 @@ describe('helpers/variableType', function () {
 
 	it('should be correctly specify number type', function () {
 		checkVariables(isNumber);
-	});
-
-	it('should be correctly specify boolean type', function () {
-		checkVariables(isBoolean);
 	});
 
 	it('should be correctly specify function', function () {
