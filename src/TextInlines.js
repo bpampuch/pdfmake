@@ -1,4 +1,3 @@
-import { isArray } from './helpers/variableType';
 import TextBreaker from './TextBreaker';
 import StyleContextStack from './StyleContextStack';
 
@@ -12,13 +11,13 @@ const TRAILING = /(\s)+$/g;
 const flattenTextArray = array => {
 	function flatten(array) {
 		return array.reduce((prev, cur) => {
-			let current = isArray(cur.text) ? flatten(cur.text) : cur;
+			let current = Array.isArray(cur.text) ? flatten(cur.text) : cur;
 			let more = [].concat(current).some(Array.isArray);
 			return prev.concat(more ? flatten(current) : current);
 		}, []);
 	}
 
-	if (!isArray(array)) {
+	if (!Array.isArray(array)) {
 		array = [array];
 	}
 

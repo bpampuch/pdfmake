@@ -4,7 +4,7 @@ import SVGMeasure from './SVGMeasure';
 import sizes from './standardPageSizes';
 import { tableLayouts } from './tableLayouts';
 import Renderer from './Renderer';
-import { isFunction, isString, isNumber, isBoolean, isArray, isValue } from './helpers/variableType';
+import { isFunction, isString, isNumber, isBoolean, isValue } from './helpers/variableType';
 
 /**
  * Printer which turns document definition into a pdf
@@ -239,7 +239,7 @@ function fixPageSize(pageSize, pageOrientation) {
 function fixPageMargins(margin) {
 	if (isNumber(margin)) {
 		margin = { left: margin, right: margin, top: margin, bottom: margin };
-	} else if (isArray(margin)) {
+	} else if (Array.isArray(margin)) {
 		if (margin.length === 2) {
 			margin = { left: margin[0], top: margin[1], right: margin[0], bottom: margin[1] };
 		} else if (margin.length === 4) {

@@ -1,5 +1,5 @@
 import LineBreaker from 'linebreak';
-import { isArray, isObject } from './helpers/variableType';
+import { isObject } from './helpers/variableType';
 import StyleContextStack from './StyleContextStack';
 
 /**
@@ -92,7 +92,7 @@ class TextBreaker {
 	getBreaks(texts, styleContextStack) {
 		let results = [];
 
-		if (!isArray(texts)) {
+		if (!Array.isArray(texts)) {
 			texts = [texts];
 		}
 

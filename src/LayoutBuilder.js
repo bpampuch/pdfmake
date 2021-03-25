@@ -5,7 +5,7 @@ import PageElementWriter from './PageElementWriter';
 import ColumnCalculator from './columnCalculator';
 import TableProcessor from './TableProcessor';
 import Line from './Line';
-import { isString, isArray, isFunction, isValue, isNumber } from './helpers/variableType';
+import { isString, isFunction, isValue, isNumber } from './helpers/variableType';
 import { stringifyNode, getNodeId } from './helpers/node';
 import { pack, offsetVector } from './helpers/tools';
 import TextInlines from './TextInlines';
@@ -87,7 +87,7 @@ class LayoutBuilder {
 				nodeInfo.startPosition = node.positions[0];
 				nodeInfo.pageNumbers = Array.from(new Set(node.positions.map(node => node.pageNumber)));
 				nodeInfo.pages = pages.length;
-				nodeInfo.stack = isArray(node.stack);
+				nodeInfo.stack = Array.isArray(node.stack);
 
 				node.nodeInfo = nodeInfo;
 			});
@@ -626,7 +626,7 @@ class LayoutBuilder {
 			let height;
 			if (isFunction(rowHeights)) {
 				height = rowHeights(i);
-			} else if (isArray(rowHeights)) {
+			} else if (Array.isArray(rowHeights)) {
 				height = rowHeights[i];
 			} else {
 				height = rowHeights;
@@ -669,7 +669,7 @@ class LayoutBuilder {
 			line._pageNodeRef = node._pageRef._nodeRef;
 		}
 
-		if (line && line.inlines && isArray(line.inlines)) {
+		if (line && line.inlines && Array.isArray(line.inlines)) {
 			for (let i = 0, l = line.inlines.length; i < l; i++) {
 				if (line.inlines[i]._tocItemRef) {
 					line.inlines[i]._pageNodeRef = line.inlines[i]._tocItemRef;
@@ -781,7 +781,7 @@ function decorateNode(node) {
 	let y = node.y;
 	node.positions = [];
 
-	if (isArray(node.canvas)) {
+	if (Array.isArray(node.canvas)) {
 		node.canvas.forEach(vector => {
 			let x = vector.x;
 			let y = vector.y;
@@ -803,7 +803,7 @@ function decorateNode(node) {
 	node.resetXY = () => {
 		node.x = x;
 		node.y = y;
-		if (isArray(node.canvas)) {
+		if (Array.isArray(node.canvas)) {
 			node.canvas.forEach(vector => {
 				vector.resetXY();
 			});

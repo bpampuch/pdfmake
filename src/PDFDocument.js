@@ -1,5 +1,4 @@
 import PDFKit from 'pdfkit';
-import { isArray } from './helpers/variableType';
 
 const typeName = (bold, italics) => {
 	let type = 'normal';
@@ -59,7 +58,7 @@ class PDFDocument extends PDFKit {
 
 		if (!this.fontCache[familyName][type]) {
 			let def = this.fonts[familyName][type];
-			if (!isArray(def)) {
+			if (!Array.isArray(def)) {
 				def = [def];
 			}
 

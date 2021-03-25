@@ -26,14 +26,6 @@ export function isBoolean(variable) {
  * @param {any} variable
  * @returns {boolean}
  */
-export function isArray(variable) {
-	return Array.isArray(variable);
-}
-
-/**
- * @param {any} variable
- * @returns {boolean}
- */
 export function isFunction(variable) {
 	return typeof variable === 'function';
 }
@@ -43,7 +35,7 @@ export function isFunction(variable) {
  * @returns {boolean}
  */
 export function isObject(variable) {
-	return (variable !== null) && !isArray(variable) && !isString(variable) && !isNumber(variable) && (typeof variable === 'object');
+	return (variable !== null) && !Array.isArray(variable) && !isString(variable) && !isNumber(variable) && (typeof variable === 'object');
 }
 
 /**

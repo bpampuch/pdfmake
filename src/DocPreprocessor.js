@@ -1,4 +1,4 @@
-import { isString, isNumber, isBoolean, isArray, isValue, isEmptyObject } from './helpers/variableType';
+import { isString, isNumber, isBoolean, isValue, isEmptyObject } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
 
 const convertValueToString = value => {
@@ -25,7 +25,7 @@ class DocPreprocessor {
 
 	preprocessNode(node) {
 		// expand shortcuts and casting values
-		if (isArray(node)) {
+		if (Array.isArray(node)) {
 			node = { stack: node };
 		} else if (isString(node) || isNumber(node) || isBoolean(node) || !isValue(node) || isEmptyObject(node)) { // text node defined as value
 			node = { text: convertValueToString(node) };
@@ -118,7 +118,7 @@ class DocPreprocessor {
 
 	preprocessText(node) {
 		if (node.tocItem) {
-			if (!isArray(node.tocItem)) {
+			if (!Array.isArray(node.tocItem)) {
 				node.tocItem = [node.tocItem];
 			}
 
@@ -187,7 +187,7 @@ class DocPreprocessor {
 
 		if (node.text && node.text.text) {
 			node.text = [this.preprocessNode(node.text)];
-		} else if (isArray(node.text)) {
+		} else if (Array.isArray(node.text)) {
 			let isSetParentNode = false;
 			if (this.parentNode === null) {
 				this.parentNode = node;
@@ -228,7 +228,7 @@ class DocPreprocessor {
 	}
 
 	preprocessImage(node) {
-		if ((node.image.type !== undefined) && (node.image.data !== undefined) && (node.image.type === 'Buffer') && isArray(node.image.data)) {
+		if ((node.image.type !== undefined) && (node.image.data !== undefined) && (node.image.type === 'Buffer') && Array.isArray(node.image.data)) {
 			node.image = Buffer.from(node.image.data);
 		}
 		return node;
