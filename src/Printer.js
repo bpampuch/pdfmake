@@ -4,7 +4,7 @@ import SVGMeasure from './SVGMeasure';
 import sizes from './standardPageSizes';
 import { tableLayouts } from './tableLayouts';
 import Renderer from './Renderer';
-import { isFunction, isString, isNumber, isValue } from './helpers/variableType';
+import { isString, isNumber, isValue } from './helpers/variableType';
 
 /**
  * Printer which turns document definition into a pdf
@@ -178,7 +178,7 @@ function setMetadata(docDefinition, pdfKitDoc) {
 
 function calculatePageHeight(pages, margins) {
 	function getItemHeight(item) {
-		if (isFunction(item.item.getHeight)) {
+		if (typeof item.item.getHeight === 'function') {
 			return item.item.getHeight();
 		} else if (item.item._height) {
 			return item.item._height;
