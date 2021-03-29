@@ -49,8 +49,9 @@
     "node": ">=10"
   },
   "scripts": {
-    "test": "run-s build build:standard-fonts build:fonts build:vfs mocha lint",
-    "build": "run-s build:node build:browser",
+    "test": "run-s build mocha lint",
+    "build": "run-s build:clean build:node build:browser build:standard-fonts build:fonts build:vfs",
+    "build:clean": "shx rm -rf js build",
     "build:node": "babel src --out-dir js",
     "build:browser": "webpack",
     "build:vfs": "node build-vfs.js",
@@ -59,7 +60,6 @@
     "build:fonts": "shx mkdir -p build/fonts && shx mkdir -p build/fonts/Roboto && shx cp -r fonts/Roboto/*.* build/fonts/Roboto && brfs \"./src/browser-extensions/fonts/Roboto.js\" > build/fonts/Roboto.js",
     "lint": "eslint \"./src/**/*.js\" \"./tests/**/*.js\" \"./examples/**/*.js\" \"./standard-fonts/**/*.js\" \"./fonts/**/*.js\"",
     "mocha": "mocha --reporter spec \"./tests/**/*.spec.js\"",
-    "clean": "shx rm -rf js",
     "playground": "node dev-playground/server.js"
   },
   "repository": {
