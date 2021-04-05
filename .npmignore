@@ -9,7 +9,6 @@ composer.json
 bower.json
 .editorconfig
 .eslintrc.json
-.travis.yml
 build-vfs.js
 build-examples.js
 babel.config.json
