@@ -12,4 +12,3 @@ webpack.config.js
 webpack-standardfonts.config.js
 .editorconfig
 .eslintrc.json
-.travis.yml
