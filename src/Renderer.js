@@ -87,6 +87,9 @@ class Renderer {
 					case 'svg':
 						this.renderSVG(item.item);
 						break;
+					case 'attachment':
+						this.renderAttachment(item.item);
+						break;
 					case 'beginClip':
 						this.beginClip(item.item);
 						break;
@@ -295,7 +298,7 @@ class Renderer {
 			const height = image.cover.height ? image.cover.height : image.height;
 			this.pdfDocument.save();
 			this.pdfDocument.rect(image.x, image.y, width, height).clip();
-			this.pdfDocument.image(image.image, image.x, image.y, { cover: [width, height], align: align, valign: valign});
+			this.pdfDocument.image(image.image, image.x, image.y, { cover: [width, height], align: align, valign: valign });
 			this.pdfDocument.restore();
 		} else {
 			this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
@@ -328,6 +331,18 @@ class Renderer {
 		};
 
 		getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, options);
+	}
+
+	renderAttachment(attachment) {
+		console.log(attachment);
+
+		const file = {
+			src: Buffer.from(attachment.attachment),
+			name: attachment.filename,
+			description: attachment.description || null			
+		};
+
+		this.pdfDocument.fileAnnotation(attachment.x, attachment.y, attachment._width, attachment._height, file);
 	}
 
 	beginClip(rect) {

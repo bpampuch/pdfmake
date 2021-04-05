@@ -55,6 +55,8 @@ class DocPreprocessor {
 			return this.preprocessCanvas(node);
 		} else if (node.qr) {
 			return this.preprocessQr(node);
+		} else if (node.attachment) {
+			return this.preprocessAttachment(node);
 		} else if (node.pageReference || node.textReference) {
 			return this.preprocessText(node);
 		} else {
@@ -243,6 +245,10 @@ class DocPreprocessor {
 	}
 
 	preprocessQr(node) {
+		return node;
+	}
+
+	preprocessAttachment(node) {
 		return node;
 	}
 
