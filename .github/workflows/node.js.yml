@@ -23,9 +23,6 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm install
-    - name: Node.js 15 - require mocha 8
-      run: npm install mocha@8.3.2
-      if: ${{ matrix.node-version == '15.x' }}        
     # Pending fix for brfs: https://github.com/browserify/brfs/pull/96
     - name: fix brfs compatibility with Node.js 15
       run: npm install liborm85/brfs#node15
