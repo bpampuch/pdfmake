@@ -26,5 +26,5 @@ jobs:
     # Pending fix for brfs: https://github.com/browserify/brfs/pull/96
     - name: fix brfs compatibility with Node.js 15
       run: npm install liborm85/brfs#node15
-      if: ${{ matrix.node-version == '15.x' }}    
+      if: ${{ matrix.node-version == '15.x' }}
     - run: npm test
