@@ -99,12 +99,10 @@ class PDFDocument extends PDFKit {
 		return realImageSrc(src);
 	}
 
-	provideImage(src) {
-		let imageSource;
+	provideImage(src, imageSource) {
 		let image;
 
 		try {
-			imageSource = this.provideImageSource(src);
 			image = this.openImage(imageSource);
 			if (!image) {
 				throw new Error('No image');

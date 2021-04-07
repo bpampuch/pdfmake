@@ -134,7 +134,7 @@ class DocMeasure {
 			return this.measureSVG(node);
 		}
 
-		let image = this.pdfDocument.provideImage(node.image);
+		let image = this.pdfDocument.provideImage(node.image, imageSource);
 		let imageSize = { width: image.width, height: image.height };
 
 		this.measureImageWithDimensions(node, imageSize);
