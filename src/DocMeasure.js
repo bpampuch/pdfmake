@@ -112,15 +112,27 @@ class DocMeasure {
 	}
 
 	convertIfBase64Image(node) {
-		if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) { // base64 image
+		if (/^data:image\/(jpeg|jpg|png|svg+xml);base64,/.test(node.image)) { // base64 image
 			let label = `$$pdfmake$$${this.autoImageIndex++}`;
 			this.pdfDocument.images[label] = node.image;
 			node.image = label;
 		}
 	}
 
+	chekIfIsSVG(imageSource) {
+		// read the first 1000 bytes instead of 4 to allow for possible whitespace
+		return imageSource.toString('utf-8', 0, 1000).trim().startsWith('<svg');
+	}
+
 	measureImage(node) {
 		this.convertIfBase64Image(node);
+		let imageSource = this.pdfDocument.provideImageSource(node.image);
+
+		if (this.chekIfIsSVG(imageSource)) {
+			delete node.image;
+			node.svg = imageSource.toString('utf-8');
+			return this.measureSVG(node);
+		}
 
 		let image = this.pdfDocument.provideImage(node.image);
 		let imageSize = { width: image.width, height: image.height };
@@ -131,6 +143,14 @@ class DocMeasure {
 	}
 
 	measureSVG(node) {
+		let imageSource = this.pdfDocument.provideImageSource(node.svg);
+
+		if (!this.chekIfIsSVG(imageSource)) {
+			throw new Error('DocMeasure.measureSVG: No valid SVG image provided');
+		} else {
+			node.svg = imageSource;
+		}
+
 		let dimensions = this.svgMeasure.measureSVG(node.svg);
 
 		this.measureImageWithDimensions(node, dimensions);

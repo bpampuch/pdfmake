@@ -72,7 +72,7 @@ class PDFDocument extends PDFKit {
 		return this.fontCache[familyName][type];
 	}
 
-	provideImage(src) {
+	provideImageSource(src) {
 		const realImageSrc = src => {
 			let image = this.images[src];
 
@@ -96,10 +96,16 @@ class PDFDocument extends PDFKit {
 			return this._imageRegistry[src];
 		}
 
+		return realImageSrc(src);
+	}
+
+	provideImage(src) {
+		let imageSource;
 		let image;
 
 		try {
-			image = this.openImage(realImageSrc(src));
+			imageSource = this.provideImageSource(src);
+			image = this.openImage(imageSource);
 			if (!image) {
 				throw new Error('No image');
 			}
