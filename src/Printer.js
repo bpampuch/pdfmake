@@ -49,6 +49,7 @@ class PdfPrinter {
 					docDefinition.version = docDefinition.version || '1.3';
 					docDefinition.compress = typeof docDefinition.compress === 'boolean' ? docDefinition.compress : true;
 					docDefinition.images = docDefinition.images || {};
+					docDefinition.attachments = docDefinition.attachments || {};
 					docDefinition.pageMargins = isValue(docDefinition.pageMargins) ? docDefinition.pageMargins : 40;
 
 					let pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
@@ -66,8 +67,9 @@ class PdfPrinter {
 						font: null
 					};
 
-					this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, pdfOptions, this.virtualfs);
+					this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.attachments, pdfOptions, this.virtualfs);
 					setMetadata(docDefinition, this.pdfKitDoc);
+					embedFiles(docDefinition, this.pdfKitDoc);
 
 					const builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins), new SVGMeasure());
 
@@ -137,6 +139,22 @@ class PdfPrinter {
 				}
 			}
 
+			if (docDefinition.attachments) {
+				for (let attachment in docDefinition.attachments) {
+					if (docDefinition.attachments.hasOwnProperty(attachment) && docDefinition.attachments[attachment].src) {
+						this.urlResolver.resolve(docDefinition.attachments[attachment].src);
+					}
+				}
+			}
+
+			if (docDefinition.files) {
+				for (let file in docDefinition.files) {
+					if (docDefinition.files.hasOwnProperty(file) && docDefinition.files[file].src) {
+						this.urlResolver.resolve(docDefinition.files[file].src);
+					}
+				}
+			}
+
 			this.urlResolver.resolved().then(() => {
 				resolve();
 			}, result => {
@@ -172,6 +190,23 @@ function setMetadata(docDefinition, pdfKitDoc) {
 				key = standardizePropertyKey(key);
 				pdfKitDoc.info[key] = value;
 			}
+		}
+	}
+}
+
+function embedFiles(docDefinition, pdfKitDoc) {
+	if (docDefinition.files) {
+		for (const key in docDefinition.files) {
+			const file = docDefinition.files[key];
+
+			if (!file.src) return;
+
+			if (pdfKitDoc.virtualfs && pdfKitDoc.virtualfs.existsSync(file.src)) {
+				file.src = pdfKitDoc.virtualfs.readFileSync(file.src);
+			}
+
+			file.name = file.name || key;
+			pdfKitDoc.file(file.src, file);
 		}
 	}
 }
