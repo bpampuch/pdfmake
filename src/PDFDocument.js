@@ -92,10 +92,6 @@ class PDFDocument extends PDFKit {
 			return Buffer.from(image.substring(index + 7), 'base64');
 		};
 
-		if (this._imageRegistry[src]) {
-			return this._imageRegistry[src];
-		}
-
 		const realImageSrc = getRealImageSrc(src);
 
 		// convert to Buffer if in browser context
@@ -107,6 +103,10 @@ class PDFDocument extends PDFKit {
 	}
 
 	provideImage(src, imageSource) {
+		if (this._imageRegistry[src]) {
+			return this._imageRegistry[src];
+		}
+
 		let image;
 
 		try {
