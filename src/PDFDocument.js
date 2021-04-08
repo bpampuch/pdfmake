@@ -73,7 +73,7 @@ class PDFDocument extends PDFKit {
 	}
 
 	provideImageSource(src) {
-		const realImageSrc = src => {
+		const getRealImageSrc = src => {
 			let image = this.images[src];
 
 			if (!image) {
@@ -96,7 +96,14 @@ class PDFDocument extends PDFKit {
 			return this._imageRegistry[src];
 		}
 
-		return realImageSrc(src);
+		const realImageSrc = getRealImageSrc(src);
+
+		// convert to Buffer if in browser context
+		if (realImageSrc instanceof ArrayBuffer) {
+			return Buffer.from(new Uint8Array(realImageSrc));
+		}
+
+		return realImageSrc;
 	}
 
 	provideImage(src, imageSource) {
