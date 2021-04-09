@@ -121,7 +121,7 @@ class DocMeasure {
 
 	chekIfIsSVG(imageSource) {
 		// read the first 1000 bytes instead of 4 to allow for possible whitespace
-		return imageSource.toString('utf-8', 0, 1000).trim().startsWith('<svg');
+		return imageSource.toString('utf-8', 0, 1000).includes('<svg');
 	}
 
 	measureImage(node) {
