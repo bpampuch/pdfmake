@@ -81,11 +81,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 				}
 			});
 			nodeInfo.startPosition = node.positions[0];
-			nodeInfo.pageNumbers = node.positions.map(function (node) {
-				return node.pageNumber;
-			}).filter(function (element, position, array) {
-				return array.indexOf(element) === position;
-			});
+			nodeInfo.pageNumbers = Array.from(new Set(node.positions.map(function (node) { return node.pageNumber; })));
 			nodeInfo.pages = pages.length;
 			nodeInfo.stack = isArray(node.stack);
 
@@ -100,17 +96,21 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 				var followingNodesOnPage = [];
 				var nodesOnNextPage = [];
 				var previousNodesOnPage = [];
-				for (var ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
-					if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-						followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
-					}
-					if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
-						nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
+				if (pageBreakBeforeFct.length > 1) {
+					for (var ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
+						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+							followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
+						}
+						if (pageBreakBeforeFct.length > 2 && linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
+							nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
+						}
 					}
 				}
-				for (var ii = 0; ii < index; ii++) {
-					if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-						previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
+				if (pageBreakBeforeFct.length > 3) {
+					for (var ii = 0; ii < index; ii++) {
+						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+							previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
+						}
 					}
 				}
 				if (pageBreakBeforeFct(node.nodeInfo, followingNodesOnPage, nodesOnNextPage, previousNodesOnPage)) {
