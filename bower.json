@@ -30,7 +30,6 @@
     "tests",
     "yarn.lock",
     "composer.json",
-    ".github",
-    ".travis.yml"
+    ".github"
   ]
 }

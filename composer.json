@@ -29,8 +29,7 @@
       ".github",
       ".npmignore",
       ".editorconfig",
-      ".eslintrc.json",
-      ".travis.yml"
+      ".eslintrc.json"
     ]
   }
 }
