@@ -693,9 +693,8 @@ class DocMeasure {
 	}
 
 	measureAttachment(node) {
-		// TODO
-		node._width = 7;
-		node._height = 18;
+		node._width = node.width || 7;
+		node._height = node.height || 18;
 
 		return node;
 	}
