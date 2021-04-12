@@ -150,8 +150,7 @@ class Renderer {
 
 		textDecorator.drawBackground(line, x, y);
 
-		//TODO: line.optimizeInlines();
-		//TOOD: lines without differently styled inlines should be written to pdf as one stream
+		line.optimizeInlines();
 		for (let i = 0, l = line.inlines.length; i < l; i++) {
 			let inline = line.inlines[i];
 			let shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
