@@ -193,6 +193,27 @@ class Renderer {
 				this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
 				this.pdfDocument.annotate(x + inline.x, shiftedY, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
 			}
+			if (inline.linkToFile) {
+				const attachment = this.pdfDocument.provideAttachment(inline.linkToFile);
+				this.pdfDocument.fileAnnotation(
+					x + inline.x,
+					shiftedY,
+					inline.width,
+					inline.height,
+					attachment,
+					// add empty rectangle as file annotation appearance with the same size as the rendered inline
+					{
+						AP: {
+							N: {
+								Type: 'XObject',
+								Subtype: 'Form',
+								FormType: 1,
+								BBox: [x + inline.x, shiftedY, inline.width, inline.height]
+							}
+						},
+					}
+				);
+			}
 		}
 
 		// Decorations won't draw correctly for superscript
