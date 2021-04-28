@@ -1741,7 +1741,7 @@ describe('LayoutBuilder', function () {
 		});
 
 		it('should provide the current page, page count and page size', function () {
-			docStructure = ['Text'];
+			docStructure = [{ text: 'Text', metadata: 'm' }];
 			header = sinon.spy();
 			footer = sinon.spy();
 			background = sinon.spy();
@@ -1749,13 +1749,16 @@ describe('LayoutBuilder', function () {
 			builder.layoutDocument(docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFunction);
 
 			var pageSize = { width: 400, height: 800, orientation: 'portrait' };
+			var metadata = [['m']]
 			assert.equal(header.getCall(0).args[0], 1);
 			assert.equal(header.getCall(0).args[1], 1);
 			assert.deepEqual(header.getCall(0).args[2], pageSize);
+			assert.deepEqual(header.getCall(0).args[3], metadata);
 
 			assert.equal(footer.getCall(0).args[0], 1);
 			assert.equal(footer.getCall(0).args[1], 1);
 			assert.deepEqual(footer.getCall(0).args[2], pageSize);
+			assert.deepEqual(footer.getCall(0).args[3], metadata);
 		});
 	});
 
