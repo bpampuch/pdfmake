@@ -184,4 +184,82 @@ describe('Line', function () {
 
 		// TODO: test for nextInlines with noNewLine
 	});
+
+	describe('optimizeInlines', function () {
+		it('should optimize inlines with the same style', function () {
+			var line = new Line(1000);
+			line.addInline({ text: 'Inline ', fontSize: 12, height: 14.06, width: 31.69, leadingCut: 0, trailingCut: 2.97 });
+			line.addInline({ text: 'text ', fontSize: 12, height: 14.06, width: 23.14, leadingCut: 0, trailingCut: 2.97 });
+			line.addInline({ text: 'works ', fontSize: 12, height: 14.06, width: 32.20, leadingCut: 0, trailingCut: 2.97 });
+			line.optimizeInlines();
+			assert.strictEqual(line.inlines.length, 1);
+			assert.strictEqual(line.inlines[0].text, 'Inline text works ');
+			assert.strictEqual(line.inlines[0].width, 31.69 + 23.14 + 32.20);
+		});
+
+		it('should not optimize inlines with different styles', function () {
+			var line = new Line(1000);
+			line.addInline({ text: 'Bigger', fontSize: 15, height: 17.57, width: 42.87, leadingCut: 0, trailingCut: 0 });
+			line.addInline({ text: 'Inline ', fontSize: 12, height: 14.06, width: 31.69, leadingCut: 0, trailingCut: 2.97 });
+			line.addInline({ text: 'text ', fontSize: 12, height: 14.06, width: 23.14, leadingCut: 0, trailingCut: 2.97 });
+			line.addInline({ text: 'works ', fontSize: 12, height: 14.06, width: 32.20, leadingCut: 0, trailingCut: 2.97 });
+			line.optimizeInlines();
+			assert.strictEqual(line.inlines.length, 2);
+			assert.strictEqual(line.inlines[0].text, 'Bigger');
+			assert.strictEqual(line.inlines[1].text, 'Inline text works ');
+			assert.strictEqual(line.inlines[1].width, 31.69 + 23.14 + 32.20);
+		});
+
+		it('should set x to x of the first optimized inline', function () {
+			var line = new Line(1000);
+			line.addInline({ text: 'Bigger', fontSize: 15, height: 17.57, width: 42.87, leadingCut: 0, trailingCut: 0 });
+			line.addInline({ text: 'Inline ', fontSize: 12, height: 14.06, width: 31.69, leadingCut: 0, trailingCut: 2.97 });
+			line.addInline({ text: 'text ', fontSize: 12, height: 14.06, width: 23.14, leadingCut: 0, trailingCut: 2.97 });
+			line.addInline({ text: 'works ', fontSize: 12, height: 14.06, width: 32.20, leadingCut: 0, trailingCut: 2.97 });
+			line.optimizeInlines();
+			assert.strictEqual(line.inlines[0].x, 0);
+			assert.strictEqual(line.inlines[1].x, 42.87); // sum of preceding inline widths minus first inline leadingCut
+		});
+
+		it('should set leadingCut to leadingCut of the first optimized inline', function () {
+			var line = new Line(1000);
+			line.addInline({ text: 'Inline ', fontSize: 12, height: 14.06, width: 31.69, leadingCut: 20, trailingCut: 2.97 });
+			line.addInline({ text: 'text ', fontSize: 12, height: 14.06, width: 23.14, leadingCut: 0, trailingCut: 2.97 });
+			line.addInline({ text: 'works ', fontSize: 12, height: 14.06, width: 32.20, leadingCut: 10, trailingCut: 2.97 });
+			line.optimizeInlines();
+			assert.strictEqual(line.inlines[0].leadingCut, 20);
+		});
+
+		it('should set trailingCut the trailingCut of the last optimized inline', function () {
+			var line = new Line(1000);
+			line.addInline({ text: 'Inline ', fontSize: 12, height: 14.06, width: 31.69, leadingCut: 0, trailingCut: 0 });
+			line.addInline({ text: 'text ', fontSize: 12, height: 14.06, width: 23.14, leadingCut: 0, trailingCut: 10 });
+			line.addInline({ text: 'works ', fontSize: 12, height: 14.06, width: 32.20, leadingCut: 0, trailingCut: 2.97 });
+			line.optimizeInlines();
+			assert.strictEqual(line.inlines[0].trailingCut, 2.97);
+		});
+
+		it('should optimize chunks of inlines with the same style', function () {
+			var line = new Line(1000);
+			// chunk 0
+			line.addInline({ text: 'Bigger', fontSize: 15, height: 17.57, width: 42.87, leadingCut: 0, trailingCut: 0 });
+			// chunk 1
+			line.addInline({ text: 'Inline ', fontSize: 12, height: 14.06, width: 31.69, leadingCut: 0, trailingCut: 2.97 });
+			line.addInline({ text: 'text ', fontSize: 12, height: 14.06, width: 23.14, leadingCut: 0, trailingCut: 2.97 });
+			line.addInline({ text: 'works ', fontSize: 12, height: 14.06, width: 32.20, leadingCut: 0, trailingCut: 2.97 });
+			// chunk 2
+			line.addInline({ text: 'Bigger', fontSize: 15, height: 17.57, width: 42.87, leadingCut: 0, trailingCut: 0 });
+			// chunk 3
+			line.addInline({ text: 'Inline ', fontSize: 12, height: 14.06, width: 31.69, leadingCut: 0, trailingCut: 2.97 });
+			line.addInline({ text: 'text ', fontSize: 12, height: 14.06, width: 23.14, leadingCut: 0, trailingCut: 2.97 });
+			// chunk 4
+			line.addInline({ text: 'Bigger', fontSize: 15, height: 17.57, width: 42.87, leadingCut: 0, trailingCut: 0 });
+			// chunk 5
+			line.addInline({ text: 'works ', fontSize: 12, height: 14.06, width: 32.20, leadingCut: 0, trailingCut: 2.97 });
+			line.optimizeInlines();
+			assert.strictEqual(line.inlines.length, 6);
+			assert.strictEqual(line.inlines[1].text, 'Inline text works ');
+			assert.strictEqual(line.inlines[3].text, 'Inline text ');
+		});
+	});
 });
