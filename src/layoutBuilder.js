@@ -198,9 +198,8 @@ LayoutBuilder.prototype.addDynamicRepeatable = function (nodeGetter, sizeFunctio
 	for (var pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
 		this.writer.context().page = pageIndex;
 
-		var metadataPerPage = this.writer.context().pages.map(p => 
-			p.items
-			  .flatMap(it => isArray(it.item.inlines) ? it.item.inlines : [])
+		var metadataPerPage = this.writer.context().pages.map(p =>
+			([].concat(...p.items.map(it => isArray(it.item.inlines) ? it.item.inlines : [])))
 			  .map(i => i.metadata)
 			  .filter(i => i != null)
 		)
