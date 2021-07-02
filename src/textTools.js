@@ -5,7 +5,7 @@ var isNumber = require('./helpers').isNumber;
 var isObject = require('./helpers').isObject;
 var isArray = require('./helpers').isArray;
 var isUndefined = require('./helpers').isUndefined;
-var LineBreaker = require('linebreak');
+var LineBreaker = require('@foliojs-fork/linebreak');
 
 var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;
