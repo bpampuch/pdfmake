@@ -62,7 +62,7 @@ module.exports = {
 								"@babel/preset-env",
 								{
 									targets: {
-										"ie": "10"
+										"ie": "11"
 									},
 									modules: false,
 									useBuiltIns: 'usage',
