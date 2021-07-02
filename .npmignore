@@ -7,8 +7,9 @@ build/fonts/
 yarn.lock
 composer.json
 bower.json
-gulpfile.js
 webpack.config.js
 webpack-standardfonts.config.js
 .editorconfig
 .eslintrc.json
+build-vfs.js
+build-examples.js
