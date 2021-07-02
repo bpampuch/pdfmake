@@ -51,11 +51,11 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) an
 
 Documentation URL: https://pdfmake.github.io/docs/
 
-## Building from sources version 0.1.x
+## Building from sources version 0.2.x
 
 using npm:
 ```
-git clone --branch 0.1 https://github.com/bpampuch/pdfmake.git
+git clone --branch 0.2 https://github.com/bpampuch/pdfmake.git
 cd pdfmake
 npm install
 npm run build
@@ -63,7 +63,7 @@ npm run build
 
 using yarn:
 ```
-git clone --branch 0.1 https://github.com/bpampuch/pdfmake.git
+git clone --branch 0.2 https://github.com/bpampuch/pdfmake.git
 cd pdfmake
 yarn
 yarn run build
