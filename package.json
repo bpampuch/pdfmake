@@ -47,7 +47,7 @@
     "node": ">=12"
   },
   "scripts": {
-    "test": "run-s build mocha lint",
+    "test": "run-s build mocha",
     "build": "run-s build:browser",
     "build:browser": "webpack",
     "build:browser-standard-fonts": "webpack --config webpack-standardfonts.config.js",
