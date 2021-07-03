@@ -31,6 +31,7 @@
       ".editorconfig",
       ".eslintrc.json",
       "webpack.config.js",
+      "build-fonts.js",
       "build-examples.js",
       "babel.config.json"
     ]
