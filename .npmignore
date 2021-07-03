@@ -9,7 +9,6 @@ composer.json
 bower.json
 .editorconfig
 .eslintrc.json
-build-vfs.js
 build-examples.js
 babel.config.json
 webpack.config.js
