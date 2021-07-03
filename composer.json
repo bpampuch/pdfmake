@@ -32,7 +32,6 @@
       ".eslintrc.json",
       "webpack.config.js",
       "webpack-standardfonts.config.js",
-      "build-vfs.js",
       "build-examples.js"
     ]
   }

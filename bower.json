@@ -31,7 +31,6 @@
     "yarn.lock",
     "composer.json",
     ".github",
-    "build-vfs.js",
     "build-examples.js"
   ]
 }

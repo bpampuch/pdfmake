@@ -11,5 +11,4 @@ webpack.config.js
 webpack-standardfonts.config.js
 .editorconfig
 .eslintrc.json
-build-vfs.js
 build-examples.js
