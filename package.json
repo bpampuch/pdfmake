@@ -43,6 +43,7 @@
   },
   "scripts": {
     "build": "gulp build",
+    "build:vfs": "node build-vfs.js \"./examples/fonts\"",
     "test": "gulp",
     "playground": "node dev-playground/server.js"
   },
