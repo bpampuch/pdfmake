@@ -1,4 +1,4 @@
-import LineBreaker from 'linebreak';
+import LineBreaker from '@foliojs-fork/linebreak';
 import { isObject } from './helpers/variableType';
 import StyleContextStack from './StyleContextStack';
 

@@ -191,18 +191,18 @@ describe('TextBreaker', function () {
 
 		it('should support an array of plain strings', function () {
 			var result = textBreaker.getBreaks(plainTextArray);
-			assert.equal(result.length, 7);
+			assert.equal(result.length, 8);
 		});
 
 		it('should support an array of plain strings with new-lines', function () {
 			var result = textBreaker.getBreaks(plainTextArray);
-			assert.equal(result[4].lineEnd, true);
+			assert.equal(result[5].lineEnd, true);
 		});
 
 		it('should support arrays with style definition', function () {
 			var result = textBreaker.getBreaks(mixedTextArray);
 
-			assert.equal(result.length, 7);
+			assert.equal(result.length, 8);
 		});
 
 		it('should keep style definitions after splitting new-lines', function () {
@@ -217,7 +217,7 @@ describe('TextBreaker', function () {
 
 		it('should keep unknown style fields after splitting new-lines', function () {
 			var result = textBreaker.getBreaks(mixedTextArrayWithUnknownStyleDefinitions);
-			assert.equal(result.length, 7);
+			assert.equal(result.length, 8);
 			assert.equal(result[5].unknownStyle, 123);
 			assert.equal(result[6].unknownStyle, 123);
 		});
