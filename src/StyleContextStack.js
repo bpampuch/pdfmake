@@ -1,4 +1,4 @@
-import { isString, isArray, isValue } from './helpers/variableType';
+import { isString, isValue } from './helpers/variableType';
 
 /**
  * Used for style inheritance and style overrides
@@ -68,7 +68,7 @@ class StyleContextStack {
 		let styleNames = [];
 
 		if (item.style) {
-			if (isArray(item.style)) {
+			if (Array.isArray(item.style)) {
 				styleNames = item.style;
 			} else {
 				styleNames = [item.style];

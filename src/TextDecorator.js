@@ -1,5 +1,3 @@
-import { isArray } from './helpers/variableType';
-
 const groupDecorations = line => {
 	let groups = [];
 	let currentGroup = null;
@@ -10,7 +8,7 @@ const groupDecorations = line => {
 			currentGroup = null;
 			continue;
 		}
-		if (!isArray(decoration)) {
+		if (!Array.isArray(decoration)) {
 			decoration = [decoration];
 		}
 		let color = inline.decorationColor || inline.color || 'black';

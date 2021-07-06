@@ -1,6 +1,5 @@
 const fs = require('fs');
 const exec = require('child_process').exec;
-const log = require('fancy-log');
 
 var errCount = 0;
 var position = 0;
@@ -12,20 +11,20 @@ const files = items.filter(file => file.substring(file.length - 3, file.length) 
 files.forEach(function (file) {
   exec(`node ${file}`, function (err, stdout, stderr) {
     position++;
-    log('FILE: ', file, ` (${position}/${files.length})`);
-    log(stdout);
+    console.log('FILE: ', file, ` (${position}/${files.length})`);
+    console.log(stdout);
 
     if (stderr) {
       errCount++;
-      log.error(stderr);
+      console.error(stderr);
     } else if (err) {
       errCount++;
-      log.error(err);
+      console.error(err);
     }
 
     if (position === files.length) {
       if (errCount) {
-        log.error('Errors count: ', errCount);
+        console.error('Errors count: ', errCount);
       }
     }
   });

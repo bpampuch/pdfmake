@@ -19,6 +19,7 @@ module.exports = {
 		// Workaround https://github.com/webpack/webpack/issues/6642 until https://github.com/webpack/webpack/issues/6525 lands.
 		globalObject: `typeof self !== 'undefined' ? self : this`
 	},
+	target: ['web', 'es5'], // For Internet Explorer 11 support
 	resolve: {
 		alias: {
 			fs: path.join(__dirname, './src/browser-extensions/virtual-fs-cjs.js')
@@ -77,7 +78,7 @@ module.exports = {
 			},
 			{
 				test: /\.js$/,
-				include: /(pdfkit|saslprep|unicode-trie|unicode-properties|dfa|linebreak|png-js)/,
+				include: /(pdfkit|linebreak|fontkit|saslprep|restructure|unicode-trie|unicode-properties|dfa|buffer|png-js)/,
 				use: {
 					loader: 'babel-loader',
 					options: {

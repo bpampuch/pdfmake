@@ -1,5 +1,5 @@
 import sizes from './standardPageSizes';
-import { isString, isNumber, isArray } from './helpers/variableType';
+import { isString, isNumber } from './helpers/variableType';
 
 export function normalizePageSize(pageSize, pageOrientation) {
 	function isNeedSwapPageSizes(pageOrientation) {
@@ -39,7 +39,7 @@ export function normalizePageSize(pageSize, pageOrientation) {
 export function normalizePageMargin(margin) {
 	if (isNumber(margin)) {
 		margin = { left: margin, right: margin, top: margin, bottom: margin };
-	} else if (isArray(margin)) {
+	} else if (Array.isArray(margin)) {
 		if (margin.length === 2) {
 			margin = { left: margin[0], top: margin[1], right: margin[0], bottom: margin[1] };
 		} else if (margin.length === 4) {

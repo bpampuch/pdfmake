@@ -1,7 +1,7 @@
-# pdfmake [![Build Status][travis_img]][travis_url] [![GitHub][github_img]][github_url] [![npm][npm_img]][npm_url] [![Bower][bower_img]][bower_url] [![Packagist][packagist_img]][packagist_url] [![CDNJS][cdnjs_img]][cndjs_url]
+# pdfmake [![Node.js CI][githubactions_img]][githubactions_url] [![GitHub][github_img]][github_url] [![npm][npm_img]][npm_url] [![Bower][bower_img]][bower_url] [![Packagist][packagist_img]][packagist_url] [![CDNJS][cdnjs_img]][cndjs_url]
 
-[travis_img]: https://travis-ci.org/bpampuch/pdfmake.svg?branch=master
-[travis_url]: https://travis-ci.org/bpampuch/pdfmake
+[githubactions_img]: https://github.com/bpampuch/pdfmake/workflows/Node.js%20CI/badge.svg?branch=master
+[githubactions_url]: https://github.com/bpampuch/pdfmake/actions
 
 [github_img]: https://img.shields.io/github/release/bpampuch/pdfmake.svg
 [github_url]: https://github.com/bpampuch/pdfmake/releases/latest
@@ -23,7 +23,7 @@ PDF document generation library for server-side and client-side in pure JavaScri
 
 Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) and [examples](https://github.com/bpampuch/pdfmake/tree/master/examples).
 
-#### This is unstable master branch for version 0.2.x, for stable version 0.1.x see [branch 0.1](https://github.com/bpampuch/pdfmake/tree/0.1).
+#### This is unstable master branch for version 0.3.x, for stable use version 0.2.x see [branch 0.2](https://github.com/bpampuch/pdfmake/tree/0.2) or older version 0.1.x see [branch 0.1](https://github.com/bpampuch/pdfmake/tree/0.1).
 
 ### Features
 

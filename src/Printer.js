@@ -4,7 +4,7 @@ import SVGMeasure from './SVGMeasure';
 import { normalizePageSize, normalizePageMargin } from './PageSize';
 import { tableLayouts } from './tableLayouts';
 import Renderer from './Renderer';
-import { isFunction, isNumber, isBoolean, isValue } from './helpers/variableType';
+import { isNumber, isValue } from './helpers/variableType';
 
 /**
  * Printer which turns document definition into a pdf
@@ -47,7 +47,7 @@ class PdfPrinter {
 			this.resolveUrls(docDefinition).then(() => {
 				try {
 					docDefinition.version = docDefinition.version || '1.3';
-					docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
+					docDefinition.compress = typeof docDefinition.compress === 'boolean' ? docDefinition.compress : true;
 					docDefinition.images = docDefinition.images || {};
 					docDefinition.pageMargins = isValue(docDefinition.pageMargins) ? docDefinition.pageMargins : 40;
 
@@ -60,7 +60,7 @@ class PdfPrinter {
 						userPassword: docDefinition.userPassword,
 						ownerPassword: docDefinition.ownerPassword,
 						permissions: docDefinition.permissions,
-						fontLayoutCache: isBoolean(options.fontLayoutCache) ? options.fontLayoutCache : true,
+						fontLayoutCache: typeof options.fontLayoutCache === 'boolean' ? options.fontLayoutCache : true,
 						bufferPages: options.bufferPages || false,
 						autoFirstPage: false,
 						font: null
@@ -178,7 +178,7 @@ function setMetadata(docDefinition, pdfKitDoc) {
 
 function calculatePageHeight(pages, margins) {
 	function getItemHeight(item) {
-		if (isFunction(item.item.getHeight)) {
+		if (typeof item.item.getHeight === 'function') {
 			return item.item.getHeight();
 		} else if (item.item._height) {
 			return item.item._height;

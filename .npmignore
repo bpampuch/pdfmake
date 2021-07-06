@@ -1,5 +1,4 @@
 .git*
-CONTRIBUTING.md
 dev-playground/
 docs/
 examples/
@@ -10,9 +9,7 @@ composer.json
 bower.json
 .editorconfig
 .eslintrc.json
-.travis.yml
 build-fonts.js
 build-examples.js
 babel.config.json
 webpack.config.js
-webpack-standardfonts.config.js

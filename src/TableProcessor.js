@@ -1,5 +1,5 @@
 import ColumnCalculator from './columnCalculator';
-import { isFunction, isNumber } from './helpers/variableType';
+import { isNumber } from './helpers/variableType';
 
 class TableProcessor {
 	constructor(tableNode) {
@@ -198,7 +198,7 @@ class TableProcessor {
 				}
 
 				if (borderColor == null) {
-					borderColor = isFunction(this.layout.hLineColor) ? this.layout.hLineColor(lineIndex, this.tableNode, i) : this.layout.hLineColor;
+					borderColor = typeof this.layout.hLineColor === 'function' ? this.layout.hLineColor(lineIndex, this.tableNode, i) : this.layout.hLineColor;
 				}
 
 				if (!currentLine && shouldDrawLine) {
@@ -309,7 +309,7 @@ class TableProcessor {
 		}
 
 		if (borderColor == null) {
-			borderColor = isFunction(this.layout.vLineColor) ? this.layout.vLineColor(vLineColIndex, this.tableNode, vLineRowIndex) : this.layout.vLineColor;
+			borderColor = typeof this.layout.vLineColor === 'function' ? this.layout.vLineColor(vLineColIndex, this.tableNode, vLineRowIndex) : this.layout.vLineColor;
 		}
 
 		writer.addVector({
@@ -437,10 +437,10 @@ class TableProcessor {
 					let fillColor = body[rowIndex][colIndex].fillColor;
 					let fillOpacity = body[rowIndex][colIndex].fillOpacity;
 					if (!fillColor) {
-						fillColor = isFunction(this.layout.fillColor) ? this.layout.fillColor(rowIndex, this.tableNode, colIndex) : this.layout.fillColor;
+						fillColor = typeof this.layout.fillColor === 'function' ? this.layout.fillColor(rowIndex, this.tableNode, colIndex) : this.layout.fillColor;
 					}
 					if (!isNumber(fillOpacity)) {
-						fillOpacity = isFunction(this.layout.fillOpacity) ? this.layout.fillOpacity(rowIndex, this.tableNode, colIndex) : this.layout.fillOpacity;
+						fillOpacity = typeof this.layout.fillOpacity === 'function' ? this.layout.fillOpacity(rowIndex, this.tableNode, colIndex) : this.layout.fillOpacity;
 					}
 					if (fillColor) {
 						let widthLeftBorder = leftCellBorder ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
