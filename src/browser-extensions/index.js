@@ -1,7 +1,13 @@
 import pdfmakeBase from '../base';
-import OutputDocumentBrowser from './OutputDocumentBrowser'; // TODO: Lazy loading for support on unsupported browsers (see issue https://github.com/bpampuch/pdfmake/issues/1663)
+import OutputDocumentBrowser from './OutputDocumentBrowser';
 import URLBrowserResolver from './URLBrowserResolver';
 import fs from 'fs';
+import configurator from 'core-js/configurator';
+
+// core-js: Polyfills will be used only if natives completely unavailable.
+configurator({
+  useNative: ['Promise']
+});
 
 let defaultClientFonts = {
 	Roboto: {
@@ -12,27 +18,11 @@ let defaultClientFonts = {
 	}
 };
 
-const isBrowserSupported = () => {
-	// Ensure the browser provides the level of support needed
-	if (!Object.keys || typeof Uint16Array === 'undefined') {
-		return false;
-	}
-	return true;
-};
-
 class pdfmake extends pdfmakeBase {
 	constructor() {
 		super();
 		this.urlResolver = new URLBrowserResolver(this.virtualfs);
 		this.fonts = defaultClientFonts;
-	}
-
-	createPdf(docDefinition) {
-		if (!isBrowserSupported()) {
-			throw new Error('Your browser does not provide the level of support needed');
-		}
-
-		return super.createPdf(docDefinition);
 	}
 
 	addFontContainer(fontContainer) {

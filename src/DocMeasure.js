@@ -2,7 +2,7 @@ import TextInlines from './TextInlines';
 import StyleContextStack from './StyleContextStack';
 import ColumnCalculator from './columnCalculator';
 import { defaultTableLayout } from './tableLayouts';
-import { isString, isNumber, isObject, isArray } from './helpers/variableType';
+import { isString, isNumber, isObject } from './helpers/variableType';
 import { stringifyNode, getNodeId, getNodeMargin } from './helpers/node';
 import { pack } from './helpers/tools';
 import qrEncoder from './qrEnc.js';
@@ -360,7 +360,7 @@ class DocMeasure {
 		}
 
 		if (separator) {
-			if (isArray(separator)) {
+			if (Array.isArray(separator)) {
 				if (separator[0]) {
 					counterText = separator[0] + counterText;
 				}
