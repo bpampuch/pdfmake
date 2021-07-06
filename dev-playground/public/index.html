@@ -58,10 +58,10 @@
 
 			var editor = ace.edit('editor');
 			setupEditor(editor);
-			var names = ['basics', 'styles1', 'styles2', 'styles3', 'columns', 'tables', 'lists', 'margin', 'images', 'svgs'];
+			var names = ['basics', 'styles1', 'styles2', 'styles3', 'columns', 'tables', 'lists', 'margin', 'images', 'svgs', 'attachments'];
 
 			var i = 0;
-			['basics', 'named-styles', 'inline-styling', 'style-overrides', 'columns', 'tables', 'lists', 'margins', 'images', 'svgs'].forEach(function (example) {
+			['basics', 'named-styles', 'inline-styling', 'style-overrides', 'columns', 'tables', 'lists', 'margins', 'images', 'svgs', 'attachments'].forEach(function (example) {
 				$scope.examples.push({
 					name: names[i++],
 					activate: function () {
