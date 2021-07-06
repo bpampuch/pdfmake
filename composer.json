@@ -30,7 +30,6 @@
       ".npmignore",
       ".editorconfig",
       ".eslintrc.json",
-      ".travis.yml",
       "webpack.config.js",
       "build-fonts.js",
       "build-examples.js",
