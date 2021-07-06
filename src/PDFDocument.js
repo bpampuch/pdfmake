@@ -72,8 +72,8 @@ class PDFDocument extends PDFKit {
 		return this.fontCache[familyName][type];
 	}
 
-	provideImage(src) {
-		const realImageSrc = src => {
+	provideImageSource(src) {
+		const getRealImageSrc = src => {
 			let image = this.images[src];
 
 			if (!image) {
@@ -92,6 +92,17 @@ class PDFDocument extends PDFKit {
 			return Buffer.from(image.substring(index + 7), 'base64');
 		};
 
+		const realImageSrc = getRealImageSrc(src);
+
+		// convert to Buffer if in browser context
+		if (realImageSrc instanceof ArrayBuffer) {
+			return Buffer.from(new Uint8Array(realImageSrc));
+		}
+
+		return realImageSrc;
+	}
+
+	provideImage(src, imageSource) {
 		if (this._imageRegistry[src]) {
 			return this._imageRegistry[src];
 		}
@@ -99,7 +110,7 @@ class PDFDocument extends PDFKit {
 		let image;
 
 		try {
-			image = this.openImage(realImageSrc(src));
+			image = this.openImage(imageSource);
 			if (!image) {
 				throw new Error('No image');
 			}
