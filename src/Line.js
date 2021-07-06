@@ -98,6 +98,31 @@ class Line {
 		return (this.inlineWidths + inlineWidth - this.leadingCut - inlineTrailingCut) <= this.maxWidth;
 	}
 
+	optimizeInlines() {
+		this.inlines = this.inlines.reduce((inlines, inline) => {
+			const previous = inlines.pop();
+			if (!previous) {
+				return [inline];
+			}
+
+			// unique set of all keys present in previous and current element except 'text', 'x', 'width', 'leadingCut', 'trailingCut'
+			const keysToCompare = [...new Set(Object.keys(previous).concat(Object.keys(inline)))]
+				.filter(key => !['text', 'x', 'width', 'leadingCut', 'trailingCut'].includes(key));
+
+			for (const key of keysToCompare) {
+				if (previous[key] !== inline[key]) {
+					inlines.push(previous, inline);
+					return inlines;
+				}
+			}
+			previous.text += inline.text;
+			previous.width += inline.width;
+			previous.trailingCut = inline.trailingCut;
+			inlines.push(previous);
+			return inlines;
+		}, []);
+	}
+
 	clone() {
 		let result = new Line(this.maxWidth);
 
