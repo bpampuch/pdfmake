@@ -419,6 +419,8 @@ class LayoutBuilder {
 
 			if (node.stack) {
 				this.processVerticalContainer(node);
+			} else if (node.section) {
+				this.processSection(node);
 			} else if (node.columns) {
 				this.processColumns(node);
 			} else if (node.ul) {
@@ -461,6 +463,23 @@ class LayoutBuilder {
 
 			//TODO: paragraph gap
 		}, this);
+	}
+
+	// section
+	processSection(sectionNode) {
+		// TODO: properties
+
+		let page = this.writer.context().getCurrentPage();
+		if (page && page.items.length) { // move to new empty page
+			// TODO: property for inherit page size and margin from before section
+			this.writer.addPage(
+				sectionNode.pageSize || this.pageSize,
+				sectionNode.pageOrientation,
+				sectionNode.pageMargins || this.pageMargins
+			);
+		}
+
+		this.processNode(sectionNode.section);
 	}
 
 	// columns
