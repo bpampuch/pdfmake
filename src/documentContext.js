@@ -12,8 +12,8 @@ function DocumentContext(pageSize, pageMargins) {
 
 	this.pageMargins = pageMargins;
 
-	this.x = pageMargins.left;
-	this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
+	this.x = pageMargins(1).left;
+	this.availableWidth = pageSize.width - pageMargins(1).left - pageMargins(1).right;
 	this.availableHeight = 0;
 	this.page = -1;
 
@@ -135,9 +135,17 @@ DocumentContext.prototype.moveDown = function (offset) {
 };
 
 DocumentContext.prototype.initializePage = function () {
-	this.y = this.pageMargins.top;
-	this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-	this.pageSnapshot().availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
+    this.y = this.getCurrentPage().pageMargins.top;
+
+    this.availableHeight =
+        this.getCurrentPage().pageSize.height -
+        this.getCurrentPage().pageMargins.top -
+        this.getCurrentPage().pageMargins.bottom;
+
+    this.pageSnapshot().availableWidth =
+        this.getCurrentPage().pageSize.width -
+        this.getCurrentPage().pageMargins.left -
+        this.getCurrentPage().pageMargins.right;
 };
 
 DocumentContext.prototype.pageSnapshot = function () {
@@ -151,11 +159,11 @@ DocumentContext.prototype.pageSnapshot = function () {
 DocumentContext.prototype.moveTo = function (x, y) {
 	if (x !== undefined && x !== null) {
 		this.x = x;
-		this.availableWidth = this.getCurrentPage().pageSize.width - this.x - this.pageMargins.right;
+		this.availableWidth = this.getCurrentPage().pageSize.width - this.x - this.getCurrentPage().pageMargins.right;
 	}
 	if (y !== undefined && y !== null) {
 		this.y = y;
-		this.availableHeight = this.getCurrentPage().pageSize.height - this.y - this.pageMargins.bottom;
+		this.availableHeight = this.getCurrentPage().pageSize.height - this.y - this.getCurrentPage().pageMargins.bottom;
 	}
 };
 
@@ -253,12 +261,16 @@ DocumentContext.prototype.moveToNextPage = function (pageOrientation) {
 	};
 };
 
-
 DocumentContext.prototype.addPage = function (pageSize) {
-	var page = { items: [], pageSize: pageSize };
+	var page = {
+		items: [],
+		pageSize: pageSize,
+		pageMargins: this.pageMargins(this.pages.length + 1)
+	};
 	this.pages.push(page);
 	this.backgroundLength.push(0);
 	this.page = this.pages.length - 1;
+
 	this.initializePage();
 
 	this.tracker.emit('pageAdded');
@@ -276,18 +288,19 @@ DocumentContext.prototype.getCurrentPage = function () {
 
 DocumentContext.prototype.getCurrentPosition = function () {
 	var pageSize = this.getCurrentPage().pageSize;
-	var innerHeight = pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-	var innerWidth = pageSize.width - this.pageMargins.left - this.pageMargins.right;
+	var innerHeight = pageSize.height - this.getCurrentPage().pageMargins.top - this.getCurrentPage().pageMargins.bottom;
+	var innerWidth = pageSize.width - this.getCurrentPage().pageMargins.left - this.getCurrentPage().pageMargins.right;
 
 	return {
+		pageMargins: this.getCurrentPage().pageMargins,
 		pageNumber: this.page + 1,
 		pageOrientation: pageSize.orientation,
 		pageInnerHeight: innerHeight,
 		pageInnerWidth: innerWidth,
 		left: this.x,
 		top: this.y,
-		verticalRatio: ((this.y - this.pageMargins.top) / innerHeight),
-		horizontalRatio: ((this.x - this.pageMargins.left) / innerWidth)
+		verticalRatio: ((this.y - this.getCurrentPage().pageMargins.top) / innerHeight),
+		horizontalRatio: ((this.x - this.getCurrentPage().pageMargins.left) / innerWidth)
 	};
 };
 
