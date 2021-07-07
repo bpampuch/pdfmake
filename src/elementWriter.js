@@ -298,7 +298,7 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
  */
 ElementWriter.prototype.pushContext = function (contextOrWidth, height) {
 	if (contextOrWidth === undefined) {
-		height = this.context.getCurrentPage().height - this.context.pageMargins.top - this.context.pageMargins.bottom;
+		height = (this.context.getCurrentPage().height || this.context.getCurrentPage().pageSize.height) - this.context.pageMargins.top - this.context.pageMargins.bottom;
 		contextOrWidth = this.context.availableWidth;
 	}
 

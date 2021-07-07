@@ -111,9 +111,8 @@ PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY)
 		this.writer.popContext();
 
 		var nbPages = unbreakableContext.pages.length;
-		if (nbPages > 0) {
-			// no support for multi-page unbreakableBlocks
-			var fragment = unbreakableContext.pages[0];
+		for (let currentPage = 0; currentPage < nbPages; currentPage++) {
+			var fragment = unbreakableContext.pages[currentPage];
 			fragment.xOffset = forcedX;
 			fragment.yOffset = forcedY;
 
