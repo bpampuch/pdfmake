@@ -113,6 +113,30 @@ class DocPreprocessor {
 			}
 		}
 
+		// table alignment on page
+		switch (node.tableAlignment) {
+			case 'right':
+				node.width = 'auto';
+				node = {
+					columns: [
+						{ width: '*', text: '' },
+						node
+					]
+				};
+				break;
+
+			case 'center':
+				node.width = 'auto';
+				node = {
+					columns: [
+						{ width: '*', text: '' },
+						node,
+						{ width: '*', text: '' }
+					]
+				};
+				break;
+		}
+
 		return node;
 	}
 
