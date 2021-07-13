@@ -159,6 +159,14 @@ describe('PageElementWriter', function () {
 			assert.deepEqual(position, { pageNumber: 2, left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500 });
 		});
 
+		it('should throw an error if not fit in page', function () {
+			var lineHeight = 1800;
+
+			assert.throws(() => {
+				pew.addLine(buildLine(lineHeight));
+			});
+		});
+
 		it('should write into the current page if it\'s a large image and nothing else exists on the page', function () {
 			var position = pew.addImage(buildImage(2000));
 
