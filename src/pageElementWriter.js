@@ -24,6 +24,9 @@ function fitOnPage(self, addFct) {
 	if (!position) {
 		self.moveToNextPage();
 		position = addFct(self);
+		if (!position) {
+			throw new Error('unable to add it to page');
+		}
 	}
 	return position;
 }
@@ -69,10 +72,9 @@ PageElementWriter.prototype.alignCanvas = function (node) {
 };
 
 PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-	if (!this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition)) {
-		this.moveToNextPage();
-		this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition);
-	}
+	fitOnPage(this, function (self) {
+		return self.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition);
+	});
 };
 
 PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
