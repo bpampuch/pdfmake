@@ -14,6 +14,29 @@ const stripUnits = textVal => {
 	return n;
 };
 
+const extractWidthAndHeight = (widthAttributeValue, heightAttributeValue, viewBoxAttributeValue) => {
+	let docWidth = stripUnits(widthAttributeValue);
+	let docHeight = stripUnits(heightAttributeValue);
+
+	if ((docWidth === undefined || docHeight === undefined) && typeof viewBoxAttributeValue === 'string') {
+		let viewBoxParts = viewBoxAttributeValue.split(/[,\s]+/);
+		if (viewBoxParts.length !== 4) {
+			throw new Error("Unexpected svg viewbox format, should have 4 entries but found: '" + viewBoxAttributeValue + "'");
+		}
+		if (docWidth === undefined) {
+			docWidth = stripUnits(viewBoxParts[2]);
+		}
+		if (docHeight === undefined) {
+			docHeight = stripUnits(viewBoxParts[3]);
+		}
+	}
+
+	return {
+		width: docWidth,
+		height: docHeight
+	};
+};
+
 /**
  * Make sure it's valid XML and the root tage is <svg/>, returns xmldoc DOM
  *
@@ -41,38 +64,38 @@ class SVGMeasure {
 
 	}
 
-	measureSVG(svgString) {
-		let doc = parseSVG(svgString);
 
-		let docWidth = stripUnits(doc.attr.width);
-		let docHeight = stripUnits(doc.attr.height);
 
-		if ((docWidth === undefined || docHeight === undefined) && typeof doc.attr.viewBox === 'string') {
-			let viewBoxParts = doc.attr.viewBox.split(/[,\s]+/);
-			if (viewBoxParts.length !== 4) {
-				throw new Error("Unexpected svg viewbox format, should have 4 entries but found: '" + doc.attr.viewBox + "'");
-			}
-			if (docWidth === undefined) {
-				docWidth = stripUnits(viewBoxParts[2]);
-			}
-			if (docHeight === undefined) {
-				docHeight = stripUnits(viewBoxParts[3]);
-			}
+
+	measureSVG(svgElementOrString) {
+		let width, height, viewBox;
+		if (typeof(svgElementOrString) === "string") {
+			let doc = parseSVG(svgElementOrString);
+			width = doc.attr.width;
+			height = doc.attr.height;
+			viewBox = doc.attr.viewBox;
+		} else {
+			width = svgElementOrString.getAttribute("width");
+			height = svgElementOrString.getAttribute("height");
+			viewBox = svgElementOrString.getAttribute("viewBox");
 		}
-
-		return {
-			width: docWidth,
-			height: docHeight
-		};
+		return extractWidthAndHeight(width, height, viewBox);
 	}
 
-	writeDimensions(svgString, dimensions) {
-		let doc = parseSVG(svgString);
+	writeDimensions(svgElementOrString, dimensions) {
+		if (typeof svgElementOrString === "string") {
+			let doc = parseSVG(svgElementOrString);
 
-		doc.attr.width = "" + dimensions.width;
-		doc.attr.height = "" + dimensions.height;
+			doc.attr.width = "" + dimensions.width;
+			doc.attr.height = "" + dimensions.height;
 
-		return doc.toString();
+			return doc.toString();
+		} else {
+			svgElementOrString.setAttribute("width", "" + dimensions.width);
+			svgElementOrString.setAttribute("height", "" + dimensions.height);
+			return svgElementOrString;
+		}
+
 	}
 }
 
