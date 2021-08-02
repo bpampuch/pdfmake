@@ -25,6 +25,7 @@ module.exports = {
 			fs: path.join(__dirname, './src/browser-extensions/virtual-fs.js')
 		},
 		fallback: {
+			crypto: false,
 			buffer: require.resolve('buffer/'),
 			util: require.resolve('util/'),
 			stream: require.resolve('stream-browserify'),
