@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2 - 2021-08-02
+
+- Fixed compatibility with Internet Explorer 11
+
 ## 0.2.1 - 2021-08-02
 
 - Upgrade Unicode Line Breaking Algorithm (UAX #14) to Unicode 13.0.0
