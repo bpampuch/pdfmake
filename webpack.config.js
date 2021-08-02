@@ -79,7 +79,7 @@ module.exports = {
 			},
 			{
 				test: /\.js$/,
-				include: /(pdfkit|linebreak|fontkit|saslprep|restructure|unicode-trie|unicode-properties|dfa|buffer|png-js)/,
+				include: /(pdfkit|linebreak|fontkit|saslprep|restructure|unicode-trie|unicode-properties|dfa|buffer|png-js|crypto-js)/,
 				use: {
 					loader: 'babel-loader',
 					options: {
