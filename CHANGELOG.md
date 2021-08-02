@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.1 - 2021-08-02
 
 - Upgrade Unicode Line Breaking Algorithm (UAX #14) to Unicode 13.0.0
 - Updated [@foliojs-fork/pdfkit](https://github.com/foliojs-fork/pdfkit) to version 0.12.3.
