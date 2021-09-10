@@ -1,6 +1,7 @@
 import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
 import { isNumber } from './helpers/variableType';
+import * as util from 'util'
 
 // TODO: refactor lazy load init
 const getSvgToPDF = function () {
@@ -74,6 +75,7 @@ class Renderer {
 			let page = pages[i];
 			for (let ii = 0, il = page.items.length; ii < il; ii++) {
 				let item = page.items[ii];
+				
 				switch (item.type) {
 					case 'vector':
 						this.renderVector(item.item);
@@ -86,6 +88,9 @@ class Renderer {
 						break;
 					case 'svg':
 						this.renderSVG(item.item);
+						break;
+					case 'acroform': 
+						this.renderAcroForm(item.item)
 						break;
 					case 'beginClip':
 						this.beginClip(item.item);
@@ -330,6 +335,35 @@ class Renderer {
 		getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, options);
 	}
 
+
+	renderAcroForm(node) {
+		const id = node.acroform.id
+
+		if (id == null) {
+			throw new Error(`Acroform field requires an ID`);
+		}
+		
+		const {type, options} = node.acroform
+		this.pdfDocument.font("Helvetica")
+		this.pdfDocument.initForm();
+		switch (type) {
+			case "text":
+				this.pdfDocument.formText(id, node.x, node.y, 200, 40, options);
+				break;
+			case "button":
+				this.pdfDocument.formPushButton(id, node.x, node.y, 200, 40, options);
+				break
+			case "combo":
+				this.pdfDocument.formCombo(id, node.x, node.y, 200, 40, options);
+				break
+			case "list":
+				this.pdfDocument.formList(id, node.x, node.y, 200, 40, options);
+				break
+			default:
+				throw new Error(`Unrecognized acroform type: ${type}`);
+		}
+	}
+
 	beginClip(rect) {
 		this.pdfDocument.save();
 		this.pdfDocument.addContent(`${rect.x} ${rect.y} ${rect.width} ${rect.height} re`);
@@ -338,6 +372,7 @@ class Renderer {
 
 	endClip() {
 		this.pdfDocument.restore();
+		
 	}
 
 	renderWatermark(page) {

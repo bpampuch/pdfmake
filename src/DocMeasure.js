@@ -61,8 +61,11 @@ class DocMeasure {
 				return extendMargins(this.measureCanvas(node));
 			} else if (node.qr) {
 				return extendMargins(this.measureQr(node));
-			} else {
-				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
+			} else if (node.acroform) {
+				return extendMargins(this.measureAcroForm(node));
+			}
+			else {
+				throw new Error(`Unrecognized document docmeasure structure: ${stringifyNode(node)}`);
 			}
 		});
 
@@ -686,6 +689,13 @@ class DocMeasure {
 
 	measureQr(node) {
 		node = qrEncoder.measure(node);
+		node._alignment = this.styleStack.getProperty('alignment');
+		return node;
+	}
+
+	measureAcroForm(node) {
+		node._minWidth = 200;
+		node._minHeight = 200;
 		node._alignment = this.styleStack.getProperty('alignment');
 		return node;
 	}

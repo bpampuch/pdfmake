@@ -10,6 +10,7 @@ import { stringifyNode, getNodeId } from './helpers/node';
 import { pack, offsetVector } from './helpers/tools';
 import TextInlines from './TextInlines';
 import StyleContextStack from './StyleContextStack';
+import * as util from 'util'
 
 function addAll(target, otherArray) {
 	otherArray.forEach(item => {
@@ -77,7 +78,7 @@ class LayoutBuilder {
 				let nodeInfo = {};
 				[
 					'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns',
-					'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
+					'headlineLevel', 'style', 'pageBreak', 'pageOrientation', 'acroForm', 'type', 'options',
 					'width', 'height'
 				].forEach(key => {
 					if (node[key] !== undefined) {
@@ -439,8 +440,10 @@ class LayoutBuilder {
 				this.processCanvas(node);
 			} else if (node.qr) {
 				this.processQr(node);
+			} else if (node.acroform) {
+				this.processAcroForm(node)
 			} else if (!node._span) {
-				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
+				throw new Error(`Unrecognized document layoutbuilder structure: ${stringifyNode(node)}`);
 			}
 
 			if (absPosition || relPosition) {
@@ -773,6 +776,11 @@ class LayoutBuilder {
 	processQr(node) {
 		let position = this.writer.addQr(node);
 		node.positions.push(position);
+	}
+
+	processAcroForm (node) {
+		let position = this.writer.addAcroForm(node);
+		node.positions.push(position);	
 	}
 }
 

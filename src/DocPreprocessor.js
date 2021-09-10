@@ -1,5 +1,6 @@
 import { isString, isNumber, isValue, isEmptyObject } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
+import * as util from 'util'
 
 const convertValueToString = value => {
 	if (isString(value)) {
@@ -32,7 +33,6 @@ class DocPreprocessor {
 		} else if ('text' in node) { // cast value in text property
 			node.text = convertValueToString(node.text);
 		}
-
 		if (node.columns) {
 			return this.preprocessColumns(node);
 		} else if (node.stack) {
@@ -57,8 +57,10 @@ class DocPreprocessor {
 			return this.preprocessQr(node);
 		} else if (node.pageReference || node.textReference) {
 			return this.preprocessText(node);
+		} else if (node.acroform) {
+			return this.preprocessAcroForm(node);
 		} else {
-			throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
+			throw new Error(`Unrecognized document docpreprocesser structure: ${stringifyNode(node)}`);
 		}
 	}
 
@@ -239,6 +241,10 @@ class DocPreprocessor {
 	}
 
 	preprocessSVG(node) {
+		return node;
+	}
+
+	preprocessAcroForm(node) {
 		return node;
 	}
 
