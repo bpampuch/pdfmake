@@ -33,6 +33,7 @@ class PDFDocument extends PDFKit {
 
 		this.images = images;
 		this.virtualfs = virtualfs;
+		this.formRadioMap = {}; //key: ref
 	}
 
 	getFontType(bold, italics) {
@@ -121,6 +122,175 @@ class PDFDocument extends PDFKit {
 		});
 		this._root.data.OpenAction = printActionRef;
 		printActionRef.end();
+	}
+
+	formRadiobutton(name, x, y, w, h, options) {
+		const rect = this._convertRect(x, y, w, h);
+		const parentName = options.parentId
+
+		if (options == null || parentName == null) 
+			throw new Error(`Options missing 'parentId'`);
+
+		const key = Object.keys(this.formRadioMap).filter(key => key == parentName)[0]
+		let groupRef;
+
+		if (key == null) { 
+			groupRef = this.ref({
+				FT: 'Btn',
+				Ff: 32768,
+				F: 4,
+				T: new String(parentName),
+				Kids: [],
+			})
+			this.formRadioMap[parentName] = groupRef
+		} else {
+			groupRef = this.formRadioMap[parentName]
+		}
+		
+		if (groupRef == null) 
+			throw new Error(`Unable to create radio group`);
+		
+		const trueRef = this.ref({
+			Type: 'XObject',
+			Subtype: 'Form',
+			FormType: 1,
+			BBox: rect,
+			Resources: {
+				ProcSet: ["PDF"]
+			}
+		})
+
+		const dtrueRef = this.ref({
+			Type: 'XObject',
+			Subtype: 'Form',
+			FormType: 1,
+			BBox: rect,
+			Resources: {
+				ProcSet: ["PDF"]
+			}
+		})
+
+		const offRef = this.ref({
+			Type: 'XObject',
+			Subtype: 'Form',
+			FormType: 1,
+			BBox: rect,
+			Resources: {
+				ProcSet: ["PDF"]
+			}
+		})
+
+		const formId = name
+		// name + (children.length + 1)
+
+		const childRef = this.ref({
+			Type: 'Annot',
+			Subtype: 'Widget',
+			Rect: rect,
+			AS: formId,
+			Parent: groupRef,
+			MK: {
+				CA: new String(8)
+			},
+			AP: {
+				N: {
+					[formId]: trueRef,
+				},
+				D: {
+					[formId]: dtrueRef,
+					Off: offRef
+				}
+			}
+		})
+
+		childRef.end()
+		trueRef.end()
+		dtrueRef.end()
+		offRef.end()
+
+		this.page.annotations.push(childRef); 
+		this._root.data.AcroForm.data.Fields.push(childRef); 
+
+		this.formRadioMap[parentName].data.Kids.push(childRef)
+		if (options.selected) { 
+			this.formRadioMap[parentName].data.V = formId
+		}
+	}
+
+	writeRadioForms() {
+		Object.keys(this.formRadioMap).forEach(key => {
+			this.formRadioMap[key].end()
+		})
+	}
+
+	formCheckbox(name, x, y, w, h) {
+		const rect = this._convertRect(x, y, w, h);
+
+		const trueRef = this.ref({
+			Type: 'XObject',
+			Subtype: 'Form',
+			FormType: 1,
+			BBox: rect,
+			Resources: {
+				ProcSet: ["PDF"]
+			}
+		})
+
+		const dtrueRef = this.ref({
+			Type: 'XObject',
+			Subtype: 'Form',
+			FormType: 1,
+			BBox: rect,
+			Resources: {
+				ProcSet: ["PDF"]
+			}
+		})
+
+		const offRef = this.ref({
+			Type: 'XObject',
+			Subtype: 'Form',
+			FormType: 1,
+			BBox: rect,
+			Resources: {
+				ProcSet: ["PDF"]
+			}
+		})
+
+		//spec 556
+		const checkboxRef = this.ref({
+			Type: 'Annot',
+			Subtype: 'Widget',
+			Rect: rect,
+			FT: 'Btn',
+			F: 4,
+			T: new String(name),
+			AS: "true",
+			V: "true",
+			Q: 1,
+			MK: {
+				CA: new String(3)
+			},
+			AP: {
+				N: {
+					"true": trueRef,
+				},
+				D: {
+					"true": dtrueRef,
+					Off: offRef
+				}
+			}
+			
+		})
+
+		//handle parents
+
+		this.page.annotations.push(checkboxRef);
+		this._root.data.AcroForm.data.Fields.push(checkboxRef); 
+
+		checkboxRef.end()
+		trueRef.end()
+		dtrueRef.end()
+		offRef.end()
 	}
 }
 
