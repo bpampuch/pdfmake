@@ -1,6 +1,6 @@
 {
   "name": "pdfmake",
-  "version": "0.2.1-fork207",
+  "version": "0.2.1-fork207B",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/printer.js",
   "browser": "build/pdfmake.js",
@@ -42,6 +42,15 @@
     "webpack": "^5.42.0",
     "webpack-cli": "^4.7.2"
   },
+  "files": [
+    "build/*.js*",
+    "src",
+    "build-vfs.js",
+    "CHANGELOG.md",
+    "LICENSE",
+    "package.json",
+    "README.md"
+  ],
   "engines": {
     "node": ">=12"
   },

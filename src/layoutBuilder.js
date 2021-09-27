@@ -420,7 +420,13 @@ LayoutBuilder.prototype.processNode = function (node) {
 		}
 
 		if (unbreakable) {
-			self.writer.commitUnbreakableBlock();
+			try {
+				self.writer.commitUnbreakableBlock();
+			} catch (e) {
+				e.node = node;
+				throw e;
+			}
+
 		}
 	});
 
