@@ -65,7 +65,7 @@ class DocMeasure {
 				return extendMargins(this.measureAcroForm(node));
 			}
 			else {
-				throw new Error(`Unrecognized document docmeasure structure: ${stringifyNode(node)}`);
+				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
 		});
 
@@ -689,14 +689,21 @@ class DocMeasure {
 
 	measureQr(node) {
 		node = qrEncoder.measure(node);
-		node._alignment = this.styleStack.getProperty('alignment');
+		node._styleStack = this.styleStack.getProperty('alignment');
 		return node;
 	}
 
 	measureAcroForm(node) {
-		node._minWidth = 200;
-		node._minHeight = 200;
+		node._minWidth = 10;
+		node._minHeight = 10;
+		//percent
+		//inline
+
+		let styleStack = this.styleStack.clone();
+		styleStack.push(node);
+		node._font = styleStack.getProperty('font')
 		node._alignment = this.styleStack.getProperty('alignment');
+
 		return node;
 	}
 }

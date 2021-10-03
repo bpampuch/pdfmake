@@ -219,7 +219,7 @@ class ElementWriter extends EventEmitter {
 		node.y = context.y;
 
 		
-		context.moveDown(node._height || node._minHeight);
+		context.moveDown(node.height || node._minHeight);
 
 		return position;
 	}

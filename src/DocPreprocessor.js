@@ -60,7 +60,7 @@ class DocPreprocessor {
 		} else if (node.acroform) {
 			return this.preprocessAcroForm(node);
 		} else {
-			throw new Error(`Unrecognized document docpreprocesser structure: ${stringifyNode(node)}`);
+			throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 		}
 	}
 

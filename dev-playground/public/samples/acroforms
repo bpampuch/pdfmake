@@ -1,0 +1,133 @@
+content: [
+    {
+        text: [
+            "Refer to: https://pdfkit.org/docs/forms.html#common_options",
+            " or pdf reference for form options"
+        ],  
+    },
+    {
+        columns: [
+            {
+                stack: [
+                    {
+                        text: 'First name'  
+                    },
+                    {
+                        acroform: {
+                            type: 'text',
+                            id: 'firstname',
+                                
+                        },
+                        height: 20,
+                        
+                    },
+                ],
+                margin: 5
+            },
+            {
+                stack: [
+                    {
+                        text: 'Surname'  
+                    },
+                    {
+                        acroform: {
+                            type: 'text',
+                            id: 'surname'
+                        },
+                        height: 20,
+                    }
+                ],
+                margin: 5
+            }
+        ]
+    },
+    {
+        text: 'List form'  
+    },
+    {
+        acroform: {
+            type: 'list',
+            id: 'list1',
+            options: {
+                select: ['', 'A', 'B', 'C'], 
+                defaultValue: ''
+            }
+            
+        },
+        width: 100,
+        height: 20,
+        
+    },
+    {
+        text: 'Combo form'  
+    },
+    {
+        acroform: {
+            type: 'combo',
+            id: 'combo1',
+            options: {
+                select: ['', 'A', 'B', 'C'], 
+                defaultValue: ''
+            }
+            
+        },
+        width: 100,
+        height: 20,
+        
+    },
+    {
+        text: 'Checkbox form'  
+    },
+    {
+        acroform: {
+            type: 'checkbox',
+            id: 'checkbox1',
+        },
+        width: 20,
+        height: 20,
+        
+    },
+    {
+        text: 'Radio form'  
+    },
+    {
+        acroform: {
+            type: 'radio',
+            id: 'formChild1',
+            options: {
+                parentId: 'form1',
+                selected: true,
+            },
+            selected: true,
+        },
+        width: 20,
+        height: 20,
+        
+    },
+    {
+        acroform: {
+            type: 'radio',
+            id: 'form2',
+            options: {
+                parentId: 'form1',
+                selected: false,
+            },
+        },
+        width: 20,
+        height: 20,
+        
+    },
+    {
+        acroform: {
+            type: 'radio',
+            id: 'form3',
+            options: {
+                parentId: 'form1',
+                selected: false,
+            },
+        },
+        width: 20,
+        height: 20,
+        
+    },
+],

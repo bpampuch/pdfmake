@@ -223,6 +223,7 @@ class PDFDocument extends PDFKit {
 		})
 	}
 
+	//handle decorations, image replacement of tick
 	formCheckbox(name, x, y, w, h) {
 		const rect = this._convertRect(x, y, w, h);
 

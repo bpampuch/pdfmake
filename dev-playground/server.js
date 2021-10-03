@@ -35,6 +35,7 @@ app.post('/pdf', function (req, res) {
 		res.contentType('application/pdf');
 		res.send(binary);
 	}, function (error) {
+		console.log(error) //print in console
 		res.send('ERROR:' + error);
 	});
 

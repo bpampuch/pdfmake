@@ -443,7 +443,7 @@ class LayoutBuilder {
 			} else if (node.acroform) {
 				this.processAcroForm(node)
 			} else if (!node._span) {
-				throw new Error(`Unrecognized document layoutbuilder structure: ${stringifyNode(node)}`);
+				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
 
 			if (absPosition || relPosition) {
@@ -779,8 +779,10 @@ class LayoutBuilder {
 	}
 
 	processAcroForm (node) {
+		let availableWidth = this.writer.context().availableWidth;
 		let position = this.writer.addAcroForm(node);
 		node.positions.push(position);	
+		node.availableWidth = availableWidth
 	}
 }
 

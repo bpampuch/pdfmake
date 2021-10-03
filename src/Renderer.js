@@ -51,6 +51,7 @@ class Renderer {
 	constructor(pdfDocument, progressCallback) {
 		this.pdfDocument = pdfDocument;
 		this.progressCallback = progressCallback;
+		this.hasFormInit = false;
 	}
 
 	renderPages(pages) {
@@ -107,6 +108,9 @@ class Renderer {
 			if (page.watermark) {
 				this.renderWatermark(page);
 			}
+		}
+		if (this.hasFormInit && Object.keys(this.pdfDocument.formRadioMap).length > 0) {
+			this.pdfDocument.writeRadioForms()
 		}
 	}
 
@@ -200,6 +204,7 @@ class Renderer {
 
 		// Decorations won't draw correctly for superscript
 		textDecorator.drawDecorations(line, x, y);
+		
 	}
 
 	renderVector(vector) {
@@ -337,6 +342,12 @@ class Renderer {
 
 
 	renderAcroForm(node) {
+		if (this.hasFormInit == false)  { 
+			this.pdfDocument.font(this.pdfDocument.getFontFile(node._font));
+			this.pdfDocument.initForm();
+			this.hasFormInit = true
+		}
+
 		const id = node.acroform.id
 
 		if (id == null) {
@@ -344,21 +355,44 @@ class Renderer {
 		}
 		
 		const {type, options} = node.acroform
-		this.pdfDocument.font("Helvetica")
-		this.pdfDocument.initForm();
+		
+		let tmp = node.width || node.availableWidth || (node._calcWidth != NaN && node._calcWidth) || node._minWidth 
+		if (node.width == '*') {
+			tmp = node.availableWidth
+		}
+		let tmp_Height = node.height 
+
+		this.pdfDocument.font(this.pdfDocument.getFontFile(node._font));
+
 		switch (type) {
 			case "text":
-				this.pdfDocument.formText(id, node.x, node.y, 200, 40, options);
+			case "formText":
+				this.pdfDocument.formText(id, node.x, node.y, tmp, tmp_Height, options);
 				break;
-			case "button":
-				this.pdfDocument.formPushButton(id, node.x, node.y, 200, 40, options);
-				break
+			// case "button":
+			// case "formPushButton":
+			// 	this.pdfDocument.formPushButton(id, node.x, node.y, tmp, tmp_Height, options);
+			// 	break
 			case "combo":
-				this.pdfDocument.formCombo(id, node.x, node.y, 200, 40, options);
+			case "formCombo":
+				this.pdfDocument.formCombo(id, node.x, node.y, tmp, tmp_Height, options);
 				break
 			case "list":
-				this.pdfDocument.formList(id, node.x, node.y, 200, 40, options);
+			case "formList":
+				this.pdfDocument.formList(id, node.x, node.y, tmp, tmp_Height, options);
 				break
+			case "combo":
+			case "formCombo":
+				this.pdfDocument.formCombo(id, node.x, node.y, tmp, tmp_Height, options);
+				break
+			case "checkbox": 
+			case "formCheckbox":
+				this.pdfDocument.formCheckbox(id, node.x, node.y, tmp, tmp_Height,)
+				break;
+			case "radio":
+			case "formRadio":
+				this.pdfDocument.formRadiobutton(id, node.x, node.y, tmp, tmp_Height, options)
+				break;
 			default:
 				throw new Error(`Unrecognized acroform type: ${type}`);
 		}
