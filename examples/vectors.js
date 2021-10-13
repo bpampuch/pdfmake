@@ -29,7 +29,7 @@ var docDefinition = {
 					x: 0,
 					y: 0,
 					w: 310,
-					h: 260,
+					h: 290,
 					r: 5,
 					dash: { length: 5 },
 					// lineWidth: 10,
@@ -40,7 +40,7 @@ var docDefinition = {
 					x: 1,
 					y: 1,
 					w: 308,
-					h: 258,
+					h: 288,
 					r: 4,
 					lineColor: 'red',
 					color: '#ffffe0',
@@ -113,6 +113,11 @@ var docDefinition = {
 					r1: 30, r2: 20,
 					linearGradient: ['red', 'green', 'blue', 'red'],
 				},
+				{
+					type: 'rect',
+					x: 10, y: 250, w: 50, h: 30,
+					color: ['stripe45d', 'blue'],
+				}
 			]
 		},
 		'This text should be rendered under canvas',
@@ -126,6 +131,14 @@ var docDefinition = {
 	],
 	defaultStyle: {
 		color: 'gray',
+	},
+	patterns: {
+		stripe45d: {
+			boundingBox: [1, 1, 4, 4],
+			xStep: 3,
+			yStep: 3,
+			pattern: '1 w 0 1 m 4 5 l s 2 0 m 5 3 l s'
+		}
 	}
 };
 

@@ -97,6 +97,17 @@ function getNodeId(node) {
 	return null;
 }
 
+function isPattern(color) {
+	return isArray(color) && color.length === 2;
+}
+
+// converts from a [<pattern name>, <color>] as used by pdfmake
+// into [<pattern object>, <color>] as used by pdfkit
+// (the pattern has to be registered in the doc definition of course)
+function getPattern(color, patterns){
+	return [patterns[color[0]], color[1]];
+}
+
 module.exports = {
 	isString: isString,
 	isNumber: isNumber,
@@ -109,5 +120,7 @@ module.exports = {
 	pack: pack,
 	fontStringify: fontStringify,
 	offsetVector: offsetVector,
-	getNodeId: getNodeId
+	getNodeId: getNodeId,
+	isPattern: isPattern,
+	getPattern: getPattern
 };
