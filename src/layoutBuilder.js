@@ -533,8 +533,22 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 
 			self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
 			if (!column._span) {
+				var ctxX = self.writer.context().x;
+				var ctxY = self.writer.context().y;
 				self.processNode(column);
 				addAll(positions, column.positions);
+				if (column.overlayPattern) {
+					self.writer.addVector({
+						type: 'rect',
+						x: ctxX,
+						y: ctxY,
+						w: width,
+						h: height,
+						lineWidth: 0,
+						fillOpacity: column.overlayOpacity,
+						color: column.overlayPattern
+					}, true, true);
+				}
 			} else if (column._columnEndingContext) {
 				// row-span ending
 				self.writer.context().markEnding(column);
