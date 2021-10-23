@@ -14,7 +14,7 @@ function stripUnits(textVal) {
 /** Make sure it's valid XML and the root tage is <svg/>, returns xmldoc DOM */
 function parseSVG(svgString) {
 	var doc;
-	
+
 	try {
 		doc = new xmldoc.XmlDocument(svgString);
 	} catch (err) {

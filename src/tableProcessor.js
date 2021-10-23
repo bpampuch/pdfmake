@@ -426,7 +426,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 				}
 				if (!isNumber(fillOpacity)) {
 					fillOpacity = isFunction(this.layout.fillOpacity) ? this.layout.fillOpacity(rowIndex, this.tableNode, colIndex) : this.layout.fillOpacity;
-                                }
+				}
 				if (fillColor) {
 					var widthLeftBorder = leftCellBorder ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
 					var widthRightBorder;

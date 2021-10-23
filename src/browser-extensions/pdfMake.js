@@ -24,15 +24,15 @@ function Document(docDefinition, tableLayouts, fonts, vfs) {
 
 function canCreatePdf() {
 	// Ensure the browser provides the level of support needed
-  try {
-    var arr = new Uint8Array(1)
-    var proto = { foo: function () { return 42 } }
-    Object.setPrototypeOf(proto, Uint8Array.prototype)
-    Object.setPrototypeOf(arr, proto)
-    return arr.foo() === 42
-  } catch (e) {
-    return false
-  }
+	try {
+		var arr = new Uint8Array(1)
+		var proto = { foo: function () { return 42 } }
+		Object.setPrototypeOf(proto, Uint8Array.prototype)
+		Object.setPrototypeOf(arr, proto)
+		return arr.foo() === 42
+	} catch (e) {
+		return false
+	}
 }
 
 Document.prototype._createDoc = function (options, cb) {
