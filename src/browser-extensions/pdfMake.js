@@ -33,11 +33,6 @@ function canCreatePdf() {
   } catch (e) {
     return false
   }
-
-	if (!Object.keys || typeof Uint16Array === 'undefined') {
-		return false;
-	}
-	return true;
 }
 
 Document.prototype._createDoc = function (options, cb) {
