@@ -296,7 +296,7 @@ var docDefinition = {
 			}
 		},
 		{ text: 'handling fill color opacity...', margin: [0, 20, 0, 8] },
-		{ text: '... just hardcoding values in the second and third row', margin: [0, 20, 0, 8] },
+		{ text: '... just hardcoding values in the second, third and fourth row', margin: [0, 20, 0, 8] },
 		{
 			style: 'tableExample',
 			table: {
@@ -308,9 +308,14 @@ var docDefinition = {
 						{text: 'Sample value 3',fillOpacity:0.85,fillColor:'blue'},
 					],
 					[
-						{text: 'Sample value 1',fillOpacity:0.15,fillColor:['stripe45d', 'blue']},
-						{text: 'Sample value 2',fillOpacity:0.60,fillColor:['stripe45d', 'blue']},
-						{text: 'Sample value 3',fillOpacity:0.85,fillColor:['stripe45d', 'blue']},
+						{text: 'Sample value 1', fillOpacity: 0.15, fillColor: ['stripe45d', 'blue']},
+						{text: 'Sample value 2', fillOpacity: 0.60, fillColor: ['stripe45d', 'blue']},
+						{text: 'Sample value 3', fillOpacity: 0.85, fillColor: ['stripe45d', 'blue']},
+					],
+					[
+						{text: 'Sample value 1', fillOpacity: 0.15, fillColor: 'blue', overlayPattern: ['stripe45d', 'gray'], overlayOpacity: 0.15},
+						{text: 'Sample value 2', fillOpacity: 0.60, fillColor: 'blue', overlayPattern: ['stripe45d', 'gray'], overlayOpacity: 0.5},
+						{text: 'Sample value 3', fillOpacity: 0.85, fillColor: 'blue', overlayPattern: ['stripe45d', 'gray'], overlayOpacity: 0.9},
 					],
 					['Sample value 1', 'Sample value 2', 'Sample value 3']
 				]
