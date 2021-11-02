@@ -104,7 +104,7 @@ function isPattern(color) {
 // converts from a [<pattern name>, <color>] as used by pdfmake
 // into [<pattern object>, <color>] as used by pdfkit
 // (the pattern has to be registered in the doc definition of course)
-function getPattern(color, patterns){
+function getPattern(color, patterns) {
 	return [patterns[color[0]], color[1]];
 }
 

@@ -700,11 +700,11 @@ function endClip(pdfKitDoc) {
 
 function createPatterns(patternDefinitions, pdfKitDoc) {
 	var patterns = {};
-	Object.keys(patternDefinitions).forEach(function(p) {
+	Object.keys(patternDefinitions).forEach(function (p) {
 		var pattern = patternDefinitions[p];
 		patterns[p] = pdfKitDoc.pattern(pattern.boundingBox, pattern.xStep, pattern.yStep, pattern.pattern, pattern.colored);
 	});
 	return patterns;
-  }
+}
 
 module.exports = PdfPrinter;
