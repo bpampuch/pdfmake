@@ -1,6 +1,8 @@
 'use strict';
 
 var isArray = require('./helpers').isArray;
+var isPattern = require('./helpers').isPattern;
+var getPattern = require('./helpers').getPattern;
 
 function groupDecorations(line) {
 	var groups = [], currentGroup = null;
@@ -131,15 +133,19 @@ function drawDecorations(line, x, y, pdfKitDoc) {
 	}
 }
 
-function drawBackground(line, x, y, pdfKitDoc) {
+function drawBackground(line, x, y, patterns, pdfKitDoc) {
 	var height = line.getHeight();
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
 		if (!inline.background) {
 			continue;
 		}
+		var color = inline.background;
+		if (isPattern(inline.background)) {
+			color = getPattern(inline.background, patterns);
+		}
 		var justifyShift = (inline.justifyShift || 0);
-		pdfKitDoc.fillColor(inline.background)
+		pdfKitDoc.fillColor(color)
 			.rect(x + inline.x - justifyShift, y, inline.width + justifyShift, height)
 			.fill();
 	}

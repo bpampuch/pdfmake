@@ -63,7 +63,20 @@ var docDefinition = {
 				' World'
 			]
 		}
-	]
+		,
+		'\n\n',
+		{
+			text: 'Text background pattern', background: ['stripe45d', 'gray']
+		}
+	],
+	patterns: {
+		stripe45d: {
+			boundingBox: [1, 1, 4, 4],
+			xStep: 3,
+			yStep: 3,
+			pattern: '1 w 0 1 m 4 5 l s 2 0 m 5 3 l s'
+		}
+	}
 };
 
 var pdfDoc = printer.createPdfKitDocument(docDefinition);
