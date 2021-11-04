@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@foliojs-fork/linebreak": "^1.1.1",
-    "@foliojs-fork/pdfkit": "^0.12.3",
+    "@foliojs-fork/pdfkit": "^0.13.0",
     "iconv-lite": "^0.6.3",
     "svg-to-pdfkit": "^0.1.8",
     "xmldoc": "^1.1.2"

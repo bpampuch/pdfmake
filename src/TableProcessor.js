@@ -442,7 +442,9 @@ class TableProcessor {
 					if (!isNumber(fillOpacity)) {
 						fillOpacity = typeof this.layout.fillOpacity === 'function' ? this.layout.fillOpacity(rowIndex, this.tableNode, colIndex) : this.layout.fillOpacity;
 					}
-					if (fillColor) {
+					var overlayPattern = body[rowIndex][colIndex].overlayPattern;
+					var overlayOpacity = body[rowIndex][colIndex].overlayOpacity;
+					if (fillColor || overlayPattern) {
 						let widthLeftBorder = leftCellBorder ? this.layout.vLineWidth(colIndex, this.tableNode) : 0;
 						let widthRightBorder;
 						if ((colIndex === 0 || colIndex + 1 == body[rowIndex].length) && !rightCellBorder) {
@@ -457,16 +459,33 @@ class TableProcessor {
 						let y1f = this.dontBreakRows ? y1 : y1 - (hzLineOffset / 2);
 						let x2f = xs[i + 1].x + widthRightBorder;
 						let y2f = this.dontBreakRows ? y2 + this.bottomLineWidth : y2 + (this.bottomLineWidth / 2);
-						writer.addVector({
-							type: 'rect',
-							x: x1f,
-							y: y1f,
-							w: x2f - x1f,
-							h: y2f - y1f,
-							lineWidth: 0,
-							color: fillColor,
-							fillOpacity: fillOpacity
-						}, false, true, writer.context().backgroundLength[writer.context().page]);
+						var bgWidth = x2f - x1f;
+						var bgHeight = y2f - y1f;
+						if (fillColor) {
+							writer.addVector({
+								type: 'rect',
+								x: x1f,
+								y: y1f,
+								w: bgWidth,
+								h: bgHeight,
+								lineWidth: 0,
+								color: fillColor,
+								fillOpacity: fillOpacity
+							}, false, true, writer.context().backgroundLength[writer.context().page]);
+						}
+
+						if (overlayPattern) {
+							writer.addVector({
+								type: 'rect',
+								x: x1f,
+								y: y1f,
+								w: bgWidth,
+								h: bgHeight,
+								lineWidth: 0,
+								color: overlayPattern,
+								fillOpacity: overlayOpacity
+							}, false, true);
+						}
 					}
 				}
 			}
