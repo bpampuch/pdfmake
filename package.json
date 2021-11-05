@@ -11,7 +11,6 @@
     "@foliojs-fork/linebreak": "^1.1.1",
     "@foliojs-fork/pdfkit": "^0.13.0",
     "iconv-lite": "^0.6.3",
-    "svg-to-pdfkit": "^0.1.8",
     "xmldoc": "^1.1.2"
   },
   "devDependencies": {
@@ -33,9 +32,11 @@
     "npm-run-all": "^4.1.5",
     "process": "^0.11.10",
     "rewire": "^5.0.0",
+    "shx": "^0.3.3",
     "sinon": "^11.1.1",
     "stream-browserify": "^3.0.0",
     "string-replace-webpack-plugin": "^0.1.3",
+    "svg-to-pdfkit": "^0.1.8",
     "terser-webpack-plugin": "^5.1.4",
     "transform-loader": "^0.2.4",
     "util": "^0.12.4",
@@ -47,7 +48,8 @@
   },
   "scripts": {
     "test": "run-s build mocha",
-    "build": "run-s build:browser",
+    "build": "run-s build:3rdparty build:browser",
+    "build:3rdparty": "shx cp node_modules/svg-to-pdfkit/source.js src/3rd-party/svg-to-pdfkit/source.js && shx cp node_modules/svg-to-pdfkit/LICENSE src/3rd-party/svg-to-pdfkit/LICENSE",
     "build:browser": "webpack",
     "build:browser-standard-fonts": "webpack --config webpack-standardfonts.config.js",
     "build:vfs": "node build-vfs.js \"./examples/fonts\"",

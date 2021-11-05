@@ -17,15 +17,7 @@ var isArray = require('./helpers').isArray;
 var isUndefined = require('./helpers').isUndefined;
 var isPattern = require('./helpers').isPattern;
 var getPattern = require('./helpers').getPattern;
-
-var getSvgToPDF = function () {
-	try {
-		// optional dependency to support svg nodes
-		return require('svg-to-pdfkit');
-	} catch (e) {
-		throw new Error('Please install svg-to-pdfkit to enable svg nodes');
-	}
-};
+var SVGtoPDF = require('./3rd-party/svg-to-pdfkit');
 
 var findFont = function (fonts, requiredFonts, defaultFont) {
 	for (var i = 0; i < requiredFonts.length; i++) {
@@ -685,7 +677,7 @@ function renderSVG(svg, x, y, pdfKitDoc, fontProvider) {
 		return fontFile;
 	};
 
-	getSvgToPDF()(pdfKitDoc, svg.svg, svg.x, svg.y, options);
+	SVGtoPDF(pdfKitDoc, svg.svg, svg.x, svg.y, options);
 }
 
 function beginClip(rect, pdfKitDoc) {
