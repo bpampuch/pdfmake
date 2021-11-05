@@ -1,16 +1,7 @@
 import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
 import { isNumber } from './helpers/variableType';
-
-// TODO: refactor lazy load init
-const getSvgToPDF = function () {
-	try {
-		// optional dependency to support svg nodes
-		return require('svg-to-pdfkit');
-	} catch (e) {
-		throw new Error('Please install svg-to-pdfkit to enable svg nodes');
-	}
-};
+import SVGtoPDF from './3rd-party/svg-to-pdfkit';
 
 const findFont = (fonts, requiredFonts, defaultFont) => {
 	for (let i = 0; i < requiredFonts.length; i++) {
@@ -332,7 +323,7 @@ class Renderer {
 			return fontFile;
 		};
 
-		getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, options);
+		SVGtoPDF(this.pdfDocument, svg.svg, svg.x, svg.y, options);
 	}
 
 	beginClip(rect) {
