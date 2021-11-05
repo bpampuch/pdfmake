@@ -36,5 +36,8 @@
   },
   "plugins": [
     "jsdoc"
+  ],
+  "ignorePatterns": [
+    "src/3rd-party/svg-to-pdfkit/*"
   ]
 }
