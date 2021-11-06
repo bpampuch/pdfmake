@@ -48,8 +48,15 @@ class TextDecorator {
 			if (!inline.background) {
 				continue;
 			}
+
+			let color = inline.background;
+			let patternColor = this.pdfDocument.providePattern(inline.background);
+			if (patternColor !== null) {
+				color = patternColor;
+			}
+
 			let justifyShift = (inline.justifyShift || 0);
-			this.pdfDocument.fillColor(inline.background)
+			this.pdfDocument.fillColor(color)
 				.rect(x + inline.x - justifyShift, y, inline.width + justifyShift, height)
 				.fill();
 		}

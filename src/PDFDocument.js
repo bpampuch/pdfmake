@@ -13,7 +13,7 @@ const typeName = (bold, italics) => {
 };
 
 class PDFDocument extends PDFKit {
-	constructor(fonts = {}, images = {}, attachments = {}, options = {}, virtualfs = null) {
+	constructor(fonts = {}, images = {}, patterns = {}, attachments = {}, options = {}, virtualfs = null) {
 		super(options);
 
 		this.fonts = {};
@@ -30,6 +30,15 @@ class PDFDocument extends PDFKit {
 				};
 			}
 		}
+
+		this.patterns = {};
+		for (let pattern in patterns) {
+			if (patterns.hasOwnProperty(pattern)) {
+				let patternDef = patterns[pattern];
+				this.patterns[pattern] = this.pattern(patternDef.boundingBox, patternDef.xStep, patternDef.yStep, patternDef.pattern, patternDef.colored);
+			}
+		}
+
 
 		this.images = images;
 		this.attachments = attachments;
@@ -112,6 +121,18 @@ class PDFDocument extends PDFKit {
 		this._imageRegistry[src] = image;
 
 		return image;
+	}
+
+	/**
+	 * @param {Array} color pdfmake format: [<pattern name>, <color>]
+	 * @returns {Array} pdfkit format: [<pattern object>, <color>]
+	 */
+	providePattern(color) {
+		if (Array.isArray(color) && color.length === 2) {
+			return [this.patterns[color[0]], color[1]];
+		}
+
+		return null;
 	}
 
 	provideAttachment(src) {
