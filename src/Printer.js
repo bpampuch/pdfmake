@@ -163,7 +163,7 @@ function createMetadata(docDefinition) {
 		return key.replace(/\s+/g, '');
 	}
 
-	const info = {
+	let info = {
 		Producer: 'pdfmake',
 		Creator: 'pdfmake'
 	};
