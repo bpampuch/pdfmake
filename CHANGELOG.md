@@ -2,6 +2,7 @@
 
 ## 0.2.3 - 2021-11-06
 
+- Updated [@foliojs-fork/pdfkit](https://github.com/foliojs-fork/pdfkit) to version 0.13.0.
 - Tiling pattern support.
 - svg-to-pdfkit package moved as built-in. Solve not used installation of pdfkit.
 - Fixed passing document metadata.
