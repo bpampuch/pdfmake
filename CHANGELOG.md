@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.3 - 2021-11-06
 
 - Tiling pattern support.
 - svg-to-pdfkit package moved as built-in. Solve not used installation of pdfkit.
