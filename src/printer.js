@@ -128,11 +128,11 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		fontLayoutCache: isBoolean(options.fontLayoutCache) ? options.fontLayoutCache : true,
 		bufferPages: options.bufferPages || false,
 		autoFirstPage: false,
+		info: createMetadata(docDefinition),
 		font: null
 	};
 
 	this.pdfKitDoc = PdfKitEngine.createPdfDocument(pdfOptions);
-	setMetadata(docDefinition, this.pdfKitDoc);
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
@@ -175,7 +175,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	return this.pdfKitDoc;
 };
 
-function setMetadata(docDefinition, pdfKitDoc) {
+function createMetadata(docDefinition) {
 	// PDF standard has these properties reserved: Title, Author, Subject, Keywords,
 	// Creator, Producer, CreationDate, ModDate, Trapped.
 	// To keep the pdfmake api consistent, the info field are defined lowercase.
@@ -191,18 +191,21 @@ function setMetadata(docDefinition, pdfKitDoc) {
 		return key.replace(/\s+/g, '');
 	}
 
-	pdfKitDoc.info.Producer = 'pdfmake';
-	pdfKitDoc.info.Creator = 'pdfmake';
+	var info = {
+		Producer: 'pdfmake',
+		Creator: 'pdfmake'
+	};
 
 	if (docDefinition.info) {
 		for (var key in docDefinition.info) {
 			var value = docDefinition.info[key];
 			if (value) {
 				key = standardizePropertyKey(key);
-				pdfKitDoc.info[key] = value;
+				info[key] = value;
 			}
 		}
 	}
+	return info;
 }
 
 function calculatePageHeight(pages, margins) {
