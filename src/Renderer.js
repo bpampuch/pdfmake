@@ -1,16 +1,7 @@
 import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
 import { isNumber } from './helpers/variableType';
-
-// TODO: refactor lazy load init
-const getSvgToPDF = function () {
-	try {
-		// optional dependency to support svg nodes
-		return require('svg-to-pdfkit');
-	} catch (e) {
-		throw new Error('Please install svg-to-pdfkit to enable svg nodes');
-	}
-};
+import SVGtoPDF from './3rd-party/svg-to-pdfkit';
 
 const findFont = (fonts, requiredFonts, defaultFont) => {
 	for (let i = 0; i < requiredFonts.length; i++) {
@@ -269,6 +260,11 @@ class Renderer {
 			vector.color = gradient;
 		}
 
+		let patternColor = this.pdfDocument.providePattern(vector.color);
+		if (patternColor !== null) {
+			vector.color = patternColor;
+		}
+
 		let fillOpacity = isNumber(vector.fillOpacity) ? vector.fillOpacity : 1;
 		let strokeOpacity = isNumber(vector.strokeOpacity) ? vector.strokeOpacity : 1;
 
@@ -295,7 +291,7 @@ class Renderer {
 			const height = image.cover.height ? image.cover.height : image.height;
 			this.pdfDocument.save();
 			this.pdfDocument.rect(image.x, image.y, width, height).clip();
-			this.pdfDocument.image(image.image, image.x, image.y, { cover: [width, height], align: align, valign: valign});
+			this.pdfDocument.image(image.image, image.x, image.y, { cover: [width, height], align: align, valign: valign });
 			this.pdfDocument.restore();
 		} else {
 			this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
@@ -327,7 +323,7 @@ class Renderer {
 			return fontFile;
 		};
 
-		getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, options);
+		SVGtoPDF(this.pdfDocument, svg.svg, svg.x, svg.y, options);
 	}
 
 	beginClip(rect) {
