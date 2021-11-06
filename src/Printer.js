@@ -50,6 +50,7 @@ class PdfPrinter {
 					docDefinition.compress = typeof docDefinition.compress === 'boolean' ? docDefinition.compress : true;
 					docDefinition.images = docDefinition.images || {};
 					docDefinition.pageMargins = isValue(docDefinition.pageMargins) ? docDefinition.pageMargins : 40;
+					docDefinition.patterns = docDefinition.patterns || {};
 
 					let pageSize = normalizePageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 
@@ -67,7 +68,7 @@ class PdfPrinter {
 						font: null
 					};
 
-					this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, pdfOptions, this.virtualfs);
+					this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.patterns, pdfOptions, this.virtualfs);
 
 					const builder = new LayoutBuilder(pageSize, normalizePageMargin(docDefinition.pageMargins), new SVGMeasure());
 
