@@ -3,7 +3,7 @@ const fs = require('fs');
 const vfsBefore = "var vfs = ";
 const vfsAfter = "; var _global = typeof window === 'object' ? window : typeof global === 'object' ? global : typeof self === 'object' ? self : this; if (typeof _global.pdfMake !== 'undefined' && typeof _global.pdfMake.addVirtualFileSystem !== 'undefined') { _global.pdfMake.addVirtualFileSystem(vfs); } if (typeof module !== 'undefined') { module.exports = vfs; }";
 const sourcePath = process.argv[2];
-const vfsFilename = process.argv[3] ? process.argv[2] : './build/vfs_fonts.js';
+const vfsFilename = process.argv[3] ? process.argv[3] : './build/vfs_fonts.js';
 
 var vfs = {};
 
