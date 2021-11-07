@@ -3,7 +3,7 @@ const fs = require('fs');
 const vfsBefore = "this.pdfMake = this.pdfMake || {}; this.pdfMake.vfs = ";
 const vfsAfter = ";";
 const sourcePath = process.argv[2];
-const vfsFilename = process.argv[3] ? process.argv[2] : './build/vfs_fonts.js';
+const vfsFilename = process.argv[3] ? process.argv[3] : './build/vfs_fonts.js';
 
 var vfs = {};
 
