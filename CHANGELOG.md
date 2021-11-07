@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed destination path argument in VFS build script.
+
 ## 0.2.3 - 2021-11-06
 
 - Updated [@foliojs-fork/pdfkit](https://github.com/foliojs-fork/pdfkit) to version 0.13.0.
