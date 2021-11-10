@@ -1,4 +1,4 @@
-/*! pdfmake v0.2.3, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.2.4, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -12,7 +12,7 @@
 return /******/ (function() { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 6540:
+/***/ 9282:
 /***/ (function(module, __unused_webpack_exports, __webpack_require__) {
 
 "use strict";
@@ -1280,7 +1280,7 @@ function includes(str, search, start) {
 
 createErrorType('ERR_AMBIGUOUS_ARGUMENT', 'The "%s" argument is ambiguous. %s', TypeError);
 createErrorType('ERR_INVALID_ARG_TYPE', function (name, expected, actual) {
-  if (assert === undefined) assert = __webpack_require__(6540);
+  if (assert === undefined) assert = __webpack_require__(9282);
   assert(typeof name === 'string', "'name' must be a string"); // determiner: 'must be' or 'must not be'
 
   var determiner;
@@ -1333,7 +1333,7 @@ createErrorType('ERR_MISSING_ARGS', function () {
     args[_key] = arguments[_key];
   }
 
-  if (assert === undefined) assert = __webpack_require__(6540);
+  if (assert === undefined) assert = __webpack_require__(9282);
   assert(args.length > 0, 'At least one arg needs to be specified');
   var msg = 'The ';
   var len = args.length;
@@ -6164,33 +6164,6 @@ __webpack_require__(1539);
 
 // eslint-disable-next-line es/no-typed-arrays -- safe
 module.exports = typeof ArrayBuffer != 'undefined' && typeof DataView != 'undefined';
-
-/***/ }),
-
-/***/ 5158:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-
-
-__webpack_require__(7803);
-
-__webpack_require__(1539);
-
-__webpack_require__(1825);
-
-// FF26- bug: ArrayBuffers are non-extensible, but Object.isExtensible does not report it
-var fails = __webpack_require__(7293);
-
-module.exports = fails(function () {
-  if (typeof ArrayBuffer == 'function') {
-    var buffer = new ArrayBuffer(8); // eslint-disable-next-line es/no-object-isextensible, es/no-object-defineproperty -- safe
-
-    if (Object.isExtensible(buffer)) Object.defineProperty(buffer, 'a', {
-      value: 8
-    });
-  }
-});
 
 /***/ }),
 
@@ -14377,7 +14350,7 @@ module.exports = /*#__PURE__*/function () {
 
 /***/ }),
 
-/***/ 9282:
+/***/ 4872:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -28568,7 +28541,7 @@ module.exports = __webpack_require__(6450).BrotliDecompressBuffer;
 
 /* eslint camelcase: "off" */
 
-var assert = __webpack_require__(6540);
+var assert = __webpack_require__(9282);
 
 var Zstream = __webpack_require__(4860);
 var zlib_deflate = __webpack_require__(2233);
@@ -28988,7 +28961,7 @@ var Buffer = (__webpack_require__(8823).Buffer);
 var Transform = (__webpack_require__(2830).Transform);
 var binding = __webpack_require__(4505);
 var util = __webpack_require__(9539);
-var assert = (__webpack_require__(6540).ok);
+var assert = (__webpack_require__(9282).ok);
 var kMaxLength = (__webpack_require__(8823).kMaxLength);
 var kRangeErrorMessage = 'Cannot create final Buffer. It would be larger ' + 'than 0x' + kMaxLength.toString(16) + ' bytes';
 
@@ -38040,13 +38013,17 @@ var hasOwn = __webpack_require__(2597);
 var defineProperty = (__webpack_require__(3070).f);
 var getOwnPropertyNamesModule = __webpack_require__(8006);
 var getOwnPropertyNamesExternalModule = __webpack_require__(1156);
-var isExtensible = __webpack_require__(2050);
 var uid = __webpack_require__(9711);
 var FREEZING = __webpack_require__(6677);
 
 var REQUIRED = false;
 var METADATA = uid('meta');
 var id = 0;
+
+// eslint-disable-next-line es/no-object-isextensible -- safe
+var isExtensible = Object.isExtensible || function () {
+  return true;
+};
 
 var setMetadata = function (it) {
   defineProperty(it, METADATA, { value: {
@@ -39115,29 +39092,6 @@ module.exports = CORRECT_PROTOTYPE_GETTER ? Object.getPrototypeOf : function (O)
 
 /***/ }),
 
-/***/ 2050:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-var fails = __webpack_require__(7293);
-var isObject = __webpack_require__(111);
-var classof = __webpack_require__(4326);
-var ARRAY_BUFFER_NON_EXTENSIBLE = __webpack_require__(5158);
-
-// eslint-disable-next-line es/no-object-isextensible -- safe
-var $isExtensible = Object.isExtensible;
-var FAILS_ON_PRIMITIVES = fails(function () { $isExtensible(1); });
-
-// `Object.isExtensible` method
-// https://tc39.es/ecma262/#sec-object.isextensible
-module.exports = (FAILS_ON_PRIMITIVES || ARRAY_BUFFER_NON_EXTENSIBLE) ? function isExtensible(it) {
-  if (!isObject(it)) return false;
-  if (ARRAY_BUFFER_NON_EXTENSIBLE && classof(it) == 'ArrayBuffer') return false;
-  return $isExtensible ? $isExtensible(it) : true;
-} : $isExtensible;
-
-
-/***/ }),
-
 /***/ 7976:
 /***/ (function(module, __unused_webpack_exports, __webpack_require__) {
 
@@ -39817,7 +39771,7 @@ var store = __webpack_require__(5465);
 (module.exports = function (key, value) {
   return store[key] || (store[key] = value !== undefined ? value : {});
 })('versions', []).push({
-  version: '3.19.1',
+  version: '3.19.0',
   mode: IS_PURE ? 'pure' : 'global',
   copyright: '© 2021 Denis Pushkarev (zloirock.ru)'
 });
@@ -40811,22 +40765,16 @@ var clearErrorStack = __webpack_require__(7741);
 var installErrorCause = __webpack_require__(8340);
 var iterate = __webpack_require__(408);
 var normalizeStringArgument = __webpack_require__(6277);
-var wellKnownSymbol = __webpack_require__(5112);
 var ERROR_STACK_INSTALLABLE = __webpack_require__(2914);
 
-var TO_STRING_TAG = wellKnownSymbol('toStringTag');
 var Error = global.Error;
 var push = [].push;
 
 var $AggregateError = function AggregateError(errors, message /* , options */) {
+  var that = isPrototypeOf(AggregateErrorPrototype, this) ? this : create(AggregateErrorPrototype);
   var options = arguments.length > 2 ? arguments[2] : undefined;
-  var isInstance = isPrototypeOf(AggregateErrorPrototype, this);
-  var that;
   if (setPrototypeOf) {
-    that = setPrototypeOf(new Error(undefined), isInstance ? getPrototypeOf(this) : AggregateErrorPrototype);
-  } else {
-    that = isInstance ? this : create(AggregateErrorPrototype);
-    createNonEnumerableProperty(that, TO_STRING_TAG, 'Error');
+    that = setPrototypeOf(new Error(undefined), getPrototypeOf(that));
   }
   createNonEnumerableProperty(that, 'message', normalizeStringArgument(message, ''));
   if (ERROR_STACK_INSTALLABLE) createNonEnumerableProperty(that, 'stack', clearErrorStack(that.stack, 1));
@@ -41884,22 +41832,6 @@ $({ target: 'Object', stat: true, forced: FAILS_ON_PRIMITIVES, sham: !CORRECT_PR
   }
 });
 
-
-
-/***/ }),
-
-/***/ 1825:
-/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-var $ = __webpack_require__(2109);
-var $isExtensible = __webpack_require__(2050);
-
-// `Object.isExtensible` method
-// https://tc39.es/ecma262/#sec-object.isextensible
-// eslint-disable-next-line es/no-object-isextensible -- safe
-$({ target: 'Object', stat: true, forced: Object.isExtensible !== $isExtensible }, {
-  isExtensible: $isExtensible
-});
 
 
 /***/ }),
@@ -55568,7 +55500,7 @@ module.exports = __webpack_require__(7187).EventEmitter;
 
 /***/ }),
 
-/***/ 8486:
+/***/ 4896:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
@@ -72713,7 +72645,7 @@ module.exports = URLBrowserResolver;
 var isFunction = (__webpack_require__(6225).isFunction);
 var isUndefined = (__webpack_require__(6225).isUndefined);
 var isNull = (__webpack_require__(6225).isNull);
-var FileSaver = __webpack_require__(8486);
+var FileSaver = __webpack_require__(4896);
 var saveAs = FileSaver.saveAs;
 
 var defaultClientFonts = {
@@ -76315,7 +76247,7 @@ function _interopDefault(ex) {
 	return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex;
 }
 
-var PdfKit = _interopDefault(__webpack_require__(9282));
+var PdfKit = _interopDefault(__webpack_require__(4872));
 
 function getEngineInstance() {
 	return PdfKit;
