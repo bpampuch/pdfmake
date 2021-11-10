@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fixed destination path argument in VFS build script.
+- Fixed error "Object.isExtensible is not a function" (bug is in core-js version 3.19.1).
 
 ## 0.2.3 - 2021-11-06
 
