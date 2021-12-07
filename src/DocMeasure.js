@@ -696,13 +696,16 @@ class DocMeasure {
 	measureAcroForm(node) {
 		node._minWidth = 10;
 		node._minHeight = 10;
-		//percent
-		//inline
 
-		let styleStack = this.styleStack.clone();
-		styleStack.push(node);
-		node._font = styleStack.getProperty('font')
-		node._alignment = this.styleStack.getProperty('alignment');
+		let font = StyleContextStack.getStyleProperty(node, this.styleStack, 'font', 'Roboto');
+		let bold = StyleContextStack.getStyleProperty(node,  this.styleStack, 'bold', false);
+		let italics = StyleContextStack.getStyleProperty(node,  this.styleStack, 'italics', false);
+	
+		node.font = font;
+		node.bold = bold;
+		node.italics = italics;
+
+		node.alignment = StyleContextStack.getStyleProperty(node,  this.styleStack, 'alignment', 'left');
 
 		return node;
 	}

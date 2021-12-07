@@ -1,133 +1,310 @@
-content: [
-    {
-        text: [
-            "Refer to: https://pdfkit.org/docs/forms.html#common_options",
-            " or pdf reference for form options"
-        ],  
-    },
-    {
-        columns: [
-            {
-                stack: [
-                    {
-                        text: 'First name'  
-                    },
-                    {
-                        acroform: {
-                            type: 'text',
-                            id: 'firstname',
-                                
-                        },
-                        height: 20,
-                        
-                    },
-                ],
-                margin: 5
-            },
-            {
-                stack: [
-                    {
-                        text: 'Surname'  
-                    },
-                    {
-                        acroform: {
-                            type: 'text',
-                            id: 'surname'
-                        },
-                        height: 20,
-                    }
-                ],
-                margin: 5
-            }
-        ]
-    },
-    {
-        text: 'List form'  
-    },
-    {
-        acroform: {
-            type: 'list',
-            id: 'list1',
-            options: {
-                select: ['', 'A', 'B', 'C'], 
-                defaultValue: ''
-            }
-            
-        },
-        width: 100,
-        height: 20,
-        
-    },
-    {
-        text: 'Combo form'  
-    },
-    {
-        acroform: {
-            type: 'combo',
-            id: 'combo1',
-            options: {
-                select: ['', 'A', 'B', 'C'], 
-                defaultValue: ''
-            }
-            
-        },
-        width: 100,
-        height: 20,
-        
-    },
-    {
-        text: 'Checkbox form'  
-    },
-    {
-        acroform: {
-            type: 'checkbox',
-            id: 'checkbox1',
-        },
-        width: 20,
-        height: 20,
-        
-    },
-    {
-        text: 'Radio form'  
-    },
-    {
-        acroform: {
-            type: 'radio',
-            id: 'formChild1',
-            options: {
-                parentId: 'form1',
-                selected: true,
-            },
-            selected: true,
-        },
-        width: 20,
-        height: 20,
-        
-    },
-    {
-        acroform: {
-            type: 'radio',
-            id: 'form2',
-            options: {
-                parentId: 'form1',
-                selected: false,
-            },
-        },
-        width: 20,
-        height: 20,
-        
-    },
-    {
-        acroform: {
-            type: 'radio',
-            id: 'form3',
-            options: {
-                parentId: 'form1',
-                selected: false,
-            },
-        },
-        width: 20,
-        height: 20,
-        
-    },
-],
+enableForms: true,
+	content: [
+		{text: 'Acroforms', style: 'header'},
+		{
+			text: [
+				"It is recommended that you test your PDF form ",
+				"documents across all platforms and viewers that you wish to ",
+				"support. Refer to ",
+				"https://pdfkit.org/docs/forms or the PDF ",
+				"reference for form options and advanced form field use.\n\n"
+			],
+			style: 'subheader'
+		},
+		{
+		    text: "make sure you set the enableForms flag to true\n\n", 
+		    style: {bold: true}
+		},
+		{text: 'Text field', style: 'formHeader'},
+		{
+			style: 'tableExample',
+			table: {
+				widths: ['*', '*', '*'],
+				body: [
+					[
+						{
+							acroform: {
+								type: 'text',
+								id: 'text_placeholder',
+								options: {
+									value: 'Placeholder ...'
+								}
+								
+							},
+							height: 15,
+							italics: true
+						},
+						{
+							acroform: {
+								type: 'text',
+								id: 'text_alignment',
+								options: {
+									align: 'right',
+									value: 'right alignment'
+								}
+								
+							},
+							height: 15,
+						},
+						{
+							acroform: {
+								type: 'text',
+								id: 'text_date',
+								options: {
+									format: { 
+										type: 'date', 
+									} ,
+									align: 'center',
+									value: '10/12'
+								}
+								
+							},
+							height: 15,
+						
+						}  
+					],
+					[
+						{
+							acroform: {
+								type: 'text',
+								id: 'text_currency',
+								options: {
+									align: 'right', 
+									format: { 
+										type: 'number', 
+										nDec: 2, 
+										sepComma: true,
+										negStyle: 'ParensRed', 
+										currency: '$', 
+										currencyPrepend: true 
+									},
+									value: '$123,346.99'
+								}
+							},
+							height: 15,
+						},
+						{
+							acroform: {
+								type: 'text',
+								id: 'text_backgroundcolor',
+								options: {
+									backgroundColor: 'yellow',
+									borderColor: 'green',
+									align: 'center',
+									value: 'background color'
+								}
+							},
+							height: 15,
+						},
+						{
+							acroform: {
+								type: 'text',
+								id: 'text_required',
+								options: {
+									align: 'left',
+									required: true,
+									value: 'required text'
+								},
+							},
+							height: 15,
+							bold: true,
+							italics: true,
+							
+						},
+					],
+					[
+						{
+							acroform: {
+								type: 'text',
+								id: 'text_multi',
+								options: {
+									multiline: true,
+									value: "multiline text form " 
+								}
+							},
+							height: 50,
+						},
+						'',
+						''
+					]
+				]
+			},
+			layout: 'noBorders'
+		},
+	
+		{text: '\nList', style: 'formHeader'},
+		{
+			acroform: {
+				type: 'list',
+				id: 'list1',
+				options: {
+					select: ['', 'A', 'B', 'C'], 
+					defaultValue: ''
+				}
+				
+			},
+			width: 100,
+			height: 15,
+			
+		},
+		{text: '\nCombo-list', style: 'formHeader'},
+		{
+			acroform: {
+				type: 'combo',
+				id: 'combo1',
+				options: {
+					select: ['', 'A', 'B', 'C'], 
+					defaultValue: ''
+				}
+				
+			},
+			width: 100,
+			height: 20,
+			
+		},
+		{text: '\nCheckbox form', style: 'formHeader'},
+		{
+			acroform: {
+				type: 'checkbox',
+				id: 'checkbox1',
+			},
+			width: 20,
+			height: 20,
+			
+		},
+		{text: '\nRadio form', style: 'formHeader'},
+		{
+			acroform: {
+				type: 'radio',
+				id: 'formChild1',
+				options: {
+					parentId: 'form1',
+					selected: true,
+				},
+				selected: true,
+			},
+			width: 20,
+			height: 20,
+			
+		},
+		{
+			acroform: {
+				type: 'radio',
+				id: 'form2',
+				options: {
+					parentId: 'form1',
+					selected: false,
+				},
+			},
+			width: 20,
+			height: 20,
+			
+		},
+		{
+			acroform: {
+				type: 'radio',
+				id: 'form3',
+				options: {
+					parentId: 'form1',
+					selected: false,
+				},
+			},
+			width: 20,
+			height: 20,
+		},
+		{
+			text: '\nYou can also use forms inline with text\n\n', 
+			style: 'formHeader'
+		},
+		{
+			text: [
+				"The weather was very ",
+				{
+					acroform: {
+						type: 'combo',
+						id: 'combo_story1',
+						options: {
+							select: ['', 'nice', 'bad'], 
+							defaultValue: ''
+						}
+						
+					},
+					width: 50,
+					height: 15,
+					
+				},
+				" and the skies were ",
+				{
+					acroform: {
+						type: 'combo',
+						id: 'combo_story2',
+						options: {
+							select: ['', 'clear', 'grey'], 
+							defaultValue: ''
+						}
+						
+					},
+					width: 50,
+					height: 15,
+					
+				},
+				". A fox named ",
+				{
+					acroform: {
+						type: 'text',
+						id: 'text_story1',
+					},
+					width: 50,
+					height: 15,
+				},
+				"  and friends were playing a game at the park. When suddenly",
+				"... ",
+				{
+				    text: 'finish the story', 
+				    style: {italics: true, bold: true}
+				},
+			]
+		},
+		{
+			acroform: {
+				type: 'text',
+				id: 'text_story2',
+				options: {
+				    multiline: true
+				}
+			},
+			width: '*',
+			height: 100,
+		},
+		{
+		    text: [
+		        "\nDid you finish this story? ",
+		        {
+        			acroform: {
+        				type: 'checkbox',
+        				id: 'checkbox_story1',
+        			},
+        			width: 15,
+        			height: 15,
+        			
+        		},
+	        ]
+		}
+	],
+	styles: {
+		header: {
+			fontSize: 18,
+			bold: true,
+			margin: [0, 0, 0, 10],
+			lineHeight: 0.3,
+		},
+		subheader: {
+			fontSize: 13,
+			margin: [0, 10, 0, 5]
+		},
+		formHeader: {
+			bold: true,
+			fontSize: 13,
+			color: 'black'
+		}
+	}

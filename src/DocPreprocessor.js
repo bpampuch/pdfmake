@@ -1,6 +1,5 @@
 import { isString, isNumber, isValue, isEmptyObject } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
-import * as util from 'util'
 
 const convertValueToString = value => {
 	if (isString(value)) {

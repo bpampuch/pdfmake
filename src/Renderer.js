@@ -1,8 +1,6 @@
 import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
 import { isNumber } from './helpers/variableType';
-import * as util from 'util'
-
 // TODO: refactor lazy load init
 const getSvgToPDF = function () {
 	try {
@@ -91,7 +89,7 @@ class Renderer {
 						this.renderSVG(item.item);
 						break;
 					case 'acroform': 
-						this.renderAcroForm(item.item)
+						this.renderAcroForm(item.item);
 						break;
 					case 'beginClip':
 						this.beginClip(item.item);
@@ -110,7 +108,7 @@ class Renderer {
 			}
 		}
 		if (this.hasFormInit && Object.keys(this.pdfDocument.formRadioMap).length > 0) {
-			this.pdfDocument.writeRadioForms()
+			this.pdfDocument.writeRadioForms();
 		}
 	}
 
@@ -162,44 +160,52 @@ class Renderer {
 			let inline = line.inlines[i];
 			let shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
 
-			if (inline._pageNodeRef) {
-				preparePageNodeRefLine(inline._pageNodeRef, inline);
+			if (inline.acroform) {
+				let shiftedY = offsetText(y + shiftToBaseline, inline);
+				inline.y = shiftedY;
+				inline.x = x + inline.x;
+				this.renderAcroForm(inline);
+			} else {
+				if (inline._pageNodeRef) {
+					preparePageNodeRefLine(inline._pageNodeRef, inline);
+				}
+	
+				let options = {
+					lineBreak: false,
+					textWidth: inline.width,
+					characterSpacing: inline.characterSpacing,
+					wordCount: 1,
+					link: inline.link
+				};
+	
+				if (inline.linkToDestination) {
+					options.goTo = inline.linkToDestination;
+				}
+	
+				if (line.id && i === 0) {
+					options.destination = line.id;
+				}
+	
+				if (inline.fontFeatures) {
+					options.features = inline.fontFeatures;
+				}
+	
+				let opacity = isNumber(inline.opacity) ? inline.opacity : 1;
+				this.pdfDocument.opacity(opacity);
+				this.pdfDocument.fill(inline.color || 'black');
+	
+				this.pdfDocument._font = inline.font;
+				this.pdfDocument.fontSize(inline.fontSize);
+	
+				let shiftedY = offsetText(y + shiftToBaseline, inline);
+				this.pdfDocument.text(inline.text, x + inline.x, shiftedY, options);
+	
+				if (inline.linkToPage) {
+					this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
+					this.pdfDocument.annotate(x + inline.x, shiftedY, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
+				}
 			}
-
-			let options = {
-				lineBreak: false,
-				textWidth: inline.width,
-				characterSpacing: inline.characterSpacing,
-				wordCount: 1,
-				link: inline.link
-			};
-
-			if (inline.linkToDestination) {
-				options.goTo = inline.linkToDestination;
-			}
-
-			if (line.id && i === 0) {
-				options.destination = line.id;
-			}
-
-			if (inline.fontFeatures) {
-				options.features = inline.fontFeatures;
-			}
-
-			let opacity = isNumber(inline.opacity) ? inline.opacity : 1;
-			this.pdfDocument.opacity(opacity);
-			this.pdfDocument.fill(inline.color || 'black');
-
-			this.pdfDocument._font = inline.font;
-			this.pdfDocument.fontSize(inline.fontSize);
-
-			let shiftedY = offsetText(y + shiftToBaseline, inline);
-			this.pdfDocument.text(inline.text, x + inline.x, shiftedY, options);
-
-			if (inline.linkToPage) {
-				this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
-				this.pdfDocument.annotate(x + inline.x, shiftedY, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
-			}
+			
 		}
 
 		// Decorations won't draw correctly for superscript
@@ -347,60 +353,65 @@ class Renderer {
 
 
 	renderAcroForm(node) {
+		const { font, bold, italics } = node;
+		const { type, options } = node.acroform;
+
 		if (this.hasFormInit == false)  { 
-			this.pdfDocument.font(this.pdfDocument.getFontFile(node._font));
+			this.pdfDocument._font = typeof font === "string" ? this.pdfDocument.provideFont(font, bold, italics) : font; 
 			this.pdfDocument.initForm();
-			this.hasFormInit = true
+			this.hasFormInit = true;
 		}
 
-		const id = node.acroform.id
+		const id = node.acroform.id;
 
 		if (id == null) {
 			throw new Error(`Acroform field requires an ID`);
 		}
-		
-		const {type, options} = node.acroform
-		
-		let tmp = node.width || node.availableWidth || (node._calcWidth != NaN && node._calcWidth) || node._minWidth 
+	
+		//not sure if this is the right way of doing it
+		let width = node.width || node.availableWidth || (!isNaN(node._calcWidth) && node._calcWidth) || node._minWidth; 
 		if (node.width == '*') {
-			tmp = node.availableWidth
+			width = node.availableWidth;
 		}
-		let tmp_Height = node.height 
 
-		this.pdfDocument.font(this.pdfDocument.getFontFile(node._font));
+		//handle font decorations, sizes etc.
+		const args = [id, node.x, node.y, width, node.height, options];
+		let resolvedType;
 
 		switch (type) {
 			case "text":
 			case "formText":
-				this.pdfDocument.formText(id, node.x, node.y, tmp, tmp_Height, options);
+				resolvedType = "formText";
 				break;
-			// case "button":
-			// case "formPushButton":
-			// 	this.pdfDocument.formPushButton(id, node.x, node.y, tmp, tmp_Height, options);
-			// 	break
-			case "combo":
-			case "formCombo":
-				this.pdfDocument.formCombo(id, node.x, node.y, tmp, tmp_Height, options);
-				break
+			case "button":
+			case "formPushButton":
+				resolvedType = "formPushButton";
+				break;
 			case "list":
 			case "formList":
-				this.pdfDocument.formList(id, node.x, node.y, tmp, tmp_Height, options);
-				break
+				resolvedType = "formList";
+				break;
 			case "combo":
 			case "formCombo":
-				this.pdfDocument.formCombo(id, node.x, node.y, tmp, tmp_Height, options);
-				break
+				resolvedType = "formCombo";
+				break;
 			case "checkbox": 
 			case "formCheckbox":
-				this.pdfDocument.formCheckbox(id, node.x, node.y, tmp, tmp_Height,)
+				resolvedType = "formCheckbox";
 				break;
 			case "radio":
 			case "formRadio":
-				this.pdfDocument.formRadiobutton(id, node.x, node.y, tmp, tmp_Height, options)
+			case "formRadiobutton":
+				resolvedType = "formRadiobutton";
 				break;
 			default:
 				throw new Error(`Unrecognized acroform type: ${type}`);
 		}
+
+		
+		this.pdfDocument._font = typeof font === "string" ? this.pdfDocument.provideFont(font, bold, italics) : font; 
+
+		this.pdfDocument[resolvedType](...args);
 	}
 
 	beginClip(rect) {

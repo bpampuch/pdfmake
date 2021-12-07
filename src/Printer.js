@@ -67,7 +67,7 @@ class PdfPrinter {
 						font: null
 					};
 
-					this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.patterns, pdfOptions, this.virtualfs);
+					this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.patterns, pdfOptions, this.virtualfs, docDefinition.enableForms);
 					setMetadata(docDefinition, this.pdfKitDoc);
 
 					const builder = new LayoutBuilder(pageSize, normalizePageMargin(docDefinition.pageMargins), new SVGMeasure());

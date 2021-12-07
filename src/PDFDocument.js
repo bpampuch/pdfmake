@@ -1,4 +1,5 @@
-import PDFKit from '@foliojs-fork/pdfkit';
+import ModifiedPDFKit from './ModifiedPDFKit';
+import { PDFEmbeddedFont } from './ModifiedPDFKit';
 
 const typeName = (bold, italics) => {
 	let type = 'normal';
@@ -11,9 +12,9 @@ const typeName = (bold, italics) => {
 	}
 	return type;
 };
-
-class PDFDocument extends PDFKit {
-	constructor(fonts = {}, images = {}, patterns = {}, options = {}, virtualfs = null) {
+ 
+class PDFDocument extends ModifiedPDFKit {
+	constructor(fonts = {}, images = {}, patterns = {}, options = {}, virtualfs = null, enableForms) {
 		super(options);
 
 		this.fonts = {};
@@ -32,17 +33,19 @@ class PDFDocument extends PDFKit {
 		}
 
 		this.patterns = {};
-		for (let pattern in patterns) {
-			if (patterns.hasOwnProperty(pattern)) {
-				let patternDef = patterns[pattern];
-				this.patterns[pattern] = this.pattern(patternDef.boundingBox, patternDef.xStep, patternDef.yStep, patternDef.pattern, patternDef.colored);
-			}
-		}
+		// this.pattern undefined?
+		// for (let pattern in patterns) {
+		// 	if (patterns.hasOwnProperty(pattern)) {
+		// 		let patternDef = patterns[pattern];
+		// 		this.patterns[pattern] = this.pattern(patternDef.boundingBox, patternDef.xStep, patternDef.yStep, patternDef.pattern, patternDef.colored);
+		// 	}
+		// }
 
 
 		this.images = images;
 		this.virtualfs = virtualfs;
 		this.formRadioMap = {}; //key: ref
+		this.enableForms = enableForms; //get rid of enableForms flag???
 	}
 
 	getFontType(bold, italics) {
@@ -76,7 +79,25 @@ class PDFDocument extends PDFKit {
 				def[0] = this.virtualfs.readFileSync(def[0]);
 			}
 
-			this.fontCache[familyName][type] = this.font(...def)._font;
+			if (this.enableForms) { 
+				//TODO: find a better way of embedding fonts
+				//formFonts.includes(def[0])
+				//TODO: check if standard font
+
+				this._font = new PDFEmbeddedFont(
+					this, 
+					this.dictionary,
+					def[0],
+					`F${++this._fontCount}`,
+				);
+			
+				this._fontFamilies[def[0]] = this._font;
+				this._fontFamilies[this._font.name] = this._font;
+					
+				this.fontCache[familyName][type] =  this._font;
+			} else {
+				this.fontCache[familyName][type] = this.font(...def)._font;
+			}
 		}
 
 		return this.fontCache[familyName][type];
@@ -143,176 +164,6 @@ class PDFDocument extends PDFKit {
 		});
 		this._root.data.OpenAction = printActionRef;
 		printActionRef.end();
-	}
-
-	formRadiobutton(name, x, y, w, h, options) {
-		const rect = this._convertRect(x, y, w, h);
-		const parentName = options.parentId
-
-		if (options == null || parentName == null) 
-			throw new Error(`Options missing 'parentId'`);
-
-		const key = Object.keys(this.formRadioMap).filter(key => key == parentName)[0]
-		let groupRef;
-
-		if (key == null) { 
-			groupRef = this.ref({
-				FT: 'Btn',
-				Ff: 32768,
-				F: 4,
-				T: new String(parentName),
-				Kids: [],
-			})
-			this.formRadioMap[parentName] = groupRef
-		} else {
-			groupRef = this.formRadioMap[parentName]
-		}
-		
-		if (groupRef == null) 
-			throw new Error(`Unable to create radio group`);
-		
-		const trueRef = this.ref({
-			Type: 'XObject',
-			Subtype: 'Form',
-			FormType: 1,
-			BBox: rect,
-			Resources: {
-				ProcSet: ["PDF"]
-			}
-		})
-
-		const dtrueRef = this.ref({
-			Type: 'XObject',
-			Subtype: 'Form',
-			FormType: 1,
-			BBox: rect,
-			Resources: {
-				ProcSet: ["PDF"]
-			}
-		})
-
-		const offRef = this.ref({
-			Type: 'XObject',
-			Subtype: 'Form',
-			FormType: 1,
-			BBox: rect,
-			Resources: {
-				ProcSet: ["PDF"]
-			}
-		})
-
-		const formId = name
-		// name + (children.length + 1)
-
-		const childRef = this.ref({
-			Type: 'Annot',
-			Subtype: 'Widget',
-			Rect: rect,
-			AS: formId,
-			Parent: groupRef,
-			MK: {
-				CA: new String(8)
-			},
-			AP: {
-				N: {
-					[formId]: trueRef,
-				},
-				D: {
-					[formId]: dtrueRef,
-					Off: offRef
-				}
-			}
-		})
-
-		childRef.end()
-		trueRef.end()
-		dtrueRef.end()
-		offRef.end()
-
-		this.page.annotations.push(childRef); 
-		this._root.data.AcroForm.data.Fields.push(childRef); 
-
-		this.formRadioMap[parentName].data.Kids.push(childRef)
-		if (options.selected) { 
-			this.formRadioMap[parentName].data.V = formId
-		}
-	}
-
-	writeRadioForms() {
-		Object.keys(this.formRadioMap).forEach(key => {
-			this.formRadioMap[key].end()
-		})
-	}
-
-	//handle decorations, image replacement of tick
-	formCheckbox(name, x, y, w, h) {
-		const rect = this._convertRect(x, y, w, h);
-
-		const trueRef = this.ref({
-			Type: 'XObject',
-			Subtype: 'Form',
-			FormType: 1,
-			BBox: rect,
-			Resources: {
-				ProcSet: ["PDF"]
-			}
-		})
-
-		const dtrueRef = this.ref({
-			Type: 'XObject',
-			Subtype: 'Form',
-			FormType: 1,
-			BBox: rect,
-			Resources: {
-				ProcSet: ["PDF"]
-			}
-		})
-
-		const offRef = this.ref({
-			Type: 'XObject',
-			Subtype: 'Form',
-			FormType: 1,
-			BBox: rect,
-			Resources: {
-				ProcSet: ["PDF"]
-			}
-		})
-
-		//spec 556
-		const checkboxRef = this.ref({
-			Type: 'Annot',
-			Subtype: 'Widget',
-			Rect: rect,
-			FT: 'Btn',
-			F: 4,
-			T: new String(name),
-			AS: "true",
-			V: "true",
-			Q: 1,
-			MK: {
-				CA: new String(3)
-			},
-			AP: {
-				N: {
-					"true": trueRef,
-				},
-				D: {
-					"true": dtrueRef,
-					Off: offRef
-				}
-			}
-			
-		})
-
-		//handle parents
-
-		this.page.annotations.push(checkboxRef);
-		this._root.data.AcroForm.data.Fields.push(checkboxRef); 
-
-		checkboxRef.end()
-		trueRef.end()
-		dtrueRef.end()
-		offRef.end()
 	}
 }
 

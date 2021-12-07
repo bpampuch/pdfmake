@@ -2,7 +2,6 @@ import { isNumber } from './helpers/variableType';
 import { pack, offsetVector } from './helpers/tools';
 import DocumentContext from './DocumentContext';
 import { EventEmitter } from 'events';
-import * as util from 'util'
 
 /**
  * A line/vector writer, which adds elements to current page and sets
@@ -214,7 +213,7 @@ class ElementWriter extends EventEmitter {
 			type: 'acroform',
 			item: node
 		}, index);
-
+	
 		node.x = context.x + node._x;
 		node.y = context.y;
 

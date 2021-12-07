@@ -10,7 +10,6 @@ import { stringifyNode, getNodeId } from './helpers/node';
 import { pack, offsetVector } from './helpers/tools';
 import TextInlines from './TextInlines';
 import StyleContextStack from './StyleContextStack';
-import * as util from 'util'
 
 function addAll(target, otherArray) {
 	otherArray.forEach(item => {
@@ -441,7 +440,7 @@ class LayoutBuilder {
 			} else if (node.qr) {
 				this.processQr(node);
 			} else if (node.acroform) {
-				this.processAcroForm(node)
+				this.processAcroForm(node);
 			} else if (!node._span) {
 				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
@@ -648,7 +647,7 @@ class LayoutBuilder {
 		processor.endTable(this.writer);
 	}
 
-	// leafs (texts)
+	// leafs (texts, acroform)
 	processLeaf(node) {
 		let line = this.buildNextLine(node);
 		if (line && (node.tocItem || node.id)) {
@@ -727,7 +726,7 @@ class LayoutBuilder {
 			let inline = textNode._inlines.shift();
 			isForceContinue = false;
 
-			if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
+			if (!inline.noWrap && inline.text && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
 				let widthPerChar = inline.width / inline.text.length;
 				let maxChars = Math.floor(line.getAvailableWidth() / widthPerChar);
 				if (maxChars < 1) {
@@ -782,7 +781,7 @@ class LayoutBuilder {
 		let availableWidth = this.writer.context().availableWidth;
 		let position = this.writer.addAcroForm(node);
 		node.positions.push(position);	
-		node.availableWidth = availableWidth
+		node.availableWidth = availableWidth;
 	}
 }
 
