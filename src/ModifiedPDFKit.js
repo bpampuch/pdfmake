@@ -323,7 +323,7 @@ end\
  
 
 class ModifiedPDFKit extends PDFKit {
-    constructor(options){
+    constructor(options = {}){
         super(options);
     }
 
@@ -358,9 +358,6 @@ class ModifiedPDFKit extends PDFKit {
 			Subtype: 'Form',
 			FormType: 1,
 			BBox: rect,
-			Resources: {
-				ProcSet: ["PDF"]
-			}
 		});
 
 		const dtrueRef = this.ref({
@@ -368,9 +365,6 @@ class ModifiedPDFKit extends PDFKit {
 			Subtype: 'Form',
 			FormType: 1,
 			BBox: rect,
-			Resources: {
-				ProcSet: ["PDF"]
-			}
 		});
 
 		const offRef = this.ref({
@@ -378,10 +372,14 @@ class ModifiedPDFKit extends PDFKit {
 			Subtype: 'Form',
 			FormType: 1,
 			BBox: rect,
-			Resources: {
-				ProcSet: ["PDF"]
-			}
 		});
+
+		// const doffRef = this.ref({
+		// 	Type: 'XObject',
+		// 	Subtype: 'Form',
+		// 	FormType: 1,
+		// 	BBox: rect,
+		// });
 
 		const formId = name;
 
@@ -389,30 +387,63 @@ class ModifiedPDFKit extends PDFKit {
 			Type: 'Annot',
 			Subtype: 'Widget',
 			Rect: rect,
-			AS: formId,
+			AS: options.selected ? formId : 'Off',
 			Parent: groupRef,
 			MK: {
 				CA: new String(8)
 			},
 			AP: {
-				N: {
+				N: {//normal state
 					[formId]: trueRef,
+					Off: offRef
 				},
 				D: {
 					[formId]: dtrueRef,
-					Off: offRef
+					// Off: doffRef
 				}
 			}
 		});
 
-		//TODO: handle image, to replace tick
 		childRef.end();
 		trueRef.end(
-			
+			`
+			q
+				0 0 1 rg
+				BT
+					/${this._font.id} 12 tf
+				 	0 0 Td
+					(8) Tj
+				ET
+			Q
+			`
 		);
 		dtrueRef.end(
+			`
+			q
+				0 0 1 rg
+				BT
+					/${this._font.id} 12 tf
+				 	0 0 Td
+					(8) Tj
+				ET
+			Q
+			`
 		);
-		offRef.end();
+		offRef.end(
+			`
+			q
+				0 0 1 rg
+				BT
+					/${this._font.id} 12 tf
+					0 0 Td
+					(4) Tj
+				ET
+			Q
+			`
+		);
+		// doffRef.end(
+			
+		// );
 
 		this.page.annotations.push(childRef); 
 		this._root.data.AcroForm.data.Fields.push(childRef); 
@@ -429,8 +460,7 @@ class ModifiedPDFKit extends PDFKit {
 		});
 	}
 
-	//handle decorations, image replacement of tick
-	formCheckbox(name, x, y, w, h) {
+	formCheckbox(name, x, y, w, h, options) {
 		const rect = this._convertRect(x, y, w, h);
 
 		const trueRef = this.ref({
@@ -471,8 +501,8 @@ class ModifiedPDFKit extends PDFKit {
 			FT: 'Btn',
 			F: 4,
 			T: new String(name),
-			AS: "true",
-			V: "true",
+			AS: options && options.selected ? "true" : 'Off',
+			V: options && options.selected ? "true" : 'Off',
 			Q: 1,
 			MK: {
 				CA: new String(3)
@@ -480,10 +510,11 @@ class ModifiedPDFKit extends PDFKit {
 			AP: {
 				N: {
 					"true": trueRef,
+					Off: offRef
 				},
 				D: {
 					"true": dtrueRef,
-					Off: offRef
+					
 				}
 			}
 			
@@ -493,13 +524,43 @@ class ModifiedPDFKit extends PDFKit {
 		this.page.annotations.push(checkboxRef);
 		this._root.data.AcroForm.data.Fields.push(checkboxRef); 
 
-		//TODO: handle image, to replace tick
 		checkboxRef.end();
 		trueRef.end(
+			`
+			q
+				0 0 1 rg
+				BT
+					/${this._font.id} 12 tf
+					0 0 Td
+					(8) Tj
+				ET
+			Q
+			`
 		);
 		dtrueRef.end(
+			`
+			q
+				0 0 1 rg
+				BT
+			    	/${this._font.id} 12 tf
+					0 0 Td
+					(8) Tj
+				ET
+			Q
+			`
 		);
-		offRef.end();
+		offRef.end(
+			`
+			q
+				0 0 1 rg
+				BT
+					/${this._font.id} 12 tf
+					0 0 Td
+					(4) Tj
+				ET
+			Q
+			`
+		);
 	}
 }
 

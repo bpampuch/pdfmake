@@ -14,7 +14,7 @@ const typeName = (bold, italics) => {
 };
  
 class PDFDocument extends ModifiedPDFKit {
-	constructor(fonts = {}, images = {}, patterns = {}, options = {}, virtualfs = null, enableForms) {
+	constructor(fonts = {}, images = {}, patterns = {}, options = {}, virtualfs = null, subsetFonts = true) {
 		super(options);
 
 		this.fonts = {};
@@ -33,19 +33,17 @@ class PDFDocument extends ModifiedPDFKit {
 		}
 
 		this.patterns = {};
-		// this.pattern undefined?
-		// for (let pattern in patterns) {
-		// 	if (patterns.hasOwnProperty(pattern)) {
-		// 		let patternDef = patterns[pattern];
-		// 		this.patterns[pattern] = this.pattern(patternDef.boundingBox, patternDef.xStep, patternDef.yStep, patternDef.pattern, patternDef.colored);
-		// 	}
-		// }
-
+		for (let pattern in patterns) {
+			if (patterns.hasOwnProperty(pattern)) {
+				let patternDef = patterns[pattern];
+				this.patterns[pattern] = this.pattern(patternDef.boundingBox, patternDef.xStep, patternDef.yStep, patternDef.pattern, patternDef.colored);
+			}
+		}
 
 		this.images = images;
 		this.virtualfs = virtualfs;
 		this.formRadioMap = {}; //key: ref
-		this.enableForms = enableForms; //get rid of enableForms flag???
+		this.subsetFonts = subsetFonts; //get rid of this flag??
 	}
 
 	getFontType(bold, italics) {
@@ -79,7 +77,7 @@ class PDFDocument extends ModifiedPDFKit {
 				def[0] = this.virtualfs.readFileSync(def[0]);
 			}
 
-			if (this.enableForms) { 
+			if (this.subsetFonts == false) { 
 				//TODO: find a better way of embedding fonts
 				//formFonts.includes(def[0])
 				//TODO: check if standard font
