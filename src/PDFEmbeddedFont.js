@@ -1,10 +1,7 @@
-import PDFKit from '@foliojs-fork/pdfkit';
 var fs = require('fs');
 var fontkit = require('@foliojs-fork/fontkit');
 
-//TODO: must be a better way of embedding the entire font, so that inputs can use all glyphs?
-//TODO: problems reading font, when compress flag is false
-export class PDFEmbeddedFont {
+class PDFEmbeddedFont {
 	constructor(document, dictionary, src, id) {
 		this.document = document;
         this.src = src;
@@ -50,6 +47,8 @@ export class PDFEmbeddedFont {
 		 * TODO: 
 		 * handle text features e.g. ligatures and copy/paste issue e.g. fi = f when pasted, 
 		 * and wierd spacing issue, setting it to false works can be overriden in the doc def.
+		 * 
+		 * font layout returns a single unicode point, instead of its substituions 
 		 */
 		const run = this.font.layout(text, {liga: false,...features}); // Normalize position values
 	
@@ -287,7 +286,7 @@ export class PDFEmbeddedFont {
 				const srcCode = toHex(parseInt(key));
 				const dstString = encoded.join(' ');
 
-				//i dont think this is the best way
+				//TODO: not good
 				entries += `<${srcCode}> <${dstString}>\n`;
 			}
 
@@ -320,248 +319,5 @@ end\
 		return cmap;
 	}
 }
- 
 
-class ModifiedPDFKit extends PDFKit {
-    constructor(options = {}){
-        super(options);
-    }
-
-	formRadiobutton(name, x, y, w, h, options) {
-		const rect = this._convertRect(x, y, w, h);
-		const parentName = options.parentId;
-
-		if (options == null || parentName == null) 
-			throw new Error(`Options missing 'parentId'`);
-
-		const key = Object.keys(this.formRadioMap).filter(key => key == parentName)[0];
-		let groupRef;
-
-		if (key == null) { 
-			groupRef = this.ref({
-				FT: 'Btn',
-				Ff: 32768,
-				F: 4,
-				T: new String(parentName),
-				Kids: [],
-			});
-			this.formRadioMap[parentName] = groupRef;
-		} else {
-			groupRef = this.formRadioMap[parentName];
-		}
-		
-		if (groupRef == null) 
-			throw new Error(`Unable to create radio group`);
-		
-		const trueRef = this.ref({
-			Type: 'XObject',
-			Subtype: 'Form',
-			FormType: 1,
-			BBox: rect,
-		});
-
-		const dtrueRef = this.ref({
-			Type: 'XObject',
-			Subtype: 'Form',
-			FormType: 1,
-			BBox: rect,
-		});
-
-		const offRef = this.ref({
-			Type: 'XObject',
-			Subtype: 'Form',
-			FormType: 1,
-			BBox: rect,
-		});
-
-		// const doffRef = this.ref({
-		// 	Type: 'XObject',
-		// 	Subtype: 'Form',
-		// 	FormType: 1,
-		// 	BBox: rect,
-		// });
-
-		const formId = name;
-
-		const childRef = this.ref({
-			Type: 'Annot',
-			Subtype: 'Widget',
-			Rect: rect,
-			AS: options.selected ? formId : 'Off',
-			Parent: groupRef,
-			MK: {
-				CA: new String(8)
-			},
-			AP: {
-				N: {//normal state
-					[formId]: trueRef,
-					Off: offRef
-				},
-				D: {
-					[formId]: dtrueRef,
-					// Off: doffRef
-				}
-			}
-		});
-
-		childRef.end();
-		trueRef.end(
-			`
-			q
-				0 0 1 rg
-				BT
-					/${this._font.id} 12 tf
-				 	0 0 Td
-					(8) Tj
-				ET
-			Q
-			`
-		);
-		dtrueRef.end(
-			`
-			q
-				0 0 1 rg
-				BT
-					/${this._font.id} 12 tf
-				 	0 0 Td
-					(8) Tj
-				ET
-			Q
-			`
-		);
-		offRef.end(
-			`
-			q
-				0 0 1 rg
-				BT
-					/${this._font.id} 12 tf
-					0 0 Td
-					(4) Tj
-				ET
-			Q
-			`
-		);
-		// doffRef.end(
-			
-		// );
-
-		this.page.annotations.push(childRef); 
-		this._root.data.AcroForm.data.Fields.push(childRef); 
-
-		this.formRadioMap[parentName].data.Kids.push(childRef);
-		if (options.selected) { 
-			this.formRadioMap[parentName].data.V = formId;
-		}
-	}
-
-	writeRadioForms() {
-		Object.keys(this.formRadioMap).forEach(key => {
-			this.formRadioMap[key].end();
-		});
-	}
-
-	formCheckbox(name, x, y, w, h, options) {
-		const rect = this._convertRect(x, y, w, h);
-
-		const trueRef = this.ref({
-			Type: 'XObject',
-			Subtype: 'Form',
-			FormType: 1,
-			BBox: rect,
-			Resources: {
-				ProcSet: ["PDF"]
-			}
-		});
-
-		const dtrueRef = this.ref({
-			Type: 'XObject',
-			Subtype: 'Form',
-			FormType: 1,
-			BBox: rect,
-			Resources: {
-				ProcSet: ["PDF"]
-			}
-		});
-
-		const offRef = this.ref({
-			Type: 'XObject',
-			Subtype: 'Form',
-			FormType: 1,
-			BBox: rect,
-			Resources: {
-				ProcSet: ["PDF"]
-			}
-		});
-
-		//spec 556
-		const checkboxRef = this.ref({
-			Type: 'Annot',
-			Subtype: 'Widget',
-			Rect: rect,
-			FT: 'Btn',
-			F: 4,
-			T: new String(name),
-			AS: options && options.selected ? "true" : 'Off',
-			V: options && options.selected ? "true" : 'Off',
-			Q: 1,
-			MK: {
-				CA: new String(3)
-			},
-			AP: {
-				N: {
-					"true": trueRef,
-					Off: offRef
-				},
-				D: {
-					"true": dtrueRef,
-					
-				}
-			}
-			
-		});
-
-		//handle parents
-		this.page.annotations.push(checkboxRef);
-		this._root.data.AcroForm.data.Fields.push(checkboxRef); 
-
-		checkboxRef.end();
-		trueRef.end(
-			`
-			q
-				0 0 1 rg
-				BT
-					/${this._font.id} 12 tf
-					0 0 Td
-					(8) Tj
-				ET
-			Q
-			`
-		);
-		dtrueRef.end(
-			`
-			q
-				0 0 1 rg
-				BT
-			    	/${this._font.id} 12 tf
-					0 0 Td
-					(8) Tj
-				ET
-			Q
-			`
-		);
-		offRef.end(
-			`
-			q
-				0 0 1 rg
-				BT
-					/${this._font.id} 12 tf
-					0 0 Td
-					(4) Tj
-				ET
-			Q
-			`
-		);
-	}
-}
-
-export default ModifiedPDFKit;
+export default PDFEmbeddedFont;

@@ -153,7 +153,7 @@ class Renderer {
 			let shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
 
 			if (inline.acroform) {
-				let shiftedY = offsetText(y + shiftToBaseline, inline);
+				let shiftedY = y + (lineHeight - inline.height - descent);
 				inline.y = shiftedY;
 				inline.x = x + inline.x;
 				this.renderAcroForm(inline);
@@ -360,14 +360,14 @@ class Renderer {
 			throw new Error(`Acroform field requires an ID`);
 		}
 	
-		//not sure if this is the right way of doing it
 		let width = node.width || node.availableWidth || (!isNaN(node._calcWidth) && node._calcWidth) || node._minWidth; 
 		if (node.width == '*') {
 			width = node.availableWidth;
 		}
 
-		//handle font decorations, sizes etc.
+		//TODO: handle font decorations, sizes etc. for inline
 		const args = [id, node.x, node.y, width, node.height, options];
+
 		let resolvedType;
 
 		switch (type) {

@@ -120,7 +120,7 @@ class TextBreaker {
 			}
 
 			//TODO: handle if last or first is not text
-			if (lastWord && words.length) {
+			if (lastWord && words.length && !lastWord.acroform) {
 				let firstWord = getFirstWord(words, noWrap);
 
 				let wrapWords = splitWords(lastWord + firstWord, false);
@@ -129,7 +129,6 @@ class TextBreaker {
 				}
 			}
 
-			
 			for (let i2 = 0, l2 = words.length; i2 < l2; i2++) {
 
 				let result = {};
@@ -152,7 +151,11 @@ class TextBreaker {
 
 			lastWord = null;
 			if (i + 1 < l) {
-				lastWord = getLastWord(words, noWrap);
+				if (words[0].acroform) {
+					lastWord = words[0];
+				} else {
+					lastWord = getLastWord(words, noWrap);
+				}
 			}
 		}
 

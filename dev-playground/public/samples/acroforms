@@ -9,8 +9,10 @@ content: [
 			"https://pdfkit.org/docs/forms or the PDF ",
 			"reference for form options and advanced form field use.\n\n"
 		],
-		style: 'subheader'
+		style: 'description'
 	},
+	
+	{text: 'Components\n', style: 'subHeader'},
 	{
 		text: [
 			"Make sure you set the subsetFonts flag to false when using ",
@@ -20,121 +22,121 @@ content: [
 	},
 	{text: 'Text field', style: 'formHeader'},
 	{
-		style: 'tableExample',
-		table: {
-			widths: ['*', '*', '*'],
-			body: [
-				[
-					{
-						acroform: {
-							type: 'text',
-							id: 'text_placeholder',
-							options: {
-								value: 'Placeholder ...'
-							}
-							
-						},
-						height: 15,
-						italics: true
-					},
-					{
-						acroform: {
-							type: 'text',
-							id: 'text_alignment',
-							options: {
-								align: 'right',
-								value: 'right alignment'
-							}
-							
-						},
-						height: 15,
-					},
-					{
-						acroform: {
-							type: 'text',
-							id: 'text_date',
-							options: {
-								format: { 
-									type: 'date', 
-								} ,
-								align: 'center',
-								value: '10/12'
-							}
-							
-						},
-						height: 15,
-					
-					}  
-				],
-				[
-					{
-						acroform: {
-							type: 'text',
-							id: 'text_currency',
-							options: {
-								align: 'right', 
-								format: { 
-									type: 'number', 
-									nDec: 2, 
-									sepComma: true,
-									negStyle: 'ParensRed', 
-									currency: '$', 
-									currencyPrepend: true 
-								},
-								value: '$123,346.99'
-							}
-						},
-						height: 15,
-					},
-					{
-						acroform: {
-							type: 'text',
-							id: 'text_backgroundcolor',
-							options: {
-								backgroundColor: 'yellow',
-								borderColor: 'green',
-								align: 'center',
-								value: 'background color'
-							}
-						},
-						height: 15,
-					},
-					{
-						acroform: {
-							type: 'text',
-							id: 'text_required',
-							options: {
-								align: 'left',
-								required: true,
-								value: 'required text'
-							},
-						},
-						height: 15,
-						bold: true,
-						italics: true,
+		columns: [
+			[
+				{
+					acroform: {
+						type: 'text',
+						id: 'text_placeholder',
+						options: {
+							value: 'Placeholder ...'
+						}
 						
 					},
-				],
-				[
-					{
-						acroform: {
-							type: 'text',
-							id: 'text_multi',
-							options: {
-								multiline: true,
-								value: "multiline text form " 
-							}
-						},
-						height: 50,
+					style: 'textFieldStyle',
+					height: 15,
+					italics: true,
+				},
+				{
+					acroform: {
+						type: 'text',
+						id: 'text_date',
+						options: {
+							format: { 
+								type: 'date', 
+							} ,
+							align: 'center',
+							value: '10/12'
+						}
+						
 					},
-					'',
-					''
-				]
-			]
-		},
-		layout: 'noBorders'
+					style: 'textFieldStyle',
+					height: 15,
+				
+				}, 
+					{
+					acroform: {
+						type: 'text',
+						id: 'text_multi',
+						options: {
+							multiline: true,
+							value: "multiline text form " 
+						}
+					},
+					style: 'textFieldStyle',
+					height: 50,
+				},
+			],
+			[
+				
+				{
+					acroform: {
+						type: 'text',
+						id: 'text_alignment',
+						options: {
+							align: 'right',
+							value: 'right alignment'
+						}
+						
+					},
+					style: 'textFieldStyle',
+					height: 15,
+				},
+				
+				{
+					acroform: {
+						type: 'text',
+						id: 'text_color',
+						options: {
+							align: 'center',
+							required: true,
+							value: 'Font style'
+						},
+					},
+					style: 'textFieldStyle',
+					height: 15,
+					
+				},
+			],
+			[
+				{
+					acroform: {
+						type: 'text',
+						id: 'text_currency',
+						options: {
+							align: 'right', 
+							format: { 
+								type: 'number', 
+								nDec: 2, 
+								sepComma: true,
+								negStyle: 'ParensRed', 
+								currency: '$', 
+								currencyPrepend: true 
+							},
+							value: '$123,346.99'
+						}
+					},
+					style: 'textFieldStyle',
+					height: 15,
+				},
+				{
+					acroform: {
+						type: 'text',
+						id: 'text_backgroundcolor',
+						options: {
+							backgroundColor: 'yellow',
+							borderColor: 'green',
+							align: 'center',
+							value: 'background color'
+						}
+					},
+					style: 'textFieldStyle',
+					height: 15,
+				},
+			],
+		],
+		
 	},
-
 	{text: '\nList', style: 'formHeader'},
 	{
 		acroform: {
@@ -150,7 +152,7 @@ content: [
 		height: 15,
 		
 	},
-	{text: '\nCombo-list', style: 'formHeader'},
+	{text: '\nCombobox', style: 'formHeader'},
 	{
 		acroform: {
 			type: 'combo',
@@ -218,7 +220,26 @@ content: [
 	},
 	{
 		text: '\nYou can also use forms inline with text\n\n', 
-		style: 'formHeader'
+		style: 'subHeader'
+	},
+	{
+		text: [
+			"Check this box! ",
+			{
+				acroform: {
+					type: 'checkbox',
+					id: 'checkbox2',
+					options: {
+						selected: false
+					}
+				},
+				width: 15,
+				height: 15,
+				
+			},
+			'\n\n'
+		],
+		alignment: 'center'
 	},
 	{
 		text: [
@@ -243,7 +264,7 @@ content: [
 					type: 'combo',
 					id: 'combo_story2',
 					options: {
-						select: ['', 'clear', 'grey'], 
+						select: ['', 'clear', 'cloudy'], 
 						defaultValue: ''
 					}
 					
@@ -266,8 +287,9 @@ content: [
 			{
 				text: 'finish the story', 
 				style: {italics: true, bold: true}
+			
 			},
-		]
+		],
 	},
 	{
 		acroform: {
@@ -279,21 +301,134 @@ content: [
 		},
 		width: '*',
 		height: 100,
+		pageBreak: 'after',
 	},
+	{text: 'With table example\n\n', style: 'subHeader'},
 	{
-		text: [
-			"\nDid you finish this story? ",
-			{
-				acroform: {
-					type: 'checkbox',
-					id: 'checkbox_story1',
-				},
-				width: 15,
-				height: 15,
-				
+			style: 'tableExample',
+			table: {
+				widths: ['*', '*'],
+				body: [
+					[
+						{
+							text: 'Your details',
+							colSpan: 2,
+							alignment: 'center',
+							color: 'white',
+							fillColor: 'black'
+						},
+						''
+					],
+					[
+						{
+							text: [
+								"First Name: ",
+								{
+									acroform: {
+										type: 'text',
+										id: 'text_form1',
+										options: {
+											multiline: true
+										}
+									},
+									width: 100,
+									height: 15,
+								},
+							],
+							style: 'tableCell',
+						},
+						{
+							text: [
+								"Last Name: ",
+								{
+									acroform: {
+										type: 'text',
+										id: 'text_form2',
+										options: {
+											multiline: true
+										}
+									},
+									width: 100,
+									height: 15,
+								},
+							],
+							style: 'tableCell',
+						},
+					],
+					[
+						{
+							text: [
+								"Address: ",
+								{
+									acroform: {
+										type: 'text',
+										id: 'text_form3',
+										options: {
+											multiline: true
+										}
+									},
+									width: 100,
+									height: 15,
+								},
+							],
+							colSpan: 2,
+							style: 'tableCell',
+						},
+						'',
+					],
+					[
+						{
+							text: [
+								"Date of birth (DD/MM/YY): ",
+								{
+									acroform: {
+										type: 'text',
+										id: 'text_form4',
+										options: {
+											multiline: true
+										}
+									},
+									width: 100,
+									height: 15,
+								},
+							],
+							style: 'tableCell',
+						},
+						{
+							text: [
+								"Gender:    ",
+								{
+									acroform: {
+										type: 'radio',
+										id: 'radio_form1',
+										options: {
+											parentId: 'radioForm2',
+										},
+									},
+									width: 15,
+									height: 15,
+								},
+								" Male   ",
+								{
+									acroform: {
+										type: 'radio',
+										id: 'radio_form2',
+										options: {
+											parentId: 'radioForm2',
+										},
+									},
+									width: 15,
+									height: 15,
+								},
+								" Female",
+							],
+							style: 'tableCell',
+						}
+					]
+				],
 			},
-		]
-	},
+			layout: 'noBorders'
+		}
 ],
 styles: {
 	header: {
@@ -302,13 +437,19 @@ styles: {
 		margin: [0, 0, 0, 10],
 		lineHeight: 0.3,
 	},
-	subheader: {
+	description: {
 		fontSize: 13,
 		margin: [0, 10, 0, 5]
 	},
+	subHeader: { bold: true, fontSize: 13 },
 	formHeader: {
-		bold: true,
-		fontSize: 13,
+		fontSize: 12,
 		color: 'black'
+	}, 
+	tableCell: {
+		margin: [0, 5, 0, 5]
+	},
+	textFieldStyle: {
+			margin: [0, 0, 5, 5]
 	}
 }

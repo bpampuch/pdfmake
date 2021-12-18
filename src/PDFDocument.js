@@ -1,5 +1,6 @@
-import ModifiedPDFKit from './ModifiedPDFKit';
-import { PDFEmbeddedFont } from './ModifiedPDFKit';
+import ExtendedAcroFormMixin from './ExtendedAcroFormMixin';
+import PDFEmbeddedFont from './PDFEmbeddedFont';
+import PDFKit from '@foliojs-fork/pdfkit';
 
 const typeName = (bold, italics) => {
 	let type = 'normal';
@@ -13,7 +14,7 @@ const typeName = (bold, italics) => {
 	return type;
 };
  
-class PDFDocument extends ModifiedPDFKit {
+class PDFDocument extends PDFKit {
 	constructor(fonts = {}, images = {}, patterns = {}, options = {}, virtualfs = null, subsetFonts = true) {
 		super(options);
 
@@ -164,5 +165,11 @@ class PDFDocument extends ModifiedPDFKit {
 		printActionRef.end();
 	}
 }
+
+export function mixin(methods) {
+	Object.assign(PDFDocument.prototype, methods);
+}
+
+mixin(ExtendedAcroFormMixin);
 
 export default PDFDocument;
