@@ -47,8 +47,7 @@ class PDFEmbeddedFont {
 		 * TODO: 
 		 * handle text features e.g. ligatures and copy/paste issue e.g. fi = f when pasted, 
 		 * and wierd spacing issue, setting it to false works can be overriden in the doc def.
-		 * 
-		 * font layout returns a single unicode point, instead of its substituions 
+		 * font layout returns a single unicode point, instead of its substituions, line 25 
 		 */
 		const run = this.font.layout(text, {liga: false,...features}); // Normalize position values
 	

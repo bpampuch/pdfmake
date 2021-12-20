@@ -153,9 +153,10 @@ class Renderer {
 			let shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
 
 			if (inline.acroform) {
-				let shiftedY = y + (lineHeight - inline.height - descent);
+				let shiftedY = y + (lineHeight - inline.height - descent + 3);
 				inline.y = shiftedY;
 				inline.x = x + inline.x;
+
 				this.renderAcroForm(inline);
 			} else {
 				if (inline._pageNodeRef) {
@@ -346,7 +347,11 @@ class Renderer {
 
 	renderAcroForm(node) {
 		const { font, bold, italics } = node;
-		const { type, options } = node.acroform;
+		let { type, options } = node.acroform;
+
+		if (options == null) {
+			options = {};
+		}
 
 		if (this.hasFormInit == false)  { 
 			this.pdfDocument._font = typeof font === "string" ? this.pdfDocument.provideFont(font, bold, italics) : font; 
@@ -365,14 +370,29 @@ class Renderer {
 			width = node.availableWidth;
 		}
 
-		//TODO: handle font decorations, sizes etc. for inline
+		if (width == null) {
+			throw new Error(`Form ${type} width is undefined`);
+		}
+
 		const args = [id, node.x, node.y, width, node.height, options];
 
 		let resolvedType;
 
+		this.pdfDocument._font = typeof font === "string" ? this.pdfDocument.provideFont(font, bold, italics) : font;
+
 		switch (type) {
 			case "text":
 			case "formText":
+				//TODO auto sizing doesnt work in adobe acrobat
+				if (this.pdfDocument._acroform.defaultFont == this.pdfDocument._font.name) {
+					Object.assign(options, {
+						DR: this.pdfDocument.page.resources,
+						DA: new String(`/${this.pdfDocument._font.id} ${options.fontSize || this.pdfDocument._fontSize} Tf 0 g`),
+					});
+				} else {
+					Object.assign(options, {fontSize: this.pdfDocument._fontSize});
+				}	
+				
 				resolvedType = "formText";
 				break;
 			case "button":
@@ -399,9 +419,6 @@ class Renderer {
 			default:
 				throw new Error(`Unrecognized acroform type: ${type}`);
 		}
-
-		
-		this.pdfDocument._font = typeof font === "string" ? this.pdfDocument.provideFont(font, bold, italics) : font; 
 
 		this.pdfDocument[resolvedType](...args);
 	}

@@ -1,6 +1,7 @@
-import ExtendedAcroFormMixin from './ExtendedAcroFormMixin';
-import PDFEmbeddedFont from './PDFEmbeddedFont';
+import ExtendedAcroFormMixin from './pdf-kit-extensions/ExtendedAcroFormMixin';
+import PDFEmbeddedFont from './pdf-kit-extensions/PDFEmbeddedFont';
 import PDFKit from '@foliojs-fork/pdfkit';
+import { isStandardFont } from './pdf-kit-extensions/StandardFonts';
 
 const typeName = (bold, italics) => {
 	let type = 'normal';
@@ -78,11 +79,7 @@ class PDFDocument extends PDFKit {
 				def[0] = this.virtualfs.readFileSync(def[0]);
 			}
 
-			if (this.subsetFonts == false) { 
-				//TODO: find a better way of embedding fonts
-				//formFonts.includes(def[0])
-				//TODO: check if standard font
-
+			if (this.subsetFonts == false && !isStandardFont(def[0])) { 
 				this._font = new PDFEmbeddedFont(
 					this, 
 					this.dictionary,
@@ -92,7 +89,7 @@ class PDFDocument extends PDFKit {
 			
 				this._fontFamilies[def[0]] = this._font;
 				this._fontFamilies[this._font.name] = this._font;
-					
+
 				this.fontCache[familyName][type] =  this._font;
 			} else {
 				this.fontCache[familyName][type] = this.font(...def)._font;
