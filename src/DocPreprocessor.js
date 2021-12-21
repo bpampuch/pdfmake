@@ -32,7 +32,6 @@ class DocPreprocessor {
 		} else if ('text' in node) { // cast value in text property
 			node.text = convertValueToString(node.text);
 		}
-
 		if (node.columns) {
 			return this.preprocessColumns(node);
 		} else if (node.stack) {
@@ -57,6 +56,8 @@ class DocPreprocessor {
 			return this.preprocessQr(node);
 		} else if (node.pageReference || node.textReference) {
 			return this.preprocessText(node);
+		} else if (node.acroform) {
+			return this.preprocessAcroForm(node);
 		} else {
 			throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 		}
@@ -239,6 +240,10 @@ class DocPreprocessor {
 	}
 
 	preprocessSVG(node) {
+		return node;
+	}
+
+	preprocessAcroForm(node) {
 		return node;
 	}
 

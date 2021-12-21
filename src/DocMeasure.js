@@ -61,7 +61,10 @@ class DocMeasure {
 				return extendMargins(this.measureCanvas(node));
 			} else if (node.qr) {
 				return extendMargins(this.measureQr(node));
-			} else {
+			} else if (node.acroform) {
+				return extendMargins(this.measureAcroForm(node));
+			}
+			else {
 				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
 		});
@@ -686,7 +689,24 @@ class DocMeasure {
 
 	measureQr(node) {
 		node = qrEncoder.measure(node);
-		node._alignment = this.styleStack.getProperty('alignment');
+		node._styleStack = this.styleStack.getProperty('alignment');
+		return node;
+	}
+
+	measureAcroForm(node) {
+		node._minWidth = 10;
+		node._minHeight = 10;
+
+		let font = StyleContextStack.getStyleProperty(node, this.styleStack, 'font', 'Roboto');
+		let bold = StyleContextStack.getStyleProperty(node,  this.styleStack, 'bold', false);
+		let italics = StyleContextStack.getStyleProperty(node,  this.styleStack, 'italics', false);
+	
+		node.font = font;
+		node.bold = bold;
+		node.italics = italics;
+
+		node.alignment = StyleContextStack.getStyleProperty(node,  this.styleStack, 'alignment', 'left');
+
 		return node;
 	}
 }

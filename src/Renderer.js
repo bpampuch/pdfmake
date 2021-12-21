@@ -41,6 +41,7 @@ class Renderer {
 	constructor(pdfDocument, progressCallback) {
 		this.pdfDocument = pdfDocument;
 		this.progressCallback = progressCallback;
+		this.hasFormInit = false;
 	}
 
 	renderPages(pages) {
@@ -65,6 +66,7 @@ class Renderer {
 			let page = pages[i];
 			for (let ii = 0, il = page.items.length; ii < il; ii++) {
 				let item = page.items[ii];
+				
 				switch (item.type) {
 					case 'vector':
 						this.renderVector(item.item);
@@ -77,6 +79,9 @@ class Renderer {
 						break;
 					case 'svg':
 						this.renderSVG(item.item);
+						break;
+					case 'acroform': 
+						this.renderAcroForm(item.item);
 						break;
 					case 'beginClip':
 						this.beginClip(item.item);
@@ -144,48 +149,59 @@ class Renderer {
 			let inline = line.inlines[i];
 			let shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
 
-			if (inline._pageNodeRef) {
-				preparePageNodeRefLine(inline._pageNodeRef, inline);
+			if (inline.acroform) {
+				//TODO positioning issue
+				let shiftedY = y + (lineHeight - ((inline.font.ascender / 1000) * inline.height) - descent);
+				inline.y = shiftedY;
+				inline.x = x + inline.x;
+
+				this.renderAcroForm(inline);
+			} else {
+				if (inline._pageNodeRef) {
+					preparePageNodeRefLine(inline._pageNodeRef, inline);
+				}
+	
+				let options = {
+					lineBreak: false,
+					textWidth: inline.width,
+					characterSpacing: inline.characterSpacing,
+					wordCount: 1,
+					link: inline.link
+				};
+	
+				if (inline.linkToDestination) {
+					options.goTo = inline.linkToDestination;
+				}
+	
+				if (line.id && i === 0) {
+					options.destination = line.id;
+				}
+	
+				if (inline.fontFeatures) {
+					options.features = inline.fontFeatures;
+				}
+	
+				let opacity = isNumber(inline.opacity) ? inline.opacity : 1;
+				this.pdfDocument.opacity(opacity);
+				this.pdfDocument.fill(inline.color || 'black');
+	
+				this.pdfDocument._font = inline.font;
+				this.pdfDocument.fontSize(inline.fontSize);
+	
+				let shiftedY = offsetText(y + shiftToBaseline, inline);
+				this.pdfDocument.text(inline.text, x + inline.x, shiftedY, options);
+	
+				if (inline.linkToPage) {
+					this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
+					this.pdfDocument.annotate(x + inline.x, shiftedY, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
+				}
 			}
-
-			let options = {
-				lineBreak: false,
-				textWidth: inline.width,
-				characterSpacing: inline.characterSpacing,
-				wordCount: 1,
-				link: inline.link
-			};
-
-			if (inline.linkToDestination) {
-				options.goTo = inline.linkToDestination;
-			}
-
-			if (line.id && i === 0) {
-				options.destination = line.id;
-			}
-
-			if (inline.fontFeatures) {
-				options.features = inline.fontFeatures;
-			}
-
-			let opacity = isNumber(inline.opacity) ? inline.opacity : 1;
-			this.pdfDocument.opacity(opacity);
-			this.pdfDocument.fill(inline.color || 'black');
-
-			this.pdfDocument._font = inline.font;
-			this.pdfDocument.fontSize(inline.fontSize);
-
-			let shiftedY = offsetText(y + shiftToBaseline, inline);
-			this.pdfDocument.text(inline.text, x + inline.x, shiftedY, options);
-
-			if (inline.linkToPage) {
-				this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
-				this.pdfDocument.annotate(x + inline.x, shiftedY, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
-			}
+			
 		}
 
 		// Decorations won't draw correctly for superscript
 		textDecorator.drawDecorations(line, x, y);
+		
 	}
 
 	renderVector(vector) {
@@ -324,6 +340,84 @@ class Renderer {
 		};
 
 		SVGtoPDF(this.pdfDocument, svg.svg, svg.x, svg.y, options);
+	}
+
+
+	renderAcroForm(node) {
+		const { font, bold, italics } = node;
+		let { type, options } = node.acroform;
+
+		if (options == null) {
+			options = {};
+		}
+
+		const setFont = () => {
+			if (typeof font === "string") {
+				this.pdfDocument._font = this.pdfDocument.provideFont(font, bold, italics);
+			} else {
+				this.pdfDocument._font = font; 
+			}
+			if (this.hasFormInit) {
+				this.pdfDocument.addFontToAcroFormDict();
+			}
+		};
+
+		if (this.hasFormInit == false)  { 
+			setFont();
+			this.pdfDocument.initForm();
+			this.hasFormInit = true;
+		}
+
+		const id = node.acroform.id;
+
+		if (id == null) {
+			throw new Error(`Acroform field ${id} requires an ID`);
+		}
+	
+		let width = node.width || node.availableWidth || (!isNaN(node._calcWidth) && node._calcWidth) || node._minWidth; 
+		if (node.width == '*') {
+			width = node.availableWidth;
+		}
+
+		if (width == null) {
+			throw new Error(`Form ${type} width is undefined`);
+		}
+
+		let resolvedType;
+
+		setFont();
+
+		switch (type) {
+			case "text":
+			case "formText":
+				resolvedType = "formText";
+				break;
+			case "button":
+			case "formPushButton":
+				resolvedType = "formPushButton";
+				break;
+			case "list":
+			case "formList":
+				resolvedType = "formList";
+				break;
+			case "combo":
+			case "formCombo":
+				resolvedType = "formCombo";
+				break;
+			case "checkbox": 
+			case "formCheckbox":
+				resolvedType = "formCheckbox";
+				break;
+			case "radio":
+			case "formRadio":
+			case "formRadioButton":
+				resolvedType = "formRadioButton";
+				break;
+			default:
+				throw new Error(`Unrecognized acroform type: ${type}`);
+		}
+
+		this.pdfDocument[resolvedType](id, node.x, node.y, width, node.height, options);
 	}
 
 	beginClip(rect) {

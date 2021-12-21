@@ -121,7 +121,7 @@ class TextInlines {
 			item.link = StyleContextStack.getStyleProperty(item, styleContextStack, 'link', null);
 			item.linkToPage = StyleContextStack.getStyleProperty(item, styleContextStack, 'linkToPage', null);
 			item.linkToDestination = StyleContextStack.getStyleProperty(item, styleContextStack, 'linkToDestination', null);
-			item.noWrap = StyleContextStack.getStyleProperty(item, styleContextStack, 'noWrap', null);
+			item.noWrap = item.acroform ? true: StyleContextStack.getStyleProperty(item, styleContextStack, 'noWrap', null);
 			item.opacity = StyleContextStack.getStyleProperty(item, styleContextStack, 'opacity', 1);
 			item.sup = StyleContextStack.getStyleProperty(item, styleContextStack, 'sup', false);
 			item.sub = StyleContextStack.getStyleProperty(item, styleContextStack, 'sub', false);
@@ -133,30 +133,38 @@ class TextInlines {
 
 			let lineHeight = StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeight', 1);
 
-			item.width = this.widthOfText(item.text, item);
-			item.height = item.font.lineHeight(item.fontSize) * lineHeight;
+			if (item.acroform) {
+				item.width = item.width || 25;
+				item.height = item.height || 15;
+			}  else {
+				item.width = this.widthOfText(item.text, item);
+				item.height = item.font.lineHeight(item.fontSize) * lineHeight;
 
-			if (!item.leadingCut) {
-				item.leadingCut = 0;
-			}
-
-			let preserveLeadingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
-			if (!preserveLeadingSpaces) {
-				let leadingSpaces = item.text.match(LEADING);
-				if (leadingSpaces) {
-					item.leadingCut += this.widthOfText(leadingSpaces[0], item);
+				if (!item.leadingCut) {
+					item.leadingCut = 0;
+				}
+	
+				let preserveLeadingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
+				if (!preserveLeadingSpaces) {
+					let leadingSpaces = item.text.match(LEADING);
+					if (leadingSpaces) {
+						item.leadingCut += this.widthOfText(leadingSpaces[0], item);
+					}
+				}
+	
+				item.trailingCut = 0;
+	
+				let preserveTrailingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
+				if (!preserveTrailingSpaces) {
+					let trailingSpaces = item.text.match(TRAILING);
+					if (trailingSpaces) {
+						item.trailingCut = this.widthOfText(trailingSpaces[0], item);
+					}
 				}
 			}
+			
 
-			item.trailingCut = 0;
-
-			let preserveTrailingSpaces = StyleContextStack.getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
-			if (!preserveTrailingSpaces) {
-				let trailingSpaces = item.text.match(TRAILING);
-				if (trailingSpaces) {
-					item.trailingCut = this.widthOfText(trailingSpaces[0], item);
-				}
-			}
+			
 		}, this);
 
 		return array;

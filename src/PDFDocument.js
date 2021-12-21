@@ -1,4 +1,7 @@
+import ExtendedAcroFormMixin from './pdf-kit-extensions/ExtendedAcroFormMixin';
+import PDFEmbeddedFont from './pdf-kit-extensions/PDFEmbeddedFont';
 import PDFKit from '@foliojs-fork/pdfkit';
+import { isStandardFont } from './pdf-kit-extensions/StandardFonts';
 
 const typeName = (bold, italics) => {
 	let type = 'normal';
@@ -11,9 +14,9 @@ const typeName = (bold, italics) => {
 	}
 	return type;
 };
-
+ 
 class PDFDocument extends PDFKit {
-	constructor(fonts = {}, images = {}, patterns = {}, options = {}, virtualfs = null) {
+	constructor(fonts = {}, images = {}, patterns = {}, options = {}, virtualfs = null, subsetFonts = true) {
 		super(options);
 
 		this.fonts = {};
@@ -39,9 +42,9 @@ class PDFDocument extends PDFKit {
 			}
 		}
 
-
 		this.images = images;
 		this.virtualfs = virtualfs;
+		this.subsetFonts = subsetFonts; //TODO maybe automatically set this flag
 	}
 
 	getFontType(bold, italics) {
@@ -75,7 +78,20 @@ class PDFDocument extends PDFKit {
 				def[0] = this.virtualfs.readFileSync(def[0]);
 			}
 
-			this.fontCache[familyName][type] = this.font(...def)._font;
+			if (this.subsetFonts == false && !isStandardFont(def[0])) { 
+				this._font = new PDFEmbeddedFont(
+					this, 
+					def[0],
+					`F${++this._fontCount}`,
+				);
+			
+				this._fontFamilies[def[0]] = this._font;
+				this._fontFamilies[this._font.name] = this._font;
+
+				this.fontCache[familyName][type] = this._font;
+			} else {
+				this.fontCache[familyName][type] = this.font(...def)._font;
+			}
 		}
 
 		return this.fontCache[familyName][type];
@@ -144,5 +160,11 @@ class PDFDocument extends PDFKit {
 		printActionRef.end();
 	}
 }
+
+export function mixin(methods) {
+	Object.assign(PDFDocument.prototype, methods);
+}
+
+mixin(ExtendedAcroFormMixin);
 
 export default PDFDocument;
