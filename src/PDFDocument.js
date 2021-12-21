@@ -44,8 +44,7 @@ class PDFDocument extends PDFKit {
 
 		this.images = images;
 		this.virtualfs = virtualfs;
-		this.formRadioMap = {}; //key: ref
-		this.subsetFonts = subsetFonts; //get rid of this flag??
+		this.subsetFonts = subsetFonts; //TODO maybe automatically set this flag
 	}
 
 	getFontType(bold, italics) {
@@ -82,7 +81,6 @@ class PDFDocument extends PDFKit {
 			if (this.subsetFonts == false && !isStandardFont(def[0])) { 
 				this._font = new PDFEmbeddedFont(
 					this, 
-					this.dictionary,
 					def[0],
 					`F${++this._fontCount}`,
 				);
@@ -90,7 +88,7 @@ class PDFDocument extends PDFKit {
 				this._fontFamilies[def[0]] = this._font;
 				this._fontFamilies[this._font.name] = this._font;
 
-				this.fontCache[familyName][type] =  this._font;
+				this.fontCache[familyName][type] = this._font;
 			} else {
 				this.fontCache[familyName][type] = this.font(...def)._font;
 			}

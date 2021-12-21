@@ -2,10 +2,10 @@ var fs = require('fs');
 var fontkit = require('@foliojs-fork/fontkit');
 
 class PDFEmbeddedFont {
-	constructor(document, dictionary, src, id) {
+	constructor(document, src, id) {
 		this.document = document;
         this.src = src;
-        this.dictionary = dictionary;
+        this.dictionary = document.dictionary;
 
 		if (typeof src === 'string') {
 			this.font = fontkit.create(fs.readFileSync(src));
@@ -45,9 +45,8 @@ class PDFEmbeddedFont {
 	layoutRun(text, features) {
 		/**
 		 * TODO: 
-		 * handle text features e.g. ligatures and copy/paste issue e.g. fi = f when pasted, 
-		 * and wierd spacing issue, setting it to false works can be overriden in the doc def.
 		 * font layout returns a single unicode point, instead of its substituions, line 25 
+		 * liga false but can be overriden
 		 */
 		const run = this.font.layout(text, {liga: false,...features}); // Normalize position values
 	

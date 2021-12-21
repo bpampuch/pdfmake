@@ -90,7 +90,7 @@ content: [
 						options: {
 							align: 'center',
 							required: true,
-							value: 'Font style'
+							value: 'Ω©®℅¥123'
 						},
 					},
 					style: 'textFieldStyle',
@@ -137,86 +137,96 @@ content: [
 		],
 		
 	},
-	{text: '\nList', style: 'formHeader'},
 	{
-		acroform: {
-			type: 'list',
-			id: 'list1',
-			options: {
-				select: ['', 'A', 'B', 'C'], 
-				defaultValue: ''
-			}
-			
-		},
-		width: 100,
-		height: 15,
-		
-	},
-	{text: '\nCombobox', style: 'formHeader'},
-	{
-		acroform: {
-			type: 'combo',
-			id: 'combo1',
-			options: {
-				select: ['', 'A', 'B', 'C'], 
-				defaultValue: ''
-			}
-			
-		},
-		width: 100,
-		height: 20,
-		
-	},
-	{text: '\nCheckbox form', style: 'formHeader'},
-	{
-		acroform: {
-			type: 'checkbox',
-			id: 'checkbox1',
-			options: {
-				selected: false
-			}
-		},
-		width: 20,
-		height: 20,
-		
-	},
-	{text: '\nRadio form', style: 'formHeader'},
-	{
-		acroform: {
-			type: 'radio',
-			id: 'radioChild1',
-			options: {
-				parentId: 'radioForm1',
-				selected: true,
-			},
-			selected: true,
-		},
-		width: 20,
-		height: 20,
-		
-	},
-	{
-		acroform: {
-			type: 'radio',
-			id: 'radioChild2',
-			options: {
-				parentId: 'radioForm1',
-			},
-		},
-		width: 20,
-		height: 20,
-		
-	},
-	{
-		acroform: {
-			type: 'radio',
-			id: 'radioChild3',
-			options: {
-				parentId: 'radioForm1',
-			},
-		},
-		width: 20,
-		height: 20,
+		columns: [
+			[
+				{text: '\nList', style: 'formHeader'},
+				{
+					acroform: {
+						type: 'list',
+						id: 'list1',
+						options: {
+							select: ['', 'A', 'B', 'C'], 
+						}
+						
+					},
+					width: 100,
+					height: 60,
+					
+				},
+			],
+			[
+				{text: '\nCombobox', style: 'formHeader'},
+				{
+					acroform: {
+						type: 'combo',
+						id: 'combo1',
+						options: {
+							select: ['', 'A', 'B', 'C'], 
+							defaultValue: ''
+						}
+						
+					},
+					width: 100,
+					height: 20,
+					
+				},
+			], 
+			[
+				{text: '\nCheckbox form', style: 'formHeader'},
+				{
+					acroform: {
+						type: 'checkbox',
+						id: 'checkbox1',
+						options: {
+							selected: false,
+						}
+					},
+					width: 20,
+					height: 20,
+					
+				},
+			], 
+			[
+				{text: '\nRadio form', style: 'formHeader'},
+				{
+					acroform: {
+						type: 'radio',
+						id: 'radioChild1',
+						options: {
+							parentId: 'radioForm1',
+							selected: true,
+						},
+					},
+					width: 50,
+					height: 30,
+					
+				},
+				{
+					acroform: {
+						type: 'radio',
+						id: 'radioChild2',
+						options: {
+							parentId: 'radioForm1',
+						},
+					},
+					width: 40,
+					height: 25,
+					
+				},
+				{
+					acroform: {
+						type: 'radio',
+						id: 'radioChild3',
+						options: {
+							parentId: 'radioForm1',
+						},
+					},
+					width: 30,
+					height: 20,
+				},
+			],
+		]
 	},
 	{
 		text: '\nYou can also use forms inline with text\n\n', 
@@ -255,7 +265,7 @@ content: [
 					
 				},
 				width: 50,
-				height: 15,
+				height: 9.5,
 				
 			},
 			" and the skies were ",
@@ -270,7 +280,7 @@ content: [
 					
 				},
 				width: 50,
-				height: 15,
+				height: 9.5,
 				
 			},
 			". A fox named ",
@@ -280,7 +290,7 @@ content: [
 					id: 'text_story1',
 				},
 				width: 50,
-				height: 15,
+				height: 9.5,
 			},
 			"  and friends were playing a game at the park, when suddenly",
 			"... ",
@@ -301,134 +311,7 @@ content: [
 		},
 		width: '*',
 		height: 100,
-		pageBreak: 'after',
 	},
-	{text: 'With table example\n\n', style: 'subHeader'},
-	{
-			style: 'tableExample',
-			table: {
-				widths: ['*', '*'],
-				body: [
-					[
-						{
-							text: 'Your details',
-							colSpan: 2,
-							alignment: 'center',
-							color: 'white',
-							fillColor: 'black'
-						},
-						''
-					],
-					[
-						{
-							text: [
-								"First Name: ",
-								{
-									acroform: {
-										type: 'text',
-										id: 'text_form1',
-										options: {
-											multiline: true
-										}
-									},
-									width: 100,
-									height: 15,
-								},
-							],
-							style: 'tableCell',
-						},
-						{
-							text: [
-								"Last Name: ",
-								{
-									acroform: {
-										type: 'text',
-										id: 'text_form2',
-										options: {
-											multiline: true
-										}
-									},
-									width: 100,
-									height: 15,
-								},
-							],
-							style: 'tableCell',
-						},
-					],
-					[
-						{
-							text: [
-								"Address: ",
-								{
-									acroform: {
-										type: 'text',
-										id: 'text_form3',
-										options: {
-											multiline: true
-										}
-									},
-									width: 100,
-									height: 15,
-								},
-							],
-							colSpan: 2,
-							style: 'tableCell',
-						},
-						'',
-					],
-					[
-						{
-							text: [
-								"Date of birth (DD/MM/YY): ",
-								{
-									acroform: {
-										type: 'text',
-										id: 'text_form4',
-										options: {
-											multiline: true
-										}
-									},
-									width: 100,
-									height: 15,
-								},
-							],
-							style: 'tableCell',
-						},
-						{
-							text: [
-								"Gender:    ",
-								{
-									acroform: {
-										type: 'radio',
-										id: 'radio_form1',
-										options: {
-											parentId: 'radioForm2',
-										},
-									},
-									width: 15,
-									height: 15,
-								},
-								" Male   ",
-								{
-									acroform: {
-										type: 'radio',
-										id: 'radio_form2',
-										options: {
-											parentId: 'radioForm2',
-										},
-									},
-									width: 15,
-									height: 15,
-								},
-								" Female",
-							],
-							style: 'tableCell',
-						}
-					]
-				],
-			},
-			layout: 'noBorders'
-		}
 ],
 styles: {
 	header: {

@@ -4,7 +4,18 @@
 const ExtendedAcroFormMixin = {
 
 	extendedFormAnnotation(name, type, x, y, w, h, options = {}, appearanceId) {
-		let fieldDict = this._fieldDict(name, type, options);
+		let resolvedType = type == 'radioChild' ? null : type; 
+		let fieldDict = this._fieldDict(name, resolvedType, options);
+
+		//TODO adobe acrobat doesn't like 0 font size
+		Object.assign(fieldDict, {
+			DR: this.page.resources,
+			DA: new String(`/${this._font.id} ${options.fontSize || this._fontSize} Tf 0 g`),
+		});
+
+		if (fieldDict.fontSize) {
+			delete fieldDict.fontSize;
+		}
 
 		fieldDict.Subtype = 'Widget';
 
@@ -12,7 +23,10 @@ const ExtendedAcroFormMixin = {
 			fieldDict.F = 4; 
 		} 
 		
-		this.createApperances(x, y, w, h, fieldDict, type, appearanceId);
+		if ((type == 'checkbox' || type == 'radioChild') && appearanceId) {
+			this.createAppearances(x, y, w, h, fieldDict, type, appearanceId);
+		}
+		
 		this.annotate(x, y, w, h, fieldDict);
 
 		let annotRef = this.page.annotations[this.page.annotations.length - 1];
@@ -20,46 +34,10 @@ const ExtendedAcroFormMixin = {
 
 	},
 
-	createApperances(x, y, w, h, options = {}, type, appearanceId) {
-		const fontSize = options.fontSize || this._fontSize;
+	createAppearances(x, y, w, h, options = {}, type, appearanceId) {
+		const dimentions = [x, y, w, h];
 
-		let CA;
-		if (type == null) {
-			CA = new String(8);
-		} else {
-			CA = new String(3);
-		}
-
-		const APstream = `
-q
-	0 0 1 rg
-	BT
-		/${this._font.id} ${fontSize} tf
-		0 0 Td
-		(${CA}) Tj
-	ET
-Q`
-		;
-
-		Object.assign(options, {
-			MK: {
-				CA
-			},
-			AP : {
-				N: {
-					[appearanceId]: this._createAppearanceField(x, y, w, h, APstream),
-					"Off": this._createAppearanceField(x, y, w, h, APstream)
-				},
-				//R
-				D: {
-					[appearanceId]: this._createAppearanceField(x, y, w, h, APstream),
-					"Off": this._createAppearanceField(x, y, w, h, APstream)
-				}
-			}
-			
-		});
-		
-		if (type == null) { //radio field
+		if (type == 'radioChild') { //radio field
 			delete options.T;
 		}
 
@@ -75,15 +53,32 @@ Q`
 		delete options.selected;
 		delete options.fontSize;
 
+		let resolvedType;
+		switch (type) {
+			case 'radioChild':
+				resolvedType = 'RadioButton';
+				break;
+			case 'checkbox':
+				resolvedType = 'Checkbox';
+				break;
+			default:
+				break;
+		}
+
+		const CA = Appearance[resolvedType].getCA();
+		const AP = Appearance[resolvedType].createAppearance(this, appearanceId, dimentions);
+
+		Object.assign(options, {MK: {CA}, AP});
+
 		return options;
 	},
 
-	_createAppearanceField(x, y, w, h, stream) {
+	_createAppearanceField(dimentions, stream) {
 		const appr = this.ref({
 			Type: 'XObject',
 			Subtype: 'Form',
 			FormType: 1,
-			BBox: [0, 0, w, h],
+			BBox: dimentions,
 			Resources: this.page.resources
 		});
 
@@ -93,21 +88,19 @@ Q`
 	},
 
 	_getParentRadioField(parentName) {
-		const key = Object.keys(this.formRadioMap).filter(key => key == parentName)[0];
+		const ref = this._getParent(parentName);
 		let groupRef;
 
-		if (key == null) { 
-			groupRef = this.ref({
+		if (ref == null) { 
+			groupRef = this.formField(parentName, {
 				FT: 'Btn',
-				Ff: 32768,
+				Ff: 32768, //TODO
 				F: 4,
 				T: new String(parentName),
 				Kids: [],
 			});
-			
-			this.formRadioMap[parentName] = groupRef;
 		} else {
-			groupRef = this.formRadioMap[parentName];
+			groupRef = ref;
 		}
 		
 		if (groupRef == null) {
@@ -117,13 +110,11 @@ Q`
 		return groupRef;
 	},
 
-	writeRadioForms() {
-		Object.keys(this.formRadioMap).forEach(key => {
-			this.formRadioMap[key].end();
-		});
+	_getParent(parentName) {
+		return this._root.data.AcroForm.data.Fields.filter(ref => ref.data.T != null && ref.data.T == parentName)[0];
 	},
 
-	formRadiobutton(name, x, y, w, h, options = {}) {
+	formRadioButton(name, x, y, w, h, options = {}) {
 		if (options.parentId == null) {
 			throw new Error(`Unable to find key 'parentId' for radio form field: ${name}`);
 		}
@@ -133,16 +124,100 @@ Q`
 		options.Parent = this._getParentRadioField(parentName);
 
 		if (options.selected) { 
-			this.formRadioMap[parentName].data.V = name;
+			this._getParent(parentName).data.V = name;
 		}
 		
 		delete options.parentId;
 
-		return this.extendedFormAnnotation(name, null, x, y, w, h, options, name);
+		return this.extendedFormAnnotation(name, 'radioChild', x, y, w, h, options, name);
 	},
 
 	formCheckbox(name, x, y, w, h, options = {}) {
 		return this.extendedFormAnnotation(name, 'checkbox', x, y, w, h, options, "On");
+	},
+
+	formText(name, x, y, w, h, options = {}) {
+		return this.extendedFormAnnotation(name, 'text', x, y, w, h, options);
+	},
+
+	formPushButton(name, x, y, w, h, options = {}) {
+		return this.extendedFormAnnotation(name, 'pushButton', x, y, w, h, options);
+	},
+
+	formCombo(name, x, y, w, h, options = {}) {
+		return this.extendedFormAnnotation(name, 'combo', x, y, w, h, options);
+	},
+
+	formList(name, x, y, w, h, options = {}) {
+		return this.extendedFormAnnotation(name, 'list', x, y, w, h, options);
+	},
+
+	addFontToAcroFormDict() {
+		this._acroform.fonts[this._font.id] = this._font.ref();
+	}
+};
+
+//TODO doc definition to customise this
+const Appearance = {
+	Checkbox: {
+		createAppearance(pdfDocument, appearanceId, dimentions) {
+			const APStream =  this.getTrueAPStream(pdfDocument);
+			return {
+				N: {
+					[appearanceId]: pdfDocument._createAppearanceField(dimentions, APStream),
+					"Off": pdfDocument._createAppearanceField(dimentions, APStream)
+				},
+				//R
+				D: {
+					[appearanceId]: pdfDocument._createAppearanceField(dimentions, APStream),
+					"Off": pdfDocument._createAppearanceField(dimentions, APStream)
+				}
+			};
+		},
+		getTrueAPStream(pdfDocument) {
+			return `
+q
+0 0 1 rg
+BT
+	/${pdfDocument._font.id} ${pdfDocument._fontSize} Tf
+	0 0 Td
+	(${this.getCA()}) Tj
+ET
+Q`;
+		},
+		getCA() {
+			return new String(3);
+		}
+	},
+	RadioButton: {
+		createAppearance(pdfDocument, appearanceId, dimentions) {
+			const APStream =  this.getTrueAPStream(pdfDocument);
+			return {
+				N: {
+					[appearanceId]: pdfDocument._createAppearanceField(dimentions, APStream),
+					"Off": pdfDocument._createAppearanceField(dimentions, APStream)
+				},
+				//R
+				D: {
+					[appearanceId]: pdfDocument._createAppearanceField(dimentions, APStream),
+					"Off": pdfDocument._createAppearanceField(dimentions, APStream)
+				}
+			};
+		},
+		getTrueAPStream(pdfDocument) {
+			return `
+q
+0 0 1 rg
+BT
+	/${pdfDocument._font.id} ${pdfDocument._fontSize} Tf
+	0 0 Td
+	(${this.getCA()}) Tj
+ET
+Q`;
+		},
+		getCA() {
+			return new String(8);
+		}
 	}
 };
 

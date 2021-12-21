@@ -99,9 +99,6 @@ class Renderer {
 				this.renderWatermark(page);
 			}
 		}
-		if (this.hasFormInit && Object.keys(this.pdfDocument.formRadioMap).length > 0) {
-			this.pdfDocument.writeRadioForms();
-		}
 	}
 
 	renderLine(line, x, y) {
@@ -153,7 +150,8 @@ class Renderer {
 			let shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
 
 			if (inline.acroform) {
-				let shiftedY = y + (lineHeight - inline.height - descent + 3);
+				//TODO positioning issue
+				let shiftedY = y + (lineHeight - ((inline.font.ascender / 1000) * inline.height) - descent);
 				inline.y = shiftedY;
 				inline.x = x + inline.x;
 
@@ -353,8 +351,19 @@ class Renderer {
 			options = {};
 		}
 
+		const setFont = () => {
+			if (typeof font === "string") {
+				this.pdfDocument._font = this.pdfDocument.provideFont(font, bold, italics);
+			} else {
+				this.pdfDocument._font = font; 
+			}
+			if (this.hasFormInit) {
+				this.pdfDocument.addFontToAcroFormDict();
+			}
+		};
+
 		if (this.hasFormInit == false)  { 
-			this.pdfDocument._font = typeof font === "string" ? this.pdfDocument.provideFont(font, bold, italics) : font; 
+			setFont();
 			this.pdfDocument.initForm();
 			this.hasFormInit = true;
 		}
@@ -362,7 +371,7 @@ class Renderer {
 		const id = node.acroform.id;
 
 		if (id == null) {
-			throw new Error(`Acroform field requires an ID`);
+			throw new Error(`Acroform field ${id} requires an ID`);
 		}
 	
 		let width = node.width || node.availableWidth || (!isNaN(node._calcWidth) && node._calcWidth) || node._minWidth; 
@@ -374,25 +383,13 @@ class Renderer {
 			throw new Error(`Form ${type} width is undefined`);
 		}
 
-		const args = [id, node.x, node.y, width, node.height, options];
-
 		let resolvedType;
 
-		this.pdfDocument._font = typeof font === "string" ? this.pdfDocument.provideFont(font, bold, italics) : font;
+		setFont();
 
 		switch (type) {
 			case "text":
 			case "formText":
-				//TODO auto sizing doesnt work in adobe acrobat
-				if (this.pdfDocument._acroform.defaultFont == this.pdfDocument._font.name) {
-					Object.assign(options, {
-						DR: this.pdfDocument.page.resources,
-						DA: new String(`/${this.pdfDocument._font.id} ${options.fontSize || this.pdfDocument._fontSize} Tf 0 g`),
-					});
-				} else {
-					Object.assign(options, {fontSize: this.pdfDocument._fontSize});
-				}	
-				
 				resolvedType = "formText";
 				break;
 			case "button":
@@ -413,14 +410,14 @@ class Renderer {
 				break;
 			case "radio":
 			case "formRadio":
-			case "formRadiobutton":
-				resolvedType = "formRadiobutton";
+			case "formRadioButton":
+				resolvedType = "formRadioButton";
 				break;
 			default:
 				throw new Error(`Unrecognized acroform type: ${type}`);
 		}
 
-		this.pdfDocument[resolvedType](...args);
+		this.pdfDocument[resolvedType](id, node.x, node.y, width, node.height, options);
 	}
 
 	beginClip(rect) {
@@ -431,7 +428,6 @@ class Renderer {
 
 	endClip() {
 		this.pdfDocument.restore();
-		
 	}
 
 	renderWatermark(page) {
