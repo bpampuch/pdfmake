@@ -23,7 +23,7 @@ class ElementWriter extends EventEmitter {
 		let context = this.context();
 		let page = context.getCurrentPage();
 		let position = this.getCurrentPositionOnPage();
-
+		
 		if (context.availableHeight < height || !page) {
 			return false;
 		}
@@ -42,7 +42,7 @@ class ElementWriter extends EventEmitter {
 		if (!dontUpdateContextPosition) {
 			context.moveDown(height);
 		}
-
+		
 		return position;
 	}
 
@@ -192,6 +192,33 @@ class ElementWriter extends EventEmitter {
 		}
 
 		context.moveDown(qr._height);
+
+		return position;
+	}
+
+	addAcroForm(node, index) {
+		let context = this.context();
+		let page = context.getCurrentPage();
+		let position = this.getCurrentPositionOnPage();
+		
+		if (!page) {
+			return false;
+		}
+
+		if (node._x === undefined) {
+			node._x = node.x || 0;
+		}
+
+		addPageItem(page, {
+			type: 'acroform',
+			item: node
+		}, index);
+	
+		node.x = context.x + node._x;
+		node.y = context.y;
+
+		
+		context.moveDown(node.height || node._minHeight);
 
 		return position;
 	}

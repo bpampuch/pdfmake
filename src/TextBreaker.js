@@ -104,16 +104,23 @@ class TextBreaker {
 
 			let noWrap = StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 			if (isObject(item)) {
-				if (item._textRef && item._textRef._textNodeRef.text) {
-					item.text = item._textRef._textNodeRef.text;
+				if (item.text) {
+					if (item._textRef && item._textRef._textNodeRef.text) {
+						item.text = item._textRef._textNodeRef.text;
+					}
+					words = splitWords(item.text, noWrap);
+					style = StyleContextStack.copyStyle(item);
+				} else if (item.acroform) {
+					words = [item];
+					style = StyleContextStack.copyStyle(item);
 				}
-				words = splitWords(item.text, noWrap);
-				style = StyleContextStack.copyStyle(item);
+				
 			} else {
 				words = splitWords(item, noWrap);
 			}
 
-			if (lastWord && words.length) {
+			//TODO: handle if last or first is not text
+			if (lastWord && words.length && !lastWord.acroform) {
 				let firstWord = getFirstWord(words, noWrap);
 
 				let wrapWords = splitWords(lastWord + firstWord, false);
@@ -123,10 +130,16 @@ class TextBreaker {
 			}
 
 			for (let i2 = 0, l2 = words.length; i2 < l2; i2++) {
-				let result = {
-					text: words[i2].text
-				};
 
+				let result = {};
+				if (words[0].acroform) {
+					result = words[0];
+				} else {
+					result = {
+						text: words[i2].text
+					};
+				}
+				
 				if (words[i2].lineEnd) {
 					result.lineEnd = true;
 				}
@@ -138,7 +151,11 @@ class TextBreaker {
 
 			lastWord = null;
 			if (i + 1 < l) {
-				lastWord = getLastWord(words, noWrap);
+				if (words[0].acroform) {
+					lastWord = words[0];
+				} else {
+					lastWord = getLastWord(words, noWrap);
+				}
 			}
 		}
 
