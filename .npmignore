@@ -4,6 +4,7 @@ docs/
 examples/
 tests/
 build/fonts/
+package-lock.json
 yarn.lock
 composer.json
 bower.json
