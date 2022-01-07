@@ -13,7 +13,7 @@ const typeName = (bold, italics) => {
 };
 
 class PDFDocument extends PDFKit {
-	constructor(fonts = {}, images = {}, patterns = {}, options = {}, virtualfs = null) {
+	constructor(fonts = {}, images = {}, patterns = {}, attachments = {}, options = {}, virtualfs = null) {
 		super(options);
 
 		this.fonts = {};
@@ -41,6 +41,7 @@ class PDFDocument extends PDFKit {
 
 
 		this.images = images;
+		this.attachments = attachments;
 		this.virtualfs = virtualfs;
 	}
 
@@ -132,6 +133,31 @@ class PDFDocument extends PDFKit {
 		}
 
 		return null;
+	}
+
+	provideAttachment(src) {
+		const checkRequired = obj => {
+			if (!obj) {
+				throw new Error('No attachment');
+			}
+			if (!obj.src) {
+				throw new Error('The "src" key is required for attachments');
+			}
+
+			return obj;
+		};
+
+		if (typeof src === 'object') {
+			return checkRequired(src);
+		}
+
+		let attachment = checkRequired(this.attachments[src]);
+
+		if (this.virtualfs && this.virtualfs.existsSync(attachment.src)) {
+			return this.virtualfs.readFileSync(attachment.src);
+		}
+
+		return attachment;
 	}
 
 	setOpenActionAsPrint() {
