@@ -1,6 +1,10 @@
 # Changelog
 
-0.3.0-beta.1 - 2022-01-01
+## Unreleased
+
+- attachments embedding
+
+## 0.3.0-beta.1 - 2022-01-01
 
 - Port code base to ES6+
 - Unify interface for node and browser **(breaking change)**
