@@ -23,7 +23,7 @@ var docDefinition = {
 			pageSize: 'A7',
 			pageOrientation: 'portrait',
 			section: [
-				'SECTION 4',
+				'SECTION 3',
 				'Text in section as A7 page.'
 			]
 		},
@@ -32,7 +32,7 @@ var docDefinition = {
 			pageOrientation: 'portrait',
 			pageMargins: 5,
 			section: [
-				'SECTION 5',
+				'SECTION 4',
 				'Text in section as A6 page with margin.'
 			]
 		},
@@ -41,7 +41,7 @@ var docDefinition = {
 			pageOrientation: 'landscape',
 			pageMargins: 5,
 			section: [
-				'SECTION 6',
+				'SECTION 5',
 				'Text in section as A6 landscape page with margin.'
 			]
 		}
