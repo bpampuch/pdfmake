@@ -196,6 +196,32 @@ class ElementWriter extends EventEmitter {
 		return position;
 	}
 
+	addAttachment(attachment, index) {
+		let context = this.context();
+		let page = context.getCurrentPage();
+		let position = this.getCurrentPositionOnPage();
+
+		if (!page || (attachment.absolutePosition === undefined && context.availableHeight < attachment._height && page.items.length > 0)) {
+			return false;
+		}
+
+		if (attachment._x === undefined) {
+			attachment._x = attachment.x || 0;
+		}
+
+		attachment.x = context.x + attachment._x;
+		attachment.y = context.y;
+
+		addPageItem(page, {
+			type: 'attachment',
+			item: attachment
+		}, index);
+
+		context.moveDown(attachment._height);
+
+		return position;
+	}
+
 	alignImage(image) {
 		let width = this.context().availableWidth;
 		let imageWidth = image._minWidth;

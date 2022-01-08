@@ -49,6 +49,7 @@ class PdfPrinter {
 					docDefinition.version = docDefinition.version || '1.3';
 					docDefinition.compress = typeof docDefinition.compress === 'boolean' ? docDefinition.compress : true;
 					docDefinition.images = docDefinition.images || {};
+					docDefinition.attachments = docDefinition.attachments || {};
 					docDefinition.pageMargins = isValue(docDefinition.pageMargins) ? docDefinition.pageMargins : 40;
 					docDefinition.patterns = docDefinition.patterns || {};
 
@@ -68,7 +69,8 @@ class PdfPrinter {
 						font: null
 					};
 
-					this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.patterns, pdfOptions, this.virtualfs);
+					this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.patterns, docDefinition.attachments, pdfOptions, this.virtualfs);
+					embedFiles(docDefinition, this.pdfKitDoc);
 
 					const builder = new LayoutBuilder(pageSize, normalizePageMargin(docDefinition.pageMargins), new SVGMeasure());
 
@@ -138,6 +140,22 @@ class PdfPrinter {
 				}
 			}
 
+			if (docDefinition.attachments) {
+				for (let attachment in docDefinition.attachments) {
+					if (docDefinition.attachments.hasOwnProperty(attachment) && docDefinition.attachments[attachment].src) {
+						this.urlResolver.resolve(docDefinition.attachments[attachment].src);
+					}
+				}
+			}
+
+			if (docDefinition.files) {
+				for (let file in docDefinition.files) {
+					if (docDefinition.files.hasOwnProperty(file) && docDefinition.files[file].src) {
+						this.urlResolver.resolve(docDefinition.files[file].src);
+					}
+				}
+			}
+
 			this.urlResolver.resolved().then(() => {
 				resolve();
 			}, result => {
@@ -178,6 +196,23 @@ function createMetadata(docDefinition) {
 		}
 	}
 	return info;
+}
+
+function embedFiles(docDefinition, pdfKitDoc) {
+	if (docDefinition.files) {
+		for (const key in docDefinition.files) {
+			const file = docDefinition.files[key];
+
+			if (!file.src) return;
+
+			if (pdfKitDoc.virtualfs && pdfKitDoc.virtualfs.existsSync(file.src)) {
+				file.src = pdfKitDoc.virtualfs.readFileSync(file.src);
+			}
+
+			file.name = file.name || key;
+			pdfKitDoc.file(file.src, file);
+		}
+	}
 }
 
 function calculatePageHeight(pages, margins) {

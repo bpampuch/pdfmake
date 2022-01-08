@@ -441,6 +441,8 @@ class LayoutBuilder {
 				this.processCanvas(node);
 			} else if (node.qr) {
 				this.processQr(node);
+			} else if (node.attachment) {
+				this.processAttachment(node);
 			} else if (!node._span) {
 				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
@@ -791,6 +793,11 @@ class LayoutBuilder {
 
 	processQr(node) {
 		let position = this.writer.addQr(node);
+		node.positions.push(position);
+	}
+
+	processAttachment(node) {
+		let position = this.writer.addAttachment(node);
 		node.positions.push(position);
 	}
 }

@@ -63,6 +63,8 @@ class DocMeasure {
 				return extendMargins(this.measureCanvas(node));
 			} else if (node.qr) {
 				return extendMargins(this.measureQr(node));
+			} else if (node.attachment) {
+				return extendMargins(this.measureAttachment(node));
 			} else {
 				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
@@ -697,6 +699,13 @@ class DocMeasure {
 	measureQr(node) {
 		node = qrEncoder.measure(node);
 		node._alignment = this.styleStack.getProperty('alignment');
+		return node;
+	}
+
+	measureAttachment(node) {
+		node._width = node.width || 7;
+		node._height = node.height || 18;
+
 		return node;
 	}
 }
