@@ -224,7 +224,7 @@ class DocumentContext extends EventEmitter {
 			this.availableWidth = pageSize.width - pageMargin.left - pageMargin.right;
 		}
 
-		let page = { items: [], pageSize: pageSize };
+		let page = { items: [], pageSize: pageSize, pageMargins: this.pageMargins };
 		this.pages.push(page);
 		this.backgroundLength.push(0);
 		this.page = this.pages.length - 1;
