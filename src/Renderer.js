@@ -56,8 +56,7 @@ class Renderer {
 		let renderedItems = 0;
 
 		for (let i = 0; i < pages.length; i++) {
-			this.pdfDocument.options.size = [pages[i].pageSize.width, pages[i].pageSize.height];
-			this.pdfDocument.addPage(this.pdfDocument.options);
+			this.pdfDocument.addPage({size: [pages[i].pageSize.width, pages[i].pageSize.height]});
 
 			let page = pages[i];
 			for (let ii = 0, il = page.items.length; ii < il; ii++) {
