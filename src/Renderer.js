@@ -45,7 +45,6 @@ class Renderer {
 
 	renderPages(pages) {
 		this.pdfDocument._pdfMakePages = pages; // TODO: Why?
-		this.pdfDocument.addPage();
 
 		let totalItems = 0;
 		if (this.progressCallback) {
@@ -57,10 +56,8 @@ class Renderer {
 		let renderedItems = 0;
 
 		for (let i = 0; i < pages.length; i++) {
-			if (i > 0) {
-				this.pdfDocument.options.size = [pages[i].pageSize.width, pages[i].pageSize.height];
-				this.pdfDocument.addPage(this.pdfDocument.options);
-			}
+			this.pdfDocument.options.size = [pages[i].pageSize.width, pages[i].pageSize.height];
+			this.pdfDocument.addPage(this.pdfDocument.options);
 
 			let page = pages[i];
 			for (let ii = 0, il = page.items.length; ii < il; ii++) {
