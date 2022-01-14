@@ -141,8 +141,7 @@ class Renderer {
 
 		textDecorator.drawBackground(line, x, y);
 
-		//TODO: line.optimizeInlines();
-		//TOOD: lines without differently styled inlines should be written to pdf as one stream
+		line.optimizeInlines();
 		for (let i = 0, l = line.inlines.length; i < l; i++) {
 			let inline = line.inlines[i];
 			let shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
@@ -184,6 +183,27 @@ class Renderer {
 			if (inline.linkToPage) {
 				this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
 				this.pdfDocument.annotate(x + inline.x, shiftedY, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
+			}
+			if (inline.linkToFile) {
+				const attachment = this.pdfDocument.provideAttachment(inline.linkToFile);
+				this.pdfDocument.fileAnnotation(
+					x + inline.x,
+					shiftedY,
+					inline.width,
+					inline.height,
+					attachment,
+					// add empty rectangle as file annotation appearance with the same size as the rendered inline
+					{
+						AP: {
+							N: {
+								Type: 'XObject',
+								Subtype: 'Form',
+								FormType: 1,
+								BBox: [x + inline.x, shiftedY, inline.width, inline.height]
+							}
+						},
+					}
+				);
 			}
 		}
 
