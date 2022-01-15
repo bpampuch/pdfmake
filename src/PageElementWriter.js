@@ -1,5 +1,6 @@
 import ElementWriter from './ElementWriter';
 import { normalizePageSize, normalizePageMargin } from './PageSize';
+import DocumentContext from './DocumentContext';
 
 /**
  * An extended ElementWriter which can handle:
