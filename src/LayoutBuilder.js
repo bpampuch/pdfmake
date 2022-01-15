@@ -171,8 +171,7 @@ class LayoutBuilder {
 		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
-		this.writer = new PageElementWriter(
-			new DocumentContext(this.pageSize, this.pageMargins));
+		this.writer = new PageElementWriter(new DocumentContext(this.pageSize, this.pageMargins));
 
 		this.writer.context().addListener('pageAdded', () => {
 			this.addBackground(background);

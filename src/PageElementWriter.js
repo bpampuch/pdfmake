@@ -10,6 +10,10 @@ import { normalizePageSize, normalizePageMargin } from './PageSize';
  *                 whole block will be rendered on the same page)
  */
 class PageElementWriter extends ElementWriter {
+
+	/**
+	 * @param {DocumentContext} context
+	 */
 	constructor(context) {
 		super(context);
 		this.transactionLevel = 0;

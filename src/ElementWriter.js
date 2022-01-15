@@ -8,12 +8,19 @@ import { EventEmitter } from 'events';
  * their positions based on the context
  */
 class ElementWriter extends EventEmitter {
+
+	/**
+	 * @param {DocumentContext} context
+	 */
 	constructor(context) {
 		super();
 		this._context = context;
 		this.contextStack = [];
 	}
 
+	/**
+	 * @returns {DocumentContext}
+	 */
 	context() {
 		return this._context;
 	}
