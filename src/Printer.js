@@ -1,10 +1,10 @@
 import PDFDocument from './PDFDocument';
 import LayoutBuilder from './LayoutBuilder';
 import SVGMeasure from './SVGMeasure';
-import sizes from './standardPageSizes';
+import { normalizePageSize, normalizePageMargin } from './PageSize';
 import { tableLayouts } from './tableLayouts';
 import Renderer from './Renderer';
-import { isString, isNumber, isValue } from './helpers/variableType';
+import { isNumber, isValue } from './helpers/variableType';
 
 /**
  * Printer which turns document definition into a pdf
@@ -49,9 +49,11 @@ class PdfPrinter {
 					docDefinition.version = docDefinition.version || '1.3';
 					docDefinition.compress = typeof docDefinition.compress === 'boolean' ? docDefinition.compress : true;
 					docDefinition.images = docDefinition.images || {};
+					docDefinition.attachments = docDefinition.attachments || {};
 					docDefinition.pageMargins = isValue(docDefinition.pageMargins) ? docDefinition.pageMargins : 40;
+					docDefinition.patterns = docDefinition.patterns || {};
 
-					let pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
+					let pageSize = normalizePageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 
 					let pdfOptions = {
 						size: [pageSize.width, pageSize.height],
@@ -63,13 +65,14 @@ class PdfPrinter {
 						fontLayoutCache: typeof options.fontLayoutCache === 'boolean' ? options.fontLayoutCache : true,
 						bufferPages: options.bufferPages || false,
 						autoFirstPage: false,
+						info: createMetadata(docDefinition),
 						font: null
 					};
 
-					this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, pdfOptions, this.virtualfs);
-					setMetadata(docDefinition, this.pdfKitDoc);
+					this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.patterns, docDefinition.attachments, pdfOptions, this.virtualfs);
+					embedFiles(docDefinition, this.pdfKitDoc);
 
-					const builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins), new SVGMeasure());
+					const builder = new LayoutBuilder(pageSize, normalizePageMargin(docDefinition.pageMargins), new SVGMeasure());
 
 					builder.registerTableLayouts(tableLayouts);
 					if (options.tableLayouts) {
@@ -137,6 +140,22 @@ class PdfPrinter {
 				}
 			}
 
+			if (docDefinition.attachments) {
+				for (let attachment in docDefinition.attachments) {
+					if (docDefinition.attachments.hasOwnProperty(attachment) && docDefinition.attachments[attachment].src) {
+						this.urlResolver.resolve(docDefinition.attachments[attachment].src);
+					}
+				}
+			}
+
+			if (docDefinition.files) {
+				for (let file in docDefinition.files) {
+					if (docDefinition.files.hasOwnProperty(file) && docDefinition.files[file].src) {
+						this.urlResolver.resolve(docDefinition.files[file].src);
+					}
+				}
+			}
+
 			this.urlResolver.resolved().then(() => {
 				resolve();
 			}, result => {
@@ -146,7 +165,7 @@ class PdfPrinter {
 	}
 }
 
-function setMetadata(docDefinition, pdfKitDoc) {
+function createMetadata(docDefinition) {
 	// PDF standard has these properties reserved: Title, Author, Subject, Keywords,
 	// Creator, Producer, CreationDate, ModDate, Trapped.
 	// To keep the pdfmake api consistent, the info field are defined lowercase.
@@ -162,16 +181,36 @@ function setMetadata(docDefinition, pdfKitDoc) {
 		return key.replace(/\s+/g, '');
 	}
 
-	pdfKitDoc.info.Producer = 'pdfmake';
-	pdfKitDoc.info.Creator = 'pdfmake';
+	let info = {
+		Producer: 'pdfmake',
+		Creator: 'pdfmake'
+	};
 
 	if (docDefinition.info) {
 		for (let key in docDefinition.info) {
 			let value = docDefinition.info[key];
 			if (value) {
 				key = standardizePropertyKey(key);
-				pdfKitDoc.info[key] = value;
+				info[key] = value;
 			}
+		}
+	}
+	return info;
+}
+
+function embedFiles(docDefinition, pdfKitDoc) {
+	if (docDefinition.files) {
+		for (const key in docDefinition.files) {
+			const file = docDefinition.files[key];
+
+			if (!file.src) return;
+
+			if (pdfKitDoc.virtualfs && pdfKitDoc.virtualfs.existsSync(file.src)) {
+				file.src = pdfKitDoc.virtualfs.readFileSync(file.src);
+			}
+
+			file.name = file.name || key;
+			pdfKitDoc.file(file.src, file);
 		}
 	}
 }
@@ -196,7 +235,7 @@ function calculatePageHeight(pages, margins) {
 		return top + height;
 	}
 
-	let fixedMargins = fixPageMargins(margins || 40);
+	let fixedMargins = normalizePageMargin(margins || 40);
 	let height = fixedMargins.top;
 
 	pages.forEach(page => {
@@ -211,57 +250,6 @@ function calculatePageHeight(pages, margins) {
 	height += fixedMargins.bottom;
 
 	return height;
-}
-
-function fixPageSize(pageSize, pageOrientation) {
-	function isNeedSwapPageSizes(pageOrientation) {
-		if (isString(pageOrientation)) {
-			pageOrientation = pageOrientation.toLowerCase();
-			return ((pageOrientation === 'portrait') && (size.width > size.height)) ||
-				((pageOrientation === 'landscape') && (size.width < size.height));
-		}
-		return false;
-	}
-
-	// if pageSize.height is set to auto, set the height to infinity so there are no page breaks.
-	if (pageSize && pageSize.height === 'auto') {
-		pageSize.height = Infinity;
-	}
-
-	let size = pageSize2widthAndHeight(pageSize || 'A4');
-	if (isNeedSwapPageSizes(pageOrientation)) { // swap page sizes
-		size = { width: size.height, height: size.width };
-	}
-	size.orientation = size.width > size.height ? 'landscape' : 'portrait';
-	return size;
-}
-
-function fixPageMargins(margin) {
-	if (isNumber(margin)) {
-		margin = { left: margin, right: margin, top: margin, bottom: margin };
-	} else if (Array.isArray(margin)) {
-		if (margin.length === 2) {
-			margin = { left: margin[0], top: margin[1], right: margin[0], bottom: margin[1] };
-		} else if (margin.length === 4) {
-			margin = { left: margin[0], top: margin[1], right: margin[2], bottom: margin[3] };
-		} else {
-			throw new Error('Invalid pageMargins definition');
-		}
-	}
-
-	return margin;
-}
-
-function pageSize2widthAndHeight(pageSize) {
-	if (isString(pageSize)) {
-		let size = sizes[pageSize.toUpperCase()];
-		if (!size) {
-			throw new Error(`Page size ${pageSize} not recognized`);
-		}
-		return { width: size[0], height: size[1] };
-	}
-
-	return pageSize;
 }
 
 export default PdfPrinter;

@@ -25,6 +25,7 @@ module.exports = {
 			fs: path.join(__dirname, './src/browser-extensions/virtual-fs-cjs.js')
 		},
 		fallback: {
+			crypto: false,
 			buffer: require.resolve('buffer/'),
 			util: require.resolve('util/'),
 			stream: require.resolve('stream-browserify'),
@@ -78,7 +79,7 @@ module.exports = {
 			},
 			{
 				test: /\.js$/,
-				include: /(pdfkit|saslprep|unicode-trie|unicode-properties|dfa|linebreak|png-js)/,
+				include: /(pdfkit|linebreak|fontkit|saslprep|restructure|unicode-trie|unicode-properties|dfa|buffer|png-js|crypto-js)/,
 				use: {
 					loader: 'babel-loader',
 					options: {

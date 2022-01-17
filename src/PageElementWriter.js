@@ -35,6 +35,10 @@ class PageElementWriter extends ElementWriter {
 		return this._fitOnPage(() => super.addQr(qr, index));
 	}
 
+	addAttachment(attachment, index) {
+		return this._fitOnPage(() => super.addAttachment(attachment, index));
+	}
+
 	addVector(vector, ignoreContextX, ignoreContextY, index) {
 		return super.addVector(vector, ignoreContextX, ignoreContextY, index);
 	}

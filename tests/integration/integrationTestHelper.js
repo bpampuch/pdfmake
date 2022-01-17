@@ -15,6 +15,7 @@ class IntegrationTestHelper {
 	renderPages(sizeName, docDefinition) {
 		var size = sizes[sizeName];
 		docDefinition.images = docDefinition.images || {};
+		docDefinition.attachments = docDefinition.attachments || {};
 		var fontDescriptors = {
 			Roboto: {
 				normal: 'tests/fonts/Roboto-Regular.ttf',
@@ -26,7 +27,7 @@ class IntegrationTestHelper {
 
 		var pageSize = { width: size[0], height: size[1], orientation: 'portrait' };
 
-		this.pdfDocument = new PDFDocument(fontDescriptors, docDefinition.images, { size: [pageSize.width, pageSize.height], compress: false });
+		this.pdfDocument = new PDFDocument(fontDescriptors, docDefinition.images, docDefinition.attachments, { size: [pageSize.width, pageSize.height], compress: false });
 		var builder = new LayoutBuilder(pageSize, { left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom }, new SVGMeasure());
 
 		return builder.layoutDocument(
