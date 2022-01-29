@@ -1672,7 +1672,8 @@ describe('LayoutBuilder', function () {
 			var pageMargins = { left: 40, top: 40, bottom: 40, right: 40 };
 
 			builder2 = new LayoutBuilder(pageSize, pageMargins, {});
-			builder2.writer = new PageElementWriter(new DocumentContext(pageSize, pageMargins, true));
+			builder2.writer = new PageElementWriter(new DocumentContext(pageSize, pageMargins));
+			builder2.writer.addPage(pageSize, pageMargins);
 			builder2.linearNodeList = [];
 		});
 

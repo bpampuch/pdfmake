@@ -12,16 +12,17 @@ class DocumentContext extends EventEmitter {
 
 		this.pageMargins = pageMargins;
 
-		this.x = pageMargins.left;
-		this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
-		this.availableHeight = 0;
+		//this.x = pageMargins.left;
+		//this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
+		//this.availableHeight = 0;
+		//
 		this.page = -1;
 
 		this.snapshots = [];
 		this.endingCell = null;
 		this.backgroundLength = [];
 
-		this.addPage(pageSize);
+		//this.addPage(pageSize);
 	}
 
 	beginColumnGroup() {

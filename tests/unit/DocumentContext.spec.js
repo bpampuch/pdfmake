@@ -10,7 +10,7 @@ describe('DocumentContext', function () {
 
 	beforeEach(function () {
 		pc = new DocumentContext.default({ width: 400, height: 800, orientation: 'portrait' }, { left: 40, right: 40, top: 60, bottom: 60 });
-		// pc.addPage();
+		pc.addPage({ width: 400, height: 800, orientation: 'portrait' }, { left: 40, right: 40, top: 60, bottom: 60 });
 	});
 
 	it('should set initial values based on pageSize and pageMargins', function () {

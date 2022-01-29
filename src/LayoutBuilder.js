@@ -167,6 +167,16 @@ class LayoutBuilder {
 		watermark
 	) {
 
+		const isNecessaryAddFirstPage = (docStructure) => {
+			if (docStructure.stack && docStructure.stack.length > 0 && docStructure.stack[0].section) {
+				return false;
+			} else if (docStructure.section) {
+				return false;
+			}
+
+			return true;
+		};
+
 		this.linearNodeList = [];
 		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 		docStructure = this.docMeasure.measureDocument(docStructure);
@@ -177,7 +187,15 @@ class LayoutBuilder {
 			this.addBackground(background);
 		});
 
-		this.addBackground(background);
+		if (isNecessaryAddFirstPage(docStructure)) {
+			this.writer.addPage(
+				this.pageSize,
+				null,
+				this.pageMargins
+			);
+		}
+
+		//this.addBackground(background);
 		this.processNode(docStructure);
 		this.addHeadersAndFooters(header, footer);
 		if (watermark != null) {
@@ -471,7 +489,8 @@ class LayoutBuilder {
 		// TODO: properties
 
 		let page = this.writer.context().getCurrentPage();
-		if (page && page.items.length) { // move to new empty page
+		// TODO: background
+		if (!page || (page && page.items.length)) { // move to new empty page
 			// TODO: property for inherit page size and margin from before section
 			this.writer.addPage(
 				sectionNode.pageSize || this.pageSize,
