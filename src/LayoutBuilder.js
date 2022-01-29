@@ -181,7 +181,7 @@ class LayoutBuilder {
 		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
-		this.writer = new PageElementWriter(new DocumentContext(this.pageSize, this.pageMargins));
+		this.writer = new PageElementWriter(new DocumentContext());
 
 		this.writer.context().addListener('pageAdded', () => {
 			this.addBackground(background);
@@ -195,7 +195,6 @@ class LayoutBuilder {
 			);
 		}
 
-		//this.addBackground(background);
 		this.processNode(docStructure);
 		this.addHeadersAndFooters(header, footer);
 		if (watermark != null) {

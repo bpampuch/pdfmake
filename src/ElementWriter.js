@@ -375,7 +375,7 @@ class ElementWriter extends EventEmitter {
 
 		if (isNumber(contextOrWidth)) {
 			let width = contextOrWidth;
-			contextOrWidth = new DocumentContext({ width: width, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
+			contextOrWidth = new DocumentContext();
 			contextOrWidth.addPage({ width: width, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
 		}
 

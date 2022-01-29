@@ -6,23 +6,14 @@ import { EventEmitter } from 'events';
  * It facilitates column divisions and vertical sync
  */
 class DocumentContext extends EventEmitter {
-	constructor(pageSize, pageMargins) {
+	constructor() {
 		super();
 		this.pages = [];
-
-		this.pageMargins = pageMargins;
-
-		//this.x = pageMargins.left;
-		//this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
-		//this.availableHeight = 0;
-		//
 		this.page = -1;
 
 		this.snapshots = [];
 		this.endingCell = null;
 		this.backgroundLength = [];
-
-		//this.addPage(pageSize);
 	}
 
 	beginColumnGroup() {
