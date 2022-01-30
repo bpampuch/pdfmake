@@ -182,8 +182,10 @@ describe('Integration Test: svg\'s', function () {
 		it('writes svg in header', function () {
 			var dd = {
 				content: [],
-				header: {
-					svg: '<svg width="200" height="100" viewBox="0 0 600 300"></svg>',
+				header: function () {
+					return {
+						svg: '<svg width="200" height="100" viewBox="0 0 600 300"></svg>',
+					};
 				}
 			};
 

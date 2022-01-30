@@ -5,6 +5,7 @@ import { normalizePageSize, normalizePageMargin } from './PageSize';
 import { tableLayouts } from './tableLayouts';
 import Renderer from './Renderer';
 import { isNumber, isValue } from './helpers/variableType';
+import { convertToDynamicContent } from './helpers/tools';
 
 /**
  * Printer which turns document definition into a pdf
@@ -52,6 +53,14 @@ class PdfPrinter {
 					docDefinition.attachments = docDefinition.attachments || {};
 					docDefinition.pageMargins = isValue(docDefinition.pageMargins) ? docDefinition.pageMargins : 40;
 					docDefinition.patterns = docDefinition.patterns || {};
+
+					if (docDefinition.header && typeof docDefinition.header !== 'function') {
+						docDefinition.header = convertToDynamicContent(docDefinition.header);
+					}
+
+					if (docDefinition.footer && typeof docDefinition.footer !== 'function') {
+						docDefinition.footer = convertToDynamicContent(docDefinition.footer);
+					}
 
 					let pageSize = normalizePageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 
