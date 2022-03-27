@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Support passing headers to request for loading font files and images via URL adresses
+
 ## 0.2.4 - 2021-11-10
 
 - Fixed destination path argument in VFS build script.

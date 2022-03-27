@@ -36,6 +36,14 @@ function canCreatePdf() {
 }
 
 Document.prototype._createDoc = function (options, cb) {
+	var getExtendedUrl = function (url) {
+		if (typeof url === 'object') {
+			return { url: url.url, headers: url.headers };
+		}
+
+		return { url: url, headers: {} };
+	};
+
 	options = options || {};
 	if (this.tableLayouts) {
 		options.tableLayouts = this.tableLayouts;
@@ -58,16 +66,24 @@ Document.prototype._createDoc = function (options, cb) {
 	for (var font in this.fonts) {
 		if (this.fonts.hasOwnProperty(font)) {
 			if (this.fonts[font].normal) {
-				urlResolver.resolve(this.fonts[font].normal);
+				var url = getExtendedUrl(this.fonts[font].normal);
+				urlResolver.resolve(url.url, url.headers);
+				this.fonts[font].normal = url.url;
 			}
 			if (this.fonts[font].bold) {
-				urlResolver.resolve(this.fonts[font].bold);
+				var url = getExtendedUrl(this.fonts[font].bold);
+				urlResolver.resolve(url.url, url.headers);
+				this.fonts[font].bold = url.url;
 			}
 			if (this.fonts[font].italics) {
-				urlResolver.resolve(this.fonts[font].italics);
+				var url = getExtendedUrl(this.fonts[font].italics);
+				urlResolver.resolve(url.url, url.headers);
+				this.fonts[font].italics = url.url;
 			}
 			if (this.fonts[font].bolditalics) {
-				urlResolver.resolve(this.fonts[font].bolditalics);
+				var url = getExtendedUrl(this.fonts[font].bolditalics);
+				urlResolver.resolve(url.url, url.headers);
+				this.fonts[font].bolditalics = url.url;
 			}
 		}
 	}
@@ -75,7 +91,9 @@ Document.prototype._createDoc = function (options, cb) {
 	if (this.docDefinition.images) {
 		for (var image in this.docDefinition.images) {
 			if (this.docDefinition.images.hasOwnProperty(image)) {
-				urlResolver.resolve(this.docDefinition.images[image]);
+				var url = getExtendedUrl(this.docDefinition.images[image]);
+				urlResolver.resolve(url.url, url.headers);
+				this.docDefinition.images[image] = url.url;
 			}
 		}
 	}
