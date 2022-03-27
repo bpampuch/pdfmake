@@ -110,6 +110,14 @@ class PdfPrinter {
 	 * @returns {Promise}
 	 */
 	resolveUrls(docDefinition) {
+		const getExtendedUrl = url => {
+			if (typeof url === 'object') {
+				return { url: url.url, headers: url.headers };
+			}
+
+			return { url: url, headers: {} };
+		};
+
 		return new Promise((resolve, reject) => {
 			if (this.urlResolver === null) {
 				resolve();
@@ -118,16 +126,24 @@ class PdfPrinter {
 			for (let font in this.fontDescriptors) {
 				if (this.fontDescriptors.hasOwnProperty(font)) {
 					if (this.fontDescriptors[font].normal) {
-						this.urlResolver.resolve(this.fontDescriptors[font].normal);
+						let url = getExtendedUrl(this.fontDescriptors[font].normal);
+						this.urlResolver.resolve(url.url, url.headers);
+						this.fontDescriptors[font].normal = url.url;
 					}
 					if (this.fontDescriptors[font].bold) {
-						this.urlResolver.resolve(this.fontDescriptors[font].bold);
+						let url = getExtendedUrl(this.fontDescriptors[font].bold);
+						this.urlResolver.resolve(url.url, url.headers);
+						this.fontDescriptors[font].bold = url.url;
 					}
 					if (this.fontDescriptors[font].italics) {
-						this.urlResolver.resolve(this.fontDescriptors[font].italics);
+						let url = getExtendedUrl(this.fontDescriptors[font].italics);
+						this.urlResolver.resolve(url.url, url.headers);
+						this.fontDescriptors[font].italics = url.url;
 					}
 					if (this.fontDescriptors[font].bolditalics) {
-						this.urlResolver.resolve(this.fontDescriptors[font].bolditalics);
+						let url = getExtendedUrl(this.fontDescriptors[font].bolditalics);
+						this.urlResolver.resolve(url.url, url.headers);
+						this.fontDescriptors[font].bolditalics = url.url;
 					}
 				}
 			}
@@ -135,7 +151,9 @@ class PdfPrinter {
 			if (docDefinition.images) {
 				for (let image in docDefinition.images) {
 					if (docDefinition.images.hasOwnProperty(image)) {
-						this.urlResolver.resolve(docDefinition.images[image]);
+						let url = getExtendedUrl(docDefinition.images[image]);
+						this.urlResolver.resolve(url.url, url.headers);
+						docDefinition.images[image] = url.url;
 					}
 				}
 			}
@@ -143,7 +161,9 @@ class PdfPrinter {
 			if (docDefinition.attachments) {
 				for (let attachment in docDefinition.attachments) {
 					if (docDefinition.attachments.hasOwnProperty(attachment) && docDefinition.attachments[attachment].src) {
-						this.urlResolver.resolve(docDefinition.attachments[attachment].src);
+						let url = getExtendedUrl(docDefinition.attachments[attachment].src);
+						this.urlResolver.resolve(url.url, url.headers);
+						docDefinition.attachments[attachment].src = url.url;
 					}
 				}
 			}
@@ -151,7 +171,9 @@ class PdfPrinter {
 			if (docDefinition.files) {
 				for (let file in docDefinition.files) {
 					if (docDefinition.files.hasOwnProperty(file) && docDefinition.files[file].src) {
-						this.urlResolver.resolve(docDefinition.files[file].src);
+						let url = getExtendedUrl(docDefinition.files[file].src);
+						this.urlResolver.resolve(url.url, url.headers);
+						docDefinition.files[file].src = url.url;
 					}
 				}
 			}
