@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.2 - 2022-04-01
 
 - Attachments embedding
 - Support passing headers to request for loading font files and images via URL adresses
