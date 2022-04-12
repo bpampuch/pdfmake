@@ -53,7 +53,7 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) an
 
 **Documentation URL: https://pdfmake.github.io/docs/**
 
-Source of documenation: https://github.com/pdfmake/docs **Improvements are welcome!**
+Source of documentation: https://github.com/pdfmake/docs **Improvements are welcome!**
 
 ## Building from sources
 
