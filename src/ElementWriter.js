@@ -125,7 +125,7 @@ class ElementWriter extends EventEmitter {
 		this.alignCanvas(node);
 
 		node.canvas.forEach(function (vector) {
-      // begin - Vertical alignment
+			// begin - Vertical alignment
 			vector.__nodeRef = node.__nodeRef ?? node;
 			// end - Vertical alignment
 			let position = this.addVector(vector, false, false, index);

@@ -140,9 +140,9 @@ class LayoutBuilder {
 
 		this.docPreprocessor = new DocPreprocessor();
 		this.docMeasure = new DocMeasure(pdfDocument, styleDictionary, defaultStyle, this.svgMeasure, this.tableLayouts);
-    // begin - Vertical alignment
-    this.__nodesHierarchy = [];
-    // end - Vertical alignment
+		// begin - Vertical alignment
+		this.__nodesHierarchy = [];
+		// end - Vertical alignment
 
 		function resetXYs(result) {
 			result.linearNodeList.forEach(node => {
@@ -460,10 +460,10 @@ class LayoutBuilder {
 
 	// vertical container
 	processVerticalContainer(node) {
-    // begin - Vertical alignment
-    this.__nodesHierarchy.push(node);
-    node.__contentHeight = 0;
-    // end - Vertical alignment
+		// begin - Vertical alignment
+		this.__nodesHierarchy.push(node);
+		node.__contentHeight = 0;
+		// end - Vertical alignment
 
 		node.stack.forEach(item => {
 			this.processNode(item);
@@ -471,10 +471,10 @@ class LayoutBuilder {
 
 			//TODO: paragraph gap
 		}, this);
-    // begin - Vertical alignment
-    const lastNode = this.__nodesHierarchy.pop();
-    this.__nodesHierarchy.length > 0 && (this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight);
-    // end - Vertical alignment
+		// begin - Vertical alignment
+		const lastNode = this.__nodesHierarchy.pop();
+		this.__nodesHierarchy.length > 0 && (this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight);
+		// end - Vertical alignment
 	}
 
 	// columns
@@ -486,10 +486,10 @@ class LayoutBuilder {
 		if (gaps) {
 			availableWidth -= (gaps.length - 1) * columnNode._gap;
 		}
-    // begin - Vertical alignment
-    columnNode.__contentHeight = 0;
-    this.__nodesHierarchy.push(columnNode);
-    // end - Vertical alignment
+		// begin - Vertical alignment
+		columnNode.__contentHeight = 0;
+		this.__nodesHierarchy.push(columnNode);
+		// end - Vertical alignment
 
 		ColumnCalculator.buildColumnWidths(columns, availableWidth);
 		let result = this.processRow(columns, columns, gaps);
@@ -509,11 +509,11 @@ class LayoutBuilder {
 
 			return gaps;
 		}
-    // begin - Vertical alignment
-    const lastNode = this.__nodesHierarchy.pop();
-    lastNode.__contentHeight = Math.max(...columns.map(c => c.__contentHeight));
-    this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
-    // end - Vertical alignment
+		// begin - Vertical alignment
+		const lastNode = this.__nodesHierarchy.pop();
+		lastNode.__contentHeight = Math.max(...columns.map(c => c.__contentHeight));
+		this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
+		// end - Vertical alignment
 	}
 
 	processRow(columns, widths, gaps, tableBody, tableRow, height) {
@@ -622,10 +622,10 @@ class LayoutBuilder {
 				}
 			}
 		};
-    // begin - Vertical alignment
-    this.__nodesHierarchy.push(node);
-    node.__contentHeight = 0;
-    // end - Vertical alignment
+		// begin - Vertical alignment
+		this.__nodesHierarchy.push(node);
+		node.__contentHeight = 0;
+		// end - Vertical alignment
 
 		let items = orderedList ? node.ol : node.ul;
 		let gapSize = node._gapSize;
@@ -637,9 +637,9 @@ class LayoutBuilder {
 		this.writer.addListener('lineAdded', addMarkerToFirstLeaf);
 
 		items.forEach(item => {
-      // begin - Vertical alignment
-      item.__nodeRef = node.__nodeRef ?? node;
-      // end - Vertical alignment
+			// begin - Vertical alignment
+			item.__nodeRef = node.__nodeRef ?? node;
+			// end - Vertical alignment
 			nextMarker = item.listMarker;
 			this.processNode(item);
 			addAll(node.positions, item.positions);
@@ -648,10 +648,10 @@ class LayoutBuilder {
 		this.writer.removeListener('lineAdded', addMarkerToFirstLeaf);
 
 		this.writer.context().addMargin(-gapSize.width);
-    // begin - Vertical alignment
-    const lastNode = this.__nodesHierarchy.pop();
-    this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
-    // end - Vertical alignment
+		// begin - Vertical alignment
+		const lastNode = this.__nodesHierarchy.pop();
+		this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
+		// end - Vertical alignment
 	}
 
 	// tables
@@ -688,13 +688,13 @@ class LayoutBuilder {
 
 	// leafs (texts)
 	processLeaf(node) {
-    // begin - Vertical alignment
+		// begin - Vertical alignment
 		node = this.docPreprocessor.checkNode(node);
-    // end - Vertical alignment
+		// end - Vertical alignment
 		let line = this.buildNextLine(node);
-    // begin - Vertical alignment
-    line && (line.__nodeRef = node.__nodeRef ?? node);
-    // end - Vertical alignment
+		// begin - Vertical alignment
+		line && (line.__nodeRef = node.__nodeRef ?? node);
+		// end - Vertical alignment
 		if (line && (node.tocItem || node.id)) {
 			line._node = node;
 		}
@@ -739,10 +739,10 @@ class LayoutBuilder {
 				currentHeight += line.getHeight();
 			}
 		}
-    // begin - Vertical alignment
-    node.__contentHeight = currentHeight;
-    this.__nodesHierarchy.length > 0 && (this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += currentHeight);
-    // end - Vertical alignment
+		// begin - Vertical alignment
+		node.__contentHeight = currentHeight;
+		this.__nodesHierarchy.length > 0 && (this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += currentHeight);
+		// end - Vertical alignment
 	}
 
 	processToc(node) {

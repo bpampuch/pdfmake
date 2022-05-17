@@ -23,19 +23,19 @@ class DocPreprocessor {
 		return this.preprocessNode(docStructure);
 	}
 
-  // begin - Vertical alignment
-  checkNode = function(node) {
+	// begin - Vertical alignment
+	checkNode = function (node) {
 		// expand shortcuts and casting values
 		if (Array.isArray(node)) {
-		  node = { stack: node };
+			node = { stack: node };
 		} else if (isString(node) || isNumber(node) || typeof node === 'boolean' || !isValue(node) || isEmptyObject(node)) { // text node defined as value
-		  node = { text: convertValueToString(node) };
+			node = { text: convertValueToString(node) };
 		} else if ('text' in node) { // cast value in text property
-		  node.text = convertValueToString(node.text);
+			node.text = convertValueToString(node.text);
 		}
 		return node;
-  };
-  // end - Vertical alignment
+	};
+	// end - Vertical alignment
 
 	preprocessNode(node) {
 		// begin - Vertical alignment
@@ -77,10 +77,10 @@ class DocPreprocessor {
 		let columns = node.columns;
 
 		for (let i = 0, l = columns.length; i < l; i++) {
-      // begin - Vertical alignment
-      columns[i] = this.checkNode(columns[i]);
-      columns[i].__nodeRef =  node.__nodeRef ?? node;
-      // end - Vertical alignment
+			// begin - Vertical alignment
+			columns[i] = this.checkNode(columns[i]);
+			columns[i].__nodeRef = node.__nodeRef ?? node;
+			// end - Vertical alignment
 			columns[i] = this.preprocessNode(columns[i]);
 		}
 
@@ -91,10 +91,10 @@ class DocPreprocessor {
 		let items = node.stack;
 
 		for (let i = 0, l = items.length; i < l; i++) {
-      // begin - Vertical alignment
-      items[i] = this.checkNode(items[i]);
-      items[i].__nodeRef =  node.__nodeRef ?? node;
-      // end - Vertical alignment
+			// begin - Vertical alignment
+			items[i] = this.checkNode(items[i]);
+			items[i].__nodeRef = node.__nodeRef ?? node;
+			// end - Vertical alignment
 			items[i] = this.preprocessNode(items[i]);
 		}
 
@@ -105,10 +105,10 @@ class DocPreprocessor {
 		let items = node.ul || node.ol;
 
 		for (let i = 0, l = items.length; i < l; i++) {
-      // begin - Vertical alignment
-      items[i] = this.checkNode(items[i]);
-      items[i].__nodeRef =  node.__nodeRef ?? node;
-      // end - Vertical alignment
+			// begin - Vertical alignment
+			items[i] = this.checkNode(items[i]);
+			items[i].__nodeRef = node.__nodeRef ?? node;
+			// end - Vertical alignment
 			items[i] = this.preprocessNode(items[i]);
 		}
 
