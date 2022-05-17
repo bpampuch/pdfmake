@@ -125,6 +125,9 @@ class ElementWriter extends EventEmitter {
 		this.alignCanvas(node);
 
 		node.canvas.forEach(function (vector) {
+      // begin - Vertical alignment
+			vector.__nodeRef = node.__nodeRef ?? node;
+			// end - Vertical alignment
 			let position = this.addVector(vector, false, false, index);
 			positions.push(position);
 			if (index !== undefined) {
@@ -188,6 +191,9 @@ class ElementWriter extends EventEmitter {
 			let vector = qr._canvas[i];
 			vector.x += qr.x;
 			vector.y += qr.y;
+			// begin - Vertical alignment
+			vector.__nodeRef = qr.__nodeRef ?? qr;
+			// end - Vertical alignment
 			this.addVector(vector, true, true, index);
 		}
 

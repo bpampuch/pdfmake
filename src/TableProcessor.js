@@ -1,5 +1,8 @@
 import ColumnCalculator from './columnCalculator';
 import { isNumber } from './helpers/variableType';
+// begin - Vertical alignment
+import { offsetVector } from './helpers/tools';
+// end - Vertical alignment
 
 class TableProcessor {
 	constructor(tableNode) {
@@ -7,6 +10,9 @@ class TableProcessor {
 	}
 
 	beginTable(writer) {
+    // begin - Vertical alignment
+		this.tableNode.table.__rowsHeight = [];
+		// end - Vertical alignment
 		const getTableInnerContentWidth = () => {
 			let width = 0;
 
@@ -113,6 +119,9 @@ class TableProcessor {
 		prepareCellBorders(this.tableNode.table.body);
 
 		this.drawHorizontalLine(0, writer);
+		// begin - Vertical alignment
+		this.tableNode.__height = writer.context().y;
+		// end - Vertical alignment
 	}
 
 	onRowBreak(rowIndex, writer) {
@@ -140,6 +149,9 @@ class TableProcessor {
 		writer.context().availableHeight -= this.reservedAtBottom;
 
 		writer.context().moveDown(this.rowPaddingTop);
+    // begin - Vertical alignment
+		this.tableNode.table.__rowsHeight[rowIndex] = { top: this.rowTopY, height: 0 };
+		// end - Vertical alignment
 	}
 
 	drawHorizontalLine(lineIndex, writer, overrideY) {
@@ -240,6 +252,9 @@ class TableProcessor {
 							lineWidth: lineWidth,
 							dash: dash,
 							lineColor: borderColor
+							// begin - Vertical alignment
+							, __tableRef: this.tableNode.table
+							// end - Vertical alignment
 						}, false, overrideY);
 						currentLine = null;
 						borderColor = null;
@@ -321,13 +336,90 @@ class TableProcessor {
 			lineWidth: width,
 			dash: dash,
 			lineColor: borderColor
+			// begin - Vertical alignment
+			, __tableRef: this.tableNode.table
+			// end - Vertical alignment
 		}, false, true);
 		cellBefore = null;
 		currentCell = null;
 		borderColor = null;
 	}
 
+  // begin - Vertical alignment
+  getCellContentHeight = function(cell, items) {
+    let contentHeight = 0;
+    cell._maxHeight && (contentHeight = cell._maxHeight); // for canvas
+    // for forced multiline text, text with lineHeight, ul, ol
+    cell.__contentHeight && (contentHeight = cell.__contentHeight);
+    !contentHeight && (contentHeight = items.reduce((p, v) => {
+        const item = v.item.inlines ? (v.item.inlines[0] ?? null) : v.item;
+        const lineHeight = v.item.__nodeRef?.lineHeight ?? (v.item._height ?? v.item.h);
+        let height = item.height ?? (item.h ?? 0);
+        (v.type === 'vector') || (cell.ol && !v.item.lastLineInParagraph) && (height = 0); // for ol with counter
+        return p + (height / (lineHeight ?? 1))
+      },0));
+    !contentHeight && cell._height && (contentHeight = cell._height); // for text, image, svg, qr
+    return contentHeight;
+  };
+
+  processTableVerticalAlignment = function(writer, table) {
+    const getCells = (node) => node.table ? node.table.body.flat().map(getCells).flat() : node;
+    const getNestedTables = (node) => node.table ? [node, ...node.table.body.flat().map(getNestedTables).filter(Boolean).flat()] : null;
+    // for all rows in table
+    table.body.forEach((row, rowIndex) => {
+      // filter only cells with vertical alignment (middle / bottom)
+      !Array.isArray(row) && row.columns && (row = row.columns);
+      row.filter(cell => cell.verticalAlign && ['middle', 'bottom'].indexOf(cell.verticalAlign) > -1).forEach(cell => {
+        let nestedTables;
+        if (!cell._span) {
+          let cellHeight = 0;
+          if (cell.rowSpan && cell.rowSpan > 1) {
+            const heights = table.__rowsHeight.slice(rowIndex, rowIndex + cell.rowSpan);
+            cellHeight = heights.reduce((previousValue, value) => previousValue + value.height, 0);
+          } else {
+            cellHeight = table.__rowsHeight[rowIndex].height;
+          }
+          if (cellHeight) {
+            const pageItems = writer._context.pages.flatMap(x => x.items);
+            let items = pageItems.filter(i => i.item.__nodeRef === cell || i.item === cell);
+            let itemHeight = 0;
+            if (items.length === 0 && cell.table) {
+              itemHeight = cell.table.__rowsHeight.reduce((p, v) => p + v.height, 0);
+              nestedTables = getNestedTables(cell);
+              items = pageItems.filter(i => getCells(cell).indexOf(i.item.__nodeRef) > -1 ||
+                i.item.__tableRef && nestedTables.some(nt => nt.table === i.item.__tableRef));
+            } else if (cell.stack) {
+              const tables = cell.stack.filter(x => x.table);
+              nestedTables = getNestedTables(tables[0]);
+              itemHeight = tables.reduce((p, v) => p + v.__height, 0) + 
+								cell.stack.flatMap(x => x.__contentHeight).filter(Boolean).reduce((p, v) => p + v, 0);
+              items = [...items, pageItems.filter(i => getCells(tables[0]).indexOf(i.item.__nodeRef) > -1 ||
+                i.item.__tableRef && nestedTables.some(nt => nt.table === i.item.__tableRef))].flat();
+            } else {
+							itemHeight = this.getCellContentHeight(cell, items);
+						}
+            items.forEach(x => {
+              const offsetTop = cell.verticalAlign === 'bottom'
+                ? cellHeight - itemHeight - 3
+                : (cellHeight - itemHeight) / 2;
+              if (x && x.item) {
+                x.item.type && offsetVector(x.item, 0, Math.max(0, offsetTop) - 1.5);
+                !x.item.type && (x.item.y += Math.max(0, offsetTop) - 1.5);
+              }
+            });
+          }
+        }
+      });
+    });
+  }
+  // end - Vertical alignment
+
 	endTable(writer) {
+    // begin - Vertical alignment
+    this.processTableVerticalAlignment(writer, this.tableNode.table);
+		this.tableNode.__height = writer.context().y - this.tableNode.__height + 
+			Math.ceil(this.layout.hLineWidth(0, this.tableNode)) * this.tableNode.table.body.length;
+    // end - Vertical alignment
 		if (this.cleanUpRepeatables) {
 			writer.popFromRepeatables();
 		}
@@ -552,6 +644,9 @@ class TableProcessor {
 			this.cleanUpRepeatables = true;
 			this.headerRepeatable = null;
 		}
+    // begin - Vertical alignment
+	  this.tableNode.table.__rowsHeight[rowIndex].height = endingY - this.tableNode.table.__rowsHeight[rowIndex].top;
+    // end - Vertical alignment
 	}
 }
 
