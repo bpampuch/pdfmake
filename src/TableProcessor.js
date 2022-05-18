@@ -346,11 +346,11 @@ class TableProcessor {
 	}
 
   // begin - Vertical alignment
-  getCellContentHeight = function(cell, items) {
+  getCellContentHeight(cell, items) {
     let contentHeight = 0;
     cell._maxHeight && (contentHeight = cell._maxHeight); // for canvas
     // for forced multiline text, text with lineHeight, ul, ol
-    cell.__contentHeight && (contentHeight = cell.__contentHeight);
+    !cell.lineHeight && cell.__contentHeight && (contentHeight = cell.__contentHeight);
     !contentHeight && (contentHeight = items.reduce((p, v) => {
         const item = v.item.inlines ? (v.item.inlines[0] ?? null) : v.item;
         const lineHeight = v.item.__nodeRef?.lineHeight ?? (v.item._height ?? v.item.h);
@@ -362,7 +362,7 @@ class TableProcessor {
     return contentHeight;
   };
 
-  processTableVerticalAlignment = function(writer, table) {
+  processTableVerticalAlignment(writer, table) {
     const getCells = (node) => node.table ? node.table.body.flat().map(getCells).flat() : node;
     const getNestedTables = (node) => node.table ? [node, ...node.table.body.flat().map(getNestedTables).filter(Boolean).flat()] : null;
     // for all rows in table
@@ -391,7 +391,7 @@ class TableProcessor {
             } else if (cell.stack) {
               const tables = cell.stack.filter(x => x.table);
               nestedTables = getNestedTables(tables[0]);
-              itemHeight = tables.reduce((p, v) => p + v.__height, 0) + 
+              itemHeight = tables.reduce((p, v) => p + v.__height, 0) +
 								cell.stack.flatMap(x => x.__contentHeight).filter(Boolean).reduce((p, v) => p + v, 0);
               items = [...items, pageItems.filter(i => getCells(tables[0]).indexOf(i.item.__nodeRef) > -1 ||
                 i.item.__tableRef && nestedTables.some(nt => nt.table === i.item.__tableRef))].flat();
@@ -417,7 +417,7 @@ class TableProcessor {
 	endTable(writer) {
     // begin - Vertical alignment
     this.processTableVerticalAlignment(writer, this.tableNode.table);
-		this.tableNode.__height = writer.context().y - this.tableNode.__height + 
+		this.tableNode.__height = writer.context().y - this.tableNode.__height +
 			Math.ceil(this.layout.hLineWidth(0, this.tableNode)) * this.tableNode.table.body.length;
     // end - Vertical alignment
 		if (this.cleanUpRepeatables) {
