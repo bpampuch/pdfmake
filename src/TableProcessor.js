@@ -10,7 +10,7 @@ class TableProcessor {
 	}
 
 	beginTable(writer) {
-    // begin - Vertical alignment
+		// begin - Vertical alignment
 		this.tableNode.table.__rowsHeight = [];
 		// end - Vertical alignment
 		const getTableInnerContentWidth = () => {
@@ -149,7 +149,7 @@ class TableProcessor {
 		writer.context().availableHeight -= this.reservedAtBottom;
 
 		writer.context().moveDown(this.rowPaddingTop);
-    // begin - Vertical alignment
+		// begin - Vertical alignment
 		this.tableNode.table.__rowsHeight[rowIndex] = { top: this.rowTopY, height: 0 };
 		// end - Vertical alignment
 	}
@@ -393,33 +393,33 @@ class TableProcessor {
               nestedTables = getNestedTables(tables[0]);
               itemHeight = tables.reduce((p, v) => p + v.__height, 0) +
 								cell.stack.flatMap(x => x.__contentHeight).filter(Boolean).reduce((p, v) => p + v, 0);
-              items = [...items, pageItems.filter(i => getCells(tables[0]).indexOf(i.item.__nodeRef) > -1 ||
-                i.item.__tableRef && nestedTables.some(nt => nt.table === i.item.__tableRef))].flat();
-            } else {
+							items = [...items, pageItems.filter(i => getCells(tables[0]).indexOf(i.item.__nodeRef) > -1 ||
+								i.item.__tableRef && nestedTables.some(nt => nt.table === i.item.__tableRef))].flat();
+						} else {
 							itemHeight = this.getCellContentHeight(cell, items);
 						}
-            items.forEach(x => {
-              const offsetTop = cell.verticalAlign === 'bottom'
-                ? cellHeight - itemHeight - 3
-                : (cellHeight - itemHeight) / 2;
-              if (x && x.item) {
-                x.item.type && offsetVector(x.item, 0, Math.max(0, offsetTop) - 1.5);
-                !x.item.type && (x.item.y += Math.max(0, offsetTop) - 1.5);
-              }
-            });
-          }
-        }
-      });
-    });
-  }
-  // end - Vertical alignment
+						items.forEach(x => {
+							const offsetTop = cell.verticalAlign === 'bottom'
+								? cellHeight - itemHeight - 3
+								: (cellHeight - itemHeight) / 2;
+							if (x && x.item) {
+								x.item.type && offsetVector(x.item, 0, Math.max(0, offsetTop) - 1.5);
+								!x.item.type && (x.item.y += Math.max(0, offsetTop) - 1.5);
+							}
+						});
+					}
+				}
+			});
+		});
+	}
+	// end - Vertical alignment
 
 	endTable(writer) {
     // begin - Vertical alignment
     this.processTableVerticalAlignment(writer, this.tableNode.table);
 		this.tableNode.__height = writer.context().y - this.tableNode.__height +
 			Math.ceil(this.layout.hLineWidth(0, this.tableNode)) * this.tableNode.table.body.length;
-    // end - Vertical alignment
+		// end - Vertical alignment
 		if (this.cleanUpRepeatables) {
 			writer.popFromRepeatables();
 		}
@@ -644,9 +644,9 @@ class TableProcessor {
 			this.cleanUpRepeatables = true;
 			this.headerRepeatable = null;
 		}
-    // begin - Vertical alignment
-	  this.tableNode.table.__rowsHeight[rowIndex].height = endingY - this.tableNode.table.__rowsHeight[rowIndex].top;
-    // end - Vertical alignment
+		// begin - Vertical alignment
+		this.tableNode.table.__rowsHeight[rowIndex].height = endingY - this.tableNode.table.__rowsHeight[rowIndex].top;
+		// end - Vertical alignment
 	}
 }
 
