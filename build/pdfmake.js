@@ -1,4 +1,4 @@
-/*! pdfmake v0.3.0-beta.2, @license MIT, @link http://pdfmake.org */
+/*! @sirfull/pdfmake v0.3.0-beta.2, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -2088,7 +2088,7 @@ var web_dom_collections_for_each = __webpack_require__(4747);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.regexp.to-string.js
 var es_regexp_to_string = __webpack_require__(9714);
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
-var pdfkit_es5 = __webpack_require__(2531);
+var pdfkit_es5 = __webpack_require__(8673);
 ;// CONCATENATED MODULE: ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(710)["Buffer"];
 
@@ -2538,7 +2538,26 @@ var convertValueToString = function convertValueToString(value) {
 };
 
 var DocPreprocessor = /*#__PURE__*/function () {
-  function DocPreprocessor() {}
+  function DocPreprocessor() {
+    this.checkNode = function (node) {
+      // expand shortcuts and casting values
+      if (Array.isArray(node)) {
+        node = {
+          stack: node
+        };
+      } else if (isString(node) || isNumber(node) || typeof node === 'boolean' || !isValue(node) || isEmptyObject(node)) {
+        // text node defined as value
+        node = {
+          text: convertValueToString(node)
+        };
+      } else if ('text' in node) {
+        // cast value in text property
+        node.text = convertValueToString(node.text);
+      }
+
+      return node;
+    };
+  }
 
   var _proto = DocPreprocessor.prototype;
 
@@ -2547,23 +2566,13 @@ var DocPreprocessor = /*#__PURE__*/function () {
     this.tocs = [];
     this.nodeReferences = [];
     return this.preprocessNode(docStructure);
-  };
+  } // begin - Vertical alignment
+  ;
 
+  // end - Vertical alignment
   _proto.preprocessNode = function preprocessNode(node) {
-    // expand shortcuts and casting values
-    if (Array.isArray(node)) {
-      node = {
-        stack: node
-      };
-    } else if (isString(node) || isNumber(node) || typeof node === 'boolean' || !isValue(node) || isEmptyObject(node)) {
-      // text node defined as value
-      node = {
-        text: convertValueToString(node)
-      };
-    } else if ('text' in node) {
-      // cast value in text property
-      node.text = convertValueToString(node.text);
-    }
+    // begin - Vertical alignment
+    node = this.checkNode(node); // end - Vertical alignment
 
     if (node.columns) {
       return this.preprocessColumns(node);
@@ -2600,6 +2609,12 @@ var DocPreprocessor = /*#__PURE__*/function () {
     var columns = node.columns;
 
     for (var i = 0, l = columns.length; i < l; i++) {
+      var _node$__nodeRef;
+
+      // begin - Vertical alignment
+      columns[i] = this.checkNode(columns[i]);
+      columns[i].__nodeRef = (_node$__nodeRef = node.__nodeRef) != null ? _node$__nodeRef : node; // end - Vertical alignment
+
       columns[i] = this.preprocessNode(columns[i]);
     }
 
@@ -2610,6 +2625,12 @@ var DocPreprocessor = /*#__PURE__*/function () {
     var items = node.stack;
 
     for (var i = 0, l = items.length; i < l; i++) {
+      var _node$__nodeRef2;
+
+      // begin - Vertical alignment
+      items[i] = this.checkNode(items[i]);
+      items[i].__nodeRef = (_node$__nodeRef2 = node.__nodeRef) != null ? _node$__nodeRef2 : node; // end - Vertical alignment
+
       items[i] = this.preprocessNode(items[i]);
     }
 
@@ -2620,6 +2641,12 @@ var DocPreprocessor = /*#__PURE__*/function () {
     var items = node.ul || node.ol;
 
     for (var i = 0, l = items.length; i < l; i++) {
+      var _node$__nodeRef3;
+
+      // begin - Vertical alignment
+      items[i] = this.checkNode(items[i]);
+      items[i].__nodeRef = (_node$__nodeRef3 = node.__nodeRef) != null ? _node$__nodeRef3 : node; // end - Vertical alignment
+
       items[i] = this.preprocessNode(items[i]);
     }
 
@@ -5767,6 +5794,11 @@ var ElementWriter = /*#__PURE__*/function (_EventEmitter) {
 
     this.alignCanvas(node);
     node.canvas.forEach(function (vector) {
+      var _node$__nodeRef;
+
+      // begin - Vertical alignment
+      vector.__nodeRef = (_node$__nodeRef = node.__nodeRef) != null ? _node$__nodeRef : node; // end - Vertical alignment
+
       var position = this.addVector(vector, false, false, index);
       positions.push(position);
 
@@ -5821,9 +5853,14 @@ var ElementWriter = /*#__PURE__*/function (_EventEmitter) {
     this.alignImage(qr);
 
     for (var i = 0, l = qr._canvas.length; i < l; i++) {
+      var _qr$__nodeRef;
+
       var vector = qr._canvas[i];
       vector.x += qr.x;
-      vector.y += qr.y;
+      vector.y += qr.y; // begin - Vertical alignment
+
+      vector.__nodeRef = (_qr$__nodeRef = qr.__nodeRef) != null ? _qr$__nodeRef : qr; // end - Vertical alignment
+
       this.addVector(vector, true, true, index);
     }
 
@@ -6243,21 +6280,151 @@ var PageElementWriter = /*#__PURE__*/function (_ElementWriter) {
 }(src_ElementWriter);
 
 /* harmony default export */ var src_PageElementWriter = (PageElementWriter);
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.flat.js
+var es_array_flat = __webpack_require__(4944);
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.unscopables.flat.js
+var es_array_unscopables_flat = __webpack_require__(3792);
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.flat-map.js
+var es_array_flat_map = __webpack_require__(6535);
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.unscopables.flat-map.js
+var es_array_unscopables_flat_map = __webpack_require__(9244);
 ;// CONCATENATED MODULE: ./src/TableProcessor.js
 
 
 
 
 
+
+
+
+
+
+
+ // begin - Vertical alignment
+
+ // end - Vertical alignment
+
 var TableProcessor = /*#__PURE__*/function () {
   function TableProcessor(tableNode) {
+    this.getCellContentHeight = function (cell, items) {
+      var contentHeight = 0;
+      cell._maxHeight && (contentHeight = cell._maxHeight); // for canvas
+      // for forced multiline text, text with lineHeight, ul, ol
+
+      cell.__contentHeight && (contentHeight = cell.__contentHeight);
+      !contentHeight && (contentHeight = items.reduce(function (p, v) {
+        var _v$item$inlines$, _v$item$__nodeRef$lin, _v$item$__nodeRef, _v$item$_height, _item$height, _item$h;
+
+        var item = v.item.inlines ? (_v$item$inlines$ = v.item.inlines[0]) != null ? _v$item$inlines$ : null : v.item;
+        var lineHeight = (_v$item$__nodeRef$lin = (_v$item$__nodeRef = v.item.__nodeRef) == null ? void 0 : _v$item$__nodeRef.lineHeight) != null ? _v$item$__nodeRef$lin : (_v$item$_height = v.item._height) != null ? _v$item$_height : v.item.h;
+        var height = (_item$height = item.height) != null ? _item$height : (_item$h = item.h) != null ? _item$h : 0;
+        v.type === 'vector' || cell.ol && !v.item.lastLineInParagraph && (height = 0); // for ol with counter
+
+        return p + height / (lineHeight != null ? lineHeight : 1);
+      }, 0));
+      !contentHeight && cell._height && (contentHeight = cell._height); // for text, image, svg, qr
+
+      return contentHeight;
+    };
+
+    this.processTableVerticalAlignment = function (writer, table) {
+      var _this = this;
+
+      var getCells = function getCells(node) {
+        return node.table ? node.table.body.flat().map(getCells).flat() : node;
+      };
+
+      var getNestedTables = function getNestedTables(node) {
+        return node.table ? [node].concat(node.table.body.flat().map(getNestedTables).filter(Boolean).flat()) : null;
+      }; // for all rows in table
+
+
+      table.body.forEach(function (row, rowIndex) {
+        // filter only cells with vertical alignment (middle / bottom)
+        !Array.isArray(row) && row.columns && (row = row.columns);
+        row.filter(function (cell) {
+          return cell.verticalAlign && ['middle', 'bottom'].indexOf(cell.verticalAlign) > -1;
+        }).forEach(function (cell) {
+          var nestedTables;
+
+          if (!cell._span) {
+            var cellHeight = 0;
+
+            if (cell.rowSpan && cell.rowSpan > 1) {
+              var heights = table.__rowsHeight.slice(rowIndex, rowIndex + cell.rowSpan);
+
+              cellHeight = heights.reduce(function (previousValue, value) {
+                return previousValue + value.height;
+              }, 0);
+            } else {
+              cellHeight = table.__rowsHeight[rowIndex].height;
+            }
+
+            if (cellHeight) {
+              var pageItems = writer._context.pages.flatMap(function (x) {
+                return x.items;
+              });
+
+              var items = pageItems.filter(function (i) {
+                return i.item.__nodeRef === cell || i.item === cell;
+              });
+              var itemHeight = 0;
+
+              if (items.length === 0 && cell.table) {
+                itemHeight = cell.table.__rowsHeight.reduce(function (p, v) {
+                  return p + v.height;
+                }, 0);
+                nestedTables = getNestedTables(cell);
+                items = pageItems.filter(function (i) {
+                  return getCells(cell).indexOf(i.item.__nodeRef) > -1 || i.item.__tableRef && nestedTables.some(function (nt) {
+                    return nt.table === i.item.__tableRef;
+                  });
+                });
+              } else if (cell.stack) {
+                var tables = cell.stack.filter(function (x) {
+                  return x.table;
+                });
+                nestedTables = getNestedTables(tables[0]);
+                itemHeight = tables.reduce(function (p, v) {
+                  return p + v.__height;
+                }, 0) + cell.stack.flatMap(function (x) {
+                  return x.__contentHeight;
+                }).filter(Boolean).reduce(function (p, v) {
+                  return p + v;
+                }, 0);
+                items = [].concat(items, [pageItems.filter(function (i) {
+                  return getCells(tables[0]).indexOf(i.item.__nodeRef) > -1 || i.item.__tableRef && nestedTables.some(function (nt) {
+                    return nt.table === i.item.__tableRef;
+                  });
+                })]).flat();
+              } else {
+                itemHeight = _this.getCellContentHeight(cell, items);
+              }
+
+              items.forEach(function (x) {
+                var offsetTop = cell.verticalAlign === 'bottom' ? cellHeight - itemHeight - 3 : (cellHeight - itemHeight) / 2;
+
+                if (x && x.item) {
+                  x.item.type && offsetVector(x.item, 0, Math.max(0, offsetTop) - 1.5);
+                  !x.item.type && (x.item.y += Math.max(0, offsetTop) - 1.5);
+                }
+              });
+            }
+          }
+        });
+      });
+    };
+
     this.tableNode = tableNode;
   }
 
   var _proto = TableProcessor.prototype;
 
   _proto.beginTable = function beginTable(writer) {
-    var _this = this;
+    var _this2 = this;
+
+    // begin - Vertical alignment
+    this.tableNode.table.__rowsHeight = []; // end - Vertical alignment
 
     var getTableInnerContentWidth = function getTableInnerContentWidth() {
       var width = 0;
@@ -6276,12 +6443,12 @@ var TableProcessor = /*#__PURE__*/function () {
         rowSpan: 0
       });
 
-      for (var i = 0, l = _this.tableNode.table.body[0].length; i < l; i++) {
-        var paddings = _this.layout.paddingLeft(i, _this.tableNode) + _this.layout.paddingRight(i, _this.tableNode);
+      for (var i = 0, l = _this2.tableNode.table.body[0].length; i < l; i++) {
+        var paddings = _this2.layout.paddingLeft(i, _this2.tableNode) + _this2.layout.paddingRight(i, _this2.tableNode);
 
-        var lBorder = _this.layout.vLineWidth(i, _this.tableNode);
+        var lBorder = _this2.layout.vLineWidth(i, _this2.tableNode);
 
-        lastWidth = paddings + lBorder + _this.tableNode.table.widths[i]._calcWidth;
+        lastWidth = paddings + lBorder + _this2.tableNode.table.widths[i]._calcWidth;
         rsd[rsd.length - 1].width = lastWidth;
         x += lastWidth;
         rsd.push({
@@ -6365,15 +6532,17 @@ var TableProcessor = /*#__PURE__*/function () {
 
 
     prepareCellBorders(this.tableNode.table.body);
-    this.drawHorizontalLine(0, writer);
+    this.drawHorizontalLine(0, writer); // begin - Vertical alignment
+
+    this.tableNode.__height = writer.context().y; // end - Vertical alignment
   };
 
   _proto.onRowBreak = function onRowBreak(rowIndex, writer) {
-    var _this2 = this;
+    var _this3 = this;
 
     return function () {
-      var offset = _this2.rowPaddingTop + (!_this2.headerRows ? _this2.topLineWidth : 0);
-      writer.context().availableHeight -= _this2.reservedAtBottom;
+      var offset = _this3.rowPaddingTop + (!_this3.headerRows ? _this3.topLineWidth : 0);
+      writer.context().availableHeight -= _this3.reservedAtBottom;
       writer.context().moveDown(offset);
     };
   };
@@ -6393,7 +6562,12 @@ var TableProcessor = /*#__PURE__*/function () {
     this.rowTopY = writer.context().y;
     this.reservedAtBottom = this.bottomLineWidth + this.rowPaddingBottom;
     writer.context().availableHeight -= this.reservedAtBottom;
-    writer.context().moveDown(this.rowPaddingTop);
+    writer.context().moveDown(this.rowPaddingTop); // begin - Vertical alignment
+
+    this.tableNode.table.__rowsHeight[rowIndex] = {
+      top: this.rowTopY,
+      height: 0
+    }; // end - Vertical alignment
   };
 
   _proto.drawHorizontalLine = function drawHorizontalLine(lineIndex, writer, overrideY) {
@@ -6505,7 +6679,10 @@ var TableProcessor = /*#__PURE__*/function () {
               y2: y,
               lineWidth: lineWidth,
               dash: dash,
-              lineColor: borderColor
+              lineColor: borderColor // begin - Vertical alignment
+              ,
+              __tableRef: this.tableNode.table // end - Vertical alignment
+
             }, false, overrideY);
             currentLine = null;
             borderColor = null;
@@ -6592,33 +6769,42 @@ var TableProcessor = /*#__PURE__*/function () {
       y2: y1,
       lineWidth: width,
       dash: dash,
-      lineColor: borderColor
+      lineColor: borderColor // begin - Vertical alignment
+      ,
+      __tableRef: this.tableNode.table // end - Vertical alignment
+
     }, false, true);
     cellBefore = null;
     currentCell = null;
     borderColor = null;
-  };
+  } // begin - Vertical alignment
+  ;
 
+  // end - Vertical alignment
   _proto.endTable = function endTable(writer) {
+    // begin - Vertical alignment
+    this.processTableVerticalAlignment(writer, this.tableNode.table);
+    this.tableNode.__height = writer.context().y - this.tableNode.__height + Math.ceil(this.layout.hLineWidth(0, this.tableNode)) * this.tableNode.table.body.length; // end - Vertical alignment
+
     if (this.cleanUpRepeatables) {
       writer.popFromRepeatables();
     }
   };
 
   _proto.endRow = function endRow(rowIndex, writer, pageBreaks) {
-    var _this3 = this;
+    var _this4 = this;
 
     var getLineXs = function getLineXs() {
       var result = [];
       var cols = 0;
 
-      for (var i = 0, l = _this3.tableNode.table.body[rowIndex].length; i < l; i++) {
+      for (var i = 0, l = _this4.tableNode.table.body[rowIndex].length; i < l; i++) {
         if (!cols) {
           result.push({
-            x: _this3.rowSpanData[i].left,
+            x: _this4.rowSpanData[i].left,
             index: i
           });
-          var item = _this3.tableNode.table.body[rowIndex][i];
+          var item = _this4.tableNode.table.body[rowIndex][i];
           cols = item._colSpan || item.colSpan || 0;
         }
 
@@ -6628,8 +6814,8 @@ var TableProcessor = /*#__PURE__*/function () {
       }
 
       result.push({
-        x: _this3.rowSpanData[_this3.rowSpanData.length - 1].left,
-        index: _this3.rowSpanData.length - 1
+        x: _this4.rowSpanData[_this4.rowSpanData.length - 1].left,
+        index: _this4.rowSpanData.length - 1
       });
       return result;
     };
@@ -6814,8 +7000,8 @@ var TableProcessor = /*#__PURE__*/function () {
 
     if (this.dontBreakRows) {
       var pageChangedCallback = function pageChangedCallback() {
-        if (!_this3.headerRows && _this3.layout.hLineWhenBroken !== false) {
-          _this3.drawHorizontalLine(rowIndex, writer);
+        if (!_this4.headerRows && _this4.layout.hLineWhenBroken !== false) {
+          _this4.drawHorizontalLine(rowIndex, writer);
         }
       };
 
@@ -6829,7 +7015,10 @@ var TableProcessor = /*#__PURE__*/function () {
       writer.pushToRepeatables(this.headerRepeatable);
       this.cleanUpRepeatables = true;
       this.headerRepeatable = null;
-    }
+    } // begin - Vertical alignment
+
+
+    this.tableNode.table.__rowsHeight[rowIndex].height = endingY - this.tableNode.table.__rowsHeight[rowIndex].top; // end - Vertical alignment
   };
 
   return TableProcessor;
@@ -7122,7 +7311,9 @@ var LayoutBuilder = /*#__PURE__*/function () {
     }
 
     this.docPreprocessor = new src_DocPreprocessor();
-    this.docMeasure = new src_DocMeasure(pdfDocument, styleDictionary, defaultStyle, this.svgMeasure, this.tableLayouts);
+    this.docMeasure = new src_DocMeasure(pdfDocument, styleDictionary, defaultStyle, this.svgMeasure, this.tableLayouts); // begin - Vertical alignment
+
+    this.__nodesHierarchy = []; // end - Vertical alignment
 
     function resetXYs(result) {
       result.linearNodeList.forEach(function (node) {
@@ -7467,11 +7658,20 @@ var LayoutBuilder = /*#__PURE__*/function () {
   _proto.processVerticalContainer = function processVerticalContainer(node) {
     var _this3 = this;
 
+    // begin - Vertical alignment
+    this.__nodesHierarchy.push(node);
+
+    node.__contentHeight = 0; // end - Vertical alignment
+
     node.stack.forEach(function (item) {
       _this3.processNode(item);
 
       addAll(node.positions, item.positions); //TODO: paragraph gap
-    }, this);
+    }, this); // begin - Vertical alignment
+
+    var lastNode = this.__nodesHierarchy.pop();
+
+    this.__nodesHierarchy.length > 0 && (this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight); // end - Vertical alignment
   } // columns
   ;
 
@@ -7482,7 +7682,13 @@ var LayoutBuilder = /*#__PURE__*/function () {
 
     if (gaps) {
       availableWidth -= (gaps.length - 1) * columnNode._gap;
-    }
+    } // begin - Vertical alignment
+
+
+    columnNode.__contentHeight = 0;
+
+    this.__nodesHierarchy.push(columnNode); // end - Vertical alignment
+
 
     columnCalculator.buildColumnWidths(columns, availableWidth);
     var result = this.processRow(columns, columns, gaps);
@@ -7501,7 +7707,15 @@ var LayoutBuilder = /*#__PURE__*/function () {
       }
 
       return gaps;
-    }
+    } // begin - Vertical alignment
+
+
+    var lastNode = this.__nodesHierarchy.pop();
+
+    lastNode.__contentHeight = Math.max.apply(Math, columns.map(function (c) {
+      return c.__contentHeight;
+    }));
+    this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight; // end - Vertical alignment
   };
 
   _proto.processRow = function processRow(columns, widths, gaps, tableBody, tableRow, height) {
@@ -7596,12 +7810,23 @@ var LayoutBuilder = /*#__PURE__*/function () {
         nextMarker = null;
 
         if (marker.canvas) {
-          var vector = marker.canvas[0];
+          var _line$__nodeRef;
+
+          var vector = marker.canvas[0]; // begin - Vertical alignment
+
+          vector.__nodeRef = (_line$__nodeRef = line.__nodeRef) != null ? _line$__nodeRef : line;
+          vector._height = marker._maxHeight; // end - Vertical alignment
+
           offsetVector(vector, -marker._minWidth, 0);
 
           _this4.writer.addVector(vector);
         } else if (marker._inlines) {
-          var markerLine = new src_Line(_this4.pageSize.width);
+          var _line$__nodeRef2;
+
+          var markerLine = new src_Line(_this4.pageSize.width); // begin - Vertical alignment
+
+          markerLine.__nodeRef = (_line$__nodeRef2 = line.__nodeRef) != null ? _line$__nodeRef2 : line; // end - Vertical alignment
+
           markerLine.addInline(marker._inlines[0]);
           markerLine.x = -marker._minWidth;
           markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
@@ -7609,7 +7834,12 @@ var LayoutBuilder = /*#__PURE__*/function () {
           _this4.writer.addLine(markerLine, true);
         }
       }
-    };
+    }; // begin - Vertical alignment
+
+
+    this.__nodesHierarchy.push(node);
+
+    node.__contentHeight = 0; // end - Vertical alignment
 
     var items = orderedList ? node.ol : node.ul;
     var gapSize = node._gapSize;
@@ -7617,6 +7847,11 @@ var LayoutBuilder = /*#__PURE__*/function () {
     var nextMarker;
     this.writer.addListener('lineAdded', addMarkerToFirstLeaf);
     items.forEach(function (item) {
+      var _node$__nodeRef;
+
+      // begin - Vertical alignment
+      item.__nodeRef = (_node$__nodeRef = node.__nodeRef) != null ? _node$__nodeRef : node; // end - Vertical alignment
+
       nextMarker = item.listMarker;
 
       _this4.processNode(item);
@@ -7624,7 +7859,11 @@ var LayoutBuilder = /*#__PURE__*/function () {
       addAll(node.positions, item.positions);
     });
     this.writer.removeListener('lineAdded', addMarkerToFirstLeaf);
-    this.writer.context().addMargin(-gapSize.width);
+    this.writer.context().addMargin(-gapSize.width); // begin - Vertical alignment
+
+    var lastNode = this.__nodesHierarchy.pop();
+
+    this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight; // end - Vertical alignment
   } // tables
   ;
 
@@ -7659,7 +7898,14 @@ var LayoutBuilder = /*#__PURE__*/function () {
   ;
 
   _proto.processLeaf = function processLeaf(node) {
-    var line = this.buildNextLine(node);
+    var _node$__nodeRef2;
+
+    // begin - Vertical alignment
+    node = this.docPreprocessor.checkNode(node); // end - Vertical alignment
+
+    var line = this.buildNextLine(node); // begin - Vertical alignment
+
+    line && (line.__nodeRef = (_node$__nodeRef2 = node.__nodeRef) != null ? _node$__nodeRef2 : node); // end - Vertical alignment
 
     if (line && (node.tocItem || node.id)) {
       line._node = node;
@@ -7702,9 +7948,18 @@ var LayoutBuilder = /*#__PURE__*/function () {
       line = this.buildNextLine(node);
 
       if (line) {
+        var _node$__nodeRef3;
+
+        // begin - Vertical alignment
+        line.__nodeRef = (_node$__nodeRef3 = node.__nodeRef) != null ? _node$__nodeRef3 : node; // end - Vertical alignment
+
         currentHeight += line.getHeight();
       }
-    }
+    } // begin - Vertical alignment
+
+
+    node.__contentHeight = currentHeight;
+    this.__nodesHierarchy.length > 0 && (this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += currentHeight); // end - Vertical alignment
   };
 
   _proto.processToc = function processToc(node) {
@@ -9228,7 +9483,7 @@ var OutputDocument = /*#__PURE__*/function () {
 
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(5935);
+var FileSaver_min = __webpack_require__(9217);
 ;// CONCATENATED MODULE: ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -26365,7 +26620,7 @@ module.exports = /*#__PURE__*/function () {
 
 /***/ }),
 
-/***/ 2531:
+/***/ 8673:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -39275,6 +39530,50 @@ module.exports = function (KEY, exec, FORCED, SHAM) {
 
 /***/ }),
 
+/***/ 6790:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+var global = __webpack_require__(7854);
+var isArray = __webpack_require__(3157);
+var lengthOfArrayLike = __webpack_require__(6244);
+var bind = __webpack_require__(9974);
+
+var TypeError = global.TypeError;
+
+// `FlattenIntoArray` abstract operation
+// https://tc39.github.io/proposal-flatMap/#sec-FlattenIntoArray
+var flattenIntoArray = function (target, original, source, sourceLen, start, depth, mapper, thisArg) {
+  var targetIndex = start;
+  var sourceIndex = 0;
+  var mapFn = mapper ? bind(mapper, thisArg) : false;
+  var element, elementLen;
+
+  while (sourceIndex < sourceLen) {
+    if (sourceIndex in source) {
+      element = mapFn ? mapFn(source[sourceIndex], sourceIndex, original) : source[sourceIndex];
+
+      if (depth > 0 && isArray(element)) {
+        elementLen = lengthOfArrayLike(element);
+        targetIndex = flattenIntoArray(target, original, element, elementLen, targetIndex, depth - 1) - 1;
+      } else {
+        if (targetIndex >= 0x1FFFFFFFFFFFFF) throw TypeError('Exceed the acceptable array length');
+        target[targetIndex] = element;
+      }
+
+      targetIndex++;
+    }
+    sourceIndex++;
+  }
+  return targetIndex;
+};
+
+module.exports = flattenIntoArray;
+
+
+/***/ }),
+
 /***/ 6677:
 /***/ (function(module, __unused_webpack_exports, __webpack_require__) {
 
@@ -42889,6 +43188,63 @@ $({ target: 'Array', proto: true, forced: !HAS_SPECIES_SUPPORT }, {
 
 /***/ }),
 
+/***/ 6535:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+var $ = __webpack_require__(2109);
+var flattenIntoArray = __webpack_require__(6790);
+var aCallable = __webpack_require__(9662);
+var toObject = __webpack_require__(7908);
+var lengthOfArrayLike = __webpack_require__(6244);
+var arraySpeciesCreate = __webpack_require__(5417);
+
+// `Array.prototype.flatMap` method
+// https://tc39.es/ecma262/#sec-array.prototype.flatmap
+$({ target: 'Array', proto: true }, {
+  flatMap: function flatMap(callbackfn /* , thisArg */) {
+    var O = toObject(this);
+    var sourceLen = lengthOfArrayLike(O);
+    var A;
+    aCallable(callbackfn);
+    A = arraySpeciesCreate(O, 0);
+    A.length = flattenIntoArray(A, O, O, sourceLen, 0, 1, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+    return A;
+  }
+});
+
+
+/***/ }),
+
+/***/ 4944:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+var $ = __webpack_require__(2109);
+var flattenIntoArray = __webpack_require__(6790);
+var toObject = __webpack_require__(7908);
+var lengthOfArrayLike = __webpack_require__(6244);
+var toIntegerOrInfinity = __webpack_require__(9303);
+var arraySpeciesCreate = __webpack_require__(5417);
+
+// `Array.prototype.flat` method
+// https://tc39.es/ecma262/#sec-array.prototype.flat
+$({ target: 'Array', proto: true }, {
+  flat: function flat(/* depthArg = 1 */) {
+    var depthArg = arguments.length ? arguments[0] : undefined;
+    var O = toObject(this);
+    var sourceLen = lengthOfArrayLike(O);
+    var A = arraySpeciesCreate(O, 0);
+    A.length = flattenIntoArray(A, O, O, sourceLen, 0, depthArg === undefined ? 1 : toIntegerOrInfinity(depthArg));
+    return A;
+  }
+});
+
+
+/***/ }),
+
 /***/ 1038:
 /***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
 
@@ -43289,6 +43645,32 @@ $({ target: 'Array', proto: true, forced: !HAS_SPECIES_SUPPORT }, {
     return A;
   }
 });
+
+
+/***/ }),
+
+/***/ 9244:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+// this method was added to unscopables after implementation
+// in popular engines, so it's moved to a separate module
+var addToUnscopables = __webpack_require__(1223);
+
+// https://tc39.es/ecma262/#sec-array.prototype-@@unscopables
+addToUnscopables('flatMap');
+
+
+/***/ }),
+
+/***/ 3792:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+// this method was added to unscopables after implementation
+// in popular engines, so it's moved to a separate module
+var addToUnscopables = __webpack_require__(1223);
+
+// https://tc39.es/ecma262/#sec-array.prototype-@@unscopables
+addToUnscopables('flat');
 
 
 /***/ }),
@@ -48056,20 +48438,9 @@ var isFunction = function (fn) {
 	return typeof fn === 'function' && toStr.call(fn) === '[object Function]';
 };
 
-var arePropertyDescriptorsSupported = function () {
-	var obj = {};
-	try {
-		origDefineProperty(obj, 'x', { enumerable: false, value: obj });
-		// eslint-disable-next-line no-unused-vars, no-restricted-syntax
-		for (var _ in obj) { // jscs:ignore disallowUnusedVariables
-			return false;
-		}
-		return obj.x === obj;
-	} catch (e) { /* this is IE 8. */
-		return false;
-	}
-};
-var supportsDescriptors = origDefineProperty && arePropertyDescriptorsSupported();
+var hasPropertyDescriptors = __webpack_require__(1044)();
+
+var supportsDescriptors = origDefineProperty && hasPropertyDescriptors;
 
 var defineProperty = function (object, name, value, predicate) {
 	if (name in object && (!isFunction(predicate) || !predicate())) {
@@ -48083,7 +48454,7 @@ var defineProperty = function (object, name, value, predicate) {
 			writable: true
 		});
 	} else {
-		object[name] = value;
+		object[name] = value; // eslint-disable-line no-param-reassign
 	}
 };
 
@@ -48716,31 +49087,72 @@ module.exports = function () {
 
 /***/ }),
 
-/***/ 9804:
-/***/ (function(module) {
+/***/ 4029:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
 
 
-var hasOwn = Object.prototype.hasOwnProperty;
-var toString = Object.prototype.toString;
+var isCallable = __webpack_require__(5320);
 
-module.exports = function forEach (obj, fn, ctx) {
-    if (toString.call(fn) !== '[object Function]') {
-        throw new TypeError('iterator must be a function');
-    }
-    var l = obj.length;
-    if (l === +l) {
-        for (var i = 0; i < l; i++) {
-            fn.call(ctx, obj[i], i, obj);
-        }
-    } else {
-        for (var k in obj) {
-            if (hasOwn.call(obj, k)) {
-                fn.call(ctx, obj[k], k, obj);
+var toStr = Object.prototype.toString;
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+
+var forEachArray = function forEachArray(array, iterator, receiver) {
+    for (var i = 0, len = array.length; i < len; i++) {
+        if (hasOwnProperty.call(array, i)) {
+            if (receiver == null) {
+                iterator(array[i], i, array);
+            } else {
+                iterator.call(receiver, array[i], i, array);
             }
         }
     }
 };
 
+var forEachString = function forEachString(string, iterator, receiver) {
+    for (var i = 0, len = string.length; i < len; i++) {
+        // no such thing as a sparse string.
+        if (receiver == null) {
+            iterator(string.charAt(i), i, string);
+        } else {
+            iterator.call(receiver, string.charAt(i), i, string);
+        }
+    }
+};
+
+var forEachObject = function forEachObject(object, iterator, receiver) {
+    for (var k in object) {
+        if (hasOwnProperty.call(object, k)) {
+            if (receiver == null) {
+                iterator(object[k], k, object);
+            } else {
+                iterator.call(receiver, object[k], k, object);
+            }
+        }
+    }
+};
+
+var forEach = function forEach(list, iterator, thisArg) {
+    if (!isCallable(iterator)) {
+        throw new TypeError('iterator must be a function');
+    }
+
+    var receiver;
+    if (arguments.length >= 3) {
+        receiver = thisArg;
+    }
+
+    if (toStr.call(list) === '[object Array]') {
+        forEachArray(list, iterator, receiver);
+    } else if (typeof list === 'string') {
+        forEachString(list, iterator, receiver);
+    } else {
+        forEachObject(list, iterator, receiver);
+    }
+};
+
+module.exports = forEach;
 
 
 /***/ }),
@@ -48814,6 +49226,45 @@ module.exports = function bind(that) {
 var implementation = __webpack_require__(7648);
 
 module.exports = Function.prototype.bind || implementation;
+
+
+/***/ }),
+
+/***/ 5972:
+/***/ (function(module) {
+
+"use strict";
+
+
+var functionsHaveNames = function functionsHaveNames() {
+	return typeof function f() {}.name === 'string';
+};
+
+var gOPD = Object.getOwnPropertyDescriptor;
+if (gOPD) {
+	try {
+		gOPD([], 'length');
+	} catch (e) {
+		// IE 8 has a broken gOPD
+		gOPD = null;
+	}
+}
+
+functionsHaveNames.functionsHaveConfigurableNames = function functionsHaveConfigurableNames() {
+	if (!functionsHaveNames() || !gOPD) {
+		return false;
+	}
+	var desc = gOPD(function () {}, 'name');
+	return !!desc && !!desc.configurable;
+};
+
+var $bind = Function.prototype.bind;
+
+functionsHaveNames.boundFunctionsHaveNames = function boundFunctionsHaveNames() {
+	return functionsHaveNames() && typeof $bind === 'function' && function f() {}.bind().name !== '';
+};
+
+module.exports = functionsHaveNames;
 
 
 /***/ }),
@@ -49152,6 +49603,47 @@ module.exports = function GetIntrinsic(name, allowMissing) {
 	}
 	return value;
 };
+
+
+/***/ }),
+
+/***/ 1044:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+
+var GetIntrinsic = __webpack_require__(210);
+
+var $defineProperty = GetIntrinsic('%Object.defineProperty%', true);
+
+var hasPropertyDescriptors = function hasPropertyDescriptors() {
+	if ($defineProperty) {
+		try {
+			$defineProperty({}, 'a', { value: 1 });
+			return true;
+		} catch (e) {
+			// IE 8 has a broken defineProperty
+			return false;
+		}
+	}
+	return false;
+};
+
+hasPropertyDescriptors.hasArrayLengthDefineBug = function hasArrayLengthDefineBug() {
+	// node v0.6 has a bug where array lengths can be Set but not Defined
+	if (!hasPropertyDescriptors()) {
+		return null;
+	}
+	try {
+		return $defineProperty([], 'length', { value: 1 }).length !== 1;
+	} catch (e) {
+		// In Firefox 4-22, defining length on an array throws an exception.
+		return true;
+	}
+};
+
+module.exports = hasPropertyDescriptors;
 
 
 /***/ }),
@@ -52378,6 +52870,88 @@ module.exports = supportsStandardArguments ? isStandardArguments : isLegacyArgum
 
 /***/ }),
 
+/***/ 5320:
+/***/ (function(module) {
+
+"use strict";
+
+
+var fnToStr = Function.prototype.toString;
+var reflectApply = typeof Reflect === 'object' && Reflect !== null && Reflect.apply;
+var badArrayLike;
+var isCallableMarker;
+if (typeof reflectApply === 'function' && typeof Object.defineProperty === 'function') {
+	try {
+		badArrayLike = Object.defineProperty({}, 'length', {
+			get: function () {
+				throw isCallableMarker;
+			}
+		});
+		isCallableMarker = {};
+		// eslint-disable-next-line no-throw-literal
+		reflectApply(function () { throw 42; }, null, badArrayLike);
+	} catch (_) {
+		if (_ !== isCallableMarker) {
+			reflectApply = null;
+		}
+	}
+} else {
+	reflectApply = null;
+}
+
+var constructorRegex = /^\s*class\b/;
+var isES6ClassFn = function isES6ClassFunction(value) {
+	try {
+		var fnStr = fnToStr.call(value);
+		return constructorRegex.test(fnStr);
+	} catch (e) {
+		return false; // not a function
+	}
+};
+
+var tryFunctionObject = function tryFunctionToStr(value) {
+	try {
+		if (isES6ClassFn(value)) { return false; }
+		fnToStr.call(value);
+		return true;
+	} catch (e) {
+		return false;
+	}
+};
+var toStr = Object.prototype.toString;
+var fnClass = '[object Function]';
+var genClass = '[object GeneratorFunction]';
+var hasToStringTag = typeof Symbol === 'function' && !!Symbol.toStringTag; // better: use `has-tostringtag`
+/* globals document: false */
+var documentDotAll = typeof document === 'object' && typeof document.all === 'undefined' && document.all !== undefined ? document.all : {};
+
+module.exports = reflectApply
+	? function isCallable(value) {
+		if (value === documentDotAll) { return true; }
+		if (!value) { return false; }
+		if (typeof value !== 'function' && typeof value !== 'object') { return false; }
+		if (typeof value === 'function' && !value.prototype) { return true; }
+		try {
+			reflectApply(value, null, badArrayLike);
+		} catch (e) {
+			if (e !== isCallableMarker) { return false; }
+		}
+		return !isES6ClassFn(value);
+	}
+	: function isCallable(value) {
+		if (value === documentDotAll) { return true; }
+		if (!value) { return false; }
+		if (typeof value !== 'function' && typeof value !== 'object') { return false; }
+		if (typeof value === 'function' && !value.prototype) { return true; }
+		if (hasToStringTag) { return tryFunctionObject(value); }
+		if (isES6ClassFn(value)) { return false; }
+		var strClass = toStr.call(value);
+		return strClass === fnClass || strClass === genClass;
+	};
+
+
+/***/ }),
+
 /***/ 8923:
 /***/ (function(module, __unused_webpack_exports, __webpack_require__) {
 
@@ -52611,7 +53185,7 @@ module.exports = hasToStringTag
 "use strict";
 
 
-var forEach = __webpack_require__(9804);
+var forEach = __webpack_require__(4029);
 var availableTypedArrays = __webpack_require__(3083);
 var callBound = __webpack_require__(1924);
 
@@ -59701,10 +60275,12 @@ try {
 /***/ }),
 
 /***/ 3697:
-/***/ (function(module) {
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
 
 "use strict";
 
+
+var functionsHaveConfigurableNames = (__webpack_require__(5972).functionsHaveConfigurableNames)();
 
 var $Object = Object;
 var $TypeError = TypeError;
@@ -59737,6 +60313,10 @@ module.exports = function flags() {
 	}
 	return result;
 };
+
+if (functionsHaveConfigurableNames && Object.defineProperty) {
+	Object.defineProperty(module.exports, "name", ({ value: 'get flags' }));
+}
 
 
 /***/ }),
@@ -59781,8 +60361,28 @@ var $gOPD = Object.getOwnPropertyDescriptor;
 module.exports = function getPolyfill() {
 	if (supportsDescriptors && (/a/mig).flags === 'gim') {
 		var descriptor = $gOPD(RegExp.prototype, 'flags');
-		if (descriptor && typeof descriptor.get === 'function' && typeof (/a/).dotAll === 'boolean') {
-			return descriptor.get;
+		if (
+			descriptor
+			&& typeof descriptor.get === 'function'
+			&& typeof RegExp.prototype.dotAll === 'boolean'
+			&& typeof RegExp.prototype.hasIndices === 'boolean'
+		) {
+			/* eslint getter-return: 0 */
+			var calls = '';
+			var o = {};
+			Object.defineProperty(o, 'hasIndices', {
+				get: function () {
+					calls += 'd';
+				}
+			});
+			Object.defineProperty(o, 'sticky', {
+				get: function () {
+					calls += 'y';
+				}
+			});
+			if (calls === 'dy') {
+				return descriptor.get;
+			}
 		}
 	}
 	return implementation;
@@ -64502,7 +65102,7 @@ module.exports = __webpack_require__(7187).EventEmitter;
 
 /***/ }),
 
-/***/ 5935:
+/***/ 9217:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
@@ -81128,7 +81728,7 @@ exports.callbackify = callbackify;
 "use strict";
 
 
-var forEach = __webpack_require__(9804);
+var forEach = __webpack_require__(4029);
 var availableTypedArrays = __webpack_require__(3083);
 var callBound = __webpack_require__(1924);
 
