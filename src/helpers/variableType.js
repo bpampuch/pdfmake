@@ -18,6 +18,14 @@ export function isNumber(variable) {
  * @param {any} variable
  * @returns {boolean}
  */
+export function isFunction(variable) {
+	return (typeof variable === 'function') || (variable instanceof Function);
+}
+
+/**
+ * @param {any} variable
+ * @returns {boolean}
+ */
 export function isObject(variable) {
 	return (variable !== null) && !Array.isArray(variable) && !isString(variable) && !isNumber(variable) && (typeof variable === 'object');
 }

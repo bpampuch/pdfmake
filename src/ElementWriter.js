@@ -362,7 +362,9 @@ class ElementWriter extends EventEmitter {
 	 */
 	pushContext(contextOrWidth, height) {
 		if (contextOrWidth === undefined) {
-			height = this.context().getCurrentPage().height - this.context().pageMargins.top - this.context().pageMargins.bottom;
+			height = this.context().getCurrentPage().height
+				- this.context().getCurrentPage().pageMargins.top
+				- this.context().getCurrentPage().pageMargins.bottom;
 			contextOrWidth = this.context().availableWidth;
 		}
 

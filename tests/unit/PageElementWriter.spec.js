@@ -112,7 +112,22 @@ describe('PageElementWriter', function () {
 			var position = addOneTenthLines(10);
 
 			assert.equal(ctx.pages.length, 1);
-			assert.deepEqual(position, { pageNumber: 1, left: MARGINS.left, top: (9 / 10 * AVAILABLE_HEIGHT) + MARGINS.top, verticalRatio: 0.9, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500 });
+			assert.deepEqual(position, {
+				pageNumber: 1,
+				left: MARGINS.left,
+				top: (9 / 10 * AVAILABLE_HEIGHT) + MARGINS.top,
+				verticalRatio: 0.9,
+				horizontalRatio: 0,
+				pageOrientation: 'portrait',
+				pageInnerHeight: 1000,
+				pageInnerWidth: 500,
+				pageMargins: {
+					left: MARGINS.left,
+					right: MARGINS.right,
+					top: MARGINS.top,
+					bottom: MARGINS.bottom,
+				},
+			});
 		});
 
 		it('should add new pages if there\'s not enough space left', function () {
@@ -121,7 +136,22 @@ describe('PageElementWriter', function () {
 			assert.equal(ctx.pages.length, 2);
 			assert.equal(ctx.pages[0].items.length, 10);
 			assert.equal(ctx.pages[1].items.length, 1);
-			assert.deepEqual(position, { pageNumber: 2, left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500 });
+			assert.deepEqual(position, {
+				pageNumber: 2,
+				left: MARGINS.left,
+				top: MARGINS.top,
+				verticalRatio: 0,
+				horizontalRatio: 0,
+				pageOrientation: 'portrait',
+				pageInnerHeight: 1000,
+				pageInnerWidth: 500,
+				pageMargins: {
+					left: MARGINS.left,
+					right: MARGINS.right,
+					top: MARGINS.top,
+					bottom: MARGINS.bottom,
+				},
+			});
 		});
 
 		it('should subtract line height from availableHeight when adding a line and update current y position', function () {
@@ -157,7 +187,22 @@ describe('PageElementWriter', function () {
 			var position = pew.addImage(buildImage(300));
 
 			assert.equal(ctx.pages.length, 1);
-			assert.deepEqual(position, { pageNumber: 1, left: MARGINS.left, top: lineHeight + MARGINS.top, verticalRatio: 0.4, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500 });
+			assert.deepEqual(position, {
+				pageNumber: 1,
+				left: MARGINS.left,
+				top: lineHeight + MARGINS.top,
+				verticalRatio: 0.4,
+				horizontalRatio: 0,
+				pageOrientation: 'portrait',
+				pageInnerHeight: 1000,
+				pageInnerWidth: 500,
+				pageMargins: {
+					left: MARGINS.left,
+					right: MARGINS.right,
+					top: MARGINS.top,
+					bottom: MARGINS.bottom,
+				},
+			});
 		});
 
 		it('should add a new page if something else exists on the page and there\'s not enough space left', function () {
@@ -169,7 +214,22 @@ describe('PageElementWriter', function () {
 			assert.equal(ctx.pages.length, 2);
 			assert.equal(ctx.pages[0].items.length, 1);
 			assert.equal(ctx.pages[1].items.length, 1);
-			assert.deepEqual(position, { pageNumber: 2, left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500 });
+			assert.deepEqual(position, {
+				pageNumber: 2,
+				left: MARGINS.left,
+				top: MARGINS.top,
+				verticalRatio: 0,
+				horizontalRatio: 0,
+				pageOrientation: 'portrait',
+				pageInnerHeight: 1000,
+				pageInnerWidth: 500,
+				pageMargins: {
+					left: MARGINS.left,
+					right: MARGINS.right,
+					top: MARGINS.top,
+					bottom: MARGINS.bottom,
+				},
+			});
 		});
 
 		it('should write into the current page if it\'s a large image and nothing else exists on the page', function () {
@@ -177,7 +237,22 @@ describe('PageElementWriter', function () {
 
 			assert.equal(ctx.pages.length, 1);
 			assert.equal(ctx.pages[0].items.length, 1);
-			assert.deepEqual(position, { pageNumber: 1, left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500 });
+			assert.deepEqual(position, {
+				pageNumber: 1,
+				left: MARGINS.left,
+				top: MARGINS.top,
+				verticalRatio: 0,
+				horizontalRatio: 0,
+				pageOrientation: 'portrait',
+				pageInnerHeight: 1000,
+				pageInnerWidth: 500,
+				pageMargins: {
+					left: MARGINS.left,
+					right: MARGINS.right,
+					top: MARGINS.top,
+					bottom: MARGINS.bottom,
+				},
+			});
 		});
 
 		it('should write into the a new page page if it\'s a large image and something else does exist on the page', function () {
@@ -187,7 +262,22 @@ describe('PageElementWriter', function () {
 			assert.equal(ctx.pages.length, 2);
 			assert.equal(ctx.pages[0].items.length, 1);
 			assert.equal(ctx.pages[1].items.length, 1);
-			assert.deepEqual(position, { pageNumber: 2, left: MARGINS.left, top: MARGINS.top, verticalRatio: 0, horizontalRatio: 0, pageOrientation: 'portrait', pageInnerHeight: 1000, pageInnerWidth: 500 });
+			assert.deepEqual(position, {
+				pageNumber: 2,
+				left: MARGINS.left,
+				top: MARGINS.top,
+				verticalRatio: 0,
+				horizontalRatio: 0,
+				pageOrientation: 'portrait',
+				pageInnerHeight: 1000,
+				pageInnerWidth: 500,
+				pageMargins: {
+					left: MARGINS.left,
+					right: MARGINS.right,
+					top: MARGINS.top,
+					bottom: MARGINS.bottom,
+				},
+			});
 		});
 	});
 
@@ -420,7 +510,16 @@ describe('PageElementWriter', function () {
 
 		it('should use existing page', function () {
 			addOneTenthLines(1);
-			ctx.pages.push({ items: [], pageSize: pageSize });
+			ctx.pages.push({
+				items: [],
+				pageSize: pageSize,
+				pageMargins: {
+					left: MARGINS.left,
+					right: MARGINS.right,
+					top: MARGINS.top,
+					bottom: MARGINS.bottom
+				},
+			});
 			ctx.availableWidth = 'garbage';
 			ctx.availableHeight = 'garbage';
 
