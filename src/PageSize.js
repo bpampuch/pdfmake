@@ -1,5 +1,5 @@
 import sizes from './standardPageSizes';
-import { isString, isNumber } from './helpers/variableType';
+import { isString, isNumber, isFunction, isObject, isValue } from './helpers/variableType';
 
 export function normalizePageSize(pageSize, pageOrientation) {
 	function isNeedSwapPageSizes(pageOrientation) {
@@ -36,6 +36,27 @@ export function normalizePageSize(pageSize, pageOrientation) {
 	return size;
 }
 
+function isPageMarginObject(margin) {
+	if (isObject(margin)) {
+		const { left, top, right, bottom } = margin;
+
+		if (isValue(left) && isValue(top) && isValue(right) && isValue(bottom)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+/*
+ * Accepts margin definition as being:
+ *   * a number to set same margin size on all margins
+ *   * a function which will receive pageNumber as argument
+ *   * an array with two numbers to set horizontal and vertical margin respectively
+ *   * an array with four numbers to set left, top, right and bottom margin respectively
+ *
+ * Normalized value is an object with the four margins as property.
+ * */
 export function normalizePageMargin(margin) {
 	if (isNumber(margin)) {
 		margin = { left: margin, right: margin, top: margin, bottom: margin };
@@ -49,5 +70,43 @@ export function normalizePageMargin(margin) {
 		}
 	}
 
+	if (!isFunction(margin) && !isPageMarginObject(margin)) {
+		throw new Error('Invalid pageMargins definition');
+	}
+
 	return margin;
+}
+
+/*
+ * Returns a function accepting pageNumber as argument and returning
+ * a normalized page margin object
+ * */
+export function functionalizePageMargin(margin) {
+	let marginFn;
+	if (isFunction(margin)) {
+		marginFn = function (pageNumber) {
+			return normalizePageMargin(margin(pageNumber));
+		};
+	} else {
+		if (!isPageMarginObject(margin)) {
+			margin = normalizePageMargin(margin);
+		}
+
+		const { left, top, right, bottom } = margin;
+		marginFn = function () {
+			return {
+				left,
+				top,
+				right,
+				bottom,
+			};
+		};
+
+	}
+
+	if (!isFunction(marginFn)) {
+		throw new Error(`Unable to functionalize pageMargin: ${margin}`);
+	}
+
+	return marginFn;
 }
