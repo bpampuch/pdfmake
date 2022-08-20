@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed calculating auto page height
+
 ## 0.2.5 - 2022-04-01
 
 - Support passing headers to request for loading font files and images via URL adresses

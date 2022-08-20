@@ -215,7 +215,11 @@ function calculatePageHeight(pages, margins) {
 		} else if (item.item._height) {
 			return item.item._height;
 		} else if (item.type === 'vector') {
-			return item.item.y1 > item.item.y2 ? item.item.y1 : item.item.y2;
+			if (typeof item.item.y1 !== 'undefined') {
+				return item.item.y1 > item.item.y2 ? item.item.y1 : item.item.y2;
+			} else {
+				return item.item.h;
+			}
 		} else {
 			// TODO: add support for next item types
 			return 0;
