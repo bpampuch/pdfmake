@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Updated Roboto font (version 3.005)
 - Fixed calculating auto page height
 
 ## 0.2.5 - 2022-04-01
