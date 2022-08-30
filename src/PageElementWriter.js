@@ -13,10 +13,15 @@ class PageElementWriter extends ElementWriter {
 		super(context);
 		this.transactionLevel = 0;
 		this.repeatables = [];
+		
+		//Code Change - Heading continuty.
+		this.repeatableHeaders = [];
+		this.headings = {};
+		this.sameNodeHeadings = {};
 	}
 
-	addLine(line, dontUpdateContextPosition, index) {
-		return this._fitOnPage(() => super.addLine(line, dontUpdateContextPosition, index));
+	addLine(line, headingLevel, dontUpdateContextPosition, index) {
+		return this._fitOnPage(() => super.addLine(line, dontUpdateContextPosition, index), headingLevel);
 	}
 
 	addImage(image, index) {
@@ -55,8 +60,42 @@ class PageElementWriter extends ElementWriter {
 		return this._fitOnPage(() => super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition));
 	}
 
-	moveToNextPage(pageOrientation) {
+	moveToNextPage(pageOrientation, headingLevelCheck) {
 		let nextPage = this.context().moveToNextPage(pageOrientation);
+
+		/*
+		Code Change - Heading continuty.
+
+		Removing headers with greater level than current level.
+		*/
+		if(headingLevelCheck >=0){
+			if(headingLevelCheck === 0){
+			  this.repeatableHeaders = [];        
+			}
+	  
+			let levels = Object.keys(this.headings);
+			levels.map((key) =>{
+			  if(key >= headingLevelCheck){
+				  this.headings[key] = ''
+			  }           
+			});
+		};
+		
+		//Similar process as repeatables.
+		let yOffset = 0;
+		this.repeatableHeaders.forEach(function (rep) {
+				  
+			this.addFragment({
+				...rep,
+				items: rep.items.map(header => ({
+					...header,
+				
+				})),
+				yOffset: 0
+			}, true, true);
+			yOffset += rep.items.reduce((acc, header) => header.item.y, 0)
+			
+		}, this);
 
 		// moveToNextPage is called multiple times for table, because is called for each column
 		// and repeatables are inserted only in the first time. If columns are used, is needed
@@ -146,10 +185,90 @@ class PageElementWriter extends ElementWriter {
 		this.repeatables.pop();
 	}
 
-	_fitOnPage(addFct) {
+	//Code Change - Heading continuty:- Function to add incoming headers to headings object. heading levels [0-n] is added and -1 removes all existing headers.
+	pushToheader(header,level,sameNodeCheck){
+    
+		if(header && header.item && header.item.inlines[0].text && header.item.x && header.item.y){
+
+			if(sameNodeCheck && this.headings[level].item && header.item){
+				let headingInLine = this.headings[level].item.inlines;
+				let headingText = headingInLine[headingInLine.length-1].text;
+				let headingContinutyText = this.headings[level].item.headingContinutyText;
+				if(headingContinutyText){
+					this.headings[level].item.inlines[headingInLine.length-1].text = headingText.replace(headingContinutyText,'').trim();
+				}
+				this.sameNodeHeadings[level] = header;
+			}else{
+				let keys = Object.keys(this.headings);
+					
+				if(this.headings[level-1] || level === 0){
+					this.headings[level] = header
+				}
+					
+				keys.forEach(key =>{
+					if(key > level){
+						this.headings[key] = ''
+					}
+				});
+			
+				if(level < 0){
+					this.headings = {};
+				}
+			}			
+			
+			this.pushToRepeatableHeaders();
+		} 
+		
+	
+	}
+
+	//Code Change - Heading continuty:- Function to push headings to repeatableHeader object and also positioning and building headers for same nodes.
+	pushToRepeatableHeaders() {
+		let currentHeaderHeight = this.context().pageMargins.top;
+		this.repeatableHeaders = [];
+	  
+		let keys = Object.keys(this.headings);
+		for(let i = 0;i<keys.length;i++){
+		  if(Object.keys(this.headings[i]).length > 0){ 
+        if(i>0){
+          this.headings[i].item.y = currentHeaderHeight + 15;
+          this.headings[i].item.x = this.context().x;
+          currentHeaderHeight = this.headings[i].item.y;
+        }
+        if(this.sameNodeHeadings[i]){
+          this.sameNodeHeadings[i].item.y = currentHeaderHeight + 15;
+          this.sameNodeHeadings[i].item.x = this.context().x;
+          currentHeaderHeight = this.sameNodeHeadings[i].item.y;
+        }
+        if(i === keys.length - 1){
+          this.context.y = currentHeaderHeight + 5;
+        }
+
+        this.repeatableHeaders.push({
+          height: 15,
+          xOffset: 0,
+          items: [this.headings[i]]
+        });
+
+        if(this.sameNodeHeadings[i]){
+          this.repeatableHeaders.push({
+            height: 15,
+            xOffset: 0,
+            items: [this.sameNodeHeadings[i]]
+          });
+        }
+		  }
+		}
+	}
+
+	_fitOnPage(addFct, headingLevel) {
 		let position = addFct();
 		if (!position) {
-			this.moveToNextPage();
+			if(headingLevel){
+				this.moveToNextPage(undefined,headingLevel);
+			}else{
+				this.moveToNextPage();
+			}      
 			position = addFct();
 		}
 		return position;

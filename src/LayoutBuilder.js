@@ -21,6 +21,7 @@ function addAll(target, otherArray) {
  * Layout engine which turns document-definition-object into a set of pages, lines, inlines
  * and vectors ready to be rendered into a PDF
  */
+
 class LayoutBuilder {
 	/**
 	 * @param {object} pageSize - an object defining page width and height
@@ -32,6 +33,10 @@ class LayoutBuilder {
 		this.pageMargins = pageMargins;
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = {};
+
+		//Code Change - Heading continuty. 
+		this.sameNodeCheck = false;
+		this.prevHeaderContinutyLevel = '';
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -356,16 +361,16 @@ class LayoutBuilder {
 			let margin = node._margin;
 
 			if (node.pageBreak === 'before') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 			} else if (node.pageBreak === 'beforeOdd') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				if ((this.writer.context().page + 1) % 2 === 1) {
-					this.writer.moveToNextPage(node.pageOrientation);
+					this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				}
 			} else if (node.pageBreak === 'beforeEven') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				if ((this.writer.context().page + 1) % 2 === 0) {
-					this.writer.moveToNextPage(node.pageOrientation);
+					this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				}
 			}
 
@@ -382,16 +387,16 @@ class LayoutBuilder {
 			}
 
 			if (node.pageBreak === 'after') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 			} else if (node.pageBreak === 'afterOdd') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				if ((this.writer.context().page + 1) % 2 === 1) {
-					this.writer.moveToNextPage(node.pageOrientation);
+					this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				}
 			} else if (node.pageBreak === 'afterEven') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				if ((this.writer.context().page + 1) % 2 === 0) {
-					this.writer.moveToNextPage(node.pageOrientation);
+					this.writer.moveToNextPage(node.pageOrientation, node.headingContinutyLevel);
 				}
 			}
 		};
@@ -684,7 +689,69 @@ class LayoutBuilder {
 		}
 
 		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
-			let positions = this.writer.addLine(line);
+			//Code Change - Heading continuty :- Creating clone of line with "headingContinutyLevel" value
+			let positions;
+			if(node.headingContinutyLevel >= -1) {
+				positions = this.writer.addLine(line,node.headingContinutyLevel);
+				this.sameNodeCheck = false;
+				if(node.headingContinutyLevel === this.prevHeaderContinutyLevel){
+					this.sameNodeCheck = true;
+				}
+				let lineClone = new Line(this.writer.context().availableWidth);
+				lineClone.maxWidth = line.maxWidth;
+				lineClone.leadingCut = line.leadingCut;
+				lineClone.trailingCut = line.trailingCut;
+				lineClone.inlineWidths = line.inlineWidths;
+				const lastLineIndex = line.inlines.length-1;
+				lineClone.inlines = [...line.inlines];
+				const lastline = lineClone.inlines[lastLineIndex];
+				let headingContinutyText = '';
+				if(node.headingContinutyText) {
+					headingContinutyText = node.headingContinutyText;
+				}
+				lineClone.inlines[lastLineIndex] = {
+					...lastline,
+					text: lastline.text + ' ' + headingContinutyText
+				}
+				lineClone.headingContinutyText = headingContinutyText;
+				if(line.hasOwnProperty('newLineForced')){
+					lineClone.newLineForced = line.newLineForced
+				}
+				lineClone.lastLineInParagraph = line.lastLineInParagraph;
+				
+				lineClone.x = line.x;
+				if(line._node){
+					lineClone._node = {...line._node};
+					if(lineClone._node.id){
+						lineClone._node.id = '' 
+					}
+					if(lineClone._node.tocItem){
+						delete lineClone._node.tocItem
+					}
+					if(lineClone._node.tocItem){
+						lineClone._node.positions = []
+					}
+					if(lineClone._node.tocStyle){
+						delete lineClone._node.tocStyle
+					}
+				}
+				
+				lineClone.y = line.y;
+				this.writer.pushToheader({
+					item: lineClone,
+					type: 'line'
+				},node.headingContinutyLevel,this.sameNodeCheck)
+		
+				this.prevHeaderContinutyLevel = node.headingContinutyLevel;
+			}else{
+				this.sameNodeCheck = false;
+				this.writer.pushToheader({
+					item: '',
+					type: 'line'
+				},node.headingContinutyLevel,this.sameNodeCheck)
+				positions = this.writer.addLine(line,null);
+				this.prevHeaderContinutyLevel = '';
+			}
 			node.positions.push(positions);
 			line = this.buildNextLine(node);
 			if (line) {
