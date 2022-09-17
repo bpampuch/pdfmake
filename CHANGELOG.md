@@ -4,6 +4,7 @@
 
 - Updated Roboto font (version 3.005)
 - Fixed calculating auto page height
+- Fixed TrueType Collection loading from URL
 
 ## 0.3.0-beta.2 - 2022-04-01
 
