@@ -66,24 +66,48 @@ Document.prototype._createDoc = function (options, cb) {
 	for (var font in this.fonts) {
 		if (this.fonts.hasOwnProperty(font)) {
 			if (this.fonts[font].normal) {
-				var url = getExtendedUrl(this.fonts[font].normal);
-				urlResolver.resolve(url.url, url.headers);
-				this.fonts[font].normal = url.url;
+				if (Array.isArray(this.fonts[font].normal)) { // TrueType Collection
+					var url = getExtendedUrl(this.fonts[font].normal[0]);
+					urlResolver.resolve(url.url, url.headers);
+					this.fonts[font].normal[0] = url.url;
+				} else {
+					var url = getExtendedUrl(this.fonts[font].normal);
+					urlResolver.resolve(url.url, url.headers);
+					this.fonts[font].normal = url.url;
+				}
 			}
 			if (this.fonts[font].bold) {
-				var url = getExtendedUrl(this.fonts[font].bold);
-				urlResolver.resolve(url.url, url.headers);
-				this.fonts[font].bold = url.url;
+				if (Array.isArray(this.fonts[font].bold)) { // TrueType Collection
+					var url = getExtendedUrl(this.fonts[font].bold[0]);
+					urlResolver.resolve(url.url, url.headers);
+					this.fonts[font].bold[0] = url.url;
+				} else {
+					var url = getExtendedUrl(this.fonts[font].bold);
+					urlResolver.resolve(url.url, url.headers);
+					this.fonts[font].bold = url.url;
+				}
 			}
 			if (this.fonts[font].italics) {
-				var url = getExtendedUrl(this.fonts[font].italics);
-				urlResolver.resolve(url.url, url.headers);
-				this.fonts[font].italics = url.url;
+				if (Array.isArray(this.fonts[font].italics)) { // TrueType Collection
+					var url = getExtendedUrl(this.fonts[font].italics[0]);
+					urlResolver.resolve(url.url, url.headers);
+					this.fonts[font].italics[0] = url.url;
+				} else {
+					var url = getExtendedUrl(this.fonts[font].italics);
+					urlResolver.resolve(url.url, url.headers);
+					this.fonts[font].italics = url.url;
+				}
 			}
 			if (this.fonts[font].bolditalics) {
-				var url = getExtendedUrl(this.fonts[font].bolditalics);
-				urlResolver.resolve(url.url, url.headers);
-				this.fonts[font].bolditalics = url.url;
+				if (Array.isArray(this.fonts[font].bolditalics)) { // TrueType Collection
+					var url = getExtendedUrl(this.fonts[font].bolditalics[0]);
+					urlResolver.resolve(url.url, url.headers);
+					this.fonts[font].bolditalics[0] = url.url;
+				} else {
+					var url = getExtendedUrl(this.fonts[font].bolditalics);
+					urlResolver.resolve(url.url, url.headers);
+					this.fonts[font].bolditalics = url.url;
+				}
 			}
 		}
 	}
