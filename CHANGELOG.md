@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.3 - 2022-10-09
 
 - Updated Roboto font (version 3.005)
 - Fixed calculating auto page height
