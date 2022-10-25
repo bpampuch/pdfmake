@@ -362,7 +362,7 @@ class TableProcessor {
 		return contentHeight;
 	};
 
-	processTableVerticalAlignment = function (writer, table) {
+	processTableVerticalAlignment = function (writer, tableProcessor, table) {
 		const getCells = (node) => node.table ? node.table.body.flat().map(getCells).flat() : node;
 		const getNestedTables = (node) => node.table ? [node, ...node.table.body.flat().map(getNestedTables).filter(Boolean).flat()] : null;
 		// for all rows in table
@@ -403,8 +403,9 @@ class TableProcessor {
 								? cellHeight - itemHeight - 3
 								: (cellHeight - itemHeight) / 2;
 							if (x && x.item) {
-								x.item.type && offsetVector(x.item, 0, Math.max(0, offsetTop) - 1.5);
-								!x.item.type && (x.item.y += Math.max(0, offsetTop) - 1.5);
+								const paddingTop = tableProcessor.layout.paddingTop(rowIndex, this.tableNode);
+								x.item.type && offsetVector(x.item, 0, Math.max(0, offsetTop) - paddingTop);
+								!x.item.type && (x.item.y += Math.max(0, offsetTop) - paddingTop);
 							}
 						});
 					}
@@ -416,7 +417,7 @@ class TableProcessor {
 
 	endTable(writer) {
 		// begin - Vertical alignment
-		this.processTableVerticalAlignment(writer, this.tableNode.table);
+		this.processTableVerticalAlignment(writer, this, this.tableNode.table);
 		this.tableNode.__height = writer.context().y - this.tableNode.__height +
 			Math.ceil(this.layout.hLineWidth(0, this.tableNode)) * this.tableNode.table.body.length;
 		// end - Vertical alignment

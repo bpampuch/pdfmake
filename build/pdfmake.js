@@ -1,4 +1,4 @@
-/*! @sirfull/pdfmake v0.3.0-beta.2, @license MIT, @link http://pdfmake.org */
+/*! @sirfull/pdfmake v0.3.0-beta.2.1, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -2088,7 +2088,7 @@ var web_dom_collections_for_each = __webpack_require__(4747);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.regexp.to-string.js
 var es_regexp_to_string = __webpack_require__(9714);
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
-var pdfkit_es5 = __webpack_require__(8673);
+var pdfkit_es5 = __webpack_require__(4040);
 ;// CONCATENATED MODULE: ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(710)["Buffer"];
 
@@ -6327,7 +6327,7 @@ var TableProcessor = /*#__PURE__*/function () {
       return contentHeight;
     };
 
-    this.processTableVerticalAlignment = function (writer, table) {
+    this.processTableVerticalAlignment = function (writer, tableProcessor, table) {
       var _this = this;
 
       var getCells = function getCells(node) {
@@ -6405,8 +6405,9 @@ var TableProcessor = /*#__PURE__*/function () {
                 var offsetTop = cell.verticalAlign === 'bottom' ? cellHeight - itemHeight - 3 : (cellHeight - itemHeight) / 2;
 
                 if (x && x.item) {
-                  x.item.type && offsetVector(x.item, 0, Math.max(0, offsetTop) - 1.5);
-                  !x.item.type && (x.item.y += Math.max(0, offsetTop) - 1.5);
+                  var paddingTop = tableProcessor.layout.paddingTop(rowIndex, _this.tableNode);
+                  x.item.type && offsetVector(x.item, 0, Math.max(0, offsetTop) - paddingTop);
+                  !x.item.type && (x.item.y += Math.max(0, offsetTop) - paddingTop);
                 }
               });
             }
@@ -6783,7 +6784,7 @@ var TableProcessor = /*#__PURE__*/function () {
   // end - Vertical alignment
   _proto.endTable = function endTable(writer) {
     // begin - Vertical alignment
-    this.processTableVerticalAlignment(writer, this.tableNode.table);
+    this.processTableVerticalAlignment(writer, this, this.tableNode.table);
     this.tableNode.__height = writer.context().y - this.tableNode.__height + Math.ceil(this.layout.hLineWidth(0, this.tableNode)) * this.tableNode.table.body.length; // end - Vertical alignment
 
     if (this.cleanUpRepeatables) {
@@ -9483,7 +9484,7 @@ var OutputDocument = /*#__PURE__*/function () {
 
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(9217);
+var FileSaver_min = __webpack_require__(3930);
 ;// CONCATENATED MODULE: ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -26620,7 +26621,7 @@ module.exports = /*#__PURE__*/function () {
 
 /***/ }),
 
-/***/ 8673:
+/***/ 4040:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -65102,7 +65103,7 @@ module.exports = __webpack_require__(7187).EventEmitter;
 
 /***/ }),
 
-/***/ 9217:
+/***/ 3930:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
