@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Minimal supported version Node.js 14 LTS
+
 ## 0.3.0-beta.3 - 2022-10-09
 
 - Updated Roboto font (version 3.005)
