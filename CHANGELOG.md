@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.2.7 - 2022-12-17
 
-- Vulnerability fix CVE-2022-46161
+- Fixed theoretical vulnerability CVE-2022-46161 (**It was never part of version released as npm package or cdnjs or bower or packagist!**)
 
 ## 0.2.6 - 2022-10-09
 
