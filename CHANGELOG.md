@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Minimal supported version Node.js 14 LTS
+- Vulnerability fix CVE-2022-46161
 
 ## 0.3.0-beta.3 - 2022-10-09
 
