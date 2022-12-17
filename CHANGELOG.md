@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Vulnerability fix CVE-2022-46161
+
 ## 0.2.6 - 2022-10-09
 
 - Updated Roboto font (version 3.005)
