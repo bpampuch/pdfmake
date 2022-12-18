@@ -29,7 +29,7 @@ function createPdfBinary(docDefinition) {
 }
 
 app.post('/pdf', function (req, res) {
-	eval(req.body.content);
+	const dd = new Function(req.body.content + '; return dd;')();
 
 	createPdfBinary(dd).then(function (binary) {
 		res.contentType('application/pdf');
