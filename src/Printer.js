@@ -49,6 +49,7 @@ class PdfPrinter {
 					docDefinition.version = docDefinition.version || '1.3';
 					docDefinition.compress = typeof docDefinition.compress === 'boolean' ? docDefinition.compress : true;
 					docDefinition.images = docDefinition.images || {};
+					docDefinition.attachments = docDefinition.attachments || {};
 					docDefinition.pageMargins = isValue(docDefinition.pageMargins) ? docDefinition.pageMargins : 40;
 					docDefinition.patterns = docDefinition.patterns || {};
 
@@ -68,7 +69,8 @@ class PdfPrinter {
 						font: null
 					};
 
-					this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.patterns, pdfOptions, this.virtualfs);
+					this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.patterns, docDefinition.attachments, pdfOptions, this.virtualfs);
+					embedFiles(docDefinition, this.pdfKitDoc);
 
 					const builder = new LayoutBuilder(pageSize, normalizePageMargin(docDefinition.pageMargins), new SVGMeasure());
 
@@ -108,6 +110,14 @@ class PdfPrinter {
 	 * @returns {Promise}
 	 */
 	resolveUrls(docDefinition) {
+		const getExtendedUrl = url => {
+			if (typeof url === 'object') {
+				return { url: url.url, headers: url.headers };
+			}
+
+			return { url: url, headers: {} };
+		};
+
 		return new Promise((resolve, reject) => {
 			if (this.urlResolver === null) {
 				resolve();
@@ -116,16 +126,48 @@ class PdfPrinter {
 			for (let font in this.fontDescriptors) {
 				if (this.fontDescriptors.hasOwnProperty(font)) {
 					if (this.fontDescriptors[font].normal) {
-						this.urlResolver.resolve(this.fontDescriptors[font].normal);
+						if (Array.isArray(this.fontDescriptors[font].normal)) { // TrueType Collection
+							let url = getExtendedUrl(this.fontDescriptors[font].normal[0]);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].normal[0] = url.url;
+						} else {
+							let url = getExtendedUrl(this.fontDescriptors[font].normal);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].normal = url.url;
+						}
 					}
 					if (this.fontDescriptors[font].bold) {
-						this.urlResolver.resolve(this.fontDescriptors[font].bold);
+						if (Array.isArray(this.fontDescriptors[font].bold)) { // TrueType Collection
+							let url = getExtendedUrl(this.fontDescriptors[font].bold[0]);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].bold[0] = url.url;
+						} else {
+							let url = getExtendedUrl(this.fontDescriptors[font].bold);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].bold = url.url;
+						}
 					}
 					if (this.fontDescriptors[font].italics) {
-						this.urlResolver.resolve(this.fontDescriptors[font].italics);
+						if (Array.isArray(this.fontDescriptors[font].italics)) { // TrueType Collection
+							let url = getExtendedUrl(this.fontDescriptors[font].italics[0]);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].italics[0] = url.url;
+						} else {
+							let url = getExtendedUrl(this.fontDescriptors[font].italics);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].italics = url.url;
+						}
 					}
 					if (this.fontDescriptors[font].bolditalics) {
-						this.urlResolver.resolve(this.fontDescriptors[font].bolditalics);
+						if (Array.isArray(this.fontDescriptors[font].bolditalics)) { // TrueType Collection
+							let url = getExtendedUrl(this.fontDescriptors[font].bolditalics[0]);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].bolditalics[0] = url.url;
+						} else {
+							let url = getExtendedUrl(this.fontDescriptors[font].bolditalics);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].bolditalics = url.url;
+						}
 					}
 				}
 			}
@@ -133,7 +175,29 @@ class PdfPrinter {
 			if (docDefinition.images) {
 				for (let image in docDefinition.images) {
 					if (docDefinition.images.hasOwnProperty(image)) {
-						this.urlResolver.resolve(docDefinition.images[image]);
+						let url = getExtendedUrl(docDefinition.images[image]);
+						this.urlResolver.resolve(url.url, url.headers);
+						docDefinition.images[image] = url.url;
+					}
+				}
+			}
+
+			if (docDefinition.attachments) {
+				for (let attachment in docDefinition.attachments) {
+					if (docDefinition.attachments.hasOwnProperty(attachment) && docDefinition.attachments[attachment].src) {
+						let url = getExtendedUrl(docDefinition.attachments[attachment].src);
+						this.urlResolver.resolve(url.url, url.headers);
+						docDefinition.attachments[attachment].src = url.url;
+					}
+				}
+			}
+
+			if (docDefinition.files) {
+				for (let file in docDefinition.files) {
+					if (docDefinition.files.hasOwnProperty(file) && docDefinition.files[file].src) {
+						let url = getExtendedUrl(docDefinition.files[file].src);
+						this.urlResolver.resolve(url.url, url.headers);
+						docDefinition.files[file].src = url.url;
 					}
 				}
 			}
@@ -180,6 +244,23 @@ function createMetadata(docDefinition) {
 	return info;
 }
 
+function embedFiles(docDefinition, pdfKitDoc) {
+	if (docDefinition.files) {
+		for (const key in docDefinition.files) {
+			const file = docDefinition.files[key];
+
+			if (!file.src) return;
+
+			if (pdfKitDoc.virtualfs && pdfKitDoc.virtualfs.existsSync(file.src)) {
+				file.src = pdfKitDoc.virtualfs.readFileSync(file.src);
+			}
+
+			file.name = file.name || key;
+			pdfKitDoc.file(file.src, file);
+		}
+	}
+}
+
 function calculatePageHeight(pages, margins) {
 	function getItemHeight(item) {
 		if (typeof item.item.getHeight === 'function') {
@@ -187,7 +268,11 @@ function calculatePageHeight(pages, margins) {
 		} else if (item.item._height) {
 			return item.item._height;
 		} else if (item.type === 'vector') {
-			return item.item.y1 > item.item.y2 ? item.item.y1 : item.item.y2;
+			if (typeof item.item.y1 !== 'undefined') {
+				return item.item.y1 > item.item.y2 ? item.item.y1 : item.item.y2;
+			} else {
+				return item.item.h;
+			}
 		} else {
 			// TODO: add support for next item types
 			return 0;

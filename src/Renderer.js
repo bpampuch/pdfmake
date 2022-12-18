@@ -78,6 +78,9 @@ class Renderer {
 					case 'svg':
 						this.renderSVG(item.item);
 						break;
+					case 'attachment':
+						this.renderAttachment(item.item);
+						break;
 					case 'beginClip':
 						this.beginClip(item.item);
 						break;
@@ -306,6 +309,27 @@ class Renderer {
 		if (image.linkToDestination) {
 			this.pdfDocument.goTo(image.x, image.y, image._width, image._height, image.linkToDestination);
 		}
+		if (image.linkToFile) {
+			const attachment = this.pdfDocument.provideAttachment(image.linkToFile);
+			this.pdfDocument.fileAnnotation(
+				image.x,
+				image.y,
+				image._width,
+				image._height,
+				attachment,
+				// add empty rectangle as file annotation appearance with the same size as the rendered image
+				{
+					AP: {
+						N: {
+							Type: 'XObject',
+							Subtype: 'Form',
+							FormType: 1,
+							BBox: [image.x, image.y, image._width, image._height]
+						}
+					},
+				}
+			);
+		}
 	}
 
 	renderSVG(svg) {
@@ -324,6 +348,17 @@ class Renderer {
 		};
 
 		SVGtoPDF(this.pdfDocument, svg.svg, svg.x, svg.y, options);
+	}
+
+	renderAttachment(attachment) {
+		const file = this.pdfDocument.provideAttachment(attachment.attachment);
+
+		const options = {};
+		if (attachment.icon) {
+			options.Name = attachment.icon;
+		}
+
+		this.pdfDocument.fileAnnotation(attachment.x, attachment.y, attachment._width, attachment._height, file, options);
 	}
 
 	beginClip(rect) {
