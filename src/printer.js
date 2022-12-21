@@ -136,7 +136,7 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
-	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins), new ImageMeasure(this.pdfKitDoc, docDefinition.images), new SVGMeasure());
+	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins), new ImageMeasure(this.pdfKitDoc, docDefinition.images), new SVGMeasure(), docDefinition.QROpts);
 
 	registerDefaultTableLayouts(builder);
 	if (options.tableLayouts) {

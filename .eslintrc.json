@@ -29,7 +29,8 @@
     "jsdoc/valid-types": 1
   },
   "plugins": [
-    "jsdoc"
+    "jsdoc",
+    "mocha"
   ],
   "ignorePatterns": [
     "src/3rd-party/svg-to-pdfkit/*"

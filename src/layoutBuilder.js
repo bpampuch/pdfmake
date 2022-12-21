@@ -34,13 +34,14 @@ function addAll(target, otherArray) {
  * @param {Object} pageSize - an object defining page width and height
  * @param {Object} pageMargins - an object defining top, left, right and bottom margins
  */
-function LayoutBuilder(pageSize, pageMargins, imageMeasure, svgMeasure) {
+function LayoutBuilder(pageSize, pageMargins, imageMeasure, svgMeasure, QROpts) {
 	this.pageSize = pageSize;
 	this.pageMargins = pageMargins;
 	this.tracker = new TraversalTracker();
 	this.imageMeasure = imageMeasure;
 	this.svgMeasure = svgMeasure;
 	this.tableLayouts = {};
+  this.QROpts = QROpts || {};
 }
 
 LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
@@ -728,7 +729,40 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 		return null;
 	}
 
-	var line = new Line(this.writer.context().availableWidth);
+  const availableHeight = this.writer.context().availableHeight;
+  let availableWidth = this.writer.context().availableWidth;
+
+  let checkQRBoundaries = false;
+  let { width, height } = this.QROpts || {};
+  if (Number.isInteger(width) || Number.isInteger(height)) {
+    if (!Number.isInteger(width)) width = height;
+    else if (!Number.isInteger(height)) height = width;
+    checkQRBoundaries = true
+  }
+  const reduceWidth = width;
+  const reduceHeight = height;
+
+  if (checkQRBoundaries && reduceWidth && reduceHeight) {
+    let widthRemaining = availableWidth;
+    let heightRemaining = availableHeight - reduceHeight;
+    let lineHeight = 0;
+    for (const word of textNode._inlines) {
+      if (word.width <= widthRemaining) {
+        widthRemaining -= word.width;
+        lineHeight = Math.max(lineHeight, word.height)
+      } else {
+        widthRemaining = availableWidth;
+        heightRemaining -= lineHeight
+        if (heightRemaining < 0) {
+          if (reduceWidth) availableWidth -= reduceWidth
+          break;
+        }
+        lineHeight = 0;
+      }
+    }
+  }
+
+	var line = new Line(availableWidth);
 	var textTools = new TextTools(null);
 
 	var isForceContinue = false;
