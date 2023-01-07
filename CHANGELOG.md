@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0-beta.4 - 2022-12-17
+
+- Minimal supported version Node.js 14 LTS
+- Fixed theoretical vulnerability CVE-2022-46161 (**It was never part of version released as npm package or cdnjs or bower or packagist!**)
+
 ## 0.3.0-beta.3 - 2022-10-09
 
 - Updated Roboto font (version 3.005)
