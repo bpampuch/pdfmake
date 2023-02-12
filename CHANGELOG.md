@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed document buffer size. Node.js 18+ allow max 1 GiB.
+
 ## 0.3.0-beta.4 - 2022-12-17
 
 - Minimal supported version Node.js 14 LTS
