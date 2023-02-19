@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.5 - 2023-02-19
 
 - Fixed document buffer size. Node.js 18+ allow max 1 GiB.
 
