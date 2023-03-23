@@ -126,24 +126,48 @@ class PdfPrinter {
 			for (let font in this.fontDescriptors) {
 				if (this.fontDescriptors.hasOwnProperty(font)) {
 					if (this.fontDescriptors[font].normal) {
-						let url = getExtendedUrl(this.fontDescriptors[font].normal);
-						this.urlResolver.resolve(url.url, url.headers);
-						this.fontDescriptors[font].normal = url.url;
+						if (Array.isArray(this.fontDescriptors[font].normal)) { // TrueType Collection
+							let url = getExtendedUrl(this.fontDescriptors[font].normal[0]);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].normal[0] = url.url;
+						} else {
+							let url = getExtendedUrl(this.fontDescriptors[font].normal);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].normal = url.url;
+						}
 					}
 					if (this.fontDescriptors[font].bold) {
-						let url = getExtendedUrl(this.fontDescriptors[font].bold);
-						this.urlResolver.resolve(url.url, url.headers);
-						this.fontDescriptors[font].bold = url.url;
+						if (Array.isArray(this.fontDescriptors[font].bold)) { // TrueType Collection
+							let url = getExtendedUrl(this.fontDescriptors[font].bold[0]);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].bold[0] = url.url;
+						} else {
+							let url = getExtendedUrl(this.fontDescriptors[font].bold);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].bold = url.url;
+						}
 					}
 					if (this.fontDescriptors[font].italics) {
-						let url = getExtendedUrl(this.fontDescriptors[font].italics);
-						this.urlResolver.resolve(url.url, url.headers);
-						this.fontDescriptors[font].italics = url.url;
+						if (Array.isArray(this.fontDescriptors[font].italics)) { // TrueType Collection
+							let url = getExtendedUrl(this.fontDescriptors[font].italics[0]);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].italics[0] = url.url;
+						} else {
+							let url = getExtendedUrl(this.fontDescriptors[font].italics);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].italics = url.url;
+						}
 					}
 					if (this.fontDescriptors[font].bolditalics) {
-						let url = getExtendedUrl(this.fontDescriptors[font].bolditalics);
-						this.urlResolver.resolve(url.url, url.headers);
-						this.fontDescriptors[font].bolditalics = url.url;
+						if (Array.isArray(this.fontDescriptors[font].bolditalics)) { // TrueType Collection
+							let url = getExtendedUrl(this.fontDescriptors[font].bolditalics[0]);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].bolditalics[0] = url.url;
+						} else {
+							let url = getExtendedUrl(this.fontDescriptors[font].bolditalics);
+							this.urlResolver.resolve(url.url, url.headers);
+							this.fontDescriptors[font].bolditalics = url.url;
+						}
 					}
 				}
 			}
@@ -244,7 +268,11 @@ function calculatePageHeight(pages, margins) {
 		} else if (item.item._height) {
 			return item.item._height;
 		} else if (item.type === 'vector') {
-			return item.item.y1 > item.item.y2 ? item.item.y1 : item.item.y2;
+			if (typeof item.item.y1 !== 'undefined') {
+				return item.item.y1 > item.item.y2 ? item.item.y1 : item.item.y2;
+			} else {
+				return item.item.h;
+			}
 		} else {
 			// TODO: add support for next item types
 			return 0;
