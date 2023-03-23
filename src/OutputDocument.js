@@ -4,7 +4,7 @@ class OutputDocument {
 	 * @param {Promise<object>} pdfDocumentPromise
 	 */
 	constructor(pdfDocumentPromise) {
-		this.bufferSize = 9007199254740991;
+		this.bufferSize = 1073741824;
 		this.pdfDocumentPromise = pdfDocumentPromise;
 		this.bufferPromise = null;
 	}
