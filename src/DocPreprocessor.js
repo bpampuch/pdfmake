@@ -23,7 +23,8 @@ class DocPreprocessor {
 		return this.preprocessNode(docStructure);
 	}
 
-	preprocessNode(node) {
+	// begin - Vertical alignment
+	checkNode(node) {
 		// expand shortcuts and casting values
 		if (Array.isArray(node)) {
 			node = { stack: node };
@@ -32,6 +33,14 @@ class DocPreprocessor {
 		} else if ('text' in node) { // cast value in text property
 			node.text = convertValueToString(node.text);
 		}
+		return node;
+	};
+	// end - Vertical alignment
+
+	preprocessNode(node) {
+		// begin - Vertical alignment
+		node = this.checkNode(node);
+		// end - Vertical alignment
 
 		if (node.columns) {
 			return this.preprocessColumns(node);
@@ -68,6 +77,10 @@ class DocPreprocessor {
 		let columns = node.columns;
 
 		for (let i = 0, l = columns.length; i < l; i++) {
+			// begin - Vertical alignment
+			columns[i] = this.checkNode(columns[i]);
+			columns[i].__nodeRef = node.__nodeRef ?? node;
+			// end - Vertical alignment
 			columns[i] = this.preprocessNode(columns[i]);
 		}
 
@@ -78,6 +91,10 @@ class DocPreprocessor {
 		let items = node.stack;
 
 		for (let i = 0, l = items.length; i < l; i++) {
+			// begin - Vertical alignment
+			items[i] = this.checkNode(items[i]);
+			items[i].__nodeRef = node.__nodeRef ?? node;
+			// end - Vertical alignment
 			items[i] = this.preprocessNode(items[i]);
 		}
 
@@ -88,6 +105,10 @@ class DocPreprocessor {
 		let items = node.ul || node.ol;
 
 		for (let i = 0, l = items.length; i < l; i++) {
+			// begin - Vertical alignment
+			items[i] = this.checkNode(items[i]);
+			items[i].__nodeRef = node.__nodeRef ?? node;
+			// end - Vertical alignment
 			items[i] = this.preprocessNode(items[i]);
 		}
 

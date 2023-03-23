@@ -1,4 +1,4 @@
-/*! pdfmake v0.3.0-beta.5, @license MIT, @link http://pdfmake.org */
+/*! @sirfull/pdfmake v0.3.0-beta.5.1, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -2088,7 +2088,7 @@ var web_dom_collections_for_each = __webpack_require__(4747);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.regexp.to-string.js
 var es_regexp_to_string = __webpack_require__(9714);
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
-var pdfkit_es5 = __webpack_require__(5617);
+var pdfkit_es5 = __webpack_require__(3055);
 ;// CONCATENATED MODULE: ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(710)["Buffer"];
 
@@ -2339,7 +2339,7 @@ var es_symbol_iterator = __webpack_require__(2165);
 
 function _createForOfIteratorHelperLoose(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (it) return (it = it.call(o)).next.bind(it); if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; return function () { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
 
 function fontStringify(key, val) {
   if (key === 'font') {
@@ -2455,29 +2455,41 @@ var convertValueToString = function convertValueToString(value) {
   return value;
 };
 var DocPreprocessor = /*#__PURE__*/function () {
-  function DocPreprocessor() {}
+  function DocPreprocessor() {
+    this.checkNode = function (node) {
+      // expand shortcuts and casting values
+      if (Array.isArray(node)) {
+        node = {
+          stack: node
+        };
+      } else if (isString(node) || isNumber(node) || typeof node === 'boolean' || !isValue(node) || isEmptyObject(node)) {
+        // text node defined as value
+        node = {
+          text: convertValueToString(node)
+        };
+      } else if ('text' in node) {
+        // cast value in text property
+        node.text = convertValueToString(node.text);
+      }
+      return node;
+    };
+  }
   var _proto = DocPreprocessor.prototype;
   _proto.preprocessDocument = function preprocessDocument(docStructure) {
     this.parentNode = null;
     this.tocs = [];
     this.nodeReferences = [];
     return this.preprocessNode(docStructure);
-  };
+  }
+
+  // begin - Vertical alignment
+  ;
+  // end - Vertical alignment
   _proto.preprocessNode = function preprocessNode(node) {
-    // expand shortcuts and casting values
-    if (Array.isArray(node)) {
-      node = {
-        stack: node
-      };
-    } else if (isString(node) || isNumber(node) || typeof node === 'boolean' || !isValue(node) || isEmptyObject(node)) {
-      // text node defined as value
-      node = {
-        text: convertValueToString(node)
-      };
-    } else if ('text' in node) {
-      // cast value in text property
-      node.text = convertValueToString(node.text);
-    }
+    // begin - Vertical alignment
+    node = this.checkNode(node);
+    // end - Vertical alignment
+
     if (node.columns) {
       return this.preprocessColumns(node);
     } else if (node.stack) {
@@ -2511,6 +2523,11 @@ var DocPreprocessor = /*#__PURE__*/function () {
   _proto.preprocessColumns = function preprocessColumns(node) {
     var columns = node.columns;
     for (var i = 0, l = columns.length; i < l; i++) {
+      var _node$__nodeRef;
+      // begin - Vertical alignment
+      columns[i] = this.checkNode(columns[i]);
+      columns[i].__nodeRef = (_node$__nodeRef = node.__nodeRef) != null ? _node$__nodeRef : node;
+      // end - Vertical alignment
       columns[i] = this.preprocessNode(columns[i]);
     }
     return node;
@@ -2518,6 +2535,11 @@ var DocPreprocessor = /*#__PURE__*/function () {
   _proto.preprocessVerticalContainer = function preprocessVerticalContainer(node) {
     var items = node.stack;
     for (var i = 0, l = items.length; i < l; i++) {
+      var _node$__nodeRef2;
+      // begin - Vertical alignment
+      items[i] = this.checkNode(items[i]);
+      items[i].__nodeRef = (_node$__nodeRef2 = node.__nodeRef) != null ? _node$__nodeRef2 : node;
+      // end - Vertical alignment
       items[i] = this.preprocessNode(items[i]);
     }
     return node;
@@ -2525,6 +2547,11 @@ var DocPreprocessor = /*#__PURE__*/function () {
   _proto.preprocessList = function preprocessList(node) {
     var items = node.ul || node.ol;
     for (var i = 0, l = items.length; i < l; i++) {
+      var _node$__nodeRef3;
+      // begin - Vertical alignment
+      items[i] = this.checkNode(items[i]);
+      items[i].__nodeRef = (_node$__nodeRef3 = node.__nodeRef) != null ? _node$__nodeRef3 : node;
+      // end - Vertical alignment
       items[i] = this.preprocessNode(items[i]);
     }
     return node;
@@ -3747,7 +3774,9 @@ var encode = function encode(ver, mode, data, maxbuflen) {
   var pack = function pack(x, n) {
     if (n >= remaining) {
       buf.push(bits | x >> (n -= remaining));
-      while (n >= 8) buf.push(x >> (n -= 8) & 255);
+      while (n >= 8) {
+        buf.push(x >> (n -= 8) & 255);
+      }
       bits = 0;
       remaining = 8;
     }
@@ -3787,7 +3816,9 @@ var encode = function encode(ver, mode, data, maxbuflen) {
 
   // the padding to fill up the remaining space. we should not add any
   // words when the overflow already occurred.
-  while (buf.length + 1 < maxbuflen) buf.push(0xec, 0x11);
+  while (buf.length + 1 < maxbuflen) {
+    buf.push(0xec, 0x11);
+  }
   if (buf.length < maxbuflen) buf.push(0xec);
   return buf;
 };
@@ -3803,7 +3834,9 @@ var calculateecc = function calculateecc(poly, genpoly) {
   var modulus = poly.slice(0);
   var polylen = poly.length,
     genpolylen = genpoly.length;
-  for (var i = 0; i < genpolylen; ++i) modulus.push(0);
+  for (var i = 0; i < genpolylen; ++i) {
+    modulus.push(0);
+  }
   for (var i = 0; i < polylen;) {
     var quotient = GF256_INVMAP[modulus[i++]];
     if (quotient >= 0) {
@@ -4042,9 +4075,13 @@ var evaluatematrix = function evaluatematrix(matrix) {
     groups = [0]; // the first empty group of white
     for (var j = 0; j < n;) {
       var k;
-      for (k = 0; j < n && row[j]; ++k) ++j;
+      for (k = 0; j < n && row[j]; ++k) {
+        ++j;
+      }
       groups.push(k);
-      for (k = 0; j < n && !row[j]; ++k) ++j;
+      for (k = 0; j < n && !row[j]; ++k) {
+        ++j;
+      }
       groups.push(k);
     }
     score += evaluategroup(groups);
@@ -4053,9 +4090,13 @@ var evaluatematrix = function evaluatematrix(matrix) {
     groups = [0];
     for (var j = 0; j < n;) {
       var k;
-      for (k = 0; j < n && matrix[j][i]; ++k) ++j;
+      for (k = 0; j < n && matrix[j][i]; ++k) {
+        ++j;
+      }
       groups.push(k);
-      for (k = 0; j < n && !matrix[j][i]; ++k) ++j;
+      for (k = 0; j < n && !matrix[j][i]; ++k) {
+        ++j;
+      }
       groups.push(k);
     }
     score += evaluategroup(groups);
@@ -5230,6 +5271,10 @@ var ElementWriter = /*#__PURE__*/function (_EventEmitter) {
     }
     this.alignCanvas(node);
     node.canvas.forEach(function (vector) {
+      var _node$__nodeRef;
+      // begin - Vertical alignment
+      vector.__nodeRef = (_node$__nodeRef = node.__nodeRef) != null ? _node$__nodeRef : node;
+      // end - Vertical alignment
       var position = this.addVector(vector, false, false, index);
       positions.push(position);
       if (index !== undefined) {
@@ -5274,9 +5319,13 @@ var ElementWriter = /*#__PURE__*/function (_EventEmitter) {
     qr.y = context.y;
     this.alignImage(qr);
     for (var i = 0, l = qr._canvas.length; i < l; i++) {
+      var _qr$__nodeRef;
       var vector = qr._canvas[i];
       vector.x += qr.x;
       vector.y += qr.y;
+      // begin - Vertical alignment
+      vector.__nodeRef = (_qr$__nodeRef = qr.__nodeRef) != null ? _qr$__nodeRef : qr;
+      // end - Vertical alignment
       this.addVector(vector, true, true, index);
     }
     context.moveDown(qr._height);
@@ -5628,18 +5677,133 @@ var PageElementWriter = /*#__PURE__*/function (_ElementWriter) {
   return PageElementWriter;
 }(src_ElementWriter);
 /* harmony default export */ var src_PageElementWriter = (PageElementWriter);
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.flat.js
+var es_array_flat = __webpack_require__(4944);
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.unscopables.flat.js
+var es_array_unscopables_flat = __webpack_require__(3792);
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.flat-map.js
+var es_array_flat_map = __webpack_require__(6535);
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.unscopables.flat-map.js
+var es_array_unscopables_flat_map = __webpack_require__(9244);
 ;// CONCATENATED MODULE: ./src/TableProcessor.js
 
 
 
 
+
+
+
+
+
+
+
+
+// begin - Vertical alignment
+
+// end - Vertical alignment
 var TableProcessor = /*#__PURE__*/function () {
   function TableProcessor(tableNode) {
+    this.getCellContentHeight = function (cell, items) {
+      var contentHeight = 0;
+      cell._maxHeight && (contentHeight = cell._maxHeight); // for canvas
+      // for forced multiline text, text with lineHeight, ul, ol
+      cell.__contentHeight && (contentHeight = cell.__contentHeight);
+      !contentHeight && (contentHeight = items.reduce(function (p, v) {
+        var _v$item$inlines$, _v$item$__nodeRef$lin, _v$item$__nodeRef, _v$item$_height, _item$height, _item$h;
+        var item = v.item.inlines ? (_v$item$inlines$ = v.item.inlines[0]) != null ? _v$item$inlines$ : null : v.item;
+        var lineHeight = (_v$item$__nodeRef$lin = (_v$item$__nodeRef = v.item.__nodeRef) == null ? void 0 : _v$item$__nodeRef.lineHeight) != null ? _v$item$__nodeRef$lin : (_v$item$_height = v.item._height) != null ? _v$item$_height : v.item.h;
+        var height = (_item$height = item.height) != null ? _item$height : (_item$h = item.h) != null ? _item$h : 0;
+        v.type === 'vector' || cell.ol && !v.item.lastLineInParagraph && (height = 0); // for ol with counter
+        return p + height / (lineHeight != null ? lineHeight : 1);
+      }, 0));
+      !contentHeight && cell._height && (contentHeight = cell._height); // for text, image, svg, qr
+      return contentHeight;
+    };
+    this.processTableVerticalAlignment = function (writer, tableProcessor, table) {
+      var _this = this;
+      var getCells = function getCells(node) {
+        return node.table ? node.table.body.flat().map(getCells).flat() : node;
+      };
+      var getNestedTables = function getNestedTables(node) {
+        return node.table ? [node].concat(node.table.body.flat().map(getNestedTables).filter(Boolean).flat()) : null;
+      };
+      // for all rows in table
+      table.body.forEach(function (row, rowIndex) {
+        // filter only cells with vertical alignment (middle / bottom)
+        !Array.isArray(row) && row.columns && (row = row.columns);
+        row.filter(function (cell) {
+          return cell.verticalAlign && ['middle', 'bottom'].indexOf(cell.verticalAlign) > -1;
+        }).forEach(function (cell) {
+          var nestedTables;
+          if (!cell._span) {
+            var cellHeight = 0;
+            if (cell.rowSpan && cell.rowSpan > 1) {
+              var heights = table.__rowsHeight.slice(rowIndex, rowIndex + cell.rowSpan);
+              cellHeight = heights.reduce(function (previousValue, value) {
+                return previousValue + value.height;
+              }, 0);
+            } else {
+              cellHeight = table.__rowsHeight[rowIndex].height;
+            }
+            if (cellHeight) {
+              var pageItems = writer._context.pages.flatMap(function (x) {
+                return x.items;
+              });
+              var items = pageItems.filter(function (i) {
+                return i.item.__nodeRef === cell || i.item === cell;
+              });
+              var itemHeight = 0;
+              if (items.length === 0 && cell.table) {
+                itemHeight = cell.table.__rowsHeight.reduce(function (p, v) {
+                  return p + v.height;
+                }, 0);
+                nestedTables = getNestedTables(cell);
+                items = pageItems.filter(function (i) {
+                  return getCells(cell).indexOf(i.item.__nodeRef) > -1 || i.item.__tableRef && nestedTables.some(function (nt) {
+                    return nt.table === i.item.__tableRef;
+                  });
+                });
+              } else if (cell.stack) {
+                var tables = cell.stack.filter(function (x) {
+                  return x.table;
+                });
+                nestedTables = getNestedTables(tables[0]);
+                itemHeight = tables.reduce(function (p, v) {
+                  return p + v.__height;
+                }, 0) + cell.stack.flatMap(function (x) {
+                  return x.__contentHeight;
+                }).filter(Boolean).reduce(function (p, v) {
+                  return p + v;
+                }, 0);
+                items = [].concat(items, [pageItems.filter(function (i) {
+                  return getCells(tables[0]).indexOf(i.item.__nodeRef) > -1 || i.item.__tableRef && nestedTables.some(function (nt) {
+                    return nt.table === i.item.__tableRef;
+                  });
+                })]).flat();
+              } else {
+                itemHeight = _this.getCellContentHeight(cell, items);
+              }
+              items.forEach(function (x) {
+                var offsetTop = cell.verticalAlign === 'bottom' ? cellHeight - itemHeight - 3 : (cellHeight - itemHeight) / 2;
+                if (x && x.item) {
+                  var paddingTop = tableProcessor.layout.paddingTop(rowIndex, _this.tableNode);
+                  x.item.type && offsetVector(x.item, 0, Math.max(0, offsetTop) - paddingTop);
+                  !x.item.type && (x.item.y += Math.max(0, offsetTop) - paddingTop);
+                }
+              });
+            }
+          }
+        });
+      });
+    };
     this.tableNode = tableNode;
   }
   var _proto = TableProcessor.prototype;
   _proto.beginTable = function beginTable(writer) {
-    var _this = this;
+    var _this2 = this;
+    // begin - Vertical alignment
+    this.tableNode.table.__rowsHeight = [];
+    // end - Vertical alignment
     var getTableInnerContentWidth = function getTableInnerContentWidth() {
       var width = 0;
       tableNode.table.widths.forEach(function (w) {
@@ -5655,10 +5819,10 @@ var TableProcessor = /*#__PURE__*/function () {
         left: 0,
         rowSpan: 0
       });
-      for (var i = 0, l = _this.tableNode.table.body[0].length; i < l; i++) {
-        var paddings = _this.layout.paddingLeft(i, _this.tableNode) + _this.layout.paddingRight(i, _this.tableNode);
-        var lBorder = _this.layout.vLineWidth(i, _this.tableNode);
-        lastWidth = paddings + lBorder + _this.tableNode.table.widths[i]._calcWidth;
+      for (var i = 0, l = _this2.tableNode.table.body[0].length; i < l; i++) {
+        var paddings = _this2.layout.paddingLeft(i, _this2.tableNode) + _this2.layout.paddingRight(i, _this2.tableNode);
+        var lBorder = _this2.layout.vLineWidth(i, _this2.tableNode);
+        lastWidth = paddings + lBorder + _this2.tableNode.table.widths[i]._calcWidth;
         rsd[rsd.length - 1].width = lastWidth;
         x += lastWidth;
         rsd.push({
@@ -5736,12 +5900,15 @@ var TableProcessor = /*#__PURE__*/function () {
     // update the border properties of all cells before drawing any lines
     prepareCellBorders(this.tableNode.table.body);
     this.drawHorizontalLine(0, writer);
+    // begin - Vertical alignment
+    this.tableNode.__height = writer.context().y;
+    // end - Vertical alignment
   };
   _proto.onRowBreak = function onRowBreak(rowIndex, writer) {
-    var _this2 = this;
+    var _this3 = this;
     return function () {
-      var offset = _this2.rowPaddingTop + (!_this2.headerRows ? _this2.topLineWidth : 0);
-      writer.context().availableHeight -= _this2.reservedAtBottom;
+      var offset = _this3.rowPaddingTop + (!_this3.headerRows ? _this3.topLineWidth : 0);
+      writer.context().availableHeight -= _this3.reservedAtBottom;
       writer.context().moveDown(offset);
     };
   };
@@ -5759,6 +5926,12 @@ var TableProcessor = /*#__PURE__*/function () {
     this.reservedAtBottom = this.bottomLineWidth + this.rowPaddingBottom;
     writer.context().availableHeight -= this.reservedAtBottom;
     writer.context().moveDown(this.rowPaddingTop);
+    // begin - Vertical alignment
+    this.tableNode.table.__rowsHeight[rowIndex] = {
+      top: this.rowTopY,
+      height: 0
+    };
+    // end - Vertical alignment
   };
   _proto.drawHorizontalLine = function drawHorizontalLine(lineIndex, writer, overrideY) {
     var lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode);
@@ -5854,6 +6027,10 @@ var TableProcessor = /*#__PURE__*/function () {
               lineWidth: lineWidth,
               dash: dash,
               lineColor: borderColor
+              // begin - Vertical alignment
+              ,
+              __tableRef: this.tableNode.table
+              // end - Vertical alignment
             }, false, overrideY);
             currentLine = null;
             borderColor = null;
@@ -5928,28 +6105,40 @@ var TableProcessor = /*#__PURE__*/function () {
       lineWidth: width,
       dash: dash,
       lineColor: borderColor
+      // begin - Vertical alignment
+      ,
+      __tableRef: this.tableNode.table
+      // end - Vertical alignment
     }, false, true);
     cellBefore = null;
     currentCell = null;
     borderColor = null;
-  };
+  }
+
+  // begin - Vertical alignment
+  ;
+  // end - Vertical alignment
   _proto.endTable = function endTable(writer) {
+    // begin - Vertical alignment
+    this.processTableVerticalAlignment(writer, this, this.tableNode.table);
+    this.tableNode.__height = writer.context().y - this.tableNode.__height + Math.ceil(this.layout.hLineWidth(0, this.tableNode)) * this.tableNode.table.body.length;
+    // end - Vertical alignment
     if (this.cleanUpRepeatables) {
       writer.popFromRepeatables();
     }
   };
   _proto.endRow = function endRow(rowIndex, writer, pageBreaks) {
-    var _this3 = this;
+    var _this4 = this;
     var getLineXs = function getLineXs() {
       var result = [];
       var cols = 0;
-      for (var i = 0, l = _this3.tableNode.table.body[rowIndex].length; i < l; i++) {
+      for (var i = 0, l = _this4.tableNode.table.body[rowIndex].length; i < l; i++) {
         if (!cols) {
           result.push({
-            x: _this3.rowSpanData[i].left,
+            x: _this4.rowSpanData[i].left,
             index: i
           });
-          var item = _this3.tableNode.table.body[rowIndex][i];
+          var item = _this4.tableNode.table.body[rowIndex][i];
           cols = item._colSpan || item.colSpan || 0;
         }
         if (cols > 0) {
@@ -5957,8 +6146,8 @@ var TableProcessor = /*#__PURE__*/function () {
         }
       }
       result.push({
-        x: _this3.rowSpanData[_this3.rowSpanData.length - 1].left,
-        index: _this3.rowSpanData.length - 1
+        x: _this4.rowSpanData[_this4.rowSpanData.length - 1].left,
+        index: _this4.rowSpanData.length - 1
       });
       return result;
     };
@@ -6121,8 +6310,8 @@ var TableProcessor = /*#__PURE__*/function () {
     }
     if (this.dontBreakRows) {
       var pageChangedCallback = function pageChangedCallback() {
-        if (!_this3.headerRows && _this3.layout.hLineWhenBroken !== false) {
-          _this3.drawHorizontalLine(rowIndex, writer);
+        if (!_this4.headerRows && _this4.layout.hLineWhenBroken !== false) {
+          _this4.drawHorizontalLine(rowIndex, writer);
         }
       };
       writer.addListener('pageChanged', pageChangedCallback);
@@ -6135,6 +6324,9 @@ var TableProcessor = /*#__PURE__*/function () {
       this.cleanUpRepeatables = true;
       this.headerRepeatable = null;
     }
+    // begin - Vertical alignment
+    this.tableNode.table.__rowsHeight[rowIndex].height = endingY - this.tableNode.table.__rowsHeight[rowIndex].top;
+    // end - Vertical alignment
   };
   return TableProcessor;
 }();
@@ -6386,6 +6578,10 @@ var LayoutBuilder = /*#__PURE__*/function () {
     }
     this.docPreprocessor = new src_DocPreprocessor();
     this.docMeasure = new src_DocMeasure(pdfDocument, styleDictionary, defaultStyle, this.svgMeasure, this.tableLayouts);
+    // begin - Vertical alignment
+    this.__nodesHierarchy = [];
+    // end - Vertical alignment
+
     function resetXYs(result) {
       result.linearNodeList.forEach(function (node) {
         node.resetXY();
@@ -6675,12 +6871,21 @@ var LayoutBuilder = /*#__PURE__*/function () {
   ;
   _proto.processVerticalContainer = function processVerticalContainer(node) {
     var _this3 = this;
+    // begin - Vertical alignment
+    this.__nodesHierarchy.push(node);
+    node.__contentHeight = 0;
+    // end - Vertical alignment
+
     node.stack.forEach(function (item) {
       _this3.processNode(item);
       addAll(node.positions, item.positions);
 
       //TODO: paragraph gap
     }, this);
+    // begin - Vertical alignment
+    var lastNode = this.__nodesHierarchy.pop();
+    this.__nodesHierarchy.length > 0 && (this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight);
+    // end - Vertical alignment
   }
 
   // columns
@@ -6692,6 +6897,11 @@ var LayoutBuilder = /*#__PURE__*/function () {
     if (gaps) {
       availableWidth -= (gaps.length - 1) * columnNode._gap;
     }
+    // begin - Vertical alignment
+    columnNode.__contentHeight = 0;
+    this.__nodesHierarchy.push(columnNode);
+    // end - Vertical alignment
+
     columnCalculator.buildColumnWidths(columns, availableWidth);
     var result = this.processRow(columns, columns, gaps);
     addAll(columnNode.positions, result.positions);
@@ -6706,6 +6916,13 @@ var LayoutBuilder = /*#__PURE__*/function () {
       }
       return gaps;
     }
+    // begin - Vertical alignment
+    var lastNode = this.__nodesHierarchy.pop();
+    lastNode.__contentHeight = Math.max.apply(Math, columns.map(function (c) {
+      return c.__contentHeight;
+    }));
+    this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
+    // end - Vertical alignment
   };
   _proto.processRow = function processRow(columns, widths, gaps, tableBody, tableRow, height) {
     var storePageBreakData = function storePageBreakData(data) {
@@ -6782,11 +6999,21 @@ var LayoutBuilder = /*#__PURE__*/function () {
         var marker = nextMarker;
         nextMarker = null;
         if (marker.canvas) {
+          var _line$__nodeRef;
           var vector = marker.canvas[0];
+          // begin - Vertical alignment
+          vector.__nodeRef = (_line$__nodeRef = line.__nodeRef) != null ? _line$__nodeRef : line;
+          vector._height = marker._maxHeight;
+          // end - Vertical alignment
+
           offsetVector(vector, -marker._minWidth, 0);
           _this4.writer.addVector(vector);
         } else if (marker._inlines) {
+          var _line$__nodeRef2;
           var markerLine = new src_Line(_this4.pageSize.width);
+          // begin - Vertical alignment
+          markerLine.__nodeRef = (_line$__nodeRef2 = line.__nodeRef) != null ? _line$__nodeRef2 : line;
+          // end - Vertical alignment
           markerLine.addInline(marker._inlines[0]);
           markerLine.x = -marker._minWidth;
           markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
@@ -6794,18 +7021,31 @@ var LayoutBuilder = /*#__PURE__*/function () {
         }
       }
     };
+    // begin - Vertical alignment
+    this.__nodesHierarchy.push(node);
+    node.__contentHeight = 0;
+    // end - Vertical alignment
+
     var items = orderedList ? node.ol : node.ul;
     var gapSize = node._gapSize;
     this.writer.context().addMargin(gapSize.width);
     var nextMarker;
     this.writer.addListener('lineAdded', addMarkerToFirstLeaf);
     items.forEach(function (item) {
+      var _node$__nodeRef;
+      // begin - Vertical alignment
+      item.__nodeRef = (_node$__nodeRef = node.__nodeRef) != null ? _node$__nodeRef : node;
+      // end - Vertical alignment
       nextMarker = item.listMarker;
       _this4.processNode(item);
       addAll(node.positions, item.positions);
     });
     this.writer.removeListener('lineAdded', addMarkerToFirstLeaf);
     this.writer.context().addMargin(-gapSize.width);
+    // begin - Vertical alignment
+    var lastNode = this.__nodesHierarchy.pop();
+    this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
+    // end - Vertical alignment
   }
 
   // tables
@@ -6837,7 +7077,14 @@ var LayoutBuilder = /*#__PURE__*/function () {
   // leafs (texts)
   ;
   _proto.processLeaf = function processLeaf(node) {
+    var _node$__nodeRef2;
+    // begin - Vertical alignment
+    node = this.docPreprocessor.checkNode(node);
+    // end - Vertical alignment
     var line = this.buildNextLine(node);
+    // begin - Vertical alignment
+    line && (line.__nodeRef = (_node$__nodeRef2 = node.__nodeRef) != null ? _node$__nodeRef2 : node);
+    // end - Vertical alignment
     if (line && (node.tocItem || node.id)) {
       line._node = node;
     }
@@ -6870,9 +7117,17 @@ var LayoutBuilder = /*#__PURE__*/function () {
       node.positions.push(positions);
       line = this.buildNextLine(node);
       if (line) {
+        var _node$__nodeRef3;
+        // begin - Vertical alignment
+        line.__nodeRef = (_node$__nodeRef3 = node.__nodeRef) != null ? _node$__nodeRef3 : node;
+        // end - Vertical alignment
         currentHeight += line.getHeight();
       }
     }
+    // begin - Vertical alignment
+    node.__contentHeight = currentHeight;
+    this.__nodesHierarchy.length > 0 && (this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += currentHeight);
+    // end - Vertical alignment
   };
   _proto.processToc = function processToc(node) {
     if (node.toc.title) {
@@ -8171,7 +8426,7 @@ var OutputDocument = /*#__PURE__*/function () {
 }();
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(2734);
+var FileSaver_min = __webpack_require__(7555);
 ;// CONCATENATED MODULE: ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -8760,7 +9015,7 @@ __webpack_require__(6992);
 __webpack_require__(3948);
 function _createForOfIteratorHelperLoose(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (it) return (it = it.call(o)).next.bind(it); if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; return function () { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
 var _require = __webpack_require__(2245),
   NumberT = _require.Number;
 var utils = __webpack_require__(4810);
@@ -13790,10 +14045,8 @@ __webpack_require__(3753);
 __webpack_require__(545);
 __webpack_require__(8309);
 __webpack_require__(3161);
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, _toPropertyKey(descriptor.key), descriptor); } }
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
-function _toPropertyKey(arg) { var key = _toPrimitive(arg, "string"); return typeof key === "symbol" ? key : String(key); }
-function _toPrimitive(input, hint) { if (typeof input !== "object" || input === null) return input; var prim = input[Symbol.toPrimitive]; if (prim !== undefined) { var res = prim.call(input, hint || "default"); if (typeof res !== "object") return res; throw new TypeError("@@toPrimitive must return a primitive value."); } return (hint === "string" ? String : Number)(input); }
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 function _inheritsLoose(subClass, superClass) { subClass.prototype = Object.create(superClass.prototype); subClass.prototype.constructor = subClass; _setPrototypeOf(subClass, superClass); }
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
@@ -15707,8 +15960,10 @@ if (DESCRIPTORS && !hasOwn(TypedArrayPrototype, TO_STRING_TAG)) {
       return isObject(this) ? this[TYPED_ARRAY_TAG] : undefined;
     }
   });
-  for (NAME in TypedArrayConstructorsList) if (global[NAME]) {
-    createNonEnumerableProperty(global[NAME], TYPED_ARRAY_TAG, NAME);
+  for (NAME in TypedArrayConstructorsList) {
+    if (global[NAME]) {
+      createNonEnumerableProperty(global[NAME], TYPED_ARRAY_TAG, NAME);
+    }
   }
 }
 module.exports = {
@@ -15817,7 +16072,9 @@ var set = function set(view, count, index, conversion, value, isLittleEndian) {
   var bytes = getInternalState(store.buffer).bytes;
   var start = intIndex + store.byteOffset;
   var pack = conversion(+value);
-  for (var i = 0; i < count; i++) bytes[start + i] = pack[isLittleEndian ? i : count - i - 1];
+  for (var i = 0; i < count; i++) {
+    bytes[start + i] = pack[isLittleEndian ? i : count - i - 1];
+  }
 };
 if (!NATIVE_ARRAY_BUFFER) {
   $ArrayBuffer = function ArrayBuffer(length) {
@@ -22385,8 +22642,8 @@ __webpack_require__(1817);
 __webpack_require__(7042);
 function _createForOfIteratorHelperLoose(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (it) return (it = it.call(o)).next.bind(it); if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; return function () { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
-function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return exports; }; var exports = {}, Op = Object.prototype, hasOwn = Op.hasOwnProperty, defineProperty = Object.defineProperty || function (obj, key, desc) { obj[key] = desc.value; }, $Symbol = "function" == typeof Symbol ? Symbol : {}, iteratorSymbol = $Symbol.iterator || "@@iterator", asyncIteratorSymbol = $Symbol.asyncIterator || "@@asyncIterator", toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag"; function define(obj, key, value) { return Object.defineProperty(obj, key, { value: value, enumerable: !0, configurable: !0, writable: !0 }), obj[key]; } try { define({}, ""); } catch (err) { define = function define(obj, key, value) { return obj[key] = value; }; } function wrap(innerFn, outerFn, self, tryLocsList) { var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator, generator = Object.create(protoGenerator.prototype), context = new Context(tryLocsList || []); return defineProperty(generator, "_invoke", { value: makeInvokeMethod(innerFn, self, context) }), generator; } function tryCatch(fn, obj, arg) { try { return { type: "normal", arg: fn.call(obj, arg) }; } catch (err) { return { type: "throw", arg: err }; } } exports.wrap = wrap; var ContinueSentinel = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var IteratorPrototype = {}; define(IteratorPrototype, iteratorSymbol, function () { return this; }); var getProto = Object.getPrototypeOf, NativeIteratorPrototype = getProto && getProto(getProto(values([]))); NativeIteratorPrototype && NativeIteratorPrototype !== Op && hasOwn.call(NativeIteratorPrototype, iteratorSymbol) && (IteratorPrototype = NativeIteratorPrototype); var Gp = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(IteratorPrototype); function defineIteratorMethods(prototype) { ["next", "throw", "return"].forEach(function (method) { define(prototype, method, function (arg) { return this._invoke(method, arg); }); }); } function AsyncIterator(generator, PromiseImpl) { function invoke(method, arg, resolve, reject) { var record = tryCatch(generator[method], generator, arg); if ("throw" !== record.type) { var result = record.arg, value = result.value; return value && "object" == typeof value && hasOwn.call(value, "__await") ? PromiseImpl.resolve(value.__await).then(function (value) { invoke("next", value, resolve, reject); }, function (err) { invoke("throw", err, resolve, reject); }) : PromiseImpl.resolve(value).then(function (unwrapped) { result.value = unwrapped, resolve(result); }, function (error) { return invoke("throw", error, resolve, reject); }); } reject(record.arg); } var previousPromise; defineProperty(this, "_invoke", { value: function value(method, arg) { function callInvokeWithMethodAndArg() { return new PromiseImpl(function (resolve, reject) { invoke(method, arg, resolve, reject); }); } return previousPromise = previousPromise ? previousPromise.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(innerFn, self, context) { var state = "suspendedStart"; return function (method, arg) { if ("executing" === state) throw new Error("Generator is already running"); if ("completed" === state) { if ("throw" === method) throw arg; return doneResult(); } for (context.method = method, context.arg = arg;;) { var delegate = context.delegate; if (delegate) { var delegateResult = maybeInvokeDelegate(delegate, context); if (delegateResult) { if (delegateResult === ContinueSentinel) continue; return delegateResult; } } if ("next" === context.method) context.sent = context._sent = context.arg;else if ("throw" === context.method) { if ("suspendedStart" === state) throw state = "completed", context.arg; context.dispatchException(context.arg); } else "return" === context.method && context.abrupt("return", context.arg); state = "executing"; var record = tryCatch(innerFn, self, context); if ("normal" === record.type) { if (state = context.done ? "completed" : "suspendedYield", record.arg === ContinueSentinel) continue; return { value: record.arg, done: context.done }; } "throw" === record.type && (state = "completed", context.method = "throw", context.arg = record.arg); } }; } function maybeInvokeDelegate(delegate, context) { var methodName = context.method, method = delegate.iterator[methodName]; if (undefined === method) return context.delegate = null, "throw" === methodName && delegate.iterator.return && (context.method = "return", context.arg = undefined, maybeInvokeDelegate(delegate, context), "throw" === context.method) || "return" !== methodName && (context.method = "throw", context.arg = new TypeError("The iterator does not provide a '" + methodName + "' method")), ContinueSentinel; var record = tryCatch(method, delegate.iterator, context.arg); if ("throw" === record.type) return context.method = "throw", context.arg = record.arg, context.delegate = null, ContinueSentinel; var info = record.arg; return info ? info.done ? (context[delegate.resultName] = info.value, context.next = delegate.nextLoc, "return" !== context.method && (context.method = "next", context.arg = undefined), context.delegate = null, ContinueSentinel) : info : (context.method = "throw", context.arg = new TypeError("iterator result is not an object"), context.delegate = null, ContinueSentinel); } function pushTryEntry(locs) { var entry = { tryLoc: locs[0] }; 1 in locs && (entry.catchLoc = locs[1]), 2 in locs && (entry.finallyLoc = locs[2], entry.afterLoc = locs[3]), this.tryEntries.push(entry); } function resetTryEntry(entry) { var record = entry.completion || {}; record.type = "normal", delete record.arg, entry.completion = record; } function Context(tryLocsList) { this.tryEntries = [{ tryLoc: "root" }], tryLocsList.forEach(pushTryEntry, this), this.reset(!0); } function values(iterable) { if (iterable) { var iteratorMethod = iterable[iteratorSymbol]; if (iteratorMethod) return iteratorMethod.call(iterable); if ("function" == typeof iterable.next) return iterable; if (!isNaN(iterable.length)) { var i = -1, next = function next() { for (; ++i < iterable.length;) if (hasOwn.call(iterable, i)) return next.value = iterable[i], next.done = !1, next; return next.value = undefined, next.done = !0, next; }; return next.next = next; } } return { next: doneResult }; } function doneResult() { return { value: undefined, done: !0 }; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, defineProperty(Gp, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), defineProperty(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, toStringTagSymbol, "GeneratorFunction"), exports.isGeneratorFunction = function (genFun) { var ctor = "function" == typeof genFun && genFun.constructor; return !!ctor && (ctor === GeneratorFunction || "GeneratorFunction" === (ctor.displayName || ctor.name)); }, exports.mark = function (genFun) { return Object.setPrototypeOf ? Object.setPrototypeOf(genFun, GeneratorFunctionPrototype) : (genFun.__proto__ = GeneratorFunctionPrototype, define(genFun, toStringTagSymbol, "GeneratorFunction")), genFun.prototype = Object.create(Gp), genFun; }, exports.awrap = function (arg) { return { __await: arg }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, asyncIteratorSymbol, function () { return this; }), exports.AsyncIterator = AsyncIterator, exports.async = function (innerFn, outerFn, self, tryLocsList, PromiseImpl) { void 0 === PromiseImpl && (PromiseImpl = Promise); var iter = new AsyncIterator(wrap(innerFn, outerFn, self, tryLocsList), PromiseImpl); return exports.isGeneratorFunction(outerFn) ? iter : iter.next().then(function (result) { return result.done ? result.value : iter.next(); }); }, defineIteratorMethods(Gp), define(Gp, toStringTagSymbol, "Generator"), define(Gp, iteratorSymbol, function () { return this; }), define(Gp, "toString", function () { return "[object Generator]"; }), exports.keys = function (val) { var object = Object(val), keys = []; for (var key in object) keys.push(key); return keys.reverse(), function next() { for (; keys.length;) { var key = keys.pop(); if (key in object) return next.value = key, next.done = !1, next; } return next.done = !0, next; }; }, exports.values = values, Context.prototype = { constructor: Context, reset: function reset(skipTempReset) { if (this.prev = 0, this.next = 0, this.sent = this._sent = undefined, this.done = !1, this.delegate = null, this.method = "next", this.arg = undefined, this.tryEntries.forEach(resetTryEntry), !skipTempReset) for (var name in this) "t" === name.charAt(0) && hasOwn.call(this, name) && !isNaN(+name.slice(1)) && (this[name] = undefined); }, stop: function stop() { this.done = !0; var rootRecord = this.tryEntries[0].completion; if ("throw" === rootRecord.type) throw rootRecord.arg; return this.rval; }, dispatchException: function dispatchException(exception) { if (this.done) throw exception; var context = this; function handle(loc, caught) { return record.type = "throw", record.arg = exception, context.next = loc, caught && (context.method = "next", context.arg = undefined), !!caught; } for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i], record = entry.completion; if ("root" === entry.tryLoc) return handle("end"); if (entry.tryLoc <= this.prev) { var hasCatch = hasOwn.call(entry, "catchLoc"), hasFinally = hasOwn.call(entry, "finallyLoc"); if (hasCatch && hasFinally) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } else if (hasCatch) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); } else { if (!hasFinally) throw new Error("try statement without catch or finally"); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } } } }, abrupt: function abrupt(type, arg) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc <= this.prev && hasOwn.call(entry, "finallyLoc") && this.prev < entry.finallyLoc) { var finallyEntry = entry; break; } } finallyEntry && ("break" === type || "continue" === type) && finallyEntry.tryLoc <= arg && arg <= finallyEntry.finallyLoc && (finallyEntry = null); var record = finallyEntry ? finallyEntry.completion : {}; return record.type = type, record.arg = arg, finallyEntry ? (this.method = "next", this.next = finallyEntry.finallyLoc, ContinueSentinel) : this.complete(record); }, complete: function complete(record, afterLoc) { if ("throw" === record.type) throw record.arg; return "break" === record.type || "continue" === record.type ? this.next = record.arg : "return" === record.type ? (this.rval = this.arg = record.arg, this.method = "return", this.next = "end") : "normal" === record.type && afterLoc && (this.next = afterLoc), ContinueSentinel; }, finish: function finish(finallyLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.finallyLoc === finallyLoc) return this.complete(entry.completion, entry.afterLoc), resetTryEntry(entry), ContinueSentinel; } }, catch: function _catch(tryLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc === tryLoc) { var record = entry.completion; if ("throw" === record.type) { var thrown = record.arg; resetTryEntry(entry); } return thrown; } } throw new Error("illegal catch attempt"); }, delegateYield: function delegateYield(iterable, resultName, nextLoc) { return this.delegate = { iterator: values(iterable), resultName: resultName, nextLoc: nextLoc }, "next" === this.method && (this.arg = undefined), ContinueSentinel; } }, exports; }
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return exports; }; var exports = {}, Op = Object.prototype, hasOwn = Op.hasOwnProperty, $Symbol = "function" == typeof Symbol ? Symbol : {}, iteratorSymbol = $Symbol.iterator || "@@iterator", asyncIteratorSymbol = $Symbol.asyncIterator || "@@asyncIterator", toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag"; function define(obj, key, value) { return Object.defineProperty(obj, key, { value: value, enumerable: !0, configurable: !0, writable: !0 }), obj[key]; } try { define({}, ""); } catch (err) { define = function define(obj, key, value) { return obj[key] = value; }; } function wrap(innerFn, outerFn, self, tryLocsList) { var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator, generator = Object.create(protoGenerator.prototype), context = new Context(tryLocsList || []); return generator._invoke = function (innerFn, self, context) { var state = "suspendedStart"; return function (method, arg) { if ("executing" === state) throw new Error("Generator is already running"); if ("completed" === state) { if ("throw" === method) throw arg; return doneResult(); } for (context.method = method, context.arg = arg;;) { var delegate = context.delegate; if (delegate) { var delegateResult = maybeInvokeDelegate(delegate, context); if (delegateResult) { if (delegateResult === ContinueSentinel) continue; return delegateResult; } } if ("next" === context.method) context.sent = context._sent = context.arg;else if ("throw" === context.method) { if ("suspendedStart" === state) throw state = "completed", context.arg; context.dispatchException(context.arg); } else "return" === context.method && context.abrupt("return", context.arg); state = "executing"; var record = tryCatch(innerFn, self, context); if ("normal" === record.type) { if (state = context.done ? "completed" : "suspendedYield", record.arg === ContinueSentinel) continue; return { value: record.arg, done: context.done }; } "throw" === record.type && (state = "completed", context.method = "throw", context.arg = record.arg); } }; }(innerFn, self, context), generator; } function tryCatch(fn, obj, arg) { try { return { type: "normal", arg: fn.call(obj, arg) }; } catch (err) { return { type: "throw", arg: err }; } } exports.wrap = wrap; var ContinueSentinel = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var IteratorPrototype = {}; define(IteratorPrototype, iteratorSymbol, function () { return this; }); var getProto = Object.getPrototypeOf, NativeIteratorPrototype = getProto && getProto(getProto(values([]))); NativeIteratorPrototype && NativeIteratorPrototype !== Op && hasOwn.call(NativeIteratorPrototype, iteratorSymbol) && (IteratorPrototype = NativeIteratorPrototype); var Gp = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(IteratorPrototype); function defineIteratorMethods(prototype) { ["next", "throw", "return"].forEach(function (method) { define(prototype, method, function (arg) { return this._invoke(method, arg); }); }); } function AsyncIterator(generator, PromiseImpl) { function invoke(method, arg, resolve, reject) { var record = tryCatch(generator[method], generator, arg); if ("throw" !== record.type) { var result = record.arg, value = result.value; return value && "object" == typeof value && hasOwn.call(value, "__await") ? PromiseImpl.resolve(value.__await).then(function (value) { invoke("next", value, resolve, reject); }, function (err) { invoke("throw", err, resolve, reject); }) : PromiseImpl.resolve(value).then(function (unwrapped) { result.value = unwrapped, resolve(result); }, function (error) { return invoke("throw", error, resolve, reject); }); } reject(record.arg); } var previousPromise; this._invoke = function (method, arg) { function callInvokeWithMethodAndArg() { return new PromiseImpl(function (resolve, reject) { invoke(method, arg, resolve, reject); }); } return previousPromise = previousPromise ? previousPromise.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); }; } function maybeInvokeDelegate(delegate, context) { var method = delegate.iterator[context.method]; if (undefined === method) { if (context.delegate = null, "throw" === context.method) { if (delegate.iterator.return && (context.method = "return", context.arg = undefined, maybeInvokeDelegate(delegate, context), "throw" === context.method)) return ContinueSentinel; context.method = "throw", context.arg = new TypeError("The iterator does not provide a 'throw' method"); } return ContinueSentinel; } var record = tryCatch(method, delegate.iterator, context.arg); if ("throw" === record.type) return context.method = "throw", context.arg = record.arg, context.delegate = null, ContinueSentinel; var info = record.arg; return info ? info.done ? (context[delegate.resultName] = info.value, context.next = delegate.nextLoc, "return" !== context.method && (context.method = "next", context.arg = undefined), context.delegate = null, ContinueSentinel) : info : (context.method = "throw", context.arg = new TypeError("iterator result is not an object"), context.delegate = null, ContinueSentinel); } function pushTryEntry(locs) { var entry = { tryLoc: locs[0] }; 1 in locs && (entry.catchLoc = locs[1]), 2 in locs && (entry.finallyLoc = locs[2], entry.afterLoc = locs[3]), this.tryEntries.push(entry); } function resetTryEntry(entry) { var record = entry.completion || {}; record.type = "normal", delete record.arg, entry.completion = record; } function Context(tryLocsList) { this.tryEntries = [{ tryLoc: "root" }], tryLocsList.forEach(pushTryEntry, this), this.reset(!0); } function values(iterable) { if (iterable) { var iteratorMethod = iterable[iteratorSymbol]; if (iteratorMethod) return iteratorMethod.call(iterable); if ("function" == typeof iterable.next) return iterable; if (!isNaN(iterable.length)) { var i = -1, next = function next() { for (; ++i < iterable.length;) { if (hasOwn.call(iterable, i)) return next.value = iterable[i], next.done = !1, next; } return next.value = undefined, next.done = !0, next; }; return next.next = next; } } return { next: doneResult }; } function doneResult() { return { value: undefined, done: !0 }; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, define(Gp, "constructor", GeneratorFunctionPrototype), define(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, toStringTagSymbol, "GeneratorFunction"), exports.isGeneratorFunction = function (genFun) { var ctor = "function" == typeof genFun && genFun.constructor; return !!ctor && (ctor === GeneratorFunction || "GeneratorFunction" === (ctor.displayName || ctor.name)); }, exports.mark = function (genFun) { return Object.setPrototypeOf ? Object.setPrototypeOf(genFun, GeneratorFunctionPrototype) : (genFun.__proto__ = GeneratorFunctionPrototype, define(genFun, toStringTagSymbol, "GeneratorFunction")), genFun.prototype = Object.create(Gp), genFun; }, exports.awrap = function (arg) { return { __await: arg }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, asyncIteratorSymbol, function () { return this; }), exports.AsyncIterator = AsyncIterator, exports.async = function (innerFn, outerFn, self, tryLocsList, PromiseImpl) { void 0 === PromiseImpl && (PromiseImpl = Promise); var iter = new AsyncIterator(wrap(innerFn, outerFn, self, tryLocsList), PromiseImpl); return exports.isGeneratorFunction(outerFn) ? iter : iter.next().then(function (result) { return result.done ? result.value : iter.next(); }); }, defineIteratorMethods(Gp), define(Gp, toStringTagSymbol, "Generator"), define(Gp, iteratorSymbol, function () { return this; }), define(Gp, "toString", function () { return "[object Generator]"; }), exports.keys = function (object) { var keys = []; for (var key in object) { keys.push(key); } return keys.reverse(), function next() { for (; keys.length;) { var key = keys.pop(); if (key in object) return next.value = key, next.done = !1, next; } return next.done = !0, next; }; }, exports.values = values, Context.prototype = { constructor: Context, reset: function reset(skipTempReset) { if (this.prev = 0, this.next = 0, this.sent = this._sent = undefined, this.done = !1, this.delegate = null, this.method = "next", this.arg = undefined, this.tryEntries.forEach(resetTryEntry), !skipTempReset) for (var name in this) { "t" === name.charAt(0) && hasOwn.call(this, name) && !isNaN(+name.slice(1)) && (this[name] = undefined); } }, stop: function stop() { this.done = !0; var rootRecord = this.tryEntries[0].completion; if ("throw" === rootRecord.type) throw rootRecord.arg; return this.rval; }, dispatchException: function dispatchException(exception) { if (this.done) throw exception; var context = this; function handle(loc, caught) { return record.type = "throw", record.arg = exception, context.next = loc, caught && (context.method = "next", context.arg = undefined), !!caught; } for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i], record = entry.completion; if ("root" === entry.tryLoc) return handle("end"); if (entry.tryLoc <= this.prev) { var hasCatch = hasOwn.call(entry, "catchLoc"), hasFinally = hasOwn.call(entry, "finallyLoc"); if (hasCatch && hasFinally) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } else if (hasCatch) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); } else { if (!hasFinally) throw new Error("try statement without catch or finally"); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } } } }, abrupt: function abrupt(type, arg) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc <= this.prev && hasOwn.call(entry, "finallyLoc") && this.prev < entry.finallyLoc) { var finallyEntry = entry; break; } } finallyEntry && ("break" === type || "continue" === type) && finallyEntry.tryLoc <= arg && arg <= finallyEntry.finallyLoc && (finallyEntry = null); var record = finallyEntry ? finallyEntry.completion : {}; return record.type = type, record.arg = arg, finallyEntry ? (this.method = "next", this.next = finallyEntry.finallyLoc, ContinueSentinel) : this.complete(record); }, complete: function complete(record, afterLoc) { if ("throw" === record.type) throw record.arg; return "break" === record.type || "continue" === record.type ? this.next = record.arg : "return" === record.type ? (this.rval = this.arg = record.arg, this.method = "return", this.next = "end") : "normal" === record.type && afterLoc && (this.next = afterLoc), ContinueSentinel; }, finish: function finish(finallyLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.finallyLoc === finallyLoc) return this.complete(entry.completion, entry.afterLoc), resetTryEntry(entry), ContinueSentinel; } }, catch: function _catch(tryLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc === tryLoc) { var record = entry.completion; if ("throw" === record.type) { var thrown = record.arg; resetTryEntry(entry); } return thrown; } } throw new Error("illegal catch attempt"); }, delegateYield: function delegateYield(iterable, resultName, nextLoc) { return this.delegate = { iterator: values(iterable), resultName: resultName, nextLoc: nextLoc }, "next" === this.method && (this.arg = undefined), ContinueSentinel; } }, exports; }
 var INITIAL_STATE = 1;
 var FAIL_STATE = 0;
 /**
@@ -22410,64 +22667,66 @@ var StateMachine = /*#__PURE__*/function () {
     return _ref = {}, _ref[Symbol.iterator] = /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
       var state, startRun, lastAccepting, lastState, p, c;
       return _regeneratorRuntime().wrap(function _callee$(_context) {
-        while (1) switch (_context.prev = _context.next) {
-          case 0:
-            state = INITIAL_STATE;
-            startRun = null;
-            lastAccepting = null;
-            lastState = null;
-            p = 0;
-          case 5:
-            if (!(p < str.length)) {
-              _context.next = 21;
-              break;
-            }
-            c = str[p];
-            lastState = state;
-            state = self.stateTable[state][c];
-            if (!(state === FAIL_STATE)) {
-              _context.next = 15;
-              break;
-            }
-            if (!(startRun != null && lastAccepting != null && lastAccepting >= startRun)) {
-              _context.next = 13;
-              break;
-            }
-            _context.next = 13;
-            return [startRun, lastAccepting, self.tags[lastState]];
-          case 13:
-            // reset the state as if we started over from the initial state
-
-            state = self.stateTable[INITIAL_STATE][c];
-            startRun = null;
-          case 15:
-            // start a run if not in the failure state
-
-            if (state !== FAIL_STATE && startRun == null) {
-              startRun = p;
-            } // if accepting, mark the potential match end
-
-            if (self.accepting[state]) {
-              lastAccepting = p;
-            } // reset the state to the initial state if we get into the failure state
-
-            if (state === FAIL_STATE) {
+        while (1) {
+          switch (_context.prev = _context.next) {
+            case 0:
               state = INITIAL_STATE;
-            }
-          case 18:
-            p++;
-            _context.next = 5;
-            break;
-          case 21:
-            if (!(startRun != null && lastAccepting != null && lastAccepting >= startRun)) {
-              _context.next = 24;
+              startRun = null;
+              lastAccepting = null;
+              lastState = null;
+              p = 0;
+            case 5:
+              if (!(p < str.length)) {
+                _context.next = 21;
+                break;
+              }
+              c = str[p];
+              lastState = state;
+              state = self.stateTable[state][c];
+              if (!(state === FAIL_STATE)) {
+                _context.next = 15;
+                break;
+              }
+              if (!(startRun != null && lastAccepting != null && lastAccepting >= startRun)) {
+                _context.next = 13;
+                break;
+              }
+              _context.next = 13;
+              return [startRun, lastAccepting, self.tags[lastState]];
+            case 13:
+              // reset the state as if we started over from the initial state
+
+              state = self.stateTable[INITIAL_STATE][c];
+              startRun = null;
+            case 15:
+              // start a run if not in the failure state
+
+              if (state !== FAIL_STATE && startRun == null) {
+                startRun = p;
+              } // if accepting, mark the potential match end
+
+              if (self.accepting[state]) {
+                lastAccepting = p;
+              } // reset the state to the initial state if we get into the failure state
+
+              if (state === FAIL_STATE) {
+                state = INITIAL_STATE;
+              }
+            case 18:
+              p++;
+              _context.next = 5;
               break;
-            }
-            _context.next = 24;
-            return [startRun, lastAccepting, self.tags[state]];
-          case 24:
-          case "end":
-            return _context.stop();
+            case 21:
+              if (!(startRun != null && lastAccepting != null && lastAccepting >= startRun)) {
+                _context.next = 24;
+                break;
+              }
+              _context.next = 24;
+              return [startRun, lastAccepting, self.tags[state]];
+            case 24:
+            case "end":
+              return _context.stop();
+          }
         }
       }, _callee);
     }), _ref;
@@ -22762,7 +23021,9 @@ module.exports = /*#__PURE__*/function () {
             var pixelsPos = ((y0 + row * dy) * width + x0) * pixelBytes;
             var bufferPos = row * scanlineLength;
             for (i = 0; i < w; i++) {
-              for (var j = 0; j < pixelBytes; j++) pixels[pixelsPos++] = buffer[bufferPos++];
+              for (var j = 0; j < pixelBytes; j++) {
+                pixels[pixelsPos++] = buffer[bufferPos++];
+              }
               pixelsPos += (dx - 1) * pixelBytes;
             }
           }
@@ -23205,7 +23466,7 @@ function () {
 
 /***/ }),
 
-/***/ 5617:
+/***/ 3055:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -23462,7 +23723,9 @@ function _unsupportedIterableToArray(o, minLen) {
 }
 function _arrayLikeToArray(arr, len) {
   if (len == null || len > arr.length) len = arr.length;
-  for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
+  for (var i = 0, arr2 = new Array(len); i < len; i++) {
+    arr2[i] = arr[i];
+  }
   return arr2;
 }
 function _nonIterableSpread() {
@@ -34785,6 +35048,50 @@ module.exports = function (KEY, exec, FORCED, SHAM) {
 
 /***/ }),
 
+/***/ 6790:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+var global = __webpack_require__(7854);
+var isArray = __webpack_require__(3157);
+var lengthOfArrayLike = __webpack_require__(6244);
+var bind = __webpack_require__(9974);
+
+var TypeError = global.TypeError;
+
+// `FlattenIntoArray` abstract operation
+// https://tc39.github.io/proposal-flatMap/#sec-FlattenIntoArray
+var flattenIntoArray = function (target, original, source, sourceLen, start, depth, mapper, thisArg) {
+  var targetIndex = start;
+  var sourceIndex = 0;
+  var mapFn = mapper ? bind(mapper, thisArg) : false;
+  var element, elementLen;
+
+  while (sourceIndex < sourceLen) {
+    if (sourceIndex in source) {
+      element = mapFn ? mapFn(source[sourceIndex], sourceIndex, original) : source[sourceIndex];
+
+      if (depth > 0 && isArray(element)) {
+        elementLen = lengthOfArrayLike(element);
+        targetIndex = flattenIntoArray(target, original, element, elementLen, targetIndex, depth - 1) - 1;
+      } else {
+        if (targetIndex >= 0x1FFFFFFFFFFFFF) throw TypeError('Exceed the acceptable array length');
+        target[targetIndex] = element;
+      }
+
+      targetIndex++;
+    }
+    sourceIndex++;
+  }
+  return targetIndex;
+};
+
+module.exports = flattenIntoArray;
+
+
+/***/ }),
+
 /***/ 6677:
 /***/ (function(module, __unused_webpack_exports, __webpack_require__) {
 
@@ -38399,6 +38706,63 @@ $({ target: 'Array', proto: true, forced: !HAS_SPECIES_SUPPORT }, {
 
 /***/ }),
 
+/***/ 6535:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+var $ = __webpack_require__(2109);
+var flattenIntoArray = __webpack_require__(6790);
+var aCallable = __webpack_require__(9662);
+var toObject = __webpack_require__(7908);
+var lengthOfArrayLike = __webpack_require__(6244);
+var arraySpeciesCreate = __webpack_require__(5417);
+
+// `Array.prototype.flatMap` method
+// https://tc39.es/ecma262/#sec-array.prototype.flatmap
+$({ target: 'Array', proto: true }, {
+  flatMap: function flatMap(callbackfn /* , thisArg */) {
+    var O = toObject(this);
+    var sourceLen = lengthOfArrayLike(O);
+    var A;
+    aCallable(callbackfn);
+    A = arraySpeciesCreate(O, 0);
+    A.length = flattenIntoArray(A, O, O, sourceLen, 0, 1, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+    return A;
+  }
+});
+
+
+/***/ }),
+
+/***/ 4944:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+var $ = __webpack_require__(2109);
+var flattenIntoArray = __webpack_require__(6790);
+var toObject = __webpack_require__(7908);
+var lengthOfArrayLike = __webpack_require__(6244);
+var toIntegerOrInfinity = __webpack_require__(9303);
+var arraySpeciesCreate = __webpack_require__(5417);
+
+// `Array.prototype.flat` method
+// https://tc39.es/ecma262/#sec-array.prototype.flat
+$({ target: 'Array', proto: true }, {
+  flat: function flat(/* depthArg = 1 */) {
+    var depthArg = arguments.length ? arguments[0] : undefined;
+    var O = toObject(this);
+    var sourceLen = lengthOfArrayLike(O);
+    var A = arraySpeciesCreate(O, 0);
+    A.length = flattenIntoArray(A, O, O, sourceLen, 0, depthArg === undefined ? 1 : toIntegerOrInfinity(depthArg));
+    return A;
+  }
+});
+
+
+/***/ }),
+
 /***/ 1038:
 /***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
 
@@ -38799,6 +39163,32 @@ $({ target: 'Array', proto: true, forced: !HAS_SPECIES_SUPPORT }, {
     return A;
   }
 });
+
+
+/***/ }),
+
+/***/ 9244:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+// this method was added to unscopables after implementation
+// in popular engines, so it's moved to a separate module
+var addToUnscopables = __webpack_require__(1223);
+
+// https://tc39.es/ecma262/#sec-array.prototype-@@unscopables
+addToUnscopables('flatMap');
+
+
+/***/ }),
+
+/***/ 3792:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+// this method was added to unscopables after implementation
+// in popular engines, so it's moved to a separate module
+var addToUnscopables = __webpack_require__(1223);
+
+// https://tc39.es/ecma262/#sec-array.prototype-@@unscopables
+addToUnscopables('flat');
 
 
 /***/ }),
@@ -43601,14 +43991,8 @@ var hasPropertyDescriptors = __webpack_require__(1044)();
 var supportsDescriptors = origDefineProperty && hasPropertyDescriptors;
 
 var defineProperty = function (object, name, value, predicate) {
-	if (name in object) {
-		if (predicate === true) {
-			if (object[name] === value) {
-				return;
-			}
-		} else if (!isFunction(predicate) || !predicate()) {
-			return;
-		}
+	if (name in object && (!isFunction(predicate) || !predicate())) {
+		return;
 	}
 	if (supportsDescriptors) {
 		origDefineProperty(object, name, {
@@ -44501,8 +44885,6 @@ var INTRINSICS = {
 	'%AsyncIteratorPrototype%': needsEval,
 	'%Atomics%': typeof Atomics === 'undefined' ? undefined : Atomics,
 	'%BigInt%': typeof BigInt === 'undefined' ? undefined : BigInt,
-	'%BigInt64Array%': typeof BigInt64Array === 'undefined' ? undefined : BigInt64Array,
-	'%BigUint64Array%': typeof BigUint64Array === 'undefined' ? undefined : BigUint64Array,
 	'%Boolean%': Boolean,
 	'%DataView%': typeof DataView === 'undefined' ? undefined : DataView,
 	'%Date%': Date,
@@ -44557,14 +44939,6 @@ var INTRINSICS = {
 	'%WeakRef%': typeof WeakRef === 'undefined' ? undefined : WeakRef,
 	'%WeakSet%': typeof WeakSet === 'undefined' ? undefined : WeakSet
 };
-
-try {
-	null.error; // eslint-disable-line no-unused-expressions
-} catch (e) {
-	// https://github.com/tc39/proposal-shadowrealm/pull/384#issuecomment-1364264229
-	var errorProto = getProto(getProto(e));
-	INTRINSICS['%Error.prototype%'] = errorProto;
-}
 
 var doEval = function doEval(name) {
 	var value;
@@ -44781,30 +45155,6 @@ module.exports = function GetIntrinsic(name, allowMissing) {
 	}
 	return value;
 };
-
-
-/***/ }),
-
-/***/ 7296:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-
-
-var GetIntrinsic = __webpack_require__(210);
-
-var $gOPD = GetIntrinsic('%Object.getOwnPropertyDescriptor%', true);
-
-if ($gOPD) {
-	try {
-		$gOPD([], 'length');
-	} catch (e) {
-		// IE 8 has a broken gOPD
-		$gOPD = null;
-	}
-}
-
-module.exports = $gOPD;
 
 
 /***/ }),
@@ -48420,7 +48770,6 @@ var callBound = __webpack_require__(1924);
 
 var $toString = callBound('Object.prototype.toString');
 var hasToStringTag = __webpack_require__(6410)();
-var gOPD = __webpack_require__(7296);
 
 var g = typeof globalThis === 'undefined' ? __webpack_require__.g : globalThis;
 var typedArrays = availableTypedArrays();
@@ -48435,6 +48784,7 @@ var $indexOf = callBound('Array.prototype.indexOf', true) || function indexOf(ar
 };
 var $slice = callBound('String.prototype.slice');
 var toStrTags = {};
+var gOPD = __webpack_require__(882);
 var getPrototypeOf = Object.getPrototypeOf; // require('getprototypeof');
 if (hasToStringTag && gOPD && getPrototypeOf) {
 	forEach(typedArrays, function (typedArray) {
@@ -59570,7 +59920,7 @@ module.exports = __webpack_require__(7187).EventEmitter;
 
 /***/ }),
 
-/***/ 2734:
+/***/ 7555:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
@@ -60277,8 +60627,6 @@ module.exports = tinf_uncompress;
 __webpack_require__(2526);
 __webpack_require__(1817);
 __webpack_require__(2165);
-__webpack_require__(6649);
-__webpack_require__(6078);
 __webpack_require__(1539);
 __webpack_require__(4747);
 __webpack_require__(7941);
@@ -60335,15 +60683,13 @@ __webpack_require__(5109);
 __webpack_require__(9714);
 __webpack_require__(3210);
 var _;
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, _toPropertyKey(descriptor.key), descriptor); } }
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
-function _toPropertyKey(arg) { var key = _toPrimitive(arg, "string"); return typeof key === "symbol" ? key : String(key); }
-function _toPrimitive(input, hint) { if (typeof input !== "object" || input === null) return input; var prim = input[Symbol.toPrimitive]; if (prim !== undefined) { var res = prim.call(input, hint || "default"); if (typeof res !== "object") return res; throw new TypeError("@@toPrimitive must return a primitive value."); } return (hint === "string" ? String : Number)(input); }
 function _inheritsLoose(subClass, superClass) { subClass.prototype = Object.create(superClass.prototype); subClass.prototype.constructor = subClass; _setPrototypeOf(subClass, superClass); }
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 function _createForOfIteratorHelperLoose(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (it) return (it = it.call(o)).next.bind(it); if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; return function () { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
 function _interopDefault(ex) {
   return ex && typeof ex === 'object' && 'default' in ex ? ex['default'] : ex;
 }
@@ -74125,7 +74471,6 @@ exports.callbackify = callbackify;
 var forEach = __webpack_require__(4029);
 var availableTypedArrays = __webpack_require__(3083);
 var callBound = __webpack_require__(1924);
-var gOPD = __webpack_require__(7296);
 
 var $toString = callBound('Object.prototype.toString');
 var hasToStringTag = __webpack_require__(6410)();
@@ -74135,6 +74480,7 @@ var typedArrays = availableTypedArrays();
 
 var $slice = callBound('String.prototype.slice');
 var toStrTags = {};
+var gOPD = __webpack_require__(882);
 var getPrototypeOf = Object.getPrototypeOf; // require('getprototypeof');
 if (hasToStringTag && gOPD && getPrototypeOf) {
 	forEach(typedArrays, function (typedArray) {
@@ -74661,6 +75007,29 @@ module.exports = function availableTypedArrays() {
 	}
 	return out;
 };
+
+
+/***/ }),
+
+/***/ 882:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+
+var GetIntrinsic = __webpack_require__(210);
+
+var $gOPD = GetIntrinsic('%Object.getOwnPropertyDescriptor%', true);
+if ($gOPD) {
+	try {
+		$gOPD([], 'length');
+	} catch (e) {
+		// IE 8 has a broken gOPD
+		$gOPD = null;
+	}
+}
+
+module.exports = $gOPD;
 
 
 /***/ }),
