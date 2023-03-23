@@ -1,5 +1,5 @@
 {
-  "name": "@sirfull/pdfmake",
+  "name": "pdfmake",
   "version": "0.3.0-beta.5.1",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "js/index.js",
