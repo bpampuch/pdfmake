@@ -12,13 +12,15 @@ function Line(maxWidth) {
 	this.leadingCut = 0;
 	this.trailingCut = 0;
 	this.inlineWidths = 0;
-	this.inlines = [];
+	this.inlineRTLRegex = /^[\u0600-\u07BF\u0860-\u08FF]/;
+	this._inlines = [];
+	this._isInlinesXUpToDate = true;
 }
 
 Line.prototype.getAscenderHeight = function () {
 	var y = 0;
 
-	this.inlines.forEach(function (inline) {
+	this._inlines.forEach(function (inline) {
 		y = Math.max(y, inline.font.ascender / 1000 * inline.fontSize);
 	});
 	return y;
@@ -27,7 +29,7 @@ Line.prototype.getAscenderHeight = function () {
 Line.prototype.hasEnoughSpaceForInline = function (inline, nextInlines) {
 	nextInlines = nextInlines || [];
 
-	if (this.inlines.length === 0) {
+	if (this._inlines.length === 0) {
 		return true;
 	}
 	if (this.newLineForced) {
@@ -51,19 +53,37 @@ Line.prototype.hasEnoughSpaceForInline = function (inline, nextInlines) {
 };
 
 Line.prototype.addInline = function (inline) {
-	if (this.inlines.length === 0) {
+	if (this._inlines.length === 0) {
 		this.leadingCut = inline.leadingCut || 0;
 	}
 	this.trailingCut = inline.trailingCut || 0;
 
-	inline.x = this.inlineWidths - this.leadingCut;
+	var isRTLInline = inline.text.match(this.inlineRTLRegex);
 
-	this.inlines.push(inline);
+	if (isRTLInline) {
+		// ltr direction & rtl inline.
+		var inlineIndex = this._inlines.length;
+		for(var i = this._inlines.length - 1; i >= 0; i--) {
+			if (this._inlines[i].text.match(this.inlineRTLRegex)) {
+				inlineIndex = i;
+			} else {
+				break;
+			}
+		}
+
+		this._inlines.splice(inlineIndex, 0, inline);
+	} else {
+		// ltr direction & ltr inline.
+		this._inlines.push(inline);
+	}
+
 	this.inlineWidths += inline.width;
 
 	if (inline.lineEnd) {
 		this.newLineForced = true;
 	}
+
+	this._isInlinesXUpToDate = false;
 };
 
 Line.prototype.getWidth = function () {
@@ -81,11 +101,28 @@ Line.prototype.getAvailableWidth = function () {
 Line.prototype.getHeight = function () {
 	var max = 0;
 
-	this.inlines.forEach(function (item) {
+	this._inlines.forEach(function (item) {
 		max = Math.max(max, item.height || 0);
 	});
 
 	return max;
 };
+
+Object.defineProperty(Line.prototype, "inlines", {
+    get: function inlines() {
+		if (!this._isInlinesXUpToDate) {
+			// recalculate .x for each inline.
+			var inlineWidths = 0;
+			for (var i = 0; i < this._inlines.length; i++) {
+				this._inlines[i].x = inlineWidths - this.leadingCut;
+				inlineWidths += this._inlines[i].width;
+			}
+
+			this._isInlinesXUpToDate = true;
+		}
+
+        return this._inlines;
+    }
+});
 
 module.exports = Line;
