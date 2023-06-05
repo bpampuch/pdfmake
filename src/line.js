@@ -7,8 +7,9 @@
  * @this {Line}
  * @param {Number} Maximum width this line can have
  */
-function Line(maxWidth) {
+function Line(maxWidth, direction = 'ltr') {
 	this.maxWidth = maxWidth;
+	this.direction = direction;
 	this.leadingCut = 0;
 	this.trailingCut = 0;
 	this.inlineWidths = 0;
@@ -59,22 +60,42 @@ Line.prototype.addInline = function (inline) {
 	this.trailingCut = inline.trailingCut || 0;
 
 	var isRTLInline = inline.text.match(this.inlineRTLRegex);
+	var isRTLDirection = this.direction === 'rtl';
 
-	if (isRTLInline) {
-		// ltr direction & rtl inline.
-		var inlineIndex = this._inlines.length;
-		for(var i = this._inlines.length - 1; i >= 0; i--) {
-			if (this._inlines[i].text.match(this.inlineRTLRegex)) {
-				inlineIndex = i;
-			} else {
-				break;
+	if (isRTLDirection) {
+		if (isRTLInline) {
+			// rtl direction & rtl inline.
+			this._inlines.unshift(inline);
+		} else {
+			// rtl direction & ltr inline.
+			var inlineIndex = 0;
+			for(var i = 0; i < this._inlines.length; i++) {
+				if (!this._inlines[i].text.match(this.inlineRTLRegex)) {
+					inlineIndex = i + 1;
+				} else {
+					break;
+				}
 			}
-		}
 
-		this._inlines.splice(inlineIndex, 0, inline);
+			this._inlines.splice(inlineIndex, 0, inline);
+		}
 	} else {
-		// ltr direction & ltr inline.
-		this._inlines.push(inline);
+		if (isRTLInline) {
+			// ltr direction & rtl inline.
+			var inlineIndex = this._inlines.length;
+			for(var i = this._inlines.length - 1; i >= 0; i--) {
+				if (this._inlines[i].text.match(this.inlineRTLRegex)) {
+					inlineIndex = i;
+				} else {
+					break;
+				}
+			}
+
+			this._inlines.splice(inlineIndex, 0, inline);
+		} else {
+			// ltr direction & ltr inline.
+			this._inlines.push(inline);
+		}
 	}
 
 	this.inlineWidths += inline.width;

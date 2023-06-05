@@ -617,7 +617,7 @@ LayoutBuilder.prototype.processList = function (orderedList, node) {
 				offsetVector(vector, -marker._minWidth, 0);
 				self.writer.addVector(vector);
 			} else if (marker._inlines) {
-				var markerLine = new Line(self.pageSize.width);
+				var markerLine = new Line(self.pageSize.width, node.direction);
 				markerLine.addInline(marker._inlines[0]);
 				markerLine.x = -marker._minWidth;
 				markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
@@ -728,7 +728,7 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 		return null;
 	}
 
-	var line = new Line(this.writer.context().availableWidth);
+	var line = new Line(this.writer.context().availableWidth, textNode.direction);
 	var textTools = new TextTools(null);
 
 	var isForceContinue = false;

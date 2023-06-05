@@ -221,7 +221,7 @@ ElementWriter.prototype.endClip = function () {
 };
 
 function cloneLine(line) {
-	var result = new Line(line.maxWidth);
+	var result = new Line(line.maxWidth, line.direction);
 
 	for (var key in line) {
 		if (line.hasOwnProperty(key)) {
