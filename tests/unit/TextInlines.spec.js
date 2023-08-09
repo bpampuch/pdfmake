@@ -142,8 +142,8 @@ describe('TextInlines', function () {
 
 			it('should set leading and trailing cuts to 0 if texts cannot be trimmed', function () {
 				var result = textInlines.buildInlines(plainTextArray);
-				assert.equal(result.items[6].trailingCut, 0);
-				assert.equal(result.items[6].leadingCut, 0);
+				assert.equal(result.items[7].trailingCut, 0);
+				assert.equal(result.items[7].leadingCut, 0);
 			});
 
 		});

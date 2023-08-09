@@ -23,14 +23,17 @@
   "archive": {
     "exclude": [
       "bower.json",
-      "CONTRIBUTING.md",
       "/dev-playground",
       "/examples",
       "tests/",
+      ".github",
       ".npmignore",
       ".editorconfig",
       ".eslintrc.json",
-      ".travis.yml"
+      "webpack.config.js",
+      "build-fonts.js",
+      "build-examples.js",
+      "babel.config.json"
     ]
   }
 }

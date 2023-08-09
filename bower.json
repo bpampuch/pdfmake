@@ -22,11 +22,9 @@
   "ignore": [
     "**/.*",
     "dev-playground",
-    "gulpfile.js",
     "webpack.config.js",
     "README.md",
     "bower.json",
-    "CONTRIBUTING.md",
     "examples",
     "node_modules",
     "package.json",
@@ -34,6 +32,9 @@
     "tests",
     "yarn.lock",
     "composer.json",
-    ".travis.yml"
+    ".github",
+    "build-fonts.js",
+    "build-examples.js",
+    "babel.config.json"
   ]
 }

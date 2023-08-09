@@ -5,7 +5,7 @@ import PageElementWriter from './PageElementWriter';
 import ColumnCalculator from './columnCalculator';
 import TableProcessor from './TableProcessor';
 import Line from './Line';
-import { isString, isArray, isFunction, isValue } from './helpers/variableType';
+import { isString, isValue, isNumber } from './helpers/variableType';
 import { stringifyNode, getNodeId } from './helpers/node';
 import { pack, offsetVector } from './helpers/tools';
 import TextInlines from './TextInlines';
@@ -67,7 +67,7 @@ class LayoutBuilder {
 
 		function addPageBreaksIfNecessary(linearNodeList, pages) {
 
-			if (!isFunction(pageBreakBeforeFct)) {
+			if (typeof pageBreakBeforeFct !== 'function') {
 				return false;
 			}
 
@@ -85,32 +85,57 @@ class LayoutBuilder {
 					}
 				});
 				nodeInfo.startPosition = node.positions[0];
-				nodeInfo.pageNumbers = node.positions.map(node => node.pageNumber).filter((element, position, array) => array.indexOf(element) === position);
+				nodeInfo.pageNumbers = Array.from(new Set(node.positions.map(node => node.pageNumber)));
 				nodeInfo.pages = pages.length;
-				nodeInfo.stack = isArray(node.stack);
+				nodeInfo.stack = Array.isArray(node.stack);
 
 				node.nodeInfo = nodeInfo;
 			});
 
-			return linearNodeList.some((node, index, followingNodeList) => {
+			for (let index = 0; index < linearNodeList.length; index++) {
+				let node = linearNodeList[index];
 				if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 					node.pageBreakCalculated = true;
 					let pageNumber = node.nodeInfo.pageNumbers[0];
-					let followingNodesOnPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber));
-					let nodesOnNextPage = followingNodeList.slice(index + 1).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber + 1));
-					let previousNodesOnPage = followingNodeList.slice(0, index).filter(node0 => node0.nodeInfo.pageNumbers.includes(pageNumber));
 
 					if (
-						pageBreakBeforeFct(
-							node.nodeInfo,
-							followingNodesOnPage.map(node => node.nodeInfo),
-							nodesOnNextPage.map(node => node.nodeInfo),
-							previousNodesOnPage.map(node => node.nodeInfo))) {
+						pageBreakBeforeFct(node.nodeInfo, {
+							getFollowingNodesOnPage: () => {
+								let followingNodesOnPage = [];
+								for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
+									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+										followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
+									}
+								}
+								return followingNodesOnPage;
+							},
+							getNodesOnNextPage: () => {
+								let nodesOnNextPage = [];
+								for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
+									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
+										nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
+									}
+								}
+								return nodesOnNextPage;
+							},
+							getPreviousNodesOnPage: () => {
+								let previousNodesOnPage = [];
+								for (let ii = 0; ii < index; ii++) {
+									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+										previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
+									}
+								}
+								return previousNodesOnPage;
+							},
+						})
+					) {
 						node.pageBreak = 'before';
 						return true;
 					}
 				}
-			});
+			}
+
+			return false;
 		}
 
 		this.docPreprocessor = new DocPreprocessor();
@@ -164,7 +189,7 @@ class LayoutBuilder {
 	}
 
 	addBackground(background) {
-		let backgroundGetter = isFunction(background) ? background : () => background;
+		let backgroundGetter = typeof background === 'function' ? background : () => background;
 
 		let context = this.writer.context();
 		let pageSize = context.getCurrentPage().pageSize;
@@ -218,13 +243,13 @@ class LayoutBuilder {
 			height: pageMargins.bottom
 		});
 
-		if (isFunction(header)) {
+		if (typeof header === 'function') {
 			this.addDynamicRepeatable(header, headerSizeFct);
 		} else if (header) {
 			this.addStaticRepeatable(header, headerSizeFct);
 		}
 
-		if (isFunction(footer)) {
+		if (typeof footer === 'function') {
 			this.addDynamicRepeatable(footer, footerSizeFct);
 		} else if (footer) {
 			this.addStaticRepeatable(footer, footerSizeFct);
@@ -243,7 +268,7 @@ class LayoutBuilder {
 		watermark.font = watermark.font || defaultStyle.font || 'Roboto';
 		watermark.fontSize = watermark.fontSize || 'auto';
 		watermark.color = watermark.color || 'black';
-		watermark.opacity = watermark.opacity || 0.6;
+		watermark.opacity = isNumber(watermark.opacity) ? watermark.opacity : 0.6;
 		watermark.bold = watermark.bold || false;
 		watermark.italics = watermark.italics || false;
 		watermark.angle = isValue(watermark.angle) ? watermark.angle : null;
@@ -332,6 +357,16 @@ class LayoutBuilder {
 
 			if (node.pageBreak === 'before') {
 				this.writer.moveToNextPage(node.pageOrientation);
+			} else if (node.pageBreak === 'beforeOdd') {
+				this.writer.moveToNextPage(node.pageOrientation);
+				if ((this.writer.context().page + 1) % 2 === 1) {
+					this.writer.moveToNextPage(node.pageOrientation);
+				}
+			} else if (node.pageBreak === 'beforeEven') {
+				this.writer.moveToNextPage(node.pageOrientation);
+				if ((this.writer.context().page + 1) % 2 === 0) {
+					this.writer.moveToNextPage(node.pageOrientation);
+				}
 			}
 
 			if (margin) {
@@ -348,6 +383,16 @@ class LayoutBuilder {
 
 			if (node.pageBreak === 'after') {
 				this.writer.moveToNextPage(node.pageOrientation);
+			} else if (node.pageBreak === 'afterOdd') {
+				this.writer.moveToNextPage(node.pageOrientation);
+				if ((this.writer.context().page + 1) % 2 === 1) {
+					this.writer.moveToNextPage(node.pageOrientation);
+				}
+			} else if (node.pageBreak === 'afterEven') {
+				this.writer.moveToNextPage(node.pageOrientation);
+				if ((this.writer.context().page + 1) % 2 === 0) {
+					this.writer.moveToNextPage(node.pageOrientation);
+				}
 			}
 		};
 
@@ -394,6 +439,8 @@ class LayoutBuilder {
 				this.processCanvas(node);
 			} else if (node.qr) {
 				this.processQr(node);
+			} else if (node.attachment) {
+				this.processAttachment(node);
 			} else if (!node._span) {
 				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
@@ -579,9 +626,9 @@ class LayoutBuilder {
 			processor.beginRow(i, this.writer);
 
 			let height;
-			if (isFunction(rowHeights)) {
+			if (typeof rowHeights === 'function') {
 				height = rowHeights(i);
-			} else if (isArray(rowHeights)) {
+			} else if (Array.isArray(rowHeights)) {
 				height = rowHeights[i];
 			} else {
 				height = rowHeights;
@@ -624,7 +671,7 @@ class LayoutBuilder {
 			line._pageNodeRef = node._pageRef._nodeRef;
 		}
 
-		if (line && line.inlines && isArray(line.inlines)) {
+		if (line && line.inlines && Array.isArray(line.inlines)) {
 			for (let i = 0, l = line.inlines.length; i < l; i++) {
 				if (line.inlines[i]._tocItemRef) {
 					line.inlines[i]._pageNodeRef = line.inlines[i]._tocItemRef;
@@ -729,6 +776,11 @@ class LayoutBuilder {
 		let position = this.writer.addQr(node);
 		node.positions.push(position);
 	}
+
+	processAttachment(node) {
+		let position = this.writer.addAttachment(node);
+		node.positions.push(position);
+	}
 }
 
 function decorateNode(node) {
@@ -736,7 +788,7 @@ function decorateNode(node) {
 	let y = node.y;
 	node.positions = [];
 
-	if (isArray(node.canvas)) {
+	if (Array.isArray(node.canvas)) {
 		node.canvas.forEach(vector => {
 			let x = vector.x;
 			let y = vector.y;
@@ -758,7 +810,7 @@ function decorateNode(node) {
 	node.resetXY = () => {
 		node.x = x;
 		node.y = y;
-		if (isArray(node.canvas)) {
+		if (Array.isArray(node.canvas)) {
 			node.canvas.forEach(vector => {
 				vector.resetXY();
 			});

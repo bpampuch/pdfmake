@@ -1,10 +1,10 @@
-import { isString, isNumber, isBoolean, isArray, isValue, isEmptyObject } from './helpers/variableType';
+import { isString, isNumber, isValue, isEmptyObject } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
 
 const convertValueToString = value => {
 	if (isString(value)) {
 		return value.replace(/\t/g, '    '); // expand tab as spaces
-	} else if (isNumber(value) || isBoolean(value)) {
+	} else if (isNumber(value) || typeof value === 'boolean') {
 		return value.toString();
 	} else if (!isValue(value) || isEmptyObject(value)) {
 		return '';
@@ -25,9 +25,9 @@ class DocPreprocessor {
 
 	preprocessNode(node) {
 		// expand shortcuts and casting values
-		if (isArray(node)) {
+		if (Array.isArray(node)) {
 			node = { stack: node };
-		} else if (isString(node) || isNumber(node) || isBoolean(node) || !isValue(node) || isEmptyObject(node)) { // text node defined as value
+		} else if (isString(node) || isNumber(node) || typeof node === 'boolean' || !isValue(node) || isEmptyObject(node)) { // text node defined as value
 			node = { text: convertValueToString(node) };
 		} else if ('text' in node) { // cast value in text property
 			node.text = convertValueToString(node.text);
@@ -55,6 +55,8 @@ class DocPreprocessor {
 			return this.preprocessCanvas(node);
 		} else if (node.qr) {
 			return this.preprocessQr(node);
+		} else if (node.attachment) {
+			return this.preprocessAttachment(node);
 		} else if (node.pageReference || node.textReference) {
 			return this.preprocessText(node);
 		} else {
@@ -118,7 +120,7 @@ class DocPreprocessor {
 
 	preprocessText(node) {
 		if (node.tocItem) {
-			if (!isArray(node.tocItem)) {
+			if (!Array.isArray(node.tocItem)) {
 				node.tocItem = [node.tocItem];
 			}
 
@@ -187,7 +189,7 @@ class DocPreprocessor {
 
 		if (node.text && node.text.text) {
 			node.text = [this.preprocessNode(node.text)];
-		} else if (isArray(node.text)) {
+		} else if (Array.isArray(node.text)) {
 			let isSetParentNode = false;
 			if (this.parentNode === null) {
 				this.parentNode = node;
@@ -228,7 +230,7 @@ class DocPreprocessor {
 	}
 
 	preprocessImage(node) {
-		if ((node.image.type !== undefined) && (node.image.data !== undefined) && (node.image.type === 'Buffer') && isArray(node.image.data)) {
+		if ((node.image.type !== undefined) && (node.image.data !== undefined) && (node.image.type === 'Buffer') && Array.isArray(node.image.data)) {
 			node.image = Buffer.from(node.image.data);
 		}
 		return node;
@@ -243,6 +245,10 @@ class DocPreprocessor {
 	}
 
 	preprocessQr(node) {
+		return node;
+	}
+
+	preprocessAttachment(node) {
 		return node;
 	}
 

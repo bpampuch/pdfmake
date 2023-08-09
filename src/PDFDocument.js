@@ -1,5 +1,4 @@
-import PDFKit from 'pdfkit';
-import { isArray } from './helpers/variableType';
+import PDFKit from '@foliojs-fork/pdfkit';
 
 const typeName = (bold, italics) => {
 	let type = 'normal';
@@ -14,7 +13,7 @@ const typeName = (bold, italics) => {
 };
 
 class PDFDocument extends PDFKit {
-	constructor(fonts = {}, images = {}, options = {}) {
+	constructor(fonts = {}, images = {}, patterns = {}, attachments = {}, options = {}, virtualfs = null) {
 		super(options);
 
 		this.fonts = {};
@@ -32,7 +31,18 @@ class PDFDocument extends PDFKit {
 			}
 		}
 
+		this.patterns = {};
+		for (let pattern in patterns) {
+			if (patterns.hasOwnProperty(pattern)) {
+				let patternDef = patterns[pattern];
+				this.patterns[pattern] = this.pattern(patternDef.boundingBox, patternDef.xStep, patternDef.yStep, patternDef.pattern, patternDef.colored);
+			}
+		}
+
+
 		this.images = images;
+		this.attachments = attachments;
+		this.virtualfs = virtualfs;
 	}
 
 	getFontType(bold, italics) {
@@ -58,9 +68,14 @@ class PDFDocument extends PDFKit {
 
 		if (!this.fontCache[familyName][type]) {
 			let def = this.fonts[familyName][type];
-			if (!isArray(def)) {
+			if (!Array.isArray(def)) {
 				def = [def];
 			}
+
+			if (this.virtualfs && this.virtualfs.existsSync(def[0])) {
+				def[0] = this.virtualfs.readFileSync(def[0]);
+			}
+
 			this.fontCache[familyName][type] = this.font(...def)._font;
 		}
 
@@ -73,6 +88,10 @@ class PDFDocument extends PDFKit {
 
 			if (!image) {
 				return src;
+			}
+
+			if (this.virtualfs && this.virtualfs.existsSync(image)) {
+				return this.virtualfs.readFileSync(image);
 			}
 
 			let index = image.indexOf('base64,');
@@ -102,6 +121,43 @@ class PDFDocument extends PDFKit {
 		this._imageRegistry[src] = image;
 
 		return image;
+	}
+
+	/**
+	 * @param {Array} color pdfmake format: [<pattern name>, <color>]
+	 * @returns {Array} pdfkit format: [<pattern object>, <color>]
+	 */
+	providePattern(color) {
+		if (Array.isArray(color) && color.length === 2) {
+			return [this.patterns[color[0]], color[1]];
+		}
+
+		return null;
+	}
+
+	provideAttachment(src) {
+		const checkRequired = obj => {
+			if (!obj) {
+				throw new Error('No attachment');
+			}
+			if (!obj.src) {
+				throw new Error('The "src" key is required for attachments');
+			}
+
+			return obj;
+		};
+
+		if (typeof src === 'object') {
+			return checkRequired(src);
+		}
+
+		let attachment = checkRequired(this.attachments[src]);
+
+		if (this.virtualfs && this.virtualfs.existsSync(attachment.src)) {
+			return this.virtualfs.readFileSync(attachment.src);
+		}
+
+		return attachment;
 	}
 
 	setOpenActionAsPrint() {

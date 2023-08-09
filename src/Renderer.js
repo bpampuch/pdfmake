@@ -1,14 +1,7 @@
 import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
-
-var getSvgToPDF = function () {
-	try {
-		// optional dependency to support svg nodes
-		return require('svg-to-pdfkit');
-	} catch (e) {
-		throw new Error('Please install svg-to-pdfkit to enable svg nodes');
-	}
-};
+import { isNumber } from './helpers/variableType';
+import SVGtoPDF from './3rd-party/svg-to-pdfkit';
 
 const findFont = (fonts, requiredFonts, defaultFont) => {
 	for (let i = 0; i < requiredFonts.length; i++) {
@@ -22,6 +15,26 @@ const findFont = (fonts, requiredFonts, defaultFont) => {
 	}
 
 	return defaultFont;
+};
+
+/**
+ * Shift the "y" height of the text baseline up or down (superscript or subscript,
+ * respectively). The exact shift can / should be changed according to standard
+ * conventions.
+ *
+ * @param {number} y
+ * @param {object} inline
+ * @returns {number}
+ */
+const offsetText = (y, inline) => {
+	var newY = y;
+	if (inline.sup) {
+		newY -= inline.fontSize * 0.75;
+	}
+	if (inline.sub) {
+		newY += inline.fontSize * 0.35;
+	}
+	return newY;
 };
 
 class Renderer {
@@ -64,6 +77,9 @@ class Renderer {
 						break;
 					case 'svg':
 						this.renderSVG(item.item);
+						break;
+					case 'attachment':
+						this.renderAttachment(item.item);
 						break;
 					case 'beginClip':
 						this.beginClip(item.item);
@@ -155,20 +171,23 @@ class Renderer {
 				options.features = inline.fontFeatures;
 			}
 
-			this.pdfDocument.opacity(inline.opacity || 1);
+			let opacity = isNumber(inline.opacity) ? inline.opacity : 1;
+			this.pdfDocument.opacity(opacity);
 			this.pdfDocument.fill(inline.color || 'black');
 
 			this.pdfDocument._font = inline.font;
 			this.pdfDocument.fontSize(inline.fontSize);
-			this.pdfDocument.text(inline.text, x + inline.x, y + shiftToBaseline, options);
+
+			let shiftedY = offsetText(y + shiftToBaseline, inline);
+			this.pdfDocument.text(inline.text, x + inline.x, shiftedY, options);
 
 			if (inline.linkToPage) {
 				this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
-				this.pdfDocument.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
+				this.pdfDocument.annotate(x + inline.x, shiftedY, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
 			}
-
 		}
 
+		// Decorations won't draw correctly for superscript
 		textDecorator.drawDecorations(line, x, y);
 	}
 
@@ -244,33 +263,78 @@ class Renderer {
 			vector.color = gradient;
 		}
 
+		let patternColor = this.pdfDocument.providePattern(vector.color);
+		if (patternColor !== null) {
+			vector.color = patternColor;
+		}
+
+		let fillOpacity = isNumber(vector.fillOpacity) ? vector.fillOpacity : 1;
+		let strokeOpacity = isNumber(vector.strokeOpacity) ? vector.strokeOpacity : 1;
+
 		if (vector.color && vector.lineColor) {
-			this.pdfDocument.fillColor(vector.color, vector.fillOpacity || 1);
-			this.pdfDocument.strokeColor(vector.lineColor, vector.strokeOpacity || 1);
+			this.pdfDocument.fillColor(vector.color, fillOpacity);
+			this.pdfDocument.strokeColor(vector.lineColor, strokeOpacity);
 			this.pdfDocument.fillAndStroke();
 		} else if (vector.color) {
-			this.pdfDocument.fillColor(vector.color, vector.fillOpacity || 1);
+			this.pdfDocument.fillColor(vector.color, fillOpacity);
 			this.pdfDocument.fill();
 		} else {
-			this.pdfDocument.strokeColor(vector.lineColor || 'black', vector.strokeOpacity || 1);
+			this.pdfDocument.strokeColor(vector.lineColor || 'black', strokeOpacity);
 			this.pdfDocument.stroke();
 		}
 	}
 
 	renderImage(image) {
-		this.pdfDocument.opacity(image.opacity || 1);
-		this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+		let opacity = isNumber(image.opacity) ? image.opacity : 1;
+		this.pdfDocument.opacity(opacity);
+		if (image.cover) {
+			const align = image.cover.align || 'center';
+			const valign = image.cover.valign || 'center';
+			const width = image.cover.width ? image.cover.width : image.width;
+			const height = image.cover.height ? image.cover.height : image.height;
+			this.pdfDocument.save();
+			this.pdfDocument.rect(image.x, image.y, width, height).clip();
+			this.pdfDocument.image(image.image, image.x, image.y, { cover: [width, height], align: align, valign: valign });
+			this.pdfDocument.restore();
+		} else {
+			this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+		}
 		if (image.link) {
 			this.pdfDocument.link(image.x, image.y, image._width, image._height, image.link);
+		}
+		if (image.linkToPage) {
+			this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [image.linkToPage, 0, 0] }).end();
+			this.pdfDocument.annotate(image.x, image.y, image._width, image._height, { Subtype: 'Link', Dest: [image.linkToPage - 1, 'XYZ', null, null, null] });
+		}
+		if (image.linkToDestination) {
+			this.pdfDocument.goTo(image.x, image.y, image._width, image._height, image.linkToDestination);
+		}
+		if (image.linkToFile) {
+			const attachment = this.pdfDocument.provideAttachment(image.linkToFile);
+			this.pdfDocument.fileAnnotation(
+				image.x,
+				image.y,
+				image._width,
+				image._height,
+				attachment,
+				// add empty rectangle as file annotation appearance with the same size as the rendered image
+				{
+					AP: {
+						N: {
+							Type: 'XObject',
+							Subtype: 'Form',
+							FormType: 1,
+							BBox: [image.x, image.y, image._width, image._height]
+						}
+					},
+				}
+			);
 		}
 	}
 
 	renderSVG(svg) {
 		let options = Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options);
-		options.fontCallback = (family, bold, italic, fontOptions) => {
-			fontOptions.fauxBold = bold;
-			fontOptions.fauxItalic = italic;
-
+		options.fontCallback = (family, bold, italic) => {
 			let fontsFamily = family.split(',').map(f => f.trim().replace(/('|")/g, ''));
 			let font = findFont(this.pdfDocument.fonts, fontsFamily, svg.font || 'Roboto');
 
@@ -283,7 +347,18 @@ class Renderer {
 			return fontFile;
 		};
 
-		getSvgToPDF()(this.pdfDocument, svg.svg, svg.x, svg.y, options);
+		SVGtoPDF(this.pdfDocument, svg.svg, svg.x, svg.y, options);
+	}
+
+	renderAttachment(attachment) {
+		const file = this.pdfDocument.provideAttachment(attachment.attachment);
+
+		const options = {};
+		if (attachment.icon) {
+			options.Name = attachment.icon;
+		}
+
+		this.pdfDocument.fileAnnotation(attachment.x, attachment.y, attachment._width, attachment._height, file, options);
 	}
 
 	beginClip(rect) {

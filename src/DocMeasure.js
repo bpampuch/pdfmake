@@ -2,7 +2,7 @@ import TextInlines from './TextInlines';
 import StyleContextStack from './StyleContextStack';
 import ColumnCalculator from './columnCalculator';
 import { defaultTableLayout } from './tableLayouts';
-import { isString, isNumber, isObject, isArray } from './helpers/variableType';
+import { isString, isNumber, isObject } from './helpers/variableType';
 import { stringifyNode, getNodeId, getNodeMargin } from './helpers/node';
 import { pack } from './helpers/tools';
 import qrEncoder from './qrEnc.js';
@@ -27,7 +27,7 @@ class DocMeasure {
 	 * Measures all nodes and sets min/max-width properties required for the second
 	 * layout-pass.
 	 *
-	 * @param  {object} docStructure document-definition-object
+	 * @param {object} docStructure document-definition-object
 	 * @returns {object} document-measurement-object
 	 */
 	measureDocument(docStructure) {
@@ -61,6 +61,8 @@ class DocMeasure {
 				return extendMargins(this.measureCanvas(node));
 			} else if (node.qr) {
 				return extendMargins(this.measureQr(node));
+			} else if (node.attachment) {
+				return extendMargins(this.measureAttachment(node));
 			} else {
 				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
@@ -360,7 +362,7 @@ class DocMeasure {
 		}
 
 		if (separator) {
-			if (isArray(separator)) {
+			if (Array.isArray(separator)) {
 				if (separator[0]) {
 					counterText = separator[0] + counterText;
 				}
@@ -527,6 +529,7 @@ class DocMeasure {
 			return () => {
 				if (isObject(data)) {
 					data.fillColor = _this.styleStack.getProperty('fillColor');
+					data.fillOpacity = _this.styleStack.getProperty('fillOpacity');
 				}
 				return _this.measureNode(data);
 			};
@@ -619,7 +622,8 @@ class DocMeasure {
 					_span: true,
 					_minWidth: 0,
 					_maxWidth: 0,
-					fillColor: table.body[row][col].fillColor
+					fillColor: table.body[row][col].fillColor,
+					fillOpacity: table.body[row][col].fillOpacity
 				};
 			}
 		}
@@ -685,6 +689,13 @@ class DocMeasure {
 	measureQr(node) {
 		node = qrEncoder.measure(node);
 		node._alignment = this.styleStack.getProperty('alignment');
+		return node;
+	}
+
+	measureAttachment(node) {
+		node._width = node.width || 7;
+		node._height = node.height || 18;
+
 		return node;
 	}
 }

@@ -1,25 +1,9 @@
 import OutputDocument from '../OutputDocument';
 import { saveAs } from 'file-saver';
 
-const bufferToBlob = buffer => {
-	let blob;
-	try {
-		blob = new Blob([buffer], { type: 'application/pdf' });
-	} catch (e) {
-		// Old browser which can't handle it without making it an byte array (ie10)
-		if (e.name === 'InvalidStateError') {
-			let byteArray = new Uint8Array(buffer);
-			blob = new Blob([byteArray.buffer], { type: 'application/pdf' });
-		}
-	}
-
-	if (!blob) {
-		throw new Error('Could not generate blob');
-	}
-
-	return blob;
-};
-
+/**
+ * @returns {Window}
+ */
 const openWindow = () => {
 	// we have to open the window immediately and store the reference
 	// otherwise popup blockers will stop us
@@ -34,13 +18,17 @@ const openWindow = () => {
 class OutputDocumentBrowser extends OutputDocument {
 
 	/**
-	 * @returns {Promise}
+	 * @returns {Promise<Blob>}
 	 */
 	getBlob() {
 		return new Promise((resolve, reject) => {
 			this.getBuffer().then(buffer => {
-				let blob = bufferToBlob(buffer);
-				resolve(blob);
+				try {
+					let blob = new Blob([buffer], { type: 'application/pdf' });
+					resolve(blob);
+				} catch (e) {
+					reject(e);
+				}
 			}, result => {
 				reject(result);
 			});
@@ -54,8 +42,12 @@ class OutputDocumentBrowser extends OutputDocument {
 	download(filename = 'file.pdf') {
 		return new Promise((resolve, reject) => {
 			this.getBlob().then(blob => {
-				saveAs(blob, filename);
-				resolve();
+				try {
+					saveAs(blob, filename);
+					resolve();
+				} catch (e) {
+					reject(e);
+				}
 			}, result => {
 				reject(result);
 			});
@@ -93,7 +85,7 @@ class OutputDocumentBrowser extends OutputDocument {
 					*/
 				} catch (e) {
 					win.close();
-					throw e;
+					reject(e);
 				}
 			}, result => {
 				reject(result);
@@ -106,8 +98,18 @@ class OutputDocumentBrowser extends OutputDocument {
 	 * @returns {Promise}
 	 */
 	print(win = null) {
-		this.getStream().setOpenActionAsPrint();
-		return this.open(win);
+		return new Promise((resolve, reject) => {
+			this.getStream().then(stream => {
+				stream.setOpenActionAsPrint();
+				return this.open(win).then(() => {
+					resolve();
+				}, result => {
+					reject(result);
+				});
+			}, result => {
+				reject(result);
+			});
+		});
 	}
 
 }

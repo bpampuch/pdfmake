@@ -1,4 +1,4 @@
-import { isNumber, isArray } from './variableType';
+import { isNumber } from './variableType';
 
 function fontStringify(key, val) {
 	if (key === 'font') {
@@ -26,7 +26,7 @@ export function getNodeId(node) {
 		return node.id;
 	}
 
-	if (isArray(node.text)) {
+	if (Array.isArray(node.text)) {
 		for (let n of node.text) {
 			let nodeId = getNodeId(n);
 			if (nodeId) {
@@ -73,7 +73,7 @@ export function getNodeMargin(node, styleStack) {
 	function convertMargin(margin) {
 		if (isNumber(margin)) {
 			margin = [margin, margin, margin, margin];
-		} else if (isArray(margin)) {
+		} else if (Array.isArray(margin)) {
 			if (margin.length === 2) {
 				margin = [margin[0], margin[1], margin[0], margin[1]];
 			}
@@ -84,7 +84,7 @@ export function getNodeMargin(node, styleStack) {
 	let margin = [undefined, undefined, undefined, undefined];
 
 	if (node.style) {
-		let styleArray = isArray(node.style) ? node.style : [node.style];
+		let styleArray = Array.isArray(node.style) ? node.style : [node.style];
 		let flattenedStyleArray = flattenStyleArray(styleArray, styleStack);
 
 		if (flattenedStyleArray) {

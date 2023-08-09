@@ -1,5 +1,3 @@
-import { isArray } from './helpers/variableType';
-
 const groupDecorations = line => {
 	let groups = [];
 	let currentGroup = null;
@@ -10,7 +8,7 @@ const groupDecorations = line => {
 			currentGroup = null;
 			continue;
 		}
-		if (!isArray(decoration)) {
+		if (!Array.isArray(decoration)) {
 			decoration = [decoration];
 		}
 		let color = inline.decorationColor || inline.color || 'black';
@@ -50,8 +48,15 @@ class TextDecorator {
 			if (!inline.background) {
 				continue;
 			}
+
+			let color = inline.background;
+			let patternColor = this.pdfDocument.providePattern(inline.background);
+			if (patternColor !== null) {
+				color = patternColor;
+			}
+
 			let justifyShift = (inline.justifyShift || 0);
-			this.pdfDocument.fillColor(inline.background)
+			this.pdfDocument.fillColor(color)
 				.rect(x + inline.x - justifyShift, y, inline.width + justifyShift, height)
 				.fill();
 		}

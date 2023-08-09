@@ -1,4 +1,4 @@
-import { isString, isArray, isValue } from './helpers/variableType';
+import { isString, isValue } from './helpers/variableType';
 
 /**
  * Used for style inheritance and style overrides
@@ -68,7 +68,7 @@ class StyleContextStack {
 		let styleNames = [];
 
 		if (item.style) {
-			if (isArray(item.style)) {
+			if (Array.isArray(item.style)) {
 				styleNames = item.style;
 			} else {
 				styleNames = [item.style];
@@ -89,6 +89,7 @@ class StyleContextStack {
 			'color',
 			'columnGap',
 			'fillColor',
+			'fillOpacity',
 			'decoration',
 			'decorationStyle',
 			'decorationColor',
@@ -97,7 +98,9 @@ class StyleContextStack {
 			'characterSpacing',
 			'noWrap',
 			'markerColor',
-			'leadingIndent'
+			'leadingIndent',
+			'sup',
+			'sub'
 			//'tableCellPadding'
 			// 'cellBorder',
 			// 'headerCellBorder',
@@ -126,8 +129,8 @@ class StyleContextStack {
 	 * Automatically pushes elements onto the stack, using autopush based on item,
 	 * executes callback and then pops elements back. Returns value returned by callback
 	 *
-	 * @param  {object} item - an object with optional style property and/or style overrides
-	 * @param  {Function} callback to be called between autopush and pop
+	 * @param {object} item - an object with optional style property and/or style overrides
+	 * @param {Function} callback to be called between autopush and pop
 	 * @returns {object} value returned by callback
 	 */
 	auto(item, callback) {
