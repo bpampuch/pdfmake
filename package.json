@@ -1,6 +1,6 @@
 {
   "name": "@mbc-agentur/pdfmake",
-  "version": "0.3.0-alpha.0",
+  "version": "0.3.0-alpha.0-mbc-types",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "js/index.js",
   "esnext": "src/index.js",
@@ -49,10 +49,11 @@
   },
   "scripts": {
     "test": "run-s build mocha lint",
-    "build": "run-s build:clean build:node build:browser build:standard-fonts build:fonts build:vfs",
+    "build": "run-s build:clean build:node build:browser build:standard-fonts build:fonts build:vfs build:copy-types",
     "build:clean": "shx rm -rf js build",
     "build:node": "babel src --out-dir js",
     "build:browser": "webpack",
+    "build:copy-types": "cp types/* build",
     "build:vfs": "node build-vfs.js \"./examples/fonts\"",
     "build:examples": "node build-examples.js",
     "build:standard-fonts": "shx mkdir -p build/standard-fonts && brfs \"./src/browser-extensions/standard-fonts/Courier.js\" > build/standard-fonts/Courier.js && brfs \"./src/browser-extensions/standard-fonts/Helvetica.js\" > build/standard-fonts/Helvetica.js && brfs \"./src/browser-extensions/standard-fonts/Times.js\" > build/standard-fonts/Times.js && brfs \"./src/browser-extensions/standard-fonts/Symbol.js\" > build/standard-fonts/Symbol.js && brfs \"./src/browser-extensions/standard-fonts/ZapfDingbats.js\" > build/standard-fonts/ZapfDingbats.js",
