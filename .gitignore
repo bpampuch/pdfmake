@@ -11,3 +11,4 @@ package-lock.json
 yarn.lock
 .idea
 /js
+/build/

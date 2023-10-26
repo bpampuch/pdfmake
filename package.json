@@ -1,5 +1,5 @@
 {
-  "name": "pdfmake",
+  "name": "@mbc-agentur/pdfmake",
   "version": "0.3.0-alpha.0",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "js/index.js",

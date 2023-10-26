@@ -1,9 +1,14 @@
 # This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
 
-name: Node.js CI
+name: Pdfmake branch ci
 
-on: [push, pull_request]
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  push:
+    branches: [ "master" ]
 
 jobs:
   build:
@@ -14,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        node-version: [12.x, 14.x, 16.x]
+        node-version: [14.x]
 
     steps:
     - uses: actions/checkout@v2
@@ -23,4 +28,4 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm install
-    - run: npm test
+    - run: npm run build
