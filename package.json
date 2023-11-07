@@ -11,7 +11,7 @@
   "dependencies": {
     "iconv-lite": "^0.6.3",
     "linebreak": "^1.1.0",
-    "pdfkit": "^0.13.0",
+    "pdfkit": "https://github.com/shubhamn/pdfkit.git",
     "xmldoc": "^1.1.2"
   },
   "devDependencies": {
