@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.6 - 2023-11-09
 
 - Update pdfkit to 0.14.0
 - Update Roboto font (version 3.008)
