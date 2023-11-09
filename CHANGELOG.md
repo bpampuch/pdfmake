@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Update pdfkit to 0.14.0
+
 ## 0.2.7 - 2022-12-17
 
 - Fixed theoretical vulnerability CVE-2022-46161 (**It was never part of version released as npm package or cdnjs or bower or packagist!**)
