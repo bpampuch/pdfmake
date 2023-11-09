@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Update pdfkit to 0.14.0
+- Update Roboto font (version 3.008)
 
 ## 0.2.7 - 2022-12-17
 
