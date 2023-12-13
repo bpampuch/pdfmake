@@ -11,6 +11,7 @@
   "dependencies": {
     "@foliojs-fork/linebreak": "^1.1.1",
     "@foliojs-fork/pdfkit": "^0.14.0",
+    "express": "^4.18.2",
     "iconv-lite": "^0.6.3",
     "xmldoc": "^1.1.2"
   },
