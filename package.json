@@ -24,7 +24,7 @@
     "brfs": "^2.0.2",
     "browserify-zlib": "^0.2.0",
     "buffer": "6.0.3",
-    "core-js": "3.34.0",
+    "core-js": "3.19.0",
     "eslint": "^8.55.0",
     "eslint-plugin-jsdoc": "^46.9.1",
     "expose-loader": "^4.1.0",
