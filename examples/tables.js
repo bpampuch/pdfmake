@@ -681,7 +681,75 @@ var docDefinition = {
 					],
 				],
 			},
-		}
+		},
+		{ text: 'Image on table', pageBreak: 'before', style: 'subheader' },
+		{
+			style: 'tableExample',
+			color: '#444',
+			table: {
+				widths: [200, 'auto', 'auto'],
+				headerRows: 2,
+				// keepWithHeaderRows: 1,
+				body: [
+					[
+						{
+							text: 'Header with Colspan = 3',
+							style: 'tableHeader',
+							colSpan: 3,
+							borderColor: ['#ff00ff', '#00ffff', '#ff00ff', '#00ffff'],
+							alignment: 'center',
+						},
+						{},
+						{},
+					],
+					[
+						{
+							text: 'Header 1',
+							style: 'tableHeader',
+							alignment: 'center',
+						},
+						{
+							text: 'Header 2',
+							style: 'tableHeader',
+							alignment: 'center',
+						},
+						{
+							text: 'Header 3',
+							style: 'tableHeader',
+							alignment: 'center',
+						},
+					],
+					[
+            {
+              image: 'fonts/sampleImage.jpg',
+              cover: {width: 100, height: 100 },
+            },
+            {
+              image: 'fonts/sampleImage.jpg',
+              cover: {width: 100, height: 100 },
+            },
+            {
+              image: 'fonts/sampleImage.jpg',
+              cover: {width: 100, height: 100 },
+            },
+					],
+					[
+            {
+              image: 'fonts/sampleImage.jpg',
+              fit: [100, 100],
+            },
+            {
+              image: 'fonts/sampleImage.jpg',
+              fit: [100, 100],
+            },
+            {
+              image: 'fonts/sampleImage.jpg',
+              fit: [100, 100],
+            },
+					],
+				],
+			},
+		},
 	],
 	styles: {
 		header: {

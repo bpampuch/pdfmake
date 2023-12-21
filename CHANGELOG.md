@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Fixed cover image size inside table
+
+## 0.3.0-beta.6 - 2023-11-09
+
+- Update pdfkit to 0.14.0
+- Update Roboto font (version 3.008)
+
+## 0.3.0-beta.5 - 2023-02-19
+
+- Fixed document buffer size. Node.js 18+ allow max 1 GiB.
+
 ## 0.3.0-beta.4 - 2022-12-17
 
 - Minimal supported version Node.js 14 LTS
