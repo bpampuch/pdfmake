@@ -78,7 +78,7 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 			y += lineAscent - (ascent * 0.25);
 			break;
 		default:
-			throw 'Unkown decoration : ' + group.decoration;
+			throw 'Unknown decoration : ' + group.decoration;
 	}
 	pdfKitDoc.save();
 
