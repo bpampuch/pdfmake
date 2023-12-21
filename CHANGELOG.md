@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed cover image size inside table
+
 ## 0.2.8 - 2023-11-09
 
 - Update pdfkit to 0.14.0
