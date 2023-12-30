@@ -53,6 +53,11 @@ module.exports = {
 				}
 			},
 			{
+				enforce: "pre",
+				test: /\.(cjs|js)$/,
+				use: ["source-map-loader"],
+			},
+			{
 				test: /\.js$/,
 				include: /(pdfkit|linebreak|fontkit|saslprep|restructure|unicode-trie|unicode-properties|dfa|buffer|png-js|crypto-js)/,
 				use: {
