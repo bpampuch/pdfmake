@@ -102,6 +102,10 @@ class TableProcessor {
 		this.cleanUpRepeatables = false;
 
 		this.headerRows = tableNode.table.headerRows || 0;
+		if (this.headerRows > tableNode.table.body.length) {
+			throw new Error(`Too few rows in the table. Property headerRows requires at least ${this.headerRows}, contains only ${tableNode.table.body.length}`);
+		}
+
 		this.rowsWithoutPageBreak = this.headerRows + (tableNode.table.keepWithHeaderRows || 0);
 		this.dontBreakRows = tableNode.table.dontBreakRows || false;
 

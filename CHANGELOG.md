@@ -4,6 +4,7 @@
 
 - Minimal supported version Node.js 16 LTS
 - Fixed cover image size inside table
+- Fixed "Cannot read properties of undefined (reading 'bottomMost')" if table contains too few rows
 
 ## 0.3.0-beta.6 - 2023-11-09
 
