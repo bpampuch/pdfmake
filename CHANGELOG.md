@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Added padding option for QR code
+- Allow the document language to be specified
 - Fixed cover image size inside table
 - Fixed "Cannot read properties of undefined (reading 'bottomMost')" if table contains too few rows
 - Fixed invalid source-maps in builded js file
