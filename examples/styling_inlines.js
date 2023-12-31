@@ -58,7 +58,8 @@ var docDefinition = {
 			fontSize: 15,
 			italics: true
 		}
-	}
+	},
+	language: "en-AU"
 };
 
 var pdfDoc = printer.createPdfKitDocument(docDefinition);
