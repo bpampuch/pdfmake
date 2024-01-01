@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.9 - 2024-01-01
 
 - Added padding option for QR code
 - Allow the document language to be specified
