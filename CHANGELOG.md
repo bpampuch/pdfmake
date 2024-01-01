@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.7 - 2024-01-01
 
 - Minimal supported version Node.js 16 LTS
 - Added padding option for QR code
