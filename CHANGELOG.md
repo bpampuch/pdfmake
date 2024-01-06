@@ -1,8 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.7 - 2024-01-01
 
+- Minimal supported version Node.js 16 LTS
+- Added padding option for QR code
+- Allow the document language to be specified
 - Fixed cover image size inside table
+- Fixed "Cannot read properties of undefined (reading 'bottomMost')" if table contains too few rows
+- Fixed invalid source-maps in builded js file
 
 ## 0.3.0-beta.6 - 2023-11-09
 

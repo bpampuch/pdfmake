@@ -31,8 +31,13 @@ var docDefinition = {
 		header('A very long text (' + longText.length + ' chars)'),
 		{ qr: longText },
 		'\n',
+
 		header('same long text with fit = 100 and alignment = right'),
 		{ qr: longText, fit: 150, alignment: 'right' },
+		'\n',
+
+		header('same long text with fit = 100 and padding = 1 modules in pixel'),
+		{ qr: longText, fit: 150, padding: 1 },
 	]
 };
 
