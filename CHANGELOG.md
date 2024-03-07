@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.8 - 2024-03-07
 
 - Removed unused brfs dependency
 
