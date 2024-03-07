@@ -40,7 +40,7 @@ describe('Printer', function () {
 
 		assert(PDFDocument.prototype.addPage.callCount === 2);
 
-		assert.equal(PDFDocument.prototype.addPage.firstCall.args[0], undefined);
+		assert.deepEqual(PDFDocument.prototype.addPage.firstCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
 		assert.deepEqual(PDFDocument.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
 	});
 
@@ -64,7 +64,7 @@ describe('Printer', function () {
 
 		assert(PDFDocument.prototype.addPage.callCount === 2);
 
-		assert.equal(PDFDocument.prototype.addPage.firstCall.args[0], undefined);
+		assert.deepEqual(PDFDocument.prototype.addPage.firstCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
 		assert.deepEqual(PDFDocument.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
 	});
 
@@ -93,7 +93,7 @@ describe('Printer', function () {
 
 		assert(PDFDocument.prototype.addPage.callCount === 3);
 
-		assert.equal(PDFDocument.prototype.addPage.firstCall.args[0], undefined);
+		assert.deepEqual(PDFDocument.prototype.addPage.firstCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
 		assert.deepEqual(PDFDocument.prototype.addPage.secondCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
 		assert.deepEqual(PDFDocument.prototype.addPage.thirdCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
 	});
@@ -125,7 +125,7 @@ describe('Printer', function () {
 		assert.equal(PDFDocument.prototype.addPage.callCount, 3);
 
 
-		assert.equal(PDFDocument.prototype.addPage.firstCall.args[0], undefined);
+		assert.deepEqual(PDFDocument.prototype.addPage.firstCall.args[0].size, [SHORT_SIDE, LONG_SIDE]);
 		assert.deepEqual(PDFDocument.prototype.addPage.secondCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
 		assert.deepEqual(PDFDocument.prototype.addPage.thirdCall.args[0].size, [LONG_SIDE, SHORT_SIDE]);
 	});

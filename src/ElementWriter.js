@@ -8,12 +8,19 @@ import { EventEmitter } from 'events';
  * their positions based on the context
  */
 class ElementWriter extends EventEmitter {
+
+	/**
+	 * @param {DocumentContext} context
+	 */
 	constructor(context) {
 		super();
 		this._context = context;
 		this.contextStack = [];
 	}
 
+	/**
+	 * @returns {DocumentContext}
+	 */
 	context() {
 		return this._context;
 	}
@@ -357,7 +364,7 @@ class ElementWriter extends EventEmitter {
 	 * pushContext(width, height) - creates and pushes a new context with the specified width and height
 	 * pushContext() - creates a new context for unbreakable blocks (with current availableWidth and full-page-height)
 	 *
-	 * @param {object|number} contextOrWidth
+	 * @param {DocumentContext|number} contextOrWidth
 	 * @param {number} height
 	 */
 	pushContext(contextOrWidth, height) {
@@ -367,7 +374,9 @@ class ElementWriter extends EventEmitter {
 		}
 
 		if (isNumber(contextOrWidth)) {
-			contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
+			let width = contextOrWidth;
+			contextOrWidth = new DocumentContext();
+			contextOrWidth.addPage({ width: width, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
 		}
 
 		this.contextStack.push(this.context());
