@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Removed unused brfs dependency
+
 ## 0.3.0-beta.7 - 2024-01-01
 
 - Minimal supported version Node.js 16 LTS
