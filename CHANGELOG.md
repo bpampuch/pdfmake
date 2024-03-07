@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Removed unused brfs dependency
+
 ## 0.2.9 - 2024-01-01
 
 - Added padding option for QR code
