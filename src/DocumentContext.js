@@ -255,7 +255,7 @@ class DocumentContext extends EventEmitter {
 	}
 }
 
-function pageOrientation(pageOrientationString, currentPageOrientation) {
+const pageOrientation = (pageOrientationString, currentPageOrientation) => {
 	if (pageOrientationString === undefined) {
 		return currentPageOrientation;
 	} else if (isString(pageOrientationString) && (pageOrientationString.toLowerCase() === 'landscape')) {
