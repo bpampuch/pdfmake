@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixes and validates input values headerRows and keepWithHeaderRows
+
 ## 0.2.10 - 2024-03-07
 
 - Removed unused brfs dependency

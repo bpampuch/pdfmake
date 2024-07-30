@@ -32,6 +32,17 @@ function isUndefined(variable) {
 	return variable === undefined;
 }
 
+/**
+ * @param {any} variable
+ * @returns {boolean}
+ */
+function isPositiveInteger(variable) {
+	if (!isNumber(variable) || !Number.isInteger(variable) || variable <= 0) {
+			return false;
+	}
+	return true;
+}
+
 function pack() {
 	var result = {};
 
@@ -117,6 +128,7 @@ module.exports = {
 	isObject: isObject,
 	isNull: isNull,
 	isUndefined: isUndefined,
+	isPositiveInteger: isPositiveInteger,
 	pack: pack,
 	fontStringify: fontStringify,
 	offsetVector: offsetVector,
