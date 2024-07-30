@@ -84,50 +84,9 @@ StyleContextStack.prototype.autopush = function (item) {
 		this.push(styleNames[i]);
 	}
 
-	var styleProperties = [
-		'font',
-		'fontSize',
-		'fontFeatures',
-		'bold',
-		'italics',
-		'alignment',
-		'color',
-		'columnGap',
-		'fillColor',
-		'fillOpacity',
-		'decoration',
-		'decorationStyle',
-		'decorationColor',
-		'background',
-		'lineHeight',
-		'characterSpacing',
-		'noWrap',
-		'markerColor',
-		'leadingIndent',
-		'sup',
-		'sub'
-		//'tableCellPadding'
-		// 'cellBorder',
-		// 'headerCellBorder',
-		// 'oddRowCellBorder',
-		// 'evenRowCellBorder',
-		// 'tableBorder'
-	];
-	var styleOverrideObject = {};
-	var pushStyleOverrideObject = false;
-
-	styleProperties.forEach(function (key) {
-		if (!isUndefined(item[key]) && !isNull(item[key])) {
-			styleOverrideObject[key] = item[key];
-			pushStyleOverrideObject = true;
-		}
-	});
-
-	if (pushStyleOverrideObject) {
-		this.push(styleOverrideObject);
-	}
-
-	return styleNames.length + (pushStyleOverrideObject ? 1 : 0);
+	// rather than spend significant time making a styleOverrideObject, just add item
+	this.push(item);
+	return styleNames.length + 1;
 };
 
 /**

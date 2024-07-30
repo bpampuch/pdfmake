@@ -21,6 +21,36 @@ describe('StyleContextStack', function () {
 
 	var defaultStyle = { fontSize: 12, bold: false, font: 'Helvetica' };
 
+	var styleProperties = [
+		'font',
+		'fontSize',
+		'fontFeatures',
+		'bold',
+		'italics',
+		'alignment',
+		'color',
+		'columnGap',
+		'fillColor',
+		'fillOpacity',
+		'decoration',
+		'decorationStyle',
+		'decorationColor',
+		'background',
+		'lineHeight',
+		'characterSpacing',
+		'noWrap',
+		'markerColor',
+		'leadingIndent',
+		'sup',
+		'sub'
+		//'tableCellPadding'
+		// 'cellBorder',
+		// 'headerCellBorder',
+		// 'oddRowCellBorder',
+		// 'evenRowCellBorder',
+		// 'tableBorder'
+	];
+
 	var stackWithDefaultStyle;
 	var fullStack;
 
@@ -113,21 +143,25 @@ describe('StyleContextStack', function () {
 	});
 
 	describe('autopush', function () {
-		it('should not push anything if no style nor style-property is defined', function () {
-			assert.equal(fullStack.autopush({ anotherProperty: 'test' }), 0);
+		it('should not push any style if no style nor style-property is defined', function () {
+			assert.equal(fullStack.autopush({ anotherProperty: 'test' }), 1);
+			assert.equal(fullStack.styleOverrides.length, 1);
+			styleProperties.forEach(function(key) {
+				assert.equal(fullStack.styleOverrides[0][key], undefined);
+			});
 		});
 
 		it('should push style name if object specifies it in the style property', function () {
 			assert.equal(fullStack.styleOverrides.length, 0);
-			assert.equal(fullStack.autopush({ anotherProperty: 'test', style: 'header' }), 1);
-			assert.equal(fullStack.styleOverrides.length, 1);
+			assert.equal(fullStack.autopush({ anotherProperty: 'test', style: 'header' }), 2);
+			assert.equal(fullStack.styleOverrides.length, 2);
 			assert.equal(fullStack.styleOverrides[0], 'header');
 		});
 
 		it('should push all style names if object specifies them as an array in the style property', function () {
 			assert.equal(fullStack.styleOverrides.length, 0);
-			assert.equal(fullStack.autopush({ anotherProperty: 'test', style: ['header', 'small'] }), 2);
-			assert.equal(fullStack.styleOverrides.length, 2);
+			assert.equal(fullStack.autopush({ anotherProperty: 'test', style: ['header', 'small'] }), 3);
+			assert.equal(fullStack.styleOverrides.length, 3);
 			assert.equal(fullStack.styleOverrides[0], 'header');
 			assert.equal(fullStack.styleOverrides[1], 'small');
 		});
