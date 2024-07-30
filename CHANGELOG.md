@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fixes and validates input values headerRows and keepWithHeaderRows
+- Fixed numbering nested ordered lists
 
 ## 0.2.10 - 2024-03-07
 
