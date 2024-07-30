@@ -4,6 +4,7 @@
 
 - Fixes and validates input values headerRows and keepWithHeaderRows
 - Fixed numbering nested ordered lists
+- Speed up StyleContextStack.autopush() for large tables
 
 ## 0.2.10 - 2024-03-07
 
