@@ -88,6 +88,8 @@ StyleContextStack.prototype.autopush = function (item) {
 		'font',
 		'fontSize',
 		'fontFeatures',
+		'border',
+		'borderColor',
 		'bold',
 		'italics',
 		'alignment',
