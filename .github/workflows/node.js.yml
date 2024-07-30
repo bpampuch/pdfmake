@@ -17,9 +17,9 @@ jobs:
         node-version: [12.x, 14.x, 16.x, 18.x, 20.x]
         exclude:
           - os: macos-latest
-            node-version: 12
+            node-version: 12.x
           - os: macos-latest
-            node-version: 14            
+            node-version: 14.x          
             
     steps:
     - uses: actions/checkout@v2
