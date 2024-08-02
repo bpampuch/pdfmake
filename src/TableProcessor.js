@@ -95,7 +95,7 @@ class TableProcessor {
 		this.layout = tableNode._layout;
 
 		availableWidth = writer.context().availableWidth - this.offsets.total;
-		ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth);
+		ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth, this.offsets.total, tableNode);
 
 		this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
 		this.rowSpanData = prepareRowSpanData();
