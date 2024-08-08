@@ -5,7 +5,8 @@
 - Fixed and validates input values headerRows and keepWithHeaderRows
 - Fixed numbering nested ordered lists
 - Speed up StyleContextStack.autopush() for large tables
-- Fixed widths of table columns with percentages 
+- Fixed widths of table columns with percentages
+- Fixed storing the correct context in the ending cell of a row span when there were nested column groups (columns or tables)
 
 ## 0.3.0-beta.8 - 2024-03-07
 
