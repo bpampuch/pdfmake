@@ -19,8 +19,6 @@ function DocumentContext(pageSize, pageMargins) {
 
 	this.snapshots = [];
 
-	this.endingCell = null;
-
 	this.tracker = new TraversalTracker();
 
 	this.backgroundLength = [];
@@ -42,7 +40,6 @@ DocumentContext.prototype.beginColumnGroup = function () {
 			availableWidth: this.availableWidth,
 			page: this.page
 		},
-		endingCell: this.endingCell,
 		lastColumnWidth: this.lastColumnWidth
 	});
 
@@ -52,9 +49,8 @@ DocumentContext.prototype.beginColumnGroup = function () {
 DocumentContext.prototype.beginColumn = function (width, offset, endingCell) {
 	var saved = this.snapshots[this.snapshots.length - 1];
 
-	this.calculateBottomMost(saved);
+	this.calculateBottomMost(saved, endingCell);
 
-	this.endingCell = endingCell;
 	this.page = saved.page;
 	this.x = this.x + this.lastColumnWidth + (offset || 0);
 	this.y = saved.y;
@@ -64,10 +60,9 @@ DocumentContext.prototype.beginColumn = function (width, offset, endingCell) {
 	this.lastColumnWidth = width;
 };
 
-DocumentContext.prototype.calculateBottomMost = function (destContext) {
-	if (this.endingCell) {
-		this.saveContextInEndingCell(this.endingCell);
-		this.endingCell = null;
+DocumentContext.prototype.calculateBottomMost = function (destContext, endingCell) {
+	if (endingCell) {
+		this.saveContextInEndingCell(endingCell);
 	} else {
 		destContext.bottomMost = bottomMostContext(this, destContext.bottomMost);
 	}
@@ -93,12 +88,11 @@ DocumentContext.prototype.saveContextInEndingCell = function (endingCell) {
 	};
 };
 
-DocumentContext.prototype.completeColumnGroup = function (height) {
+DocumentContext.prototype.completeColumnGroup = function (height, endingCell) {
 	var saved = this.snapshots.pop();
 
-	this.calculateBottomMost(saved);
+	this.calculateBottomMost(saved, endingCell);
 
-	this.endingCell = null;
 	this.x = saved.x;
 
 	var y = saved.bottomMost.y;
@@ -175,7 +169,6 @@ DocumentContext.prototype.beginDetachedBlock = function () {
 		availableHeight: this.availableHeight,
 		availableWidth: this.availableWidth,
 		page: this.page,
-		endingCell: this.endingCell,
 		lastColumnWidth: this.lastColumnWidth
 	});
 };
@@ -188,7 +181,6 @@ DocumentContext.prototype.endDetachedBlock = function () {
 	this.availableWidth = saved.availableWidth;
 	this.availableHeight = saved.availableHeight;
 	this.page = saved.page;
-	this.endingCell = saved.endingCell;
 	this.lastColumnWidth = saved.lastColumnWidth;
 };
 

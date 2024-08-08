@@ -511,6 +511,21 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 	}
 };
 
+LayoutBuilder.prototype.findStartingSpanCell = function (arr, i) {
+	let requiredColspan = 1;
+	for (let index = i - 1; index >= 0; index--) {
+			if (!arr[index]._span) {
+				if (arr[index].rowSpan > 1 && (arr[index].colSpan || 1) === requiredColspan) {
+					return arr[index];
+				} else {
+					return null;
+				}
+			}
+			requiredColspan++;
+	}
+	return null;
+}
+
 LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, height) {
 	var self = this;
 	var pageBreaks = [], positions = [];
@@ -531,17 +546,52 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 				}
 			}
 
-			self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
+			// if rowspan starts in this cell, we retrieve the last cell affected by the rowspan
+			var endingCell = getEndingCell(column, i);
+			if (endingCell) {
+				// We store a reference of the ending cell in the first cell of the rowspan
+				column._endingCell = endingCell;
+			}
+
+			// Check if exists and retrieve the cell that started the rowspan in case we are in the cell just after
+			var startingSpanCell = self.findStartingSpanCell(columns, i);
+			var endingSpanCell = null;
+			if (startingSpanCell && startingSpanCell._endingCell) {
+				// Reference to the last cell of the rowspan
+				endingSpanCell = startingSpanCell._endingCell;
+			}
+
+			// We pass the endingSpanCell reference to store the context just after processing rowspan cell
+			self.writer.context().beginColumn(width, leftOffset, endingSpanCell);
 			if (!column._span) {
 				self.processNode(column);
 				addAll(positions, column.positions);
 			} else if (column._columnEndingContext) {
 				// row-span ending
+				// Recover the context after processing the rowspanned cell
 				self.writer.context().markEnding(column);
 			}
 		}
 
-		self.writer.context().completeColumnGroup(height);
+		// Check if last cell is part of a span
+		var endingSpanCell = null;
+		var lastColumn = columns.length > 0 ? columns[columns.length - 1] : null;
+		if (lastColumn) {
+			// Previous column cell has a rowspan
+			if (lastColumn._endingCell) {
+				endingSpanCell = lastColumn._endingCell;
+			// Previous column cell is part of a span
+			} else if (lastColumn._span === true) {
+				// We get the cell that started the span where we set a reference to the ending cell
+				var startingSpanCell = self.findStartingSpanCell(columns, columns.length);
+				if (startingSpanCell) {
+					// Context will be stored here (ending cell)
+					endingSpanCell = startingSpanCell._endingCell;
+				}
+			}
+		}
+
+		self.writer.context().completeColumnGroup(height, endingSpanCell);
 	});
 
 	return { pageBreaks: pageBreaks, positions: positions };
