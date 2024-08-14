@@ -35,6 +35,10 @@ ImageMeasure.prototype.measureImage = function (src) {
 			return src;
 		}
 
+		if (typeof img === 'object') {
+			throw 'Not supported image definition: ' + JSON.stringify(img);
+		}
+
 		if (fs.existsSync(img)) {
 			return fs.readFileSync(img);
 		}

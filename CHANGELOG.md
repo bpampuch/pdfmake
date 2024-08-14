@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed error message of bad image definition
+
 ## 0.2.11 - 2024-08-09
 
 - Fixed and validates input values headerRows and keepWithHeaderRows
