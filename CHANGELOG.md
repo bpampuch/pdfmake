@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.12 - 2024-08-14
 
 - Fixed error message of bad image definition
 

@@ -1,4 +1,4 @@
-/*! pdfmake v0.2.11, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.2.12, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -15135,7 +15135,7 @@ if ( true && module && typeof module.exports !== 'undefined') {
 
 /***/ }),
 
-/***/ 21408:
+/***/ 82759:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -54429,7 +54429,7 @@ module.exports = URLBrowserResolver;
 var isFunction = (__webpack_require__(91867).isFunction);
 var isUndefined = (__webpack_require__(91867).isUndefined);
 var isNull = (__webpack_require__(91867).isNull);
-var FileSaver = __webpack_require__(12615);
+var FileSaver = __webpack_require__(42616);
 var saveAs = FileSaver.saveAs;
 
 var defaultClientFonts = {
@@ -56977,6 +56977,10 @@ ImageMeasure.prototype.measureImage = function (src) {
 			return src;
 		}
 
+		if (typeof img === 'object') {
+			throw 'Not supported image definition: ' + JSON.stringify(img);
+		}
+
 		if (fs.existsSync(img)) {
 			return fs.readFileSync(img);
 		}
@@ -58151,7 +58155,7 @@ function _interopDefault(ex) {
 	return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex;
 }
 
-var PdfKit = _interopDefault(__webpack_require__(21408));
+var PdfKit = _interopDefault(__webpack_require__(82759));
 
 function getEngineInstance() {
 	return PdfKit;
@@ -61163,7 +61167,7 @@ module.exports = TraversalTracker;
 
 /***/ }),
 
-/***/ 12615:
+/***/ 42616:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
