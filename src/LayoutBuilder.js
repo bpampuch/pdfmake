@@ -511,6 +511,22 @@ class LayoutBuilder {
 	}
 
 	processRow(columns, widths, gaps, tableBody, tableRow, height) {
+		const updatePageBreakData = (page, prevY) => {
+			let pageDesc;
+			// Find page break data for this row and page
+      for (let i = 0, l = pageBreaks.length; i < l; i++) {
+        let desc = pageBreaks[i];
+        if (desc.prevPage === page) {
+          pageDesc = desc;
+          break;
+        }
+      }
+			// If row has page break in this page, update prevY
+			if (pageDesc) {
+				pageDesc.prevY = Math.max(pageDesc.prevY, prevY);
+			}
+		};
+
 		const storePageBreakData = data => {
 			let pageDesc;
 
@@ -594,6 +610,9 @@ class LayoutBuilder {
 				}
 			}
 		}
+
+		// If there are page breaks in this row, update data with prevY of last cell
+		updatePageBreakData(this.writer.context().page, this.writer.context().y);
 
 		this.writer.context().completeColumnGroup(height, endingSpanCell);
 
