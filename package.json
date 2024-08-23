@@ -11,6 +11,7 @@
   "dependencies": {
     "@foliojs-fork/linebreak": "^1.1.1",
     "@foliojs-fork/pdfkit": "^0.14.0",
+    "ajv": "^8.17.1",
     "iconv-lite": "^0.6.3",
     "xmldoc": "^1.3.0"
   },
@@ -61,7 +62,8 @@
     "build:fonts": "shx mkdir -p build/fonts && shx mkdir -p build/fonts/Roboto && shx cp -r fonts/Roboto/*.* build/fonts/Roboto && brfs \"./src/browser-extensions/fonts/Roboto.js\" > build/fonts/Roboto.js",
     "lint": "eslint \"./src/**/*.js\" \"./tests/**/*.js\" \"./examples/**/*.js\" \"./standard-fonts/**/*.js\" \"./fonts/**/*.js\"",
     "mocha": "mocha --reporter spec \"./tests/**/*.spec.js\"",
-    "playground": "node dev-playground/server.js"
+    "playground": "node dev-playground/server.js",
+    "build:doka": "npm run build && cp -r build/* ../personal/doka-front/src/pdfmake/"
   },
   "repository": {
     "type": "git",

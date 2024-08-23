@@ -43,7 +43,7 @@ var web_dom_collections_for_each = __webpack_require__(2437);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.regexp.to-string.js
 var es_regexp_to_string = __webpack_require__(7114);
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
-var pdfkit_es5 = __webpack_require__(5710);
+var pdfkit_es5 = __webpack_require__(7956);
 ;// CONCATENATED MODULE: ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(4598)["Buffer"];
 
@@ -648,6 +648,10 @@ var DocPreprocessor = /*#__PURE__*/function () {
 /* harmony default export */ var src_DocPreprocessor = (DocPreprocessor);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.concat.js
 var es_array_concat = __webpack_require__(9081);
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.join.js
+var es_array_join = __webpack_require__(4845);
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es.object.entries.js
+var es_object_entries = __webpack_require__(3489);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.string.match.js
 var es_string_match = __webpack_require__(6422);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.string.link.js
@@ -2211,6 +2215,12 @@ function measure(node) {
 
 
 
+
+
+
+
+
+
 var DocMeasure = /*#__PURE__*/function () {
   function DocMeasure(pdfDocument, styleDictionary, defaultStyle, svgMeasure, tableLayouts) {
     this.pdfDocument = pdfDocument;
@@ -2237,6 +2247,7 @@ var DocMeasure = /*#__PURE__*/function () {
     return this.styleStack.auto(node, function () {
       // TODO: refactor + rethink whether this is the proper way to handle margins
       node._margin = getNodeMargin(node, _this2.styleStack);
+      extendHierarchy(node);
       if (node.columns) {
         return extendMargins(_this2.measureColumns(node));
       } else if (node.stack) {
@@ -2265,6 +2276,21 @@ var DocMeasure = /*#__PURE__*/function () {
         throw new Error("Unrecognized document structure: " + stringifyNode(node));
       }
     });
+    function extendHierarchy(node) {
+      var lineals = ['ul', 'ol', 'table', 'columns', 'li'];
+      var groups = ['stack'];
+      Object.entries(node).forEach(function (_ref) {
+        var key = _ref[0],
+          value = _ref[1];
+        if (lineals.includes(key)) {
+          value.hierarchy = node.hierarchy;
+        } else if (groups.includes(key)) {
+          value.forEach(function (item) {
+            item.hierarchy = node.hierarchy;
+          });
+        }
+      });
+    }
     function extendMargins(node) {
       var margin = node._margin;
       if (margin) {
@@ -2469,7 +2495,7 @@ var DocMeasure = /*#__PURE__*/function () {
     marker._minHeight = marker._maxHeight = gapSize.height;
     return marker;
   };
-  _proto.buildOrderedMarker = function buildOrderedMarker(counter, styleStack, type, separator) {
+  _proto.buildOrderedMarker = function buildOrderedMarker(counter, styleStack, type, separator, hierarchy) {
     function prepareAlpha(counter) {
       function toAlpha(num) {
         return (num >= 26 ? toAlpha((num / 26 >> 0) - 1) : '') + 'abcdefghijklmnopqrstuvwxyz'[num % 26 >> 0];
@@ -2511,26 +2537,38 @@ var DocMeasure = /*#__PURE__*/function () {
     function prepareDecimal(counter) {
       return counter.toString();
     }
+    var levels = [];
+    var idx = hierarchy.length - 1;
+    while (idx >= 0 && hierarchy[idx].type === type) {
+      levels.unshift(hierarchy[idx].counter);
+      idx--;
+    }
+    levels.push(counter);
     var counterText;
     switch (type) {
       case 'none':
         counterText = null;
         break;
       case 'upper-alpha':
-        counterText = prepareAlpha(counter).toUpperCase();
+        // counterText = prepareAlpha(counter).toUpperCase();
+        counterText = levels.map(prepareAlpha).join(separator).toUpperCase();
         break;
       case 'lower-alpha':
-        counterText = prepareAlpha(counter);
+        // counterText = prepareAlpha(counter);
+        counterText = levels.map(prepareAlpha).join(separator);
         break;
       case 'upper-roman':
-        counterText = prepareRoman(counter);
+        // counterText = prepareRoman(counter);
+        counterText = levels.map(prepareRoman).join(separator).toUpperCase();
         break;
       case 'lower-roman':
-        counterText = prepareRoman(counter).toLowerCase();
+        // counterText = prepareRoman(counter).toLowerCase();
+        counterText = levels.map(prepareRoman).join(separator).toLowerCase();
         break;
       case 'decimal':
       default:
-        counterText = prepareDecimal(counter);
+        // counterText = prepareDecimal(counter);
+        counterText = levels.map(prepareDecimal).join(separator);
         break;
     }
     if (counterText === null) {
@@ -2591,10 +2629,17 @@ var DocMeasure = /*#__PURE__*/function () {
     node._maxWidth = 0;
     var counter = node.start;
     for (var i = 0, l = items.length; i < l; i++) {
+      var type = items[i].listType || node.type;
+      var hierarchy = node.hierarchy ? [].concat(node.hierarchy) : [];
+      items[i].hierarchy = hierarchy.concat({
+        type: type,
+        counter: counter
+      });
       var item = items[i] = this.measureNode(items[i]);
+      console.log('item', item);
       if (!item.ol && !item.ul) {
         var counterValue = isNumber(item.counter) ? item.counter : counter;
-        item.listMarker = this.buildOrderedMarker(counterValue, style, item.listType || node.type, node.separator);
+        item.listMarker = this.buildOrderedMarker(counterValue, style, type, node.separator, hierarchy);
         if (item.listMarker._inlines) {
           node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
         }
@@ -6211,7 +6256,7 @@ var OutputDocument = /*#__PURE__*/function () {
 }();
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(2867);
+var FileSaver_min = __webpack_require__(2081);
 ;// CONCATENATED MODULE: ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -21741,7 +21786,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 5710:
+/***/ 7956:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -39413,6 +39458,23 @@ var assign = __webpack_require__(7146);
 // eslint-disable-next-line es/no-object-assign -- required for testing
 $({ target: 'Object', stat: true, forced: Object.assign !== assign }, {
   assign: assign
+});
+
+
+/***/ }),
+
+/***/ 3489:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+var $ = __webpack_require__(6475);
+var $entries = (__webpack_require__(754).entries);
+
+// `Object.entries` method
+// https://tc39.es/ecma262/#sec-object.entries
+$({ target: 'Object', stat: true }, {
+  entries: function entries(O) {
+    return $entries(O);
+  }
 });
 
 
@@ -62286,7 +62348,7 @@ module.exports = __webpack_require__(5349);
 
 /***/ }),
 
-/***/ 2867:
+/***/ 2081:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
@@ -66305,7 +66367,7 @@ var CmapProcessor = (_class = /*#__PURE__*/function () {
     }
   };
   return CmapProcessor;
-}(), (_applyDecoratedDescriptor(_class.prototype, "getCharacterSet", [cache], Object.getOwnPropertyDescriptor(_class.prototype, "getCharacterSet"), _class.prototype), _applyDecoratedDescriptor(_class.prototype, "codePointsForGlyph", [cache], Object.getOwnPropertyDescriptor(_class.prototype, "codePointsForGlyph"), _class.prototype)), _class);
+}(), _applyDecoratedDescriptor(_class.prototype, "getCharacterSet", [cache], Object.getOwnPropertyDescriptor(_class.prototype, "getCharacterSet"), _class.prototype), _applyDecoratedDescriptor(_class.prototype, "codePointsForGlyph", [cache], Object.getOwnPropertyDescriptor(_class.prototype, "codePointsForGlyph"), _class.prototype), _class);
 var KernProcessor = /*#__PURE__*/function () {
   function KernProcessor(font) {
     this.kern = font.kern;
@@ -71863,7 +71925,7 @@ var Glyph = (_class$3 = /*#__PURE__*/function () {
       return this._getName();
     }
   }]);
-}(), (_applyDecoratedDescriptor(_class$3.prototype, "cbox", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "cbox"), _class$3.prototype), _applyDecoratedDescriptor(_class$3.prototype, "bbox", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "bbox"), _class$3.prototype), _applyDecoratedDescriptor(_class$3.prototype, "path", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "path"), _class$3.prototype), _applyDecoratedDescriptor(_class$3.prototype, "advanceWidth", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "advanceWidth"), _class$3.prototype), _applyDecoratedDescriptor(_class$3.prototype, "advanceHeight", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "advanceHeight"), _class$3.prototype), _applyDecoratedDescriptor(_class$3.prototype, "name", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "name"), _class$3.prototype)), _class$3);
+}(), _applyDecoratedDescriptor(_class$3.prototype, "cbox", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "cbox"), _class$3.prototype), _applyDecoratedDescriptor(_class$3.prototype, "bbox", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "bbox"), _class$3.prototype), _applyDecoratedDescriptor(_class$3.prototype, "path", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "path"), _class$3.prototype), _applyDecoratedDescriptor(_class$3.prototype, "advanceWidth", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "advanceWidth"), _class$3.prototype), _applyDecoratedDescriptor(_class$3.prototype, "advanceHeight", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "advanceHeight"), _class$3.prototype), _applyDecoratedDescriptor(_class$3.prototype, "name", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "name"), _class$3.prototype), _class$3);
 var GlyfHeader = new r.Struct({
   numberOfContours: r.int16,
   // if negative, this is a composite glyph
@@ -74255,7 +74317,7 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
       return new GlyphVariationProcessor(this, variationCoords);
     }
   }]);
-}(), (_applyDecoratedDescriptor(_class$4.prototype, "bbox", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "bbox"), _class$4.prototype), _applyDecoratedDescriptor(_class$4.prototype, "_cmapProcessor", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "_cmapProcessor"), _class$4.prototype), _applyDecoratedDescriptor(_class$4.prototype, "characterSet", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "characterSet"), _class$4.prototype), _applyDecoratedDescriptor(_class$4.prototype, "_layoutEngine", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "_layoutEngine"), _class$4.prototype), _applyDecoratedDescriptor(_class$4.prototype, "variationAxes", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "variationAxes"), _class$4.prototype), _applyDecoratedDescriptor(_class$4.prototype, "namedVariations", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "namedVariations"), _class$4.prototype), _applyDecoratedDescriptor(_class$4.prototype, "_variationProcessor", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "_variationProcessor"), _class$4.prototype)), _class$4);
+}(), _applyDecoratedDescriptor(_class$4.prototype, "bbox", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "bbox"), _class$4.prototype), _applyDecoratedDescriptor(_class$4.prototype, "_cmapProcessor", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "_cmapProcessor"), _class$4.prototype), _applyDecoratedDescriptor(_class$4.prototype, "characterSet", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "characterSet"), _class$4.prototype), _applyDecoratedDescriptor(_class$4.prototype, "_layoutEngine", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "_layoutEngine"), _class$4.prototype), _applyDecoratedDescriptor(_class$4.prototype, "variationAxes", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "variationAxes"), _class$4.prototype), _applyDecoratedDescriptor(_class$4.prototype, "namedVariations", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "namedVariations"), _class$4.prototype), _applyDecoratedDescriptor(_class$4.prototype, "_variationProcessor", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "_variationProcessor"), _class$4.prototype), _class$4);
 var WOFFDirectoryEntry = new r.Struct({
   tag: new r.String(4),
   offset: new r.Pointer(r.uint32, 'void', {

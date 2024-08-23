@@ -39,6 +39,8 @@ class DocMeasure {
 			// TODO: refactor + rethink whether this is the proper way to handle margins
 			node._margin = getNodeMargin(node, this.styleStack);
 
+			extendHierarchy(node);
+
 			if (node.columns) {
 				return extendMargins(this.measureColumns(node));
 			} else if (node.stack) {
@@ -67,6 +69,20 @@ class DocMeasure {
 				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
 		});
+
+		function extendHierarchy(node) {
+			const lineals = ['ul', 'ol', 'table', 'columns', 'li'];
+			const groups = ['stack'];
+			Object.entries(node).forEach(([key, value]) => {
+				if (lineals.includes(key)) {
+					value.hierarchy = node.hierarchy;
+				} else if (groups.includes(key)) {
+					value.forEach((item) => {
+						item.hierarchy = node.hierarchy;
+					});
+				}
+			});
+		}
 
 		function extendMargins(node) {
 			let margin = node._margin;
@@ -299,7 +315,7 @@ class DocMeasure {
 		return marker;
 	}
 
-	buildOrderedMarker(counter, styleStack, type, separator) {
+	buildOrderedMarker(counter, styleStack, type, separator, hierarchy) {
 		function prepareAlpha(counter) {
 			function toAlpha(num) {
 				return (num >= 26 ? toAlpha((num / 26 >> 0) - 1) : '') + 'abcdefghijklmnopqrstuvwxyz'[num % 26 >> 0];
@@ -332,6 +348,16 @@ class DocMeasure {
 			return counter.toString();
 		}
 
+		let levels = [];
+		let idx = hierarchy.length - 1;
+
+		while (idx >= 0 && hierarchy[idx].type === type) {
+			levels.unshift(hierarchy[idx].counter);
+			idx--;
+		}
+
+		levels.push(counter);
+
 		let counterText;
 		switch (type) {
 			case 'none':
@@ -339,24 +365,29 @@ class DocMeasure {
 				break;
 
 			case 'upper-alpha':
-				counterText = prepareAlpha(counter).toUpperCase();
+				// counterText = prepareAlpha(counter).toUpperCase();
+				counterText = levels.map(prepareAlpha).join(separator).toUpperCase();
 				break;
 
 			case 'lower-alpha':
-				counterText = prepareAlpha(counter);
+				// counterText = prepareAlpha(counter);
+				counterText = levels.map(prepareAlpha).join(separator);
 				break;
 
 			case 'upper-roman':
-				counterText = prepareRoman(counter);
+				// counterText = prepareRoman(counter);
+				counterText = levels.map(prepareRoman).join(separator).toUpperCase();
 				break;
 
 			case 'lower-roman':
-				counterText = prepareRoman(counter).toLowerCase();
+				// counterText = prepareRoman(counter).toLowerCase();
+				counterText = levels.map(prepareRoman).join(separator).toLowerCase();
 				break;
 
 			case 'decimal':
 			default:
-				counterText = prepareDecimal(counter);
+				// counterText = prepareDecimal(counter);
+				counterText = levels.map(prepareDecimal).join(separator);
 				break;
 		}
 
@@ -425,11 +456,18 @@ class DocMeasure {
 
 		let counter = node.start;
 		for (let i = 0, l = items.length; i < l; i++) {
+			let type = items[i].listType || node.type;
+			let hierarchy = node.hierarchy ? [...node.hierarchy] : [];
+
+			items[i].hierarchy = hierarchy.concat({ type, counter });
+
 			let item = items[i] = this.measureNode(items[i]);
+
+			console.log('item', item);
 
 			if (!item.ol && !item.ul) {
 				let counterValue = isNumber(item.counter) ? item.counter : counter;
-				item.listMarker = this.buildOrderedMarker(counterValue, style, item.listType || node.type, node.separator);
+				item.listMarker = this.buildOrderedMarker(counterValue, style, type, node.separator, hierarchy);
 				if (item.listMarker._inlines) {
 					node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
 				}
