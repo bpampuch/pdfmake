@@ -186,6 +186,16 @@ class DocumentContext extends EventEmitter {
 		let prevPage = this.page;
 		let prevY = this.y;
 
+		// If we are in a column group
+		if (this.snapshots.length > 0) {
+			let lastSnapshot = this.snapshots[this.snapshots.length - 1];
+			// We have to update prevY accordingly by also taking into consideration
+			// the 'y' of cells that don't break page
+			if (lastSnapshot.bottomMost && lastSnapshot.bottomMost.y) {
+				prevY = Math.max(this.y, lastSnapshot.bottomMost.y);
+			}
+		}
+
 		let createNewPage = nextPageIndex >= this.pages.length;
 		if (createNewPage) {
 			let currentAvailableWidth = this.availableWidth;
