@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed page break in a column group
+
 ## 0.3.0-beta.9 - 2024-08-09
 
 - Fixed and validates input values headerRows and keepWithHeaderRows
