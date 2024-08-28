@@ -591,10 +591,29 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 			}
 		}
 
+		// If there are page breaks in this row, update data with prevY of last cell
+		updatePageBreakData(self.writer.context().page, self.writer.context().y);
+
 		self.writer.context().completeColumnGroup(height, endingSpanCell);
 	});
 
 	return { pageBreaks: pageBreaks, positions: positions };
+
+	function updatePageBreakData(page, prevY) {
+		var pageDesc;
+		// Find page break data for this row and page
+		for (var i = 0, l = pageBreaks.length; i < l; i++) {
+			var desc = pageBreaks[i];
+			if (desc.prevPage === page) {
+				pageDesc = desc;
+				break;
+			}
+		}
+		// If row has page break in this page, update prevY
+		if (pageDesc) {
+			pageDesc.prevY = Math.max(pageDesc.prevY, prevY);
+		}
+	}
 
 	function storePageBreakData(data) {
 		var pageDesc;
