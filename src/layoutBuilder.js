@@ -512,8 +512,8 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 };
 
 LayoutBuilder.prototype.findStartingSpanCell = function (arr, i) {
-	let requiredColspan = 1;
-	for (let index = i - 1; index >= 0; index--) {
+	var requiredColspan = 1;
+	for (var index = i - 1; index >= 0; index--) {
 			if (!arr[index]._span) {
 				if (arr[index].rowSpan > 1 && (arr[index].colSpan || 1) === requiredColspan) {
 					return arr[index];
