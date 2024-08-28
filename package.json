@@ -45,7 +45,7 @@
     "webpack-cli": "^4.7.2"
   },
   "engines": {
-    "node": ">=12"
+    "node": ">=18"
   },
   "scripts": {
     "test": "run-s build mocha",
