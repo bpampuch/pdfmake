@@ -46,7 +46,7 @@
     "webpack-cli": "^5.1.4"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "scripts": {
     "test": "run-s build mocha lint",

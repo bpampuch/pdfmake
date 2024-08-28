@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Minimal supported version Node.js 18 LTS
 - Fixed page break in a column group
 
 ## 0.3.0-beta.9 - 2024-08-09
