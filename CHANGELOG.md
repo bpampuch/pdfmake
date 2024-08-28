@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed page break in a column group
+
 ## 0.2.12 - 2024-08-14
 
 - Fixed error message of bad image definition
