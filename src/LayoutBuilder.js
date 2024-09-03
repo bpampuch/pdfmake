@@ -476,7 +476,7 @@ class LayoutBuilder {
 		}
 
 		ColumnCalculator.buildColumnWidths(columns, availableWidth);
-		let result = this.processRow(columns, columns, gaps);
+		let result = this.processRow(false, columns, columns, gaps);
 		addAll(columnNode.positions, result.positions);
 
 		function gapArray(gap) {
@@ -510,7 +510,7 @@ class LayoutBuilder {
     return null;
 	}
 
-	processRow(columns, widths, gaps, tableBody, tableRow, height) {
+	processRow(dontBreakRows, columns, widths, gaps, tableBody, tableRow, height) {
 		const updatePageBreakData = (page, prevY) => {
 			let pageDesc;
 			// Find page break data for this row and page
@@ -571,6 +571,7 @@ class LayoutBuilder {
 			if (endingCell) {
 				// We store a reference of the ending cell in the first cell of the rowspan
 				column._endingCell = endingCell;
+				column._endingCell._startingRowSpanY = column._startingRowSpanY;
 			}
 
 			// Check if exists and retrieve the cell that started the rowspan in case we are in the cell just after
@@ -587,9 +588,14 @@ class LayoutBuilder {
 				this.processNode(column);
 				addAll(positions, column.positions);
 			} else if (column._columnEndingContext) {
+				let discountY = 0;
+				if (dontBreakRows) {
+					const ctxBeforeRowSpanLastRow = this.writer.contextStack[this.writer.contextStack.length - 1];
+					discountY = ctxBeforeRowSpanLastRow.y - column._startingRowSpanY;
+				}
 				// row-span ending
 				// Recover the context after processing the rowspanned cell
-				this.writer.context().markEnding(column);
+				this.writer.context().markEnding(column, discountY);
 			}
 		}
 
@@ -692,6 +698,16 @@ class LayoutBuilder {
 
 		let rowHeights = tableNode.table.heights;
 		for (let i = 0, l = tableNode.table.body.length; i < l; i++) {
+			// if dontBreakRows and row starts a rowspan
+			// we store the 'y' of the beginning of each rowSpan
+			if (processor.dontBreakRows) {
+				tableNode.table.body[i].forEach(cell => {
+					if (cell.rowSpan && cell.rowSpan > 1) {
+						cell._startingRowSpanY = this.writer.context().y;
+					}
+				});
+			}
+
 			processor.beginRow(i, this.writer);
 
 			let height;
@@ -707,7 +723,7 @@ class LayoutBuilder {
 				height = undefined;
 			}
 
-			let result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
+			let result = this.processRow(processor.dontBreakRows, tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
 			addAll(tableNode.positions, result.positions);
 
 			processor.endRow(i, this.writer, result.pageBreaks);
