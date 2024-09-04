@@ -322,10 +322,21 @@ class ElementWriter extends EventEmitter {
 					var v = pack(item.item);
 
 					offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
-					page.items.push({
-						type: 'vector',
-						item: v
-					});
+					if (v._isFillColorFromUnbreakable) {
+						// If the item is a fillColor from an unbreakable block
+						// We have to add it at the beginning of the items body array of the page
+						delete v._isFillColorFromUnbreakable;
+						const endOfBackgroundItemsIndex = ctx.backgroundLength[ctx.page];
+						page.items.splice(endOfBackgroundItemsIndex, 0, {
+							type: 'vector',
+							item: v
+						});
+					} else {
+						page.items.push({
+							type: 'vector',
+							item: v
+						});
+					}
 					break;
 
 				case 'image':

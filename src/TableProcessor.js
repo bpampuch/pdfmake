@@ -490,7 +490,9 @@ class TableProcessor {
 								h: bgHeight,
 								lineWidth: 0,
 								color: fillColor,
-								fillOpacity: fillOpacity
+								fillOpacity: fillOpacity,
+								// mark if we are in an unbreakable block
+								_isFillColorFromUnbreakable: !!writer.transactionLevel
 							}, false, true, writer.context().backgroundLength[writer.context().page]);
 						}
 
