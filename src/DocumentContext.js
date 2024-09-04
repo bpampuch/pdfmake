@@ -65,9 +65,9 @@ class DocumentContext extends EventEmitter {
 		}
 	}
 
-	markEnding(endingCell) {
+	markEnding(endingCell, originalXOffset) {
 		this.page = endingCell._columnEndingContext.page;
-		this.x = endingCell._columnEndingContext.x;
+		this.x = endingCell._columnEndingContext.x + originalXOffset;
 		this.y = endingCell._columnEndingContext.y;
 		this.availableWidth = endingCell._columnEndingContext.availableWidth;
 		this.availableHeight = endingCell._columnEndingContext.availableHeight;
