@@ -4,6 +4,8 @@
 
 - Minimal supported version Node.js 18 LTS
 - Fixed page break in a column group
+- Fixed saving margins in an unbreakable block
+- Fixed fillColor items in unbreakable blocks
 
 ## 0.2.12 - 2024-08-14
 
