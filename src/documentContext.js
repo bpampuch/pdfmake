@@ -68,9 +68,9 @@ DocumentContext.prototype.calculateBottomMost = function (destContext, endingCel
 	}
 };
 
-DocumentContext.prototype.markEnding = function (endingCell) {
+DocumentContext.prototype.markEnding = function (endingCell, originalXOffset) {
 	this.page = endingCell._columnEndingContext.page;
-	this.x = endingCell._columnEndingContext.x;
+	this.x = endingCell._columnEndingContext.x + originalXOffset;
 	this.y = endingCell._columnEndingContext.y;
 	this.availableWidth = endingCell._columnEndingContext.availableWidth;
 	this.availableHeight = endingCell._columnEndingContext.availableHeight;

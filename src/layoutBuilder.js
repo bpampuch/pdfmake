@@ -559,6 +559,11 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 			if (startingSpanCell && startingSpanCell._endingCell) {
 				// Reference to the last cell of the rowspan
 				endingSpanCell = startingSpanCell._endingCell;
+				// Store if we are in an unbreakable block when we save the context and the originalX
+				if (this.writer.transactionLevel > 0) {
+					endingSpanCell._isUnbreakableContext = true;
+					endingSpanCell._originalXOffset = this.writer.originalX;
+				}
 			}
 
 			// We pass the endingSpanCell reference to store the context just after processing rowspan cell
@@ -567,9 +572,15 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 				self.processNode(column);
 				addAll(positions, column.positions);
 			} else if (column._columnEndingContext) {
+				var originalXOffset = 0;
+				// If context was saved from an unbreakable block and we are not in an unbreakable block anymore
+				// We have to sum the originalX (X before starting unbreakable block) to X
+				if (column._isUnbreakableContext && !this.writer.transactionLevel) {
+					originalXOffset = column._originalXOffset;
+				}
 				// row-span ending
 				// Recover the context after processing the rowspanned cell
-				self.writer.context().markEnding(column);
+				self.writer.context().markEnding(column, originalXOffset);
 			}
 		}
 
@@ -587,6 +598,11 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 				if (startingSpanCell) {
 					// Context will be stored here (ending cell)
 					endingSpanCell = startingSpanCell._endingCell;
+					// Store if we are in an unbreakable block when we save the context and the originalX
+					if (this.writer.transactionLevel > 0) {
+						endingSpanCell._isUnbreakableContext = true;
+						endingSpanCell._originalXOffset = this.writer.originalX;
+					}
 				}
 			}
 		}
