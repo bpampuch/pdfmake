@@ -491,7 +491,7 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 	}
 
 	ColumnCalculator.buildColumnWidths(columns, availableWidth);
-	var result = this.processRow(columns, columns, gaps);
+	var result = this.processRow(false, columns, columns, gaps);
 	addAll(columnNode.positions, result.positions);
 
 
@@ -526,7 +526,7 @@ LayoutBuilder.prototype.findStartingSpanCell = function (arr, i) {
 	return null;
 }
 
-LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, height) {
+LayoutBuilder.prototype.processRow = function (dontBreakRows, columns, widths, gaps, tableBody, tableRow, height) {
 	var self = this;
 	var pageBreaks = [], positions = [];
 
@@ -551,6 +551,7 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 			if (endingCell) {
 				// We store a reference of the ending cell in the first cell of the rowspan
 				column._endingCell = endingCell;
+				column._endingCell._startingRowSpanY = column._startingRowSpanY;
 			}
 
 			// Check if exists and retrieve the cell that started the rowspan in case we are in the cell just after
@@ -568,10 +569,17 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 
 			// We pass the endingSpanCell reference to store the context just after processing rowspan cell
 			self.writer.context().beginColumn(width, leftOffset, endingSpanCell);
+
 			if (!column._span) {
 				self.processNode(column);
 				addAll(positions, column.positions);
 			} else if (column._columnEndingContext) {
+				var discountY = 0;
+				if (dontBreakRows) {
+					// Calculate how many points we have to discount to Y when dontBreakRows and rowSpan are combined
+					const ctxBeforeRowSpanLastRow = this.writer.contextStack[this.writer.contextStack.length - 1];
+					discountY = ctxBeforeRowSpanLastRow.y - column._startingRowSpanY;
+				}
 				var originalXOffset = 0;
 				// If context was saved from an unbreakable block and we are not in an unbreakable block anymore
 				// We have to sum the originalX (X before starting unbreakable block) to X
@@ -580,7 +588,7 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 				}
 				// row-span ending
 				// Recover the context after processing the rowspanned cell
-				self.writer.context().markEnding(column, originalXOffset);
+				self.writer.context().markEnding(column, originalXOffset, discountY);
 			}
 		}
 
@@ -720,6 +728,16 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 
 	var rowHeights = tableNode.table.heights;
 	for (var i = 0, l = tableNode.table.body.length; i < l; i++) {
+		// if dontBreakRows and row starts a rowspan
+		// we store the 'y' of the beginning of each rowSpan
+		if (processor.dontBreakRows) {
+			tableNode.table.body[i].forEach(cell => {
+				if (cell.rowSpan && cell.rowSpan > 1) {
+					cell._startingRowSpanY = this.writer.context().y;
+				}
+			});
+		}
+
 		processor.beginRow(i, this.writer);
 
 		var height;
@@ -735,7 +753,7 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 			height = undefined;
 		}
 
-		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
+		var result = this.processRow(processor.dontBreakRows, tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
 		addAll(tableNode.positions, result.positions);
 
 		processor.endRow(i, this.writer, result.pageBreaks);
