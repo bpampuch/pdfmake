@@ -23,7 +23,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
-var pdfkit_es5 = __webpack_require__(2200);
+var pdfkit_es5 = __webpack_require__(6042);
 ;// CONCATENATED MODULE: ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(4598)["Buffer"];
 
@@ -234,359 +234,154 @@ function isEmptyObject(variable) {
 function isValue(variable) {
   return variable !== undefined && variable !== null;
 }
-;// CONCATENATED MODULE: ./src/helpers/node.js
+;// CONCATENATED MODULE: ./src/columnCalculator.js
 
-function fontStringify(key, val) {
-  if (key === 'font') {
-    return 'font';
+function buildColumnWidths(columns, availableWidth, offsetTotal, tableNode) {
+  if (offsetTotal === void 0) {
+    offsetTotal = 0;
   }
-  return val;
-}
-
-/**
- * Convert node to readable string
- *
- * @param {object} node
- * @returns {string}
- */
-function stringifyNode(node) {
-  return JSON.stringify(node, fontStringify);
-}
-
-/**
- * @param {object} node
- * @returns {?string}
- */
-function getNodeId(node) {
-  if (node.id) {
-    return node.id;
-  }
-  if (Array.isArray(node.text)) {
-    for (let n of node.text) {
-      let nodeId = getNodeId(n);
-      if (nodeId) {
-        return nodeId;
-      }
-    }
-  }
-  return null;
-}
-
-/**
- * @param {object} node
- * @param {object} styleStack object is instance of PDFDocument
- * @returns {?Array}
- */
-function getNodeMargin(node, styleStack) {
-  function processSingleMargins(node, currentMargin) {
-    if (node.marginLeft || node.marginTop || node.marginRight || node.marginBottom) {
-      return [node.marginLeft || currentMargin[0] || 0, node.marginTop || currentMargin[1] || 0, node.marginRight || currentMargin[2] || 0, node.marginBottom || currentMargin[3] || 0];
-    }
-    return currentMargin;
-  }
-  function flattenStyleArray(styleArray, styleStack) {
-    let flattenedStyles = {};
-    for (let i = styleArray.length - 1; i >= 0; i--) {
-      let styleName = styleArray[i];
-      let style = styleStack.styleDictionary[styleName];
-      for (let key in style) {
-        if (style.hasOwnProperty(key)) {
-          flattenedStyles[key] = style[key];
-        }
-      }
-    }
-    return flattenedStyles;
-  }
-  function convertMargin(margin) {
-    if (isNumber(margin)) {
-      margin = [margin, margin, margin, margin];
-    } else if (Array.isArray(margin)) {
-      if (margin.length === 2) {
-        margin = [margin[0], margin[1], margin[0], margin[1]];
-      }
-    }
-    return margin;
-  }
-  let margin = [undefined, undefined, undefined, undefined];
-  if (node.style) {
-    let styleArray = Array.isArray(node.style) ? node.style : [node.style];
-    let flattenedStyleArray = flattenStyleArray(styleArray, styleStack);
-    if (flattenedStyleArray) {
-      margin = processSingleMargins(flattenedStyleArray, margin);
-    }
-    if (flattenedStyleArray.margin) {
-      margin = convertMargin(flattenedStyleArray.margin);
-    }
-  }
-  margin = processSingleMargins(node, margin);
-  if (node.margin) {
-    margin = convertMargin(node.margin);
-  }
-  if (margin[0] === undefined && margin[1] === undefined && margin[2] === undefined && margin[3] === undefined) {
-    return null;
-  }
-  return margin;
-}
-;// CONCATENATED MODULE: ./src/DocPreprocessor.js
-/* provided dependency */ var DocPreprocessor_Buffer = __webpack_require__(4598)["Buffer"];
-
-
-const convertValueToString = value => {
-  if (isString(value)) {
-    return value.replace(/\t/g, '    '); // expand tab as spaces
-  } else if (isNumber(value) || typeof value === 'boolean') {
-    return value.toString();
-  } else if (!isValue(value) || isEmptyObject(value)) {
-    return '';
-  }
-
-  // TODO: throw exception ?
-
-  return value;
-};
-class DocPreprocessor {
-  constructor() {
-    // begin - Vertical alignment
-    this.checkNode = function (node) {
-      // expand shortcuts and casting values
-      if (Array.isArray(node)) {
-        node = {
-          stack: node
-        };
-      } else if (isString(node) || isNumber(node) || typeof node === 'boolean' || !isValue(node) || isEmptyObject(node)) {
-        // text node defined as value
-        node = {
-          text: convertValueToString(node)
-        };
-      } else if ('text' in node) {
-        // cast value in text property
-        node.text = convertValueToString(node.text);
-      }
-      return node;
-    };
-  }
-  preprocessDocument(docStructure) {
-    this.parentNode = null;
-    this.tocs = [];
-    this.nodeReferences = [];
-    return this.preprocessNode(docStructure);
-  }
-  // end - Vertical alignment
-
-  preprocessNode(node) {
-    // begin - Vertical alignment
-    node = this.checkNode(node);
-    // end - Vertical alignment
-
-    if (node.columns) {
-      return this.preprocessColumns(node);
-    } else if (node.stack) {
-      return this.preprocessVerticalContainer(node);
-    } else if (node.ul) {
-      return this.preprocessList(node);
-    } else if (node.ol) {
-      return this.preprocessList(node);
-    } else if (node.table) {
-      return this.preprocessTable(node);
-    } else if (node.text !== undefined) {
-      return this.preprocessText(node);
-    } else if (node.toc) {
-      return this.preprocessToc(node);
-    } else if (node.image) {
-      return this.preprocessImage(node);
-    } else if (node.svg) {
-      return this.preprocessSVG(node);
-    } else if (node.canvas) {
-      return this.preprocessCanvas(node);
-    } else if (node.qr) {
-      return this.preprocessQr(node);
-    } else if (node.attachment) {
-      return this.preprocessAttachment(node);
-    } else if (node.pageReference || node.textReference) {
-      return this.preprocessText(node);
+  let autoColumns = [];
+  let autoMin = 0;
+  let autoMax = 0;
+  let starColumns = [];
+  let starMaxMin = 0;
+  let starMaxMax = 0;
+  let fixedColumns = [];
+  let initial_availableWidth = availableWidth;
+  columns.forEach(column => {
+    if (isAutoColumn(column)) {
+      autoColumns.push(column);
+      autoMin += column._minWidth;
+      autoMax += column._maxWidth;
+    } else if (isStarColumn(column)) {
+      starColumns.push(column);
+      starMaxMin = Math.max(starMaxMin, column._minWidth);
+      starMaxMax = Math.max(starMaxMax, column._maxWidth);
     } else {
-      throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
+      fixedColumns.push(column);
     }
-  }
-  preprocessColumns(node) {
-    let columns = node.columns;
-    for (let i = 0, l = columns.length; i < l; i++) {
-      // begin - Vertical alignment
-      columns[i] = this.checkNode(columns[i]);
-      columns[i].__nodeRef = node.__nodeRef ?? node;
-      // end - Vertical alignment
-      columns[i] = this.preprocessNode(columns[i]);
-    }
-    return node;
-  }
-  preprocessVerticalContainer(node) {
-    let items = node.stack;
-    for (let i = 0, l = items.length; i < l; i++) {
-      // begin - Vertical alignment
-      items[i] = this.checkNode(items[i]);
-      items[i].__nodeRef = node.__nodeRef ?? node;
-      // end - Vertical alignment
-      items[i] = this.preprocessNode(items[i]);
-    }
-    return node;
-  }
-  preprocessList(node) {
-    let items = node.ul || node.ol;
-    for (let i = 0, l = items.length; i < l; i++) {
-      // begin - Vertical alignment
-      items[i] = this.checkNode(items[i]);
-      items[i].__nodeRef = node.__nodeRef ?? node;
-      // end - Vertical alignment
-      items[i] = this.preprocessNode(items[i]);
-    }
-    return node;
-  }
-  preprocessTable(node) {
-    let col;
-    let row;
-    let cols;
-    let rows;
-    for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
-      for (row = 0, rows = node.table.body.length; row < rows; row++) {
-        let rowData = node.table.body[row];
-        let data = rowData[col];
-        if (data !== undefined) {
-          if (data === null) {
-            // transform to object
-            data = '';
-          }
-          if (!data._span) {
-            rowData[col] = this.preprocessNode(data);
-          }
+  });
+  fixedColumns.forEach((col, colIndex) => {
+    // width specified as %
+    if (isString(col.width) && /\d+%/.test(col.width)) {
+      // In tables we have to take into consideration the reserved width for paddings and borders
+      let reservedWidth = 0;
+      if (tableNode) {
+        const paddingLeft = tableNode._layout.paddingLeft(colIndex, tableNode);
+        const paddingRight = tableNode._layout.paddingRight(colIndex, tableNode);
+        const borderLeft = tableNode._layout.vLineWidth(colIndex, tableNode);
+        const borderRight = tableNode._layout.vLineWidth(colIndex + 1, tableNode);
+        if (colIndex === 0) {
+          // first column assumes whole borderLeft and half of border right
+          reservedWidth = paddingLeft + paddingRight + borderLeft + borderRight / 2;
+        } else if (colIndex === fixedColumns.length - 1) {
+          // last column assumes whole borderRight and half of border left
+          reservedWidth = paddingLeft + paddingRight + borderLeft / 2 + borderRight;
+        } else {
+          // Columns in the middle assume half of each border
+          reservedWidth = paddingLeft + paddingRight + borderLeft / 2 + borderRight / 2;
         }
       }
+      const totalAvailableWidth = initial_availableWidth + offsetTotal;
+      col.width = parseFloat(col.width) * totalAvailableWidth / 100 - reservedWidth;
     }
-    return node;
-  }
-  preprocessText(node) {
-    if (node.tocItem) {
-      if (!Array.isArray(node.tocItem)) {
-        node.tocItem = [node.tocItem];
-      }
-      for (let i = 0, l = node.tocItem.length; i < l; i++) {
-        if (!isString(node.tocItem[i])) {
-          node.tocItem[i] = '_default_';
-        }
-        let tocItemId = node.tocItem[i];
-        if (!this.tocs[tocItemId]) {
-          this.tocs[tocItemId] = {
-            toc: {
-              _items: [],
-              _pseudo: true
-            }
-          };
-        }
-        if (!node.id) {
-          node.id = `toc-${tocItemId}-${this.tocs[tocItemId].toc._items.length}`;
-        }
-        let tocItemRef = {
-          _nodeRef: this._getNodeForNodeRef(node),
-          _textNodeRef: node
-        };
-        this.tocs[tocItemId].toc._items.push(tocItemRef);
-      }
+    if (col.width < col._minWidth && col.elasticWidth) {
+      col._calcWidth = col._minWidth;
+    } else {
+      col._calcWidth = col.width;
     }
-    if (node.id) {
-      if (this.nodeReferences[node.id]) {
-        if (!this.nodeReferences[node.id]._pseudo) {
-          throw new Error(`Node id '${node.id}' already exists`);
-        }
-        this.nodeReferences[node.id]._nodeRef = this._getNodeForNodeRef(node);
-        this.nodeReferences[node.id]._textNodeRef = node;
-        this.nodeReferences[node.id]._pseudo = false;
-      } else {
-        this.nodeReferences[node.id] = {
-          _nodeRef: this._getNodeForNodeRef(node),
-          _textNodeRef: node
-        };
-      }
+    availableWidth -= col._calcWidth;
+  });
+
+  // http://www.freesoft.org/CIE/RFC/1942/18.htm
+  // http://www.w3.org/TR/CSS2/tables.html#width-layout
+  // http://dev.w3.org/csswg/css3-tables-algorithms/Overview.src.htm
+  let minW = autoMin + starMaxMin * starColumns.length;
+  let maxW = autoMax + starMaxMax * starColumns.length;
+  if (minW >= availableWidth) {
+    // case 1 - there's no way to fit all columns within available width
+    // that's actually pretty bad situation with PDF as we have no horizontal scroll
+    // no easy workaround (unless we decide, in the future, to split single words)
+    // currently we simply use minWidths for all columns
+    autoColumns.forEach(col => {
+      col._calcWidth = col._minWidth;
+    });
+    starColumns.forEach(col => {
+      col._calcWidth = starMaxMin; // starMaxMin already contains padding
+    });
+  } else {
+    if (maxW < availableWidth) {
+      // case 2 - we can fit rest of the table within available space
+      autoColumns.forEach(col => {
+        col._calcWidth = col._maxWidth;
+        availableWidth -= col._calcWidth;
+      });
+    } else {
+      // maxW is too large, but minW fits within available width
+      let W = availableWidth - minW;
+      let D = maxW - minW;
+      autoColumns.forEach(col => {
+        let d = col._maxWidth - col._minWidth;
+        col._calcWidth = col._minWidth + d * W / D;
+        availableWidth -= col._calcWidth;
+      });
     }
-    if (node.pageReference) {
-      if (!this.nodeReferences[node.pageReference]) {
-        this.nodeReferences[node.pageReference] = {
-          _nodeRef: {},
-          _textNodeRef: {},
-          _pseudo: true
-        };
-      }
-      node.text = '00000';
-      node.linkToDestination = node.pageReference;
-      node._pageRef = this.nodeReferences[node.pageReference];
+    if (starColumns.length > 0) {
+      let starSize = availableWidth / starColumns.length;
+      starColumns.forEach(col => {
+        col._calcWidth = starSize;
+      });
     }
-    if (node.textReference) {
-      if (!this.nodeReferences[node.textReference]) {
-        this.nodeReferences[node.textReference] = {
-          _nodeRef: {},
-          _pseudo: true
-        };
-      }
-      node.text = '';
-      node.linkToDestination = node.textReference;
-      node._textRef = this.nodeReferences[node.textReference];
-    }
-    if (node.text && node.text.text) {
-      node.text = [this.preprocessNode(node.text)];
-    } else if (Array.isArray(node.text)) {
-      let isSetParentNode = false;
-      if (this.parentNode === null) {
-        this.parentNode = node;
-        isSetParentNode = true;
-      }
-      for (let i = 0, l = node.text.length; i < l; i++) {
-        node.text[i] = this.preprocessNode(node.text[i]);
-      }
-      if (isSetParentNode) {
-        this.parentNode = null;
-      }
-    }
-    return node;
-  }
-  preprocessToc(node) {
-    if (!node.toc.id) {
-      node.toc.id = '_default_';
-    }
-    node.toc.title = node.toc.title ? this.preprocessNode(node.toc.title) : null;
-    node.toc._items = [];
-    if (this.tocs[node.toc.id]) {
-      if (!this.tocs[node.toc.id].toc._pseudo) {
-        throw new Error(`TOC '${node.toc.id}' already exists`);
-      }
-      node.toc._items = this.tocs[node.toc.id].toc._items;
-    }
-    this.tocs[node.toc.id] = node;
-    return node;
-  }
-  preprocessImage(node) {
-    if (node.image.type !== undefined && node.image.data !== undefined && node.image.type === 'Buffer' && Array.isArray(node.image.data)) {
-      node.image = DocPreprocessor_Buffer.from(node.image.data);
-    }
-    return node;
-  }
-  preprocessCanvas(node) {
-    return node;
-  }
-  preprocessSVG(node) {
-    return node;
-  }
-  preprocessQr(node) {
-    return node;
-  }
-  preprocessAttachment(node) {
-    return node;
-  }
-  _getNodeForNodeRef(node) {
-    if (this.parentNode) {
-      return this.parentNode;
-    }
-    return node;
   }
 }
-/* harmony default export */ var src_DocPreprocessor = (DocPreprocessor);
+function isAutoColumn(column) {
+  return column.width === 'auto';
+}
+function isStarColumn(column) {
+  return column.width === null || column.width === undefined || column.width === '*' || column.width === 'star';
+}
+
+//TODO: refactor and reuse in measureTable
+function measureMinMax(columns) {
+  let result = {
+    min: 0,
+    max: 0
+  };
+  let maxStar = {
+    min: 0,
+    max: 0
+  };
+  let starCount = 0;
+  for (let i = 0, l = columns.length; i < l; i++) {
+    let c = columns[i];
+    if (isStarColumn(c)) {
+      maxStar.min = Math.max(maxStar.min, c._minWidth);
+      maxStar.max = Math.max(maxStar.max, c._maxWidth);
+      starCount++;
+    } else if (isAutoColumn(c)) {
+      result.min += c._minWidth;
+      result.max += c._maxWidth;
+    } else {
+      result.min += c.width !== undefined && c.width || c._minWidth;
+      result.max += c.width !== undefined && c.width || c._maxWidth;
+    }
+  }
+  if (starCount) {
+    result.min += starCount * maxStar.min;
+    result.max += starCount * maxStar.max;
+  }
+  return result;
+}
+
+/**
+ * Calculates column widths
+ */
+/* harmony default export */ var columnCalculator = ({
+  buildColumnWidths: buildColumnWidths,
+  measureMinMax: measureMinMax,
+  isAutoColumn: isAutoColumn,
+  isStarColumn: isStarColumn
+});
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/linebreak/src/linebreaker.js
 var linebreaker = __webpack_require__(5417);
 var linebreaker_default = /*#__PURE__*/__webpack_require__.n(linebreaker);
@@ -1102,154 +897,6 @@ class TextInlines {
   }
 }
 /* harmony default export */ var src_TextInlines = (TextInlines);
-;// CONCATENATED MODULE: ./src/columnCalculator.js
-
-function buildColumnWidths(columns, availableWidth, offsetTotal, tableNode) {
-  if (offsetTotal === void 0) {
-    offsetTotal = 0;
-  }
-  let autoColumns = [];
-  let autoMin = 0;
-  let autoMax = 0;
-  let starColumns = [];
-  let starMaxMin = 0;
-  let starMaxMax = 0;
-  let fixedColumns = [];
-  let initial_availableWidth = availableWidth;
-  columns.forEach(column => {
-    if (isAutoColumn(column)) {
-      autoColumns.push(column);
-      autoMin += column._minWidth;
-      autoMax += column._maxWidth;
-    } else if (isStarColumn(column)) {
-      starColumns.push(column);
-      starMaxMin = Math.max(starMaxMin, column._minWidth);
-      starMaxMax = Math.max(starMaxMax, column._maxWidth);
-    } else {
-      fixedColumns.push(column);
-    }
-  });
-  fixedColumns.forEach((col, colIndex) => {
-    // width specified as %
-    if (isString(col.width) && /\d+%/.test(col.width)) {
-      // In tables we have to take into consideration the reserved width for paddings and borders
-      let reservedWidth = 0;
-      if (tableNode) {
-        const paddingLeft = tableNode._layout.paddingLeft(colIndex, tableNode);
-        const paddingRight = tableNode._layout.paddingRight(colIndex, tableNode);
-        const borderLeft = tableNode._layout.vLineWidth(colIndex, tableNode);
-        const borderRight = tableNode._layout.vLineWidth(colIndex + 1, tableNode);
-        if (colIndex === 0) {
-          // first column assumes whole borderLeft and half of border right
-          reservedWidth = paddingLeft + paddingRight + borderLeft + borderRight / 2;
-        } else if (colIndex === fixedColumns.length - 1) {
-          // last column assumes whole borderRight and half of border left
-          reservedWidth = paddingLeft + paddingRight + borderLeft / 2 + borderRight;
-        } else {
-          // Columns in the middle assume half of each border
-          reservedWidth = paddingLeft + paddingRight + borderLeft / 2 + borderRight / 2;
-        }
-      }
-      const totalAvailableWidth = initial_availableWidth + offsetTotal;
-      col.width = parseFloat(col.width) * totalAvailableWidth / 100 - reservedWidth;
-    }
-    if (col.width < col._minWidth && col.elasticWidth) {
-      col._calcWidth = col._minWidth;
-    } else {
-      col._calcWidth = col.width;
-    }
-    availableWidth -= col._calcWidth;
-  });
-
-  // http://www.freesoft.org/CIE/RFC/1942/18.htm
-  // http://www.w3.org/TR/CSS2/tables.html#width-layout
-  // http://dev.w3.org/csswg/css3-tables-algorithms/Overview.src.htm
-  let minW = autoMin + starMaxMin * starColumns.length;
-  let maxW = autoMax + starMaxMax * starColumns.length;
-  if (minW >= availableWidth) {
-    // case 1 - there's no way to fit all columns within available width
-    // that's actually pretty bad situation with PDF as we have no horizontal scroll
-    // no easy workaround (unless we decide, in the future, to split single words)
-    // currently we simply use minWidths for all columns
-    autoColumns.forEach(col => {
-      col._calcWidth = col._minWidth;
-    });
-    starColumns.forEach(col => {
-      col._calcWidth = starMaxMin; // starMaxMin already contains padding
-    });
-  } else {
-    if (maxW < availableWidth) {
-      // case 2 - we can fit rest of the table within available space
-      autoColumns.forEach(col => {
-        col._calcWidth = col._maxWidth;
-        availableWidth -= col._calcWidth;
-      });
-    } else {
-      // maxW is too large, but minW fits within available width
-      let W = availableWidth - minW;
-      let D = maxW - minW;
-      autoColumns.forEach(col => {
-        let d = col._maxWidth - col._minWidth;
-        col._calcWidth = col._minWidth + d * W / D;
-        availableWidth -= col._calcWidth;
-      });
-    }
-    if (starColumns.length > 0) {
-      let starSize = availableWidth / starColumns.length;
-      starColumns.forEach(col => {
-        col._calcWidth = starSize;
-      });
-    }
-  }
-}
-function isAutoColumn(column) {
-  return column.width === 'auto';
-}
-function isStarColumn(column) {
-  return column.width === null || column.width === undefined || column.width === '*' || column.width === 'star';
-}
-
-//TODO: refactor and reuse in measureTable
-function measureMinMax(columns) {
-  let result = {
-    min: 0,
-    max: 0
-  };
-  let maxStar = {
-    min: 0,
-    max: 0
-  };
-  let starCount = 0;
-  for (let i = 0, l = columns.length; i < l; i++) {
-    let c = columns[i];
-    if (isStarColumn(c)) {
-      maxStar.min = Math.max(maxStar.min, c._minWidth);
-      maxStar.max = Math.max(maxStar.max, c._maxWidth);
-      starCount++;
-    } else if (isAutoColumn(c)) {
-      result.min += c._minWidth;
-      result.max += c._maxWidth;
-    } else {
-      result.min += c.width !== undefined && c.width || c._minWidth;
-      result.max += c.width !== undefined && c.width || c._maxWidth;
-    }
-  }
-  if (starCount) {
-    result.min += starCount * maxStar.min;
-    result.max += starCount * maxStar.max;
-  }
-  return result;
-}
-
-/**
- * Calculates column widths
- */
-/* harmony default export */ var columnCalculator = ({
-  buildColumnWidths: buildColumnWidths,
-  measureMinMax: measureMinMax,
-  isAutoColumn: isAutoColumn,
-  isStarColumn: isStarColumn
-});
 ;// CONCATENATED MODULE: ./src/tableLayouts.js
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 
@@ -1346,6 +993,99 @@ const defaultTableLayout = {
   },
   defaultBorder: true
 };
+;// CONCATENATED MODULE: ./src/helpers/node.js
+
+function fontStringify(key, val) {
+  if (key === 'font') {
+    return 'font';
+  }
+  return val;
+}
+
+/**
+ * Convert node to readable string
+ *
+ * @param {object} node
+ * @returns {string}
+ */
+function stringifyNode(node) {
+  return JSON.stringify(node, fontStringify);
+}
+
+/**
+ * @param {object} node
+ * @returns {?string}
+ */
+function getNodeId(node) {
+  if (node.id) {
+    return node.id;
+  }
+  if (Array.isArray(node.text)) {
+    for (let n of node.text) {
+      let nodeId = getNodeId(n);
+      if (nodeId) {
+        return nodeId;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * @param {object} node
+ * @param {object} styleStack object is instance of PDFDocument
+ * @returns {?Array}
+ */
+function getNodeMargin(node, styleStack) {
+  function processSingleMargins(node, currentMargin) {
+    if (node.marginLeft || node.marginTop || node.marginRight || node.marginBottom) {
+      return [node.marginLeft || currentMargin[0] || 0, node.marginTop || currentMargin[1] || 0, node.marginRight || currentMargin[2] || 0, node.marginBottom || currentMargin[3] || 0];
+    }
+    return currentMargin;
+  }
+  function flattenStyleArray(styleArray, styleStack) {
+    let flattenedStyles = {};
+    for (let i = styleArray.length - 1; i >= 0; i--) {
+      let styleName = styleArray[i];
+      let style = styleStack.styleDictionary[styleName];
+      for (let key in style) {
+        if (style.hasOwnProperty(key)) {
+          flattenedStyles[key] = style[key];
+        }
+      }
+    }
+    return flattenedStyles;
+  }
+  function convertMargin(margin) {
+    if (isNumber(margin)) {
+      margin = [margin, margin, margin, margin];
+    } else if (Array.isArray(margin)) {
+      if (margin.length === 2) {
+        margin = [margin[0], margin[1], margin[0], margin[1]];
+      }
+    }
+    return margin;
+  }
+  let margin = [undefined, undefined, undefined, undefined];
+  if (node.style) {
+    let styleArray = Array.isArray(node.style) ? node.style : [node.style];
+    let flattenedStyleArray = flattenStyleArray(styleArray, styleStack);
+    if (flattenedStyleArray) {
+      margin = processSingleMargins(flattenedStyleArray, margin);
+    }
+    if (flattenedStyleArray.margin) {
+      margin = convertMargin(flattenedStyleArray.margin);
+    }
+  }
+  margin = processSingleMargins(node, margin);
+  if (node.margin) {
+    margin = convertMargin(node.margin);
+  }
+  if (margin[0] === undefined && margin[1] === undefined && margin[2] === undefined && margin[3] === undefined) {
+    return null;
+  }
+  return margin;
+}
 ;// CONCATENATED MODULE: ./src/helpers/tools.js
 function pack() {
   let result = {};
@@ -2724,6 +2464,266 @@ class DocMeasure {
   }
 }
 /* harmony default export */ var src_DocMeasure = (DocMeasure);
+;// CONCATENATED MODULE: ./src/DocPreprocessor.js
+/* provided dependency */ var DocPreprocessor_Buffer = __webpack_require__(4598)["Buffer"];
+
+
+const convertValueToString = value => {
+  if (isString(value)) {
+    return value.replace(/\t/g, '    '); // expand tab as spaces
+  } else if (isNumber(value) || typeof value === 'boolean') {
+    return value.toString();
+  } else if (!isValue(value) || isEmptyObject(value)) {
+    return '';
+  }
+
+  // TODO: throw exception ?
+
+  return value;
+};
+class DocPreprocessor {
+  constructor() {
+    // begin - Vertical alignment
+    this.checkNode = function (node) {
+      // expand shortcuts and casting values
+      if (Array.isArray(node)) {
+        node = {
+          stack: node
+        };
+      } else if (isString(node) || isNumber(node) || typeof node === 'boolean' || !isValue(node) || isEmptyObject(node)) {
+        // text node defined as value
+        node = {
+          text: convertValueToString(node)
+        };
+      } else if ('text' in node) {
+        // cast value in text property
+        node.text = convertValueToString(node.text);
+      }
+      return node;
+    };
+  }
+  preprocessDocument(docStructure) {
+    this.parentNode = null;
+    this.tocs = [];
+    this.nodeReferences = [];
+    return this.preprocessNode(docStructure);
+  }
+  // end - Vertical alignment
+
+  preprocessNode(node) {
+    // begin - Vertical alignment
+    node = this.checkNode(node);
+    // end - Vertical alignment
+
+    if (node.columns) {
+      return this.preprocessColumns(node);
+    } else if (node.stack) {
+      return this.preprocessVerticalContainer(node);
+    } else if (node.ul) {
+      return this.preprocessList(node);
+    } else if (node.ol) {
+      return this.preprocessList(node);
+    } else if (node.table) {
+      return this.preprocessTable(node);
+    } else if (node.text !== undefined) {
+      return this.preprocessText(node);
+    } else if (node.toc) {
+      return this.preprocessToc(node);
+    } else if (node.image) {
+      return this.preprocessImage(node);
+    } else if (node.svg) {
+      return this.preprocessSVG(node);
+    } else if (node.canvas) {
+      return this.preprocessCanvas(node);
+    } else if (node.qr) {
+      return this.preprocessQr(node);
+    } else if (node.attachment) {
+      return this.preprocessAttachment(node);
+    } else if (node.pageReference || node.textReference) {
+      return this.preprocessText(node);
+    } else {
+      throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
+    }
+  }
+  preprocessColumns(node) {
+    let columns = node.columns;
+    for (let i = 0, l = columns.length; i < l; i++) {
+      // begin - Vertical alignment
+      columns[i] = this.checkNode(columns[i]);
+      columns[i].__nodeRef = node.__nodeRef ?? node;
+      // end - Vertical alignment
+      columns[i] = this.preprocessNode(columns[i]);
+    }
+    return node;
+  }
+  preprocessVerticalContainer(node) {
+    let items = node.stack;
+    for (let i = 0, l = items.length; i < l; i++) {
+      // begin - Vertical alignment
+      items[i] = this.checkNode(items[i]);
+      items[i].__nodeRef = node.__nodeRef ?? node;
+      // end - Vertical alignment
+      items[i] = this.preprocessNode(items[i]);
+    }
+    return node;
+  }
+  preprocessList(node) {
+    let items = node.ul || node.ol;
+    for (let i = 0, l = items.length; i < l; i++) {
+      // begin - Vertical alignment
+      items[i] = this.checkNode(items[i]);
+      items[i].__nodeRef = node.__nodeRef ?? node;
+      // end - Vertical alignment
+      items[i] = this.preprocessNode(items[i]);
+    }
+    return node;
+  }
+  preprocessTable(node) {
+    let col;
+    let row;
+    let cols;
+    let rows;
+    for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
+      for (row = 0, rows = node.table.body.length; row < rows; row++) {
+        let rowData = node.table.body[row];
+        let data = rowData[col];
+        if (data !== undefined) {
+          if (data === null) {
+            // transform to object
+            data = '';
+          }
+          if (!data._span) {
+            rowData[col] = this.preprocessNode(data);
+          }
+        }
+      }
+    }
+    return node;
+  }
+  preprocessText(node) {
+    if (node.tocItem) {
+      if (!Array.isArray(node.tocItem)) {
+        node.tocItem = [node.tocItem];
+      }
+      for (let i = 0, l = node.tocItem.length; i < l; i++) {
+        if (!isString(node.tocItem[i])) {
+          node.tocItem[i] = '_default_';
+        }
+        let tocItemId = node.tocItem[i];
+        if (!this.tocs[tocItemId]) {
+          this.tocs[tocItemId] = {
+            toc: {
+              _items: [],
+              _pseudo: true
+            }
+          };
+        }
+        if (!node.id) {
+          node.id = `toc-${tocItemId}-${this.tocs[tocItemId].toc._items.length}`;
+        }
+        let tocItemRef = {
+          _nodeRef: this._getNodeForNodeRef(node),
+          _textNodeRef: node
+        };
+        this.tocs[tocItemId].toc._items.push(tocItemRef);
+      }
+    }
+    if (node.id) {
+      if (this.nodeReferences[node.id]) {
+        if (!this.nodeReferences[node.id]._pseudo) {
+          throw new Error(`Node id '${node.id}' already exists`);
+        }
+        this.nodeReferences[node.id]._nodeRef = this._getNodeForNodeRef(node);
+        this.nodeReferences[node.id]._textNodeRef = node;
+        this.nodeReferences[node.id]._pseudo = false;
+      } else {
+        this.nodeReferences[node.id] = {
+          _nodeRef: this._getNodeForNodeRef(node),
+          _textNodeRef: node
+        };
+      }
+    }
+    if (node.pageReference) {
+      if (!this.nodeReferences[node.pageReference]) {
+        this.nodeReferences[node.pageReference] = {
+          _nodeRef: {},
+          _textNodeRef: {},
+          _pseudo: true
+        };
+      }
+      node.text = '00000';
+      node.linkToDestination = node.pageReference;
+      node._pageRef = this.nodeReferences[node.pageReference];
+    }
+    if (node.textReference) {
+      if (!this.nodeReferences[node.textReference]) {
+        this.nodeReferences[node.textReference] = {
+          _nodeRef: {},
+          _pseudo: true
+        };
+      }
+      node.text = '';
+      node.linkToDestination = node.textReference;
+      node._textRef = this.nodeReferences[node.textReference];
+    }
+    if (node.text && node.text.text) {
+      node.text = [this.preprocessNode(node.text)];
+    } else if (Array.isArray(node.text)) {
+      let isSetParentNode = false;
+      if (this.parentNode === null) {
+        this.parentNode = node;
+        isSetParentNode = true;
+      }
+      for (let i = 0, l = node.text.length; i < l; i++) {
+        node.text[i] = this.preprocessNode(node.text[i]);
+      }
+      if (isSetParentNode) {
+        this.parentNode = null;
+      }
+    }
+    return node;
+  }
+  preprocessToc(node) {
+    if (!node.toc.id) {
+      node.toc.id = '_default_';
+    }
+    node.toc.title = node.toc.title ? this.preprocessNode(node.toc.title) : null;
+    node.toc._items = [];
+    if (this.tocs[node.toc.id]) {
+      if (!this.tocs[node.toc.id].toc._pseudo) {
+        throw new Error(`TOC '${node.toc.id}' already exists`);
+      }
+      node.toc._items = this.tocs[node.toc.id].toc._items;
+    }
+    this.tocs[node.toc.id] = node;
+    return node;
+  }
+  preprocessImage(node) {
+    if (node.image.type !== undefined && node.image.data !== undefined && node.image.type === 'Buffer' && Array.isArray(node.image.data)) {
+      node.image = DocPreprocessor_Buffer.from(node.image.data);
+    }
+    return node;
+  }
+  preprocessCanvas(node) {
+    return node;
+  }
+  preprocessSVG(node) {
+    return node;
+  }
+  preprocessQr(node) {
+    return node;
+  }
+  preprocessAttachment(node) {
+    return node;
+  }
+  _getNodeForNodeRef(node) {
+    if (this.parentNode) {
+      return this.parentNode;
+    }
+    return node;
+  }
+}
+/* harmony default export */ var src_DocPreprocessor = (DocPreprocessor);
 // EXTERNAL MODULE: ./node_modules/events/events.js
 var events = __webpack_require__(4785);
 ;// CONCATENATED MODULE: ./src/DocumentContext.js
@@ -2992,6 +2992,111 @@ function bottomMostContext(c1, c2) {
   };
 }
 /* harmony default export */ var src_DocumentContext = (DocumentContext);
+;// CONCATENATED MODULE: ./src/Line.js
+class Line {
+  /**
+   * @param {number} maxWidth Maximum width this line can have
+   */
+  constructor(maxWidth) {
+    this.maxWidth = maxWidth;
+    this.leadingCut = 0;
+    this.trailingCut = 0;
+    this.inlineWidths = 0;
+    this.inlines = [];
+  }
+
+  /**
+   * @param {object} inline
+   */
+  addInline(inline) {
+    if (this.inlines.length === 0) {
+      this.leadingCut = inline.leadingCut || 0;
+    }
+    this.trailingCut = inline.trailingCut || 0;
+    inline.x = this.inlineWidths - this.leadingCut;
+    this.inlines.push(inline);
+    this.inlineWidths += inline.width;
+    if (inline.lineEnd) {
+      this.newLineForced = true;
+    }
+  }
+
+  /**
+   * @returns {number}
+   */
+  getHeight() {
+    let max = 0;
+    this.inlines.forEach(item => {
+      max = Math.max(max, item.height || 0);
+    });
+    return max;
+  }
+
+  /**
+   * @returns {number}
+   */
+  getAscenderHeight() {
+    let y = 0;
+    this.inlines.forEach(inline => {
+      y = Math.max(y, inline.font.ascender / 1000 * inline.fontSize);
+    });
+    return y;
+  }
+
+  /**
+   * @returns {number}
+   */
+  getWidth() {
+    return this.inlineWidths - this.leadingCut - this.trailingCut;
+  }
+
+  /**
+   * @returns {number}
+   */
+  getAvailableWidth() {
+    return this.maxWidth - this.getWidth();
+  }
+
+  /**
+   * @param {object} inline
+   * @param {Array} nextInlines
+   * @returns {boolean}
+   */
+  hasEnoughSpaceForInline(inline, nextInlines) {
+    if (nextInlines === void 0) {
+      nextInlines = [];
+    }
+    if (this.inlines.length === 0) {
+      return true;
+    }
+    if (this.newLineForced) {
+      return false;
+    }
+    let inlineWidth = inline.width;
+    let inlineTrailingCut = inline.trailingCut || 0;
+    if (inline.noNewLine) {
+      for (let i = 0, l = nextInlines.length; i < l; i++) {
+        let nextInline = nextInlines[i];
+        inlineWidth += nextInline.width;
+        inlineTrailingCut += nextInline.trailingCut || 0;
+        if (!nextInline.noNewLine) {
+          break;
+        }
+      }
+    }
+    return this.inlineWidths + inlineWidth - this.leadingCut - inlineTrailingCut <= this.maxWidth;
+  }
+  clone() {
+    let result = new Line(this.maxWidth);
+    for (let key in this) {
+      if (this.hasOwnProperty(key)) {
+        result[key] = this[key];
+      }
+    }
+    return result;
+  }
+}
+/* harmony default export */ var src_Line = (Line);
 ;// CONCATENATED MODULE: ./src/ElementWriter.js
 
 
@@ -3687,7 +3792,7 @@ class TableProcessor {
     writer.context().availableHeight -= this.reservedAtBottom;
     writer.context().moveDown(this.rowPaddingTop);
     // begin - Vertical alignment
-    this.tableNode.table.__rowsHeight[rowIndex] = {
+    if (this.tableNode.table.__rowsHeight[rowIndex]) this.tableNode.table.__rowsHeight[rowIndex] = {
       top: this.rowTopY,
       height: 0
     };
@@ -4089,111 +4194,6 @@ class TableProcessor {
   }
 }
 /* harmony default export */ var src_TableProcessor = (TableProcessor);
-;// CONCATENATED MODULE: ./src/Line.js
-class Line {
-  /**
-   * @param {number} maxWidth Maximum width this line can have
-   */
-  constructor(maxWidth) {
-    this.maxWidth = maxWidth;
-    this.leadingCut = 0;
-    this.trailingCut = 0;
-    this.inlineWidths = 0;
-    this.inlines = [];
-  }
-
-  /**
-   * @param {object} inline
-   */
-  addInline(inline) {
-    if (this.inlines.length === 0) {
-      this.leadingCut = inline.leadingCut || 0;
-    }
-    this.trailingCut = inline.trailingCut || 0;
-    inline.x = this.inlineWidths - this.leadingCut;
-    this.inlines.push(inline);
-    this.inlineWidths += inline.width;
-    if (inline.lineEnd) {
-      this.newLineForced = true;
-    }
-  }
-
-  /**
-   * @returns {number}
-   */
-  getHeight() {
-    let max = 0;
-    this.inlines.forEach(item => {
-      max = Math.max(max, item.height || 0);
-    });
-    return max;
-  }
-
-  /**
-   * @returns {number}
-   */
-  getAscenderHeight() {
-    let y = 0;
-    this.inlines.forEach(inline => {
-      y = Math.max(y, inline.font.ascender / 1000 * inline.fontSize);
-    });
-    return y;
-  }
-
-  /**
-   * @returns {number}
-   */
-  getWidth() {
-    return this.inlineWidths - this.leadingCut - this.trailingCut;
-  }
-
-  /**
-   * @returns {number}
-   */
-  getAvailableWidth() {
-    return this.maxWidth - this.getWidth();
-  }
-
-  /**
-   * @param {object} inline
-   * @param {Array} nextInlines
-   * @returns {boolean}
-   */
-  hasEnoughSpaceForInline(inline, nextInlines) {
-    if (nextInlines === void 0) {
-      nextInlines = [];
-    }
-    if (this.inlines.length === 0) {
-      return true;
-    }
-    if (this.newLineForced) {
-      return false;
-    }
-    let inlineWidth = inline.width;
-    let inlineTrailingCut = inline.trailingCut || 0;
-    if (inline.noNewLine) {
-      for (let i = 0, l = nextInlines.length; i < l; i++) {
-        let nextInline = nextInlines[i];
-        inlineWidth += nextInline.width;
-        inlineTrailingCut += nextInline.trailingCut || 0;
-        if (!nextInline.noNewLine) {
-          break;
-        }
-      }
-    }
-    return this.inlineWidths + inlineWidth - this.leadingCut - inlineTrailingCut <= this.maxWidth;
-  }
-  clone() {
-    let result = new Line(this.maxWidth);
-    for (let key in this) {
-      if (this.hasOwnProperty(key)) {
-        result[key] = this[key];
-      }
-    }
-    return result;
-  }
-}
-/* harmony default export */ var src_Line = (Line);
 ;// CONCATENATED MODULE: ./src/LayoutBuilder.js
 
 
@@ -4846,7 +4846,7 @@ class LayoutBuilder {
     this.writer.context().addMargin(-gapSize.width);
     // begin - Vertical alignment
     const lastNode = this.__nodesHierarchy.pop();
-    this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
+    if (this.__nodesHierarchy[this.__nodesHierarchy.length - 1]) this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
     // end - Vertical alignment
   }
 
@@ -6169,7 +6169,7 @@ class OutputDocument {
 }
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(9322);
+var FileSaver_min = __webpack_require__(2926);
 ;// CONCATENATED MODULE: ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -21784,7 +21784,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 2200:
+/***/ 6042:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -34634,7 +34634,7 @@ module.exports = function (Iterable, NAME, IteratorConstructor, next, DEFAULT, I
 
 /***/ }),
 
-/***/ 6042:
+/***/ 3661:
 /***/ (function(module, __unused_webpack_exports, __webpack_require__) {
 
 var path = __webpack_require__(1206);
@@ -40615,7 +40615,7 @@ $({ target: 'String', proto: true, forced: forcedStringTrimMethod('trim') }, {
 /***/ 5877:
 /***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
 
-var defineWellKnownSymbol = __webpack_require__(6042);
+var defineWellKnownSymbol = __webpack_require__(3661);
 
 // `Symbol.asyncIterator` well-known symbol
 // https://tc39.es/ecma262/#sec-symbol.asynciterator
@@ -40694,7 +40694,7 @@ if (DESCRIPTORS && isCallable(NativeSymbol) && (!('description' in SymbolPrototy
 /***/ 9330:
 /***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
 
-var defineWellKnownSymbol = __webpack_require__(6042);
+var defineWellKnownSymbol = __webpack_require__(3661);
 
 // `Symbol.iterator` well-known symbol
 // https://tc39.es/ecma262/#sec-symbol.iterator
@@ -40746,7 +40746,7 @@ var hiddenKeys = __webpack_require__(682);
 var uid = __webpack_require__(6859);
 var wellKnownSymbol = __webpack_require__(8688);
 var wrappedWellKnownSymbolModule = __webpack_require__(5960);
-var defineWellKnownSymbol = __webpack_require__(6042);
+var defineWellKnownSymbol = __webpack_require__(3661);
 var setToStringTag = __webpack_require__(5216);
 var InternalStateModule = __webpack_require__(172);
 var $forEach = (__webpack_require__(1102).forEach);
@@ -41037,7 +41037,7 @@ hiddenKeys[HIDDEN] = true;
 /***/ 5597:
 /***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
 
-var defineWellKnownSymbol = __webpack_require__(6042);
+var defineWellKnownSymbol = __webpack_require__(3661);
 
 // `Symbol.toPrimitive` well-known symbol
 // https://tc39.es/ecma262/#sec-symbol.toprimitive
@@ -41049,7 +41049,7 @@ defineWellKnownSymbol('toPrimitive');
 /***/ 8178:
 /***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
 
-var defineWellKnownSymbol = __webpack_require__(6042);
+var defineWellKnownSymbol = __webpack_require__(3661);
 
 // `Symbol.toStringTag` well-known symbol
 // https://tc39.es/ecma262/#sec-symbol.tostringtag
@@ -60727,7 +60727,7 @@ module.exports = __webpack_require__(5349);
 
 /***/ }),
 
-/***/ 9322:
+/***/ 2926:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),

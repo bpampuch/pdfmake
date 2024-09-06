@@ -170,7 +170,7 @@ class TableProcessor {
 
 		writer.context().moveDown(this.rowPaddingTop);
 		// begin - Vertical alignment
-		this.tableNode.table.__rowsHeight[rowIndex] = { top: this.rowTopY, height: 0 };
+		if(this.tableNode.table.__rowsHeight?.[rowIndex]) this.tableNode.table.__rowsHeight[rowIndex] = { top: this.rowTopY, height: 0 };
 		// end - Vertical alignment
 	}
 
@@ -668,7 +668,7 @@ class TableProcessor {
 			this.headerRepeatable = null;
 		}
 		// begin - Vertical alignment
-		this.tableNode.table.__rowsHeight[rowIndex].height = endingY - this.tableNode.table.__rowsHeight[rowIndex].top;
+		if(this.tableNode.table.__rowsHeight?.[rowIndex]) this.tableNode.table.__rowsHeight[rowIndex].height = endingY - this.tableNode.table.__rowsHeight[rowIndex].top;
 		// end - Vertical alignment
 	}
 }

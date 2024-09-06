@@ -1,15 +1,15 @@
-import DocPreprocessor from './DocPreprocessor';
-import DocMeasure from './DocMeasure';
-import DocumentContext from './DocumentContext';
-import PageElementWriter from './PageElementWriter';
 import ColumnCalculator from './columnCalculator';
-import TableProcessor from './TableProcessor';
+import DocMeasure from './DocMeasure';
+import DocPreprocessor from './DocPreprocessor';
+import DocumentContext from './DocumentContext';
+import { getNodeId, stringifyNode } from './helpers/node';
+import { offsetVector, pack } from './helpers/tools';
+import { isNumber, isString, isValue } from './helpers/variableType';
 import Line from './Line';
-import { isString, isValue, isNumber } from './helpers/variableType';
-import { stringifyNode, getNodeId } from './helpers/node';
-import { pack, offsetVector } from './helpers/tools';
-import TextInlines from './TextInlines';
+import PageElementWriter from './PageElementWriter';
 import StyleContextStack from './StyleContextStack';
+import TableProcessor from './TableProcessor';
+import TextInlines from './TextInlines';
 
 function addAll(target, otherArray) {
 	otherArray.forEach(item => {
@@ -32,6 +32,9 @@ class LayoutBuilder {
 		this.pageMargins = pageMargins;
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = {};
+		// begin - Vertical alignment
+		this.__nodesHierarchy = [];
+		// end - Vertical alignment
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -743,7 +746,7 @@ class LayoutBuilder {
 		this.writer.context().addMargin(-gapSize.width);
 		// begin - Vertical alignment
 		const lastNode = this.__nodesHierarchy.pop();
-		this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
+		if(this.__nodesHierarchy[this.__nodesHierarchy.length - 1]) this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
 		// end - Vertical alignment
 	}
 
@@ -792,7 +795,7 @@ class LayoutBuilder {
 	// leafs (texts)
 	processLeaf(node) {
 		// begin - Vertical alignment
-		node = this.docPreprocessor.checkNode(node);
+		if(this.docPreprocessor)  node = this.docPreprocessor.checkNode(node);
 		// end - Vertical alignment
 		let line = this.buildNextLine(node);
 		// begin - Vertical alignment
