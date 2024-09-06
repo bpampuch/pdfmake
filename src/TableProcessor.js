@@ -170,7 +170,7 @@ class TableProcessor {
 
 		writer.context().moveDown(this.rowPaddingTop);
 		// begin - Vertical alignment
-		if(this.tableNode.table.__rowsHeight?.[rowIndex]) this.tableNode.table.__rowsHeight[rowIndex] = { top: this.rowTopY, height: 0 };
+		if(this.tableNode.table.__rowsHeight && this.tableNode.table.__rowsHeight[rowIndex]) this.tableNode.table.__rowsHeight[rowIndex] = { top: this.rowTopY, height: 0 };
 		// end - Vertical alignment
 	}
 
@@ -366,23 +366,23 @@ class TableProcessor {
 	}
 
 	// begin - Vertical alignment
-	getCellContentHeight = function (cell, items) {
+	getCellContentHeight(cell, items) {
 		let contentHeight = 0;
 		cell._maxHeight && (contentHeight = cell._maxHeight); // for canvas
 		// for forced multiline text, text with lineHeight, ul, ol
 		cell.__contentHeight && (contentHeight = cell.__contentHeight);
 		!contentHeight && (contentHeight = items.reduce((p, v) => {
-			const item = v.item.inlines ? (v.item.inlines[0] ?? null) : v.item;
-			const lineHeight = v.item.__nodeRef?.lineHeight ?? (v.item._height ?? v.item.h);
-			let height = item.height ?? (item.h ?? 0);
+			const item = v.item.inlines ? (v.item.inlines[0] ? v.item.inlines[0] : null) : v.item;
+			const lineHeight = v.item.__nodeRef && v.item.__nodeRef.lineHeight ? v.item.__nodeRef.lineHeight: (v.item._height ? v.item._height : v.item.h);
+			let height = item.height ? item.height: (item.h ? item.h : 0);
 			(v.type === 'vector') || (cell.ol && !v.item.lastLineInParagraph) && (height = 0); // for ol with counter
-			return p + (height / (lineHeight ?? 1))
+			return p + (height / (lineHeight ? lineHeight : 1));
 		}, 0));
 		!contentHeight && cell._height && (contentHeight = cell._height); // for text, image, svg, qr
 		return contentHeight;
 	};
 
-	processTableVerticalAlignment = function (writer, tableProcessor, table) {
+	processTableVerticalAlignment(writer, tableProcessor, table) {
 		const getCells = (node) => node.table ? node.table.body.flat().map(getCells).flat() : node;
 		const getNestedTables = (node) => node.table ? [node, ...node.table.body.flat().map(getNestedTables).filter(Boolean).flat()] : null;
 		// for all rows in table
@@ -668,7 +668,7 @@ class TableProcessor {
 			this.headerRepeatable = null;
 		}
 		// begin - Vertical alignment
-		if(this.tableNode.table.__rowsHeight?.[rowIndex]) this.tableNode.table.__rowsHeight[rowIndex].height = endingY - this.tableNode.table.__rowsHeight[rowIndex].top;
+		if(this.tableNode.table.__rowsHeight && this.tableNode.table.__rowsHeight[rowIndex]) this.tableNode.table.__rowsHeight[rowIndex].height = endingY - this.tableNode.table.__rowsHeight[rowIndex].top;
 		// end - Vertical alignment
 	}
 }

@@ -1,7 +1,7 @@
-import { isNumber } from './helpers/variableType';
-import { pack, offsetVector } from './helpers/tools';
-import DocumentContext from './DocumentContext';
 import { EventEmitter } from 'events';
+import DocumentContext from './DocumentContext';
+import { offsetVector, pack } from './helpers/tools';
+import { isNumber } from './helpers/variableType';
 
 /**
  * A line/vector writer, which adds elements to current page and sets
@@ -126,7 +126,7 @@ class ElementWriter extends EventEmitter {
 
 		node.canvas.forEach(function (vector) {
 			// begin - Vertical alignment
-			vector.__nodeRef = node.__nodeRef ?? node;
+			vector.__nodeRef = node.__nodeRef ? node.__nodeRef : node;
 			// end - Vertical alignment
 			let position = this.addVector(vector, false, false, index);
 			positions.push(position);
@@ -192,7 +192,7 @@ class ElementWriter extends EventEmitter {
 			vector.x += qr.x;
 			vector.y += qr.y;
 			// begin - Vertical alignment
-			vector.__nodeRef = qr.__nodeRef ?? qr;
+			vector.__nodeRef = qr.__nodeRef ? qr.__nodeRef: qr;
 			// end - Vertical alignment
 			this.addVector(vector, true, true, index);
 		}

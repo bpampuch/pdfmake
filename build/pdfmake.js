@@ -23,7 +23,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
-var pdfkit_es5 = __webpack_require__(6042);
+var pdfkit_es5 = __webpack_require__(5419);
 ;// CONCATENATED MODULE: ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(4598)["Buffer"];
 
@@ -2482,31 +2482,30 @@ const convertValueToString = value => {
   return value;
 };
 class DocPreprocessor {
-  constructor() {
-    // begin - Vertical alignment
-    this.checkNode = function (node) {
-      // expand shortcuts and casting values
-      if (Array.isArray(node)) {
-        node = {
-          stack: node
-        };
-      } else if (isString(node) || isNumber(node) || typeof node === 'boolean' || !isValue(node) || isEmptyObject(node)) {
-        // text node defined as value
-        node = {
-          text: convertValueToString(node)
-        };
-      } else if ('text' in node) {
-        // cast value in text property
-        node.text = convertValueToString(node.text);
-      }
-      return node;
-    };
-  }
   preprocessDocument(docStructure) {
     this.parentNode = null;
     this.tocs = [];
     this.nodeReferences = [];
     return this.preprocessNode(docStructure);
+  }
+
+  // begin - Vertical alignment
+  checkNode(node) {
+    // expand shortcuts and casting values
+    if (Array.isArray(node)) {
+      node = {
+        stack: node
+      };
+    } else if (isString(node) || isNumber(node) || typeof node === 'boolean' || !isValue(node) || isEmptyObject(node)) {
+      // text node defined as value
+      node = {
+        text: convertValueToString(node)
+      };
+    } else if ('text' in node) {
+      // cast value in text property
+      node.text = convertValueToString(node.text);
+    }
+    return node;
   }
   // end - Vertical alignment
 
@@ -2550,7 +2549,7 @@ class DocPreprocessor {
     for (let i = 0, l = columns.length; i < l; i++) {
       // begin - Vertical alignment
       columns[i] = this.checkNode(columns[i]);
-      columns[i].__nodeRef = node.__nodeRef ?? node;
+      columns[i].__nodeRef = node.__nodeRef ? columns[i].__nodeRef = node.__nodeRef : node;
       // end - Vertical alignment
       columns[i] = this.preprocessNode(columns[i]);
     }
@@ -2561,7 +2560,7 @@ class DocPreprocessor {
     for (let i = 0, l = items.length; i < l; i++) {
       // begin - Vertical alignment
       items[i] = this.checkNode(items[i]);
-      items[i].__nodeRef = node.__nodeRef ?? node;
+      items[i].__nodeRef = node.__nodeRef ? node.__nodeRef : node;
       // end - Vertical alignment
       items[i] = this.preprocessNode(items[i]);
     }
@@ -2572,7 +2571,7 @@ class DocPreprocessor {
     for (let i = 0, l = items.length; i < l; i++) {
       // begin - Vertical alignment
       items[i] = this.checkNode(items[i]);
-      items[i].__nodeRef = node.__nodeRef ?? node;
+      items[i].__nodeRef = node.__nodeRef ? node.__nodeRef : node;
       // end - Vertical alignment
       items[i] = this.preprocessNode(items[i]);
     }
@@ -3196,7 +3195,7 @@ class ElementWriter extends events.EventEmitter {
     this.alignCanvas(node);
     node.canvas.forEach(function (vector) {
       // begin - Vertical alignment
-      vector.__nodeRef = node.__nodeRef ?? node;
+      vector.__nodeRef = node.__nodeRef ? node.__nodeRef : node;
       // end - Vertical alignment
       let position = this.addVector(vector, false, false, index);
       positions.push(position);
@@ -3246,7 +3245,7 @@ class ElementWriter extends events.EventEmitter {
       vector.x += qr.x;
       vector.y += qr.y;
       // begin - Vertical alignment
-      vector.__nodeRef = qr.__nodeRef ?? qr;
+      vector.__nodeRef = qr.__nodeRef ? qr.__nodeRef : qr;
       // end - Vertical alignment
       this.addVector(vector, true, true, index);
     }
@@ -3588,22 +3587,6 @@ class PageElementWriter extends src_ElementWriter {
 
 class TableProcessor {
   constructor(tableNode) {
-    // begin - Vertical alignment
-    this.getCellContentHeight = function (cell, items) {
-      let contentHeight = 0;
-      cell._maxHeight && (contentHeight = cell._maxHeight); // for canvas
-      // for forced multiline text, text with lineHeight, ul, ol
-      cell.__contentHeight && (contentHeight = cell.__contentHeight);
-      !contentHeight && (contentHeight = items.reduce((p, v) => {
-        const item = v.item.inlines ? v.item.inlines[0] ?? null : v.item;
-        const lineHeight = v.item.__nodeRef?.lineHeight ?? v.item._height ?? v.item.h;
-        let height = item.height ?? item.h ?? 0;
-        v.type === 'vector' || cell.ol && !v.item.lastLineInParagraph && (height = 0); // for ol with counter
-        return p + height / (lineHeight ?? 1);
-      }, 0));
-      !contentHeight && cell._height && (contentHeight = cell._height); // for text, image, svg, qr
-      return contentHeight;
-    };
     this.processTableVerticalAlignment = function (writer, tableProcessor, table) {
       const getCells = node => node.table ? node.table.body.flat().map(getCells).flat() : node;
       const getNestedTables = node => node.table ? [node, ...node.table.body.flat().map(getNestedTables).filter(Boolean).flat()] : null;
@@ -3792,7 +3775,7 @@ class TableProcessor {
     writer.context().availableHeight -= this.reservedAtBottom;
     writer.context().moveDown(this.rowPaddingTop);
     // begin - Vertical alignment
-    if (this.tableNode.table.__rowsHeight[rowIndex]) this.tableNode.table.__rowsHeight[rowIndex] = {
+    if (this.tableNode.table.__rowsHeight && this.tableNode.table.__rowsHeight[rowIndex]) this.tableNode.table.__rowsHeight[rowIndex] = {
       top: this.rowTopY,
       height: 0
     };
@@ -3978,6 +3961,23 @@ class TableProcessor {
     cellBefore = null;
     currentCell = null;
     borderColor = null;
+  }
+
+  // begin - Vertical alignment
+  getCellContentHeight(cell, items) {
+    let contentHeight = 0;
+    cell._maxHeight && (contentHeight = cell._maxHeight); // for canvas
+    // for forced multiline text, text with lineHeight, ul, ol
+    cell.__contentHeight && (contentHeight = cell.__contentHeight);
+    !contentHeight && (contentHeight = items.reduce((p, v) => {
+      const item = v.item.inlines ? v.item.inlines[0] ?? null : v.item;
+      const lineHeight = v.item.__nodeRef?.lineHeight ?? v.item._height ?? v.item.h;
+      let height = item.height ?? item.h ?? 0;
+      v.type === 'vector' || cell.ol && !v.item.lastLineInParagraph && (height = 0); // for ol with counter
+      return p + height / (lineHeight ?? 1);
+    }, 0));
+    !contentHeight && cell._height && (contentHeight = cell._height); // for text, image, svg, qr
+    return contentHeight;
   }
   // end - Vertical alignment
 
@@ -4189,7 +4189,7 @@ class TableProcessor {
       this.headerRepeatable = null;
     }
     // begin - Vertical alignment
-    this.tableNode.table.__rowsHeight[rowIndex].height = endingY - this.tableNode.table.__rowsHeight[rowIndex].top;
+    if (this.tableNode.table.__rowsHeight && this.tableNode.table.__rowsHeight[rowIndex]) this.tableNode.table.__rowsHeight[rowIndex].height = endingY - this.tableNode.table.__rowsHeight[rowIndex].top;
     // end - Vertical alignment
   }
 }
@@ -4228,6 +4228,9 @@ class LayoutBuilder {
     this.pageMargins = pageMargins;
     this.svgMeasure = svgMeasure;
     this.tableLayouts = {};
+    // begin - Vertical alignment
+    this.__nodesHierarchy = [];
+    // end - Vertical alignment
   }
   registerTableLayouts(tableLayouts) {
     this.tableLayouts = pack(this.tableLayouts, tableLayouts);
@@ -4806,7 +4809,7 @@ class LayoutBuilder {
         if (marker.canvas) {
           let vector = marker.canvas[0];
           // begin - Vertical alignment
-          vector.__nodeRef = line.__nodeRef ?? line;
+          vector.__nodeRef = line.__nodeRef ? line.__nodeRef : line;
           vector._height = marker._maxHeight;
           // end - Vertical alignment
 
@@ -4815,7 +4818,7 @@ class LayoutBuilder {
         } else if (marker._inlines) {
           let markerLine = new src_Line(this.pageSize.width);
           // begin - Vertical alignment
-          markerLine.__nodeRef = line.__nodeRef ?? line;
+          markerLine.__nodeRef = line.__nodeRef ? line.__nodeRef : line;
           // end - Vertical alignment
           markerLine.addInline(marker._inlines[0]);
           markerLine.x = -marker._minWidth;
@@ -4836,7 +4839,7 @@ class LayoutBuilder {
     this.writer.addListener('lineAdded', addMarkerToFirstLeaf);
     items.forEach(item => {
       // begin - Vertical alignment
-      item.__nodeRef = node.__nodeRef ?? node;
+      item.__nodeRef = node.__nodeRef ? node.__nodeRef : node;
       // end - Vertical alignment
       nextMarker = item.listMarker;
       this.processNode(item);
@@ -4887,11 +4890,11 @@ class LayoutBuilder {
   // leafs (texts)
   processLeaf(node) {
     // begin - Vertical alignment
-    node = this.docPreprocessor.checkNode(node);
+    if (this.docPreprocessor) node = this.docPreprocessor.checkNode(node);
     // end - Vertical alignment
     let line = this.buildNextLine(node);
     // begin - Vertical alignment
-    line && (line.__nodeRef = node.__nodeRef ?? node);
+    line && (line.__nodeRef = node.__nodeRef ? node.__nodeRef : node);
     // end - Vertical alignment
     if (line && (node.tocItem || node.id)) {
       line._node = node;
@@ -4926,7 +4929,8 @@ class LayoutBuilder {
       line = this.buildNextLine(node);
       if (line) {
         // begin - Vertical alignment
-        line.__nodeRef = node.__nodeRef ?? node;
+        line.__nodeRef = node.__nodeRef ? node.__nodeRef : node;
+        ;
         // end - Vertical alignment
         currentHeight += line.getHeight();
       }
@@ -6169,7 +6173,7 @@ class OutputDocument {
 }
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(2926);
+var FileSaver_min = __webpack_require__(652);
 ;// CONCATENATED MODULE: ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -21784,7 +21788,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 6042:
+/***/ 5419:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -34634,7 +34638,7 @@ module.exports = function (Iterable, NAME, IteratorConstructor, next, DEFAULT, I
 
 /***/ }),
 
-/***/ 3661:
+/***/ 6042:
 /***/ (function(module, __unused_webpack_exports, __webpack_require__) {
 
 var path = __webpack_require__(1206);
@@ -40615,7 +40619,7 @@ $({ target: 'String', proto: true, forced: forcedStringTrimMethod('trim') }, {
 /***/ 5877:
 /***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
 
-var defineWellKnownSymbol = __webpack_require__(3661);
+var defineWellKnownSymbol = __webpack_require__(6042);
 
 // `Symbol.asyncIterator` well-known symbol
 // https://tc39.es/ecma262/#sec-symbol.asynciterator
@@ -40694,7 +40698,7 @@ if (DESCRIPTORS && isCallable(NativeSymbol) && (!('description' in SymbolPrototy
 /***/ 9330:
 /***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
 
-var defineWellKnownSymbol = __webpack_require__(3661);
+var defineWellKnownSymbol = __webpack_require__(6042);
 
 // `Symbol.iterator` well-known symbol
 // https://tc39.es/ecma262/#sec-symbol.iterator
@@ -40746,7 +40750,7 @@ var hiddenKeys = __webpack_require__(682);
 var uid = __webpack_require__(6859);
 var wellKnownSymbol = __webpack_require__(8688);
 var wrappedWellKnownSymbolModule = __webpack_require__(5960);
-var defineWellKnownSymbol = __webpack_require__(3661);
+var defineWellKnownSymbol = __webpack_require__(6042);
 var setToStringTag = __webpack_require__(5216);
 var InternalStateModule = __webpack_require__(172);
 var $forEach = (__webpack_require__(1102).forEach);
@@ -41037,7 +41041,7 @@ hiddenKeys[HIDDEN] = true;
 /***/ 5597:
 /***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
 
-var defineWellKnownSymbol = __webpack_require__(3661);
+var defineWellKnownSymbol = __webpack_require__(6042);
 
 // `Symbol.toPrimitive` well-known symbol
 // https://tc39.es/ecma262/#sec-symbol.toprimitive
@@ -41049,7 +41053,7 @@ defineWellKnownSymbol('toPrimitive');
 /***/ 8178:
 /***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
 
-var defineWellKnownSymbol = __webpack_require__(3661);
+var defineWellKnownSymbol = __webpack_require__(6042);
 
 // `Symbol.toStringTag` well-known symbol
 // https://tc39.es/ecma262/#sec-symbol.tostringtag
@@ -60727,7 +60731,7 @@ module.exports = __webpack_require__(5349);
 
 /***/ }),
 
-/***/ 2926:
+/***/ 652:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),

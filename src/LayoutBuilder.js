@@ -700,7 +700,7 @@ class LayoutBuilder {
 				if (marker.canvas) {
 					let vector = marker.canvas[0];
 					// begin - Vertical alignment
-					vector.__nodeRef = line.__nodeRef ?? line;
+					vector.__nodeRef = line.__nodeRef ? line.__nodeRef : line;
 					vector._height = marker._maxHeight;
 					// end - Vertical alignment
 
@@ -709,7 +709,7 @@ class LayoutBuilder {
 				} else if (marker._inlines) {
 					let markerLine = new Line(this.pageSize.width);
 					// begin - Vertical alignment
-					markerLine.__nodeRef = line.__nodeRef ?? line;
+					markerLine.__nodeRef = line.__nodeRef ? line.__nodeRef: line;
 					// end - Vertical alignment
 					markerLine.addInline(marker._inlines[0]);
 					markerLine.x = -marker._minWidth;
@@ -734,7 +734,7 @@ class LayoutBuilder {
 
 		items.forEach(item => {
 			// begin - Vertical alignment
-			item.__nodeRef = node.__nodeRef ?? node;
+			item.__nodeRef = node.__nodeRef ? node.__nodeRef : node;
 			// end - Vertical alignment
 			nextMarker = item.listMarker;
 			this.processNode(item);
@@ -799,7 +799,7 @@ class LayoutBuilder {
 		// end - Vertical alignment
 		let line = this.buildNextLine(node);
 		// begin - Vertical alignment
-		line && (line.__nodeRef = node.__nodeRef ?? node);
+		line && (line.__nodeRef = node.__nodeRef ? node.__nodeRef : node);
 		// end - Vertical alignment
 		if (line && (node.tocItem || node.id)) {
 			line._node = node;
@@ -840,7 +840,7 @@ class LayoutBuilder {
 			line = this.buildNextLine(node);
 			if (line) {
 				// begin - Vertical alignment
-				line.__nodeRef = node.__nodeRef ?? node;
+				line.__nodeRef = node.__nodeRef ? node.__nodeRef : node;;
 				// end - Vertical alignment
 				currentHeight += line.getHeight();
 			}

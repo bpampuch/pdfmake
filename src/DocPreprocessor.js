@@ -1,5 +1,5 @@
-import { isString, isNumber, isValue, isEmptyObject } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
+import { isEmptyObject, isNumber, isString, isValue } from './helpers/variableType';
 
 const convertValueToString = value => {
 	if (isString(value)) {
@@ -24,7 +24,7 @@ class DocPreprocessor {
 	}
 
 	// begin - Vertical alignment
-	checkNode = function (node) {
+	checkNode(node) {
 		// expand shortcuts and casting values
 		if (Array.isArray(node)) {
 			node = { stack: node };
@@ -79,7 +79,7 @@ class DocPreprocessor {
 		for (let i = 0, l = columns.length; i < l; i++) {
 			// begin - Vertical alignment
 			columns[i] = this.checkNode(columns[i]);
-			columns[i].__nodeRef = node.__nodeRef ?? node;
+			columns[i].__nodeRef = node.__nodeRef ? columns[i].__nodeRef = node.__nodeRef: node;
 			// end - Vertical alignment
 			columns[i] = this.preprocessNode(columns[i]);
 		}
@@ -93,7 +93,7 @@ class DocPreprocessor {
 		for (let i = 0, l = items.length; i < l; i++) {
 			// begin - Vertical alignment
 			items[i] = this.checkNode(items[i]);
-			items[i].__nodeRef = node.__nodeRef ?? node;
+			items[i].__nodeRef = node.__nodeRef ? node.__nodeRef : node;
 			// end - Vertical alignment
 			items[i] = this.preprocessNode(items[i]);
 		}
@@ -107,7 +107,7 @@ class DocPreprocessor {
 		for (let i = 0, l = items.length; i < l; i++) {
 			// begin - Vertical alignment
 			items[i] = this.checkNode(items[i]);
-			items[i].__nodeRef = node.__nodeRef ?? node;
+			items[i].__nodeRef = node.__nodeRef ? node.__nodeRef : node;
 			// end - Vertical alignment
 			items[i] = this.preprocessNode(items[i]);
 		}
