@@ -1,7 +1,7 @@
 import ColumnCalculator from './columnCalculator';
-import { isNumber } from './helpers/variableType';
+import { isNumber, isPositiveInteger } from './helpers/variableType';
 // begin - Vertical alignment
-import { offsetVector, isPositiveInteger } from './helpers/tools';
+import { offsetVector } from './helpers/tools';
 // end - Vertical alignment
 
 class TableProcessor {

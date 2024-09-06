@@ -22,16 +22,8 @@ __webpack_require__.d(__webpack_exports__, {
   "default": function() { return /* binding */ browser_extensions; }
 });
 
-// NAMESPACE OBJECT: ./src/helpers/tools.js
-var tools_namespaceObject = {};
-__webpack_require__.r(tools_namespaceObject);
-__webpack_require__.d(tools_namespaceObject, {
-  d: function() { return offsetVector; },
-  q: function() { return pack; }
-});
-
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
-var pdfkit_es5 = __webpack_require__(9109);
+var pdfkit_es5 = __webpack_require__(2200);
 ;// CONCATENATED MODULE: ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(4598)["Buffer"];
 
@@ -3650,14 +3642,14 @@ class TableProcessor {
     this.headerRows = 0;
     this.rowsWithoutPageBreak = 0;
     const headerRows = tableNode.table.headerRows;
-    if ((0,tools_namespaceObject.isPositiveInteger)(headerRows)) {
+    if (isPositiveInteger(headerRows)) {
       this.headerRows = headerRows;
       if (this.headerRows > tableNode.table.body.length) {
         throw new Error(`Too few rows in the table. Property headerRows requires at least ${this.headerRows}, contains only ${tableNode.table.body.length}`);
       }
       this.rowsWithoutPageBreak = this.headerRows;
       const keepWithHeaderRows = tableNode.table.keepWithHeaderRows;
-      if ((0,tools_namespaceObject.isPositiveInteger)(keepWithHeaderRows)) {
+      if (isPositiveInteger(keepWithHeaderRows)) {
         this.rowsWithoutPageBreak += keepWithHeaderRows;
       }
     }
@@ -6177,7 +6169,7 @@ class OutputDocument {
 }
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(2414);
+var FileSaver_min = __webpack_require__(9322);
 ;// CONCATENATED MODULE: ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -15254,7 +15246,7 @@ __webpack_require__(4538);
 __webpack_require__(4793);
 __webpack_require__(4202);
 __webpack_require__(2529);
-__webpack_require__(1490);
+__webpack_require__(9109);
 ;
 (function (root, factory) {
   if (true) {
@@ -21792,7 +21784,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 9109:
+/***/ 2200:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -41871,7 +41863,7 @@ createTypedArrayConstructor('Uint8', function (init) {
 
 /***/ }),
 
-/***/ 1490:
+/***/ 9109:
 /***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
 
 // TODO: Remove from `core-js@4`
@@ -60735,7 +60727,7 @@ module.exports = __webpack_require__(5349);
 
 /***/ }),
 
-/***/ 2414:
+/***/ 9322:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
@@ -73595,17 +73587,6 @@ module.exports = /*#__PURE__*/JSON.parse('[["0","\\u0000",128],["a1","｡",62],[
 /******/ 	/* webpack/runtime/hasOwnProperty shorthand */
 /******/ 	!function() {
 /******/ 		__webpack_require__.o = function(obj, prop) { return Object.prototype.hasOwnProperty.call(obj, prop); }
-/******/ 	}();
-/******/ 	
-/******/ 	/* webpack/runtime/make namespace object */
-/******/ 	!function() {
-/******/ 		// define __esModule on exports
-/******/ 		__webpack_require__.r = function(exports) {
-/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
-/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-/******/ 			}
-/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 		};
 /******/ 	}();
 /******/ 	
 /******/ 	/* webpack/runtime/node module decorator */
