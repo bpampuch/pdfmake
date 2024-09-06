@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Drop support Internet Explorer 11 (Microsoft will not support from 2022)
 - Minimal supported version Node.js 18 LTS
 - Fixed page break in a column group
 - Fixed saving margins in an unbreakable block
