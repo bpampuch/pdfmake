@@ -29,7 +29,7 @@
       ".github",
       ".npmignore",
       ".editorconfig",
-      ".eslintrc.json",
+      "eslint.config.mjs",
       "webpack.config.js",
       "build-fonts.js",
       "build-examples.js",

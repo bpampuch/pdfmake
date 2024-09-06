@@ -18,7 +18,6 @@ class DocumentContext extends EventEmitter {
 		this.page = -1;
 
 		this.snapshots = [];
-		this.endingCell = null;
 		this.backgroundLength = [];
 
 		this.addPage(pageSize);
@@ -38,7 +37,6 @@ class DocumentContext extends EventEmitter {
 				availableWidth: this.availableWidth,
 				page: this.page
 			},
-			endingCell: this.endingCell,
 			lastColumnWidth: this.lastColumnWidth
 		});
 
@@ -48,9 +46,8 @@ class DocumentContext extends EventEmitter {
 	beginColumn(width, offset, endingCell) {
 		let saved = this.snapshots[this.snapshots.length - 1];
 
-		this.calculateBottomMost(saved);
+		this.calculateBottomMost(saved, endingCell);
 
-		this.endingCell = endingCell;
 		this.page = saved.page;
 		this.x = this.x + this.lastColumnWidth + (offset || 0);
 		this.y = saved.y;
@@ -60,19 +57,18 @@ class DocumentContext extends EventEmitter {
 		this.lastColumnWidth = width;
 	}
 
-	calculateBottomMost(destContext) {
-		if (this.endingCell) {
-			this.saveContextInEndingCell(this.endingCell);
-			this.endingCell = null;
+	calculateBottomMost(destContext, endingCell) {
+		if (endingCell) {
+			this.saveContextInEndingCell(endingCell);
 		} else {
 			destContext.bottomMost = bottomMostContext(this, destContext.bottomMost);
 		}
 	}
 
-	markEnding(endingCell) {
+	markEnding(endingCell, originalXOffset, discountY) {
 		this.page = endingCell._columnEndingContext.page;
-		this.x = endingCell._columnEndingContext.x;
-		this.y = endingCell._columnEndingContext.y;
+		this.x = endingCell._columnEndingContext.x + originalXOffset;
+    this.y = endingCell._columnEndingContext.y - discountY;
 		this.availableWidth = endingCell._columnEndingContext.availableWidth;
 		this.availableHeight = endingCell._columnEndingContext.availableHeight;
 		this.lastColumnWidth = endingCell._columnEndingContext.lastColumnWidth;
@@ -89,12 +85,11 @@ class DocumentContext extends EventEmitter {
 		};
 	}
 
-	completeColumnGroup(height) {
+	completeColumnGroup(height, endingCell) {
 		let saved = this.snapshots.pop();
 
-		this.calculateBottomMost(saved);
+		this.calculateBottomMost(saved, endingCell);
 
-		this.endingCell = null;
 		this.x = saved.x;
 
 		let y = saved.bottomMost.y;
@@ -171,7 +166,6 @@ class DocumentContext extends EventEmitter {
 			availableHeight: this.availableHeight,
 			availableWidth: this.availableWidth,
 			page: this.page,
-			endingCell: this.endingCell,
 			lastColumnWidth: this.lastColumnWidth
 		});
 	}
@@ -184,7 +178,6 @@ class DocumentContext extends EventEmitter {
 		this.availableWidth = saved.availableWidth;
 		this.availableHeight = saved.availableHeight;
 		this.page = saved.page;
-		this.endingCell = saved.endingCell;
 		this.lastColumnWidth = saved.lastColumnWidth;
 	}
 
@@ -192,6 +185,16 @@ class DocumentContext extends EventEmitter {
 		let nextPageIndex = this.page + 1;
 		let prevPage = this.page;
 		let prevY = this.y;
+
+		// If we are in a column group
+		if (this.snapshots.length > 0) {
+			let lastSnapshot = this.snapshots[this.snapshots.length - 1];
+			// We have to update prevY accordingly by also taking into consideration
+			// the 'y' of cells that don't break page
+			if (lastSnapshot.bottomMost && lastSnapshot.bottomMost.y) {
+				prevY = Math.max(this.y, lastSnapshot.bottomMost.y);
+			}
+		}
 
 		let createNewPage = nextPageIndex >= this.pages.length;
 		if (createNewPage) {

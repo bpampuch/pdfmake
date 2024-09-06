@@ -1679,32 +1679,43 @@ describe('LayoutBuilder', function () {
 		it('should return an empty array if no page breaks occur', function () {
 			var doc = createTable(1, 0);
 
-			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
 			assert(result.pageBreaks instanceof Array);
 			assert.equal(result.pageBreaks.length, 0);
 		});
 
 		it('on page break should return an entry with ending/starting positions', function () {
-			var doc = createTable(0, 1, 10, 5);
-			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+			var doc = createTable(0, 1, 10, 5, 5);
+			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
 			assert(result.pageBreaks instanceof Array);
 			assert.equal(result.pageBreaks.length, 1);
 			assert.equal(result.pageBreaks[0].prevPage, 0);
-			assert.equal(result.pageBreaks[0].prevY, 40 + 12 * 5);
+			assert.equal(result.pageBreaks[0].prevY, 40 + 12 * 6);
+		});
+
+		it('on page break should return an entry with ending/starting positions 2', function () {
+			var doc = createTable(0, 1, 10, 5);
+			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+
+			assert(result.pageBreaks instanceof Array);
+			assert.equal(result.pageBreaks.length, 1);
+			assert.equal(result.pageBreaks[0].prevPage, 0);
+
+			assert.equal(result.pageBreaks[0].prevY, 40 + 12 * 11);
 		});
 
 		it('on multi-pass page break (columns or table columns) should treat bottom-most page-break as the ending position ', function () {
 			var doc = createTable(0, 1, 10, 5, 7);
-			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
 			assert.equal(result.pageBreaks[0].prevY, 40 + 12 * 7);
 		});
 
 		it('on multiple page breaks (more than 2 pages), should return all entries with ending/starting positions', function () {
-			var doc = createTable(0, 1, 100, 90);
-			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+			var doc = createTable(0, 1, 100, 90, 90);
+			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
 			assert(result.pageBreaks instanceof Array);
 			assert.equal(result.pageBreaks.length, 2);
@@ -1714,9 +1725,21 @@ describe('LayoutBuilder', function () {
 			assert.equal(result.pageBreaks[1].prevY, 40 + (90 - 60) * 12);
 		});
 
+		it('on multiple page breaks (more than 2 pages), should return all entries with ending/starting positions 2', function () {
+			var doc = createTable(0, 1, 100, 90);
+			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+
+			assert(result.pageBreaks instanceof Array);
+			assert.equal(result.pageBreaks.length, 2);
+			assert.equal(result.pageBreaks[0].prevPage, 0);
+			assert.equal(result.pageBreaks[0].prevY, 40 + 60 * 12);
+			assert.equal(result.pageBreaks[1].prevPage, 1);
+			assert.equal(result.pageBreaks[1].prevY, 40 + 41 * 12);
+		});
+
 		it('on multiple and multi-pass page breaks should calculate bottom-most endings for every page', function () {
 			var doc = createTable(0, 1, 100, 90, 92);
-			var result = builder2.processRow(doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
 
 			assert(result.pageBreaks instanceof Array);
 			assert.equal(result.pageBreaks.length, 2);
@@ -1726,6 +1749,9 @@ describe('LayoutBuilder', function () {
 			assert.equal(result.pageBreaks[1].prevY, 40 + (92 - 60) * 12);
 		});
 	});
+
+
+
 
 	describe('dynamic header/footer', function () {
 		var docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction;

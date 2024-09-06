@@ -492,7 +492,7 @@ class LayoutBuilder {
 		// end - Vertical alignment
 
 		ColumnCalculator.buildColumnWidths(columns, availableWidth);
-		let result = this.processRow(columns, columns, gaps);
+		let result = this.processRow(false, columns, columns, gaps);
 		addAll(columnNode.positions, result.positions);
 
 		function gapArray(gap) {
@@ -516,7 +516,38 @@ class LayoutBuilder {
 		// end - Vertical alignment
 	}
 
-	processRow(columns, widths, gaps, tableBody, tableRow, height) {
+	findStartingSpanCell(arr, i) {
+		let requiredColspan = 1;
+    for (let index = i - 1; index >= 0; index--) {
+        if (!arr[index]._span) {
+					if (arr[index].rowSpan > 1 && (arr[index].colSpan || 1) === requiredColspan) {
+            return arr[index];
+					} else {
+						return null;
+					}
+        }
+				requiredColspan++;
+    }
+    return null;
+	}
+
+	processRow(dontBreakRows, columns, widths, gaps, tableBody, tableRow, height) {
+		const updatePageBreakData = (page, prevY) => {
+			let pageDesc;
+			// Find page break data for this row and page
+      for (let i = 0, l = pageBreaks.length; i < l; i++) {
+        let desc = pageBreaks[i];
+        if (desc.prevPage === page) {
+          pageDesc = desc;
+          break;
+        }
+      }
+			// If row has page break in this page, update prevY
+			if (pageDesc) {
+				pageDesc.prevY = Math.max(pageDesc.prevY, prevY);
+			}
+		};
+
 		const storePageBreakData = data => {
 			let pageDesc;
 
@@ -556,17 +587,79 @@ class LayoutBuilder {
 				}
 			}
 
-			this.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
+			// if rowspan starts in this cell, we retrieve the last cell affected by the rowspan
+			const endingCell = getEndingCell(column, i);
+			if (endingCell) {
+				// We store a reference of the ending cell in the first cell of the rowspan
+				column._endingCell = endingCell;
+				column._endingCell._startingRowSpanY = column._startingRowSpanY;
+			}
+
+			// Check if exists and retrieve the cell that started the rowspan in case we are in the cell just after
+			let startingSpanCell = this.findStartingSpanCell(columns, i);
+			let endingSpanCell = null;
+			if (startingSpanCell && startingSpanCell._endingCell) {
+				// Reference to the last cell of the rowspan
+				endingSpanCell = startingSpanCell._endingCell;
+				// Store if we are in an unbreakable block when we save the context and the originalX
+				if (this.writer.transactionLevel > 0) {
+					endingSpanCell._isUnbreakableContext = true;
+					endingSpanCell._originalXOffset = this.writer.originalX;
+				}
+			}
+
+			// We pass the endingSpanCell reference to store the context just after processing rowspan cell
+			this.writer.context().beginColumn(width, leftOffset, endingSpanCell);
+
 			if (!column._span) {
 				this.processNode(column);
 				addAll(positions, column.positions);
 			} else if (column._columnEndingContext) {
+				let discountY = 0;
+				if (dontBreakRows) {
+					// Calculate how many points we have to discount to Y when dontBreakRows and rowSpan are combined
+					const ctxBeforeRowSpanLastRow = this.writer.contextStack[this.writer.contextStack.length - 1];
+					discountY = ctxBeforeRowSpanLastRow.y - column._startingRowSpanY;
+				}
+				let originalXOffset = 0;
+				// If context was saved from an unbreakable block and we are not in an unbreakable block anymore
+				// We have to sum the originalX (X before starting unbreakable block) to X
+				if (column._isUnbreakableContext && !this.writer.transactionLevel) {
+					originalXOffset = column._originalXOffset;
+				}
 				// row-span ending
-				this.writer.context().markEnding(column);
+				// Recover the context after processing the rowspanned cell
+				this.writer.context().markEnding(column, originalXOffset, discountY);
 			}
 		}
 
-		this.writer.context().completeColumnGroup(height);
+		// Check if last cell is part of a span
+		let endingSpanCell = null;
+		const lastColumn = columns.length > 0 ? columns[columns.length - 1] : null;
+		if (lastColumn) {
+			// Previous column cell has a rowspan
+			if (lastColumn._endingCell) {
+				endingSpanCell = lastColumn._endingCell;
+			// Previous column cell is part of a span
+			} else if (lastColumn._span === true) {
+				// We get the cell that started the span where we set a reference to the ending cell
+				const startingSpanCell = this.findStartingSpanCell(columns, columns.length);
+				if (startingSpanCell) {
+					// Context will be stored here (ending cell)
+					endingSpanCell = startingSpanCell._endingCell;
+					// Store if we are in an unbreakable block when we save the context and the originalX
+					if (this.writer.transactionLevel > 0) {
+						endingSpanCell._isUnbreakableContext = true;
+						endingSpanCell._originalXOffset = this.writer.originalX;
+					}
+				}
+			}
+		}
+
+		// If there are page breaks in this row, update data with prevY of last cell
+		updatePageBreakData(this.writer.context().page, this.writer.context().y);
+
+		this.writer.context().completeColumnGroup(height, endingSpanCell);
 
 		this.writer.removeListener('pageChanged', storePageBreakData);
 
@@ -662,6 +755,16 @@ class LayoutBuilder {
 
 		let rowHeights = tableNode.table.heights;
 		for (let i = 0, l = tableNode.table.body.length; i < l; i++) {
+			// if dontBreakRows and row starts a rowspan
+			// we store the 'y' of the beginning of each rowSpan
+			if (processor.dontBreakRows) {
+				tableNode.table.body[i].forEach(cell => {
+					if (cell.rowSpan && cell.rowSpan > 1) {
+						cell._startingRowSpanY = this.writer.context().y;
+					}
+				});
+			}
+
 			processor.beginRow(i, this.writer);
 
 			let height;
@@ -677,7 +780,7 @@ class LayoutBuilder {
 				height = undefined;
 			}
 
-			let result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
+			let result = this.processRow(processor.dontBreakRows, tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
 			addAll(tableNode.positions, result.positions);
 
 			processor.endRow(i, this.writer, result.pageBreaks);

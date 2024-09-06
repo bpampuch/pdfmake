@@ -41,12 +41,17 @@ class URLResolver {
 		if (!this.resolving[url]) {
 			this.resolving[url] = new Promise((resolve, reject) => {
 				if (url.toLowerCase().indexOf('https://') === 0 || url.toLowerCase().indexOf('http://') === 0) {
-					fetchUrl(url, headers).then(buffer => {
-						this.fs.writeFileSync(url, buffer);
+					if (this.fs.existsSync(url)) {
+						// url was downloaded earlier
 						resolve();
-					}, result => {
-						reject(result);
-					});
+					} else {
+						fetchUrl(url, headers).then(buffer => {
+							this.fs.writeFileSync(url, buffer);
+							resolve();
+						}, result => {
+							reject(result);
+						});
+					}
 				} else {
 					// cannot be resolved
 					resolve();

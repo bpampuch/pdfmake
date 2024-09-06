@@ -1,7 +1,7 @@
 import ColumnCalculator from './columnCalculator';
 import { isNumber } from './helpers/variableType';
 // begin - Vertical alignment
-import { offsetVector } from './helpers/tools';
+import { offsetVector, isPositiveInteger } from './helpers/tools';
 // end - Vertical alignment
 
 class TableProcessor {
@@ -101,14 +101,34 @@ class TableProcessor {
 		this.layout = tableNode._layout;
 
 		availableWidth = writer.context().availableWidth - this.offsets.total;
-		ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth);
+		ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth, this.offsets.total, tableNode);
 
 		this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
 		this.rowSpanData = prepareRowSpanData();
 		this.cleanUpRepeatables = false;
 
-		this.headerRows = tableNode.table.headerRows || 0;
-		this.rowsWithoutPageBreak = this.headerRows + (tableNode.table.keepWithHeaderRows || 0);
+		// headersRows and rowsWithoutPageBreak (headerRows + keepWithHeaderRows)
+		this.headerRows = 0;
+		this.rowsWithoutPageBreak = 0;
+
+		const headerRows = tableNode.table.headerRows;
+
+		if (isPositiveInteger(headerRows)) {
+      this.headerRows = headerRows;
+
+			if (this.headerRows > tableNode.table.body.length) {
+				throw new Error(`Too few rows in the table. Property headerRows requires at least ${this.headerRows}, contains only ${tableNode.table.body.length}`);
+			}
+
+			this.rowsWithoutPageBreak = this.headerRows;
+
+			const keepWithHeaderRows = tableNode.table.keepWithHeaderRows;
+
+			if (isPositiveInteger(keepWithHeaderRows)) {
+					this.rowsWithoutPageBreak += keepWithHeaderRows;
+			}
+		}
+
 		this.dontBreakRows = tableNode.table.dontBreakRows || false;
 
 		if (this.rowsWithoutPageBreak) {
@@ -563,7 +583,9 @@ class TableProcessor {
 								h: bgHeight,
 								lineWidth: 0,
 								color: fillColor,
-								fillOpacity: fillOpacity
+								fillOpacity: fillOpacity,
+								// mark if we are in an unbreakable block
+								_isFillColorFromUnbreakable: !!writer.transactionLevel
 							}, false, true, writer.context().backgroundLength[writer.context().page]);
 						}
 
