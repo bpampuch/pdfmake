@@ -7,6 +7,7 @@
 - Fixed saving margins in an unbreakable block
 - Fixed fillColor items in unbreakable blocks
 - Fixed calculating correctly the 'y' at the end of a rowSpan with dontBreakRows
+- Fixed margins (top/bottom) of nodes and row height are considered for breaking page
 
 ## 0.2.12 - 2024-08-14
 
