@@ -1684,7 +1684,13 @@ describe('LayoutBuilder', function () {
 		it('should return an empty array if no page breaks occur', function () {
 			var doc = createTable(1, 0);
 
-			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+			var result = builder2.processRow({
+				cells: doc.table.body[0],
+				widths: doc.table.widths,
+				gaps: doc._offsets.offsets,
+				tableBody: doc.table.body,
+				rowIndex: 0
+			});
 
 			assert(result.pageBreaks instanceof Array);
 			assert.equal(result.pageBreaks.length, 0);
@@ -1692,7 +1698,13 @@ describe('LayoutBuilder', function () {
 
 		it('on page break should return an entry with ending/starting positions', function () {
 			var doc = createTable(0, 1, 10, 5, 5);
-			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+			var result = builder2.processRow({
+				cells: doc.table.body[0],
+				widths: doc.table.widths,
+				gaps: doc._offsets.offsets,
+				tableBody: doc.table.body,
+				rowIndex: 0
+			});
 
 			assert(result.pageBreaks instanceof Array);
 			assert.equal(result.pageBreaks.length, 1);
@@ -1702,7 +1714,13 @@ describe('LayoutBuilder', function () {
 
 		it('on page break should return an entry with ending/starting positions 2', function () {
 			var doc = createTable(0, 1, 10, 5);
-			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+			var result = builder2.processRow({
+				cells: doc.table.body[0],
+				widths: doc.table.widths,
+				gaps: doc._offsets.offsets,
+				tableBody: doc.table.body,
+				rowIndex: 0
+			});
 
 			assert(result.pageBreaks instanceof Array);
 			assert.equal(result.pageBreaks.length, 1);
@@ -1712,14 +1730,26 @@ describe('LayoutBuilder', function () {
 
 		it('on multi-pass page break (columns or table columns) should treat bottom-most page-break as the ending position ', function () {
 			var doc = createTable(0, 1, 10, 5, 7);
-			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+			var result = builder2.processRow({
+				cells: doc.table.body[0],
+				widths: doc.table.widths,
+				gaps: doc._offsets.offsets,
+				tableBody: doc.table.body,
+				rowIndex: 0
+			});
 
 			assert.equal(result.pageBreaks[0].prevY, 40 + 12 * 7);
 		});
 
 		it('on multiple page breaks (more than 2 pages), should return all entries with ending/starting positions', function () {
 			var doc = createTable(0, 1, 100, 90, 90);
-			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+			var result = builder2.processRow({
+				cells: doc.table.body[0],
+				widths: doc.table.widths,
+				gaps: doc._offsets.offsets,
+				tableBody: doc.table.body,
+				rowIndex: 0
+			});
 
 			assert(result.pageBreaks instanceof Array);
 			assert.equal(result.pageBreaks.length, 2);
@@ -1731,7 +1761,13 @@ describe('LayoutBuilder', function () {
 
 		it('on multiple page breaks (more than 2 pages), should return all entries with ending/starting positions 2', function () {
 			var doc = createTable(0, 1, 100, 90);
-			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+			var result = builder2.processRow({
+				cells: doc.table.body[0],
+				widths: doc.table.widths,
+				gaps: doc._offsets.offsets,
+				tableBody: doc.table.body,
+				rowIndex: 0
+			});
 
 			assert(result.pageBreaks instanceof Array);
 			assert.equal(result.pageBreaks.length, 2);
@@ -1743,7 +1779,13 @@ describe('LayoutBuilder', function () {
 
 		it('on multiple and multi-pass page breaks should calculate bottom-most endings for every page', function () {
 			var doc = createTable(0, 1, 100, 90, 92);
-			var result = builder2.processRow(false, doc.table.body[0], doc.table.widths, doc._offsets.offsets, doc.table.body, 0);
+			var result = builder2.processRow({
+				cells: doc.table.body[0],
+				widths: doc.table.widths,
+				gaps: doc._offsets.offsets,
+				tableBody: doc.table.body,
+				rowIndex: 0
+			});
 
 			assert(result.pageBreaks instanceof Array);
 			assert.equal(result.pageBreaks.length, 2);
