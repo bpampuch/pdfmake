@@ -23,7 +23,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
-var pdfkit_es5 = __webpack_require__(8869);
+var pdfkit_es5 = __webpack_require__(8835);
 ;// CONCATENATED MODULE: ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(4598)["Buffer"];
 
@@ -4490,13 +4490,29 @@ class LayoutBuilder {
         }
       }
       if (margin) {
-        this.writer.context().moveDown(margin[1]);
-        this.writer.context().addMargin(margin[0], margin[2]);
+        const availableHeight = this.writer.context().availableHeight;
+        // If top margin is bigger than available space, move to next page
+        // Necessary for nodes inside tables
+        if (availableHeight - margin[1] < 0) {
+          this.writer.context().moveDown(availableHeight);
+          this.writer.moveToNextPage(node.pageOrientation);
+        } else {
+          this.writer.context().moveDown(margin[1]);
+          this.writer.context().addMargin(margin[0], margin[2]);
+        }
       }
       callback();
       if (margin) {
-        this.writer.context().addMargin(-margin[0], -margin[2]);
-        this.writer.context().moveDown(margin[3]);
+        const availableHeight = this.writer.context().availableHeight;
+        // If bottom margin is bigger than available space, move to next page
+        // Necessary for nodes inside tables
+        if (availableHeight - margin[3] < 0) {
+          this.writer.context().moveDown(availableHeight);
+          this.writer.moveToNextPage(node.pageOrientation);
+        } else {
+          this.writer.context().addMargin(-margin[0], -margin[2]);
+          this.writer.context().moveDown(margin[3]);
+        }
       }
       if (node.pageBreak === 'after') {
         this.writer.moveToNextPage(node.pageOrientation);
@@ -4595,7 +4611,11 @@ class LayoutBuilder {
     columnNode.contentHeight = 0;
     this.nodesHierarchy.push(columnNode);
     columnCalculator.buildColumnWidths(columns, availableWidth);
-    let result = this.processRow(false, columns, columns, gaps);
+    let result = this.processRow({
+      cells: columns,
+      widths: columns,
+      gaps
+    });
     addAll(columnNode.positions, result.positions);
     function gapArray(gap) {
       if (!gap) {
@@ -4628,7 +4648,17 @@ class LayoutBuilder {
     }
     return null;
   }
-  processRow(dontBreakRows, columns, widths, gaps, tableBody, tableRow, height) {
+  processRow(_ref) {
+    let {
+      dontBreakRows = false,
+      rowsWithoutPageBreak = 0,
+      cells,
+      widths,
+      gaps,
+      tableBody,
+      rowIndex,
+      height
+    } = _ref;
     const updatePageBreakData = (page, prevY) => {
       let pageDesc;
       // Find page break data for this row and page
@@ -4660,13 +4690,20 @@ class LayoutBuilder {
       pageDesc.prevY = Math.max(pageDesc.prevY, data.prevY);
       pageDesc.y = Math.min(pageDesc.y, data.y);
     };
+    const isUnbreakableRow = dontBreakRows || rowIndex <= rowsWithoutPageBreak - 1;
     let pageBreaks = [];
     let positions = [];
+    let willBreakByHeight = false;
     this.writer.addListener('pageChanged', storePageBreakData);
-    widths = widths || columns;
+
+    // Check if row should break by height
+    if (!isUnbreakableRow && height > this.writer.context().availableHeight) {
+      willBreakByHeight = true;
+    }
+    widths = widths || cells;
     this.writer.context().beginColumnGroup();
-    for (let i = 0, l = columns.length; i < l; i++) {
-      let column = columns[i];
+    for (let i = 0, l = cells.length; i < l; i++) {
+      let column = cells[i];
       let width = widths[i]._calcWidth;
       let leftOffset = colLeftOffset(i);
       if (column.colSpan && column.colSpan > 1) {
@@ -4684,7 +4721,7 @@ class LayoutBuilder {
       }
 
       // Check if exists and retrieve the cell that started the rowspan in case we are in the cell just after
-      let startingSpanCell = this.findStartingSpanCell(columns, i);
+      let startingSpanCell = this.findStartingSpanCell(cells, i);
       let endingSpanCell = null;
       if (startingSpanCell && startingSpanCell._endingCell) {
         // Reference to the last cell of the rowspan
@@ -4722,7 +4759,7 @@ class LayoutBuilder {
 
     // Check if last cell is part of a span
     let endingSpanCell = null;
-    const lastColumn = columns.length > 0 ? columns[columns.length - 1] : null;
+    const lastColumn = cells.length > 0 ? cells[cells.length - 1] : null;
     if (lastColumn) {
       // Previous column cell has a rowspan
       if (lastColumn._endingCell) {
@@ -4730,7 +4767,7 @@ class LayoutBuilder {
         // Previous column cell is part of a span
       } else if (lastColumn._span === true) {
         // We get the cell that started the span where we set a reference to the ending cell
-        const startingSpanCell = this.findStartingSpanCell(columns, columns.length);
+        const startingSpanCell = this.findStartingSpanCell(cells, cells.length);
         if (startingSpanCell) {
           // Context will be stored here (ending cell)
           endingSpanCell = startingSpanCell._endingCell;
@@ -4745,6 +4782,12 @@ class LayoutBuilder {
 
     // If there are page breaks in this row, update data with prevY of last cell
     updatePageBreakData(this.writer.context().page, this.writer.context().y);
+
+    // If content did not break page, check if we should break by height
+    if (!isUnbreakableRow && pageBreaks.length === 0 && willBreakByHeight) {
+      this.writer.context().moveDown(this.writer.context().availableHeight);
+      this.writer.moveToNextPage();
+    }
     this.writer.context().completeColumnGroup(height, endingSpanCell);
     this.writer.removeListener('pageChanged', storePageBreakData);
     return {
@@ -4759,7 +4802,7 @@ class LayoutBuilder {
     }
     function getEndingCell(column, columnIndex) {
       if (column.rowSpan && column.rowSpan > 1) {
-        let endingRow = tableRow + column.rowSpan - 1;
+        let endingRow = rowIndex + column.rowSpan - 1;
         if (endingRow >= tableBody.length) {
           throw new Error(`Row span for column ${columnIndex} (with indexes starting from 0) exceeded row count`);
         }
@@ -4848,7 +4891,16 @@ class LayoutBuilder {
       if (height === 'auto') {
         height = undefined;
       }
-      let result = this.processRow(processor.dontBreakRows, tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
+      let result = this.processRow({
+        dontBreakRows: processor.dontBreakRows,
+        rowsWithoutPageBreak: processor.rowsWithoutPageBreak,
+        cells: tableNode.table.body[i],
+        widths: tableNode.table.widths,
+        gaps: tableNode._offsets.offsets,
+        tableBody: tableNode.table.body,
+        rowIndex: i,
+        height
+      });
       addAll(tableNode.positions, result.positions);
       processor.endRow(i, this.writer, result.pageBreaks);
     }
@@ -6136,7 +6188,7 @@ class OutputDocument {
 }
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(6364);
+var FileSaver_min = __webpack_require__(9680);
 ;// CONCATENATED MODULE: ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -21619,7 +21671,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 8869:
+/***/ 8835:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -60383,7 +60435,7 @@ module.exports = __webpack_require__(5349);
 
 /***/ }),
 
-/***/ 6364:
+/***/ 9680:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
