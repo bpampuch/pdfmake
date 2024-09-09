@@ -4,10 +4,12 @@
 
 - Drop support Internet Explorer 11 (Microsoft will not support from 2022)
 - Minimal supported version Node.js 18 LTS
+- Update Roboto font (version 3.010)
 - Fixed page break in a column group
 - Fixed saving margins in an unbreakable block
 - Fixed fillColor items in unbreakable blocks
 - Fixed calculating correctly the 'y' at the end of a rowSpan with dontBreakRows
+- Fixed margins (top/bottom) of nodes and row height are considered for breaking page
 
 ## 0.3.0-beta.9 - 2024-08-09
 
