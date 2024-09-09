@@ -32,9 +32,9 @@ class LayoutBuilder {
 		this.pageMargins = pageMargins;
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = {};
-		// begin - Vertical alignment
-		this.__nodesHierarchy = [];
-		// end - Vertical alignment
+
+		//vertical alignment
+		this.nodesHierarchy = [];
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -143,9 +143,9 @@ class LayoutBuilder {
 
 		this.docPreprocessor = new DocPreprocessor();
 		this.docMeasure = new DocMeasure(pdfDocument, styleDictionary, defaultStyle, this.svgMeasure, this.tableLayouts);
-		// begin - Vertical alignment
-		this.__nodesHierarchy = [];
-		// end - Vertical alignment
+
+		//vertical alignment
+		this.nodesHierarchy = [];
 
 		function resetXYs(result) {
 			result.linearNodeList.forEach(node => {
@@ -461,12 +461,11 @@ class LayoutBuilder {
 		});
 	}
 
-	// vertical container
+	//vertical container
 	processVerticalContainer(node) {
-		// begin - Vertical alignment
-		this.__nodesHierarchy.push(node);
-		node.__contentHeight = 0;
-		// end - Vertical alignment
+		//vertical alignment
+		this.nodesHierarchy.push(node);
+		node.contentHeight = 0;
 
 		node.stack.forEach(item => {
 			this.processNode(item);
@@ -474,10 +473,10 @@ class LayoutBuilder {
 
 			//TODO: paragraph gap
 		}, this);
-		// begin - Vertical alignment
-		const lastNode = this.__nodesHierarchy.pop();
-		this.__nodesHierarchy.length > 0 && (this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight);
-		// end - Vertical alignment
+
+		//vertical alignment
+		const lastNode = this.nodesHierarchy.pop();
+		this.nodesHierarchy.length > 0 && (this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += lastNode.contentHeight);
 	}
 
 	// columns
@@ -489,10 +488,10 @@ class LayoutBuilder {
 		if (gaps) {
 			availableWidth -= (gaps.length - 1) * columnNode._gap;
 		}
-		// begin - Vertical alignment
-		columnNode.__contentHeight = 0;
-		this.__nodesHierarchy.push(columnNode);
-		// end - Vertical alignment
+
+		//vertical alignment
+		columnNode.contentHeight = 0;
+		this.nodesHierarchy.push(columnNode);
 
 		ColumnCalculator.buildColumnWidths(columns, availableWidth);
 		let result = this.processRow(false, columns, columns, gaps);
@@ -512,11 +511,11 @@ class LayoutBuilder {
 
 			return gaps;
 		}
-		// begin - Vertical alignment
-		const lastNode = this.__nodesHierarchy.pop();
-		lastNode.__contentHeight = Math.max(...columns.map(c => c.__contentHeight));
-		this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
-		// end - Vertical alignment
+
+		//vertical alignment
+		const lastNode = this.nodesHierarchy.pop();
+		lastNode.contentHeight = Math.max(...columns.map(c => c.contentHeight));
+		this.nodesHierarchy.length > 0 && (this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += lastNode.contentHeight);
 	}
 
 	findStartingSpanCell(arr, i) {
@@ -699,18 +698,19 @@ class LayoutBuilder {
 
 				if (marker.canvas) {
 					let vector = marker.canvas[0];
-					// begin - Vertical alignment
-					vector.__nodeRef = line.__nodeRef ? line.__nodeRef : line;
+
+					//vertical alignment
+					vector.nodeRef = line.nodeRef ? line.nodeRef : line;
 					vector._height = marker._maxHeight;
-					// end - Vertical alignment
 
 					offsetVector(vector, -marker._minWidth, 0);
 					this.writer.addVector(vector);
 				} else if (marker._inlines) {
 					let markerLine = new Line(this.pageSize.width);
-					// begin - Vertical alignment
-					markerLine.__nodeRef = line.__nodeRef ? line.__nodeRef: line;
-					// end - Vertical alignment
+
+					//vertical alignment
+					markerLine.nodeRef = line.nodeRef ? line.nodeRef: line;
+
 					markerLine.addInline(marker._inlines[0]);
 					markerLine.x = -marker._minWidth;
 					markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
@@ -718,10 +718,10 @@ class LayoutBuilder {
 				}
 			}
 		};
-		// begin - Vertical alignment
-		this.__nodesHierarchy.push(node);
-		node.__contentHeight = 0;
-		// end - Vertical alignment
+
+		//vertical alignment
+		this.nodesHierarchy.push(node);
+		node.contentHeight = 0;
 
 		let items = orderedList ? node.ol : node.ul;
 		let gapSize = node._gapSize;
@@ -733,9 +733,10 @@ class LayoutBuilder {
 		this.writer.addListener('lineAdded', addMarkerToFirstLeaf);
 
 		items.forEach(item => {
-			// begin - Vertical alignment
-			item.__nodeRef = node.__nodeRef ? node.__nodeRef : node;
-			// end - Vertical alignment
+
+			//vertical alignment
+			item.nodeRef = node.nodeRef ? node.nodeRef : node;
+
 			nextMarker = item.listMarker;
 			this.processNode(item);
 			addAll(node.positions, item.positions);
@@ -744,10 +745,10 @@ class LayoutBuilder {
 		this.writer.removeListener('lineAdded', addMarkerToFirstLeaf);
 
 		this.writer.context().addMargin(-gapSize.width);
-		// begin - Vertical alignment
-		const lastNode = this.__nodesHierarchy.pop();
-		if(this.__nodesHierarchy[this.__nodesHierarchy.length - 1]) this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
-		// end - Vertical alignment
+
+		//vertical alignment
+		const lastNode = this.nodesHierarchy.pop();
+		if(this.nodesHierarchy[this.nodesHierarchy.length - 1]) this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += lastNode.contentHeight;
 	}
 
 	// tables
@@ -794,13 +795,11 @@ class LayoutBuilder {
 
 	// leafs (texts)
 	processLeaf(node) {
-		// begin - Vertical alignment
+		//vertical alignment
 		if(this.docPreprocessor)  node = this.docPreprocessor.checkNode(node);
-		// end - Vertical alignment
 		let line = this.buildNextLine(node);
-		// begin - Vertical alignment
-		line && (line.__nodeRef = node.__nodeRef ? node.__nodeRef : node);
-		// end - Vertical alignment
+		line && (line.nodeRef = node.nodeRef ? node.nodeRef : node);
+
 		if (line && (node.tocItem || node.id)) {
 			line._node = node;
 		}
@@ -839,16 +838,16 @@ class LayoutBuilder {
 			node.positions.push(positions);
 			line = this.buildNextLine(node);
 			if (line) {
-				// begin - Vertical alignment
-				line.__nodeRef = node.__nodeRef ? node.__nodeRef : node;;
-				// end - Vertical alignment
+				//vertical alignment
+				line.nodeRef = node.nodeRef ? node.nodeRef : node;
+
 				currentHeight += line.getHeight();
 			}
 		}
-		// begin - Vertical alignment
-		node.__contentHeight = currentHeight;
-		this.__nodesHierarchy.length > 0 && (this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += currentHeight);
-		// end - Vertical alignment
+
+		//vertical alignment
+		node.contentHeight = currentHeight;
+		this.nodesHierarchy.length > 0 && (this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += currentHeight);
 	}
 
 	processToc(node) {

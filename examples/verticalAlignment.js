@@ -158,6 +158,16 @@ const docDefinition = {
 						'',
 						'',
 						{
+							table: {
+								heights: "100%",
+								body: [
+									[ 'ColG', 'ColH', 'ColI' ],
+									[ '8', '9', '10' ]
+								]
+							},
+							verticalAlign: 'middle'
+						},
+						{
 							canvas: [
 								{
 									type: 'rect',
@@ -252,7 +262,7 @@ const docDefinition = {
 									x: 200, y: 10, w: 50, h: 30,
 									color: [ 'stripe45d', 'blue' ],
 								}
-							], colSpan: 7, alignment: 'center', verticalAlign: 'middle'
+							], colSpan: 6, alignment: 'center', verticalAlign: 'middle'
 						}
 					]
 				]
