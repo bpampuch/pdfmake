@@ -114,5 +114,83 @@ describe('ColumnCalculator', function () {
 			assert.equal(columns[0]._calcWidth, columns[0]._calcWidth);
 			assert.equal(columns[0]._calcWidth + columns[1]._calcWidth + columns[2]._calcWidth, 320);
 		});
+
+		it('should calculate widths of columns correctly', function () {
+			const availableWidth = 200;
+			const columns = [
+				{ width: '25%', _minWidth: 30, _maxWidth: 41 },
+				{ width: '50%', _minWidth: 31, _maxWidth: 42 },
+				{ width: '25%', _minWidth: 33, _maxWidth: 421 },
+			];
+
+			ColumnCalculator.buildColumnWidths(columns, availableWidth);
+			assert.equal(columns[0]._calcWidth, 50);
+			assert.equal(columns[1]._calcWidth, 100);
+			assert.equal(columns[2]._calcWidth, 50);
+		});
+
+		it('should calculate widths of the table columns correctly when using percentages', function () {
+			const availableWidth = 149;
+			const offsetTotal = 51;
+			const columns = [
+				{
+					width: "50%",
+					_minWidth: 22.27734375,
+					_maxWidth: 22.27734375,
+				},
+				{
+					width: "25%",
+					_minWidth: 22.27734375,
+					_maxWidth: 22.27734375,
+				},
+				{
+					width: "25%",
+					_minWidth: 22.27734375,
+					_maxWidth: 22.27734375,
+				},
+			];
+			const tableNode = {
+				table: {
+						widths: ['50%', '25%', '25%'],
+						body: [['50%', '25%', '25%']]
+				},
+				_layout: {
+					vLineWidth: function (i) {
+						if (i === 0) {
+							return 4;
+						}
+						if (i === 1) {
+							return 6;
+						}
+						if (i === 2) {
+							return 5;
+						}
+						if (i === 3) {
+							return 4;
+						}
+					},
+					paddingLeft: function(i) {
+						return i === 0 ? 5 : 3;
+					},
+					paddingRight: function() {
+						return 7;
+					}
+				}
+			};
+
+			ColumnCalculator.buildColumnWidths(columns, availableWidth, offsetTotal, tableNode);
+			// 200 Total available width (availableWidth + offsetTotal) === 149 + 51
+			// Fist column is 50% width of 200 === 100
+			// 100 - 4 borderLeft - 6/2 = 3 borderRight - 5 paddingLeft - 7 paddingRight
+			assert.equal(columns[0].width, 81);
+			// Second column has 25% width of 200 which is 50
+			// 50 - 3 (6/2) borderLeft - 2.5 (5/2) borderRight - 3 paddingLeft - 7 paddingRight
+			assert.equal(columns[1].width, 34.5);
+			// Third column has 25% width of 200 which is 50
+			// 50 - 2.5 (5/2) borderLeft - 4 borderRight - 3 paddingLeft - 7 paddingRight
+			assert.equal(columns[2].width, 33.5);
+			// The sum of all column width should be equal to totalAvailableWidth - offsetTotal
+			assert.equal(availableWidth, 81 + 34.5 + 33.5);
+		});
 	});
 });

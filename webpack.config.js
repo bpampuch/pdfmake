@@ -47,7 +47,10 @@ module.exports = {
 								"@babel/preset-env",
 								{
 									targets: {
-										"ie": "11"
+										"chrome": "109",
+										"edge": "109",
+										"firefox": "102",
+										"safari": "14"
 									},
 									modules: false,
 									useBuiltIns: 'usage',
@@ -76,6 +79,11 @@ module.exports = {
 						]
 					})
 				}
+			},
+			{
+				enforce: "pre",
+				test: /\.(cjs|js)$/,
+				use: ["source-map-loader"],
 			},
 			{
 				test: /\.js$/,

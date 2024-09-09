@@ -1,7 +1,7 @@
-import { isNumber } from './helpers/variableType';
-import { pack, offsetVector } from './helpers/tools';
-import DocumentContext from './DocumentContext';
 import { EventEmitter } from 'events';
+import DocumentContext from './DocumentContext';
+import { offsetVector, pack } from './helpers/tools';
+import { isNumber } from './helpers/variableType';
 
 /**
  * A line/vector writer, which adds elements to current page and sets
@@ -125,9 +125,9 @@ class ElementWriter extends EventEmitter {
 		this.alignCanvas(node);
 
 		node.canvas.forEach(function (vector) {
-			// begin - Vertical alignment
-			vector.__nodeRef = node.__nodeRef ?? node;
-			// end - Vertical alignment
+			//vertical alignment
+			vector.nodeRef = node.nodeRef ? node.nodeRef : node;
+
 			let position = this.addVector(vector, false, false, index);
 			positions.push(position);
 			if (index !== undefined) {
@@ -191,9 +191,10 @@ class ElementWriter extends EventEmitter {
 			let vector = qr._canvas[i];
 			vector.x += qr.x;
 			vector.y += qr.y;
-			// begin - Vertical alignment
-			vector.__nodeRef = qr.__nodeRef ?? qr;
-			// end - Vertical alignment
+
+			//vertical alignment
+			vector.nodeRef = qr.nodeRef ? qr.nodeRef: qr;
+
 			this.addVector(vector, true, true, index);
 		}
 
@@ -328,10 +329,21 @@ class ElementWriter extends EventEmitter {
 					var v = pack(item.item);
 
 					offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
-					page.items.push({
-						type: 'vector',
-						item: v
-					});
+					if (v._isFillColorFromUnbreakable) {
+						// If the item is a fillColor from an unbreakable block
+						// We have to add it at the beginning of the items body array of the page
+						delete v._isFillColorFromUnbreakable;
+						const endOfBackgroundItemsIndex = ctx.backgroundLength[ctx.page];
+						page.items.splice(endOfBackgroundItemsIndex, 0, {
+							type: 'vector',
+							item: v
+						});
+					} else {
+						page.items.push({
+							type: 'vector',
+							item: v
+						});
+					}
 					break;
 
 				case 'image':

@@ -1,15 +1,15 @@
-import DocPreprocessor from './DocPreprocessor';
-import DocMeasure from './DocMeasure';
-import DocumentContext from './DocumentContext';
-import PageElementWriter from './PageElementWriter';
 import ColumnCalculator from './columnCalculator';
-import TableProcessor from './TableProcessor';
+import DocMeasure from './DocMeasure';
+import DocPreprocessor from './DocPreprocessor';
+import DocumentContext from './DocumentContext';
+import { getNodeId, stringifyNode } from './helpers/node';
+import { offsetVector, pack } from './helpers/tools';
+import { isNumber, isString, isValue } from './helpers/variableType';
 import Line from './Line';
-import { isString, isValue, isNumber } from './helpers/variableType';
-import { stringifyNode, getNodeId } from './helpers/node';
-import { pack, offsetVector } from './helpers/tools';
-import TextInlines from './TextInlines';
+import PageElementWriter from './PageElementWriter';
 import StyleContextStack from './StyleContextStack';
+import TableProcessor from './TableProcessor';
+import TextInlines from './TextInlines';
 
 function addAll(target, otherArray) {
 	otherArray.forEach(item => {
@@ -32,6 +32,9 @@ class LayoutBuilder {
 		this.pageMargins = pageMargins;
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = {};
+
+		//vertical alignment
+		this.nodesHierarchy = [];
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -140,9 +143,9 @@ class LayoutBuilder {
 
 		this.docPreprocessor = new DocPreprocessor();
 		this.docMeasure = new DocMeasure(pdfDocument, styleDictionary, defaultStyle, this.svgMeasure, this.tableLayouts);
-		// begin - Vertical alignment
-		this.__nodesHierarchy = [];
-		// end - Vertical alignment
+
+		//vertical alignment
+		this.nodesHierarchy = [];
 
 		function resetXYs(result) {
 			result.linearNodeList.forEach(node => {
@@ -458,12 +461,11 @@ class LayoutBuilder {
 		});
 	}
 
-	// vertical container
+	//vertical container
 	processVerticalContainer(node) {
-		// begin - Vertical alignment
-		this.__nodesHierarchy.push(node);
-		node.__contentHeight = 0;
-		// end - Vertical alignment
+		//vertical alignment
+		this.nodesHierarchy.push(node);
+		node.contentHeight = 0;
 
 		node.stack.forEach(item => {
 			this.processNode(item);
@@ -471,10 +473,10 @@ class LayoutBuilder {
 
 			//TODO: paragraph gap
 		}, this);
-		// begin - Vertical alignment
-		const lastNode = this.__nodesHierarchy.pop();
-		this.__nodesHierarchy.length > 0 && (this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight);
-		// end - Vertical alignment
+
+		//vertical alignment
+		const lastNode = this.nodesHierarchy.pop();
+		this.nodesHierarchy.length > 0 && (this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += lastNode.contentHeight);
 	}
 
 	// columns
@@ -486,13 +488,13 @@ class LayoutBuilder {
 		if (gaps) {
 			availableWidth -= (gaps.length - 1) * columnNode._gap;
 		}
-		// begin - Vertical alignment
-		columnNode.__contentHeight = 0;
-		this.__nodesHierarchy.push(columnNode);
-		// end - Vertical alignment
+
+		//vertical alignment
+		columnNode.contentHeight = 0;
+		this.nodesHierarchy.push(columnNode);
 
 		ColumnCalculator.buildColumnWidths(columns, availableWidth);
-		let result = this.processRow(columns, columns, gaps);
+		let result = this.processRow(false, columns, columns, gaps);
 		addAll(columnNode.positions, result.positions);
 
 		function gapArray(gap) {
@@ -509,14 +511,45 @@ class LayoutBuilder {
 
 			return gaps;
 		}
-		// begin - Vertical alignment
-		const lastNode = this.__nodesHierarchy.pop();
-		lastNode.__contentHeight = Math.max(...columns.map(c => c.__contentHeight));
-		this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
-		// end - Vertical alignment
+
+		//vertical alignment
+		const lastNode = this.nodesHierarchy.pop();
+		lastNode.contentHeight = Math.max(...columns.map(c => c.contentHeight));
+		this.nodesHierarchy.length > 0 && (this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += lastNode.contentHeight);
 	}
 
-	processRow(columns, widths, gaps, tableBody, tableRow, height) {
+	findStartingSpanCell(arr, i) {
+		let requiredColspan = 1;
+    for (let index = i - 1; index >= 0; index--) {
+        if (!arr[index]._span) {
+					if (arr[index].rowSpan > 1 && (arr[index].colSpan || 1) === requiredColspan) {
+            return arr[index];
+					} else {
+						return null;
+					}
+        }
+				requiredColspan++;
+    }
+    return null;
+	}
+
+	processRow(dontBreakRows, columns, widths, gaps, tableBody, tableRow, height) {
+		const updatePageBreakData = (page, prevY) => {
+			let pageDesc;
+			// Find page break data for this row and page
+      for (let i = 0, l = pageBreaks.length; i < l; i++) {
+        let desc = pageBreaks[i];
+        if (desc.prevPage === page) {
+          pageDesc = desc;
+          break;
+        }
+      }
+			// If row has page break in this page, update prevY
+			if (pageDesc) {
+				pageDesc.prevY = Math.max(pageDesc.prevY, prevY);
+			}
+		};
+
 		const storePageBreakData = data => {
 			let pageDesc;
 
@@ -556,17 +589,79 @@ class LayoutBuilder {
 				}
 			}
 
-			this.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
+			// if rowspan starts in this cell, we retrieve the last cell affected by the rowspan
+			const endingCell = getEndingCell(column, i);
+			if (endingCell) {
+				// We store a reference of the ending cell in the first cell of the rowspan
+				column._endingCell = endingCell;
+				column._endingCell._startingRowSpanY = column._startingRowSpanY;
+			}
+
+			// Check if exists and retrieve the cell that started the rowspan in case we are in the cell just after
+			let startingSpanCell = this.findStartingSpanCell(columns, i);
+			let endingSpanCell = null;
+			if (startingSpanCell && startingSpanCell._endingCell) {
+				// Reference to the last cell of the rowspan
+				endingSpanCell = startingSpanCell._endingCell;
+				// Store if we are in an unbreakable block when we save the context and the originalX
+				if (this.writer.transactionLevel > 0) {
+					endingSpanCell._isUnbreakableContext = true;
+					endingSpanCell._originalXOffset = this.writer.originalX;
+				}
+			}
+
+			// We pass the endingSpanCell reference to store the context just after processing rowspan cell
+			this.writer.context().beginColumn(width, leftOffset, endingSpanCell);
+
 			if (!column._span) {
 				this.processNode(column);
 				addAll(positions, column.positions);
 			} else if (column._columnEndingContext) {
+				let discountY = 0;
+				if (dontBreakRows) {
+					// Calculate how many points we have to discount to Y when dontBreakRows and rowSpan are combined
+					const ctxBeforeRowSpanLastRow = this.writer.contextStack[this.writer.contextStack.length - 1];
+					discountY = ctxBeforeRowSpanLastRow.y - column._startingRowSpanY;
+				}
+				let originalXOffset = 0;
+				// If context was saved from an unbreakable block and we are not in an unbreakable block anymore
+				// We have to sum the originalX (X before starting unbreakable block) to X
+				if (column._isUnbreakableContext && !this.writer.transactionLevel) {
+					originalXOffset = column._originalXOffset;
+				}
 				// row-span ending
-				this.writer.context().markEnding(column);
+				// Recover the context after processing the rowspanned cell
+				this.writer.context().markEnding(column, originalXOffset, discountY);
 			}
 		}
 
-		this.writer.context().completeColumnGroup(height);
+		// Check if last cell is part of a span
+		let endingSpanCell = null;
+		const lastColumn = columns.length > 0 ? columns[columns.length - 1] : null;
+		if (lastColumn) {
+			// Previous column cell has a rowspan
+			if (lastColumn._endingCell) {
+				endingSpanCell = lastColumn._endingCell;
+			// Previous column cell is part of a span
+			} else if (lastColumn._span === true) {
+				// We get the cell that started the span where we set a reference to the ending cell
+				const startingSpanCell = this.findStartingSpanCell(columns, columns.length);
+				if (startingSpanCell) {
+					// Context will be stored here (ending cell)
+					endingSpanCell = startingSpanCell._endingCell;
+					// Store if we are in an unbreakable block when we save the context and the originalX
+					if (this.writer.transactionLevel > 0) {
+						endingSpanCell._isUnbreakableContext = true;
+						endingSpanCell._originalXOffset = this.writer.originalX;
+					}
+				}
+			}
+		}
+
+		// If there are page breaks in this row, update data with prevY of last cell
+		updatePageBreakData(this.writer.context().page, this.writer.context().y);
+
+		this.writer.context().completeColumnGroup(height, endingSpanCell);
 
 		this.writer.removeListener('pageChanged', storePageBreakData);
 
@@ -603,18 +698,19 @@ class LayoutBuilder {
 
 				if (marker.canvas) {
 					let vector = marker.canvas[0];
-					// begin - Vertical alignment
-					vector.__nodeRef = line.__nodeRef ?? line;
+
+					//vertical alignment
+					vector.nodeRef = line.nodeRef ? line.nodeRef : line;
 					vector._height = marker._maxHeight;
-					// end - Vertical alignment
 
 					offsetVector(vector, -marker._minWidth, 0);
 					this.writer.addVector(vector);
 				} else if (marker._inlines) {
 					let markerLine = new Line(this.pageSize.width);
-					// begin - Vertical alignment
-					markerLine.__nodeRef = line.__nodeRef ?? line;
-					// end - Vertical alignment
+
+					//vertical alignment
+					markerLine.nodeRef = line.nodeRef ? line.nodeRef: line;
+
 					markerLine.addInline(marker._inlines[0]);
 					markerLine.x = -marker._minWidth;
 					markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
@@ -622,10 +718,10 @@ class LayoutBuilder {
 				}
 			}
 		};
-		// begin - Vertical alignment
-		this.__nodesHierarchy.push(node);
-		node.__contentHeight = 0;
-		// end - Vertical alignment
+
+		//vertical alignment
+		this.nodesHierarchy.push(node);
+		node.contentHeight = 0;
 
 		let items = orderedList ? node.ol : node.ul;
 		let gapSize = node._gapSize;
@@ -637,9 +733,10 @@ class LayoutBuilder {
 		this.writer.addListener('lineAdded', addMarkerToFirstLeaf);
 
 		items.forEach(item => {
-			// begin - Vertical alignment
-			item.__nodeRef = node.__nodeRef ?? node;
-			// end - Vertical alignment
+
+			//vertical alignment
+			item.nodeRef = node.nodeRef ? node.nodeRef : node;
+
 			nextMarker = item.listMarker;
 			this.processNode(item);
 			addAll(node.positions, item.positions);
@@ -648,10 +745,10 @@ class LayoutBuilder {
 		this.writer.removeListener('lineAdded', addMarkerToFirstLeaf);
 
 		this.writer.context().addMargin(-gapSize.width);
-		// begin - Vertical alignment
-		const lastNode = this.__nodesHierarchy.pop();
-		this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += lastNode.__contentHeight;
-		// end - Vertical alignment
+
+		//vertical alignment
+		const lastNode = this.nodesHierarchy.pop();
+		if(this.nodesHierarchy[this.nodesHierarchy.length - 1]) this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += lastNode.contentHeight;
 	}
 
 	// tables
@@ -662,6 +759,16 @@ class LayoutBuilder {
 
 		let rowHeights = tableNode.table.heights;
 		for (let i = 0, l = tableNode.table.body.length; i < l; i++) {
+			// if dontBreakRows and row starts a rowspan
+			// we store the 'y' of the beginning of each rowSpan
+			if (processor.dontBreakRows) {
+				tableNode.table.body[i].forEach(cell => {
+					if (cell.rowSpan && cell.rowSpan > 1) {
+						cell._startingRowSpanY = this.writer.context().y;
+					}
+				});
+			}
+
 			processor.beginRow(i, this.writer);
 
 			let height;
@@ -677,7 +784,7 @@ class LayoutBuilder {
 				height = undefined;
 			}
 
-			let result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
+			let result = this.processRow(processor.dontBreakRows, tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
 			addAll(tableNode.positions, result.positions);
 
 			processor.endRow(i, this.writer, result.pageBreaks);
@@ -688,13 +795,11 @@ class LayoutBuilder {
 
 	// leafs (texts)
 	processLeaf(node) {
-		// begin - Vertical alignment
-		node = this.docPreprocessor.checkNode(node);
-		// end - Vertical alignment
+		//vertical alignment
+		if(this.docPreprocessor)  node = this.docPreprocessor.checkNode(node);
 		let line = this.buildNextLine(node);
-		// begin - Vertical alignment
-		line && (line.__nodeRef = node.__nodeRef ?? node);
-		// end - Vertical alignment
+		line && (line.nodeRef = node.nodeRef ? node.nodeRef : node);
+
 		if (line && (node.tocItem || node.id)) {
 			line._node = node;
 		}
@@ -733,16 +838,16 @@ class LayoutBuilder {
 			node.positions.push(positions);
 			line = this.buildNextLine(node);
 			if (line) {
-				// begin - Vertical alignment
-				line.__nodeRef = node.__nodeRef ?? node;
-				// end - Vertical alignment
+				//vertical alignment
+				line.nodeRef = node.nodeRef ? node.nodeRef : node;
+
 				currentHeight += line.getHeight();
 			}
 		}
-		// begin - Vertical alignment
-		node.__contentHeight = currentHeight;
-		this.__nodesHierarchy.length > 0 && (this.__nodesHierarchy[this.__nodesHierarchy.length - 1].__contentHeight += currentHeight);
-		// end - Vertical alignment
+
+		//vertical alignment
+		node.contentHeight = currentHeight;
+		this.nodesHierarchy.length > 0 && (this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += currentHeight);
 	}
 
 	processToc(node) {

@@ -180,6 +180,14 @@ describe('DocMeasure', function () {
 			assert(result._gapSize);
 		});
 
+		it('should not increase listMarker when list item is a nested list', function () {
+			var node = { ol: ['parent item 1', { ol: ['nested item 1', 'nested item 2']}, 'parent item 2'] };
+			docPreprocessor.preprocessList(node);
+			var result = docMeasure.measureOrderedList(node);
+
+			assert.equal(result.ol[2].listMarker._inlines[0].text, '2. ');
+		});
+
 		it('should calculate _minWidth and _maxWidth of all elements', function () {
 			var node = { ol: ['this is a test', 'another one'] };
 			docPreprocessor.preprocessList(node);

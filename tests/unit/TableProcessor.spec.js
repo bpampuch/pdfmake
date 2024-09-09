@@ -205,4 +205,133 @@ describe('TableProcessor', function () {
 			assert.equal(fakeWriter.popFromRepeatables.callCount, 1);
 		});
 	});
+
+	describe('headerRows and keepWithHeaderRows (issue #2754)', function () {
+		var fakeWriter = {
+			context: function () {
+				return {
+					availableWidth: 56473,
+				};
+			},
+			beginUnbreakableBlock: function () { },
+		};
+
+		const inputTable = {
+			table: {
+				widths: [{ width: 20 }, { width: 20 }],
+				body: [['a', 'b'], ['c', 'd'], ['e', 'f']]
+			},
+			_offsets: {
+				total: 9
+			},
+			_layout: {
+				paddingLeft: function () { },
+				paddingRight: function () { },
+				paddingBottom: function () { },
+				paddingTop: function () { },
+				vLineWidth: function () { },
+				hLineWidth: function () { },
+				fillColor: function () { },
+				fillOpacity: function () { }
+			}
+		};
+
+		it('should ignore wrong values for headerRows - 1', function () {
+			inputTable.table.headerRows = '2';
+			inputTable.table.keepWithHeaderRows = 2;
+
+			var tableProcessor = new TableProcessor(inputTable);
+			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.beginTable(fakeWriter);
+			assert.equal(tableProcessor.headerRows, 0);
+			assert.equal(tableProcessor.rowsWithoutPageBreak, 0);
+		});
+
+		it('should ignore wrong values for headerRows - 2', function () {
+			inputTable.table.headerRows = -5;
+			inputTable.table.keepWithHeaderRows = 2;
+
+			var tableProcessor = new TableProcessor(inputTable);
+			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.beginTable(fakeWriter);
+			assert.equal(tableProcessor.headerRows, 0);
+			assert.equal(tableProcessor.rowsWithoutPageBreak, 0);
+		});
+
+
+		it('should ignore wrong values for headerRows - 3', function () {
+			inputTable.table.headerRows = 2.5;
+			inputTable.table.keepWithHeaderRows = 2;
+
+			var tableProcessor = new TableProcessor(inputTable);
+			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.beginTable(fakeWriter);
+			assert.equal(tableProcessor.headerRows, 0);
+			assert.equal(tableProcessor.rowsWithoutPageBreak, 0);
+		});
+
+		it('should ignore keepWithHeaderRows if headerRows is not bigger than 0', function () {
+			inputTable.table.headerRows = 0;
+			inputTable.table.keepWithHeaderRows = 2;
+
+			var tableProcessor = new TableProcessor(inputTable);
+			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.beginTable(fakeWriter);
+			assert.equal(tableProcessor.headerRows, 0);
+			assert.equal(tableProcessor.rowsWithoutPageBreak, 0);
+		});
+
+		it('should ignore wrong values for keepWithHeaderRows - 1', function () {
+			inputTable.table.headerRows = 1;
+			inputTable.table.keepWithHeaderRows = 1.5;
+
+			var tableProcessor = new TableProcessor(inputTable);
+			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.beginTable(fakeWriter);
+			assert.equal(tableProcessor.headerRows, 1);
+			assert.equal(tableProcessor.rowsWithoutPageBreak, 1);
+		});
+
+		it('should ignore wrong values for keepWithHeaderRows - 2', function () {
+			inputTable.table.headerRows = 2;
+			inputTable.table.keepWithHeaderRows = '1.5';
+
+			var tableProcessor = new TableProcessor(inputTable);
+			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.beginTable(fakeWriter);
+			assert.equal(tableProcessor.headerRows, 2);
+			assert.equal(tableProcessor.rowsWithoutPageBreak, 2);
+		});
+
+		it('should sum up headerRows and keepWithHeaderRows - 1', function () {
+			inputTable.table.headerRows = 1;
+			inputTable.table.keepWithHeaderRows = 2;
+
+			var tableProcessor = new TableProcessor(inputTable);
+			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.beginTable(fakeWriter);
+			assert.equal(tableProcessor.rowsWithoutPageBreak, 3);
+			assert.equal(tableProcessor.headerRows, 1);
+		});
+
+		it('should sum up headerRows and keepWithHeaderRows - 2', function () {
+			inputTable.table.headerRows = 1;
+			inputTable.table.keepWithHeaderRows = 0;
+
+			var tableProcessor = new TableProcessor(inputTable);
+			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.beginTable(fakeWriter);
+			assert.equal(tableProcessor.rowsWithoutPageBreak, 1);
+			assert.equal(tableProcessor.headerRows, 1);
+		});
+
+		it('should throw exception when headerRows > table rows', function () {
+			inputTable.table.headerRows = 5;
+			inputTable.table.keepWithHeaderRows = 0;
+
+			var tableProcessor = new TableProcessor(inputTable);
+			tableProcessor.drawHorizontalLine = function() { };
+			assert.throws(() => tableProcessor.beginTable(fakeWriter), /Too few rows in the table/);
+		});
+	});
 });

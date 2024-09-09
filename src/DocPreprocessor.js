@@ -1,5 +1,5 @@
-import { isString, isNumber, isValue, isEmptyObject } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
+import { isEmptyObject, isNumber, isString, isValue } from './helpers/variableType';
 
 const convertValueToString = value => {
 	if (isString(value)) {
@@ -23,7 +23,6 @@ class DocPreprocessor {
 		return this.preprocessNode(docStructure);
 	}
 
-	// begin - Vertical alignment
 	checkNode(node) {
 		// expand shortcuts and casting values
 		if (Array.isArray(node)) {
@@ -35,12 +34,10 @@ class DocPreprocessor {
 		}
 		return node;
 	};
-	// end - Vertical alignment
 
 	preprocessNode(node) {
-		// begin - Vertical alignment
+		//vertical alignment
 		node = this.checkNode(node);
-		// end - Vertical alignment
 
 		if (node.columns) {
 			return this.preprocessColumns(node);
@@ -77,10 +74,10 @@ class DocPreprocessor {
 		let columns = node.columns;
 
 		for (let i = 0, l = columns.length; i < l; i++) {
-			// begin - Vertical alignment
+			//vertical alignment
 			columns[i] = this.checkNode(columns[i]);
-			columns[i].__nodeRef = node.__nodeRef ?? node;
-			// end - Vertical alignment
+			columns[i].nodeRef = node.nodeRef ? columns[i].nodeRef = node.nodeRef: node;
+
 			columns[i] = this.preprocessNode(columns[i]);
 		}
 
@@ -91,10 +88,9 @@ class DocPreprocessor {
 		let items = node.stack;
 
 		for (let i = 0, l = items.length; i < l; i++) {
-			// begin - Vertical alignment
+			//vertical alignment
 			items[i] = this.checkNode(items[i]);
-			items[i].__nodeRef = node.__nodeRef ?? node;
-			// end - Vertical alignment
+			items[i].nodeRef = node.nodeRef ? node.nodeRef : node;
 			items[i] = this.preprocessNode(items[i]);
 		}
 
@@ -105,10 +101,10 @@ class DocPreprocessor {
 		let items = node.ul || node.ol;
 
 		for (let i = 0, l = items.length; i < l; i++) {
-			// begin - Vertical alignment
+			//vertical alignment
 			items[i] = this.checkNode(items[i]);
-			items[i].__nodeRef = node.__nodeRef ?? node;
-			// end - Vertical alignment
+			items[i].nodeRef = node.nodeRef ? node.nodeRef : node;
+
 			items[i] = this.preprocessNode(items[i]);
 		}
 

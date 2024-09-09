@@ -30,7 +30,8 @@ var docDefinition = {
 	],
 	defaultStyle: {
 		font: 'Helvetica'
-	}
+	},
+	language: "en-AU"
 };
 
 var now = new Date();
