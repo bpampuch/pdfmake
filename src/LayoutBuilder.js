@@ -513,7 +513,7 @@ class LayoutBuilder {
 
 		ColumnCalculator.buildColumnWidths(columns, availableWidth);
 		let result = this.processRow({
-			marginX: [columnNode._margin?.[0] || 0, columnNode._margin?.[2] || 0],
+			marginX: columnNode._margin ? [columnNode._margin[0], columnNode._margin[2]] : [0, 0],
 			cells: columns,
 			widths: columns,
 			gaps
@@ -800,7 +800,7 @@ class LayoutBuilder {
 			}
 
 			let result = this.processRow({
-				marginX: [tableNode._margin?.[0] || 0, tableNode._margin?.[2] || 0],
+				marginX: tableNode._margin ? [tableNode._margin[0], tableNode._margin[2]] : [0, 0],
 				dontBreakRows: processor.dontBreakRows,
 				rowsWithoutPageBreak: processor.rowsWithoutPageBreak,
 				cells: tableNode.table.body[i],

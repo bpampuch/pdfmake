@@ -138,8 +138,8 @@ class DocumentContext extends EventEmitter {
 		const {pageCtx, isSnapshot} = this.pageSnapshot();
 		pageCtx.availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
 		if (isSnapshot && this.marginXTopParent) {
-			pageCtx.availableWidth -= this.marginXTopParent[0]
-			pageCtx.availableWidth -= this.marginXTopParent[1]
+			pageCtx.availableWidth -= this.marginXTopParent[0];
+			pageCtx.availableWidth -= this.marginXTopParent[1];
 		}
 	}
 
