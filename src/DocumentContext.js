@@ -23,7 +23,7 @@ class DocumentContext extends EventEmitter {
 		this.addPage(pageSize);
 	}
 
-	beginColumnGroup() {
+	beginColumnGroup(marginXTopParent) {
 		this.snapshots.push({
 			x: this.x,
 			y: this.y,
@@ -41,6 +41,13 @@ class DocumentContext extends EventEmitter {
 		});
 
 		this.lastColumnWidth = 0;
+		if (marginXTopParent) {
+			this.marginXTopParent = marginXTopParent;
+		}
+	}
+
+	resetMarginXTopParent () {
+		this.marginXTopParent = null;
 	}
 
 	beginColumn(width, offset, endingCell) {
@@ -128,16 +135,21 @@ class DocumentContext extends EventEmitter {
 	initializePage() {
 		this.y = this.pageMargins.top;
 		this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-		this.pageSnapshot().availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
+		const {pageCtx, isSnapshot} = this.pageSnapshot();
+		pageCtx.availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
+		if (isSnapshot && this.marginXTopParent) {
+			pageCtx.availableWidth -= this.marginXTopParent[0]
+			pageCtx.availableWidth -= this.marginXTopParent[1]
+		}
 	}
 
 	pageSnapshot() {
-		if (this.snapshots[0]) {
-			return this.snapshots[0];
-		} else {
-			return this;
-		}
-	}
+    if (this.snapshots[0]) {
+      return {pageCtx: this.snapshots[0], isSnapshot: true};
+    } else {
+      return {pageCtx: this, isSnapshot: false};
+    }
+  }
 
 	moveTo(x, y) {
 		if (x !== undefined && x !== null) {
