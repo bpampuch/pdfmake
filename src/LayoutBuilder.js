@@ -154,7 +154,14 @@ class LayoutBuilder {
 		}
 
 		let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
+
 		while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
+			resetXYs(result);
+			result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
+		}
+
+		const stretchNeeded = this.updateNodeToStretch(this.docPreprocessor.preprocessDocument(docStructure));
+		if(stretchNeeded) {
 			resetXYs(result);
 			result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
 		}
@@ -978,6 +985,63 @@ class LayoutBuilder {
 		let position = this.writer.addAttachment(node);
 		node.positions.push(position);
 	}
+
+
+	updateNodeToStretch(node, parent) {
+		let updateNodeToStretch = false;
+		if (node.stack) {
+			node.stack.forEach(item => {
+				if(this.updateNodeToStretch(item, node)) updateNodeToStretch = true;
+			});
+		} else if (node.columns) {
+			node.columns.forEach(item => {
+				if(this.updateNodeToStretch(item, node)) updateNodeToStretch = true;
+			});
+		} else if (node.ul) {
+			node.ul.forEach(item => {
+				if(this.updateNodeToStretch(item, node)) updateNodeToStretch = true;
+			});
+		} else if (node.ol) {
+			node.ol.forEach(item => {
+				if(this.updateNodeToStretch(item, node)) updateNodeToStretch = true;
+			});
+		} else if (node.table) {
+			node.table.body.forEach(row => {
+				row.forEach(cell => {
+					if(this.updateNodeToStretch(cell, node)) updateNodeToStretch = true;
+				});
+			});
+
+			const stretchedHeights = Array.isArray(node.table.heights) && node.table.heights.filter(h => h === "*").length;
+			if(stretchedHeights) {
+				updateNodeToStretch = true;
+				const fixedHeights = node.table.heights.reduce((previousValue, h) => h !== '*' ? previousValue + h : previousValue, 0);
+				const parentHeight = parent.computedHeight;
+				if(parentHeight) {
+					const stretchedHeight = ((parentHeight - fixedHeights) / stretchedHeights);
+					for(let i = 0; i < node.table.heights.length; i++) {
+						node.table.heights[i] === '*' && (node.table.heights[i] = stretchedHeight);
+					}
+				}
+			}
+		} else if (node.text !== undefined) {
+		} else if (node.toc) {
+			if (node.toc.title) {
+				if(this.updateNodeToStretch(node.toc.title, node)) updateNodeToStretch = true;
+			}
+			if (node.toc._table) {
+				if(this.updateNodeToStretch(node.toc._table, node)) updateNodeToStretch = true;
+			}
+		} else if (node.image) {
+		} else if (node.svg) {
+		} else if (node.canvas) {
+		} else if (node.qr) {
+		} else if (node.attachment) {
+		} else if (!node._span) {
+		}
+		return updateNodeToStretch;
+	}
+
 }
 
 function decorateNode(node) {
