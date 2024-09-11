@@ -153,15 +153,9 @@ class LayoutBuilder {
 			});
 		}
 
+		this.docStructureClone = this.deepClone(docStructure);
+
 		let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
-
-		//check if stretch is needed and update heights
-		const stretchNeeded = this.updateNodeToStretch(this.docPreprocessor.preprocessDocument(docStructure));
-
-		if(stretchNeeded){
-			resetXYs(result);
-			result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
-		}
 
 		while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
 			resetXYs(result);
@@ -181,7 +175,6 @@ class LayoutBuilder {
 		footer,
 		watermark
 	) {
-
 		this.linearNodeList = [];
 		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 		docStructure = this.docMeasure.measureDocument(docStructure);
@@ -198,6 +191,13 @@ class LayoutBuilder {
 		this.addHeadersAndFooters(header, footer);
 		if (watermark != null) {
 			this.addWatermark(watermark, pdfDocument, defaultStyle);
+		}
+
+		//check if stretch is needed and update heights
+		const stretchNeeded = this.updateNodeToStretch(docStructure);
+		if (stretchNeeded) {
+			this.copyTableHeights(docStructure, this.docPreprocessor.preprocessDocument(this.docStructureClone));
+			return this.tryLayoutDocument(this.docStructureClone, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
 		}
 
 		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
@@ -548,20 +548,20 @@ class LayoutBuilder {
 
 	findStartingSpanCell(arr, i) {
 		let requiredColspan = 1;
-    for (let index = i - 1; index >= 0; index--) {
-        if (!arr[index]._span) {
-					if (arr[index].rowSpan > 1 && (arr[index].colSpan || 1) === requiredColspan) {
-            return arr[index];
-					} else {
-						return null;
-					}
-        }
-				requiredColspan++;
-    }
-    return null;
+		for (let index = i - 1; index >= 0; index--) {
+			if (!arr[index]._span) {
+				if (arr[index].rowSpan > 1 && (arr[index].colSpan || 1) === requiredColspan) {
+					return arr[index];
+				} else {
+					return null;
+				}
+			}
+			requiredColspan++;
+		}
+		return null;
 	}
 
-	processRow({dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableBody, rowIndex, height}) {
+	processRow({ dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableBody, rowIndex, height }) {
 		const updatePageBreakData = (page, prevY) => {
 			let pageDesc;
 			// Find page break data for this row and page
@@ -676,7 +676,7 @@ class LayoutBuilder {
 			// Previous column cell has a rowspan
 			if (lastColumn._endingCell) {
 				endingSpanCell = lastColumn._endingCell;
-			// Previous column cell is part of a span
+				// Previous column cell is part of a span
 			} else if (lastColumn._span === true) {
 				// We get the cell that started the span where we set a reference to the ending cell
 				const startingSpanCell = this.findStartingSpanCell(cells, cells.length);
@@ -748,7 +748,7 @@ class LayoutBuilder {
 					let markerLine = new Line(this.pageSize.width);
 
 					//vertical alignment
-					markerLine.nodeRef = line.nodeRef ? line.nodeRef: line;
+					markerLine.nodeRef = line.nodeRef ? line.nodeRef : line;
 
 					markerLine.addInline(marker._inlines[0]);
 					markerLine.x = -marker._minWidth;
@@ -787,7 +787,7 @@ class LayoutBuilder {
 
 		//vertical alignment
 		const lastNode = this.nodesHierarchy.pop();
-		if(this.nodesHierarchy[this.nodesHierarchy.length - 1]) this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += lastNode.contentHeight;
+		if (this.nodesHierarchy[this.nodesHierarchy.length - 1]) this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += lastNode.contentHeight;
 	}
 
 	// tables
@@ -845,7 +845,7 @@ class LayoutBuilder {
 	// leafs (texts)
 	processLeaf(node) {
 		//vertical alignment
-		if(this.docPreprocessor)  node = this.docPreprocessor.checkNode(node);
+		if (this.docPreprocessor) node = this.docPreprocessor.checkNode(node);
 		let line = this.buildNextLine(node);
 		line && (line.nodeRef = node.nodeRef ? node.nodeRef : node);
 
@@ -988,40 +988,71 @@ class LayoutBuilder {
 		node.positions.push(position);
 	}
 
+	deepClone(obj) {
+		// Handle null or undefined values
+		if (obj === null || typeof obj !== 'object') {
+			return obj;
+		}
+
+		// Handle Date
+		if (obj instanceof Date) {
+			return new Date(obj);
+		}
+
+		// Handle Array
+		if (Array.isArray(obj)) {
+			return obj.map(item => this.deepClone(item));
+		}
+
+		// Handle Functions
+		if (typeof obj === 'function') {
+			return obj.bind({});
+		}
+
+		// Handle Object (recursively clone properties)
+		const clonedObj = {};
+		for (const key in obj) {
+			if (obj.hasOwnProperty(key)) {
+				clonedObj[key] = this.deepClone(obj[key]);
+			}
+		}
+
+		return clonedObj;
+	}
 
 	updateNodeToStretch(node, parentHeight) {
 		let updateNodeToStretch = false;
 
 		if (node.stack) {
 			node.stack.forEach(item => {
-				if(this.updateNodeToStretch(item, node.computedHeight)) updateNodeToStretch = true;
+				if (this.updateNodeToStretch(item, node.computedHeight)) updateNodeToStretch = true;
 			});
 		} else if (node.columns) {
 			node.columns.forEach(item => {
-				if(this.updateNodeToStretch(item, node.computedHeight)) updateNodeToStretch = true;
+				if (this.updateNodeToStretch(item, node.computedHeight)) updateNodeToStretch = true;
 			});
 		} else if (node.ul) {
 			node.ul.forEach(item => {
-				if(this.updateNodeToStretch(item, node.computedHeight)) updateNodeToStretch = true;
+				if (this.updateNodeToStretch(item, node.computedHeight)) updateNodeToStretch = true;
 			});
 		} else if (node.ol) {
 			node.ol.forEach(item => {
-				if(this.updateNodeToStretch(item, node.computedHeight)) updateNodeToStretch = true;
+				if (this.updateNodeToStretch(item, node.computedHeight)) updateNodeToStretch = true;
 			});
 		} else if (node.table) {
 			node.table.body.forEach((row, rowI) => {
 				row.forEach(cell => {
-					if(this.updateNodeToStretch(cell, node.table.rowsHeight[rowI].height)) updateNodeToStretch = true;
+					if (this.updateNodeToStretch(cell, node.table.rowsHeight[rowI].height)) updateNodeToStretch = true;
 				});
 			});
 
 			const stretchedHeights = Array.isArray(node.table.heights) && node.table.heights.filter(h => h === "*").length;
-			if(stretchedHeights) {
+			if (stretchedHeights) {
 				updateNodeToStretch = true;
 				const fixedHeights = node.table.heights.reduce((previousValue, h) => h !== '*' ? previousValue + h : previousValue, 0);
-				if(parentHeight) {
-					const stretchedHeight =  (parentHeight - fixedHeights) / stretchedHeights;
-					for(let i = 0; i < node.table.heights.length; i++) {
+				if (parentHeight) {
+					const stretchedHeight = (parentHeight - fixedHeights) / stretchedHeights;
+					for (let i = 0; i < node.table.heights.length; i++) {
 						node.table.heights[i] === '*' && (node.table.heights[i] = stretchedHeight);
 					}
 				}
@@ -1029,20 +1060,61 @@ class LayoutBuilder {
 		} else if (node.text !== undefined) {
 		} else if (node.toc) {
 			if (node.toc.title) {
-				if(this.updateNodeToStretch(node.toc.title, node.computedHeight)) updateNodeToStretch = true;
+				if (this.updateNodeToStretch(node.toc.title, node.computedHeight)) updateNodeToStretch = true;
 			}
 			if (node.toc._table) {
-				if(this.updateNodeToStretch(node.toc._table, node.computedHeight)) updateNodeToStretch = true;
+				if (this.updateNodeToStretch(node.toc._table, node.computedHeight)) updateNodeToStretch = true;
 			}
 		} else if (node.image) {
 		} else if (node.svg) {
 		} else if (node.canvas) {
-			node.canvas.forEach(item => {delete item.nodeRef});
+			node.canvas.forEach(item => { delete item.nodeRef });
 		} else if (node.qr) {
 		} else if (node.attachment) {
 		} else if (!node._span) {
 		}
 		return updateNodeToStretch;
+	}
+
+	copyTableHeights(node, nodeCopy) {
+		if (node.stack) {
+			node.stack.forEach((item, i) => {
+				this.copyTableHeights(item, nodeCopy.stack[i]);
+			});
+		} else if (node.columns) {
+			node.columns.forEach((item, i) => {
+				this.copyTableHeights(item, nodeCopy.columns[i]);
+			});
+		} else if (node.ul) {
+			node.ul.forEach((item, i) => {
+				this.copyTableHeights(item, nodeCopy.ul[i]);
+			});
+		} else if (node.ol) {
+			node.ol.forEach((item, i) => {
+				this.copyTableHeights(item, nodeCopy.ol[i]);
+			});
+		} else if (node.table) {
+			nodeCopy.table.heights = node.table.heights;
+			node.table.body.forEach((row, rowI) => {
+				row.forEach((cell, cellI) => {
+					this.copyTableHeights(cell, nodeCopy.table.body[rowI][cellI]);
+				});
+			});
+		} else if (node.text !== undefined) {
+		} else if (node.toc) {
+			if (node.toc.title) {
+				this.copyTableHeights(node.toc.title, nodeCopy.toc.title)
+			}
+			if (node.toc._table) {
+				this.copyTableHeights(node.toc._table, nodeCopy.toc._table)
+			}
+		} else if (node.image) {
+		} else if (node.svg) {
+		} else if (node.canvas) {
+		} else if (node.qr) {
+		} else if (node.attachment) {
+		} else if (!node._span) {
+		}
 	}
 
 }

@@ -22,6 +22,167 @@ __webpack_require__.d(__webpack_exports__, {
   "default": function() { return /* binding */ browser_extensions; }
 });
 
+// EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
+var pdfkit_es5 = __webpack_require__(8524);
+;// CONCATENATED MODULE: ./src/PDFDocument.js
+/* provided dependency */ var Buffer = __webpack_require__(4598)["Buffer"];
+
+const typeName = (bold, italics) => {
+  let type = 'normal';
+  if (bold && italics) {
+    type = 'bolditalics';
+  } else if (bold) {
+    type = 'bold';
+  } else if (italics) {
+    type = 'italics';
+  }
+  return type;
+};
+class PDFDocument extends pdfkit_es5/* default */.A {
+  constructor(fonts, images, patterns, attachments, options, virtualfs) {
+    if (fonts === void 0) {
+      fonts = {};
+    }
+    if (images === void 0) {
+      images = {};
+    }
+    if (patterns === void 0) {
+      patterns = {};
+    }
+    if (attachments === void 0) {
+      attachments = {};
+    }
+    if (options === void 0) {
+      options = {};
+    }
+    if (virtualfs === void 0) {
+      virtualfs = null;
+    }
+    super(options);
+    this.fonts = {};
+    this.fontCache = {};
+    for (let font in fonts) {
+      if (fonts.hasOwnProperty(font)) {
+        let fontDef = fonts[font];
+        this.fonts[font] = {
+          normal: fontDef.normal,
+          bold: fontDef.bold,
+          italics: fontDef.italics,
+          bolditalics: fontDef.bolditalics
+        };
+      }
+    }
+    this.patterns = {};
+    for (let pattern in patterns) {
+      if (patterns.hasOwnProperty(pattern)) {
+        let patternDef = patterns[pattern];
+        this.patterns[pattern] = this.pattern(patternDef.boundingBox, patternDef.xStep, patternDef.yStep, patternDef.pattern, patternDef.colored);
+      }
+    }
+    this.images = images;
+    this.attachments = attachments;
+    this.virtualfs = virtualfs;
+  }
+  getFontType(bold, italics) {
+    return typeName(bold, italics);
+  }
+  getFontFile(familyName, bold, italics) {
+    let type = this.getFontType(bold, italics);
+    if (!this.fonts[familyName] || !this.fonts[familyName][type]) {
+      return null;
+    }
+    return this.fonts[familyName][type];
+  }
+  provideFont(familyName, bold, italics) {
+    let type = this.getFontType(bold, italics);
+    if (this.getFontFile(familyName, bold, italics) === null) {
+      throw new Error(`Font '${familyName}' in style '${type}' is not defined in the font section of the document definition.`);
+    }
+    this.fontCache[familyName] = this.fontCache[familyName] || {};
+    if (!this.fontCache[familyName][type]) {
+      let def = this.fonts[familyName][type];
+      if (!Array.isArray(def)) {
+        def = [def];
+      }
+      if (this.virtualfs && this.virtualfs.existsSync(def[0])) {
+        def[0] = this.virtualfs.readFileSync(def[0]);
+      }
+      this.fontCache[familyName][type] = this.font(...def)._font;
+    }
+    return this.fontCache[familyName][type];
+  }
+  provideImage(src) {
+    const realImageSrc = src => {
+      let image = this.images[src];
+      if (!image) {
+        return src;
+      }
+      if (this.virtualfs && this.virtualfs.existsSync(image)) {
+        return this.virtualfs.readFileSync(image);
+      }
+      let index = image.indexOf('base64,');
+      if (index < 0) {
+        return this.images[src];
+      }
+      return Buffer.from(image.substring(index + 7), 'base64');
+    };
+    if (this._imageRegistry[src]) {
+      return this._imageRegistry[src];
+    }
+    let image;
+    try {
+      image = this.openImage(realImageSrc(src));
+      if (!image) {
+        throw new Error('No image');
+      }
+    } catch (error) {
+      throw new Error(`Invalid image: ${error.toString()}\nImages dictionary should contain dataURL entries (or local file paths in node.js)`);
+    }
+    image.embed(this);
+    this._imageRegistry[src] = image;
+    return image;
+  }
+
+  /**
+   * @param {Array} color pdfmake format: [<pattern name>, <color>]
+   * @returns {Array} pdfkit format: [<pattern object>, <color>]
+   */
+  providePattern(color) {
+    if (Array.isArray(color) && color.length === 2) {
+      return [this.patterns[color[0]], color[1]];
+    }
+    return null;
+  }
+  provideAttachment(src) {
+    const checkRequired = obj => {
+      if (!obj) {
+        throw new Error('No attachment');
+      }
+      if (!obj.src) {
+        throw new Error('The "src" key is required for attachments');
+      }
+      return obj;
+    };
+    if (typeof src === 'object') {
+      return checkRequired(src);
+    }
+    let attachment = checkRequired(this.attachments[src]);
+    if (this.virtualfs && this.virtualfs.existsSync(attachment.src)) {
+      return this.virtualfs.readFileSync(attachment.src);
+    }
+    return attachment;
+  }
+  setOpenActionAsPrint() {
+    let printActionRef = this.ref({
+      Type: 'Action',
+      S: 'Named',
+      N: 'Print'
+    });
+    this._root.data.OpenAction = printActionRef;
+    printActionRef.end();
+  }
+}
+/* harmony default export */ var src_PDFDocument = (PDFDocument);
 ;// CONCATENATED MODULE: ./src/helpers/variableType.js
 /**
  * @param {any} variable
@@ -2304,7 +2465,7 @@ class DocMeasure {
 }
 /* harmony default export */ var src_DocMeasure = (DocMeasure);
 ;// CONCATENATED MODULE: ./src/DocPreprocessor.js
-/* provided dependency */ var Buffer = __webpack_require__(4598)["Buffer"];
+/* provided dependency */ var DocPreprocessor_Buffer = __webpack_require__(4598)["Buffer"];
 
 
 const convertValueToString = value => {
@@ -2529,7 +2690,7 @@ class DocPreprocessor {
   }
   preprocessImage(node) {
     if (node.image.type !== undefined && node.image.data !== undefined && node.image.type === 'Buffer' && Array.isArray(node.image.data)) {
-      node.image = Buffer.from(node.image.data);
+      node.image = DocPreprocessor_Buffer.from(node.image.data);
     }
     return node;
   }
@@ -4199,14 +4360,8 @@ class LayoutBuilder {
         node.resetXY();
       });
     }
+    this.docStructureClone = this.deepClone(docStructure);
     let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
-
-    //check if stretch is needed and update heights
-    const stretchNeeded = this.updateNodeToStretch(this.docPreprocessor.preprocessDocument(docStructure));
-    if (stretchNeeded) {
-      resetXYs(result);
-      result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
-    }
     while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
       resetXYs(result);
       result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
@@ -4226,6 +4381,13 @@ class LayoutBuilder {
     this.addHeadersAndFooters(header, footer);
     if (watermark != null) {
       this.addWatermark(watermark, pdfDocument, defaultStyle);
+    }
+
+    //check if stretch is needed and update heights
+    const stretchNeeded = this.updateNodeToStretch(docStructure);
+    if (stretchNeeded) {
+      this.copyTableHeights(docStructure, this.docPreprocessor.preprocessDocument(this.docStructureClone));
+      return this.tryLayoutDocument(this.docStructureClone, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
     }
     return {
       pages: this.writer.context().pages,
@@ -4935,6 +5097,36 @@ class LayoutBuilder {
     let position = this.writer.addAttachment(node);
     node.positions.push(position);
   }
+  deepClone(obj) {
+    // Handle null or undefined values
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+
+    // Handle Date
+    if (obj instanceof Date) {
+      return new Date(obj);
+    }
+
+    // Handle Array
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.deepClone(item));
+    }
+
+    // Handle Functions
+    if (typeof obj === 'function') {
+      return obj.bind({});
+    }
+
+    // Handle Object (recursively clone properties)
+    const clonedObj = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        clonedObj[key] = this.deepClone(obj[key]);
+      }
+    }
+    return clonedObj;
+  }
   updateNodeToStretch(node, parentHeight) {
     let updateNodeToStretch = false;
     if (node.stack) {
@@ -4964,7 +5156,7 @@ class LayoutBuilder {
         updateNodeToStretch = true;
         const fixedHeights = node.table.heights.reduce((previousValue, h) => h !== '*' ? previousValue + h : previousValue, 0);
         if (parentHeight) {
-          const stretchedHeight = Math.floor((parentHeight - fixedHeights) / stretchedHeights);
+          const stretchedHeight = (parentHeight - fixedHeights) / stretchedHeights;
           for (let i = 0; i < node.table.heights.length; i++) {
             node.table.heights[i] === '*' && (node.table.heights[i] = stretchedHeight);
           }
@@ -4983,6 +5175,39 @@ class LayoutBuilder {
       });
     } else if (node.qr) {} else if (node.attachment) {} else if (!node._span) {}
     return updateNodeToStretch;
+  }
+  copyTableHeights(node, nodeCopy) {
+    if (node.stack) {
+      node.stack.forEach((item, i) => {
+        this.copyTableHeights(item, nodeCopy.stack[i]);
+      });
+    } else if (node.columns) {
+      node.columns.forEach((item, i) => {
+        this.copyTableHeights(item, nodeCopy.columns[i]);
+      });
+    } else if (node.ul) {
+      node.ul.forEach((item, i) => {
+        this.copyTableHeights(item, nodeCopy.ul[i]);
+      });
+    } else if (node.ol) {
+      node.ol.forEach((item, i) => {
+        this.copyTableHeights(item, nodeCopy.ol[i]);
+      });
+    } else if (node.table) {
+      nodeCopy.table.heights = node.table.heights;
+      node.table.body.forEach((row, rowI) => {
+        row.forEach((cell, cellI) => {
+          this.copyTableHeights(cell, nodeCopy.table.body[rowI][cellI]);
+        });
+      });
+    } else if (node.text !== undefined) {} else if (node.toc) {
+      if (node.toc.title) {
+        this.copyTableHeights(node.toc.title, nodeCopy.toc.title);
+      }
+      if (node.toc._table) {
+        this.copyTableHeights(node.toc._table, nodeCopy.toc._table);
+      }
+    } else if (node.image) {} else if (node.svg) {} else if (node.canvas) {} else if (node.qr) {} else if (node.attachment) {} else if (!node._span) {}
   }
 }
 function decorateNode(node) {
@@ -5018,167 +5243,75 @@ function decorateNode(node) {
   };
 }
 /* harmony default export */ var src_LayoutBuilder = (LayoutBuilder);
-// EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
-var pdfkit_es5 = __webpack_require__(5170);
-;// CONCATENATED MODULE: ./src/PDFDocument.js
-/* provided dependency */ var PDFDocument_Buffer = __webpack_require__(4598)["Buffer"];
+// EXTERNAL MODULE: ./node_modules/xmldoc/index.js
+var xmldoc = __webpack_require__(2242);
+var xmldoc_default = /*#__PURE__*/__webpack_require__.n(xmldoc);
+;// CONCATENATED MODULE: ./src/SVGMeasure.js
 
-const typeName = (bold, italics) => {
-  let type = 'normal';
-  if (bold && italics) {
-    type = 'bolditalics';
-  } else if (bold) {
-    type = 'bold';
-  } else if (italics) {
-    type = 'italics';
+
+/**
+ * Strip unit postfix, parse number, but return undefined instead of NaN for bad input
+ *
+ * @param {string} textVal
+ * @returns {?number}
+ */
+const stripUnits = textVal => {
+  var n = parseFloat(textVal);
+  if (typeof n !== 'number' || isNaN(n)) {
+    return undefined;
   }
-  return type;
+  return n;
 };
-class PDFDocument extends pdfkit_es5/* default */.A {
-  constructor(fonts, images, patterns, attachments, options, virtualfs) {
-    if (fonts === void 0) {
-      fonts = {};
-    }
-    if (images === void 0) {
-      images = {};
-    }
-    if (patterns === void 0) {
-      patterns = {};
-    }
-    if (attachments === void 0) {
-      attachments = {};
-    }
-    if (options === void 0) {
-      options = {};
-    }
-    if (virtualfs === void 0) {
-      virtualfs = null;
-    }
-    super(options);
-    this.fonts = {};
-    this.fontCache = {};
-    for (let font in fonts) {
-      if (fonts.hasOwnProperty(font)) {
-        let fontDef = fonts[font];
-        this.fonts[font] = {
-          normal: fontDef.normal,
-          bold: fontDef.bold,
-          italics: fontDef.italics,
-          bolditalics: fontDef.bolditalics
-        };
-      }
-    }
-    this.patterns = {};
-    for (let pattern in patterns) {
-      if (patterns.hasOwnProperty(pattern)) {
-        let patternDef = patterns[pattern];
-        this.patterns[pattern] = this.pattern(patternDef.boundingBox, patternDef.xStep, patternDef.yStep, patternDef.pattern, patternDef.colored);
-      }
-    }
-    this.images = images;
-    this.attachments = attachments;
-    this.virtualfs = virtualfs;
-  }
-  getFontType(bold, italics) {
-    return typeName(bold, italics);
-  }
-  getFontFile(familyName, bold, italics) {
-    let type = this.getFontType(bold, italics);
-    if (!this.fonts[familyName] || !this.fonts[familyName][type]) {
-      return null;
-    }
-    return this.fonts[familyName][type];
-  }
-  provideFont(familyName, bold, italics) {
-    let type = this.getFontType(bold, italics);
-    if (this.getFontFile(familyName, bold, italics) === null) {
-      throw new Error(`Font '${familyName}' in style '${type}' is not defined in the font section of the document definition.`);
-    }
-    this.fontCache[familyName] = this.fontCache[familyName] || {};
-    if (!this.fontCache[familyName][type]) {
-      let def = this.fonts[familyName][type];
-      if (!Array.isArray(def)) {
-        def = [def];
-      }
-      if (this.virtualfs && this.virtualfs.existsSync(def[0])) {
-        def[0] = this.virtualfs.readFileSync(def[0]);
-      }
-      this.fontCache[familyName][type] = this.font(...def)._font;
-    }
-    return this.fontCache[familyName][type];
-  }
-  provideImage(src) {
-    const realImageSrc = src => {
-      let image = this.images[src];
-      if (!image) {
-        return src;
-      }
-      if (this.virtualfs && this.virtualfs.existsSync(image)) {
-        return this.virtualfs.readFileSync(image);
-      }
-      let index = image.indexOf('base64,');
-      if (index < 0) {
-        return this.images[src];
-      }
-      return PDFDocument_Buffer.from(image.substring(index + 7), 'base64');
-    };
-    if (this._imageRegistry[src]) {
-      return this._imageRegistry[src];
-    }
-    let image;
-    try {
-      image = this.openImage(realImageSrc(src));
-      if (!image) {
-        throw new Error('No image');
-      }
-    } catch (error) {
-      throw new Error(`Invalid image: ${error.toString()}\nImages dictionary should contain dataURL entries (or local file paths in node.js)`);
-    }
-    image.embed(this);
-    this._imageRegistry[src] = image;
-    return image;
-  }
 
-  /**
-   * @param {Array} color pdfmake format: [<pattern name>, <color>]
-   * @returns {Array} pdfkit format: [<pattern object>, <color>]
-   */
-  providePattern(color) {
-    if (Array.isArray(color) && color.length === 2) {
-      return [this.patterns[color[0]], color[1]];
-    }
-    return null;
+/**
+ * Make sure it's valid XML and the root tage is <svg/>, returns xmldoc DOM
+ *
+ * @param {string} svgString
+ * @returns {object}
+ */
+const parseSVG = svgString => {
+  var doc;
+  try {
+    doc = new (xmldoc_default()).XmlDocument(svgString);
+  } catch (err) {
+    throw new Error('SVGMeasure: ' + err);
   }
-  provideAttachment(src) {
-    const checkRequired = obj => {
-      if (!obj) {
-        throw new Error('No attachment');
+  if (doc.name !== "svg") {
+    throw new Error('SVGMeasure: expected <svg> document');
+  }
+  return doc;
+};
+class SVGMeasure {
+  constructor() {}
+  measureSVG(svgString) {
+    let doc = parseSVG(svgString);
+    let docWidth = stripUnits(doc.attr.width);
+    let docHeight = stripUnits(doc.attr.height);
+    if ((docWidth === undefined || docHeight === undefined) && typeof doc.attr.viewBox === 'string') {
+      let viewBoxParts = doc.attr.viewBox.split(/[,\s]+/);
+      if (viewBoxParts.length !== 4) {
+        throw new Error("Unexpected svg viewbox format, should have 4 entries but found: '" + doc.attr.viewBox + "'");
       }
-      if (!obj.src) {
-        throw new Error('The "src" key is required for attachments');
+      if (docWidth === undefined) {
+        docWidth = stripUnits(viewBoxParts[2]);
       }
-      return obj;
+      if (docHeight === undefined) {
+        docHeight = stripUnits(viewBoxParts[3]);
+      }
+    }
+    return {
+      width: docWidth,
+      height: docHeight
     };
-    if (typeof src === 'object') {
-      return checkRequired(src);
-    }
-    let attachment = checkRequired(this.attachments[src]);
-    if (this.virtualfs && this.virtualfs.existsSync(attachment.src)) {
-      return this.virtualfs.readFileSync(attachment.src);
-    }
-    return attachment;
   }
-  setOpenActionAsPrint() {
-    let printActionRef = this.ref({
-      Type: 'Action',
-      S: 'Named',
-      N: 'Print'
-    });
-    this._root.data.OpenAction = printActionRef;
-    printActionRef.end();
+  writeDimensions(svgString, dimensions) {
+    let doc = parseSVG(svgString);
+    doc.attr.width = "" + dimensions.width;
+    doc.attr.height = "" + dimensions.height;
+    return doc.toString();
   }
 }
-/* harmony default export */ var src_PDFDocument = (PDFDocument);
+/* harmony default export */ var src_SVGMeasure = (SVGMeasure);
 ;// CONCATENATED MODULE: ./src/standardPageSizes.js
 /* harmony default export */ var standardPageSizes = ({
   '4A0': [4767.87, 6740.79],
@@ -5814,75 +5947,6 @@ class Renderer {
   }
 }
 /* harmony default export */ var src_Renderer = (Renderer);
-// EXTERNAL MODULE: ./node_modules/xmldoc/index.js
-var xmldoc = __webpack_require__(2242);
-var xmldoc_default = /*#__PURE__*/__webpack_require__.n(xmldoc);
-;// CONCATENATED MODULE: ./src/SVGMeasure.js
-
-
-/**
- * Strip unit postfix, parse number, but return undefined instead of NaN for bad input
- *
- * @param {string} textVal
- * @returns {?number}
- */
-const stripUnits = textVal => {
-  var n = parseFloat(textVal);
-  if (typeof n !== 'number' || isNaN(n)) {
-    return undefined;
-  }
-  return n;
-};
-
-/**
- * Make sure it's valid XML and the root tage is <svg/>, returns xmldoc DOM
- *
- * @param {string} svgString
- * @returns {object}
- */
-const parseSVG = svgString => {
-  var doc;
-  try {
-    doc = new (xmldoc_default()).XmlDocument(svgString);
-  } catch (err) {
-    throw new Error('SVGMeasure: ' + err);
-  }
-  if (doc.name !== "svg") {
-    throw new Error('SVGMeasure: expected <svg> document');
-  }
-  return doc;
-};
-class SVGMeasure {
-  constructor() {}
-  measureSVG(svgString) {
-    let doc = parseSVG(svgString);
-    let docWidth = stripUnits(doc.attr.width);
-    let docHeight = stripUnits(doc.attr.height);
-    if ((docWidth === undefined || docHeight === undefined) && typeof doc.attr.viewBox === 'string') {
-      let viewBoxParts = doc.attr.viewBox.split(/[,\s]+/);
-      if (viewBoxParts.length !== 4) {
-        throw new Error("Unexpected svg viewbox format, should have 4 entries but found: '" + doc.attr.viewBox + "'");
-      }
-      if (docWidth === undefined) {
-        docWidth = stripUnits(viewBoxParts[2]);
-      }
-      if (docHeight === undefined) {
-        docHeight = stripUnits(viewBoxParts[3]);
-      }
-    }
-    return {
-      width: docWidth,
-      height: docHeight
-    };
-  }
-  writeDimensions(svgString, dimensions) {
-    let doc = parseSVG(svgString);
-    doc.attr.width = "" + dimensions.width;
-    doc.attr.height = "" + dimensions.height;
-    return doc.toString();
-  }
-}
-/* harmony default export */ var src_SVGMeasure = (SVGMeasure);
 ;// CONCATENATED MODULE: ./src/Printer.js
 
 
@@ -5963,7 +6027,7 @@ class PdfPrinter {
           };
           this.pdfKitDoc = new src_PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.patterns, docDefinition.attachments, pdfOptions, this.virtualfs);
           embedFiles(docDefinition, this.pdfKitDoc);
-          let builder = new src_LayoutBuilder(pageSize, normalizePageMargin(docDefinition.pageMargins), new src_SVGMeasure());
+          const builder = new src_LayoutBuilder(pageSize, normalizePageMargin(docDefinition.pageMargins), new src_SVGMeasure());
           builder.registerTableLayouts(tableLayouts);
           if (options.tableLayouts) {
             builder.registerTableLayouts(options.tableLayouts);
@@ -5972,45 +6036,6 @@ class PdfPrinter {
             fontSize: 12,
             font: 'Roboto'
           }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.watermark, docDefinition.pageBreakBefore);
-
-          // if(builder.stretchNeeded) {
-          // 	docDefinition.version = docDefinition.version || '1.3';
-          // docDefinition.compress = typeof docDefinition.compress === 'boolean' ? docDefinition.compress : true;
-          // docDefinition.images = docDefinition.images || {};
-          // docDefinition.attachments = docDefinition.attachments || {};
-          // docDefinition.pageMargins = isValue(docDefinition.pageMargins) ? docDefinition.pageMargins : 40;
-          // docDefinition.patterns = docDefinition.patterns || {};
-
-          // let pageSize = normalizePageSize(docDefinition.pageSize, docDefinition.pageOrientation);
-
-          // let pdfOptions = {
-          // 	size: [pageSize.width, pageSize.height],
-          // 	pdfVersion: docDefinition.version,
-          // 	compress: docDefinition.compress,
-          // 	userPassword: docDefinition.userPassword,
-          // 	ownerPassword: docDefinition.ownerPassword,
-          // 	permissions: docDefinition.permissions,
-          // 	lang: docDefinition.language,
-          // 	fontLayoutCache: typeof options.fontLayoutCache === 'boolean' ? options.fontLayoutCache : true,
-          // 	bufferPages: options.bufferPages || false,
-          // 	autoFirstPage: false,
-          // 	info: createMetadata(docDefinition),
-          // 	font: null
-          // };
-
-          // 	this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.patterns, docDefinition.attachments, pdfOptions, this.virtualfs);
-          // 	embedFiles(docDefinition, this.pdfKitDoc);
-
-          // 	builder = new LayoutBuilder(pageSize, normalizePageMargin(docDefinition.pageMargins), new SVGMeasure());
-
-          // 	builder.registerTableLayouts(tableLayouts);
-          // 	if (options.tableLayouts) {
-          // 		builder.registerTableLayouts(options.tableLayouts);
-          // 	}
-
-          // 	pages = builder.layoutDocument(docDefinition.content, this.pdfKitDoc, docDefinition.styles || {}, docDefinition.defaultStyle || { fontSize: 12, font: 'Roboto' }, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.watermark, docDefinition.pageBreakBefore);
-          // }
-
           let maxNumberPages = docDefinition.maxPagesNumber || -1;
           if (isNumber(maxNumberPages) && maxNumberPages > -1) {
             pages = pages.slice(0, maxNumberPages);
@@ -6347,7 +6372,7 @@ class OutputDocument {
 }
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(4954);
+var FileSaver_min = __webpack_require__(5549);
 ;// CONCATENATED MODULE: ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -21830,7 +21855,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 5170:
+/***/ 8524:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -60594,7 +60619,7 @@ module.exports = __webpack_require__(5349);
 
 /***/ }),
 
-/***/ 4954:
+/***/ 5549:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
