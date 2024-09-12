@@ -23,7 +23,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
-var pdfkit_es5 = __webpack_require__(8524);
+var pdfkit_es5 = __webpack_require__(2787);
 ;// CONCATENATED MODULE: ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(4598)["Buffer"];
 
@@ -1122,6 +1122,75 @@ function offsetVector(vector, x, y) {
       break;
   }
 }
+function clone(obj) {
+  // Handle null or undefined values
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  // Handle Date
+  if (obj instanceof Date) {
+    return new Date(obj);
+  }
+
+  // Handle Array
+  if (Array.isArray(obj)) {
+    return obj.map(item => clone(item));
+  }
+
+  // Handle Functions
+  if (typeof obj === 'function') {
+    return obj.bind({});
+  }
+
+  // Handle Object (recursively clone properties)
+  const clonedObj = {};
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      clonedObj[key] = clone(obj[key]);
+    }
+  }
+  return clonedObj;
+}
+function get(obj, path) {
+  /**
+   * If the path is a string, convert it to an array
+   * @param {string|Array} path The path
+   * @returns {Array} The path array
+   */
+  var stringToPath = function (path) {
+    // If the path isn't a string, return it
+    if (typeof path !== 'string') return path;
+
+    // Create new array
+    var output = [];
+
+    // Split to an array with dot notation
+    path.split('.').forEach(function (item) {
+      // Split to an array with bracket notation
+      item.split(/\[([^\]]+)\]/g).filter(i => i !== '').forEach(function (key) {
+        // Push to the new array
+        if (key.length > 0) {
+          output.push(key);
+        }
+      });
+    });
+    return output;
+  };
+
+  // Get the path as an array
+  path = stringToPath(path);
+
+  // Cache the current object
+  var current = obj;
+
+  // For each item in the path, dig into the object
+  for (var i = 0; i < path.length; i++) {
+    current = current[path[i]];
+  }
+  return current;
+}
+;
 ;// CONCATENATED MODULE: ./src/qrEnc.js
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 /*eslint no-redeclare: "off"*/
@@ -4360,7 +4429,9 @@ class LayoutBuilder {
         node.resetXY();
       });
     }
-    this.docStructureClone = this.deepClone(docStructure);
+
+    //copies the original structure if the generation must be done a second time (stretch)
+    this.docStructureCopy = clone(docStructure);
     let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
     while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
       resetXYs(result);
@@ -4384,10 +4455,19 @@ class LayoutBuilder {
     }
 
     //check if stretch is needed and update heights
-    const stretchNeeded = this.updateNodeToStretch(docStructure);
-    if (stretchNeeded) {
-      this.copyTableHeights(docStructure, this.docPreprocessor.preprocessDocument(this.docStructureClone));
-      return this.tryLayoutDocument(this.docStructureClone, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
+    const stretchedHeightPaths = this.updateTableWithStretchedHeights(docStructure);
+    if (stretchedHeightPaths.length) {
+      //pre process the structure copy
+      this.docStructureCopy = this.docPreprocessor.preprocessDocument(this.docStructureCopy);
+      //updates stretched heights on structure copy
+      stretchedHeightPaths.forEach(stretchedHeightPath => {
+        const nodeHeights = get(docStructure, stretchedHeightPath);
+        const nodeCopyHeights = get(this.docStructureCopy, stretchedHeightPath);
+        nodeHeights.forEach((v, i) => nodeCopyHeights[i] = v);
+      });
+
+      //generate the layout doc again with structure copy
+      return this.tryLayoutDocument(this.docStructureCopy, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
     }
     return {
       pages: this.writer.context().pages,
@@ -5097,117 +5177,44 @@ class LayoutBuilder {
     let position = this.writer.addAttachment(node);
     node.positions.push(position);
   }
-  deepClone(obj) {
-    // Handle null or undefined values
-    if (obj === null || typeof obj !== 'object') {
-      return obj;
-    }
-
-    // Handle Date
-    if (obj instanceof Date) {
-      return new Date(obj);
-    }
-
-    // Handle Array
-    if (Array.isArray(obj)) {
-      return obj.map(item => this.deepClone(item));
-    }
-
-    // Handle Functions
-    if (typeof obj === 'function') {
-      return obj.bind({});
-    }
-
-    // Handle Object (recursively clone properties)
-    const clonedObj = {};
-    for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        clonedObj[key] = this.deepClone(obj[key]);
-      }
-    }
-    return clonedObj;
-  }
-  updateNodeToStretch(node, parentHeight) {
-    let updateNodeToStretch = false;
-    if (node.stack) {
-      node.stack.forEach(item => {
-        if (this.updateNodeToStretch(item, node.computedHeight)) updateNodeToStretch = true;
-      });
-    } else if (node.columns) {
-      node.columns.forEach(item => {
-        if (this.updateNodeToStretch(item, node.computedHeight)) updateNodeToStretch = true;
-      });
-    } else if (node.ul) {
-      node.ul.forEach(item => {
-        if (this.updateNodeToStretch(item, node.computedHeight)) updateNodeToStretch = true;
-      });
-    } else if (node.ol) {
-      node.ol.forEach(item => {
-        if (this.updateNodeToStretch(item, node.computedHeight)) updateNodeToStretch = true;
-      });
-    } else if (node.table) {
-      node.table.body.forEach((row, rowI) => {
-        row.forEach(cell => {
-          if (this.updateNodeToStretch(cell, node.table.rowsHeight[rowI].height)) updateNodeToStretch = true;
+  updateTableWithStretchedHeights(node) {
+    const stretchedHeightPaths = [];
+    const concatPath = (root, relative) => root != undefined ? root + '.' + relative : relative;
+    const browseTheStructure = (node, parentHeight, path) => {
+      if (node.stack) {
+        node.stack.forEach((item, i) => browseTheStructure(item, node.computedHeight, concatPath(path, 'stack[' + i + ']')));
+      } else if (node.columns) {
+        node.columns.forEach((item, i) => browseTheStructure(item, node.computedHeight, concatPath(path, 'columns[' + i + ']')));
+      } else if (node.ul) {
+        node.ul.forEach((item, i) => browseTheStructure(item, node.computedHeight, concatPath(path, 'ul[' + i + ']')));
+      } else if (node.ol) {
+        node.ol.forEach((item, i) => browseTheStructure(item, node.computedHeight, concatPath(path, 'ol[' + i + ']')));
+      } else if (node.table) {
+        node.table.body.forEach((row, rowI) => {
+          row.forEach((cell, cellI) => browseTheStructure(cell, node.table.rowsHeight[rowI].height, concatPath(path, 'table.body[' + rowI + '][' + cellI + ']')));
         });
-      });
-      const stretchedHeights = Array.isArray(node.table.heights) && node.table.heights.filter(h => h === "*").length;
-      if (stretchedHeights) {
-        updateNodeToStretch = true;
-        const fixedHeights = node.table.heights.reduce((previousValue, h) => h !== '*' ? previousValue + h : previousValue, 0);
-        if (parentHeight) {
-          const stretchedHeight = (parentHeight - fixedHeights) / stretchedHeights;
-          for (let i = 0; i < node.table.heights.length; i++) {
-            node.table.heights[i] === '*' && (node.table.heights[i] = stretchedHeight);
+        const stretchedHeights = Array.isArray(node.table.heights) && node.table.heights.filter(h => h === "*").length;
+        if (stretchedHeights) {
+          stretchedHeightPaths.push(concatPath(path, 'table.heights'));
+          const fixedHeights = node.table.heights.reduce((previousValue, h) => h !== '*' ? previousValue + h : previousValue, 0);
+          if (parentHeight) {
+            const stretchedHeight = (parentHeight - fixedHeights) / stretchedHeights;
+            for (let i = 0; i < node.table.heights.length; i++) {
+              node.table.heights[i] === '*' && (node.table.heights[i] = stretchedHeight);
+            }
           }
         }
+      } else if (node.toc) {
+        if (node.toc.title) {
+          browseTheStructure(node.toc.title, node.computedHeight, concatPath(path, 'toc.title'));
+        }
+        if (node.toc._table) {
+          browseTheStructure(node.toc._table, node.computedHeight, concatPath(path, 'toc._table'));
+        }
       }
-    } else if (node.text !== undefined) {} else if (node.toc) {
-      if (node.toc.title) {
-        if (this.updateNodeToStretch(node.toc.title, node.computedHeight)) updateNodeToStretch = true;
-      }
-      if (node.toc._table) {
-        if (this.updateNodeToStretch(node.toc._table, node.computedHeight)) updateNodeToStretch = true;
-      }
-    } else if (node.image) {} else if (node.svg) {} else if (node.canvas) {
-      node.canvas.forEach(item => {
-        delete item.nodeRef;
-      });
-    } else if (node.qr) {} else if (node.attachment) {} else if (!node._span) {}
-    return updateNodeToStretch;
-  }
-  copyTableHeights(node, nodeCopy) {
-    if (node.stack) {
-      node.stack.forEach((item, i) => {
-        this.copyTableHeights(item, nodeCopy.stack[i]);
-      });
-    } else if (node.columns) {
-      node.columns.forEach((item, i) => {
-        this.copyTableHeights(item, nodeCopy.columns[i]);
-      });
-    } else if (node.ul) {
-      node.ul.forEach((item, i) => {
-        this.copyTableHeights(item, nodeCopy.ul[i]);
-      });
-    } else if (node.ol) {
-      node.ol.forEach((item, i) => {
-        this.copyTableHeights(item, nodeCopy.ol[i]);
-      });
-    } else if (node.table) {
-      nodeCopy.table.heights = node.table.heights;
-      node.table.body.forEach((row, rowI) => {
-        row.forEach((cell, cellI) => {
-          this.copyTableHeights(cell, nodeCopy.table.body[rowI][cellI]);
-        });
-      });
-    } else if (node.text !== undefined) {} else if (node.toc) {
-      if (node.toc.title) {
-        this.copyTableHeights(node.toc.title, nodeCopy.toc.title);
-      }
-      if (node.toc._table) {
-        this.copyTableHeights(node.toc._table, nodeCopy.toc._table);
-      }
-    } else if (node.image) {} else if (node.svg) {} else if (node.canvas) {} else if (node.qr) {} else if (node.attachment) {} else if (!node._span) {}
+    };
+    browseTheStructure(node);
+    return stretchedHeightPaths;
   }
 }
 function decorateNode(node) {
@@ -6372,7 +6379,7 @@ class OutputDocument {
 }
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(5549);
+var FileSaver_min = __webpack_require__(1599);
 ;// CONCATENATED MODULE: ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -21855,7 +21862,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 8524:
+/***/ 2787:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -60619,7 +60626,7 @@ module.exports = __webpack_require__(5349);
 
 /***/ }),
 
-/***/ 5549:
+/***/ 1599:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
