@@ -1,6 +1,6 @@
 {
-  "name": "@SirFull/pdfmake",
-  "version": "0.3.0-beta.9.1",
+  "name": "pdfmake",
+  "version": "0.3.0-beta.9",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "js/index.js",
   "esnext": "src/index.js",
@@ -67,10 +67,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/sirfull/pdfmake.git"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
+    "url": "git://github.com/bpampuch/pdfmake.git"
   },
   "keywords": [
     "pdf",
