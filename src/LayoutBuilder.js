@@ -1018,12 +1018,17 @@ class LayoutBuilder {
 
 				const stretchedHeights = Array.isArray(node.table.heights) && node.table.heights.filter(h => h === "*").length;
 				if (stretchedHeights) {
-					stretchedHeightPaths.push(concatPath(path, 'table.heights'));
-					const fixedHeights = node.table.heights.reduce((previousValue, h) => h !== '*' ? previousValue + h : previousValue, 0);
-					if (parentHeight) {
+					if (parentHeight && isNumber(parentHeight)) {
+						stretchedHeightPaths.push(concatPath(path, 'table.heights'));
+						const fixedHeights = node.table.heights.reduce((previousValue, h) => h !== '*' ? previousValue + h : previousValue, 0);
 						const stretchedHeight = (parentHeight - fixedHeights) / stretchedHeights;
 						for (let i = 0; i < node.table.heights.length; i++) {
 							node.table.heights[i] === '*' && (node.table.heights[i] = stretchedHeight);
+						}
+					}
+					else {
+						for (let i = 0; i < node.table.heights.length; i++) {
+							node.table.heights[i] === '*' && (node.table.heights[i] = 'auto');
 						}
 					}
 				}

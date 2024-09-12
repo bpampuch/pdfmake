@@ -23,7 +23,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
-var pdfkit_es5 = __webpack_require__(2787);
+var pdfkit_es5 = __webpack_require__(1949);
 ;// CONCATENATED MODULE: ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(4598)["Buffer"];
 
@@ -3787,7 +3787,7 @@ class TableProcessor {
     //vertical alignment
     if (this.tableNode.table.rowsHeight) this.tableNode.table.rowsHeight[rowIndex] = {
       top: this.rowTopY,
-      height: 0
+      height: undefined
     };
   }
   drawHorizontalLine(lineIndex, writer, overrideY) {
@@ -4016,18 +4016,6 @@ class TableProcessor {
     return [items, itemsHeight];
   }
   processTableVerticalAlignment(writer, tableProcessor, table) {
-    // if(stretchedHeightIndexes.length) {
-    // 	const fixedHeights = table.heights.reduce((previousValue, h, rowIndex) => h !== '*' ? previousValue + table.rowsHeight[rowIndex].height : previousValue, 0);
-    // 	const height = this.tableNode.computedHeight;
-    // 	// manage vertical stretch for specific rows in the table
-    // 	table.body.forEach((row, rowIndex) => {
-    // 		if(stretchedHeightIndexes.includes(rowIndex)){
-
-    // 		}
-    // 	});
-    // }
-    // else {
-
     table.body.forEach((row, rowIndex) => {
       // filter only cells with vertical alignment (middle / bottom)
       let cells = !Array.isArray(row) && row.columns ? row.columns : row;
@@ -4035,7 +4023,7 @@ class TableProcessor {
         if (!cell._span && cell.verticalAlign && ['middle', 'bottom'].indexOf(cell.verticalAlign) > -1) {
           // manage vertical alignmenet (middle or bottom) for all rows in the table
           let cellHeight = this.computeCellHeight(table, rowIndex, cell);
-          if (cellHeight) {
+          if (cellHeight && isNumber(cellHeight)) {
             //get all child items and their height
             let [items, contentHeight] = this.getAllChildsAndHeight(writer, cell);
 
@@ -4047,48 +4035,9 @@ class TableProcessor {
               !x.item.type && (x.item.y += Math.max(0, offsetTop) - paddingTop);
             });
           }
-          //if (!cell._span) {
-          // if(cell.verticalAlign && ['middle', 'bottom'].indexOf(cell.verticalAlign) > -1) {
-          // 	// manage vertical alignmenet (middle or bottom) for all rows in the table
-          // 	let cellHeight = this.computeCellHeight(table, rowIndex, cell);
-          // 	if (cellHeight) {
-          // 		//get all child items and their height
-          // 		let [items, contentHeight] = this.getAllChildsAndHeight(writer, cell);
-
-          // 		//update y for all items
-          // 		const offsetTop = cell.verticalAlign === 'bottom'	? cellHeight - contentHeight : (cellHeight - contentHeight ) / 2;
-          // 		items.filter(x => x.item).forEach(x => {
-          // 			const paddingTop = tableProcessor.layout.paddingTop(rowIndex, this.tableNode);
-          // 			x.item.type && offsetVector(x.item, 0, Math.max(0, offsetTop) - paddingTop);
-          // 			!x.item.type && (x.item.y += Math.max(0, offsetTop) - paddingTop);
-          // 		});
-          // 	}
-          // }
-          // else if(cell.table) {
-          // 	//check if there is any row to stretch
-          // 	const stretchedHeightIndexes = Array.isArray(cell.table.heights) ? cell.table.heights.map((h,i) => h === "*" ? i : null).filter(i => i != null) : [];
-          // 	if(stretchedHeightIndexes.length){
-          // 		const cellHeight = this.computeCellHeight(table, rowIndex, cell);
-          // 		if(cellHeight){
-          // 			let [items, contentHeight] = this.getAllChildsAndHeight(writer, cell);
-          // 			if(cellHeight > contentHeight){
-          // 				const fixedHeights = cell.table.heights.reduce((previousValue, h) => h !== '*' ? previousValue + h : previousValue, 0);
-          // 				const stretchedHeight = ((cellHeight - fixedHeights) / stretchedHeightIndexes.length);
-          // 				stretchedHeightIndexes.forEach(stretchedHeightIndex => {
-          // 					const rowToStretch = cell.table.body[stretchedHeightIndex];
-          // 					rowToStretch.forEach(cellToStretch => {
-          // 						let [items, contentHeight] = this.getAllChildsAndHeight(writer, cellToStretch);
-          // 					});
-          // 				});
-          // 			}
-          // 		}
-          // 	}
-          // }
-          //}
         }
       });
     });
-    // }
   }
   endTable(writer) {
     //vertical alignment
@@ -4298,7 +4247,7 @@ class TableProcessor {
     }
 
     //vertical alignment
-    if (this.tableNode.table.rowsHeight && this.tableNode.table.rowsHeight[rowIndex]) this.tableNode.table.rowsHeight[rowIndex].height = endingY - this.tableNode.table.rowsHeight[rowIndex].top;
+    if (isNumber(endingY) && this.tableNode.table.rowsHeight && this.tableNode.table.rowsHeight[rowIndex]) this.tableNode.table.rowsHeight[rowIndex].height = endingY - this.tableNode.table.rowsHeight[rowIndex].top;
   }
 }
 /* harmony default export */ var src_TableProcessor = (TableProcessor);
@@ -5195,12 +5144,16 @@ class LayoutBuilder {
         });
         const stretchedHeights = Array.isArray(node.table.heights) && node.table.heights.filter(h => h === "*").length;
         if (stretchedHeights) {
-          stretchedHeightPaths.push(concatPath(path, 'table.heights'));
-          const fixedHeights = node.table.heights.reduce((previousValue, h) => h !== '*' ? previousValue + h : previousValue, 0);
-          if (parentHeight) {
+          if (parentHeight && isNumber(parentHeight)) {
+            stretchedHeightPaths.push(concatPath(path, 'table.heights'));
+            const fixedHeights = node.table.heights.reduce((previousValue, h) => h !== '*' ? previousValue + h : previousValue, 0);
             const stretchedHeight = (parentHeight - fixedHeights) / stretchedHeights;
             for (let i = 0; i < node.table.heights.length; i++) {
               node.table.heights[i] === '*' && (node.table.heights[i] = stretchedHeight);
+            }
+          } else {
+            for (let i = 0; i < node.table.heights.length; i++) {
+              node.table.heights[i] === '*' && (node.table.heights[i] = 'auto');
             }
           }
         }
@@ -6379,7 +6332,7 @@ class OutputDocument {
 }
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(1599);
+var FileSaver_min = __webpack_require__(1727);
 ;// CONCATENATED MODULE: ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -21862,7 +21815,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 2787:
+/***/ 1949:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -60626,7 +60579,7 @@ module.exports = __webpack_require__(5349);
 
 /***/ }),
 
-/***/ 1599:
+/***/ 1727:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
