@@ -168,7 +168,7 @@ const docDefinition = {
 								]
 							},
 							layout: {
-								hLineWidth: (i, r) => i === 1 ? 5 : 1,
+								hLineWidth: (i) => i === 1 ? 5 : 1,
 							},
 						},
 						{
@@ -193,7 +193,7 @@ const docDefinition = {
 								]
 							},
 							layout: {
-								hLineWidth: (i, r) => i === 0 ? 5 : i === 1 ? 50 : 1,
+								hLineWidth: (i) => i === 0 ? 5 : i === 1 ? 50 : 1,
 							},
 							verticalAlign: 'bottom'
 						},
@@ -219,9 +219,9 @@ const docDefinition = {
 								]
 							},
 							layout: {
-								hLineWidth: (i, r) => i === 0 ? 5 : i === 1 ? 50 : 1,
-								paddingBottom: (i, r) => 5,
-								paddingTop: (i, r) => 5,
+								hLineWidth: (i) => i === 0 ? 5 : i === 1 ? 50 : 1,
+								paddingBottom: () => 5,
+								paddingTop: () => 5,
 							},
 							verticalAlign: 'middle'
 						},
