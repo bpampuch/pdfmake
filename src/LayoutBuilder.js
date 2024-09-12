@@ -1,15 +1,16 @@
-import DocPreprocessor from './DocPreprocessor';
-import DocMeasure from './DocMeasure';
-import DocumentContext from './DocumentContext';
-import PageElementWriter from './PageElementWriter';
 import ColumnCalculator from './columnCalculator';
-import TableProcessor from './TableProcessor';
+import DocMeasure from './DocMeasure';
+import DocPreprocessor from './DocPreprocessor';
+import DocumentContext from './DocumentContext';
+import { getNodeId, stringifyNode } from './helpers/node';
+import { offsetVector, pack, clone, get } from './helpers/tools';
+import { isNumber, isString, isValue } from './helpers/variableType';
 import Line from './Line';
-import { isString, isValue, isNumber } from './helpers/variableType';
-import { stringifyNode, getNodeId } from './helpers/node';
-import { pack, offsetVector } from './helpers/tools';
-import TextInlines from './TextInlines';
+import PageElementWriter from './PageElementWriter';
 import StyleContextStack from './StyleContextStack';
+import TableProcessor from './TableProcessor';
+import TextInlines from './TextInlines';
+
 
 function addAll(target, otherArray) {
 	otherArray.forEach(item => {
@@ -32,6 +33,9 @@ class LayoutBuilder {
 		this.pageMargins = pageMargins;
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = {};
+
+		//vertical alignment
+		this.nodesHierarchy = [];
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -141,13 +145,20 @@ class LayoutBuilder {
 		this.docPreprocessor = new DocPreprocessor();
 		this.docMeasure = new DocMeasure(pdfDocument, styleDictionary, defaultStyle, this.svgMeasure, this.tableLayouts);
 
+		//vertical alignment
+		this.nodesHierarchy = [];
+
 		function resetXYs(result) {
 			result.linearNodeList.forEach(node => {
 				node.resetXY();
 			});
 		}
 
+		//copies the original structure if the generation must be done a second time (stretch)
+		this.docStructureCopy = clone(docStructure);
+
 		let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
+
 		while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
 			resetXYs(result);
 			result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
@@ -166,7 +177,6 @@ class LayoutBuilder {
 		footer,
 		watermark
 	) {
-
 		this.linearNodeList = [];
 		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 		docStructure = this.docMeasure.measureDocument(docStructure);
@@ -183,6 +193,22 @@ class LayoutBuilder {
 		this.addHeadersAndFooters(header, footer);
 		if (watermark != null) {
 			this.addWatermark(watermark, pdfDocument, defaultStyle);
+		}
+
+		//check if stretch is needed and update heights
+		const stretchedHeightPaths = this.updateTableWithStretchedHeights(docStructure);
+		if (stretchedHeightPaths.length) {
+			//pre process the structure copy
+			this.docStructureCopy = this.docPreprocessor.preprocessDocument(this.docStructureCopy);
+			//updates stretched heights on structure copy
+			stretchedHeightPaths.forEach(stretchedHeightPath => {
+				const nodeHeights = get(docStructure, stretchedHeightPath);
+				const nodeCopyHeights = get(this.docStructureCopy, stretchedHeightPath);
+				nodeHeights.forEach((v, i) => nodeCopyHeights[i] = v);
+			});
+
+			//generate the layout doc again with structure copy
+			return this.tryLayoutDocument(this.docStructureCopy, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
 		}
 
 		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
@@ -470,14 +496,22 @@ class LayoutBuilder {
 		});
 	}
 
-	// vertical container
+	//vertical container
 	processVerticalContainer(node) {
+		//vertical alignment
+		this.nodesHierarchy.push(node);
+		node.contentHeight = 0;
+
 		node.stack.forEach(item => {
 			this.processNode(item);
 			addAll(node.positions, item.positions);
 
 			//TODO: paragraph gap
 		}, this);
+
+		//vertical alignment
+		const lastNode = this.nodesHierarchy.pop();
+		this.nodesHierarchy.length > 0 && (this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += lastNode.contentHeight);
 	}
 
 	// columns
@@ -489,6 +523,10 @@ class LayoutBuilder {
 		if (gaps) {
 			availableWidth -= (gaps.length - 1) * columnNode._gap;
 		}
+
+		//vertical alignment
+		columnNode.contentHeight = 0;
+		this.nodesHierarchy.push(columnNode);
 
 		ColumnCalculator.buildColumnWidths(columns, availableWidth);
 		let result = this.processRow({
@@ -512,24 +550,29 @@ class LayoutBuilder {
 
 			return gaps;
 		}
+
+		//vertical alignment
+		const lastNode = this.nodesHierarchy.pop();
+		lastNode.contentHeight = Math.max(...columns.map(c => c.contentHeight));
+		this.nodesHierarchy.length > 0 && (this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += lastNode.contentHeight);
 	}
 
 	findStartingSpanCell(arr, i) {
 		let requiredColspan = 1;
-    for (let index = i - 1; index >= 0; index--) {
-        if (!arr[index]._span) {
-					if (arr[index].rowSpan > 1 && (arr[index].colSpan || 1) === requiredColspan) {
-            return arr[index];
-					} else {
-						return null;
-					}
-        }
-				requiredColspan++;
-    }
-    return null;
+		for (let index = i - 1; index >= 0; index--) {
+			if (!arr[index]._span) {
+				if (arr[index].rowSpan > 1 && (arr[index].colSpan || 1) === requiredColspan) {
+					return arr[index];
+				} else {
+					return null;
+				}
+			}
+			requiredColspan++;
+		}
+		return null;
 	}
 
-	processRow({dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableBody, rowIndex, height}) {
+	processRow({ dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableBody, rowIndex, height }) {
 		const updatePageBreakData = (page, prevY) => {
 			let pageDesc;
 			// Find page break data for this row and page
@@ -644,7 +687,7 @@ class LayoutBuilder {
 			// Previous column cell has a rowspan
 			if (lastColumn._endingCell) {
 				endingSpanCell = lastColumn._endingCell;
-			// Previous column cell is part of a span
+				// Previous column cell is part of a span
 			} else if (lastColumn._span === true) {
 				// We get the cell that started the span where we set a reference to the ending cell
 				const startingSpanCell = this.findStartingSpanCell(cells, cells.length);
@@ -706,10 +749,18 @@ class LayoutBuilder {
 				if (marker.canvas) {
 					let vector = marker.canvas[0];
 
+					//vertical alignment
+					vector.nodeRef = line.nodeRef ? line.nodeRef : line;
+					vector._height = marker._maxHeight;
+
 					offsetVector(vector, -marker._minWidth, 0);
 					this.writer.addVector(vector);
 				} else if (marker._inlines) {
 					let markerLine = new Line(this.pageSize.width);
+
+					//vertical alignment
+					markerLine.nodeRef = line.nodeRef ? line.nodeRef : line;
+
 					markerLine.addInline(marker._inlines[0]);
 					markerLine.x = -marker._minWidth;
 					markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
@@ -717,6 +768,10 @@ class LayoutBuilder {
 				}
 			}
 		};
+
+		//vertical alignment
+		this.nodesHierarchy.push(node);
+		node.contentHeight = 0;
 
 		let items = orderedList ? node.ol : node.ul;
 		let gapSize = node._gapSize;
@@ -728,6 +783,10 @@ class LayoutBuilder {
 		this.writer.addListener('lineAdded', addMarkerToFirstLeaf);
 
 		items.forEach(item => {
+
+			//vertical alignment
+			item.nodeRef = node.nodeRef ? node.nodeRef : node;
+
 			nextMarker = item.listMarker;
 			this.processNode(item);
 			addAll(node.positions, item.positions);
@@ -736,6 +795,10 @@ class LayoutBuilder {
 		this.writer.removeListener('lineAdded', addMarkerToFirstLeaf);
 
 		this.writer.context().addMargin(-gapSize.width);
+
+		//vertical alignment
+		const lastNode = this.nodesHierarchy.pop();
+		if (this.nodesHierarchy[this.nodesHierarchy.length - 1]) this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += lastNode.contentHeight;
 	}
 
 	// tables
@@ -792,7 +855,11 @@ class LayoutBuilder {
 
 	// leafs (texts)
 	processLeaf(node) {
+		//vertical alignment
+		if (this.docPreprocessor) node = this.docPreprocessor.checkNode(node);
 		let line = this.buildNextLine(node);
+		line && (line.nodeRef = node.nodeRef ? node.nodeRef : node);
+
 		if (line && (node.tocItem || node.id)) {
 			line._node = node;
 		}
@@ -831,9 +898,16 @@ class LayoutBuilder {
 			node.positions.push(positions);
 			line = this.buildNextLine(node);
 			if (line) {
+				//vertical alignment
+				line.nodeRef = node.nodeRef ? node.nodeRef : node;
+
 				currentHeight += line.getHeight();
 			}
 		}
+
+		//vertical alignment
+		node.contentHeight = currentHeight;
+		this.nodesHierarchy.length > 0 && (this.nodesHierarchy[this.nodesHierarchy.length - 1].contentHeight += currentHeight);
 	}
 
 	processToc(node) {
@@ -923,6 +997,54 @@ class LayoutBuilder {
 	processAttachment(node) {
 		let position = this.writer.addAttachment(node);
 		node.positions.push(position);
+	}
+
+	updateTableWithStretchedHeights(node) {
+		const stretchedHeightPaths = [];
+		const concatPath = (root, relative) => root != undefined ? (root + '.' + relative) : relative;
+		const browseTheStructure = (node, parentHeight, path) => {
+			if (node.stack) {
+				node.stack.forEach((item, i) => browseTheStructure(item, node.computedHeight, concatPath(path, 'stack[' + i + ']')));
+			} else if (node.columns) {
+				node.columns.forEach((item, i) => browseTheStructure(item, node.computedHeight, concatPath(path, 'columns[' + i + ']')));
+			} else if (node.ul) {
+				node.ul.forEach((item, i) => browseTheStructure(item, node.computedHeight, concatPath(path, 'ul[' + i + ']')));
+			} else if (node.ol) {
+				node.ol.forEach((item, i) => browseTheStructure(item, node.computedHeight, concatPath(path, 'ol[' + i + ']')));
+			} else if (node.table) {
+				node.table.body.forEach((row, rowI) => {
+					row.forEach((cell, cellI) => browseTheStructure(cell, node.table.rowsHeight[rowI].height, concatPath(path, 'table.body[' + rowI + '][' + cellI + ']')));
+				});
+
+				const stretchedHeights = Array.isArray(node.table.heights) && node.table.heights.filter(h => h === "*").length;
+				if (stretchedHeights) {
+					if (parentHeight && isNumber(parentHeight)) {
+						stretchedHeightPaths.push(concatPath(path, 'table.heights'));
+						const fixedHeights = node.table.heights.reduce((previousValue, h) => h !== '*' ? previousValue + h : previousValue, 0);
+						const stretchedHeight = (parentHeight - fixedHeights) / stretchedHeights;
+						for (let i = 0; i < node.table.heights.length; i++) {
+							node.table.heights[i] === '*' && (node.table.heights[i] = stretchedHeight);
+						}
+					}
+					else {
+						for (let i = 0; i < node.table.heights.length; i++) {
+							node.table.heights[i] === '*' && (node.table.heights[i] = 'auto');
+						}
+					}
+				}
+			} else if (node.toc) {
+				if (node.toc.title) {
+					browseTheStructure(node.toc.title, node.computedHeight, concatPath(path, 'toc.title'));
+				}
+				if (node.toc._table) {
+					browseTheStructure(node.toc._table, node.computedHeight, concatPath(path, 'toc._table'));
+				}
+			}
+		};
+
+		browseTheStructure(node);
+
+		return stretchedHeightPaths;
 	}
 }
 

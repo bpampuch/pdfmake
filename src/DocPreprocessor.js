@@ -1,5 +1,5 @@
-import { isString, isNumber, isValue, isEmptyObject } from './helpers/variableType';
 import { stringifyNode } from './helpers/node';
+import { isEmptyObject, isNumber, isString, isValue } from './helpers/variableType';
 
 const convertValueToString = value => {
 	if (isString(value)) {
@@ -23,7 +23,7 @@ class DocPreprocessor {
 		return this.preprocessNode(docStructure);
 	}
 
-	preprocessNode(node) {
+	checkNode(node) {
 		// expand shortcuts and casting values
 		if (Array.isArray(node)) {
 			node = { stack: node };
@@ -32,6 +32,12 @@ class DocPreprocessor {
 		} else if ('text' in node) { // cast value in text property
 			node.text = convertValueToString(node.text);
 		}
+		return node;
+	};
+
+	preprocessNode(node) {
+		//vertical alignment
+		node = this.checkNode(node);
 
 		if (node.columns) {
 			return this.preprocessColumns(node);
@@ -68,6 +74,10 @@ class DocPreprocessor {
 		let columns = node.columns;
 
 		for (let i = 0, l = columns.length; i < l; i++) {
+			//vertical alignment
+			columns[i] = this.checkNode(columns[i]);
+			columns[i].nodeRef = node.nodeRef ? columns[i].nodeRef = node.nodeRef: node;
+
 			columns[i] = this.preprocessNode(columns[i]);
 		}
 
@@ -78,6 +88,9 @@ class DocPreprocessor {
 		let items = node.stack;
 
 		for (let i = 0, l = items.length; i < l; i++) {
+			//vertical alignment
+			items[i] = this.checkNode(items[i]);
+			items[i].nodeRef = node.nodeRef ? node.nodeRef : node;
 			items[i] = this.preprocessNode(items[i]);
 		}
 
@@ -88,6 +101,10 @@ class DocPreprocessor {
 		let items = node.ul || node.ol;
 
 		for (let i = 0, l = items.length; i < l; i++) {
+			//vertical alignment
+			items[i] = this.checkNode(items[i]);
+			items[i].nodeRef = node.nodeRef ? node.nodeRef : node;
+
 			items[i] = this.preprocessNode(items[i]);
 		}
 
