@@ -10,6 +10,8 @@
 - Fixed fillColor items in unbreakable blocks
 - Fixed calculating correctly the 'y' at the end of a rowSpan with dontBreakRows
 - Fixed margins (top/bottom) of nodes and row height are considered for breaking page
+- Fixed margins after page break
+- Fixed margins of nodes with relativePosition or absolutePosition are ignored and don't interfere with the regular flow of the layout
 
 ## 0.3.0-beta.9 - 2024-08-09
 
