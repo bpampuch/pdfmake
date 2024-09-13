@@ -138,7 +138,7 @@ DocumentContext.prototype.moveDown = function (offset) {
 DocumentContext.prototype.initializePage = function () {
 	this.y = this.pageMargins.top;
 	this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-	const {pageCtx, isSnapshot} = this.pageSnapshot();
+	const { pageCtx, isSnapshot } = this.pageSnapshot();
 	pageCtx.availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
 	if (isSnapshot && this.marginXTopParent) {
 		pageCtx.availableWidth -= this.marginXTopParent[0];
@@ -148,9 +148,9 @@ DocumentContext.prototype.initializePage = function () {
 
 DocumentContext.prototype.pageSnapshot = function () {
 	if (this.snapshots[0]) {
-		return {pageCtx: this.snapshots[0], isSnapshot: true};
+		return { pageCtx: this.snapshots[0], isSnapshot: true };
 	} else {
-		return {pageCtx: this, isSnapshot: false};
+		return { pageCtx: this, isSnapshot: false };
 	}
 };
 

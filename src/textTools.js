@@ -112,7 +112,7 @@ TextTools.prototype.sizeOfRotatedText = function (text, angle, styleContextStack
 		width: Math.abs(size.height * Math.sin(angleRad)) + Math.abs(size.width * Math.cos(angleRad)),
 		height: Math.abs(size.width * Math.sin(angleRad)) + Math.abs(size.height * Math.cos(angleRad))
 	};
-}
+};
 
 TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpacing, fontFeatures) {
 	return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
@@ -320,7 +320,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 
 		if ((sup || sub) && item.fontSize === undefined) {
 			// font size reduction taken from here: https://en.wikipedia.org/wiki/Subscript_and_superscript#Desktop_publishing
-			fontSize *= 0.58
+			fontSize *= 0.58;
 		}
 
 		var font = fontProvider.provideFont(fontName, bold, italics);

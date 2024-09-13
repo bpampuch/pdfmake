@@ -43,7 +43,7 @@ TableProcessor.prototype.beginTable = function (writer) {
 		const keepWithHeaderRows = tableNode.table.keepWithHeaderRows;
 
 		if (isPositiveInteger(keepWithHeaderRows)) {
-				this.rowsWithoutPageBreak += keepWithHeaderRows;
+			this.rowsWithoutPageBreak += keepWithHeaderRows;
 		}
 	}
 

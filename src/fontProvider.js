@@ -35,7 +35,7 @@ function FontProvider(fontDescriptors, pdfKitDoc) {
 
 FontProvider.prototype.getFontType = function (bold, italics) {
 	return typeName(bold, italics);
-}
+};
 
 FontProvider.prototype.getFontFile = function (familyName, bold, italics) {
 	var type = this.getFontType(bold, italics);
@@ -44,7 +44,7 @@ FontProvider.prototype.getFontFile = function (familyName, bold, italics) {
 	}
 
 	return this.fonts[familyName][type];
-}
+};
 
 FontProvider.prototype.provideFont = function (familyName, bold, italics) {
 	var type = this.getFontType(bold, italics);

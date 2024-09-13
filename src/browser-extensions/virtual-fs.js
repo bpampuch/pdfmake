@@ -9,7 +9,7 @@ VirtualFileSystem.prototype.existsSync = function (filename) {
 	filename = fixFilename(filename);
 	return typeof this.fileSystem[filename] !== 'undefined'
 		|| typeof this.dataSystem[filename] !== 'undefined';
-}
+};
 
 VirtualFileSystem.prototype.readFileSync = function (filename, options) {
 	filename = fixFilename(filename);

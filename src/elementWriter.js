@@ -116,7 +116,7 @@ ElementWriter.prototype.addImage = function (image, index, type) {
 };
 
 ElementWriter.prototype.addSVG = function (image, index) {
-	return this.addImage(image, index, 'svg')
+	return this.addImage(image, index, 'svg');
 };
 
 ElementWriter.prototype.addQr = function (qr, index) {

@@ -80,7 +80,7 @@ URLBrowserResolver.prototype.resolve = function (url, headers) {
 	}
 
 	return this.resolving[url];
-}
+};
 
 URLBrowserResolver.prototype.resolved = function () {
 	var _this = this;
@@ -91,6 +91,6 @@ URLBrowserResolver.prototype.resolved = function () {
 			reject(result);
 		});
 	});
-}
+};
 
 module.exports = URLBrowserResolver;
