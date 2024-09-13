@@ -26,7 +26,7 @@ function DocumentContext(pageSize, pageMargins) {
 	this.addPage(pageSize);
 }
 
-DocumentContext.prototype.beginColumnGroup = function () {
+DocumentContext.prototype.beginColumnGroup = function (marginXTopParent) {
 	this.snapshots.push({
 		x: this.x,
 		y: this.y,
@@ -44,6 +44,13 @@ DocumentContext.prototype.beginColumnGroup = function () {
 	});
 
 	this.lastColumnWidth = 0;
+	if (marginXTopParent) {
+		this.marginXTopParent = marginXTopParent;
+	}
+};
+
+DocumentContext.prototype.resetMarginXTopParent = function () {
+	this.marginXTopParent = null;
 };
 
 DocumentContext.prototype.beginColumn = function (width, offset, endingCell) {
@@ -131,14 +138,19 @@ DocumentContext.prototype.moveDown = function (offset) {
 DocumentContext.prototype.initializePage = function () {
 	this.y = this.pageMargins.top;
 	this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-	this.pageSnapshot().availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
+	const {pageCtx, isSnapshot} = this.pageSnapshot();
+	pageCtx.availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
+	if (isSnapshot && this.marginXTopParent) {
+		pageCtx.availableWidth -= this.marginXTopParent[0];
+		pageCtx.availableWidth -= this.marginXTopParent[1];
+	}
 };
 
 DocumentContext.prototype.pageSnapshot = function () {
 	if (this.snapshots[0]) {
-		return this.snapshots[0];
+		return {pageCtx: this.snapshots[0], isSnapshot: true};
 	} else {
-		return this;
+		return {pageCtx: this, isSnapshot: false};
 	}
 };
 
