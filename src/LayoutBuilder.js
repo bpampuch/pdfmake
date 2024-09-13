@@ -32,6 +32,7 @@ class LayoutBuilder {
 		this.pageMargins = pageMargins;
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = {};
+		this.nestedLevel = 0;
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -369,31 +370,50 @@ class LayoutBuilder {
 				}
 			}
 
-			if (margin) {
+			const isDetachedBlock = node.relativePosition || node.absolutePosition;
+
+			// Detached nodes have no margins, their position is only determined by 'x' and 'y'
+			if (margin && !isDetachedBlock) {
 				const availableHeight = this.writer.context().availableHeight;
 				// If top margin is bigger than available space, move to next page
 				// Necessary for nodes inside tables
 				if (availableHeight - margin[1] < 0) {
+					// Consume the whole available space
 					this.writer.context().moveDown(availableHeight);
 					this.writer.moveToNextPage(node.pageOrientation);
+					/**
+					 * TODO - Something to consider:
+					 * Right now the node starts at the top of next page (after header)
+					 * Another option would be to apply just the top margin that has not been consumed in the page before
+					 * It would something like: this.write.context().moveDown(margin[1] - availableHeight)
+					 */
 				} else {
 					this.writer.context().moveDown(margin[1]);
-					this.writer.context().addMargin(margin[0], margin[2]);
 				}
+				// Apply lateral margins
+				this.writer.context().addMargin(margin[0], margin[2]);
 			}
 			callback();
 
-			if (margin) {
+			// Detached nodes have no margins, their position is only determined by 'x' and 'y'
+			if (margin && !isDetachedBlock) {
 				const availableHeight = this.writer.context().availableHeight;
 				// If bottom margin is bigger than available space, move to next page
 				// Necessary for nodes inside tables
 				if (availableHeight - margin[3] < 0) {
 					this.writer.context().moveDown(availableHeight);
 					this.writer.moveToNextPage(node.pageOrientation);
+					/**
+					 * TODO - Something to consider:
+					 * Right now next node starts at the top of next page (after header)
+					 * Another option would be to apply the bottom margin that has not been consumed in the next page?
+					 * It would something like: this.write.context().moveDown(margin[3] - availableHeight)
+					 */
 				} else {
-					this.writer.context().addMargin(-margin[0], -margin[2]);
 					this.writer.context().moveDown(margin[3]);
 				}
+				// Apply lateral margins
+				this.writer.context().addMargin(-margin[0], -margin[2]);
 			}
 
 			if (node.pageBreak === 'after') {
@@ -482,6 +502,7 @@ class LayoutBuilder {
 
 	// columns
 	processColumns(columnNode) {
+		this.nestedLevel++;
 		let columns = columnNode.columns;
 		let availableWidth = this.writer.context().availableWidth;
 		let gaps = gapArray(columnNode._gap);
@@ -492,12 +513,16 @@ class LayoutBuilder {
 
 		ColumnCalculator.buildColumnWidths(columns, availableWidth);
 		let result = this.processRow({
+			marginX: columnNode._margin ? [columnNode._margin[0], columnNode._margin[2]] : [0, 0],
 			cells: columns,
 			widths: columns,
 			gaps
 		});
 		addAll(columnNode.positions, result.positions);
-
+		this.nestedLevel--;
+		if (this.nestedLevel === 0) {
+			this.writer.context().resetMarginXTopParent();
+		}
 		function gapArray(gap) {
 			if (!gap) {
 				return null;
@@ -529,7 +554,7 @@ class LayoutBuilder {
     return null;
 	}
 
-	processRow({dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableBody, rowIndex, height}) {
+	processRow({marginX = [0, 0], dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableBody, rowIndex, height}) {
 		const updatePageBreakData = (page, prevY) => {
 			let pageDesc;
 			// Find page break data for this row and page
@@ -577,8 +602,10 @@ class LayoutBuilder {
 		}
 
 		widths = widths || cells;
+		// Use the marginX if we are in a top level table/column (not nested)
+		const marginXParent = this.nestedLevel === 1 ? marginX : null;
 
-		this.writer.context().beginColumnGroup();
+		this.writer.context().beginColumnGroup(marginXParent);
 
 		for (let i = 0, l = cells.length; i < l; i++) {
 			let column = cells[i];
@@ -740,6 +767,7 @@ class LayoutBuilder {
 
 	// tables
 	processTable(tableNode) {
+		this.nestedLevel++;
 		let processor = new TableProcessor(tableNode);
 
 		processor.beginTable(this.writer);
@@ -772,6 +800,7 @@ class LayoutBuilder {
 			}
 
 			let result = this.processRow({
+				marginX: tableNode._margin ? [tableNode._margin[0], tableNode._margin[2]] : [0, 0],
 				dontBreakRows: processor.dontBreakRows,
 				rowsWithoutPageBreak: processor.rowsWithoutPageBreak,
 				cells: tableNode.table.body[i],
@@ -788,6 +817,10 @@ class LayoutBuilder {
 		}
 
 		processor.endTable(this.writer);
+		this.nestedLevel--;
+		if (this.nestedLevel === 0) {
+			this.writer.context().resetMarginXTopParent();
+		}
 	}
 
 	// leafs (texts)
