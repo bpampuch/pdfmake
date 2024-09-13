@@ -20,7 +20,7 @@ export function isNumber(variable) {
  */
 export function isPositiveInteger(variable) {
 	if (!isNumber(variable) || !Number.isInteger(variable) || variable <= 0) {
-			return false;
+		return false;
 	}
 	return true;
 }

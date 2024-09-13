@@ -108,7 +108,7 @@ class TableProcessor {
 		const headerRows = tableNode.table.headerRows;
 
 		if (isPositiveInteger(headerRows)) {
-      this.headerRows = headerRows;
+			this.headerRows = headerRows;
 
 			if (this.headerRows > tableNode.table.body.length) {
 				throw new Error(`Too few rows in the table. Property headerRows requires at least ${this.headerRows}, contains only ${tableNode.table.body.length}`);
@@ -119,7 +119,7 @@ class TableProcessor {
 			const keepWithHeaderRows = tableNode.table.keepWithHeaderRows;
 
 			if (isPositiveInteger(keepWithHeaderRows)) {
-					this.rowsWithoutPageBreak += keepWithHeaderRows;
+				this.rowsWithoutPageBreak += keepWithHeaderRows;
 			}
 		}
 

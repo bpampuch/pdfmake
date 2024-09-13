@@ -46,7 +46,7 @@ class DocumentContext extends EventEmitter {
 		}
 	}
 
-	resetMarginXTopParent () {
+	resetMarginXTopParent() {
 		this.marginXTopParent = null;
 	}
 
@@ -75,7 +75,7 @@ class DocumentContext extends EventEmitter {
 	markEnding(endingCell, originalXOffset, discountY) {
 		this.page = endingCell._columnEndingContext.page;
 		this.x = endingCell._columnEndingContext.x + originalXOffset;
-    this.y = endingCell._columnEndingContext.y - discountY;
+		this.y = endingCell._columnEndingContext.y - discountY;
 		this.availableWidth = endingCell._columnEndingContext.availableWidth;
 		this.availableHeight = endingCell._columnEndingContext.availableHeight;
 		this.lastColumnWidth = endingCell._columnEndingContext.lastColumnWidth;
@@ -135,7 +135,7 @@ class DocumentContext extends EventEmitter {
 	initializePage() {
 		this.y = this.pageMargins.top;
 		this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-		const {pageCtx, isSnapshot} = this.pageSnapshot();
+		const { pageCtx, isSnapshot } = this.pageSnapshot();
 		pageCtx.availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
 		if (isSnapshot && this.marginXTopParent) {
 			pageCtx.availableWidth -= this.marginXTopParent[0];
@@ -144,12 +144,12 @@ class DocumentContext extends EventEmitter {
 	}
 
 	pageSnapshot() {
-    if (this.snapshots[0]) {
-      return {pageCtx: this.snapshots[0], isSnapshot: true};
-    } else {
-      return {pageCtx: this, isSnapshot: false};
-    }
-  }
+		if (this.snapshots[0]) {
+			return { pageCtx: this.snapshots[0], isSnapshot: true };
+		} else {
+			return { pageCtx: this, isSnapshot: false };
+		}
+	}
 
 	moveTo(x, y) {
 		if (x !== undefined && x !== null) {

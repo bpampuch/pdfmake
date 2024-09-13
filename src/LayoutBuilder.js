@@ -541,20 +541,20 @@ class LayoutBuilder {
 
 	findStartingSpanCell(arr, i) {
 		let requiredColspan = 1;
-    for (let index = i - 1; index >= 0; index--) {
-        if (!arr[index]._span) {
-					if (arr[index].rowSpan > 1 && (arr[index].colSpan || 1) === requiredColspan) {
-            return arr[index];
-					} else {
-						return null;
-					}
-        }
-				requiredColspan++;
-    }
-    return null;
+		for (let index = i - 1; index >= 0; index--) {
+			if (!arr[index]._span) {
+				if (arr[index].rowSpan > 1 && (arr[index].colSpan || 1) === requiredColspan) {
+					return arr[index];
+				} else {
+					return null;
+				}
+			}
+			requiredColspan++;
+		}
+		return null;
 	}
 
-	processRow({marginX = [0, 0], dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableBody, rowIndex, height}) {
+	processRow({ marginX = [0, 0], dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableBody, rowIndex, height }) {
 		const updatePageBreakData = (page, prevY) => {
 			let pageDesc;
 			// Find page break data for this row and page
@@ -671,7 +671,7 @@ class LayoutBuilder {
 			// Previous column cell has a rowspan
 			if (lastColumn._endingCell) {
 				endingSpanCell = lastColumn._endingCell;
-			// Previous column cell is part of a span
+				// Previous column cell is part of a span
 			} else if (lastColumn._span === true) {
 				// We get the cell that started the span where we set a reference to the ending cell
 				const startingSpanCell = this.findStartingSpanCell(cells, cells.length);
