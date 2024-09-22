@@ -619,9 +619,9 @@ LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows
 				// Reference to the last cell of the rowspan
 				endingSpanCell = startingSpanCell._endingCell;
 				// Store if we are in an unbreakable block when we save the context and the originalX
-				if (this.writer.transactionLevel > 0) {
+				if (self.writer.transactionLevel > 0) {
 					endingSpanCell._isUnbreakableContext = true;
-					endingSpanCell._originalXOffset = this.writer.originalX;
+					endingSpanCell._originalXOffset = self.writer.originalX;
 				}
 			}
 
@@ -635,13 +635,13 @@ LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows
 				var discountY = 0;
 				if (dontBreakRows) {
 					// Calculate how many points we have to discount to Y when dontBreakRows and rowSpan are combined
-					const ctxBeforeRowSpanLastRow = this.writer.contextStack[this.writer.contextStack.length - 1];
+					const ctxBeforeRowSpanLastRow = self.writer.contextStack[self.writer.contextStack.length - 1];
 					discountY = ctxBeforeRowSpanLastRow.y - column._startingRowSpanY;
 				}
 				var originalXOffset = 0;
 				// If context was saved from an unbreakable block and we are not in an unbreakable block anymore
 				// We have to sum the originalX (X before starting unbreakable block) to X
-				if (column._isUnbreakableContext && !this.writer.transactionLevel) {
+				if (column._isUnbreakableContext && !self.writer.transactionLevel) {
 					originalXOffset = column._originalXOffset;
 				}
 				// row-span ending
@@ -665,9 +665,9 @@ LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows
 					// Context will be stored here (ending cell)
 					endingSpanCell = startingSpanCell._endingCell;
 					// Store if we are in an unbreakable block when we save the context and the originalX
-					if (this.writer.transactionLevel > 0) {
+					if (self.writer.transactionLevel > 0) {
 						endingSpanCell._isUnbreakableContext = true;
-						endingSpanCell._originalXOffset = this.writer.originalX;
+						endingSpanCell._originalXOffset = self.writer.originalX;
 					}
 				}
 			}
@@ -678,7 +678,7 @@ LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows
 
 		// If content did not break page, check if we should break by height
 		if (!isUnbreakableRow && pageBreaks.length === 0 && willBreakByHeight) {
-			self.writer.context().moveDown(this.writer.context().availableHeight);
+			self.writer.context().moveDown(self.writer.context().availableHeight);
 			self.writer.moveToNextPage();
 		}
 
