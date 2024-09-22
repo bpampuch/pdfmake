@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.10 - 2024-09-22
 
 - Drop support Internet Explorer 11 (Microsoft will not support from 2022)
 - Minimal supported version Node.js 18 LTS
