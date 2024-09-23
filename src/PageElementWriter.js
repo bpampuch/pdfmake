@@ -39,8 +39,8 @@ class PageElementWriter extends ElementWriter {
 		return this._fitOnPage(() => super.addAttachment(attachment, index));
 	}
 
-	addVector(vector, ignoreContextX, ignoreContextY, index) {
-		return super.addVector(vector, ignoreContextX, ignoreContextY, index);
+	addVector(vector, ignoreContextX, ignoreContextY, index, forcePage) {
+		return super.addVector(vector, ignoreContextX, ignoreContextY, index, forcePage);
 	}
 
 	beginClip(width, height) {
