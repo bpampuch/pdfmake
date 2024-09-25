@@ -52,8 +52,8 @@ PageElementWriter.prototype.addQr = function (qr, index) {
 	});
 };
 
-PageElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index) {
-	return this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
+PageElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index, forcePage) {
+	return this.writer.addVector(vector, ignoreContextX, ignoreContextY, index, forcePage);
 };
 
 PageElementWriter.prototype.beginClip = function (width, height) {

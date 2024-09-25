@@ -186,10 +186,13 @@ ElementWriter.prototype.alignCanvas = function (node) {
 	}
 };
 
-ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index) {
+ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index, forcePage) {
 	var context = this.context;
-	var page = context.getCurrentPage(),
-		position = this.getCurrentPositionOnPage();
+	var page = context.getCurrentPage();
+	if (isNumber(forcePage)) {
+		page = context.pages[forcePage];
+	}
+	var position = this.getCurrentPositionOnPage();
 
 	if (page) {
 		offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
