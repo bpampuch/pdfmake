@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.2.13 - 2024-09-22
+## Unreleased
+
+- Fixed drawing top horizontal line of the table with page break
+
+## 0.3.0-beta.10 - 2024-09-22
 
 - Minimal supported version Node.js 18 LTS
 - Update Roboto font (version 3.010)
