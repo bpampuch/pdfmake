@@ -259,9 +259,12 @@ class ElementWriter extends EventEmitter {
 		}
 	}
 
-	addVector(vector, ignoreContextX, ignoreContextY, index) {
+	addVector(vector, ignoreContextX, ignoreContextY, index, forcePage) {
 		let context = this.context();
 		let page = context.getCurrentPage();
+		if (isNumber(forcePage)) {
+			page = context.pages[forcePage];
+		}
 		let position = this.getCurrentPositionOnPage();
 
 		if (page) {
