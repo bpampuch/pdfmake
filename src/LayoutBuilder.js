@@ -168,18 +168,34 @@ class LayoutBuilder {
 		watermark
 	) {
 
+		const isNecessaryAddFirstPage = (docStructure) => {
+			if (docStructure.stack && docStructure.stack.length > 0 && docStructure.stack[0].section) {
+				return false;
+			} else if (docStructure.section) {
+				return false;
+			}
+
+			return true;
+		};
+
 		this.linearNodeList = [];
 		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
-		this.writer = new PageElementWriter(
-			new DocumentContext(this.pageSize, this.pageMargins));
+		this.writer = new PageElementWriter(new DocumentContext());
 
 		this.writer.context().addListener('pageAdded', () => {
 			this.addBackground(background);
 		});
 
-		this.addBackground(background);
+		if (isNecessaryAddFirstPage(docStructure)) {
+			this.writer.addPage(
+				this.pageSize,
+				null,
+				this.pageMargins
+			);
+		}
+
 		this.processNode(docStructure);
 		this.addHeadersAndFooters(header, footer);
 		if (watermark != null) {
@@ -206,11 +222,6 @@ class LayoutBuilder {
 		}
 	}
 
-	addStaticRepeatable(headerOrFooter, sizeFunction) {
-		this.addDynamicRepeatable(() => // copy to new object
-			JSON.parse(JSON.stringify(headerOrFooter)), sizeFunction);
-	}
-
 	addDynamicRepeatable(nodeGetter, sizeFunction) {
 		let pages = this.writer.context().pages;
 
@@ -220,7 +231,7 @@ class LayoutBuilder {
 			let node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
 
 			if (node) {
-				let sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
+				let sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.writer.context().getCurrentPage().pageMargins);
 				this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
 				node = this.docPreprocessor.preprocessDocument(node);
 				this.processNode(this.docMeasure.measureDocument(node));
@@ -244,16 +255,12 @@ class LayoutBuilder {
 			height: pageMargins.bottom
 		});
 
-		if (typeof header === 'function') {
+		if (header) {
 			this.addDynamicRepeatable(header, headerSizeFct);
-		} else if (header) {
-			this.addStaticRepeatable(header, headerSizeFct);
 		}
 
-		if (typeof footer === 'function') {
+		if (footer) {
 			this.addDynamicRepeatable(footer, footerSizeFct);
-		} else if (footer) {
-			this.addStaticRepeatable(footer, footerSizeFct);
 		}
 	}
 
@@ -454,6 +461,8 @@ class LayoutBuilder {
 
 			if (node.stack) {
 				this.processVerticalContainer(node);
+			} else if (node.section) {
+				this.processSection(node);
 			} else if (node.columns) {
 				this.processColumns(node);
 			} else if (node.ul) {
@@ -498,6 +507,24 @@ class LayoutBuilder {
 
 			//TODO: paragraph gap
 		}, this);
+	}
+
+	// section
+	processSection(sectionNode) {
+		// TODO: properties
+
+		let page = this.writer.context().getCurrentPage();
+		// TODO: background
+		if (!page || (page && page.items.length)) { // move to new empty page
+			// TODO: property for inherit page size and margin from before section
+			this.writer.addPage(
+				sectionNode.pageSize || this.pageSize,
+				sectionNode.pageOrientation,
+				sectionNode.pageMargins || this.pageMargins
+			);
+		}
+
+		this.processNode(sectionNode.section);
 	}
 
 	// columns

@@ -1,4 +1,6 @@
 import ElementWriter from './ElementWriter';
+import { normalizePageSize, normalizePageMargin } from './PageSize';
+import DocumentContext from './DocumentContext';
 
 /**
  * An extended ElementWriter which can handle:
@@ -9,6 +11,10 @@ import ElementWriter from './ElementWriter';
  *                 whole block will be rendered on the same page)
  */
 class PageElementWriter extends ElementWriter {
+
+	/**
+	 * @param {DocumentContext} context
+	 */
 	constructor(context) {
 		super(context);
 		this.transactionLevel = 0;
@@ -73,6 +79,19 @@ class PageElementWriter extends ElementWriter {
 		this.emit('pageChanged', {
 			prevPage: nextPage.prevPage,
 			prevY: nextPage.prevY,
+			y: this.context().y
+		});
+	}
+
+	addPage(pageSize, pageOrientation, pageMargin) {
+		let prevPage = this.page;
+		let prevY = this.y;
+
+		this.context().addPage(normalizePageSize(pageSize, pageOrientation), normalizePageMargin(pageMargin));
+
+		this.emit('pageChanged', {
+			prevPage: prevPage,
+			prevY: prevY,
 			y: this.context().y
 		});
 	}

@@ -37,3 +37,8 @@ export function offsetVector(vector, x, y) {
 			break;
 	}
 }
+
+export function convertToDynamicContent(staticContent) {
+	return () => // copy to new object
+		JSON.parse(JSON.stringify(staticContent));
+}
