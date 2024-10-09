@@ -5,7 +5,7 @@
 - Fixed drawing top horizontal line of the table with page break
 - Fixed uncaught Error when rowSpan and dontBreakRows combined
 
-## 0.3.0-beta.10 - 2024-09-22
+## 0.2.13 - 2024-09-22
 
 - Minimal supported version Node.js 18 LTS
 - Update Roboto font (version 3.010)
