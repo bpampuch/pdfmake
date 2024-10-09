@@ -635,7 +635,7 @@ LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows
 				var discountY = 0;
 				if (dontBreakRows) {
 					// Calculate how many points we have to discount to Y when dontBreakRows and rowSpan are combined
-					const ctxBeforeRowSpanLastRow = self.writer.contextStack[self.writer.contextStack.length - 1];
+					const ctxBeforeRowSpanLastRow = self.writer.writer.contextStack[self.writer.writer.contextStack.length - 1];
 					discountY = ctxBeforeRowSpanLastRow.y - column._startingRowSpanY;
 				}
 				var originalXOffset = 0;

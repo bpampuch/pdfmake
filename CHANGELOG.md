@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fixed drawing top horizontal line of the table with page break
+- Fixed uncaught Error when rowSpan and dontBreakRows combined
 
 ## 0.3.0-beta.10 - 2024-09-22
 
