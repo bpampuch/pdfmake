@@ -1,4 +1,4 @@
-/*! pdfmake v0.3.0-beta.10, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.3.0-beta.11, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -23,8 +23,8 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
-var pdfkit_es5 = __webpack_require__(776);
-;// CONCATENATED MODULE: ./src/PDFDocument.js
+var pdfkit_es5 = __webpack_require__(9727);
+;// ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(4598)["Buffer"];
 
 const typeName = (bold, italics) => {
@@ -183,7 +183,7 @@ class PDFDocument extends pdfkit_es5/* default */.A {
   }
 }
 /* harmony default export */ var src_PDFDocument = (PDFDocument);
-;// CONCATENATED MODULE: ./src/helpers/variableType.js
+;// ./src/helpers/variableType.js
 /**
  * @param {any} variable
  * @returns {boolean}
@@ -234,7 +234,7 @@ function isEmptyObject(variable) {
 function isValue(variable) {
   return variable !== undefined && variable !== null;
 }
-;// CONCATENATED MODULE: ./src/helpers/node.js
+;// ./src/helpers/node.js
 
 function fontStringify(key, val) {
   if (key === 'font') {
@@ -327,7 +327,7 @@ function getNodeMargin(node, styleStack) {
   }
   return margin;
 }
-;// CONCATENATED MODULE: ./src/DocPreprocessor.js
+;// ./src/DocPreprocessor.js
 /* provided dependency */ var DocPreprocessor_Buffer = __webpack_require__(4598)["Buffer"];
 
 
@@ -566,7 +566,7 @@ class DocPreprocessor {
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/linebreak/src/linebreaker.js
 var linebreaker = __webpack_require__(5417);
 var linebreaker_default = /*#__PURE__*/__webpack_require__.n(linebreaker);
-;// CONCATENATED MODULE: ./src/StyleContextStack.js
+;// ./src/StyleContextStack.js
 
 
 /**
@@ -740,7 +740,7 @@ class StyleContextStack {
   }
 }
 /* harmony default export */ var src_StyleContextStack = (StyleContextStack);
-;// CONCATENATED MODULE: ./src/TextBreaker.js
+;// ./src/TextBreaker.js
 
 
 
@@ -876,7 +876,7 @@ class TextBreaker {
   }
 }
 /* harmony default export */ var src_TextBreaker = (TextBreaker);
-;// CONCATENATED MODULE: ./src/TextInlines.js
+;// ./src/TextInlines.js
 
 
 const LEADING = /^(\s)+/g;
@@ -1078,7 +1078,7 @@ class TextInlines {
   }
 }
 /* harmony default export */ var src_TextInlines = (TextInlines);
-;// CONCATENATED MODULE: ./src/columnCalculator.js
+;// ./src/columnCalculator.js
 
 function buildColumnWidths(columns, availableWidth, offsetTotal, tableNode) {
   if (offsetTotal === void 0) {
@@ -1226,7 +1226,7 @@ function measureMinMax(columns) {
   isAutoColumn: isAutoColumn,
   isStarColumn: isStarColumn
 });
-;// CONCATENATED MODULE: ./src/tableLayouts.js
+;// ./src/tableLayouts.js
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 
 
@@ -1322,7 +1322,7 @@ const defaultTableLayout = {
   },
   defaultBorder: true
 };
-;// CONCATENATED MODULE: ./src/helpers/tools.js
+;// ./src/helpers/tools.js
 function pack() {
   let result = {};
   for (let i = 0, l = arguments.length; i < l; i++) {
@@ -1358,7 +1358,7 @@ function offsetVector(vector, x, y) {
       break;
   }
 }
-;// CONCATENATED MODULE: ./src/qrEnc.js
+;// ./src/qrEnc.js
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
 /*eslint no-redeclare: "off"*/
 /*eslint no-throw-literal: "off"*/
@@ -2078,7 +2078,7 @@ function measure(node) {
 /* harmony default export */ var qrEnc = ({
   measure: measure
 });
-;// CONCATENATED MODULE: ./src/DocMeasure.js
+;// ./src/DocMeasure.js
 
 
 
@@ -2702,7 +2702,7 @@ class DocMeasure {
 /* harmony default export */ var src_DocMeasure = (DocMeasure);
 // EXTERNAL MODULE: ./node_modules/events/events.js
 var events = __webpack_require__(4785);
-;// CONCATENATED MODULE: ./src/DocumentContext.js
+;// ./src/DocumentContext.js
 
 
 
@@ -2988,7 +2988,7 @@ function bottomMostContext(c1, c2) {
   };
 }
 /* harmony default export */ var src_DocumentContext = (DocumentContext);
-;// CONCATENATED MODULE: ./src/ElementWriter.js
+;// ./src/ElementWriter.js
 
 
 
@@ -3191,9 +3191,12 @@ class ElementWriter extends events.EventEmitter {
       });
     }
   }
-  addVector(vector, ignoreContextX, ignoreContextY, index) {
+  addVector(vector, ignoreContextX, ignoreContextY, index, forcePage) {
     let context = this.context();
     let page = context.getCurrentPage();
+    if (isNumber(forcePage)) {
+      page = context.pages[forcePage];
+    }
     let position = this.getCurrentPositionOnPage();
     if (page) {
       offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
@@ -3327,7 +3330,7 @@ function addPageItem(page, item, index) {
   }
 }
 /* harmony default export */ var src_ElementWriter = (ElementWriter);
-;// CONCATENATED MODULE: ./src/PageElementWriter.js
+;// ./src/PageElementWriter.js
 
 
 /**
@@ -3362,8 +3365,8 @@ class PageElementWriter extends src_ElementWriter {
   addAttachment(attachment, index) {
     return this._fitOnPage(() => super.addAttachment(attachment, index));
   }
-  addVector(vector, ignoreContextX, ignoreContextY, index) {
-    return super.addVector(vector, ignoreContextX, ignoreContextY, index);
+  addVector(vector, ignoreContextX, ignoreContextY, index, forcePage) {
+    return super.addVector(vector, ignoreContextX, ignoreContextY, index, forcePage);
   }
   beginClip(width, height) {
     return super.beginClip(width, height);
@@ -3464,7 +3467,7 @@ class PageElementWriter extends src_ElementWriter {
   }
 }
 /* harmony default export */ var src_PageElementWriter = (PageElementWriter);
-;// CONCATENATED MODULE: ./src/TableProcessor.js
+;// ./src/TableProcessor.js
 
 
 class TableProcessor {
@@ -3575,13 +3578,18 @@ class TableProcessor {
       }
     }
     this.dontBreakRows = tableNode.table.dontBreakRows || false;
-    if (this.rowsWithoutPageBreak) {
+    if (this.rowsWithoutPageBreak || this.dontBreakRows) {
       writer.beginUnbreakableBlock();
+      // Draw the top border of the table
+      this.drawHorizontalLine(0, writer);
+      if (this.rowsWithoutPageBreak && this.dontBreakRows) {
+        // We just increase the value of transactionLevel
+        writer.beginUnbreakableBlock();
+      }
     }
 
     // update the border properties of all cells before drawing any lines
     prepareCellBorders(this.tableNode.table.body);
-    this.drawHorizontalLine(0, writer);
   }
   onRowBreak(rowIndex, writer) {
     return () => {
@@ -3597,7 +3605,12 @@ class TableProcessor {
     this.rowPaddingBottom = this.layout.paddingBottom(rowIndex, this.tableNode);
     this.rowCallback = this.onRowBreak(rowIndex, writer);
     writer.addListener('pageChanged', this.rowCallback);
-    if (this.dontBreakRows) {
+    if (rowIndex == 0 && !this.dontBreakRows && !this.rowsWithoutPageBreak) {
+      // We store the 'y' to draw later and if necessary the top border of the table
+      this._tableTopBorderY = writer.context().y;
+      writer.context().moveDown(this.topLineWidth);
+    }
+    if (this.dontBreakRows && rowIndex > 0) {
       writer.beginUnbreakableBlock();
     }
     this.rowTopY = writer.context().y;
@@ -3605,7 +3618,10 @@ class TableProcessor {
     writer.context().availableHeight -= this.reservedAtBottom;
     writer.context().moveDown(this.rowPaddingTop);
   }
-  drawHorizontalLine(lineIndex, writer, overrideY) {
+  drawHorizontalLine(lineIndex, writer, overrideY, moveDown, forcePage) {
+    if (moveDown === void 0) {
+      moveDown = true;
+    }
     let lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode);
     if (lineWidth) {
       let style = this.layout.hLineStyle(lineIndex, this.tableNode);
@@ -3699,7 +3715,7 @@ class TableProcessor {
               lineWidth: lineWidth,
               dash: dash,
               lineColor: borderColor
-            }, false, overrideY);
+            }, false, isNumber(overrideY), null, forcePage);
             currentLine = null;
             borderColor = null;
             cellAbove = null;
@@ -3708,7 +3724,9 @@ class TableProcessor {
           }
         }
       }
-      writer.context().moveDown(lineWidth);
+      if (moveDown) {
+        writer.context().moveDown(lineWidth);
+      }
     }
   }
   drawVerticalLine(x, y0, y1, vLineColIndex, writer, vLineRowIndex, beforeVLineColIndex) {
@@ -3831,6 +3849,15 @@ class TableProcessor {
     }
     ys[ys.length - 1].y1 = endingY;
     let skipOrphanePadding = ys[0].y1 - ys[0].y0 === this.rowPaddingTop;
+    if (rowIndex === 0 && !skipOrphanePadding && !this.rowsWithoutPageBreak && !this.dontBreakRows) {
+      // Draw the top border of the table
+      let pageTableStartedAt = null;
+      if (pageBreaks && pageBreaks.length > 0) {
+        // Get the page where table started at
+        pageTableStartedAt = pageBreaks[0].prevPage;
+      }
+      this.drawHorizontalLine(0, writer, this._tableTopBorderY, false, pageTableStartedAt);
+    }
     for (let yi = skipOrphanePadding ? 1 : 0, yl = ys.length; yi < yl; yi++) {
       let willBreak = yi < ys.length - 1;
       let rowBreakWithoutHeader = yi > 0 && !this.headerRows;
@@ -3846,6 +3873,14 @@ class TableProcessor {
         //TODO: buggy, availableHeight should be updated on every pageChanged event
         // TableProcessor should be pageChanged listener, instead of processRow
         this.reservedAtBottom = 0;
+      }
+
+      // Draw horizontal lines before the vertical lines so they are not overridden
+      if (willBreak && this.layout.hLineWhenBroken !== false) {
+        this.drawHorizontalLine(rowIndex + 1, writer, y2);
+      }
+      if (rowBreakWithoutHeader && this.layout.hLineWhenBroken !== false) {
+        this.drawHorizontalLine(rowIndex, writer, y1);
       }
       for (let i = 0, l = xs.length; i < l; i++) {
         let leftCellBorder = false;
@@ -3929,12 +3964,6 @@ class TableProcessor {
           }
         }
       }
-      if (willBreak && this.layout.hLineWhenBroken !== false) {
-        this.drawHorizontalLine(rowIndex + 1, writer, y2);
-      }
-      if (rowBreakWithoutHeader && this.layout.hLineWhenBroken !== false) {
-        this.drawHorizontalLine(rowIndex, writer, y1);
-      }
     }
     writer.context().page = endingPage;
     writer.context().y = endingY;
@@ -3967,7 +3996,8 @@ class TableProcessor {
     }
     if (this.dontBreakRows) {
       const pageChangedCallback = () => {
-        if (!this.headerRows && this.layout.hLineWhenBroken !== false) {
+        if (rowIndex > 0 && !this.headerRows && this.layout.hLineWhenBroken !== false) {
+          // Draw the top border of the row after a page break
           this.drawHorizontalLine(rowIndex, writer);
         }
       };
@@ -3984,7 +4014,7 @@ class TableProcessor {
   }
 }
 /* harmony default export */ var src_TableProcessor = (TableProcessor);
-;// CONCATENATED MODULE: ./src/Line.js
+;// ./src/Line.js
 class Line {
   /**
    * @param {number} maxWidth Maximum width this line can have
@@ -4089,7 +4119,7 @@ class Line {
   }
 }
 /* harmony default export */ var src_Line = (Line);
-;// CONCATENATED MODULE: ./src/LayoutBuilder.js
+;// ./src/LayoutBuilder.js
 
 
 
@@ -4970,7 +5000,7 @@ function decorateNode(node) {
 // EXTERNAL MODULE: ./node_modules/xmldoc/index.js
 var xmldoc = __webpack_require__(2242);
 var xmldoc_default = /*#__PURE__*/__webpack_require__.n(xmldoc);
-;// CONCATENATED MODULE: ./src/SVGMeasure.js
+;// ./src/SVGMeasure.js
 
 
 /**
@@ -5036,7 +5066,7 @@ class SVGMeasure {
   }
 }
 /* harmony default export */ var src_SVGMeasure = (SVGMeasure);
-;// CONCATENATED MODULE: ./src/standardPageSizes.js
+;// ./src/standardPageSizes.js
 /* harmony default export */ var standardPageSizes = ({
   '4A0': [4767.87, 6740.79],
   '2A0': [3370.39, 4767.87],
@@ -5089,7 +5119,7 @@ class SVGMeasure {
   LETTER: [612.00, 792.00],
   TABLOID: [792.00, 1224.00]
 });
-;// CONCATENATED MODULE: ./src/PageSize.js
+;// ./src/PageSize.js
 
 
 function normalizePageSize(pageSize, pageOrientation) {
@@ -5158,7 +5188,7 @@ function normalizePageMargin(margin) {
   }
   return margin;
 }
-;// CONCATENATED MODULE: ./src/TextDecorator.js
+;// ./src/TextDecorator.js
 const groupDecorations = line => {
   let groups = [];
   let currentGroup = null;
@@ -5300,7 +5330,7 @@ class TextDecorator {
 /* harmony default export */ var src_TextDecorator = (TextDecorator);
 // EXTERNAL MODULE: ./src/3rd-party/svg-to-pdfkit.js
 var svg_to_pdfkit = __webpack_require__(739);
-;// CONCATENATED MODULE: ./src/Renderer.js
+;// ./src/Renderer.js
 
 
 
@@ -5671,7 +5701,7 @@ class Renderer {
   }
 }
 /* harmony default export */ var src_Renderer = (Renderer);
-;// CONCATENATED MODULE: ./src/Printer.js
+;// ./src/Printer.js
 
 
 
@@ -5970,7 +6000,7 @@ function calculatePageHeight(pages, margins) {
 /* harmony default export */ var Printer = (PdfPrinter);
 // EXTERNAL MODULE: ./src/virtual-fs.js
 var virtual_fs = __webpack_require__(6811);
-;// CONCATENATED MODULE: ./src/base.js
+;// ./src/base.js
 
 
 
@@ -6021,7 +6051,7 @@ class pdfmake {
   }
 }
 /* harmony default export */ var base = (pdfmake);
-;// CONCATENATED MODULE: ./src/OutputDocument.js
+;// ./src/OutputDocument.js
 /* provided dependency */ var OutputDocument_Buffer = __webpack_require__(4598)["Buffer"];
 class OutputDocument {
   /**
@@ -6096,8 +6126,8 @@ class OutputDocument {
 }
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(6549);
-;// CONCATENATED MODULE: ./src/browser-extensions/OutputDocumentBrowser.js
+var FileSaver_min = __webpack_require__(453);
+;// ./src/browser-extensions/OutputDocumentBrowser.js
 
 
 
@@ -6221,7 +6251,7 @@ class OutputDocumentBrowser extends src_OutputDocument {
   }
 }
 /* harmony default export */ var browser_extensions_OutputDocumentBrowser = (OutputDocumentBrowser);
-;// CONCATENATED MODULE: ./src/browser-extensions/URLBrowserResolver.js
+;// ./src/browser-extensions/URLBrowserResolver.js
 const fetchUrl = function (url, headers) {
   if (headers === void 0) {
     headers = {};
@@ -6306,7 +6336,7 @@ var virtual_fs_cjs_default = /*#__PURE__*/__webpack_require__.n(virtual_fs_cjs);
 // EXTERNAL MODULE: ./node_modules/core-js/configurator.js
 var configurator = __webpack_require__(6491);
 var configurator_default = /*#__PURE__*/__webpack_require__.n(configurator);
-;// CONCATENATED MODULE: ./src/browser-extensions/index.js
+;// ./src/browser-extensions/index.js
 
 
 
@@ -21567,7 +21597,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 776:
+/***/ 9727:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -53339,8 +53369,8 @@ module.exports = function getPolyfill() {
 		if (
 			descriptor
 			&& typeof descriptor.get === 'function'
-			&& typeof RegExp.prototype.dotAll === 'boolean'
-			&& typeof RegExp.prototype.hasIndices === 'boolean'
+			&& 'dotAll' in RegExp.prototype
+			&& 'hasIndices' in RegExp.prototype
 		) {
 			/* eslint getter-return: 0 */
 			var calls = '';
@@ -53355,6 +53385,9 @@ module.exports = function getPolyfill() {
 					calls += 'y';
 				}
 			});
+
+			descriptor.get.call(o);
+
 			if (calls === 'dy') {
 				return descriptor.get;
 			}
@@ -60331,7 +60364,7 @@ module.exports = __webpack_require__(5349);
 
 /***/ }),
 
-/***/ 6549:
+/***/ 453:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.11 - 2024-10-09
 
 - Fixed drawing top horizontal line of the table with page break
 
