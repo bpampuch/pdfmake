@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.14 - 2024-10-09
 
 - Fixed drawing top horizontal line of the table with page break
 - Fixed uncaught Error when rowSpan and dontBreakRows combined
