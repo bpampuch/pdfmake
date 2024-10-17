@@ -48,6 +48,9 @@ var sampleTestProvider = {
 			descender: -50
 		};
 	},
+	provideImageSource(src) { // eslint-disable-line no-unused-vars
+		return {};
+	},
 	provideImage(src) { // eslint-disable-line no-unused-vars
 		return {
 			width: 1,
