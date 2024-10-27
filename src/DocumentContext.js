@@ -23,13 +23,14 @@ class DocumentContext extends EventEmitter {
 		this.addPage(pageSize);
 	}
 
-	beginColumnGroup(marginXTopParent) {
+	beginColumnGroup(marginXTopParent, bottomByPage = {}) {
 		this.snapshots.push({
 			x: this.x,
 			y: this.y,
 			availableHeight: this.availableHeight,
 			availableWidth: this.availableWidth,
 			page: this.page,
+      bottomByPage: bottomByPage ? bottomByPage : {},
 			bottomMost: {
 				x: this.x,
 				y: this.y,
@@ -44,6 +45,16 @@ class DocumentContext extends EventEmitter {
 		if (marginXTopParent) {
 			this.marginXTopParent = marginXTopParent;
 		}
+	}
+
+	updateBottomByPage () {
+		const lastSnapshot = this.snapshots[this.snapshots.length - 1];
+		const lastPage = this.page;
+		let previousBottom = -Number.MIN_VALUE;
+		if (lastSnapshot.bottomByPage[lastPage]) {
+			previousBottom = lastSnapshot.bottomByPage[lastPage];
+		}
+		lastSnapshot.bottomByPage[lastPage] = Math.max(previousBottom, this.y);
 	}
 
 	resetMarginXTopParent() {
@@ -118,6 +129,7 @@ class DocumentContext extends EventEmitter {
 			this.availableHeight -= (y - saved.bottomMost.y);
 		}
 		this.lastColumnWidth = saved.lastColumnWidth;
+		return saved.bottomByPage;
 	}
 
 	addMargin(left, right) {
