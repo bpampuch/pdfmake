@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Fixed bug with how page breaks provoked by cells with rowspan were handled
+- Fixed find where previous cell started with row span and col span combination
+- Fixed calculating correctly the 'y' at the end of a rowSpan with dontBreakRows
+
 ## 0.2.14 - 2024-10-09
 
 - Fixed drawing top horizontal line of the table with page break
