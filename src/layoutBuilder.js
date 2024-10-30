@@ -559,7 +559,15 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 	}
 };
 
-LayoutBuilder.prototype.findStartingSpanCell = function (arr, i) {
+/**
+ * Searches for a cell in the same row that starts a rowspan and is positioned immediately before the current cell.
+ * Alternatively, it finds a cell where the colspan initiating the rowspan extends to the cell just before the current one.
+ *
+ * @param {Array<object>} arr - An array representing cells in a row.
+ * @param {number} i - The index of the current cell to search backward from.
+ * @returns {object|null} The starting cell of the rowspan if found; otherwise, `null`.
+ */
+LayoutBuilder.prototype._findStartingRowSpanCell = function (arr, i) {
 	var requiredColspan = 1;
 	for (var index = i - 1; index >= 0; index--) {
 		if (!arr[index]._span) {
@@ -574,172 +582,285 @@ LayoutBuilder.prototype.findStartingSpanCell = function (arr, i) {
 	return null;
 };
 
-LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableBody, rowIndex, height }) {
+/**
+ * Retrieves a page break description for a specified page from a list of page breaks.
+ *
+ * @param {Array<object>} pageBreaks - An array of page break descriptions, each containing `prevPage` properties.
+ * @param {number} page - The page number to find the associated page break for.
+ * @returns {object|undefined} The page break description object for the specified page if found; otherwise, `undefined`.
+ */
+LayoutBuilder.prototype._getPageBreak = function (pageBreaks, page) {
+	return pageBreaks.find(desc => desc.prevPage === page);
+};
+
+LayoutBuilder.prototype._getPageBreakListBySpan = function (tableNode, page, rowIndex) {
+	if (!tableNode || !tableNode._breaksBySpan) {
+		return null;
+	}
+	const breaksList = tableNode._breaksBySpan.filter(desc => desc.prevPage === page && rowIndex <= desc.rowIndexOfSpanEnd);
+
+	var y = Number.MAX_VALUE,
+		prevY = Number.MIN_VALUE;
+
+	breaksList.forEach(b => {
+		prevY = Math.max(b.prevY, prevY);
+		y = Math.min(b.y, y);
+	});
+
+	return {
+		prevPage: page,
+		prevY: prevY,
+		y: y
+	};
+};
+
+LayoutBuilder.prototype._findSameRowPageBreakByRowSpanData = function (breaksBySpan, page, rowIndex) {
+	if (!breaksBySpan) {
+		return null;
+	}
+	return breaksBySpan.find(desc => desc.prevPage === page && rowIndex === desc.rowIndexOfSpanEnd);
+};
+
+LayoutBuilder.prototype._updatePageBreaksData = function (pageBreaks, tableNode, rowIndex) {
+	Object.keys(tableNode._bottomByPage).forEach(p => {
+		const page = Number(p);
+		const pageBreak = this._getPageBreak(pageBreaks, page);
+		if (pageBreak) {
+			pageBreak.prevY = Math.max(pageBreak.prevY, tableNode._bottomByPage[page]);
+		}
+		if (tableNode._breaksBySpan && tableNode._breaksBySpan.length > 0) {
+			const breaksBySpanList = tableNode._breaksBySpan.filter(pb => pb.prevPage === page && rowIndex <= pb.rowIndexOfSpanEnd);
+			if (breaksBySpanList && breaksBySpanList.length > 0) {
+				breaksBySpanList.forEach(b => {
+					b.prevY = Math.max(b.prevY, tableNode._bottomByPage[page]);
+				});
+			}
+		}
+	});
+};
+
+/**
+ * Resolves the Y-coordinates for a target object by comparing two break points.
+ *
+ * @param {object} break1 - The first break point with `prevY` and `y` properties.
+ * @param {object} break2 - The second break point with `prevY` and `y` properties.
+ * @param {object} target - The target object to be updated with resolved Y-coordinates.
+ * @property {number} target.prevY - Updated to the maximum `prevY` value between `break1` and `break2`.
+ * @property {number} target.y - Updated to the minimum `y` value between `break1` and `break2`.
+ */
+LayoutBuilder.prototype._resolveBreakY = function (break1, break2, target) {
+	target.prevY = Math.max(break1.prevY, break2.prevY);
+	target.y = Math.min(break1.y, break2.y);
+};
+
+LayoutBuilder.prototype._storePageBreakData = function (data, startsRowSpan, pageBreaks, tableNode) {
+	var pageDesc;
+	var pageDescBySpan;
+
+	if (!startsRowSpan) {
+		pageDesc = this._getPageBreak(pageBreaks, data.prevPage);
+		pageDescBySpan = this._getPageBreakListBySpan(tableNode, data.prevPage, data.rowIndex);
+		if (!pageDesc) {
+			pageDesc = Object.assign({}, data);
+			pageBreaks.push(pageDesc);
+		}
+
+		if (pageDescBySpan) {
+			this._resolveBreakY(pageDesc, pageDescBySpan, pageDesc);
+		}
+		this._resolveBreakY(pageDesc, data, pageDesc);
+	} else {
+		var breaksBySpan = tableNode && tableNode._breaksBySpan || null;
+		pageDescBySpan = this._findSameRowPageBreakByRowSpanData(breaksBySpan, data.prevPage, data.rowIndex);
+		if (!pageDescBySpan) {
+			pageDescBySpan = Object.assign({}, data, {
+				rowIndexOfSpanEnd: data.rowIndex + data.rowSpan - 1
+			});
+			if (!tableNode._breaksBySpan) {
+				tableNode._breaksBySpan = [];
+			}
+			tableNode._breaksBySpan.push(pageDescBySpan);
+		}
+		pageDescBySpan.prevY = Math.max(pageDescBySpan.prevY, data.prevY);
+		pageDescBySpan.y = Math.min(pageDescBySpan.y, data.y);
+		pageDesc = this._getPageBreak(pageBreaks, data.prevPage);
+		if (pageDesc) {
+			this._resolveBreakY(pageDesc, pageDescBySpan, pageDesc);
+		}
+	}
+};
+
+/**
+ * Calculates the left offset for a column based on the specified gap values.
+ *
+ * @param {number} i - The index of the column for which the offset is being calculated.
+ * @param {Array<number>} gaps - An array of gap values for each column.
+ * @returns {number} The left offset for the column. Returns `gaps[i]` if it exists, otherwise `0`.
+ */
+LayoutBuilder.prototype._colLeftOffset = function (i, gaps) {
+	if (gaps && gaps.length > i) {
+		return gaps[i];
+	}
+	return 0;
+};
+
+/**
+ * Retrieves the ending cell for a row span in case it exists in a specified table column.
+ *
+ * @param {Array<Array<object>>} tableBody - The table body, represented as a 2D array of cell objects.
+ * @param {number} rowIndex - The index of the starting row for the row span.
+ * @param {object} column - The column object containing row span information.
+ * @param {number} columnIndex - The index of the column within the row.
+ * @returns {object|null} The cell at the end of the row span if it exists; otherwise, `null`.
+ * @throws {Error} If the row span extends beyond the total row count.
+ */
+LayoutBuilder.prototype._getRowSpanEndingCell = function (tableBody, rowIndex, column, columnIndex) {
+	if (column.rowSpan && column.rowSpan > 1) {
+		var endingRow = rowIndex + column.rowSpan - 1;
+		if (endingRow >= tableBody.length) {
+			throw new Error(`Row span for column ${columnIndex} (with indexes starting from 0) exceeded row count`);
+		}
+		return tableBody[endingRow][columnIndex];
+	}
+
+	return null;
+};
+
+LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableNode, tableBody, rowIndex, height }) {
 	var self = this;
 	var isUnbreakableRow = dontBreakRows || rowIndex <= rowsWithoutPageBreak - 1;
 	var pageBreaks = [];
+	var pageBreaksByRowSpan = [];
 	var positions = [];
 	var willBreakByHeight = false;
+	widths = widths || cells;
 
-	this.tracker.auto('pageChanged', storePageBreakData, function () {
-		// Check if row should break by height
-		if (!isUnbreakableRow && height > self.writer.context().availableHeight) {
-			willBreakByHeight = true;
-		}
+	// Check if row should break by height
+	if (!isUnbreakableRow && height > self.writer.context().availableHeight) {
+		willBreakByHeight = true;
+	}
 
-		widths = widths || cells;
-		// Use the marginX if we are in a top level table/column (not nested)
-		const marginXParent = self.nestedLevel === 1 ? marginX : null;
+	// Use the marginX if we are in a top level table/column (not nested)
+	const marginXParent = self.nestedLevel === 1 ? marginX : null;
+	const _bottomByPage = tableNode ? tableNode._bottomByPage : null;
+	this.writer.context().beginColumnGroup(marginXParent, _bottomByPage);
 
-		self.writer.context().beginColumnGroup(marginXParent);
+	for (var i = 0, l = cells.length; i < l; i++) {
+		var cell = cells[i];
 
-		for (var i = 0, l = cells.length; i < l; i++) {
-			var column = cells[i];
+		// Page change handler
+
+		this.tracker.auto('pageChanged', storePageBreakClosure, function () {
 			var width = widths[i]._calcWidth;
-			var leftOffset = colLeftOffset(i);
+			var leftOffset = self._colLeftOffset(i, gaps);
+			// Check if exists and retrieve the cell that started the rowspan in case we are in the cell just after
+			var startingSpanCell = self._findStartingRowSpanCell(cells, i);
 
-			if (column.colSpan && column.colSpan > 1) {
-				for (var j = 1; j < column.colSpan; j++) {
+			if (cell.colSpan && cell.colSpan > 1) {
+				for (var j = 1; j < cell.colSpan; j++) {
 					width += widths[++i]._calcWidth + gaps[i];
 				}
 			}
 
 			// if rowspan starts in this cell, we retrieve the last cell affected by the rowspan
-			var endingCell = getEndingCell(column, i);
-			if (endingCell) {
+			const rowSpanEndingCell = self._getRowSpanEndingCell(tableBody, rowIndex, cell, i);
+			if (rowSpanEndingCell) {
 				// We store a reference of the ending cell in the first cell of the rowspan
-				column._endingCell = endingCell;
-				column._endingCell._startingRowSpanY = column._startingRowSpanY;
+				cell._endingCell = rowSpanEndingCell;
+				cell._endingCell._startingRowSpanY = cell._startingRowSpanY;
 			}
 
-			// Check if exists and retrieve the cell that started the rowspan in case we are in the cell just after
-			var startingSpanCell = self.findStartingSpanCell(cells, i);
-			var endingSpanCell = null;
+			// If we are after a cell that started a rowspan
+			var endOfRowSpanCell = null;
 			if (startingSpanCell && startingSpanCell._endingCell) {
 				// Reference to the last cell of the rowspan
-				endingSpanCell = startingSpanCell._endingCell;
+				endOfRowSpanCell = startingSpanCell._endingCell;
 				// Store if we are in an unbreakable block when we save the context and the originalX
 				if (self.writer.transactionLevel > 0) {
-					endingSpanCell._isUnbreakableContext = true;
-					endingSpanCell._originalXOffset = self.writer.originalX;
+					endOfRowSpanCell._isUnbreakableContext = true;
+					endOfRowSpanCell._originalXOffset = self.writer.originalX;
 				}
 			}
 
 			// We pass the endingSpanCell reference to store the context just after processing rowspan cell
-			self.writer.context().beginColumn(width, leftOffset, endingSpanCell);
+			self.writer.context().beginColumn(width, leftOffset, endOfRowSpanCell);
 
-			if (!column._span) {
-				self.processNode(column);
-				addAll(positions, column.positions);
-			} else if (column._columnEndingContext) {
+			if (!cell._span) {
+				self.processNode(cell);
+				self.writer.context().updateBottomByPage();
+				addAll(positions, cell.positions);
+			} else if (cell._columnEndingContext) {
 				var discountY = 0;
 				if (dontBreakRows) {
 					// Calculate how many points we have to discount to Y when dontBreakRows and rowSpan are combined
 					const ctxBeforeRowSpanLastRow = self.writer.writer.contextStack[self.writer.writer.contextStack.length - 1];
-					discountY = ctxBeforeRowSpanLastRow.y - column._startingRowSpanY;
+					discountY = ctxBeforeRowSpanLastRow.y - cell._startingRowSpanY;
 				}
 				var originalXOffset = 0;
 				// If context was saved from an unbreakable block and we are not in an unbreakable block anymore
 				// We have to sum the originalX (X before starting unbreakable block) to X
-				if (column._isUnbreakableContext && !self.writer.transactionLevel) {
-					originalXOffset = column._originalXOffset;
+				if (cell._isUnbreakableContext && !self.writer.transactionLevel) {
+					originalXOffset = cell._originalXOffset;
 				}
 				// row-span ending
 				// Recover the context after processing the rowspanned cell
-				self.writer.context().markEnding(column, originalXOffset, discountY);
+				self.writer.context().markEnding(cell, originalXOffset, discountY);
 			}
-		}
+		});
+	}
 
-		// Check if last cell is part of a span
-		var endingSpanCell = null;
-		var lastColumn = cells.length > 0 ? cells[cells.length - 1] : null;
-		if (lastColumn) {
-			// Previous column cell has a rowspan
-			if (lastColumn._endingCell) {
-				endingSpanCell = lastColumn._endingCell;
-				// Previous column cell is part of a span
-			} else if (lastColumn._span === true) {
-				// We get the cell that started the span where we set a reference to the ending cell
-				var startingSpanCell = self.findStartingSpanCell(cells, cells.length);
-				if (startingSpanCell) {
-					// Context will be stored here (ending cell)
-					endingSpanCell = startingSpanCell._endingCell;
-					// Store if we are in an unbreakable block when we save the context and the originalX
-					if (self.writer.transactionLevel > 0) {
-						endingSpanCell._isUnbreakableContext = true;
-						endingSpanCell._originalXOffset = self.writer.originalX;
-					}
+	// Check if last cell is part of a span
+	var endingSpanCell = null;
+	var lastColumn = cells.length > 0 ? cells[cells.length - 1] : null;
+	if (lastColumn) {
+		// Previous column cell has a rowspan
+		if (lastColumn._endingCell) {
+			endingSpanCell = lastColumn._endingCell;
+			// Previous column cell is part of a span
+		} else if (lastColumn._span === true) {
+			// We get the cell that started the span where we set a reference to the ending cell
+			const startingSpanCell = this._findStartingRowSpanCell(cells, cells.length);
+			if (startingSpanCell) {
+				// Context will be stored here (ending cell)
+				endingSpanCell = startingSpanCell._endingCell;
+				// Store if we are in an unbreakable block when we save the context and the originalX
+				if (this.writer.transactionLevel > 0) {
+					endingSpanCell._isUnbreakableContext = true;
+					endingSpanCell._originalXOffset = this.writer.originalX;
 				}
 			}
 		}
+	}
 
+	// If content did not break page, check if we should break by height
+	if (willBreakByHeight && !isUnbreakableRow && pageBreaks.length === 0) {
+		this.writer.context().moveDown(this.writer.context().availableHeight);
+		this.writer.moveToNextPage();
+	}
+
+	var bottomByPage = this.writer.context().completeColumnGroup(height, endingSpanCell);
+
+	if (tableNode) {
+		tableNode._bottomByPage = bottomByPage;
 		// If there are page breaks in this row, update data with prevY of last cell
-		updatePageBreakData(self.writer.context().page, self.writer.context().y);
-
-		// If content did not break page, check if we should break by height
-		if (!isUnbreakableRow && pageBreaks.length === 0 && willBreakByHeight) {
-			self.writer.context().moveDown(self.writer.context().availableHeight);
-			self.writer.moveToNextPage();
-		}
-
-		self.writer.context().completeColumnGroup(height, endingSpanCell);
-	});
-
-	return { pageBreaks: pageBreaks, positions: positions };
-
-	function updatePageBreakData(page, prevY) {
-		var pageDesc;
-		// Find page break data for this row and page
-		for (var i = 0, l = pageBreaks.length; i < l; i++) {
-			var desc = pageBreaks[i];
-			if (desc.prevPage === page) {
-				pageDesc = desc;
-				break;
-			}
-		}
-		// If row has page break in this page, update prevY
-		if (pageDesc) {
-			pageDesc.prevY = Math.max(pageDesc.prevY, prevY);
-		}
+		this._updatePageBreaksData(pageBreaks, tableNode, rowIndex);
 	}
 
-	function storePageBreakData(data) {
-		var pageDesc;
+	return {
+		pageBreaksBySpan: pageBreaksByRowSpan,
+		pageBreaks: pageBreaks,
+		positions: positions
+	};
 
-		for (var i = 0, l = pageBreaks.length; i < l; i++) {
-			var desc = pageBreaks[i];
-			if (desc.prevPage === data.prevPage) {
-				pageDesc = desc;
-				break;
-			}
+	function storePageBreakClosure(data) {
+		const startsRowSpan = cell.rowSpan && cell.rowSpan > 1;
+		if (startsRowSpan) {
+			data.rowSpan = cell.rowSpan;
 		}
-
-		if (!pageDesc) {
-			pageDesc = data;
-			pageBreaks.push(pageDesc);
-		}
-		pageDesc.prevY = Math.max(pageDesc.prevY, data.prevY);
-		pageDesc.y = Math.min(pageDesc.y, data.y);
+		data.rowIndex = rowIndex;
+		self._storePageBreakData(data, startsRowSpan, pageBreaks, tableNode);
 	}
 
-	function colLeftOffset(i) {
-		if (gaps && gaps.length > i) {
-			return gaps[i];
-		}
-		return 0;
-	}
-
-	function getEndingCell(column, columnIndex) {
-		if (column.rowSpan && column.rowSpan > 1) {
-			var endingRow = rowIndex + column.rowSpan - 1;
-			if (endingRow >= tableBody.length) {
-				throw 'Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count';
-			}
-			return tableBody[endingRow][columnIndex];
-		}
-
-		return null;
-	}
 };
 
 // lists
@@ -818,6 +939,8 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 			height = undefined;
 		}
 
+		var pageBeforeProcessing = this.writer.context().page;
+
 		var result = this.processRow({
 			marginX: tableNode._margin ? [tableNode._margin[0], tableNode._margin[2]] : [0, 0],
 			dontBreakRows: processor.dontBreakRows,
@@ -826,10 +949,20 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 			widths: tableNode.table.widths,
 			gaps: tableNode._offsets.offsets,
 			tableBody: tableNode.table.body,
+			tableNode,
 			rowIndex: i,
 			height
 		});
 		addAll(tableNode.positions, result.positions);
+
+		if (!result.pageBreaks || result.pageBreaks.length === 0) {
+			var breaksBySpan = tableNode && tableNode._breaksBySpan || null;
+			var breakBySpanData = this._findSameRowPageBreakByRowSpanData(breaksBySpan, pageBeforeProcessing, i);
+			if (breakBySpanData) {
+				var finalBreakBySpanData = this._getPageBreakListBySpan(tableNode, breakBySpanData.prevPage, i);
+				result.pageBreaks.push(finalBreakBySpanData);
+			}
+		}
 
 		processor.endRow(i, this.writer, result.pageBreaks);
 	}

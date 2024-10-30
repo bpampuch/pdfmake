@@ -26,13 +26,14 @@ function DocumentContext(pageSize, pageMargins) {
 	this.addPage(pageSize);
 }
 
-DocumentContext.prototype.beginColumnGroup = function (marginXTopParent) {
+DocumentContext.prototype.beginColumnGroup = function (marginXTopParent, bottomByPage = {}) {
 	this.snapshots.push({
 		x: this.x,
 		y: this.y,
 		availableHeight: this.availableHeight,
 		availableWidth: this.availableWidth,
 		page: this.page,
+		bottomByPage: bottomByPage ? bottomByPage : {},
 		bottomMost: {
 			x: this.x,
 			y: this.y,
@@ -47,6 +48,16 @@ DocumentContext.prototype.beginColumnGroup = function (marginXTopParent) {
 	if (marginXTopParent) {
 		this.marginXTopParent = marginXTopParent;
 	}
+};
+
+DocumentContext.prototype.updateBottomByPage = function () {
+	const lastSnapshot = this.snapshots[this.snapshots.length - 1];
+	const lastPage = this.page;
+	let previousBottom = -Number.MIN_VALUE;
+	if (lastSnapshot.bottomByPage[lastPage]) {
+		previousBottom = lastSnapshot.bottomByPage[lastPage];
+	}
+	lastSnapshot.bottomByPage[lastPage] = Math.max(previousBottom, this.y);
 };
 
 DocumentContext.prototype.resetMarginXTopParent = function () {
@@ -121,6 +132,7 @@ DocumentContext.prototype.completeColumnGroup = function (height, endingCell) {
 		this.availableHeight -= (y - saved.bottomMost.y);
 	}
 	this.lastColumnWidth = saved.lastColumnWidth;
+	return saved.bottomByPage;
 };
 
 DocumentContext.prototype.addMargin = function (left, right) {
