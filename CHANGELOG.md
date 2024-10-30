@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Update pdfkit to 0.15.1
 - Fixed bug with how page breaks provoked by cells with rowspan were handled
 - Fixed find where previous cell started with row span and col span combination
 - Fixed calculating correctly the 'y' at the end of a rowSpan with dontBreakRows
