@@ -140,6 +140,13 @@ module.exports = {
 
 			{
 				enforce: 'post',
+				test: /pdfkit[/\\]js[/\\]pdfkit.es.js$/,
+				use: {
+					loader: "transform-loader?brfs"
+				}
+			},
+			{
+				enforce: 'post',
 				test: /fontkit[/\\]index.js$/,
 				use: {
 					loader: "transform-loader?brfs"
