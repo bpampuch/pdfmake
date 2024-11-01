@@ -3,6 +3,7 @@
 var isFunction = require('../helpers').isFunction;
 var isUndefined = require('../helpers').isUndefined;
 var isNull = require('../helpers').isNull;
+var pack = require('./helpers').pack;
 var FileSaver = require('file-saver');
 var saveAs = FileSaver.saveAs;
 
@@ -16,6 +17,8 @@ var defaultClientFonts = {
 };
 
 var globalVfs;
+var globalFonts;
+var globalTableLayouts;
 
 function Document(docDefinition, tableLayouts, fonts, vfs) {
 	this.docDefinition = docDefinition;
@@ -323,12 +326,30 @@ module.exports = {
 		}
 		return new Document(
 			docDefinition,
-			tableLayouts || global.pdfMake.tableLayouts,
-			fonts || global.pdfMake.fonts,
+			tableLayouts || globalTableLayouts || global.pdfMake.tableLayouts,
+			fonts || globalFonts || global.pdfMake.fonts,
 			vfs || globalVfs || global.pdfMake.vfs
 		);
 	},
 	addVirtualFileSystem: function (vfs) {
 		globalVfs = vfs;
+	},
+	addFonts: function (fonts) {
+		globalFonts = pack(globalFonts, fonts);
+	},
+	setFonts: function (fonts) {
+		globalFonts = fonts;
+	},
+	clearFonts: function () {
+		globalFonts = undefined;
+	},
+	addTableLayouts: function (tableLayouts) {
+		globalTableLayouts = pack(globalTableLayouts, tableLayouts);
+	},
+	setTableLayouts: function (tableLayouts) {
+		globalTableLayouts = tableLayouts;
+	},
+	clearTableLayouts: function () {
+		globalTableLayouts = undefined;
 	}
 };
