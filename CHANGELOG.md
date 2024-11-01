@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Added support PDF/A and PDF/UA
+- Added support PDF/A and PDF/UA (see [documentation](https://pdfmake.github.io/docs/0.1/document-definition-object/pdfa/))
 - Changed Virtual file system (VFS) format for better compatibility with frameworks (backwards compatibility preserved). **For compatibility with frameworks, rebuild VFS required!**
 - Update pdfkit to 0.15.1
 - Fixed bug with how page breaks provoked by cells with rowspan were handled
