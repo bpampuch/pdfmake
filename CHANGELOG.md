@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Added support PDF/A and PDF/UA (see [documentation](https://pdfmake.github.io/docs/0.3/document-definition-object/pdfa/))
+- Added support `link`, `linkToPage` and `linkToDestination` for SVG
 - Update pdfkit to 0.15.1
 - Fixed bug with how page breaks provoked by cells with rowspan were handled
 - Fixed find where previous cell started with row span and col span combination
