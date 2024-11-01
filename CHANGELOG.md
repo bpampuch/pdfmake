@@ -6,6 +6,7 @@
 - Changed Virtual file system (VFS) format for better compatibility with frameworks (backwards compatibility preserved). **For compatibility with frameworks, rebuild VFS required!**
 - Browser: Added methods for fonts (`addFonts`, `setFonts`, `clearFonts`)
 - Browser: Added methods for table layouts (`addTableLayouts`, `setTableLayouts`, `clearTableLayouts`)
+- Added support `link`, `linkToPage` and `linkToDestination` for SVG
 - Update pdfkit to 0.15.1
 - Fixed bug with how page breaks provoked by cells with rowspan were handled
 - Fixed find where previous cell started with row span and col span combination
