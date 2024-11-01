@@ -112,6 +112,9 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	options = options || {};
 
 	docDefinition.version = docDefinition.version || '1.3';
+	docDefinition.subset = docDefinition.subset || undefined;
+	docDefinition.tagged = typeof docDefinition.tagged === 'boolean' ? docDefinition.tagged : false;
+	docDefinition.displayTitle = typeof docDefinition.displayTitle === 'boolean' ? docDefinition.displayTitle : false;
 	docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
 	docDefinition.images = docDefinition.images || {};
 	docDefinition.pageMargins = ((docDefinition.pageMargins !== undefined) && (docDefinition.pageMargins !== null)) ? docDefinition.pageMargins : 40;
@@ -121,6 +124,9 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	var pdfOptions = {
 		size: [pageSize.width, pageSize.height],
 		pdfVersion: docDefinition.version,
+		subset: docDefinition.subset,
+		tagged: docDefinition.tagged,
+		displayTitle: docDefinition.displayTitle,
 		compress: docDefinition.compress,
 		userPassword: docDefinition.userPassword,
 		ownerPassword: docDefinition.ownerPassword,
