@@ -15,6 +15,8 @@ var defaultClientFonts = {
 	}
 };
 
+var globalVfs;
+
 function Document(docDefinition, tableLayouts, fonts, vfs) {
 	this.docDefinition = docDefinition;
 	this.tableLayouts = tableLayouts || null;
@@ -323,7 +325,10 @@ module.exports = {
 			docDefinition,
 			tableLayouts || global.pdfMake.tableLayouts,
 			fonts || global.pdfMake.fonts,
-			vfs || global.pdfMake.vfs
+			vfs || globalVfs || global.pdfMake.vfs
 		);
+	},
+	addVirtualFileSystem: function (vfs) {
+		globalVfs = vfs;
 	}
 };
