@@ -2,8 +2,8 @@
 
 var isFunction = require('../helpers').isFunction;
 var isUndefined = require('../helpers').isUndefined;
-var isNull = require('../helpers').isNull;
-var pack = require('./helpers').pack;
+//var isNull = require('../helpers').isNull;
+var pack = require('../helpers').pack;
 var FileSaver = require('file-saver');
 var saveAs = FileSaver.saveAs;
 
