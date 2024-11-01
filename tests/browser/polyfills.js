@@ -1,7 +1,7 @@
 var assert = require('assert');
 var pdfmake = require('./../../build/pdfmake.js');
 var pdfFonts = require('./../../build/vfs_fonts.js');
-pdfmake.vfs = pdfFonts.pdfMake.vfs;
+pdfmake.addVirtualFileSystem(pdfFonts);
 
 describe('core-js polyfill', function () {
 	it('Object.isExtensible bug', async function () {
