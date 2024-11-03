@@ -39,10 +39,25 @@ var docDefinition = {
 		{
 			pageSize: 'A6',
 			pageOrientation: 'landscape',
-			pageMargins: 5,
+			pageMargins: 10,
 			section: [
 				'SECTION 5',
 				'Text in section as A6 landscape page with margin.'
+			]
+		},
+		{
+			pageSize: 'inherit',
+			pageOrientation: 'inherit',
+			pageMargins: 'inherit',
+			section: [
+				'SECTION 7',
+				'Text in section with page definition as previous page. Page size, orientation and margins are inherited.'
+			]
+		},
+		{
+			section: [
+				'SECTION 8',
+				'Text in section with page definition as defined in document.'
 			]
 		}
 	]

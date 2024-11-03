@@ -516,7 +516,17 @@ class LayoutBuilder {
 		let page = this.writer.context().getCurrentPage();
 		// TODO: background
 		if (!page || (page && page.items.length)) { // move to new empty page
-			// TODO: property for inherit page size and margin from before section
+			// page definition inherit from current page
+			if (sectionNode.pageSize === 'inherit') {
+				sectionNode.pageSize = page ? {width: page.pageSize.width, height: page.pageSize.height} : undefined;
+			}
+			if (sectionNode.pageOrientation === 'inherit') {
+				sectionNode.pageOrientation = page ? page.pageSize.orientation : undefined;
+			}
+			if (sectionNode.pageMargins === 'inherit') {
+				sectionNode.pageMargins = page ?  page.pageMargins : undefined;
+			}
+
 			this.writer.addPage(
 				sectionNode.pageSize || this.pageSize,
 				sectionNode.pageOrientation,
