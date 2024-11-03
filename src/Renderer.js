@@ -56,7 +56,7 @@ class Renderer {
 		let renderedItems = 0;
 
 		for (let i = 0; i < pages.length; i++) {
-			this.pdfDocument.addPage({size: [pages[i].pageSize.width, pages[i].pageSize.height]});
+			this.pdfDocument.addPage({ size: [pages[i].pageSize.width, pages[i].pageSize.height] });
 
 			let page = pages[i];
 			for (let ii = 0, il = page.items.length; ii < il; ii++) {
@@ -349,7 +349,7 @@ class Renderer {
 			this.pdfDocument.link(svg.x, svg.y, svg._width, svg._height, svg.link);
 		}
 		if (svg.linkToPage) {
-			this.pdfDocument.ref({Type: 'Action', S: 'GoTo', D: [svg.linkToPage, 0, 0]}).end();
+			this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [svg.linkToPage, 0, 0] }).end();
 			this.pdfDocument.annotate(svg.x, svg.y, svg._width, svg._height, { Subtype: 'Link', Dest: [svg.linkToPage - 1, 'XYZ', null, null, null] });
 		}
 		if (svg.linkToDestination) {

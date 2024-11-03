@@ -181,7 +181,7 @@ describe('DocMeasure', function () {
 		});
 
 		it('should not increase listMarker when list item is a nested list', function () {
-			var node = { ol: ['parent item 1', { ol: ['nested item 1', 'nested item 2']}, 'parent item 2'] };
+			var node = { ol: ['parent item 1', { ol: ['nested item 1', 'nested item 2'] }, 'parent item 2'] };
 			docPreprocessor.preprocessList(node);
 			var result = docMeasure.measureOrderedList(node);
 

@@ -134,7 +134,7 @@ describe('StyleContextStack', function () {
 		it('should not push any style if no style nor style-property is defined', function () {
 			assert.equal(fullStack.autopush({ anotherProperty: 'test' }), 1);
 			assert.equal(fullStack.styleOverrides.length, 1);
-			styleProperties.forEach(function(key) {
+			styleProperties.forEach(function (key) {
 				assert.equal(fullStack.styleOverrides[0][key], undefined);
 			});
 		});

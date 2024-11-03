@@ -624,12 +624,12 @@ class LayoutBuilder {
 	* @property {number} target.prevY - Updated to the maximum `prevY` value between `break1` and `break2`.
 	* @property {number} target.y - Updated to the minimum `y` value between `break1` and `break2`.
 	*/
-	_resolveBreakY (break1, break2, target) {
+	_resolveBreakY(break1, break2, target) {
 		target.prevY = Math.max(break1.prevY, break2.prevY);
 		target.y = Math.min(break1.y, break2.y);
 	};
 
-	_storePageBreakData (data, startsRowSpan, pageBreaks, tableNode) {
+	_storePageBreakData(data, startsRowSpan, pageBreaks, tableNode) {
 		if (!startsRowSpan) {
 			let pageDesc = this._getPageBreak(pageBreaks, data.prevPage);
 			let pageDescBySpan = this._getPageBreakListBySpan(tableNode, data.prevPage, data.rowIndex);
@@ -830,7 +830,7 @@ class LayoutBuilder {
 		}
 
 		return {
-			pageBreaksBySpan : pageBreaksByRowSpan,
+			pageBreaksBySpan: pageBreaksByRowSpan,
 			pageBreaks: pageBreaks,
 			positions: positions
 		};
