@@ -7,7 +7,7 @@ import xmldoc from 'xmldoc';
  * @returns {?number}
  */
 const stripUnits = textVal => {
-	var n = parseFloat(textVal);
+	let n = parseFloat(textVal);
 	if (typeof n !== 'number' || isNaN(n)) {
 		return undefined;
 	}
@@ -21,7 +21,7 @@ const stripUnits = textVal => {
  * @returns {object}
  */
 const parseSVG = (svgString) => {
-	var doc;
+	let doc;
 
 	try {
 		doc = new xmldoc.XmlDocument(svgString);
