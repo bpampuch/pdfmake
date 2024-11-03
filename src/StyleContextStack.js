@@ -79,50 +79,9 @@ class StyleContextStack {
 			this.push(styleNames[i]);
 		}
 
-		let styleProperties = [
-			'font',
-			'fontSize',
-			'fontFeatures',
-			'bold',
-			'italics',
-			'alignment',
-			'color',
-			'columnGap',
-			'fillColor',
-			'fillOpacity',
-			'decoration',
-			'decorationStyle',
-			'decorationColor',
-			'background',
-			'lineHeight',
-			'characterSpacing',
-			'noWrap',
-			'markerColor',
-			'leadingIndent',
-			'sup',
-			'sub'
-			//'tableCellPadding'
-			// 'cellBorder',
-			// 'headerCellBorder',
-			// 'oddRowCellBorder',
-			// 'evenRowCellBorder',
-			// 'tableBorder'
-		];
-		let styleOverrideObject = {};
-		let pushStyleOverrideObject = false;
-
-		styleProperties.forEach(key => {
-			if (isValue(item[key])) {
-				styleOverrideObject[key] = item[key];
-				pushStyleOverrideObject = true;
-			}
-		});
-
-		if (pushStyleOverrideObject) {
-			this.push(styleOverrideObject);
-		}
-
-		return styleNames.length + (pushStyleOverrideObject ? 1 : 0);
+		// rather than spend significant time making a styleOverrideObject, just add item
+		this.push(item);
+		return styleNames.length + 1;
 	}
 
 	/**

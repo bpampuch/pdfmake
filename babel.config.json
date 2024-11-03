@@ -4,7 +4,7 @@
       "@babel/preset-env",
       {
         "targets": {
-          "node": "12.13"
+          "node": "18.12"
         },
         "loose": true
       }

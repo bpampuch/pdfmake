@@ -48,6 +48,9 @@ class PdfPrinter {
 			this.resolveUrls(docDefinition).then(() => {
 				try {
 					docDefinition.version = docDefinition.version || '1.3';
+					docDefinition.subset = docDefinition.subset || undefined;
+					docDefinition.tagged = typeof docDefinition.tagged === 'boolean' ? docDefinition.tagged : false;
+					docDefinition.displayTitle = typeof docDefinition.displayTitle === 'boolean' ? docDefinition.displayTitle : false;
 					docDefinition.compress = typeof docDefinition.compress === 'boolean' ? docDefinition.compress : true;
 					docDefinition.images = docDefinition.images || {};
 					docDefinition.attachments = docDefinition.attachments || {};
@@ -67,6 +70,9 @@ class PdfPrinter {
 					let pdfOptions = {
 						size: [pageSize.width, pageSize.height],
 						pdfVersion: docDefinition.version,
+						subset: docDefinition.subset,
+						tagged: docDefinition.tagged,
+						displayTitle: docDefinition.displayTitle,
 						compress: docDefinition.compress,
 						userPassword: docDefinition.userPassword,
 						ownerPassword: docDefinition.ownerPassword,

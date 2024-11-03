@@ -6,7 +6,7 @@ import configurator from 'core-js/configurator';
 
 // core-js: Polyfills will be used only if natives completely unavailable.
 configurator({
-  useNative: ['Promise']
+	useNative: ['Promise']
 });
 
 let defaultClientFonts = {
