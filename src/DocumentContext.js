@@ -26,7 +26,7 @@ class DocumentContext extends EventEmitter {
 			availableHeight: this.availableHeight,
 			availableWidth: this.availableWidth,
 			page: this.page,
-      bottomByPage: bottomByPage ? bottomByPage : {},
+			bottomByPage: bottomByPage ? bottomByPage : {},
 			bottomMost: {
 				x: this.x,
 				y: this.y,
@@ -43,7 +43,7 @@ class DocumentContext extends EventEmitter {
 		}
 	}
 
-	updateBottomByPage () {
+	updateBottomByPage() {
 		const lastSnapshot = this.snapshots[this.snapshots.length - 1];
 		const lastPage = this.page;
 		let previousBottom = -Number.MIN_VALUE;

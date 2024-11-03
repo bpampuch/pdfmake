@@ -99,7 +99,7 @@ describe('Printer', function () {
 	});
 
 
-	it('should not switch width and height for pdfkit if page orientation changes from landscape to landscape',async function () {
+	it('should not switch width and height for pdfkit if page orientation changes from landscape to landscape', async function () {
 		printer = new Printer(fontDescriptors);
 		var docDefinition = {
 			pageOrientation: 'portrait',

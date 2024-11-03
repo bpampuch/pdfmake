@@ -151,8 +151,8 @@ describe('ColumnCalculator', function () {
 			];
 			const tableNode = {
 				table: {
-						widths: ['50%', '25%', '25%'],
-						body: [['50%', '25%', '25%']]
+					widths: ['50%', '25%', '25%'],
+					body: [['50%', '25%', '25%']]
 				},
 				_layout: {
 					vLineWidth: function (i) {
@@ -169,10 +169,10 @@ describe('ColumnCalculator', function () {
 							return 4;
 						}
 					},
-					paddingLeft: function(i) {
+					paddingLeft: function (i) {
 						return i === 0 ? 5 : 3;
 					},
-					paddingRight: function() {
+					paddingRight: function () {
 						return 7;
 					}
 				}
