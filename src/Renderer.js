@@ -27,7 +27,7 @@ const findFont = (fonts, requiredFonts, defaultFont) => {
  * @returns {number}
  */
 const offsetText = (y, inline) => {
-	var newY = y;
+	let newY = y;
 	if (inline.sup) {
 		newY -= inline.fontSize * 0.75;
 	}
