@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.12 - 2024-11-03
 
 - Added support PDF/A and PDF/UA (see [documentation](https://pdfmake.github.io/docs/0.3/document-definition-object/pdfa/))
 - Added support `link`, `linkToPage` and `linkToDestination` for SVG
