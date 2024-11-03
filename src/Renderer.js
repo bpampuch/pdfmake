@@ -45,7 +45,6 @@ class Renderer {
 
 	renderPages(pages) {
 		this.pdfDocument._pdfMakePages = pages; // TODO: Why?
-		this.pdfDocument.addPage();
 
 		let totalItems = 0;
 		if (this.progressCallback) {
@@ -57,10 +56,7 @@ class Renderer {
 		let renderedItems = 0;
 
 		for (let i = 0; i < pages.length; i++) {
-			if (i > 0) {
-				this._updatePageOrientationInOptions(pages[i]);
-				this.pdfDocument.addPage(this.pdfDocument.options);
-			}
+			this.pdfDocument.addPage({size: [pages[i].pageSize.width, pages[i].pageSize.height]});
 
 			let page = pages[i];
 			for (let ii = 0, il = page.items.length; ii < il; ii++) {
@@ -402,15 +398,6 @@ class Renderer {
 		this.pdfDocument.restore();
 	}
 
-	_updatePageOrientationInOptions(currentPage) {
-		let previousPageOrientation = this.pdfDocument.options.size[0] > this.pdfDocument.options.size[1] ? 'landscape' : 'portrait';
-
-		if (currentPage.pageSize.orientation !== previousPageOrientation) {
-			let width = this.pdfDocument.options.size[0];
-			let height = this.pdfDocument.options.size[1];
-			this.pdfDocument.options.size = [height, width];
-		}
-	}
 }
 
 export default Renderer;

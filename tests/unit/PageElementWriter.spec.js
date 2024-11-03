@@ -100,7 +100,8 @@ describe('PageElementWriter', function () {
 
 	beforeEach(function () {
 		pageSize = { width: DOCUMENT_WIDTH, height: DOCUMENT_HEIGHT, orientation: DOCUMENT_ORIENTATION };
-		ctx = new DocumentContext(pageSize, MARGINS);
+		ctx = new DocumentContext();
+		ctx.addPage(pageSize, MARGINS);
 
 		PageElementWriter.prototype.emit = sinon.spy(PageElementWriter.prototype.emit);
 
