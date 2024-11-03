@@ -9,6 +9,10 @@ class DocumentContext extends EventEmitter {
 	constructor() {
 		super();
 		this.pages = [];
+		this.pageMargins = undefined;
+		this.x = undefined;
+		this.availableWidth = undefined;
+		this.availableHeight = undefined;
 		this.page = -1;
 
 		this.snapshots = [];
