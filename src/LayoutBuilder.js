@@ -210,11 +210,6 @@ class LayoutBuilder {
 		}
 	}
 
-	addStaticRepeatable(headerOrFooter, sizeFunction) {
-		this.addDynamicRepeatable(() => // copy to new object
-			JSON.parse(JSON.stringify(headerOrFooter)), sizeFunction);
-	}
-
 	addDynamicRepeatable(nodeGetter, sizeFunction) {
 		let pages = this.writer.context().pages;
 
@@ -248,16 +243,12 @@ class LayoutBuilder {
 			height: pageMargins.bottom
 		});
 
-		if (typeof header === 'function') {
+		if (header) {
 			this.addDynamicRepeatable(header, headerSizeFct);
-		} else if (header) {
-			this.addStaticRepeatable(header, headerSizeFct);
 		}
 
-		if (typeof footer === 'function') {
+		if (footer) {
 			this.addDynamicRepeatable(footer, footerSizeFct);
-		} else if (footer) {
-			this.addStaticRepeatable(footer, footerSizeFct);
 		}
 	}
 
