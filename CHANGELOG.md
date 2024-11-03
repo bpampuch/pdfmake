@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.3.0-beta.12 - 2024-11-03
+
+- Added support PDF/A and PDF/UA (see [documentation](https://pdfmake.github.io/docs/0.3/document-definition-object/pdfa/))
+- Added support `link`, `linkToPage` and `linkToDestination` for SVG
+- Update pdfkit to 0.15.1
+- Fixed bug with how page breaks provoked by cells with rowspan were handled
+- Fixed find where previous cell started with row span and col span combination
+- Fixed calculating correctly the 'y' at the end of a rowSpan with dontBreakRows
+
+## 0.3.0-beta.11 - 2024-10-09
+
+- Fixed drawing top horizontal line of the table with page break
+
+## 0.3.0-beta.10 - 2024-09-22
+
+- Drop support Internet Explorer 11 (Microsoft will not support from 2022)
+- Minimal supported version Node.js 18 LTS
+- Update Roboto font (version 3.010)
+- Fixed page break in a column group
+- Fixed saving margins in an unbreakable block
+- Fixed fillColor items in unbreakable blocks
+- Fixed calculating correctly the 'y' at the end of a rowSpan with dontBreakRows
+- Fixed margins (top/bottom) of nodes and row height are considered for breaking page
+- Fixed margins after page break
+- Fixed margins of nodes with relativePosition or absolutePosition are ignored and don't interfere with the regular flow of the layout
+
+## 0.3.0-beta.9 - 2024-08-09
+
+- Fixed and validates input values headerRows and keepWithHeaderRows
+- Fixed numbering nested ordered lists
+- Speed up StyleContextStack.autopush() for large tables
+- Fixed widths of table columns with percentages
+- Fixed storing the correct context in the ending cell of a row span when there were nested column groups (columns or tables)
+
+## 0.3.0-beta.8 - 2024-03-07
+
+- Removed unused brfs dependency
+
 ## 0.3.0-beta.7 - 2024-01-01
 
 - Minimal supported version Node.js 16 LTS

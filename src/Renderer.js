@@ -348,6 +348,17 @@ class Renderer {
 		};
 
 		SVGtoPDF(this.pdfDocument, svg.svg, svg.x, svg.y, options);
+
+		if (svg.link) {
+			this.pdfDocument.link(svg.x, svg.y, svg._width, svg._height, svg.link);
+		}
+		if (svg.linkToPage) {
+			this.pdfDocument.ref({Type: 'Action', S: 'GoTo', D: [svg.linkToPage, 0, 0]}).end();
+			this.pdfDocument.annotate(svg.x, svg.y, svg._width, svg._height, { Subtype: 'Link', Dest: [svg.linkToPage - 1, 'XYZ', null, null, null] });
+		}
+		if (svg.linkToDestination) {
+			this.pdfDocument.goTo(svg.x, svg.y, svg._width, svg._height, svg.linkToDestination);
+		}
 	}
 
 	renderAttachment(attachment) {

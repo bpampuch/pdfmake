@@ -433,16 +433,17 @@ class DocMeasure {
 				if (item.listMarker._inlines) {
 					node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
 				}
-			}  // TODO: else - nested lists numbering
+
+				if (node.reversed) {
+					counter--;
+				} else {
+					counter++;
+				}
+			}
 
 			node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
 			node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth);
 
-			if (node.reversed) {
-				counter--;
-			} else {
-				counter++;
-			}
 		}
 
 		node._minWidth += node._gapSize.width;

@@ -32,6 +32,7 @@ class LayoutBuilder {
 		this.pageMargins = pageMargins;
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = {};
+		this.nestedLevel = 0;
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -369,16 +370,50 @@ class LayoutBuilder {
 				}
 			}
 
-			if (margin) {
-				this.writer.context().moveDown(margin[1]);
+			const isDetachedBlock = node.relativePosition || node.absolutePosition;
+
+			// Detached nodes have no margins, their position is only determined by 'x' and 'y'
+			if (margin && !isDetachedBlock) {
+				const availableHeight = this.writer.context().availableHeight;
+				// If top margin is bigger than available space, move to next page
+				// Necessary for nodes inside tables
+				if (availableHeight - margin[1] < 0) {
+					// Consume the whole available space
+					this.writer.context().moveDown(availableHeight);
+					this.writer.moveToNextPage(node.pageOrientation);
+					/**
+					 * TODO - Something to consider:
+					 * Right now the node starts at the top of next page (after header)
+					 * Another option would be to apply just the top margin that has not been consumed in the page before
+					 * It would something like: this.write.context().moveDown(margin[1] - availableHeight)
+					 */
+				} else {
+					this.writer.context().moveDown(margin[1]);
+				}
+				// Apply lateral margins
 				this.writer.context().addMargin(margin[0], margin[2]);
 			}
-
 			callback();
 
-			if (margin) {
+			// Detached nodes have no margins, their position is only determined by 'x' and 'y'
+			if (margin && !isDetachedBlock) {
+				const availableHeight = this.writer.context().availableHeight;
+				// If bottom margin is bigger than available space, move to next page
+				// Necessary for nodes inside tables
+				if (availableHeight - margin[3] < 0) {
+					this.writer.context().moveDown(availableHeight);
+					this.writer.moveToNextPage(node.pageOrientation);
+					/**
+					 * TODO - Something to consider:
+					 * Right now next node starts at the top of next page (after header)
+					 * Another option would be to apply the bottom margin that has not been consumed in the next page?
+					 * It would something like: this.write.context().moveDown(margin[3] - availableHeight)
+					 */
+				} else {
+					this.writer.context().moveDown(margin[3]);
+				}
+				// Apply lateral margins
 				this.writer.context().addMargin(-margin[0], -margin[2]);
-				this.writer.context().moveDown(margin[3]);
 			}
 
 			if (node.pageBreak === 'after') {
@@ -467,6 +502,7 @@ class LayoutBuilder {
 
 	// columns
 	processColumns(columnNode) {
+		this.nestedLevel++;
 		let columns = columnNode.columns;
 		let availableWidth = this.writer.context().availableWidth;
 		let gaps = gapArray(columnNode._gap);
@@ -476,9 +512,17 @@ class LayoutBuilder {
 		}
 
 		ColumnCalculator.buildColumnWidths(columns, availableWidth);
-		let result = this.processRow(columns, columns, gaps);
+		let result = this.processRow({
+			marginX: columnNode._margin ? [columnNode._margin[0], columnNode._margin[2]] : [0, 0],
+			cells: columns,
+			widths: columns,
+			gaps
+		});
 		addAll(columnNode.positions, result.positions);
-
+		this.nestedLevel--;
+		if (this.nestedLevel === 0) {
+			this.writer.context().resetMarginXTopParent();
+		}
 		function gapArray(gap) {
 			if (!gap) {
 				return null;
@@ -495,80 +539,306 @@ class LayoutBuilder {
 		}
 	}
 
-	processRow(columns, widths, gaps, tableBody, tableRow, height) {
-		const storePageBreakData = data => {
-			let pageDesc;
-
-			for (let i = 0, l = pageBreaks.length; i < l; i++) {
-				let desc = pageBreaks[i];
-				if (desc.prevPage === data.prevPage) {
-					pageDesc = desc;
-					break;
+	/**
+	* Searches for a cell in the same row that starts a rowspan and is positioned immediately before the current cell.
+	* Alternatively, it finds a cell where the colspan initiating the rowspan extends to the cell just before the current one.
+	*
+	* @param {Array<object>} arr - An array representing cells in a row.
+	* @param {number} i - The index of the current cell to search backward from.
+	* @returns {object|null} The starting cell of the rowspan if found; otherwise, `null`.
+	*/
+	_findStartingRowSpanCell(arr, i) {
+		let requiredColspan = 1;
+		for (let index = i - 1; index >= 0; index--) {
+			if (!arr[index]._span) {
+				if (arr[index].rowSpan > 1 && (arr[index].colSpan || 1) === requiredColspan) {
+					return arr[index];
+				} else {
+					return null;
 				}
 			}
+			requiredColspan++;
+		}
+		return null;
+	}
 
+	/**
+	* Retrieves a page break description for a specified page from a list of page breaks.
+	*
+	* @param {Array<object>} pageBreaks - An array of page break descriptions, each containing `prevPage` properties.
+	* @param {number} page - The page number to find the associated page break for.
+	* @returns {object|undefined} The page break description object for the specified page if found; otherwise, `undefined`.
+	*/
+	_getPageBreak(pageBreaks, page) {
+		return pageBreaks.find(desc => desc.prevPage === page);
+	}
+
+	_getPageBreakListBySpan(tableNode, page, rowIndex) {
+		if (!tableNode || !tableNode._breaksBySpan) {
+			return null;
+		}
+		const breaksList = tableNode._breaksBySpan.filter(desc => desc.prevPage === page && rowIndex <= desc.rowIndexOfSpanEnd);
+
+		let y = Number.MAX_VALUE,
+			prevY = Number.MIN_VALUE;
+
+		breaksList.forEach(b => {
+			prevY = Math.max(b.prevY, prevY);
+			y = Math.min(b.y, y);
+		});
+
+		return {
+			prevPage: page,
+			prevY: prevY,
+			y: y
+		};
+	}
+
+	_findSameRowPageBreakByRowSpanData(breaksBySpan, page, rowIndex) {
+		if (!breaksBySpan) {
+			return null;
+		}
+		return breaksBySpan.find(desc => desc.prevPage === page && rowIndex === desc.rowIndexOfSpanEnd);
+	}
+
+	_updatePageBreaksData(pageBreaks, tableNode, rowIndex) {
+		Object.keys(tableNode._bottomByPage).forEach(p => {
+			const page = Number(p);
+			const pageBreak = this._getPageBreak(pageBreaks, page);
+			if (pageBreak) {
+				pageBreak.prevY = Math.max(pageBreak.prevY, tableNode._bottomByPage[page]);
+			}
+			if (tableNode._breaksBySpan && tableNode._breaksBySpan.length > 0) {
+				const breaksBySpanList = tableNode._breaksBySpan.filter(pb => pb.prevPage === page && rowIndex <= pb.rowIndexOfSpanEnd);
+
+				if (breaksBySpanList && breaksBySpanList.length > 0) {
+					breaksBySpanList.forEach(b => {
+						b.prevY = Math.max(b.prevY, tableNode._bottomByPage[page]);
+					});
+				}
+			}
+		});
+	}
+
+	/**
+	* Resolves the Y-coordinates for a target object by comparing two break points.
+	*
+	* @param {object} break1 - The first break point with `prevY` and `y` properties.
+	* @param {object} break2 - The second break point with `prevY` and `y` properties.
+	* @param {object} target - The target object to be updated with resolved Y-coordinates.
+	* @property {number} target.prevY - Updated to the maximum `prevY` value between `break1` and `break2`.
+	* @property {number} target.y - Updated to the minimum `y` value between `break1` and `break2`.
+	*/
+	_resolveBreakY (break1, break2, target) {
+		target.prevY = Math.max(break1.prevY, break2.prevY);
+		target.y = Math.min(break1.y, break2.y);
+	};
+
+	_storePageBreakData (data, startsRowSpan, pageBreaks, tableNode) {
+		if (!startsRowSpan) {
+			let pageDesc = this._getPageBreak(pageBreaks, data.prevPage);
+			let pageDescBySpan = this._getPageBreakListBySpan(tableNode, data.prevPage, data.rowIndex);
 			if (!pageDesc) {
-				pageDesc = data;
+				pageDesc = {
+					...data
+				};
 				pageBreaks.push(pageDesc);
 			}
-			pageDesc.prevY = Math.max(pageDesc.prevY, data.prevY);
-			pageDesc.y = Math.min(pageDesc.y, data.y);
-		};
+			if (pageDescBySpan) {
+				this._resolveBreakY(pageDesc, pageDescBySpan, pageDesc);
+			}
+			this._resolveBreakY(pageDesc, data, pageDesc);
+		} else {
+			const breaksBySpan = tableNode && tableNode._breaksBySpan || null;
+			let pageDescBySpan = this._findSameRowPageBreakByRowSpanData(breaksBySpan, data.prevPage, data.rowIndex);
+			if (!pageDescBySpan) {
+				pageDescBySpan = {
+					...data,
+					rowIndexOfSpanEnd: data.rowIndex + data.rowSpan - 1
+				};
+				if (!tableNode._breaksBySpan) {
+					tableNode._breaksBySpan = [];
+				}
+				tableNode._breaksBySpan.push(pageDescBySpan);
+			}
+			pageDescBySpan.prevY = Math.max(pageDescBySpan.prevY, data.prevY);
+			pageDescBySpan.y = Math.min(pageDescBySpan.y, data.y);
+			let pageDesc = this._getPageBreak(pageBreaks, data.prevPage);
+			if (pageDesc) {
+				this._resolveBreakY(pageDesc, pageDescBySpan, pageDesc);
+			}
+		}
+	};
 
+	/**
+	* Calculates the left offset for a column based on the specified gap values.
+	*
+	* @param {number} i - The index of the column for which the offset is being calculated.
+	* @param {Array<number>} gaps - An array of gap values for each column.
+	* @returns {number} The left offset for the column. Returns `gaps[i]` if it exists, otherwise `0`.
+	*/
+	_colLeftOffset(i, gaps) {
+		if (gaps && gaps.length > i) {
+			return gaps[i];
+		}
+		return 0;
+	}
+
+	/**
+	* Retrieves the ending cell for a row span in case it exists in a specified table column.
+	*
+	* @param {Array<Array<object>>} tableBody - The table body, represented as a 2D array of cell objects.
+	* @param {number} rowIndex - The index of the starting row for the row span.
+	* @param {object} column - The column object containing row span information.
+	* @param {number} columnIndex - The index of the column within the row.
+	* @returns {object|null} The cell at the end of the row span if it exists; otherwise, `null`.
+	* @throws {Error} If the row span extends beyond the total row count.
+	*/
+	_getRowSpanEndingCell(tableBody, rowIndex, column, columnIndex) {
+		if (column.rowSpan && column.rowSpan > 1) {
+			let endingRow = rowIndex + column.rowSpan - 1;
+			if (endingRow >= tableBody.length) {
+				throw new Error(`Row span for column ${columnIndex} (with indexes starting from 0) exceeded row count`);
+			}
+			return tableBody[endingRow][columnIndex];
+		}
+
+		return null;
+	}
+
+	processRow({ marginX = [0, 0], dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableNode, tableBody, rowIndex, height }) {
+		const isUnbreakableRow = dontBreakRows || rowIndex <= rowsWithoutPageBreak - 1;
 		let pageBreaks = [];
+		let pageBreaksByRowSpan = [];
 		let positions = [];
+		let willBreakByHeight = false;
+		widths = widths || cells;
 
-		this.writer.addListener('pageChanged', storePageBreakData);
+		// Check if row should break by height
+		if (!isUnbreakableRow && height > this.writer.context().availableHeight) {
+			willBreakByHeight = true;
+		}
 
-		widths = widths || columns;
+		// Use the marginX if we are in a top level table/column (not nested)
+		const marginXParent = this.nestedLevel === 1 ? marginX : null;
+		const _bottomByPage = tableNode ? tableNode._bottomByPage : null;
+		this.writer.context().beginColumnGroup(marginXParent, _bottomByPage);
 
-		this.writer.context().beginColumnGroup();
+		for (let i = 0, l = cells.length; i < l; i++) {
+			let cell = cells[i];
 
-		for (let i = 0, l = columns.length; i < l; i++) {
-			let column = columns[i];
+			// Page change handler
+			const storePageBreakClosure = data => {
+				const startsRowSpan = cell.rowSpan && cell.rowSpan > 1;
+				if (startsRowSpan) {
+					data.rowSpan = cell.rowSpan;
+				}
+				data.rowIndex = rowIndex;
+				this._storePageBreakData(data, startsRowSpan, pageBreaks, tableNode);
+			};
+
+			this.writer.addListener('pageChanged', storePageBreakClosure);
+
 			let width = widths[i]._calcWidth;
-			let leftOffset = colLeftOffset(i);
+			let leftOffset = this._colLeftOffset(i, gaps);
+			// Check if exists and retrieve the cell that started the rowspan in case we are in the cell just after
+			let startingSpanCell = this._findStartingRowSpanCell(cells, i);
 
-			if (column.colSpan && column.colSpan > 1) {
-				for (let j = 1; j < column.colSpan; j++) {
+			if (cell.colSpan && cell.colSpan > 1) {
+				for (let j = 1; j < cell.colSpan; j++) {
 					width += widths[++i]._calcWidth + gaps[i];
 				}
 			}
 
-			this.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i));
-			if (!column._span) {
-				this.processNode(column);
-				addAll(positions, column.positions);
-			} else if (column._columnEndingContext) {
-				// row-span ending
-				this.writer.context().markEnding(column);
+			// if rowspan starts in this cell, we retrieve the last cell affected by the rowspan
+			const rowSpanEndingCell = this._getRowSpanEndingCell(tableBody, rowIndex, cell, i);
+			if (rowSpanEndingCell) {
+				// We store a reference of the ending cell in the first cell of the rowspan
+				cell._endingCell = rowSpanEndingCell;
+				cell._endingCell._startingRowSpanY = cell._startingRowSpanY;
 			}
-		}
 
-		this.writer.context().completeColumnGroup(height);
-
-		this.writer.removeListener('pageChanged', storePageBreakData);
-
-		return { pageBreaks: pageBreaks, positions: positions };
-
-		function colLeftOffset(i) {
-			if (gaps && gaps.length > i) {
-				return gaps[i];
-			}
-			return 0;
-		}
-
-		function getEndingCell(column, columnIndex) {
-			if (column.rowSpan && column.rowSpan > 1) {
-				let endingRow = tableRow + column.rowSpan - 1;
-				if (endingRow >= tableBody.length) {
-					throw new Error(`Row span for column ${columnIndex} (with indexes starting from 0) exceeded row count`);
+			// If we are after a cell that started a rowspan
+			let endOfRowSpanCell = null;
+			if (startingSpanCell && startingSpanCell._endingCell) {
+				// Reference to the last cell of the rowspan
+				endOfRowSpanCell = startingSpanCell._endingCell;
+				// Store if we are in an unbreakable block when we save the context and the originalX
+				if (this.writer.transactionLevel > 0) {
+					endOfRowSpanCell._isUnbreakableContext = true;
+					endOfRowSpanCell._originalXOffset = this.writer.originalX;
 				}
-				return tableBody[endingRow][columnIndex];
 			}
 
-			return null;
+			// We pass the endingSpanCell reference to store the context just after processing rowspan cell
+			this.writer.context().beginColumn(width, leftOffset, endOfRowSpanCell);
+
+			if (!cell._span) {
+				this.processNode(cell);
+				this.writer.context().updateBottomByPage();
+				addAll(positions, cell.positions);
+			} else if (cell._columnEndingContext) {
+				let discountY = 0;
+				if (dontBreakRows) {
+					// Calculate how many points we have to discount to Y when dontBreakRows and rowSpan are combined
+					const ctxBeforeRowSpanLastRow = this.writer.contextStack[this.writer.contextStack.length - 1];
+					discountY = ctxBeforeRowSpanLastRow.y - cell._startingRowSpanY;
+				}
+				let originalXOffset = 0;
+				// If context was saved from an unbreakable block and we are not in an unbreakable block anymore
+				// We have to sum the originalX (X before starting unbreakable block) to X
+				if (cell._isUnbreakableContext && !this.writer.transactionLevel) {
+					originalXOffset = cell._originalXOffset;
+				}
+				// row-span ending
+				// Recover the context after processing the rowspanned cell
+				this.writer.context().markEnding(cell, originalXOffset, discountY);
+			}
+			this.writer.removeListener('pageChanged', storePageBreakClosure);
 		}
+
+		// Check if last cell is part of a span
+		let endingSpanCell = null;
+		const lastColumn = cells.length > 0 ? cells[cells.length - 1] : null;
+		if (lastColumn) {
+			// Previous column cell has a rowspan
+			if (lastColumn._endingCell) {
+				endingSpanCell = lastColumn._endingCell;
+				// Previous column cell is part of a span
+			} else if (lastColumn._span === true) {
+				// We get the cell that started the span where we set a reference to the ending cell
+				const startingSpanCell = this._findStartingRowSpanCell(cells, cells.length);
+				if (startingSpanCell) {
+					// Context will be stored here (ending cell)
+					endingSpanCell = startingSpanCell._endingCell;
+					// Store if we are in an unbreakable block when we save the context and the originalX
+					if (this.writer.transactionLevel > 0) {
+						endingSpanCell._isUnbreakableContext = true;
+						endingSpanCell._originalXOffset = this.writer.originalX;
+					}
+				}
+			}
+		}
+
+		// If content did not break page, check if we should break by height
+		if (willBreakByHeight && !isUnbreakableRow && pageBreaks.length === 0) {
+			this.writer.context().moveDown(this.writer.context().availableHeight);
+			this.writer.moveToNextPage();
+		}
+
+		const bottomByPage = this.writer.context().completeColumnGroup(height, endingSpanCell);
+
+		if (tableNode) {
+			tableNode._bottomByPage = bottomByPage;
+			// If there are page breaks in this row, update data with prevY of last cell
+			this._updatePageBreaksData(pageBreaks, tableNode, rowIndex);
+		}
+
+		return {
+			pageBreaksBySpan : pageBreaksByRowSpan,
+			pageBreaks: pageBreaks,
+			positions: positions
+		};
 	}
 
 	// lists
@@ -617,12 +887,23 @@ class LayoutBuilder {
 
 	// tables
 	processTable(tableNode) {
+		this.nestedLevel++;
 		let processor = new TableProcessor(tableNode);
 
 		processor.beginTable(this.writer);
 
 		let rowHeights = tableNode.table.heights;
 		for (let i = 0, l = tableNode.table.body.length; i < l; i++) {
+			// if dontBreakRows and row starts a rowspan
+			// we store the 'y' of the beginning of each rowSpan
+			if (processor.dontBreakRows) {
+				tableNode.table.body[i].forEach(cell => {
+					if (cell.rowSpan && cell.rowSpan > 1) {
+						cell._startingRowSpanY = this.writer.context().y;
+					}
+				});
+			}
+
 			processor.beginRow(i, this.writer);
 
 			let height;
@@ -638,13 +919,40 @@ class LayoutBuilder {
 				height = undefined;
 			}
 
-			let result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, height);
+			const pageBeforeProcessing = this.writer.context().page;
+
+			let result = this.processRow({
+				marginX: tableNode._margin ? [tableNode._margin[0], tableNode._margin[2]] : [0, 0],
+				dontBreakRows: processor.dontBreakRows,
+				rowsWithoutPageBreak: processor.rowsWithoutPageBreak,
+				cells: tableNode.table.body[i],
+				widths: tableNode.table.widths,
+				gaps: tableNode._offsets.offsets,
+				tableBody: tableNode.table.body,
+				tableNode,
+				rowIndex: i,
+				height
+			});
+
 			addAll(tableNode.positions, result.positions);
+
+			if (!result.pageBreaks || result.pageBreaks.length === 0) {
+				const breaksBySpan = tableNode && tableNode._breaksBySpan || null;
+				const breakBySpanData = this._findSameRowPageBreakByRowSpanData(breaksBySpan, pageBeforeProcessing, i);
+				if (breakBySpanData) {
+					const finalBreakBySpanData = this._getPageBreakListBySpan(tableNode, breakBySpanData.prevPage, i);
+					result.pageBreaks.push(finalBreakBySpanData);
+				}
+			}
 
 			processor.endRow(i, this.writer, result.pageBreaks);
 		}
 
 		processor.endTable(this.writer);
+		this.nestedLevel--;
+		if (this.nestedLevel === 0) {
+			this.writer.context().resetMarginXTopParent();
+		}
 	}
 
 	// leafs (texts)

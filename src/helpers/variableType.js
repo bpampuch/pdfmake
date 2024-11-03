@@ -18,6 +18,17 @@ export function isNumber(variable) {
  * @param {any} variable
  * @returns {boolean}
  */
+export function isPositiveInteger(variable) {
+	if (!isNumber(variable) || !Number.isInteger(variable) || variable <= 0) {
+		return false;
+	}
+	return true;
+}
+
+/**
+ * @param {any} variable
+ * @returns {boolean}
+ */
 export function isObject(variable) {
 	return (variable !== null) && !Array.isArray(variable) && !isString(variable) && !isNumber(variable) && (typeof variable === 'object');
 }
