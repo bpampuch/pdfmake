@@ -22,6 +22,7 @@ const fetchUrl = (url, headers = {}) => {
 			const ok = res.statusCode >= 200 && res.statusCode < 300;
 			if (!ok) {
 				reject(new TypeError(`Failed to fetch (status code: ${res.statusCode}, url: "${url}")`));
+				return;
 			}
 
 			const chunks = [];
