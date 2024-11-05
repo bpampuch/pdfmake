@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed speed in Node.js if is fetching URL for image or font redirected
+
 ## 0.3.0-beta.12 - 2024-11-03
 
 - Added support PDF/A and PDF/UA (see [documentation](https://pdfmake.github.io/docs/0.3/document-definition-object/pdfa/))
