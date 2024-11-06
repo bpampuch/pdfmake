@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fixed speed in Node.js if is fetching URL for image or font redirected
+- Fixed aspect ratio for image with exif orientation tag
 
 ## 0.3.0-beta.12 - 2024-11-03
 

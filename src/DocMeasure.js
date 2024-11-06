@@ -128,7 +128,15 @@ class DocMeasure {
 		this.convertIfBase64Image(node);
 
 		let image = this.pdfDocument.provideImage(node.image);
+
 		let imageSize = { width: image.width, height: image.height };
+
+		if (image.constructor.name === 'JPEG') {
+			// If EXIF orientation calls for it, swap width and height
+			if (image.orientation > 4) {
+				imageSize = { width: image.height, height: image.width };
+			}
+		}
 
 		this.measureImageWithDimensions(node, imageSize);
 
