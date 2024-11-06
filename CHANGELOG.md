@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed aspect ratio for image with exif orientation tag
+
 ## 0.2.15 - 2024-11-02
 
 - Added support PDF/A and PDF/UA (see [documentation](https://pdfmake.github.io/docs/0.1/document-definition-object/pdfa/))
