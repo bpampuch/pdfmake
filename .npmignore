@@ -10,5 +10,5 @@ bower.json
 webpack.config.js
 webpack-standardfonts.config.js
 .editorconfig
-.eslintrc.json
+eslint.config.mjs
 build-examples.js
