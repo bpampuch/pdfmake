@@ -1,4 +1,5 @@
 .git*
+.idea/
 dev-playground/
 docs/
 examples/
@@ -9,7 +10,7 @@ yarn.lock
 composer.json
 bower.json
 .editorconfig
-.eslintrc.json
+eslint.config.mjs
 build-fonts.js
 build-examples.js
 babel.config.json
