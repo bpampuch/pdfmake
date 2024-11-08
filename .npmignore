@@ -1,4 +1,5 @@
 .git*
+.idea/
 dev-playground/
 docs/
 examples/
