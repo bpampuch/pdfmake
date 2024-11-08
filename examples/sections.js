@@ -5,6 +5,8 @@ var Roboto = require('../fonts/Roboto');
 pdfmake.addFonts(Roboto);
 
 var docDefinition = {
+	header: function () { return 'default header'; },
+	footer: function () { return 'default footer'; },
 	content: [
 		{
 			section: [
@@ -13,6 +15,8 @@ var docDefinition = {
 			]
 		},
 		{
+			header: function (currentPage, pageCount) { return 'header: ' + currentPage.toString() + ' of ' + pageCount; },
+			footer: function (currentPage, pageCount) { return 'footer: ' + currentPage.toString() + ' of ' + pageCount; },
 			pageOrientation: 'landscape',
 			section: [
 				'SECTION 2',
@@ -20,6 +24,9 @@ var docDefinition = {
 			]
 		},
 		{
+			header: null,
+			footer: null,
+
 			pageSize: 'A7',
 			pageOrientation: 'portrait',
 			section: [
@@ -55,6 +62,8 @@ var docDefinition = {
 			]
 		},
 		{
+			header: function (currentPage, pageCount) { return 'header in section 8: ' + currentPage.toString() + ' of ' + pageCount; },
+			footer: function (currentPage, pageCount) { return 'footer in section 8: ' + currentPage.toString() + ' of ' + pageCount; },
 			section: [
 				'SECTION 8',
 				'Text in section with page definition as defined in document.'

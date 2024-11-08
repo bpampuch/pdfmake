@@ -222,7 +222,7 @@ class DocumentContext extends EventEmitter {
 			let currentPageOrientation = this.getCurrentPage().pageSize.orientation;
 
 			let pageSize = getPageSize(this.getCurrentPage(), pageOrientation);
-			this.addPage(pageSize);
+			this.addPage(pageSize, null, this.getCurrentPage().customProperties);
 
 			if (currentPageOrientation === pageSize.orientation) {
 				this.availableWidth = currentAvailableWidth;
@@ -240,14 +240,14 @@ class DocumentContext extends EventEmitter {
 		};
 	}
 
-	addPage(pageSize, pageMargin = null) {
+	addPage(pageSize, pageMargin = null, customProperties = {}) {
 		if (pageMargin !== null) {
 			this.pageMargins = pageMargin;
 			this.x = pageMargin.left;
 			this.availableWidth = pageSize.width - pageMargin.left - pageMargin.right;
 		}
 
-		let page = { items: [], pageSize: pageSize, pageMargins: this.pageMargins };
+		let page = { items: [], pageSize: pageSize, pageMargins: this.pageMargins, customProperties: customProperties };
 		this.pages.push(page);
 		this.backgroundLength.push(0);
 		this.page = this.pages.length - 1;

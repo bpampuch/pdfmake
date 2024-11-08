@@ -7,7 +7,7 @@ import TableProcessor from './TableProcessor';
 import Line from './Line';
 import { isString, isValue, isNumber } from './helpers/variableType';
 import { stringifyNode, getNodeId } from './helpers/node';
-import { pack, offsetVector } from './helpers/tools';
+import { pack, offsetVector, convertToDynamicContent } from './helpers/tools';
 import TextInlines from './TextInlines';
 import StyleContextStack from './StyleContextStack';
 
@@ -222,13 +222,24 @@ class LayoutBuilder {
 		}
 	}
 
-	addDynamicRepeatable(nodeGetter, sizeFunction) {
+	addDynamicRepeatable(nodeGetter, sizeFunction, customPropertyName) {
 		let pages = this.writer.context().pages;
 
 		for (let pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
 			this.writer.context().page = pageIndex;
 
-			let node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
+			let customProperties = this.writer.context().getCurrentPage().customProperties;
+
+			let pageNodeGetter = nodeGetter;
+			if (customProperties[customPropertyName] || customProperties[customPropertyName] === null) {
+				pageNodeGetter = customProperties[customPropertyName];
+			}
+
+			if ((typeof pageNodeGetter === 'undefined') || (pageNodeGetter === null)) {
+				continue;
+			}
+
+			let node = pageNodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
 
 			if (node) {
 				let sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.writer.context().getCurrentPage().pageMargins);
@@ -255,13 +266,8 @@ class LayoutBuilder {
 			height: pageMargins.bottom
 		});
 
-		if (header) {
-			this.addDynamicRepeatable(header, headerSizeFct);
-		}
-
-		if (footer) {
-			this.addDynamicRepeatable(footer, footerSizeFct);
-		}
+		this.addDynamicRepeatable(header, headerSizeFct, 'header');
+		this.addDynamicRepeatable(footer, footerSizeFct, 'footer');
 	}
 
 	addWatermark(watermark, pdfDocument, defaultStyle) {
@@ -514,23 +520,64 @@ class LayoutBuilder {
 		// TODO: properties
 
 		let page = this.writer.context().getCurrentPage();
-		// TODO: background
 		if (!page || (page && page.items.length)) { // move to new empty page
 			// page definition inherit from current page
 			if (sectionNode.pageSize === 'inherit') {
-				sectionNode.pageSize = page ? {width: page.pageSize.width, height: page.pageSize.height} : undefined;
+				sectionNode.pageSize = page ? { width: page.pageSize.width, height: page.pageSize.height } : undefined;
 			}
 			if (sectionNode.pageOrientation === 'inherit') {
 				sectionNode.pageOrientation = page ? page.pageSize.orientation : undefined;
 			}
 			if (sectionNode.pageMargins === 'inherit') {
-				sectionNode.pageMargins = page ?  page.pageMargins : undefined;
+				sectionNode.pageMargins = page ? page.pageMargins : undefined;
+			}
+
+			if (sectionNode.header === 'inherit') {
+				sectionNode.header = page ? page.customProperties.header : undefined;
+			}
+
+			if (sectionNode.footer === 'inherit') {
+				sectionNode.footer = page ? page.customProperties.footer : undefined;
+			}
+
+			if (sectionNode.background === 'inherit') {
+				sectionNode.background = page ? page.customProperties.background : undefined;
+			}
+
+			if (sectionNode.watermark === 'inherit') {
+				sectionNode.watermark = page ? page.customProperties.watermark : undefined;
+			}
+
+			if (sectionNode.header && typeof sectionNode.header !== 'function' && sectionNode.header !== null) {
+				sectionNode.header = convertToDynamicContent(sectionNode.header);
+			}
+
+			if (sectionNode.footer && typeof sectionNode.footer !== 'function' && sectionNode.footer !== null) {
+				sectionNode.footer = convertToDynamicContent(sectionNode.footer);
+			}
+
+			let customProperties = {};
+			if (typeof sectionNode.header !== 'undefined') {
+				customProperties.header = sectionNode.header;
+			}
+
+			if (typeof sectionNode.footer !== 'undefined') {
+				customProperties.footer = sectionNode.footer;
+			}
+
+			if (typeof sectionNode.background !== 'undefined') {
+				customProperties.background = sectionNode.background;
+			}
+
+			if (typeof sectionNode.watermark !== 'undefined') {
+				customProperties.watermark = sectionNode.watermark;
 			}
 
 			this.writer.addPage(
 				sectionNode.pageSize || this.pageSize,
 				sectionNode.pageOrientation,
-				sectionNode.pageMargins || this.pageMargins
+				sectionNode.pageMargins || this.pageMargins,
+				customProperties
 			);
 		}
 
