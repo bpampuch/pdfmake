@@ -34,6 +34,7 @@ class DocPreprocessor {
 		}
 
 		if (node.section) {
+			// TODO: add a check that section node is in root
 			return this.preprocessSection(node);
 		} else if (node.columns) {
 			return this.preprocessColumns(node);
