@@ -184,8 +184,13 @@ class LayoutBuilder {
 
 		this.writer = new PageElementWriter(new DocumentContext());
 
-		this.writer.context().addListener('pageAdded', () => {
-			this.addBackground(background);
+		this.writer.context().addListener('pageAdded', (page) => {
+			let backgroundGetter = background;
+			if (page.customProperties['background'] || page.customProperties['background'] === null) {
+				backgroundGetter = page.customProperties['background'];
+			}
+
+			this.addBackground(backgroundGetter);
 		});
 
 		if (isNecessaryAddFirstPage(docStructure)) {

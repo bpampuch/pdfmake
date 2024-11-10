@@ -7,6 +7,7 @@ pdfmake.addFonts(Roboto);
 var docDefinition = {
 	header: function () { return 'default header'; },
 	footer: function () { return 'default footer'; },
+	background: function() { return { text:'global background', alignment: 'right' }; },
 	content: [
 		{
 			section: [
@@ -17,6 +18,7 @@ var docDefinition = {
 		{
 			header: function (currentPage, pageCount) { return 'header: ' + currentPage.toString() + ' of ' + pageCount; },
 			footer: function (currentPage, pageCount) { return 'footer: ' + currentPage.toString() + ' of ' + pageCount; },
+			background: function() { return { text:'SECTION 2 background', alignment: 'right' }; },
 			pageOrientation: 'landscape',
 			section: [
 				'SECTION 2',
@@ -26,7 +28,7 @@ var docDefinition = {
 		{
 			header: null,
 			footer: null,
-
+			background: null,
 			pageSize: 'A7',
 			pageOrientation: 'portrait',
 			section: [

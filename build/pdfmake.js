@@ -23,7 +23,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es.js
-var pdfkit_es = __webpack_require__(4098);
+var pdfkit_es = __webpack_require__(6140);
 ;// ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(4598)["Buffer"];
 
@@ -366,7 +366,9 @@ class DocPreprocessor {
       // cast value in text property
       node.text = convertValueToString(node.text);
     }
-    if (node.columns) {
+    if (node.section) {
+      return this.preprocessSection(node);
+    } else if (node.columns) {
       return this.preprocessColumns(node);
     } else if (node.stack) {
       return this.preprocessVerticalContainer(node);
@@ -395,6 +397,10 @@ class DocPreprocessor {
     } else {
       throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
     }
+  }
+  preprocessSection(node) {
+    node.section = this.preprocessNode(node.section);
+    return node;
   }
   preprocessColumns(node) {
     let columns = node.columns;
@@ -634,6 +640,10 @@ class StyleContextStack {
    */
   autopush(item) {
     if (isString(item)) {
+      return 0;
+    }
+    if (typeof item.section !== 'undefined') {
+      // section node not support style overrides
       return 0;
     }
     let styleNames = [];
@@ -919,7 +929,7 @@ class TextInlines {
    * Converts an array of strings (or inline-definition-objects) into a collection
    * of inlines and calculated minWidth/maxWidth and their min/max widths
    *
-   * @param {Array} textArray an array of inline-definition-objects (or strings)
+   * @param {Array|object} textArray an array of inline-definition-objects (or strings)
    * @param {StyleContextStack} styleContextStack current style stack
    * @returns {object} collection of inlines, minWidth, maxWidth
    */
@@ -1357,6 +1367,11 @@ function offsetVector(vector, x, y) {
       }
       break;
   }
+}
+function convertToDynamicContent(staticContent) {
+  return () =>
+  // copy to new object
+  JSON.parse(JSON.stringify(staticContent));
 }
 ;// ./src/qrEnc.js
 /*eslint no-unused-vars: ["error", {"args": "none"}]*/
@@ -2111,7 +2126,9 @@ class DocMeasure {
     return this.styleStack.auto(node, () => {
       // TODO: refactor + rethink whether this is the proper way to handle margins
       node._margin = getNodeMargin(node, this.styleStack);
-      if (node.columns) {
+      if (node.section) {
+        return extendMargins(this.measureSection(node));
+      } else if (node.columns) {
         return extendMargins(this.measureColumns(node));
       } else if (node.stack) {
         return extendMargins(this.measureVerticalContainer(node));
@@ -2193,6 +2210,15 @@ class DocMeasure {
       width: image.width,
       height: image.height
     };
+    if (image.constructor.name === 'JPEG') {
+      // If EXIF orientation calls for it, swap width and height
+      if (image.orientation > 4) {
+        imageSize = {
+          width: image.height,
+          height: image.width
+        };
+      }
+    }
     this.measureImageWithDimensions(node, imageSize);
     return node;
   }
@@ -2491,6 +2517,12 @@ class DocMeasure {
     }
     return node;
   }
+  measureSection(node) {
+    // TODO: properties
+
+    node.section = this.measureNode(node.section);
+    return node;
+  }
   measureColumns(node) {
     let columns = node.columns;
     node._gap = this.styleStack.getProperty('columnGap') || 0;
@@ -2711,17 +2743,16 @@ var events = __webpack_require__(4785);
  * It facilitates column divisions and vertical sync
  */
 class DocumentContext extends events.EventEmitter {
-  constructor(pageSize, pageMargins) {
+  constructor() {
     super();
     this.pages = [];
-    this.pageMargins = pageMargins;
-    this.x = pageMargins.left;
-    this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
-    this.availableHeight = 0;
+    this.pageMargins = undefined;
+    this.x = undefined;
+    this.availableWidth = undefined;
+    this.availableHeight = undefined;
     this.page = -1;
     this.snapshots = [];
     this.backgroundLength = [];
-    this.addPage(pageSize);
   }
   beginColumnGroup(marginXTopParent, bottomByPage) {
     if (bottomByPage === void 0) {
@@ -2910,7 +2941,7 @@ class DocumentContext extends events.EventEmitter {
       let currentAvailableWidth = this.availableWidth;
       let currentPageOrientation = this.getCurrentPage().pageSize.orientation;
       let pageSize = getPageSize(this.getCurrentPage(), pageOrientation);
-      this.addPage(pageSize);
+      this.addPage(pageSize, null, this.getCurrentPage().customProperties);
       if (currentPageOrientation === pageSize.orientation) {
         this.availableWidth = currentAvailableWidth;
       }
@@ -2925,16 +2956,29 @@ class DocumentContext extends events.EventEmitter {
       y: this.y
     };
   }
-  addPage(pageSize) {
+  addPage(pageSize, pageMargin, customProperties) {
+    if (pageMargin === void 0) {
+      pageMargin = null;
+    }
+    if (customProperties === void 0) {
+      customProperties = {};
+    }
+    if (pageMargin !== null) {
+      this.pageMargins = pageMargin;
+      this.x = pageMargin.left;
+      this.availableWidth = pageSize.width - pageMargin.left - pageMargin.right;
+    }
     let page = {
       items: [],
-      pageSize: pageSize
+      pageSize: pageSize,
+      pageMargins: this.pageMargins,
+      customProperties: customProperties
     };
     this.pages.push(page);
     this.backgroundLength.push(0);
     this.page = this.pages.length - 1;
     this.initializePage();
-    this.emit('pageAdded');
+    this.emit('pageAdded', page);
     return page;
   }
   getCurrentPage() {
@@ -3013,11 +3057,18 @@ function bottomMostContext(c1, c2) {
  * their positions based on the context
  */
 class ElementWriter extends events.EventEmitter {
+  /**
+   * @param {DocumentContext} context
+   */
   constructor(context) {
     super();
     this._context = context;
     this.contextStack = [];
   }
+
+  /**
+   * @returns {DocumentContext}
+   */
   context() {
     return this._context;
   }
@@ -3307,7 +3358,7 @@ class ElementWriter extends events.EventEmitter {
    * pushContext(width, height) - creates and pushes a new context with the specified width and height
    * pushContext() - creates a new context for unbreakable blocks (with current availableWidth and full-page-height)
    *
-   * @param {object|number} contextOrWidth
+   * @param {DocumentContext|number} contextOrWidth
    * @param {number} height
    */
   pushContext(contextOrWidth, height) {
@@ -3316,8 +3367,10 @@ class ElementWriter extends events.EventEmitter {
       contextOrWidth = this.context().availableWidth;
     }
     if (isNumber(contextOrWidth)) {
-      contextOrWidth = new src_DocumentContext({
-        width: contextOrWidth,
+      let width = contextOrWidth;
+      contextOrWidth = new src_DocumentContext();
+      contextOrWidth.addPage({
+        width: width,
         height: height
       }, {
         left: 0,
@@ -3344,7 +3397,131 @@ function addPageItem(page, item, index) {
   }
 }
 /* harmony default export */ var src_ElementWriter = (ElementWriter);
+;// ./src/standardPageSizes.js
+/* harmony default export */ var standardPageSizes = ({
+  '4A0': [4767.87, 6740.79],
+  '2A0': [3370.39, 4767.87],
+  A0: [2383.94, 3370.39],
+  A1: [1683.78, 2383.94],
+  A2: [1190.55, 1683.78],
+  A3: [841.89, 1190.55],
+  A4: [595.28, 841.89],
+  A5: [419.53, 595.28],
+  A6: [297.64, 419.53],
+  A7: [209.76, 297.64],
+  A8: [147.40, 209.76],
+  A9: [104.88, 147.40],
+  A10: [73.70, 104.88],
+  B0: [2834.65, 4008.19],
+  B1: [2004.09, 2834.65],
+  B2: [1417.32, 2004.09],
+  B3: [1000.63, 1417.32],
+  B4: [708.66, 1000.63],
+  B5: [498.90, 708.66],
+  B6: [354.33, 498.90],
+  B7: [249.45, 354.33],
+  B8: [175.75, 249.45],
+  B9: [124.72, 175.75],
+  B10: [87.87, 124.72],
+  C0: [2599.37, 3676.54],
+  C1: [1836.85, 2599.37],
+  C2: [1298.27, 1836.85],
+  C3: [918.43, 1298.27],
+  C4: [649.13, 918.43],
+  C5: [459.21, 649.13],
+  C6: [323.15, 459.21],
+  C7: [229.61, 323.15],
+  C8: [161.57, 229.61],
+  C9: [113.39, 161.57],
+  C10: [79.37, 113.39],
+  RA0: [2437.80, 3458.27],
+  RA1: [1729.13, 2437.80],
+  RA2: [1218.90, 1729.13],
+  RA3: [864.57, 1218.90],
+  RA4: [609.45, 864.57],
+  SRA0: [2551.18, 3628.35],
+  SRA1: [1814.17, 2551.18],
+  SRA2: [1275.59, 1814.17],
+  SRA3: [907.09, 1275.59],
+  SRA4: [637.80, 907.09],
+  EXECUTIVE: [521.86, 756.00],
+  FOLIO: [612.00, 936.00],
+  LEGAL: [612.00, 1008.00],
+  LETTER: [612.00, 792.00],
+  TABLOID: [792.00, 1224.00]
+});
+;// ./src/PageSize.js
+
+
+function normalizePageSize(pageSize, pageOrientation) {
+  function isNeedSwapPageSizes(pageOrientation) {
+    if (isString(pageOrientation)) {
+      pageOrientation = pageOrientation.toLowerCase();
+      return pageOrientation === 'portrait' && size.width > size.height || pageOrientation === 'landscape' && size.width < size.height;
+    }
+    return false;
+  }
+  function pageSizeToWidthAndHeight(pageSize) {
+    if (isString(pageSize)) {
+      let size = standardPageSizes[pageSize.toUpperCase()];
+      if (!size) {
+        throw new Error(`Page size ${pageSize} not recognized`);
+      }
+      return {
+        width: size[0],
+        height: size[1]
+      };
+    }
+    return pageSize;
+  }
+
+  // if pageSize.height is set to auto, set the height to infinity so there are no page breaks.
+  if (pageSize && pageSize.height === 'auto') {
+    pageSize.height = Infinity;
+  }
+  let size = pageSizeToWidthAndHeight(pageSize || 'A4');
+  if (isNeedSwapPageSizes(pageOrientation)) {
+    // swap page sizes
+    size = {
+      width: size.height,
+      height: size.width
+    };
+  }
+  size.orientation = size.width > size.height ? 'landscape' : 'portrait';
+  return size;
+}
+function normalizePageMargin(margin) {
+  if (isNumber(margin)) {
+    margin = {
+      left: margin,
+      right: margin,
+      top: margin,
+      bottom: margin
+    };
+  } else if (Array.isArray(margin)) {
+    if (margin.length === 2) {
+      margin = {
+        left: margin[0],
+        top: margin[1],
+        right: margin[0],
+        bottom: margin[1]
+      };
+    } else if (margin.length === 4) {
+      margin = {
+        left: margin[0],
+        top: margin[1],
+        right: margin[2],
+        bottom: margin[3]
+      };
+    } else {
+      throw new Error('Invalid pageMargins definition');
+    }
+  }
+  return margin;
+}
 ;// ./src/PageElementWriter.js
+
+
 
 
 /**
@@ -3356,6 +3533,9 @@ function addPageItem(page, item, index) {
  *                 whole block will be rendered on the same page)
  */
 class PageElementWriter extends src_ElementWriter {
+  /**
+   * @param {DocumentContext} context
+   */
   constructor(context) {
     super(context);
     this.transactionLevel = 0;
@@ -3408,6 +3588,19 @@ class PageElementWriter extends src_ElementWriter {
     this.emit('pageChanged', {
       prevPage: nextPage.prevPage,
       prevY: nextPage.prevY,
+      y: this.context().y
+    });
+  }
+  addPage(pageSize, pageOrientation, pageMargin, customProperties) {
+    if (customProperties === void 0) {
+      customProperties = {};
+    }
+    let prevPage = this.page;
+    let prevY = this.y;
+    this.context().addPage(normalizePageSize(pageSize, pageOrientation), normalizePageMargin(pageMargin), customProperties);
+    this.emit('pageChanged', {
+      prevPage: prevPage,
+      prevY: prevY,
       y: this.context().y
     });
   }
@@ -4263,14 +4456,28 @@ class LayoutBuilder {
     return result.pages;
   }
   tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark) {
+    const isNecessaryAddFirstPage = docStructure => {
+      if (docStructure.stack && docStructure.stack.length > 0 && docStructure.stack[0].section) {
+        return false;
+      } else if (docStructure.section) {
+        return false;
+      }
+      return true;
+    };
     this.linearNodeList = [];
     docStructure = this.docPreprocessor.preprocessDocument(docStructure);
     docStructure = this.docMeasure.measureDocument(docStructure);
-    this.writer = new src_PageElementWriter(new src_DocumentContext(this.pageSize, this.pageMargins));
-    this.writer.context().addListener('pageAdded', () => {
-      this.addBackground(background);
+    this.writer = new src_PageElementWriter(new src_DocumentContext());
+    this.writer.context().addListener('pageAdded', page => {
+      let backgroundGetter = background;
+      if (page.customProperties['background'] || page.customProperties['background'] === null) {
+        backgroundGetter = page.customProperties['background'];
+      }
+      this.addBackground(backgroundGetter);
     });
-    this.addBackground(background);
+    if (isNecessaryAddFirstPage(docStructure)) {
+      this.writer.addPage(this.pageSize, null, this.pageMargins);
+    }
     this.processNode(docStructure);
     this.addHeadersAndFooters(header, footer);
     if (watermark != null) {
@@ -4294,18 +4501,21 @@ class LayoutBuilder {
       context.backgroundLength[context.page] += pageBackground.positions.length;
     }
   }
-  addStaticRepeatable(headerOrFooter, sizeFunction) {
-    this.addDynamicRepeatable(() =>
-    // copy to new object
-    JSON.parse(JSON.stringify(headerOrFooter)), sizeFunction);
-  }
-  addDynamicRepeatable(nodeGetter, sizeFunction) {
+  addDynamicRepeatable(nodeGetter, sizeFunction, customPropertyName) {
     let pages = this.writer.context().pages;
     for (let pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
       this.writer.context().page = pageIndex;
-      let node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
+      let customProperties = this.writer.context().getCurrentPage().customProperties;
+      let pageNodeGetter = nodeGetter;
+      if (customProperties[customPropertyName] || customProperties[customPropertyName] === null) {
+        pageNodeGetter = customProperties[customPropertyName];
+      }
+      if (typeof pageNodeGetter === 'undefined' || pageNodeGetter === null) {
+        continue;
+      }
+      let node = pageNodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
       if (node) {
-        let sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
+        let sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.writer.context().getCurrentPage().pageMargins);
         this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
         node = this.docPreprocessor.preprocessDocument(node);
         this.processNode(this.docMeasure.measureDocument(node));
@@ -4326,16 +4536,8 @@ class LayoutBuilder {
       width: pageSize.width,
       height: pageMargins.bottom
     });
-    if (typeof header === 'function') {
-      this.addDynamicRepeatable(header, headerSizeFct);
-    } else if (header) {
-      this.addStaticRepeatable(header, headerSizeFct);
-    }
-    if (typeof footer === 'function') {
-      this.addDynamicRepeatable(footer, footerSizeFct);
-    } else if (footer) {
-      this.addStaticRepeatable(footer, footerSizeFct);
-    }
+    this.addDynamicRepeatable(header, headerSizeFct, 'header');
+    this.addDynamicRepeatable(footer, footerSizeFct, 'footer');
   }
   addWatermark(watermark, pdfDocument, defaultStyle) {
     if (isString(watermark)) {
@@ -4526,6 +4728,8 @@ class LayoutBuilder {
       }
       if (node.stack) {
         this.processVerticalContainer(node);
+      } else if (node.section) {
+        this.processSection(node);
       } else if (node.columns) {
         this.processColumns(node);
       } else if (node.ul) {
@@ -4568,6 +4772,62 @@ class LayoutBuilder {
 
       //TODO: paragraph gap
     }, this);
+  }
+
+  // section
+  processSection(sectionNode) {
+    // TODO: properties
+
+    let page = this.writer.context().getCurrentPage();
+    if (!page || page && page.items.length) {
+      // move to new empty page
+      // page definition inherit from current page
+      if (sectionNode.pageSize === 'inherit') {
+        sectionNode.pageSize = page ? {
+          width: page.pageSize.width,
+          height: page.pageSize.height
+        } : undefined;
+      }
+      if (sectionNode.pageOrientation === 'inherit') {
+        sectionNode.pageOrientation = page ? page.pageSize.orientation : undefined;
+      }
+      if (sectionNode.pageMargins === 'inherit') {
+        sectionNode.pageMargins = page ? page.pageMargins : undefined;
+      }
+      if (sectionNode.header === 'inherit') {
+        sectionNode.header = page ? page.customProperties.header : undefined;
+      }
+      if (sectionNode.footer === 'inherit') {
+        sectionNode.footer = page ? page.customProperties.footer : undefined;
+      }
+      if (sectionNode.background === 'inherit') {
+        sectionNode.background = page ? page.customProperties.background : undefined;
+      }
+      if (sectionNode.watermark === 'inherit') {
+        sectionNode.watermark = page ? page.customProperties.watermark : undefined;
+      }
+      if (sectionNode.header && typeof sectionNode.header !== 'function' && sectionNode.header !== null) {
+        sectionNode.header = convertToDynamicContent(sectionNode.header);
+      }
+      if (sectionNode.footer && typeof sectionNode.footer !== 'function' && sectionNode.footer !== null) {
+        sectionNode.footer = convertToDynamicContent(sectionNode.footer);
+      }
+      let customProperties = {};
+      if (typeof sectionNode.header !== 'undefined') {
+        customProperties.header = sectionNode.header;
+      }
+      if (typeof sectionNode.footer !== 'undefined') {
+        customProperties.footer = sectionNode.footer;
+      }
+      if (typeof sectionNode.background !== 'undefined') {
+        customProperties.background = sectionNode.background;
+      }
+      if (typeof sectionNode.watermark !== 'undefined') {
+        customProperties.watermark = sectionNode.watermark;
+      }
+      this.writer.addPage(sectionNode.pageSize || this.pageSize, sectionNode.pageOrientation, sectionNode.pageMargins || this.pageMargins, customProperties);
+    }
+    this.processNode(sectionNode.section);
   }
 
   // columns
@@ -5149,7 +5409,7 @@ var xmldoc_default = /*#__PURE__*/__webpack_require__.n(xmldoc);
  * @returns {?number}
  */
 const stripUnits = textVal => {
-  var n = parseFloat(textVal);
+  let n = parseFloat(textVal);
   if (typeof n !== 'number' || isNaN(n)) {
     return undefined;
   }
@@ -5163,7 +5423,7 @@ const stripUnits = textVal => {
  * @returns {object}
  */
 const parseSVG = svgString => {
-  var doc;
+  let doc;
   try {
     doc = new (xmldoc_default()).XmlDocument(svgString);
   } catch (err) {
@@ -5205,128 +5465,6 @@ class SVGMeasure {
   }
 }
 /* harmony default export */ var src_SVGMeasure = (SVGMeasure);
-;// ./src/standardPageSizes.js
-/* harmony default export */ var standardPageSizes = ({
-  '4A0': [4767.87, 6740.79],
-  '2A0': [3370.39, 4767.87],
-  A0: [2383.94, 3370.39],
-  A1: [1683.78, 2383.94],
-  A2: [1190.55, 1683.78],
-  A3: [841.89, 1190.55],
-  A4: [595.28, 841.89],
-  A5: [419.53, 595.28],
-  A6: [297.64, 419.53],
-  A7: [209.76, 297.64],
-  A8: [147.40, 209.76],
-  A9: [104.88, 147.40],
-  A10: [73.70, 104.88],
-  B0: [2834.65, 4008.19],
-  B1: [2004.09, 2834.65],
-  B2: [1417.32, 2004.09],
-  B3: [1000.63, 1417.32],
-  B4: [708.66, 1000.63],
-  B5: [498.90, 708.66],
-  B6: [354.33, 498.90],
-  B7: [249.45, 354.33],
-  B8: [175.75, 249.45],
-  B9: [124.72, 175.75],
-  B10: [87.87, 124.72],
-  C0: [2599.37, 3676.54],
-  C1: [1836.85, 2599.37],
-  C2: [1298.27, 1836.85],
-  C3: [918.43, 1298.27],
-  C4: [649.13, 918.43],
-  C5: [459.21, 649.13],
-  C6: [323.15, 459.21],
-  C7: [229.61, 323.15],
-  C8: [161.57, 229.61],
-  C9: [113.39, 161.57],
-  C10: [79.37, 113.39],
-  RA0: [2437.80, 3458.27],
-  RA1: [1729.13, 2437.80],
-  RA2: [1218.90, 1729.13],
-  RA3: [864.57, 1218.90],
-  RA4: [609.45, 864.57],
-  SRA0: [2551.18, 3628.35],
-  SRA1: [1814.17, 2551.18],
-  SRA2: [1275.59, 1814.17],
-  SRA3: [907.09, 1275.59],
-  SRA4: [637.80, 907.09],
-  EXECUTIVE: [521.86, 756.00],
-  FOLIO: [612.00, 936.00],
-  LEGAL: [612.00, 1008.00],
-  LETTER: [612.00, 792.00],
-  TABLOID: [792.00, 1224.00]
-});
-;// ./src/PageSize.js
-
-
-function normalizePageSize(pageSize, pageOrientation) {
-  function isNeedSwapPageSizes(pageOrientation) {
-    if (isString(pageOrientation)) {
-      pageOrientation = pageOrientation.toLowerCase();
-      return pageOrientation === 'portrait' && size.width > size.height || pageOrientation === 'landscape' && size.width < size.height;
-    }
-    return false;
-  }
-  function pageSizeToWidthAndHeight(pageSize) {
-    if (isString(pageSize)) {
-      let size = standardPageSizes[pageSize.toUpperCase()];
-      if (!size) {
-        throw new Error(`Page size ${pageSize} not recognized`);
-      }
-      return {
-        width: size[0],
-        height: size[1]
-      };
-    }
-    return pageSize;
-  }
-
-  // if pageSize.height is set to auto, set the height to infinity so there are no page breaks.
-  if (pageSize && pageSize.height === 'auto') {
-    pageSize.height = Infinity;
-  }
-  let size = pageSizeToWidthAndHeight(pageSize || 'A4');
-  if (isNeedSwapPageSizes(pageOrientation)) {
-    // swap page sizes
-    size = {
-      width: size.height,
-      height: size.width
-    };
-  }
-  size.orientation = size.width > size.height ? 'landscape' : 'portrait';
-  return size;
-}
-function normalizePageMargin(margin) {
-  if (isNumber(margin)) {
-    margin = {
-      left: margin,
-      right: margin,
-      top: margin,
-      bottom: margin
-    };
-  } else if (Array.isArray(margin)) {
-    if (margin.length === 2) {
-      margin = {
-        left: margin[0],
-        top: margin[1],
-        right: margin[0],
-        bottom: margin[1]
-      };
-    } else if (margin.length === 4) {
-      margin = {
-        left: margin[0],
-        top: margin[1],
-        right: margin[2],
-        bottom: margin[3]
-      };
-    } else {
-      throw new Error('Invalid pageMargins definition');
-    }
-  }
-  return margin;
-}
 ;// ./src/TextDecorator.js
 const groupDecorations = line => {
   let groups = [];
@@ -5496,7 +5634,7 @@ const findFont = (fonts, requiredFonts, defaultFont) => {
  * @returns {number}
  */
 const offsetText = (y, inline) => {
-  var newY = y;
+  let newY = y;
   if (inline.sup) {
     newY -= inline.fontSize * 0.75;
   }
@@ -5512,7 +5650,7 @@ class Renderer {
   }
   renderPages(pages) {
     this.pdfDocument._pdfMakePages = pages; // TODO: Why?
-    this.pdfDocument.addPage();
+
     let totalItems = 0;
     if (this.progressCallback) {
       pages.forEach(page => {
@@ -5521,10 +5659,9 @@ class Renderer {
     }
     let renderedItems = 0;
     for (let i = 0; i < pages.length; i++) {
-      if (i > 0) {
-        this._updatePageOrientationInOptions(pages[i]);
-        this.pdfDocument.addPage(this.pdfDocument.options);
-      }
+      this.pdfDocument.addPage({
+        size: [pages[i].pageSize.width, pages[i].pageSize.height]
+      });
       let page = pages[i];
       for (let ii = 0, il = page.items.length; ii < il; ii++) {
         let item = page.items[ii];
@@ -5847,17 +5984,10 @@ class Renderer {
     });
     this.pdfDocument.restore();
   }
-  _updatePageOrientationInOptions(currentPage) {
-    let previousPageOrientation = this.pdfDocument.options.size[0] > this.pdfDocument.options.size[1] ? 'landscape' : 'portrait';
-    if (currentPage.pageSize.orientation !== previousPageOrientation) {
-      let width = this.pdfDocument.options.size[0];
-      let height = this.pdfDocument.options.size[1];
-      this.pdfDocument.options.size = [height, width];
-    }
-  }
 }
 /* harmony default export */ var src_Renderer = (Renderer);
 ;// ./src/Printer.js
+
 
 
 
@@ -5923,6 +6053,12 @@ class PdfPrinter {
           docDefinition.attachments = docDefinition.attachments || {};
           docDefinition.pageMargins = isValue(docDefinition.pageMargins) ? docDefinition.pageMargins : 40;
           docDefinition.patterns = docDefinition.patterns || {};
+          if (docDefinition.header && typeof docDefinition.header !== 'function') {
+            docDefinition.header = convertToDynamicContent(docDefinition.header);
+          }
+          if (docDefinition.footer && typeof docDefinition.footer !== 'function') {
+            docDefinition.footer = convertToDynamicContent(docDefinition.footer);
+          }
           let pageSize = normalizePageSize(docDefinition.pageSize, docDefinition.pageOrientation);
           let pdfOptions = {
             size: [pageSize.width, pageSize.height],
@@ -6288,7 +6424,7 @@ class OutputDocument {
 }
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(6200);
+var FileSaver_min = __webpack_require__(7552);
 ;// ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -54513,7 +54649,7 @@ module.exports = __webpack_require__(5349);
 
 /***/ }),
 
-/***/ 6200:
+/***/ 7552:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
@@ -67187,7 +67323,7 @@ module.exports = LineBreaker;
 
 /***/ }),
 
-/***/ 4098:
+/***/ 6140:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";

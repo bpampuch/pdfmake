@@ -253,7 +253,7 @@ class DocumentContext extends EventEmitter {
 		this.page = this.pages.length - 1;
 		this.initializePage();
 
-		this.emit('pageAdded');
+		this.emit('pageAdded', page);
 
 		return page;
 	}
