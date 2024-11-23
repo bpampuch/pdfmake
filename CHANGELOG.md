@@ -4,6 +4,7 @@
 
 - Fixed speed in Node.js if is fetching URL for image or font redirected
 - Fixed aspect ratio for image with exif orientation tag
+- Fixed font size calculation for watermark if is page orientation is changed
 
 ## 0.3.0-beta.12 - 2024-11-03
 
@@ -50,7 +51,7 @@
 - Allow the document language to be specified
 - Fixed cover image size inside table
 - Fixed "Cannot read properties of undefined (reading 'bottomMost')" if table contains too few rows
-- Fixed invalid source-maps in builded js file
+- Fixed invalid source-maps in built js file
 
 ## 0.3.0-beta.6 - 2023-11-09
 
@@ -76,7 +77,7 @@
 ## 0.3.0-beta.2 - 2022-04-01
 
 - Attachments embedding
-- Support passing headers to request for loading font files and images via URL adresses
+- Support passing headers to request for loading font files and images via URL addresses
 
 ## 0.3.0-beta.1 - 2022-01-01
 
