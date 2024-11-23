@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fixed aspect ratio for image with exif orientation tag
+- Fixed font size calculation for watermark if is page orientation is changed
 
 ## 0.2.15 - 2024-11-02
 

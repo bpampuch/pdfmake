@@ -252,36 +252,40 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 		return;
 	}
 
-	watermark.font = watermark.font || defaultStyle.font || 'Roboto';
-	watermark.fontSize = watermark.fontSize || 'auto';
-	watermark.color = watermark.color || 'black';
-	watermark.opacity = isNumber(watermark.opacity) ? watermark.opacity : 0.6;
-	watermark.bold = watermark.bold || false;
-	watermark.italics = watermark.italics || false;
-	watermark.angle = !isUndefined(watermark.angle) && !isNull(watermark.angle) ? watermark.angle : null;
-
-	if (watermark.angle === null) {
-		watermark.angle = Math.atan2(this.pageSize.height, this.pageSize.width) * -180 / Math.PI;
-	}
-
-	if (watermark.fontSize === 'auto') {
-		watermark.fontSize = getWatermarkFontSize(this.pageSize, watermark, fontProvider);
-	}
-
-	var watermarkObject = {
-		text: watermark.text,
-		font: fontProvider.provideFont(watermark.font, watermark.bold, watermark.italics),
-		fontSize: watermark.fontSize,
-		color: watermark.color,
-		opacity: watermark.opacity,
-		angle: watermark.angle
-	};
-
-	watermarkObject._size = getWatermarkSize(watermark, fontProvider);
-
 	var pages = this.writer.context().pages;
 	for (var i = 0, l = pages.length; i < l; i++) {
-		pages[i].watermark = watermarkObject;
+		pages[i].watermark = getWatermarkObject({ ...watermark }, pages[i].pageSize, fontProvider, defaultStyle);
+	}
+
+	function getWatermarkObject(watermark, pageSize, fontProvider, defaultStyle) {
+		watermark.font = watermark.font || defaultStyle.font || 'Roboto';
+		watermark.fontSize = watermark.fontSize || 'auto';
+		watermark.color = watermark.color || 'black';
+		watermark.opacity = isNumber(watermark.opacity) ? watermark.opacity : 0.6;
+		watermark.bold = watermark.bold || false;
+		watermark.italics = watermark.italics || false;
+		watermark.angle = !isUndefined(watermark.angle) && !isNull(watermark.angle) ? watermark.angle : null;
+
+		if (watermark.angle === null) {
+			watermark.angle = Math.atan2(pageSize.height, pageSize.width) * -180 / Math.PI;
+		}
+
+		if (watermark.fontSize === 'auto') {
+			watermark.fontSize = getWatermarkFontSize(pageSize, watermark, fontProvider);
+		}
+
+		var watermarkObject = {
+			text: watermark.text,
+			font: fontProvider.provideFont(watermark.font, watermark.bold, watermark.italics),
+			fontSize: watermark.fontSize,
+			color: watermark.color,
+			opacity: watermark.opacity,
+			angle: watermark.angle
+		};
+
+		watermarkObject._size = getWatermarkSize(watermark, fontProvider);
+
+		return watermarkObject;
 	}
 
 	function getWatermarkSize(watermark, fontProvider) {
