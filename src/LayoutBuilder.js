@@ -261,36 +261,40 @@ class LayoutBuilder {
 			return;
 		}
 
-		watermark.font = watermark.font || defaultStyle.font || 'Roboto';
-		watermark.fontSize = watermark.fontSize || 'auto';
-		watermark.color = watermark.color || 'black';
-		watermark.opacity = isNumber(watermark.opacity) ? watermark.opacity : 0.6;
-		watermark.bold = watermark.bold || false;
-		watermark.italics = watermark.italics || false;
-		watermark.angle = isValue(watermark.angle) ? watermark.angle : null;
-
-		if (watermark.angle === null) {
-			watermark.angle = Math.atan2(this.pageSize.height, this.pageSize.width) * -180 / Math.PI;
-		}
-
-		if (watermark.fontSize === 'auto') {
-			watermark.fontSize = getWatermarkFontSize(this.pageSize, watermark, pdfDocument);
-		}
-
-		let watermarkObject = {
-			text: watermark.text,
-			font: pdfDocument.provideFont(watermark.font, watermark.bold, watermark.italics),
-			fontSize: watermark.fontSize,
-			color: watermark.color,
-			opacity: watermark.opacity,
-			angle: watermark.angle
-		};
-
-		watermarkObject._size = getWatermarkSize(watermark, pdfDocument);
-
 		let pages = this.writer.context().pages;
 		for (let i = 0, l = pages.length; i < l; i++) {
-			pages[i].watermark = watermarkObject;
+			pages[i].watermark = getWatermarkObject({ ...watermark }, pages[i].pageSize, pdfDocument, defaultStyle);
+		}
+
+		function getWatermarkObject(watermark, pageSize, pdfDocument, defaultStyle) {
+			watermark.font = watermark.font || defaultStyle.font || 'Roboto';
+			watermark.fontSize = watermark.fontSize || 'auto';
+			watermark.color = watermark.color || 'black';
+			watermark.opacity = isNumber(watermark.opacity) ? watermark.opacity : 0.6;
+			watermark.bold = watermark.bold || false;
+			watermark.italics = watermark.italics || false;
+			watermark.angle = isValue(watermark.angle) ? watermark.angle : null;
+
+			if (watermark.angle === null) {
+				watermark.angle = Math.atan2(pageSize.height, pageSize.width) * -180 / Math.PI;
+			}
+
+			if (watermark.fontSize === 'auto') {
+				watermark.fontSize = getWatermarkFontSize(pageSize, watermark, pdfDocument);
+			}
+
+			let watermarkObject = {
+				text: watermark.text,
+				font: pdfDocument.provideFont(watermark.font, watermark.bold, watermark.italics),
+				fontSize: watermark.fontSize,
+				color: watermark.color,
+				opacity: watermark.opacity,
+				angle: watermark.angle
+			};
+
+			watermarkObject._size = getWatermarkSize(watermark, pdfDocument);
+
+			return watermarkObject;
 		}
 
 		function getWatermarkSize(watermark, pdfDocument) {
