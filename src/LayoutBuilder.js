@@ -203,9 +203,7 @@ class LayoutBuilder {
 
 		this.processNode(docStructure);
 		this.addHeadersAndFooters(header, footer);
-		if (watermark != null) {
-			this.addWatermark(watermark, pdfDocument, defaultStyle);
-		}
+		this.addWatermark(watermark, pdfDocument, defaultStyle);
 
 		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
 	}
@@ -276,17 +274,26 @@ class LayoutBuilder {
 	}
 
 	addWatermark(watermark, pdfDocument, defaultStyle) {
-		if (isString(watermark)) {
-			watermark = { 'text': watermark };
-		}
-
-		if (!watermark.text) { // empty watermark text
-			return;
-		}
-
 		let pages = this.writer.context().pages;
 		for (let i = 0, l = pages.length; i < l; i++) {
-			pages[i].watermark = getWatermarkObject({ ...watermark }, pages[i].pageSize, pdfDocument, defaultStyle);
+			let pageWatermark = watermark;
+			if (pages[i].customProperties['watermark'] || pages[i].customProperties['watermark'] === null) {
+				pageWatermark = pages[i].customProperties['watermark'];
+			}
+
+			if (pageWatermark === undefined || pageWatermark === null) {
+				continue;
+			}
+
+			if (isString(pageWatermark)) {
+				pageWatermark = { 'text': pageWatermark };
+			}
+
+			if (!pageWatermark.text) { // empty watermark text
+				continue;
+			}
+
+			pages[i].watermark = getWatermarkObject({ ...pageWatermark }, pages[i].pageSize, pdfDocument, defaultStyle);
 		}
 
 		function getWatermarkObject(watermark, pageSize, pdfDocument, defaultStyle) {

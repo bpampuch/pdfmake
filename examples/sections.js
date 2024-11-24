@@ -8,6 +8,7 @@ var docDefinition = {
 	header: function () { return 'default header'; },
 	footer: function () { return 'default footer'; },
 	background: function() { return { text:'global background', alignment: 'right' }; },
+	watermark: 'default watermark',
 	content: [
 		{
 			section: [
@@ -19,6 +20,7 @@ var docDefinition = {
 			header: function (currentPage, pageCount) { return 'header: ' + currentPage.toString() + ' of ' + pageCount; },
 			footer: function (currentPage, pageCount) { return 'footer: ' + currentPage.toString() + ' of ' + pageCount; },
 			background: function() { return { text:'SECTION 2 background', alignment: 'right' }; },
+			watermark: 'SECTION 2 watermark',
 			pageOrientation: 'landscape',
 			section: [
 				'SECTION 2',
@@ -29,6 +31,7 @@ var docDefinition = {
 			header: null,
 			footer: null,
 			background: null,
+			watermark: null,
 			pageSize: 'A7',
 			pageOrientation: 'portrait',
 			section: [
@@ -37,6 +40,7 @@ var docDefinition = {
 			]
 		},
 		{
+			watermark: 'inherit',
 			pageSize: 'A6',
 			pageOrientation: 'portrait',
 			pageMargins: 5,
@@ -46,6 +50,7 @@ var docDefinition = {
 			]
 		},
 		{
+			watermark: 'watermark for inherit',
 			pageSize: 'A6',
 			pageOrientation: 'landscape',
 			pageMargins: 10,
@@ -55,6 +60,7 @@ var docDefinition = {
 			]
 		},
 		{
+			watermark: 'inherit',
 			pageSize: 'inherit',
 			pageOrientation: 'inherit',
 			pageMargins: 'inherit',
