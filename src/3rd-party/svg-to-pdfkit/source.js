@@ -113,11 +113,13 @@ var SVGtoPDF = function(doc, svg, x, y, options) {
       doc.addContent('/' + name + ' gs');
     }
     function docCreatePattern(group, dx, dy, matrix) {
-      let pattern = new (function PDFPattern() {})();
-      pattern.group = group;
-      pattern.dx = dx;
-      pattern.dy = dy;
-      pattern.matrix = matrix || [1, 0, 0, 1, 0, 0];
+      let pattern = {
+        type: 'PDFPattern',
+        group: group,
+        dx: dx,
+        dy: dy,
+        matrix: matrix || [1, 0, 0, 1, 0, 0],
+      }
       return pattern;
     }
     function docUsePattern(pattern, stroke) {
@@ -160,7 +162,7 @@ var SVGtoPDF = function(doc, svg, x, y, options) {
       doc.addContent('ET');
     }
     function docFillColor(color) {
-      if (color[0].constructor.name === 'PDFPattern') {
+      if (color[0].type === 'PDFPattern') {
         doc.fillOpacity(color[1]);
         docUsePattern(color[0], false);
       } else {
@@ -168,7 +170,7 @@ var SVGtoPDF = function(doc, svg, x, y, options) {
       }
     }
     function docStrokeColor(color) {
-      if (color[0].constructor.name === 'PDFPattern') {
+      if (color[0].type === 'PDFPattern') {
         doc.strokeOpacity(color[1]);
         docUsePattern(color[0], true);
       } else {
