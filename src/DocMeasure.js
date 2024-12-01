@@ -34,6 +34,10 @@ class DocMeasure {
 		return this.measureNode(docStructure);
 	}
 
+	measureBlock(node) {
+		return this.measureNode(node);
+	}
+
 	measureNode(node) {
 		return this.styleStack.auto(node, () => {
 			// TODO: refactor + rethink whether this is the proper way to handle margins

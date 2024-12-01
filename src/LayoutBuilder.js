@@ -218,8 +218,8 @@ class LayoutBuilder {
 
 		if (pageBackground) {
 			this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
-			pageBackground = this.docPreprocessor.preprocessDocument(pageBackground);
-			this.processNode(this.docMeasure.measureDocument(pageBackground));
+			pageBackground = this.docPreprocessor.preprocessBlock(pageBackground);
+			this.processNode(this.docMeasure.measureBlock(pageBackground));
 			this.writer.commitUnbreakableBlock(0, 0);
 			context.backgroundLength[context.page] += pageBackground.positions.length;
 		}
@@ -247,8 +247,8 @@ class LayoutBuilder {
 			if (node) {
 				let sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.writer.context().getCurrentPage().pageMargins);
 				this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
-				node = this.docPreprocessor.preprocessDocument(node);
-				this.processNode(this.docMeasure.measureDocument(node));
+				node = this.docPreprocessor.preprocessBlock(node);
+				this.processNode(this.docMeasure.measureBlock(node));
 				this.writer.commitUnbreakableBlock(sizes.x, sizes.y);
 			}
 		}

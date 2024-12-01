@@ -20,10 +20,17 @@ class DocPreprocessor {
 		this.parentNode = null;
 		this.tocs = [];
 		this.nodeReferences = [];
-		return this.preprocessNode(docStructure);
+		return this.preprocessNode(docStructure, true);
 	}
 
-	preprocessNode(node) {
+	preprocessBlock(node) {
+		this.parentNode = null;
+		this.tocs = [];
+		this.nodeReferences = [];
+		return this.preprocessNode(node);
+	}
+
+	preprocessNode(node, isSectionAllowed = false) {
 		// expand shortcuts and casting values
 		if (Array.isArray(node)) {
 			node = { stack: node };
@@ -34,12 +41,15 @@ class DocPreprocessor {
 		}
 
 		if (node.section) {
-			// TODO: add a check that section node is in root
+			if (!isSectionAllowed) {
+				throw new Error(`Incorrect document structure, section node is only allowed at the root level of document structure: ${stringifyNode(node)}`);
+			}
+
 			return this.preprocessSection(node);
 		} else if (node.columns) {
 			return this.preprocessColumns(node);
 		} else if (node.stack) {
-			return this.preprocessVerticalContainer(node);
+			return this.preprocessVerticalContainer(node, isSectionAllowed);
 		} else if (node.ul) {
 			return this.preprocessList(node);
 		} else if (node.ol) {
@@ -83,11 +93,11 @@ class DocPreprocessor {
 		return node;
 	}
 
-	preprocessVerticalContainer(node) {
+	preprocessVerticalContainer(node, isSectionAllowed) {
 		let items = node.stack;
 
 		for (let i = 0, l = items.length; i < l; i++) {
-			items[i] = this.preprocessNode(items[i]);
+			items[i] = this.preprocessNode(items[i], isSectionAllowed);
 		}
 
 		return node;
