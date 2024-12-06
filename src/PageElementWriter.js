@@ -83,11 +83,11 @@ class PageElementWriter extends ElementWriter {
 		});
 	}
 
-	addPage(pageSize, pageOrientation, pageMargin) {
+	addPage(pageSize, pageOrientation, pageMargin, customProperties = {}) {
 		let prevPage = this.page;
 		let prevY = this.y;
 
-		this.context().addPage(normalizePageSize(pageSize, pageOrientation), normalizePageMargin(pageMargin));
+		this.context().addPage(normalizePageSize(pageSize, pageOrientation), normalizePageMargin(pageMargin), customProperties);
 
 		this.emit('pageChanged', {
 			prevPage: prevPage,
