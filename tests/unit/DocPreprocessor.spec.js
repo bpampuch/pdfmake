@@ -78,28 +78,28 @@ describe('DocPreprocessor', function () {
 
 		it('should normalize text', function () {
 			var ddContent = [
-				{text: 'Abc123'},
-				{text: '12'},
-				{text: '12.34'},
-				{text: '0'},
-				{text: ''},
-				{text: new String('Abcdef')},
-				{text: 56},
-				{text: 56.78},
-				{text: 0},
-				{text: true},
-				{text: false},
-				{text: 'true'},
-				{text: 'false'},
-				{text: []}, // is text with nested texts
-				{text: '[]'},
-				{text: [1, 2, 3]}, // is text with nested texts
-				{text: {}},
-				{text: '{}'},
-				{text: null},
-				{text: 'null'},
-				{text: undefined},
-				{text: 'undefined'},
+				{ text: 'Abc123' },
+				{ text: '12' },
+				{ text: '12.34' },
+				{ text: '0' },
+				{ text: '' },
+				{ text: new String('Abcdef') },
+				{ text: 56 },
+				{ text: 56.78 },
+				{ text: 0 },
+				{ text: true },
+				{ text: false },
+				{ text: 'true' },
+				{ text: 'false' },
+				{ text: [] }, // is text with nested texts
+				{ text: '[]' },
+				{ text: [1, 2, 3] }, // is text with nested texts
+				{ text: {} },
+				{ text: '{}' },
+				{ text: null },
+				{ text: 'null' },
+				{ text: undefined },
+				{ text: 'undefined' },
 			];
 			var result = docPreprocessor.preprocessNode(ddContent);
 
@@ -137,13 +137,13 @@ describe('DocPreprocessor', function () {
 		it('should replace tab as 4 spaces', function () {
 			var ddContent = [
 				'a\tb',
-				{text: 'a\tb'},
+				{ text: 'a\tb' },
 				'a\tb\tc',
-				{text: 'a\tb\tc'},
+				{ text: 'a\tb\tc' },
 				{
 					text: [
 						'A\tB',
-						{text: 'A\tB'},
+						{ text: 'A\tB' },
 					]
 				}
 			];
@@ -187,7 +187,8 @@ describe('DocPreprocessor', function () {
 		it('should support simple toc on begin of document', function () {
 			var ddContent = [
 				{
-					toc: {}
+					toc: {
+					}
 				},
 				{
 					text: 'Header 1',
@@ -220,7 +221,8 @@ describe('DocPreprocessor', function () {
 					tocItem: true
 				},
 				{
-					toc: {}
+					toc: {
+					}
 				},
 			];
 			var result = docPreprocessor.preprocessDocument(ddContent);
@@ -275,7 +277,7 @@ describe('DocPreprocessor', function () {
 				{
 					table: {
 						body: [
-							[{section: []}],
+							[{ section: [] }],
 						]
 					}
 				},
