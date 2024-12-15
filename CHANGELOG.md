@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.13 - 2024-12-15
 
 - Update pdfkit to 0.15.2
 - Fixed speed in Node.js if is fetching URL for image or font redirected
