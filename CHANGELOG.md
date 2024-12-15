@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Update pdfkit to 0.15.2
 - Fixed aspect ratio for image with exif orientation tag
 - Fixed font size calculation for watermark if is page orientation is changed
 
