@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.16 - 2024-12-15
 
 - Update pdfkit to 0.15.2
 - Fixed aspect ratio for image with exif orientation tag
