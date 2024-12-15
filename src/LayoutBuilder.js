@@ -7,7 +7,7 @@ import TableProcessor from './TableProcessor';
 import Line from './Line';
 import { isString, isValue, isNumber } from './helpers/variableType';
 import { stringifyNode, getNodeId } from './helpers/node';
-import { pack, offsetVector } from './helpers/tools';
+import { pack, offsetVector, convertToDynamicContent } from './helpers/tools';
 import TextInlines from './TextInlines';
 import StyleContextStack from './StyleContextStack';
 
@@ -168,27 +168,42 @@ class LayoutBuilder {
 		watermark
 	) {
 
+		const isNecessaryAddFirstPage = (docStructure) => {
+			if (docStructure.stack && docStructure.stack.length > 0 && docStructure.stack[0].section) {
+				return false;
+			} else if (docStructure.section) {
+				return false;
+			}
+
+			return true;
+		};
+
 		this.linearNodeList = [];
 		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
 		this.writer = new PageElementWriter(new DocumentContext());
 
-		this.writer.context().addListener('pageAdded', () => {
-			this.addBackground(background);
+		this.writer.context().addListener('pageAdded', (page) => {
+			let backgroundGetter = background;
+			if (page.customProperties['background'] || page.customProperties['background'] === null) {
+				backgroundGetter = page.customProperties['background'];
+			}
+
+			this.addBackground(backgroundGetter);
 		});
 
-		this.writer.addPage(
-			this.pageSize,
-			null,
-			this.pageMargins
-		);
+		if (isNecessaryAddFirstPage(docStructure)) {
+			this.writer.addPage(
+				this.pageSize,
+				null,
+				this.pageMargins
+			);
+		}
 
 		this.processNode(docStructure);
 		this.addHeadersAndFooters(header, footer);
-		if (watermark != null) {
-			this.addWatermark(watermark, pdfDocument, defaultStyle);
-		}
+		this.addWatermark(watermark, pdfDocument, defaultStyle);
 
 		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
 	}
@@ -203,26 +218,37 @@ class LayoutBuilder {
 
 		if (pageBackground) {
 			this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
-			pageBackground = this.docPreprocessor.preprocessDocument(pageBackground);
-			this.processNode(this.docMeasure.measureDocument(pageBackground));
+			pageBackground = this.docPreprocessor.preprocessBlock(pageBackground);
+			this.processNode(this.docMeasure.measureBlock(pageBackground));
 			this.writer.commitUnbreakableBlock(0, 0);
 			context.backgroundLength[context.page] += pageBackground.positions.length;
 		}
 	}
 
-	addDynamicRepeatable(nodeGetter, sizeFunction) {
+	addDynamicRepeatable(nodeGetter, sizeFunction, customPropertyName) {
 		let pages = this.writer.context().pages;
 
 		for (let pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
 			this.writer.context().page = pageIndex;
 
-			let node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
+			let customProperties = this.writer.context().getCurrentPage().customProperties;
+
+			let pageNodeGetter = nodeGetter;
+			if (customProperties[customPropertyName] || customProperties[customPropertyName] === null) {
+				pageNodeGetter = customProperties[customPropertyName];
+			}
+
+			if ((typeof pageNodeGetter === 'undefined') || (pageNodeGetter === null)) {
+				continue;
+			}
+
+			let node = pageNodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
 
 			if (node) {
 				let sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.writer.context().getCurrentPage().pageMargins);
 				this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
-				node = this.docPreprocessor.preprocessDocument(node);
-				this.processNode(this.docMeasure.measureDocument(node));
+				node = this.docPreprocessor.preprocessBlock(node);
+				this.processNode(this.docMeasure.measureBlock(node));
 				this.writer.commitUnbreakableBlock(sizes.x, sizes.y);
 			}
 		}
@@ -243,27 +269,31 @@ class LayoutBuilder {
 			height: pageMargins.bottom
 		});
 
-		if (header) {
-			this.addDynamicRepeatable(header, headerSizeFct);
-		}
-
-		if (footer) {
-			this.addDynamicRepeatable(footer, footerSizeFct);
-		}
+		this.addDynamicRepeatable(header, headerSizeFct, 'header');
+		this.addDynamicRepeatable(footer, footerSizeFct, 'footer');
 	}
 
 	addWatermark(watermark, pdfDocument, defaultStyle) {
-		if (isString(watermark)) {
-			watermark = { 'text': watermark };
-		}
-
-		if (!watermark.text) { // empty watermark text
-			return;
-		}
-
 		let pages = this.writer.context().pages;
 		for (let i = 0, l = pages.length; i < l; i++) {
-			pages[i].watermark = getWatermarkObject({ ...watermark }, pages[i].pageSize, pdfDocument, defaultStyle);
+			let pageWatermark = watermark;
+			if (pages[i].customProperties['watermark'] || pages[i].customProperties['watermark'] === null) {
+				pageWatermark = pages[i].customProperties['watermark'];
+			}
+
+			if (pageWatermark === undefined || pageWatermark === null) {
+				continue;
+			}
+
+			if (isString(pageWatermark)) {
+				pageWatermark = { 'text': pageWatermark };
+			}
+
+			if (!pageWatermark.text) { // empty watermark text
+				continue;
+			}
+
+			pages[i].watermark = getWatermarkObject({ ...pageWatermark }, pages[i].pageSize, pdfDocument, defaultStyle);
 		}
 
 		function getWatermarkObject(watermark, pageSize, pdfDocument, defaultStyle) {
@@ -453,6 +483,8 @@ class LayoutBuilder {
 
 			if (node.stack) {
 				this.processVerticalContainer(node);
+			} else if (node.section) {
+				this.processSection(node);
 			} else if (node.columns) {
 				this.processColumns(node);
 			} else if (node.ul) {
@@ -497,6 +529,75 @@ class LayoutBuilder {
 
 			//TODO: paragraph gap
 		}, this);
+	}
+
+	// section
+	processSection(sectionNode) {
+		// TODO: properties
+
+		let page = this.writer.context().getCurrentPage();
+		if (!page || (page && page.items.length)) { // move to new empty page
+			// page definition inherit from current page
+			if (sectionNode.pageSize === 'inherit') {
+				sectionNode.pageSize = page ? { width: page.pageSize.width, height: page.pageSize.height } : undefined;
+			}
+			if (sectionNode.pageOrientation === 'inherit') {
+				sectionNode.pageOrientation = page ? page.pageSize.orientation : undefined;
+			}
+			if (sectionNode.pageMargins === 'inherit') {
+				sectionNode.pageMargins = page ? page.pageMargins : undefined;
+			}
+
+			if (sectionNode.header === 'inherit') {
+				sectionNode.header = page ? page.customProperties.header : undefined;
+			}
+
+			if (sectionNode.footer === 'inherit') {
+				sectionNode.footer = page ? page.customProperties.footer : undefined;
+			}
+
+			if (sectionNode.background === 'inherit') {
+				sectionNode.background = page ? page.customProperties.background : undefined;
+			}
+
+			if (sectionNode.watermark === 'inherit') {
+				sectionNode.watermark = page ? page.customProperties.watermark : undefined;
+			}
+
+			if (sectionNode.header && typeof sectionNode.header !== 'function' && sectionNode.header !== null) {
+				sectionNode.header = convertToDynamicContent(sectionNode.header);
+			}
+
+			if (sectionNode.footer && typeof sectionNode.footer !== 'function' && sectionNode.footer !== null) {
+				sectionNode.footer = convertToDynamicContent(sectionNode.footer);
+			}
+
+			let customProperties = {};
+			if (typeof sectionNode.header !== 'undefined') {
+				customProperties.header = sectionNode.header;
+			}
+
+			if (typeof sectionNode.footer !== 'undefined') {
+				customProperties.footer = sectionNode.footer;
+			}
+
+			if (typeof sectionNode.background !== 'undefined') {
+				customProperties.background = sectionNode.background;
+			}
+
+			if (typeof sectionNode.watermark !== 'undefined') {
+				customProperties.watermark = sectionNode.watermark;
+			}
+
+			this.writer.addPage(
+				sectionNode.pageSize || this.pageSize,
+				sectionNode.pageOrientation,
+				sectionNode.pageMargins || this.pageMargins,
+				customProperties
+			);
+		}
+
+		this.processNode(sectionNode.section);
 	}
 
 	// columns

@@ -65,6 +65,10 @@ class StyleContextStack {
 			return 0;
 		}
 
+		if (typeof item.section !== 'undefined') { // section node not support style overrides
+			return 0;
+		}
+
 		let styleNames = [];
 
 		if (item.style) {
