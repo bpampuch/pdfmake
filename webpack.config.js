@@ -1,4 +1,5 @@
 var path = require('path');
+var fs = require('fs');
 var TerserPlugin = require('terser-webpack-plugin');
 var StringReplacePlugin = require("string-replace-webpack-plugin");
 var webpack = require('webpack');
@@ -46,6 +47,24 @@ module.exports = {
 								pattern: "import fs from 'fs';",
 								replacement: function () {
 									return "var fs = require('fs');";
+								}
+							}
+						]
+					})
+				}
+			},
+			// transpile to inline only required file
+			{
+				enforce: 'pre',
+				test: /pdfkit[/\\]js[/\\]/,
+				use: {
+					loader: StringReplacePlugin.replace({
+						replacements: [
+							{
+								pattern: "fs.readFileSync(`${__dirname}/data/sRGB_IEC61966_2_1.icc`)",
+								replacement: function () {
+									const data = fs.readFileSync('node_modules/pdfkit/js/data/sRGB_IEC61966_2_1.icc');
+									return `Buffer("` + data.toString('base64') + `","base64");`;
 								}
 							}
 						]
@@ -108,14 +127,6 @@ module.exports = {
 							}
 						]
 					})
-				}
-			},
-
-			{
-				enforce: 'post',
-				test: /pdfkit[/\\]js[/\\]pdfkit.es.js$/,
-				use: {
-					loader: "transform-loader?brfs"
 				}
 			},
 			{
