@@ -6,6 +6,13 @@ var pkg = require('./package.json');
 
 var banner = '/*! ' + pkg.name + ' v' + pkg.version + ', @license ' + pkg.license + ', @link ' + pkg.homepage + ' */';
 
+var supportedBrowsers = {
+	"chrome": "109",
+	"edge": "109",
+	"firefox": "102",
+	"safari": "14"
+};
+
 module.exports = {
 	mode: 'production',
 	entry: {
@@ -46,12 +53,7 @@ module.exports = {
 							[
 								"@babel/preset-env",
 								{
-									targets: {
-										"chrome": "109",
-										"edge": "109",
-										"firefox": "102",
-										"safari": "14"
-									},
+									targets: supportedBrowsers,
 									modules: false,
 									useBuiltIns: 'usage',
 									// TODO: after fix in babel remove corejs version and remove core-js dependency in package.json
@@ -95,9 +97,7 @@ module.exports = {
 							[
 								"@babel/preset-env",
 								{
-									targets: {
-										"ie": "11"
-									},
+									targets: supportedBrowsers,
 									modules: false,
 									useBuiltIns: 'usage',
 									// TODO: after fix in babel remove corejs version and remove core-js dependency in package.json
