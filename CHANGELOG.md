@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.14 - 2024-12-23
 
 - Fix big size pdfmake bundle for browser
 
