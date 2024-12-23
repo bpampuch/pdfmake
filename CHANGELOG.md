@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fix big size pdfmake bundle for browser
+
 ## 0.2.16 - 2024-12-15
 
 - Update pdfkit to 0.15.2
