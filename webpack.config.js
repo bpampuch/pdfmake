@@ -155,27 +155,6 @@ module.exports = {
 					})
 				}
 			},
-			{
-				enforce: 'post',
-				test: /fontkit[/\\]index.js$/,
-				use: {
-					loader: "transform-loader?brfs"
-				}
-			},
-			{
-				enforce: 'post',
-				test: /unicode-properties[/\\]index.js$/,
-				use: {
-					loader: "transform-loader?brfs"
-				}
-			},
-			{
-				enforce: 'post',
-				test: /linebreak[/\\]src[/\\]linebreaker.js/,
-				use: {
-					loader: "transform-loader?brfs"
-				}
-			}
 		]
 	},
 	optimization: {
