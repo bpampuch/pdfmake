@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a potential issue in the minimized library when detecting the orientation of JPEG images
+
 ## 0.2.17 - 2024-12-23
 
 - Fix big size pdfmake bundle for browser

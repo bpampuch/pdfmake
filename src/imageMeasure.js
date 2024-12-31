@@ -28,11 +28,9 @@ ImageMeasure.prototype.measureImage = function (src) {
 
 	var imageSize = { width: image.width, height: image.height };
 
-	if (typeof image === 'object' && image.constructor.name === 'JPEG') {
-		// If EXIF orientation calls for it, swap width and height
-		if (image.orientation > 4) {
-			imageSize = { width: image.height, height: image.width };
-		}
+	// If EXIF orientation calls for it, swap width and height
+	if (image.orientation > 4) {
+		imageSize = { width: image.height, height: image.width };
 	}
 
 	return imageSize;
