@@ -4,6 +4,7 @@
 
 - Reverted to the original `pdfkit` package, moving away from `@foliojs-fork`
 - Update pdfkit to 0.16.0
+- Fixed a potential issue in the minimized library when detecting the orientation of JPEG images
 
 ## 0.3.0-beta.14 - 2024-12-23
 
