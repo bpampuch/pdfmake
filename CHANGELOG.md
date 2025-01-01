@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Update pdfkit
 - Fixed a potential issue in the minimized library when detecting the orientation of JPEG images
 
 ## 0.2.17 - 2024-12-23
