@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.15 - 2025-01-01
 
 - Reverted to the original `pdfkit` package, moving away from `@foliojs-fork`
 - Update pdfkit to 0.16.0
