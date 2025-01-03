@@ -1,4 +1,4 @@
-import PDFKit from '@foliojs-fork/pdfkit';
+import PDFKit from 'pdfkit';
 
 const typeName = (bold, italics) => {
 	let type = 'normal';

@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Fixed URL resolving for same URL in browser
+- Fixed sharing URL resolver for not available URLs
+
+## 0.3.0-beta.15 - 2025-01-01
+
+- Reverted to the original `pdfkit` package, moving away from `@foliojs-fork`
+- Update pdfkit to 0.16.0
+- Fixed a potential issue in the minimized library when detecting the orientation of JPEG images
+
+## 0.3.0-beta.14 - 2024-12-23
+
+- Fixed big size pdfmake bundle for browser
+
+## 0.3.0-beta.13 - 2024-12-15
+
+- Update pdfkit to 0.15.2
 - Fixed speed in Node.js if is fetching URL for image or font redirected
 - Fixed aspect ratio for image with exif orientation tag
 - Fixed font size calculation for watermark if is page orientation is changed

@@ -18,7 +18,7 @@ class pdfmake {
 		options.progressCallback = this.progressCallback;
 		options.tableLayouts = this.tableLayouts;
 
-		let printer = new Printer(this.fonts, this.virtualfs, this.urlResolver);
+		let printer = new Printer(this.fonts, this.virtualfs, this.urlResolver());
 		const pdfDocumentPromise = printer.createPdfKitDocument(docDefinition, options);
 
 		return this._transformToDocument(pdfDocumentPromise);

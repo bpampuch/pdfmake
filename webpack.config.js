@@ -1,10 +1,18 @@
 var path = require('path');
+var fs = require('fs');
 var TerserPlugin = require('terser-webpack-plugin');
 var StringReplacePlugin = require("string-replace-webpack-plugin");
 var webpack = require('webpack');
 var pkg = require('./package.json');
 
 var banner = '/*! ' + pkg.name + ' v' + pkg.version + ', @license ' + pkg.license + ', @link ' + pkg.homepage + ' */';
+
+var supportedBrowsers = {
+	"chrome": "109",
+	"edge": "109",
+	"firefox": "102",
+	"safari": "14"
+};
 
 module.exports = {
 	mode: 'production',
@@ -19,7 +27,6 @@ module.exports = {
 		// Workaround https://github.com/webpack/webpack/issues/6642 until https://github.com/webpack/webpack/issues/6525 lands.
 		globalObject: `typeof self !== 'undefined' ? self : this`
 	},
-	target: ['web', 'es5'], // For Internet Explorer 11 support
 	resolve: {
 		alias: {
 			fs: path.join(__dirname, './src/browser-extensions/virtual-fs-cjs.js')
@@ -46,12 +53,7 @@ module.exports = {
 							[
 								"@babel/preset-env",
 								{
-									targets: {
-										"chrome": "109",
-										"edge": "109",
-										"firefox": "102",
-										"safari": "14"
-									},
+									targets: supportedBrowsers,
 									modules: false,
 									useBuiltIns: 'usage',
 									// TODO: after fix in babel remove corejs version and remove core-js dependency in package.json
@@ -80,6 +82,24 @@ module.exports = {
 					})
 				}
 			},
+			// transpile to inline only required file
+			{
+				enforce: 'pre',
+				test: /pdfkit[/\\]js[/\\]/,
+				use: {
+					loader: StringReplacePlugin.replace({
+						replacements: [
+							{
+								pattern: "fs.readFileSync(`${__dirname}/data/sRGB_IEC61966_2_1.icc`)",
+								replacement: function () {
+									const data = fs.readFileSync('node_modules/pdfkit/js/data/sRGB_IEC61966_2_1.icc');
+									return `Buffer("` + data.toString('base64') + `","base64");`;
+								}
+							}
+						]
+					})
+				}
+			},
 			{
 				enforce: "pre",
 				test: /\.(cjs|js)$/,
@@ -95,9 +115,7 @@ module.exports = {
 							[
 								"@babel/preset-env",
 								{
-									targets: {
-										"ie": "11"
-									},
+									targets: supportedBrowsers,
 									modules: false,
 									useBuiltIns: 'usage',
 									// TODO: after fix in babel remove corejs version and remove core-js dependency in package.json
@@ -137,35 +155,6 @@ module.exports = {
 					})
 				}
 			},
-
-			{
-				enforce: 'post',
-				test: /pdfkit[/\\]js[/\\]pdfkit.es.js$/,
-				use: {
-					loader: "transform-loader?brfs"
-				}
-			},
-			{
-				enforce: 'post',
-				test: /fontkit[/\\]index.js$/,
-				use: {
-					loader: "transform-loader?brfs"
-				}
-			},
-			{
-				enforce: 'post',
-				test: /unicode-properties[/\\]index.js$/,
-				use: {
-					loader: "transform-loader?brfs"
-				}
-			},
-			{
-				enforce: 'post',
-				test: /linebreak[/\\]src[/\\]linebreaker.js/,
-				use: {
-					loader: "transform-loader?brfs"
-				}
-			}
 		]
 	},
 	optimization: {

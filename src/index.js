@@ -5,7 +5,7 @@ const URLResolver = require('./URLResolver').default;
 class pdfmake extends pdfmakeBase {
 	constructor() {
 		super();
-		this.urlResolver = new URLResolver(this.virtualfs);
+		this.urlResolver = () => new URLResolver(this.virtualfs);
 	}
 
 	_transformToDocument(doc) {
