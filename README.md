@@ -3,7 +3,7 @@
 [githubactions_img]: https://github.com/bpampuch/pdfmake/actions/workflows/node.js.yml/badge.svg?branch=0.2
 [githubactions_url]: https://github.com/bpampuch/pdfmake/actions
 
-[github_img]: https://img.shields.io/github/release/bpampuch/pdfmake.svg
+[github_img]: https://img.shields.io/github/release/bpampuch/pdfmake.svg?colorB=0E7FBF
 [github_url]: https://github.com/bpampuch/pdfmake/releases/latest
 
 [npm_img]: https://img.shields.io/npm/v/pdfmake.svg?colorB=0E7FBF
