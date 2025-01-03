@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fixed URL resolving for same URL in browser
+- Fixed sharing URL resolver for not available URLs
 
 ## 0.3.0-beta.15 - 2025-01-01
 

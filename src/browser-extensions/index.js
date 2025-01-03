@@ -21,7 +21,7 @@ let defaultClientFonts = {
 class pdfmake extends pdfmakeBase {
 	constructor() {
 		super();
-		this.urlResolver = new URLBrowserResolver(this.virtualfs);
+		this.urlResolver = () => new URLBrowserResolver(this.virtualfs);
 		this.fonts = defaultClientFonts;
 	}
 
