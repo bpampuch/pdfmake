@@ -34,12 +34,18 @@ class DocMeasure {
 		return this.measureNode(docStructure);
 	}
 
+	measureBlock(node) {
+		return this.measureNode(node);
+	}
+
 	measureNode(node) {
 		return this.styleStack.auto(node, () => {
 			// TODO: refactor + rethink whether this is the proper way to handle margins
 			node._margin = getNodeMargin(node, this.styleStack);
 
-			if (node.columns) {
+			if (node.section) {
+				return extendMargins(this.measureSection(node));
+			} else if (node.columns) {
 				return extendMargins(this.measureColumns(node));
 			} else if (node.stack) {
 				return extendMargins(this.measureVerticalContainer(node));
@@ -461,6 +467,14 @@ class DocMeasure {
 				item.listMarker._minWidth = item.listMarker._maxWidth = node._gapSize.width;
 			}
 		}
+
+		return node;
+	}
+
+	measureSection(node) {
+		// TODO: properties
+
+		node.section = this.measureNode(node.section);
 
 		return node;
 	}
