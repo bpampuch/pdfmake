@@ -1,6 +1,6 @@
 # pdfmake [![Node.js CI][githubactions_img]][githubactions_url] [![GitHub][github_img]][github_url] [![npm][npm_img]][npm_url] [![Bower][bower_img]][bower_url] [![Packagist][packagist_img]][packagist_url] [![CDNJS][cdnjs_img]][cndjs_url]
 
-[githubactions_img]: https://github.com/bpampuch/pdfmake/workflows/Node.js%20CI/badge.svg?branch=master
+[githubactions_img]: https://github.com/bpampuch/pdfmake/actions/workflows/node.js.yml/badge.svg?branch=master
 [githubactions_url]: https://github.com/bpampuch/pdfmake/actions
 
 [github_img]: https://img.shields.io/github/release/bpampuch/pdfmake.svg
