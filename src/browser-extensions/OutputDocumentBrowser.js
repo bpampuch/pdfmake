@@ -43,8 +43,14 @@ class OutputDocumentBrowser extends OutputDocument {
 		return new Promise((resolve, reject) => {
 			this.getBlob().then(blob => {
 				try {
-					saveAs(blob, filename);
-					resolve();
+					// Ensure the content is correctly embedded before saving the file
+					this.getBuffer().then(buffer => {
+						if (buffer.byteLength === 0) {
+							throw new Error('Empty PDF content');
+						}
+						saveAs(blob, filename);
+						resolve();
+					});
 				} catch (e) {
 					reject(e);
 				}

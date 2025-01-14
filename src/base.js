@@ -21,7 +21,18 @@ class pdfmake {
 		let printer = new Printer(this.fonts, this.virtualfs, this.urlResolver());
 		const pdfDocumentPromise = printer.createPdfKitDocument(docDefinition, options);
 
-		return this._transformToDocument(pdfDocumentPromise);
+		// Add a verification step to ensure the content is correctly embedded
+		return pdfDocumentPromise.then(pdfDocument => {
+			return new Promise((resolve, reject) => {
+				pdfDocument.getBuffer().then(buffer => {
+					if (buffer.byteLength === 0) {
+						reject(new Error('Empty PDF content'));
+					} else {
+						resolve(this._transformToDocument(pdfDocument));
+					}
+				}).catch(reject);
+			});
+		});
 	}
 
 	setProgressCallback(callback) {

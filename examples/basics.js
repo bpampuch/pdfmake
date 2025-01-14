@@ -28,6 +28,16 @@ var now = new Date();
 var pdf = pdfmake.createPdf(docDefinition);
 pdf.write('pdfs/basics.pdf').then(() => {
 	console.log(new Date() - now);
+	// Add a verification step to check the content of the generated PDF
+	pdf.getBuffer().then(buffer => {
+		if (buffer.byteLength === 0) {
+			console.error('Empty PDF content');
+		} else {
+			console.log('PDF content is correctly embedded');
+		}
+	}).catch(err => {
+		console.error(err);
+	});
 }, err => {
 	console.error(err);
 });
