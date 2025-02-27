@@ -13,7 +13,7 @@ const typeName = (bold, italics) => {
 };
 
 class PDFDocument extends PDFKit {
-	constructor(fonts = {}, images = {}, patterns = {}, attachments = {}, options = {}, virtualfs = null) {
+	constructor(fonts = {}, images = {}, patterns = {}, attachments = {}, options = {}, virtualfs = null, subsetFonts = true) {
 		super(options);
 
 		this.fonts = {};
@@ -43,6 +43,7 @@ class PDFDocument extends PDFKit {
 		this.images = images;
 		this.attachments = attachments;
 		this.virtualfs = virtualfs;
+		this.subsetFonts = subsetFonts; //TODO maybe automatically set this flag
 	}
 
 	getFontType(bold, italics) {
@@ -76,7 +77,9 @@ class PDFDocument extends PDFKit {
 				def[0] = this.virtualfs.readFileSync(def[0]);
 			}
 
+
 			this.fontCache[familyName][type] = this.font(...def)._font;
+			
 		}
 
 		return this.fontCache[familyName][type];
@@ -170,5 +173,6 @@ class PDFDocument extends PDFKit {
 		printActionRef.end();
 	}
 }
+
 
 export default PDFDocument;

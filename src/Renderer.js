@@ -41,6 +41,7 @@ class Renderer {
 	constructor(pdfDocument, progressCallback) {
 		this.pdfDocument = pdfDocument;
 		this.progressCallback = progressCallback;
+		this.hasFormInit = false;
 	}
 
 	renderPages(pages) {
@@ -73,6 +74,9 @@ class Renderer {
 						break;
 					case 'svg':
 						this.renderSVG(item.item);
+						break;
+					case 'acroform': 
+						this.renderAcroForm(item.item);
 						break;
 					case 'attachment':
 						this.renderAttachment(item.item);
@@ -143,43 +147,52 @@ class Renderer {
 			let inline = line.inlines[i];
 			let shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
 
-			if (inline._pageNodeRef) {
-				preparePageNodeRefLine(inline._pageNodeRef, inline);
-			}
+			if (inline.acroform) {
+				//TODO positioning issue
+				let shiftedY = y + (lineHeight - ((inline.font.ascender / 1000) * inline.height) - descent);
+				inline.y = shiftedY;
+				inline.x = x + inline.x;
 
-			let options = {
-				lineBreak: false,
-				textWidth: inline.width,
-				characterSpacing: inline.characterSpacing,
-				wordCount: 1,
-				link: inline.link
-			};
+				this.renderAcroForm(inline);
+			} else {
+				if (inline._pageNodeRef) {
+					preparePageNodeRefLine(inline._pageNodeRef, inline);
+				}
 
-			if (inline.linkToDestination) {
-				options.goTo = inline.linkToDestination;
-			}
+				let options = {
+					lineBreak: false,
+					textWidth: inline.width,
+					characterSpacing: inline.characterSpacing,
+					wordCount: 1,
+					link: inline.link
+				};
 
-			if (line.id && i === 0) {
-				options.destination = line.id;
-			}
+				if (inline.linkToDestination) {
+					options.goTo = inline.linkToDestination;
+				}
 
-			if (inline.fontFeatures) {
-				options.features = inline.fontFeatures;
-			}
+				if (line.id && i === 0) {
+					options.destination = line.id;
+				}
 
-			let opacity = isNumber(inline.opacity) ? inline.opacity : 1;
-			this.pdfDocument.opacity(opacity);
-			this.pdfDocument.fill(inline.color || 'black');
+				if (inline.fontFeatures) {
+					options.features = inline.fontFeatures;
+				}
 
-			this.pdfDocument._font = inline.font;
-			this.pdfDocument.fontSize(inline.fontSize);
+				let opacity = isNumber(inline.opacity) ? inline.opacity : 1;
+				this.pdfDocument.opacity(opacity);
+				this.pdfDocument.fill(inline.color || 'black');
 
-			let shiftedY = offsetText(y + shiftToBaseline, inline);
-			this.pdfDocument.text(inline.text, x + inline.x, shiftedY, options);
+				this.pdfDocument._font = inline.font;
+				this.pdfDocument.fontSize(inline.fontSize);
 
-			if (inline.linkToPage) {
-				this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
-				this.pdfDocument.annotate(x + inline.x, shiftedY, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
+				let shiftedY = offsetText(y + shiftToBaseline, inline);
+				this.pdfDocument.text(inline.text, x + inline.x, shiftedY, options);
+
+				if (inline.linkToPage) {
+					this.pdfDocument.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
+					this.pdfDocument.annotate(x + inline.x, shiftedY, inline.width, inline.height, { Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null] });
+				}
 			}
 		}
 
@@ -278,6 +291,81 @@ class Renderer {
 			this.pdfDocument.strokeColor(vector.lineColor || 'black', strokeOpacity);
 			this.pdfDocument.stroke();
 		}
+	}
+
+	renderAcroForm(node) {
+		const { font, bold, italics } = node;
+		let { type, options } = node.acroform;
+
+		if (options == null) {
+			options = {};
+		}
+
+		if (this.hasFormInit == false)  { 
+			this.pdfDocument.initForm();
+			this.hasFormInit = true;
+		}
+
+		const setFont = () => {
+			if (typeof font === "string") {
+				this.pdfDocument._font = this.pdfDocument.provideFont(font, bold, italics);
+			} else {
+				this.pdfDocument._font = font; 
+			}
+			// if (this.hasFormInit) {
+			// 	this.pdfDocument.addFontToAcroFormDict();
+			// }
+		};
+
+		const id = node.acroform.id;
+
+		if (id == null) {
+			throw new Error(`Acroform field ${id} requires an ID`);
+		}
+
+		let width = node.width || node.availableWidth || (!isNaN(node._calcWidth) && node._calcWidth) || node._minWidth; 
+		if (node.width == '*') {
+			width = node.availableWidth;
+		}
+
+		if (width == null) {
+			throw new Error(`Form ${type} width is undefined`);
+		}
+
+		let resolvedType;
+
+		setFont();
+		switch (type) {
+			case "text":
+			case "formText":
+				resolvedType = "formText";
+				break;
+			case "button":
+			case "formPushButton":
+				resolvedType = "formPushButton";
+				break;
+			case "list":
+			case "formList":
+				resolvedType = "formList";
+				break;
+			case "combo":
+			case "formCombo":
+				resolvedType = "formCombo";
+				break;
+			case "checkbox": 
+			case "formCheckbox":
+				resolvedType = "formCheckbox";
+				break;
+			case "radio":
+			case "formRadio":
+			case "formRadioButton":
+				resolvedType = "formRadioButton";
+				break;
+			default:
+				throw new Error(`Unrecognized acroform type: ${type}`);
+		}
+
+		this.pdfDocument[resolvedType](id, node.x, node.y, width, node.height, options);
 	}
 
 	renderImage(image) {

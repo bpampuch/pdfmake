@@ -45,6 +45,10 @@ class PageElementWriter extends ElementWriter {
 		return this._fitOnPage(() => super.addAttachment(attachment, index));
 	}
 
+	addAcroForm(node, index) {
+		return this._fitOnPage(() => super.addAcroForm(node, index));
+	}
+
 	addVector(vector, ignoreContextX, ignoreContextY, index, forcePage) {
 		return super.addVector(vector, ignoreContextX, ignoreContextY, index, forcePage);
 	}

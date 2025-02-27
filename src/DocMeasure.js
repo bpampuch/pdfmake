@@ -38,7 +38,6 @@ class DocMeasure {
 		return this.styleStack.auto(node, () => {
 			// TODO: refactor + rethink whether this is the proper way to handle margins
 			node._margin = getNodeMargin(node, this.styleStack);
-
 			if (node.columns) {
 				return extendMargins(this.measureColumns(node));
 			} else if (node.stack) {
@@ -63,6 +62,8 @@ class DocMeasure {
 				return extendMargins(this.measureQr(node));
 			} else if (node.attachment) {
 				return extendMargins(this.measureAttachment(node));
+			} else if (node.acroform) {
+				return extendMargins(this.measureAcroForm(node));
 			} else {
 				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
@@ -705,6 +706,23 @@ class DocMeasure {
 	measureAttachment(node) {
 		node._width = node.width || 7;
 		node._height = node.height || 18;
+
+		return node;
+	}
+
+	measureAcroForm(node) {
+		node._minWidth = 10;
+		node._minHeight = 10;
+
+		let font = StyleContextStack.getStyleProperty(node, this.styleStack, 'font', 'Roboto');
+		let bold = StyleContextStack.getStyleProperty(node,  this.styleStack, 'bold', false);
+		let italics = StyleContextStack.getStyleProperty(node,  this.styleStack, 'italics', false);
+
+		node.font = font;
+		node.bold = bold;
+		node.italics = italics;
+
+		node.alignment = StyleContextStack.getStyleProperty(node,  this.styleStack, 'alignment', 'left');
 
 		return node;
 	}

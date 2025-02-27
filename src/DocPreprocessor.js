@@ -59,9 +59,15 @@ class DocPreprocessor {
 			return this.preprocessAttachment(node);
 		} else if (node.pageReference || node.textReference) {
 			return this.preprocessText(node);
+		} else if (node.acroform) {
+			return this.preprocessAcroForm(node);
 		} else {
 			throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 		}
+	}
+
+	preprocessAcroForm(node) {
+		return node;
 	}
 
 	preprocessColumns(node) {

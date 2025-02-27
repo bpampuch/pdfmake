@@ -1,0 +1,383 @@
+    "subsetFonts": false,
+    "content": [
+        {
+            "text": "Acroforms",
+            "style": "header"
+        },
+        {
+            "text": [
+                "It is recommended that you test your PDF form ",
+                "documents across all platforms and viewers that you wish to ",
+                "support. Refer to ",
+                "https://pdfkit.org/docs/forms or the PDF ",
+                "reference for form options and advanced form field use.\n\n"
+            ],
+            "style": "description"
+        },
+        {
+            "text": "Components\n",
+            "style": "subHeader"
+        },
+        {
+            "text": [
+                "Make sure you set the subsetFonts flag to false when using ",
+                "form fields with text.\n\n"
+            ],
+            "style": {
+                "bold": true
+            }
+        },
+        {
+            "text": "Text field",
+            "style": "formHeader"
+        },
+        {
+            "columns": [
+                [
+                    {
+                        "acroform": {
+                            "type": "text",
+                            "id": "text_placeholder",
+                            "options": {
+                                "value": "Placeholder ..."
+                            }
+                        },
+                        "style": "textFieldStyle",
+                        "height": 15,
+                        "italics": true
+                    },
+                    {
+                        "acroform": {
+                            "type": "text",
+                            "id": "text_date",
+                            "options": {
+                                "format": {
+                                    "type": "date"
+                                },
+                                "align": "center",
+                                "value": "10/12"
+                            }
+                        },
+                        "style": "textFieldStyle",
+                        "height": 15
+                    },
+                    {
+                        "acroform": {
+                            "type": "text",
+                            "id": "text_multi",
+                            "options": {
+                                "multiline": true,
+                                "value": "multiline text form "
+                            }
+                        },
+                        "style": "textFieldStyle",
+                        "height": 50
+                    }
+                ],
+                [
+                    {
+                        "acroform": {
+                            "type": "text",
+                            "id": "text_alignment",
+                            "options": {
+                                "align": "right",
+                                "value": "right alignment"
+                            }
+                        },
+                        "style": "textFieldStyle",
+                        "height": 15
+                    },
+                    {
+                        "acroform": {
+                            "type": "text",
+                            "id": "text_color",
+                            "options": {
+                                "align": "center",
+                                "required": true,
+                                "value": "Ω©®℅¥123"
+                            }
+                        },
+                        "style": "textFieldStyle",
+                        "height": 15
+                    }
+                ],
+                [
+                    {
+                        "acroform": {
+                            "type": "text",
+                            "id": "text_currency",
+                            "options": {
+                                "align": "right",
+                                "format": {
+                                    "type": "number",
+                                    "nDec": 2,
+                                    "sepComma": true,
+                                    "negStyle": "ParensRed",
+                                    "currency": "$",
+                                    "currencyPrepend": true
+                                },
+                                "value": "$123,346.99"
+                            }
+                        },
+                        "style": "textFieldStyle",
+                        "height": 15
+                    },
+                    {
+                        "acroform": {
+                            "type": "text",
+                            "id": "text_backgroundcolor",
+                            "options": {
+                                "backgroundColor": "yellow",
+                                "borderColor": "green",
+                                "align": "center",
+                                "value": "background color"
+                            }
+                        },
+                        "style": "textFieldStyle",
+                        "height": 15
+                    }
+                ]
+            ]
+        },
+        {
+            "columns": [
+                [
+                    {
+                        "text": "\nList",
+                        "style": "formHeader"
+                    },
+                    {
+                        "acroform": {
+                            "type": "list",
+                            "id": "list1",
+                            "options": {
+                                "select": [
+                                    "",
+                                    "A",
+                                    "B",
+                                    "C"
+                                ]
+                            }
+                        },
+                        "width": 100,
+                        "height": 60
+                    }
+                ],
+                [
+                    {
+                        "text": "\nCombobox",
+                        "style": "formHeader"
+                    },
+                    {
+                        "acroform": {
+                            "type": "combo",
+                            "id": "combo1",
+                            "options": {
+                                "select": [
+                                    "",
+                                    "A",
+                                    "B",
+                                    "C"
+                                ],
+                                "defaultValue": ""
+                            }
+                        },
+                        "width": 100,
+                        "height": 20
+                    }
+                ],
+                [
+                    {
+                        "text": "\nCheckbox form",
+                        "style": "formHeader"
+                    },
+                    {
+                        "acroform": {
+                            "type": "checkbox",
+                            "id": "checkbox1",
+                            "options": {
+                                "selected": false
+                            }
+                        },
+                        "width": 20,
+                        "height": 20
+                    }
+                ],
+                [
+                    {
+                        "text": "\nRadio form",
+                        "style": "formHeader"
+                    },
+                    {
+                        "acroform": {
+                            "type": "radio",
+                            "id": "radioChild1",
+                            "options": {
+                                "parentId": "radioForm1",
+                                "selected": true
+                            }
+                        },
+                        "width": 50,
+                        "height": 30
+                    },
+                    {
+                        "acroform": {
+                            "type": "radio",
+                            "id": "radioChild2",
+                            "options": {
+                                "parentId": "radioForm1"
+                            }
+                        },
+                        "width": 40,
+                        "height": 25
+                    },
+                    {
+                        "acroform": {
+                            "type": "radio",
+                            "id": "radioChild3",
+                            "options": {
+                                "parentId": "radioForm1"
+                            }
+                        },
+                        "width": 30,
+                        "height": 20
+                    }
+                ]
+            ]
+        },
+        {
+            "text": "\nYou can also use forms inline with text\n\n",
+            "style": "subHeader"
+        },
+        {
+            "text": [
+                "Check this box! ",
+                {
+                    "acroform": {
+                        "type": "checkbox",
+                        "id": "checkbox2",
+                        "options": {
+                            "selected": false
+                        }
+                    },
+                    "width": 15,
+                    "height": 15
+                },
+                "\n\n"
+            ],
+            "alignment": "center"
+        },
+        {
+            "text": [
+                "The weather was very ",
+                {
+                    "acroform": {
+                        "type": "combo",
+                        "id": "combo_story1",
+                        "options": {
+                            "select": [
+                                "",
+                                "nice",
+                                "bad"
+                            ],
+                            "defaultValue": ""
+                        }
+                    },
+                    "width": 50,
+                    "height": 9.5
+                },
+                " and the skies were ",
+                {
+                    "acroform": {
+                        "type": "combo",
+                        "id": "combo_story2",
+                        "options": {
+                            "select": [
+                                "",
+                                "clear",
+                                "cloudy"
+                            ],
+                            "defaultValue": ""
+                        }
+                    },
+                    "width": 50,
+                    "height": 9.5
+                },
+                ". A fox named ",
+                {
+                    "acroform": {
+                        "type": "text",
+                        "id": "text_story1"
+                    },
+                    "width": 50,
+                    "height": 9.5
+                },
+                "  and friends were playing a game at the park, when suddenly",
+                "... ",
+                {
+                    "text": "finish the story",
+                    "style": {
+                        "italics": true,
+                        "bold": true
+                    }
+                }
+            ]
+        },
+        {
+            "acroform": {
+                "type": "text",
+                "id": "text_story2",
+                "options": {
+                    "multiline": true
+                }
+            },
+            "width": "*",
+            "height": 100
+        }
+    ],
+    "styles": {
+        "header": {
+            "fontSize": 18,
+            "bold": true,
+            "margin": [
+                0,
+                0,
+                0,
+                10
+            ],
+            "lineHeight": 0.3
+        },
+        "description": {
+            "fontSize": 13,
+            "margin": [
+                0,
+                10,
+                0,
+                5
+            ]
+        },
+        "subHeader": {
+            "bold": true,
+            "fontSize": 13
+        },
+        "formHeader": {
+            "fontSize": 12,
+            "color": "black"
+        },
+        "tableCell": {
+            "margin": [
+                0,
+                5,
+                0,
+                5
+            ]
+        },
+        "textFieldStyle": {
+            "margin": [
+                0,
+                0,
+                5,
+                5
+            ]
+        }
+    }

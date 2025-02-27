@@ -33,13 +33,7 @@ class Line {
 	 * @returns {number}
 	 */
 	getHeight() {
-		let max = 0;
-
-		this.inlines.forEach(item => {
-			max = Math.max(max, item.height || 0);
-		});
-
-		return max;
+		return Math.max(...this.inlines.map(item => item.height || 0));
 	}
 
 	/**
@@ -49,7 +43,7 @@ class Line {
 		let y = 0;
 
 		this.inlines.forEach(inline => {
-			y = Math.max(y, inline.font.ascender / 1000 * inline.fontSize);
+			y = Math.max(y, inline.acroform ? inline.height : inline.font.ascender / 1000 * inline.fontSize);
 		});
 
 		return y;
