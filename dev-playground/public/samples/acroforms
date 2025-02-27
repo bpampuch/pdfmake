@@ -1,3 +1,4 @@
+{
     "subsetFonts": false,
     "content": [
         {
@@ -202,46 +203,6 @@
                         "width": 20,
                         "height": 20
                     }
-                ],
-                [
-                    {
-                        "text": "\nRadio form",
-                        "style": "formHeader"
-                    },
-                    {
-                        "acroform": {
-                            "type": "radio",
-                            "id": "radioChild1",
-                            "options": {
-                                "parentId": "radioForm1",
-                                "selected": true
-                            }
-                        },
-                        "width": 50,
-                        "height": 30
-                    },
-                    {
-                        "acroform": {
-                            "type": "radio",
-                            "id": "radioChild2",
-                            "options": {
-                                "parentId": "radioForm1"
-                            }
-                        },
-                        "width": 40,
-                        "height": 25
-                    },
-                    {
-                        "acroform": {
-                            "type": "radio",
-                            "id": "radioChild3",
-                            "options": {
-                                "parentId": "radioForm1"
-                            }
-                        },
-                        "width": 30,
-                        "height": 20
-                    }
                 ]
             ]
         },
@@ -331,6 +292,7 @@
                     "multiline": true
                 }
             },
+            "style": "textFieldStyle",
             "width": "*",
             "height": 100
         }
@@ -373,6 +335,7 @@
             ]
         },
         "textFieldStyle": {
+            "font": "Helvetica",
             "margin": [
                 0,
                 0,
@@ -381,3 +344,4 @@
             ]
         }
     }
+}
