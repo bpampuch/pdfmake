@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Update Roboto font (version 3.011)
+
 ## 0.2.18 - 2025-01-01
 
 - Update pdfkit
