@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "linebreak": "^1.1.0",
-    "pdfkit": "^0.16.0",
+    "pdfkit": "^0.17.0",
     "xmldoc": "^1.3.0"
   },
   "devDependencies": {
