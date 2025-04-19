@@ -31,6 +31,7 @@
     "file-saver": "^2.0.5",
     "globals": "^15.14.0",
     "mocha": "^11.0.1",
+    "nodemon": "^3.1.9",
     "npm-run-all": "^4.1.5",
     "process": "^0.11.10",
     "rewire": "^7.0.0",
@@ -62,7 +63,8 @@
     "build:fonts": "shx mkdir -p build/fonts && shx mkdir -p build/fonts/Roboto && shx cp -r fonts/Roboto/*.* build/fonts/Roboto && brfs \"./src/browser-extensions/fonts/Roboto.js\" > build/fonts/Roboto.js",
     "lint": "eslint \"./src/**/*.js\" \"./tests/**/*.js\" \"./examples/**/*.js\" \"./standard-fonts/**/*.js\" \"./fonts/**/*.js\"",
     "mocha": "mocha --reporter spec \"./tests/**/*.spec.js\"",
-    "playground": "node dev-playground/server.js"
+    "playground": "node dev-playground/server.js",
+    "playground:watch": "nodemon dev-playground/server.js"
   },
   "repository": {
     "type": "git",

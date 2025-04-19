@@ -203,6 +203,33 @@ class ElementWriter extends EventEmitter {
 		return position;
 	}
 
+	addAcroForm(node, index) {
+		let context = this.context();
+		let page = context.getCurrentPage();
+		let position = this.getCurrentPositionOnPage();
+
+		if (!page) {
+			return false;
+		}
+
+		if (node._x === undefined) {
+			node._x = node.x || 0;
+		}
+
+		addPageItem(page, {
+			type: 'acroform',
+			item: node
+		}, index);
+
+		node.x = context.x + node._x;
+		node.y = context.y;
+
+
+		context.moveDown(node.height || node._minHeight);
+
+		return position;
+	}
+
 	addAttachment(attachment, index) {
 		let context = this.context();
 		let page = context.getCurrentPage();

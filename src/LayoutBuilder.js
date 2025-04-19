@@ -7,7 +7,7 @@ import TableProcessor from './TableProcessor';
 import Line from './Line';
 import { isString, isValue, isNumber } from './helpers/variableType';
 import { stringifyNode, getNodeId } from './helpers/node';
-import { pack, offsetVector } from './helpers/tools';
+import { offsetVector } from './helpers/tools';
 import TextInlines from './TextInlines';
 import StyleContextStack from './StyleContextStack';
 
@@ -36,7 +36,7 @@ class LayoutBuilder {
 	}
 
 	registerTableLayouts(tableLayouts) {
-		this.tableLayouts = pack(this.tableLayouts, tableLayouts);
+		this.tableLayouts = { ...this.tableLayouts, ...tableLayouts };// pack(this.tableLayouts, tableLayouts);
 	}
 
 	/**
@@ -78,7 +78,7 @@ class LayoutBuilder {
 				let nodeInfo = {};
 				[
 					'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns',
-					'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
+					'headlineLevel', 'style', 'pageBreak', 'pageOrientation', 'acroForm', 'type', 'options',
 					'width', 'height'
 				].forEach(key => {
 					if (node[key] !== undefined) {
@@ -475,6 +475,8 @@ class LayoutBuilder {
 				this.processQr(node);
 			} else if (node.attachment) {
 				this.processAttachment(node);
+			} else if (node.acroform) {
+				this.processAcroForm(node);
 			} else if (!node._span) {
 				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
 			}
@@ -954,7 +956,7 @@ class LayoutBuilder {
 		}
 	}
 
-	// leafs (texts)
+	// leafs (texts, acroform))
 	processLeaf(node) {
 		let line = this.buildNextLine(node);
 		if (line && (node.tocItem || node.id)) {
@@ -1033,7 +1035,7 @@ class LayoutBuilder {
 			let inline = textNode._inlines.shift();
 			isForceContinue = false;
 
-			if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
+			if (!inline.noWrap && inline.text && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
 				let widthPerChar = inline.width / inline.text.length;
 				let maxChars = Math.floor(line.getAvailableWidth() / widthPerChar);
 				if (maxChars < 1) {
@@ -1082,6 +1084,13 @@ class LayoutBuilder {
 	processQr(node) {
 		let position = this.writer.addQr(node);
 		node.positions.push(position);
+	}
+
+	processAcroForm (node) {
+		let availableWidth = this.writer.context().availableWidth;
+		let position = this.writer.addAcroForm(node);
+		node.positions.push(position);	
+		node.availableWidth = availableWidth;
 	}
 
 	processAttachment(node) {
