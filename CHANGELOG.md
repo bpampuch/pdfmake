@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Update pdfkit to 0.17.0
+- Update Roboto font (version 3.011)
 - Fixed URL resolving for same URL in browser
 - Fixed sharing URL resolver for not available URLs
 
