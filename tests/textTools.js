@@ -194,6 +194,11 @@ describe('TextTools', function () {
 			var result = TextTools.__get__('splitWords')('中华民族到了最危险的时候，\n每个人被迫着发出最后的吼声。\n起来！起来！起来！');
 			assert.equal(result.length, 31);
 		});
+
+		it('should split each character with the wrapChars arg', function () {
+			var result = TextTools.__get__('splitWords')(sampleText, false, true);
+			assert.equal(result.length, sampleText.length);
+		});
 	});
 
 	describe('normalizeTextArray', function () {

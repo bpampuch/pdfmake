@@ -118,7 +118,7 @@ TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpa
 	return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
 };
 
-function splitWords(text, noWrap) {
+function splitWords(text, noWrap, wrapChars = false) {
 	var results = [];
 	text = text.replace(/\t/g, '    ');
 
@@ -136,9 +136,24 @@ function splitWords(text, noWrap) {
 
 		if (bk.required || word.match(/\r?\n$|\r$/)) { // new line
 			word = word.replace(/\r?\n$|\r$/, '');
-			results.push({ text: word, lineEnd: true });
+			if (wrapChars) {
+				const chars = word.split('');
+				for (let i = 0; i < chars.length; i++) {
+					const c = chars[i];
+					results.push({ text: c, lineEnd: i === chars.length - 1 });
+				}
+			} else {
+				results.push({ text: word, lineEnd: true });
+			}
 		} else {
-			results.push({ text: word });
+			if (wrapChars) {
+				const chars = word.split('');
+				for (const c of chars) {
+					results.push({ text: c });
+				}
+			} else {
+				results.push({ text: word });
+			}
 		}
 
 		last = bk.position;
@@ -210,16 +225,16 @@ function normalizeTextArray(array, styleContextStack) {
 			if (item._textRef && item._textRef._textNodeRef.text) {
 				item.text = item._textRef._textNodeRef.text;
 			}
-			words = splitWords(normalizeString(item.text), noWrap);
+			words = splitWords(normalizeString(item.text), noWrap, item.wrapChars);
 			style = copyStyle(item);
 		} else {
-			words = splitWords(normalizeString(item), noWrap);
+			words = splitWords(normalizeString(item), noWrap, item.wrapChars);
 		}
 
 		if (lastWord && words.length) {
 			var firstWord = getOneWord(0, words, noWrap);
 
-			var wrapWords = splitWords(normalizeString(lastWord + firstWord), false);
+			var wrapWords = splitWords(normalizeString(lastWord + firstWord), false, item.wrapChars);
 			if (wrapWords.length === 1) {
 				results[results.length - 1].noNewLine = true;
 			}
