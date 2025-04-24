@@ -228,7 +228,7 @@ function normalizeTextArray(array, styleContextStack) {
 			words = splitWords(normalizeString(item.text), noWrap, item.wrapChars);
 			style = copyStyle(item);
 		} else {
-			words = splitWords(normalizeString(item), noWrap, item.wrapChars);
+			words = splitWords(normalizeString(item), noWrap);
 		}
 
 		if (lastWord && words.length) {
