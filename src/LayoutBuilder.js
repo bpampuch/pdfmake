@@ -172,14 +172,18 @@ class LayoutBuilder {
 		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
-		this.writer = new PageElementWriter(
-			new DocumentContext(this.pageSize, this.pageMargins));
+		this.writer = new PageElementWriter(new DocumentContext());
 
 		this.writer.context().addListener('pageAdded', () => {
 			this.addBackground(background);
 		});
 
-		this.addBackground(background);
+		this.writer.addPage(
+			this.pageSize,
+			null,
+			this.pageMargins
+		);
+
 		this.processNode(docStructure);
 		this.addHeadersAndFooters(header, footer);
 		if (watermark != null) {
@@ -206,11 +210,6 @@ class LayoutBuilder {
 		}
 	}
 
-	addStaticRepeatable(headerOrFooter, sizeFunction) {
-		this.addDynamicRepeatable(() => // copy to new object
-			JSON.parse(JSON.stringify(headerOrFooter)), sizeFunction);
-	}
-
 	addDynamicRepeatable(nodeGetter, sizeFunction) {
 		let pages = this.writer.context().pages;
 
@@ -220,7 +219,7 @@ class LayoutBuilder {
 			let node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
 
 			if (node) {
-				let sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
+				let sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.writer.context().getCurrentPage().pageMargins);
 				this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
 				node = this.docPreprocessor.preprocessDocument(node);
 				this.processNode(this.docMeasure.measureDocument(node));
@@ -244,16 +243,12 @@ class LayoutBuilder {
 			height: pageMargins.bottom
 		});
 
-		if (typeof header === 'function') {
+		if (header) {
 			this.addDynamicRepeatable(header, headerSizeFct);
-		} else if (header) {
-			this.addStaticRepeatable(header, headerSizeFct);
 		}
 
-		if (typeof footer === 'function') {
+		if (footer) {
 			this.addDynamicRepeatable(footer, footerSizeFct);
-		} else if (footer) {
-			this.addStaticRepeatable(footer, footerSizeFct);
 		}
 	}
 
@@ -266,36 +261,40 @@ class LayoutBuilder {
 			return;
 		}
 
-		watermark.font = watermark.font || defaultStyle.font || 'Roboto';
-		watermark.fontSize = watermark.fontSize || 'auto';
-		watermark.color = watermark.color || 'black';
-		watermark.opacity = isNumber(watermark.opacity) ? watermark.opacity : 0.6;
-		watermark.bold = watermark.bold || false;
-		watermark.italics = watermark.italics || false;
-		watermark.angle = isValue(watermark.angle) ? watermark.angle : null;
-
-		if (watermark.angle === null) {
-			watermark.angle = Math.atan2(this.pageSize.height, this.pageSize.width) * -180 / Math.PI;
-		}
-
-		if (watermark.fontSize === 'auto') {
-			watermark.fontSize = getWatermarkFontSize(this.pageSize, watermark, pdfDocument);
-		}
-
-		let watermarkObject = {
-			text: watermark.text,
-			font: pdfDocument.provideFont(watermark.font, watermark.bold, watermark.italics),
-			fontSize: watermark.fontSize,
-			color: watermark.color,
-			opacity: watermark.opacity,
-			angle: watermark.angle
-		};
-
-		watermarkObject._size = getWatermarkSize(watermark, pdfDocument);
-
 		let pages = this.writer.context().pages;
 		for (let i = 0, l = pages.length; i < l; i++) {
-			pages[i].watermark = watermarkObject;
+			pages[i].watermark = getWatermarkObject({ ...watermark }, pages[i].pageSize, pdfDocument, defaultStyle);
+		}
+
+		function getWatermarkObject(watermark, pageSize, pdfDocument, defaultStyle) {
+			watermark.font = watermark.font || defaultStyle.font || 'Roboto';
+			watermark.fontSize = watermark.fontSize || 'auto';
+			watermark.color = watermark.color || 'black';
+			watermark.opacity = isNumber(watermark.opacity) ? watermark.opacity : 0.6;
+			watermark.bold = watermark.bold || false;
+			watermark.italics = watermark.italics || false;
+			watermark.angle = isValue(watermark.angle) ? watermark.angle : null;
+
+			if (watermark.angle === null) {
+				watermark.angle = Math.atan2(pageSize.height, pageSize.width) * -180 / Math.PI;
+			}
+
+			if (watermark.fontSize === 'auto') {
+				watermark.fontSize = getWatermarkFontSize(pageSize, watermark, pdfDocument);
+			}
+
+			let watermarkObject = {
+				text: watermark.text,
+				font: pdfDocument.provideFont(watermark.font, watermark.bold, watermark.italics),
+				fontSize: watermark.fontSize,
+				color: watermark.color,
+				opacity: watermark.opacity,
+				angle: watermark.angle
+			};
+
+			watermarkObject._size = getWatermarkSize(watermark, pdfDocument);
+
+			return watermarkObject;
 		}
 
 		function getWatermarkSize(watermark, pdfDocument) {
@@ -629,12 +628,12 @@ class LayoutBuilder {
 	* @property {number} target.prevY - Updated to the maximum `prevY` value between `break1` and `break2`.
 	* @property {number} target.y - Updated to the minimum `y` value between `break1` and `break2`.
 	*/
-	_resolveBreakY (break1, break2, target) {
+	_resolveBreakY(break1, break2, target) {
 		target.prevY = Math.max(break1.prevY, break2.prevY);
 		target.y = Math.min(break1.y, break2.y);
 	};
 
-	_storePageBreakData (data, startsRowSpan, pageBreaks, tableNode) {
+	_storePageBreakData(data, startsRowSpan, pageBreaks, tableNode) {
 		if (!startsRowSpan) {
 			let pageDesc = this._getPageBreak(pageBreaks, data.prevPage);
 			let pageDescBySpan = this._getPageBreakListBySpan(tableNode, data.prevPage, data.rowIndex);
@@ -835,7 +834,7 @@ class LayoutBuilder {
 		}
 
 		return {
-			pageBreaksBySpan : pageBreaksByRowSpan,
+			pageBreaksBySpan: pageBreaksByRowSpan,
 			pageBreaks: pageBreaks,
 			positions: positions
 		};

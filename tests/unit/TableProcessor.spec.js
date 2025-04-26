@@ -241,7 +241,7 @@ describe('TableProcessor', function () {
 			inputTable.table.keepWithHeaderRows = 2;
 
 			var tableProcessor = new TableProcessor(inputTable);
-			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.drawHorizontalLine = function () { };
 			tableProcessor.beginTable(fakeWriter);
 			assert.equal(tableProcessor.headerRows, 0);
 			assert.equal(tableProcessor.rowsWithoutPageBreak, 0);
@@ -252,7 +252,7 @@ describe('TableProcessor', function () {
 			inputTable.table.keepWithHeaderRows = 2;
 
 			var tableProcessor = new TableProcessor(inputTable);
-			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.drawHorizontalLine = function () { };
 			tableProcessor.beginTable(fakeWriter);
 			assert.equal(tableProcessor.headerRows, 0);
 			assert.equal(tableProcessor.rowsWithoutPageBreak, 0);
@@ -264,7 +264,7 @@ describe('TableProcessor', function () {
 			inputTable.table.keepWithHeaderRows = 2;
 
 			var tableProcessor = new TableProcessor(inputTable);
-			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.drawHorizontalLine = function () { };
 			tableProcessor.beginTable(fakeWriter);
 			assert.equal(tableProcessor.headerRows, 0);
 			assert.equal(tableProcessor.rowsWithoutPageBreak, 0);
@@ -275,7 +275,7 @@ describe('TableProcessor', function () {
 			inputTable.table.keepWithHeaderRows = 2;
 
 			var tableProcessor = new TableProcessor(inputTable);
-			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.drawHorizontalLine = function () { };
 			tableProcessor.beginTable(fakeWriter);
 			assert.equal(tableProcessor.headerRows, 0);
 			assert.equal(tableProcessor.rowsWithoutPageBreak, 0);
@@ -286,7 +286,7 @@ describe('TableProcessor', function () {
 			inputTable.table.keepWithHeaderRows = 1.5;
 
 			var tableProcessor = new TableProcessor(inputTable);
-			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.drawHorizontalLine = function () { };
 			tableProcessor.beginTable(fakeWriter);
 			assert.equal(tableProcessor.headerRows, 1);
 			assert.equal(tableProcessor.rowsWithoutPageBreak, 1);
@@ -297,7 +297,7 @@ describe('TableProcessor', function () {
 			inputTable.table.keepWithHeaderRows = '1.5';
 
 			var tableProcessor = new TableProcessor(inputTable);
-			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.drawHorizontalLine = function () { };
 			tableProcessor.beginTable(fakeWriter);
 			assert.equal(tableProcessor.headerRows, 2);
 			assert.equal(tableProcessor.rowsWithoutPageBreak, 2);
@@ -308,7 +308,7 @@ describe('TableProcessor', function () {
 			inputTable.table.keepWithHeaderRows = 2;
 
 			var tableProcessor = new TableProcessor(inputTable);
-			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.drawHorizontalLine = function () { };
 			tableProcessor.beginTable(fakeWriter);
 			assert.equal(tableProcessor.rowsWithoutPageBreak, 3);
 			assert.equal(tableProcessor.headerRows, 1);
@@ -319,7 +319,7 @@ describe('TableProcessor', function () {
 			inputTable.table.keepWithHeaderRows = 0;
 
 			var tableProcessor = new TableProcessor(inputTable);
-			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.drawHorizontalLine = function () { };
 			tableProcessor.beginTable(fakeWriter);
 			assert.equal(tableProcessor.rowsWithoutPageBreak, 1);
 			assert.equal(tableProcessor.headerRows, 1);
@@ -330,7 +330,7 @@ describe('TableProcessor', function () {
 			inputTable.table.keepWithHeaderRows = 0;
 
 			var tableProcessor = new TableProcessor(inputTable);
-			tableProcessor.drawHorizontalLine = function() { };
+			tableProcessor.drawHorizontalLine = function () { };
 			assert.throws(() => tableProcessor.beginTable(fakeWriter), /Too few rows in the table/);
 		});
 	});

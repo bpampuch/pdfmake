@@ -2,7 +2,7 @@ var fs = require('fs');
 
 var fontContainer = {
 	vfs: {
-		'data/Symbol.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/@foliojs-fork/pdfkit/js/data/Symbol.afm', 'utf8'), encoding: 'utf8' }
+		'data/Symbol.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Symbol.afm', 'utf8'), encoding: 'utf8' }
 	},
 	fonts: {
 		Symbol: {

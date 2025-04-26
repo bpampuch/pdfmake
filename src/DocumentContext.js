@@ -6,21 +6,17 @@ import { EventEmitter } from 'events';
  * It facilitates column divisions and vertical sync
  */
 class DocumentContext extends EventEmitter {
-	constructor(pageSize, pageMargins) {
+	constructor() {
 		super();
 		this.pages = [];
-
-		this.pageMargins = pageMargins;
-
-		this.x = pageMargins.left;
-		this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
-		this.availableHeight = 0;
+		this.pageMargins = undefined;
+		this.x = undefined;
+		this.availableWidth = undefined;
+		this.availableHeight = undefined;
 		this.page = -1;
 
 		this.snapshots = [];
 		this.backgroundLength = [];
-
-		this.addPage(pageSize);
 	}
 
 	beginColumnGroup(marginXTopParent, bottomByPage = {}) {
@@ -30,7 +26,7 @@ class DocumentContext extends EventEmitter {
 			availableHeight: this.availableHeight,
 			availableWidth: this.availableWidth,
 			page: this.page,
-      bottomByPage: bottomByPage ? bottomByPage : {},
+			bottomByPage: bottomByPage ? bottomByPage : {},
 			bottomMost: {
 				x: this.x,
 				y: this.y,
@@ -47,7 +43,7 @@ class DocumentContext extends EventEmitter {
 		}
 	}
 
-	updateBottomByPage () {
+	updateBottomByPage() {
 		const lastSnapshot = this.snapshots[this.snapshots.length - 1];
 		const lastPage = this.page;
 		let previousBottom = -Number.MIN_VALUE;
@@ -244,8 +240,14 @@ class DocumentContext extends EventEmitter {
 		};
 	}
 
-	addPage(pageSize) {
-		let page = { items: [], pageSize: pageSize };
+	addPage(pageSize, pageMargin = null) {
+		if (pageMargin !== null) {
+			this.pageMargins = pageMargin;
+			this.x = pageMargin.left;
+			this.availableWidth = pageSize.width - pageMargin.left - pageMargin.right;
+		}
+
+		let page = { items: [], pageSize: pageSize, pageMargins: this.pageMargins };
 		this.pages.push(page);
 		this.backgroundLength.push(0);
 		this.page = this.pages.length - 1;

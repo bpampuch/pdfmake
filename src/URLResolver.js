@@ -11,6 +11,8 @@ const fetchUrl = (url, headers = {}) => {
 
 		h.get(url, options, res => {
 			if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) { // redirect url
+				res.resume();
+				
 				fetchUrl(res.headers.location).then(buffer => {
 					resolve(buffer);
 				}, result => {
@@ -22,6 +24,8 @@ const fetchUrl = (url, headers = {}) => {
 			const ok = res.statusCode >= 200 && res.statusCode < 300;
 			if (!ok) {
 				reject(new TypeError(`Failed to fetch (status code: ${res.statusCode}, url: "${url}")`));
+				res.resume();
+				return;
 			}
 
 			const chunks = [];
