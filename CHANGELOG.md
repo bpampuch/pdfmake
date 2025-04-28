@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed DoS via repeatedly redirect URL in file embedding
+
 ## 0.3.0-beta.16 - 2025-04-26
 
 - Update pdfkit to 0.17.0
