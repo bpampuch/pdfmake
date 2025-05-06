@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed crash that occurred when using automatic page height
+
 ## 0.3.0-beta.17 - 2025-04-29
 
 - Fixed DoS via repeatedly redirect URL in file embedding
