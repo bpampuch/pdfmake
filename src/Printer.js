@@ -105,7 +105,9 @@ class PdfPrinter {
 					// was laid out using the height of each of the items in the page.
 					if (pageSize.height === Infinity) {
 						let pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
-						this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
+						pages.forEach(page => {
+							page.pageSize.height = pageHeight;
+						});
 					}
 
 					const renderer = new Renderer(this.pdfKitDoc, options.progressCallback);

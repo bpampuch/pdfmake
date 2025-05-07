@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Fixed crash that occurred when using automatic page height
+
+## 0.3.0-beta.17 - 2025-04-29
+
+- Fixed DoS via repeatedly redirect URL in file embedding
+
 ## 0.3.0-beta.16 - 2025-04-26
 
 - Update pdfkit to 0.17.0
