@@ -1,4 +1,3 @@
-
 const assert = require('assert');
 
 const DocPreprocessor = require('../../js/DocPreprocessor').default;
@@ -235,6 +234,56 @@ describe('DocPreprocessor', function () {
 			assert.equal(result.stack[2].toc.id, '_default_');
 			assert.equal(Array.isArray(result.stack[2].toc._items), true);
 			assert.equal(result.stack[2].toc._items.length, 2);
+		});
+
+	});
+
+	describe('section', function () {
+
+		it('should support section', function () {
+			var ddContent = [
+				{
+					section: [],
+				},
+				{
+					section: [],
+				},
+			];
+			assert.doesNotThrow(function () {
+				docPreprocessor.preprocessDocument(ddContent);
+			});
+		});
+
+		it('should support section in stack', function () {
+			var ddContent = [
+				{
+					stack: [
+						{
+							section: [],
+						},
+						{
+							section: [],
+						},
+					]
+				}
+			];
+			assert.doesNotThrow(function () {
+				docPreprocessor.preprocessDocument(ddContent);
+			});
+		});
+
+		it('should support section only in root', function () {
+			var ddContent = [
+				{
+					table: {
+						body: [
+							[{ section: [] }],
+						]
+					}
+				},
+			];
+
+			assert.throws(() => docPreprocessor.preprocessDocument(ddContent), /Incorrect document structure, section node is only allowed at the root level of document structure/);
 		});
 
 	});

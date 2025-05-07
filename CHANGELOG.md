@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added `section` node
 - Fixed crash that occurred when using automatic page height
 
 ## 0.3.0-beta.17 - 2025-04-29
