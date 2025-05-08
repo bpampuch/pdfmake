@@ -1043,6 +1043,27 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 		return newInline;
 	}
 
+	function findMaxFitLength(text, maxWidth, measureFn) {
+		let low = 1;
+		let high = text.length;
+		let bestFit = 1;
+
+		while (low <= high) {
+			const mid = Math.floor((low + high) / 2);
+			const part = text.substring(0, mid);
+			const width = measureFn(part);
+
+			if (width <= maxWidth) {
+				bestFit = mid;
+				low = mid + 1;
+			} else {
+				high = mid - 1;
+			}
+		}
+
+		return bestFit;
+	}
+
 	if (!textNode._inlines || textNode._inlines.length === 0) {
 		return null;
 	}
@@ -1058,11 +1079,9 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 		isForceContinue = false;
 
 		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
-			var widthPerChar = inline.width / inline.text.length;
-			var maxChars = Math.floor(line.getAvailableWidth() / widthPerChar);
-			if (maxChars < 1) {
-				maxChars = 1;
-			}
+			var maxChars = findMaxFitLength(inline.text, line.getAvailableWidth(), function (txt) {
+				return textTools.widthOfString(txt, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures)
+			});
 			if (maxChars < inline.text.length) {
 				var newInline = cloneInline(inline);
 
