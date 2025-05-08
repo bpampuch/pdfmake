@@ -4,6 +4,7 @@
 
 - Added `section` node
 - Fixed crash that occurred when using automatic page height
+- Fixed text overflow with some non-wrappable texts
 
 ## 0.3.0-beta.17 - 2025-04-29
 
