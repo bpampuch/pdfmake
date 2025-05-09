@@ -7,8 +7,6 @@ tests/
 build/fonts/
 package-lock.json
 yarn.lock
-composer.json
-bower.json
 .editorconfig
 eslint.config.mjs
 build-fonts.js
