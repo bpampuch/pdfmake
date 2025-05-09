@@ -1,4 +1,4 @@
-/*! pdfmake v0.2.19, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.2.20, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -8069,8 +8069,8 @@ var CFFIndex = /*#__PURE__*/function () {
 
     offset = 1;
     offsetType.encode(stream, offset);
-    for (var _i22 = 0, _sizes = sizes; _i22 < _sizes.length; _i22++) {
-      var size = _sizes[_i22];
+    for (var _i0 = 0, _sizes = sizes; _i0 < _sizes.length; _i0++) {
+      var size = _sizes[_i0];
       offset += size;
       offsetType.encode(stream, offset);
     }
@@ -9405,8 +9405,8 @@ var ValueRecord = /*#__PURE__*/function () {
     }
     this.key = key;
   }
-  var _proto10 = ValueRecord.prototype;
-  _proto10.buildStruct = function buildStruct(parent) {
+  var _proto0 = ValueRecord.prototype;
+  _proto0.buildStruct = function buildStruct(parent) {
     var struct = parent;
     while (!struct[this.key] && struct.parent) {
       struct = struct.parent;
@@ -9424,10 +9424,10 @@ var ValueRecord = /*#__PURE__*/function () {
     }
     return new r.Struct(fields);
   };
-  _proto10.size = function size(val, ctx) {
+  _proto0.size = function size(val, ctx) {
     return this.buildStruct(ctx).size(val, ctx);
   };
-  _proto10.decode = function decode(stream, parent) {
+  _proto0.decode = function decode(stream, parent) {
     var res = this.buildStruct(parent).decode(stream, parent);
     delete res.rel;
     return res;
@@ -9706,8 +9706,8 @@ var VariableSizeNumber = /*#__PURE__*/function () {
   function VariableSizeNumber(size) {
     this._size = size;
   }
-  var _proto11 = VariableSizeNumber.prototype;
-  _proto11.decode = function decode(stream, parent) {
+  var _proto1 = VariableSizeNumber.prototype;
+  _proto1.decode = function decode(stream, parent) {
     switch (this.size(0, parent)) {
       case 1:
         return stream.readUInt8();
@@ -9719,7 +9719,7 @@ var VariableSizeNumber = /*#__PURE__*/function () {
         return stream.readUInt32BE();
     }
   };
-  _proto11.size = function size(val, parent) {
+  _proto1.size = function size(val, parent) {
     return utils.resolveLength(this._size, null, parent);
   };
   return VariableSizeNumber;
@@ -10038,8 +10038,8 @@ var UnboundedArrayAccessor = /*#__PURE__*/function () {
     this.base = this.stream.pos;
     this._items = [];
   }
-  var _proto12 = UnboundedArrayAccessor.prototype;
-  _proto12.getItem = function getItem(index) {
+  var _proto10 = UnboundedArrayAccessor.prototype;
+  _proto10.getItem = function getItem(index) {
     if (this._items[index] == null) {
       var pos = this.stream.pos;
       this.stream.pos = this.base + this.type.size(null, this.parent) * index;
@@ -10048,7 +10048,7 @@ var UnboundedArrayAccessor = /*#__PURE__*/function () {
     }
     return this._items[index];
   };
-  _proto12.inspect = function inspect() {
+  _proto10.inspect = function inspect() {
     return "[UnboundedArray ".concat(this.type.constructor.name, "]");
   };
   return UnboundedArrayAccessor;
@@ -10058,8 +10058,8 @@ var UnboundedArray = /*#__PURE__*/function (_r$Array2) {
     return _r$Array2.call(this, type, 0) || this;
   }
   _inheritsLoose(UnboundedArray, _r$Array2);
-  var _proto13 = UnboundedArray.prototype;
-  _proto13.decode = function decode(stream, parent) {
+  var _proto11 = UnboundedArray.prototype;
+  _proto11.decode = function decode(stream, parent) {
     return new UnboundedArrayAccessor(this.type, stream, parent);
   };
   return UnboundedArray;
@@ -10073,16 +10073,16 @@ var LookupTable = function LookupTable(ValueType) {
     function Shadow(type) {
       this.type = type;
     }
-    var _proto14 = Shadow.prototype;
-    _proto14.decode = function decode(stream, ctx) {
+    var _proto12 = Shadow.prototype;
+    _proto12.decode = function decode(stream, ctx) {
       ctx = ctx.parent.parent;
       return this.type.decode(stream, ctx);
     };
-    _proto14.size = function size(val, ctx) {
+    _proto12.size = function size(val, ctx) {
       ctx = ctx.parent.parent;
       return this.type.size(val, ctx);
     };
-    _proto14.encode = function encode(stream, val, ctx) {
+    _proto12.encode = function encode(stream, val, ctx) {
       ctx = ctx.parent.parent;
       return this.type.encode(stream, val, ctx);
     };
@@ -10616,8 +10616,8 @@ var CmapProcessor = (_class = /*#__PURE__*/function () {
     // take the first table with a supported encoding.
 
     if (!this.cmap && iconv) {
-      for (var _iterator10 = _createForOfIteratorHelperLoose(cmapTable.tables), _step10; !(_step10 = _iterator10()).done;) {
-        var cmap = _step10.value;
+      for (var _iterator0 = _createForOfIteratorHelperLoose(cmapTable.tables), _step0; !(_step0 = _iterator0()).done;) {
+        var cmap = _step0.value;
         var encoding = getEncoding(cmap.platformID, cmap.encodingID, cmap.table.language - 1);
         if (iconv.encodingExists(encoding)) {
           this.cmap = cmap.table;
@@ -10633,14 +10633,14 @@ var CmapProcessor = (_class = /*#__PURE__*/function () {
       this.uvs = null;
     }
   }
-  var _proto15 = CmapProcessor.prototype;
-  _proto15.findSubtable = function findSubtable(cmapTable, pairs) {
-    for (var _iterator11 = _createForOfIteratorHelperLoose(pairs), _step11; !(_step11 = _iterator11()).done;) {
-      var _step11$value = _step11.value,
-        platformID = _step11$value[0],
-        encodingID = _step11$value[1];
-      for (var _iterator12 = _createForOfIteratorHelperLoose(cmapTable.tables), _step12; !(_step12 = _iterator12()).done;) {
-        var cmap = _step12.value;
+  var _proto13 = CmapProcessor.prototype;
+  _proto13.findSubtable = function findSubtable(cmapTable, pairs) {
+    for (var _iterator1 = _createForOfIteratorHelperLoose(pairs), _step1; !(_step1 = _iterator1()).done;) {
+      var _step1$value = _step1.value,
+        platformID = _step1$value[0],
+        encodingID = _step1$value[1];
+      for (var _iterator10 = _createForOfIteratorHelperLoose(cmapTable.tables), _step10; !(_step10 = _iterator10()).done;) {
+        var cmap = _step10.value;
         if (cmap.platformID === platformID && cmap.encodingID === encodingID) {
           return cmap.table;
         }
@@ -10648,7 +10648,7 @@ var CmapProcessor = (_class = /*#__PURE__*/function () {
     }
     return null;
   };
-  _proto15.lookup = function lookup(codepoint, variationSelector) {
+  _proto13.lookup = function lookup(codepoint, variationSelector) {
     // If there is no Unicode cmap in this font, we need to re-encode
     // the codepoint in the encoding that the cmap supports.
     if (this.encoding) {
@@ -10727,7 +10727,7 @@ var CmapProcessor = (_class = /*#__PURE__*/function () {
         throw new Error("Unknown cmap format ".concat(cmap.version));
     }
   };
-  _proto15.getVariationSelector = function getVariationSelector(codepoint, variationSelector) {
+  _proto13.getVariationSelector = function getVariationSelector(codepoint, variationSelector) {
     if (!this.uvs) {
       return 0;
     }
@@ -10751,7 +10751,7 @@ var CmapProcessor = (_class = /*#__PURE__*/function () {
     }
     return 0;
   };
-  _proto15.getCharacterSet = function getCharacterSet() {
+  _proto13.getCharacterSet = function getCharacterSet() {
     var cmap = this.cmap;
     switch (cmap.version) {
       case 0:
@@ -10776,8 +10776,8 @@ var CmapProcessor = (_class = /*#__PURE__*/function () {
       case 13:
         {
           var _res = [];
-          for (var _iterator13 = _createForOfIteratorHelperLoose(cmap.groups.toArray()), _step13; !(_step13 = _iterator13()).done;) {
-            var group = _step13.value;
+          for (var _iterator11 = _createForOfIteratorHelperLoose(cmap.groups.toArray()), _step11; !(_step11 = _iterator11()).done;) {
+            var group = _step11.value;
             _res.push.apply(_res, range(group.startCharCode, group.endCharCode + 1));
           }
           return _res;
@@ -10788,7 +10788,7 @@ var CmapProcessor = (_class = /*#__PURE__*/function () {
         throw new Error("Unknown cmap format ".concat(cmap.version));
     }
   };
-  _proto15.codePointsForGlyph = function codePointsForGlyph(gid) {
+  _proto13.codePointsForGlyph = function codePointsForGlyph(gid) {
     var cmap = this.cmap;
     switch (cmap.version) {
       case 0:
@@ -10830,8 +10830,8 @@ var CmapProcessor = (_class = /*#__PURE__*/function () {
       case 12:
         {
           var _res3 = [];
-          for (var _iterator14 = _createForOfIteratorHelperLoose(cmap.groups.toArray()), _step14; !(_step14 = _iterator14()).done;) {
-            var group = _step14.value;
+          for (var _iterator12 = _createForOfIteratorHelperLoose(cmap.groups.toArray()), _step12; !(_step12 = _iterator12()).done;) {
+            var group = _step12.value;
             if (gid >= group.glyphID && gid <= group.glyphID + (group.endCharCode - group.startCharCode)) {
               _res3.push(group.startCharCode + (gid - group.glyphID));
             }
@@ -10841,8 +10841,8 @@ var CmapProcessor = (_class = /*#__PURE__*/function () {
       case 13:
         {
           var _res4 = [];
-          for (var _iterator15 = _createForOfIteratorHelperLoose(cmap.groups.toArray()), _step15; !(_step15 = _iterator15()).done;) {
-            var _group = _step15.value;
+          for (var _iterator13 = _createForOfIteratorHelperLoose(cmap.groups.toArray()), _step13; !(_step13 = _iterator13()).done;) {
+            var _group = _step13.value;
             if (gid === _group.glyphID) {
               _res4.push.apply(_res4, range(_group.startCharCode, _group.endCharCode + 1));
             }
@@ -10859,18 +10859,18 @@ var KernProcessor = /*#__PURE__*/function () {
   function KernProcessor(font) {
     this.kern = font.kern;
   }
-  var _proto16 = KernProcessor.prototype;
-  _proto16.process = function process(glyphs, positions) {
+  var _proto14 = KernProcessor.prototype;
+  _proto14.process = function process(glyphs, positions) {
     for (var glyphIndex = 0; glyphIndex < glyphs.length - 1; glyphIndex++) {
       var left = glyphs[glyphIndex].id;
       var right = glyphs[glyphIndex + 1].id;
       positions[glyphIndex].xAdvance += this.getKerning(left, right);
     }
   };
-  _proto16.getKerning = function getKerning(left, right) {
+  _proto14.getKerning = function getKerning(left, right) {
     var res = 0;
-    for (var _iterator16 = _createForOfIteratorHelperLoose(this.kern.tables), _step16; !(_step16 = _iterator16()).done;) {
-      var table = _step16.value;
+    for (var _iterator14 = _createForOfIteratorHelperLoose(this.kern.tables), _step14; !(_step14 = _iterator14()).done;) {
+      var table = _step14.value;
       if (table.coverage.crossStream) {
         continue;
       }
@@ -10946,8 +10946,8 @@ var UnicodeLayoutEngine = /*#__PURE__*/function () {
   function UnicodeLayoutEngine(font) {
     this.font = font;
   }
-  var _proto17 = UnicodeLayoutEngine.prototype;
-  _proto17.positionGlyphs = function positionGlyphs(glyphs, positions) {
+  var _proto15 = UnicodeLayoutEngine.prototype;
+  _proto15.positionGlyphs = function positionGlyphs(glyphs, positions) {
     // find each base + mark cluster, and position the marks relative to the base
     var clusterStart = 0;
     var clusterEnd = 0;
@@ -10968,7 +10968,7 @@ var UnicodeLayoutEngine = /*#__PURE__*/function () {
     }
     return positions;
   };
-  _proto17.positionCluster = function positionCluster(glyphs, positions, clusterStart, clusterEnd) {
+  _proto15.positionCluster = function positionCluster(glyphs, positions, clusterStart, clusterEnd) {
     var base = glyphs[clusterStart];
     var baseBox = base.cbox.copy(); // adjust bounding box for ligature glyphs
 
@@ -11050,7 +11050,7 @@ var UnicodeLayoutEngine = /*#__PURE__*/function () {
     }
     return;
   };
-  _proto17.getCombiningClass = function getCombiningClass(codePoint) {
+  _proto15.getCombiningClass = function getCombiningClass(codePoint) {
     var combiningClass = unicode.getCombiningClass(codePoint); // Thai / Lao need some per-character work
 
     if ((codePoint & ~0xff) === 0x0e00) {
@@ -11225,8 +11225,8 @@ var BBox = /*#__PURE__*/function () {
    * The width of the bounding box
    * @type {number}
    */
-  var _proto18 = BBox.prototype;
-  _proto18.addPoint = function addPoint(x, y) {
+  var _proto16 = BBox.prototype;
+  _proto16.addPoint = function addPoint(x, y) {
     if (Math.abs(x) !== Infinity) {
       if (x < this.minX) {
         this.minX = x;
@@ -11244,7 +11244,7 @@ var BBox = /*#__PURE__*/function () {
       }
     }
   };
-  _proto18.copy = function copy() {
+  _proto16.copy = function copy() {
     return new BBox(this.minX, this.minY, this.maxX, this.maxY);
   };
   return _createClass(BBox, [{
@@ -11397,8 +11397,8 @@ var OPENTYPE_SCRIPTS = {};
 for (var script in UNICODE_SCRIPTS) {
   var tag = UNICODE_SCRIPTS[script];
   if (Array.isArray(tag)) {
-    for (var _iterator17 = _createForOfIteratorHelperLoose(tag), _step17; !(_step17 = _iterator17()).done;) {
-      var t = _step17.value;
+    for (var _iterator15 = _createForOfIteratorHelperLoose(tag), _step15; !(_step15 = _iterator15()).done;) {
+      var t = _step15.value;
       OPENTYPE_SCRIPTS[t] = script;
     }
   } else {
@@ -11545,8 +11545,8 @@ var GlyphRun = /*#__PURE__*/function () {
     this.features = {}; // Convert features to an object
 
     if (Array.isArray(features)) {
-      for (var _iterator18 = _createForOfIteratorHelperLoose(features), _step18; !(_step18 = _iterator18()).done;) {
-        var tag = _step18.value;
+      for (var _iterator16 = _createForOfIteratorHelperLoose(features), _step16; !(_step16 = _iterator16()).done;) {
+        var tag = _step16.value;
         this.features[tag] = true;
       }
     } else if (typeof features === 'object') {
@@ -11561,8 +11561,8 @@ var GlyphRun = /*#__PURE__*/function () {
     key: "advanceWidth",
     get: function get() {
       var width = 0;
-      for (var _iterator19 = _createForOfIteratorHelperLoose(this.positions), _step19; !(_step19 = _iterator19()).done;) {
-        var position = _step19.value;
+      for (var _iterator17 = _createForOfIteratorHelperLoose(this.positions), _step17; !(_step17 = _iterator17()).done;) {
+        var position = _step17.value;
         width += position.xAdvance;
       }
       return width;
@@ -11575,8 +11575,8 @@ var GlyphRun = /*#__PURE__*/function () {
     key: "advanceHeight",
     get: function get() {
       var height = 0;
-      for (var _iterator20 = _createForOfIteratorHelperLoose(this.positions), _step20; !(_step20 = _iterator20()).done;) {
-        var position = _step20.value;
+      for (var _iterator18 = _createForOfIteratorHelperLoose(this.positions), _step18; !(_step18 = _iterator18()).done;) {
+        var position = _step18.value;
         height += position.yAdvance;
       }
       return height;
@@ -12189,8 +12189,8 @@ var AATLookupTable = (_class$1 = /*#__PURE__*/function () {
   function AATLookupTable(table) {
     this.table = table;
   }
-  var _proto19 = AATLookupTable.prototype;
-  _proto19.lookup = function lookup(glyph) {
+  var _proto17 = AATLookupTable.prototype;
+  _proto17.lookup = function lookup(glyph) {
     switch (this.table.version) {
       case 0:
         // simple array format
@@ -12251,15 +12251,15 @@ var AATLookupTable = (_class$1 = /*#__PURE__*/function () {
         throw new Error("Unknown lookup table format: ".concat(this.table.version));
     }
   };
-  _proto19.glyphsForValue = function glyphsForValue(classValue) {
+  _proto17.glyphsForValue = function glyphsForValue(classValue) {
     var res = [];
     switch (this.table.version) {
       case 2: // segment format
 
       case 4:
         {
-          for (var _iterator21 = _createForOfIteratorHelperLoose(this.table.segments), _step21; !(_step21 = _iterator21()).done;) {
-            var segment = _step21.value;
+          for (var _iterator19 = _createForOfIteratorHelperLoose(this.table.segments), _step19; !(_step19 = _iterator19()).done;) {
+            var segment = _step19.value;
             if (this.table.version === 2 && segment.value === classValue) {
               res.push.apply(res, range(segment.firstGlyph, segment.lastGlyph + 1));
             } else {
@@ -12275,8 +12275,8 @@ var AATLookupTable = (_class$1 = /*#__PURE__*/function () {
       case 6:
         {
           // lookup single
-          for (var _iterator22 = _createForOfIteratorHelperLoose(this.table.segments), _step22; !(_step22 = _iterator22()).done;) {
-            var _segment = _step22.value;
+          for (var _iterator20 = _createForOfIteratorHelperLoose(this.table.segments), _step20; !(_step20 = _iterator20()).done;) {
+            var _segment = _step20.value;
             if (_segment.value === classValue) {
               res.push(_segment.glyph);
             }
@@ -12310,8 +12310,8 @@ var AATStateMachine = /*#__PURE__*/function () {
     this.stateTable = stateTable;
     this.lookupTable = new AATLookupTable(stateTable.classTable);
   }
-  var _proto20 = AATStateMachine.prototype;
-  _proto20.process = function process(glyphs, reverse, processEntry) {
+  var _proto18 = AATStateMachine.prototype;
+  _proto18.process = function process(glyphs, reverse, processEntry) {
     var currentState = START_OF_TEXT_STATE; // START_OF_LINE_STATE is used for kashida glyph insertions sometimes I think?
 
     var index = reverse ? glyphs.length - 1 : 0;
@@ -12352,7 +12352,7 @@ var AATStateMachine = /*#__PURE__*/function () {
    * Performs a depth-first traversal of the glyph strings
    * represented by the state machine.
    */;
-  _proto20.traverse = function traverse(opts, state, visited) {
+  _proto18.traverse = function traverse(opts, state, visited) {
     if (state === void 0) {
       state = 0;
     }
@@ -12373,8 +12373,8 @@ var AATStateMachine = /*#__PURE__*/function () {
       var entryIndex = row[classCode];
       var entry = entryTable.getItem(entryIndex); // Try all glyphs in the class
 
-      for (var _iterator23 = _createForOfIteratorHelperLoose(this.lookupTable.glyphsForValue(classCode)), _step23; !(_step23 = _iterator23()).done;) {
-        var glyph = _step23.value;
+      for (var _iterator21 = _createForOfIteratorHelperLoose(this.lookupTable.glyphsForValue(classCode)), _step21; !(_step21 = _iterator21()).done;) {
+        var glyph = _step21.value;
         if (opts.enter) {
           opts.enter(glyph, entry);
         }
@@ -12419,17 +12419,17 @@ var AATMorxProcessor = (_class$2 = /*#__PURE__*/function () {
     this.inputCache = null;
   } // Processes an array of glyphs and applies the specified features
   // Features should be in the form of {featureType:{featureSetting:boolean}}
-  var _proto21 = AATMorxProcessor.prototype;
-  _proto21.process = function process(glyphs, features) {
+  var _proto19 = AATMorxProcessor.prototype;
+  _proto19.process = function process(glyphs, features) {
     if (features === void 0) {
       features = {};
     }
-    for (var _iterator24 = _createForOfIteratorHelperLoose(this.morx.chains), _step24; !(_step24 = _iterator24()).done;) {
-      var chain = _step24.value;
+    for (var _iterator22 = _createForOfIteratorHelperLoose(this.morx.chains), _step22; !(_step22 = _iterator22()).done;) {
+      var chain = _step22.value;
       var flags = chain.defaultFlags; // enable/disable the requested features
 
-      for (var _iterator25 = _createForOfIteratorHelperLoose(chain.features), _step25; !(_step25 = _iterator25()).done;) {
-        var feature = _step25.value;
+      for (var _iterator23 = _createForOfIteratorHelperLoose(chain.features), _step23; !(_step23 = _iterator23()).done;) {
+        var feature = _step23.value;
         var f = void 0;
         if (f = features[feature.featureType]) {
           if (f[feature.featureSetting]) {
@@ -12441,8 +12441,8 @@ var AATMorxProcessor = (_class$2 = /*#__PURE__*/function () {
           }
         }
       }
-      for (var _iterator26 = _createForOfIteratorHelperLoose(chain.subtables), _step26; !(_step26 = _iterator26()).done;) {
-        var subtable = _step26.value;
+      for (var _iterator24 = _createForOfIteratorHelperLoose(chain.subtables), _step24; !(_step24 = _iterator24()).done;) {
+        var subtable = _step24.value;
         if (subtable.subFeatureFlags & flags) {
           this.processSubtable(subtable, glyphs);
         }
@@ -12458,7 +12458,7 @@ var AATMorxProcessor = (_class$2 = /*#__PURE__*/function () {
     }
     return glyphs;
   };
-  _proto21.processSubtable = function processSubtable(subtable, glyphs) {
+  _proto19.processSubtable = function processSubtable(subtable, glyphs) {
     this.subtable = subtable;
     this.glyphs = glyphs;
     if (this.subtable.type === 4) {
@@ -12475,10 +12475,10 @@ var AATMorxProcessor = (_class$2 = /*#__PURE__*/function () {
     var reverse = !!(this.subtable.coverage & REVERSE_DIRECTION);
     return stateMachine.process(this.glyphs, reverse, process);
   };
-  _proto21.getStateMachine = function getStateMachine(subtable) {
+  _proto19.getStateMachine = function getStateMachine(subtable) {
     return new AATStateMachine(subtable.table.stateTable);
   };
-  _proto21.getProcessor = function getProcessor() {
+  _proto19.getProcessor = function getProcessor() {
     switch (this.subtable.type) {
       case 0:
         return this.processIndicRearragement;
@@ -12494,7 +12494,7 @@ var AATMorxProcessor = (_class$2 = /*#__PURE__*/function () {
         throw new Error("Invalid morx subtable type: ".concat(this.subtable.type));
     }
   };
-  _proto21.processIndicRearragement = function processIndicRearragement(glyph, entry, index) {
+  _proto19.processIndicRearragement = function processIndicRearragement(glyph, entry, index) {
     if (entry.flags & MARK_FIRST) {
       this.firstGlyph = index;
     }
@@ -12503,7 +12503,7 @@ var AATMorxProcessor = (_class$2 = /*#__PURE__*/function () {
     }
     reorderGlyphs(this.glyphs, entry.flags & VERB, this.firstGlyph, this.lastGlyph);
   };
-  _proto21.processContextualSubstitution = function processContextualSubstitution(glyph, entry, index) {
+  _proto19.processContextualSubstitution = function processContextualSubstitution(glyph, entry, index) {
     var subsitutions = this.subtable.table.substitutionTable.items;
     if (entry.markIndex !== 0xffff) {
       var lookup = subsitutions.getItem(entry.markIndex);
@@ -12527,7 +12527,7 @@ var AATMorxProcessor = (_class$2 = /*#__PURE__*/function () {
       this.markedGlyph = index;
     }
   };
-  _proto21.processLigature = function processLigature(glyph, entry, index) {
+  _proto19.processLigature = function processLigature(glyph, entry, index) {
     if (entry.flags & SET_COMPONENT) {
       this.ligatureStack.push(index);
     }
@@ -12567,7 +12567,7 @@ var AATMorxProcessor = (_class$2 = /*#__PURE__*/function () {
       (_this$ligatureStack = this.ligatureStack).push.apply(_this$ligatureStack, ligatureGlyphs);
     }
   };
-  _proto21.processNoncontextualSubstitutions = function processNoncontextualSubstitutions(subtable, glyphs, index) {
+  _proto19.processNoncontextualSubstitutions = function processNoncontextualSubstitutions(subtable, glyphs, index) {
     var lookupTable = new AATLookupTable(subtable.table.lookupTable);
     for (index = 0; index < glyphs.length; index++) {
       var glyph = glyphs[index];
@@ -12580,7 +12580,7 @@ var AATMorxProcessor = (_class$2 = /*#__PURE__*/function () {
       }
     }
   };
-  _proto21._insertGlyphs = function _insertGlyphs(glyphIndex, insertionActionIndex, count, isBefore) {
+  _proto19._insertGlyphs = function _insertGlyphs(glyphIndex, insertionActionIndex, count, isBefore) {
     var _this$glyphs;
     var insertions = [];
     while (count--) {
@@ -12592,7 +12592,7 @@ var AATMorxProcessor = (_class$2 = /*#__PURE__*/function () {
     }
     (_this$glyphs = this.glyphs).splice.apply(_this$glyphs, [glyphIndex, 0].concat(insertions));
   };
-  _proto21.processGlyphInsertion = function processGlyphInsertion(glyph, entry, index) {
+  _proto19.processGlyphInsertion = function processGlyphInsertion(glyph, entry, index) {
     if (entry.flags & SET_MARK) {
       this.markedIndex = index;
     }
@@ -12607,37 +12607,37 @@ var AATMorxProcessor = (_class$2 = /*#__PURE__*/function () {
       this._insertGlyphs(index, entry.currentInsertIndex, _count, _isBefore);
     }
   };
-  _proto21.getSupportedFeatures = function getSupportedFeatures() {
+  _proto19.getSupportedFeatures = function getSupportedFeatures() {
     var features = [];
-    for (var _iterator27 = _createForOfIteratorHelperLoose(this.morx.chains), _step27; !(_step27 = _iterator27()).done;) {
-      var chain = _step27.value;
-      for (var _iterator28 = _createForOfIteratorHelperLoose(chain.features), _step28; !(_step28 = _iterator28()).done;) {
-        var feature = _step28.value;
+    for (var _iterator25 = _createForOfIteratorHelperLoose(this.morx.chains), _step25; !(_step25 = _iterator25()).done;) {
+      var chain = _step25.value;
+      for (var _iterator26 = _createForOfIteratorHelperLoose(chain.features), _step26; !(_step26 = _iterator26()).done;) {
+        var feature = _step26.value;
         features.push([feature.featureType, feature.featureSetting]);
       }
     }
     return features;
   };
-  _proto21.generateInputs = function generateInputs(gid) {
+  _proto19.generateInputs = function generateInputs(gid) {
     if (!this.inputCache) {
       this.generateInputCache();
     }
     return this.inputCache[gid] || [];
   };
-  _proto21.generateInputCache = function generateInputCache() {
+  _proto19.generateInputCache = function generateInputCache() {
     this.inputCache = {};
-    for (var _iterator29 = _createForOfIteratorHelperLoose(this.morx.chains), _step29; !(_step29 = _iterator29()).done;) {
-      var chain = _step29.value;
+    for (var _iterator27 = _createForOfIteratorHelperLoose(this.morx.chains), _step27; !(_step27 = _iterator27()).done;) {
+      var chain = _step27.value;
       var flags = chain.defaultFlags;
-      for (var _iterator30 = _createForOfIteratorHelperLoose(chain.subtables), _step30; !(_step30 = _iterator30()).done;) {
-        var subtable = _step30.value;
+      for (var _iterator28 = _createForOfIteratorHelperLoose(chain.subtables), _step28; !(_step28 = _iterator28()).done;) {
+        var subtable = _step28.value;
         if (subtable.subFeatureFlags & flags) {
           this.generateInputsForSubtable(subtable);
         }
       }
     }
   };
-  _proto21.generateInputsForSubtable = function generateInputsForSubtable(subtable) {
+  _proto19.generateInputsForSubtable = function generateInputsForSubtable(subtable) {
     var _this3 = this;
     // Currently, only supporting ligature subtables.
     if (subtable.type !== 2) {
@@ -12779,8 +12779,8 @@ var AATLayoutEngine = /*#__PURE__*/function () {
     this.morxProcessor = new AATMorxProcessor(font);
     this.fallbackPosition = false;
   }
-  var _proto22 = AATLayoutEngine.prototype;
-  _proto22.substitute = function substitute(glyphRun) {
+  var _proto20 = AATLayoutEngine.prototype;
+  _proto20.substitute = function substitute(glyphRun) {
     // AAT expects the glyphs to be in visual order prior to morx processing,
     // so reverse the glyphs if the script is right-to-left.
     if (glyphRun.direction === 'rtl') {
@@ -12788,22 +12788,22 @@ var AATLayoutEngine = /*#__PURE__*/function () {
     }
     this.morxProcessor.process(glyphRun.glyphs, mapOTToAAT(glyphRun.features));
   };
-  _proto22.getAvailableFeatures = function getAvailableFeatures(script, language) {
+  _proto20.getAvailableFeatures = function getAvailableFeatures(script, language) {
     return mapAATToOT(this.morxProcessor.getSupportedFeatures());
   };
-  _proto22.stringsForGlyph = function stringsForGlyph(gid) {
+  _proto20.stringsForGlyph = function stringsForGlyph(gid) {
     var glyphStrings = this.morxProcessor.generateInputs(gid);
     var result = new Set();
-    for (var _iterator31 = _createForOfIteratorHelperLoose(glyphStrings), _step31; !(_step31 = _iterator31()).done;) {
-      var glyphs = _step31.value;
+    for (var _iterator29 = _createForOfIteratorHelperLoose(glyphStrings), _step29; !(_step29 = _iterator29()).done;) {
+      var glyphs = _step29.value;
       this._addStrings(glyphs, 0, result, '');
     }
     return result;
   };
-  _proto22._addStrings = function _addStrings(glyphs, index, strings, string) {
+  _proto20._addStrings = function _addStrings(glyphs, index, strings, string) {
     var codePoints = this.font._cmapProcessor.codePointsForGlyph(glyphs[index]);
-    for (var _iterator32 = _createForOfIteratorHelperLoose(codePoints), _step32; !(_step32 = _iterator32()).done;) {
-      var codePoint = _step32.value;
+    for (var _iterator30 = _createForOfIteratorHelperLoose(codePoints), _step30; !(_step30 = _iterator30()).done;) {
+      var codePoint = _step30.value;
       var s = string + String.fromCodePoint(codePoint);
       if (index < glyphs.length - 1) {
         this._addStrings(glyphs, index + 1, strings, s);
@@ -12836,12 +12836,12 @@ var ShapingPlan = /*#__PURE__*/function () {
    * Adds the given features to the last stage.
    * Ignores features that have already been applied.
    */
-  var _proto23 = ShapingPlan.prototype;
-  _proto23._addFeatures = function _addFeatures(features, global) {
+  var _proto21 = ShapingPlan.prototype;
+  _proto21._addFeatures = function _addFeatures(features, global) {
     var stageIndex = this.stages.length - 1;
     var stage = this.stages[stageIndex];
-    for (var _iterator33 = _createForOfIteratorHelperLoose(features), _step33; !(_step33 = _iterator33()).done;) {
-      var feature = _step33.value;
+    for (var _iterator31 = _createForOfIteratorHelperLoose(features), _step31; !(_step31 = _iterator31()).done;) {
+      var feature = _step31.value;
       if (this.allFeatures[feature] == null) {
         stage.push(feature);
         this.allFeatures[feature] = stageIndex;
@@ -12854,7 +12854,7 @@ var ShapingPlan = /*#__PURE__*/function () {
   /**
    * Add features to the last stage
    */;
-  _proto23.add = function add(arg, global) {
+  _proto21.add = function add(arg, global) {
     if (global === void 0) {
       global = true;
     }
@@ -12876,7 +12876,7 @@ var ShapingPlan = /*#__PURE__*/function () {
   /**
    * Add a new stage
    */;
-  _proto23.addStage = function addStage(arg, global) {
+  _proto21.addStage = function addStage(arg, global) {
     if (typeof arg === 'function') {
       this.stages.push(arg, []);
     } else {
@@ -12884,7 +12884,7 @@ var ShapingPlan = /*#__PURE__*/function () {
       this.add(arg, global);
     }
   };
-  _proto23.setFeatureOverrides = function setFeatureOverrides(features) {
+  _proto21.setFeatureOverrides = function setFeatureOverrides(features) {
     if (Array.isArray(features)) {
       this.add(features);
     } else if (typeof features === 'object') {
@@ -12903,9 +12903,9 @@ var ShapingPlan = /*#__PURE__*/function () {
   /**
    * Assigns the global features to the given glyphs
    */;
-  _proto23.assignGlobalFeatures = function assignGlobalFeatures(glyphs) {
-    for (var _iterator34 = _createForOfIteratorHelperLoose(glyphs), _step34; !(_step34 = _iterator34()).done;) {
-      var glyph = _step34.value;
+  _proto21.assignGlobalFeatures = function assignGlobalFeatures(glyphs) {
+    for (var _iterator32 = _createForOfIteratorHelperLoose(glyphs), _step32; !(_step32 = _iterator32()).done;) {
+      var glyph = _step32.value;
       for (var feature in this.globalFeatures) {
         glyph.features[feature] = true;
       }
@@ -12914,9 +12914,9 @@ var ShapingPlan = /*#__PURE__*/function () {
   /**
    * Executes the planned stages using the given OTProcessor
    */;
-  _proto23.process = function process(processor, glyphs, positions) {
-    for (var _iterator35 = _createForOfIteratorHelperLoose(this.stages), _step35; !(_step35 = _iterator35()).done;) {
-      var stage = _step35.value;
+  _proto21.process = function process(processor, glyphs, positions) {
+    for (var _iterator33 = _createForOfIteratorHelperLoose(this.stages), _step33; !(_step33 = _iterator33()).done;) {
+      var stage = _step33.value;
       if (typeof stage === 'function') {
         if (!positions) {
           stage(this.font, glyphs, this);
@@ -13099,8 +13099,8 @@ var GlyphIterator = /*#__PURE__*/function () {
     this.glyphs = glyphs;
     this.reset(options);
   }
-  var _proto24 = GlyphIterator.prototype;
-  _proto24.reset = function reset(options, index) {
+  var _proto22 = GlyphIterator.prototype;
+  _proto22.reset = function reset(options, index) {
     if (options === void 0) {
       options = {};
     }
@@ -13112,10 +13112,10 @@ var GlyphIterator = /*#__PURE__*/function () {
     this.markAttachmentType = options.markAttachmentType || 0;
     this.index = index;
   };
-  _proto24.shouldIgnore = function shouldIgnore(glyph) {
+  _proto22.shouldIgnore = function shouldIgnore(glyph) {
     return this.flags.ignoreMarks && glyph.isMark || this.flags.ignoreBaseGlyphs && glyph.isBase || this.flags.ignoreLigatures && glyph.isLigature || this.markAttachmentType && glyph.isMark && glyph.markAttachmentType !== this.markAttachmentType;
   };
-  _proto24.move = function move(dir) {
+  _proto22.move = function move(dir) {
     this.index += dir;
     while (0 <= this.index && this.index < this.glyphs.length && this.shouldIgnore(this.glyphs[this.index])) {
       this.index += dir;
@@ -13125,13 +13125,13 @@ var GlyphIterator = /*#__PURE__*/function () {
     }
     return this.glyphs[this.index];
   };
-  _proto24.next = function next() {
+  _proto22.next = function next() {
     return this.move(+1);
   };
-  _proto24.prev = function prev() {
+  _proto22.prev = function prev() {
     return this.move(-1);
   };
-  _proto24.peek = function peek(count) {
+  _proto22.peek = function peek(count) {
     if (count === void 0) {
       count = 1;
     }
@@ -13140,7 +13140,7 @@ var GlyphIterator = /*#__PURE__*/function () {
     this.index = idx;
     return res;
   };
-  _proto24.peekIndex = function peekIndex(count) {
+  _proto22.peekIndex = function peekIndex(count) {
     if (count === void 0) {
       count = 1;
     }
@@ -13150,7 +13150,7 @@ var GlyphIterator = /*#__PURE__*/function () {
     this.index = idx;
     return res;
   };
-  _proto24.increment = function increment(count) {
+  _proto22.increment = function increment(count) {
     if (count === void 0) {
       count = 1;
     }
@@ -13190,18 +13190,18 @@ var OTProcessor = /*#__PURE__*/function () {
     this.ligatureID = 1;
     this.currentFeature = null;
   }
-  var _proto25 = OTProcessor.prototype;
-  _proto25.findScript = function findScript(script) {
+  var _proto23 = OTProcessor.prototype;
+  _proto23.findScript = function findScript(script) {
     if (this.table.scriptList == null) {
       return null;
     }
     if (!Array.isArray(script)) {
       script = [script];
     }
-    for (var _iterator36 = _createForOfIteratorHelperLoose(script), _step36; !(_step36 = _iterator36()).done;) {
-      var s = _step36.value;
-      for (var _iterator37 = _createForOfIteratorHelperLoose(this.table.scriptList), _step37; !(_step37 = _iterator37()).done;) {
-        var entry = _step37.value;
+    for (var _iterator34 = _createForOfIteratorHelperLoose(script), _step34; !(_step34 = _iterator34()).done;) {
+      var s = _step34.value;
+      for (var _iterator35 = _createForOfIteratorHelperLoose(this.table.scriptList), _step35; !(_step35 = _iterator35()).done;) {
+        var entry = _step35.value;
         if (entry.tag === s) {
           return entry;
         }
@@ -13209,7 +13209,7 @@ var OTProcessor = /*#__PURE__*/function () {
     }
     return null;
   };
-  _proto25.selectScript = function selectScript(script, language, direction$1) {
+  _proto23.selectScript = function selectScript(script, language, direction$1) {
     var changed = false;
     var entry;
     if (!this.script || script !== this.scriptTag) {
@@ -13234,8 +13234,8 @@ var OTProcessor = /*#__PURE__*/function () {
     }
     if (!language || language !== this.languageTag) {
       this.language = null;
-      for (var _iterator38 = _createForOfIteratorHelperLoose(this.script.langSysRecords), _step38; !(_step38 = _iterator38()).done;) {
-        var lang = _step38.value;
+      for (var _iterator36 = _createForOfIteratorHelperLoose(this.script.langSysRecords), _step36; !(_step36 = _iterator36()).done;) {
+        var lang = _step36.value;
         if (lang.tag === language) {
           this.language = lang.langSys;
           this.languageTag = lang.tag;
@@ -13252,8 +13252,8 @@ var OTProcessor = /*#__PURE__*/function () {
     if (changed) {
       this.features = {};
       if (this.language) {
-        for (var _iterator39 = _createForOfIteratorHelperLoose(this.language.featureIndexes), _step39; !(_step39 = _iterator39()).done;) {
-          var featureIndex = _step39.value;
+        for (var _iterator37 = _createForOfIteratorHelperLoose(this.language.featureIndexes), _step37; !(_step37 = _iterator37()).done;) {
+          var featureIndex = _step37.value;
           var record = this.table.featureList[featureIndex];
           var substituteFeature = this.substituteFeatureForVariations(featureIndex);
           this.features[record.tag] = substituteFeature || record.feature;
@@ -13262,19 +13262,19 @@ var OTProcessor = /*#__PURE__*/function () {
     }
     return this.scriptTag;
   };
-  _proto25.lookupsForFeatures = function lookupsForFeatures(userFeatures, exclude) {
+  _proto23.lookupsForFeatures = function lookupsForFeatures(userFeatures, exclude) {
     if (userFeatures === void 0) {
       userFeatures = [];
     }
     var lookups = [];
-    for (var _iterator40 = _createForOfIteratorHelperLoose(userFeatures), _step40; !(_step40 = _iterator40()).done;) {
-      var tag = _step40.value;
+    for (var _iterator38 = _createForOfIteratorHelperLoose(userFeatures), _step38; !(_step38 = _iterator38()).done;) {
+      var tag = _step38.value;
       var feature = this.features[tag];
       if (!feature) {
         continue;
       }
-      for (var _iterator41 = _createForOfIteratorHelperLoose(feature.lookupListIndexes), _step41; !(_step41 = _iterator41()).done;) {
-        var lookupIndex = _step41.value;
+      for (var _iterator39 = _createForOfIteratorHelperLoose(feature.lookupListIndexes), _step39; !(_step39 = _iterator39()).done;) {
+        var lookupIndex = _step39.value;
         if (exclude && exclude.indexOf(lookupIndex) !== -1) {
           continue;
         }
@@ -13290,21 +13290,21 @@ var OTProcessor = /*#__PURE__*/function () {
     });
     return lookups;
   };
-  _proto25.substituteFeatureForVariations = function substituteFeatureForVariations(featureIndex) {
+  _proto23.substituteFeatureForVariations = function substituteFeatureForVariations(featureIndex) {
     if (this.variationsIndex === -1) {
       return null;
     }
     var record = this.table.featureVariations.featureVariationRecords[this.variationsIndex];
     var substitutions = record.featureTableSubstitution.substitutions;
-    for (var _iterator42 = _createForOfIteratorHelperLoose(substitutions), _step42; !(_step42 = _iterator42()).done;) {
-      var substitution = _step42.value;
+    for (var _iterator40 = _createForOfIteratorHelperLoose(substitutions), _step40; !(_step40 = _iterator40()).done;) {
+      var substitution = _step40.value;
       if (substitution.featureIndex === featureIndex) {
         return substitution.alternateFeatureTable;
       }
     }
     return null;
   };
-  _proto25.findVariationsIndex = function findVariationsIndex(coords) {
+  _proto23.findVariationsIndex = function findVariationsIndex(coords) {
     var variations = this.table.featureVariations;
     if (!variations) {
       return -1;
@@ -13318,24 +13318,24 @@ var OTProcessor = /*#__PURE__*/function () {
     }
     return -1;
   };
-  _proto25.variationConditionsMatch = function variationConditionsMatch(conditions, coords) {
+  _proto23.variationConditionsMatch = function variationConditionsMatch(conditions, coords) {
     return conditions.every(function (condition) {
       var coord = condition.axisIndex < coords.length ? coords[condition.axisIndex] : 0;
       return condition.filterRangeMinValue <= coord && coord <= condition.filterRangeMaxValue;
     });
   };
-  _proto25.applyFeatures = function applyFeatures(userFeatures, glyphs, advances) {
+  _proto23.applyFeatures = function applyFeatures(userFeatures, glyphs, advances) {
     var lookups = this.lookupsForFeatures(userFeatures);
     this.applyLookups(lookups, glyphs, advances);
   };
-  _proto25.applyLookups = function applyLookups(lookups, glyphs, positions) {
+  _proto23.applyLookups = function applyLookups(lookups, glyphs, positions) {
     this.glyphs = glyphs;
     this.positions = positions;
     this.glyphIterator = new GlyphIterator(glyphs);
-    for (var _iterator43 = _createForOfIteratorHelperLoose(lookups), _step43; !(_step43 = _iterator43()).done;) {
-      var _step43$value = _step43.value,
-        feature = _step43$value.feature,
-        lookup = _step43$value.lookup;
+    for (var _iterator41 = _createForOfIteratorHelperLoose(lookups), _step41; !(_step41 = _iterator41()).done;) {
+      var _step41$value = _step41.value,
+        feature = _step41$value.feature,
+        lookup = _step41$value.lookup;
       this.currentFeature = feature;
       this.glyphIterator.reset(lookup.flags);
       while (this.glyphIterator.index < glyphs.length) {
@@ -13343,8 +13343,8 @@ var OTProcessor = /*#__PURE__*/function () {
           this.glyphIterator.next();
           continue;
         }
-        for (var _iterator44 = _createForOfIteratorHelperLoose(lookup.subTables), _step44; !(_step44 = _iterator44()).done;) {
-          var table = _step44.value;
+        for (var _iterator42 = _createForOfIteratorHelperLoose(lookup.subTables), _step42; !(_step42 = _iterator42()).done;) {
+          var table = _step42.value;
           var res = this.applyLookup(lookup.lookupType, table);
           if (res) {
             break;
@@ -13354,14 +13354,14 @@ var OTProcessor = /*#__PURE__*/function () {
       }
     }
   };
-  _proto25.applyLookup = function applyLookup(lookup, table) {
+  _proto23.applyLookup = function applyLookup(lookup, table) {
     throw new Error("applyLookup must be implemented by subclasses");
   };
-  _proto25.applyLookupList = function applyLookupList(lookupRecords) {
+  _proto23.applyLookupList = function applyLookupList(lookupRecords) {
     var options = this.glyphIterator.options;
     var glyphIndex = this.glyphIterator.index;
-    for (var _iterator45 = _createForOfIteratorHelperLoose(lookupRecords), _step45; !(_step45 = _iterator45()).done;) {
-      var lookupRecord = _step45.value;
+    for (var _iterator43 = _createForOfIteratorHelperLoose(lookupRecords), _step43; !(_step43 = _iterator43()).done;) {
+      var lookupRecord = _step43.value;
       // Reset flags and find glyph index for this lookup record
       this.glyphIterator.reset(options, glyphIndex);
       this.glyphIterator.increment(lookupRecord.sequenceIndex); // Get the lookup and setup flags for subtables
@@ -13369,8 +13369,8 @@ var OTProcessor = /*#__PURE__*/function () {
       var lookup = this.table.lookupList.get(lookupRecord.lookupListIndex);
       this.glyphIterator.reset(lookup.flags, this.glyphIterator.index); // Apply lookup subtables until one matches
 
-      for (var _iterator46 = _createForOfIteratorHelperLoose(lookup.subTables), _step46; !(_step46 = _iterator46()).done;) {
-        var table = _step46.value;
+      for (var _iterator44 = _createForOfIteratorHelperLoose(lookup.subTables), _step44; !(_step44 = _iterator44()).done;) {
+        var table = _step44.value;
         if (this.applyLookup(lookup.lookupType, table)) {
           break;
         }
@@ -13379,7 +13379,7 @@ var OTProcessor = /*#__PURE__*/function () {
     this.glyphIterator.reset(options, glyphIndex);
     return true;
   };
-  _proto25.coverageIndex = function coverageIndex(coverage, glyph) {
+  _proto23.coverageIndex = function coverageIndex(coverage, glyph) {
     if (glyph == null) {
       glyph = this.glyphIterator.cur.id;
     }
@@ -13387,8 +13387,8 @@ var OTProcessor = /*#__PURE__*/function () {
       case 1:
         return coverage.glyphs.indexOf(glyph);
       case 2:
-        for (var _iterator47 = _createForOfIteratorHelperLoose(coverage.rangeRecords), _step47; !(_step47 = _iterator47()).done;) {
-          var range = _step47.value;
+        for (var _iterator45 = _createForOfIteratorHelperLoose(coverage.rangeRecords), _step45; !(_step45 = _iterator45()).done;) {
+          var range = _step45.value;
           if (range.start <= glyph && glyph <= range.end) {
             return range.startCoverageIndex + glyph - range.start;
           }
@@ -13397,7 +13397,7 @@ var OTProcessor = /*#__PURE__*/function () {
     }
     return -1;
   };
-  _proto25.match = function match(sequenceIndex, sequence, fn, matched) {
+  _proto23.match = function match(sequenceIndex, sequence, fn, matched) {
     var pos = this.glyphIterator.index;
     var glyph = this.glyphIterator.increment(sequenceIndex);
     var idx = 0;
@@ -13414,12 +13414,12 @@ var OTProcessor = /*#__PURE__*/function () {
     }
     return matched || true;
   };
-  _proto25.sequenceMatches = function sequenceMatches(sequenceIndex, sequence) {
+  _proto23.sequenceMatches = function sequenceMatches(sequenceIndex, sequence) {
     return this.match(sequenceIndex, sequence, function (component, glyph) {
       return component === glyph.id;
     });
   };
-  _proto25.sequenceMatchIndices = function sequenceMatchIndices(sequenceIndex, sequence) {
+  _proto23.sequenceMatchIndices = function sequenceMatchIndices(sequenceIndex, sequence) {
     var _this4 = this;
     return this.match(sequenceIndex, sequence, function (component, glyph) {
       // If the current feature doesn't apply to this glyph,
@@ -13429,13 +13429,13 @@ var OTProcessor = /*#__PURE__*/function () {
       return component === glyph.id;
     }, []);
   };
-  _proto25.coverageSequenceMatches = function coverageSequenceMatches(sequenceIndex, sequence) {
+  _proto23.coverageSequenceMatches = function coverageSequenceMatches(sequenceIndex, sequence) {
     var _this5 = this;
     return this.match(sequenceIndex, sequence, function (coverage, glyph) {
       return _this5.coverageIndex(coverage, glyph.id) >= 0;
     });
   };
-  _proto25.getClassID = function getClassID(glyph, classDef) {
+  _proto23.getClassID = function getClassID(glyph, classDef) {
     switch (classDef.version) {
       case 1:
         // Class array
@@ -13445,8 +13445,8 @@ var OTProcessor = /*#__PURE__*/function () {
         }
         break;
       case 2:
-        for (var _iterator48 = _createForOfIteratorHelperLoose(classDef.classRangeRecord), _step48; !(_step48 = _iterator48()).done;) {
-          var range = _step48.value;
+        for (var _iterator46 = _createForOfIteratorHelperLoose(classDef.classRangeRecord), _step46; !(_step46 = _iterator46()).done;) {
+          var range = _step46.value;
           if (range.start <= glyph && glyph <= range.end) {
             return range.class;
           }
@@ -13455,13 +13455,13 @@ var OTProcessor = /*#__PURE__*/function () {
     }
     return 0;
   };
-  _proto25.classSequenceMatches = function classSequenceMatches(sequenceIndex, sequence, classDef) {
+  _proto23.classSequenceMatches = function classSequenceMatches(sequenceIndex, sequence, classDef) {
     var _this6 = this;
     return this.match(sequenceIndex, sequence, function (classID, glyph) {
       return classID === _this6.getClassID(glyph.id, classDef);
     });
   };
-  _proto25.applyContext = function applyContext(table) {
+  _proto23.applyContext = function applyContext(table) {
     switch (table.version) {
       case 1:
         var index = this.coverageIndex(table.coverage);
@@ -13469,8 +13469,8 @@ var OTProcessor = /*#__PURE__*/function () {
           return false;
         }
         var set = table.ruleSets[index];
-        for (var _iterator49 = _createForOfIteratorHelperLoose(set), _step49; !(_step49 = _iterator49()).done;) {
-          var rule = _step49.value;
+        for (var _iterator47 = _createForOfIteratorHelperLoose(set), _step47; !(_step47 = _iterator47()).done;) {
+          var rule = _step47.value;
           if (this.sequenceMatches(1, rule.input)) {
             return this.applyLookupList(rule.lookupRecords);
           }
@@ -13485,8 +13485,8 @@ var OTProcessor = /*#__PURE__*/function () {
           return false;
         }
         set = table.classSet[index];
-        for (var _iterator50 = _createForOfIteratorHelperLoose(set), _step50; !(_step50 = _iterator50()).done;) {
-          var _rule = _step50.value;
+        for (var _iterator48 = _createForOfIteratorHelperLoose(set), _step48; !(_step48 = _iterator48()).done;) {
+          var _rule = _step48.value;
           if (this.classSequenceMatches(1, _rule.classes, table.classDef)) {
             return this.applyLookupList(_rule.lookupRecords);
           }
@@ -13500,7 +13500,7 @@ var OTProcessor = /*#__PURE__*/function () {
     }
     return false;
   };
-  _proto25.applyChainingContext = function applyChainingContext(table) {
+  _proto23.applyChainingContext = function applyChainingContext(table) {
     switch (table.version) {
       case 1:
         var index = this.coverageIndex(table.coverage);
@@ -13508,8 +13508,8 @@ var OTProcessor = /*#__PURE__*/function () {
           return false;
         }
         var set = table.chainRuleSets[index];
-        for (var _iterator51 = _createForOfIteratorHelperLoose(set), _step51; !(_step51 = _iterator51()).done;) {
-          var rule = _step51.value;
+        for (var _iterator49 = _createForOfIteratorHelperLoose(set), _step49; !(_step49 = _iterator49()).done;) {
+          var rule = _step49.value;
           if (this.sequenceMatches(-rule.backtrack.length, rule.backtrack) && this.sequenceMatches(1, rule.input) && this.sequenceMatches(1 + rule.input.length, rule.lookahead)) {
             return this.applyLookupList(rule.lookupRecords);
           }
@@ -13524,8 +13524,8 @@ var OTProcessor = /*#__PURE__*/function () {
         if (!rules) {
           return false;
         }
-        for (var _iterator52 = _createForOfIteratorHelperLoose(rules), _step52; !(_step52 = _iterator52()).done;) {
-          var _rule2 = _step52.value;
+        for (var _iterator50 = _createForOfIteratorHelperLoose(rules), _step50; !(_step50 = _iterator50()).done;) {
+          var _rule2 = _step50.value;
           if (this.classSequenceMatches(-_rule2.backtrack.length, _rule2.backtrack, table.backtrackClassDef) && this.classSequenceMatches(1, _rule2.input, table.inputClassDef) && this.classSequenceMatches(1 + _rule2.input.length, _rule2.lookahead, table.lookaheadClassDef)) {
             return this.applyLookupList(_rule2.lookupRecords);
           }
@@ -13567,8 +13567,8 @@ var GlyphInfo = /*#__PURE__*/function () {
     this.substituted = false;
     this.isMultiplied = false;
   }
-  var _proto26 = GlyphInfo.prototype;
-  _proto26.copy = function copy() {
+  var _proto24 = GlyphInfo.prototype;
+  _proto24.copy = function copy() {
     return new GlyphInfo(this._font, this.id, this.codePoints, this.features);
   };
   return _createClass(GlyphInfo, [{
@@ -14184,11 +14184,11 @@ var IndicInfo = function IndicInfo(category, position, syllableType, syllable) {
 function setupSyllables(font, glyphs) {
   var syllable = 0;
   var last = 0;
-  for (var _iterator53 = _createForOfIteratorHelperLoose(stateMachine.match(glyphs.map(indicCategory))), _step53; !(_step53 = _iterator53()).done;) {
-    var _step53$value = _step53.value,
-      start = _step53$value[0],
-      end = _step53$value[1],
-      tags = _step53$value[2];
+  for (var _iterator51 = _createForOfIteratorHelperLoose(stateMachine.match(glyphs.map(indicCategory))), _step51; !(_step51 = _iterator51()).done;) {
+    var _step51$value = _step51.value,
+      start = _step51$value[0],
+      end = _step51$value[1],
+      tags = _step51$value[2];
     if (start > last) {
       ++syllable;
       for (var i = last; i < start; i++) {
@@ -14219,9 +14219,9 @@ function isHalantOrCoeng(glyph) {
   return glyph.shaperInfo.category & HALANT_OR_COENG_FLAGS;
 }
 function wouldSubstitute(glyphs, feature) {
-  for (var _iterator54 = _createForOfIteratorHelperLoose(glyphs), _step54; !(_step54 = _iterator54()).done;) {
+  for (var _iterator52 = _createForOfIteratorHelperLoose(glyphs), _step52; !(_step52 = _iterator52()).done;) {
     var _glyph$features;
-    var glyph = _step54.value;
+    var glyph = _step52.value;
     glyph.features = (_glyph$features = {}, _glyph$features[feature] = true, _glyph$features);
   }
   var GSUB = glyphs[0]._font._layoutEngine.engine.GSUBProcessor;
@@ -14951,11 +14951,11 @@ var USEInfo = function USEInfo(category, syllableType, syllable) {
 };
 function setupSyllables$1(font, glyphs) {
   var syllable = 0;
-  for (var _iterator55 = _createForOfIteratorHelperLoose(stateMachine$1.match(glyphs.map(useCategory))), _step55; !(_step55 = _iterator55()).done;) {
-    var _step55$value = _step55.value,
-      start = _step55$value[0],
-      end = _step55$value[1],
-      tags = _step55$value[2];
+  for (var _iterator53 = _createForOfIteratorHelperLoose(stateMachine$1.match(glyphs.map(useCategory))), _step53; !(_step53 = _iterator53()).done;) {
+    var _step53$value = _step53.value,
+      start = _step53$value[0],
+      end = _step53$value[1],
+      tags = _step53$value[2];
     ++syllable; // Create shaper info
 
     for (var i = start; i <= end; i++) {
@@ -14969,14 +14969,14 @@ function setupSyllables$1(font, glyphs) {
   }
 }
 function clearSubstitutionFlags(font, glyphs) {
-  for (var _iterator56 = _createForOfIteratorHelperLoose(glyphs), _step56; !(_step56 = _iterator56()).done;) {
-    var glyph = _step56.value;
+  for (var _iterator54 = _createForOfIteratorHelperLoose(glyphs), _step54; !(_step54 = _iterator54()).done;) {
+    var glyph = _step54.value;
     glyph.substituted = false;
   }
 }
 function recordRphf(font, glyphs) {
-  for (var _iterator57 = _createForOfIteratorHelperLoose(glyphs), _step57; !(_step57 = _iterator57()).done;) {
-    var glyph = _step57.value;
+  for (var _iterator55 = _createForOfIteratorHelperLoose(glyphs), _step55; !(_step55 = _iterator55()).done;) {
+    var glyph = _step55.value;
     if (glyph.substituted && glyph.features.rphf) {
       // Mark a substituted repha.
       glyph.shaperInfo.category = 'R';
@@ -14984,8 +14984,8 @@ function recordRphf(font, glyphs) {
   }
 }
 function recordPref(font, glyphs) {
-  for (var _iterator58 = _createForOfIteratorHelperLoose(glyphs), _step58; !(_step58 = _iterator58()).done;) {
-    var glyph = _step58.value;
+  for (var _iterator56 = _createForOfIteratorHelperLoose(glyphs), _step56; !(_step56 = _iterator56()).done;) {
+    var glyph = _step56.value;
     if (glyph.substituted) {
       // Mark a substituted pref as VPre, as they behave the same way.
       glyph.shaperInfo.category = 'VPre';
@@ -15202,8 +15202,8 @@ function choose(script) {
   if (!Array.isArray(script)) {
     script = [script];
   }
-  for (var _iterator59 = _createForOfIteratorHelperLoose(script), _step59; !(_step59 = _iterator59()).done;) {
-    var s = _step59.value;
+  for (var _iterator57 = _createForOfIteratorHelperLoose(script), _step57; !(_step57 = _iterator57()).done;) {
+    var s = _step57.value;
     var shaper = SHAPERS[s];
     if (shaper) {
       return shaper;
@@ -15216,8 +15216,8 @@ var GSUBProcessor = /*#__PURE__*/function (_OTProcessor) {
     return _OTProcessor.apply(this, arguments) || this;
   }
   _inheritsLoose(GSUBProcessor, _OTProcessor);
-  var _proto27 = GSUBProcessor.prototype;
-  _proto27.applyLookup = function applyLookup(lookupType, table) {
+  var _proto25 = GSUBProcessor.prototype;
+  _proto25.applyLookup = function applyLookup(lookupType, table) {
     var _this7 = this;
     switch (lookupType) {
       case 1:
@@ -15288,8 +15288,8 @@ var GSUBProcessor = /*#__PURE__*/function (_OTProcessor) {
           if (_index3 === -1) {
             return false;
           }
-          for (var _iterator60 = _createForOfIteratorHelperLoose(table.ligatureSets.get(_index3)), _step60; !(_step60 = _iterator60()).done;) {
-            var ligature = _step60.value;
+          for (var _iterator58 = _createForOfIteratorHelperLoose(table.ligatureSets.get(_index3)), _step58; !(_step58 = _iterator58()).done;) {
+            var ligature = _step58.value;
             var matched = this.sequenceMatchIndices(1, ligature.components);
             if (!matched) {
               continue;
@@ -15297,9 +15297,9 @@ var GSUBProcessor = /*#__PURE__*/function (_OTProcessor) {
             var _curGlyph = this.glyphIterator.cur; // Concatenate all of the characters the new ligature will represent
 
             var characters = _curGlyph.codePoints.slice();
-            for (var _iterator61 = _createForOfIteratorHelperLoose(matched), _step61; !(_step61 = _iterator61()).done;) {
+            for (var _iterator59 = _createForOfIteratorHelperLoose(matched), _step59; !(_step59 = _iterator59()).done;) {
               var _characters;
-              var _index4 = _step61.value;
+              var _index4 = _step59.value;
               (_characters = characters).push.apply(_characters, this.glyphs[_index4].codePoints);
             } // Create the replacement ligature glyph
 
@@ -15342,8 +15342,8 @@ var GSUBProcessor = /*#__PURE__*/function (_OTProcessor) {
             var idx = this.glyphIterator.index + 1; // Set ligatureID and ligatureComponent on glyphs that were skipped in the matched sequence.
             // This allows GPOS to attach marks to the correct ligature components.
 
-            for (var _iterator62 = _createForOfIteratorHelperLoose(matched), _step62; !(_step62 = _iterator62()).done;) {
-              var matchIndex = _step62.value;
+            for (var _iterator60 = _createForOfIteratorHelperLoose(matched), _step60; !(_step60 = _iterator60()).done;) {
+              var matchIndex = _step60.value;
               // Don't assign new ligature components for mark ligatures (see above)
               if (isMarkLigature) {
                 idx = matchIndex;
@@ -15400,8 +15400,8 @@ var GPOSProcessor = /*#__PURE__*/function (_OTProcessor2) {
     return _OTProcessor2.apply(this, arguments) || this;
   }
   _inheritsLoose(GPOSProcessor, _OTProcessor2);
-  var _proto28 = GPOSProcessor.prototype;
-  _proto28.applyPositionValue = function applyPositionValue(sequenceIndex, value) {
+  var _proto26 = GPOSProcessor.prototype;
+  _proto26.applyPositionValue = function applyPositionValue(sequenceIndex, value) {
     var position = this.positions[this.glyphIterator.peekIndex(sequenceIndex)];
     if (value.xAdvance != null) {
       position.xAdvance += value.xAdvance;
@@ -15433,7 +15433,7 @@ var GPOSProcessor = /*#__PURE__*/function (_OTProcessor2) {
       }
     } // TODO: device tables
   };
-  _proto28.applyLookup = function applyLookup(lookupType, table) {
+  _proto26.applyLookup = function applyLookup(lookupType, table) {
     switch (lookupType) {
       case 1:
         {
@@ -15467,8 +15467,8 @@ var GPOSProcessor = /*#__PURE__*/function (_OTProcessor2) {
             case 1:
               // Adjustments for glyph pairs
               var set = table.pairSets.get(_index);
-              for (var _iterator63 = _createForOfIteratorHelperLoose(set), _step63; !(_step63 = _iterator63()).done;) {
-                var _pair = _step63.value;
+              for (var _iterator61 = _createForOfIteratorHelperLoose(set), _step61; !(_step61 = _iterator61()).done;) {
+                var _pair = _step61.value;
                 if (_pair.secondGlyph === nextGlyph.id) {
                   this.applyPositionValue(0, _pair.value1);
                   this.applyPositionValue(1, _pair.value2);
@@ -15636,7 +15636,7 @@ var GPOSProcessor = /*#__PURE__*/function (_OTProcessor2) {
         throw new Error("Unsupported GPOS table: ".concat(lookupType));
     }
   };
-  _proto28.applyAnchor = function applyAnchor(markRecord, baseAnchor, baseGlyphIndex) {
+  _proto26.applyAnchor = function applyAnchor(markRecord, baseAnchor, baseGlyphIndex) {
     var baseCoords = this.getAnchor(baseAnchor);
     var markCoords = this.getAnchor(markRecord.markAnchor);
     var basePos = this.positions[baseGlyphIndex];
@@ -15645,7 +15645,7 @@ var GPOSProcessor = /*#__PURE__*/function (_OTProcessor2) {
     markPos.yOffset = baseCoords.y - markCoords.y;
     this.glyphIterator.cur.markAttachment = baseGlyphIndex;
   };
-  _proto28.getAnchor = function getAnchor(anchor) {
+  _proto26.getAnchor = function getAnchor(anchor) {
     // TODO: contour point, device tables
     var x = anchor.xCoordinate;
     var y = anchor.yCoordinate; // Adjustments for font variations
@@ -15665,14 +15665,14 @@ var GPOSProcessor = /*#__PURE__*/function (_OTProcessor2) {
       y: y
     };
   };
-  _proto28.applyFeatures = function applyFeatures(userFeatures, glyphs, advances) {
+  _proto26.applyFeatures = function applyFeatures(userFeatures, glyphs, advances) {
     _OTProcessor2.prototype.applyFeatures.call(this, userFeatures, glyphs, advances);
     for (var i = 0; i < this.glyphs.length; i++) {
       this.fixCursiveAttachment(i);
     }
     this.fixMarkAttachment();
   };
-  _proto28.fixCursiveAttachment = function fixCursiveAttachment(i) {
+  _proto26.fixCursiveAttachment = function fixCursiveAttachment(i) {
     var glyph = this.glyphs[i];
     if (glyph.cursiveAttachment != null) {
       var j = glyph.cursiveAttachment;
@@ -15681,7 +15681,7 @@ var GPOSProcessor = /*#__PURE__*/function (_OTProcessor2) {
       this.positions[i].yOffset += this.positions[j].yOffset;
     }
   };
-  _proto28.fixMarkAttachment = function fixMarkAttachment() {
+  _proto26.fixMarkAttachment = function fixMarkAttachment() {
     for (var i = 0; i < this.glyphs.length; i++) {
       var glyph = this.glyphs[i];
       if (glyph.markAttachment != null) {
@@ -15719,8 +15719,8 @@ var OTLayoutEngine = /*#__PURE__*/function () {
       this.GPOSProcessor = new GPOSProcessor(font, font.GPOS);
     }
   }
-  var _proto29 = OTLayoutEngine.prototype;
-  _proto29.setup = function setup(glyphRun) {
+  var _proto27 = OTLayoutEngine.prototype;
+  _proto27.setup = function setup(glyphRun) {
     var _this8 = this;
     // Map glyphs to GlyphInfo objects so data can be passed between
     // GSUB and GPOS without mutating the real (shared) Glyph objects.
@@ -15745,7 +15745,7 @@ var OTLayoutEngine = /*#__PURE__*/function () {
       glyphRun.features[key] = true;
     }
   };
-  _proto29.substitute = function substitute(glyphRun) {
+  _proto27.substitute = function substitute(glyphRun) {
     var _this9 = this;
     if (this.GSUBProcessor) {
       this.plan.process(this.GSUBProcessor, this.glyphInfos); // Map glyph infos back to normal Glyph objects
@@ -15755,7 +15755,7 @@ var OTLayoutEngine = /*#__PURE__*/function () {
       });
     }
   };
-  _proto29.position = function position(glyphRun) {
+  _proto27.position = function position(glyphRun) {
     if (this.shaper.zeroMarkWidths === 'BEFORE_GPOS') {
       this.zeroMarkAdvances(glyphRun.positions);
     }
@@ -15772,7 +15772,7 @@ var OTLayoutEngine = /*#__PURE__*/function () {
     }
     return this.GPOSProcessor && this.GPOSProcessor.features;
   };
-  _proto29.zeroMarkAdvances = function zeroMarkAdvances(positions) {
+  _proto27.zeroMarkAdvances = function zeroMarkAdvances(positions) {
     for (var i = 0; i < this.glyphInfos.length; i++) {
       if (this.glyphInfos[i].isMark) {
         positions[i].xAdvance = 0;
@@ -15780,12 +15780,12 @@ var OTLayoutEngine = /*#__PURE__*/function () {
       }
     }
   };
-  _proto29.cleanup = function cleanup() {
+  _proto27.cleanup = function cleanup() {
     this.glyphInfos = null;
     this.plan = null;
     this.shaper = null;
   };
-  _proto29.getAvailableFeatures = function getAvailableFeatures(script, language) {
+  _proto27.getAvailableFeatures = function getAvailableFeatures(script, language) {
     var features = [];
     if (this.GSUBProcessor) {
       this.GSUBProcessor.selectScript(script, language);
@@ -15812,8 +15812,8 @@ var LayoutEngine = /*#__PURE__*/function () {
       this.engine = new OTLayoutEngine(this.font);
     }
   }
-  var _proto30 = LayoutEngine.prototype;
-  _proto30.layout = function layout(string, features, script, language, direction) {
+  var _proto28 = LayoutEngine.prototype;
+  _proto28.layout = function layout(string, features, script, language, direction) {
     // Make the features parameter optional
     if (typeof features === 'string') {
       direction = language;
@@ -15832,8 +15832,8 @@ var LayoutEngine = /*#__PURE__*/function () {
       // Attempt to detect the script from the glyph code points if not provided.
       if (script == null) {
         var codePoints = [];
-        for (var _iterator64 = _createForOfIteratorHelperLoose(string), _step64; !(_step64 = _iterator64()).done;) {
-          var glyph = _step64.value;
+        for (var _iterator62 = _createForOfIteratorHelperLoose(string), _step62; !(_step62 = _iterator62()).done;) {
+          var glyph = _step62.value;
           codePoints.push.apply(codePoints, glyph.codePoints);
         }
         script = forCodePoints(codePoints);
@@ -15860,13 +15860,13 @@ var LayoutEngine = /*#__PURE__*/function () {
     }
     return glyphRun;
   };
-  _proto30.substitute = function substitute(glyphRun) {
+  _proto28.substitute = function substitute(glyphRun) {
     // Call the advanced layout engine to make substitutions
     if (this.engine && this.engine.substitute) {
       this.engine.substitute(glyphRun);
     }
   };
-  _proto30.position = function position(glyphRun) {
+  _proto28.position = function position(glyphRun) {
     // Get initial glyph positions
     glyphRun.positions = glyphRun.glyphs.map(function (glyph) {
       return new GlyphPosition(glyph.advanceWidth);
@@ -15892,7 +15892,7 @@ var LayoutEngine = /*#__PURE__*/function () {
       glyphRun.features.kern = true;
     }
   };
-  _proto30.hideDefaultIgnorables = function hideDefaultIgnorables(glyphs, positions) {
+  _proto28.hideDefaultIgnorables = function hideDefaultIgnorables(glyphs, positions) {
     var space = this.font.glyphForCodePoint(0x20);
     for (var i = 0; i < glyphs.length; i++) {
       if (this.isDefaultIgnorable(glyphs[i].codePoints[0])) {
@@ -15902,7 +15902,7 @@ var LayoutEngine = /*#__PURE__*/function () {
       }
     }
   };
-  _proto30.isDefaultIgnorable = function isDefaultIgnorable(ch) {
+  _proto28.isDefaultIgnorable = function isDefaultIgnorable(ch) {
     // From DerivedCoreProperties.txt in the Unicode database,
     // minus U+115F, U+1160, U+3164 and U+FFA0, which is what
     // Harfbuzz and Uniscribe do.
@@ -15941,7 +15941,7 @@ var LayoutEngine = /*#__PURE__*/function () {
       }
     }
   };
-  _proto30.getAvailableFeatures = function getAvailableFeatures(script, language) {
+  _proto28.getAvailableFeatures = function getAvailableFeatures(script, language) {
     var features = [];
     if (this.engine) {
       features.push.apply(features, this.engine.getAvailableFeatures(script, language));
@@ -15951,16 +15951,16 @@ var LayoutEngine = /*#__PURE__*/function () {
     }
     return features;
   };
-  _proto30.stringsForGlyph = function stringsForGlyph(gid) {
+  _proto28.stringsForGlyph = function stringsForGlyph(gid) {
     var result = new Set();
     var codePoints = this.font._cmapProcessor.codePointsForGlyph(gid);
-    for (var _iterator65 = _createForOfIteratorHelperLoose(codePoints), _step65; !(_step65 = _iterator65()).done;) {
-      var codePoint = _step65.value;
+    for (var _iterator63 = _createForOfIteratorHelperLoose(codePoints), _step63; !(_step63 = _iterator63()).done;) {
+      var codePoint = _step63.value;
       result.add(String.fromCodePoint(codePoint));
     }
     if (this.engine && this.engine.stringsForGlyph) {
-      for (var _iterator66 = _createForOfIteratorHelperLoose(this.engine.stringsForGlyph(gid)), _step66; !(_step66 = _iterator66()).done;) {
-        var string = _step66.value;
+      for (var _iterator64 = _createForOfIteratorHelperLoose(this.engine.stringsForGlyph(gid)), _step64; !(_step64 = _iterator64()).done;) {
+        var string = _step64.value;
         result.add(string);
       }
     }
@@ -15992,11 +15992,11 @@ var Path = /*#__PURE__*/function () {
    * a graphics context in order to render the path.
    * @return {string}
    */
-  var _proto31 = Path.prototype;
-  _proto31.toFunction = function toFunction() {
-    var _this10 = this;
+  var _proto29 = Path.prototype;
+  _proto29.toFunction = function toFunction() {
+    var _this0 = this;
     return function (ctx) {
-      _this10.commands.forEach(function (c) {
+      _this0.commands.forEach(function (c) {
         return ctx[c.command].apply(ctx, c.args);
       });
     };
@@ -16005,7 +16005,7 @@ var Path = /*#__PURE__*/function () {
    * Converts the path to an SVG path data string
    * @return {string}
    */;
-  _proto31.toSVG = function toSVG() {
+  _proto29.toSVG = function toSVG() {
     var cmds = this.commands.map(function (c) {
       var args = c.args.map(function (arg) {
         return Math.round(arg * 100) / 100;
@@ -16026,10 +16026,10 @@ var Path = /*#__PURE__*/function () {
    * @param {function} fn
    * @return {Path}
    */
-  _proto31.mapPoints = function mapPoints(fn) {
+  _proto29.mapPoints = function mapPoints(fn) {
     var path = new Path();
-    for (var _iterator67 = _createForOfIteratorHelperLoose(this.commands), _step67; !(_step67 = _iterator67()).done;) {
-      var c = _step67.value;
+    for (var _iterator65 = _createForOfIteratorHelperLoose(this.commands), _step65; !(_step65 = _iterator65()).done;) {
+      var c = _step65.value;
       var args = [];
       for (var i = 0; i < c.args.length; i += 2) {
         var _fn = fn(c.args[i], c.args[i + 1]),
@@ -16044,7 +16044,7 @@ var Path = /*#__PURE__*/function () {
   /**
    * Transforms the path by the given matrix.
    */;
-  _proto31.transform = function transform(m0, m1, m2, m3, m4, m5) {
+  _proto29.transform = function transform(m0, m1, m2, m3, m4, m5) {
     return this.mapPoints(function (x, y) {
       x = m0 * x + m2 * y + m4;
       y = m1 * x + m3 * y + m5;
@@ -16054,13 +16054,13 @@ var Path = /*#__PURE__*/function () {
   /**
    * Translates the path by the given offset.
    */;
-  _proto31.translate = function translate(x, y) {
+  _proto29.translate = function translate(x, y) {
     return this.transform(1, 0, 0, 1, x, y);
   }
   /**
    * Rotates the path by the given angle (in radians).
    */;
-  _proto31.rotate = function rotate(angle) {
+  _proto29.rotate = function rotate(angle) {
     var cos = Math.cos(angle);
     var sin = Math.sin(angle);
     return this.transform(cos, sin, -sin, cos, 0, 0);
@@ -16068,7 +16068,7 @@ var Path = /*#__PURE__*/function () {
   /**
    * Scales the path.
    */;
-  _proto31.scale = function scale(scaleX, scaleY) {
+  _proto29.scale = function scale(scaleX, scaleY) {
     if (scaleY === void 0) {
       scaleY = scaleX;
     }
@@ -16079,8 +16079,8 @@ var Path = /*#__PURE__*/function () {
     get: function get() {
       if (!this._cbox) {
         var cbox = new BBox();
-        for (var _iterator68 = _createForOfIteratorHelperLoose(this.commands), _step68; !(_step68 = _iterator68()).done;) {
-          var command = _step68.value;
+        for (var _iterator66 = _createForOfIteratorHelperLoose(this.commands), _step66; !(_step66 = _iterator66()).done;) {
+          var command = _step66.value;
           for (var i = 0; i < command.args.length; i += 2) {
             cbox.addPoint(command.args[i], command.args[i + 1]);
           }
@@ -16106,8 +16106,8 @@ var Path = /*#__PURE__*/function () {
       var f = function f(t) {
         return Math.pow(1 - t, 3) * p0[i] + 3 * Math.pow(1 - t, 2) * t * p1[i] + 3 * (1 - t) * Math.pow(t, 2) * p2[i] + Math.pow(t, 3) * p3[i];
       };
-      for (var _iterator69 = _createForOfIteratorHelperLoose(this.commands), _step69; !(_step69 = _iterator69()).done;) {
-        var c = _step69.value;
+      for (var _iterator67 = _createForOfIteratorHelperLoose(this.commands), _step67; !(_step67 = _iterator67()).done;) {
+        var c = _step67.value;
         switch (c.command) {
           case 'moveTo':
           case 'lineTo':
@@ -16209,8 +16209,8 @@ var _loop = function _loop(command) {
     return this;
   };
 };
-for (var _i23 = 0, _arr = ['moveTo', 'lineTo', 'quadraticCurveTo', 'bezierCurveTo', 'closePath']; _i23 < _arr.length; _i23++) {
-  var command = _arr[_i23];
+for (var _i1 = 0, _arr = ['moveTo', 'lineTo', 'quadraticCurveTo', 'bezierCurveTo', 'closePath']; _i1 < _arr.length; _i1++) {
+  var command = _arr[_i1];
   _loop(command);
 }
 var StandardNames = ['.notdef', '.null', 'nonmarkingreturn', 'space', 'exclam', 'quotedbl', 'numbersign', 'dollar', 'percent', 'ampersand', 'quotesingle', 'parenleft', 'parenright', 'asterisk', 'plus', 'comma', 'hyphen', 'period', 'slash', 'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'colon', 'semicolon', 'less', 'equal', 'greater', 'question', 'at', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'bracketleft', 'backslash', 'bracketright', 'asciicircum', 'underscore', 'grave', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'braceleft', 'bar', 'braceright', 'asciitilde', 'Adieresis', 'Aring', 'Ccedilla', 'Eacute', 'Ntilde', 'Odieresis', 'Udieresis', 'aacute', 'agrave', 'acircumflex', 'adieresis', 'atilde', 'aring', 'ccedilla', 'eacute', 'egrave', 'ecircumflex', 'edieresis', 'iacute', 'igrave', 'icircumflex', 'idieresis', 'ntilde', 'oacute', 'ograve', 'ocircumflex', 'odieresis', 'otilde', 'uacute', 'ugrave', 'ucircumflex', 'udieresis', 'dagger', 'degree', 'cent', 'sterling', 'section', 'bullet', 'paragraph', 'germandbls', 'registered', 'copyright', 'trademark', 'acute', 'dieresis', 'notequal', 'AE', 'Oslash', 'infinity', 'plusminus', 'lessequal', 'greaterequal', 'yen', 'mu', 'partialdiff', 'summation', 'product', 'pi', 'integral', 'ordfeminine', 'ordmasculine', 'Omega', 'ae', 'oslash', 'questiondown', 'exclamdown', 'logicalnot', 'radical', 'florin', 'approxequal', 'Delta', 'guillemotleft', 'guillemotright', 'ellipsis', 'nonbreakingspace', 'Agrave', 'Atilde', 'Otilde', 'OE', 'oe', 'endash', 'emdash', 'quotedblleft', 'quotedblright', 'quoteleft', 'quoteright', 'divide', 'lozenge', 'ydieresis', 'Ydieresis', 'fraction', 'currency', 'guilsinglleft', 'guilsinglright', 'fi', 'fl', 'daggerdbl', 'periodcentered', 'quotesinglbase', 'quotedblbase', 'perthousand', 'Acircumflex', 'Ecircumflex', 'Aacute', 'Edieresis', 'Egrave', 'Iacute', 'Icircumflex', 'Idieresis', 'Igrave', 'Oacute', 'Ocircumflex', 'apple', 'Ograve', 'Uacute', 'Ucircumflex', 'Ugrave', 'dotlessi', 'circumflex', 'tilde', 'macron', 'breve', 'dotaccent', 'ring', 'cedilla', 'hungarumlaut', 'ogonek', 'caron', 'Lslash', 'lslash', 'Scaron', 'scaron', 'Zcaron', 'zcaron', 'brokenbar', 'Eth', 'eth', 'Yacute', 'yacute', 'Thorn', 'thorn', 'minus', 'multiply', 'onesuperior', 'twosuperior', 'threesuperior', 'onehalf', 'onequarter', 'threequarters', 'franc', 'Gbreve', 'gbreve', 'Idotaccent', 'Scedilla', 'scedilla', 'Cacute', 'cacute', 'Ccaron', 'ccaron', 'dcroat'];
@@ -16244,17 +16244,17 @@ var Glyph = (_class$3 = /*#__PURE__*/function () {
     this.isMark = this.codePoints.length > 0 && this.codePoints.every(unicode.isMark);
     this.isLigature = this.codePoints.length > 1;
   }
-  var _proto32 = Glyph.prototype;
-  _proto32._getPath = function _getPath() {
+  var _proto30 = Glyph.prototype;
+  _proto30._getPath = function _getPath() {
     return new Path();
   };
-  _proto32._getCBox = function _getCBox() {
+  _proto30._getCBox = function _getCBox() {
     return this.path.cbox;
   };
-  _proto32._getBBox = function _getBBox() {
+  _proto30._getBBox = function _getBBox() {
     return this.path.bbox;
   };
-  _proto32._getTableMetrics = function _getTableMetrics(table) {
+  _proto30._getTableMetrics = function _getTableMetrics(table) {
     if (this.id < table.metrics.length) {
       return table.metrics.get(this.id);
     }
@@ -16265,7 +16265,7 @@ var Glyph = (_class$3 = /*#__PURE__*/function () {
     };
     return res;
   };
-  _proto32._getMetrics = function _getMetrics(cbox) {
+  _proto30._getMetrics = function _getMetrics(cbox) {
     if (this._metrics) {
       return this._metrics;
     }
@@ -16317,7 +16317,7 @@ var Glyph = (_class$3 = /*#__PURE__*/function () {
    * @param {number} size
    * @return {Path}
    */
-  _proto32.getScaledPath = function getScaledPath(size) {
+  _proto30.getScaledPath = function getScaledPath(size) {
     var scale = 1 / this._font.unitsPerEm * size;
     return this.path.scale(scale);
   }
@@ -16325,7 +16325,7 @@ var Glyph = (_class$3 = /*#__PURE__*/function () {
    * The glyph's advance width.
    * @type {number}
    */;
-  _proto32._getName = function _getName() {
+  _proto30._getName = function _getName() {
     var post = this._font.post;
     if (!post) {
       return null;
@@ -16354,7 +16354,7 @@ var Glyph = (_class$3 = /*#__PURE__*/function () {
    * @param {CanvasRenderingContext2d} ctx
    * @param {number} size
    */
-  _proto32.render = function render(ctx, size) {
+  _proto30.render = function render(ctx, size) {
     ctx.save();
     var scale = 1 / this._font.head.unitsPerEm * size;
     ctx.scale(scale, scale);
@@ -16448,8 +16448,8 @@ var Point = /*#__PURE__*/function () {
     this.x = x;
     this.y = y;
   }
-  var _proto33 = Point.prototype;
-  _proto33.copy = function copy() {
+  var _proto31 = Point.prototype;
+  _proto31.copy = function copy() {
     return new Point(this.onCurve, this.endContour, this.x, this.y);
   };
   return Point;
@@ -16470,9 +16470,9 @@ var TTFGlyph = /*#__PURE__*/function (_Glyph) {
     return _Glyph.apply(this, arguments) || this;
   }
   _inheritsLoose(TTFGlyph, _Glyph);
-  var _proto34 = TTFGlyph.prototype;
+  var _proto32 = TTFGlyph.prototype;
   // Parses just the glyph header and returns the bounding box
-  _proto34._getCBox = function _getCBox(internal) {
+  _proto32._getCBox = function _getCBox(internal) {
     // We need to decode the glyph if variation processing is requested,
     // so it's easier just to recompute the path's cbox after decoding.
     if (this._font._variationProcessor && !internal) {
@@ -16485,7 +16485,7 @@ var TTFGlyph = /*#__PURE__*/function (_Glyph) {
     return Object.freeze(cbox);
   } // Parses a single glyph coordinate
   ;
-  _proto34._parseGlyphCoord = function _parseGlyphCoord(stream, prev, short, same) {
+  _proto32._parseGlyphCoord = function _parseGlyphCoord(stream, prev, short, same) {
     if (short) {
       var val = stream.readUInt8();
       if (!same) {
@@ -16503,7 +16503,7 @@ var TTFGlyph = /*#__PURE__*/function (_Glyph) {
   } // Decodes the glyph data into points for simple glyphs,
   // or components for composite glyphs
   ;
-  _proto34._decode = function _decode() {
+  _proto32._decode = function _decode() {
     var glyfPos = this._font.loca.offsets[this.id];
     var nextPos = this._font.loca.offsets[this.id + 1]; // Nothing to do if there is no data for this glyph
 
@@ -16521,7 +16521,7 @@ var TTFGlyph = /*#__PURE__*/function (_Glyph) {
     }
     return glyph;
   };
-  _proto34._decodeSimple = function _decodeSimple(glyph, stream) {
+  _proto32._decodeSimple = function _decodeSimple(glyph, stream) {
     // this is a simple glyph
     glyph.points = [];
     var endPtsOfContours = new r.Array(r.uint16, glyph.numberOfContours).decode(stream);
@@ -16562,7 +16562,7 @@ var TTFGlyph = /*#__PURE__*/function (_Glyph) {
     }
     return;
   };
-  _proto34._decodeComposite = function _decodeComposite(glyph, stream, offset) {
+  _proto32._decodeComposite = function _decodeComposite(glyph, stream, offset) {
     if (offset === void 0) {
       offset = 0;
     }
@@ -16617,7 +16617,7 @@ var TTFGlyph = /*#__PURE__*/function (_Glyph) {
     }
     return haveInstructions;
   };
-  _proto34._getPhantomPoints = function _getPhantomPoints(glyph) {
+  _proto32._getPhantomPoints = function _getPhantomPoints(glyph) {
     var cbox = this._getCBox(true);
     if (this._metrics == null) {
       this._metrics = Glyph.prototype._getMetrics.call(this, cbox);
@@ -16630,7 +16630,7 @@ var TTFGlyph = /*#__PURE__*/function (_Glyph) {
     return [new Point(false, true, glyph.xMin - leftBearing, 0), new Point(false, true, glyph.xMin - leftBearing + advanceWidth, 0), new Point(false, true, 0, glyph.yMax + topBearing), new Point(false, true, 0, glyph.yMax + topBearing + advanceHeight)];
   } // Decodes font data, resolves composite glyphs, and returns an array of contours
   ;
-  _proto34._getContours = function _getContours() {
+  _proto32._getContours = function _getContours() {
     var glyph = this._decode();
     if (!glyph) {
       return [];
@@ -16638,8 +16638,8 @@ var TTFGlyph = /*#__PURE__*/function (_Glyph) {
     var points = [];
     if (glyph.numberOfContours < 0) {
       // resolve composite glyphs
-      for (var _iterator70 = _createForOfIteratorHelperLoose(glyph.components), _step70; !(_step70 = _iterator70()).done;) {
-        var component = _step70.value;
+      for (var _iterator68 = _createForOfIteratorHelperLoose(glyph.components), _step68; !(_step68 = _iterator68()).done;) {
+        var component = _step68.value;
         var _contours = this._font.getGlyph(component.glyphID)._getContours();
         for (var i = 0; i < _contours.length; i++) {
           var contour = _contours[i];
@@ -16673,7 +16673,7 @@ var TTFGlyph = /*#__PURE__*/function (_Glyph) {
     }
     return contours;
   };
-  _proto34._getMetrics = function _getMetrics() {
+  _proto32._getMetrics = function _getMetrics() {
     if (this._metrics) {
       return this._metrics;
     }
@@ -16686,7 +16686,7 @@ var TTFGlyph = /*#__PURE__*/function (_Glyph) {
     return this._metrics;
   } // Converts contours to a Path object that can be rendered
   ;
-  _proto34._getPath = function _getPath() {
+  _proto32._getPath = function _getPath() {
     var contours = this._getContours();
     var path = new Path();
     for (var i = 0; i < contours.length; i++) {
@@ -16746,14 +16746,14 @@ var CFFGlyph = /*#__PURE__*/function (_Glyph2) {
     return _Glyph2.apply(this, arguments) || this;
   }
   _inheritsLoose(CFFGlyph, _Glyph2);
-  var _proto35 = CFFGlyph.prototype;
-  _proto35._getName = function _getName() {
+  var _proto33 = CFFGlyph.prototype;
+  _proto33._getName = function _getName() {
     if (this._font.CFF2) {
       return _Glyph2.prototype._getName.call(this);
     }
     return this._font['CFF '].getGlyphName(this.id);
   };
-  _proto35.bias = function bias(s) {
+  _proto33.bias = function bias(s) {
     if (s.length < 1240) {
       return 107;
     } else if (s.length < 33900) {
@@ -16762,7 +16762,7 @@ var CFFGlyph = /*#__PURE__*/function (_Glyph2) {
       return 32768;
     }
   };
-  _proto35._getPath = function _getPath() {
+  _proto33._getPath = function _getPath() {
     var cff = this._font.CFF2 || this._font['CFF '];
     var stream = cff.stream;
     var str = cff.topDict.CharStrings[this.id];
@@ -17316,7 +17316,7 @@ var SBIXGlyph = /*#__PURE__*/function (_TTFGlyph) {
     return _TTFGlyph.apply(this, arguments) || this;
   }
   _inheritsLoose(SBIXGlyph, _TTFGlyph);
-  var _proto36 = SBIXGlyph.prototype;
+  var _proto34 = SBIXGlyph.prototype;
   /**
    * Returns an object representing a glyph image at the given point size.
    * The object has a data property with a Buffer containing the actual image data,
@@ -17325,7 +17325,7 @@ var SBIXGlyph = /*#__PURE__*/function (_TTFGlyph) {
    * @param {number} size
    * @return {object}
    */
-  _proto36.getImageForSize = function getImageForSize(size) {
+  _proto34.getImageForSize = function getImageForSize(size) {
     for (var i = 0; i < this._font.sbix.imageTables.length; i++) {
       var table = this._font.sbix.imageTables[i];
       if (table.ppem >= size) {
@@ -17343,7 +17343,7 @@ var SBIXGlyph = /*#__PURE__*/function (_TTFGlyph) {
       buflen: end - start
     });
   };
-  _proto36.render = function render(ctx, size) {
+  _proto34.render = function render(ctx, size) {
     var img = this.getImageForSize(size);
     if (img != null) {
       var scale = size / this._font.unitsPerEm;
@@ -17373,8 +17373,8 @@ var COLRGlyph = /*#__PURE__*/function (_Glyph3) {
     return _Glyph3.apply(this, arguments) || this;
   }
   _inheritsLoose(COLRGlyph, _Glyph3);
-  var _proto37 = COLRGlyph.prototype;
-  _proto37._getBBox = function _getBBox() {
+  var _proto35 = COLRGlyph.prototype;
+  _proto35._getBBox = function _getBBox() {
     var bbox = new BBox();
     for (var i = 0; i < this.layers.length; i++) {
       var layer = this.layers[i];
@@ -17389,11 +17389,11 @@ var COLRGlyph = /*#__PURE__*/function (_Glyph3) {
    * each layer in the composite color glyph.
    * @type {object[]}
    */;
-  _proto37.render = function render(ctx, size) {
-    for (var _iterator71 = _createForOfIteratorHelperLoose(this.layers), _step71; !(_step71 = _iterator71()).done;) {
-      var _step71$value = _step71.value,
-        glyph = _step71$value.glyph,
-        color = _step71$value.color;
+  _proto35.render = function render(ctx, size) {
+    for (var _iterator69 = _createForOfIteratorHelperLoose(this.layers), _step69; !(_step69 = _iterator69()).done;) {
+      var _step69$value = _step69.value,
+        glyph = _step69$value.glyph,
+        color = _step69$value.color;
       ctx.fillColor([color.red, color.green, color.blue], color.alpha / 255 * 100);
       glyph.render(ctx, size);
     }
@@ -17470,8 +17470,8 @@ var GlyphVariationProcessor = /*#__PURE__*/function () {
     this.normalizedCoords = this.normalizeCoords(coords);
     this.blendVectors = new Map();
   }
-  var _proto38 = GlyphVariationProcessor.prototype;
-  _proto38.normalizeCoords = function normalizeCoords(coords) {
+  var _proto36 = GlyphVariationProcessor.prototype;
+  _proto36.normalizeCoords = function normalizeCoords(coords) {
     // the default mapping is linear along each axis, in two segments:
     // from the minValue to defaultValue, and from defaultValue to maxValue.
     var normalized = [];
@@ -17500,7 +17500,7 @@ var GlyphVariationProcessor = /*#__PURE__*/function () {
     }
     return normalized;
   };
-  _proto38.transformPoints = function transformPoints(gid, glyphPoints) {
+  _proto36.transformPoints = function transformPoints(gid, glyphPoints) {
     if (!this.font.fvar || !this.font.gvar) {
       return;
     }
@@ -17607,7 +17607,7 @@ var GlyphVariationProcessor = /*#__PURE__*/function () {
       stream.pos = here;
     }
   };
-  _proto38.decodePoints = function decodePoints() {
+  _proto36.decodePoints = function decodePoints() {
     var stream = this.font.stream;
     var count = stream.readUInt8();
     if (count & POINTS_ARE_WORDS) {
@@ -17627,7 +17627,7 @@ var GlyphVariationProcessor = /*#__PURE__*/function () {
     }
     return points;
   };
-  _proto38.decodeDeltas = function decodeDeltas(count) {
+  _proto36.decodeDeltas = function decodeDeltas(count) {
     var stream = this.font.stream;
     var i = 0;
     var deltas = new Int16Array(count);
@@ -17645,7 +17645,7 @@ var GlyphVariationProcessor = /*#__PURE__*/function () {
     }
     return deltas;
   };
-  _proto38.tupleFactor = function tupleFactor(tupleIndex, tupleCoords, startCoords, endCoords) {
+  _proto36.tupleFactor = function tupleFactor(tupleIndex, tupleCoords, startCoords, endCoords) {
     var normalized = this.normalizedCoords;
     var gvar = this.font.gvar;
     var factor = 1;
@@ -17676,7 +17676,7 @@ var GlyphVariationProcessor = /*#__PURE__*/function () {
   // Needed for the Ø and Q glyphs in Skia.
   // Algorithm from Freetype.
   ;
-  _proto38.interpolateMissingDeltas = function interpolateMissingDeltas(points, inPoints, hasDelta) {
+  _proto36.interpolateMissingDeltas = function interpolateMissingDeltas(points, inPoints, hasDelta) {
     if (points.length === 0) {
       return;
     }
@@ -17720,7 +17720,7 @@ var GlyphVariationProcessor = /*#__PURE__*/function () {
       point = endPoint + 1;
     }
   };
-  _proto38.deltaInterpolate = function deltaInterpolate(p1, p2, ref1, ref2, inPoints, outPoints) {
+  _proto36.deltaInterpolate = function deltaInterpolate(p1, p2, ref1, ref2, inPoints, outPoints) {
     if (p1 > p2) {
       return;
     }
@@ -17754,7 +17754,7 @@ var GlyphVariationProcessor = /*#__PURE__*/function () {
       }
     }
   };
-  _proto38.deltaShift = function deltaShift(p1, p2, ref, inPoints, outPoints) {
+  _proto36.deltaShift = function deltaShift(p1, p2, ref, inPoints, outPoints) {
     var deltaX = outPoints[ref].x - inPoints[ref].x;
     var deltaY = outPoints[ref].y - inPoints[ref].y;
     if (deltaX === 0 && deltaY === 0) {
@@ -17767,7 +17767,7 @@ var GlyphVariationProcessor = /*#__PURE__*/function () {
       }
     }
   };
-  _proto38.getAdvanceAdjustment = function getAdvanceAdjustment(gid, table) {
+  _proto36.getAdvanceAdjustment = function getAdvanceAdjustment(gid, table) {
     var outerIndex, innerIndex;
     if (table.advanceWidthMapping) {
       var idx = gid;
@@ -17786,7 +17786,7 @@ var GlyphVariationProcessor = /*#__PURE__*/function () {
   } // See pseudo code from `Font Variations Overview'
   // in the OpenType specification.
   ;
-  _proto38.getDelta = function getDelta(itemStore, outerIndex, innerIndex) {
+  _proto36.getDelta = function getDelta(itemStore, outerIndex, innerIndex) {
     if (outerIndex >= itemStore.itemVariationData.length) {
       return 0;
     }
@@ -17802,7 +17802,7 @@ var GlyphVariationProcessor = /*#__PURE__*/function () {
     }
     return netAdjustment;
   };
-  _proto38.getBlendVector = function getBlendVector(itemStore, outerIndex) {
+  _proto36.getBlendVector = function getBlendVector(itemStore, outerIndex) {
     var varData = itemStore.itemVariationData[outerIndex];
     if (this.blendVectors.has(varData)) {
       return this.blendVectors.get(varData);
@@ -17856,8 +17856,8 @@ var Subset = /*#__PURE__*/function () {
 
     this.includeGlyph(0);
   }
-  var _proto39 = Subset.prototype;
-  _proto39.includeGlyph = function includeGlyph(glyph) {
+  var _proto37 = Subset.prototype;
+  _proto37.includeGlyph = function includeGlyph(glyph) {
     if (typeof glyph === 'object') {
       glyph = glyph.id;
     }
@@ -17867,11 +17867,11 @@ var Subset = /*#__PURE__*/function () {
     }
     return this.mapping[glyph];
   };
-  _proto39.encodeStream = function encodeStream() {
-    var _this11 = this;
+  _proto37.encodeStream = function encodeStream() {
+    var _this1 = this;
     var s = new r.EncodeStream();
     resolved.then(function () {
-      _this11.encode(s);
+      _this1.encode(s);
       return s.end();
     });
     return s;
@@ -17916,8 +17916,8 @@ var Glyf = new r.Struct({
  */
 var TTFGlyphEncoder = /*#__PURE__*/function () {
   function TTFGlyphEncoder() {}
-  var _proto40 = TTFGlyphEncoder.prototype;
-  _proto40.encodeSimple = function encodeSimple(path, instructions) {
+  var _proto38 = TTFGlyphEncoder.prototype;
+  _proto38.encodeSimple = function encodeSimple(path, instructions) {
     if (instructions === void 0) {
       instructions = [];
     }
@@ -18001,7 +18001,7 @@ var TTFGlyphEncoder = /*#__PURE__*/function () {
     }
     return stream.buffer;
   };
-  _proto40._encodePoint = function _encodePoint(value, last, points, flag, shortFlag, sameFlag) {
+  _proto38._encodePoint = function _encodePoint(value, last, points, flag, shortFlag, sameFlag) {
     var diff = value - last;
     if (value === last) {
       flag |= sameFlag;
@@ -18022,14 +18022,14 @@ var TTFGlyphEncoder = /*#__PURE__*/function () {
 }();
 var TTFSubset = /*#__PURE__*/function (_Subset) {
   function TTFSubset(font) {
-    var _this12;
-    _this12 = _Subset.call(this, font) || this;
-    _this12.glyphEncoder = new TTFGlyphEncoder();
-    return _this12;
+    var _this10;
+    _this10 = _Subset.call(this, font) || this;
+    _this10.glyphEncoder = new TTFGlyphEncoder();
+    return _this10;
   }
   _inheritsLoose(TTFSubset, _Subset);
-  var _proto41 = TTFSubset.prototype;
-  _proto41._addGlyph = function _addGlyph(gid) {
+  var _proto39 = TTFSubset.prototype;
+  _proto39._addGlyph = function _addGlyph(gid) {
     var glyph = this.font.getGlyph(gid);
     var glyf = glyph._decode(); // get the offset to the glyph from the loca table
 
@@ -18041,8 +18041,8 @@ var TTFSubset = /*#__PURE__*/function (_Subset) {
 
     if (glyf && glyf.numberOfContours < 0) {
       buffer = Buffer.from(buffer);
-      for (var _iterator72 = _createForOfIteratorHelperLoose(glyf.components), _step72; !(_step72 = _iterator72()).done;) {
-        var component = _step72.value;
+      for (var _iterator70 = _createForOfIteratorHelperLoose(glyf.components), _step70; !(_step70 = _iterator70()).done;) {
+        var component = _step70.value;
         gid = this.includeGlyph(component.glyphID);
         buffer.writeUInt16BE(gid, component.pos);
       }
@@ -18059,7 +18059,7 @@ var TTFSubset = /*#__PURE__*/function (_Subset) {
     this.offset += buffer.length;
     return this.glyf.length - 1;
   };
-  _proto41.encode = function encode(stream) {
+  _proto39.encode = function encode(stream) {
     // tables required by PDF spec:
     //   head, hhea, loca, maxp, cvt , prep, glyf, hmtx, fpgm
     //
@@ -18132,21 +18132,21 @@ var TTFSubset = /*#__PURE__*/function (_Subset) {
 }(Subset);
 var CFFSubset = /*#__PURE__*/function (_Subset2) {
   function CFFSubset(font) {
-    var _this13;
-    _this13 = _Subset2.call(this, font) || this;
-    _this13.cff = _this13.font['CFF '];
-    if (!_this13.cff) {
+    var _this11;
+    _this11 = _Subset2.call(this, font) || this;
+    _this11.cff = _this11.font['CFF '];
+    if (!_this11.cff) {
       throw new Error('Not a CFF Font');
     }
-    return _this13;
+    return _this11;
   }
   _inheritsLoose(CFFSubset, _Subset2);
-  var _proto42 = CFFSubset.prototype;
-  _proto42.subsetCharstrings = function subsetCharstrings() {
+  var _proto40 = CFFSubset.prototype;
+  _proto40.subsetCharstrings = function subsetCharstrings() {
     this.charstrings = [];
     var gsubrs = {};
-    for (var _iterator73 = _createForOfIteratorHelperLoose(this.glyphs), _step73; !(_step73 = _iterator73()).done;) {
-      var gid = _step73.value;
+    for (var _iterator71 = _createForOfIteratorHelperLoose(this.glyphs), _step71; !(_step71 = _iterator71()).done;) {
+      var gid = _step71.value;
       this.charstrings.push(this.cff.getCharString(gid));
       var glyph = this.font.getGlyph(gid);
       var path = glyph.path; // this causes the glyph to be parsed
@@ -18157,7 +18157,7 @@ var CFFSubset = /*#__PURE__*/function (_Subset2) {
     }
     this.gsubrs = this.subsetSubrs(this.cff.globalSubrIndex, gsubrs);
   };
-  _proto42.subsetSubrs = function subsetSubrs(subrs, used) {
+  _proto40.subsetSubrs = function subsetSubrs(subrs, used) {
     var res = [];
     for (var i = 0; i < subrs.length; i++) {
       var subr = subrs[i];
@@ -18170,7 +18170,7 @@ var CFFSubset = /*#__PURE__*/function (_Subset2) {
     }
     return res;
   };
-  _proto42.subsetFontdict = function subsetFontdict(topDict) {
+  _proto40.subsetFontdict = function subsetFontdict(topDict) {
     topDict.FDArray = [];
     topDict.FDSelect = {
       version: 0,
@@ -18179,8 +18179,8 @@ var CFFSubset = /*#__PURE__*/function (_Subset2) {
     var used_fds = {};
     var used_subrs = [];
     var fd_select = {};
-    for (var _iterator74 = _createForOfIteratorHelperLoose(this.glyphs), _step74; !(_step74 = _iterator74()).done;) {
-      var gid = _step74.value;
+    for (var _iterator72 = _createForOfIteratorHelperLoose(this.glyphs), _step72; !(_step72 = _iterator72()).done;) {
+      var gid = _step72.value;
       var fd = this.cff.fdForGlyph(gid);
       if (fd == null) {
         continue;
@@ -18209,10 +18209,10 @@ var CFFSubset = /*#__PURE__*/function (_Subset2) {
     }
     return;
   };
-  _proto42.createCIDFontdict = function createCIDFontdict(topDict) {
+  _proto40.createCIDFontdict = function createCIDFontdict(topDict) {
     var used_subrs = {};
-    for (var _iterator75 = _createForOfIteratorHelperLoose(this.glyphs), _step75; !(_step75 = _iterator75()).done;) {
-      var gid = _step75.value;
+    for (var _iterator73 = _createForOfIteratorHelperLoose(this.glyphs), _step73; !(_step73 = _iterator73()).done;) {
+      var gid = _step73.value;
       var glyph = this.font.getGlyph(gid);
       var path = glyph.path; // this causes the glyph to be parsed
 
@@ -18237,7 +18237,7 @@ var CFFSubset = /*#__PURE__*/function (_Subset2) {
       sentinel: this.charstrings.length
     };
   };
-  _proto42.addString = function addString(string) {
+  _proto40.addString = function addString(string) {
     if (!string) {
       return null;
     }
@@ -18247,7 +18247,7 @@ var CFFSubset = /*#__PURE__*/function (_Subset2) {
     this.strings.push(string);
     return standardStrings.length + this.strings.length - 1;
   };
-  _proto42.encode = function encode(stream) {
+  _proto40.encode = function encode(stream) {
     this.subsetCharstrings();
     var charset = {
       version: this.charstrings.length > 255 ? 2 : 1,
@@ -18261,8 +18261,8 @@ var CFFSubset = /*#__PURE__*/function (_Subset2) {
     topDict.charset = charset;
     topDict.Encoding = null;
     topDict.CharStrings = this.charstrings;
-    for (var _i24 = 0, _arr2 = ['version', 'Notice', 'Copyright', 'FullName', 'FamilyName', 'Weight', 'PostScript', 'BaseFontName', 'FontName']; _i24 < _arr2.length; _i24++) {
-      var key = _arr2[_i24];
+    for (var _i22 = 0, _arr2 = ['version', 'Notice', 'Copyright', 'FullName', 'FamilyName', 'Weight', 'PostScript', 'BaseFontName', 'FontName']; _i22 < _arr2.length; _i22++) {
+      var key = _arr2[_i22];
       topDict[key] = this.addString(this.cff.string(topDict[key]));
     }
     topDict.ROS = [this.addString('Adobe'), this.addString('Identity'), 0];
@@ -18318,14 +18318,14 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
     var format = buffer.toString('ascii', 0, 4);
     return format === 'true' || format === 'OTTO' || format === String.fromCharCode(0, 1, 0, 0);
   };
-  var _proto43 = TTFFont.prototype;
-  _proto43.setDefaultLanguage = function setDefaultLanguage(lang) {
+  var _proto41 = TTFFont.prototype;
+  _proto41.setDefaultLanguage = function setDefaultLanguage(lang) {
     if (lang === void 0) {
       lang = null;
     }
     this.defaultLanguage = lang;
   };
-  _proto43._getTable = function _getTable(table) {
+  _proto41._getTable = function _getTable(table) {
     if (!(table.tag in this._tables)) {
       try {
         this._tables[table.tag] = this._decodeTable(table);
@@ -18338,7 +18338,7 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
     }
     return this._tables[table.tag];
   };
-  _proto43._getTableStream = function _getTableStream(tag) {
+  _proto41._getTableStream = function _getTableStream(tag) {
     var table = this.directory.tables[tag];
     if (table) {
       this.stream.pos = table.offset;
@@ -18346,12 +18346,12 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
     }
     return null;
   };
-  _proto43._decodeDirectory = function _decodeDirectory() {
+  _proto41._decodeDirectory = function _decodeDirectory() {
     return this.directory = Directory.decode(this.stream, {
       _startOffset: 0
     });
   };
-  _proto43._decodeTable = function _decodeTable(table) {
+  _proto41._decodeTable = function _decodeTable(table) {
     var pos = this.stream.pos;
     var stream = this._getTableStream(table.tag);
     var result = tables[table.tag].decode(stream, this, table.length);
@@ -18363,7 +18363,7 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
    * `lang` is a BCP-47 language code.
    * @return {string}
    */;
-  _proto43.getName = function getName(key, lang) {
+  _proto41.getName = function getName(key, lang) {
     if (lang === void 0) {
       lang = this.defaultLanguage || fontkit.defaultLanguage;
     }
@@ -18385,7 +18385,7 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
    * @param {number} codePoint
    * @return {boolean}
    */
-  _proto43.hasGlyphForCodePoint = function hasGlyphForCodePoint(codePoint) {
+  _proto41.hasGlyphForCodePoint = function hasGlyphForCodePoint(codePoint) {
     return !!this._cmapProcessor.lookup(codePoint);
   }
   /**
@@ -18395,7 +18395,7 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
    * @param {number} codePoint
    * @return {Glyph}
    */;
-  _proto43.glyphForCodePoint = function glyphForCodePoint(codePoint) {
+  _proto41.glyphForCodePoint = function glyphForCodePoint(codePoint) {
     return this.getGlyph(this._cmapProcessor.lookup(codePoint), [codePoint]);
   }
   /**
@@ -18407,7 +18407,7 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
    * @param {string} string
    * @return {Glyph[]}
    */;
-  _proto43.glyphsForString = function glyphsForString(string) {
+  _proto41.glyphsForString = function glyphsForString(string) {
     var glyphs = [];
     var len = string.length;
     var idx = 0;
@@ -18453,14 +18453,14 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
    * @param {string} [direction]
    * @return {GlyphRun}
    */
-  _proto43.layout = function layout(string, userFeatures, script, language, direction) {
+  _proto41.layout = function layout(string, userFeatures, script, language, direction) {
     return this._layoutEngine.layout(string, userFeatures, script, language, direction);
   }
   /**
    * Returns an array of strings that map to the given glyph id.
    * @param {number} gid - glyph id
    */;
-  _proto43.stringsForGlyph = function stringsForGlyph(gid) {
+  _proto41.stringsForGlyph = function stringsForGlyph(gid) {
     return this._layoutEngine.stringsForGlyph(gid);
   }
   /**
@@ -18471,10 +18471,10 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
    *
    * @type {string[]}
    */;
-  _proto43.getAvailableFeatures = function getAvailableFeatures(script, language) {
+  _proto41.getAvailableFeatures = function getAvailableFeatures(script, language) {
     return this._layoutEngine.getAvailableFeatures(script, language);
   };
-  _proto43._getBaseGlyph = function _getBaseGlyph(glyph, characters) {
+  _proto41._getBaseGlyph = function _getBaseGlyph(glyph, characters) {
     if (characters === void 0) {
       characters = [];
     }
@@ -18496,7 +18496,7 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
    * @param {number[]} characters
    * @return {Glyph}
    */;
-  _proto43.getGlyph = function getGlyph(glyph, characters) {
+  _proto41.getGlyph = function getGlyph(glyph, characters) {
     if (characters === void 0) {
       characters = [];
     }
@@ -18515,7 +18515,7 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
    * Returns a Subset for this font.
    * @return {Subset}
    */;
-  _proto43.createSubset = function createSubset() {
+  _proto41.createSubset = function createSubset() {
     if (this.directory.tables['CFF ']) {
       return new CFFSubset(this);
     }
@@ -18536,7 +18536,7 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
    * @param {object} settings
    * @return {TTFFont}
    */
-  _proto43.getVariation = function getVariation(settings) {
+  _proto41.getVariation = function getVariation(settings) {
     if (!(this.directory.tables.fvar && (this.directory.tables.gvar && this.directory.tables.glyf || this.directory.tables.CFF2))) {
       throw new Error('Variations require a font with the fvar, gvar and glyf, or CFF2 tables.');
     }
@@ -18562,7 +18562,7 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
     return font;
   };
   // Standardized format plugin API
-  _proto43.getFont = function getFont(name) {
+  _proto41.getFont = function getFont(name) {
     return this.getVariation(name);
   };
   return _createClass(TTFFont, [{
@@ -18749,8 +18749,8 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
       if (!this.fvar) {
         return res;
       }
-      for (var _iterator76 = _createForOfIteratorHelperLoose(this.fvar.axis), _step76; !(_step76 = _iterator76()).done;) {
-        var axis = _step76.value;
+      for (var _iterator74 = _createForOfIteratorHelperLoose(this.fvar.axis), _step74; !(_step74 = _iterator74()).done;) {
+        var axis = _step74.value;
         res[axis.axisTag.trim()] = {
           name: axis.name.en,
           min: axis.minValue,
@@ -18774,8 +18774,8 @@ var TTFFont = (_class$4 = /*#__PURE__*/function () {
       if (!this.fvar) {
         return res;
       }
-      for (var _iterator77 = _createForOfIteratorHelperLoose(this.fvar.instance), _step77; !(_step77 = _iterator77()).done;) {
-        var instance = _step77.value;
+      for (var _iterator75 = _createForOfIteratorHelperLoose(this.fvar.instance), _step75; !(_step75 = _iterator75()).done;) {
+        var instance = _step75.value;
         var settings = {};
         for (var i = 0; i < this.fvar.axis.length; i++) {
           var axis = this.fvar.axis[i];
@@ -18833,8 +18833,8 @@ var WOFFDirectory = new r.Struct({
 });
 WOFFDirectory.process = function () {
   var tables = {};
-  for (var _iterator78 = _createForOfIteratorHelperLoose(this.tables), _step78; !(_step78 = _iterator78()).done;) {
-    var table = _step78.value;
+  for (var _iterator76 = _createForOfIteratorHelperLoose(this.tables), _step76; !(_step76 = _iterator76()).done;) {
+    var table = _step76.value;
     tables[table.tag] = table;
   }
   this.tables = tables;
@@ -18847,13 +18847,13 @@ var WOFFFont = /*#__PURE__*/function (_TTFFont) {
   WOFFFont.probe = function probe(buffer) {
     return buffer.toString('ascii', 0, 4) === 'wOFF';
   };
-  var _proto44 = WOFFFont.prototype;
-  _proto44._decodeDirectory = function _decodeDirectory() {
+  var _proto42 = WOFFFont.prototype;
+  _proto42._decodeDirectory = function _decodeDirectory() {
     this.directory = WOFFDirectory.decode(this.stream, {
       _startOffset: 0
     });
   };
-  _proto44._getTableStream = function _getTableStream(tag) {
+  _proto42._getTableStream = function _getTableStream(tag) {
     var table = this.directory.tables[tag];
     if (table) {
       this.stream.pos = table.offset;
@@ -18879,12 +18879,12 @@ var WOFF2Glyph = /*#__PURE__*/function (_TTFGlyph2) {
     return _TTFGlyph2.apply(this, arguments) || this;
   }
   _inheritsLoose(WOFF2Glyph, _TTFGlyph2);
-  var _proto45 = WOFF2Glyph.prototype;
-  _proto45._decode = function _decode() {
+  var _proto43 = WOFF2Glyph.prototype;
+  _proto43._decode = function _decode() {
     // We have to decode in advance (in WOFF2Font), so just return the pre-decoded data.
     return this._font._transformedGlyphs[this.id];
   };
-  _proto45._getCBox = function _getCBox() {
+  _proto43._getCBox = function _getCBox() {
     return this.path.bbox;
   };
   return WOFF2Glyph;
@@ -18967,12 +18967,12 @@ var WOFF2Font = /*#__PURE__*/function (_TTFFont2) {
   WOFF2Font.probe = function probe(buffer) {
     return buffer.toString('ascii', 0, 4) === 'wOF2';
   };
-  var _proto46 = WOFF2Font.prototype;
-  _proto46._decodeDirectory = function _decodeDirectory() {
+  var _proto44 = WOFF2Font.prototype;
+  _proto44._decodeDirectory = function _decodeDirectory() {
     this.directory = WOFF2Directory.decode(this.stream);
     this._dataPos = this.stream.pos;
   };
-  _proto46._decompress = function _decompress() {
+  _proto44._decompress = function _decompress() {
     // decompress data and setup table offsets if we haven't already
     if (!this._decompressed) {
       this.stream.pos = this._dataPos;
@@ -18991,13 +18991,13 @@ var WOFF2Font = /*#__PURE__*/function (_TTFFont2) {
       this._decompressed = true;
     }
   };
-  _proto46._decodeTable = function _decodeTable(table) {
+  _proto44._decodeTable = function _decodeTable(table) {
     this._decompress();
     return _TTFFont2.prototype._decodeTable.call(this, table);
   } // Override this method to get a glyph and return our
   // custom subclass if there is a glyf table.
   ;
-  _proto46._getBaseGlyph = function _getBaseGlyph(glyph, characters) {
+  _proto44._getBaseGlyph = function _getBaseGlyph(glyph, characters) {
     if (characters === void 0) {
       characters = [];
     }
@@ -19012,7 +19012,7 @@ var WOFF2Font = /*#__PURE__*/function (_TTFFont2) {
       }
     }
   };
-  _proto46._transformGlyfTable = function _transformGlyfTable() {
+  _proto44._transformGlyfTable = function _transformGlyfTable() {
     this._decompress();
     this.stream.pos = this.directory.tables.glyf.offset;
     var table = GlyfTable.decode(this.stream);
@@ -19055,8 +19055,8 @@ var Substream = /*#__PURE__*/function () {
     this.length = length;
     this._buf = new r.Buffer(length);
   }
-  var _proto47 = Substream.prototype;
-  _proto47.decode = function decode(stream, parent) {
+  var _proto45 = Substream.prototype;
+  _proto45.decode = function decode(stream, parent) {
     return new r.DecodeStream(this._buf.decode(stream, parent));
   };
   return Substream;
@@ -19164,10 +19164,10 @@ var TrueTypeCollection = /*#__PURE__*/function () {
   TrueTypeCollection.probe = function probe(buffer) {
     return buffer.toString('ascii', 0, 4) === 'ttcf';
   };
-  var _proto48 = TrueTypeCollection.prototype;
-  _proto48.getFont = function getFont(name) {
-    for (var _iterator79 = _createForOfIteratorHelperLoose(this.header.offsets), _step79; !(_step79 = _iterator79()).done;) {
-      var offset = _step79.value;
+  var _proto46 = TrueTypeCollection.prototype;
+  _proto46.getFont = function getFont(name) {
+    for (var _iterator77 = _createForOfIteratorHelperLoose(this.header.offsets), _step77; !(_step77 = _iterator77()).done;) {
+      var offset = _step77.value;
       var stream = new r.DecodeStream(this.stream.buffer);
       stream.pos = offset;
       var font = new TTFFont(stream);
@@ -19181,8 +19181,8 @@ var TrueTypeCollection = /*#__PURE__*/function () {
     key: "fonts",
     get: function get() {
       var fonts = [];
-      for (var _iterator80 = _createForOfIteratorHelperLoose(this.header.offsets), _step80; !(_step80 = _iterator80()).done;) {
-        var offset = _step80.value;
+      for (var _iterator78 = _createForOfIteratorHelperLoose(this.header.offsets), _step78; !(_step78 = _iterator78()).done;) {
+        var offset = _step78.value;
         var stream = new r.DecodeStream(this.stream.buffer);
         stream.pos = offset;
         fonts.push(new TTFFont(stream));
@@ -19233,10 +19233,10 @@ var DFont = /*#__PURE__*/function () {
   function DFont(stream) {
     this.stream = stream;
     this.header = DFontHeader.decode(this.stream);
-    for (var _iterator81 = _createForOfIteratorHelperLoose(this.header.map.typeList.types), _step81; !(_step81 = _iterator81()).done;) {
-      var type = _step81.value;
-      for (var _iterator82 = _createForOfIteratorHelperLoose(type.refList), _step82; !(_step82 = _iterator82()).done;) {
-        var ref = _step82.value;
+    for (var _iterator79 = _createForOfIteratorHelperLoose(this.header.map.typeList.types), _step79; !(_step79 = _iterator79()).done;) {
+      var type = _step79.value;
+      for (var _iterator80 = _createForOfIteratorHelperLoose(type.refList), _step80; !(_step80 = _iterator80()).done;) {
+        var ref = _step80.value;
         if (ref.nameOffset >= 0) {
           this.stream.pos = ref.nameOffset + this.header.map.nameListOffset;
           ref.name = DFontName.decode(this.stream);
@@ -19256,21 +19256,21 @@ var DFont = /*#__PURE__*/function () {
     } catch (e) {
       return false;
     }
-    for (var _iterator83 = _createForOfIteratorHelperLoose(header.map.typeList.types), _step83; !(_step83 = _iterator83()).done;) {
-      var type = _step83.value;
+    for (var _iterator81 = _createForOfIteratorHelperLoose(header.map.typeList.types), _step81; !(_step81 = _iterator81()).done;) {
+      var type = _step81.value;
       if (type.name === 'sfnt') {
         return true;
       }
     }
     return false;
   };
-  var _proto49 = DFont.prototype;
-  _proto49.getFont = function getFont(name) {
+  var _proto47 = DFont.prototype;
+  _proto47.getFont = function getFont(name) {
     if (!this.sfnt) {
       return null;
     }
-    for (var _iterator84 = _createForOfIteratorHelperLoose(this.sfnt.refList), _step84; !(_step84 = _iterator84()).done;) {
-      var ref = _step84.value;
+    for (var _iterator82 = _createForOfIteratorHelperLoose(this.sfnt.refList), _step82; !(_step82 = _iterator82()).done;) {
+      var ref = _step82.value;
       var pos = this.header.dataOffset + ref.dataOffset + 4;
       var stream = new r.DecodeStream(this.stream.buffer.slice(pos));
       var font = new TTFFont(stream);
@@ -19284,8 +19284,8 @@ var DFont = /*#__PURE__*/function () {
     key: "fonts",
     get: function get() {
       var fonts = [];
-      for (var _iterator85 = _createForOfIteratorHelperLoose(this.sfnt.refList), _step85; !(_step85 = _iterator85()).done;) {
-        var ref = _step85.value;
+      for (var _iterator83 = _createForOfIteratorHelperLoose(this.sfnt.refList), _step83; !(_step83 = _iterator83()).done;) {
+        var ref = _step83.value;
         var pos = this.header.dataOffset + ref.dataOffset + 4;
         var stream = new r.DecodeStream(this.stream.buffer.slice(pos));
         fonts.push(new TTFFont(stream));
@@ -23419,6 +23419,18 @@ module.exports = {};
 
 /***/ }),
 
+/***/ 15548:
+/***/ (function(module, exports, __webpack_require__) {
+
+var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
+		__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
+		(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
+		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));else {}})(this,function(){"use strict";function b(a,b){return"undefined"==typeof b?b={autoBom:!1}:"object"!=typeof b&&(console.warn("Deprecated: Expected third argument to be a object"),b={autoBom:!b}),b.autoBom&&/^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(a.type)?new Blob(["\uFEFF",a],{type:a.type}):a}function c(a,b,c){var d=new XMLHttpRequest;d.open("GET",a),d.responseType="blob",d.onload=function(){g(d.response,b,c)},d.onerror=function(){console.error("could not download file")},d.send()}function d(a){var b=new XMLHttpRequest;b.open("HEAD",a,!1);try{b.send()}catch(a){}return 200<=b.status&&299>=b.status}function e(a){try{a.dispatchEvent(new MouseEvent("click"))}catch(c){var b=document.createEvent("MouseEvents");b.initMouseEvent("click",!0,!0,window,0,0,0,80,20,!1,!1,!1,!1,0,null),a.dispatchEvent(b)}}var f="object"==typeof window&&window.window===window?window:"object"==typeof self&&self.self===self?self:"object"==typeof __webpack_require__.g&&__webpack_require__.g.global===__webpack_require__.g?__webpack_require__.g:void 0,a=f.navigator&&/Macintosh/.test(navigator.userAgent)&&/AppleWebKit/.test(navigator.userAgent)&&!/Safari/.test(navigator.userAgent),g=f.saveAs||("object"!=typeof window||window!==f?function(){}:(typeof HTMLAnchorElement !== "undefined" && "download" in HTMLAnchorElement.prototype)&&!a?function(b,g,h){var i=f.URL||f.webkitURL,j=document.createElement("a");g=g||b.name||"download",j.download=g,j.rel="noopener","string"==typeof b?(j.href=b,j.origin===location.origin?e(j):d(j.href)?c(b,g,h):e(j,j.target="_blank")):(j.href=i.createObjectURL(b),setTimeout(function(){i.revokeObjectURL(j.href)},4E4),setTimeout(function(){e(j)},0))}:"msSaveOrOpenBlob"in navigator?function(f,g,h){if(g=g||f.name||"download","string"!=typeof f)navigator.msSaveOrOpenBlob(b(f,h),g);else if(d(f))c(f,g,h);else{var i=document.createElement("a");i.href=f,i.target="_blank",setTimeout(function(){e(i)})}}:function(b,d,e,g){if(g=g||open("","_blank"),g&&(g.document.title=g.document.body.innerText="downloading..."),"string"==typeof b)return c(b,d,e);var h="application/octet-stream"===b.type,i=/constructor/i.test(f.HTMLElement)||f.safari,j=/CriOS\/[\d]+/.test(navigator.userAgent);if((j||h&&i||a)&&"undefined"!=typeof FileReader){var k=new FileReader;k.onloadend=function(){var a=k.result;a=j?a:a.replace(/^data:[^;]*;/,"data:attachment/file;"),g?g.location.href=a:location=a,g=null},k.readAsDataURL(b)}else{var l=f.URL||f.webkitURL,m=l.createObjectURL(b);g?g.location=m:location.href=m,g=null,setTimeout(function(){l.revokeObjectURL(m)},4E4)}});f.saveAs=g.saveAs=g, true&&(module.exports=g)});
+
+
+
+/***/ }),
+
 /***/ 15567:
 /***/ (function(module, __unused_webpack_exports, __webpack_require__) {
 
@@ -24575,7 +24587,7 @@ __webpack_require__(94712);
 function _createForOfIteratorHelperLoose(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (t) return (t = t.call(r)).next.bind(t); if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var o = 0; return function () { return o >= r.length ? { done: !0 } : { done: !1, value: r[o++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
-function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == typeof h && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator.return && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(typeof e + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, catch: function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return r; }; var t, r = {}, e = Object.prototype, n = e.hasOwnProperty, o = "function" == typeof Symbol ? Symbol : {}, i = o.iterator || "@@iterator", a = o.asyncIterator || "@@asyncIterator", u = o.toStringTag || "@@toStringTag"; function c(t, r, e, n) { return Object.defineProperty(t, r, { value: e, enumerable: !n, configurable: !n, writable: !n }); } try { c({}, ""); } catch (t) { c = function c(t, r, e) { return t[r] = e; }; } function h(r, e, n, o) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype); return c(a, "_invoke", function (r, e, n) { var o = 1; return function (i, a) { if (3 === o) throw Error("Generator is already running"); if (4 === o) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var u = n.delegate; if (u) { var c = d(u, n); if (c) { if (c === f) continue; return c; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (1 === o) throw o = 4, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = 3; var h = s(r, e, n); if ("normal" === h.type) { if (o = n.done ? 4 : 2, h.arg === f) continue; return { value: h.arg, done: n.done }; } "throw" === h.type && (o = 4, n.method = "throw", n.arg = h.arg); } }; }(r, n, new Context(o || [])), !0), a; } function s(t, r, e) { try { return { type: "normal", arg: t.call(r, e) }; } catch (t) { return { type: "throw", arg: t }; } } r.wrap = h; var f = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var l = {}; c(l, i, function () { return this; }); var p = Object.getPrototypeOf, y = p && p(p(x([]))); y && y !== e && n.call(y, i) && (l = y); var v = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(l); function g(t) { ["next", "throw", "return"].forEach(function (r) { c(t, r, function (t) { return this._invoke(r, t); }); }); } function AsyncIterator(t, r) { function e(o, i, a, u) { var c = s(t[o], t, i); if ("throw" !== c.type) { var h = c.arg, f = h.value; return f && "object" == typeof f && n.call(f, "__await") ? r.resolve(f.__await).then(function (t) { e("next", t, a, u); }, function (t) { e("throw", t, a, u); }) : r.resolve(f).then(function (t) { h.value = t, a(h); }, function (t) { return e("throw", t, a, u); }); } u(c.arg); } var o; c(this, "_invoke", function (t, n) { function i() { return new r(function (r, o) { e(t, n, r, o); }); } return o = o ? o.then(i, i) : i(); }, !0); } function d(r, e) { var n = e.method, o = r.i[n]; if (o === t) return e.delegate = null, "throw" === n && r.i.return && (e.method = "return", e.arg = t, d(r, e), "throw" === e.method) || "return" !== n && (e.method = "throw", e.arg = new TypeError("The iterator does not provide a '" + n + "' method")), f; var i = s(o, r.i, e.arg); if ("throw" === i.type) return e.method = "throw", e.arg = i.arg, e.delegate = null, f; var a = i.arg; return a ? a.done ? (e[r.r] = a.value, e.next = r.n, "return" !== e.method && (e.method = "next", e.arg = t), e.delegate = null, f) : a : (e.method = "throw", e.arg = new TypeError("iterator result is not an object"), e.delegate = null, f); } function w(t) { this.tryEntries.push(t); } function m(r) { var e = r[4] || {}; e.type = "normal", e.arg = t, r[4] = e; } function Context(t) { this.tryEntries = [[-1]], t.forEach(w, this), this.reset(!0); } function x(r) { if (null != r) { var e = r[i]; if (e) return e.call(r); if ("function" == typeof r.next) return r; if (!isNaN(r.length)) { var o = -1, a = function e() { for (; ++o < r.length;) if (n.call(r, o)) return e.value = r[o], e.done = !1, e; return e.value = t, e.done = !0, e; }; return a.next = a; } } throw new TypeError(typeof r + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, c(v, "constructor", GeneratorFunctionPrototype), c(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = c(GeneratorFunctionPrototype, u, "GeneratorFunction"), r.isGeneratorFunction = function (t) { var r = "function" == typeof t && t.constructor; return !!r && (r === GeneratorFunction || "GeneratorFunction" === (r.displayName || r.name)); }, r.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, c(t, u, "GeneratorFunction")), t.prototype = Object.create(v), t; }, r.awrap = function (t) { return { __await: t }; }, g(AsyncIterator.prototype), c(AsyncIterator.prototype, a, function () { return this; }), r.AsyncIterator = AsyncIterator, r.async = function (t, e, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(h(t, e, n, o), i); return r.isGeneratorFunction(e) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, g(v), c(v, u, "Generator"), c(v, i, function () { return this; }), c(v, "toString", function () { return "[object Generator]"; }), r.keys = function (t) { var r = Object(t), e = []; for (var n in r) e.unshift(n); return function t() { for (; e.length;) if ((n = e.pop()) in r) return t.value = n, t.done = !1, t; return t.done = !0, t; }; }, r.values = x, Context.prototype = { constructor: Context, reset: function reset(r) { if (this.prev = this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(m), !r) for (var e in this) "t" === e.charAt(0) && n.call(this, e) && !isNaN(+e.slice(1)) && (this[e] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0][4]; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(r) { if (this.done) throw r; var e = this; function n(t) { a.type = "throw", a.arg = r, e.next = t; } for (var o = e.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i[4], u = this.prev, c = i[1], h = i[2]; if (-1 === i[0]) return n("end"), !1; if (!c && !h) throw Error("try statement without catch or finally"); if (null != i[0] && i[0] <= u) { if (u < c) return this.method = "next", this.arg = t, n(c), !0; if (u < h) return n(h), !1; } } }, abrupt: function abrupt(t, r) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var n = this.tryEntries[e]; if (n[0] > -1 && n[0] <= this.prev && this.prev < n[2]) { var o = n; break; } } o && ("break" === t || "continue" === t) && o[0] <= r && r <= o[2] && (o = null); var i = o ? o[4] : {}; return i.type = t, i.arg = r, o ? (this.method = "next", this.next = o[2], f) : this.complete(i); }, complete: function complete(t, r) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && r && (this.next = r), f; }, finish: function finish(t) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var e = this.tryEntries[r]; if (e[2] === t) return this.complete(e[4], e[3]), m(e), f; } }, catch: function _catch(t) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var e = this.tryEntries[r]; if (e[0] === t) { var n = e[4]; if ("throw" === n.type) { var o = n.arg; m(e); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(r, e, n) { return this.delegate = { i: x(r), r: e, n: n }, "next" === this.method && (this.arg = t), f; } }, r; }
 var INITIAL_STATE = 1;
 var FAIL_STATE = 0;
 /**
@@ -38173,7 +38185,7 @@ var isFunction = (__webpack_require__(91867).isFunction);
 var isUndefined = (__webpack_require__(91867).isUndefined);
 //var isNull = require('../helpers').isNull;
 var pack = (__webpack_require__(91867).pack);
-var FileSaver = __webpack_require__(93932);
+var FileSaver = __webpack_require__(15548);
 var saveAs = FileSaver.saveAs;
 
 var defaultClientFonts = {
@@ -51733,6 +51745,23 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
     }
     return newInline;
   }
+  function findMaxFitLength(text, maxWidth, measureFn) {
+    var low = 1;
+    var high = text.length;
+    var bestFit = 1;
+    while (low <= high) {
+      var mid = Math.floor((low + high) / 2);
+      var part = text.substring(0, mid);
+      var width = measureFn(part);
+      if (width <= maxWidth) {
+        bestFit = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return bestFit;
+  }
   if (!textNode._inlines || textNode._inlines.length === 0) {
     return null;
   }
@@ -51744,11 +51773,9 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
     var inline = textNode._inlines.shift();
     isForceContinue = false;
     if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
-      var widthPerChar = inline.width / inline.text.length;
-      var maxChars = Math.floor(line.getAvailableWidth() / widthPerChar);
-      if (maxChars < 1) {
-        maxChars = 1;
-      }
+      var maxChars = findMaxFitLength(inline.text, line.getAvailableWidth(), function (txt) {
+        return textTools.widthOfString(txt, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
+      });
       if (maxChars < inline.text.length) {
         var newInline = cloneInline(inline);
         newInline.text = inline.text.substr(maxChars);
@@ -61677,7 +61704,7 @@ function _interopDefault(ex) {
 	return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex;
 }
 
-var PdfKit = _interopDefault(__webpack_require__(96516));
+var PdfKit = _interopDefault(__webpack_require__(90760));
 
 function getEngineInstance() {
 	return PdfKit;
@@ -65587,1970 +65614,7 @@ module.exports = {};
 
 /***/ }),
 
-/***/ 90780:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-var parent = __webpack_require__(42075);
-__webpack_require__(94712);
-
-module.exports = parent;
-
-
-/***/ }),
-
-/***/ 90868:
-/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-var createTypedArrayConstructor = __webpack_require__(98828);
-
-// `Float64Array` constructor
-// https://tc39.es/ecma262/#sec-typedarray-objects
-createTypedArrayConstructor('Float64', function (init) {
-  return function Float64Array(data, byteOffset, length) {
-    return init(this, data, byteOffset, length);
-  };
-});
-
-
-/***/ }),
-
-/***/ 91102:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-var bind = __webpack_require__(25567);
-var uncurryThis = __webpack_require__(38347);
-var IndexedObject = __webpack_require__(7514);
-var toObject = __webpack_require__(43162);
-var lengthOfArrayLike = __webpack_require__(45495);
-var arraySpeciesCreate = __webpack_require__(45744);
-
-var push = uncurryThis([].push);
-
-// `Array.prototype.{ forEach, map, filter, some, every, find, findIndex, filterReject }` methods implementation
-var createMethod = function (TYPE) {
-  var IS_MAP = TYPE == 1;
-  var IS_FILTER = TYPE == 2;
-  var IS_SOME = TYPE == 3;
-  var IS_EVERY = TYPE == 4;
-  var IS_FIND_INDEX = TYPE == 6;
-  var IS_FILTER_REJECT = TYPE == 7;
-  var NO_HOLES = TYPE == 5 || IS_FIND_INDEX;
-  return function ($this, callbackfn, that, specificCreate) {
-    var O = toObject($this);
-    var self = IndexedObject(O);
-    var boundFunction = bind(callbackfn, that);
-    var length = lengthOfArrayLike(self);
-    var index = 0;
-    var create = specificCreate || arraySpeciesCreate;
-    var target = IS_MAP ? create($this, length) : IS_FILTER || IS_FILTER_REJECT ? create($this, 0) : undefined;
-    var value, result;
-    for (;length > index; index++) if (NO_HOLES || index in self) {
-      value = self[index];
-      result = boundFunction(value, index, O);
-      if (TYPE) {
-        if (IS_MAP) target[index] = result; // map
-        else if (result) switch (TYPE) {
-          case 3: return true;              // some
-          case 5: return value;             // find
-          case 6: return index;             // findIndex
-          case 2: push(target, value);      // filter
-        } else switch (TYPE) {
-          case 4: return false;             // every
-          case 7: push(target, value);      // filterReject
-        }
-      }
-    }
-    return IS_FIND_INDEX ? -1 : IS_SOME || IS_EVERY ? IS_EVERY : target;
-  };
-};
-
-module.exports = {
-  // `Array.prototype.forEach` method
-  // https://tc39.es/ecma262/#sec-array.prototype.foreach
-  forEach: createMethod(0),
-  // `Array.prototype.map` method
-  // https://tc39.es/ecma262/#sec-array.prototype.map
-  map: createMethod(1),
-  // `Array.prototype.filter` method
-  // https://tc39.es/ecma262/#sec-array.prototype.filter
-  filter: createMethod(2),
-  // `Array.prototype.some` method
-  // https://tc39.es/ecma262/#sec-array.prototype.some
-  some: createMethod(3),
-  // `Array.prototype.every` method
-  // https://tc39.es/ecma262/#sec-array.prototype.every
-  every: createMethod(4),
-  // `Array.prototype.find` method
-  // https://tc39.es/ecma262/#sec-array.prototype.find
-  find: createMethod(5),
-  // `Array.prototype.findIndex` method
-  // https://tc39.es/ecma262/#sec-array.prototype.findIndex
-  findIndex: createMethod(6),
-  // `Array.prototype.filterReject` method
-  // https://github.com/tc39/proposal-array-filtering
-  filterReject: createMethod(7)
-};
-
-
-/***/ }),
-
-/***/ 91132:
-/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-
-var global = __webpack_require__(32010);
-var uncurryThis = __webpack_require__(38347);
-var PROPER_FUNCTION_NAME = (__webpack_require__(7081).PROPER);
-var ArrayBufferViewCore = __webpack_require__(59754);
-var ArrayIterators = __webpack_require__(81755);
-var wellKnownSymbol = __webpack_require__(38688);
-
-var ITERATOR = wellKnownSymbol('iterator');
-var Uint8Array = global.Uint8Array;
-var arrayValues = uncurryThis(ArrayIterators.values);
-var arrayKeys = uncurryThis(ArrayIterators.keys);
-var arrayEntries = uncurryThis(ArrayIterators.entries);
-var aTypedArray = ArrayBufferViewCore.aTypedArray;
-var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
-var nativeTypedArrayIterator = Uint8Array && Uint8Array.prototype[ITERATOR];
-
-var PROPER_ARRAY_VALUES_NAME = !!nativeTypedArrayIterator && nativeTypedArrayIterator.name === 'values';
-
-var typedArrayValues = function values() {
-  return arrayValues(aTypedArray(this));
-};
-
-// `%TypedArray%.prototype.entries` method
-// https://tc39.es/ecma262/#sec-%typedarray%.prototype.entries
-exportTypedArrayMethod('entries', function entries() {
-  return arrayEntries(aTypedArray(this));
-});
-// `%TypedArray%.prototype.keys` method
-// https://tc39.es/ecma262/#sec-%typedarray%.prototype.keys
-exportTypedArrayMethod('keys', function keys() {
-  return arrayKeys(aTypedArray(this));
-});
-// `%TypedArray%.prototype.values` method
-// https://tc39.es/ecma262/#sec-%typedarray%.prototype.values
-exportTypedArrayMethod('values', typedArrayValues, PROPER_FUNCTION_NAME && !PROPER_ARRAY_VALUES_NAME);
-// `%TypedArray%.prototype[@@iterator]` method
-// https://tc39.es/ecma262/#sec-%typedarray%.prototype-@@iterator
-exportTypedArrayMethod(ITERATOR, typedArrayValues, PROPER_FUNCTION_NAME && !PROPER_ARRAY_VALUES_NAME);
-
-
-/***/ }),
-
-/***/ 91151:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-var wellKnownSymbol = __webpack_require__(38688);
-
-var MATCH = wellKnownSymbol('match');
-
-module.exports = function (METHOD_NAME) {
-  var regexp = /./;
-  try {
-    '/./'[METHOD_NAME](regexp);
-  } catch (error1) {
-    try {
-      regexp[MATCH] = false;
-      return '/./'[METHOD_NAME](regexp);
-    } catch (error2) { /* empty */ }
-  } return false;
-};
-
-
-/***/ }),
-
-/***/ 91159:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-var uncurryThis = __webpack_require__(38347);
-var requireObjectCoercible = __webpack_require__(83943);
-var toString = __webpack_require__(25096);
-
-var quot = /"/g;
-var replace = uncurryThis(''.replace);
-
-// `CreateHTML` abstract operation
-// https://tc39.es/ecma262/#sec-createhtml
-module.exports = function (string, tag, attribute, value) {
-  var S = toString(requireObjectCoercible(string));
-  var p1 = '<' + tag;
-  if (attribute !== '') p1 += ' ' + attribute + '="' + replace(toString(value), quot, '&quot;') + '"';
-  return p1 + '>' + S + '</' + tag + '>';
-};
-
-
-/***/ }),
-
-/***/ 91780:
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-__webpack_require__(39081);
-;
-(function (root, factory, undef) {
-  if (true) {
-    // CommonJS
-    module.exports = exports = factory(__webpack_require__(48352), __webpack_require__(51270));
-  } else {}
-})(void 0, function (CryptoJS) {
-  /**
-   * ISO 10126 padding strategy.
-   */
-  CryptoJS.pad.Iso10126 = {
-    pad: function pad(data, blockSize) {
-      // Shortcut
-      var blockSizeBytes = blockSize * 4;
-
-      // Count padding bytes
-      var nPaddingBytes = blockSizeBytes - data.sigBytes % blockSizeBytes;
-
-      // Pad
-      data.concat(CryptoJS.lib.WordArray.random(nPaddingBytes - 1)).concat(CryptoJS.lib.WordArray.create([nPaddingBytes << 24], 1));
-    },
-    unpad: function unpad(data) {
-      // Get number of padding bytes from last byte
-      var nPaddingBytes = data.words[data.sigBytes - 1 >>> 2] & 0xff;
-
-      // Remove padding
-      data.sigBytes -= nPaddingBytes;
-    }
-  };
-  return CryptoJS.pad.Iso10126;
-});
-
-/***/ }),
-
-/***/ 91867:
-/***/ (function(module) {
-
-"use strict";
-
-
-function isString(variable) {
-	return typeof variable === 'string' || variable instanceof String;
-}
-
-function isNumber(variable) {
-	return typeof variable === 'number' || variable instanceof Number;
-}
-
-function isBoolean(variable) {
-	return typeof variable === 'boolean';
-}
-
-function isArray(variable) {
-	return Array.isArray(variable);
-}
-
-function isFunction(variable) {
-	return typeof variable === 'function';
-}
-
-function isObject(variable) {
-	return variable !== null && typeof variable === 'object';
-}
-
-function isNull(variable) {
-	return variable === null;
-}
-
-function isUndefined(variable) {
-	return variable === undefined;
-}
-
-/**
- * @param {any} variable
- * @returns {boolean}
- */
-function isPositiveInteger(variable) {
-	if (!isNumber(variable) || !Number.isInteger(variable) || variable <= 0) {
-		return false;
-	}
-	return true;
-}
-
-function pack() {
-	var result = {};
-
-	for (var i = 0, l = arguments.length; i < l; i++) {
-		var obj = arguments[i];
-
-		if (obj) {
-			for (var key in obj) {
-				if (obj.hasOwnProperty(key)) {
-					result[key] = obj[key];
-				}
-			}
-		}
-	}
-
-	return result;
-}
-
-function offsetVector(vector, x, y) {
-	switch (vector.type) {
-		case 'ellipse':
-		case 'rect':
-			vector.x += x;
-			vector.y += y;
-			break;
-		case 'line':
-			vector.x1 += x;
-			vector.x2 += x;
-			vector.y1 += y;
-			vector.y2 += y;
-			break;
-		case 'polyline':
-			for (var i = 0, l = vector.points.length; i < l; i++) {
-				vector.points[i].x += x;
-				vector.points[i].y += y;
-			}
-			break;
-	}
-}
-
-function fontStringify(key, val) {
-	if (key === 'font') {
-		return 'font';
-	}
-	return val;
-}
-
-function getNodeId(node) {
-	if (node.id) {
-		return node.id;
-	}
-
-	if (isArray(node.text)) {
-		for (var i = 0, l = node.text.length; i < l; i++) {
-			var n = node.text[i];
-			var nodeId = getNodeId(n);
-			if (nodeId) {
-				return nodeId;
-			}
-		}
-	}
-
-	return null;
-}
-
-function isPattern(color) {
-	return isArray(color) && color.length === 2;
-}
-
-// converts from a [<pattern name>, <color>] as used by pdfmake
-// into [<pattern object>, <color>] as used by pdfkit
-// (the pattern has to be registered in the doc definition of course)
-function getPattern(color, patterns) {
-	return [patterns[color[0]], color[1]];
-}
-
-module.exports = {
-	isString: isString,
-	isNumber: isNumber,
-	isBoolean: isBoolean,
-	isArray: isArray,
-	isFunction: isFunction,
-	isObject: isObject,
-	isNull: isNull,
-	isUndefined: isUndefined,
-	isPositiveInteger: isPositiveInteger,
-	pack: pack,
-	fontStringify: fontStringify,
-	offsetVector: offsetVector,
-	getNodeId: getNodeId,
-	isPattern: isPattern,
-	getPattern: getPattern
-};
-
-
-/***/ }),
-
-/***/ 92451:
-/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-
-var ArrayBufferViewCore = __webpack_require__(59754);
-var $reduceRight = (__webpack_require__(32843).right);
-
-var aTypedArray = ArrayBufferViewCore.aTypedArray;
-var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
-
-// `%TypedArray%.prototype.reduceRicht` method
-// https://tc39.es/ecma262/#sec-%typedarray%.prototype.reduceright
-exportTypedArrayMethod('reduceRight', function reduceRight(callbackfn /* , initialValue */) {
-  var length = arguments.length;
-  return $reduceRight(aTypedArray(this), callbackfn, length, length > 1 ? arguments[1] : undefined);
-});
-
-
-/***/ }),
-
-/***/ 92642:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-
-var toObject = __webpack_require__(43162);
-var toAbsoluteIndex = __webpack_require__(74841);
-var lengthOfArrayLike = __webpack_require__(45495);
-
-var min = Math.min;
-
-// `Array.prototype.copyWithin` method implementation
-// https://tc39.es/ecma262/#sec-array.prototype.copywithin
-// eslint-disable-next-line es/no-array-prototype-copywithin -- safe
-module.exports = [].copyWithin || function copyWithin(target /* = 0 */, start /* = 0, end = @length */) {
-  var O = toObject(this);
-  var len = lengthOfArrayLike(O);
-  var to = toAbsoluteIndex(target, len);
-  var from = toAbsoluteIndex(start, len);
-  var end = arguments.length > 2 ? arguments[2] : undefined;
-  var count = min((end === undefined ? len : toAbsoluteIndex(end, len)) - from, len - to);
-  var inc = 1;
-  if (from < to && to < from + count) {
-    inc = -1;
-    from += count - 1;
-    to += count - 1;
-  }
-  while (count-- > 0) {
-    if (from in O) O[to] = O[from];
-    else delete O[to];
-    to += inc;
-    from += inc;
-  } return O;
-};
-
-
-/***/ }),
-
-/***/ 92920:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-
-
-// (C) 1995-2013 Jean-loup Gailly and Mark Adler
-// (C) 2014-2017 Vitaly Puzrin and Andrey Tupitsin
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//   claim that you wrote the original software. If you use this software
-//   in a product, an acknowledgment in the product documentation would be
-//   appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//   misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
-
-var utils = __webpack_require__(72519);
-
-var MAXBITS = 15;
-var ENOUGH_LENS = 852;
-var ENOUGH_DISTS = 592;
-//var ENOUGH = (ENOUGH_LENS+ENOUGH_DISTS);
-
-var CODES = 0;
-var LENS = 1;
-var DISTS = 2;
-
-var lbase = [ /* Length codes 257..285 base */
-  3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31,
-  35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0
-];
-
-var lext = [ /* Length codes 257..285 extra */
-  16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18,
-  19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 72, 78
-];
-
-var dbase = [ /* Distance codes 0..29 base */
-  1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
-  257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145,
-  8193, 12289, 16385, 24577, 0, 0
-];
-
-var dext = [ /* Distance codes 0..29 extra */
-  16, 16, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22,
-  23, 23, 24, 24, 25, 25, 26, 26, 27, 27,
-  28, 28, 29, 29, 64, 64
-];
-
-module.exports = function inflate_table(type, lens, lens_index, codes, table, table_index, work, opts)
-{
-  var bits = opts.bits;
-      //here = opts.here; /* table entry for duplication */
-
-  var len = 0;               /* a code's length in bits */
-  var sym = 0;               /* index of code symbols */
-  var min = 0, max = 0;          /* minimum and maximum code lengths */
-  var root = 0;              /* number of index bits for root table */
-  var curr = 0;              /* number of index bits for current table */
-  var drop = 0;              /* code bits to drop for sub-table */
-  var left = 0;                   /* number of prefix codes available */
-  var used = 0;              /* code entries in table used */
-  var huff = 0;              /* Huffman code */
-  var incr;              /* for incrementing code, index */
-  var fill;              /* index for replicating entries */
-  var low;               /* low bits for current root entry */
-  var mask;              /* mask for low root bits */
-  var next;             /* next available space in table */
-  var base = null;     /* base value table to use */
-  var base_index = 0;
-//  var shoextra;    /* extra bits table to use */
-  var end;                    /* use base and extra for symbol > end */
-  var count = new utils.Buf16(MAXBITS + 1); //[MAXBITS+1];    /* number of codes of each length */
-  var offs = new utils.Buf16(MAXBITS + 1); //[MAXBITS+1];     /* offsets in table for each length */
-  var extra = null;
-  var extra_index = 0;
-
-  var here_bits, here_op, here_val;
-
-  /*
-   Process a set of code lengths to create a canonical Huffman code.  The
-   code lengths are lens[0..codes-1].  Each length corresponds to the
-   symbols 0..codes-1.  The Huffman code is generated by first sorting the
-   symbols by length from short to long, and retaining the symbol order
-   for codes with equal lengths.  Then the code starts with all zero bits
-   for the first code of the shortest length, and the codes are integer
-   increments for the same length, and zeros are appended as the length
-   increases.  For the deflate format, these bits are stored backwards
-   from their more natural integer increment ordering, and so when the
-   decoding tables are built in the large loop below, the integer codes
-   are incremented backwards.
-
-   This routine assumes, but does not check, that all of the entries in
-   lens[] are in the range 0..MAXBITS.  The caller must assure this.
-   1..MAXBITS is interpreted as that code length.  zero means that that
-   symbol does not occur in this code.
-
-   The codes are sorted by computing a count of codes for each length,
-   creating from that a table of starting indices for each length in the
-   sorted table, and then entering the symbols in order in the sorted
-   table.  The sorted table is work[], with that space being provided by
-   the caller.
-
-   The length counts are used for other purposes as well, i.e. finding
-   the minimum and maximum length codes, determining if there are any
-   codes at all, checking for a valid set of lengths, and looking ahead
-   at length counts to determine sub-table sizes when building the
-   decoding tables.
-   */
-
-  /* accumulate lengths for codes (assumes lens[] all in 0..MAXBITS) */
-  for (len = 0; len <= MAXBITS; len++) {
-    count[len] = 0;
-  }
-  for (sym = 0; sym < codes; sym++) {
-    count[lens[lens_index + sym]]++;
-  }
-
-  /* bound code lengths, force root to be within code lengths */
-  root = bits;
-  for (max = MAXBITS; max >= 1; max--) {
-    if (count[max] !== 0) { break; }
-  }
-  if (root > max) {
-    root = max;
-  }
-  if (max === 0) {                     /* no symbols to code at all */
-    //table.op[opts.table_index] = 64;  //here.op = (var char)64;    /* invalid code marker */
-    //table.bits[opts.table_index] = 1;   //here.bits = (var char)1;
-    //table.val[opts.table_index++] = 0;   //here.val = (var short)0;
-    table[table_index++] = (1 << 24) | (64 << 16) | 0;
-
-
-    //table.op[opts.table_index] = 64;
-    //table.bits[opts.table_index] = 1;
-    //table.val[opts.table_index++] = 0;
-    table[table_index++] = (1 << 24) | (64 << 16) | 0;
-
-    opts.bits = 1;
-    return 0;     /* no symbols, but wait for decoding to report error */
-  }
-  for (min = 1; min < max; min++) {
-    if (count[min] !== 0) { break; }
-  }
-  if (root < min) {
-    root = min;
-  }
-
-  /* check for an over-subscribed or incomplete set of lengths */
-  left = 1;
-  for (len = 1; len <= MAXBITS; len++) {
-    left <<= 1;
-    left -= count[len];
-    if (left < 0) {
-      return -1;
-    }        /* over-subscribed */
-  }
-  if (left > 0 && (type === CODES || max !== 1)) {
-    return -1;                      /* incomplete set */
-  }
-
-  /* generate offsets into symbol table for each length for sorting */
-  offs[1] = 0;
-  for (len = 1; len < MAXBITS; len++) {
-    offs[len + 1] = offs[len] + count[len];
-  }
-
-  /* sort symbols by length, by symbol order within each length */
-  for (sym = 0; sym < codes; sym++) {
-    if (lens[lens_index + sym] !== 0) {
-      work[offs[lens[lens_index + sym]]++] = sym;
-    }
-  }
-
-  /*
-   Create and fill in decoding tables.  In this loop, the table being
-   filled is at next and has curr index bits.  The code being used is huff
-   with length len.  That code is converted to an index by dropping drop
-   bits off of the bottom.  For codes where len is less than drop + curr,
-   those top drop + curr - len bits are incremented through all values to
-   fill the table with replicated entries.
-
-   root is the number of index bits for the root table.  When len exceeds
-   root, sub-tables are created pointed to by the root entry with an index
-   of the low root bits of huff.  This is saved in low to check for when a
-   new sub-table should be started.  drop is zero when the root table is
-   being filled, and drop is root when sub-tables are being filled.
-
-   When a new sub-table is needed, it is necessary to look ahead in the
-   code lengths to determine what size sub-table is needed.  The length
-   counts are used for this, and so count[] is decremented as codes are
-   entered in the tables.
-
-   used keeps track of how many table entries have been allocated from the
-   provided *table space.  It is checked for LENS and DIST tables against
-   the constants ENOUGH_LENS and ENOUGH_DISTS to guard against changes in
-   the initial root table size constants.  See the comments in inftrees.h
-   for more information.
-
-   sym increments through all symbols, and the loop terminates when
-   all codes of length max, i.e. all codes, have been processed.  This
-   routine permits incomplete codes, so another loop after this one fills
-   in the rest of the decoding tables with invalid code markers.
-   */
-
-  /* set up for code type */
-  // poor man optimization - use if-else instead of switch,
-  // to avoid deopts in old v8
-  if (type === CODES) {
-    base = extra = work;    /* dummy value--not used */
-    end = 19;
-
-  } else if (type === LENS) {
-    base = lbase;
-    base_index -= 257;
-    extra = lext;
-    extra_index -= 257;
-    end = 256;
-
-  } else {                    /* DISTS */
-    base = dbase;
-    extra = dext;
-    end = -1;
-  }
-
-  /* initialize opts for loop */
-  huff = 0;                   /* starting code */
-  sym = 0;                    /* starting code symbol */
-  len = min;                  /* starting code length */
-  next = table_index;              /* current table to fill in */
-  curr = root;                /* current table index bits */
-  drop = 0;                   /* current bits to drop from code for index */
-  low = -1;                   /* trigger new sub-table when len > root */
-  used = 1 << root;          /* use root table entries */
-  mask = used - 1;            /* mask for comparing low */
-
-  /* check available table space */
-  if ((type === LENS && used > ENOUGH_LENS) ||
-    (type === DISTS && used > ENOUGH_DISTS)) {
-    return 1;
-  }
-
-  /* process all codes and make table entries */
-  for (;;) {
-    /* create table entry */
-    here_bits = len - drop;
-    if (work[sym] < end) {
-      here_op = 0;
-      here_val = work[sym];
-    }
-    else if (work[sym] > end) {
-      here_op = extra[extra_index + work[sym]];
-      here_val = base[base_index + work[sym]];
-    }
-    else {
-      here_op = 32 + 64;         /* end of block */
-      here_val = 0;
-    }
-
-    /* replicate for those indices with low len bits equal to huff */
-    incr = 1 << (len - drop);
-    fill = 1 << curr;
-    min = fill;                 /* save offset to next table */
-    do {
-      fill -= incr;
-      table[next + (huff >> drop) + fill] = (here_bits << 24) | (here_op << 16) | here_val |0;
-    } while (fill !== 0);
-
-    /* backwards increment the len-bit code huff */
-    incr = 1 << (len - 1);
-    while (huff & incr) {
-      incr >>= 1;
-    }
-    if (incr !== 0) {
-      huff &= incr - 1;
-      huff += incr;
-    } else {
-      huff = 0;
-    }
-
-    /* go to next symbol, update count, len */
-    sym++;
-    if (--count[len] === 0) {
-      if (len === max) { break; }
-      len = lens[lens_index + work[sym]];
-    }
-
-    /* create new sub-table if needed */
-    if (len > root && (huff & mask) !== low) {
-      /* if first time, transition to sub-tables */
-      if (drop === 0) {
-        drop = root;
-      }
-
-      /* increment past last table */
-      next += min;            /* here min is 1 << curr */
-
-      /* determine length of next table */
-      curr = len - drop;
-      left = 1 << curr;
-      while (curr + drop < max) {
-        left -= count[curr + drop];
-        if (left <= 0) { break; }
-        curr++;
-        left <<= 1;
-      }
-
-      /* check for enough space */
-      used += 1 << curr;
-      if ((type === LENS && used > ENOUGH_LENS) ||
-        (type === DISTS && used > ENOUGH_DISTS)) {
-        return 1;
-      }
-
-      /* point entry in root table to sub-table */
-      low = huff & mask;
-      /*table.op[low] = curr;
-      table.bits[low] = root;
-      table.val[low] = next - opts.table_index;*/
-      table[low] = (root << 24) | (curr << 16) | (next - table_index) |0;
-    }
-  }
-
-  /* fill in remaining table entry if code is incomplete (guaranteed to have
-   at most one remaining entry, since if the code is incomplete, the
-   maximum code length that was allowed to get this far is one bit) */
-  if (huff !== 0) {
-    //table.op[next + huff] = 64;            /* invalid code marker */
-    //table.bits[next + huff] = len - drop;
-    //table.val[next + huff] = 0;
-    table[next + huff] = ((len - drop) << 24) | (64 << 16) |0;
-  }
-
-  /* set return parameters */
-  //opts.table_index += used;
-  opts.bits = root;
-  return 0;
-};
-
-
-/***/ }),
-
-/***/ 93143:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-/* provided dependency */ var process = __webpack_require__(9964);
-/* eslint-disable node/no-deprecated-api */
-
-
-
-__webpack_require__(41584);
-__webpack_require__(81755);
-__webpack_require__(8953);
-__webpack_require__(14032);
-__webpack_require__(56912);
-__webpack_require__(73663);
-__webpack_require__(29883);
-__webpack_require__(35471);
-__webpack_require__(21012);
-__webpack_require__(88997);
-__webpack_require__(97464);
-__webpack_require__(2857);
-__webpack_require__(83326);
-__webpack_require__(94715);
-__webpack_require__(13624);
-__webpack_require__(91132);
-__webpack_require__(62514);
-__webpack_require__(24597);
-__webpack_require__(88042);
-__webpack_require__(4660);
-__webpack_require__(92451);
-__webpack_require__(44206);
-__webpack_require__(66288);
-__webpack_require__(13250);
-__webpack_require__(3858);
-__webpack_require__(84538);
-__webpack_require__(64793);
-__webpack_require__(74202);
-__webpack_require__(52529);
-var buffer = __webpack_require__(14598);
-var Buffer = buffer.Buffer;
-var safer = {};
-var key;
-for (key in buffer) {
-  if (!buffer.hasOwnProperty(key)) continue;
-  if (key === 'SlowBuffer' || key === 'Buffer') continue;
-  safer[key] = buffer[key];
-}
-var Safer = safer.Buffer = {};
-for (key in Buffer) {
-  if (!Buffer.hasOwnProperty(key)) continue;
-  if (key === 'allocUnsafe' || key === 'allocUnsafeSlow') continue;
-  Safer[key] = Buffer[key];
-}
-safer.Buffer.prototype = Buffer.prototype;
-if (!Safer.from || Safer.from === Uint8Array.from) {
-  Safer.from = function (value, encodingOrOffset, length) {
-    if (typeof value === 'number') {
-      throw new TypeError('The "value" argument must not be of type number. Received type ' + typeof value);
-    }
-    if (value && typeof value.length === 'undefined') {
-      throw new TypeError('The first argument must be one of type string, Buffer, ArrayBuffer, Array, or Array-like Object. Received type ' + typeof value);
-    }
-    return Buffer(value, encodingOrOffset, length);
-  };
-}
-if (!Safer.alloc) {
-  Safer.alloc = function (size, fill, encoding) {
-    if (typeof size !== 'number') {
-      throw new TypeError('The "size" argument must be of type number. Received type ' + typeof size);
-    }
-    if (size < 0 || size >= 2 * (1 << 30)) {
-      throw new RangeError('The value "' + size + '" is invalid for option "size"');
-    }
-    var buf = Buffer(size);
-    if (!fill || fill.length === 0) {
-      buf.fill(0);
-    } else if (typeof encoding === 'string') {
-      buf.fill(fill, encoding);
-    } else {
-      buf.fill(fill);
-    }
-    return buf;
-  };
-}
-if (!safer.kStringMaxLength) {
-  try {
-    safer.kStringMaxLength = process.binding('buffer').kStringMaxLength;
-  } catch (e) {
-    // we can't determine kStringMaxLength in environments where process.binding
-    // is unsupported, so let's not set it
-  }
-}
-if (!safer.constants) {
-  safer.constants = {
-    MAX_LENGTH: safer.kMaxLength
-  };
-  if (safer.kStringMaxLength) {
-    safer.constants.MAX_STRING_LENGTH = safer.kStringMaxLength;
-  }
-}
-module.exports = safer;
-
-/***/ }),
-
-/***/ 93415:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-/* provided dependency */ var Buffer = __webpack_require__(14598)["Buffer"];
-
-
-var fs = __webpack_require__(48181);
-
-function ImageMeasure(pdfKitDoc, imageDictionary) {
-	this.pdfKitDoc = pdfKitDoc;
-	this.imageDictionary = imageDictionary || {};
-}
-
-ImageMeasure.prototype.measureImage = function (src) {
-	var image;
-	var that = this;
-
-	if (!this.pdfKitDoc._imageRegistry[src]) {
-		try {
-			image = this.pdfKitDoc.openImage(realImageSrc(src));
-			if (!image) {
-				throw 'No image';
-			}
-		} catch (error) {
-			throw 'Invalid image: ' + error.toString() + '\nImages dictionary should contain dataURL entries (or local file paths in node.js)';
-		}
-		image.embed(this.pdfKitDoc);
-		this.pdfKitDoc._imageRegistry[src] = image;
-	} else {
-		image = this.pdfKitDoc._imageRegistry[src];
-	}
-
-	var imageSize = { width: image.width, height: image.height };
-
-	// If EXIF orientation calls for it, swap width and height
-	if (image.orientation > 4) {
-		imageSize = { width: image.height, height: image.width };
-	}
-
-	return imageSize;
-
-	function realImageSrc(src) {
-		var img = that.imageDictionary[src];
-
-		if (!img) {
-			return src;
-		}
-
-		if (typeof img === 'object') {
-			throw 'Not supported image definition: ' + JSON.stringify(img);
-		}
-
-		if (fs.existsSync(img)) {
-			return fs.readFileSync(img);
-		}
-
-		var index = img.indexOf('base64,');
-		if (index < 0) {
-			return that.imageDictionary[src];
-		}
-
-		return Buffer.from(img.substring(index + 7), 'base64');
-	}
-};
-
-module.exports = ImageMeasure;
-
-
-/***/ }),
-
-/***/ 93666:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-var global = __webpack_require__(32010);
-var isRegExp = __webpack_require__(28831);
-
-var TypeError = global.TypeError;
-
-module.exports = function (it) {
-  if (isRegExp(it)) {
-    throw TypeError("The method doesn't accept regular expressions");
-  } return it;
-};
-
-
-/***/ }),
-
-/***/ 93932:
-/***/ (function(module, exports, __webpack_require__) {
-
-var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
-		__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
-		(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
-		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));else {}})(this,function(){"use strict";function b(a,b){return"undefined"==typeof b?b={autoBom:!1}:"object"!=typeof b&&(console.warn("Deprecated: Expected third argument to be a object"),b={autoBom:!b}),b.autoBom&&/^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(a.type)?new Blob(["\uFEFF",a],{type:a.type}):a}function c(a,b,c){var d=new XMLHttpRequest;d.open("GET",a),d.responseType="blob",d.onload=function(){g(d.response,b,c)},d.onerror=function(){console.error("could not download file")},d.send()}function d(a){var b=new XMLHttpRequest;b.open("HEAD",a,!1);try{b.send()}catch(a){}return 200<=b.status&&299>=b.status}function e(a){try{a.dispatchEvent(new MouseEvent("click"))}catch(c){var b=document.createEvent("MouseEvents");b.initMouseEvent("click",!0,!0,window,0,0,0,80,20,!1,!1,!1,!1,0,null),a.dispatchEvent(b)}}var f="object"==typeof window&&window.window===window?window:"object"==typeof self&&self.self===self?self:"object"==typeof __webpack_require__.g&&__webpack_require__.g.global===__webpack_require__.g?__webpack_require__.g:void 0,a=f.navigator&&/Macintosh/.test(navigator.userAgent)&&/AppleWebKit/.test(navigator.userAgent)&&!/Safari/.test(navigator.userAgent),g=f.saveAs||("object"!=typeof window||window!==f?function(){}:(typeof HTMLAnchorElement !== "undefined" && "download" in HTMLAnchorElement.prototype)&&!a?function(b,g,h){var i=f.URL||f.webkitURL,j=document.createElement("a");g=g||b.name||"download",j.download=g,j.rel="noopener","string"==typeof b?(j.href=b,j.origin===location.origin?e(j):d(j.href)?c(b,g,h):e(j,j.target="_blank")):(j.href=i.createObjectURL(b),setTimeout(function(){i.revokeObjectURL(j.href)},4E4),setTimeout(function(){e(j)},0))}:"msSaveOrOpenBlob"in navigator?function(f,g,h){if(g=g||f.name||"download","string"!=typeof f)navigator.msSaveOrOpenBlob(b(f,h),g);else if(d(f))c(f,g,h);else{var i=document.createElement("a");i.href=f,i.target="_blank",setTimeout(function(){e(i)})}}:function(b,d,e,g){if(g=g||open("","_blank"),g&&(g.document.title=g.document.body.innerText="downloading..."),"string"==typeof b)return c(b,d,e);var h="application/octet-stream"===b.type,i=/constructor/i.test(f.HTMLElement)||f.safari,j=/CriOS\/[\d]+/.test(navigator.userAgent);if((j||h&&i||a)&&"undefined"!=typeof FileReader){var k=new FileReader;k.onloadend=function(){var a=k.result;a=j?a:a.replace(/^data:[^;]*;/,"data:attachment/file;"),g?g.location.href=a:location=a,g=null},k.readAsDataURL(b)}else{var l=f.URL||f.webkitURL,m=l.createObjectURL(b);g?g.location=m:location.href=m,g=null,setTimeout(function(){l.revokeObjectURL(m)},4E4)}});f.saveAs=g.saveAs=g, true&&(module.exports=g)});
-
-
-
-/***/ }),
-
-/***/ 93975:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-var uncurryThis = __webpack_require__(38347);
-
-var toString = uncurryThis({}.toString);
-var stringSlice = uncurryThis(''.slice);
-
-module.exports = function (it) {
-  return stringSlice(toString(it), 8, -1);
-};
-
-
-/***/ }),
-
-/***/ 94119:
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-;
-(function (root, factory, undef) {
-  if (true) {
-    // CommonJS
-    module.exports = exports = factory(__webpack_require__(48352), __webpack_require__(18909), __webpack_require__(14287), __webpack_require__(2256), __webpack_require__(66947), __webpack_require__(16190), __webpack_require__(68319), __webpack_require__(37146), __webpack_require__(66664), __webpack_require__(11905), __webpack_require__(51965), __webpack_require__(27772), __webpack_require__(16720), __webpack_require__(1239), __webpack_require__(4420), __webpack_require__(44130), __webpack_require__(82747), __webpack_require__(51270), __webpack_require__(62256), __webpack_require__(48306), __webpack_require__(65881), __webpack_require__(6564), __webpack_require__(29819), __webpack_require__(28164), __webpack_require__(91780), __webpack_require__(14623), __webpack_require__(85628), __webpack_require__(61807), __webpack_require__(73948), __webpack_require__(22956), __webpack_require__(24107), __webpack_require__(95086), __webpack_require__(6819), __webpack_require__(75891), __webpack_require__(73517));
-  } else {}
-})(void 0, function (CryptoJS) {
-  return CryptoJS;
-});
-
-/***/ }),
-
-/***/ 94578:
-/***/ (function(module) {
-
-// `IsCallable` abstract operation
-// https://tc39.es/ecma262/#sec-iscallable
-module.exports = function (argument) {
-  return typeof argument == 'function';
-};
-
-
-/***/ }),
-
-/***/ 94712:
-/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-var global = __webpack_require__(32010);
-var DOMIterables = __webpack_require__(23327);
-var DOMTokenListPrototype = __webpack_require__(67797);
-var ArrayIteratorMethods = __webpack_require__(81755);
-var createNonEnumerableProperty = __webpack_require__(48914);
-var wellKnownSymbol = __webpack_require__(38688);
-
-var ITERATOR = wellKnownSymbol('iterator');
-var TO_STRING_TAG = wellKnownSymbol('toStringTag');
-var ArrayValues = ArrayIteratorMethods.values;
-
-var handlePrototype = function (CollectionPrototype, COLLECTION_NAME) {
-  if (CollectionPrototype) {
-    // some Chrome versions have non-configurable methods on DOMTokenList
-    if (CollectionPrototype[ITERATOR] !== ArrayValues) try {
-      createNonEnumerableProperty(CollectionPrototype, ITERATOR, ArrayValues);
-    } catch (error) {
-      CollectionPrototype[ITERATOR] = ArrayValues;
-    }
-    if (!CollectionPrototype[TO_STRING_TAG]) {
-      createNonEnumerableProperty(CollectionPrototype, TO_STRING_TAG, COLLECTION_NAME);
-    }
-    if (DOMIterables[COLLECTION_NAME]) for (var METHOD_NAME in ArrayIteratorMethods) {
-      // some Chrome versions have non-configurable methods on DOMTokenList
-      if (CollectionPrototype[METHOD_NAME] !== ArrayIteratorMethods[METHOD_NAME]) try {
-        createNonEnumerableProperty(CollectionPrototype, METHOD_NAME, ArrayIteratorMethods[METHOD_NAME]);
-      } catch (error) {
-        CollectionPrototype[METHOD_NAME] = ArrayIteratorMethods[METHOD_NAME];
-      }
-    }
-  }
-};
-
-for (var COLLECTION_NAME in DOMIterables) {
-  handlePrototype(global[COLLECTION_NAME] && global[COLLECTION_NAME].prototype, COLLECTION_NAME);
-}
-
-handlePrototype(DOMTokenListPrototype, 'DOMTokenList');
-
-
-/***/ }),
-
-/***/ 94715:
-/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-
-var ArrayBufferViewCore = __webpack_require__(59754);
-var $includes = (__webpack_require__(12636).includes);
-
-var aTypedArray = ArrayBufferViewCore.aTypedArray;
-var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
-
-// `%TypedArray%.prototype.includes` method
-// https://tc39.es/ecma262/#sec-%typedarray%.prototype.includes
-exportTypedArrayMethod('includes', function includes(searchElement /* , fromIndex */) {
-  return $includes(aTypedArray(this), searchElement, arguments.length > 1 ? arguments[1] : undefined);
-});
-
-
-/***/ }),
-
-/***/ 94845:
-/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-
-var $ = __webpack_require__(56475);
-var uncurryThis = __webpack_require__(38347);
-var IndexedObject = __webpack_require__(7514);
-var toIndexedObject = __webpack_require__(98086);
-var arrayMethodIsStrict = __webpack_require__(81007);
-
-var un$Join = uncurryThis([].join);
-
-var ES3_STRINGS = IndexedObject != Object;
-var STRICT_METHOD = arrayMethodIsStrict('join', ',');
-
-// `Array.prototype.join` method
-// https://tc39.es/ecma262/#sec-array.prototype.join
-$({ target: 'Array', proto: true, forced: ES3_STRINGS || !STRICT_METHOD }, {
-  join: function join(separator) {
-    return un$Join(toIndexedObject(this), separator === undefined ? ',' : separator);
-  }
-});
-
-
-/***/ }),
-
-/***/ 94910:
-/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-
-var $ = __webpack_require__(56475);
-var global = __webpack_require__(32010);
-var isPrototypeOf = __webpack_require__(70176);
-var getPrototypeOf = __webpack_require__(69548);
-var setPrototypeOf = __webpack_require__(3840);
-var copyConstructorProperties = __webpack_require__(2675);
-var create = __webpack_require__(10819);
-var createNonEnumerableProperty = __webpack_require__(48914);
-var createPropertyDescriptor = __webpack_require__(97841);
-var clearErrorStack = __webpack_require__(34074);
-var installErrorCause = __webpack_require__(87811);
-var iterate = __webpack_require__(80383);
-var normalizeStringArgument = __webpack_require__(86392);
-var ERROR_STACK_INSTALLABLE = __webpack_require__(45144);
-
-var Error = global.Error;
-var push = [].push;
-
-var $AggregateError = function AggregateError(errors, message /* , options */) {
-  var that = isPrototypeOf(AggregateErrorPrototype, this) ? this : create(AggregateErrorPrototype);
-  var options = arguments.length > 2 ? arguments[2] : undefined;
-  if (setPrototypeOf) {
-    that = setPrototypeOf(new Error(undefined), getPrototypeOf(that));
-  }
-  createNonEnumerableProperty(that, 'message', normalizeStringArgument(message, ''));
-  if (ERROR_STACK_INSTALLABLE) createNonEnumerableProperty(that, 'stack', clearErrorStack(that.stack, 1));
-  installErrorCause(that, options);
-  var errorsArray = [];
-  iterate(errors, push, { that: errorsArray });
-  createNonEnumerableProperty(that, 'errors', errorsArray);
-  return that;
-};
-
-if (setPrototypeOf) setPrototypeOf($AggregateError, Error);
-else copyConstructorProperties($AggregateError, Error);
-
-var AggregateErrorPrototype = $AggregateError.prototype = create(Error.prototype, {
-  constructor: createPropertyDescriptor(1, $AggregateError),
-  message: createPropertyDescriptor(1, ''),
-  name: createPropertyDescriptor(1, 'AggregateError')
-});
-
-// `AggregateError` constructor
-// https://tc39.es/ecma262/#sec-aggregate-error-constructor
-$({ global: true }, {
-  AggregateError: $AggregateError
-});
-
-
-/***/ }),
-
-/***/ 95053:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-var classof = __webpack_require__(93975);
-var global = __webpack_require__(32010);
-
-module.exports = classof(global.process) == 'process';
-
-
-/***/ }),
-
-/***/ 95086:
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-__webpack_require__(14032);
-__webpack_require__(68067);
-;
-(function (root, factory, undef) {
-  if (true) {
-    // CommonJS
-    module.exports = exports = factory(__webpack_require__(48352), __webpack_require__(66947), __webpack_require__(68319), __webpack_require__(82747), __webpack_require__(51270));
-  } else {}
-})(void 0, function (CryptoJS) {
-  (function () {
-    // Shortcuts
-    var C = CryptoJS;
-    var C_lib = C.lib;
-    var StreamCipher = C_lib.StreamCipher;
-    var C_algo = C.algo;
-
-    /**
-     * RC4 stream cipher algorithm.
-     */
-    var RC4 = C_algo.RC4 = StreamCipher.extend({
-      _doReset: function _doReset() {
-        // Shortcuts
-        var key = this._key;
-        var keyWords = key.words;
-        var keySigBytes = key.sigBytes;
-
-        // Init sbox
-        var S = this._S = [];
-        for (var i = 0; i < 256; i++) {
-          S[i] = i;
-        }
-
-        // Key setup
-        for (var i = 0, j = 0; i < 256; i++) {
-          var keyByteIndex = i % keySigBytes;
-          var keyByte = keyWords[keyByteIndex >>> 2] >>> 24 - keyByteIndex % 4 * 8 & 0xff;
-          j = (j + S[i] + keyByte) % 256;
-
-          // Swap
-          var t = S[i];
-          S[i] = S[j];
-          S[j] = t;
-        }
-
-        // Counters
-        this._i = this._j = 0;
-      },
-      _doProcessBlock: function _doProcessBlock(M, offset) {
-        M[offset] ^= generateKeystreamWord.call(this);
-      },
-      keySize: 256 / 32,
-      ivSize: 0
-    });
-    function generateKeystreamWord() {
-      // Shortcuts
-      var S = this._S;
-      var i = this._i;
-      var j = this._j;
-
-      // Generate keystream word
-      var keystreamWord = 0;
-      for (var n = 0; n < 4; n++) {
-        i = (i + 1) % 256;
-        j = (j + S[i]) % 256;
-
-        // Swap
-        var t = S[i];
-        S[i] = S[j];
-        S[j] = t;
-        keystreamWord |= S[(S[i] + S[j]) % 256] << 24 - n * 8;
-      }
-
-      // Update counters
-      this._i = i;
-      this._j = j;
-      return keystreamWord;
-    }
-
-    /**
-     * Shortcut functions to the cipher's object interface.
-     *
-     * @example
-     *
-     *     var ciphertext = CryptoJS.RC4.encrypt(message, key, cfg);
-     *     var plaintext  = CryptoJS.RC4.decrypt(ciphertext, key, cfg);
-     */
-    C.RC4 = StreamCipher._createHelper(RC4);
-
-    /**
-     * Modified RC4 stream cipher algorithm.
-     */
-    var RC4Drop = C_algo.RC4Drop = RC4.extend({
-      /**
-       * Configuration options.
-       *
-       * @property {number} drop The number of keystream words to drop. Default 192
-       */
-      cfg: RC4.cfg.extend({
-        drop: 192
-      }),
-      _doReset: function _doReset() {
-        RC4._doReset.call(this);
-
-        // Drop
-        for (var i = this.cfg.drop; i > 0; i--) {
-          generateKeystreamWord.call(this);
-        }
-      }
-    });
-
-    /**
-     * Shortcut functions to the cipher's object interface.
-     *
-     * @example
-     *
-     *     var ciphertext = CryptoJS.RC4Drop.encrypt(message, key, cfg);
-     *     var plaintext  = CryptoJS.RC4Drop.decrypt(ciphertext, key, cfg);
-     */
-    C.RC4Drop = StreamCipher._createHelper(RC4Drop);
-  })();
-  return CryptoJS.RC4;
-});
-
-/***/ }),
-
-/***/ 95291:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-/* provided dependency */ var Buffer = __webpack_require__(14598)["Buffer"];
-
-
-__webpack_require__(41584);
-__webpack_require__(20731);
-__webpack_require__(61726);
-__webpack_require__(46467);
-function _inheritsLoose(t, o) { t.prototype = Object.create(o.prototype), t.prototype.constructor = t, _setPrototypeOf(t, o); }
-function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
-var iconv;
-var stream = __webpack_require__(9760);
-var DecodeStream = __webpack_require__(69591);
-try {
-  iconv = __webpack_require__(54171);
-} catch (error) {}
-var EncodeStream = /*#__PURE__*/function (_stream$Readable) {
-  function EncodeStream(bufferSize) {
-    var _this;
-    if (bufferSize === void 0) {
-      bufferSize = 65536;
-    }
-    _this = _stream$Readable.apply(this, arguments) || this;
-    _this.buffer = Buffer.alloc(bufferSize);
-    _this.bufferOffset = 0;
-    _this.pos = 0;
-    return _this;
-  }
-
-  // do nothing, required by node
-  _inheritsLoose(EncodeStream, _stream$Readable);
-  var _proto = EncodeStream.prototype;
-  _proto._read = function _read() {};
-  _proto.ensure = function ensure(bytes) {
-    if (this.bufferOffset + bytes > this.buffer.length) {
-      return this.flush();
-    }
-  };
-  _proto.flush = function flush() {
-    if (this.bufferOffset > 0) {
-      this.push(Buffer.from(this.buffer.slice(0, this.bufferOffset)));
-      return this.bufferOffset = 0;
-    }
-  };
-  _proto.writeBuffer = function writeBuffer(buffer) {
-    this.flush();
-    this.push(buffer);
-    return this.pos += buffer.length;
-  };
-  _proto.writeString = function writeString(string, encoding) {
-    if (encoding === void 0) {
-      encoding = 'ascii';
-    }
-    switch (encoding) {
-      case 'utf16le':
-      case 'ucs2':
-      case 'utf8':
-      case 'ascii':
-        return this.writeBuffer(Buffer.from(string, encoding));
-      case 'utf16be':
-        var buf = Buffer.from(string, 'utf16le');
-
-        // swap the bytes
-        for (var i = 0, end = buf.length - 1; i < end; i += 2) {
-          var byte = buf[i];
-          buf[i] = buf[i + 1];
-          buf[i + 1] = byte;
-        }
-        return this.writeBuffer(buf);
-      default:
-        if (iconv) {
-          return this.writeBuffer(iconv.encode(string, encoding));
-        } else {
-          throw new Error('Install iconv-lite to enable additional string encodings.');
-        }
-    }
-  };
-  _proto.writeUInt24BE = function writeUInt24BE(val) {
-    this.ensure(3);
-    this.buffer[this.bufferOffset++] = val >>> 16 & 0xff;
-    this.buffer[this.bufferOffset++] = val >>> 8 & 0xff;
-    this.buffer[this.bufferOffset++] = val & 0xff;
-    return this.pos += 3;
-  };
-  _proto.writeUInt24LE = function writeUInt24LE(val) {
-    this.ensure(3);
-    this.buffer[this.bufferOffset++] = val & 0xff;
-    this.buffer[this.bufferOffset++] = val >>> 8 & 0xff;
-    this.buffer[this.bufferOffset++] = val >>> 16 & 0xff;
-    return this.pos += 3;
-  };
-  _proto.writeInt24BE = function writeInt24BE(val) {
-    if (val >= 0) {
-      return this.writeUInt24BE(val);
-    } else {
-      return this.writeUInt24BE(val + 0xffffff + 1);
-    }
-  };
-  _proto.writeInt24LE = function writeInt24LE(val) {
-    if (val >= 0) {
-      return this.writeUInt24LE(val);
-    } else {
-      return this.writeUInt24LE(val + 0xffffff + 1);
-    }
-  };
-  _proto.fill = function fill(val, length) {
-    if (length < this.buffer.length) {
-      this.ensure(length);
-      this.buffer.fill(val, this.bufferOffset, this.bufferOffset + length);
-      this.bufferOffset += length;
-      return this.pos += length;
-    } else {
-      var buf = Buffer.alloc(length);
-      buf.fill(val);
-      return this.writeBuffer(buf);
-    }
-  };
-  _proto.end = function end() {
-    this.flush();
-    return this.push(null);
-  };
-  return EncodeStream;
-}(stream.Readable);
-var _loop = function _loop(key) {
-  if (key.slice(0, 5) === 'write') {
-    var bytes = +DecodeStream.TYPES[key.replace(/write|[BL]E/g, '')];
-    EncodeStream.prototype[key] = function (value) {
-      this.ensure(bytes);
-      this.buffer[key](value, this.bufferOffset);
-      this.bufferOffset += bytes;
-      return this.pos += bytes;
-    };
-  }
-};
-for (var key in Buffer.prototype) {
-  _loop(key);
-}
-module.exports = EncodeStream;
-
-/***/ }),
-
-/***/ 95304:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-
-
-var define = __webpack_require__(89295);
-var hasDescriptors = __webpack_require__(18890)();
-var functionsHaveConfigurableNames = (__webpack_require__(61084).functionsHaveConfigurableNames)();
-
-var $TypeError = __webpack_require__(96785);
-
-/** @type {import('.')} */
-module.exports = function setFunctionName(fn, name) {
-	if (typeof fn !== 'function') {
-		throw new $TypeError('`fn` is not a function');
-	}
-	var loose = arguments.length > 2 && !!arguments[2];
-	if (!loose || functionsHaveConfigurableNames) {
-		if (hasDescriptors) {
-			define(/** @type {Parameters<define>[0]} */ (fn), 'name', name, true, true);
-		} else {
-			define(/** @type {Parameters<define>[0]} */ (fn), 'name', name);
-		}
-	}
-	return fn;
-};
-
-
-/***/ }),
-
-/***/ 95717:
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-
-var global = __webpack_require__(32010);
-var bind = __webpack_require__(25567);
-var call = __webpack_require__(2834);
-var toObject = __webpack_require__(43162);
-var callWithSafeIterationClosing = __webpack_require__(97738);
-var isArrayIteratorMethod = __webpack_require__(89564);
-var isConstructor = __webpack_require__(20884);
-var lengthOfArrayLike = __webpack_require__(45495);
-var createProperty = __webpack_require__(38639);
-var getIterator = __webpack_require__(15892);
-var getIteratorMethod = __webpack_require__(13872);
-
-var Array = global.Array;
-
-// `Array.from` method implementation
-// https://tc39.es/ecma262/#sec-array.from
-module.exports = function from(arrayLike /* , mapfn = undefined, thisArg = undefined */) {
-  var O = toObject(arrayLike);
-  var IS_CONSTRUCTOR = isConstructor(this);
-  var argumentsLength = arguments.length;
-  var mapfn = argumentsLength > 1 ? arguments[1] : undefined;
-  var mapping = mapfn !== undefined;
-  if (mapping) mapfn = bind(mapfn, argumentsLength > 2 ? arguments[2] : undefined);
-  var iteratorMethod = getIteratorMethod(O);
-  var index = 0;
-  var length, result, step, iterator, next, value;
-  // if the target is not iterable or it's an array with the default iterator - use a simple case
-  if (iteratorMethod && !(this == Array && isArrayIteratorMethod(iteratorMethod))) {
-    iterator = getIterator(O, iteratorMethod);
-    next = iterator.next;
-    result = IS_CONSTRUCTOR ? new this() : [];
-    for (;!(step = call(next, iterator)).done; index++) {
-      value = mapping ? callWithSafeIterationClosing(iterator, mapfn, [step.value, index], true) : step.value;
-      createProperty(result, index, value);
-    }
-  } else {
-    length = lengthOfArrayLike(O);
-    result = IS_CONSTRUCTOR ? new this(length) : Array(length);
-    for (;length > index; index++) {
-      value = mapping ? mapfn(O[index], index) : O[index];
-      createProperty(result, index, value);
-    }
-  }
-  result.length = index;
-  return result;
-};
-
-
-/***/ }),
-
-/***/ 95756:
-/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-var createTypedArrayConstructor = __webpack_require__(98828);
-
-// `Int32Array` constructor
-// https://tc39.es/ecma262/#sec-typedarray-objects
-createTypedArrayConstructor('Int32', function (init) {
-  return function Int32Array(data, byteOffset, length) {
-    return init(this, data, byteOffset, length);
-  };
-});
-
-
-/***/ }),
-
-/***/ 95892:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-var global = __webpack_require__(32010);
-var DESCRIPTORS = __webpack_require__(15567);
-var IE8_DOM_DEFINE = __webpack_require__(18904);
-var anObject = __webpack_require__(34984);
-var toPropertyKey = __webpack_require__(63918);
-
-var TypeError = global.TypeError;
-// eslint-disable-next-line es/no-object-defineproperty -- safe
-var $defineProperty = Object.defineProperty;
-
-// `Object.defineProperty` method
-// https://tc39.es/ecma262/#sec-object.defineproperty
-exports.f = DESCRIPTORS ? $defineProperty : function defineProperty(O, P, Attributes) {
-  anObject(O);
-  P = toPropertyKey(P);
-  anObject(Attributes);
-  if (IE8_DOM_DEFINE) try {
-    return $defineProperty(O, P, Attributes);
-  } catch (error) { /* empty */ }
-  if ('get' in Attributes || 'set' in Attributes) throw TypeError('Accessors not supported');
-  if ('value' in Attributes) O[P] = Attributes.value;
-  return O;
-};
-
-
-/***/ }),
-
-/***/ 96395:
-/***/ (function(module) {
-
-"use strict";
-
-
-// (C) 1995-2013 Jean-loup Gailly and Mark Adler
-// (C) 2014-2017 Vitaly Puzrin and Andrey Tupitsin
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//   claim that you wrote the original software. If you use this software
-//   in a product, an acknowledgment in the product documentation would be
-//   appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//   misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
-
-// See state defs from inflate.js
-var BAD = 30;       /* got a data error -- remain here until reset */
-var TYPE = 12;      /* i: waiting for type bits, including last-flag bit */
-
-/*
-   Decode literal, length, and distance codes and write out the resulting
-   literal and match bytes until either not enough input or output is
-   available, an end-of-block is encountered, or a data error is encountered.
-   When large enough input and output buffers are supplied to inflate(), for
-   example, a 16K input buffer and a 64K output buffer, more than 95% of the
-   inflate execution time is spent in this routine.
-
-   Entry assumptions:
-
-        state.mode === LEN
-        strm.avail_in >= 6
-        strm.avail_out >= 258
-        start >= strm.avail_out
-        state.bits < 8
-
-   On return, state.mode is one of:
-
-        LEN -- ran out of enough output space or enough available input
-        TYPE -- reached end of block code, inflate() to interpret next block
-        BAD -- error in block data
-
-   Notes:
-
-    - The maximum input bits used by a length/distance pair is 15 bits for the
-      length code, 5 bits for the length extra, 15 bits for the distance code,
-      and 13 bits for the distance extra.  This totals 48 bits, or six bytes.
-      Therefore if strm.avail_in >= 6, then there is enough input to avoid
-      checking for available input while decoding.
-
-    - The maximum bytes that a single length/distance pair can output is 258
-      bytes, which is the maximum length that can be coded.  inflate_fast()
-      requires strm.avail_out >= 258 for each loop to avoid checking for
-      output space.
- */
-module.exports = function inflate_fast(strm, start) {
-  var state;
-  var _in;                    /* local strm.input */
-  var last;                   /* have enough input while in < last */
-  var _out;                   /* local strm.output */
-  var beg;                    /* inflate()'s initial strm.output */
-  var end;                    /* while out < end, enough space available */
-//#ifdef INFLATE_STRICT
-  var dmax;                   /* maximum distance from zlib header */
-//#endif
-  var wsize;                  /* window size or zero if not using window */
-  var whave;                  /* valid bytes in the window */
-  var wnext;                  /* window write index */
-  // Use `s_window` instead `window`, avoid conflict with instrumentation tools
-  var s_window;               /* allocated sliding window, if wsize != 0 */
-  var hold;                   /* local strm.hold */
-  var bits;                   /* local strm.bits */
-  var lcode;                  /* local strm.lencode */
-  var dcode;                  /* local strm.distcode */
-  var lmask;                  /* mask for first level of length codes */
-  var dmask;                  /* mask for first level of distance codes */
-  var here;                   /* retrieved table entry */
-  var op;                     /* code bits, operation, extra bits, or */
-                              /*  window position, window bytes to copy */
-  var len;                    /* match length, unused bytes */
-  var dist;                   /* match distance */
-  var from;                   /* where to copy match from */
-  var from_source;
-
-
-  var input, output; // JS specific, because we have no pointers
-
-  /* copy state to local variables */
-  state = strm.state;
-  //here = state.here;
-  _in = strm.next_in;
-  input = strm.input;
-  last = _in + (strm.avail_in - 5);
-  _out = strm.next_out;
-  output = strm.output;
-  beg = _out - (start - strm.avail_out);
-  end = _out + (strm.avail_out - 257);
-//#ifdef INFLATE_STRICT
-  dmax = state.dmax;
-//#endif
-  wsize = state.wsize;
-  whave = state.whave;
-  wnext = state.wnext;
-  s_window = state.window;
-  hold = state.hold;
-  bits = state.bits;
-  lcode = state.lencode;
-  dcode = state.distcode;
-  lmask = (1 << state.lenbits) - 1;
-  dmask = (1 << state.distbits) - 1;
-
-
-  /* decode literals and length/distances until end-of-block or not enough
-     input data or output space */
-
-  top:
-  do {
-    if (bits < 15) {
-      hold += input[_in++] << bits;
-      bits += 8;
-      hold += input[_in++] << bits;
-      bits += 8;
-    }
-
-    here = lcode[hold & lmask];
-
-    dolen:
-    for (;;) { // Goto emulation
-      op = here >>> 24/*here.bits*/;
-      hold >>>= op;
-      bits -= op;
-      op = (here >>> 16) & 0xff/*here.op*/;
-      if (op === 0) {                          /* literal */
-        //Tracevv((stderr, here.val >= 0x20 && here.val < 0x7f ?
-        //        "inflate:         literal '%c'\n" :
-        //        "inflate:         literal 0x%02x\n", here.val));
-        output[_out++] = here & 0xffff/*here.val*/;
-      }
-      else if (op & 16) {                     /* length base */
-        len = here & 0xffff/*here.val*/;
-        op &= 15;                           /* number of extra bits */
-        if (op) {
-          if (bits < op) {
-            hold += input[_in++] << bits;
-            bits += 8;
-          }
-          len += hold & ((1 << op) - 1);
-          hold >>>= op;
-          bits -= op;
-        }
-        //Tracevv((stderr, "inflate:         length %u\n", len));
-        if (bits < 15) {
-          hold += input[_in++] << bits;
-          bits += 8;
-          hold += input[_in++] << bits;
-          bits += 8;
-        }
-        here = dcode[hold & dmask];
-
-        dodist:
-        for (;;) { // goto emulation
-          op = here >>> 24/*here.bits*/;
-          hold >>>= op;
-          bits -= op;
-          op = (here >>> 16) & 0xff/*here.op*/;
-
-          if (op & 16) {                      /* distance base */
-            dist = here & 0xffff/*here.val*/;
-            op &= 15;                       /* number of extra bits */
-            if (bits < op) {
-              hold += input[_in++] << bits;
-              bits += 8;
-              if (bits < op) {
-                hold += input[_in++] << bits;
-                bits += 8;
-              }
-            }
-            dist += hold & ((1 << op) - 1);
-//#ifdef INFLATE_STRICT
-            if (dist > dmax) {
-              strm.msg = 'invalid distance too far back';
-              state.mode = BAD;
-              break top;
-            }
-//#endif
-            hold >>>= op;
-            bits -= op;
-            //Tracevv((stderr, "inflate:         distance %u\n", dist));
-            op = _out - beg;                /* max distance in output */
-            if (dist > op) {                /* see if copy from window */
-              op = dist - op;               /* distance back in window */
-              if (op > whave) {
-                if (state.sane) {
-                  strm.msg = 'invalid distance too far back';
-                  state.mode = BAD;
-                  break top;
-                }
-
-// (!) This block is disabled in zlib defaults,
-// don't enable it for binary compatibility
-//#ifdef INFLATE_ALLOW_INVALID_DISTANCE_TOOFAR_ARRR
-//                if (len <= op - whave) {
-//                  do {
-//                    output[_out++] = 0;
-//                  } while (--len);
-//                  continue top;
-//                }
-//                len -= op - whave;
-//                do {
-//                  output[_out++] = 0;
-//                } while (--op > whave);
-//                if (op === 0) {
-//                  from = _out - dist;
-//                  do {
-//                    output[_out++] = output[from++];
-//                  } while (--len);
-//                  continue top;
-//                }
-//#endif
-              }
-              from = 0; // window index
-              from_source = s_window;
-              if (wnext === 0) {           /* very common case */
-                from += wsize - op;
-                if (op < len) {         /* some from window */
-                  len -= op;
-                  do {
-                    output[_out++] = s_window[from++];
-                  } while (--op);
-                  from = _out - dist;  /* rest from output */
-                  from_source = output;
-                }
-              }
-              else if (wnext < op) {      /* wrap around window */
-                from += wsize + wnext - op;
-                op -= wnext;
-                if (op < len) {         /* some from end of window */
-                  len -= op;
-                  do {
-                    output[_out++] = s_window[from++];
-                  } while (--op);
-                  from = 0;
-                  if (wnext < len) {  /* some from start of window */
-                    op = wnext;
-                    len -= op;
-                    do {
-                      output[_out++] = s_window[from++];
-                    } while (--op);
-                    from = _out - dist;      /* rest from output */
-                    from_source = output;
-                  }
-                }
-              }
-              else {                      /* contiguous in window */
-                from += wnext - op;
-                if (op < len) {         /* some from window */
-                  len -= op;
-                  do {
-                    output[_out++] = s_window[from++];
-                  } while (--op);
-                  from = _out - dist;  /* rest from output */
-                  from_source = output;
-                }
-              }
-              while (len > 2) {
-                output[_out++] = from_source[from++];
-                output[_out++] = from_source[from++];
-                output[_out++] = from_source[from++];
-                len -= 3;
-              }
-              if (len) {
-                output[_out++] = from_source[from++];
-                if (len > 1) {
-                  output[_out++] = from_source[from++];
-                }
-              }
-            }
-            else {
-              from = _out - dist;          /* copy direct from output */
-              do {                        /* minimum length is three */
-                output[_out++] = output[from++];
-                output[_out++] = output[from++];
-                output[_out++] = output[from++];
-                len -= 3;
-              } while (len > 2);
-              if (len) {
-                output[_out++] = output[from++];
-                if (len > 1) {
-                  output[_out++] = output[from++];
-                }
-              }
-            }
-          }
-          else if ((op & 64) === 0) {          /* 2nd level distance code */
-            here = dcode[(here & 0xffff)/*here.val*/ + (hold & ((1 << op) - 1))];
-            continue dodist;
-          }
-          else {
-            strm.msg = 'invalid distance code';
-            state.mode = BAD;
-            break top;
-          }
-
-          break; // need to emulate goto via "continue"
-        }
-      }
-      else if ((op & 64) === 0) {              /* 2nd level length code */
-        here = lcode[(here & 0xffff)/*here.val*/ + (hold & ((1 << op) - 1))];
-        continue dolen;
-      }
-      else if (op & 32) {                     /* end-of-block */
-        //Tracevv((stderr, "inflate:         end of block\n"));
-        state.mode = TYPE;
-        break top;
-      }
-      else {
-        strm.msg = 'invalid literal/length code';
-        state.mode = BAD;
-        break top;
-      }
-
-      break; // need to emulate goto via "continue"
-    }
-  } while (_in < last && _out < end);
-
-  /* return unused bytes (on entry, bits < 8, so in won't go too far back) */
-  len = bits >> 3;
-  _in -= len;
-  bits -= len << 3;
-  hold &= (1 << bits) - 1;
-
-  /* update state and return */
-  strm.next_in = _in;
-  strm.next_out = _out;
-  strm.avail_in = (_in < last ? 5 + (last - _in) : 5 - (_in - last));
-  strm.avail_out = (_out < end ? 257 + (end - _out) : 257 - (_out - end));
-  state.hold = hold;
-  state.bits = bits;
-  return;
-};
-
-
-/***/ }),
-
-/***/ 96516:
+/***/ 90760:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -68964,8 +67028,8 @@ var PDFRadialGradient = /*#__PURE__*/function (_PDFGradient2) {
     return _this4;
   }
   _inheritsLoose(PDFRadialGradient, _PDFGradient2);
-  var _proto10 = PDFRadialGradient.prototype;
-  _proto10.shader = function shader(fn) {
+  var _proto0 = PDFRadialGradient.prototype;
+  _proto0.shader = function shader(fn) {
     return this.doc.ref({
       ShadingType: 3,
       ColorSpace: this._colorSpace,
@@ -68974,7 +67038,7 @@ var PDFRadialGradient = /*#__PURE__*/function (_PDFGradient2) {
       Extend: [true, true]
     });
   };
-  _proto10.opacityGradient = function opacityGradient() {
+  _proto0.opacityGradient = function opacityGradient() {
     return new PDFRadialGradient(this.doc, this.x1, this.y1, this.r1, this.x2, this.y2, this.r2);
   };
   return PDFRadialGradient;
@@ -68998,8 +67062,8 @@ var PDFTilingPattern = /*#__PURE__*/function () {
     this.yStep = yStep;
     this.stream = stream;
   }
-  var _proto11 = PDFTilingPattern.prototype;
-  _proto11.createPattern = function createPattern() {
+  var _proto1 = PDFTilingPattern.prototype;
+  _proto1.createPattern = function createPattern() {
     // no resources needed for our current usage
     // required entry
     var resources = this.doc.ref();
@@ -69039,7 +67103,7 @@ var PDFTilingPattern = /*#__PURE__*/function () {
     pattern.end(this.stream);
     return pattern;
   };
-  _proto11.embedPatternColorSpaces = function embedPatternColorSpaces() {
+  _proto1.embedPatternColorSpaces = function embedPatternColorSpaces() {
     var _this5 = this;
     // map each pattern to an underlying color space
     // and embed on each page
@@ -69051,10 +67115,10 @@ var PDFTilingPattern = /*#__PURE__*/function () {
       _this5.doc.page.colorSpaces[csId] = cs;
     });
   };
-  _proto11.getPatternColorSpaceId = function getPatternColorSpaceId(underlyingColorspace) {
+  _proto1.getPatternColorSpaceId = function getPatternColorSpaceId(underlyingColorspace) {
     return "CsP" + underlyingColorspace;
   };
-  _proto11.embed = function embed() {
+  _proto1.embed = function embed() {
     if (!this.id) {
       this.doc._patternCount = this.doc._patternCount + 1;
       this.id = 'P' + this.doc._patternCount;
@@ -69066,7 +67130,7 @@ var PDFTilingPattern = /*#__PURE__*/function () {
       this.doc.page.patterns[this.id] = this.pattern;
     }
   };
-  _proto11.apply = function apply(stroke, patternColor) {
+  _proto1.apply = function apply(stroke, patternColor) {
     // do any embedding/creating that might be needed
     this.embedPatternColorSpaces();
     this.embed();
@@ -70116,8 +68180,8 @@ var AFMFont = /*#__PURE__*/function () {
   AFMFont.open = function open(filename) {
     return new AFMFont(fs.readFileSync(filename, 'utf8'));
   };
-  var _proto12 = AFMFont.prototype;
-  _proto12.parse = function parse() {
+  var _proto10 = AFMFont.prototype;
+  _proto10.parse = function parse() {
     var section = '';
     for (var _iterator5 = _createForOfIteratorHelperLoose(this.contents.split('\n')), _step5; !(_step5 = _iterator5()).done;) {
       var line = _step5.value;
@@ -70160,7 +68224,7 @@ var AFMFont = /*#__PURE__*/function () {
       }
     }
   };
-  _proto12.encodeText = function encodeText(text) {
+  _proto10.encodeText = function encodeText(text) {
     var res = [];
     for (var i = 0, len = text.length; i < len; i++) {
       var char = text.charCodeAt(i);
@@ -70169,7 +68233,7 @@ var AFMFont = /*#__PURE__*/function () {
     }
     return res;
   };
-  _proto12.glyphsForString = function glyphsForString(string) {
+  _proto10.glyphsForString = function glyphsForString(string) {
     var glyphs = [];
     for (var i = 0, len = string.length; i < len; i++) {
       var charCode = string.charCodeAt(i);
@@ -70177,16 +68241,16 @@ var AFMFont = /*#__PURE__*/function () {
     }
     return glyphs;
   };
-  _proto12.characterToGlyph = function characterToGlyph(character) {
+  _proto10.characterToGlyph = function characterToGlyph(character) {
     return characters[WIN_ANSI_MAP[character] || character] || '.notdef';
   };
-  _proto12.widthOfGlyph = function widthOfGlyph(glyph) {
+  _proto10.widthOfGlyph = function widthOfGlyph(glyph) {
     return this.glyphWidths[glyph] || 0;
   };
-  _proto12.getKernPair = function getKernPair(left, right) {
+  _proto10.getKernPair = function getKernPair(left, right) {
     return this.kernPairs[left + '\0' + right] || 0;
   };
-  _proto12.advancesForGlyphs = function advancesForGlyphs(glyphs) {
+  _proto10.advancesForGlyphs = function advancesForGlyphs(glyphs) {
     var advances = [];
     for (var index = 0; index < glyphs.length; index++) {
       var left = glyphs[index];
@@ -70199,27 +68263,27 @@ var AFMFont = /*#__PURE__*/function () {
 }();
 var PDFFont = /*#__PURE__*/function () {
   function PDFFont() {}
-  var _proto13 = PDFFont.prototype;
-  _proto13.encode = function encode() {
+  var _proto11 = PDFFont.prototype;
+  _proto11.encode = function encode() {
     throw new Error('Must be implemented by subclasses');
   };
-  _proto13.widthOfString = function widthOfString() {
+  _proto11.widthOfString = function widthOfString() {
     throw new Error('Must be implemented by subclasses');
   };
-  _proto13.ref = function ref() {
+  _proto11.ref = function ref() {
     return this.dictionary != null ? this.dictionary : this.dictionary = this.document.ref();
   };
-  _proto13.finalize = function finalize() {
+  _proto11.finalize = function finalize() {
     if (this.embedded || this.dictionary == null) {
       return;
     }
     this.embed();
     return this.embedded = true;
   };
-  _proto13.embed = function embed() {
+  _proto11.embed = function embed() {
     throw new Error('Must be implemented by subclasses');
   };
-  _proto13.lineHeight = function lineHeight(size, includeGap) {
+  _proto11.lineHeight = function lineHeight(size, includeGap) {
     if (includeGap == null) {
       includeGap = false;
     }
@@ -70290,8 +68354,8 @@ var StandardFont = /*#__PURE__*/function (_PDFFont) {
     return _this6;
   }
   _inheritsLoose(StandardFont, _PDFFont);
-  var _proto14 = StandardFont.prototype;
-  _proto14.embed = function embed() {
+  var _proto12 = StandardFont.prototype;
+  _proto12.embed = function embed() {
     this.dictionary.data = {
       Type: 'Font',
       BaseFont: this.name,
@@ -70300,7 +68364,7 @@ var StandardFont = /*#__PURE__*/function (_PDFFont) {
     };
     return this.dictionary.end();
   };
-  _proto14.encode = function encode(text) {
+  _proto12.encode = function encode(text) {
     var encoded = this.font.encodeText(text);
     var glyphs = this.font.glyphsForString("" + text);
     var advances = this.font.advancesForGlyphs(glyphs);
@@ -70317,7 +68381,7 @@ var StandardFont = /*#__PURE__*/function (_PDFFont) {
     }
     return [encoded, positions];
   };
-  _proto14.widthOfString = function widthOfString(string, size) {
+  _proto12.widthOfString = function widthOfString(string, size) {
     var glyphs = this.font.glyphsForString("" + string);
     var advances = this.font.advancesForGlyphs(glyphs);
     var width = 0;
@@ -70360,8 +68424,8 @@ var EmbeddedFont = /*#__PURE__*/function (_PDFFont2) {
     return _this7;
   }
   _inheritsLoose(EmbeddedFont, _PDFFont2);
-  var _proto15 = EmbeddedFont.prototype;
-  _proto15.layoutRun = function layoutRun(text, features) {
+  var _proto13 = EmbeddedFont.prototype;
+  _proto13.layoutRun = function layoutRun(text, features) {
     var run = this.font.layout(text, features);
 
     // Normalize position values
@@ -70374,7 +68438,7 @@ var EmbeddedFont = /*#__PURE__*/function (_PDFFont2) {
     }
     return run;
   };
-  _proto15.layoutCached = function layoutCached(text) {
+  _proto13.layoutCached = function layoutCached(text) {
     if (!this.layoutCache) {
       return this.layoutRun(text);
     }
@@ -70386,7 +68450,7 @@ var EmbeddedFont = /*#__PURE__*/function (_PDFFont2) {
     this.layoutCache[text] = run;
     return run;
   };
-  _proto15.layout = function layout(text, features, onlyWidth) {
+  _proto13.layout = function layout(text, features, onlyWidth) {
     // Skip the cache if any user defined features are applied
     if (features) {
       return this.layoutRun(text, features);
@@ -70419,7 +68483,7 @@ var EmbeddedFont = /*#__PURE__*/function (_PDFFont2) {
       advanceWidth: advanceWidth
     };
   };
-  _proto15.encode = function encode(text, features) {
+  _proto13.encode = function encode(text, features) {
     var _this$layout = this.layout(text, features),
       glyphs = _this$layout.glyphs,
       positions = _this$layout.positions;
@@ -70437,12 +68501,12 @@ var EmbeddedFont = /*#__PURE__*/function (_PDFFont2) {
     }
     return [res, positions];
   };
-  _proto15.widthOfString = function widthOfString(string, size, features) {
+  _proto13.widthOfString = function widthOfString(string, size, features) {
     var width = this.layout(string, features, true).advanceWidth;
     var scale = size / 1000;
     return width * scale;
   };
-  _proto15.embed = function embed() {
+  _proto13.embed = function embed() {
     var _this8 = this;
     var isCFF = this.subset.cff != null;
     var fontFile = this.document.ref();
@@ -70535,7 +68599,7 @@ var EmbeddedFont = /*#__PURE__*/function (_PDFFont2) {
   // Because of ligature substitutions and the like, there may be one or more
   // unicode characters represented by each glyph.
   ;
-  _proto15.toUnicodeCmap = function toUnicodeCmap() {
+  _proto13.toUnicodeCmap = function toUnicodeCmap() {
     var cmap = this.document.ref();
     var entries = [];
     for (var _iterator7 = _createForOfIteratorHelperLoose(this.unicode), _step7; !(_step7 = _iterator7()).done;) {
@@ -70762,17 +68826,17 @@ var LineWrapper = /*#__PURE__*/function (_EventEmitter) {
     return _this9;
   }
   _inheritsLoose(LineWrapper, _EventEmitter);
-  var _proto16 = LineWrapper.prototype;
-  _proto16.wordWidth = function wordWidth(word) {
+  var _proto14 = LineWrapper.prototype;
+  _proto14.wordWidth = function wordWidth(word) {
     return this.document.widthOfString(word, this) + this.characterSpacing + this.wordSpacing;
   };
-  _proto16.canFit = function canFit(word, w) {
+  _proto14.canFit = function canFit(word, w) {
     if (word[word.length - 1] != SOFT_HYPHEN) {
       return w <= this.spaceLeft;
     }
     return w + this.wordWidth(HYPHEN) <= this.spaceLeft;
   };
-  _proto16.eachWord = function eachWord(text, fn) {
+  _proto14.eachWord = function eachWord(text, fn) {
     // setup a unicode line breaker
     var bk;
     var breaker = new _linebreak.default(text);
@@ -70843,8 +68907,8 @@ var LineWrapper = /*#__PURE__*/function (_EventEmitter) {
       last = bk;
     }
   };
-  _proto16.wrap = function wrap(text, options) {
-    var _this10 = this;
+  _proto14.wrap = function wrap(text, options) {
+    var _this0 = this;
     // override options from previous continued fragments
     this.horizontalScaling = options.horizontalScaling || 100;
     if (options.indent != null) {
@@ -70873,68 +68937,68 @@ var LineWrapper = /*#__PURE__*/function (_EventEmitter) {
     var lc = 0;
     var y = this.document.y; // used to reset Y pos if options.continued (below)
     var emitLine = function emitLine() {
-      options.textWidth = textWidth + _this10.wordSpacing * (wc - 1);
+      options.textWidth = textWidth + _this0.wordSpacing * (wc - 1);
       options.wordCount = wc;
-      options.lineWidth = _this10.lineWidth;
-      y = _this10.document.y;
-      _this10.emit('line', buffer, options, _this10);
+      options.lineWidth = _this0.lineWidth;
+      y = _this0.document.y;
+      _this0.emit('line', buffer, options, _this0);
       return lc++;
     };
     this.emit('sectionStart', options, this);
     this.eachWord(text, function (word, w, bk, last) {
       if (last == null || last.required) {
-        _this10.emit('firstLine', options, _this10);
-        _this10.spaceLeft = _this10.lineWidth;
+        _this0.emit('firstLine', options, _this0);
+        _this0.spaceLeft = _this0.lineWidth;
       }
-      if (_this10.canFit(word, w)) {
+      if (_this0.canFit(word, w)) {
         buffer += word;
         textWidth += w;
         wc++;
       }
-      if (bk.required || !_this10.canFit(word, w)) {
+      if (bk.required || !_this0.canFit(word, w)) {
         // if the user specified a max height and an ellipsis, and is about to pass the
         // max height and max columns after the next line, append the ellipsis
-        var lh = _this10.document.currentLineHeight(true);
-        if (_this10.height != null && _this10.ellipsis && _this10.document.y + lh * 2 > _this10.maxY && _this10.column >= _this10.columns) {
-          if (_this10.ellipsis === true) {
-            _this10.ellipsis = '…';
+        var lh = _this0.document.currentLineHeight(true);
+        if (_this0.height != null && _this0.ellipsis && _this0.document.y + lh * 2 > _this0.maxY && _this0.column >= _this0.columns) {
+          if (_this0.ellipsis === true) {
+            _this0.ellipsis = '…';
           } // map default ellipsis character
           buffer = buffer.replace(/\s+$/, '');
-          textWidth = _this10.wordWidth(buffer + _this10.ellipsis);
+          textWidth = _this0.wordWidth(buffer + _this0.ellipsis);
 
           // remove characters from the buffer until the ellipsis fits
           // to avoid infinite loop need to stop while-loop if buffer is empty string
-          while (buffer && textWidth > _this10.lineWidth) {
+          while (buffer && textWidth > _this0.lineWidth) {
             buffer = buffer.slice(0, -1).replace(/\s+$/, '');
-            textWidth = _this10.wordWidth(buffer + _this10.ellipsis);
+            textWidth = _this0.wordWidth(buffer + _this0.ellipsis);
           }
           // need to add ellipsis only if there is enough space for it
-          if (textWidth <= _this10.lineWidth) {
-            buffer = buffer + _this10.ellipsis;
+          if (textWidth <= _this0.lineWidth) {
+            buffer = buffer + _this0.ellipsis;
           }
-          textWidth = _this10.wordWidth(buffer);
+          textWidth = _this0.wordWidth(buffer);
         }
         if (bk.required) {
-          if (w > _this10.spaceLeft) {
+          if (w > _this0.spaceLeft) {
             emitLine();
             buffer = word;
             textWidth = w;
             wc = 1;
           }
-          _this10.emit('lastLine', options, _this10);
+          _this0.emit('lastLine', options, _this0);
         }
 
         // Previous entry is a soft hyphen - add visible hyphen.
         if (buffer[buffer.length - 1] == SOFT_HYPHEN) {
           buffer = buffer.slice(0, -1) + HYPHEN;
-          _this10.spaceLeft -= _this10.wordWidth(HYPHEN);
+          _this0.spaceLeft -= _this0.wordWidth(HYPHEN);
         }
         emitLine();
 
         // if we've reached the edge of the page,
         // continue on a new page or column
-        if (_this10.document.y + lh > _this10.maxY) {
-          var shouldContinue = _this10.nextSection();
+        if (_this0.document.y + lh > _this0.maxY) {
+          var shouldContinue = _this0.nextSection();
 
           // stop if we reached the maximum height
           if (!shouldContinue) {
@@ -70946,19 +69010,19 @@ var LineWrapper = /*#__PURE__*/function (_EventEmitter) {
 
         // reset the space left and buffer
         if (bk.required) {
-          _this10.spaceLeft = _this10.lineWidth;
+          _this0.spaceLeft = _this0.lineWidth;
           buffer = '';
           textWidth = 0;
           return wc = 0;
         } else {
           // reset the space left and buffer
-          _this10.spaceLeft = _this10.lineWidth - w;
+          _this0.spaceLeft = _this0.lineWidth - w;
           buffer = word;
           textWidth = w;
           return wc = 1;
         }
       } else {
-        return _this10.spaceLeft -= w;
+        return _this0.spaceLeft -= w;
       }
     });
     if (wc > 0) {
@@ -70980,7 +69044,7 @@ var LineWrapper = /*#__PURE__*/function (_EventEmitter) {
       return this.document.x = this.startX;
     }
   };
-  _proto16.nextSection = function nextSection(options) {
+  _proto14.nextSection = function nextSection(options) {
     this.emit('sectionEnd', options, this);
     if (++this.column > this.columns) {
       // if a max height was specified by the user, we're done.
@@ -71036,7 +69100,7 @@ var TextMixin = {
     return this;
   },
   _text: function _text(text, x, y, options, lineCallback) {
-    var _this11 = this;
+    var _this1 = this;
     options = this._initOptions(x, y, options);
 
     // Convert text to a string
@@ -71048,7 +69112,7 @@ var TextMixin = {
     }
     var addStructure = function addStructure() {
       if (options.structParent) {
-        options.structParent.add(_this11.struct(options.structType || 'P', [_this11.markStructureContent(options.structType || 'P')]));
+        options.structParent.add(_this1.struct(options.structType || 'P', [_this1.markStructureContent(options.structType || 'P')]));
       }
     };
 
@@ -71083,7 +69147,7 @@ var TextMixin = {
     return (this._font.widthOfString(string, this._fontSize, options.features) + (options.characterSpacing || 0) * (string.length - 1)) * horizontalScaling / 100;
   },
   heightOfString: function heightOfString(text, options) {
-    var _this12 = this;
+    var _this10 = this;
     var x = this.x,
       y = this.y;
     options = this._initOptions(options);
@@ -71091,7 +69155,7 @@ var TextMixin = {
 
     var lineGap = options.lineGap || this._lineGap || 0;
     this._text(text, this.x, this.y, options, function () {
-      return _this12.y += _this12.currentLineHeight(true) + lineGap;
+      return _this10.y += _this10.currentLineHeight(true) + lineGap;
     });
     var height = this.y - y;
     this.x = x;
@@ -71140,7 +69204,7 @@ var TextMixin = {
       }
     };
     var drawListItem = function drawListItem(listItem, i) {
-      var _this13 = this;
+      var _this11 = this;
       wrapper = new LineWrapper(this, options);
       wrapper.on('line', this._line);
       level = 1;
@@ -71159,7 +69223,7 @@ var TextMixin = {
           }
         }
         if (itemType) {
-          item = _this13.struct(itemType);
+          item = _this11.struct(itemType);
           options.structParent.add(item);
         } else if (options.structParent) {
           item = options.structParent;
@@ -71167,26 +69231,26 @@ var TextMixin = {
         var l;
         if ((l = levels[i++]) !== level) {
           var diff = itemIndent * (l - level);
-          _this13.x += diff;
+          _this11.x += diff;
           wrapper.lineWidth -= diff;
           level = l;
         }
         if (item && (labelType || bodyType)) {
-          item.add(_this13.struct(labelType || bodyType, [_this13.markStructureContent(labelType || bodyType)]));
+          item.add(_this11.struct(labelType || bodyType, [_this11.markStructureContent(labelType || bodyType)]));
         }
         switch (listType) {
           case 'bullet':
-            _this13.circle(_this13.x - indent + r, _this13.y + midLine, r);
-            _this13.fill();
+            _this11.circle(_this11.x - indent + r, _this11.y + midLine, r);
+            _this11.fill();
             break;
           case 'numbered':
           case 'lettered':
             var text = label(numbers[i - 1]);
-            _this13._fragment(text, _this13.x - indent, _this13.y, options);
+            _this11._fragment(text, _this11.x - indent, _this11.y, options);
             break;
         }
         if (item && labelType && bodyType) {
-          item.add(_this13.struct(bodyType, [_this13.markStructureContent(bodyType)]));
+          item.add(_this11.struct(bodyType, [_this11.markStructureContent(bodyType)]));
         }
         if (item && item !== options.structParent) {
           item.end();
@@ -71194,12 +69258,12 @@ var TextMixin = {
       });
       wrapper.on('sectionStart', function () {
         var pos = indent + itemIndent * (level - 1);
-        _this13.x += pos;
+        _this11.x += pos;
         return wrapper.lineWidth -= pos;
       });
       wrapper.on('sectionEnd', function () {
         var pos = indent + itemIndent * (level - 1);
-        _this13.x -= pos;
+        _this11.x -= pos;
         return wrapper.lineWidth += pos;
       });
       wrapper.wrap(listItem, options);
@@ -71269,7 +69333,7 @@ var TextMixin = {
     }
   },
   _fragment: function _fragment(text, x, y, options) {
-    var _this14 = this;
+    var _this12 = this;
     var dy, encoded, i, positions, textWidth, words;
     text = ("" + text).replace(/\n/g, '');
     if (text.length === 0) {
@@ -71438,8 +69502,8 @@ var TextMixin = {
       wordSpacing *= 1000 / this._fontSize;
       encoded = [];
       positions = [];
-      for (var _iterator10 = _createForOfIteratorHelperLoose(words), _step10; !(_step10 = _iterator10()).done;) {
-        var word = _step10.value;
+      for (var _iterator0 = _createForOfIteratorHelperLoose(words), _step0; !(_step0 = _iterator0()).done;) {
+        var word = _step0.value;
         var _this$_font$encode = this._font.encode(word, options.features),
           encodedWord = _this$_font$encode[0],
           positionsWord = _this$_font$encode[1];
@@ -71481,7 +69545,7 @@ var TextMixin = {
     var flush = function flush(i) {
       addSegment(i);
       if (commands.length > 0) {
-        _this14.addContent("[" + commands.join(' ') + "] TJ");
+        _this12.addContent("[" + commands.join(' ') + "] TJ");
         return commands.length = 0;
       }
     };
@@ -71561,8 +69625,8 @@ var JPEG = /*#__PURE__*/function () {
     this.colorSpace = COLOR_SPACE_MAP[channels];
     this.obj = null;
   }
-  var _proto17 = JPEG.prototype;
-  _proto17.embed = function embed(document) {
+  var _proto15 = JPEG.prototype;
+  _proto15.embed = function embed(document) {
     if (this.obj) {
       return;
     }
@@ -71598,8 +69662,8 @@ var PNGImage = /*#__PURE__*/function () {
     this.imgData = this.image.imgData;
     this.obj = null;
   }
-  var _proto18 = PNGImage.prototype;
-  _proto18.embed = function embed(document) {
+  var _proto16 = PNGImage.prototype;
+  _proto16.embed = function embed(document) {
     var dataDecoded = false;
     this.document = document;
     if (this.obj) {
@@ -71648,8 +69712,8 @@ var PNGImage = /*#__PURE__*/function () {
       // An array with N elements, where N is two times the number of color components.
       var rgb = this.image.transparency.rgb;
       var mask = [];
-      for (var _iterator11 = _createForOfIteratorHelperLoose(rgb), _step11; !(_step11 = _iterator11()).done;) {
-        var x = _step11.value;
+      for (var _iterator1 = _createForOfIteratorHelperLoose(rgb), _step1; !(_step1 = _iterator1()).done;) {
+        var x = _step1.value;
         mask.push(x, x);
       }
       this.obj.data['Mask'] = mask;
@@ -71670,7 +69734,7 @@ var PNGImage = /*#__PURE__*/function () {
     }
     this.finalize();
   };
-  _proto18.finalize = function finalize() {
+  _proto16.finalize = function finalize() {
     if (this.alphaChannel) {
       var sMask = this.document.ref({
         Type: 'XObject',
@@ -71693,18 +69757,18 @@ var PNGImage = /*#__PURE__*/function () {
     this.image = null;
     return this.imgData = null;
   };
-  _proto18.splitAlphaChannel = function splitAlphaChannel() {
-    var _this15 = this;
+  _proto16.splitAlphaChannel = function splitAlphaChannel() {
+    var _this13 = this;
     return this.image.decodePixels(function (pixels) {
       var a, p;
-      var colorCount = _this15.image.colors;
-      var pixelCount = _this15.width * _this15.height;
+      var colorCount = _this13.image.colors;
+      var pixelCount = _this13.width * _this13.height;
       var imgData = Buffer.alloc(pixelCount * colorCount);
       var alphaChannel = Buffer.alloc(pixelCount);
       var i = p = a = 0;
       var len = pixels.length;
       // For 16bit images copy only most significant byte (MSB) - PNG data is always stored in network byte order (MSB first)
-      var skipByteCount = _this15.image.bits === 16 ? 1 : 0;
+      var skipByteCount = _this13.image.bits === 16 ? 1 : 0;
       while (i < len) {
         for (var colorIndex = 0; colorIndex < colorCount; colorIndex++) {
           imgData[p++] = pixels[i++];
@@ -71713,29 +69777,29 @@ var PNGImage = /*#__PURE__*/function () {
         alphaChannel[a++] = pixels[i++];
         i += skipByteCount;
       }
-      _this15.imgData = _zlib.default.deflateSync(imgData);
-      _this15.alphaChannel = _zlib.default.deflateSync(alphaChannel);
-      return _this15.finalize();
+      _this13.imgData = _zlib.default.deflateSync(imgData);
+      _this13.alphaChannel = _zlib.default.deflateSync(alphaChannel);
+      return _this13.finalize();
     });
   };
-  _proto18.loadIndexedAlphaChannel = function loadIndexedAlphaChannel() {
-    var _this16 = this;
+  _proto16.loadIndexedAlphaChannel = function loadIndexedAlphaChannel() {
+    var _this14 = this;
     var transparency = this.image.transparency.indexed;
     return this.image.decodePixels(function (pixels) {
-      var alphaChannel = Buffer.alloc(_this16.width * _this16.height);
+      var alphaChannel = Buffer.alloc(_this14.width * _this14.height);
       var i = 0;
       for (var j = 0, end = pixels.length; j < end; j++) {
         alphaChannel[i++] = transparency[pixels[j]];
       }
-      _this16.alphaChannel = _zlib.default.deflateSync(alphaChannel);
-      return _this16.finalize();
+      _this14.alphaChannel = _zlib.default.deflateSync(alphaChannel);
+      return _this14.finalize();
     });
   };
-  _proto18.decodeData = function decodeData() {
-    var _this17 = this;
+  _proto16.decodeData = function decodeData() {
+    var _this15 = this;
     this.image.decodePixels(function (pixels) {
-      _this17.imgData = _zlib.default.deflateSync(pixels);
-      _this17.finalize();
+      _this15.imgData = _zlib.default.deflateSync(pixels);
+      _this15.finalize();
     });
   };
   return PNGImage;
@@ -72180,8 +70244,8 @@ var PDFOutline = /*#__PURE__*/function () {
     this.dictionary = this.document.ref(this.outlineData);
     this.children = [];
   }
-  var _proto19 = PDFOutline.prototype;
-  _proto19.addItem = function addItem(title) {
+  var _proto17 = PDFOutline.prototype;
+  _proto17.addItem = function addItem(title) {
     var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {
       expanded: false
     };
@@ -72189,7 +70253,7 @@ var PDFOutline = /*#__PURE__*/function () {
     this.children.push(result);
     return result;
   };
-  _proto19.endOutline = function endOutline() {
+  _proto17.endOutline = function endOutline() {
     if (this.children.length > 0) {
       if (this.options.expanded) {
         this.outlineData.Count = this.children.length;
@@ -72237,11 +70301,11 @@ var PDFStructureContent = /*#__PURE__*/function () {
       mcid: mcid
     }];
   }
-  var _proto20 = PDFStructureContent.prototype;
-  _proto20.push = function push(structContent) {
-    var _this18 = this;
+  var _proto18 = PDFStructureContent.prototype;
+  _proto18.push = function push(structContent) {
+    var _this16 = this;
     structContent.refs.forEach(function (ref) {
-      return _this18.refs.push(ref);
+      return _this16.refs.push(ref);
     });
   };
   return PDFStructureContent;
@@ -72252,7 +70316,7 @@ By Ben Schmidt
 */
 var PDFStructureElement = /*#__PURE__*/function () {
   function PDFStructureElement(document, type) {
-    var _this19 = this;
+    var _this17 = this;
     var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     var children = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
     this.document = document;
@@ -72289,13 +70353,13 @@ var PDFStructureElement = /*#__PURE__*/function () {
         children = [children];
       }
       children.forEach(function (child) {
-        return _this19.add(child);
+        return _this17.add(child);
       });
       this.end();
     }
   }
-  var _proto21 = PDFStructureElement.prototype;
-  _proto21.add = function add(child) {
+  var _proto19 = PDFStructureElement.prototype;
+  _proto19.add = function add(child) {
     if (this._ended) {
       throw new Error("Cannot add child to already-ended structure element");
     }
@@ -72318,24 +70382,24 @@ var PDFStructureElement = /*#__PURE__*/function () {
     this._children.push(child);
     return this;
   };
-  _proto21._addContentToParentTree = function _addContentToParentTree(content) {
-    var _this20 = this;
+  _proto19._addContentToParentTree = function _addContentToParentTree(content) {
+    var _this18 = this;
     content.refs.forEach(function (_ref) {
       var pageRef = _ref.pageRef,
         mcid = _ref.mcid;
-      var pageStructParents = _this20.document.getStructParentTree().get(pageRef.data.StructParents);
-      pageStructParents[mcid] = _this20.dictionary;
+      var pageStructParents = _this18.document.getStructParentTree().get(pageRef.data.StructParents);
+      pageStructParents[mcid] = _this18.dictionary;
     });
   };
-  _proto21.setParent = function setParent(parentRef) {
+  _proto19.setParent = function setParent(parentRef) {
     if (this.dictionary.data.P) {
       throw new Error("Structure element added to more than one parent");
     }
     this.dictionary.data.P = parentRef;
     this._flush();
   };
-  _proto21.setAttached = function setAttached() {
-    var _this21 = this;
+  _proto19.setAttached = function setAttached() {
+    var _this19 = this;
     if (this._attached) {
       return;
     }
@@ -72344,13 +70408,13 @@ var PDFStructureElement = /*#__PURE__*/function () {
         child.setAttached();
       }
       if (typeof child === 'function') {
-        _this21._children[index] = _this21._contentForClosure(child);
+        _this19._children[index] = _this19._contentForClosure(child);
       }
     });
     this._attached = true;
     this._flush();
   };
-  _proto21.end = function end() {
+  _proto19.end = function end() {
     if (this._ended) {
       return;
     }
@@ -72362,17 +70426,17 @@ var PDFStructureElement = /*#__PURE__*/function () {
     this._ended = true;
     this._flush();
   };
-  _proto21._isValidChild = function _isValidChild(child) {
+  _proto19._isValidChild = function _isValidChild(child) {
     return child instanceof PDFStructureElement || child instanceof PDFStructureContent || typeof child === 'function';
   };
-  _proto21._contentForClosure = function _contentForClosure(closure) {
+  _proto19._contentForClosure = function _contentForClosure(closure) {
     var content = this.document.markStructureContent(this.dictionary.data.S);
     closure();
     this.document.endMarkedContent();
     this._addContentToParentTree(content);
     return content;
   };
-  _proto21._isFlushable = function _isFlushable() {
+  _proto19._isFlushable = function _isFlushable() {
     if (!this.dictionary.data.P || !this._ended) {
       return false;
     }
@@ -72386,14 +70450,14 @@ var PDFStructureElement = /*#__PURE__*/function () {
       return true;
     });
   };
-  _proto21._flush = function _flush() {
-    var _this22 = this;
+  _proto19._flush = function _flush() {
+    var _this20 = this;
     if (this._flushed || !this._isFlushable()) {
       return;
     }
     this.dictionary.data.K = [];
     this._children.forEach(function (child) {
-      return _this22._flushChild(child);
+      return _this20._flushChild(child);
     });
     this.dictionary.end();
 
@@ -72404,8 +70468,8 @@ var PDFStructureElement = /*#__PURE__*/function () {
     this.dictionary.data.K = null;
     this._flushed = true;
   };
-  _proto21._flushChild = function _flushChild(child) {
-    var _this23 = this;
+  _proto19._flushChild = function _flushChild(child) {
+    var _this21 = this;
     if (child instanceof PDFStructureElement) {
       this.dictionary.data.K.push(child.dictionary);
     }
@@ -72413,13 +70477,13 @@ var PDFStructureElement = /*#__PURE__*/function () {
       child.refs.forEach(function (_ref2) {
         var pageRef = _ref2.pageRef,
           mcid = _ref2.mcid;
-        if (!_this23.dictionary.data.Pg) {
-          _this23.dictionary.data.Pg = pageRef;
+        if (!_this21.dictionary.data.Pg) {
+          _this21.dictionary.data.Pg = pageRef;
         }
-        if (_this23.dictionary.data.Pg === pageRef) {
-          _this23.dictionary.data.K.push(mcid);
+        if (_this21.dictionary.data.Pg === pageRef) {
+          _this21.dictionary.data.K.push(mcid);
         } else {
-          _this23.dictionary.data.K.push({
+          _this21.dictionary.data.K.push({
             Type: "MCR",
             Pg: pageRef,
             MCID: mcid
@@ -72438,14 +70502,14 @@ var PDFNumberTree = /*#__PURE__*/function (_PDFTree2) {
     return _PDFTree2.apply(this, arguments) || this;
   }
   _inheritsLoose(PDFNumberTree, _PDFTree2);
-  var _proto22 = PDFNumberTree.prototype;
-  _proto22._compareKeys = function _compareKeys(a, b) {
+  var _proto20 = PDFNumberTree.prototype;
+  _proto20._compareKeys = function _compareKeys(a, b) {
     return parseInt(a) - parseInt(b);
   };
-  _proto22._keysName = function _keysName() {
+  _proto20._keysName = function _keysName() {
     return "Nums";
   };
-  _proto22._dataForKey = function _dataForKey(k) {
+  _proto20._dataForKey = function _dataForKey(k) {
     return parseInt(k);
   };
   return PDFNumberTree;
@@ -72554,15 +70618,15 @@ var MarkingsMixin = {
     return this;
   },
   initPageMarkings: function initPageMarkings(pageMarkings) {
-    var _this24 = this;
+    var _this22 = this;
     pageMarkings.forEach(function (marking) {
       if (marking.structContent) {
         var structContent = marking.structContent;
-        var newStructContent = _this24.markStructureContent(marking.tag, marking.options);
+        var newStructContent = _this22.markStructureContent(marking.tag, marking.options);
         structContent.push(newStructContent);
-        _this24.page.markings.slice(-1)[0].structContent = structContent;
+        _this22.page.markings.slice(-1)[0].structContent = structContent;
       } else {
-        _this24.markContent(marking.tag, marking.options);
+        _this22.markContent(marking.tag, marking.options);
       }
     });
   },
@@ -72692,27 +70756,27 @@ var AcroFormMixin = {
    * Called automatically by document.js
    */
   endAcroForm: function endAcroForm() {
-    var _this25 = this;
+    var _this23 = this;
     if (this._root.data.AcroForm) {
       if (!Object.keys(this._acroform.fonts).length && !this._acroform.defaultFont) {
         throw new Error('No fonts specified for PDF form');
       }
       var fontDict = this._root.data.AcroForm.data.DR.Font;
       Object.keys(this._acroform.fonts).forEach(function (name) {
-        fontDict[name] = _this25._acroform.fonts[name];
+        fontDict[name] = _this23._acroform.fonts[name];
       });
       this._root.data.AcroForm.data.Fields.forEach(function (fieldRef) {
-        _this25._endChild(fieldRef);
+        _this23._endChild(fieldRef);
       });
       this._root.data.AcroForm.end();
     }
     return this;
   },
   _endChild: function _endChild(ref) {
-    var _this26 = this;
+    var _this24 = this;
     if (Array.isArray(ref.data.Kids)) {
       ref.data.Kids.forEach(function (childRef) {
-        _this26._endChild(childRef);
+        _this24._endChild(childRef);
       });
       ref.end();
     }
@@ -73185,22 +71249,22 @@ var PDFMetadata = /*#__PURE__*/function () {
   function PDFMetadata() {
     this._metadata = "\n        <?xpacket begin=\"\uFEFF\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?>\n            <x:xmpmeta xmlns:x=\"adobe:ns:meta/\">\n                <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n        ";
   }
-  var _proto23 = PDFMetadata.prototype;
-  _proto23._closeTags = function _closeTags() {
+  var _proto21 = PDFMetadata.prototype;
+  _proto21._closeTags = function _closeTags() {
     this._metadata = this._metadata.concat("\n                </rdf:RDF>\n            </x:xmpmeta>\n        <?xpacket end=\"w\"?>\n        ");
   };
-  _proto23.append = function append(xml) {
+  _proto21.append = function append(xml) {
     var newline = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
     this._metadata = this._metadata.concat(xml);
     if (newline) this._metadata = this._metadata.concat('\n');
   };
-  _proto23.getXML = function getXML() {
+  _proto21.getXML = function getXML() {
     return this._metadata;
   };
-  _proto23.getLength = function getLength() {
+  _proto21.getLength = function getLength() {
     return this._metadata.length;
   };
-  _proto23.end = function end() {
+  _proto21.end = function end() {
     this._closeTags();
     this._metadata = this._metadata.trim();
   };
@@ -73263,112 +71327,112 @@ By Devon Govett
 */
 var PDFDocument = /*#__PURE__*/function (_stream$Readable) {
   function PDFDocument() {
-    var _this27;
+    var _this25;
     var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    _this27 = _stream$Readable.call(this, options) || this;
-    _this27.options = options;
+    _this25 = _stream$Readable.call(this, options) || this;
+    _this25.options = options;
 
     // PDF version
     switch (options.pdfVersion) {
       case '1.4':
-        _this27.version = 1.4;
+        _this25.version = 1.4;
         break;
       case '1.5':
-        _this27.version = 1.5;
+        _this25.version = 1.5;
         break;
       case '1.6':
-        _this27.version = 1.6;
+        _this25.version = 1.6;
         break;
       case '1.7':
       case '1.7ext3':
-        _this27.version = 1.7;
+        _this25.version = 1.7;
         break;
       default:
-        _this27.version = 1.3;
+        _this25.version = 1.3;
         break;
     }
 
     // Whether streams should be compressed
-    _this27.compress = _this27.options.compress != null ? _this27.options.compress : true;
-    _this27._pageBuffer = [];
-    _this27._pageBufferStart = 0;
+    _this25.compress = _this25.options.compress != null ? _this25.options.compress : true;
+    _this25._pageBuffer = [];
+    _this25._pageBufferStart = 0;
 
     // The PDF object store
-    _this27._offsets = [];
-    _this27._waiting = 0;
-    _this27._ended = false;
-    _this27._offset = 0;
-    var Pages = _this27.ref({
+    _this25._offsets = [];
+    _this25._waiting = 0;
+    _this25._ended = false;
+    _this25._offset = 0;
+    var Pages = _this25.ref({
       Type: 'Pages',
       Count: 0,
       Kids: []
     });
-    var Names = _this27.ref({
+    var Names = _this25.ref({
       Dests: new PDFNameTree()
     });
-    _this27._root = _this27.ref({
+    _this25._root = _this25.ref({
       Type: 'Catalog',
       Pages: Pages,
       Names: Names
     });
-    if (_this27.options.lang) {
-      _this27._root.data.Lang = new String(_this27.options.lang);
+    if (_this25.options.lang) {
+      _this25._root.data.Lang = new String(_this25.options.lang);
     }
 
     // The current page
-    _this27.page = null;
+    _this25.page = null;
 
     // Initialize mixins
-    _this27.initMetadata();
-    _this27.initColor();
-    _this27.initVector();
-    _this27.initFonts(options.font);
-    _this27.initText();
-    _this27.initImages();
-    _this27.initOutline();
-    _this27.initMarkings(options);
-    _this27.initSubset(options);
+    _this25.initMetadata();
+    _this25.initColor();
+    _this25.initVector();
+    _this25.initFonts(options.font);
+    _this25.initText();
+    _this25.initImages();
+    _this25.initOutline();
+    _this25.initMarkings(options);
+    _this25.initSubset(options);
 
     // Initialize the metadata
-    _this27.info = {
+    _this25.info = {
       Producer: 'PDFKit',
       Creator: 'PDFKit',
       CreationDate: new Date()
     };
-    if (_this27.options.info) {
-      for (var key in _this27.options.info) {
-        var val = _this27.options.info[key];
-        _this27.info[key] = val;
+    if (_this25.options.info) {
+      for (var key in _this25.options.info) {
+        var val = _this25.options.info[key];
+        _this25.info[key] = val;
       }
     }
-    if (_this27.options.displayTitle) {
-      _this27._root.data.ViewerPreferences = _this27.ref({
+    if (_this25.options.displayTitle) {
+      _this25._root.data.ViewerPreferences = _this25.ref({
         DisplayDocTitle: true
       });
     }
 
     // Generate file ID
-    _this27._id = PDFSecurity.generateFileID(_this27.info);
+    _this25._id = PDFSecurity.generateFileID(_this25.info);
 
     // Initialize security settings
-    _this27._security = PDFSecurity.create(_this27, options);
+    _this25._security = PDFSecurity.create(_this25, options);
 
     // Write the header
     // PDF version
-    _this27._write("%PDF-" + _this27.version);
+    _this25._write("%PDF-" + _this25.version);
 
     // 4 binary chars, as recommended by the spec
-    _this27._write('%\xFF\xFF\xFF\xFF');
+    _this25._write('%\xFF\xFF\xFF\xFF');
 
     // Add the first page
-    if (_this27.options.autoFirstPage !== false) {
-      _this27.addPage();
+    if (_this25.options.autoFirstPage !== false) {
+      _this25.addPage();
     }
-    return _this27;
+    return _this25;
   }
   _inheritsLoose(PDFDocument, _stream$Readable);
-  var _proto24 = PDFDocument.prototype;
-  _proto24.addPage = function addPage(options) {
+  var _proto22 = PDFDocument.prototype;
+  _proto22.addPage = function addPage(options) {
     if (options == null) {
       options = this.options;
     }
@@ -73398,38 +71462,38 @@ var PDFDocument = /*#__PURE__*/function (_stream$Readable) {
     this.emit('pageAdded');
     return this;
   };
-  _proto24.continueOnNewPage = function continueOnNewPage(options) {
+  _proto22.continueOnNewPage = function continueOnNewPage(options) {
     var pageMarkings = this.endPageMarkings(this.page);
     this.addPage(options);
     this.initPageMarkings(pageMarkings);
     return this;
   };
-  _proto24.bufferedPageRange = function bufferedPageRange() {
+  _proto22.bufferedPageRange = function bufferedPageRange() {
     return {
       start: this._pageBufferStart,
       count: this._pageBuffer.length
     };
   };
-  _proto24.switchToPage = function switchToPage(n) {
+  _proto22.switchToPage = function switchToPage(n) {
     var page;
     if (!(page = this._pageBuffer[n - this._pageBufferStart])) {
       throw new Error("switchToPage(" + n + ") out of bounds, current buffer covers pages " + this._pageBufferStart + " to " + (this._pageBufferStart + this._pageBuffer.length - 1));
     }
     return this.page = page;
   };
-  _proto24.flushPages = function flushPages() {
+  _proto22.flushPages = function flushPages() {
     // this local variable exists so we're future-proof against
     // reentrant calls to flushPages.
     var pages = this._pageBuffer;
     this._pageBuffer = [];
     this._pageBufferStart += pages.length;
-    for (var _iterator12 = _createForOfIteratorHelperLoose(pages), _step12; !(_step12 = _iterator12()).done;) {
-      var page = _step12.value;
+    for (var _iterator10 = _createForOfIteratorHelperLoose(pages), _step10; !(_step10 = _iterator10()).done;) {
+      var page = _step10.value;
       this.endPageMarkings(page);
       page.end();
     }
   };
-  _proto24.addNamedDestination = function addNamedDestination(name) {
+  _proto22.addNamedDestination = function addNamedDestination(name) {
     for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
       args[_key - 1] = arguments[_key];
     }
@@ -73442,7 +71506,7 @@ var PDFDocument = /*#__PURE__*/function (_stream$Readable) {
     args.unshift(this.page.dictionary);
     this._root.data.Names.data.Dests.add(name, args);
   };
-  _proto24.addNamedEmbeddedFile = function addNamedEmbeddedFile(name, ref) {
+  _proto22.addNamedEmbeddedFile = function addNamedEmbeddedFile(name, ref) {
     if (!this._root.data.Names.data.EmbeddedFiles) {
       // disabling /Limits for this tree fixes attachments not showing in Adobe Reader
       this._root.data.Names.data.EmbeddedFiles = new PDFNameTree({
@@ -73453,7 +71517,7 @@ var PDFDocument = /*#__PURE__*/function (_stream$Readable) {
     // add filespec to EmbeddedFiles
     this._root.data.Names.data.EmbeddedFiles.add(name, ref);
   };
-  _proto24.addNamedJavaScript = function addNamedJavaScript(name, js) {
+  _proto22.addNamedJavaScript = function addNamedJavaScript(name, js) {
     if (!this._root.data.Names.data.JavaScript) {
       this._root.data.Names.data.JavaScript = new PDFNameTree();
     }
@@ -73463,34 +71527,34 @@ var PDFDocument = /*#__PURE__*/function (_stream$Readable) {
     };
     this._root.data.Names.data.JavaScript.add(name, data);
   };
-  _proto24.ref = function ref(data) {
+  _proto22.ref = function ref(data) {
     var ref = new PDFReference(this, this._offsets.length + 1, data);
     this._offsets.push(null); // placeholder for this object's offset once it is finalized
     this._waiting++;
     return ref;
   };
-  _proto24._read = function _read() {}
+  _proto22._read = function _read() {}
   // do nothing, but this method is required by node
   ;
-  _proto24._write = function _write(data) {
+  _proto22._write = function _write(data) {
     if (!Buffer.isBuffer(data)) {
       data = Buffer.from(data + '\n', 'binary');
     }
     this.push(data);
     return this._offset += data.length;
   };
-  _proto24.addContent = function addContent(data) {
+  _proto22.addContent = function addContent(data) {
     this.page.write(data);
     return this;
   };
-  _proto24._refEnd = function _refEnd(ref) {
+  _proto22._refEnd = function _refEnd(ref) {
     this._offsets[ref.id - 1] = ref.offset;
     if (--this._waiting === 0 && this._ended) {
       this._finalize();
       return this._ended = false;
     }
   };
-  _proto24.end = function end() {
+  _proto22.end = function end() {
     this.flushPages();
     this._info = this.ref();
     for (var key in this.info) {
@@ -73529,14 +71593,14 @@ var PDFDocument = /*#__PURE__*/function (_stream$Readable) {
       return this._ended = true;
     }
   };
-  _proto24._finalize = function _finalize() {
+  _proto22._finalize = function _finalize() {
     // generate xref
     var xRefOffset = this._offset;
     this._write('xref');
     this._write("0 " + (this._offsets.length + 1));
     this._write('0000000000 65535 f ');
-    for (var _iterator13 = _createForOfIteratorHelperLoose(this._offsets), _step13; !(_step13 = _iterator13()).done;) {
-      var offset = _step13.value;
+    for (var _iterator11 = _createForOfIteratorHelperLoose(this._offsets), _step11; !(_step11 = _iterator11()).done;) {
+      var offset = _step11.value;
       offset = ("0000000000" + offset).slice(-10);
       this._write(offset + ' 00000 n ');
     }
@@ -73560,7 +71624,7 @@ var PDFDocument = /*#__PURE__*/function (_stream$Readable) {
     // end the stream
     return this.push(null);
   };
-  _proto24.toString = function toString() {
+  _proto22.toString = function toString() {
     return '[object PDFDocument]';
   };
   return PDFDocument;
@@ -73582,6 +71646,1957 @@ mixin(AttachmentsMixin);
 mixin(SubsetMixin);
 PDFDocument.LineWrapper = LineWrapper;
 var _default = exports["default"] = PDFDocument;
+
+/***/ }),
+
+/***/ 90780:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+var parent = __webpack_require__(42075);
+__webpack_require__(94712);
+
+module.exports = parent;
+
+
+/***/ }),
+
+/***/ 90868:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+var createTypedArrayConstructor = __webpack_require__(98828);
+
+// `Float64Array` constructor
+// https://tc39.es/ecma262/#sec-typedarray-objects
+createTypedArrayConstructor('Float64', function (init) {
+  return function Float64Array(data, byteOffset, length) {
+    return init(this, data, byteOffset, length);
+  };
+});
+
+
+/***/ }),
+
+/***/ 91102:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+var bind = __webpack_require__(25567);
+var uncurryThis = __webpack_require__(38347);
+var IndexedObject = __webpack_require__(7514);
+var toObject = __webpack_require__(43162);
+var lengthOfArrayLike = __webpack_require__(45495);
+var arraySpeciesCreate = __webpack_require__(45744);
+
+var push = uncurryThis([].push);
+
+// `Array.prototype.{ forEach, map, filter, some, every, find, findIndex, filterReject }` methods implementation
+var createMethod = function (TYPE) {
+  var IS_MAP = TYPE == 1;
+  var IS_FILTER = TYPE == 2;
+  var IS_SOME = TYPE == 3;
+  var IS_EVERY = TYPE == 4;
+  var IS_FIND_INDEX = TYPE == 6;
+  var IS_FILTER_REJECT = TYPE == 7;
+  var NO_HOLES = TYPE == 5 || IS_FIND_INDEX;
+  return function ($this, callbackfn, that, specificCreate) {
+    var O = toObject($this);
+    var self = IndexedObject(O);
+    var boundFunction = bind(callbackfn, that);
+    var length = lengthOfArrayLike(self);
+    var index = 0;
+    var create = specificCreate || arraySpeciesCreate;
+    var target = IS_MAP ? create($this, length) : IS_FILTER || IS_FILTER_REJECT ? create($this, 0) : undefined;
+    var value, result;
+    for (;length > index; index++) if (NO_HOLES || index in self) {
+      value = self[index];
+      result = boundFunction(value, index, O);
+      if (TYPE) {
+        if (IS_MAP) target[index] = result; // map
+        else if (result) switch (TYPE) {
+          case 3: return true;              // some
+          case 5: return value;             // find
+          case 6: return index;             // findIndex
+          case 2: push(target, value);      // filter
+        } else switch (TYPE) {
+          case 4: return false;             // every
+          case 7: push(target, value);      // filterReject
+        }
+      }
+    }
+    return IS_FIND_INDEX ? -1 : IS_SOME || IS_EVERY ? IS_EVERY : target;
+  };
+};
+
+module.exports = {
+  // `Array.prototype.forEach` method
+  // https://tc39.es/ecma262/#sec-array.prototype.foreach
+  forEach: createMethod(0),
+  // `Array.prototype.map` method
+  // https://tc39.es/ecma262/#sec-array.prototype.map
+  map: createMethod(1),
+  // `Array.prototype.filter` method
+  // https://tc39.es/ecma262/#sec-array.prototype.filter
+  filter: createMethod(2),
+  // `Array.prototype.some` method
+  // https://tc39.es/ecma262/#sec-array.prototype.some
+  some: createMethod(3),
+  // `Array.prototype.every` method
+  // https://tc39.es/ecma262/#sec-array.prototype.every
+  every: createMethod(4),
+  // `Array.prototype.find` method
+  // https://tc39.es/ecma262/#sec-array.prototype.find
+  find: createMethod(5),
+  // `Array.prototype.findIndex` method
+  // https://tc39.es/ecma262/#sec-array.prototype.findIndex
+  findIndex: createMethod(6),
+  // `Array.prototype.filterReject` method
+  // https://github.com/tc39/proposal-array-filtering
+  filterReject: createMethod(7)
+};
+
+
+/***/ }),
+
+/***/ 91132:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+var global = __webpack_require__(32010);
+var uncurryThis = __webpack_require__(38347);
+var PROPER_FUNCTION_NAME = (__webpack_require__(7081).PROPER);
+var ArrayBufferViewCore = __webpack_require__(59754);
+var ArrayIterators = __webpack_require__(81755);
+var wellKnownSymbol = __webpack_require__(38688);
+
+var ITERATOR = wellKnownSymbol('iterator');
+var Uint8Array = global.Uint8Array;
+var arrayValues = uncurryThis(ArrayIterators.values);
+var arrayKeys = uncurryThis(ArrayIterators.keys);
+var arrayEntries = uncurryThis(ArrayIterators.entries);
+var aTypedArray = ArrayBufferViewCore.aTypedArray;
+var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+var nativeTypedArrayIterator = Uint8Array && Uint8Array.prototype[ITERATOR];
+
+var PROPER_ARRAY_VALUES_NAME = !!nativeTypedArrayIterator && nativeTypedArrayIterator.name === 'values';
+
+var typedArrayValues = function values() {
+  return arrayValues(aTypedArray(this));
+};
+
+// `%TypedArray%.prototype.entries` method
+// https://tc39.es/ecma262/#sec-%typedarray%.prototype.entries
+exportTypedArrayMethod('entries', function entries() {
+  return arrayEntries(aTypedArray(this));
+});
+// `%TypedArray%.prototype.keys` method
+// https://tc39.es/ecma262/#sec-%typedarray%.prototype.keys
+exportTypedArrayMethod('keys', function keys() {
+  return arrayKeys(aTypedArray(this));
+});
+// `%TypedArray%.prototype.values` method
+// https://tc39.es/ecma262/#sec-%typedarray%.prototype.values
+exportTypedArrayMethod('values', typedArrayValues, PROPER_FUNCTION_NAME && !PROPER_ARRAY_VALUES_NAME);
+// `%TypedArray%.prototype[@@iterator]` method
+// https://tc39.es/ecma262/#sec-%typedarray%.prototype-@@iterator
+exportTypedArrayMethod(ITERATOR, typedArrayValues, PROPER_FUNCTION_NAME && !PROPER_ARRAY_VALUES_NAME);
+
+
+/***/ }),
+
+/***/ 91151:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+var wellKnownSymbol = __webpack_require__(38688);
+
+var MATCH = wellKnownSymbol('match');
+
+module.exports = function (METHOD_NAME) {
+  var regexp = /./;
+  try {
+    '/./'[METHOD_NAME](regexp);
+  } catch (error1) {
+    try {
+      regexp[MATCH] = false;
+      return '/./'[METHOD_NAME](regexp);
+    } catch (error2) { /* empty */ }
+  } return false;
+};
+
+
+/***/ }),
+
+/***/ 91159:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+var uncurryThis = __webpack_require__(38347);
+var requireObjectCoercible = __webpack_require__(83943);
+var toString = __webpack_require__(25096);
+
+var quot = /"/g;
+var replace = uncurryThis(''.replace);
+
+// `CreateHTML` abstract operation
+// https://tc39.es/ecma262/#sec-createhtml
+module.exports = function (string, tag, attribute, value) {
+  var S = toString(requireObjectCoercible(string));
+  var p1 = '<' + tag;
+  if (attribute !== '') p1 += ' ' + attribute + '="' + replace(toString(value), quot, '&quot;') + '"';
+  return p1 + '>' + S + '</' + tag + '>';
+};
+
+
+/***/ }),
+
+/***/ 91780:
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+__webpack_require__(39081);
+;
+(function (root, factory, undef) {
+  if (true) {
+    // CommonJS
+    module.exports = exports = factory(__webpack_require__(48352), __webpack_require__(51270));
+  } else {}
+})(void 0, function (CryptoJS) {
+  /**
+   * ISO 10126 padding strategy.
+   */
+  CryptoJS.pad.Iso10126 = {
+    pad: function pad(data, blockSize) {
+      // Shortcut
+      var blockSizeBytes = blockSize * 4;
+
+      // Count padding bytes
+      var nPaddingBytes = blockSizeBytes - data.sigBytes % blockSizeBytes;
+
+      // Pad
+      data.concat(CryptoJS.lib.WordArray.random(nPaddingBytes - 1)).concat(CryptoJS.lib.WordArray.create([nPaddingBytes << 24], 1));
+    },
+    unpad: function unpad(data) {
+      // Get number of padding bytes from last byte
+      var nPaddingBytes = data.words[data.sigBytes - 1 >>> 2] & 0xff;
+
+      // Remove padding
+      data.sigBytes -= nPaddingBytes;
+    }
+  };
+  return CryptoJS.pad.Iso10126;
+});
+
+/***/ }),
+
+/***/ 91867:
+/***/ (function(module) {
+
+"use strict";
+
+
+function isString(variable) {
+	return typeof variable === 'string' || variable instanceof String;
+}
+
+function isNumber(variable) {
+	return typeof variable === 'number' || variable instanceof Number;
+}
+
+function isBoolean(variable) {
+	return typeof variable === 'boolean';
+}
+
+function isArray(variable) {
+	return Array.isArray(variable);
+}
+
+function isFunction(variable) {
+	return typeof variable === 'function';
+}
+
+function isObject(variable) {
+	return variable !== null && typeof variable === 'object';
+}
+
+function isNull(variable) {
+	return variable === null;
+}
+
+function isUndefined(variable) {
+	return variable === undefined;
+}
+
+/**
+ * @param {any} variable
+ * @returns {boolean}
+ */
+function isPositiveInteger(variable) {
+	if (!isNumber(variable) || !Number.isInteger(variable) || variable <= 0) {
+		return false;
+	}
+	return true;
+}
+
+function pack() {
+	var result = {};
+
+	for (var i = 0, l = arguments.length; i < l; i++) {
+		var obj = arguments[i];
+
+		if (obj) {
+			for (var key in obj) {
+				if (obj.hasOwnProperty(key)) {
+					result[key] = obj[key];
+				}
+			}
+		}
+	}
+
+	return result;
+}
+
+function offsetVector(vector, x, y) {
+	switch (vector.type) {
+		case 'ellipse':
+		case 'rect':
+			vector.x += x;
+			vector.y += y;
+			break;
+		case 'line':
+			vector.x1 += x;
+			vector.x2 += x;
+			vector.y1 += y;
+			vector.y2 += y;
+			break;
+		case 'polyline':
+			for (var i = 0, l = vector.points.length; i < l; i++) {
+				vector.points[i].x += x;
+				vector.points[i].y += y;
+			}
+			break;
+	}
+}
+
+function fontStringify(key, val) {
+	if (key === 'font') {
+		return 'font';
+	}
+	return val;
+}
+
+function getNodeId(node) {
+	if (node.id) {
+		return node.id;
+	}
+
+	if (isArray(node.text)) {
+		for (var i = 0, l = node.text.length; i < l; i++) {
+			var n = node.text[i];
+			var nodeId = getNodeId(n);
+			if (nodeId) {
+				return nodeId;
+			}
+		}
+	}
+
+	return null;
+}
+
+function isPattern(color) {
+	return isArray(color) && color.length === 2;
+}
+
+// converts from a [<pattern name>, <color>] as used by pdfmake
+// into [<pattern object>, <color>] as used by pdfkit
+// (the pattern has to be registered in the doc definition of course)
+function getPattern(color, patterns) {
+	return [patterns[color[0]], color[1]];
+}
+
+module.exports = {
+	isString: isString,
+	isNumber: isNumber,
+	isBoolean: isBoolean,
+	isArray: isArray,
+	isFunction: isFunction,
+	isObject: isObject,
+	isNull: isNull,
+	isUndefined: isUndefined,
+	isPositiveInteger: isPositiveInteger,
+	pack: pack,
+	fontStringify: fontStringify,
+	offsetVector: offsetVector,
+	getNodeId: getNodeId,
+	isPattern: isPattern,
+	getPattern: getPattern
+};
+
+
+/***/ }),
+
+/***/ 92451:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+var ArrayBufferViewCore = __webpack_require__(59754);
+var $reduceRight = (__webpack_require__(32843).right);
+
+var aTypedArray = ArrayBufferViewCore.aTypedArray;
+var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+
+// `%TypedArray%.prototype.reduceRicht` method
+// https://tc39.es/ecma262/#sec-%typedarray%.prototype.reduceright
+exportTypedArrayMethod('reduceRight', function reduceRight(callbackfn /* , initialValue */) {
+  var length = arguments.length;
+  return $reduceRight(aTypedArray(this), callbackfn, length, length > 1 ? arguments[1] : undefined);
+});
+
+
+/***/ }),
+
+/***/ 92642:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+var toObject = __webpack_require__(43162);
+var toAbsoluteIndex = __webpack_require__(74841);
+var lengthOfArrayLike = __webpack_require__(45495);
+
+var min = Math.min;
+
+// `Array.prototype.copyWithin` method implementation
+// https://tc39.es/ecma262/#sec-array.prototype.copywithin
+// eslint-disable-next-line es/no-array-prototype-copywithin -- safe
+module.exports = [].copyWithin || function copyWithin(target /* = 0 */, start /* = 0, end = @length */) {
+  var O = toObject(this);
+  var len = lengthOfArrayLike(O);
+  var to = toAbsoluteIndex(target, len);
+  var from = toAbsoluteIndex(start, len);
+  var end = arguments.length > 2 ? arguments[2] : undefined;
+  var count = min((end === undefined ? len : toAbsoluteIndex(end, len)) - from, len - to);
+  var inc = 1;
+  if (from < to && to < from + count) {
+    inc = -1;
+    from += count - 1;
+    to += count - 1;
+  }
+  while (count-- > 0) {
+    if (from in O) O[to] = O[from];
+    else delete O[to];
+    to += inc;
+    from += inc;
+  } return O;
+};
+
+
+/***/ }),
+
+/***/ 92920:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+
+// (C) 1995-2013 Jean-loup Gailly and Mark Adler
+// (C) 2014-2017 Vitaly Puzrin and Andrey Tupitsin
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//   claim that you wrote the original software. If you use this software
+//   in a product, an acknowledgment in the product documentation would be
+//   appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//   misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
+
+var utils = __webpack_require__(72519);
+
+var MAXBITS = 15;
+var ENOUGH_LENS = 852;
+var ENOUGH_DISTS = 592;
+//var ENOUGH = (ENOUGH_LENS+ENOUGH_DISTS);
+
+var CODES = 0;
+var LENS = 1;
+var DISTS = 2;
+
+var lbase = [ /* Length codes 257..285 base */
+  3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31,
+  35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0
+];
+
+var lext = [ /* Length codes 257..285 extra */
+  16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18,
+  19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 72, 78
+];
+
+var dbase = [ /* Distance codes 0..29 base */
+  1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
+  257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145,
+  8193, 12289, 16385, 24577, 0, 0
+];
+
+var dext = [ /* Distance codes 0..29 extra */
+  16, 16, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22,
+  23, 23, 24, 24, 25, 25, 26, 26, 27, 27,
+  28, 28, 29, 29, 64, 64
+];
+
+module.exports = function inflate_table(type, lens, lens_index, codes, table, table_index, work, opts)
+{
+  var bits = opts.bits;
+      //here = opts.here; /* table entry for duplication */
+
+  var len = 0;               /* a code's length in bits */
+  var sym = 0;               /* index of code symbols */
+  var min = 0, max = 0;          /* minimum and maximum code lengths */
+  var root = 0;              /* number of index bits for root table */
+  var curr = 0;              /* number of index bits for current table */
+  var drop = 0;              /* code bits to drop for sub-table */
+  var left = 0;                   /* number of prefix codes available */
+  var used = 0;              /* code entries in table used */
+  var huff = 0;              /* Huffman code */
+  var incr;              /* for incrementing code, index */
+  var fill;              /* index for replicating entries */
+  var low;               /* low bits for current root entry */
+  var mask;              /* mask for low root bits */
+  var next;             /* next available space in table */
+  var base = null;     /* base value table to use */
+  var base_index = 0;
+//  var shoextra;    /* extra bits table to use */
+  var end;                    /* use base and extra for symbol > end */
+  var count = new utils.Buf16(MAXBITS + 1); //[MAXBITS+1];    /* number of codes of each length */
+  var offs = new utils.Buf16(MAXBITS + 1); //[MAXBITS+1];     /* offsets in table for each length */
+  var extra = null;
+  var extra_index = 0;
+
+  var here_bits, here_op, here_val;
+
+  /*
+   Process a set of code lengths to create a canonical Huffman code.  The
+   code lengths are lens[0..codes-1].  Each length corresponds to the
+   symbols 0..codes-1.  The Huffman code is generated by first sorting the
+   symbols by length from short to long, and retaining the symbol order
+   for codes with equal lengths.  Then the code starts with all zero bits
+   for the first code of the shortest length, and the codes are integer
+   increments for the same length, and zeros are appended as the length
+   increases.  For the deflate format, these bits are stored backwards
+   from their more natural integer increment ordering, and so when the
+   decoding tables are built in the large loop below, the integer codes
+   are incremented backwards.
+
+   This routine assumes, but does not check, that all of the entries in
+   lens[] are in the range 0..MAXBITS.  The caller must assure this.
+   1..MAXBITS is interpreted as that code length.  zero means that that
+   symbol does not occur in this code.
+
+   The codes are sorted by computing a count of codes for each length,
+   creating from that a table of starting indices for each length in the
+   sorted table, and then entering the symbols in order in the sorted
+   table.  The sorted table is work[], with that space being provided by
+   the caller.
+
+   The length counts are used for other purposes as well, i.e. finding
+   the minimum and maximum length codes, determining if there are any
+   codes at all, checking for a valid set of lengths, and looking ahead
+   at length counts to determine sub-table sizes when building the
+   decoding tables.
+   */
+
+  /* accumulate lengths for codes (assumes lens[] all in 0..MAXBITS) */
+  for (len = 0; len <= MAXBITS; len++) {
+    count[len] = 0;
+  }
+  for (sym = 0; sym < codes; sym++) {
+    count[lens[lens_index + sym]]++;
+  }
+
+  /* bound code lengths, force root to be within code lengths */
+  root = bits;
+  for (max = MAXBITS; max >= 1; max--) {
+    if (count[max] !== 0) { break; }
+  }
+  if (root > max) {
+    root = max;
+  }
+  if (max === 0) {                     /* no symbols to code at all */
+    //table.op[opts.table_index] = 64;  //here.op = (var char)64;    /* invalid code marker */
+    //table.bits[opts.table_index] = 1;   //here.bits = (var char)1;
+    //table.val[opts.table_index++] = 0;   //here.val = (var short)0;
+    table[table_index++] = (1 << 24) | (64 << 16) | 0;
+
+
+    //table.op[opts.table_index] = 64;
+    //table.bits[opts.table_index] = 1;
+    //table.val[opts.table_index++] = 0;
+    table[table_index++] = (1 << 24) | (64 << 16) | 0;
+
+    opts.bits = 1;
+    return 0;     /* no symbols, but wait for decoding to report error */
+  }
+  for (min = 1; min < max; min++) {
+    if (count[min] !== 0) { break; }
+  }
+  if (root < min) {
+    root = min;
+  }
+
+  /* check for an over-subscribed or incomplete set of lengths */
+  left = 1;
+  for (len = 1; len <= MAXBITS; len++) {
+    left <<= 1;
+    left -= count[len];
+    if (left < 0) {
+      return -1;
+    }        /* over-subscribed */
+  }
+  if (left > 0 && (type === CODES || max !== 1)) {
+    return -1;                      /* incomplete set */
+  }
+
+  /* generate offsets into symbol table for each length for sorting */
+  offs[1] = 0;
+  for (len = 1; len < MAXBITS; len++) {
+    offs[len + 1] = offs[len] + count[len];
+  }
+
+  /* sort symbols by length, by symbol order within each length */
+  for (sym = 0; sym < codes; sym++) {
+    if (lens[lens_index + sym] !== 0) {
+      work[offs[lens[lens_index + sym]]++] = sym;
+    }
+  }
+
+  /*
+   Create and fill in decoding tables.  In this loop, the table being
+   filled is at next and has curr index bits.  The code being used is huff
+   with length len.  That code is converted to an index by dropping drop
+   bits off of the bottom.  For codes where len is less than drop + curr,
+   those top drop + curr - len bits are incremented through all values to
+   fill the table with replicated entries.
+
+   root is the number of index bits for the root table.  When len exceeds
+   root, sub-tables are created pointed to by the root entry with an index
+   of the low root bits of huff.  This is saved in low to check for when a
+   new sub-table should be started.  drop is zero when the root table is
+   being filled, and drop is root when sub-tables are being filled.
+
+   When a new sub-table is needed, it is necessary to look ahead in the
+   code lengths to determine what size sub-table is needed.  The length
+   counts are used for this, and so count[] is decremented as codes are
+   entered in the tables.
+
+   used keeps track of how many table entries have been allocated from the
+   provided *table space.  It is checked for LENS and DIST tables against
+   the constants ENOUGH_LENS and ENOUGH_DISTS to guard against changes in
+   the initial root table size constants.  See the comments in inftrees.h
+   for more information.
+
+   sym increments through all symbols, and the loop terminates when
+   all codes of length max, i.e. all codes, have been processed.  This
+   routine permits incomplete codes, so another loop after this one fills
+   in the rest of the decoding tables with invalid code markers.
+   */
+
+  /* set up for code type */
+  // poor man optimization - use if-else instead of switch,
+  // to avoid deopts in old v8
+  if (type === CODES) {
+    base = extra = work;    /* dummy value--not used */
+    end = 19;
+
+  } else if (type === LENS) {
+    base = lbase;
+    base_index -= 257;
+    extra = lext;
+    extra_index -= 257;
+    end = 256;
+
+  } else {                    /* DISTS */
+    base = dbase;
+    extra = dext;
+    end = -1;
+  }
+
+  /* initialize opts for loop */
+  huff = 0;                   /* starting code */
+  sym = 0;                    /* starting code symbol */
+  len = min;                  /* starting code length */
+  next = table_index;              /* current table to fill in */
+  curr = root;                /* current table index bits */
+  drop = 0;                   /* current bits to drop from code for index */
+  low = -1;                   /* trigger new sub-table when len > root */
+  used = 1 << root;          /* use root table entries */
+  mask = used - 1;            /* mask for comparing low */
+
+  /* check available table space */
+  if ((type === LENS && used > ENOUGH_LENS) ||
+    (type === DISTS && used > ENOUGH_DISTS)) {
+    return 1;
+  }
+
+  /* process all codes and make table entries */
+  for (;;) {
+    /* create table entry */
+    here_bits = len - drop;
+    if (work[sym] < end) {
+      here_op = 0;
+      here_val = work[sym];
+    }
+    else if (work[sym] > end) {
+      here_op = extra[extra_index + work[sym]];
+      here_val = base[base_index + work[sym]];
+    }
+    else {
+      here_op = 32 + 64;         /* end of block */
+      here_val = 0;
+    }
+
+    /* replicate for those indices with low len bits equal to huff */
+    incr = 1 << (len - drop);
+    fill = 1 << curr;
+    min = fill;                 /* save offset to next table */
+    do {
+      fill -= incr;
+      table[next + (huff >> drop) + fill] = (here_bits << 24) | (here_op << 16) | here_val |0;
+    } while (fill !== 0);
+
+    /* backwards increment the len-bit code huff */
+    incr = 1 << (len - 1);
+    while (huff & incr) {
+      incr >>= 1;
+    }
+    if (incr !== 0) {
+      huff &= incr - 1;
+      huff += incr;
+    } else {
+      huff = 0;
+    }
+
+    /* go to next symbol, update count, len */
+    sym++;
+    if (--count[len] === 0) {
+      if (len === max) { break; }
+      len = lens[lens_index + work[sym]];
+    }
+
+    /* create new sub-table if needed */
+    if (len > root && (huff & mask) !== low) {
+      /* if first time, transition to sub-tables */
+      if (drop === 0) {
+        drop = root;
+      }
+
+      /* increment past last table */
+      next += min;            /* here min is 1 << curr */
+
+      /* determine length of next table */
+      curr = len - drop;
+      left = 1 << curr;
+      while (curr + drop < max) {
+        left -= count[curr + drop];
+        if (left <= 0) { break; }
+        curr++;
+        left <<= 1;
+      }
+
+      /* check for enough space */
+      used += 1 << curr;
+      if ((type === LENS && used > ENOUGH_LENS) ||
+        (type === DISTS && used > ENOUGH_DISTS)) {
+        return 1;
+      }
+
+      /* point entry in root table to sub-table */
+      low = huff & mask;
+      /*table.op[low] = curr;
+      table.bits[low] = root;
+      table.val[low] = next - opts.table_index;*/
+      table[low] = (root << 24) | (curr << 16) | (next - table_index) |0;
+    }
+  }
+
+  /* fill in remaining table entry if code is incomplete (guaranteed to have
+   at most one remaining entry, since if the code is incomplete, the
+   maximum code length that was allowed to get this far is one bit) */
+  if (huff !== 0) {
+    //table.op[next + huff] = 64;            /* invalid code marker */
+    //table.bits[next + huff] = len - drop;
+    //table.val[next + huff] = 0;
+    table[next + huff] = ((len - drop) << 24) | (64 << 16) |0;
+  }
+
+  /* set return parameters */
+  //opts.table_index += used;
+  opts.bits = root;
+  return 0;
+};
+
+
+/***/ }),
+
+/***/ 93143:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+/* provided dependency */ var process = __webpack_require__(9964);
+/* eslint-disable node/no-deprecated-api */
+
+
+
+__webpack_require__(41584);
+__webpack_require__(81755);
+__webpack_require__(8953);
+__webpack_require__(14032);
+__webpack_require__(56912);
+__webpack_require__(73663);
+__webpack_require__(29883);
+__webpack_require__(35471);
+__webpack_require__(21012);
+__webpack_require__(88997);
+__webpack_require__(97464);
+__webpack_require__(2857);
+__webpack_require__(83326);
+__webpack_require__(94715);
+__webpack_require__(13624);
+__webpack_require__(91132);
+__webpack_require__(62514);
+__webpack_require__(24597);
+__webpack_require__(88042);
+__webpack_require__(4660);
+__webpack_require__(92451);
+__webpack_require__(44206);
+__webpack_require__(66288);
+__webpack_require__(13250);
+__webpack_require__(3858);
+__webpack_require__(84538);
+__webpack_require__(64793);
+__webpack_require__(74202);
+__webpack_require__(52529);
+var buffer = __webpack_require__(14598);
+var Buffer = buffer.Buffer;
+var safer = {};
+var key;
+for (key in buffer) {
+  if (!buffer.hasOwnProperty(key)) continue;
+  if (key === 'SlowBuffer' || key === 'Buffer') continue;
+  safer[key] = buffer[key];
+}
+var Safer = safer.Buffer = {};
+for (key in Buffer) {
+  if (!Buffer.hasOwnProperty(key)) continue;
+  if (key === 'allocUnsafe' || key === 'allocUnsafeSlow') continue;
+  Safer[key] = Buffer[key];
+}
+safer.Buffer.prototype = Buffer.prototype;
+if (!Safer.from || Safer.from === Uint8Array.from) {
+  Safer.from = function (value, encodingOrOffset, length) {
+    if (typeof value === 'number') {
+      throw new TypeError('The "value" argument must not be of type number. Received type ' + typeof value);
+    }
+    if (value && typeof value.length === 'undefined') {
+      throw new TypeError('The first argument must be one of type string, Buffer, ArrayBuffer, Array, or Array-like Object. Received type ' + typeof value);
+    }
+    return Buffer(value, encodingOrOffset, length);
+  };
+}
+if (!Safer.alloc) {
+  Safer.alloc = function (size, fill, encoding) {
+    if (typeof size !== 'number') {
+      throw new TypeError('The "size" argument must be of type number. Received type ' + typeof size);
+    }
+    if (size < 0 || size >= 2 * (1 << 30)) {
+      throw new RangeError('The value "' + size + '" is invalid for option "size"');
+    }
+    var buf = Buffer(size);
+    if (!fill || fill.length === 0) {
+      buf.fill(0);
+    } else if (typeof encoding === 'string') {
+      buf.fill(fill, encoding);
+    } else {
+      buf.fill(fill);
+    }
+    return buf;
+  };
+}
+if (!safer.kStringMaxLength) {
+  try {
+    safer.kStringMaxLength = process.binding('buffer').kStringMaxLength;
+  } catch (e) {
+    // we can't determine kStringMaxLength in environments where process.binding
+    // is unsupported, so let's not set it
+  }
+}
+if (!safer.constants) {
+  safer.constants = {
+    MAX_LENGTH: safer.kMaxLength
+  };
+  if (safer.kStringMaxLength) {
+    safer.constants.MAX_STRING_LENGTH = safer.kStringMaxLength;
+  }
+}
+module.exports = safer;
+
+/***/ }),
+
+/***/ 93415:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+/* provided dependency */ var Buffer = __webpack_require__(14598)["Buffer"];
+
+
+var fs = __webpack_require__(48181);
+
+function ImageMeasure(pdfKitDoc, imageDictionary) {
+	this.pdfKitDoc = pdfKitDoc;
+	this.imageDictionary = imageDictionary || {};
+}
+
+ImageMeasure.prototype.measureImage = function (src) {
+	var image;
+	var that = this;
+
+	if (!this.pdfKitDoc._imageRegistry[src]) {
+		try {
+			image = this.pdfKitDoc.openImage(realImageSrc(src));
+			if (!image) {
+				throw 'No image';
+			}
+		} catch (error) {
+			throw 'Invalid image: ' + error.toString() + '\nImages dictionary should contain dataURL entries (or local file paths in node.js)';
+		}
+		image.embed(this.pdfKitDoc);
+		this.pdfKitDoc._imageRegistry[src] = image;
+	} else {
+		image = this.pdfKitDoc._imageRegistry[src];
+	}
+
+	var imageSize = { width: image.width, height: image.height };
+
+	// If EXIF orientation calls for it, swap width and height
+	if (image.orientation > 4) {
+		imageSize = { width: image.height, height: image.width };
+	}
+
+	return imageSize;
+
+	function realImageSrc(src) {
+		var img = that.imageDictionary[src];
+
+		if (!img) {
+			return src;
+		}
+
+		if (typeof img === 'object') {
+			throw 'Not supported image definition: ' + JSON.stringify(img);
+		}
+
+		if (fs.existsSync(img)) {
+			return fs.readFileSync(img);
+		}
+
+		var index = img.indexOf('base64,');
+		if (index < 0) {
+			return that.imageDictionary[src];
+		}
+
+		return Buffer.from(img.substring(index + 7), 'base64');
+	}
+};
+
+module.exports = ImageMeasure;
+
+
+/***/ }),
+
+/***/ 93666:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+var global = __webpack_require__(32010);
+var isRegExp = __webpack_require__(28831);
+
+var TypeError = global.TypeError;
+
+module.exports = function (it) {
+  if (isRegExp(it)) {
+    throw TypeError("The method doesn't accept regular expressions");
+  } return it;
+};
+
+
+/***/ }),
+
+/***/ 93975:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+var uncurryThis = __webpack_require__(38347);
+
+var toString = uncurryThis({}.toString);
+var stringSlice = uncurryThis(''.slice);
+
+module.exports = function (it) {
+  return stringSlice(toString(it), 8, -1);
+};
+
+
+/***/ }),
+
+/***/ 94119:
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+;
+(function (root, factory, undef) {
+  if (true) {
+    // CommonJS
+    module.exports = exports = factory(__webpack_require__(48352), __webpack_require__(18909), __webpack_require__(14287), __webpack_require__(2256), __webpack_require__(66947), __webpack_require__(16190), __webpack_require__(68319), __webpack_require__(37146), __webpack_require__(66664), __webpack_require__(11905), __webpack_require__(51965), __webpack_require__(27772), __webpack_require__(16720), __webpack_require__(1239), __webpack_require__(4420), __webpack_require__(44130), __webpack_require__(82747), __webpack_require__(51270), __webpack_require__(62256), __webpack_require__(48306), __webpack_require__(65881), __webpack_require__(6564), __webpack_require__(29819), __webpack_require__(28164), __webpack_require__(91780), __webpack_require__(14623), __webpack_require__(85628), __webpack_require__(61807), __webpack_require__(73948), __webpack_require__(22956), __webpack_require__(24107), __webpack_require__(95086), __webpack_require__(6819), __webpack_require__(75891), __webpack_require__(73517));
+  } else {}
+})(void 0, function (CryptoJS) {
+  return CryptoJS;
+});
+
+/***/ }),
+
+/***/ 94578:
+/***/ (function(module) {
+
+// `IsCallable` abstract operation
+// https://tc39.es/ecma262/#sec-iscallable
+module.exports = function (argument) {
+  return typeof argument == 'function';
+};
+
+
+/***/ }),
+
+/***/ 94712:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+var global = __webpack_require__(32010);
+var DOMIterables = __webpack_require__(23327);
+var DOMTokenListPrototype = __webpack_require__(67797);
+var ArrayIteratorMethods = __webpack_require__(81755);
+var createNonEnumerableProperty = __webpack_require__(48914);
+var wellKnownSymbol = __webpack_require__(38688);
+
+var ITERATOR = wellKnownSymbol('iterator');
+var TO_STRING_TAG = wellKnownSymbol('toStringTag');
+var ArrayValues = ArrayIteratorMethods.values;
+
+var handlePrototype = function (CollectionPrototype, COLLECTION_NAME) {
+  if (CollectionPrototype) {
+    // some Chrome versions have non-configurable methods on DOMTokenList
+    if (CollectionPrototype[ITERATOR] !== ArrayValues) try {
+      createNonEnumerableProperty(CollectionPrototype, ITERATOR, ArrayValues);
+    } catch (error) {
+      CollectionPrototype[ITERATOR] = ArrayValues;
+    }
+    if (!CollectionPrototype[TO_STRING_TAG]) {
+      createNonEnumerableProperty(CollectionPrototype, TO_STRING_TAG, COLLECTION_NAME);
+    }
+    if (DOMIterables[COLLECTION_NAME]) for (var METHOD_NAME in ArrayIteratorMethods) {
+      // some Chrome versions have non-configurable methods on DOMTokenList
+      if (CollectionPrototype[METHOD_NAME] !== ArrayIteratorMethods[METHOD_NAME]) try {
+        createNonEnumerableProperty(CollectionPrototype, METHOD_NAME, ArrayIteratorMethods[METHOD_NAME]);
+      } catch (error) {
+        CollectionPrototype[METHOD_NAME] = ArrayIteratorMethods[METHOD_NAME];
+      }
+    }
+  }
+};
+
+for (var COLLECTION_NAME in DOMIterables) {
+  handlePrototype(global[COLLECTION_NAME] && global[COLLECTION_NAME].prototype, COLLECTION_NAME);
+}
+
+handlePrototype(DOMTokenListPrototype, 'DOMTokenList');
+
+
+/***/ }),
+
+/***/ 94715:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+var ArrayBufferViewCore = __webpack_require__(59754);
+var $includes = (__webpack_require__(12636).includes);
+
+var aTypedArray = ArrayBufferViewCore.aTypedArray;
+var exportTypedArrayMethod = ArrayBufferViewCore.exportTypedArrayMethod;
+
+// `%TypedArray%.prototype.includes` method
+// https://tc39.es/ecma262/#sec-%typedarray%.prototype.includes
+exportTypedArrayMethod('includes', function includes(searchElement /* , fromIndex */) {
+  return $includes(aTypedArray(this), searchElement, arguments.length > 1 ? arguments[1] : undefined);
+});
+
+
+/***/ }),
+
+/***/ 94845:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+var $ = __webpack_require__(56475);
+var uncurryThis = __webpack_require__(38347);
+var IndexedObject = __webpack_require__(7514);
+var toIndexedObject = __webpack_require__(98086);
+var arrayMethodIsStrict = __webpack_require__(81007);
+
+var un$Join = uncurryThis([].join);
+
+var ES3_STRINGS = IndexedObject != Object;
+var STRICT_METHOD = arrayMethodIsStrict('join', ',');
+
+// `Array.prototype.join` method
+// https://tc39.es/ecma262/#sec-array.prototype.join
+$({ target: 'Array', proto: true, forced: ES3_STRINGS || !STRICT_METHOD }, {
+  join: function join(separator) {
+    return un$Join(toIndexedObject(this), separator === undefined ? ',' : separator);
+  }
+});
+
+
+/***/ }),
+
+/***/ 94910:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+var $ = __webpack_require__(56475);
+var global = __webpack_require__(32010);
+var isPrototypeOf = __webpack_require__(70176);
+var getPrototypeOf = __webpack_require__(69548);
+var setPrototypeOf = __webpack_require__(3840);
+var copyConstructorProperties = __webpack_require__(2675);
+var create = __webpack_require__(10819);
+var createNonEnumerableProperty = __webpack_require__(48914);
+var createPropertyDescriptor = __webpack_require__(97841);
+var clearErrorStack = __webpack_require__(34074);
+var installErrorCause = __webpack_require__(87811);
+var iterate = __webpack_require__(80383);
+var normalizeStringArgument = __webpack_require__(86392);
+var ERROR_STACK_INSTALLABLE = __webpack_require__(45144);
+
+var Error = global.Error;
+var push = [].push;
+
+var $AggregateError = function AggregateError(errors, message /* , options */) {
+  var that = isPrototypeOf(AggregateErrorPrototype, this) ? this : create(AggregateErrorPrototype);
+  var options = arguments.length > 2 ? arguments[2] : undefined;
+  if (setPrototypeOf) {
+    that = setPrototypeOf(new Error(undefined), getPrototypeOf(that));
+  }
+  createNonEnumerableProperty(that, 'message', normalizeStringArgument(message, ''));
+  if (ERROR_STACK_INSTALLABLE) createNonEnumerableProperty(that, 'stack', clearErrorStack(that.stack, 1));
+  installErrorCause(that, options);
+  var errorsArray = [];
+  iterate(errors, push, { that: errorsArray });
+  createNonEnumerableProperty(that, 'errors', errorsArray);
+  return that;
+};
+
+if (setPrototypeOf) setPrototypeOf($AggregateError, Error);
+else copyConstructorProperties($AggregateError, Error);
+
+var AggregateErrorPrototype = $AggregateError.prototype = create(Error.prototype, {
+  constructor: createPropertyDescriptor(1, $AggregateError),
+  message: createPropertyDescriptor(1, ''),
+  name: createPropertyDescriptor(1, 'AggregateError')
+});
+
+// `AggregateError` constructor
+// https://tc39.es/ecma262/#sec-aggregate-error-constructor
+$({ global: true }, {
+  AggregateError: $AggregateError
+});
+
+
+/***/ }),
+
+/***/ 95053:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+var classof = __webpack_require__(93975);
+var global = __webpack_require__(32010);
+
+module.exports = classof(global.process) == 'process';
+
+
+/***/ }),
+
+/***/ 95086:
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+__webpack_require__(14032);
+__webpack_require__(68067);
+;
+(function (root, factory, undef) {
+  if (true) {
+    // CommonJS
+    module.exports = exports = factory(__webpack_require__(48352), __webpack_require__(66947), __webpack_require__(68319), __webpack_require__(82747), __webpack_require__(51270));
+  } else {}
+})(void 0, function (CryptoJS) {
+  (function () {
+    // Shortcuts
+    var C = CryptoJS;
+    var C_lib = C.lib;
+    var StreamCipher = C_lib.StreamCipher;
+    var C_algo = C.algo;
+
+    /**
+     * RC4 stream cipher algorithm.
+     */
+    var RC4 = C_algo.RC4 = StreamCipher.extend({
+      _doReset: function _doReset() {
+        // Shortcuts
+        var key = this._key;
+        var keyWords = key.words;
+        var keySigBytes = key.sigBytes;
+
+        // Init sbox
+        var S = this._S = [];
+        for (var i = 0; i < 256; i++) {
+          S[i] = i;
+        }
+
+        // Key setup
+        for (var i = 0, j = 0; i < 256; i++) {
+          var keyByteIndex = i % keySigBytes;
+          var keyByte = keyWords[keyByteIndex >>> 2] >>> 24 - keyByteIndex % 4 * 8 & 0xff;
+          j = (j + S[i] + keyByte) % 256;
+
+          // Swap
+          var t = S[i];
+          S[i] = S[j];
+          S[j] = t;
+        }
+
+        // Counters
+        this._i = this._j = 0;
+      },
+      _doProcessBlock: function _doProcessBlock(M, offset) {
+        M[offset] ^= generateKeystreamWord.call(this);
+      },
+      keySize: 256 / 32,
+      ivSize: 0
+    });
+    function generateKeystreamWord() {
+      // Shortcuts
+      var S = this._S;
+      var i = this._i;
+      var j = this._j;
+
+      // Generate keystream word
+      var keystreamWord = 0;
+      for (var n = 0; n < 4; n++) {
+        i = (i + 1) % 256;
+        j = (j + S[i]) % 256;
+
+        // Swap
+        var t = S[i];
+        S[i] = S[j];
+        S[j] = t;
+        keystreamWord |= S[(S[i] + S[j]) % 256] << 24 - n * 8;
+      }
+
+      // Update counters
+      this._i = i;
+      this._j = j;
+      return keystreamWord;
+    }
+
+    /**
+     * Shortcut functions to the cipher's object interface.
+     *
+     * @example
+     *
+     *     var ciphertext = CryptoJS.RC4.encrypt(message, key, cfg);
+     *     var plaintext  = CryptoJS.RC4.decrypt(ciphertext, key, cfg);
+     */
+    C.RC4 = StreamCipher._createHelper(RC4);
+
+    /**
+     * Modified RC4 stream cipher algorithm.
+     */
+    var RC4Drop = C_algo.RC4Drop = RC4.extend({
+      /**
+       * Configuration options.
+       *
+       * @property {number} drop The number of keystream words to drop. Default 192
+       */
+      cfg: RC4.cfg.extend({
+        drop: 192
+      }),
+      _doReset: function _doReset() {
+        RC4._doReset.call(this);
+
+        // Drop
+        for (var i = this.cfg.drop; i > 0; i--) {
+          generateKeystreamWord.call(this);
+        }
+      }
+    });
+
+    /**
+     * Shortcut functions to the cipher's object interface.
+     *
+     * @example
+     *
+     *     var ciphertext = CryptoJS.RC4Drop.encrypt(message, key, cfg);
+     *     var plaintext  = CryptoJS.RC4Drop.decrypt(ciphertext, key, cfg);
+     */
+    C.RC4Drop = StreamCipher._createHelper(RC4Drop);
+  })();
+  return CryptoJS.RC4;
+});
+
+/***/ }),
+
+/***/ 95291:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+/* provided dependency */ var Buffer = __webpack_require__(14598)["Buffer"];
+
+
+__webpack_require__(41584);
+__webpack_require__(20731);
+__webpack_require__(61726);
+__webpack_require__(46467);
+function _inheritsLoose(t, o) { t.prototype = Object.create(o.prototype), t.prototype.constructor = t, _setPrototypeOf(t, o); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var iconv;
+var stream = __webpack_require__(9760);
+var DecodeStream = __webpack_require__(69591);
+try {
+  iconv = __webpack_require__(54171);
+} catch (error) {}
+var EncodeStream = /*#__PURE__*/function (_stream$Readable) {
+  function EncodeStream(bufferSize) {
+    var _this;
+    if (bufferSize === void 0) {
+      bufferSize = 65536;
+    }
+    _this = _stream$Readable.apply(this, arguments) || this;
+    _this.buffer = Buffer.alloc(bufferSize);
+    _this.bufferOffset = 0;
+    _this.pos = 0;
+    return _this;
+  }
+
+  // do nothing, required by node
+  _inheritsLoose(EncodeStream, _stream$Readable);
+  var _proto = EncodeStream.prototype;
+  _proto._read = function _read() {};
+  _proto.ensure = function ensure(bytes) {
+    if (this.bufferOffset + bytes > this.buffer.length) {
+      return this.flush();
+    }
+  };
+  _proto.flush = function flush() {
+    if (this.bufferOffset > 0) {
+      this.push(Buffer.from(this.buffer.slice(0, this.bufferOffset)));
+      return this.bufferOffset = 0;
+    }
+  };
+  _proto.writeBuffer = function writeBuffer(buffer) {
+    this.flush();
+    this.push(buffer);
+    return this.pos += buffer.length;
+  };
+  _proto.writeString = function writeString(string, encoding) {
+    if (encoding === void 0) {
+      encoding = 'ascii';
+    }
+    switch (encoding) {
+      case 'utf16le':
+      case 'ucs2':
+      case 'utf8':
+      case 'ascii':
+        return this.writeBuffer(Buffer.from(string, encoding));
+      case 'utf16be':
+        var buf = Buffer.from(string, 'utf16le');
+
+        // swap the bytes
+        for (var i = 0, end = buf.length - 1; i < end; i += 2) {
+          var byte = buf[i];
+          buf[i] = buf[i + 1];
+          buf[i + 1] = byte;
+        }
+        return this.writeBuffer(buf);
+      default:
+        if (iconv) {
+          return this.writeBuffer(iconv.encode(string, encoding));
+        } else {
+          throw new Error('Install iconv-lite to enable additional string encodings.');
+        }
+    }
+  };
+  _proto.writeUInt24BE = function writeUInt24BE(val) {
+    this.ensure(3);
+    this.buffer[this.bufferOffset++] = val >>> 16 & 0xff;
+    this.buffer[this.bufferOffset++] = val >>> 8 & 0xff;
+    this.buffer[this.bufferOffset++] = val & 0xff;
+    return this.pos += 3;
+  };
+  _proto.writeUInt24LE = function writeUInt24LE(val) {
+    this.ensure(3);
+    this.buffer[this.bufferOffset++] = val & 0xff;
+    this.buffer[this.bufferOffset++] = val >>> 8 & 0xff;
+    this.buffer[this.bufferOffset++] = val >>> 16 & 0xff;
+    return this.pos += 3;
+  };
+  _proto.writeInt24BE = function writeInt24BE(val) {
+    if (val >= 0) {
+      return this.writeUInt24BE(val);
+    } else {
+      return this.writeUInt24BE(val + 0xffffff + 1);
+    }
+  };
+  _proto.writeInt24LE = function writeInt24LE(val) {
+    if (val >= 0) {
+      return this.writeUInt24LE(val);
+    } else {
+      return this.writeUInt24LE(val + 0xffffff + 1);
+    }
+  };
+  _proto.fill = function fill(val, length) {
+    if (length < this.buffer.length) {
+      this.ensure(length);
+      this.buffer.fill(val, this.bufferOffset, this.bufferOffset + length);
+      this.bufferOffset += length;
+      return this.pos += length;
+    } else {
+      var buf = Buffer.alloc(length);
+      buf.fill(val);
+      return this.writeBuffer(buf);
+    }
+  };
+  _proto.end = function end() {
+    this.flush();
+    return this.push(null);
+  };
+  return EncodeStream;
+}(stream.Readable);
+var _loop = function _loop(key) {
+  if (key.slice(0, 5) === 'write') {
+    var bytes = +DecodeStream.TYPES[key.replace(/write|[BL]E/g, '')];
+    EncodeStream.prototype[key] = function (value) {
+      this.ensure(bytes);
+      this.buffer[key](value, this.bufferOffset);
+      this.bufferOffset += bytes;
+      return this.pos += bytes;
+    };
+  }
+};
+for (var key in Buffer.prototype) {
+  _loop(key);
+}
+module.exports = EncodeStream;
+
+/***/ }),
+
+/***/ 95304:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+
+var define = __webpack_require__(89295);
+var hasDescriptors = __webpack_require__(18890)();
+var functionsHaveConfigurableNames = (__webpack_require__(61084).functionsHaveConfigurableNames)();
+
+var $TypeError = __webpack_require__(96785);
+
+/** @type {import('.')} */
+module.exports = function setFunctionName(fn, name) {
+	if (typeof fn !== 'function') {
+		throw new $TypeError('`fn` is not a function');
+	}
+	var loose = arguments.length > 2 && !!arguments[2];
+	if (!loose || functionsHaveConfigurableNames) {
+		if (hasDescriptors) {
+			define(/** @type {Parameters<define>[0]} */ (fn), 'name', name, true, true);
+		} else {
+			define(/** @type {Parameters<define>[0]} */ (fn), 'name', name);
+		}
+	}
+	return fn;
+};
+
+
+/***/ }),
+
+/***/ 95717:
+/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+
+var global = __webpack_require__(32010);
+var bind = __webpack_require__(25567);
+var call = __webpack_require__(2834);
+var toObject = __webpack_require__(43162);
+var callWithSafeIterationClosing = __webpack_require__(97738);
+var isArrayIteratorMethod = __webpack_require__(89564);
+var isConstructor = __webpack_require__(20884);
+var lengthOfArrayLike = __webpack_require__(45495);
+var createProperty = __webpack_require__(38639);
+var getIterator = __webpack_require__(15892);
+var getIteratorMethod = __webpack_require__(13872);
+
+var Array = global.Array;
+
+// `Array.from` method implementation
+// https://tc39.es/ecma262/#sec-array.from
+module.exports = function from(arrayLike /* , mapfn = undefined, thisArg = undefined */) {
+  var O = toObject(arrayLike);
+  var IS_CONSTRUCTOR = isConstructor(this);
+  var argumentsLength = arguments.length;
+  var mapfn = argumentsLength > 1 ? arguments[1] : undefined;
+  var mapping = mapfn !== undefined;
+  if (mapping) mapfn = bind(mapfn, argumentsLength > 2 ? arguments[2] : undefined);
+  var iteratorMethod = getIteratorMethod(O);
+  var index = 0;
+  var length, result, step, iterator, next, value;
+  // if the target is not iterable or it's an array with the default iterator - use a simple case
+  if (iteratorMethod && !(this == Array && isArrayIteratorMethod(iteratorMethod))) {
+    iterator = getIterator(O, iteratorMethod);
+    next = iterator.next;
+    result = IS_CONSTRUCTOR ? new this() : [];
+    for (;!(step = call(next, iterator)).done; index++) {
+      value = mapping ? callWithSafeIterationClosing(iterator, mapfn, [step.value, index], true) : step.value;
+      createProperty(result, index, value);
+    }
+  } else {
+    length = lengthOfArrayLike(O);
+    result = IS_CONSTRUCTOR ? new this(length) : Array(length);
+    for (;length > index; index++) {
+      value = mapping ? mapfn(O[index], index) : O[index];
+      createProperty(result, index, value);
+    }
+  }
+  result.length = index;
+  return result;
+};
+
+
+/***/ }),
+
+/***/ 95756:
+/***/ (function(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
+
+var createTypedArrayConstructor = __webpack_require__(98828);
+
+// `Int32Array` constructor
+// https://tc39.es/ecma262/#sec-typedarray-objects
+createTypedArrayConstructor('Int32', function (init) {
+  return function Int32Array(data, byteOffset, length) {
+    return init(this, data, byteOffset, length);
+  };
+});
+
+
+/***/ }),
+
+/***/ 95892:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+var global = __webpack_require__(32010);
+var DESCRIPTORS = __webpack_require__(15567);
+var IE8_DOM_DEFINE = __webpack_require__(18904);
+var anObject = __webpack_require__(34984);
+var toPropertyKey = __webpack_require__(63918);
+
+var TypeError = global.TypeError;
+// eslint-disable-next-line es/no-object-defineproperty -- safe
+var $defineProperty = Object.defineProperty;
+
+// `Object.defineProperty` method
+// https://tc39.es/ecma262/#sec-object.defineproperty
+exports.f = DESCRIPTORS ? $defineProperty : function defineProperty(O, P, Attributes) {
+  anObject(O);
+  P = toPropertyKey(P);
+  anObject(Attributes);
+  if (IE8_DOM_DEFINE) try {
+    return $defineProperty(O, P, Attributes);
+  } catch (error) { /* empty */ }
+  if ('get' in Attributes || 'set' in Attributes) throw TypeError('Accessors not supported');
+  if ('value' in Attributes) O[P] = Attributes.value;
+  return O;
+};
+
+
+/***/ }),
+
+/***/ 96395:
+/***/ (function(module) {
+
+"use strict";
+
+
+// (C) 1995-2013 Jean-loup Gailly and Mark Adler
+// (C) 2014-2017 Vitaly Puzrin and Andrey Tupitsin
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//   claim that you wrote the original software. If you use this software
+//   in a product, an acknowledgment in the product documentation would be
+//   appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//   misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
+
+// See state defs from inflate.js
+var BAD = 30;       /* got a data error -- remain here until reset */
+var TYPE = 12;      /* i: waiting for type bits, including last-flag bit */
+
+/*
+   Decode literal, length, and distance codes and write out the resulting
+   literal and match bytes until either not enough input or output is
+   available, an end-of-block is encountered, or a data error is encountered.
+   When large enough input and output buffers are supplied to inflate(), for
+   example, a 16K input buffer and a 64K output buffer, more than 95% of the
+   inflate execution time is spent in this routine.
+
+   Entry assumptions:
+
+        state.mode === LEN
+        strm.avail_in >= 6
+        strm.avail_out >= 258
+        start >= strm.avail_out
+        state.bits < 8
+
+   On return, state.mode is one of:
+
+        LEN -- ran out of enough output space or enough available input
+        TYPE -- reached end of block code, inflate() to interpret next block
+        BAD -- error in block data
+
+   Notes:
+
+    - The maximum input bits used by a length/distance pair is 15 bits for the
+      length code, 5 bits for the length extra, 15 bits for the distance code,
+      and 13 bits for the distance extra.  This totals 48 bits, or six bytes.
+      Therefore if strm.avail_in >= 6, then there is enough input to avoid
+      checking for available input while decoding.
+
+    - The maximum bytes that a single length/distance pair can output is 258
+      bytes, which is the maximum length that can be coded.  inflate_fast()
+      requires strm.avail_out >= 258 for each loop to avoid checking for
+      output space.
+ */
+module.exports = function inflate_fast(strm, start) {
+  var state;
+  var _in;                    /* local strm.input */
+  var last;                   /* have enough input while in < last */
+  var _out;                   /* local strm.output */
+  var beg;                    /* inflate()'s initial strm.output */
+  var end;                    /* while out < end, enough space available */
+//#ifdef INFLATE_STRICT
+  var dmax;                   /* maximum distance from zlib header */
+//#endif
+  var wsize;                  /* window size or zero if not using window */
+  var whave;                  /* valid bytes in the window */
+  var wnext;                  /* window write index */
+  // Use `s_window` instead `window`, avoid conflict with instrumentation tools
+  var s_window;               /* allocated sliding window, if wsize != 0 */
+  var hold;                   /* local strm.hold */
+  var bits;                   /* local strm.bits */
+  var lcode;                  /* local strm.lencode */
+  var dcode;                  /* local strm.distcode */
+  var lmask;                  /* mask for first level of length codes */
+  var dmask;                  /* mask for first level of distance codes */
+  var here;                   /* retrieved table entry */
+  var op;                     /* code bits, operation, extra bits, or */
+                              /*  window position, window bytes to copy */
+  var len;                    /* match length, unused bytes */
+  var dist;                   /* match distance */
+  var from;                   /* where to copy match from */
+  var from_source;
+
+
+  var input, output; // JS specific, because we have no pointers
+
+  /* copy state to local variables */
+  state = strm.state;
+  //here = state.here;
+  _in = strm.next_in;
+  input = strm.input;
+  last = _in + (strm.avail_in - 5);
+  _out = strm.next_out;
+  output = strm.output;
+  beg = _out - (start - strm.avail_out);
+  end = _out + (strm.avail_out - 257);
+//#ifdef INFLATE_STRICT
+  dmax = state.dmax;
+//#endif
+  wsize = state.wsize;
+  whave = state.whave;
+  wnext = state.wnext;
+  s_window = state.window;
+  hold = state.hold;
+  bits = state.bits;
+  lcode = state.lencode;
+  dcode = state.distcode;
+  lmask = (1 << state.lenbits) - 1;
+  dmask = (1 << state.distbits) - 1;
+
+
+  /* decode literals and length/distances until end-of-block or not enough
+     input data or output space */
+
+  top:
+  do {
+    if (bits < 15) {
+      hold += input[_in++] << bits;
+      bits += 8;
+      hold += input[_in++] << bits;
+      bits += 8;
+    }
+
+    here = lcode[hold & lmask];
+
+    dolen:
+    for (;;) { // Goto emulation
+      op = here >>> 24/*here.bits*/;
+      hold >>>= op;
+      bits -= op;
+      op = (here >>> 16) & 0xff/*here.op*/;
+      if (op === 0) {                          /* literal */
+        //Tracevv((stderr, here.val >= 0x20 && here.val < 0x7f ?
+        //        "inflate:         literal '%c'\n" :
+        //        "inflate:         literal 0x%02x\n", here.val));
+        output[_out++] = here & 0xffff/*here.val*/;
+      }
+      else if (op & 16) {                     /* length base */
+        len = here & 0xffff/*here.val*/;
+        op &= 15;                           /* number of extra bits */
+        if (op) {
+          if (bits < op) {
+            hold += input[_in++] << bits;
+            bits += 8;
+          }
+          len += hold & ((1 << op) - 1);
+          hold >>>= op;
+          bits -= op;
+        }
+        //Tracevv((stderr, "inflate:         length %u\n", len));
+        if (bits < 15) {
+          hold += input[_in++] << bits;
+          bits += 8;
+          hold += input[_in++] << bits;
+          bits += 8;
+        }
+        here = dcode[hold & dmask];
+
+        dodist:
+        for (;;) { // goto emulation
+          op = here >>> 24/*here.bits*/;
+          hold >>>= op;
+          bits -= op;
+          op = (here >>> 16) & 0xff/*here.op*/;
+
+          if (op & 16) {                      /* distance base */
+            dist = here & 0xffff/*here.val*/;
+            op &= 15;                       /* number of extra bits */
+            if (bits < op) {
+              hold += input[_in++] << bits;
+              bits += 8;
+              if (bits < op) {
+                hold += input[_in++] << bits;
+                bits += 8;
+              }
+            }
+            dist += hold & ((1 << op) - 1);
+//#ifdef INFLATE_STRICT
+            if (dist > dmax) {
+              strm.msg = 'invalid distance too far back';
+              state.mode = BAD;
+              break top;
+            }
+//#endif
+            hold >>>= op;
+            bits -= op;
+            //Tracevv((stderr, "inflate:         distance %u\n", dist));
+            op = _out - beg;                /* max distance in output */
+            if (dist > op) {                /* see if copy from window */
+              op = dist - op;               /* distance back in window */
+              if (op > whave) {
+                if (state.sane) {
+                  strm.msg = 'invalid distance too far back';
+                  state.mode = BAD;
+                  break top;
+                }
+
+// (!) This block is disabled in zlib defaults,
+// don't enable it for binary compatibility
+//#ifdef INFLATE_ALLOW_INVALID_DISTANCE_TOOFAR_ARRR
+//                if (len <= op - whave) {
+//                  do {
+//                    output[_out++] = 0;
+//                  } while (--len);
+//                  continue top;
+//                }
+//                len -= op - whave;
+//                do {
+//                  output[_out++] = 0;
+//                } while (--op > whave);
+//                if (op === 0) {
+//                  from = _out - dist;
+//                  do {
+//                    output[_out++] = output[from++];
+//                  } while (--len);
+//                  continue top;
+//                }
+//#endif
+              }
+              from = 0; // window index
+              from_source = s_window;
+              if (wnext === 0) {           /* very common case */
+                from += wsize - op;
+                if (op < len) {         /* some from window */
+                  len -= op;
+                  do {
+                    output[_out++] = s_window[from++];
+                  } while (--op);
+                  from = _out - dist;  /* rest from output */
+                  from_source = output;
+                }
+              }
+              else if (wnext < op) {      /* wrap around window */
+                from += wsize + wnext - op;
+                op -= wnext;
+                if (op < len) {         /* some from end of window */
+                  len -= op;
+                  do {
+                    output[_out++] = s_window[from++];
+                  } while (--op);
+                  from = 0;
+                  if (wnext < len) {  /* some from start of window */
+                    op = wnext;
+                    len -= op;
+                    do {
+                      output[_out++] = s_window[from++];
+                    } while (--op);
+                    from = _out - dist;      /* rest from output */
+                    from_source = output;
+                  }
+                }
+              }
+              else {                      /* contiguous in window */
+                from += wnext - op;
+                if (op < len) {         /* some from window */
+                  len -= op;
+                  do {
+                    output[_out++] = s_window[from++];
+                  } while (--op);
+                  from = _out - dist;  /* rest from output */
+                  from_source = output;
+                }
+              }
+              while (len > 2) {
+                output[_out++] = from_source[from++];
+                output[_out++] = from_source[from++];
+                output[_out++] = from_source[from++];
+                len -= 3;
+              }
+              if (len) {
+                output[_out++] = from_source[from++];
+                if (len > 1) {
+                  output[_out++] = from_source[from++];
+                }
+              }
+            }
+            else {
+              from = _out - dist;          /* copy direct from output */
+              do {                        /* minimum length is three */
+                output[_out++] = output[from++];
+                output[_out++] = output[from++];
+                output[_out++] = output[from++];
+                len -= 3;
+              } while (len > 2);
+              if (len) {
+                output[_out++] = output[from++];
+                if (len > 1) {
+                  output[_out++] = output[from++];
+                }
+              }
+            }
+          }
+          else if ((op & 64) === 0) {          /* 2nd level distance code */
+            here = dcode[(here & 0xffff)/*here.val*/ + (hold & ((1 << op) - 1))];
+            continue dodist;
+          }
+          else {
+            strm.msg = 'invalid distance code';
+            state.mode = BAD;
+            break top;
+          }
+
+          break; // need to emulate goto via "continue"
+        }
+      }
+      else if ((op & 64) === 0) {              /* 2nd level length code */
+        here = lcode[(here & 0xffff)/*here.val*/ + (hold & ((1 << op) - 1))];
+        continue dolen;
+      }
+      else if (op & 32) {                     /* end-of-block */
+        //Tracevv((stderr, "inflate:         end of block\n"));
+        state.mode = TYPE;
+        break top;
+      }
+      else {
+        strm.msg = 'invalid literal/length code';
+        state.mode = BAD;
+        break top;
+      }
+
+      break; // need to emulate goto via "continue"
+    }
+  } while (_in < last && _out < end);
+
+  /* return unused bytes (on entry, bits < 8, so in won't go too far back) */
+  len = bits >> 3;
+  _in -= len;
+  bits -= len << 3;
+  hold &= (1 << bits) - 1;
+
+  /* update state and return */
+  strm.next_in = _in;
+  strm.next_out = _out;
+  strm.avail_in = (_in < last ? 5 + (last - _in) : 5 - (_in - last));
+  strm.avail_out = (_out < end ? 257 + (end - _out) : 257 - (_out - end));
+  state.hold = hold;
+  state.bits = bits;
+  return;
+};
+
 
 /***/ }),
 
