@@ -42,6 +42,7 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) an
 * background-layer,
 * page dimensions and orientations,
 * margins,
+* document sections,
 * custom page breaks,
 * font embedding,
 * support for complex, multi-level (nested) structures,
