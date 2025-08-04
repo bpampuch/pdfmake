@@ -1,45 +1,15 @@
-import http from 'http';
-import https from 'https';
-
-const MAX_REDIRECTS = 30;
-
-const fetchUrl = (url, headers = {}, redirectCount = 0) => {
-	if (redirectCount >= MAX_REDIRECTS) {
-		return new Promise((_, reject) => {
-			reject(new Error(`Too many redirects (limit: ${MAX_REDIRECTS})`));
-		});
-	}
-	return new Promise((resolve, reject) => {
-		const parsedUrl = new URL(url);
-		const h = (parsedUrl.protocol === 'https:') ? https : http;
-		let options = {
-			headers: headers
-		};
-
-		h.get(url, options, res => {
-			if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) { // redirect url
-				res.resume();
-
-				fetchUrl(res.headers.location, {}, redirectCount + 1).then(buffer => {
-					resolve(buffer);
-				}, result => {
-					reject(result);
-				});
-				return;
+const fetchUrl = (url, headers = {}) => {
+	return fetch(url, { headers }).then(
+		response => {
+			if (!response.ok) {
+				throw new TypeError(`Failed to fetch (status code: ${response.status}, url: "${url}")`);
 			}
-
-			const ok = res.statusCode >= 200 && res.statusCode < 300;
-			if (!ok) {
-				reject(new TypeError(`Failed to fetch (status code: ${res.statusCode}, url: "${url}")`));
-				res.resume();
-				return;
-			}
-
-			const chunks = [];
-			res.on('end', () => resolve(Buffer.concat(chunks)));
-			res.on('data', d => chunks.push(d));
-		}).on('error', reject);
-	});
+			return response.arrayBuffer();
+		},
+		() => {
+			throw new TypeError(`Network request failed (url: "${url}")`);
+		}
+	);
 };
 
 class URLResolver {
