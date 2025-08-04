@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Used fetch API for downloading fonts and images
+
 ## 0.3.0-beta.18 - 2025-05-09
 
 - Added `section` node
