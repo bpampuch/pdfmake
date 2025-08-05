@@ -88,4 +88,15 @@ Line.prototype.getHeight = function () {
 	return max;
 };
 
+/**
+ * Check if this line should be rendered RTL
+ * @return {Boolean}
+ */
+Line.prototype.isRTL = function () {
+	// Check if any inline in this line is marked as RTL
+	return this.inlines.some(function (inline) {
+		return inline.isRTL || inline.direction === 'rtl';
+	});
+};
+
 module.exports = Line;

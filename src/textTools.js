@@ -6,6 +6,7 @@ var isObject = require('./helpers').isObject;
 var isArray = require('./helpers').isArray;
 var isUndefined = require('./helpers').isUndefined;
 var LineBreaker = require('@foliojs-fork/linebreak');
+var rtlUtils = require('./rtlUtils');
 
 var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;
@@ -317,6 +318,9 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var opacity = getStyleProperty(item, styleContextStack, 'opacity', 1);
 		var sup = getStyleProperty(item, styleContextStack, 'sup', false);
 		var sub = getStyleProperty(item, styleContextStack, 'sub', false);
+		
+		// RTL Support
+		var direction = getStyleProperty(item, styleContextStack, 'direction', null);
 
 		if ((sup || sub) && item.fontSize === undefined) {
 			// font size reduction taken from here: https://en.wikipedia.org/wiki/Subscript_and_superscript#Desktop_publishing
@@ -324,6 +328,14 @@ function measure(fontProvider, textArray, styleContextStack) {
 		}
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
+
+		// Process RTL text if needed
+		var originalText = item.text;
+		var rtlResult = rtlUtils.processRTLText(originalText, direction);
+		item.text = rtlResult.text;
+		item.isRTL = rtlResult.isRTL;
+		item.direction = rtlResult.isRTL ? 'rtl' : 'ltr';
+	
 
 		item.width = widthOfString(item.text, font, fontSize, characterSpacing, fontFeatures);
 		item.height = font.lineHeight(fontSize) * lineHeight;
@@ -345,6 +357,12 @@ function measure(fontProvider, textArray, styleContextStack) {
 		}
 
 		item.alignment = getStyleProperty(item, styleContextStack, 'alignment', 'left');
+		
+		// For RTL text, if no explicit alignment is set, default to 'right'
+		if (item.isRTL && item.alignment === 'left' && !getStyleProperty(item, styleContextStack, 'alignment', null)) {
+			item.alignment = 'right';
+		}
+		
 		item.font = font;
 		item.fontSize = fontSize;
 		item.fontFeatures = fontFeatures;
