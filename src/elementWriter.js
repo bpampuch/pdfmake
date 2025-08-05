@@ -57,8 +57,21 @@ ElementWriter.prototype.alignLine = function (line) {
 	var lineWidth = line.getWidth();
 
 	var alignment = line.inlines && line.inlines.length > 0 && line.inlines[0].alignment;
+	var isRTL = line.isRTL && line.isRTL();
 
 	var offset = 0;
+	
+	// For RTL lines, we need special handling
+	if (isRTL) {
+		// If it's RTL and no explicit alignment, default to right
+		if (!alignment || alignment === 'left') {
+			alignment = 'right';
+		}
+		
+		// For RTL, we need to reverse the order of inlines and adjust their positions
+		this.adjustRTLInlines(line, width);
+	}
+
 	switch (alignment) {
 		case 'right':
 			offset = width - lineWidth;
@@ -221,6 +234,68 @@ ElementWriter.prototype.endClip = function () {
 		type: 'endClip'
 	});
 	return true;
+};
+
+/**
+ * Adjust RTL inline positioning
+ * @param {Line} line - Line containing RTL text
+ * @param {number} availableWidth - Available width for the line
+ */
+ElementWriter.prototype.adjustRTLInlines = function (line, availableWidth) {
+	if (!line.inlines || line.inlines.length === 0) {
+		return;
+	}
+
+	// For RTL text, we need to reverse the visual order of inlines
+	// and recalculate their positions from right to left
+	var rtlInlines = [];
+	var ltrInlines = [];
+	var neutralInlines = [];
+
+	// Separate RTL, LTR, and neutral inlines
+	line.inlines.forEach(function(inline) {
+		if (inline.isRTL || inline.direction === 'rtl') {
+			rtlInlines.push(inline);
+		} else if (inline.direction === 'ltr') {
+			ltrInlines.push(inline);
+		} else {
+			neutralInlines.push(inline);
+		}
+	});
+
+	// If we have RTL inlines, reverse their order and recalculate positions
+	if (rtlInlines.length > 0) {
+		// Reverse the order of RTL inlines for proper display
+		rtlInlines.reverse();
+
+		// Recalculate x positions from right to left
+		var currentX = 0;
+		var reorderedInlines = [];
+
+		// Add LTR inlines first (if any)
+		ltrInlines.forEach(function(inline) {
+			inline.x = currentX;
+			currentX += inline.width;
+			reorderedInlines.push(inline);
+		});
+
+		// Add neutral inlines
+		neutralInlines.forEach(function(inline) {
+			inline.x = currentX;
+			currentX += inline.width;
+			reorderedInlines.push(inline);
+		});
+
+		// Add RTL inlines (already reversed)
+		rtlInlines.forEach(function(inline) {
+			inline.x = currentX;
+			currentX += inline.width;
+			reorderedInlines.push(inline);
+		});
+
+		// Replace the line's inlines with the reordered ones
+		line.inlines = reorderedInlines;
+	}
 };
 
 function cloneLine(line) {

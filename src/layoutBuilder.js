@@ -749,14 +749,21 @@ LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows
 	const _bottomByPage = tableNode ? tableNode._bottomByPage : null;
 	this.writer.context().beginColumnGroup(marginXParent, _bottomByPage);
 
-	for (var i = 0, l = cells.length; i < l; i++) {
+	// Process cells in normal order (RTL ordering is done in preprocessor)
+	var cellIndices = [];
+	for (var i = 0; i < cells.length; i++) {
+		cellIndices.push(i);
+	}
+
+	for (var idx = 0; idx < cellIndices.length; idx++) {
+		var i = cellIndices[idx];
 		var cell = cells[i];
 
 		// Page change handler
-
 		this.tracker.auto('pageChanged', storePageBreakClosure, function () {
 			var width = widths[i]._calcWidth;
 			var leftOffset = self._colLeftOffset(i, gaps);
+			
 			// Check if exists and retrieve the cell that started the rowspan in case we are in the cell just after
 			var startingSpanCell = self._findStartingRowSpanCell(cells, i);
 
@@ -912,6 +919,7 @@ LayoutBuilder.prototype.processList = function (orderedList, node) {
 // tables
 LayoutBuilder.prototype.processTable = function (tableNode) {
 	this.nestedLevel++;
+
 	var processor = new TableProcessor(tableNode);
 
 	processor.beginTable(this.writer);
@@ -1064,6 +1072,32 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 		return bestFit;
 	}
 
+	// RTL-aware word breaking function
+	function findRTLBreakPoint(text, maxWidth, measureFn, isRTL) {
+		if (!isRTL) {
+			return findMaxFitLength(text, maxWidth, measureFn);
+		}
+
+		// For RTL text, we want to break from the end of the line
+		// instead of the beginning
+		var words = text.split(/(\s+)/);
+		var totalWidth = 0;
+		var fitCount = 0;
+
+		// For RTL, start from the end and work backwards
+		for (var i = words.length - 1; i >= 0; i--) {
+			var wordWidth = measureFn(words[i]);
+			if (totalWidth + wordWidth <= maxWidth) {
+				totalWidth += wordWidth;
+				fitCount += words[i].length;
+			} else {
+				break;
+			}
+		}
+
+		return Math.max(1, fitCount);
+	}
+
 	if (!textNode._inlines || textNode._inlines.length === 0) {
 		return null;
 	}
@@ -1079,14 +1113,32 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 		isForceContinue = false;
 
 		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
-			var maxChars = findMaxFitLength(inline.text, line.getAvailableWidth(), function (txt) {
-				return textTools.widthOfString(txt, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures)
-			});
+			var isRTL = inline.isRTL || inline.direction === 'rtl';
+			var maxChars;
+			
+			if (isRTL) {
+				// For RTL text, use RTL-aware breaking
+				maxChars = findRTLBreakPoint(inline.text, line.getAvailableWidth(), function (txt) {
+					return textTools.widthOfString(txt, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
+				}, true);
+			} else {
+				maxChars = findMaxFitLength(inline.text, line.getAvailableWidth(), function (txt) {
+					return textTools.widthOfString(txt, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
+				});
+			}
+
 			if (maxChars < inline.text.length) {
 				var newInline = cloneInline(inline);
 
-				newInline.text = inline.text.substr(maxChars);
-				inline.text = inline.text.substr(0, maxChars);
+				if (isRTL) {
+					// For RTL, keep the end part on current line, wrap the beginning
+					newInline.text = inline.text.substr(0, inline.text.length - maxChars);
+					inline.text = inline.text.substr(inline.text.length - maxChars);
+				} else {
+					// For LTR, normal behavior
+					newInline.text = inline.text.substr(maxChars);
+					inline.text = inline.text.substr(0, maxChars);
+				}
 
 				newInline.width = textTools.widthOfString(newInline.text, newInline.font, newInline.fontSize, newInline.characterSpacing, newInline.fontFeatures);
 				inline.width = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
