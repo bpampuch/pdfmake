@@ -20,98 +20,60 @@ class OutputDocumentBrowser extends OutputDocument {
 	/**
 	 * @returns {Promise<Blob>}
 	 */
-	getBlob() {
-		return new Promise((resolve, reject) => {
-			this.getBuffer().then(buffer => {
-				try {
-					let blob = new Blob([buffer], { type: 'application/pdf' });
-					resolve(blob);
-				} catch (e) {
-					reject(e);
-				}
-			}, result => {
-				reject(result);
-			});
-		});
+	async getBlob() {
+		const buffer = await this.getBuffer();
+		return new Blob([buffer], { type: 'application/pdf' });
 	}
 
 	/**
 	 * @param {string} filename
 	 * @returns {Promise}
 	 */
-	download(filename = 'file.pdf') {
-		return new Promise((resolve, reject) => {
-			this.getBlob().then(blob => {
-				try {
-					saveAs(blob, filename);
-					resolve();
-				} catch (e) {
-					reject(e);
-				}
-			}, result => {
-				reject(result);
-			});
-		});
+	async download(filename = 'file.pdf') {
+		const blob = await this.getBlob();
+		saveAs(blob, filename);
 	}
 
 	/**
 	 * @param {Window} win
 	 * @returns {Promise}
 	 */
-	open(win = null) {
-		return new Promise((resolve, reject) => {
-			if (!win) {
-				win = openWindow();
-			}
-			this.getBlob().then(blob => {
-				try {
-					let urlCreator = window.URL || window.webkitURL;
-					let pdfUrl = urlCreator.createObjectURL(blob);
-					win.location.href = pdfUrl;
+	async open(win = null) {
+		if (!win) {
+			win = openWindow();
+		}
+		const blob = await this.getBlob();
+		try {
+			let urlCreator = window.URL || window.webkitURL;
+			let pdfUrl = urlCreator.createObjectURL(blob);
+			win.location.href = pdfUrl;
 
-					//
-					resolve();
-					/* temporarily disabled
-					if (win === window) {
-						resolve();
-					} else {
-						setTimeout(() => {
-							if (win.window === null) { // is closed by AdBlock
-								window.location.href = pdfUrl; // open in actual window
-							}
-							resolve();
-						}, 500);
+			/* temporarily disabled
+			if (win === window) {
+				return;
+			} else {
+				setTimeout(() => {
+					if (win.window === null) { // is closed by AdBlock
+						window.location.href = pdfUrl; // open in actual window
 					}
-					*/
-				} catch (e) {
-					win.close();
-					reject(e);
-				}
-			}, result => {
-				reject(result);
-			});
-		});
+					return;
+				}, 500);
+			}
+			*/
+		} finally {
+			win.close();
+		}
 	}
 
 	/**
 	 * @param {Window} win
 	 * @returns {Promise}
 	 */
-	print(win = null) {
-		return new Promise((resolve, reject) => {
-			this.getStream().then(stream => {
-				stream.setOpenActionAsPrint();
-				return this.open(win).then(() => {
-					resolve();
-				}, result => {
-					reject(result);
-				});
-			}, result => {
-				reject(result);
-			});
-		});
+	async print(win = null) {
+		const stream = await this.getStream();
+		stream.setOpenActionAsPrint();
+		await this.open(win);
 	}
-
 }
 
 export default OutputDocumentBrowser;

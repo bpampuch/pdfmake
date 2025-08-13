@@ -1,16 +1,14 @@
-const fetchUrl = (url, headers = {}) => {
-	return fetch(url, { headers }).then(
-		response => {
-			if (!response.ok) {
-				throw new TypeError(`Failed to fetch (status code: ${response.status}, url: "${url}")`);
-			}
-			return response.arrayBuffer();
-		},
-		() => {
-			throw new TypeError(`Network request failed (url: "${url}")`);
+async function fetchUrl(url, headers = {}) {
+	try {
+		const response = await fetch(url, { headers });
+		if (!response.ok) {
+			throw new Error(`Failed to fetch (status code: ${response.status}, url: "${url}")`);
 		}
-	);
-};
+		return await response.arrayBuffer();
+	} catch (error) {
+		throw new Error(`Network request failed (url: "${url}", error: ${error.message})`);
+	}
+}
 
 class URLResolver {
 	constructor(fs) {
@@ -19,38 +17,25 @@ class URLResolver {
 	}
 
 	resolve(url, headers = {}) {
-		if (!this.resolving[url]) {
-			this.resolving[url] = new Promise((resolve, reject) => {
-				if (url.toLowerCase().indexOf('https://') === 0 || url.toLowerCase().indexOf('http://') === 0) {
-					if (this.fs.existsSync(url)) {
-						// url was downloaded earlier
-						resolve();
-					} else {
-						fetchUrl(url, headers).then(buffer => {
-							this.fs.writeFileSync(url, buffer);
-							resolve();
-						}, result => {
-							reject(result);
-						});
-					}
-				} else {
-					// cannot be resolved
-					resolve();
+		const resolveUrlInternal = async () => {
+			if (url.toLowerCase().startsWith('https://') || url.toLowerCase().startsWith('http://')) {
+				if (this.fs.existsSync(url)) {
+					return; // url was downloaded earlier
 				}
-			});
-		}
+				const buffer = await fetchUrl(url, headers);
+				this.fs.writeFileSync(url, buffer);
+			}
+			// else cannot be resolved
+		};
 
+		if (!this.resolving[url]) {
+			this.resolving[url] = resolveUrlInternal();
+		}
 		return this.resolving[url];
 	}
 
 	resolved() {
-		return new Promise((resolve, reject) => {
-			Promise.all(Object.values(this.resolving)).then(() => {
-				resolve();
-			}, result => {
-				reject(result);
-			});
-		});
+		return Promise.all(Object.values(this.resolving));
 	}
 
 }
