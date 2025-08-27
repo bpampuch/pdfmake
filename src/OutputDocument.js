@@ -20,57 +20,43 @@ class OutputDocument {
 	 * @returns {Promise<Buffer>}
 	 */
 	getBuffer() {
-		if (this.bufferPromise === null) {
-			this.bufferPromise = new Promise((resolve, reject) => {
-				this.getStream().then(stream => {
-
-					let chunks = [];
-					let result;
-					stream.on('readable', () => {
-						let chunk;
-						while ((chunk = stream.read(this.bufferSize)) !== null) {
-							chunks.push(chunk);
-						}
-					});
-					stream.on('end', () => {
-						result = Buffer.concat(chunks);
-						resolve(result);
-					});
-					stream.end();
-
-				}, result => {
-					reject(result);
+		const getBufferInternal = (async () => {
+			const stream = await this.getStream();
+			return new Promise((resolve) => {
+				let chunks = [];
+				stream.on('readable', () => {
+					let chunk;
+					while ((chunk = stream.read(this.bufferSize)) !== null) {
+						chunks.push(chunk);
+					}
 				});
+				stream.on('end', () => {
+					resolve(Buffer.concat(chunks));
+				});
+				stream.end();
 			});
-		}
+		});
 
+		if (this.bufferPromise === null) {
+			this.bufferPromise = getBufferInternal();
+		}
 		return this.bufferPromise;
 	}
 
 	/**
 	 * @returns {Promise<string>}
 	 */
-	getBase64() {
-		return new Promise((resolve, reject) => {
-			this.getBuffer().then(buffer => {
-				resolve(buffer.toString('base64'));
-			}, result => {
-				reject(result);
-			});
-		});
+	async getBase64() {
+		const buffer = await this.getBuffer();
+		return buffer.toString('base64');
 	}
 
 	/**
 	 * @returns {Promise<string>}
 	 */
-	getDataUrl() {
-		return new Promise((resolve, reject) => {
-			this.getBase64().then(data => {
-				resolve('data:application/pdf;base64,' + data);
-			}, result => {
-				reject(result);
-			});
-		});
+	async getDataUrl() {
+		const data = await this.getBase64();
+		return 'data:application/pdf;base64,' + data;
 	}
 
 }
