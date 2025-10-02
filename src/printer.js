@@ -39,7 +39,7 @@ var findFont = function (fonts, requiredFonts, defaultFont) {
 /**
  * @class Creates an instance of a PdfPrinter which turns document definition into a pdf
  *
- * @param {Object} fontDescriptors font definition dictionary
+ * @param {object} fontDescriptors font definition dictionary
  *
  * @example
  * var fontDescriptors = {
@@ -58,18 +58,62 @@ function PdfPrinter(fontDescriptors) {
 }
 
 /**
+ * Resolve remote http(s) image URLs in a docDefinition.images map to data URLs (Node only).
+ * Mutates the docDefinition in-place.
+ * @param {object} docDefinition
+ * @param {number} [timeoutMs=10000]
+ */
+PdfPrinter.prototype.resolveRemoteImages = async function (docDefinition, timeoutMs) {
+	if (!docDefinition || !docDefinition.images) return;
+	// Browser flow already handled via URLBrowserResolver; skip to avoid double fetch and CORS issues.
+	if (typeof window !== 'undefined') return;
+	if (typeof fetch !== 'function') return; // Node <18 not supported for remote fetch here
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs || 10000);
+	const entries = Object.entries(docDefinition.images).filter(([_, v]) => typeof v === 'string' && /^https?:\/\//i.test(v));
+	await Promise.all(entries.map(async ([key, url]) => {
+		try {
+			const res = await fetch(url, { signal: controller.signal });
+			if (!res.ok) return;
+			const ab = await res.arrayBuffer();
+			const buf = Buffer.from(ab);
+			// derive mime from headers else fallback
+			const ct = res.headers.get('content-type');
+			const mime = ct ? ct.split(';')[0] : 'image/png';
+			docDefinition.images[key] = 'data:' + mime + ';base64,' + buf.toString('base64');
+		} catch (err) { // eslint-disable-line no-unused-vars
+			// swallow network/abort errors silently
+		}
+	}));
+	clearTimeout(timer);
+};
+
+/**
+ * Async variant returning a Promise that resolves to a pdfkit document after remote images fetched.
+ * @param {object} docDefinition
+ * @param {object} options
+ * @returns {Promise} resolves with pdfKitDoc
+ */
+PdfPrinter.prototype.createPdfKitDocumentAsync = async function (docDefinition, options) {
+	await this.resolveRemoteImages(docDefinition);
+	return this.createPdfKitDocument(docDefinition, options);
+};
+
+/**
  * Executes layout engine for the specified document and renders it into a pdfkit document
  * ready to be saved.
  *
- * @param {Object} docDefinition document definition
- * @param {Object} docDefinition.content an array describing the pdf structure (for more information take a look at the examples in the /examples folder)
- * @param {Object} [docDefinition.defaultStyle] default (implicit) style definition
- * @param {Object} [docDefinition.styles] dictionary defining all styles which can be used in the document
- * @param {Object} [docDefinition.pageSize] page size (pdfkit units, A4 dimensions by default)
- * @param {Number} docDefinition.pageSize.width width
- * @param {Number} docDefinition.pageSize.height height
- * @param {Object} [docDefinition.pageMargins] page margins (pdfkit units)
- * @param {Number} docDefinition.maxPagesNumber maximum number of pages to render
+ * @param {object} docDefinition document definition
+ * @param {object} docDefinition.content an array describing the pdf structure (for more information take a look at the examples in the /examples folder)
+ * @param {object} [docDefinition.defaultStyle] default (implicit) style definition
+ * @param {object} [docDefinition.styles] dictionary defining all styles which can be used in the document
+ * @param {object} [docDefinition.pageSize] page size (pdfkit units, A4 dimensions by default)
+ * @param {number} docDefinition.pageSize.width width
+ * @param {number} docDefinition.pageSize.height height
+ * @param {object} [docDefinition.pageMargins] page margins (pdfkit units)
+ * @param {number} docDefinition.maxPagesNumber maximum number of pages to render
+ * @param {object} [options] creation options
+ * @returns {object} pdfKit document instance
  *
  * @example
  *
@@ -106,7 +150,6 @@ function PdfPrinter(fontDescriptors) {
  * pdfKitDoc.pipe(fs.createWriteStream('sample.pdf'));
  * pdfKitDoc.end();
  *
- * @return {Object} a pdfKit document object which can be saved or encode to data-url
  */
 PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	options = options || {};
@@ -288,7 +331,7 @@ function fixPageMargins(margin) {
 		} else if (margin.length === 4) {
 			margin = { left: margin[0], top: margin[1], right: margin[2], bottom: margin[3] };
 		} else {
-			throw 'Invalid pageMargins definition';
+			throw new Error('Invalid pageMargins definition');
 		}
 	}
 
@@ -355,7 +398,7 @@ function pageSize2widthAndHeight(pageSize) {
 	if (isString(pageSize)) {
 		var size = sizes[pageSize.toUpperCase()];
 		if (!size) {
-			throw 'Page size ' + pageSize + ' not recognized';
+			throw new Error('Page size ' + pageSize + ' not recognized');
 		}
 		return { width: size[0], height: size[1] };
 	}
@@ -459,8 +502,9 @@ switch(item.verticalAlign) {
  * respectively). The exact shift can / should be changed according to standard
  * conventions.
  *
- * @param {number} y
- * @param {any} inline
+ * @param {number} y baseline y
+ * @param {any} inline inline object (expects fontSize, sup, sub)
+ * @returns {number} adjusted y position
  */
 function offsetText(y, inline) {
 	var newY = y;
@@ -480,7 +524,7 @@ function renderLine(line, x, y, patterns, pdfKitDoc) {
 		var textTools = new TextTools(null);
 
 		if (isUndefined(_pageNodeRef.positions)) {
-			throw 'Page reference id not found';
+			throw new Error('Page reference id not found');
 		}
 
 		var pageNumber = _pageNodeRef.positions[0].pageNumber.toString();
@@ -553,7 +597,7 @@ function renderLine(line, x, y, patterns, pdfKitDoc) {
 		pdfKitDoc.text(inline.text, x + inline.x, shiftedY, options);
 
 		if (inline.linkToPage) {
-			var _ref = pdfKitDoc.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
+			pdfKitDoc.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
 			pdfKitDoc.annotate(x + inline.x, shiftedY, inline.width, inline.height, {
 				Subtype: 'Link',
 				Dest: [inline.linkToPage - 1, 'XYZ', null, null, null]
@@ -650,8 +694,8 @@ function renderVector(vector, patterns, pdfKitDoc) {
 	if (vector.linearGradient && gradient) {
 		var step = 1 / (vector.linearGradient.length - 1);
 
-		for (var i = 0; i < vector.linearGradient.length; i++) {
-			gradient.stop(i * step, vector.linearGradient[i]);
+		for (var gi = 0; gi < vector.linearGradient.length; gi++) {
+			gradient.stop(gi * step, vector.linearGradient[gi]);
 		}
 
 		vector.color = gradient;
