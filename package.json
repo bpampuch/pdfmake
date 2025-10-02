@@ -1,6 +1,6 @@
 {
   "name": "@flowaccount/pdfmake",
-  "version": "0.2.20",
+  "version": "0.2.20-local.1759406968",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/printer.js",
   "browser": "build/pdfmake.js",
@@ -78,7 +78,7 @@
     "printing",
     "layout"
   ],
-  "author": "Wicky Voravit <voravit@flowaccount.com>",
+  "author": "FlowAccount Co., Ltd. <voravit@flowaccount.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/bpampuch/pdfmake/issues"
