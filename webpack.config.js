@@ -23,10 +23,14 @@ module.exports = {
 	target: ['web', 'es5'], // For Internet Explorer 11 support
 	resolve: {
 		alias: {
-			fs: path.join(__dirname, './src/browser-extensions/virtual-fs.js')
+			fs: path.join(__dirname, './src/browser-extensions/virtual-fs.js'),
+			// Provide a lightweight browser-friendly tokenizer shim to avoid native bindings in @flowaccount/node-icu-tokenizer
+			'@flowaccount/node-icu-tokenizer': path.join(__dirname, './src/browser-extensions/tokenizer-shim.js')
 		},
 		fallback: {
 			crypto: false,
+			// Webpack 5 no longer auto polyfills Node core modules; provide path polyfill for transitive deps (bindings -> path)
+			path: require.resolve('path-browserify'),
 			buffer: require.resolve('buffer/'),
 			util: require.resolve('util/'),
 			stream: require.resolve('stream-browserify'),
