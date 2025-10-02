@@ -126,8 +126,9 @@ DocumentContext.prototype.completeColumnGroup = function (height, endingCell) {
 
 	this.y = y;
 	this.page = saved.bottomMost.page;
-	this.availableWidth = saved.availableWidth;
+	this.height = saved.bottomMost.y - saved.y;
 	this.availableHeight = saved.bottomMost.availableHeight;
+	this.availableWidth = saved.availableWidth;
 	if (height) {
 		this.availableHeight -= (y - saved.bottomMost.y);
 	}
@@ -150,6 +151,7 @@ DocumentContext.prototype.moveDown = function (offset) {
 DocumentContext.prototype.initializePage = function () {
 	this.y = this.pageMargins.top;
 	this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+	this.fullHeight = this.availableHeight;
 	const { pageCtx, isSnapshot } = this.pageSnapshot();
 	pageCtx.availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
 	if (isSnapshot && this.marginXTopParent) {
