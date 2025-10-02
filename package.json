@@ -1,6 +1,6 @@
 {
-  "name": "pdfmake",
-  "version": "0.2.20",
+  "name": "@flowaccount/pdfmake",
+  "version": "0.2.20-local.1759382245",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/printer.js",
   "browser": "build/pdfmake.js",
@@ -59,7 +59,8 @@
     "build:examples": "node build-examples.js",
     "lint": "eslint \"./src/**/*.js\" \"./tests/**/*.js\" \"./examples/**/*.js\"",
     "mocha": "mocha --reporter spec \"./tests/**/*.js\"",
-    "playground": "node dev-playground/server.js"
+    "playground": "node dev-playground/server.js",
+    "publish:local": "cp .npmrc.local .npmrc && npm version 0.2.20-local.$(date +%s) --no-git-tag-version && npm publish --registry=http://localhost:4872"
   },
   "repository": {
     "type": "git",
@@ -71,7 +72,7 @@
     "printing",
     "layout"
   ],
-  "author": "Bartek Pampuch <bartosz.pampuch@gmail.com>",
+  "author": "Wicky Voravit <voravit@flowaccount.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/bpampuch/pdfmake/issues"
