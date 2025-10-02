@@ -395,7 +395,55 @@ function decorateNode(node) {
 }
 
 LayoutBuilder.prototype.processNode = function (node) {
+
 	var self = this;
+
+	// --- summaryBreak legacy logic ---
+	if (node.unbreakable && node.summary && node.table && node.table.body && node.table.body[0] && node.table.body[0][0] && node.table.body[0][0].summaryBreak) {
+		// Deep clone node and remove first cell of first row
+		var cloneNode = JSON.parse(JSON.stringify(node));
+		cloneNode.table.body[0] = cloneNode.table.body[0].slice(1);
+		// Try layout with first cell removed
+		var tracker = this.writer.context().tracker.clone();
+		var writer = this.writer.clone(tracker);
+		var fits = false;
+		try {
+			writer.beginUnbreakableBlock();
+			if (cloneNode.stack) {
+				self.processVerticalContainer.call({writer: writer}, cloneNode);
+			} else if (cloneNode.layers) {
+				self.processLayers.call({writer: writer}, cloneNode);
+			} else if (cloneNode.columns) {
+				self.processColumns.call({writer: writer}, cloneNode);
+			} else if (cloneNode.ul) {
+				self.processList.call({writer: writer}, false, cloneNode);
+			} else if (cloneNode.ol) {
+				self.processList.call({writer: writer}, true, cloneNode);
+			} else if (cloneNode.table) {
+				self.processTable.call({writer: writer}, cloneNode);
+			} else if (cloneNode.text !== undefined) {
+				self.processLeaf.call({writer: writer}, cloneNode);
+			} else if (cloneNode.toc) {
+				self.processToc.call({writer: writer}, cloneNode);
+			} else if (cloneNode.image) {
+				self.processImage.call({writer: writer}, cloneNode);
+			} else if (cloneNode.svg) {
+				self.processSVG.call({writer: writer}, cloneNode);
+			} else if (cloneNode.canvas) {
+				self.processCanvas.call({writer: writer}, cloneNode);
+			} else if (cloneNode.qr) {
+				self.processQr.call({writer: writer}, cloneNode);
+			}
+			writer.commitUnbreakableBlock();
+			// If block fits, drop first cell in original node
+			fits = true;
+		} catch (e) {
+			fits = false;
+		}
+		if (fits) {
+			node.table.body[0] = node.table.body[0].slice(1);
+		}
+	}
 
 	this.linearNodeList.push(node);
 	decorateNode(node);
