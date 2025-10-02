@@ -250,7 +250,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 			}
 
 			if (borderColor == null) {
-				borderColor = isFunction(this.layout.hLineColor) ? this.layout.hLineColor(lineIndex, this.tableNode, i) : this.layout.hLineColor;
+				borderColor = isFunction(this.layout.hLineColor) ? this.layout.hLineColor(lineIndex, this.tableNode, this.beginNewPage) : this.layout.hLineColor;
 			}
 
 			if (!currentLine && shouldDrawLine) {

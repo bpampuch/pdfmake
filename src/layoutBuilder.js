@@ -42,6 +42,13 @@ function LayoutBuilder(pageSize, pageMargins, imageMeasure, svgMeasure) {
 	this.svgMeasure = svgMeasure;
 	this.tableLayouts = {};
 	this.nestedLevel = 0;
+	// ---- Legacy customization support ----
+	// Vertical alignment stack (from legacy layoutBuilder-old.js)
+	this.verticalAlignItemStack = [];
+	// Dynamic header/footer measured heights cache
+	this._dynamicHeaderFooterHeights = { header: undefined, footer: undefined };
+	// Track if a footerBreak section already processed
+	this._footerBreakEncountered = false;
 }
 
 LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
@@ -146,11 +153,28 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
 
 	this.linearNodeList = [];
+
+	// Legacy remark table transform (safe no-op if pattern absent)
+	docStructure = this._transformRemarkTableIfNeeded(docStructure);
+
+	// Dynamic header/footer measurement pass (legacy)
+	if (header || footer) {
+		var hfHeights = this._measureHeadersAndFooters(header, footer, fontProvider, styleDictionary, defaultStyle, images);
+		if (hfHeights.header) {
+			this._dynamicHeaderFooterHeights.header = hfHeights.header;
+			this.pageMargins.top = hfHeights.header; // adjust top margin to actual header height
+		}
+		if (hfHeights.footer) {
+			this._dynamicHeaderFooterHeights.footer = hfHeights.footer;
+			this.pageMargins.bottom = hfHeights.footer; // adjust bottom margin to actual footer height
+		}
+	}
+
+	// Preprocess & measure main document after adjustments
 	docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 	docStructure = this.docMeasure.measureDocument(docStructure);
 
-	this.writer = new PageElementWriter(
-		new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
+	this.writer = new PageElementWriter(new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
 	var _this = this;
 	this.writer.context().tracker.startTracking('pageAdded', function () {
@@ -376,6 +400,15 @@ LayoutBuilder.prototype.processNode = function (node) {
 	this.linearNodeList.push(node);
 	decorateNode(node);
 
+	// Legacy footerBreak skip: after first footerBreak, skip subsequent nodes carrying footerBreak flag
+	if (node.footerBreak) {
+		if (this._footerBreakEncountered) {
+			return; // already processed one
+		}
+		// mark early so even if zero-height/unbreakable differences occur it's still treated as consumed
+		this._footerBreakEncountered = true;
+	}
+
 	applyMargins(function () {
 		var unbreakable = node.unbreakable;
 		if (unbreakable) {
@@ -396,6 +429,8 @@ LayoutBuilder.prototype.processNode = function (node) {
 
 		if (node.stack) {
 			self.processVerticalContainer(node);
+		} else if (node.layers) { // legacy layers support
+			self.processLayers(node);
 		} else if (node.columns) {
 			self.processColumns(node);
 		} else if (node.ul) {
@@ -425,7 +460,7 @@ LayoutBuilder.prototype.processNode = function (node) {
 		}
 
 		if (unbreakable) {
-			self.writer.commitUnbreakableBlock();
+			self.writer.commitUnbreakableBlock(undefined, undefined, node.footer);
 		}
 	});
 
@@ -749,6 +784,7 @@ LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows
 	const _bottomByPage = tableNode ? tableNode._bottomByPage : null;
 	this.writer.context().beginColumnGroup(marginXParent, _bottomByPage);
 
+	var verticalAlignCols = [];
 	for (var i = 0, l = cells.length; i < l; i++) {
 		var cell = cells[i];
 
@@ -788,6 +824,21 @@ LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows
 
 			// We pass the endingSpanCell reference to store the context just after processing rowspan cell
 			self.writer.context().beginColumn(width, leftOffset, endOfRowSpanCell);
+
+			if (cell && cell.verticalAlign) {
+				var verticalAlignBegin = self.writer.beginVerticalAlign(cell.verticalAlign);
+				self.verticalAlignItemStack.push({ begin: verticalAlignBegin, end: self.writer.endVerticalAlign(cell.verticalAlign) });
+				verticalAlignCols[i] = self.verticalAlignItemStack.length - 1;
+			}
+			if (cell && cell.layers) {
+				cell.layers.forEach(function (layer) {
+					if (layer.verticalAlign) {
+						var verticalAlignBeginLayer = self.writer.beginVerticalAlign(layer.verticalAlign);
+						self.verticalAlignItemStack.push({ begin: verticalAlignBeginLayer, end: self.writer.endVerticalAlign(layer.verticalAlign) });
+						layer._verticalAlignIdx = self.verticalAlignItemStack.length - 1;
+					}
+				});
+			}
 
 			if (!cell._span) {
 				self.processNode(cell);
@@ -843,6 +894,35 @@ LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows
 	}
 
 	var bottomByPage = this.writer.context().completeColumnGroup(height, endingSpanCell);
+
+	// After row laid out, adjust vertical alignment markers (legacy behavior)
+	if (verticalAlignCols.length) {
+		var rowHeight = 0;
+		// Estimate row height: difference between last bottomByPage entry for current page and starting top
+		var currentPage = this.writer.context().page;
+		if (bottomByPage && bottomByPage[currentPage] !== undefined) {
+			// bottomByPage stores bottom y for page; context.y after row should reflect this
+			rowHeight = this.writer.context().y - (this.writer.context().y - (bottomByPage[currentPage] - this.writer.context().topMargin || 0));
+		}
+		for (var c = 0; c < verticalAlignCols.length; c++) {
+			if (verticalAlignCols[c] !== undefined) {
+				var item = self.verticalAlignItemStack[verticalAlignCols[c]].begin.item;
+				item.viewHeight = rowHeight;
+				item.nodeHeight = (cells[c] && (cells[c]._height || cells[c].height)) || 0;
+			}
+		}
+		cells.forEach(function (column) {
+			if (column && column.layers) {
+				column.layers.forEach(function (layer) {
+					if (layer.verticalAlign) {
+						var item = self.verticalAlignItemStack[layer._verticalAlignIdx].begin.item;
+						item.viewHeight = rowHeight;
+						item.nodeHeight = layer._height || layer.height || 0;
+					}
+				});
+			}
+		});
+	}
 
 	if (tableNode) {
 		tableNode._bottomByPage = bottomByPage;
@@ -1143,3 +1223,95 @@ LayoutBuilder.prototype.processQr = function (node) {
 };
 
 module.exports = LayoutBuilder;
+
+// ---------------- Legacy Custom Helper Integrations ----------------
+// (Added post-export to keep upstream diff minimal; prototypes are still extended)
+
+// Overlapping layer processing (legacy). Layers share same starting y and the tallest defines consumed height.
+if (!LayoutBuilder.prototype.processLayers) {
+	LayoutBuilder.prototype.processLayers = function (node) {
+		var self = this;
+		var startY = this.writer.context().y;
+		var maxHeight = 0;
+		node.layers.forEach(function (layer) {
+			self.writer.context().y = startY;
+			self.processNode(layer);
+			addAll(node.positions, layer.positions);
+			if (layer.verticalAlign) {
+				layer._verticalAlignIdx = self.verticalAlignItemStack.length - 1;
+			}
+			maxHeight = Math.max(maxHeight, layer._height || layer.height || 0);
+		});
+		self.writer.context().y = startY + maxHeight;
+	};
+}
+
+// Remark table transformation (legacy Beam customization)
+if (!LayoutBuilder.prototype._transformRemarkTableIfNeeded) {
+	LayoutBuilder.prototype._transformRemarkTableIfNeeded = function (docStructure) {
+		try {
+			if (Array.isArray(docStructure) && Array.isArray(docStructure[2]) && docStructure[2][0] && docStructure[2][0].remark) {
+				var labelNode = docStructure[2][0];
+				var tableContainer = labelNode.remark; // expected shape: { table: { body: [], headerRows: 0 } }
+				if (tableContainer && tableContainer.table && Array.isArray(tableContainer.table.body)) {
+					var detailText = docStructure[2][1] && docStructure[2][1].text;
+					// Mutate the existing labelNode so reference at doc[2][0] still points to transformed table
+					delete labelNode.remark; // remove remark marker
+					// Ensure body starts empty only if not already transformed (idempotent)
+					if (!labelNode.table || !Array.isArray(labelNode.table.body) || labelNode.table.body.length < 2) {
+						labelNode.table = tableContainer.table;
+						labelNode.table.body = [];
+						var labelRow = [{ text: labelNode.text }];
+						var detailRow = [{ text: detailText }];
+						labelNode.table.body.push(labelRow);
+						labelNode.table.body.push(detailRow);
+						labelNode.table.headerRows = 1;
+					}
+					// remove the old detail node (now captured in table body)
+					if (docStructure[2].length > 1) {
+						docStructure[2].splice(1, 1);
+					}
+				}
+			}
+			} catch (e) { /* eslint-disable-line no-unused-vars */ /* swallow if structure unexpected */ }
+		return docStructure;
+	};
+}
+
+// Header/Footer pre-measure (legacy heuristic). Returns {header, footer} heights if measurable.
+if (!LayoutBuilder.prototype._measureHeadersAndFooters) {
+	LayoutBuilder.prototype._measureHeadersAndFooters = function (header, footer) {
+		var tempWriter = new PageElementWriter(new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
+		var self = this;
+
+		function fullSize(pageSize) { return { x: 0, y: 0, width: pageSize.width, height: pageSize.height }; }
+
+		function render(nodeOrFn, sizeFn) {
+			if (!nodeOrFn) return undefined;
+			var pages = tempWriter.context().pages;
+			for (var p = 0; p < pages.length; p++) {
+				tempWriter.context().page = p;
+				var node = (typeof nodeOrFn === 'function') ? nodeOrFn(p + 1, 1, pages[p].pageSize) : JSON.parse(JSON.stringify(nodeOrFn));
+				if (!node) continue;
+				var sizes = sizeFn(tempWriter.context().getCurrentPage().pageSize, self.pageMargins);
+				tempWriter.beginUnbreakableBlock(sizes.width, sizes.height);
+				node = self.docPreprocessor.preprocessDocument(node);
+				node = self.docMeasure.measureDocument(node);
+				var originalWriter = self.writer;
+				self.writer = tempWriter;
+				self.processNode(node);
+				self.writer = originalWriter;
+				var fragment = tempWriter.commitUnbreakableBlock(sizes.x, sizes.y);
+				if (fragment && fragment.height) {
+					return fragment.height;
+				}
+			}
+			return undefined;
+		}
+
+		return {
+			header: render(header, fullSize),
+			footer: render(footer, fullSize)
+		};
+	};
+}
