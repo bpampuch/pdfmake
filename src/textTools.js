@@ -6,15 +6,9 @@ var isObject = require('./helpers').isObject;
 var isArray = require('./helpers').isArray;
 var isUndefined = require('./helpers').isUndefined;
 var LineBreaker = require('@foliojs-fork/linebreak');
-const Tokenizer = require('@flowaccount/node-icu-tokenizer');
-const fontkit = require('fontkit');
 
 var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;
-
-var fontCacheName_new = '';
-var fontCache_new = {};
-var fontSubstituteCache = [];
 
 /**
  * Creates an instance of TextTools - text measurement utility
@@ -35,24 +29,6 @@ function TextTools(fontProvider) {
  * @return {Object}                   collection of inlines, minWidth, maxWidth
  */
 TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
-	
-	var defaultFont = styleContextStack.getProperty('font');
-	if(!fontCacheName_new)
-	{
-		fontCacheName_new = defaultFont;
-		fontCache_new = fontkit.openSync(this.fontProvider.fonts[fontCacheName_new].normal);
-	}
-
-	for(let fontItem in this.fontProvider.fonts) {
-		if(fontCacheName_new != fontItem) {
-			if(!fontSubstituteCache[fontItem])
-			{
-				var fontObj = fontkit.openSync(this.fontProvider.fonts[fontItem].normal);
-				fontSubstituteCache[fontItem] = { "Name" : fontItem, "FontObj" : fontObj };
-			}
-		}
-	}
-
 	var measured = measure(this.fontProvider, textArray, styleContextStack);
 
 	var minWidth = 0,
@@ -142,30 +118,6 @@ TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpa
 	return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
 };
 
-function tokenizerWords(word) {
-
-	var regex = / /;
-	word = word.replace(regex, "[BLANK]");
-
-	var tokenizer = new Tokenizer().tokenize(word);
-
- for(var tItem in tokenizer){
-	 if(tItem < tokenizer.length-2){
-		 var numIndex = parseInt(tItem);
-
-		 if(tokenizer[numIndex].token == '[' && tokenizer[numIndex + 1].token  == 'BLANK' && tokenizer[numIndex + 2].token == ']') {
-			 tokenizer[numIndex].token = ' ';
-			 tokenizer[numIndex + 1].del = true;
-			 tokenizer[numIndex + 2].del = true;
-		 }
-	 } else {
-		 break;
-	 }
- }
-
-	 return tokenizer;
-}
-
 function splitWords(text, noWrap) {
 	var results = [];
 	text = text.replace(/\t/g, '    ');
@@ -182,30 +134,11 @@ function splitWords(text, noWrap) {
 	while (bk = breaker.nextBreak()) {
 		var word = text.slice(last, bk.position);
 
-		if(bk.required || word.match(/\r?\n$|\r$/)){
+		if (bk.required || word.match(/\r?\n$|\r$/)) { // new line
 			word = word.replace(/\r?\n$|\r$/, '');
-
-			let tokenWord = tokenizerWords(word);
-
-			for(let tIndex in tokenWord) {
-				if(!tokenWord[tIndex].del) {
-					if(tIndex < tokenWord.length-1) {
-						results.push({text: tokenWord[tIndex].token});
-					} else {
-						results.push({text: tokenWord[tIndex].token, lineEnd: true});
-					}
-				}
-			}
-
+			results.push({ text: word, lineEnd: true });
 		} else {
-
-			let tokenWord = tokenizerWords(word);
-
-			for(let tIndex in tokenWord) {
-				if(!tokenWord[tIndex].del) {
-					results.push({text: tokenWord[tIndex].token});
-				}
-			}
+			results.push({ text: word });
 		}
 
 		last = bk.position;
@@ -350,28 +283,6 @@ function getStyleProperty(item, styleContextStack, property, defaultValue) {
 	}
 }
 
-
-function getFontCompaitible(item, fontProvider, styleContextStack) {
-
-	if(fontCacheName_new) {
-		let glyphList = fontCache_new.glyphsForString(item.text);
-		if(glyphList.filter(function(x) {return x.id <= 0;}).length == 0) {
-			return fontCacheName_new;
-		}
-	}
-	for(let count in fontSubstituteCache) {
-		var fontItem = fontSubstituteCache[count];
-		if(fontCacheName_new != fontItem.Name) {
-			let glyphList = fontItem.FontObj.glyphsForString(item.text);
-			if(glyphList.filter(function(x) {return x.id <= 0;}).length == 0) {
-				return fontItem.Name;
-			}
-		}
-	}
-	
-	return getStyleProperty(item, styleContextStack, 'font', 'Roboto');
-}
-
 function measure(fontProvider, textArray, styleContextStack) {
 	var normalized = normalizeTextArray(textArray, styleContextStack);
 
@@ -385,7 +296,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 	}
 
 	normalized.forEach(function (item) {
-		var fontName = getFontCompaitible(item, fontProvider, styleContextStack);
+		var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
 		var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
 		var fontFeatures = getStyleProperty(item, styleContextStack, 'fontFeatures', null);
 		var bold = getStyleProperty(item, styleContextStack, 'bold', false);

@@ -38,8 +38,6 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 		return this.preprocessColumns(node);
 	} else if (node.stack) {
 		return this.preprocessVerticalContainer(node);
-	} else if (node.layers) {
-		return this.preprocessLayers(node);
 	} else if (node.ul) {
 		return this.preprocessList(node);
 	} else if (node.ol) {
@@ -75,16 +73,6 @@ DocPreprocessor.prototype.preprocessColumns = function (node) {
 	return node;
 };
 
-DocPreprocessor.prototype.preprocessLayers = function (node) {
-	var items = node.layers;
-
-	for (var i = 0, l = items.length; i < l; i++) {
-		items[i] = this.preprocessNode(items[i]);
-	}
-
-	return node;
-};
-
 DocPreprocessor.prototype.preprocessVerticalContainer = function (node) {
 	var items = node.stack;
 
@@ -107,7 +95,7 @@ DocPreprocessor.prototype.preprocessList = function (node) {
 
 DocPreprocessor.prototype.preprocessTable = function (node) {
 	var col, row, cols, rows;
-	if(!node.table.body[0]){return node;}
+
 	for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
 		for (row = 0, rows = node.table.body.length; row < rows; row++) {
 			var rowData = node.table.body[row];
