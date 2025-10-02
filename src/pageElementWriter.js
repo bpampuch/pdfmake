@@ -68,11 +68,38 @@ PageElementWriter.prototype.alignCanvas = function (node) {
 	this.writer.alignCanvas(node);
 };
 
-PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-	if (!this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition)) {
-		this.moveToNextPage();
-		this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition);
+var newPageFooterBreak = true;
+
+PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
+	var res = this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+	if(isFooter){
+		if(res && isFooter == 1){
+			newPageFooterBreak = false;
+			return true;
+		} else if(!res && isFooter == 2 && newPageFooterBreak){
+			this.moveToNextPage();
+			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+		} else if(!res && isFooter == 1) {
+			this.moveToNextPage();
+		}
+	} else {
+		if(!res){
+			this.moveToNextPage();
+			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+		}
 	}
+};
+
+PageElementWriter.prototype.removeBeginClip = function(item) {
+	return this.writer.removeBeginClip(item);
+};
+
+PageElementWriter.prototype.beginVerticalAlign = function(verticalAlign) {
+	return this.writer.beginVerticalAlign(verticalAlign);
+};
+
+PageElementWriter.prototype.endVerticalAlign = function(verticalAlign) {
+	return this.writer.endVerticalAlign(verticalAlign);
 };
 
 PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
@@ -105,7 +132,7 @@ PageElementWriter.prototype.beginUnbreakableBlock = function (width, height) {
 	}
 };
 
-PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY) {
+PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY, isFooter) {
 	if (--this.transactionLevel === 0) {
 		var unbreakableContext = this.writer.context;
 		this.writer.popContext();
@@ -135,7 +162,7 @@ PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY)
 			if (forcedX !== undefined || forcedY !== undefined) {
 				this.writer.addFragment(fragment, true, true, true);
 			} else {
-				this.addFragment(fragment);
+				return this.addFragment(fragment,undefined,undefined,undefined,isFooter);
 			}
 		}
 	}
