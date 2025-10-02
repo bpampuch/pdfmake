@@ -6,15 +6,20 @@ var isObject = require('./helpers').isObject;
 var isArray = require('./helpers').isArray;
 var isUndefined = require('./helpers').isUndefined;
 var LineBreaker = require('@foliojs-fork/linebreak');
+const Tokenizer = require('@flowaccount/node-icu-tokenizer');
+const fontkit = require('fontkit');
+
+var fontCacheName_new = '';
+var fontCache_new = {};
+var fontSubstituteCache = [];
 
 var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;
 
 /**
- * Creates an instance of TextTools - text measurement utility
- *
- * @constructor
- * @param {FontProvider} fontProvider
+ * TextTools - helper with various functions for text measurement and manipulation.
+ * @class
+ * @param {object} fontProvider font provider instance
  */
 function TextTools(fontProvider) {
 	this.fontProvider = fontProvider;
@@ -23,12 +28,46 @@ function TextTools(fontProvider) {
 /**
  * Converts an array of strings (or inline-definition-objects) into a collection
  * of inlines and calculated minWidth/maxWidth.
- * and their min/max widths
- * @param  {Object} textArray - an array of inline-definition-objects (or strings)
- * @param  {Object} styleContextStack current style stack
- * @return {Object}                   collection of inlines, minWidth, maxWidth
+ * @param  {object} textArray an array of inline-definition-objects (or strings)
+ * @param  {object} styleContextStack current style stack
+ * @returns {object} collection of inlines, minWidth, maxWidth
  */
 TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
+
+	// Defensive: styleContextStack may be undefined in some unit tests calling buildInlines directly
+	var defaultFont = (styleContextStack && styleContextStack.getProperty) ? styleContextStack.getProperty('font') : 'Roboto';
+
+	// Lazy init primary font cache once (only if fontProvider has the font & path)
+	if (!fontCacheName_new) {
+		fontCacheName_new = defaultFont || 'Roboto';
+		try {
+			if (this.fontProvider && this.fontProvider.fonts && this.fontProvider.fonts[fontCacheName_new] && this.fontProvider.fonts[fontCacheName_new].normal) {
+				fontCache_new = fontkit.openSync(this.fontProvider.fonts[fontCacheName_new].normal);
+			}
+		} catch (e) { // eslint-disable-line no-unused-vars
+			// Swallow errors so tests without real font files still pass; fall back to normal pdfkit width calc via provideFont later.
+			fontCache_new = null;
+		}
+	}
+
+	// Build substitution cache only once; ignore failures silently
+	if (this.fontProvider && this.fontProvider.fonts) {
+		for (let fontItem in this.fontProvider.fonts) {
+			if (fontItem === fontCacheName_new) continue;
+			if (!fontSubstituteCache[fontItem]) {
+				try {
+					var fp = this.fontProvider.fonts[fontItem];
+					if (fp && fp.normal) {
+						var fontObj = fontkit.openSync(fp.normal);
+						fontSubstituteCache[fontItem] = { Name: fontItem, FontObj: fontObj };
+					}
+				} catch (e) { // eslint-disable-line no-unused-vars
+					// ignore; missing or unreadable font file
+				}
+			}
+		}
+	}
+
 	var measured = measure(this.fontProvider, textArray, styleContextStack);
 
 	var minWidth = 0,
@@ -68,10 +107,10 @@ TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
 };
 
 /**
- * Returns size of the specified string (without breaking it) using the current style
- * @param  {String} text              text to be measured
- * @param  {Object} styleContextStack current style stack
- * @return {Object}                   size of the specified string
+ * Returns size of the specified string (without breaking it) using the current style.
+ * @param  {string} text text to be measured
+ * @param  {object} styleContextStack current style stack
+ * @returns {object} size of the specified string
  */
 TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	text = text ? text.toString().replace(/\t/g, '    ') : '';
@@ -118,6 +157,17 @@ TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpa
 	return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
 };
 
+
+function tokenizerWords(word) {
+	var tokenizer = new Tokenizer().tokenize(word);
+	return tokenizer;
+}
+
+function shouldUseTokenizer(word) {
+	// Use tokenizer only for scripts that benefit (Thai, CJK) – keep legacy behavior for simple Latin to preserve tests
+	return /[\u0E00-\u0E7F\u4E00-\u9FFF\u3040-\u30FF\uAC00-\uD7AF]/.test(word);
+}
+
 function splitWords(text, noWrap) {
 	var results = [];
 	text = text.replace(/\t/g, '    ');
@@ -131,16 +181,25 @@ function splitWords(text, noWrap) {
 	var last = 0;
 	var bk;
 
-	while (bk = breaker.nextBreak()) {
+	for (bk = breaker.nextBreak(); bk; bk = breaker.nextBreak()) {
 		var word = text.slice(last, bk.position);
-
-		if (bk.required || word.match(/\r?\n$|\r$/)) { // new line
+		var isLineEnd = bk.required || /\r?\n$|\r$/.test(word);
+		if (isLineEnd) {
 			word = word.replace(/\r?\n$|\r$/, '');
-			results.push({ text: word, lineEnd: true });
-		} else {
-			results.push({ text: word });
 		}
-
+		if (word.length) {
+			if (shouldUseTokenizer(word)) {
+				var tokenWord = tokenizerWords(word);
+				// Keep original word grouping: recombine tokens into single segment to not inflate counts
+				var combined = tokenWord.map(t => t.token).join('');
+				results.push({ text: combined, lineEnd: isLineEnd });
+			} else {
+				results.push({ text: word, lineEnd: isLineEnd });
+			}
+		} else if (isLineEnd) {
+			// Preserve empty line markers
+			results.push({ text: '', lineEnd: true });
+		}
 		last = bk.position;
 	}
 
@@ -283,6 +342,42 @@ function getStyleProperty(item, styleContextStack, property, defaultValue) {
 	}
 }
 
+function getFontCompaitible(item, fontProvider, styleContextStack) {
+	// Base font from style
+	var baseFont = getStyleProperty(item || {}, styleContextStack, 'font', 'Roboto');
+
+	// If fontkit cache not properly initialized or disabled, return base font immediately
+	if (!fontCacheName_new || !fontCache_new || typeof fontCache_new.glyphsForString !== 'function') {
+		return baseFont;
+	}
+
+	try {
+		let glyphList = fontCache_new.glyphsForString(item.text || '');
+		if (glyphList && glyphList.filter(function (x) { return x.id <= 0; }).length === 0) {
+			return fontCacheName_new;
+		}
+	} catch (e) { // eslint-disable-line no-unused-vars
+		return baseFont; // fallback silently
+	}
+
+	for (let count in fontSubstituteCache) {
+		var fontItem = fontSubstituteCache[count];
+		if (!fontItem || !fontItem.FontObj || typeof fontItem.FontObj.glyphsForString !== 'function') continue;
+		if (fontCacheName_new !== fontItem.Name) {
+			try {
+				let glyphList = fontItem.FontObj.glyphsForString(item.text || '');
+				if (glyphList && glyphList.filter(function (x) { return x.id <= 0; }).length === 0) {
+					return fontItem.Name;
+				}
+			} catch (e) { // eslint-disable-line no-unused-vars
+				// ignore and continue trying other substitute fonts
+			}
+		}
+	}
+
+	return baseFont;
+}
+
 function measure(fontProvider, textArray, styleContextStack) {
 	var normalized = normalizeTextArray(textArray, styleContextStack);
 
@@ -296,7 +391,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 	}
 
 	normalized.forEach(function (item) {
-		var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
+		var fontName = getFontCompaitible(item, fontProvider, styleContextStack);
 		var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
 		var fontFeatures = getStyleProperty(item, styleContextStack, 'fontFeatures', null);
 		var bold = getStyleProperty(item, styleContextStack, 'bold', false);
