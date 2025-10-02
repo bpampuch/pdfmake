@@ -235,12 +235,16 @@ function cloneLine(line) {
 	return result;
 }
 
-ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
+ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
 	var ctx = this.context;
 	var page = ctx.getCurrentPage();
 
 	if (!useBlockXOffset && block.height > ctx.availableHeight) {
 		return false;
+	}
+
+	if(isFooter){
+		ctx.moveDown(ctx.availableHeight - block.height);
 	}
 
 	block.items.forEach(function (item) {
@@ -282,15 +286,19 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 				break;
 
 			case 'image':
+			case 'beginVerticalAlign':
+			case 'endVerticalAlign':
+			case 'beginClip':
+			case 'endClip':
 			case 'svg':
-				var img = pack(item.item);
+				var it = pack(item.item);
 
-				img.x = (img.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
-				img.y = (img.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+				it.x = (it.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
+				it.y = (it.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
 				page.items.push({
 					type: item.type,
-					item: img
+					item: it
 				});
 				break;
 		}
@@ -301,6 +309,49 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 	}
 
 	return true;
+};
+
+ElementWriter.prototype.beginClip = function (width, height) {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	var item = {
+		type: 'beginClip',
+		item: { x: ctx.x, y: ctx.y, width: width, height: height }
+	};
+	page.items.push(item);
+	return item;
+};
+
+ElementWriter.prototype.endClip = function () {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	var item = {
+		type: 'endClip'
+	};
+	page.items.push(item);
+	return item;
+};
+
+ElementWriter.prototype.beginVerticalAlign = function (verticalAlign) {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	var item = {
+		type: 'beginVerticalAlign',
+		item: { verticalAlign: verticalAlign }
+	};
+	page.items.push(item);
+	return item;
+};
+
+ElementWriter.prototype.endVerticalAlign = function (verticalAlign) {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	var item = {
+		type: 'endVerticalAlign',
+		item: { verticalAlign: verticalAlign }
+	};
+	page.items.push(item);
+	return item;
 };
 
 /**
