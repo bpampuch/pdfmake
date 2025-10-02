@@ -92,5 +92,14 @@
         "tests"
       ]
     }
-  }
+  },
+  "files": [
+    "src/",
+    "build/pdfmake.js",
+    "build/pdfmake.min.js",
+    "build/pdfmake.min.js.map",
+    "build/vfs_fonts.js",
+    "README.md",
+    "LICENSE"
+  ]
 }
