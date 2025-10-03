@@ -1,7 +1,7 @@
 /* jslint node: true */
 'use strict';
 
-var PDFImage = require('pdfkit/js/image');
+var fs = require('fs');
 
 function ImageMeasure(pdfKitDoc, imageDictionary) {
 	this.pdfKitDoc = pdfKitDoc;
@@ -9,18 +9,17 @@ function ImageMeasure(pdfKitDoc, imageDictionary) {
 }
 
 ImageMeasure.prototype.measureImage = function (src) {
-	var image, label;
+	var image;
 	var that = this;
 
 	if (!this.pdfKitDoc._imageRegistry[src]) {
-		label = 'I' + (++this.pdfKitDoc._imageCount);
 		try {
-			image = PDFImage.open(realImageSrc(src), label);
+			image = this.pdfKitDoc.openImage(realImageSrc(src));
+			if (!image) {
+				throw new Error('No image');
+			}
 		} catch (error) {
-			image = null;
-		}
-		if (image === null || image === undefined) {
-			throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
+			throw new Error('Invalid image: ' + error.toString() + '\nImages dictionary should contain dataURL entries (or local file paths in node.js)');
 		}
 		image.embed(this.pdfKitDoc);
 		this.pdfKitDoc._imageRegistry[src] = image;
@@ -28,7 +27,14 @@ ImageMeasure.prototype.measureImage = function (src) {
 		image = this.pdfKitDoc._imageRegistry[src];
 	}
 
-	return {width: image.width, height: image.height};
+	var imageSize = { width: image.width, height: image.height };
+
+	// If EXIF orientation calls for it, swap width and height
+	if (image.orientation > 4) {
+		imageSize = { width: image.height, height: image.width };
+	}
+
+	return imageSize;
 
 	function realImageSrc(src) {
 		var img = that.imageDictionary[src];
@@ -37,12 +43,20 @@ ImageMeasure.prototype.measureImage = function (src) {
 			return src;
 		}
 
+		if (typeof img === 'object') {
+			throw new Error('Not supported image definition: ' + JSON.stringify(img));
+		}
+
+		if (fs.existsSync(img)) {
+			return fs.readFileSync(img);
+		}
+
 		var index = img.indexOf('base64,');
 		if (index < 0) {
 			return that.imageDictionary[src];
 		}
 
-		return new Buffer(img.substring(index + 7), 'base64');
+		return Buffer.from(img.substring(index + 7), 'base64');
 	}
 };
 
