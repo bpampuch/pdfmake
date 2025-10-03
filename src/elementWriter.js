@@ -2,6 +2,7 @@
 'use strict';
 
 var Line = require('./line');
+var isNumber = require('./helpers').isNumber;
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 var DocumentContext = require('./documentContext');
@@ -9,6 +10,9 @@ var DocumentContext = require('./documentContext');
 /**
  * Creates an instance of ElementWriter - a line/vector writer, which adds
  * elements to current page and sets their positions based on the context
+ *
+ * @param {DocumentContext} context - Active document context where elements are rendered.
+ * @param {import('./traversalTracker')} tracker - Tracker instance used to emit layout events.
  */
 function ElementWriter(context, tracker) {
 	this.context = context;
@@ -87,12 +91,12 @@ ElementWriter.prototype.alignLine = function (line) {
 	}
 };
 
-ElementWriter.prototype.addImage = function (image, index) {
+ElementWriter.prototype.addImage = function (image, index, type) {
 	var context = this.context;
 	var page = context.getCurrentPage(),
 		position = this.getCurrentPositionOnPage();
 
-	if (!page || (context.availableHeight < image._height && page.items.length > 0)) {
+	if (!page || (image.absolutePosition === undefined && context.availableHeight < image._height && page.items.length > 0)) {
 		return false;
 	}
 
@@ -106,7 +110,7 @@ ElementWriter.prototype.addImage = function (image, index) {
 	this.alignImage(image);
 
 	addPageItem(page, {
-		type: 'image',
+		type: type || 'image',
 		item: image
 	}, index);
 
@@ -115,12 +119,16 @@ ElementWriter.prototype.addImage = function (image, index) {
 	return position;
 };
 
+ElementWriter.prototype.addSVG = function (image, index) {
+	return this.addImage(image, index, 'svg');
+};
+
 ElementWriter.prototype.addQr = function (qr, index) {
 	var context = this.context;
 	var page = context.getCurrentPage(),
 		position = this.getCurrentPositionOnPage();
 
-	if (context.availableHeight < qr._height || !page) {
+	if (!page || (qr.absolutePosition === undefined && context.availableHeight < qr._height)) {
 		return false;
 	}
 
@@ -163,10 +171,33 @@ ElementWriter.prototype.alignImage = function (image) {
 	}
 };
 
-ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index) {
+ElementWriter.prototype.alignCanvas = function (node) {
+	var width = this.context.availableWidth;
+	var canvasWidth = node._minWidth;
+	var offset = 0;
+	switch (node._alignment) {
+		case 'right':
+			offset = width - canvasWidth;
+			break;
+		case 'center':
+			offset = (width - canvasWidth) / 2;
+			break;
+	}
+
+	if (offset) {
+		node.canvas.forEach(function (vector) {
+			offsetVector(vector, offset, 0);
+		});
+	}
+};
+
+ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index, forcePage) {
 	var context = this.context;
-	var page = context.getCurrentPage(),
-		position = this.getCurrentPositionOnPage();
+	var page = context.getCurrentPage();
+	if (isNumber(forcePage)) {
+		page = context.pages[forcePage];
+	}
+	var position = this.getCurrentPositionOnPage();
 
 	if (page) {
 		offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
@@ -207,6 +238,9 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 		switch (item.type) {
 			case 'line':
 				var l = cloneLine(item.item);
+				if (l._node) {
+					l._node.positions[0].pageNumber = ctx.page + 1;
+				}
 				l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 				l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
@@ -220,13 +254,23 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 				var v = pack(item.item);
 
 				offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
-				page.items.push({
-					type: 'vector',
-					item: v
-				});
+				if (v._isFillColorFromUnbreakable) {
+					delete v._isFillColorFromUnbreakable;
+					var endOfBackgroundItemsIndex = ctx.backgroundLength[ctx.page] || 0;
+					page.items.splice(endOfBackgroundItemsIndex, 0, {
+						type: 'vector',
+						item: v
+					});
+				} else {
+					page.items.push({
+						type: 'vector',
+						item: v
+					});
+				}
 				break;
 
 			case 'image':
+			case 'svg':
 			case 'beginVerticalAlign':
 			case 'endVerticalAlign':
 			case 'beginClip':
@@ -270,6 +314,15 @@ ElementWriter.prototype.endClip = function () {
 	return item;
 };
 
+ElementWriter.prototype.removeBeginClip = function (item) {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	var index = page.items.indexOf(item);
+	if (index > -1) {
+		page.items.splice(index, 1);
+	}
+};
+
 ElementWriter.prototype.beginVerticalAlign = function (verticalAlign) {
 	var ctx = this.context;
 	var page = ctx.getCurrentPage();
@@ -298,6 +351,9 @@ ElementWriter.prototype.endVerticalAlign = function (verticalAlign) {
  * pushContext(context) - pushes the provided context and makes it current
  * pushContext(width, height) - creates and pushes a new context with the specified width and height
  * pushContext() - creates a new context for unbreakable blocks (with current availableWidth and full-page-height)
+ *
+ * @param {DocumentContext|number} contextOrWidth - Existing context to push or width used to create a new context.
+ * @param {number} [height] - Height of the new context when width is provided.
  */
 ElementWriter.prototype.pushContext = function (contextOrWidth, height) {
 	if (contextOrWidth === undefined) {
@@ -305,7 +361,7 @@ ElementWriter.prototype.pushContext = function (contextOrWidth, height) {
 		contextOrWidth = this.context.availableWidth;
 	}
 
-	if (typeof contextOrWidth === 'number' || contextOrWidth instanceof Number) {
+	if (isNumber(contextOrWidth)) {
 		contextOrWidth = new DocumentContext({width: contextOrWidth, height: height}, {left: 0, right: 0, top: 0, bottom: 0});
 	}
 
