@@ -2,11 +2,11 @@
 'use strict';
 
 /**
- * Creates an instance of Line
+ * Creates an instance of Line.
  *
- * @constructor
+ * @class
  * @this {Line}
- * @param {Number} Maximum width this line can have
+ * @param {number} maxWidth Maximum width this line can have
  */
 function Line(maxWidth) {
 	this.maxWidth = maxWidth;
@@ -25,7 +25,9 @@ Line.prototype.getAscenderHeight = function () {
 	return y;
 };
 
-Line.prototype.hasEnoughSpaceForInline = function (inline) {
+Line.prototype.hasEnoughSpaceForInline = function (inline, nextInlines) {
+	nextInlines = nextInlines || [];
+
 	if (this.inlines.length === 0) {
 		return true;
 	}
@@ -33,7 +35,20 @@ Line.prototype.hasEnoughSpaceForInline = function (inline) {
 		return false;
 	}
 
-	return this.inlineWidths + inline.width - this.leadingCut - (inline.trailingCut || 0) <= this.maxWidth;
+	var inlineWidth = inline.width;
+	var inlineTrailingCut = inline.trailingCut || 0;
+	if (inline.noNewLine) {
+		for (var i = 0, l = nextInlines.length; i < l; i++) {
+			var nextInline = nextInlines[i];
+			inlineWidth += nextInline.width;
+			inlineTrailingCut += nextInline.trailingCut || 0;
+			if (!nextInline.noNewLine) {
+				break;
+			}
+		}
+	}
+
+	return (this.inlineWidths + inlineWidth - this.leadingCut - inlineTrailingCut) <= this.maxWidth;
 };
 
 Line.prototype.addInline = function (inline) {
@@ -56,9 +71,14 @@ Line.prototype.getWidth = function () {
 	return this.inlineWidths - this.leadingCut - this.trailingCut;
 };
 
+Line.prototype.getAvailableWidth = function () {
+	return this.maxWidth - this.getWidth();
+};
+
 /**
- * Returns line height
- * @return {Number}
+ * Returns line height.
+ *
+ * @returns {number}
  */
 Line.prototype.getHeight = function () {
 	var max = 0;

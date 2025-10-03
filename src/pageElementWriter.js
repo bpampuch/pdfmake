@@ -50,6 +50,10 @@ PageElementWriter.prototype.addVector = function (vector, ignoreContextX, ignore
 	return this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
 };
 
+PageElementWriter.prototype.alignCanvas = function (node) {
+	return this.writer.alignCanvas(node);
+};
+
 var newPageFooterBreak = true;
 
 PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
@@ -73,7 +77,7 @@ PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, u
 
 };
 
-PageElementWriter.prototype.addFragment_test = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
+PageElementWriter.prototype.addFragment_test = function (fragment) {
 
 	if (fragment.height > this.writer.context.availableHeight) {
 		//console.log('PageBreak');
