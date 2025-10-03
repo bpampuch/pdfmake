@@ -1,6 +1,6 @@
+/* jslint node: true */
 'use strict';
 
-var isUndefined = require('./helpers').isUndefined;
 var ElementWriter = require('./elementWriter');
 
 /**
@@ -40,61 +40,49 @@ PageElementWriter.prototype.addImage = function (image, index) {
 	});
 };
 
-PageElementWriter.prototype.addSVG = function (image, index) {
-	return fitOnPage(this, function (self) {
-		return self.writer.addSVG(image, index);
-	});
-};
-
 PageElementWriter.prototype.addQr = function (qr, index) {
 	return fitOnPage(this, function (self) {
 		return self.writer.addQr(qr, index);
 	});
 };
 
-PageElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index, forcePage) {
-	return this.writer.addVector(vector, ignoreContextX, ignoreContextY, index, forcePage);
-};
-
-PageElementWriter.prototype.beginClip = function (width, height) {
-	return this.writer.beginClip(width, height);
-};
-
-PageElementWriter.prototype.endClip = function () {
-	return this.writer.endClip();
-};
-
-PageElementWriter.prototype.alignCanvas = function (node) {
-	this.writer.alignCanvas(node);
+PageElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index) {
+	return this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
 };
 
 var newPageFooterBreak = true;
 
 PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
 	var res = this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
-
-	if (isFooter) {
-		if (res && isFooter === 1) {
+	if(isFooter){
+		if(res && isFooter == 1){
 			newPageFooterBreak = false;
 			return true;
-		} else if (!res && isFooter === 2 && newPageFooterBreak) {
+		} else if(!res && isFooter == 2 && newPageFooterBreak){
 			this.moveToNextPage();
 			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
-			return true;
-		} else if (!res && isFooter === 1) {
+		} else if(!res && isFooter == 1) {
 			this.moveToNextPage();
-			return false;
 		}
-		return res;
+	} else {
+		if(!res){
+			this.moveToNextPage();
+			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+		}
 	}
 
-	if (!res) {
-		this.moveToNextPage();
-		this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
-	}
-	return true;
 };
 
+PageElementWriter.prototype.addFragment_test = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
+
+	if (fragment.height > this.writer.context.availableHeight) {
+		//console.log('PageBreak');
+		return false;
+	} else {
+		//console.log('None PageBreak');
+		return true;
+	}
+};
 
 PageElementWriter.prototype.removeBeginClip = function(item) {
 	return this.writer.removeBeginClip(item);
@@ -110,24 +98,28 @@ PageElementWriter.prototype.endVerticalAlign = function(verticalAlign) {
 
 PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
 
-	var nextPage = this.writer.context.moveToNextPage(pageOrientation);
+	var currentPage = this.writer.context.pages[this.writer.context.page];
+	this.writer.tracker.emit('beforePageChanged', {
+		prevPage: currentPage.prevPage,
+		prevY: currentPage.prevY,
+		y: currentPage.y
+	});
 
-	// moveToNextPage is called multiple times for table, because is called for each column
-	// and repeatables are inserted only in the first time. If columns are used, is needed
-	// call for table in first column and then for table in the second column (is other repeatables).
-	this.repeatables.forEach(function (rep) {
-		if (isUndefined(rep.insertedOnPages[this.writer.context.page])) {
-			rep.insertedOnPages[this.writer.context.page] = true;
+	var nextPage = this.writer.context.moveToNextPage(pageOrientation);
+	if (nextPage.newPageCreated) {
+		this.repeatables.forEach(function (rep) {
 			this.writer.addFragment(rep, true);
-		} else {
+		}, this);
+	} else {
+		this.repeatables.forEach(function (rep) {
 			this.writer.context.moveDown(rep.height);
-		}
-	}, this);
+		}, this);
+	}
 
 	this.writer.tracker.emit('pageChanged', {
 		prevPage: nextPage.prevPage,
 		prevY: nextPage.prevY,
-		y: this.writer.context.y
+		y: nextPage.y
 	});
 };
 
@@ -141,6 +133,7 @@ PageElementWriter.prototype.beginUnbreakableBlock = function (width, height) {
 PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY, isFooter) {
 	if (--this.transactionLevel === 0) {
 		var unbreakableContext = this.writer.context;
+
 		this.writer.popContext();
 
 		var nbPages = unbreakableContext.pages.length;
@@ -168,15 +161,36 @@ PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY,
 			if (forcedX !== undefined || forcedY !== undefined) {
 				this.writer.addFragment(fragment, true, true, true);
 			} else {
-				return this.addFragment(fragment, undefined, undefined, undefined,isFooter);
+				return this.addFragment(fragment,undefined,undefined,undefined,isFooter);
 			}
+		}
+	}
+};
+
+PageElementWriter.prototype.commitUnbreakableBlock_test = function (forcedX, forcedY) {
+	if (--this.transactionLevel === 0) {
+		var unbreakableContext = this.writer.context;
+		this.writer.popContext();
+
+		var nbPages = unbreakableContext.pages.length;
+		if (nbPages > 0) {
+			// no support for multi-page unbreakableBlocks
+			var fragment = unbreakableContext.pages[0];
+			fragment.xOffset = forcedX;
+			fragment.yOffset = forcedY;
+
+			fragment.height = unbreakableContext.y;
+
+			var res = this.addFragment_test(fragment);
+
+			return res;
 		}
 	}
 };
 
 PageElementWriter.prototype.currentBlockToRepeatable = function () {
 	var unbreakableContext = this.writer.context;
-	var rep = { items: [] };
+	var rep = {items: []};
 
 	unbreakableContext.pages[0].items.forEach(function (item) {
 		rep.items.push(item);
@@ -186,8 +200,6 @@ PageElementWriter.prototype.currentBlockToRepeatable = function () {
 
 	//TODO: vectors can influence height in some situations
 	rep.height = unbreakableContext.y;
-
-	rep.insertedOnPages = [];
 
 	return rep;
 };

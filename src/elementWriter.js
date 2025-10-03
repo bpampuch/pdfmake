@@ -1,7 +1,7 @@
+/* jslint node: true */
 'use strict';
 
 var Line = require('./line');
-var isNumber = require('./helpers').isNumber;
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 var DocumentContext = require('./documentContext');
@@ -87,12 +87,12 @@ ElementWriter.prototype.alignLine = function (line) {
 	}
 };
 
-ElementWriter.prototype.addImage = function (image, index, type) {
+ElementWriter.prototype.addImage = function (image, index) {
 	var context = this.context;
 	var page = context.getCurrentPage(),
 		position = this.getCurrentPositionOnPage();
 
-	if (!page || (image.absolutePosition === undefined && context.availableHeight < image._height && page.items.length > 0)) {
+	if (!page || (context.availableHeight < image._height && page.items.length > 0)) {
 		return false;
 	}
 
@@ -106,7 +106,7 @@ ElementWriter.prototype.addImage = function (image, index, type) {
 	this.alignImage(image);
 
 	addPageItem(page, {
-		type: type || 'image',
+		type: 'image',
 		item: image
 	}, index);
 
@@ -115,16 +115,12 @@ ElementWriter.prototype.addImage = function (image, index, type) {
 	return position;
 };
 
-ElementWriter.prototype.addSVG = function (image, index) {
-	return this.addImage(image, index, 'svg');
-};
-
 ElementWriter.prototype.addQr = function (qr, index) {
 	var context = this.context;
 	var page = context.getCurrentPage(),
 		position = this.getCurrentPositionOnPage();
 
-	if (!page || (qr.absolutePosition === undefined && context.availableHeight < qr._height)) {
+	if (context.availableHeight < qr._height || !page) {
 		return false;
 	}
 
@@ -167,32 +163,10 @@ ElementWriter.prototype.alignImage = function (image) {
 	}
 };
 
-ElementWriter.prototype.alignCanvas = function (node) {
-	var width = this.context.availableWidth;
-	var canvasWidth = node._minWidth;
-	var offset = 0;
-	switch (node._alignment) {
-		case 'right':
-			offset = width - canvasWidth;
-			break;
-		case 'center':
-			offset = (width - canvasWidth) / 2;
-			break;
-	}
-	if (offset) {
-		node.canvas.forEach(function (vector) {
-			offsetVector(vector, offset, 0);
-		});
-	}
-};
-
-ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index, forcePage) {
+ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index) {
 	var context = this.context;
-	var page = context.getCurrentPage();
-	if (isNumber(forcePage)) {
-		page = context.pages[forcePage];
-	}
-	var position = this.getCurrentPositionOnPage();
+	var page = context.getCurrentPage(),
+		position = this.getCurrentPositionOnPage();
 
 	if (page) {
 		offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
@@ -202,25 +176,6 @@ ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreCont
 		}, index);
 		return position;
 	}
-};
-
-ElementWriter.prototype.beginClip = function (width, height) {
-	var ctx = this.context;
-	var page = ctx.getCurrentPage();
-	page.items.push({
-		type: 'beginClip',
-		item: { x: ctx.x, y: ctx.y, width: width, height: height }
-	});
-	return true;
-};
-
-ElementWriter.prototype.endClip = function () {
-	var ctx = this.context;
-	var page = ctx.getCurrentPage();
-	page.items.push({
-		type: 'endClip'
-	});
-	return true;
 };
 
 function cloneLine(line) {
@@ -235,8 +190,8 @@ function cloneLine(line) {
 	return result;
 }
 
-
 ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
+
 	var ctx = this.context;
 	var page = ctx.getCurrentPage();
 
@@ -252,10 +207,6 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 		switch (item.type) {
 			case 'line':
 				var l = cloneLine(item.item);
-
-				if (l._node) {
-					l._node.positions[0].pageNumber = ctx.page + 1;
-				}
 				l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 				l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
@@ -269,34 +220,20 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 				var v = pack(item.item);
 
 				offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
-				if (v._isFillColorFromUnbreakable) {
-					// If the item is a fillColor from an unbreakable block
-					// We have to add it at the beginning of the items body array of the page
-					delete v._isFillColorFromUnbreakable;
-					const endOfBackgroundItemsIndex = ctx.backgroundLength[ctx.page];
-					page.items.splice(endOfBackgroundItemsIndex, 0, {
-						type: 'vector',
-						item: v
-					});
-				} else {
-					page.items.push({
-						type: 'vector',
-						item: v
-					});
-				}
+				page.items.push({
+					type: 'vector',
+					item: v
+				});
 				break;
 
 			case 'image':
-			case 'svg':
 			case 'beginVerticalAlign':
 			case 'endVerticalAlign':
 			case 'beginClip':
 			case 'endClip':
 				var it = pack(item.item);
-
 				it.x = (it.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 				it.y = (it.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
-
 				page.items.push({
 					type: item.type,
 					item: it
@@ -368,8 +305,8 @@ ElementWriter.prototype.pushContext = function (contextOrWidth, height) {
 		contextOrWidth = this.context.availableWidth;
 	}
 
-	if (isNumber(contextOrWidth)) {
-		contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
+	if (typeof contextOrWidth === 'number' || contextOrWidth instanceof Number) {
+		contextOrWidth = new DocumentContext({width: contextOrWidth, height: height}, {left: 0, right: 0, top: 0, bottom: 0});
 	}
 
 	this.contextStack.push(this.context);

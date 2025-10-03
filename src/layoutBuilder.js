@@ -1,5 +1,7 @@
+/* jslint node: true */
 'use strict';
 
+var _ = require('lodash');
 var TraversalTracker = require('./traversalTracker');
 var DocPreprocessor = require('./docPreprocessor');
 var DocMeasure = require('./docMeasure');
@@ -8,21 +10,15 @@ var PageElementWriter = require('./pageElementWriter');
 var ColumnCalculator = require('./columnCalculator');
 var TableProcessor = require('./tableProcessor');
 var Line = require('./line');
-var isString = require('./helpers').isString;
-var isArray = require('./helpers').isArray;
-var isUndefined = require('./helpers').isUndefined;
-var isNull = require('./helpers').isNull;
 var pack = require('./helpers').pack;
 var offsetVector = require('./helpers').offsetVector;
 var fontStringify = require('./helpers').fontStringify;
-var getNodeId = require('./helpers').getNodeId;
 var isFunction = require('./helpers').isFunction;
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
-var isNumber = require('./helpers').isNumber;
 
 function addAll(target, otherArray) {
-	otherArray.forEach(function (item) {
+	_.each(otherArray, function (item) {
 		target.push(item);
 	});
 }
@@ -34,21 +30,14 @@ function addAll(target, otherArray) {
  * @param {Object} pageSize - an object defining page width and height
  * @param {Object} pageMargins - an object defining top, left, right and bottom margins
  */
-function LayoutBuilder(pageSize, pageMargins, imageMeasure, svgMeasure) {
+function LayoutBuilder(pageSize, pageMargins, imageMeasure) {
 	this.pageSize = pageSize;
 	this.pageMargins = pageMargins;
 	this.tracker = new TraversalTracker();
 	this.imageMeasure = imageMeasure;
-	this.svgMeasure = svgMeasure;
-	this.tableLayouts = {};
-	this.nestedLevel = 0;
-	// ---- Legacy customization support ----
-	// Vertical alignment stack (from legacy layoutBuilder-old.js)
 	this.verticalAlignItemStack = [];
-	// Dynamic header/footer measured heights cache
-	this._dynamicHeaderFooterHeights = { header: undefined, footer: undefined };
-	// Track if a footerBreak section already processed
-	this._footerBreakEncountered = false;
+	this.tableLayouts = {};
+	this.heightHeaderAndFooter = {};
 }
 
 LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
@@ -73,70 +62,59 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			return false;
 		}
 
-		linearNodeList = linearNodeList.filter(function (node) {
-			return node.positions.length > 0;
+		linearNodeList = _.reject(linearNodeList, function (node) {
+			return _.isEmpty(node.positions);
 		});
 
-		linearNodeList.forEach(function (node) {
-			var nodeInfo = {};
-			[
-				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns',
+		_.each(linearNodeList, function (node) {
+			var nodeInfo = _.pick(node, [
+				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'columns',
 				'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
 				'width', 'height'
-			].forEach(function (key) {
-				if (node[key] !== undefined) {
-					nodeInfo[key] = node[key];
-				}
-			});
-			nodeInfo.startPosition = node.positions[0];
-			nodeInfo.pageNumbers = Array.from(new Set(node.positions.map(function (node) { return node.pageNumber; })));
+			]);
+			nodeInfo.startPosition = _.first(node.positions);
+			nodeInfo.pageNumbers = _.chain(node.positions).map('pageNumber').uniq().value();
 			nodeInfo.pages = pages.length;
-			nodeInfo.stack = isArray(node.stack);
+			nodeInfo.stack = _.isArray(node.stack);
+			nodeInfo.layers = _.isArray(node.layers);
 
 			node.nodeInfo = nodeInfo;
 		});
 
-		for (var index = 0; index < linearNodeList.length; index++) {
-			var node = linearNodeList[index];
+		return _.some(linearNodeList, function (node, index, followingNodeList) {
 			if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 				node.pageBreakCalculated = true;
-				var pageNumber = node.nodeInfo.pageNumbers[0];
-				var followingNodesOnPage = [];
-				var nodesOnNextPage = [];
-				var previousNodesOnPage = [];
-				if (pageBreakBeforeFct.length > 1) {
-					for (var ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
-						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-							followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
-						}
-						if (pageBreakBeforeFct.length > 2 && linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
-							nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
-						}
-					}
-				}
-				if (pageBreakBeforeFct.length > 3) {
-					for (var ii = 0; ii < index; ii++) {
-						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-							previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
-						}
-					}
-				}
-				if (pageBreakBeforeFct(node.nodeInfo, followingNodesOnPage, nodesOnNextPage, previousNodesOnPage)) {
+				var pageNumber = _.first(node.nodeInfo.pageNumbers);
+
+				var followingNodesOnPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
+					return _.includes(node0.nodeInfo.pageNumbers, pageNumber);
+				}).value();
+
+				var nodesOnNextPage = _.chain(followingNodeList).drop(index + 1).filter(function (node0) {
+					return _.includes(node0.nodeInfo.pageNumbers, pageNumber + 1);
+				}).value();
+
+				var previousNodesOnPage = _.chain(followingNodeList).take(index).filter(function (node0) {
+					return _.includes(node0.nodeInfo.pageNumbers, pageNumber);
+				}).value();
+
+				if (pageBreakBeforeFct(node.nodeInfo,
+					_.map(followingNodesOnPage, 'nodeInfo'),
+					_.map(nodesOnNextPage, 'nodeInfo'),
+					_.map(previousNodesOnPage, 'nodeInfo'))) {
 					node.pageBreak = 'before';
 					return true;
 				}
 			}
-		}
-
-		return false;
+		});
 	}
 
 	this.docPreprocessor = new DocPreprocessor();
-	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.svgMeasure, this.tableLayouts, images);
+	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.tableLayouts, images);
 
 
 	function resetXYs(result) {
-		result.linearNodeList.forEach(function (node) {
+		_.each(result.linearNodeList, function (node) {
 			node.resetXY();
 		});
 	}
@@ -152,29 +130,49 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
 LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
 
+	//----------get height layout header and footer ^^modify by tak^^------------
 	this.linearNodeList = [];
+	this.writer = new PageElementWriter(
+		new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
+	this.heightHeaderAndFooter = this.addHeadersAndFooters(header, footer);
 
-	// Legacy remark table transform (safe no-op if pattern absent)
-	docStructure = this._transformRemarkTableIfNeeded(docStructure);
+	if(this.heightHeaderAndFooter.header != undefined)
+		this.pageMargins.top = this.heightHeaderAndFooter.header +1;
+	//----------get height layout header and footer ^^modify by tak^^------------
 
-	// Dynamic header/footer measurement pass (legacy)
-	if (header || footer) {
-		var hfHeights = this._measureHeadersAndFooters(header, footer, fontProvider, styleDictionary, defaultStyle, images);
-		if (hfHeights.header) {
-			this._dynamicHeaderFooterHeights.header = hfHeights.header;
-			this.pageMargins.top = hfHeights.header; // adjust top margin to actual header height
-		}
-		if (hfHeights.footer) {
-			this._dynamicHeaderFooterHeights.footer = hfHeights.footer;
-			this.pageMargins.bottom = hfHeights.footer; // adjust bottom margin to actual footer height
+	//----------Remark Table Page Break by Beam----------
+	if (docStructure[2][0]) {
+		if (docStructure[2][0].remark) {
+			var tableRemark = docStructure[2][0].remark;
+			var remarkLabel = docStructure[2][0];
+			var remarkDetail = docStructure[2][1].text;
+
+			docStructure[2].splice(0, 1);
+			docStructure[2].splice(0, 1);
+
+			var labelRow = [];
+			var detailRow = [];
+
+			labelRow.push(remarkLabel);
+			detailRow.push({ remarktest: true, text: remarkDetail });
+
+			tableRemark.table.body.push(labelRow);
+			tableRemark.table.body.push(detailRow);
+
+			tableRemark.table.headerRows = 1;
+
+			docStructure[2].push(tableRemark);
+
 		}
 	}
+	//----------Remark Table Page Break by Beam----------
 
-	// Preprocess & measure main document after adjustments
+	this.linearNodeList = [];
 	docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 	docStructure = this.docMeasure.measureDocument(docStructure);
 
-	this.writer = new PageElementWriter(new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
+	this.writer = new PageElementWriter(
+		new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
 	var _this = this;
 	this.writer.context().tracker.startTracking('pageAdded', function () {
@@ -183,12 +181,13 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 
 	this.addBackground(background);
 	this.processNode(docStructure);
-	this.addHeadersAndFooters(header, footer);
+	this.addHeadersAndFooters(header, footer, this.heightHeaderAndFooter.header + 1, this.heightHeaderAndFooter.footer + 1);
+	/* jshint eqnull:true */
 	if (watermark != null) {
 		this.addWatermark(watermark, fontProvider, defaultStyle);
 	}
 
-	return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
+	return {pages: this.writer.context().pages, linearNodeList: this.linearNodeList};
 };
 
 
@@ -197,24 +196,23 @@ LayoutBuilder.prototype.addBackground = function (background) {
 		return background;
 	};
 
-	var context = this.writer.context();
-	var pageSize = context.getCurrentPage().pageSize;
-
-	var pageBackground = backgroundGetter(context.page + 1, pageSize);
+	var pageBackground = backgroundGetter(this.writer.context().page + 1);
 
 	if (pageBackground) {
+		var pageSize = this.writer.context().getCurrentPage().pageSize;
 		this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
 		pageBackground = this.docPreprocessor.preprocessDocument(pageBackground);
 		this.processNode(this.docMeasure.measureDocument(pageBackground));
 		this.writer.commitUnbreakableBlock(0, 0);
-		context.backgroundLength[context.page] += pageBackground.positions.length;
 	}
 };
 
 LayoutBuilder.prototype.addStaticRepeatable = function (headerOrFooter, sizeFunction) {
-	this.addDynamicRepeatable(function () {
+	var height = this.addDynamicRepeatable(function () {
 		return JSON.parse(JSON.stringify(headerOrFooter)); // copy to new object
 	}, sizeFunction);
+
+	return height;
 };
 
 LayoutBuilder.prototype.addDynamicRepeatable = function (nodeGetter, sizeFunction) {
@@ -233,103 +231,96 @@ LayoutBuilder.prototype.addDynamicRepeatable = function (nodeGetter, sizeFunctio
 			this.writer.commitUnbreakableBlock(sizes.x, sizes.y);
 		}
 	}
+
+	return node._height;
 };
 
-LayoutBuilder.prototype.addHeadersAndFooters = function (header, footer) {
+LayoutBuilder.prototype.addHeadersAndFooters = function (header, footer, headerHeight, footeHeight) {
+	var headerHeight;
+	var footeHeight;
+
+
 	var headerSizeFct = function (pageSize, pageMargins) {
+		if(headerHeight == undefined)
+			headerHeight = pageSize.height;
+
 		return {
 			x: 0,
 			y: 0,
 			width: pageSize.width,
-			height: pageMargins.top
+			height: headerHeight
 		};
 	};
 
 	var footerSizeFct = function (pageSize, pageMargins) {
+		if(footeHeight == undefined)
+			footeHeight = pageSize.height;
+
 		return {
 			x: 0,
-			y: pageSize.height - pageMargins.bottom,
+			y: pageSize.height - footeHeight,
 			width: pageSize.width,
-			height: pageMargins.bottom
+			height: footeHeight
 		};
 	};
 
-	if (isFunction(header)) {
-		this.addDynamicRepeatable(header, headerSizeFct);
-	} else if (header) {
-		this.addStaticRepeatable(header, headerSizeFct);
-	}
+	//---check availableHeight for add footer last page ^^modify by tak^^---
+	/*if(footeHeight != undefined && typeof footeHeight == "number"){
+		if(this.writer.context().availableHeight < footeHeight){
+			this.writer.moveToNextPage();
+		}
+	}*/
 
 	if (isFunction(footer)) {
-		this.addDynamicRepeatable(footer, footerSizeFct);
+		footeHeight = this.addDynamicRepeatable(footer, footerSizeFct);
 	} else if (footer) {
-		this.addStaticRepeatable(footer, footerSizeFct);
+		footeHeight = this.addStaticRepeatable(footer, footerSizeFct);
 	}
+
+	if (isFunction(header)) {
+		headerHeight = this.addDynamicRepeatable(header, headerSizeFct);
+	} else if (header) {
+		headerHeight = this.addStaticRepeatable(header, headerSizeFct);
+	}
+
+	return { header:headerHeight , footer:footeHeight };
 };
 
 LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaultStyle) {
-	if (isString(watermark)) {
-		watermark = { 'text': watermark };
+	if (typeof watermark === 'string') {
+		watermark = {'text': watermark};
 	}
 
 	if (!watermark.text) { // empty watermark text
 		return;
 	}
 
+	watermark.font = watermark.font || defaultStyle.font || 'Roboto';
+	watermark.color = watermark.color || 'black';
+	watermark.opacity = watermark.opacity || 0.6;
+	watermark.bold = watermark.bold || false;
+	watermark.italics = watermark.italics || false;
+
+	var watermarkObject = {
+		text: watermark.text,
+		font: fontProvider.provideFont(watermark.font, watermark.bold, watermark.italics),
+		size: getSize(this.pageSize, watermark, fontProvider),
+		color: watermark.color,
+		opacity: watermark.opacity
+	};
+
 	var pages = this.writer.context().pages;
 	for (var i = 0, l = pages.length; i < l; i++) {
-		pages[i].watermark = getWatermarkObject({ ...watermark }, pages[i].pageSize, fontProvider, defaultStyle);
+		pages[i].watermark = watermarkObject;
 	}
 
-	function getWatermarkObject(watermark, pageSize, fontProvider, defaultStyle) {
-		watermark.font = watermark.font || defaultStyle.font || 'Roboto';
-		watermark.fontSize = watermark.fontSize || 'auto';
-		watermark.color = watermark.color || 'black';
-		watermark.opacity = isNumber(watermark.opacity) ? watermark.opacity : 0.6;
-		watermark.bold = watermark.bold || false;
-		watermark.italics = watermark.italics || false;
-		watermark.angle = !isUndefined(watermark.angle) && !isNull(watermark.angle) ? watermark.angle : null;
-
-		if (watermark.angle === null) {
-			watermark.angle = Math.atan2(pageSize.height, pageSize.width) * -180 / Math.PI;
-		}
-
-		if (watermark.fontSize === 'auto') {
-			watermark.fontSize = getWatermarkFontSize(pageSize, watermark, fontProvider);
-		}
-
-		var watermarkObject = {
-			text: watermark.text,
-			font: fontProvider.provideFont(watermark.font, watermark.bold, watermark.italics),
-			fontSize: watermark.fontSize,
-			color: watermark.color,
-			opacity: watermark.opacity,
-			angle: watermark.angle
-		};
-
-		watermarkObject._size = getWatermarkSize(watermark, fontProvider);
-
-		return watermarkObject;
-	}
-
-	function getWatermarkSize(watermark, fontProvider) {
+	function getSize(pageSize, watermark, fontProvider) {
+		var width = pageSize.width;
+		var height = pageSize.height;
+		var targetWidth = Math.sqrt(width * width + height * height) * 0.8; /* page diagonal * sample factor */
 		var textTools = new TextTools(fontProvider);
-		var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
-
-		styleContextStack.push({
-			fontSize: watermark.fontSize
-		});
-
-		var size = textTools.sizeOfString(watermark.text, styleContextStack);
-		var rotatedSize = textTools.sizeOfRotatedText(watermark.text, watermark.angle, styleContextStack);
-
-		return { size: size, rotatedSize: rotatedSize };
-	}
-
-	function getWatermarkFontSize(pageSize, watermark, fontProvider) {
-		var textTools = new TextTools(fontProvider);
-		var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
-		var rotatedSize;
+		var styleContextStack = new StyleContextStack(null, {font: watermark.font, bold: watermark.bold, italics: watermark.italics});
+		var size;
 
 		/**
 		 * Binary search the best font size.
@@ -343,25 +334,20 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 			styleContextStack.push({
 				fontSize: c
 			});
-			rotatedSize = textTools.sizeOfRotatedText(watermark.text, watermark.angle, styleContextStack);
-			if (rotatedSize.width > pageSize.width) {
+			size = textTools.sizeOfString(watermark.text, styleContextStack);
+			if (size.width > targetWidth) {
 				b = c;
 				c = (a + b) / 2;
-			} else if (rotatedSize.width < pageSize.width) {
-				if (rotatedSize.height > pageSize.height) {
-					b = c;
-					c = (a + b) / 2;
-				} else {
-					a = c;
-					c = (a + b) / 2;
-				}
+			} else if (size.width < targetWidth) {
+				a = c;
+				c = (a + b) / 2;
 			}
 			styleContextStack.pop();
 		}
 		/*
 		 End binary search
 		 */
-		return c;
+		return {size: size, fontSize: c};
 	}
 };
 
@@ -369,93 +355,139 @@ function decorateNode(node) {
 	var x = node.x, y = node.y;
 	node.positions = [];
 
-	if (isArray(node.canvas)) {
-		node.canvas.forEach(function (vector) {
-			var x = vector.x, y = vector.y, x1 = vector.x1, y1 = vector.y1, x2 = vector.x2, y2 = vector.y2;
-			vector.resetXY = function () {
-				vector.x = x;
-				vector.y = y;
-				vector.x1 = x1;
-				vector.y1 = y1;
-				vector.x2 = x2;
-				vector.y2 = y2;
-			};
-		});
-	}
+	_.each(node.canvas, function (vector) {
+		var x = vector.x, y = vector.y, x1 = vector.x1, y1 = vector.y1, x2 = vector.x2, y2 = vector.y2;
+		vector.resetXY = function () {
+			vector.x = x;
+			vector.y = y;
+			vector.x1 = x1;
+			vector.y1 = y1;
+			vector.x2 = x2;
+			vector.y2 = y2;
+		};
+	});
 
 	node.resetXY = function () {
 		node.x = x;
 		node.y = y;
-		if (isArray(node.canvas)) {
-			node.canvas.forEach(function (vector) {
-				vector.resetXY();
-			});
-		}
+		_.each(node.canvas, function (vector) {
+			vector.resetXY();
+		});
 	};
 }
 
-LayoutBuilder.prototype.processNode = function (node) {
+var this_tracker_test;
+var this_writer_test;
+var this_verticalAlignItemStack_test = [];
+var result_test = false;
+var filterFooter = -1;
+var footerBreak = false;
 
-	var self = this;
+var processNode_test = function (node) {
 
-	// --- summaryBreak legacy logic ---
-	if (node.unbreakable && node.summary && node.table && node.table.body && node.table.body[0] && node.table.body[0][0] && node.table.body[0][0].summaryBreak) {
-		// Deep clone node and remove first cell of first row
-		var cloneNode = JSON.parse(JSON.stringify(node));
-		cloneNode.table.body[0] = cloneNode.table.body[0].slice(1);
-		// Try layout with first cell removed
-		var tracker = this.writer.context().tracker.clone();
-		var writer = this.writer.clone(tracker);
-		var fits = false;
-		try {
-			writer.beginUnbreakableBlock();
-			if (cloneNode.stack) {
-				self.processVerticalContainer.call({writer: writer}, cloneNode);
-			} else if (cloneNode.layers) {
-				self.processLayers.call({writer: writer}, cloneNode);
-			} else if (cloneNode.columns) {
-				self.processColumns.call({writer: writer}, cloneNode);
-			} else if (cloneNode.ul) {
-				self.processList.call({writer: writer}, false, cloneNode);
-			} else if (cloneNode.ol) {
-				self.processList.call({writer: writer}, true, cloneNode);
-			} else if (cloneNode.table) {
-				self.processTable.call({writer: writer}, cloneNode);
-			} else if (cloneNode.text !== undefined) {
-				self.processLeaf.call({writer: writer}, cloneNode);
-			} else if (cloneNode.toc) {
-				self.processToc.call({writer: writer}, cloneNode);
-			} else if (cloneNode.image) {
-				self.processImage.call({writer: writer}, cloneNode);
-			} else if (cloneNode.svg) {
-				self.processSVG.call({writer: writer}, cloneNode);
-			} else if (cloneNode.canvas) {
-				self.processCanvas.call({writer: writer}, cloneNode);
-			} else if (cloneNode.qr) {
-				self.processQr.call({writer: writer}, cloneNode);
-			}
-			writer.commitUnbreakableBlock();
-			// If block fits, drop first cell in original node
-			fits = true;
-		} catch (e) {
-			fits = false;
+	decorateNode(node);
+
+	var prevTop = this_writer_test.context().getCurrentPosition().top;
+
+	applyMargins(function () {
+		var unbreakable = node.unbreakable;
+		if (unbreakable) {
+			this_writer_test.beginUnbreakableBlock();
 		}
-		if (fits) {
-			node.table.body[0] = node.table.body[0].slice(1);
+
+		var absPosition = node.absolutePosition;
+		if (absPosition) {
+			this_writer_test.context().beginDetachedBlock();
+			this_writer_test.context().moveTo(absPosition.x || 0, absPosition.y || 0);
+		}
+
+		var relPosition = node.relativePosition;
+		if (relPosition) {
+			this_writer_test.context().beginDetachedBlock();
+			this_writer_test.context().moveTo((relPosition.x || 0) + self.writer.context().x, (relPosition.y || 0) + self.writer.context().y);
+		}
+
+		var verticalAlignBegin;
+		if (node.verticalAlign) {
+		  verticalAlignBegin = this_writer_test.beginVerticalAlign(node.verticalAlign);
+		}
+
+		if (node.stack) {
+			processVerticalContainer_test(node);
+		} else if (node.table) {
+			processTable_test(node);
+		} else if (node.text !== undefined) {
+			processLeaf_test(node);
+		}
+
+		if (absPosition || relPosition) {
+			this_writer_test.context().endDetachedBlock();
+		}
+
+			if (unbreakable) {
+				result_test = this_writer_test.commitUnbreakableBlock_test();
+			}
+
+			if (node.verticalAlign) {
+				this_verticalAlignItemStack_test.push({ begin: verticalAlignBegin, end: this_writer_test.endVerticalAlign(node.verticalAlign) });
+			  }
+
+	});
+
+	// TODO: ugly; does not work (at least) when page break in node
+  	node._height = this_writer_test.context().getCurrentPosition().top - prevTop;
+
+	function applyMargins(callback) {
+		var margin = node._margin;
+
+		if (node.pageBreak === 'before') {
+			this_writer_test.moveToNextPage(node.pageOrientation);
+		}
+
+		if (margin) {
+			this_writer_test.context().moveDown(margin[1]);
+			this_writer_test.context().addMargin(margin[0], margin[2]);
+		}
+
+		callback();
+
+		if (margin) {
+			this_writer_test.context().addMargin(-margin[0], -margin[2]);
+			this_writer_test.context().moveDown(margin[3]);
+		}
+
+		if (node.pageBreak === 'after') {
+			this_writer_test.moveToNextPage(node.pageOrientation);
+		}
+	}
+
+}
+
+LayoutBuilder.prototype.processNode = function (node) {
+	if(footerBreak && node.footerBreak){return;}
+	var self = this;
+	var unbreakable_test = node.unbreakable;
+
+	if (unbreakable_test) {
+		if(node.summary){
+			if(node.table.body[0][0].summaryBreak){
+				this_tracker_test = new TraversalTracker();
+				this_writer_test = new PageElementWriter(self.writer.context(),this_tracker_test);
+				this_verticalAlignItemStack_test = self.verticalAlignItemStack.slice();
+				var node_test = _.cloneDeep(node);
+				node_test.table.body[0].splice(0,1);
+				processNode_test(node_test);
+				if(result_test){
+					node.table.body[0].splice(0,1);
+				}
+			}
 		}
 	}
 
 	this.linearNodeList.push(node);
 	decorateNode(node);
 
-	// Legacy footerBreak skip: after first footerBreak, skip subsequent nodes carrying footerBreak flag
-	if (node.footerBreak) {
-		if (this._footerBreakEncountered) {
-			return; // already processed one
-		}
-		// mark early so even if zero-height/unbreakable differences occur it's still treated as consumed
-		this._footerBreakEncountered = true;
-	}
+	var prevTop = self.writer.context().getCurrentPosition().top;
 
 	applyMargins(function () {
 		var unbreakable = node.unbreakable;
@@ -472,14 +504,19 @@ LayoutBuilder.prototype.processNode = function (node) {
 		var relPosition = node.relativePosition;
 		if (relPosition) {
 			self.writer.context().beginDetachedBlock();
-			self.writer.context().moveToRelative(relPosition.x || 0, relPosition.y || 0);
+			self.writer.context().moveTo((relPosition.x || 0) + self.writer.context().x, (relPosition.y || 0) + self.writer.context().y);
+		}
+
+		var verticalAlignBegin;
+		if (node.verticalAlign) {
+		  verticalAlignBegin = self.writer.beginVerticalAlign(node.verticalAlign);
 		}
 
 		if (node.stack) {
 			self.processVerticalContainer(node);
-		} else if (node.layers) { // legacy layers support
+		} else if (node.layers) {
 			self.processLayers(node);
-		} else if (node.columns) {
+		}  else if (node.columns) {
 			self.processColumns(node);
 		} else if (node.ul) {
 			self.processList(false, node);
@@ -493,8 +530,6 @@ LayoutBuilder.prototype.processNode = function (node) {
 			self.processToc(node);
 		} else if (node.image) {
 			self.processImage(node);
-		} else if (node.svg) {
-			self.processSVG(node);
 		} else if (node.canvas) {
 			self.processCanvas(node);
 		} else if (node.qr) {
@@ -503,93 +538,49 @@ LayoutBuilder.prototype.processNode = function (node) {
 			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
 
-		if (absPosition || relPosition) {
+		if ((absPosition || relPosition) && (!node.absoluteRepeatable)) {
 			self.writer.context().endDetachedBlock();
 		}
 
-		if (unbreakable) {
-			self.writer.commitUnbreakableBlock(undefined, undefined, node.footer);
-		}
+			if (unbreakable) {
+
+				if(node.footer){
+					footerBreak = self.writer.commitUnbreakableBlock(undefined, undefined, node.footer);
+				} else {
+					self.writer.commitUnbreakableBlock();
+				}
+			}
+
+		if (node.verticalAlign) {
+			self.verticalAlignItemStack.push({ begin: verticalAlignBegin, end: self.writer.endVerticalAlign(node.verticalAlign) });
+		  }
+
 	});
+
+	// TODO: ugly; does not work (at least) when page break in node
+  	node._height = self.writer.context().getCurrentPosition().top - prevTop;
 
 	function applyMargins(callback) {
 		var margin = node._margin;
 
 		if (node.pageBreak === 'before') {
 			self.writer.moveToNextPage(node.pageOrientation);
-		} else if (node.pageBreak === 'beforeOdd') {
-			self.writer.moveToNextPage(node.pageOrientation);
-			if ((self.writer.context().page + 1) % 2 === 1) {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
-		} else if (node.pageBreak === 'beforeEven') {
-			self.writer.moveToNextPage(node.pageOrientation);
-			if ((self.writer.context().page + 1) % 2 === 0) {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
 		}
 
-		const isDetachedBlock = node.relativePosition || node.absolutePosition;
-
-		// Detached nodes have no margins, their position is only determined by 'x' and 'y'
-		if (margin && !isDetachedBlock) {
-			const availableHeight = self.writer.context().availableHeight;
-			// If top margin is bigger than available space, move to next page
-			// Necessary for nodes inside tables
-			if (availableHeight - margin[1] < 0) {
-				// Consume the whole available space
-				self.writer.context().moveDown(availableHeight);
-				self.writer.moveToNextPage(node.pageOrientation);
-				/**
-				 * TODO - Something to consider:
-				 * Right now the node starts at the top of next page (after header)
-				 * Another option would be to apply just the top margin that has not been consumed in the page before
-				 * It would something like: this.write.context().moveDown(margin[1] - availableHeight)
-				 */
-			} else {
-				self.writer.context().moveDown(margin[1]);
-			}
-
-			// Apply lateral margins
+		if (margin) {
+			self.writer.context().moveDown(margin[1]);
 			self.writer.context().addMargin(margin[0], margin[2]);
 		}
 
 		callback();
 
-		// Detached nodes have no margins, their position is only determined by 'x' and 'y'
-		if (margin && !isDetachedBlock) {
-			const availableHeight = self.writer.context().availableHeight;
-			// If bottom margin is bigger than available space, move to next page
-			// Necessary for nodes inside tables
-			if (availableHeight - margin[3] < 0) {
-				self.writer.context().moveDown(availableHeight);
-				self.writer.moveToNextPage(node.pageOrientation);
-				/**
-				 * TODO - Something to consider:
-				 * Right now next node starts at the top of next page (after header)
-				 * Another option would be to apply the bottom margin that has not been consumed in the next page?
-				 * It would something like: this.write.context().moveDown(margin[3] - availableHeight)
-				 */
-			} else {
-				self.writer.context().moveDown(margin[3]);
-			}
-
-			// Apply lateral margins
+		if (margin) {
 			self.writer.context().addMargin(-margin[0], -margin[2]);
+			self.writer.context().moveDown(margin[3]);
 		}
 
 		if (node.pageBreak === 'after') {
 			self.writer.moveToNextPage(node.pageOrientation);
-		} else if (node.pageBreak === 'afterOdd') {
-			self.writer.moveToNextPage(node.pageOrientation);
-			if ((self.writer.context().page + 1) % 2 === 1) {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
-		} else if (node.pageBreak === 'afterEven') {
-			self.writer.moveToNextPage(node.pageOrientation);
-			if ((self.writer.context().page + 1) % 2 === 0) {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
 		}
 	}
 };
@@ -605,9 +596,38 @@ LayoutBuilder.prototype.processVerticalContainer = function (node) {
 	});
 };
 
+var processVerticalContainer_test = function (node) {
+
+	node.stack.forEach(function (item) {
+		processNode_test(item);
+		addAll(node.positions, item.positions);
+
+		//TODO: paragraph gap
+	});
+};
+
+// layers
+LayoutBuilder.prototype.processLayers = function(node) {
+	var self = this;
+	var ctxX = self.writer.context().x;
+	var ctxY = self.writer.context().y;
+	var maxX = ctxX;
+	var maxY = ctxY;
+	node.layers.forEach(function(item, i) {
+	  self.writer.context().x = ctxX;
+	  self.writer.context().y = ctxY;
+	  self.processNode(item);
+	  item._verticalAlignIdx = self.verticalAlignItemStack.length - 1;
+	  addAll(node.positions, item.positions);
+	  maxX = self.writer.context().x > maxX ? self.writer.context().x : maxX;
+	  maxY = self.writer.context().y > maxY ? self.writer.context().y : maxY;
+	});
+	self.writer.context().x = maxX;
+	self.writer.context().y = maxY;
+  };
+
 // columns
 LayoutBuilder.prototype.processColumns = function (columnNode) {
-	this.nestedLevel++;
 	var columns = columnNode.columns;
 	var availableWidth = this.writer.context().availableWidth;
 	var gaps = gapArray(columnNode._gap);
@@ -617,18 +637,9 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 	}
 
 	ColumnCalculator.buildColumnWidths(columns, availableWidth);
-	var result = this.processRow({
-		marginX: columnNode._margin ? [columnNode._margin[0], columnNode._margin[2]] : [0, 0],
-		cells: columns,
-		widths: columns,
-		gaps
-	});
+	var result = this.processRow(columns, columns, gaps);
 	addAll(columnNode.positions, result.positions);
 
-	this.nestedLevel--;
-	if (this.nestedLevel === 0) {
-		this.writer.context().resetMarginXTopParent();
-	}
 
 	function gapArray(gap) {
 		if (!gap) {
@@ -646,353 +657,213 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 	}
 };
 
-/**
- * Searches for a cell in the same row that starts a rowspan and is positioned immediately before the current cell.
- * Alternatively, it finds a cell where the colspan initiating the rowspan extends to the cell just before the current one.
- *
- * @param {Array<object>} arr - An array representing cells in a row.
- * @param {number} i - The index of the current cell to search backward from.
- * @returns {object|null} The starting cell of the rowspan if found; otherwise, `null`.
- */
-LayoutBuilder.prototype._findStartingRowSpanCell = function (arr, i) {
-	var requiredColspan = 1;
-	for (var index = i - 1; index >= 0; index--) {
-		if (!arr[index]._span) {
-			if (arr[index].rowSpan > 1 && (arr[index].colSpan || 1) === requiredColspan) {
-				return arr[index];
-			} else {
-				return null;
-			}
-		}
-		requiredColspan++;
-	}
-	return null;
-};
-
-/**
- * Retrieves a page break description for a specified page from a list of page breaks.
- *
- * @param {Array<object>} pageBreaks - An array of page break descriptions, each containing `prevPage` properties.
- * @param {number} page - The page number to find the associated page break for.
- * @returns {object|undefined} The page break description object for the specified page if found; otherwise, `undefined`.
- */
-LayoutBuilder.prototype._getPageBreak = function (pageBreaks, page) {
-	return pageBreaks.find(desc => desc.prevPage === page);
-};
-
-LayoutBuilder.prototype._getPageBreakListBySpan = function (tableNode, page, rowIndex) {
-	if (!tableNode || !tableNode._breaksBySpan) {
-		return null;
-	}
-	const breaksList = tableNode._breaksBySpan.filter(desc => desc.prevPage === page && rowIndex <= desc.rowIndexOfSpanEnd);
-
-	var y = Number.MAX_VALUE,
-		prevY = Number.MIN_VALUE;
-
-	breaksList.forEach(b => {
-		prevY = Math.max(b.prevY, prevY);
-		y = Math.min(b.y, y);
-	});
-
-	return {
-		prevPage: page,
-		prevY: prevY,
-		y: y
-	};
-};
-
-LayoutBuilder.prototype._findSameRowPageBreakByRowSpanData = function (breaksBySpan, page, rowIndex) {
-	if (!breaksBySpan) {
-		return null;
-	}
-	return breaksBySpan.find(desc => desc.prevPage === page && rowIndex === desc.rowIndexOfSpanEnd);
-};
-
-LayoutBuilder.prototype._updatePageBreaksData = function (pageBreaks, tableNode, rowIndex) {
-	Object.keys(tableNode._bottomByPage).forEach(p => {
-		const page = Number(p);
-		const pageBreak = this._getPageBreak(pageBreaks, page);
-		if (pageBreak) {
-			pageBreak.prevY = Math.max(pageBreak.prevY, tableNode._bottomByPage[page]);
-		}
-		if (tableNode._breaksBySpan && tableNode._breaksBySpan.length > 0) {
-			const breaksBySpanList = tableNode._breaksBySpan.filter(pb => pb.prevPage === page && rowIndex <= pb.rowIndexOfSpanEnd);
-			if (breaksBySpanList && breaksBySpanList.length > 0) {
-				breaksBySpanList.forEach(b => {
-					b.prevY = Math.max(b.prevY, tableNode._bottomByPage[page]);
-				});
-			}
-		}
-	});
-};
-
-/**
- * Resolves the Y-coordinates for a target object by comparing two break points.
- *
- * @param {object} break1 - The first break point with `prevY` and `y` properties.
- * @param {object} break2 - The second break point with `prevY` and `y` properties.
- * @param {object} target - The target object to be updated with resolved Y-coordinates.
- * @property {number} target.prevY - Updated to the maximum `prevY` value between `break1` and `break2`.
- * @property {number} target.y - Updated to the minimum `y` value between `break1` and `break2`.
- */
-LayoutBuilder.prototype._resolveBreakY = function (break1, break2, target) {
-	target.prevY = Math.max(break1.prevY, break2.prevY);
-	target.y = Math.min(break1.y, break2.y);
-};
-
-LayoutBuilder.prototype._storePageBreakData = function (data, startsRowSpan, pageBreaks, tableNode) {
-	var pageDesc;
-	var pageDescBySpan;
-
-	if (!startsRowSpan) {
-		pageDesc = this._getPageBreak(pageBreaks, data.prevPage);
-		pageDescBySpan = this._getPageBreakListBySpan(tableNode, data.prevPage, data.rowIndex);
-		if (!pageDesc) {
-			pageDesc = Object.assign({}, data);
-			pageBreaks.push(pageDesc);
-		}
-
-		if (pageDescBySpan) {
-			this._resolveBreakY(pageDesc, pageDescBySpan, pageDesc);
-		}
-		this._resolveBreakY(pageDesc, data, pageDesc);
-	} else {
-		var breaksBySpan = tableNode && tableNode._breaksBySpan || null;
-		pageDescBySpan = this._findSameRowPageBreakByRowSpanData(breaksBySpan, data.prevPage, data.rowIndex);
-		if (!pageDescBySpan) {
-			pageDescBySpan = Object.assign({}, data, {
-				rowIndexOfSpanEnd: data.rowIndex + data.rowSpan - 1
-			});
-			if (!tableNode._breaksBySpan) {
-				tableNode._breaksBySpan = [];
-			}
-			tableNode._breaksBySpan.push(pageDescBySpan);
-		}
-		pageDescBySpan.prevY = Math.max(pageDescBySpan.prevY, data.prevY);
-		pageDescBySpan.y = Math.min(pageDescBySpan.y, data.y);
-		pageDesc = this._getPageBreak(pageBreaks, data.prevPage);
-		if (pageDesc) {
-			this._resolveBreakY(pageDesc, pageDescBySpan, pageDesc);
-		}
-	}
-};
-
-/**
- * Calculates the left offset for a column based on the specified gap values.
- *
- * @param {number} i - The index of the column for which the offset is being calculated.
- * @param {Array<number>} gaps - An array of gap values for each column.
- * @returns {number} The left offset for the column. Returns `gaps[i]` if it exists, otherwise `0`.
- */
-LayoutBuilder.prototype._colLeftOffset = function (i, gaps) {
-	if (gaps && gaps.length > i) {
-		return gaps[i];
-	}
-	return 0;
-};
-
-/**
- * Retrieves the ending cell for a row span in case it exists in a specified table column.
- *
- * @param {Array<Array<object>>} tableBody - The table body, represented as a 2D array of cell objects.
- * @param {number} rowIndex - The index of the starting row for the row span.
- * @param {object} column - The column object containing row span information.
- * @param {number} columnIndex - The index of the column within the row.
- * @returns {object|null} The cell at the end of the row span if it exists; otherwise, `null`.
- * @throws {Error} If the row span extends beyond the total row count.
- */
-LayoutBuilder.prototype._getRowSpanEndingCell = function (tableBody, rowIndex, column, columnIndex) {
-	if (column.rowSpan && column.rowSpan > 1) {
-		var endingRow = rowIndex + column.rowSpan - 1;
-		if (endingRow >= tableBody.length) {
-			throw new Error(`Row span for column ${columnIndex} (with indexes starting from 0) exceeded row count`);
-		}
-		return tableBody[endingRow][columnIndex];
-	}
-
-	return null;
-};
-
-LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableNode, tableBody, rowIndex, height }) {
+LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, isRemark, height, heightOffset) {
 	var self = this;
-	var isUnbreakableRow = dontBreakRows || rowIndex <= rowsWithoutPageBreak - 1;
-	var pageBreaks = [];
-	var pageBreaksByRowSpan = [];
-	var positions = [];
-	var willBreakByHeight = false;
-	widths = widths || cells;
+	var pageBreaks = [], positions = [];
 
-	// Check if row should break by height
-	if (!isUnbreakableRow && height > self.writer.context().availableHeight) {
-		willBreakByHeight = true;
-	}
+	this.tracker.auto('pageChanged', storePageBreakData, function () {
+		widths = widths || columns;
 
-	// Use the marginX if we are in a top level table/column (not nested)
-	const marginXParent = self.nestedLevel === 1 ? marginX : null;
-	const _bottomByPage = tableNode ? tableNode._bottomByPage : null;
-	this.writer.context().beginColumnGroup(marginXParent, _bottomByPage);
+		self.writer.context().beginColumnGroup();
 
-	var verticalAlignCols = [];
-	for (var i = 0, l = cells.length; i < l; i++) {
-		var cell = cells[i];
+		var verticalAlignCols = {};
 
-		// Page change handler
-
-		this.tracker.auto('pageChanged', storePageBreakClosure, function () {
+		for (var i = 0, l = columns.length; i < l; i++) {
+			var column = columns[i];
 			var width = widths[i]._calcWidth;
-			var leftOffset = self._colLeftOffset(i, gaps);
-			// Check if exists and retrieve the cell that started the rowspan in case we are in the cell just after
-			var startingSpanCell = self._findStartingRowSpanCell(cells, i);
-
-			if (cell.colSpan && cell.colSpan > 1) {
-				for (var j = 1; j < cell.colSpan; j++) {
+			var leftOffset = colLeftOffset(i);
+			var colI = i;
+			if (column.colSpan && column.colSpan > 1) {
+				for (var j = 1; j < column.colSpan; j++) {
 					width += widths[++i]._calcWidth + gaps[i];
 				}
 			}
 
-			// if rowspan starts in this cell, we retrieve the last cell affected by the rowspan
-			const rowSpanEndingCell = self._getRowSpanEndingCell(tableBody, rowIndex, cell, i);
-			if (rowSpanEndingCell) {
-				// We store a reference of the ending cell in the first cell of the rowspan
-				cell._endingCell = rowSpanEndingCell;
-				cell._endingCell._startingRowSpanY = cell._startingRowSpanY;
-			}
+			self.writer.context().beginColumn(width, leftOffset, getEndingCell(column, i), heightOffset);
 
-			// If we are after a cell that started a rowspan
-			var endOfRowSpanCell = null;
-			if (startingSpanCell && startingSpanCell._endingCell) {
-				// Reference to the last cell of the rowspan
-				endOfRowSpanCell = startingSpanCell._endingCell;
-				// Store if we are in an unbreakable block when we save the context and the originalX
-				if (self.writer.transactionLevel > 0) {
-					endOfRowSpanCell._isUnbreakableContext = true;
-					endOfRowSpanCell._originalXOffset = self.writer.originalX;
-				}
-			}
-
-			// We pass the endingSpanCell reference to store the context just after processing rowspan cell
-			self.writer.context().beginColumn(width, leftOffset, endOfRowSpanCell);
-
-			if (cell && cell.verticalAlign) {
-				var verticalAlignBegin = self.writer.beginVerticalAlign(cell.verticalAlign);
-				self.verticalAlignItemStack.push({ begin: verticalAlignBegin, end: self.writer.endVerticalAlign(cell.verticalAlign) });
-				verticalAlignCols[i] = self.verticalAlignItemStack.length - 1;
-			}
-			if (cell && cell.layers) {
-				cell.layers.forEach(function (layer) {
-					if (layer.verticalAlign) {
-						var verticalAlignBeginLayer = self.writer.beginVerticalAlign(layer.verticalAlign);
-						self.verticalAlignItemStack.push({ begin: verticalAlignBeginLayer, end: self.writer.endVerticalAlign(layer.verticalAlign) });
-						layer._verticalAlignIdx = self.verticalAlignItemStack.length - 1;
-					}
-				});
-			}
-
-			if (!cell._span) {
-				self.processNode(cell);
-				self.writer.context().updateBottomByPage();
-				addAll(positions, cell.positions);
-			} else if (cell._columnEndingContext) {
-				var discountY = 0;
-				if (dontBreakRows) {
-					// Calculate how many points we have to discount to Y when dontBreakRows and rowSpan are combined
-					const ctxBeforeRowSpanLastRow = self.writer.writer.contextStack[self.writer.writer.contextStack.length - 1];
-					discountY = ctxBeforeRowSpanLastRow.y - cell._startingRowSpanY;
-				}
-				var originalXOffset = 0;
-				// If context was saved from an unbreakable block and we are not in an unbreakable block anymore
-				// We have to sum the originalX (X before starting unbreakable block) to X
-				if (cell._isUnbreakableContext && !self.writer.transactionLevel) {
-					originalXOffset = cell._originalXOffset;
-				}
+			if (!column._span) {
+				self.processNode(column);
+				verticalAlignCols[colI] = self.verticalAlignItemStack.length - 1;
+				addAll(positions, column.positions);
+			} else if (column._columnEndingContext) {
 				// row-span ending
-				// Recover the context after processing the rowspanned cell
-				self.writer.context().markEnding(cell, originalXOffset, discountY);
+				self.writer.context().markEnding(column);
 			}
-		});
+		}
+
+		self.writer.context().completeColumnGroup(height);
+
+		var rowHeight = self.writer.context().height;
+		for(var i = 0, l = columns.length; i < l; i++) {
+		  var column = columns[i];
+		  if (column._span) continue;
+		  if (column.verticalAlign) {
+			var item = self.verticalAlignItemStack[verticalAlignCols[i]].begin.item;
+			item.viewHeight = rowHeight;
+			item.nodeHeight = column._height;
+		  }
+		  if (column.layers) {
+			column.layers.forEach(function(layer) {
+			  if(layer.verticalAlign) {
+				var item = self.verticalAlignItemStack[layer._verticalAlignIdx].begin.item;
+				item.viewHeight = rowHeight;
+				item.nodeHeight = layer._height;
+			  }
+			});
+		  }
+		}
+	});
+
+	return {pageBreaks: pageBreaks, positions: positions};
+
+	function storePageBreakData(data) {
+		var pageDesc;
+		for (var i = 0, l = pageBreaks.length; i < l; i++) {
+			var desc = pageBreaks[i];
+			if (desc.prevPage === data.prevPage) {
+				pageDesc = desc;
+				break;
+			}
+		}
+
+		if (!pageDesc) {
+			pageDesc = data;
+			pageBreaks.push(pageDesc);
+		}
+		pageDesc.prevY = Math.max(pageDesc.prevY, data.prevY);
+		pageDesc.y = Math.min(pageDesc.y, data.y);
 	}
 
-	// Check if last cell is part of a span
-	var endingSpanCell = null;
-	var lastColumn = cells.length > 0 ? cells[cells.length - 1] : null;
-	if (lastColumn) {
-		// Previous column cell has a rowspan
-		if (lastColumn._endingCell) {
-			endingSpanCell = lastColumn._endingCell;
-			// Previous column cell is part of a span
-		} else if (lastColumn._span === true) {
-			// We get the cell that started the span where we set a reference to the ending cell
-			const startingSpanCell = this._findStartingRowSpanCell(cells, cells.length);
-			if (startingSpanCell) {
-				// Context will be stored here (ending cell)
-				endingSpanCell = startingSpanCell._endingCell;
-				// Store if we are in an unbreakable block when we save the context and the originalX
-				if (this.writer.transactionLevel > 0) {
-					endingSpanCell._isUnbreakableContext = true;
-					endingSpanCell._originalXOffset = this.writer.originalX;
+	function colLeftOffset(i) {
+		if (gaps && gaps.length > i) {
+			return gaps[i];
+		}
+		return 0;
+	}
+
+	function getEndingCell(column, columnIndex) {
+		if (column.rowSpan && column.rowSpan > 1) {
+			var endingRow = tableRow + column.rowSpan - 1;
+			if (endingRow >= tableBody.length) {
+				throw 'Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count';
+			}
+			return tableBody[endingRow][columnIndex];
+		}
+
+		return null;
+	}
+
+	function verticalAlignLayer(layer) {
+		if(layer.verticalAlign) {
+		  var item = self.verticalAlignItemStack[layer._verticalAlignIdx].begin.item;
+		  item.viewHeight = self.writer.context().height;
+		  item.nodeHeight = layer._height;
+		}
+	  }
+};
+
+var processRow_test = function (columns, widths, gaps, tableBody, tableRow, isRemark) {
+	var pageBreaks = [], positions = [];
+
+	this_tracker_test.auto('pageChanged', storePageBreakData, function () {
+		widths = widths || columns;
+
+		this_writer_test.context().beginColumnGroup();
+
+		var verticalAlignCols = {};
+
+		for (var i = 0, l = columns.length; i < l; i++) {
+			var column = columns[i];
+			var width = widths[i]._calcWidth;
+			var leftOffset = colLeftOffset(i);
+			var colI = i;
+			if (column.colSpan && column.colSpan > 1) {
+				for (var j = 1; j < column.colSpan; j++) {
+					width += widths[++i]._calcWidth + gaps[i];
 				}
 			}
+
+			this_writer_test.context().beginColumn(width, leftOffset, getEndingCell(column, i));
+
+			if (!column._span) {
+				processNode_test(column);
+				verticalAlignCols[colI] = this_verticalAlignItemStack_test.length - 1;
+				addAll(positions, column.positions);
+			} else if (column._columnEndingContext) {
+				// row-span ending
+				this_writer_test.context().markEnding(column);
+			}
 		}
-	}
 
-	// If content did not break page, check if we should break by height
-	if (willBreakByHeight && !isUnbreakableRow && pageBreaks.length === 0) {
-		this.writer.context().moveDown(this.writer.context().availableHeight);
-		this.writer.moveToNextPage();
-	}
+		this_writer_test.context().completeColumnGroup();
 
-	var bottomByPage = this.writer.context().completeColumnGroup(height, endingSpanCell);
-
-	// After row laid out, adjust vertical alignment markers (legacy behavior)
-	if (verticalAlignCols.length) {
-		var rowHeight = 0;
-		// Estimate row height: difference between last bottomByPage entry for current page and starting top
-		var currentPage = this.writer.context().page;
-		if (bottomByPage && bottomByPage[currentPage] !== undefined) {
-			// bottomByPage stores bottom y for page; context.y after row should reflect this
-			rowHeight = this.writer.context().y - (this.writer.context().y - (bottomByPage[currentPage] - this.writer.context().topMargin || 0));
-		}
-		for (var c = 0; c < verticalAlignCols.length; c++) {
-			if (verticalAlignCols[c] !== undefined) {
-				var item = self.verticalAlignItemStack[verticalAlignCols[c]].begin.item;
+		var rowHeight = this_writer_test.context().height;
+		for(var i = 0, l = columns.length; i < l; i++) {
+		  var column = columns[i];
+		  if (column._span) continue;
+		  if (column.verticalAlign) {
+			var item = this_verticalAlignItemStack_test[verticalAlignCols[i]].begin.item;
+			item.viewHeight = rowHeight;
+			item.nodeHeight = column._height;
+		  }
+		  if (column.layers) {
+			column.layers.forEach(function(layer) {
+			  if(layer.verticalAlign) {
+				var item = this_verticalAlignItemStack_test[layer._verticalAlignIdx].begin.item;
 				item.viewHeight = rowHeight;
-				item.nodeHeight = (cells[c] && (cells[c]._height || cells[c].height)) || 0;
+				item.nodeHeight = layer._height;
+			  }
+			});
+		  }
+		}
+	});
+
+	return {pageBreaks: pageBreaks, positions: positions};
+
+	function storePageBreakData(data) {
+		var pageDesc;
+		for (var i = 0, l = pageBreaks.length; i < l; i++) {
+			var desc = pageBreaks[i];
+			if (desc.prevPage === data.prevPage) {
+				pageDesc = desc;
+				break;
 			}
 		}
-		cells.forEach(function (column) {
-			if (column && column.layers) {
-				column.layers.forEach(function (layer) {
-					if (layer.verticalAlign) {
-						var item = self.verticalAlignItemStack[layer._verticalAlignIdx].begin.item;
-						item.viewHeight = rowHeight;
-						item.nodeHeight = layer._height || layer.height || 0;
-					}
-				});
-			}
-		});
-	}
 
-	if (tableNode) {
-		tableNode._bottomByPage = bottomByPage;
-		// If there are page breaks in this row, update data with prevY of last cell
-		this._updatePageBreaksData(pageBreaks, tableNode, rowIndex);
-	}
-
-	return {
-		pageBreaksBySpan: pageBreaksByRowSpan,
-		pageBreaks: pageBreaks,
-		positions: positions
-	};
-
-	function storePageBreakClosure(data) {
-		const startsRowSpan = cell.rowSpan && cell.rowSpan > 1;
-		if (startsRowSpan) {
-			data.rowSpan = cell.rowSpan;
+		if (!pageDesc) {
+			pageDesc = data;
+			pageBreaks.push(pageDesc);
 		}
-		data.rowIndex = rowIndex;
-		self._storePageBreakData(data, startsRowSpan, pageBreaks, tableNode);
+		pageDesc.prevY = Math.max(pageDesc.prevY, data.prevY);
+		pageDesc.y = Math.min(pageDesc.y, data.y);
 	}
 
+	function colLeftOffset(i) {
+		if (gaps && gaps.length > i) {
+			return gaps[i];
+		}
+		return 0;
+	}
+
+	function getEndingCell(column, columnIndex) {
+		if (column.rowSpan && column.rowSpan > 1) {
+			var endingRow = tableRow + column.rowSpan - 1;
+			if (endingRow >= tableBody.length) {
+				throw 'Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count';
+			}
+			return tableBody[endingRow][columnIndex];
+		}
+
+		return null;
+	}
+
+	function verticalAlignLayer(layer) {
+		if(layer.verticalAlign) {
+		  var item = this_verticalAlignItemStack_test[layer._verticalAlignIdx].begin.item;
+		  item.viewHeight = this_writer_test.context().height;
+		  item.nodeHeight = layer._height;
+		}
+	  }
 };
 
 // lists
@@ -1039,29 +910,17 @@ LayoutBuilder.prototype.processList = function (orderedList, node) {
 
 // tables
 LayoutBuilder.prototype.processTable = function (tableNode) {
-	this.nestedLevel++;
 	var processor = new TableProcessor(tableNode);
-
 	processor.beginTable(this.writer);
 
 	var rowHeights = tableNode.table.heights;
 	for (var i = 0, l = tableNode.table.body.length; i < l; i++) {
-		// if dontBreakRows and row starts a rowspan
-		// we store the 'y' of the beginning of each rowSpan
-		if (processor.dontBreakRows) {
-			tableNode.table.body[i].forEach(cell => {
-				if (cell.rowSpan && cell.rowSpan > 1) {
-					cell._startingRowSpanY = this.writer.context().y;
-				}
-			});
-		}
-
 		processor.beginRow(i, this.writer);
 
 		var height;
 		if (isFunction(rowHeights)) {
 			height = rowHeights(i);
-		} else if (isArray(rowHeights)) {
+		} else if (Array.isArray(rowHeights)) {
 			height = rowHeights[i];
 		} else {
 			height = rowHeights;
@@ -1071,75 +930,45 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 			height = undefined;
 		}
 
-		var pageBeforeProcessing = this.writer.context().page;
-
-		var result = this.processRow({
-			marginX: tableNode._margin ? [tableNode._margin[0], tableNode._margin[2]] : [0, 0],
-			dontBreakRows: processor.dontBreakRows,
-			rowsWithoutPageBreak: processor.rowsWithoutPageBreak,
-			cells: tableNode.table.body[i],
-			widths: tableNode.table.widths,
-			gaps: tableNode._offsets.offsets,
-			tableBody: tableNode.table.body,
-			tableNode,
-			rowIndex: i,
-			height
-		});
+		var heightOffset = tableNode.heightOffset != undefined ? tableNode.heightOffset : 0;
+		
+		var result = this.processRow(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, tableNode.table.remark, height, heightOffset);		
 		addAll(tableNode.positions, result.positions);
 
-		if (!result.pageBreaks || result.pageBreaks.length === 0) {
-			var breaksBySpan = tableNode && tableNode._breaksBySpan || null;
-			var breakBySpanData = this._findSameRowPageBreakByRowSpanData(breaksBySpan, pageBeforeProcessing, i);
-			if (breakBySpanData) {
-				var finalBreakBySpanData = this._getPageBreakListBySpan(tableNode, breakBySpanData.prevPage, i);
-				result.pageBreaks.push(finalBreakBySpanData);
-			}
-		}
+		//if(tableNode.table.name == 'productItem') console.log(i,result.pageBreaks);
 
 		processor.endRow(i, this.writer, result.pageBreaks);
 	}
 
 	processor.endTable(this.writer);
-	this.nestedLevel--;
-	if (this.nestedLevel === 0) {
-		this.writer.context().resetMarginXTopParent();
+};
+
+// tables
+var processTable_test = function (tableNode) {
+	var processor = new TableProcessor(tableNode);
+	processor.beginTable(this_writer_test);
+
+	for (var i = 0, l = tableNode.table.body.length; i < l; i++) {
+		processor.beginRow(i, this_writer_test);
+
+		var result = processRow_test(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets.offsets, tableNode.table.body, i, tableNode.remark);
+		addAll(tableNode.positions, result.positions);
+
+		processor.endRow(i, this_writer_test, result.pageBreaks);
 	}
+
+	processor.endTable(this_writer_test);
 };
 
 // leafs (texts)
 LayoutBuilder.prototype.processLeaf = function (node) {
+
 	var line = this.buildNextLine(node);
-	if (line && (node.tocItem || node.id)) {
-		line._node = node;
-	}
 	var currentHeight = (line) ? line.getHeight() : 0;
 	var maxHeight = node.maxHeight || -1;
 
-	if (line) {
-		var nodeId = getNodeId(node);
-		if (nodeId) {
-			line.id = nodeId;
-		}
-	}
-
 	if (node._tocItemRef) {
-		line._pageNodeRef = node._tocItemRef;
-	}
-
-	if (node._pageRef) {
-		line._pageNodeRef = node._pageRef._nodeRef;
-	}
-
-	if (line && line.inlines && isArray(line.inlines)) {
-		for (var i = 0, l = line.inlines.length; i < l; i++) {
-			if (line.inlines[i]._tocItemRef) {
-				line.inlines[i]._pageNodeRef = line.inlines[i]._tocItemRef;
-			}
-
-			if (line.inlines[i]._pageRef) {
-				line.inlines[i]._pageNodeRef = line.inlines[i]._pageRef._nodeRef;
-			}
-		}
+		line._tocItemNode = node._tocItemRef;
 	}
 
 	while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
@@ -1152,13 +981,31 @@ LayoutBuilder.prototype.processLeaf = function (node) {
 	}
 };
 
+var processLeaf_test = function (node) {
+
+	var line = buildNextLine_test(node);
+	var currentHeight = (line) ? line.getHeight() : 0;
+	var maxHeight = node.maxHeight || -1;
+
+	if (node._tocItemRef) {
+		line._tocItemNode = node._tocItemRef;
+	}
+
+	while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
+		var positions = this_writer_test.addLine(line);
+		node.positions.push(positions);
+		line = buildNextLine_test(node);
+		if (line) {
+			currentHeight += line.getHeight();
+		}
+	}
+};
+
 LayoutBuilder.prototype.processToc = function (node) {
 	if (node.toc.title) {
 		this.processNode(node.toc.title);
 	}
-	if (node.toc._table) {
-		this.processNode(node.toc._table);
-	}
+	this.processNode(node.toc._table);
 };
 
 LayoutBuilder.prototype.buildNextLine = function (textNode) {
@@ -1171,27 +1018,6 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 		return newInline;
 	}
 
-	function findMaxFitLength(text, maxWidth, measureFn) {
-		let low = 1;
-		let high = text.length;
-		let bestFit = 1;
-
-		while (low <= high) {
-			const mid = Math.floor((low + high) / 2);
-			const part = text.substring(0, mid);
-			const width = measureFn(part);
-
-			if (width <= maxWidth) {
-				bestFit = mid;
-				low = mid + 1;
-			} else {
-				high = mid - 1;
-			}
-		}
-
-		return bestFit;
-	}
-
 	if (!textNode._inlines || textNode._inlines.length === 0) {
 		return null;
 	}
@@ -1199,34 +1025,76 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 	var line = new Line(this.writer.context().availableWidth);
 	var textTools = new TextTools(null);
 
-	var isForceContinue = false;
-	while (textNode._inlines && textNode._inlines.length > 0 &&
-		(line.hasEnoughSpaceForInline(textNode._inlines[0], textNode._inlines.slice(1)) || isForceContinue)) {
-		var isHardWrap = false;
+	while (textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
 		var inline = textNode._inlines.shift();
-		isForceContinue = false;
 
-		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
-			var maxChars = findMaxFitLength(inline.text, line.getAvailableWidth(), function (txt) {
-				return textTools.widthOfString(txt, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures)
-			});
+		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.maxWidth) {
+			var widthPerChar = inline.width / inline.text.length;
+			var maxChars = Math.floor(line.maxWidth / widthPerChar);
+			if (maxChars < 1) {
+				maxChars = 1;
+			}
 			if (maxChars < inline.text.length) {
 				var newInline = cloneInline(inline);
 
 				newInline.text = inline.text.substr(maxChars);
 				inline.text = inline.text.substr(0, maxChars);
 
-				newInline.width = textTools.widthOfString(newInline.text, newInline.font, newInline.fontSize, newInline.characterSpacing, newInline.fontFeatures);
-				inline.width = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
+				newInline.width = textTools.widthOfString(newInline.text, newInline.font, newInline.fontSize, newInline.characterSpacing);
+				inline.width = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing);
 
 				textNode._inlines.unshift(newInline);
-				isHardWrap = true;
 			}
 		}
 
 		line.addInline(inline);
+	}
 
-		isForceContinue = inline.noNewLine && !isHardWrap;
+	line.lastLineInParagraph = textNode._inlines.length === 0;
+
+	return line;
+};
+
+var buildNextLine_test = function (textNode) {
+
+	function cloneInline_test(inline) {
+		var newInline = inline.constructor();
+		for (var key in inline) {
+			newInline[key] = inline[key];
+		}
+		return newInline;
+	}
+
+	if (!textNode._inlines || textNode._inlines.length === 0) {
+		return null;
+	}
+
+	var line = new Line(this_writer_test.context().availableWidth);
+	var textTools = new TextTools(null);
+
+	while (textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
+		var inline = textNode._inlines.shift();
+
+		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.maxWidth) {
+			var widthPerChar = inline.width / inline.text.length;
+			var maxChars = Math.floor(line.maxWidth / widthPerChar);
+			if (maxChars < 1) {
+				maxChars = 1;
+			}
+			if (maxChars < inline.text.length) {
+				var newInline = cloneInline_test(inline);
+
+				newInline.text = inline.text.substr(maxChars);
+				inline.text = inline.text.substr(0, maxChars);
+
+				newInline.width = textTools.widthOfString(newInline.text, newInline.font, newInline.fontSize, newInline.characterSpacing);
+				inline.width = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing);
+
+				textNode._inlines.unshift(newInline);
+			}
+		}
+
+		line.addInline(inline);
 	}
 
 	line.lastLineInParagraph = textNode._inlines.length === 0;
@@ -1240,22 +1108,15 @@ LayoutBuilder.prototype.processImage = function (node) {
 	node.positions.push(position);
 };
 
-LayoutBuilder.prototype.processSVG = function (node) {
-	var position = this.writer.addSVG(node);
-	node.positions.push(position);
-};
-
 LayoutBuilder.prototype.processCanvas = function (node) {
 	var height = node._minHeight;
 
-	if (node.absolutePosition === undefined && this.writer.context().availableHeight < height) {
+	if (this.writer.context().availableHeight < height) {
 		// TODO: support for canvas larger than a page
 		// TODO: support for other overflow methods
 
 		this.writer.moveToNextPage();
 	}
-
-	this.writer.alignCanvas(node);
 
 	node.canvas.forEach(function (vector) {
 		var position = this.writer.addVector(vector);
@@ -1271,95 +1132,3 @@ LayoutBuilder.prototype.processQr = function (node) {
 };
 
 module.exports = LayoutBuilder;
-
-// ---------------- Legacy Custom Helper Integrations ----------------
-// (Added post-export to keep upstream diff minimal; prototypes are still extended)
-
-// Overlapping layer processing (legacy). Layers share same starting y and the tallest defines consumed height.
-if (!LayoutBuilder.prototype.processLayers) {
-	LayoutBuilder.prototype.processLayers = function (node) {
-		var self = this;
-		var startY = this.writer.context().y;
-		var maxHeight = 0;
-		node.layers.forEach(function (layer) {
-			self.writer.context().y = startY;
-			self.processNode(layer);
-			addAll(node.positions, layer.positions);
-			if (layer.verticalAlign) {
-				layer._verticalAlignIdx = self.verticalAlignItemStack.length - 1;
-			}
-			maxHeight = Math.max(maxHeight, layer._height || layer.height || 0);
-		});
-		self.writer.context().y = startY + maxHeight;
-	};
-}
-
-// Remark table transformation (legacy Beam customization)
-if (!LayoutBuilder.prototype._transformRemarkTableIfNeeded) {
-	LayoutBuilder.prototype._transformRemarkTableIfNeeded = function (docStructure) {
-		try {
-			if (Array.isArray(docStructure) && Array.isArray(docStructure[2]) && docStructure[2][0] && docStructure[2][0].remark) {
-				var labelNode = docStructure[2][0];
-				var tableContainer = labelNode.remark; // expected shape: { table: { body: [], headerRows: 0 } }
-				if (tableContainer && tableContainer.table && Array.isArray(tableContainer.table.body)) {
-					var detailText = docStructure[2][1] && docStructure[2][1].text;
-					// Mutate the existing labelNode so reference at doc[2][0] still points to transformed table
-					delete labelNode.remark; // remove remark marker
-					// Ensure body starts empty only if not already transformed (idempotent)
-					if (!labelNode.table || !Array.isArray(labelNode.table.body) || labelNode.table.body.length < 2) {
-						labelNode.table = tableContainer.table;
-						labelNode.table.body = [];
-						var labelRow = [{ text: labelNode.text }];
-						var detailRow = [{ text: detailText }];
-						labelNode.table.body.push(labelRow);
-						labelNode.table.body.push(detailRow);
-						labelNode.table.headerRows = 1;
-					}
-					// remove the old detail node (now captured in table body)
-					if (docStructure[2].length > 1) {
-						docStructure[2].splice(1, 1);
-					}
-				}
-			}
-			} catch (e) { /* eslint-disable-line no-unused-vars */ /* swallow if structure unexpected */ }
-		return docStructure;
-	};
-}
-
-// Header/Footer pre-measure (legacy heuristic). Returns {header, footer} heights if measurable.
-if (!LayoutBuilder.prototype._measureHeadersAndFooters) {
-	LayoutBuilder.prototype._measureHeadersAndFooters = function (header, footer) {
-		var tempWriter = new PageElementWriter(new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
-		var self = this;
-
-		function fullSize(pageSize) { return { x: 0, y: 0, width: pageSize.width, height: pageSize.height }; }
-
-		function render(nodeOrFn, sizeFn) {
-			if (!nodeOrFn) return undefined;
-			var pages = tempWriter.context().pages;
-			for (var p = 0; p < pages.length; p++) {
-				tempWriter.context().page = p;
-				var node = (typeof nodeOrFn === 'function') ? nodeOrFn(p + 1, 1, pages[p].pageSize) : JSON.parse(JSON.stringify(nodeOrFn));
-				if (!node) continue;
-				var sizes = sizeFn(tempWriter.context().getCurrentPage().pageSize, self.pageMargins);
-				tempWriter.beginUnbreakableBlock(sizes.width, sizes.height);
-				node = self.docPreprocessor.preprocessDocument(node);
-				node = self.docMeasure.measureDocument(node);
-				var originalWriter = self.writer;
-				self.writer = tempWriter;
-				self.processNode(node);
-				self.writer = originalWriter;
-				var fragment = tempWriter.commitUnbreakableBlock(sizes.x, sizes.y);
-				if (fragment && fragment.height) {
-					return fragment.height;
-				}
-			}
-			return undefined;
-		}
-
-		return {
-			header: render(header, fullSize),
-			footer: render(footer, fullSize)
-		};
-	};
-}

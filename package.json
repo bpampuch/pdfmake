@@ -1,6 +1,6 @@
 {
   "name": "@flowaccount/pdfmake",
-  "version": "0.2.20-local.1759406968",
+  "version": "0.2.20-local.1759466873",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/printer.js",
   "browser": "build/pdfmake.js",
@@ -13,7 +13,8 @@
     "@foliojs-fork/pdfkit": "^0.15.3",
     "iconv-lite": "^0.6.3",
     "lodash": "^4.17.4",
-    "xmldoc": "^2.0.1"
+    "xmldoc": "^2.0.1",
+    "pdfkit": "^0.8.3"
   },
   "devDependencies": {
     "@babel/cli": "^7.27.2",

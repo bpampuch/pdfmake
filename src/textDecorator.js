@@ -1,38 +1,34 @@
+/* jslint node: true */
 'use strict';
 
-var isArray = require('./helpers').isArray;
-var isPattern = require('./helpers').isPattern;
-var getPattern = require('./helpers').getPattern;
-
 function groupDecorations(line) {
-	var groups = [], currentGroup = null;
+	var groups = [], curGroup = null;
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
 		var decoration = inline.decoration;
 		if (!decoration) {
-			currentGroup = null;
+			curGroup = null;
 			continue;
-		}
-		if (!isArray(decoration)) {
-			decoration = [decoration];
 		}
 		var color = inline.decorationColor || inline.color || 'black';
 		var style = inline.decorationStyle || 'solid';
+		decoration = Array.isArray(decoration) ? decoration : [decoration];
 		for (var ii = 0, ll = decoration.length; ii < ll; ii++) {
-			var decorationItem = decoration[ii];
-			if (!currentGroup || decorationItem !== currentGroup.decoration ||
-				style !== currentGroup.decorationStyle || color !== currentGroup.decorationColor) {
+			var deco = decoration[ii];
+			if (!curGroup || deco !== curGroup.decoration ||
+				style !== curGroup.decorationStyle || color !== curGroup.decorationColor ||
+				deco === 'lineThrough') {
 
-				currentGroup = {
+				curGroup = {
 					line: line,
-					decoration: decorationItem,
+					decoration: deco,
 					decorationColor: color,
 					decorationStyle: style,
 					inlines: [inline]
 				};
-				groups.push(currentGroup);
+				groups.push(curGroup);
 			} else {
-				currentGroup.inlines.push(inline);
+				curGroup.inlines.push(inline);
 			}
 		}
 	}
@@ -44,16 +40,15 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 	function maxInline() {
 		var max = 0;
 		for (var i = 0, l = group.inlines.length; i < l; i++) {
-			var inline = group.inlines[i];
-			max = inline.fontSize > max ? i : max;
+			var inl = group.inlines[i];
+			max = inl.fontSize > max ? i : max;
 		}
 		return group.inlines[max];
 	}
 	function width() {
 		var sum = 0;
 		for (var i = 0, l = group.inlines.length; i < l; i++) {
-			var justifyShift = (group.inlines[i].justifyShift || 0);
-			sum += group.inlines[i].width + justifyShift;
+			sum += group.inlines[i].width;
 		}
 		return sum;
 	}
@@ -78,7 +73,7 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 			y += lineAscent - (ascent * 0.25);
 			break;
 		default:
-			throw 'Unknown decoration : ' + group.decoration;
+			throw 'Unkown decoration : ' + group.decoration;
 	}
 	pdfKitDoc.save();
 
@@ -118,6 +113,7 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 			rwx += sh * 6;
 		}
 		pdfKitDoc.stroke(group.decorationColor);
+
 	} else {
 		pdfKitDoc.fillColor(group.decorationColor)
 			.rect(x + firstInline.x, y - lw / 2, totalWidth, lw)
@@ -133,21 +129,16 @@ function drawDecorations(line, x, y, pdfKitDoc) {
 	}
 }
 
-function drawBackground(line, x, y, patterns, pdfKitDoc) {
+function drawBackground(line, x, y, pdfKitDoc) {
 	var height = line.getHeight();
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
-		if (!inline.background) {
-			continue;
+		if (inline.background) {
+			var justifyShift = (inline.justifyShift || 0);
+			pdfKitDoc.fillColor(inline.background)
+				.rect(x + inline.x - justifyShift, y, inline.width + justifyShift, height)
+				.fill();
 		}
-		var color = inline.background;
-		if (isPattern(inline.background)) {
-			color = getPattern(inline.background, patterns);
-		}
-		var justifyShift = (inline.justifyShift || 0);
-		pdfKitDoc.fillColor(color)
-			.rect(x + inline.x - justifyShift, y, inline.width + justifyShift, height)
-			.fill();
 	}
 }
 
