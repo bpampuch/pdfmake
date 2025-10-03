@@ -1,7 +1,16 @@
 /* jslint node: true */
 'use strict';
 
-function buildColumnWidths(columns, availableWidth) {
+var helpers = require('./helpers');
+var isString = helpers && helpers.isString ? helpers.isString : function (value) {
+	return typeof value === 'string' || value instanceof String;
+};
+
+function buildColumnWidths(columns, availableWidth, offsetTotal, tableNode) {
+	if (offsetTotal === undefined) {
+		offsetTotal = 0;
+	}
+
 	var autoColumns = [],
 		autoMin = 0, autoMax = 0,
 		starColumns = [],
@@ -24,10 +33,30 @@ function buildColumnWidths(columns, availableWidth) {
 		}
 	});
 
-	fixedColumns.forEach(function (col) {
+	fixedColumns.forEach(function (col, colIndex) {
 		// width specified as %
-		if (typeof col.width === 'string' && /\d+%/.test(col.width)) {
-			col.width = parseFloat(col.width) * initial_availableWidth / 100;
+		if (isString(col.width) && /\d+%/.test(col.width)) {
+			var reservedWidth = 0;
+			if (tableNode) {
+				var paddingLeft = tableNode._layout.paddingLeft(colIndex, tableNode);
+				var paddingRight = tableNode._layout.paddingRight(colIndex, tableNode);
+				var borderLeft = tableNode._layout.vLineWidth(colIndex, tableNode);
+				var borderRight = tableNode._layout.vLineWidth(colIndex + 1, tableNode);
+				if (colIndex === 0) {
+					// first column assumes whole borderLeft and half of border right
+					reservedWidth = paddingLeft + paddingRight + borderLeft + (borderRight / 2);
+
+				} else if (colIndex === fixedColumns.length - 1) {
+					// last column assumes whole borderRight and half of border left
+					reservedWidth = paddingLeft + paddingRight + (borderLeft / 2) + borderRight;
+
+				} else {
+					// Columns in the middle assume half of each border
+					reservedWidth = paddingLeft + paddingRight + (borderLeft / 2) + (borderRight / 2);
+				}
+			}
+			var totalAvailableWidth = initial_availableWidth + offsetTotal;
+			col.width = (parseFloat(col.width) * totalAvailableWidth / 100) - reservedWidth;
 		}
 		if (col.width < (col._minWidth) && col.elasticWidth) {
 			col._calcWidth = col._minWidth;
