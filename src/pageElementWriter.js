@@ -1,6 +1,7 @@
 /* jslint node: true */
 'use strict';
 
+var isUndefined = require('./helpers').isUndefined;
 var ElementWriter = require('./elementWriter');
 
 /**
@@ -11,6 +12,9 @@ var ElementWriter = require('./elementWriter');
  *                         a page-break occurs)
  * - transactions (used for unbreakable-blocks when we want to make sure
  *                 whole block will be rendered on the same page)
+ *
+ * @param {object} context Active document context.
+ * @param {object} tracker Tracker to emit layout events.
  */
 function PageElementWriter(context, tracker) {
 	this.transactionLevel = 0;
@@ -40,14 +44,28 @@ PageElementWriter.prototype.addImage = function (image, index) {
 	});
 };
 
+PageElementWriter.prototype.addSVG = function (image, index) {
+	return fitOnPage(this, function (self) {
+		return self.writer.addSVG(image, index);
+	});
+};
+
 PageElementWriter.prototype.addQr = function (qr, index) {
 	return fitOnPage(this, function (self) {
 		return self.writer.addQr(qr, index);
 	});
 };
 
-PageElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index) {
-	return this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
+PageElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index, forcePage) {
+	return this.writer.addVector(vector, ignoreContextX, ignoreContextY, index, forcePage);
+};
+
+PageElementWriter.prototype.beginClip = function (width, height) {
+	return this.writer.beginClip(width, height);
+};
+
+PageElementWriter.prototype.endClip = function () {
+	return this.writer.endClip();
 };
 
 PageElementWriter.prototype.alignCanvas = function (node) {
@@ -57,24 +75,29 @@ PageElementWriter.prototype.alignCanvas = function (node) {
 var newPageFooterBreak = true;
 
 PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
-	var res = this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
-	if(isFooter){
-		if(res && isFooter == 1){
+	var result = this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+	if (isFooter) {
+		if (result && isFooter === 1) {
 			newPageFooterBreak = false;
 			return true;
-		} else if(!res && isFooter == 2 && newPageFooterBreak){
-			this.moveToNextPage();
-			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
-		} else if(!res && isFooter == 1) {
-			this.moveToNextPage();
 		}
-	} else {
-		if(!res){
+		if (!result && isFooter === 2 && newPageFooterBreak) {
 			this.moveToNextPage();
-			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+			return this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
 		}
+		if (!result && isFooter === 1) {
+			this.moveToNextPage();
+			return this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+		}
+		return result;
 	}
 
+	if (!result) {
+		this.moveToNextPage();
+		return this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+	}
+
+	return true;
 };
 
 PageElementWriter.prototype.addFragment_test = function (fragment) {
@@ -101,29 +124,32 @@ PageElementWriter.prototype.endVerticalAlign = function(verticalAlign) {
 };
 
 PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
-
-	var currentPage = this.writer.context.pages[this.writer.context.page];
+	newPageFooterBreak = true;
+	var context = this.writer.context;
+	var currentPage = context.pages[context.page];
 	this.writer.tracker.emit('beforePageChanged', {
 		prevPage: currentPage.prevPage,
 		prevY: currentPage.prevY,
 		y: currentPage.y
 	});
 
-	var nextPage = this.writer.context.moveToNextPage(pageOrientation);
-	if (nextPage.newPageCreated) {
-		this.repeatables.forEach(function (rep) {
+	var nextPage = context.moveToNextPage(pageOrientation);
+	this.repeatables.forEach(function (rep) {
+		if (isUndefined(rep.insertedOnPages)) {
+			rep.insertedOnPages = [];
+		}
+		if (isUndefined(rep.insertedOnPages[context.page])) {
+			rep.insertedOnPages[context.page] = true;
 			this.writer.addFragment(rep, true);
-		}, this);
-	} else {
-		this.repeatables.forEach(function (rep) {
-			this.writer.context.moveDown(rep.height);
-		}, this);
-	}
+		} else {
+			context.moveDown(rep.height);
+		}
+	}, this);
 
 	this.writer.tracker.emit('pageChanged', {
 		prevPage: nextPage.prevPage,
 		prevY: nextPage.prevY,
-		y: nextPage.y
+		y: context.y
 	});
 };
 
@@ -204,11 +230,15 @@ PageElementWriter.prototype.currentBlockToRepeatable = function () {
 
 	//TODO: vectors can influence height in some situations
 	rep.height = unbreakableContext.y;
+	rep.insertedOnPages = [];
 
 	return rep;
 };
 
 PageElementWriter.prototype.pushToRepeatables = function (rep) {
+	if (isUndefined(rep.insertedOnPages)) {
+		rep.insertedOnPages = [];
+	}
 	this.repeatables.push(rep);
 };
 
