@@ -1,29 +1,51 @@
 /* jslint node: true */
 'use strict';
 
-var fontStringify = require('./helpers').fontStringify;
+var helpers = require('./helpers');
+var fontStringify = helpers.fontStringify;
+var isString = helpers.isString || function (value) {
+	return typeof value === 'string' || value instanceof String;
+};
+var isNumber = helpers.isNumber || function (value) {
+	return typeof value === 'number' || value instanceof Number;
+};
+var isBoolean = helpers.isBoolean || function (value) {
+	return typeof value === 'boolean' || value instanceof Boolean;
+};
+var isArray = helpers.isArray || function (value) {
+	return Array.isArray(value);
+};
+var isUndefined = helpers.isUndefined || function (value) {
+	return typeof value === 'undefined';
+};
 
 function DocPreprocessor() {
 
 }
 
 DocPreprocessor.prototype.preprocessDocument = function (docStructure) {
-	this.tocs = [];
+	this.parentNode = null;
+	this.tocs = {};
+	this.nodeReferences = {};
 	return this.preprocessNode(docStructure);
 };
 
 DocPreprocessor.prototype.preprocessNode = function (node) {
 	// expand shortcuts and casting values
-	if (Array.isArray(node)) {
+	if (isArray(node)) {
 		node = {stack: node};
-	} else if (typeof node === 'string' || node instanceof String) {
+	} else if (isString(node)) {
 		node = {text: node};
-	} else if (typeof node === 'number' || typeof node === 'boolean') {
+	} else if (isNumber(node) || isBoolean(node)) {
 		node = {text: node.toString()};
-	} else if (node === null) {
+	} else if (isUndefined(node) || node === null) {
 		node = {text: ''};
-	} else if (Object.keys(node).length === 0) { // empty object
-		node = {text: ''};
+	} else if (typeof node === 'object') {
+		if (Object.keys(node).length === 0) { // empty object
+			node = {text: ''};
+		} else if ('text' in node && (node.text === undefined || node.text === null)) {
+			node.text = '';
+		}
 	}
 
 	if (node.columns) {
@@ -32,7 +54,7 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 		return this.preprocessVerticalContainer(node);
 	} else if (node.layers) {
 		return this.preprocessLayers(node);
-	}  else if (node.ul) {
+	} else if (node.ul) {
 		return this.preprocessList(node);
 	} else if (node.ol) {
 		return this.preprocessList(node);
@@ -44,13 +66,17 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 		return this.preprocessToc(node);
 	} else if (node.image) {
 		return this.preprocessImage(node);
+	} else if (node.svg) {
+		return this.preprocessSVG(node);
 	} else if (node.canvas) {
 		return this.preprocessCanvas(node);
 	} else if (node.qr) {
 		return this.preprocessQr(node);
-	} else {
-		throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+	} else if (node.pageReference || node.textReference) {
+		return this.preprocessText(node);
 	}
+
+	throw new Error('Unrecognized document structure: ' + JSON.stringify(node, fontStringify));
 };
 
 DocPreprocessor.prototype.preprocessColumns = function (node) {
@@ -94,8 +120,15 @@ DocPreprocessor.prototype.preprocessList = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessTable = function (node) {
-	var col, row, cols, rows;
-	if(!node.table.body[0]){return node;}
+	var col;
+	var row;
+	var cols;
+	var rows;
+
+	if (!node.table.body || !node.table.body[0]) {
+		return node;
+	}
+
 	for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
 		for (row = 0, rows = node.table.body.length; row < rows; row++) {
 			var rowData = node.table.body[row];
@@ -115,13 +148,16 @@ DocPreprocessor.prototype.preprocessTable = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessText = function (node) {
+	var i;
+	var l;
+
 	if (node.tocItem) {
-		if (!Array.isArray(node.tocItem)) {
+		if (!isArray(node.tocItem)) {
 			node.tocItem = [node.tocItem];
 		}
 
-		for (var i = 0, l = node.tocItem.length; i < l; i++) {
-			if (!(typeof node.tocItem[i] === 'string' || node.tocItem[i] instanceof String)) {
+		for (i = 0, l = node.tocItem.length; i < l; i++) {
+			if (!isString(node.tocItem[i])) {
 				node.tocItem[i] = '_default_';
 			}
 
@@ -131,7 +167,76 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 				this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
 			}
 
-			this.tocs[tocItemId].toc._items.push(node);
+			if (!node.id) {
+				node.id = 'toc-' + tocItemId + '-' + this.tocs[tocItemId].toc._items.length;
+			}
+
+			var tocItemRef = {
+				_nodeRef: this._getNodeForNodeRef(node),
+				_textNodeRef: node
+			};
+			this.tocs[tocItemId].toc._items.push(tocItemRef);
+		}
+	}
+
+	if (node.id) {
+		if (this.nodeReferences[node.id]) {
+			if (!this.nodeReferences[node.id]._pseudo) {
+				throw new Error("Node id '" + node.id + "' already exists");
+			}
+
+			this.nodeReferences[node.id]._nodeRef = this._getNodeForNodeRef(node);
+			this.nodeReferences[node.id]._textNodeRef = node;
+			this.nodeReferences[node.id]._pseudo = false;
+		} else {
+			this.nodeReferences[node.id] = {
+				_nodeRef: this._getNodeForNodeRef(node),
+				_textNodeRef: node
+			};
+		}
+	}
+
+	if (node.pageReference) {
+		if (!this.nodeReferences[node.pageReference]) {
+			this.nodeReferences[node.pageReference] = {
+				_nodeRef: {},
+				_textNodeRef: {},
+				_pseudo: true
+			};
+		}
+		node.text = '00000';
+		node.linkToDestination = node.pageReference;
+		node._pageRef = this.nodeReferences[node.pageReference];
+	}
+
+	if (node.textReference) {
+		if (!this.nodeReferences[node.textReference]) {
+			this.nodeReferences[node.textReference] = {
+				_nodeRef: {},
+				_pseudo: true
+			};
+		}
+
+		node.text = '';
+		node.linkToDestination = node.textReference;
+		node._textRef = this.nodeReferences[node.textReference];
+	}
+
+	if (node.text && node.text.text) {
+		node.text = [this.preprocessNode(node.text)];
+	} else if (isArray(node.text)) {
+		var isSetParentNode = false;
+		if (this.parentNode === null) {
+			this.parentNode = node;
+			isSetParentNode = true;
+		}
+
+		for (i = 0, l = node.text.length; i < l; i++) {
+			node.text[i] = this.preprocessNode(node.text[i]);
+		}
+
+		if (isSetParentNode) {
+			this.parentNode = null;
 		}
 	}
 
@@ -148,7 +253,7 @@ DocPreprocessor.prototype.preprocessToc = function (node) {
 
 	if (this.tocs[node.toc.id]) {
 		if (!this.tocs[node.toc.id].toc._pseudo) {
-			throw "TOC '" + node.toc.id + "' already exists";
+			throw new Error("TOC '" + node.toc.id + "' already exists");
 		}
 
 		node.toc._items = this.tocs[node.toc.id].toc._items;
@@ -160,6 +265,13 @@ DocPreprocessor.prototype.preprocessToc = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessImage = function (node) {
+	if (typeof Buffer !== 'undefined' && node.image && node.image.type === 'Buffer' && !isUndefined(node.image.data) && isArray(node.image.data)) {
+		node.image = Buffer.from(node.image.data);
+	}
+	return node;
+};
+
+DocPreprocessor.prototype.preprocessSVG = function (node) {
 	return node;
 };
 
@@ -168,6 +280,14 @@ DocPreprocessor.prototype.preprocessCanvas = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessQr = function (node) {
+	return node;
+};
+
+DocPreprocessor.prototype._getNodeForNodeRef = function (node) {
+	if (this.parentNode) {
+		return this.parentNode;
+	}
+
 	return node;
 };
 
