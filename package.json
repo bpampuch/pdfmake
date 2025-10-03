@@ -1,6 +1,6 @@
 {
   "name": "@flowaccount/pdfmake",
-  "version": "0.2.20-local.1759482546",
+  "version": "0.2.20-local.1759483930",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/printer.js",
   "browser": "build/pdfmake.js",

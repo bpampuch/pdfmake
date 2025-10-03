@@ -1,7 +1,13 @@
 /* jslint node: true */
 'use strict';
 
-var LineBreaker = require('linebreak');
+var helpers = require('./helpers');
+var isString = helpers.isString;
+var isNumber = helpers.isNumber;
+var isObject = helpers.isObject;
+var isArray = helpers.isArray;
+var isUndefined = helpers.isUndefined;
+var LineBreaker = require('@foliojs-fork/linebreak');
 const Tokenizer = require('@flowaccount/node-icu-tokenizer');
 const fontkit = require('fontkit');
 
@@ -9,14 +15,15 @@ var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;
 
 var fontCacheName_new = '';
-var fontCache_new = {};
-var fontSubstituteCache = [];
-var defaultFont = '';
+var fontCache_new = null;
+var fontSubstituteCache = {};
+var defaultFont = 'Roboto';
+
 /**
- * Creates an instance of TextTools - text measurement utility
+ * Text measurement utility.
  *
- * @constructor
- * @param {FontProvider} fontProvider
+ * @class TextTools
+ * @param {object} fontProvider
  */
 function TextTools(fontProvider) {
 	this.fontProvider = fontProvider;
@@ -24,41 +31,25 @@ function TextTools(fontProvider) {
 
 /**
  * Converts an array of strings (or inline-definition-objects) into a collection
- * of inlines and calculated minWidth/maxWidth.
- * and their min/max widths
- * @param  {Object} textArray - an array of inline-definition-objects (or strings)
- * @param  {Object} styleContextStack current style stack
- * @return {Object}                   collection of inlines, minWidth, maxWidth
+ * of inlines and calculates minWidth/maxWidth.
+ *
+ * @param {(string|object|Array)} textArray - inline-definition objects (or strings)
+ * @param {object} styleContextStack current style stack
+ * @returns {{items: Array, minWidth: number, maxWidth: number}} collection of inlines
  */
 TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
+	primeFontCaches.call(this, styleContextStack);
 
-
-	defaultFont = styleContextStack.getProperty('font');
-	// if(!fontCacheName_new)
-	// {
-		fontCacheName_new = defaultFont;
-		fontCache_new = fontkit.openSync(this.fontProvider.fonts[fontCacheName_new].normal);
-	//}
-	//var fcount = 0;
-	for(let fontItem in this.fontProvider.fonts) {
-		if(fontCacheName_new != fontItem) {
-			if(!fontSubstituteCache[fontItem])
-			{
-				var fontObj = fontkit.openSync(this.fontProvider.fonts[fontItem].normal);
-				fontSubstituteCache[fontItem] = { "Name" : fontItem, "FontObj" : fontObj };
-			}
-		}
-	}
 	var measured = measure(this.fontProvider, textArray, styleContextStack);
-	var minWidth = 0,
-		maxWidth = 0,
-		currentLineWidth;
+	var minWidth = 0;
+	var maxWidth = 0;
+	var currentLineWidth;
 
 	measured.forEach(function (inline) {
 		minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);
 
 		if (!currentLineWidth) {
-			currentLineWidth = {width: 0, leadingCut: inline.leadingCut, trailingCut: 0};
+			currentLineWidth = { width: 0, leadingCut: inline.leadingCut, trailingCut: 0 };
 		}
 
 		currentLineWidth.width += inline.width;
@@ -87,17 +78,18 @@ TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
 };
 
 /**
- * Returns size of the specified string (without breaking it) using the current style
- * @param  {String} text              text to be measured
- * @param  {Object} styleContextStack current style stack
- * @return {Object}                   size of the specified string
+ * Returns size of the specified string (without breaking it) using the current style.
+ *
+ * @param {string} text text to be measured
+ * @param {object} styleContextStack current style stack
+ * @returns {object} size of the specified string
  */
 TextTools.prototype.sizeOfString = function (text, styleContextStack) {
-	text = text ? text.toString().replace('\t', '    ') : '';
+	text = text ? text.toString().replace(/\t/g, '    ') : '';
 
-	//TODO: refactor - extract from measure
 	var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
 	var fontSize = getStyleProperty({}, styleContextStack, 'fontSize', 12);
+	var fontFeatures = getStyleProperty({}, styleContextStack, 'fontFeatures', null);
 	var bold = getStyleProperty({}, styleContextStack, 'bold', false);
 	var italics = getStyleProperty({}, styleContextStack, 'italics', false);
 	var lineHeight = getStyleProperty({}, styleContextStack, 'lineHeight', 1);
@@ -106,7 +98,7 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	var font = this.fontProvider.provideFont(fontName, bold, italics);
 
 	return {
-		width: widthOfString(text, font, fontSize, characterSpacing),
+		width: widthOfString(text, font, fontSize, characterSpacing, fontFeatures),
 		height: font.lineHeight(fontSize) * lineHeight,
 		fontSize: fontSize,
 		lineHeight: lineHeight,
@@ -115,30 +107,45 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	};
 };
 
-TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpacing) {
-	return widthOfString(text, font, fontSize, characterSpacing);
+/**
+ * Returns size of the specified rotated string (without breaking it) using the current style
+ *
+ * @param {string} text text to be measured
+ * @param {number} angle
+ * @param {object} styleContextStack current style stack
+ * @returns {object} size of the specified string
+ */
+TextTools.prototype.sizeOfRotatedText = function (text, angle, styleContextStack) {
+	var angleRad = angle * Math.PI / -180;
+	var size = this.sizeOfString(text, styleContextStack);
+
+	return {
+		width: Math.abs(size.height * Math.sin(angleRad)) + Math.abs(size.width * Math.cos(angleRad)),
+		height: Math.abs(size.width * Math.sin(angleRad)) + Math.abs(size.height * Math.cos(angleRad))
+	};
+};
+
+TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpacing, fontFeatures) {
+	return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
 };
 
 function tokenizerWords(word) {
-
 	var regex = / /;
-	word = word.replace(regex, "[BLANK]");
+	word = word.replace(regex, '[BLANK]');
 
-	var tokenizer = new Tokenizer().tokenize(word, { ignoreWhitespaceTokens:false });
- for(var tItem in tokenizer){
-	 if(tItem < tokenizer.length){
-		 var numIndex = parseInt(tItem);
-		 if(tokenizer[numIndex].token == '[' && tokenizer[numIndex + 1].token  == 'BLANK' && tokenizer[numIndex + 2].token == ']') {
-			 tokenizer[numIndex].token = ' ';
-			 tokenizer[numIndex + 1].del = true;
-			 tokenizer[numIndex + 2].del = true;
-		 }
+	var tokenizer = new Tokenizer().tokenize(word, { ignoreWhitespaceTokens: false });
 
-	 } else {
-		 break;
-	 }
- } 
-	 return tokenizer;
+	for (var i = 0; i < tokenizer.length; i++) {
+		if (tokenizer[i] && tokenizer[i].token === '[' &&
+			tokenizer[i + 1] && tokenizer[i + 1].token === 'BLANK' &&
+			tokenizer[i + 2] && tokenizer[i + 2].token === ']') {
+			tokenizer[i].token = ' ';
+			tokenizer[i + 1].del = true;
+			tokenizer[i + 2].del = true;
+		}
+	}
+
+	return tokenizer;
 }
 
 function splitWords(text, noWrap) {
@@ -148,54 +155,61 @@ function splitWords(text, noWrap) {
 	text = text.replace(/\r/g, '');
 
 	if (noWrap) {
-		results.push({text: text});
+		results.push({ text: text });
 		return results;
-	} 
+	}
 
-		 var breaker = new LineBreaker(text);
-		 	var last = 0;
-		 	var bk;
+	var breaker = new LineBreaker(text);
+	var last = 0;
+	var bk;
 
-			while (bk = breaker.nextBreak()) {
-				var word = text.slice(last, bk.position);
+	while ((bk = breaker.nextBreak())) {
+		var word = text.slice(last, bk.position);
+		var isLineEnd = bk.required || /\r?\n$|\r$/.test(word);
+		var trimmed = word.trim();
+		var useTokenizer = !exceptTokenizer(trimmed) && needsTokenizer(trimmed);
 
-				if(exceptTokenizer(word.trim()))
-				{				
-					results.push({text: word, lineEnd: (bk.required || word.match(/\r?\n$|\r$/))});
-				}
-				else if (bk.required || word.match(/\r?\n$|\r$/)) {
-					//word = word.replace(/\r?\n$|\r$/, '');
-
-					var tokenWord = tokenizerWords(word);
-					for (var tIndex in tokenWord) {
-						if (!tokenWord[tIndex].del) {
-							if (tIndex < tokenWord.length - 1 && tokenWord[tIndex].token != '\n') {
-								results.push({ text: tokenWord[tIndex].token });
-							} else {
-								results.push({ text: tokenWord[tIndex].token, lineEnd: true });
-							}
-						}
-					}
-				} else {
-					var tokenWord = tokenizerWords(word);
-					for (var tIndex in tokenWord) {
-						if (!tokenWord[tIndex].del) {
-							results.push({ text: tokenWord[tIndex].token });
-						}
-					}
-				}
-
-				last = bk.position;
+		if (!useTokenizer) {
+			var output = word;
+			if (isLineEnd) {
+				output = output.replace(/\r?\n$|\r$/, '');
 			}
+			results.push({ text: output, lineEnd: isLineEnd });
+		} else {
+			var tokenWord = tokenizerWords(word);
+			for (var tIndex = 0; tIndex < tokenWord.length; tIndex++) {
+				var token = tokenWord[tIndex];
+				if (!token || token.del) {
+					continue;
+				}
+
+				var tokenText = token.token;
+				var tokenResult = { text: tokenText };
+
+				if (tokenText === '\n') {
+					tokenResult.lineEnd = true;
+					tokenResult.text = '';
+				} else if (isLineEnd && tIndex === tokenWord.length - 1) {
+					tokenResult.text = tokenText.replace(/\r?\n$|\r$/, '');
+					tokenResult.lineEnd = true;
+				}
+
+				results.push(tokenResult);
+			}
+		}
+
+		last = bk.position;
+	}
+
 	return results;
 }
 
 function copyStyle(source, destination) {
 	destination = destination || {};
-	source = source || {}; //TODO: default style
+	source = source || {}; // TODO: default style
 
 	for (var key in source) {
-		if (key != 'text' && source.hasOwnProperty(key)) {
+		if (key !== 'text' && Object.prototype.hasOwnProperty.call(source, key)) {
 			destination[key] = source[key];
 		}
 	}
@@ -204,48 +218,99 @@ function copyStyle(source, destination) {
 }
 
 function normalizeTextArray(array, styleContextStack) {
+	function flatten(target) {
+		return target.reduce(function (prev, cur) {
+			var current = isObject(cur) && isArray(cur.text) ? flatten(cur.text) : cur;
+			var more = [].concat(current).some(Array.isArray);
+			return prev.concat(more ? flatten(current) : current);
+		}, []);
+	}
+
+	function getOneWord(index, words, noWrap) {
+		if (isUndefined(words[index])) {
+			return null;
+		}
+
+		if (words[index].lineEnd) {
+			return null;
+		}
+
+		var word = words[index].text;
+
+		if (noWrap) {
+			var tmpWords = splitWords(normalizeString(word), false);
+			if (isUndefined(tmpWords[tmpWords.length - 1])) {
+				return null;
+			}
+			word = tmpWords[tmpWords.length - 1].text;
+		}
+
+		return word;
+	}
+
 	var results = [];
 
-	if (!Array.isArray(array)) {
+	if (!isArray(array)) {
 		array = [array];
 	}
 
-	for (var i = 0, l = array.length; i < l; i++) {
+	array = flatten(array);
+
+	var lastWord = null;
+
+	for (var i = 0; i < array.length; i++) {
 		var item = array[i];
 		var style = null;
 		var words;
 
 		var noWrap = getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 
-		if (item !== null && (typeof item === 'object' || item instanceof Object)) {
+		if (isObject(item)) {
+			if (item._textRef && item._textRef._textNodeRef && item._textRef._textNodeRef.text) {
+				item.text = item._textRef._textNodeRef.text;
+			}
 			words = splitWords(normalizeString(item.text), noWrap);
 			style = copyStyle(item);
 		} else {
 			words = splitWords(normalizeString(item), noWrap);
 		}
 
-		for (var i2 = 0, l2 = words.length; i2 < l2; i2++) {
+		if (lastWord && words.length) {
+			var firstWord = getOneWord(0, words, noWrap);
+			var wrapWords = splitWords(normalizeString(lastWord + firstWord), false);
+			if (wrapWords.length === 1) {
+				results[results.length - 1].noNewLine = true;
+			}
+		}
+
+		for (var j = 0; j < words.length; j++) {
 			var result = {
-				text: words[i2].text
+				text: words[j].text
 			};
 
-			if (words[i2].lineEnd) {
+			if (words[j].lineEnd) {
 				result.lineEnd = true;
 			}
 
 			copyStyle(style, result);
 			results.push(result);
-		}								
+		}
+
+		lastWord = null;
+		if (i + 1 < array.length) {
+			lastWord = getOneWord(words.length - 1, words, noWrap);
+		}
 	}
+
 	return results;
 }
 
 function normalizeString(value) {
 	if (value === undefined || value === null) {
 		return '';
-	} else if (typeof value === 'number') {
+	} else if (isNumber(value)) {
 		return value.toString();
-	} else if (typeof value === 'string' || value instanceof String) {
+	} else if (isString(value)) {
 		return value;
 	} else {
 		return value.toString();
@@ -255,12 +320,12 @@ function normalizeString(value) {
 function getStyleProperty(item, styleContextStack, property, defaultValue) {
 	var value;
 
-	if (item[property] !== undefined && item[property] !== null) {
+	if (item && item[property] !== undefined && item[property] !== null) {
 		// item defines this property
 		return item[property];
 	}
 
-	if (!styleContextStack) {
+	if (!styleContextStack || typeof styleContextStack.auto !== 'function') {
 		return defaultValue;
 	}
 
@@ -275,28 +340,9 @@ function getStyleProperty(item, styleContextStack, property, defaultValue) {
 	}
 }
 
-function getFontCompaitible(item, fontProvider, styleContextStack) {
-
-	if(fontCacheName_new) {
-		var glyphList = fontCache_new.glyphsForString(item.text);
-		if(glyphList.filter(function(x) {return x.id <= 0;}).length == 0) {
-			return fontCacheName_new;
-		}
-	}
-	for(let count in fontSubstituteCache) {
-		var fontItem = fontSubstituteCache[count];
-		if(fontCacheName_new != fontItem.Name) {
-			var glyphList = fontItem.FontObj.glyphsForString(item.text);
-			if(glyphList.filter(function(x) {return x.id <= 0;}).length == 0) {
-				return fontItem.Name;
-			}
-		}
-	}
-	return defaultFont;
-}
-
 function measure(fontProvider, textArray, styleContextStack) {
 	var normalized = normalizeTextArray(textArray, styleContextStack);
+
 	if (normalized.length) {
 		var leadingIndent = getStyleProperty(normalized[0], styleContextStack, 'leadingIndent', 0);
 
@@ -305,9 +351,11 @@ function measure(fontProvider, textArray, styleContextStack) {
 			normalized[0].leadingIndent = leadingIndent;
 		}
 	}
+
 	normalized.forEach(function (item) {
-		var fontName = getFontCompaitible(item, fontProvider, styleContextStack);//getStyleProperty(item, styleContextStack, 'font', 'Roboto');
+		var fontName = getFontCompaitible(item);
 		var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
+		var fontFeatures = getStyleProperty(item, styleContextStack, 'fontFeatures', null);
 		var bold = getStyleProperty(item, styleContextStack, 'bold', false);
 		var italics = getStyleProperty(item, styleContextStack, 'italics', false);
 		var color = getStyleProperty(item, styleContextStack, 'color', 'black');
@@ -319,34 +367,45 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var characterSpacing = getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
 		var link = getStyleProperty(item, styleContextStack, 'link', null);
 		var linkToPage = getStyleProperty(item, styleContextStack, 'linkToPage', null);
+		var linkToDestination = getStyleProperty(item, styleContextStack, 'linkToDestination', null);
 		var noWrap = getStyleProperty(item, styleContextStack, 'noWrap', null);
 		var preserveLeadingSpaces = getStyleProperty(item, styleContextStack, 'preserveLeadingSpaces', false);
+		var preserveTrailingSpaces = getStyleProperty(item, styleContextStack, 'preserveTrailingSpaces', false);
+		var opacity = getStyleProperty(item, styleContextStack, 'opacity', 1);
+		var sup = getStyleProperty(item, styleContextStack, 'sup', false);
+		var sub = getStyleProperty(item, styleContextStack, 'sub', false);
+
+		if ((sup || sub) && item.fontSize === undefined) {
+			// font size reduction taken from here:
+			// https://en.wikipedia.org/wiki/Subscript_and_superscript#Desktop_publishing
+			fontSize *= 0.58;
+		}
 
 		var font = fontProvider.provideFont(fontName, bold, italics);
 
-		item.width = widthOfString(item.text, font, fontSize, characterSpacing);
+		item.width = widthOfString(item.text, font, fontSize, characterSpacing, fontFeatures);
 		item.height = font.lineHeight(fontSize) * lineHeight;
-
-		var leadingSpaces = item.text.match(LEADING);
 
 		if (!item.leadingCut) {
 			item.leadingCut = 0;
 		}
 
-		if (leadingSpaces && !preserveLeadingSpaces) {
-			item.leadingCut += widthOfString(leadingSpaces[0], font, fontSize, characterSpacing);
+		var leadingSpaces;
+		if (!preserveLeadingSpaces && (leadingSpaces = item.text.match(LEADING))) {
+			item.leadingCut += widthOfString(leadingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
 		}
 
-		var trailingSpaces = item.text.match(TRAILING);
-		if (trailingSpaces) {
-			item.trailingCut = widthOfString(trailingSpaces[0], font, fontSize, characterSpacing);
-		} else {
+		var trailingSpaces;
+		if (!preserveTrailingSpaces && (trailingSpaces = item.text.match(TRAILING))) {
+			item.trailingCut = widthOfString(trailingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
+		} else if (item.trailingCut === undefined) {
 			item.trailingCut = 0;
 		}
 
 		item.alignment = getStyleProperty(item, styleContextStack, 'alignment', 'left');
 		item.font = font;
 		item.fontSize = fontSize;
+		item.fontFeatures = fontFeatures;
 		item.characterSpacing = characterSpacing;
 		item.color = color;
 		item.decoration = decoration;
@@ -355,14 +414,18 @@ function measure(fontProvider, textArray, styleContextStack) {
 		item.background = background;
 		item.link = link;
 		item.linkToPage = linkToPage;
+		item.linkToDestination = linkToDestination;
 		item.noWrap = noWrap;
+		item.opacity = opacity;
+		item.sup = sup;
+		item.sub = sub;
 	});
 
 	return normalized;
 }
 
-function widthOfString(text, font, fontSize, characterSpacing) {
-	return font.widthOfString(text, fontSize) + ((characterSpacing || 0) * (text.length - 1));
+function widthOfString(text, font, fontSize, characterSpacing, fontFeatures) {
+	return font.widthOfString(text, fontSize, fontFeatures) + ((characterSpacing || 0) * (text.length - 1));
 }
 
 function exceptTokenizer(word) {
@@ -378,6 +441,108 @@ function exceptTokenizer(word) {
 	];
 
 	return listExceptWord.indexOf(word) > -1;
+}
+
+function needsTokenizer(word) {
+	if (!word) {
+		return false;
+	}
+
+	return /[\u0E00-\u0E7F]/.test(word);
+}
+
+function primeFontCaches(styleContextStack) {
+	if (styleContextStack && typeof styleContextStack.getProperty === 'function') {
+		var stackFont = styleContextStack.getProperty('font');
+		if (stackFont) {
+			defaultFont = stackFont;
+		}
+	}
+
+	if (!defaultFont) {
+		defaultFont = 'Roboto';
+	}
+
+	if (!this.fontProvider || !this.fontProvider.fonts) {
+		return;
+	}
+
+	if (defaultFont && fontCacheName_new !== defaultFont) {
+		var defaultFontDef = this.fontProvider.fonts[defaultFont];
+		var primaryFont = safeOpenFont(defaultFontDef && defaultFontDef.normal);
+
+		if (primaryFont) {
+			fontCacheName_new = defaultFont;
+			fontCache_new = primaryFont;
+		} else {
+			fontCacheName_new = '';
+			fontCache_new = null;
+		}
+	}
+
+	for (var fontItem in this.fontProvider.fonts) {
+		if (!Object.prototype.hasOwnProperty.call(this.fontProvider.fonts, fontItem)) {
+			continue;
+		}
+
+		if (fontItem === fontCacheName_new) {
+			continue;
+		}
+
+		if (!fontSubstituteCache[fontItem]) {
+			var substitute = safeOpenFont(this.fontProvider.fonts[fontItem].normal);
+			if (substitute) {
+				fontSubstituteCache[fontItem] = { Name: fontItem, FontObj: substitute };
+			}
+		}
+	}
+}
+
+function getFontCompaitible(item) {
+	var text = item.text || '';
+
+	if (fontCacheName_new && fontCache_new && !hasMissingGlyphs(fontCache_new.glyphsForString(text))) {
+		return fontCacheName_new;
+	}
+
+	for (var key in fontSubstituteCache) {
+		if (!Object.prototype.hasOwnProperty.call(fontSubstituteCache, key)) {
+			continue;
+		}
+
+		var fontItem = fontSubstituteCache[key];
+		if (!fontItem || !fontItem.FontObj || fontItem.Name === fontCacheName_new) {
+			continue;
+		}
+
+		if (!hasMissingGlyphs(fontItem.FontObj.glyphsForString(text))) {
+			return fontItem.Name;
+		}
+	}
+
+	return defaultFont || 'Roboto';
+}
+
+function hasMissingGlyphs(glyphList) {
+	for (var i = 0; i < glyphList.length; i++) {
+		if (!glyphList[i] || glyphList[i].id <= 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function safeOpenFont(path) {
+	if (!path) {
+		return null;
+	}
+
+	try {
+		return fontkit.openSync(path);
+	} catch (error) {
+		void error;
+		return null;
+	}
 }
 
 module.exports = TextTools;
