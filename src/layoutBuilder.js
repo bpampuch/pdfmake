@@ -30,6 +30,10 @@ var testResult = false;
 var currentLayoutBuilder;
 
 function addAll(target, otherArray) {
+	if (!isArray(target) || !isArray(otherArray) || otherArray.length === 0) {
+		return;
+	}
+
 	otherArray.forEach(function (item) {
 		target.push(item);
 	});
