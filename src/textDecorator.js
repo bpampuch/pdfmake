@@ -1,34 +1,39 @@
-/* jslint node: true */
 'use strict';
 
+var isArray = require('./helpers').isArray;
+var isPattern = require('./helpers').isPattern;
+var getPattern = require('./helpers').getPattern;
+
 function groupDecorations(line) {
-	var groups = [], curGroup = null;
+	var groups = [];
+	var currentGroup = null;
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
 		var decoration = inline.decoration;
 		if (!decoration) {
-			curGroup = null;
+			currentGroup = null;
 			continue;
+		}
+		if (!isArray(decoration)) {
+			decoration = [decoration];
 		}
 		var color = inline.decorationColor || inline.color || 'black';
 		var style = inline.decorationStyle || 'solid';
-		decoration = Array.isArray(decoration) ? decoration : [decoration];
 		for (var ii = 0, ll = decoration.length; ii < ll; ii++) {
-			var deco = decoration[ii];
-			if (!curGroup || deco !== curGroup.decoration ||
-				style !== curGroup.decorationStyle || color !== curGroup.decorationColor ||
-				deco === 'lineThrough') {
+			var decorationItem = decoration[ii];
+			if (!currentGroup || decorationItem !== currentGroup.decoration ||
+				style !== currentGroup.decorationStyle || color !== currentGroup.decorationColor) {
 
-				curGroup = {
+				currentGroup = {
 					line: line,
-					decoration: deco,
+					decoration: decorationItem,
 					decorationColor: color,
 					decorationStyle: style,
 					inlines: [inline]
 				};
-				groups.push(curGroup);
+				groups.push(currentGroup);
 			} else {
-				curGroup.inlines.push(inline);
+				currentGroup.inlines.push(inline);
 			}
 		}
 	}
@@ -40,25 +45,26 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 	function maxInline() {
 		var max = 0;
 		for (var i = 0, l = group.inlines.length; i < l; i++) {
-			var inl = group.inlines[i];
-			max = inl.fontSize > max ? i : max;
+			var inline = group.inlines[i];
+			max = inline.fontSize > max ? i : max;
 		}
 		return group.inlines[max];
 	}
 	function width() {
 		var sum = 0;
 		for (var i = 0, l = group.inlines.length; i < l; i++) {
-			sum += group.inlines[i].width;
+			var justifyShift = (group.inlines[i].justifyShift || 0);
+			sum += group.inlines[i].width + justifyShift;
 		}
 		return sum;
 	}
-	var firstInline = group.inlines[0],
-		biggerInline = maxInline(),
-		totalWidth = width(),
-		lineAscent = group.line.getAscenderHeight(),
-		ascent = biggerInline.font.ascender / 1000 * biggerInline.fontSize,
-		height = biggerInline.height,
-		descent = height - ascent;
+	var firstInline = group.inlines[0];
+	var biggerInline = maxInline();
+	var totalWidth = width();
+	var lineAscent = group.line.getAscenderHeight();
+	var ascent = biggerInline.font.ascender / 1000 * biggerInline.fontSize;
+	var height = biggerInline.height;
+	var descent = height - ascent;
 
 	var lw = 0.5 + Math.floor(Math.max(biggerInline.fontSize - 8, 0) / 2) * 0.12;
 
@@ -73,7 +79,7 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 			y += lineAscent - (ascent * 0.25);
 			break;
 		default:
-			throw 'Unkown decoration : ' + group.decoration;
+			throw new Error('Unknown decoration : ' + group.decoration);
 	}
 	pdfKitDoc.save();
 
@@ -101,7 +107,8 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 			rx += (lw * 3);
 		}
 	} else if (group.decorationStyle === 'wavy') {
-		var sh = 0.7, sv = 1;
+		var sh = 0.7;
+		var sv = 1;
 		var nbWaves = Math.ceil(totalWidth / (sh * 2)) + 1;
 		var rwx = x + firstInline.x - 1;
 		pdfKitDoc.rect(x + firstInline.x, y - sv, totalWidth, y + sv).clip();
@@ -129,16 +136,27 @@ function drawDecorations(line, x, y, pdfKitDoc) {
 	}
 }
 
-function drawBackground(line, x, y, pdfKitDoc) {
+function drawBackground(line, x, y, patterns, pdfKitDoc) {
+	// Support legacy signature drawBackground(line, x, y, pdfKitDoc)
+	if (!pdfKitDoc && patterns && typeof patterns.fillColor !== 'function') {
+		pdfKitDoc = patterns;
+		patterns = undefined;
+	}
+	var patternsStore = patterns || {};
 	var height = line.getHeight();
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
-		if (inline.background) {
-			var justifyShift = (inline.justifyShift || 0);
-			pdfKitDoc.fillColor(inline.background)
-				.rect(x + inline.x - justifyShift, y, inline.width + justifyShift, height)
-				.fill();
+		if (!inline.background) {
+			continue;
 		}
+		var color = inline.background;
+		if (isPattern(inline.background)) {
+			color = getPattern(inline.background, patternsStore);
+		}
+		var justifyShift = (inline.justifyShift || 0);
+		pdfKitDoc.fillColor(color)
+			.rect(x + inline.x - justifyShift, y, inline.width + justifyShift, height)
+			.fill();
 	}
 }
 

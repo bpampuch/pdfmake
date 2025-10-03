@@ -10,5 +10,3 @@ nbproject
 package-lock.json
 yarn.lock
 .idea
-.npmrc
-.npmrc.local
