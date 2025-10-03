@@ -1,9 +1,7 @@
 /* jslint node: true */
 'use strict';
 
-var _ = require('lodash');
-
-_.noConflict();
+var isArray = require('./helpers').isArray;
 
 function typeName(bold, italics) {
 	var type = 'normal';
@@ -23,7 +21,7 @@ function FontProvider(fontDescriptors, pdfKitDoc) {
 	this.fontCache = {};
 
 	for (var font in fontDescriptors) {
-		if (fontDescriptors.hasOwnProperty(font)) {
+		if (Object.prototype.hasOwnProperty.call(fontDescriptors, font)) {
 			var fontDef = fontDescriptors[font];
 
 			this.fonts[font] = {
@@ -36,9 +34,22 @@ function FontProvider(fontDescriptors, pdfKitDoc) {
 	}
 }
 
-FontProvider.prototype.provideFont = function (familyName, bold, italics) {
-	var type = typeName(bold, italics);
+FontProvider.prototype.getFontType = function (bold, italics) {
+	return typeName(bold, italics);
+};
+
+FontProvider.prototype.getFontFile = function (familyName, bold, italics) {
+	var type = this.getFontType(bold, italics);
 	if (!this.fonts[familyName] || !this.fonts[familyName][type]) {
+		return null;
+	}
+
+	return this.fonts[familyName][type];
+};
+
+FontProvider.prototype.provideFont = function (familyName, bold, italics) {
+	var type = this.getFontType(bold, italics);
+	if (this.getFontFile(familyName, bold, italics) === null) {
 		throw new Error('Font \'' + familyName + '\' in style \'' + type + '\' is not defined in the font section of the document definition.');
 	}
 
@@ -46,7 +57,7 @@ FontProvider.prototype.provideFont = function (familyName, bold, italics) {
 
 	if (!this.fontCache[familyName][type]) {
 		var def = this.fonts[familyName][type];
-		if (!Array.isArray(def)) {
+		if (!isArray(def)) {
 			def = [def];
 		}
 		this.fontCache[familyName][type] = this.pdfKitDoc.font.apply(this.pdfKitDoc, def)._font;
