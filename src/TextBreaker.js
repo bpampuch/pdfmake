@@ -5,14 +5,23 @@ import StyleContextStack from './StyleContextStack';
 /**
  * @param {string} text
  * @param {boolean} noWrap
+ * @param {boolean} breakAll
  * @returns {Array}
  */
-const splitWords = (text, noWrap) => {
+const splitWords = (text, noWrap, breakAll = false) => {
 	let words = [];
 
 	if (noWrap) {
 		words.push({ text: text });
 		return words;
+	}
+	if(breakAll) {
+		return text.split('').map(c => { 
+			if(c.match(/^\n$|^\r$/)) { // new line
+				return { text: '', lineEnd: true };
+			}
+			return { text: c };
+		});
 	}
 
 	let breaker = new LineBreaker(text);
@@ -101,16 +110,16 @@ class TextBreaker {
 			let item = texts[i];
 			let style = null;
 			let words;
-
+			let breakAll = StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'wordBreak', 'normal') === 'break-all';
 			let noWrap = StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 			if (isObject(item)) {
 				if (item._textRef && item._textRef._textNodeRef.text) {
 					item.text = item._textRef._textNodeRef.text;
 				}
-				words = splitWords(item.text, noWrap);
+				words = splitWords(item.text, noWrap, breakAll);
 				style = StyleContextStack.copyStyle(item);
 			} else {
-				words = splitWords(item, noWrap);
+				words = splitWords(item, noWrap, breakAll);
 			}
 
 			if (lastWord && words.length) {
@@ -141,7 +150,7 @@ class TextBreaker {
 				lastWord = getLastWord(words, noWrap);
 			}
 		}
-
+		
 		return results;
 	}
 }

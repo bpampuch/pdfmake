@@ -35,6 +35,7 @@ describe('TextBreaker', function () {
 
 	var styleStackNoWrap = new StyleContextStack({}, { noWrap: true });
 	var styleStackWrap = new StyleContextStack({}, { noWrap: false });
+	var styleStackWordBreakBreakAll = new StyleContextStack({}, { wordBreak: 'break-all' });
 
 	describe('getBreaks', function () {
 
@@ -90,6 +91,11 @@ describe('TextBreaker', function () {
 			];
 			var result = textBreaker.getBreaks(arrayText);
 			assert.equal(result.length, 52);
+		});
+
+		it('should support wordBreak break-all', function () {
+			var result = textBreaker.getBreaks(sampleText, styleStackWordBreakBreakAll);
+			assert.equal(result.length, 76);
 		});
 
 		it('should support keep noWrap from style', function () {
