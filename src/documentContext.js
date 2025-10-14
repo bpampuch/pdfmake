@@ -77,7 +77,23 @@ DocumentContext.prototype.resetMarginXTopParent = function () {
 
 DocumentContext.prototype.beginColumn = function (width, offset, endingCell, heightOffset) {
 	var saved = this.snapshots[this.snapshots.length - 1];
-	this.calculateBottomMost(saved, this.endingCell);
+	
+	// If starting a NEW spanning column, capture its context NOW (before we reset)
+	if (endingCell && !this.endingCell) {
+		// First spanning column - save current context before we reset
+		endingCell._columnEndingContext = {
+			page: this.page,
+			x: this.x,
+			y: this.y,
+			availableHeight: this.availableHeight,
+			availableWidth: this.availableWidth,
+			lastColumnWidth: this.lastColumnWidth
+		};
+	}
+	
+	// Process the PREVIOUS column's endingCell and/or update bottomMost
+	this.calculateBottomMost(saved, this.endingCell, endingCell);
+	
 	this.endingCell = endingCell;
 	this.page = saved.page;
 	this.x = this.x + this.lastColumnWidth + (offset || 0);
@@ -88,17 +104,32 @@ DocumentContext.prototype.beginColumn = function (width, offset, endingCell, hei
 	this.lastColumnWidth = width;
 };
 
-DocumentContext.prototype.calculateBottomMost = function (destContext, endingCell) {
-	var cell = endingCell;
-	if (!cell && this.endingCell) {
-		cell = this.endingCell;
+DocumentContext.prototype.calculateBottomMost = function (destContext, previousEndingCell, currentEndingCell) {
+	// If the previous column had an endingCell (spanning), save its context now
+	if (previousEndingCell) {
+		if (!previousEndingCell._columnEndingContext) {
+			// First spanning column: save current context
+			this.saveContextInEndingCell(previousEndingCell);
+		}
+		// Clear the endingCell reference
 		this.endingCell = null;
 	}
-	if (cell) {
-		this.saveContextInEndingCell(cell);
-	} else {
+	
+	// Update bottomMost if the current column is NOT spanning
+	if (!currentEndingCell) {
 		var bottomMost = destContext.bottomMost ? destContext.bottomMost : destContext;
 		destContext.bottomMost = bottomMostContext(this, bottomMost);
+	} else if (previousEndingCell) {
+		// Current column IS spanning, but previous was also spanning
+		// Save bottomMost (shortest of non-spanning columns so far) to current endingCell
+		currentEndingCell._columnEndingContext = {
+			page: destContext.bottomMost.page,
+			x: destContext.bottomMost.x,
+			y: destContext.bottomMost.y,
+			availableHeight: destContext.bottomMost.availableHeight,
+			availableWidth: destContext.bottomMost.availableWidth,
+			lastColumnWidth: destContext.bottomMost.lastColumnWidth
+		};
 	}
 };
 
@@ -127,20 +158,37 @@ DocumentContext.prototype.saveContextInEndingCell = function (endingCell) {
 DocumentContext.prototype.completeColumnGroup = function (height, endingCell) {
 	var saved = this.snapshots.pop();
 
-	this.calculateBottomMost(saved, endingCell || this.endingCell);
+	// Process any remaining endingCell from the last column
+	// This handles the case where the last column is spanning and needs its context saved
+	if (this.endingCell && !this.endingCell._columnEndingContext) {
+		// Last column is spanning and hasn't been saved yet - save it now
+		this.saveContextInEndingCell(this.endingCell);
+	}
+	this.calculateBottomMost(saved, null, null);
 
+	var hasSpanningColumn = !!(endingCell || this.endingCell);
 	this.endingCell = null;
 	this.x = saved.x;
-		var y = saved.bottomMost.y;
-		if (height) {
-			if (saved.page === saved.bottomMost.page) {
-				if ((saved.y + height) > y) {
-					y = saved.y + height;
-				}
-			} else {
-				y += height;
+	
+	var y;
+	if (hasSpanningColumn) {
+		// If there's a spanning column, use the current y position
+		// The bottomMost was saved to the endingCell, but we continue at current y
+		y = this.y;
+	} else {
+		// No spanning column, use the bottomMost
+		y = saved.bottomMost.y;
+	}
+	
+	if (height) {
+		if (saved.page === saved.bottomMost.page) {
+			if ((saved.y + height) > y) {
+				y = saved.y + height;
 			}
+		} else {
+			y += height;
 		}
+	}
 
 	this.y = y;
 	this.page = saved.bottomMost.page;

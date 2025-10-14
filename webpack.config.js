@@ -35,7 +35,10 @@ module.exports = {
 			util: require.resolve('util/'),
 			stream: require.resolve('stream-browserify'),
 			zlib: require.resolve('browserify-zlib'),
-			assert: require.resolve('assert/')
+			assert: require.resolve('assert/'),
+			// Browser build uses global fetch, not Node's http/https
+			http: false,
+			https: false
 		}
 	},
 	module: {

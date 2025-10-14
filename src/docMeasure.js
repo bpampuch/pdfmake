@@ -562,7 +562,7 @@ DocMeasure.prototype.measureOrderedList = function (node) {
 	node.type = node.type || 'decimal';
 	node.separator = node.separator || '.';
 	node.reversed = node.reversed || false;
-	if (!node.start) {
+	if (node.start === undefined || node.start === null) {
 		node.start = node.reversed ? items.length : 1;
 	}
 	node._gapSize = this.gapSizeForList();
@@ -577,20 +577,23 @@ DocMeasure.prototype.measureOrderedList = function (node) {
 		item = items[i] = this.measureNode(items[i]);
 
 		if (!item.ol && !item.ul) {
-			item.listMarker = this.buildOrderedMarker(item.counter || counter, style, item.listType || node.type, node.separator);
+			// Use item.counter if explicitly defined (including 0), otherwise use counter
+			var markerCounter = (item.counter !== undefined && item.counter !== null) ? item.counter : counter;
+			item.listMarker = this.buildOrderedMarker(markerCounter, style, item.listType || node.type, node.separator);
 			if (item.listMarker._inlines) {
 				node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
 			}
-		}  // TODO: else - nested lists numbering
+
+			// Only increment counter for actual list items, not nested lists
+			if (node.reversed) {
+				counter--;
+			} else {
+				counter++;
+			}
+		}
 
 		node._minWidth = Math.max(node._minWidth, items[i]._minWidth);
 		node._maxWidth = Math.max(node._maxWidth, items[i]._maxWidth);
-
-		if (node.reversed) {
-			counter--;
-		} else {
-			counter++;
-		}
 	}
 
 	node._minWidth += node._gapSize.width;

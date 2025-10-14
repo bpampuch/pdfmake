@@ -4,23 +4,27 @@ var assert = require('assert');
 var sinon = require('sinon');
 var http = require('http');
 
-var PdfKitEngine = require('../src/pdfKitEngine');
+var PdfKit = require('pdfkit'); // Use same PdfKit that printer.js uses
 var Printer = require('../src/printer.js');
-
-var PdfKit = PdfKitEngine.getEngineInstance();
 
 describe('Printer', function () {
 
 	var SHORT_SIDE = 1000, LONG_SIDE = 2000;
 	var fontDescriptors, printer;
+	var sandbox;
 
 	beforeEach(function () {
+		sandbox = sinon.createSandbox();
 		fontDescriptors = {
 			Roboto: {
 				normal: 'tests/fonts/Roboto-Regular.ttf'
 			}
 		};
-		PdfKit.prototype.addPage = sinon.spy(PdfKit.prototype.addPage);
+		sandbox.spy(PdfKit.prototype, 'addPage');
+	});
+
+	afterEach(function () {
+		sandbox.restore();
 	});
 
 		describe('remote images', function () {
@@ -232,7 +236,7 @@ describe('Printer', function () {
 				}
 			]
 		};
-		PdfKit.prototype.ellipse = sinon.spy(PdfKit.prototype.ellipse);
+		sandbox.spy(PdfKit.prototype, 'ellipse');
 
 		printer.createPdfKitDocument(docDefinition);
 

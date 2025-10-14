@@ -2,7 +2,14 @@
 'use strict';
 
 /**
- * Creates an instance of StyleContextStack used for style inheritance and style overrides
+ * Creates an instance of StyleContextStack used for style inherita	]);
+
+	// Always push the style override object, even if empty
+	// This maintains the expected stack structure for style inheritance
+	this.push(styleOverrideObject);
+
+	return styleNames.length + 1;
+};style overrides
  *
  * @constructor
  * @this {StyleContextStack}
@@ -81,7 +88,6 @@ StyleContextStack.prototype.autopush = function (item) {
 	}
 
 	var styleOverrideObject = {};
-	var pushSOO = false;
 
 	[
 		'font',
@@ -110,15 +116,14 @@ StyleContextStack.prototype.autopush = function (item) {
 	].forEach(function (key) {
 		if (item[key] !== undefined && item[key] !== null) {
 			styleOverrideObject[key] = item[key];
-			pushSOO = true;
 		}
 	});
 
-	if (pushSOO) {
-		this.push(styleOverrideObject);
-	}
+	// Always push the style override object, even if empty
+	// This maintains the expected stack structure for style inheritance
+	this.push(styleOverrideObject);
 
-	return styleNames.length + (pushSOO ? 1 : 0);
+	return styleNames.length + 1;
 };
 
 /**
