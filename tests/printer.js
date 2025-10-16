@@ -4,7 +4,7 @@ var assert = require('assert');
 var sinon = require('sinon');
 var http = require('http');
 
-var PdfKit = require('@foliojs-fork/pdfkit'); // Use same PdfKit that printer.js uses
+var PdfKit = require('pdfkit'); // Use same PdfKit that printer.js uses
 var Printer = require('../src/printer.js');
 
 describe('Printer', function () {

@@ -1,6 +1,6 @@
 {
   "name": "@flowaccount/pdfmake",
-  "version": "0.2.20-local.1760449299",
+  "version": "0.2.20",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/printer.js",
   "browser": "build/pdfmake.js",
@@ -67,12 +67,7 @@
     "playground": "node dev-playground/server.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "publish:local": "cp .npmrc.local .npmrc && npm version 0.2.20-local.$(date +%s) --no-git-tag-version && npm publish --registry=http://localhost:4872",
-    "publish:staging": "npm run build && npm run test && npm version prerelease --preid=staging --no-git-tag-version && npm publish --tag staging --access public",
-    "publish:production": "npm run build && npm run test && npm publish --access public",
-    "version:patch": "npm version patch",
-    "version:minor": "npm version minor",
-    "version:major": "npm version major"
+    "publish:local": "cp .npmrc.local .npmrc && npm version 0.2.20-local.$(date +%s) --no-git-tag-version && npm publish --registry=http://localhost:4872"
   },
   "repository": {
     "type": "git",
