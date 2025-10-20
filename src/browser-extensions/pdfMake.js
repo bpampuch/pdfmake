@@ -36,16 +36,12 @@ function canCreatePdf() {
 		Object.setPrototypeOf(proto, Uint8Array.prototype);
 		Object.setPrototypeOf(arr, proto);
 		return arr.foo() === 42;
-	} catch (e) { // eslint-disable-line no-unused-vars
+	} catch (e) {
 		return false;
 	}
 }
 
 Document.prototype._createDoc = function (options, cb) {
-	// If we have not prefetched remote images (http/https) embedded via images dict pointing directly to remote URLs
-	// we can integrate with existing URLBrowserResolver flow which already downloads remote resources into the virtual FS.
-	// However previous implementation only rewrote docDefinition.images entries to resolved URL (still remote). We enhance it by
-	// actually fetching and storing the binary in virtual FS so imageMeasure can load it synchronously.
 	var getExtendedUrl = function (url) {
 		if (typeof url === 'object') {
 			return { url: url.url, headers: url.headers };
@@ -127,13 +123,10 @@ Document.prototype._createDoc = function (options, cb) {
 			if (this.docDefinition.images.hasOwnProperty(image)) {
 				var originalVal = this.docDefinition.images[image];
 				var urlImg = getExtendedUrl(originalVal);
-				// only attempt remote fetch for http(s) plain string (not already dataURL)
 				if (typeof urlImg.url === 'string' && (urlImg.url.toLowerCase().startsWith('http://') || urlImg.url.toLowerCase().startsWith('https://'))) {
-					// schedule resolution (downloads into virtual FS). We keep dictionary value as the URL; imageMeasure will cause fs.existsSync to succeed and readFileSync returns binary buffer.
 					urlResolver.resolve(urlImg.url, urlImg.headers);
-					this.docDefinition.images[image] = urlImg.url; // leave as URL (acts as key for downloaded file)
+					this.docDefinition.images[image] = urlImg.url; 
 				} else {
-					// Non-remote: keep existing behavior (dataURL or path)
 					this.docDefinition.images[image] = urlImg.url;
 				}
 			}
@@ -170,7 +163,7 @@ Document.prototype._flushDoc = function (doc, callback) {
 
 Document.prototype._getPages = function (options, cb) {
 	if (!cb) {
-		throw new Error('_getPages is an async method and needs a callback argument');
+		throw '_getPages is an async method and needs a callback argument';
 	}
 	var _this = this;
 
@@ -194,7 +187,7 @@ Document.prototype._bufferToBlob = function (buffer) {
 	}
 
 	if (!blob) {
-		throw new Error('Could not generate blob');
+		throw 'Could not generate blob';
 	}
 
 	return blob;
@@ -205,7 +198,7 @@ Document.prototype._openWindow = function () {
 	// otherwise popup blockers will stop us
 	var win = window.open('', '_blank');
 	if (win === null) {
-		throw new Error('Open PDF in new window blocked by browser');
+		throw 'Open PDF in new window blocked by browser';
 	}
 
 	return win;
@@ -255,10 +248,9 @@ Document.prototype.print = function (options, win) {
 };
 
 /**
- * Download the PDF.
- * @param {string|Function} defaultFileName filename or callback when omitted
- * @param {Function} [cb] callback invoked after save
- * @param {object} [options] pdf creation options
+ * download(defaultFileName = 'file.pdf', cb = null, options = {})
+ * or
+ * download(cb, options = {})
  */
 Document.prototype.download = function (defaultFileName, cb, options) {
 	if (isFunction(defaultFileName)) {
@@ -281,7 +273,7 @@ Document.prototype.download = function (defaultFileName, cb, options) {
 
 Document.prototype.getBase64 = function (cb, options) {
 	if (!cb) {
-		throw new Error('getBase64 is an async method and needs a callback argument');
+		throw 'getBase64 is an async method and needs a callback argument';
 	}
 	this.getBuffer(function (buffer) {
 		cb(buffer.toString('base64'));
@@ -290,7 +282,7 @@ Document.prototype.getBase64 = function (cb, options) {
 
 Document.prototype.getDataUrl = function (cb, options) {
 	if (!cb) {
-		throw new Error('getDataUrl is an async method and needs a callback argument');
+		throw 'getDataUrl is an async method and needs a callback argument';
 	}
 	this.getBuffer(function (buffer) {
 		cb('data:application/pdf;base64,' + buffer.toString('base64'));
@@ -299,7 +291,7 @@ Document.prototype.getDataUrl = function (cb, options) {
 
 Document.prototype.getBlob = function (cb, options) {
 	if (!cb) {
-		throw new Error('getBlob is an async method and needs a callback argument');
+		throw 'getBlob is an async method and needs a callback argument';
 	}
 	var that = this;
 	this.getBuffer(function (result) {
@@ -310,7 +302,7 @@ Document.prototype.getBlob = function (cb, options) {
 
 Document.prototype.getBuffer = function (cb, options) {
 	if (!cb) {
-		throw new Error('getBuffer is an async method and needs a callback argument');
+		throw 'getBuffer is an async method and needs a callback argument';
 	}
 
 	var _this = this;
@@ -336,7 +328,7 @@ Document.prototype.getStream = function (options, cb) {
 module.exports = {
 	createPdf: function (docDefinition, tableLayouts, fonts, vfs) {
 		if (!canCreatePdf()) {
-			throw new Error('Your browser does not provide the level of support needed');
+			throw 'Your browser does not provide the level of support needed';
 		}
 		return new Document(
 			docDefinition,
