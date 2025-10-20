@@ -106,13 +106,13 @@ Document.prototype._createDoc = function (options, cb) {
 			}
 			if (this.fonts[font].bolditalics) {
 				if (Array.isArray(this.fonts[font].bolditalics)) { // TrueType Collection
-					var urlBoldItalicsArr = getExtendedUrl(this.fonts[font].bolditalics[0]);
-					urlResolver.resolve(urlBoldItalicsArr.url, urlBoldItalicsArr.headers);
-					this.fonts[font].bolditalics[0] = urlBoldItalicsArr.url;
+					var url = getExtendedUrl(this.fonts[font].bolditalics[0]);
+					urlResolver.resolve(url.url, url.headers);
+					this.fonts[font].bolditalics[0] = url.url;
 				} else {
-					var urlBoldItalics = getExtendedUrl(this.fonts[font].bolditalics);
-					urlResolver.resolve(urlBoldItalics.url, urlBoldItalics.headers);
-					this.fonts[font].bolditalics = urlBoldItalics.url;
+					var url = getExtendedUrl(this.fonts[font].bolditalics);
+					urlResolver.resolve(url.url, url.headers);
+					this.fonts[font].bolditalics = url.url;
 				}
 			}
 		}
