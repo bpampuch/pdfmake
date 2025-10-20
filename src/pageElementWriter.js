@@ -217,9 +217,6 @@ PageElementWriter.prototype.currentBlockToRepeatable = function () {
 };
 
 PageElementWriter.prototype.pushToRepeatables = function (rep) {
-	if (isUndefined(rep.insertedOnPages)) {
-		rep.insertedOnPages = [];
-	}
 	this.repeatables.push(rep);
 };
 
