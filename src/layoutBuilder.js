@@ -41,12 +41,10 @@ function addAll(target, otherArray) {
 
 /**
  * Creates an instance of LayoutBuilder - layout engine which turns document-definition-object
- * into a set of pages, lines, inlines and vectors ready to be rendered into a PDF.
+ * into a set of pages, lines, inlines and vectors ready to be rendered into a PDF
  *
- * @param {object} pageSize - an object defining page width and height
- * @param {object} pageMargins - an object defining top, left, right and bottom margins
- * @param {object} imageMeasure - helper responsible for resolving image dimensions
- * @param {object} svgMeasure - helper responsible for resolving SVG dimensions
+ * @param {Object} pageSize - an object defining page width and height
+ * @param {Object} pageMargins - an object defining top, left, right and bottom margins
  */
 function LayoutBuilder(pageSize, pageMargins, imageMeasure, svgMeasure) {
 	this.pageSize = pageSize;
@@ -66,19 +64,13 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
 
 /**
  * Executes layout engine on document-definition-object and creates an array of pages
- * containing positioned Blocks, Lines and inlines.
+ * containing positioned Blocks, Lines and inlines
  *
- * @param {object} docStructure - document-definition-object
- * @param {object} fontProvider - font provider
- * @param {object} styleDictionary - dictionary with style definitions
- * @param {object} defaultStyle - default style definition
- * @param {object|Function} background - background definition or factory
- * @param {object|Function} header - header definition or factory
- * @param {object|Function} footer - footer definition or factory
- * @param {object} images - image dictionary
- * @param {object|string} watermark - watermark definition
- * @param {Function} [pageBreakBeforeFct] - optional page-break hook
- * @returns {Array} an array of pages
+ * @param {Object} docStructure document-definition-object
+ * @param {Object} fontProvider font provider
+ * @param {Object} styleDictionary dictionary with style definitions
+ * @param {Object} defaultStyle default style definition
+ * @return {Array} an array of pages
  */
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
 
@@ -169,11 +161,12 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark) {
 	footerBreak = false;
 
+	this.verticalAlignItemStack = this.verticalAlignItemStack || [];
 	this.linearNodeList = [];
 	this.writer = new PageElementWriter(
 		new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
-	this.heightHeaderAndFooter = this.addHeadersAndFooters(header, footer);
+	this.heightHeaderAndFooter = this.addHeadersAndFooters(header, footer) || {};
 	if (!isUndefined(this.heightHeaderAndFooter.header)) {
 		this.pageMargins.top = this.heightHeaderAndFooter.header + 1;
 	}
@@ -255,7 +248,7 @@ LayoutBuilder.prototype.addStaticRepeatable = function (headerOrFooter, sizeFunc
 
 LayoutBuilder.prototype.addDynamicRepeatable = function (nodeGetter, sizeFunction) {
 	var pages = this.writer.context().pages;
- 	var measuredHeight;
+	var measuredHeight;
 
 	for (var pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
 		this.writer.context().page = pageIndex;
@@ -455,7 +448,8 @@ LayoutBuilder.prototype.processNode = function (node) {
 		return;
 	}
 
-	if (node && node.unbreakable && node.summary && node.table && node.table.body && node.table.body[0] && node.table.body[0][0] && node.table.body[0][0].summaryBreak) {
+	if (node && node.unbreakable && node.summary && node.table && node.table.body &&
+		node.table.body[0] && node.table.body[0][0] && node.table.body[0][0].summaryBreak) {
 		testTracker = new TraversalTracker();
 		testWriter = new PageElementWriter(self.writer.context(), testTracker);
 		testVerticalAlignStack = self.verticalAlignItemStack.slice();
@@ -569,31 +563,52 @@ LayoutBuilder.prototype.processNode = function (node) {
 			}
 		}
 
-		var isDetachedBlock = node.relativePosition || node.absolutePosition;
+		const isDetachedBlock = node.relativePosition || node.absolutePosition;
 
+		// Detached nodes have no margins, their position is only determined by 'x' and 'y'
 		if (margin && !isDetachedBlock) {
-			var availableHeightTop = self.writer.context().availableHeight;
-			if (availableHeightTop - margin[1] < 0) {
-				self.writer.context().moveDown(availableHeightTop);
+			const availableHeight = self.writer.context().availableHeight;
+			// If top margin is bigger than available space, move to next page
+			// Necessary for nodes inside tables
+			if (availableHeight - margin[1] < 0) {
+				// Consume the whole available space
+				self.writer.context().moveDown(availableHeight);
 				self.writer.moveToNextPage(node.pageOrientation);
+				/**
+				 * TODO - Something to consider:
+				 * Right now the node starts at the top of next page (after header)
+				 * Another option would be to apply just the top margin that has not been consumed in the page before
+				 * It would something like: this.write.context().moveDown(margin[1] - availableHeight)
+				 */
 			} else {
 				self.writer.context().moveDown(margin[1]);
 			}
 
+			// Apply lateral margins
 			self.writer.context().addMargin(margin[0], margin[2]);
 		}
 
 		callback();
 
+		// Detached nodes have no margins, their position is only determined by 'x' and 'y'
 		if (margin && !isDetachedBlock) {
-			var availableHeightBottom = self.writer.context().availableHeight;
-			if (availableHeightBottom - margin[3] < 0) {
-				self.writer.context().moveDown(availableHeightBottom);
+			const availableHeight = self.writer.context().availableHeight;
+			// If bottom margin is bigger than available space, move to next page
+			// Necessary for nodes inside tables
+			if (availableHeight - margin[3] < 0) {
+				self.writer.context().moveDown(availableHeight);
 				self.writer.moveToNextPage(node.pageOrientation);
+				/**
+				 * TODO - Something to consider:
+				 * Right now next node starts at the top of next page (after header)
+				 * Another option would be to apply the bottom margin that has not been consumed in the next page?
+				 * It would something like: this.write.context().moveDown(margin[3] - availableHeight)
+				 */
 			} else {
 				self.writer.context().moveDown(margin[3]);
 			}
 
+			// Apply lateral margins
 			self.writer.context().addMargin(-margin[0], -margin[2]);
 		}
 
