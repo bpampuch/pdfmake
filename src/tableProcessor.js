@@ -62,8 +62,7 @@ TableProcessor.prototype.beginTable = function (writer) {
 		// Draw the top border of the table
 		this.drawHorizontalLine(0, writer);
 		if (this.rowsWithoutPageBreak && this.dontBreakRows) {
-			// We just increase the value of transactionLevel to keep block open until needed
-			writer.transactionLevel++;
+			writer.beginUnbreakableBlock();
 		}
 	}
 
@@ -174,12 +173,8 @@ TableProcessor.prototype.beginRow = function (rowIndex, writer) {
 	this.rowPaddingBottom = this.layout.paddingBottom(rowIndex, this.tableNode);
 
 	this.rowCallback = this.onRowBreak(rowIndex, writer);
-	if (this.tableNode.eventHandle && this.tableNode.eventHandle.beforePageChanged) {
-		this.beforePageChanged = this.tableNode.eventHandle.beforePageChanged(this, rowIndex, writer);
-		writer.tracker.startTracking('beforePageChanged', this.beforePageChanged);
-	}
 	writer.tracker.startTracking('pageChanged', this.rowCallback);
-	if (rowIndex === 0 && !this.dontBreakRows && !this.rowsWithoutPageBreak) {
+	if (rowIndex == 0 && !this.dontBreakRows && !this.rowsWithoutPageBreak) {
 		// We store the 'y' to draw later and if necessary the top border of the table
 		this._tableTopBorderY = writer.context().y;
 		writer.context().moveDown(this.topLineWidth);
@@ -198,7 +193,7 @@ TableProcessor.prototype.beginRow = function (rowIndex, writer) {
 TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overrideY, moveDown = true, forcePage) {
 	var lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode);
 	if (lineWidth) {
-		var style = isFunction(this.layout.hLineStyle) ? this.layout.hLineStyle(lineIndex, this.tableNode) : null;
+		var style = this.layout.hLineStyle(lineIndex, this.tableNode);
 		var dash;
 		if (style && style.dash) {
 			dash = style.dash;
@@ -316,7 +311,7 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 	if (width === 0) {
 		return;
 	}
-	var style = isFunction(this.layout.vLineStyle) ? this.layout.vLineStyle(vLineColIndex, this.tableNode) : null;
+	var style = this.layout.vLineStyle(vLineColIndex, this.tableNode);
 	var dash;
 	if (style && style.dash) {
 		dash = style.dash;
@@ -328,7 +323,7 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 	var borderColor;
 
 	// the cell in the col before
-	if (vLineColIndex > 0 && isNumber(vLineRowIndex)) {
+	if (vLineColIndex > 0) {
 		cellBefore = body[vLineRowIndex][beforeVLineColIndex];
 		if (cellBefore && cellBefore.borderColor) {
 			if (cellBefore.border ? cellBefore.border[2] : this.layout.defaultBorder) {
@@ -338,7 +333,7 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 	}
 
 	// the current cell
-	if (borderColor == null && isNumber(vLineRowIndex) && vLineColIndex < body[vLineRowIndex].length) {
+	if (borderColor == null && vLineColIndex < body.length) {
 		currentCell = body[vLineRowIndex][vLineColIndex];
 		if (currentCell && currentCell.borderColor) {
 			if (currentCell.border ? currentCell.border[0] : this.layout.defaultBorder) {
@@ -392,9 +387,7 @@ TableProcessor.prototype.endTable = function (writer) {
 TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 	var l, i;
 	var self = this;
-	if (this.tableNode.eventHandle && this.tableNode.eventHandle.beforePageChanged) {
-		writer.tracker.stopTracking('beforePageChanged', this.beforePageChanged);
-	}
+
 	writer.tracker.stopTracking('pageChanged', this.rowCallback);
 	writer.context().moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
 	writer.context().availableHeight += this.reservedAtBottom;
@@ -426,7 +419,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 	ys[ys.length - 1].y1 = endingY;
 
 	var skipOrphanePadding = (ys[0].y1 - ys[0].y0 === this.rowPaddingTop);
-	if (rowIndex === 0 && !this.rowsWithoutPageBreak && !this.dontBreakRows) {
+	if (rowIndex === 0 && !skipOrphanePadding && !this.rowsWithoutPageBreak && !this.dontBreakRows) {
 		// Draw the top border of the table
 		var pageTableStartedAt = null;
 		if (pageBreaks && pageBreaks.length > 0) {
@@ -446,7 +439,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			y2 = y2 + this.rowPaddingBottom;
 		}
 
-		if (writer.context().page !== ys[yi].page) {
+		if (writer.context().page != ys[yi].page) {
 			writer.context().page = ys[yi].page;
 
 			//TODO: buggy, availableHeight should be updated on every pageChanged event
