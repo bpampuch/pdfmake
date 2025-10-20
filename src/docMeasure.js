@@ -264,52 +264,35 @@ DocMeasure.prototype.measureToc = function (node) {
 		node.toc.title = this.measureNode(node.toc.title);
 	}
 
-	if (node.toc._items && node.toc._items.length > 0) {
+	if (node.toc._items.length > 0) {
 		var items = node.toc._items;
 		var body = [];
-		var hasTextNodeRef = !!(items[0] && items[0]._textNodeRef);
-
-		if (hasTextNodeRef) {
-			var textStyle = node.toc.textStyle || {};
-			var numberStyle = node.toc.numberStyle || textStyle;
-			var textMargin = node.toc.textMargin || [0, 0, 0, 0];
-			for (var i = 0, l = items.length; i < l; i++) {
-				var tocItem = items[i];
-				var textNodeRef = tocItem._textNodeRef;
-				var lineStyle = (textNodeRef && textNodeRef.tocStyle) || textStyle;
-				var lineMargin = (textNodeRef && textNodeRef.tocMargin) || textMargin;
-				var lineNumberStyle = (textNodeRef && textNodeRef.tocNumberStyle) || numberStyle;
-				var destination = getNodeId(tocItem._nodeRef);
-				body.push([
-					{ text: textNodeRef ? textNodeRef.text : '', linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin },
-					{ text: '00000', linkToDestination: destination, alignment: 'right', _tocItemRef: tocItem._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
-				]);
-			}
-		} else {
-			var legacyNumberStyle = node.toc.numberStyle || {};
-			for (var j = 0, jl = items.length; j < jl; j++) {
-				var legacyItem = items[j];
-				var legacyLineStyle = legacyItem.tocStyle || {};
-				var legacyLineMargin = legacyItem.tocMargin || [0, 0, 0, 0];
-				body.push([
-					{ text: legacyItem.text || '', alignment: 'left', style: legacyLineStyle, margin: legacyLineMargin },
-					{ text: '00000', alignment: 'right', _tocItemRef: legacyItem, style: legacyNumberStyle, margin: [0, legacyLineMargin[1], 0, legacyLineMargin[3]] }
-				]);
-			}
+		var textStyle = node.toc.textStyle || {};
+		var numberStyle = node.toc.numberStyle || textStyle;
+		var textMargin = node.toc.textMargin || [0, 0, 0, 0];
+		for (var i = 0, l = items.length; i < l; i++) {
+			var tocItem = items[i];
+			var textNodeRef = tocItem._textNodeRef;
+			var lineStyle = (textNodeRef && textNodeRef.tocStyle) || textStyle;
+			var lineMargin = (textNodeRef && textNodeRef.tocMargin) || textMargin;
+			var lineNumberStyle = (textNodeRef && textNodeRef.tocNumberStyle) || numberStyle;
+			var destination = getNodeId(tocItem._nodeRef);
+			body.push([
+				{ text: textNodeRef ? textNodeRef.text : '', linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin },
+				{ text: '00000', linkToDestination: destination, alignment: 'right', _tocItemRef: tocItem._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
+			]);
 		}
 
-		if (body.length > 0) {
-			node.toc._table = {
-				table: {
-					dontBreakRows: true,
-					widths: ['*', 'auto'],
-					body: body
-				},
-				layout: 'noBorders'
-			};
+		node.toc._table = {
+			table: {
+				dontBreakRows: true,
+				widths: ['*', 'auto'],
+				body: body
+			},
+			layout: 'noBorders'
+		};
 
-			node.toc._table = this.measureNode(node.toc._table);
-		}
+		node.toc._table = this.measureNode(node.toc._table);
 	}
 
 	return node;
