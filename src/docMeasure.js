@@ -77,7 +77,7 @@ DocMeasure.prototype.measureNode = function (node) {
 		} else if (node.qr) {
 			return extendMargins(self.measureQr(node));
 		} else {
-			throw new Error('Unrecognized document structure: ' + JSON.stringify(node, fontStringify));
+			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
 	});
 
@@ -111,9 +111,7 @@ DocMeasure.prototype.measureNode = function (node) {
 			for (var i = styleArray.length - 1; i >= 0; i--) {
 				var styleName = styleArray[i];
 				var style = self.styleStack.styleDictionary[styleName];
-				if (!style) {
-					continue;
-				}
+
 				for (var key in style) {
 					if (style.hasOwnProperty(key)) {
 						flattenedStyles[key] = style[key];
@@ -144,14 +142,14 @@ DocMeasure.prototype.measureNode = function (node) {
 				margin = processSingleMargins(flattenedStyleArray, margin);
 			}
 
-			if (Object.prototype.hasOwnProperty.call(flattenedStyleArray, 'margin')) {
+			if (flattenedStyleArray.margin) {
 				margin = convertMargin(flattenedStyleArray.margin);
 			}
 		}
 
 		margin = processSingleMargins(node, margin);
 
-		if (node.margin !== undefined) {
+		if (node.margin) {
 			margin = convertMargin(node.margin);
 		}
 
@@ -220,10 +218,6 @@ DocMeasure.prototype.measureImage = function (node) {
 };
 
 DocMeasure.prototype.measureSVG = function (node) {
-	if (!this.svgMeasure) {
-		throw new Error('SVG images require svgMeasure to be provided');
-	}
-
 	var dimensions = this.svgMeasure.measureSVG(node.svg);
 
 	this.measureImageWithDimensions(node, dimensions);
@@ -241,7 +235,7 @@ DocMeasure.prototype.measureSVG = function (node) {
 
 DocMeasure.prototype.measureLeaf = function (node) {
 
-	if (node._textRef && node._textRef._textNodeRef && node._textRef._textNodeRef.text) {
+	if (node._textRef && node._textRef._textNodeRef.text) {
 		node.text = node._textRef._textNodeRef.text;
 	}
 
