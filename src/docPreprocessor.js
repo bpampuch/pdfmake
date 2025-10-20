@@ -1,23 +1,12 @@
 /* jslint node: true */
 'use strict';
 
-var helpers = require('./helpers');
-var fontStringify = helpers.fontStringify;
-var isString = helpers.isString || function (value) {
-	return typeof value === 'string' || value instanceof String;
-};
-var isNumber = helpers.isNumber || function (value) {
-	return typeof value === 'number' || value instanceof Number;
-};
-var isBoolean = helpers.isBoolean || function (value) {
-	return typeof value === 'boolean' || value instanceof Boolean;
-};
-var isArray = helpers.isArray || function (value) {
-	return Array.isArray(value);
-};
-var isUndefined = helpers.isUndefined || function (value) {
-	return typeof value === 'undefined';
-};
+var isString = require('./helpers').isString;
+var isNumber = require('./helpers').isNumber;
+var isBoolean = require('./helpers').isBoolean;
+var isArray = require('./helpers').isArray;
+var isUndefined = require('./helpers').isUndefined;
+var fontStringify = require('./helpers').fontStringify;
 
 function DocPreprocessor() {
 
