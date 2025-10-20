@@ -1,46 +1,22 @@
-/* jslint node: true */
+/*eslint no-unused-vars: ["error", {"args": "none"}]*/
+
 'use strict';
 
 var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
 var ColumnCalculator = require('./columnCalculator');
-var helpers = require('./helpers');
 var SVGMeasure = require('./svgMeasure');
-var fontStringify = helpers.fontStringify;
-var pack = helpers.pack;
+var isString = require('./helpers').isString;
+var isNumber = require('./helpers').isNumber;
+var isObject = require('./helpers').isObject;
+var isArray = require('./helpers').isArray;
+var fontStringify = require('./helpers').fontStringify;
+var getNodeId = require('./helpers').getNodeId;
+var pack = require('./helpers').pack;
 var qrEncoder = require('./qrEnc.js');
-var isNumber = helpers.isNumber || function (variable) {
-	return typeof variable === 'number' || variable instanceof Number;
-};
-var isArray = helpers.isArray || function (variable) {
-	return Array.isArray(variable);
-};
-var getNodeId = helpers.getNodeId || function (node) {
-	if (node && node.id) {
-		return node.id;
-	}
-
-	if (node && isArray(node.text)) {
-		for (var i = 0, l = node.text.length; i < l; i++) {
-			var nested = getNodeId(node.text[i]);
-			if (nested) {
-				return nested;
-			}
-		}
-	}
-
-	return null;
-};
 
 /**
  * @private
- * @param {object} fontProvider font provider used to resolve fonts
- * @param {object} styleDictionary collection of named styles
- * @param {object} defaultStyle default style applied to nodes
- * @param {object} imageMeasure helper for measuring raster images
- * @param {?object} svgMeasure helper for measuring SVG images
- * @param {object} tableLayouts registered table layout callbacks
- * @param {object} images map of named images
  */
 function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, svgMeasure, tableLayouts, images) {
 	if ((arguments.length === 6 && images === undefined) || (svgMeasure && typeof svgMeasure.measureSVG !== 'function' && typeof svgMeasure.writeDimensions !== 'function')) {
@@ -61,8 +37,8 @@ function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, s
 /**
  * Measures all nodes and sets min/max-width properties required for the second
  * layout-pass.
- * @param {object} docStructure document-definition-object
- * @returns {object} document-measurement-object
+ * @param  {Object} docStructure document-definition-object
+ * @return {Object}              document-measurement-object
  */
 DocMeasure.prototype.measureDocument = function (docStructure) {
 	return this.measureNode(docStructure);
@@ -100,9 +76,9 @@ DocMeasure.prototype.measureNode = function (node) {
 			return extendMargins(self.measureCanvas(node));
 		} else if (node.qr) {
 			return extendMargins(self.measureQr(node));
+		} else {
+			throw new Error('Unrecognized document structure: ' + JSON.stringify(node, fontStringify));
 		}
-
-		throw new Error('Unrecognized document structure: ' + JSON.stringify(node, fontStringify));
 	});
 
 	function extendMargins(node) {
@@ -118,13 +94,13 @@ DocMeasure.prototype.measureNode = function (node) {
 
 	function getNodeMargin() {
 
-		function processSingleMargins(target, currentMargin) {
-			if (target.marginLeft || target.marginTop || target.marginRight || target.marginBottom) {
+		function processSingleMargins(node, currentMargin) {
+			if (node.marginLeft || node.marginTop || node.marginRight || node.marginBottom) {
 				return [
-					target.marginLeft || currentMargin[0] || 0,
-					target.marginTop || currentMargin[1] || 0,
-					target.marginRight || currentMargin[2] || 0,
-					target.marginBottom || currentMargin[3] || 0
+					node.marginLeft || currentMargin[0] || 0,
+					node.marginTop || currentMargin[1] || 0,
+					node.marginRight || currentMargin[2] || 0,
+					node.marginBottom || currentMargin[3] || 0
 				];
 			}
 			return currentMargin;
@@ -139,7 +115,7 @@ DocMeasure.prototype.measureNode = function (node) {
 					continue;
 				}
 				for (var key in style) {
-					if (Object.prototype.hasOwnProperty.call(style, key)) {
+					if (style.hasOwnProperty(key)) {
 						flattenedStyles[key] = style[key];
 					}
 				}
@@ -166,9 +142,10 @@ DocMeasure.prototype.measureNode = function (node) {
 
 			if (flattenedStyleArray) {
 				margin = processSingleMargins(flattenedStyleArray, margin);
-				if (flattenedStyleArray.margin !== undefined) {
-					margin = convertMargin(flattenedStyleArray.margin);
-				}
+			}
+
+			if (Object.prototype.hasOwnProperty.call(flattenedStyleArray, 'margin')) {
+				margin = convertMargin(flattenedStyleArray.margin);
 			}
 		}
 
@@ -180,9 +157,9 @@ DocMeasure.prototype.measureNode = function (node) {
 
 		if (margin[0] === undefined && margin[1] === undefined && margin[2] === undefined && margin[3] === undefined) {
 			return null;
+		} else {
+			return margin;
 		}
-
-		return margin;
 	}
 };
 
@@ -228,7 +205,6 @@ DocMeasure.prototype.measureImageWithDimensions = function (node, dimensions) {
 	}
 
 	node._alignment = this.styleStack.getProperty('alignment');
-	return node;
 };
 
 DocMeasure.prototype.measureImage = function (node) {
@@ -239,6 +215,7 @@ DocMeasure.prototype.measureImage = function (node) {
 	var dimensions = this.imageMeasure.measureImage(node.image);
 
 	this.measureImageWithDimensions(node, dimensions);
+
 	return node;
 };
 
@@ -250,7 +227,9 @@ DocMeasure.prototype.measureSVG = function (node) {
 	var dimensions = this.svgMeasure.measureSVG(node.svg);
 
 	this.measureImageWithDimensions(node, dimensions);
+
 	node.font = this.styleStack.getProperty('font');
+
 	// scale SVG based on final dimension
 	node.svg = this.svgMeasure.writeDimensions(node.svg, {
 		width: node._width,
@@ -287,13 +266,13 @@ DocMeasure.prototype.measureToc = function (node) {
 
 	if (node.toc._items && node.toc._items.length > 0) {
 		var items = node.toc._items;
-		var hasTextNodeRef = !!(items[0] && items[0]._textNodeRef);
 		var body = [];
+		var hasTextNodeRef = !!(items[0] && items[0]._textNodeRef);
+
 		if (hasTextNodeRef) {
 			var textStyle = node.toc.textStyle || {};
 			var numberStyle = node.toc.numberStyle || textStyle;
 			var textMargin = node.toc.textMargin || [0, 0, 0, 0];
-
 			for (var i = 0, l = items.length; i < l; i++) {
 				var tocItem = items[i];
 				var textNodeRef = tocItem._textNodeRef;
@@ -313,7 +292,7 @@ DocMeasure.prototype.measureToc = function (node) {
 				var legacyLineStyle = legacyItem.tocStyle || {};
 				var legacyLineMargin = legacyItem.tocMargin || [0, 0, 0, 0];
 				body.push([
-					{ text: legacyItem.text, alignment: 'left', style: legacyLineStyle, margin: legacyLineMargin },
+					{ text: legacyItem.text || '', alignment: 'left', style: legacyLineStyle, margin: legacyLineMargin },
 					{ text: '00000', alignment: 'right', _tocItemRef: legacyItem, style: legacyNumberStyle, margin: [0, legacyLineMargin[1], 0, legacyLineMargin[3]] }
 				]);
 			}
@@ -378,13 +357,13 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 		var radius = gapSize.fontSize / 6;
 		return {
 			canvas: [{
-					x: radius,
-					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
-					r1: radius,
-					r2: radius,
-					type: 'ellipse',
-					color: color
-				}]
+				x: radius,
+				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+				r1: radius,
+				r2: radius,
+				type: 'ellipse',
+				color: color
+			}]
 		};
 	}
 
@@ -393,13 +372,13 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 		var size = gapSize.fontSize / 3;
 		return {
 			canvas: [{
-					x: 0,
-					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - (gapSize.fontSize / 3) - (size / 2),
-					h: size,
-					w: size,
-					type: 'rect',
-					color: color
-				}]
+				x: 0,
+				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - (gapSize.fontSize / 3) - (size / 2),
+				h: size,
+				w: size,
+				type: 'rect',
+				color: color
+			}]
 		};
 	}
 
@@ -408,13 +387,13 @@ DocMeasure.prototype.buildUnorderedMarker = function (styleStack, gapSize, type)
 		var radius = gapSize.fontSize / 6;
 		return {
 			canvas: [{
-					x: radius,
-					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
-					r1: radius,
-					r2: radius,
-					type: 'ellipse',
-					lineColor: color
-				}]
+				x: radius,
+				y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+				r1: radius,
+				r2: radius,
+				type: 'ellipse',
+				lineColor: color
+			}]
 		};
 	}
 
@@ -464,7 +443,7 @@ DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack, type, s
 			return counter.toString();
 		}
 		var num = counter;
-		var lookup = {M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1}, roman = '', i;
+		var lookup = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 }, roman = '', i;
 		for (i in lookup) {
 			while (num >= lookup[i]) {
 				roman += i;
@@ -525,13 +504,13 @@ DocMeasure.prototype.buildOrderedMarker = function (counter, styleStack, type, s
 		}
 	}
 
-	var textArray = {text: counterText};
+	var textArray = { text: counterText };
 	var markerColor = styleStack.getProperty('markerColor');
 	if (markerColor) {
 		textArray.color = markerColor;
 	}
 
-	return {_inlines: this.textTools.buildInlines(textArray, styleStack).items};
+	return { _inlines: this.textTools.buildInlines(textArray, styleStack).items };
 };
 
 DocMeasure.prototype.measureUnorderedList = function (node) {
@@ -562,7 +541,7 @@ DocMeasure.prototype.measureOrderedList = function (node) {
 	node.type = node.type || 'decimal';
 	node.separator = node.separator || '.';
 	node.reversed = node.reversed || false;
-	if (node.start === undefined || node.start === null) {
+	if (!isNumber(node.start)) {
 		node.start = node.reversed ? items.length : 1;
 	}
 	node._gapSize = this.gapSizeForList();
@@ -570,21 +549,16 @@ DocMeasure.prototype.measureOrderedList = function (node) {
 	node._maxWidth = 0;
 
 	var counter = node.start;
-	var i;
-	var l = items.length;
-	var item;
-	for (i = 0; i < l; i++) {
-		item = items[i] = this.measureNode(items[i]);
+	for (var i = 0, l = items.length; i < l; i++) {
+		var item = items[i] = this.measureNode(items[i]);
 
 		if (!item.ol && !item.ul) {
-			// Use item.counter if explicitly defined (including 0), otherwise use counter
-			var markerCounter = (item.counter !== undefined && item.counter !== null) ? item.counter : counter;
-			item.listMarker = this.buildOrderedMarker(markerCounter, style, item.listType || node.type, node.separator);
+			var counterValue = isNumber(item.counter) ? item.counter : counter;
+			item.listMarker = this.buildOrderedMarker(counterValue, style, item.listType || node.type, node.separator);
 			if (item.listMarker._inlines) {
 				node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
 			}
 
-			// Only increment counter for actual list items, not nested lists
 			if (node.reversed) {
 				counter--;
 			} else {
@@ -599,8 +573,8 @@ DocMeasure.prototype.measureOrderedList = function (node) {
 	node._minWidth += node._gapSize.width;
 	node._maxWidth += node._gapSize.width;
 
-	for (i = 0; i < l; i++) {
-		item = items[i];
+	for (var i = 0, l = items.length; i < l; i++) {
+		var item = items[i];
 		if (!item.ol && !item.ul) {
 			item.listMarker._minWidth = item.listMarker._maxWidth = node._gapSize.width;
 		}
@@ -633,6 +607,7 @@ DocMeasure.prototype.measureTable = function (node) {
 
 	var colSpans = [];
 	var col, row, cols, rows;
+
 	if (node.table.body[0]) {
 		for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
 			var c = node.table.widths[col];
@@ -655,7 +630,7 @@ DocMeasure.prototype.measureTable = function (node) {
 
 					if (data.colSpan && data.colSpan > 1) {
 						markSpans(rowData, col, data.colSpan);
-						colSpans.push({col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth});
+						colSpans.push({ col: col, span: data.colSpan, minWidth: data._minWidth, maxWidth: data._maxWidth });
 					} else {
 						c._minWidth = Math.max(c._minWidth, data._minWidth);
 						c._maxWidth = Math.max(c._maxWidth, data._maxWidth);
@@ -668,6 +643,7 @@ DocMeasure.prototype.measureTable = function (node) {
 			}
 		}
 	}
+
 	extendWidthsForColSpans();
 
 	var measures = ColumnCalculator.measureMinMax(node.table.widths);
@@ -679,8 +655,9 @@ DocMeasure.prototype.measureTable = function (node) {
 
 	function measureCb(_this, data) {
 		return function () {
-			if (data !== null && typeof data === 'object') {
+			if (isObject(data)) {
 				data.fillColor = _this.styleStack.getProperty('fillColor');
+				data.fillOpacity = _this.styleStack.getProperty('fillOpacity');
 			}
 			return _this.measureNode(data);
 		};
@@ -689,37 +666,46 @@ DocMeasure.prototype.measureTable = function (node) {
 	function getLayout(tableLayouts) {
 		var layout = node.layout;
 
-		if (typeof node.layout === 'string' || node instanceof String) {
+		if (isString(layout)) {
 			layout = tableLayouts[layout];
 		}
 
 		var defaultLayout = {
-			hLineWidth: function () {
+			hLineWidth: function (i, node) {
 				return 1;
 			},
-			vLineWidth: function () {
+			vLineWidth: function (i, node) {
 				return 1;
 			},
-			hLineColor: function () {
+			hLineColor: function (i, node) {
 				return 'black';
 			},
-			vLineColor: function () {
+			vLineColor: function (i, node) {
 				return 'black';
 			},
-			paddingLeft: function () {
-				return 4;
-			},
-			paddingRight: function () {
-				return 4;
-			},
-			paddingTop: function () {
-				return 2;
-			},
-			paddingBottom: function () {
-				return 2;
-			},
-			fillColor: function () {
+			hLineStyle: function (i, node) {
 				return null;
+			},
+			vLineStyle: function (i, node) {
+				return null;
+			},
+			paddingLeft: function (i, node) {
+				return 4;
+			},
+			paddingRight: function (i, node) {
+				return 4;
+			},
+			paddingTop: function (i, node) {
+				return 2;
+			},
+			paddingBottom: function (i, node) {
+				return 2;
+			},
+			fillColor: function (i, node) {
+				return null;
+			},
+			fillOpacity: function (i, node) {
+				return 1;
 			},
 			defaultBorder: true
 		};
@@ -776,7 +762,7 @@ DocMeasure.prototype.measureTable = function (node) {
 	}
 
 	function getMinMax(col, span, offsets) {
-		var result = {minWidth: 0, maxWidth: 0};
+		var result = { minWidth: 0, maxWidth: 0 };
 
 		for (var i = 0; i < span; i++) {
 			result.minWidth += node.table.widths[col + i]._minWidth + (i ? offsets.offsets[col + i] : 0);
@@ -803,7 +789,8 @@ DocMeasure.prototype.measureTable = function (node) {
 				_span: true,
 				_minWidth: 0,
 				_maxWidth: 0,
-				fillColor: table.body[row][col].fillColor
+				fillColor: table.body[row][col].fillColor,
+				fillOpacity: table.body[row][col].fillOpacity
 			};
 		}
 	}
@@ -813,7 +800,7 @@ DocMeasure.prototype.measureTable = function (node) {
 			node.table.widths = 'auto';
 		}
 
-		if (typeof node.table.widths === 'string' || node.table.widths instanceof String) {
+		if (isString(node.table.widths)) {
 			node.table.widths = [node.table.widths];
 
 			while (node.table.widths.length < node.table.body[0].length) {
@@ -823,8 +810,8 @@ DocMeasure.prototype.measureTable = function (node) {
 
 		for (var i = 0, l = node.table.widths.length; i < l; i++) {
 			var w = node.table.widths[i];
-			if (typeof w === 'number' || w instanceof Number || typeof w === 'string' || w instanceof String) {
-				node.table.widths[i] = {width: w};
+			if (isNumber(w) || isString(w)) {
+				node.table.widths[i] = { width: w };
 			}
 		}
 	}
@@ -860,6 +847,7 @@ DocMeasure.prototype.measureCanvas = function (node) {
 
 	node._minWidth = node._maxWidth = w;
 	node._minHeight = node._maxHeight = h;
+	node._alignment = this.styleStack.getProperty('alignment');
 
 	return node;
 };
