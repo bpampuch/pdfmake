@@ -1,4 +1,3 @@
-/* jslint node: true */
 'use strict';
 
 var Line = require('./line');
@@ -10,9 +9,6 @@ var DocumentContext = require('./documentContext');
 /**
  * Creates an instance of ElementWriter - a line/vector writer, which adds
  * elements to current page and sets their positions based on the context
- *
- * @param {DocumentContext} context - Active document context where elements are rendered.
- * @param {import('./traversalTracker')} tracker - Tracker instance used to emit layout events.
  */
 function ElementWriter(context, tracker) {
 	this.context = context;
@@ -183,7 +179,6 @@ ElementWriter.prototype.alignCanvas = function (node) {
 			offset = (width - canvasWidth) / 2;
 			break;
 	}
-
 	if (offset) {
 		node.canvas.forEach(function (vector) {
 			offsetVector(vector, offset, 0);
@@ -209,6 +204,25 @@ ElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreCont
 	}
 };
 
+ElementWriter.prototype.beginClip = function (width, height) {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	page.items.push({
+		type: 'beginClip',
+		item: { x: ctx.x, y: ctx.y, width: width, height: height }
+	});
+	return true;
+};
+
+ElementWriter.prototype.endClip = function () {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	page.items.push({
+		type: 'endClip'
+	});
+	return true;
+};
+
 function cloneLine(line) {
 	var result = new Line(line.maxWidth);
 
@@ -222,7 +236,6 @@ function cloneLine(line) {
 }
 
 ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
-
 	var ctx = this.context;
 	var page = ctx.getCurrentPage();
 
@@ -238,6 +251,7 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 		switch (item.type) {
 			case 'line':
 				var l = cloneLine(item.item);
+
 				if (l._node) {
 					l._node.positions[0].pageNumber = ctx.page + 1;
 				}
@@ -255,8 +269,10 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 
 				offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 				if (v._isFillColorFromUnbreakable) {
+					// If the item is a fillColor from an unbreakable block
+					// We have to add it at the beginning of the items body array of the page
 					delete v._isFillColorFromUnbreakable;
-					var endOfBackgroundItemsIndex = ctx.backgroundLength[ctx.page] || 0;
+					const endOfBackgroundItemsIndex = ctx.backgroundLength[ctx.page];
 					page.items.splice(endOfBackgroundItemsIndex, 0, {
 						type: 'vector',
 						item: v
@@ -278,6 +294,7 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 				var it = pack(item.item);
 				it.x = (it.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 				it.y = (it.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+
 				page.items.push({
 					type: item.type,
 					item: it
@@ -291,6 +308,35 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 	}
 
 	return true;
+};
+
+/**
+ * Pushes the provided context onto the stack or creates a new one
+ *
+ * pushContext(context) - pushes the provided context and makes it current
+ * pushContext(width, height) - creates and pushes a new context with the specified width and height
+ * pushContext() - creates a new context for unbreakable blocks (with current availableWidth and full-page-height)
+ */
+ElementWriter.prototype.pushContext = function (contextOrWidth, height) {
+	if (contextOrWidth === undefined) {
+		height = this.context.getCurrentPage().height - this.context.pageMargins.top - this.context.pageMargins.bottom;
+		contextOrWidth = this.context.availableWidth;
+	}
+
+	if (isNumber(contextOrWidth)) {
+		contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
+	}
+
+	this.contextStack.push(this.context);
+	this.context = contextOrWidth;
+};
+
+ElementWriter.prototype.popContext = function () {
+	this.context = this.contextStack.pop();
+};
+
+ElementWriter.prototype.getCurrentPositionOnPage = function () {
+	return (this.contextStack[0] || this.context).getCurrentPosition();
 };
 
 ElementWriter.prototype.beginClip = function (width, height) {
@@ -314,15 +360,6 @@ ElementWriter.prototype.endClip = function () {
 	return item;
 };
 
-ElementWriter.prototype.removeBeginClip = function (item) {
-	var ctx = this.context;
-	var page = ctx.getCurrentPage();
-	var index = page.items.indexOf(item);
-	if (index > -1) {
-		page.items.splice(index, 1);
-	}
-};
-
 ElementWriter.prototype.beginVerticalAlign = function (verticalAlign) {
 	var ctx = this.context;
 	var page = ctx.getCurrentPage();
@@ -343,38 +380,6 @@ ElementWriter.prototype.endVerticalAlign = function (verticalAlign) {
 	};
 	page.items.push(item);
 	return item;
-};
-
-/**
- * Pushes the provided context onto the stack or creates a new one
- *
- * pushContext(context) - pushes the provided context and makes it current
- * pushContext(width, height) - creates and pushes a new context with the specified width and height
- * pushContext() - creates a new context for unbreakable blocks (with current availableWidth and full-page-height)
- *
- * @param {DocumentContext|number} contextOrWidth - Existing context to push or width used to create a new context.
- * @param {number} [height] - Height of the new context when width is provided.
- */
-ElementWriter.prototype.pushContext = function (contextOrWidth, height) {
-	if (contextOrWidth === undefined) {
-		height = this.context.getCurrentPage().height - this.context.pageMargins.top - this.context.pageMargins.bottom;
-		contextOrWidth = this.context.availableWidth;
-	}
-
-	if (isNumber(contextOrWidth)) {
-		contextOrWidth = new DocumentContext({width: contextOrWidth, height: height}, {left: 0, right: 0, top: 0, bottom: 0});
-	}
-
-	this.contextStack.push(this.context);
-	this.context = contextOrWidth;
-};
-
-ElementWriter.prototype.popContext = function () {
-	this.context = this.contextStack.pop();
-};
-
-ElementWriter.prototype.getCurrentPositionOnPage = function () {
-	return (this.contextStack[0] || this.context).getCurrentPosition();
 };
 
 
