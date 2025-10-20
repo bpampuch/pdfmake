@@ -6,8 +6,6 @@ var isString = require('./helpers').isString;
 /**
  * Creates an instance of DocumentContext - a store for current x, y positions and available width/height.
  * It facilitates column divisions and vertical sync
- * @param {object} pageSize current page size including width, height, orientation
- * @param {object} pageMargins normalized page margins with top/right/bottom/left
  */
 function DocumentContext(pageSize, pageMargins) {
 	this.pages = [];
@@ -20,12 +18,10 @@ function DocumentContext(pageSize, pageMargins) {
 	this.page = -1;
 
 	this.snapshots = [];
-	this.endingCell = null;
 
 	this.tracker = new TraversalTracker();
 
 	this.backgroundLength = [];
-	this.marginXTopParent = null;
 
 	this.addPage(pageSize);
 }
@@ -45,9 +41,7 @@ DocumentContext.prototype.beginColumnGroup = function (marginXTopParent, bottomB
 			availableWidth: this.availableWidth,
 			page: this.page
 		},
-		lastColumnWidth: this.lastColumnWidth,
-		endingCell: this.endingCell,
-		marginXTopParent: this.marginXTopParent
+		lastColumnWidth: this.lastColumnWidth
 	});
 
 	this.lastColumnWidth = 0;
@@ -73,19 +67,7 @@ DocumentContext.prototype.resetMarginXTopParent = function () {
 DocumentContext.prototype.beginColumn = function (width, offset, endingCell) {
 	var saved = this.snapshots[this.snapshots.length - 1];
 
-	if (endingCell && !this.endingCell) {
-		endingCell._columnEndingContext = {
-			page: this.page,
-			x: this.x,
-			y: this.y,
-			availableHeight: this.availableHeight,
-			availableWidth: this.availableWidth,
-			lastColumnWidth: this.lastColumnWidth
-		};
-	}
-
 	this.calculateBottomMost(saved, endingCell);
-	this.endingCell = endingCell;
 
 	this.page = saved.page;
 	this.x = this.x + this.lastColumnWidth + (offset || 0);
@@ -97,28 +79,6 @@ DocumentContext.prototype.beginColumn = function (width, offset, endingCell) {
 };
 
 DocumentContext.prototype.calculateBottomMost = function (destContext, endingCell) {
-	if (this.endingCell) {
-		if (!this.endingCell._columnEndingContext) {
-			this.saveContextInEndingCell(this.endingCell);
-		}
-		if (endingCell) {
-			var bottomMost = destContext.bottomMost ? destContext.bottomMost : destContext;
-			endingCell._columnEndingContext = {
-				page: bottomMost.page,
-				x: bottomMost.x,
-				y: bottomMost.y,
-				availableHeight: bottomMost.availableHeight,
-				availableWidth: bottomMost.availableWidth,
-				lastColumnWidth: bottomMost.lastColumnWidth || this.lastColumnWidth
-			};
-		}
-		this.endingCell = null;
-	}
-
-	if (endingCell && endingCell._columnEndingContext) {
-		return;
-	}
-
 	if (endingCell) {
 		this.saveContextInEndingCell(endingCell);
 	} else {
@@ -127,8 +87,6 @@ DocumentContext.prototype.calculateBottomMost = function (destContext, endingCel
 };
 
 DocumentContext.prototype.markEnding = function (endingCell, originalXOffset, discountY) {
-	originalXOffset = originalXOffset || 0;
-	discountY = discountY || 0;
 	this.page = endingCell._columnEndingContext.page;
 	this.x = endingCell._columnEndingContext.x + originalXOffset;
 	this.y = endingCell._columnEndingContext.y - discountY;
@@ -150,17 +108,12 @@ DocumentContext.prototype.saveContextInEndingCell = function (endingCell) {
 
 DocumentContext.prototype.completeColumnGroup = function (height, endingCell) {
 	var saved = this.snapshots.pop();
-	var hasSpanningColumn = !!(endingCell || this.endingCell);
-
-	if (this.endingCell && !this.endingCell._columnEndingContext) {
-		this.saveContextInEndingCell(this.endingCell);
-	}
 
 	this.calculateBottomMost(saved, endingCell);
 
 	this.x = saved.x;
 
-	var y = hasSpanningColumn ? this.y : saved.bottomMost.y;
+	var y = saved.bottomMost.y;
 	if (height) {
 		if (saved.page === saved.bottomMost.page) {
 			if ((saved.y + height) > y) {
@@ -180,8 +133,6 @@ DocumentContext.prototype.completeColumnGroup = function (height, endingCell) {
 		this.availableHeight -= (y - saved.bottomMost.y);
 	}
 	this.lastColumnWidth = saved.lastColumnWidth;
-	this.marginXTopParent = saved.marginXTopParent;
-	this.endingCell = null;
 	return saved.bottomByPage;
 };
 
@@ -243,9 +194,7 @@ DocumentContext.prototype.beginDetachedBlock = function () {
 		availableHeight: this.availableHeight,
 		availableWidth: this.availableWidth,
 		page: this.page,
-		lastColumnWidth: this.lastColumnWidth,
-		endingCell: this.endingCell,
-		marginXTopParent: this.marginXTopParent
+		lastColumnWidth: this.lastColumnWidth
 	});
 };
 
@@ -258,8 +207,6 @@ DocumentContext.prototype.endDetachedBlock = function () {
 	this.availableHeight = saved.availableHeight;
 	this.page = saved.page;
 	this.lastColumnWidth = saved.lastColumnWidth;
-	this.endingCell = saved.endingCell;
-	this.marginXTopParent = saved.marginXTopParent;
 };
 
 function pageOrientation(pageOrientationString, currentPageOrientation) {
