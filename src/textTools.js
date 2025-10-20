@@ -1,29 +1,27 @@
-/* jslint node: true */
 'use strict';
 
-var helpers = require('./helpers');
-var isString = helpers.isString;
-var isNumber = helpers.isNumber;
-var isObject = helpers.isObject;
-var isArray = helpers.isArray;
-var isUndefined = helpers.isUndefined;
+var isString = require('./helpers').isString;
+var isNumber = require('./helpers').isNumber;
+var isObject = require('./helpers').isObject;
+var isArray = require('./helpers').isArray;
+var isUndefined = require('./helpers').isUndefined;
 var LineBreaker = require('@foliojs-fork/linebreak');
-const Tokenizer = require('@flowaccount/node-icu-tokenizer');
-const fontkit = require('fontkit');
+var Tokenizer = require('@flowaccount/node-icu-tokenizer');
+var fontkit = require('fontkit');
 
 var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;
 
-var fontCacheName_new = '';
-var fontCache_new = null;
+var fontCacheName = '';
+var fontCache = null;
 var fontSubstituteCache = {};
 var defaultFont = 'Roboto';
 
 /**
- * Text measurement utility.
+ * Creates an instance of TextTools - text measurement utility
  *
- * @class TextTools
- * @param {object} fontProvider
+ * @constructor
+ * @param {FontProvider} fontProvider
  */
 function TextTools(fontProvider) {
 	this.fontProvider = fontProvider;
@@ -31,19 +29,20 @@ function TextTools(fontProvider) {
 
 /**
  * Converts an array of strings (or inline-definition-objects) into a collection
- * of inlines and calculates minWidth/maxWidth.
- *
- * @param {(string|object|Array)} textArray - inline-definition objects (or strings)
- * @param {object} styleContextStack current style stack
- * @returns {{items: Array, minWidth: number, maxWidth: number}} collection of inlines
+ * of inlines and calculated minWidth/maxWidth.
+ * and their min/max widths
+ * @param  {Object} textArray - an array of inline-definition-objects (or strings)
+ * @param  {Object} styleContextStack current style stack
+ * @return {Object}                   collection of inlines, minWidth, maxWidth
  */
 TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
 	primeFontCaches.call(this, styleContextStack);
 
 	var measured = measure(this.fontProvider, textArray, styleContextStack);
-	var minWidth = 0;
-	var maxWidth = 0;
-	var currentLineWidth;
+
+	var minWidth = 0,
+		maxWidth = 0,
+		currentLineWidth;
 
 	measured.forEach(function (inline) {
 		minWidth = Math.max(minWidth, inline.width - inline.leadingCut - inline.trailingCut);
@@ -78,15 +77,15 @@ TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
 };
 
 /**
- * Returns size of the specified string (without breaking it) using the current style.
- *
- * @param {string} text text to be measured
- * @param {object} styleContextStack current style stack
- * @returns {object} size of the specified string
+ * Returns size of the specified string (without breaking it) using the current style
+ * @param  {String} text              text to be measured
+ * @param  {Object} styleContextStack current style stack
+ * @return {Object}                   size of the specified string
  */
 TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 	text = text ? text.toString().replace(/\t/g, '    ') : '';
 
+	//TODO: refactor - extract from measure
 	var fontName = getStyleProperty({}, styleContextStack, 'font', 'Roboto');
 	var fontSize = getStyleProperty({}, styleContextStack, 'fontSize', 12);
 	var fontFeatures = getStyleProperty({}, styleContextStack, 'fontFeatures', null);
@@ -110,15 +109,14 @@ TextTools.prototype.sizeOfString = function (text, styleContextStack) {
 /**
  * Returns size of the specified rotated string (without breaking it) using the current style
  *
- * @param {string} text text to be measured
- * @param {number} angle
- * @param {object} styleContextStack current style stack
+ * @param  {string} text text to be measured
+ * @param  {number} angle
+ * @param  {object} styleContextStack current style stack
  * @returns {object} size of the specified string
  */
 TextTools.prototype.sizeOfRotatedText = function (text, angle, styleContextStack) {
 	var angleRad = angle * Math.PI / -180;
 	var size = this.sizeOfString(text, styleContextStack);
-
 	return {
 		width: Math.abs(size.height * Math.sin(angleRad)) + Math.abs(size.width * Math.cos(angleRad)),
 		height: Math.abs(size.width * Math.sin(angleRad)) + Math.abs(size.height * Math.cos(angleRad))
@@ -128,25 +126,6 @@ TextTools.prototype.sizeOfRotatedText = function (text, angle, styleContextStack
 TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpacing, fontFeatures) {
 	return widthOfString(text, font, fontSize, characterSpacing, fontFeatures);
 };
-
-function tokenizerWords(word) {
-	var regex = / /;
-	word = word.replace(regex, '[BLANK]');
-
-	var tokenizer = new Tokenizer().tokenize(word, { ignoreWhitespaceTokens: false });
-
-	for (var i = 0; i < tokenizer.length; i++) {
-		if (tokenizer[i] && tokenizer[i].token === '[' &&
-			tokenizer[i + 1] && tokenizer[i + 1].token === 'BLANK' &&
-			tokenizer[i + 2] && tokenizer[i + 2].token === ']') {
-			tokenizer[i].token = ' ';
-			tokenizer[i + 1].del = true;
-			tokenizer[i + 2].del = true;
-		}
-	}
-
-	return tokenizer;
-}
 
 function splitWords(text, noWrap) {
 	var results = [];
@@ -204,9 +183,28 @@ function splitWords(text, noWrap) {
 	return results;
 }
 
+function tokenizerWords(word) {
+	var regex = / /;
+	word = word.replace(regex, '[BLANK]');
+
+	var tokenizer = new Tokenizer().tokenize(word, { ignoreWhitespaceTokens: false });
+
+	for (var i = 0; i < tokenizer.length; i++) {
+		if (tokenizer[i] && tokenizer[i].token === '[' &&
+			tokenizer[i + 1] && tokenizer[i + 1].token === 'BLANK' &&
+			tokenizer[i + 2] && tokenizer[i + 2].token === ']') {
+			tokenizer[i].token = ' ';
+			tokenizer[i + 1].del = true;
+			tokenizer[i + 2].del = true;
+		}
+	}
+
+	return tokenizer;
+}
+
 function copyStyle(source, destination) {
 	destination = destination || {};
-	source = source || {}; // TODO: default style
+	source = source || {}; //TODO: default style
 
 	for (var key in source) {
 		if (key !== 'text' && Object.prototype.hasOwnProperty.call(source, key)) {
@@ -257,14 +255,12 @@ function normalizeTextArray(array, styleContextStack) {
 	array = flatten(array);
 
 	var lastWord = null;
-
-	for (var i = 0; i < array.length; i++) {
+	for (var i = 0, l = array.length; i < l; i++) {
 		var item = array[i];
 		var style = null;
 		var words;
 
 		var noWrap = getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
-
 		if (isObject(item)) {
 			if (item._textRef && item._textRef._textNodeRef && item._textRef._textNodeRef.text) {
 				item.text = item._textRef._textNodeRef.text;
@@ -283,12 +279,12 @@ function normalizeTextArray(array, styleContextStack) {
 			}
 		}
 
-		for (var j = 0; j < words.length; j++) {
+		for (var i2 = 0, l2 = words.length; i2 < l2; i2++) {
 			var result = {
-				text: words[j].text
+				text: words[i2].text
 			};
 
-			if (words[j].lineEnd) {
+			if (words[i2].lineEnd) {
 				result.lineEnd = true;
 			}
 
@@ -297,7 +293,7 @@ function normalizeTextArray(array, styleContextStack) {
 		}
 
 		lastWord = null;
-		if (i + 1 < array.length) {
+		if (i + 1 < l) {
 			lastWord = getOneWord(words.length - 1, words, noWrap);
 		}
 	}
@@ -376,8 +372,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var sub = getStyleProperty(item, styleContextStack, 'sub', false);
 
 		if ((sup || sub) && item.fontSize === undefined) {
-			// font size reduction taken from here:
-			// https://en.wikipedia.org/wiki/Subscript_and_superscript#Desktop_publishing
+			// font size reduction taken from here: https://en.wikipedia.org/wiki/Subscript_and_superscript#Desktop_publishing
 			fontSize *= 0.58;
 		}
 
@@ -467,16 +462,16 @@ function primeFontCaches(styleContextStack) {
 		return;
 	}
 
-	if (defaultFont && fontCacheName_new !== defaultFont) {
+	if (defaultFont && fontCacheName !== defaultFont) {
 		var defaultFontDef = this.fontProvider.fonts[defaultFont];
 		var primaryFont = safeOpenFont(defaultFontDef && defaultFontDef.normal);
 
 		if (primaryFont) {
-			fontCacheName_new = defaultFont;
-			fontCache_new = primaryFont;
+			fontCacheName = defaultFont;
+			fontCache = primaryFont;
 		} else {
-			fontCacheName_new = '';
-			fontCache_new = null;
+			fontCacheName = '';
+			fontCache = null;
 		}
 	}
 
@@ -485,7 +480,7 @@ function primeFontCaches(styleContextStack) {
 			continue;
 		}
 
-		if (fontItem === fontCacheName_new) {
+		if (fontItem === fontCacheName) {
 			continue;
 		}
 
@@ -501,8 +496,8 @@ function primeFontCaches(styleContextStack) {
 function getFontCompaitible(item) {
 	var text = item.text || '';
 
-	if (fontCacheName_new && fontCache_new && !hasMissingGlyphs(fontCache_new.glyphsForString(text))) {
-		return fontCacheName_new;
+	if (fontCacheName && fontCache && !hasMissingGlyphs(fontCache.glyphsForString(text))) {
+		return fontCacheName;
 	}
 
 	for (var key in fontSubstituteCache) {
@@ -511,7 +506,7 @@ function getFontCompaitible(item) {
 		}
 
 		var fontItem = fontSubstituteCache[key];
-		if (!fontItem || !fontItem.FontObj || fontItem.Name === fontCacheName_new) {
+		if (!fontItem || !fontItem.FontObj || fontItem.Name === fontCacheName) {
 			continue;
 		}
 
