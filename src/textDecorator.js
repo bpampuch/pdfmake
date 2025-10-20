@@ -5,8 +5,7 @@ var isPattern = require('./helpers').isPattern;
 var getPattern = require('./helpers').getPattern;
 
 function groupDecorations(line) {
-	var groups = [];
-	var currentGroup = null;
+	var groups = [], currentGroup = null;
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
 		var decoration = inline.decoration;
@@ -58,13 +57,13 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 		}
 		return sum;
 	}
-	var firstInline = group.inlines[0];
-	var biggerInline = maxInline();
-	var totalWidth = width();
-	var lineAscent = group.line.getAscenderHeight();
-	var ascent = biggerInline.font.ascender / 1000 * biggerInline.fontSize;
-	var height = biggerInline.height;
-	var descent = height - ascent;
+	var firstInline = group.inlines[0],
+		biggerInline = maxInline(),
+		totalWidth = width(),
+		lineAscent = group.line.getAscenderHeight(),
+		ascent = biggerInline.font.ascender / 1000 * biggerInline.fontSize,
+		height = biggerInline.height,
+		descent = height - ascent;
 
 	var lw = 0.5 + Math.floor(Math.max(biggerInline.fontSize - 8, 0) / 2) * 0.12;
 
@@ -79,7 +78,7 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 			y += lineAscent - (ascent * 0.25);
 			break;
 		default:
-			throw new Error('Unknown decoration : ' + group.decoration);
+			throw 'Unknown decoration : ' + group.decoration;
 	}
 	pdfKitDoc.save();
 
@@ -107,8 +106,7 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 			rx += (lw * 3);
 		}
 	} else if (group.decorationStyle === 'wavy') {
-		var sh = 0.7;
-		var sv = 1;
+		var sh = 0.7, sv = 1;
 		var nbWaves = Math.ceil(totalWidth / (sh * 2)) + 1;
 		var rwx = x + firstInline.x - 1;
 		pdfKitDoc.rect(x + firstInline.x, y - sv, totalWidth, y + sv).clip();
@@ -120,7 +118,6 @@ function drawDecoration(group, x, y, pdfKitDoc) {
 			rwx += sh * 6;
 		}
 		pdfKitDoc.stroke(group.decorationColor);
-
 	} else {
 		pdfKitDoc.fillColor(group.decorationColor)
 			.rect(x + firstInline.x, y - lw / 2, totalWidth, lw)
@@ -137,12 +134,6 @@ function drawDecorations(line, x, y, pdfKitDoc) {
 }
 
 function drawBackground(line, x, y, patterns, pdfKitDoc) {
-	// Support legacy signature drawBackground(line, x, y, pdfKitDoc)
-	if (!pdfKitDoc && patterns && typeof patterns.fillColor !== 'function') {
-		pdfKitDoc = patterns;
-		patterns = undefined;
-	}
-	var patternsStore = patterns || {};
 	var height = line.getHeight();
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
@@ -151,7 +142,7 @@ function drawBackground(line, x, y, patterns, pdfKitDoc) {
 		}
 		var color = inline.background;
 		if (isPattern(inline.background)) {
-			color = getPattern(inline.background, patternsStore);
+			color = getPattern(inline.background, patterns);
 		}
 		var justifyShift = (inline.justifyShift || 0);
 		pdfKitDoc.fillColor(color)
