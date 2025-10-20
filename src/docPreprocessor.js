@@ -60,9 +60,9 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 		return this.preprocessQr(node);
 	} else if (node.pageReference || node.textReference) {
 		return this.preprocessText(node);
+	} else {
+		throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 	}
-
-	throw new Error('Unrecognized document structure: ' + JSON.stringify(node, fontStringify));
 };
 
 DocPreprocessor.prototype.preprocessColumns = function (node) {
@@ -165,7 +165,7 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 	if (node.id) {
 		if (this.nodeReferences[node.id]) {
 			if (!this.nodeReferences[node.id]._pseudo) {
-				throw new Error("Node id '" + node.id + "' already exists");
+				throw "Node id '" + node.id + "' already exists";
 			}
 
 			this.nodeReferences[node.id]._nodeRef = this._getNodeForNodeRef(node);
@@ -236,7 +236,7 @@ DocPreprocessor.prototype.preprocessToc = function (node) {
 
 	if (this.tocs[node.toc.id]) {
 		if (!this.tocs[node.toc.id].toc._pseudo) {
-			throw new Error("TOC '" + node.toc.id + "' already exists");
+			throw "TOC '" + node.toc.id + "' already exists";
 		}
 
 		node.toc._items = this.tocs[node.toc.id].toc._items;
@@ -248,7 +248,7 @@ DocPreprocessor.prototype.preprocessToc = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessImage = function (node) {
-	if (typeof Buffer !== 'undefined' && node.image && !isUndefined(node.image.type) && !isUndefined(node.image.data) && node.image.type === 'Buffer' && isArray(node.image.data)) {
+	if (!isUndefined(node.image.type) && !isUndefined(node.image.data) && (node.image.type === 'Buffer') && isArray(node.image.data)) {
 		node.image = Buffer.from(node.image.data);
 	}
 	return node;
