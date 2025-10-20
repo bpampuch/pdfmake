@@ -36,7 +36,6 @@
     "mocha": "^11.2.2",
     "npm-run-all": "^4.1.5",
     "path-browserify": "^1.0.1",
-    "prettier": "^3.6.2",
     "process": "^0.11.10",
     "rewire": "^7.0.0",
     "shx": "^0.4.0",
