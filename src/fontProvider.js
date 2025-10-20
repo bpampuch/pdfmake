@@ -1,4 +1,3 @@
-/* jslint node: true */
 'use strict';
 
 var isArray = require('./helpers').isArray;
@@ -21,7 +20,7 @@ function FontProvider(fontDescriptors, pdfKitDoc) {
 	this.fontCache = {};
 
 	for (var font in fontDescriptors) {
-		if (Object.prototype.hasOwnProperty.call(fontDescriptors, font)) {
+		if (fontDescriptors.hasOwnProperty(font)) {
 			var fontDef = fontDescriptors[font];
 
 			this.fonts[font] = {

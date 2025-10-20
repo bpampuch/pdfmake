@@ -26,11 +26,11 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 		node = { text: node };
 	} else if (isNumber(node) || isBoolean(node)) {
 		node = { text: node.toString() };
-	} else if (isUndefined(node) || node === null) {
+	} else if (node === undefined || node === null) {
 		node = { text: '' };
-	} else if (typeof node === 'object' && Object.keys(node).length === 0) { // empty object
+	} else if (Object.keys(node).length === 0) { // empty object
 		node = { text: '' };
-	} else if (node && typeof node === 'object' && node.hasOwnProperty('text') && (node.text === undefined || node.text === null)) {
+	} else if ('text' in node && (node.text === undefined || node.text === null)) {
 		node.text = '';
 	}
 
@@ -106,10 +106,7 @@ DocPreprocessor.prototype.preprocessList = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessTable = function (node) {
-	var col;
-	var row;
-	var cols;
-	var rows;
+	var col, row, cols, rows;
 
 	if (!node.table.body || !node.table.body[0]) {
 		return node;
@@ -134,12 +131,15 @@ DocPreprocessor.prototype.preprocessTable = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessText = function (node) {
+	var i;
+	var l;
+
 	if (node.tocItem) {
 		if (!isArray(node.tocItem)) {
 			node.tocItem = [node.tocItem];
 		}
 
-		for (var i = 0, l = node.tocItem.length; i < l; i++) {
+		for (i = 0, l = node.tocItem.length; i < l; i++) {
 			if (!isString(node.tocItem[i])) {
 				node.tocItem[i] = '_default_';
 			}
@@ -214,8 +214,8 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 			isSetParentNode = true;
 		}
 
-		for (var j = 0, textLength = node.text.length; j < textLength; j++) {
-			node.text[j] = this.preprocessNode(node.text[j]);
+		for (i = 0, l = node.text.length; i < l; i++) {
+			node.text[i] = this.preprocessNode(node.text[i]);
 		}
 
 		if (isSetParentNode) {
@@ -248,7 +248,7 @@ DocPreprocessor.prototype.preprocessToc = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessImage = function (node) {
-	if (typeof Buffer !== 'undefined' && node.image && node.image.type === 'Buffer' && !isUndefined(node.image.data) && isArray(node.image.data)) {
+	if (typeof Buffer !== 'undefined' && node.image && !isUndefined(node.image.type) && !isUndefined(node.image.data) && node.image.type === 'Buffer' && isArray(node.image.data)) {
 		node.image = Buffer.from(node.image.data);
 	}
 	return node;

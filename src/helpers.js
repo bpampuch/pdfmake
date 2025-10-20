@@ -1,4 +1,3 @@
-/* jslint node: true */
 'use strict';
 
 function isString(variable) {
@@ -52,7 +51,7 @@ function pack() {
 
 		if (obj) {
 			for (var key in obj) {
-				if (Object.prototype.hasOwnProperty.call(obj, key)) {
+				if (obj.hasOwnProperty(key)) {
 					result[key] = obj[key];
 				}
 			}
