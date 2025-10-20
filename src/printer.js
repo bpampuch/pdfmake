@@ -1,21 +1,42 @@
-/* jslint node: true */
+/*eslint no-unused-vars: ["error", {"args": "none"}]*/
 'use strict';
 
-var _ = require('lodash');
+var PdfKitEngine = require('./pdfKitEngine');
 var FontProvider = require('./fontProvider');
 var LayoutBuilder = require('./layoutBuilder');
-var PdfKit = require('@foliojs-fork/pdfkit');
 var sizes = require('./standardPageSizes');
 var ImageMeasure = require('./imageMeasure');
+var SVGMeasure = require('./svgMeasure');
 var textDecorator = require('./textDecorator');
 var TextTools = require('./textTools');
-
-_.noConflict();
+var isFunction = require('./helpers').isFunction;
+var isString = require('./helpers').isString;
+var isNumber = require('./helpers').isNumber;
+var isBoolean = require('./helpers').isBoolean;
+var isArray = require('./helpers').isArray;
+var isUndefined = require('./helpers').isUndefined;
+var isPattern = require('./helpers').isPattern;
+var getPattern = require('./helpers').getPattern;
+var SVGtoPDF = require('./3rd-party/svg-to-pdfkit');
 
 var REMOTE_RESOLVED_KEY = '__pdfMakeRemoteImagesResolved';
 var REMOTE_PROTOCOL_REGEX = /^https?:\/\//i;
 var DATA_URL_REGEX = /^data:/i;
 var TRANSPARENT_PNG_PLACEHOLDER = (typeof Buffer !== 'undefined') ? Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWM8c+bMfQAI1gP2Ce279wAAAABJRU5ErkJggg==', 'base64') : null;
+
+var findFont = function (fonts, requiredFonts, defaultFont) {
+	for (var i = 0; i < requiredFonts.length; i++) {
+		var requiredFont = requiredFonts[i].toLowerCase();
+
+		for (var font in fonts) {
+			if (font.toLowerCase() === requiredFont) {
+				return font;
+			}
+		}
+	}
+
+	return defaultFont;
+};
 
 ////////////////////////////////////////
 // PdfPrinter
@@ -75,8 +96,16 @@ function PdfPrinter(fontDescriptors) {
  *	],
  *	styles: {
  *		header: { fontSize: 30, bold: true }
+ *	},
+ *	patterns: {
+ *		stripe45d: {
+ *			boundingBox: [1, 1, 4, 4],
+ *			xStep: 3,
+ *			yStep: 3,
+ *			pattern: '1 w 0 1 m 4 5 l s 2 0 m 5 3 l s'
+ *		}
  *	}
- * }
+ * };
  *
  * var pdfKitDoc = printer.createPdfKitDocument(docDefinition);
  *
@@ -88,25 +117,51 @@ function PdfPrinter(fontDescriptors) {
 PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	options = options || {};
 
+	docDefinition.version = docDefinition.version || '1.3';
+	docDefinition.subset = docDefinition.subset || undefined;
+	docDefinition.tagged = typeof docDefinition.tagged === 'boolean' ? docDefinition.tagged : false;
+	docDefinition.displayTitle = typeof docDefinition.displayTitle === 'boolean' ? docDefinition.displayTitle : false;
+	docDefinition.compress = isBoolean(docDefinition.compress) ? docDefinition.compress : true;
+	docDefinition.images = docDefinition.images || {};
+	docDefinition.pageMargins = ((docDefinition.pageMargins !== undefined) && (docDefinition.pageMargins !== null)) ? docDefinition.pageMargins : 40;
+
 	var pageSize = fixPageSize(docDefinition.pageSize, docDefinition.pageOrientation);
 
-	this.pdfKitDoc = new PdfKit({size: [pageSize.width, pageSize.height], autoFirstPage: false, compress: docDefinition.compress || true});
-	setMetadata(docDefinition, this.pdfKitDoc);
+	var pdfOptions = {
+		size: [pageSize.width, pageSize.height],
+		pdfVersion: docDefinition.version,
+		subset: docDefinition.subset,
+		tagged: docDefinition.tagged,
+		displayTitle: docDefinition.displayTitle,
+		compress: docDefinition.compress,
+		userPassword: docDefinition.userPassword,
+		ownerPassword: docDefinition.ownerPassword,
+		permissions: docDefinition.permissions,
+		lang: docDefinition.language,
+		fontLayoutCache: isBoolean(options.fontLayoutCache) ? options.fontLayoutCache : true,
+		bufferPages: options.bufferPages || false,
+		autoFirstPage: false,
+		info: createMetadata(docDefinition),
+		font: null
+	};
+
+	this.pdfKitDoc = PdfKitEngine.createPdfDocument(pdfOptions);
 
 	this.fontProvider = new FontProvider(this.fontDescriptors, this.pdfKitDoc);
 
-	docDefinition.images = docDefinition.images || {};
-
-	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins || 40), new ImageMeasure(this.pdfKitDoc, docDefinition.images));
+	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins), new ImageMeasure(this.pdfKitDoc, docDefinition.images), new SVGMeasure());
 
 	registerDefaultTableLayouts(builder);
 	if (options.tableLayouts) {
 		builder.registerTableLayouts(options.tableLayouts);
 	}
 
-	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {fontSize: 12, font: 'Roboto'}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
+	var pages = builder.layoutDocument(docDefinition.content, this.fontProvider, docDefinition.styles || {}, docDefinition.defaultStyle || {
+		fontSize: 12,
+		font: 'Roboto'
+	}, docDefinition.background, docDefinition.header, docDefinition.footer, docDefinition.images, docDefinition.watermark, docDefinition.pageBreakBefore);
 	var maxNumberPages = docDefinition.maxPagesNumber || -1;
-	if (typeof maxNumberPages === 'number' && maxNumberPages > -1) {
+	if (isNumber(maxNumberPages) && maxNumberPages > -1) {
 		pages = pages.slice(0, maxNumberPages);
 	}
 
@@ -117,7 +172,9 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
 	}
 
-	renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
+	var patterns = createPatterns(docDefinition.patterns || {}, this.pdfKitDoc);
+
+	renderPages(pages, this.fontProvider, this.pdfKitDoc, patterns, options.progressCallback);
 
 	if (options.autoPrint) {
 		var printActionRef = this.pdfKitDoc.ref({
@@ -131,25 +188,25 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	return this.pdfKitDoc;
 };
 
-	PdfPrinter.prototype.resolveRemoteImages = function (docDefinition, timeoutMs) {
-		return resolveRemoteImages.call(this, docDefinition, timeoutMs);
-	};
+PdfPrinter.prototype.resolveRemoteImages = function (docDefinition, timeoutMs) {
+	return resolveRemoteImages.call(this, docDefinition, timeoutMs);
+};
 
-	PdfPrinter.prototype.createPdfKitDocumentAsync = function (docDefinition, options) {
-		var createOptions = options || {};
-		var timeout = undefined;
-		if (createOptions && Object.prototype.hasOwnProperty.call(createOptions, 'remoteImageTimeout')) {
-			timeout = createOptions.remoteImageTimeout;
-			createOptions = shallowOmit(createOptions, 'remoteImageTimeout');
-		}
+PdfPrinter.prototype.createPdfKitDocumentAsync = function (docDefinition, options) {
+	var createOptions = options ? Object.assign({}, options) : {};
+	var timeout;
+	if (Object.prototype.hasOwnProperty.call(createOptions, 'remoteImageTimeout')) {
+		timeout = createOptions.remoteImageTimeout;
+		delete createOptions.remoteImageTimeout;
+	}
 
-		var self = this;
-		return resolveRemoteImages.call(this, docDefinition, timeout).then(function () {
-			return self.createPdfKitDocument(docDefinition, createOptions);
-		});
-	};
+	var self = this;
+	return resolveRemoteImages.call(this, docDefinition, timeout).then(function () {
+		return self.createPdfKitDocument(docDefinition, createOptions);
+	});
+};
 
-function setMetadata(docDefinition, pdfKitDoc) {
+function createMetadata(docDefinition) {
 	// PDF standard has these properties reserved: Title, Author, Subject, Keywords,
 	// Creator, Producer, CreationDate, ModDate, Trapped.
 	// To keep the pdfmake api consistent, the info field are defined lowercase.
@@ -165,45 +222,67 @@ function setMetadata(docDefinition, pdfKitDoc) {
 		return key.replace(/\s+/g, '');
 	}
 
-	pdfKitDoc.info.Producer = 'pdfmake';
-	pdfKitDoc.info.Creator = 'pdfmake';
+	var info = {
+		Producer: 'pdfmake',
+		Creator: 'pdfmake'
+	};
 
 	if (docDefinition.info) {
 		for (var key in docDefinition.info) {
 			var value = docDefinition.info[key];
 			if (value) {
 				key = standardizePropertyKey(key);
-				pdfKitDoc.info[key] = value;
+				info[key] = value;
 			}
 		}
 	}
+	return info;
 }
 
 function calculatePageHeight(pages, margins) {
 	function getItemHeight(item) {
-		if (typeof item.item.getHeight === 'function') {
+		if (isFunction(item.item.getHeight)) {
 			return item.item.getHeight();
 		} else if (item.item._height) {
 			return item.item._height;
+		} else if (item.type === 'vector') {
+			if (typeof item.item.y1 !== 'undefined') {
+				return item.item.y1 > item.item.y2 ? item.item.y1 : item.item.y2;
+			} else {
+				return item.item.h;
+			}
 		} else {
 			// TODO: add support for next item types
 			return 0;
 		}
 	}
 
+	function getBottomPosition(item) {
+		var top = item.item.y || 0;
+		var height = getItemHeight(item);
+		return top + height;
+	}
+
 	var fixedMargins = fixPageMargins(margins || 40);
-	var height = fixedMargins.top + fixedMargins.bottom;
+	var height = fixedMargins.top;
+
 	pages.forEach(function (page) {
 		page.items.forEach(function (item) {
-			height += getItemHeight(item);
+			var bottomPosition = getBottomPosition(item);
+			if (bottomPosition > height) {
+				height = bottomPosition;
+			}
 		});
 	});
+
+	height += fixedMargins.bottom;
+
 	return height;
 }
 
 function fixPageSize(pageSize, pageOrientation) {
 	function isNeedSwapPageSizes(pageOrientation) {
-		if (typeof pageOrientation === 'string' || pageOrientation instanceof String) {
+		if (isString(pageOrientation)) {
 			pageOrientation = pageOrientation.toLowerCase();
 			return ((pageOrientation === 'portrait') && (size.width > size.height)) ||
 				((pageOrientation === 'landscape') && (size.width < size.height));
@@ -218,24 +297,20 @@ function fixPageSize(pageSize, pageOrientation) {
 
 	var size = pageSize2widthAndHeight(pageSize || 'A4');
 	if (isNeedSwapPageSizes(pageOrientation)) { // swap page sizes
-		size = {width: size.height, height: size.width};
+		size = { width: size.height, height: size.width };
 	}
 	size.orientation = size.width > size.height ? 'landscape' : 'portrait';
 	return size;
 }
 
 function fixPageMargins(margin) {
-	if (!margin) {
-		return null;
-	}
-
-	if (typeof margin === 'number' || margin instanceof Number) {
-		margin = {left: margin, right: margin, top: margin, bottom: margin};
-	} else if (Array.isArray(margin)) {
+	if (isNumber(margin)) {
+		margin = { left: margin, right: margin, top: margin, bottom: margin };
+	} else if (isArray(margin)) {
 		if (margin.length === 2) {
-			margin = {left: margin[0], top: margin[1], right: margin[0], bottom: margin[1]};
+			margin = { left: margin[0], top: margin[1], right: margin[0], bottom: margin[1] };
 		} else if (margin.length === 4) {
-			margin = {left: margin[0], top: margin[1], right: margin[2], bottom: margin[3]};
+			margin = { left: margin[0], top: margin[1], right: margin[2], bottom: margin[3] };
 		} else {
 			throw 'Invalid pageMargins definition';
 		}
@@ -245,7 +320,6 @@ function fixPageMargins(margin) {
 }
 
 function registerDefaultTableLayouts(layoutBuilder) {
-	/*jshint unused: false */
 	layoutBuilder.registerTableLayouts({
 		noBorders: {
 			hLineWidth: function (i) {
@@ -302,12 +376,12 @@ function registerDefaultTableLayouts(layoutBuilder) {
 }
 
 function pageSize2widthAndHeight(pageSize) {
-	if (typeof pageSize === 'string' || pageSize instanceof String) {
+	if (isString(pageSize)) {
 		var size = sizes[pageSize.toUpperCase()];
 		if (!size) {
 			throw 'Page size ' + pageSize + ' not recognized';
 		}
-		return {width: size[0], height: size[1]};
+		return { width: size[0], height: size[1] };
 	}
 
 	return pageSize;
@@ -323,15 +397,20 @@ function updatePageOrientationInOptions(currentPage, pdfKitDoc) {
 	}
 }
 
-function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
+function renderPages(pages, fontProvider, pdfKitDoc, patterns, progressCallback) {
 	pdfKitDoc._pdfMakePages = pages;
 	pdfKitDoc.addPage();
 
-	var totalItems = progressCallback && _.sumBy(pages, function (page) {
-		return page.items.length;
-	});
+	var totalItems = 0;
+	if (progressCallback) {
+		pages.forEach(function (page) {
+			totalItems += page.items.length;
+		});
+	}
+
 	var renderedItems = 0;
-	progressCallback = progressCallback || function () {};
+	progressCallback = progressCallback || function () {
+	};
 
 	for (var i = 0; i < pages.length; i++) {
 		if (i > 0) {
@@ -344,18 +423,27 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 			var item = page.items[ii];
 			switch (item.type) {
 				case 'vector':
-					renderVector(item.item, pdfKitDoc);
+					renderVector(item.item, patterns, pdfKitDoc);
 					break;
 				case 'line':
-					renderLine(item.item, item.item.x, item.item.y, pdfKitDoc);
+					renderLine(item.item, item.item.x, item.item.y, patterns, pdfKitDoc);
 					break;
 				case 'image':
 					renderImage(item.item, item.item.x, item.item.y, pdfKitDoc);
 					break;
+				case 'svg':
+					renderSVG(item.item, item.item.x, item.item.y, pdfKitDoc, fontProvider);
+					break;
+				case 'beginClip':
+					beginClip(item.item, pdfKitDoc);
+					break;
+				case 'endClip':
+					endClip(pdfKitDoc);
+					break;
 				case 'beginVerticalAlign':
 					beginVerticalAlign(item.item, pdfKitDoc);
 					break;
-				  case 'endVerticalAlign':
+				case 'endVerticalAlign':
 					endVerticalAlign(item.item, pdfKitDoc);
 					break;
 			}
@@ -368,25 +456,58 @@ function renderPages(pages, fontProvider, pdfKitDoc, progressCallback) {
 	}
 }
 
-function renderLine(line, x, y, pdfKitDoc) {
-	if (line._tocItemNode) {
+/**
+ * Shift the "y" height of the text baseline up or down (superscript or subscript,
+ * respectively). The exact shift can / should be changed according to standard
+ * conventions.
+ *
+ * @param {number} y
+ * @param {any} inline
+ */
+function offsetText(y, inline) {
+	var newY = y;
+	if (inline.sup) {
+		newY -= inline.fontSize * 0.75;
+	}
+	if (inline.sub) {
+		newY += inline.fontSize * 0.35;
+	}
+	return newY;
+}
+
+function renderLine(line, x, y, patterns, pdfKitDoc) {
+	function preparePageNodeRefLine(_pageNodeRef, inline) {
 		var newWidth;
 		var diffWidth;
 		var textTools = new TextTools(null);
 
-		line.inlines[0].text = line._tocItemNode.positions[0].pageNumber.toString();
-		newWidth = textTools.widthOfString(line.inlines[0].text, line.inlines[0].font, line.inlines[0].fontSize, line.inlines[0].characterSpacing);
-		diffWidth = line.inlines[0].width - newWidth;
-		line.inlines[0].width = newWidth;
+		if (isUndefined(_pageNodeRef.positions)) {
+			throw 'Page reference id not found';
+		}
 
-		switch (line.inlines[0].alignment) {
+		var pageNumber = _pageNodeRef.positions[0].pageNumber.toString();
+
+		inline.text = pageNumber;
+		newWidth = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
+		diffWidth = inline.width - newWidth;
+		inline.width = newWidth;
+
+		switch (inline.alignment) {
 			case 'right':
-				line.inlines[0].x += diffWidth;
+				inline.x += diffWidth;
 				break;
 			case 'center':
-				line.inlines[0].x += diffWidth / 2;
+				inline.x += diffWidth / 2;
 				break;
 		}
+	}
+
+	if (line._pageNodeRef) {
+		preparePageNodeRefLine(line._pageNodeRef, line.inlines[0]);
+	}
+
+	if (line._tocItemNode) {
+		preparePageNodeRefLine(line._tocItemNode, line.inlines[0]);
 	}
 
 	x = x || 0;
@@ -396,32 +517,61 @@ function renderLine(line, x, y, pdfKitDoc) {
 	var ascenderHeight = line.getAscenderHeight();
 	var descent = lineHeight - ascenderHeight;
 
-	textDecorator.drawBackground(line, x, y, pdfKitDoc);
+	textDecorator.drawBackground(line, x, y, patterns, pdfKitDoc);
 
 	//TODO: line.optimizeInlines();
 	for (var i = 0, l = line.inlines.length; i < l; i++) {
 		var inline = line.inlines[i];
 		var shiftToBaseline = lineHeight - ((inline.font.ascender / 1000) * inline.fontSize) - descent;
 
-		pdfKitDoc.fill(inline.color || 'black');
+		if (inline._pageNodeRef) {
+			preparePageNodeRefLine(inline._pageNodeRef, inline);
+		}
 
-		pdfKitDoc._font = inline.font;
-		pdfKitDoc.fontSize(inline.fontSize);
-		pdfKitDoc.text(inline.text, x + inline.x, y + shiftToBaseline, {
+		if (inline._tocItemNode) {
+			preparePageNodeRefLine(inline._tocItemNode, inline);
+		}
+
+		var options = {
 			lineBreak: false,
 			textWidth: inline.width,
 			characterSpacing: inline.characterSpacing,
 			wordCount: 1,
 			link: inline.link
-		});
+		};
+
+		if (inline.linkToDestination) {
+			options.goTo = inline.linkToDestination;
+		}
+
+		if (line.id && i === 0) {
+			options.destination = line.id;
+		}
+
+		if (inline.fontFeatures) {
+			options.features = inline.fontFeatures;
+		}
+
+		var opacity = isNumber(inline.opacity) ? inline.opacity : 1;
+		pdfKitDoc.opacity(opacity);
+		pdfKitDoc.fill(inline.color || 'black');
+
+		pdfKitDoc._font = inline.font;
+		pdfKitDoc.fontSize(inline.fontSize);
+
+		var shiftedY = offsetText(y + shiftToBaseline, inline);
+		pdfKitDoc.text(inline.text, x + inline.x, shiftedY, options);
 
 		if (inline.linkToPage) {
-			var _ref = pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0]}).end();
-			pdfKitDoc.annotate(x + inline.x, y + shiftToBaseline, inline.width, inline.height, {Subtype: 'Link', Dest: [inline.linkToPage - 1, 'XYZ', null, null, null]});
+			pdfKitDoc.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
+			pdfKitDoc.annotate(x + inline.x, shiftedY, inline.width, inline.height, {
+				Subtype: 'Link',
+				Dest: [inline.linkToPage - 1, 'XYZ', null, null, null]
+			});
 		}
 
 	}
-
+	// Decorations won't draw correctly for superscript
 	textDecorator.drawDecorations(line, x, y, pdfKitDoc);
 }
 
@@ -433,34 +583,40 @@ function renderWatermark(page, pdfKitDoc) {
 
 	pdfKitDoc.save();
 
-	var angle = Math.atan2(pdfKitDoc.page.height, pdfKitDoc.page.width) * -180 / Math.PI;
-	pdfKitDoc.rotate(angle, {origin: [pdfKitDoc.page.width / 2, pdfKitDoc.page.height / 2]});
+	pdfKitDoc.rotate(watermark.angle, { origin: [pdfKitDoc.page.width / 2, pdfKitDoc.page.height / 2] });
 
-	var x = pdfKitDoc.page.width / 2 - watermark.size.size.width / 2;
-	var y = pdfKitDoc.page.height / 2 - watermark.size.size.height / 4;
+	var x = pdfKitDoc.page.width / 2 - watermark._size.size.width / 2;
+	var y = pdfKitDoc.page.height / 2 - watermark._size.size.height / 2;
 
 	pdfKitDoc._font = watermark.font;
-	pdfKitDoc.fontSize(watermark.size.fontSize);
-	pdfKitDoc.text(watermark.text, x, y, {lineBreak: false});
+	pdfKitDoc.fontSize(watermark.fontSize);
+	pdfKitDoc.text(watermark.text, x, y, { lineBreak: false });
 
 	pdfKitDoc.restore();
 }
 
-function renderVector(vector, pdfKitDoc) {
+function renderVector(vector, patterns, pdfKitDoc) {
 	//TODO: pdf optimization (there's no need to write all properties everytime)
 	pdfKitDoc.lineWidth(vector.lineWidth || 1);
 	if (vector.dash) {
-		pdfKitDoc.dash(vector.dash.length, {space: vector.dash.space || vector.dash.length, phase: vector.dash.phase || 0});
+		pdfKitDoc.dash(vector.dash.length, { space: vector.dash.space || vector.dash.length, phase: vector.dash.phase || 0 });
 	} else {
 		pdfKitDoc.undash();
 	}
 	pdfKitDoc.lineJoin(vector.lineJoin || 'miter');
+	pdfKitDoc.lineCap(vector.lineCap || 'butt');
 
 	//TODO: clipping
+
+	var gradient = null;
 
 	switch (vector.type) {
 		case 'ellipse':
 			pdfKitDoc.ellipse(vector.x, vector.y, vector.r1, vector.r2);
+
+			if (vector.linearGradient) {
+				gradient = pdfKitDoc.linearGradient(vector.x - vector.r1, vector.y, vector.x + vector.r1, vector.y);
+			}
 			break;
 		case 'rect':
 			if (vector.r) {
@@ -470,14 +626,7 @@ function renderVector(vector, pdfKitDoc) {
 			}
 
 			if (vector.linearGradient) {
-				var gradient = pdfKitDoc.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
-				var step = 1 / (vector.linearGradient.length - 1);
-
-				for (var i = 0; i < vector.linearGradient.length; i++) {
-					gradient.stop(i * step, vector.linearGradient[i]);
-				}
-
-				vector.color = gradient;
+				gradient = pdfKitDoc.linearGradient(vector.x, vector.y, vector.x + vector.w, vector.y);
 			}
 			break;
 		case 'line':
@@ -508,47 +657,132 @@ function renderVector(vector, pdfKitDoc) {
 			break;
 	}
 
+	if (vector.linearGradient && gradient) {
+		var step = 1 / (vector.linearGradient.length - 1);
+
+		for (var i = 0; i < vector.linearGradient.length; i++) {
+			gradient.stop(i * step, vector.linearGradient[i]);
+		}
+
+		vector.color = gradient;
+	}
+
+	if (isPattern(vector.color)) {
+		vector.color = getPattern(vector.color, patterns);
+	}
+
+	var fillOpacity = isNumber(vector.fillOpacity) ? vector.fillOpacity : 1;
+	var strokeOpacity = isNumber(vector.strokeOpacity) ? vector.strokeOpacity : 1;
+
 	if (vector.color && vector.lineColor) {
-		pdfKitDoc.fillColor(vector.color, vector.fillOpacity || 1);
-		pdfKitDoc.strokeColor(vector.lineColor, vector.strokeOpacity || 1);
+		pdfKitDoc.fillColor(vector.color, fillOpacity);
+		pdfKitDoc.strokeColor(vector.lineColor, strokeOpacity);
 		pdfKitDoc.fillAndStroke();
 	} else if (vector.color) {
-		pdfKitDoc.fillColor(vector.color, vector.fillOpacity || 1);
+		pdfKitDoc.fillColor(vector.color, fillOpacity);
 		pdfKitDoc.fill();
 	} else {
-		pdfKitDoc.strokeColor(vector.lineColor || 'black', vector.strokeOpacity || 1);
+		pdfKitDoc.strokeColor(vector.lineColor || 'black', strokeOpacity);
 		pdfKitDoc.stroke();
 	}
 }
 
 function renderImage(image, x, y, pdfKitDoc) {
-	pdfKitDoc.image(image.image, image.x, image.y, {width: image._width, height: image._height});
+	var opacity = isNumber(image.opacity) ? image.opacity : 1;
+	pdfKitDoc.opacity(opacity);
+	if (image.cover) {
+		var align = image.cover.align || 'center';
+		var valign = image.cover.valign || 'center';
+		var width = image.cover.width ? image.cover.width : image.width;
+		var height = image.cover.height ? image.cover.height : image.height;
+		pdfKitDoc.save();
+		pdfKitDoc.rect(image.x, image.y, width, height).clip();
+		pdfKitDoc.image(image.image, image.x, image.y, { cover: [width, height], align: align, valign: valign });
+		pdfKitDoc.restore();
+	} else {
+		pdfKitDoc.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+	}
 	if (image.link) {
 		pdfKitDoc.link(image.x, image.y, image._width, image._height, image.link);
+	}
+	if (image.linkToPage) {
+		pdfKitDoc.ref({ Type: 'Action', S: 'GoTo', D: [image.linkToPage, 0, 0] }).end();
+		pdfKitDoc.annotate(image.x, image.y, image._width, image._height, { Subtype: 'Link', Dest: [image.linkToPage - 1, 'XYZ', null, null, null] });
+	}
+	if (image.linkToDestination) {
+		pdfKitDoc.goTo(image.x, image.y, image._width, image._height, image.linkToDestination);
 	}
 }
 
 function beginVerticalAlign(item, pdfKitDoc) {
-	switch(item.verticalAlign) {
-	  case 'center':
-		pdfKitDoc.save();
-		pdfKitDoc.translate(0, -(item.nodeHeight - item.viewHeight) / 2);
-		break;
-	  case 'bottom':
-		pdfKitDoc.save();
-		pdfKitDoc.translate(0, -(item.nodeHeight - item.viewHeight));
-		break;
+	switch (item.verticalAlign) {
+		case 'center':
+			pdfKitDoc.save();
+			pdfKitDoc.translate(0, -(item.nodeHeight - item.viewHeight) / 2);
+			break;
+		case 'bottom':
+			pdfKitDoc.save();
+			pdfKitDoc.translate(0, -(item.nodeHeight - item.viewHeight));
+			break;
 	}
-  }
+}
 
-  function endVerticalAlign(item, pdfKitDoc) {
-	switch(item.verticalAlign) {
-	  case 'center':
-	  case 'bottom':
-		pdfKitDoc.restore();
-		break;
+function endVerticalAlign(item, pdfKitDoc) {
+	switch (item.verticalAlign) {
+		case 'center':
+		case 'bottom':
+			pdfKitDoc.restore();
+			break;
 	}
-  }
+}
+
+function renderSVG(svg, x, y, pdfKitDoc, fontProvider) {
+	var options = Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options);
+	options.fontCallback = function (family, bold, italic) {
+		var fontsFamily = family.split(',').map(function (f) { return f.trim().replace(/('|")/g, ''); });
+		var font = findFont(fontProvider.fonts, fontsFamily, svg.font || 'Roboto');
+
+		var fontFile = fontProvider.getFontFile(font, bold, italic);
+		if (fontFile === null) {
+			var type = fontProvider.getFontType(bold, italic);
+			throw new Error('Font \'' + font + '\' in style \'' + type + '\' is not defined in the font section of the document definition.');
+		}
+
+		return fontFile;
+	};
+
+	SVGtoPDF(pdfKitDoc, svg.svg, svg.x, svg.y, options);
+
+	if (svg.link) {
+		pdfKitDoc.link(svg.x, svg.y, svg._width, svg._height, svg.link);
+	}
+	if (svg.linkToPage) {
+		pdfKitDoc.ref({Type: 'Action', S: 'GoTo', D: [svg.linkToPage, 0, 0]}).end();
+		pdfKitDoc.annotate(svg.x, svg.y, svg._width, svg._height, { Subtype: 'Link', Dest: [svg.linkToPage - 1, 'XYZ', null, null, null] });
+	}
+	if (svg.linkToDestination) {
+		pdfKitDoc.goTo(svg.x, svg.y, svg._width, svg._height, svg.linkToDestination);
+	}
+}
+
+function beginClip(rect, pdfKitDoc) {
+	pdfKitDoc.save();
+	pdfKitDoc.addContent('' + rect.x + ' ' + rect.y + ' ' + rect.width + ' ' + rect.height + ' re');
+	pdfKitDoc.clip();
+}
+
+function endClip(pdfKitDoc) {
+	pdfKitDoc.restore();
+}
+
+function createPatterns(patternDefinitions, pdfKitDoc) {
+	var patterns = {};
+	Object.keys(patternDefinitions).forEach(function (p) {
+		var pattern = patternDefinitions[p];
+		patterns[p] = pdfKitDoc.pattern(pattern.boundingBox, pattern.xStep, pattern.yStep, pattern.pattern, pattern.colored);
+	});
+	return patterns;
+}
 
 function resolveRemoteImages(docDefinition, timeoutMs) {
 	if (!docDefinition || typeof docDefinition !== 'object') {
@@ -658,12 +892,17 @@ function registerInlineImage(node, images) {
 			}
 		}
 	} else if (value && typeof value === 'object') {
-		if (Buffer.isBuffer && Buffer.isBuffer(value)) {
+		if (typeof Buffer !== 'undefined' && Buffer.isBuffer && Buffer.isBuffer(value)) {
+			return null;
+		}
+
+		if (typeof Uint8Array !== 'undefined' && value instanceof Uint8Array) {
+			node.image = typeof Buffer !== 'undefined' ? Buffer.from(value) : value;
 			return null;
 		}
 
 		if (value.type === 'Buffer' && Array.isArray(value.data)) {
-			node.image = Buffer.from(value.data);
+			node.image = typeof Buffer !== 'undefined' ? Buffer.from(value.data) : value.data;
 			return null;
 		}
 
@@ -698,11 +937,11 @@ function parseRemoteDescriptor(value) {
 		return null;
 	}
 
-	if (Buffer.isBuffer && Buffer.isBuffer(value)) {
+	if (typeof Buffer !== 'undefined' && Buffer.isBuffer && Buffer.isBuffer(value)) {
 		return null;
 	}
 
-	if (value instanceof Uint8Array) {
+	if (typeof Uint8Array !== 'undefined' && value instanceof Uint8Array) {
 		return null;
 	}
 
@@ -745,19 +984,10 @@ function markRemoteResolved(docDefinition) {
 			configurable: true,
 			writable: true
 		});
-	} catch (err) {
+	} catch (error) {
+		void error;
 		docDefinition[REMOTE_RESOLVED_KEY] = true;
 	}
-}
-
-function shallowOmit(source, key) {
-	var clone = {};
-	Object.keys(source || {}).forEach(function (prop) {
-		if (prop !== key) {
-			clone[prop] = source[prop];
-		}
-	});
-	return clone;
 }
 
 function fetchRemote(url, headers, timeoutMs) {
@@ -794,7 +1024,7 @@ function fetchWithGlobal(url, headers, timeoutMs) {
 
 		return response.arrayBuffer();
 	}).then(function (buffer) {
-		return Buffer.from(buffer);
+		return typeof Buffer !== 'undefined' ? Buffer.from(buffer) : buffer;
 	});
 }
 
@@ -865,7 +1095,6 @@ function fetchWithNode(url, headers, timeoutMs) {
 }
 
 module.exports = PdfPrinter;
-
 
 /* temporary browser extension */
 PdfPrinter.prototype.fs = require('fs');

@@ -116,28 +116,26 @@ PageElementWriter.prototype.endVerticalAlign = function (verticalAlign) {
 };
 
 PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
-	
+
 	var nextPage = this.writer.context.moveToNextPage(pageOrientation);
 
 	// moveToNextPage is called multiple times for table, because is called for each column
 	// and repeatables are inserted only in the first time. If columns are used, is needed
 	// call for table in first column and then for table in the second column (is other repeatables).
-	this.repeatables.forEach(function (rep) {
-		if (isUndefined(rep.insertedOnPages)) {
-			rep.insertedOnPages = [];
-		}
-		if (isUndefined(rep.insertedOnPages[context.page])) {
-			rep.insertedOnPages[context.page] = true;
+	if (nextPage.newPageCreated) {
+		this.repeatables.forEach(function (rep) {
 			this.writer.addFragment(rep, true);
-		} else {
-			context.moveDown(rep.height);
-		}
-	}, this);
+		}, this);
+	} else {
+		this.repeatables.forEach(function (rep) {
+			this.writer.context.moveDown(rep.height);
+		}, this);
+	}
 
 	this.writer.tracker.emit('pageChanged', {
 		prevPage: nextPage.prevPage,
 		prevY: nextPage.prevY,
-		y: context.y
+		y: this.writer.context.y
 	});
 };
 
