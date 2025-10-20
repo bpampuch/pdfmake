@@ -15,10 +15,10 @@ ImageMeasure.prototype.measureImage = function (src) {
 		try {
 			image = this.pdfKitDoc.openImage(realImageSrc(src));
 			if (!image) {
-				throw new Error('No image');
+				throw 'No image';
 			}
 		} catch (error) {
-			throw new Error('Invalid image: ' + error.toString() + '\nImages dictionary should contain dataURL entries (or local file paths in node.js)');
+			throw 'Invalid image: ' + error.toString() + '\nImages dictionary should contain dataURL entries (or local file paths in node.js)';
 		}
 		image.embed(this.pdfKitDoc);
 		this.pdfKitDoc._imageRegistry[src] = image;
@@ -51,7 +51,7 @@ ImageMeasure.prototype.measureImage = function (src) {
 		}
 
 		if (typeof img === 'object') {
-			throw new Error('Not supported image definition: ' + JSON.stringify(img));
+			throw 'Not supported image definition: ' + JSON.stringify(img);
 		}
 
 		if (fs.existsSync(img)) {
