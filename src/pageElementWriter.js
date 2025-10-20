@@ -1,8 +1,9 @@
-/* jslint node: true */
 'use strict';
 
 var isUndefined = require('./helpers').isUndefined;
 var ElementWriter = require('./elementWriter');
+
+var newPageFooterBreak = true;
 
 /**
  * Creates an instance of PageElementWriter - an extended ElementWriter
@@ -72,8 +73,6 @@ PageElementWriter.prototype.alignCanvas = function (node) {
 	return this.writer.alignCanvas(node);
 };
 
-var newPageFooterBreak = true;
-
 PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
 	var result = this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
 	if (isFooter) {
@@ -101,25 +100,21 @@ PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, u
 };
 
 PageElementWriter.prototype.addFragment_test = function (fragment) {
-
 	if (fragment.height > this.writer.context.availableHeight) {
-		//console.log('PageBreak');
 		return false;
-	} else {
-		//console.log('None PageBreak');
-		return true;
 	}
+	return true;
 };
 
-PageElementWriter.prototype.removeBeginClip = function(item) {
+PageElementWriter.prototype.removeBeginClip = function (item) {
 	return this.writer.removeBeginClip(item);
 };
 
-PageElementWriter.prototype.beginVerticalAlign = function(verticalAlign) {
+PageElementWriter.prototype.beginVerticalAlign = function (verticalAlign) {
 	return this.writer.beginVerticalAlign(verticalAlign);
 };
 
-PageElementWriter.prototype.endVerticalAlign = function(verticalAlign) {
+PageElementWriter.prototype.endVerticalAlign = function (verticalAlign) {
 	return this.writer.endVerticalAlign(verticalAlign);
 };
 
@@ -134,6 +129,10 @@ PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
 	});
 
 	var nextPage = context.moveToNextPage(pageOrientation);
+
+	// moveToNextPage is called multiple times for table, because is called for each column
+	// and repeatables are inserted only in the first time. If columns are used, is needed
+	// call for table in first column and then for table in the second column (is other repeatables).
 	this.repeatables.forEach(function (rep) {
 		if (isUndefined(rep.insertedOnPages)) {
 			rep.insertedOnPages = [];
@@ -163,7 +162,6 @@ PageElementWriter.prototype.beginUnbreakableBlock = function (width, height) {
 PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY, isFooter) {
 	if (--this.transactionLevel === 0) {
 		var unbreakableContext = this.writer.context;
-
 		this.writer.popContext();
 
 		var nbPages = unbreakableContext.pages.length;
@@ -191,7 +189,7 @@ PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY,
 			if (forcedX !== undefined || forcedY !== undefined) {
 				this.writer.addFragment(fragment, true, true, true);
 			} else {
-				return this.addFragment(fragment,undefined,undefined,undefined,isFooter);
+				return this.addFragment(fragment, undefined, undefined, undefined, isFooter);
 			}
 		}
 	}
@@ -204,23 +202,18 @@ PageElementWriter.prototype.commitUnbreakableBlock_test = function (forcedX, for
 
 		var nbPages = unbreakableContext.pages.length;
 		if (nbPages > 0) {
-			// no support for multi-page unbreakableBlocks
 			var fragment = unbreakableContext.pages[0];
 			fragment.xOffset = forcedX;
 			fragment.yOffset = forcedY;
-
 			fragment.height = unbreakableContext.y;
-
-			var res = this.addFragment_test(fragment);
-
-			return res;
+			return this.addFragment_test(fragment);
 		}
 	}
 };
 
 PageElementWriter.prototype.currentBlockToRepeatable = function () {
 	var unbreakableContext = this.writer.context;
-	var rep = {items: []};
+	var rep = { items: [] };
 
 	unbreakableContext.pages[0].items.forEach(function (item) {
 		rep.items.push(item);
@@ -230,6 +223,7 @@ PageElementWriter.prototype.currentBlockToRepeatable = function () {
 
 	//TODO: vectors can influence height in some situations
 	rep.height = unbreakableContext.y;
+
 	rep.insertedOnPages = [];
 
 	return rep;
