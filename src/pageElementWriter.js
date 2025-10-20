@@ -13,9 +13,6 @@ var newPageFooterBreak = true;
  *                         a page-break occurs)
  * - transactions (used for unbreakable-blocks when we want to make sure
  *                 whole block will be rendered on the same page)
- *
- * @param {object} context Active document context.
- * @param {object} tracker Tracker to emit layout events.
  */
 function PageElementWriter(context, tracker) {
 	this.transactionLevel = 0;
@@ -82,18 +79,18 @@ PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, u
 		}
 		if (!result && isFooter === 2 && newPageFooterBreak) {
 			this.moveToNextPage();
-			return this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
 		}
 		if (!result && isFooter === 1) {
 			this.moveToNextPage();
-			return this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
 		}
 		return result;
 	}
 
 	if (!result) {
 		this.moveToNextPage();
-		return this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+		this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
 	}
 
 	return true;
@@ -119,16 +116,8 @@ PageElementWriter.prototype.endVerticalAlign = function (verticalAlign) {
 };
 
 PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
-	newPageFooterBreak = true;
-	var context = this.writer.context;
-	var currentPage = context.pages[context.page];
-	this.writer.tracker.emit('beforePageChanged', {
-		prevPage: currentPage.prevPage,
-		prevY: currentPage.prevY,
-		y: currentPage.y
-	});
-
-	var nextPage = context.moveToNextPage(pageOrientation);
+	
+	var nextPage = this.writer.context.moveToNextPage(pageOrientation);
 
 	// moveToNextPage is called multiple times for table, because is called for each column
 	// and repeatables are inserted only in the first time. If columns are used, is needed
