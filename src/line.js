@@ -1,12 +1,11 @@
-/* jslint node: true */
 'use strict';
 
 /**
- * Creates an instance of Line.
+ * Creates an instance of Line
  *
- * @class
+ * @constructor
  * @this {Line}
- * @param {number} maxWidth Maximum width this line can have
+ * @param {Number} Maximum width this line can have
  */
 function Line(maxWidth) {
 	this.maxWidth = maxWidth;
@@ -76,9 +75,8 @@ Line.prototype.getAvailableWidth = function () {
 };
 
 /**
- * Returns line height.
- *
- * @returns {number}
+ * Returns line height
+ * @return {Number}
  */
 Line.prototype.getHeight = function () {
 	var max = 0;

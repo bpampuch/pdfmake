@@ -1,15 +1,12 @@
-/* jslint node: true */
 'use strict';
 
+var isString = require('./helpers').isString;
+var isArray = require('./helpers').isArray;
+var isUndefined = require('./helpers').isUndefined;
+var isNull = require('./helpers').isNull;
+
 /**
- * Creates an instance of StyleContextStack used for style inherita	]);
-
-	// Always push the style override object, even if empty
-	// This maintains the expected stack structure for style inheritance
-	this.push(styleOverrideObject);
-
-	return styleNames.length + 1;
-};style overrides
+ * Creates an instance of StyleContextStack used for style inheritance and style overrides
  *
  * @constructor
  * @this {StyleContextStack}
@@ -69,14 +66,14 @@ StyleContextStack.prototype.pop = function (howMany) {
  * @return the number of items pushed onto the stack
  */
 StyleContextStack.prototype.autopush = function (item) {
-	if (typeof item === 'string' || item instanceof String) {
+	if (isString(item)) {
 		return 0;
 	}
 
 	var styleNames = [];
 
 	if (item.style) {
-		if (Array.isArray(item.style)) {
+		if (isArray(item.style)) {
 			styleNames = item.style;
 		} else {
 			styleNames = [item.style];
@@ -87,42 +84,8 @@ StyleContextStack.prototype.autopush = function (item) {
 		this.push(styleNames[i]);
 	}
 
-	var styleOverrideObject = {};
-
-	[
-		'font',
-		'fontSize',
-		'bold',
-		'italics',
-		'alignment',
-		'color',
-		'columnGap',
-		'fillColor',
-		'decoration',
-		'decorationStyle',
-		'decorationColor',
-		'background',
-		'lineHeight',
-		'characterSpacing',
-		'noWrap',
-		'markerColor',
-		'leadingIndent'
-			//'tableCellPadding'
-			// 'cellBorder',
-			// 'headerCellBorder',
-			// 'oddRowCellBorder',
-			// 'evenRowCellBorder',
-			// 'tableBorder'
-	].forEach(function (key) {
-		if (item[key] !== undefined && item[key] !== null) {
-			styleOverrideObject[key] = item[key];
-		}
-	});
-
-	// Always push the style override object, even if empty
-	// This maintains the expected stack structure for style inheritance
-	this.push(styleOverrideObject);
-
+	// rather than spend significant time making a styleOverrideObject, just add item
+	this.push(item);
 	return styleNames.length + 1;
 };
 
@@ -156,18 +119,15 @@ StyleContextStack.prototype.getProperty = function (property) {
 		for (var i = this.styleOverrides.length - 1; i >= 0; i--) {
 			var item = this.styleOverrides[i];
 
-			if (typeof item === 'string' || item instanceof String) {
+			if (isString(item)) {
 				// named-style-override
-
 				var style = this.styleDictionary[item];
-				if (style && style[property] !== null && style[property] !== undefined) {
+				if (style && !isUndefined(style[property]) && !isNull(style[property])) {
 					return style[property];
 				}
-			} else {
+			} else if (!isUndefined(item[property]) && !isNull(item[property])) {
 				// style-overrides-object
-				if (item[property] !== undefined && item[property] !== null) {
-					return item[property];
-				}
+				return item[property];
 			}
 		}
 	}
