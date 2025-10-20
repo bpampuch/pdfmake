@@ -111,7 +111,6 @@ DocMeasure.prototype.measureNode = function (node) {
 			for (var i = styleArray.length - 1; i >= 0; i--) {
 				var styleName = styleArray[i];
 				var style = self.styleStack.styleDictionary[styleName];
-
 				for (var key in style) {
 					if (style.hasOwnProperty(key)) {
 						flattenedStyles[key] = style[key];
@@ -272,7 +271,7 @@ DocMeasure.prototype.measureToc = function (node) {
 			var lineNumberStyle = (textNodeRef && textNodeRef.tocNumberStyle) || numberStyle;
 			var destination = getNodeId(tocItem._nodeRef);
 			body.push([
-				{ text: textNodeRef ? textNodeRef.text : '', linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin },
+				{ text: textNodeRef.text, linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin },
 				{ text: '00000', linkToDestination: destination, alignment: 'right', _tocItemRef: tocItem._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
 			]);
 		}

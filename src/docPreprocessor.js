@@ -21,19 +21,17 @@ DocPreprocessor.prototype.preprocessDocument = function (docStructure) {
 DocPreprocessor.prototype.preprocessNode = function (node) {
 	// expand shortcuts and casting values
 	if (isArray(node)) {
-		node = {stack: node};
+		node = { stack: node };
 	} else if (isString(node)) {
-		node = {text: node};
+		node = { text: node };
 	} else if (isNumber(node) || isBoolean(node)) {
-		node = {text: node.toString()};
+		node = { text: node.toString() };
 	} else if (isUndefined(node) || node === null) {
-		node = {text: ''};
-	} else if (typeof node === 'object') {
-		if (Object.keys(node).length === 0) { // empty object
-			node = {text: ''};
-		} else if ('text' in node && (node.text === undefined || node.text === null)) {
-			node.text = '';
-		}
+		node = { text: '' };
+	} else if (typeof node === 'object' && Object.keys(node).length === 0) { // empty object
+		node = { text: '' };
+	} else if (node && typeof node === 'object' && node.hasOwnProperty('text') && (node.text === undefined || node.text === null)) {
+		node.text = '';
 	}
 
 	if (node.columns) {
@@ -136,15 +134,12 @@ DocPreprocessor.prototype.preprocessTable = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessText = function (node) {
-	var i;
-	var l;
-
 	if (node.tocItem) {
 		if (!isArray(node.tocItem)) {
 			node.tocItem = [node.tocItem];
 		}
 
-		for (i = 0, l = node.tocItem.length; i < l; i++) {
+		for (var i = 0, l = node.tocItem.length; i < l; i++) {
 			if (!isString(node.tocItem[i])) {
 				node.tocItem[i] = '_default_';
 			}
@@ -152,7 +147,7 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 			var tocItemId = node.tocItem[i];
 
 			if (!this.tocs[tocItemId]) {
-				this.tocs[tocItemId] = {toc: {_items: [], _pseudo: true}};
+				this.tocs[tocItemId] = { toc: { _items: [], _pseudo: true } };
 			}
 
 			if (!node.id) {
@@ -219,8 +214,8 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 			isSetParentNode = true;
 		}
 
-		for (i = 0, l = node.text.length; i < l; i++) {
-			node.text[i] = this.preprocessNode(node.text[i]);
+		for (var j = 0, textLength = node.text.length; j < textLength; j++) {
+			node.text[j] = this.preprocessNode(node.text[j]);
 		}
 
 		if (isSetParentNode) {
