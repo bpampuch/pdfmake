@@ -30,25 +30,23 @@ function DocumentContext(pageSize, pageMargins) {
 	this.addPage(pageSize);
 }
 
-DocumentContext.prototype.beginColumnGroup = function (marginXTopParent, bottomByPage) {
-	bottomByPage = bottomByPage || {};
+DocumentContext.prototype.beginColumnGroup = function (marginXTopParent, bottomByPage = {}) {
 	this.snapshots.push({
 		x: this.x,
 		y: this.y,
 		availableHeight: this.availableHeight,
 		availableWidth: this.availableWidth,
 		page: this.page,
-		bottomByPage: bottomByPage,
+		bottomByPage: bottomByPage ? bottomByPage : {},
 		bottomMost: {
 			x: this.x,
 			y: this.y,
 			availableHeight: this.availableHeight,
 			availableWidth: this.availableWidth,
-			page: this.page,
-			lastColumnWidth: this.lastColumnWidth
+			page: this.page
 		},
-		endingCell: this.endingCell,
 		lastColumnWidth: this.lastColumnWidth,
+		endingCell: this.endingCell,
 		marginXTopParent: this.marginXTopParent
 	});
 
@@ -59,13 +57,9 @@ DocumentContext.prototype.beginColumnGroup = function (marginXTopParent, bottomB
 };
 
 DocumentContext.prototype.updateBottomByPage = function () {
-	if (!this.snapshots.length) {
-		return;
-	}
-
-	var lastSnapshot = this.snapshots[this.snapshots.length - 1];
-	var lastPage = this.page;
-	var previousBottom = -Number.MIN_VALUE;
+	const lastSnapshot = this.snapshots[this.snapshots.length - 1];
+	const lastPage = this.page;
+	let previousBottom = -Number.MIN_VALUE;
 	if (lastSnapshot.bottomByPage[lastPage]) {
 		previousBottom = lastSnapshot.bottomByPage[lastPage];
 	}
@@ -91,12 +85,12 @@ DocumentContext.prototype.beginColumn = function (width, offset, endingCell) {
 	}
 
 	this.calculateBottomMost(saved, endingCell);
-
 	this.endingCell = endingCell;
+
 	this.page = saved.page;
 	this.x = this.x + this.lastColumnWidth + (offset || 0);
 	this.y = saved.y;
-	this.availableWidth = width;
+	this.availableWidth = width;	//saved.availableWidth - offset;
 	this.availableHeight = saved.availableHeight;
 
 	this.lastColumnWidth = width;
@@ -107,7 +101,6 @@ DocumentContext.prototype.calculateBottomMost = function (destContext, endingCel
 		if (!this.endingCell._columnEndingContext) {
 			this.saveContextInEndingCell(this.endingCell);
 		}
-
 		if (endingCell) {
 			var bottomMost = destContext.bottomMost ? destContext.bottomMost : destContext;
 			endingCell._columnEndingContext = {
@@ -119,21 +112,26 @@ DocumentContext.prototype.calculateBottomMost = function (destContext, endingCel
 				lastColumnWidth: bottomMost.lastColumnWidth || this.lastColumnWidth
 			};
 		}
-
 		this.endingCell = null;
 	}
 
-	if (!endingCell) {
-		var source = destContext.bottomMost ? destContext.bottomMost : destContext;
-		destContext.bottomMost = bottomMostContext(this, source);
-		destContext.bottomMost.lastColumnWidth = this.lastColumnWidth;
+	if (endingCell && endingCell._columnEndingContext) {
+		return;
+	}
+
+	if (endingCell) {
+		this.saveContextInEndingCell(endingCell);
+	} else {
+		destContext.bottomMost = bottomMostContext(this, destContext.bottomMost);
 	}
 };
 
 DocumentContext.prototype.markEnding = function (endingCell, originalXOffset, discountY) {
+	originalXOffset = originalXOffset || 0;
+	discountY = discountY || 0;
 	this.page = endingCell._columnEndingContext.page;
-	this.x = endingCell._columnEndingContext.x + (originalXOffset || 0);
-	this.y = endingCell._columnEndingContext.y - (discountY || 0);
+	this.x = endingCell._columnEndingContext.x + originalXOffset;
+	this.y = endingCell._columnEndingContext.y - discountY;
 	this.availableWidth = endingCell._columnEndingContext.availableWidth;
 	this.availableHeight = endingCell._columnEndingContext.availableHeight;
 	this.lastColumnWidth = endingCell._columnEndingContext.lastColumnWidth;
@@ -158,9 +156,8 @@ DocumentContext.prototype.completeColumnGroup = function (height, endingCell) {
 		this.saveContextInEndingCell(this.endingCell);
 	}
 
-	this.calculateBottomMost(saved, null);
+	this.calculateBottomMost(saved, endingCell);
 
-	this.endingCell = null;
 	this.x = saved.x;
 
 	var y = hasSpanningColumn ? this.y : saved.bottomMost.y;
@@ -184,7 +181,7 @@ DocumentContext.prototype.completeColumnGroup = function (height, endingCell) {
 	}
 	this.lastColumnWidth = saved.lastColumnWidth;
 	this.marginXTopParent = saved.marginXTopParent;
-
+	this.endingCell = null;
 	return saved.bottomByPage;
 };
 
@@ -203,10 +200,7 @@ DocumentContext.prototype.moveDown = function (offset) {
 DocumentContext.prototype.initializePage = function () {
 	this.y = this.pageMargins.top;
 	this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-	this.fullHeight = this.availableHeight;
-	var snapshot = this.pageSnapshot();
-	var pageCtx = snapshot.pageCtx;
-	var isSnapshot = snapshot.isSnapshot;
+	const { pageCtx, isSnapshot } = this.pageSnapshot();
 	pageCtx.availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
 	if (isSnapshot && this.marginXTopParent) {
 		pageCtx.availableWidth -= this.marginXTopParent[0];
@@ -249,8 +243,8 @@ DocumentContext.prototype.beginDetachedBlock = function () {
 		availableHeight: this.availableHeight,
 		availableWidth: this.availableWidth,
 		page: this.page,
-		endingCell: this.endingCell,
 		lastColumnWidth: this.lastColumnWidth,
+		endingCell: this.endingCell,
 		marginXTopParent: this.marginXTopParent
 	});
 };
@@ -263,8 +257,8 @@ DocumentContext.prototype.endDetachedBlock = function () {
 	this.availableWidth = saved.availableWidth;
 	this.availableHeight = saved.availableHeight;
 	this.page = saved.page;
-	this.endingCell = saved.endingCell;
 	this.lastColumnWidth = saved.lastColumnWidth;
+	this.endingCell = saved.endingCell;
 	this.marginXTopParent = saved.marginXTopParent;
 };
 
@@ -304,9 +298,13 @@ DocumentContext.prototype.moveToNextPage = function (pageOrientation) {
 
 	var prevPage = this.page;
 	var prevY = this.y;
+
+	// If we are in a column group
 	if (this.snapshots.length > 0) {
 		var lastSnapshot = this.snapshots[this.snapshots.length - 1];
-		if (lastSnapshot.bottomMost && lastSnapshot.bottomMost.y !== undefined) {
+		// We have to update prevY accordingly by also taking into consideration
+		// the 'y' of cells that don't break page
+		if (lastSnapshot.bottomMost && lastSnapshot.bottomMost.y) {
 			prevY = Math.max(this.y, lastSnapshot.bottomMost.y);
 		}
 	}
