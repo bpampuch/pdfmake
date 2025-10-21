@@ -551,79 +551,22 @@ LayoutBuilder.prototype.processNode = function (node) {
 
 		if (node.pageBreak === 'before') {
 			self.writer.moveToNextPage(node.pageOrientation);
-		} else if (node.pageBreak === 'beforeOdd') {
-			self.writer.moveToNextPage(node.pageOrientation);
-			if ((self.writer.context().page + 1) % 2 === 1) {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
-		} else if (node.pageBreak === 'beforeEven') {
-			self.writer.moveToNextPage(node.pageOrientation);
-			if ((self.writer.context().page + 1) % 2 === 0) {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
 		}
 
-		const isDetachedBlock = node.relativePosition || node.absolutePosition;
-
-		// Detached nodes have no margins, their position is only determined by 'x' and 'y'
-		if (margin && !isDetachedBlock) {
-			const availableHeight = self.writer.context().availableHeight;
-			// If top margin is bigger than available space, move to next page
-			// Necessary for nodes inside tables
-			if (availableHeight - margin[1] < 0) {
-				// Consume the whole available space
-				self.writer.context().moveDown(availableHeight);
-				self.writer.moveToNextPage(node.pageOrientation);
-				/**
-				 * TODO - Something to consider:
-				 * Right now the node starts at the top of next page (after header)
-				 * Another option would be to apply just the top margin that has not been consumed in the page before
-				 * It would something like: this.write.context().moveDown(margin[1] - availableHeight)
-				 */
-			} else {
-				self.writer.context().moveDown(margin[1]);
-			}
-
-			// Apply lateral margins
+		if (margin) {
+			self.writer.context().moveDown(margin[1]);
 			self.writer.context().addMargin(margin[0], margin[2]);
 		}
 
 		callback();
 
-		// Detached nodes have no margins, their position is only determined by 'x' and 'y'
-		if (margin && !isDetachedBlock) {
-			const availableHeight = self.writer.context().availableHeight;
-			// If bottom margin is bigger than available space, move to next page
-			// Necessary for nodes inside tables
-			if (availableHeight - margin[3] < 0) {
-				self.writer.context().moveDown(availableHeight);
-				self.writer.moveToNextPage(node.pageOrientation);
-				/**
-				 * TODO - Something to consider:
-				 * Right now next node starts at the top of next page (after header)
-				 * Another option would be to apply the bottom margin that has not been consumed in the next page?
-				 * It would something like: this.write.context().moveDown(margin[3] - availableHeight)
-				 */
-			} else {
-				self.writer.context().moveDown(margin[3]);
-			}
-
-			// Apply lateral margins
+		if (margin) {
 			self.writer.context().addMargin(-margin[0], -margin[2]);
+			self.writer.context().moveDown(margin[3]);
 		}
 
 		if (node.pageBreak === 'after') {
 			self.writer.moveToNextPage(node.pageOrientation);
-		} else if (node.pageBreak === 'afterOdd') {
-			self.writer.moveToNextPage(node.pageOrientation);
-			if ((self.writer.context().page + 1) % 2 === 1) {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
-		} else if (node.pageBreak === 'afterEven') {
-			self.writer.moveToNextPage(node.pageOrientation);
-			if ((self.writer.context().page + 1) % 2 === 0) {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
 		}
 	}
 };
