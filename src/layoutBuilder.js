@@ -444,7 +444,7 @@ function decorateNode(node) {
 LayoutBuilder.prototype.processNode = function (node) {
 	var self = this;
 
-	if (footerBreak && node.footerBreak) {
+	if (footerBreak && (node.footerBreak || node.footer)) {
 		return;
 	}
 
