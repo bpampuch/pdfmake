@@ -418,7 +418,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 
 	ys[ys.length - 1].y1 = endingY;
 
-	var skipOrphanePadding = (ys[0].y1 - ys[0].y0 === this.rowPaddingTop);
+	var skipOrphanePadding = this.rowPaddingTop > 0 && (ys[0].y1 - ys[0].y0 === this.rowPaddingTop);
 	if (rowIndex === 0 && !skipOrphanePadding && !this.rowsWithoutPageBreak && !this.dontBreakRows) {
 		// Draw the top border of the table
 		var pageTableStartedAt = null;
