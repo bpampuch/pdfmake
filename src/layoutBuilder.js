@@ -639,44 +639,24 @@ LayoutBuilder.prototype.processVerticalContainer = function (node) {
 	});
 };
 
-LayoutBuilder.prototype.processLayers = function (node) {
+// layers
+LayoutBuilder.prototype.processLayers = function(node) {
 	var self = this;
-	var context = self.writer.context();
-	var savedX = context.x;
-	var savedY = context.y;
-	var savedAvailableWidth = context.availableWidth;
-	var savedAvailableHeight = context.availableHeight;
-	var savedPage = context.page;
-	var maxX = savedX;
-	var maxY = savedY;
-	var minAvailableHeight = savedAvailableHeight;
-
-	node.layers.forEach(function (item) {
-		context.x = savedX;
-		context.y = savedY;
-		context.availableWidth = savedAvailableWidth;
-		context.availableHeight = savedAvailableHeight;
-		self.processNode(item);
-		if (item._verticalAlignIdx === undefined && self.verticalAlignItemStack.length) {
-			item._verticalAlignIdx = self.verticalAlignItemStack.length - 1;
-		}
-		addAll(node.positions, item.positions);
-		if (context.x > maxX) {
-			maxX = context.x;
-		}
-		if (context.y > maxY) {
-			maxY = context.y;
-		}
-		if (context.availableHeight < minAvailableHeight) {
-			minAvailableHeight = context.availableHeight;
-		}
+	var ctxX = self.writer.context().x;
+	var ctxY = self.writer.context().y;
+	var maxX = ctxX;
+	var maxY = ctxY;
+	node.layers.forEach(function(item, i) {
+	  self.writer.context().x = ctxX;
+	  self.writer.context().y = ctxY;
+	  self.processNode(item);
+	  item._verticalAlignIdx = self.verticalAlignItemStack.length - 1;
+	  addAll(node.positions, item.positions);
+	  maxX = self.writer.context().x > maxX ? self.writer.context().x : maxX;
+	  maxY = self.writer.context().y > maxY ? self.writer.context().y : maxY;
 	});
-
-	context.x = maxX;
-	context.y = maxY;
-	context.availableWidth = savedAvailableWidth;
-	context.availableHeight = minAvailableHeight;
-	context.page = savedPage;
+	self.writer.context().x = maxX;
+	self.writer.context().y = maxY;
 };
 
 // columns
