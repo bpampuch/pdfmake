@@ -67,33 +67,27 @@ PageElementWriter.prototype.endClip = function () {
 };
 
 PageElementWriter.prototype.alignCanvas = function (node) {
-	return this.writer.alignCanvas(node);
+	this.writer.alignCanvas(node);
 };
 
 PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
 	var result = this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
 	if (isFooter) {
-		if (result && isFooter === 1) {
+		if (result && isFooter == 1) {
 			newPageFooterBreak = false;
 			return true;
+		} else if (!result && isFooter == 2 && newPageFooterBreak) {
+			this.moveToNextPage();
+			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+		} else if (!result && isFooter == 1) {
+			this.moveToNextPage();
 		}
-		if (!result && isFooter === 2 && newPageFooterBreak) {
+	} else {
+		if (!result) {
 			this.moveToNextPage();
 			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
 		}
-		if (!result && isFooter === 1) {
-			this.moveToNextPage();
-			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
-		}
-		return result;
 	}
-
-	if (!result) {
-		this.moveToNextPage();
-		this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
-	}
-
-	return true;
 };
 
 PageElementWriter.prototype.addFragment_test = function (fragment) {

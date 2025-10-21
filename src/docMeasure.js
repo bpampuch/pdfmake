@@ -19,12 +19,6 @@ var qrEncoder = require('./qrEnc.js');
  * @private
  */
 function DocMeasure(fontProvider, styleDictionary, defaultStyle, imageMeasure, svgMeasure, tableLayouts, images) {
-	if ((arguments.length === 6 && images === undefined) || (svgMeasure && typeof svgMeasure.measureSVG !== 'function' && typeof svgMeasure.writeDimensions !== 'function')) {
-		images = tableLayouts;
-		tableLayouts = svgMeasure;
-		svgMeasure = null;
-	}
-
 	this.textTools = new TextTools(fontProvider);
 	this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 	this.imageMeasure = imageMeasure;
