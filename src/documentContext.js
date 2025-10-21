@@ -52,9 +52,17 @@ DocumentContext.prototype.beginColumnGroup = function (marginXTopParent, bottomB
 
 DocumentContext.prototype.updateBottomByPage = function () {
 	const lastSnapshot = this.snapshots[this.snapshots.length - 1];
+	if (!lastSnapshot) {
+		return;
+	}
+
+	if (!lastSnapshot.bottomByPage) {
+		lastSnapshot.bottomByPage = {};
+	}
+
 	const lastPage = this.page;
 	let previousBottom = -Number.MIN_VALUE;
-	if (lastSnapshot.bottomByPage[lastPage]) {
+	if (lastSnapshot.bottomByPage[lastPage] !== undefined) {
 		previousBottom = lastSnapshot.bottomByPage[lastPage];
 	}
 	lastSnapshot.bottomByPage[lastPage] = Math.max(previousBottom, this.y);
@@ -320,6 +328,36 @@ DocumentContext.prototype.getCurrentPosition = function () {
 };
 
 function bottomMostContext(c1, c2) {
+	if (!c1 && !c2) {
+		return {
+			page: 0,
+			x: 0,
+			y: 0,
+			availableHeight: 0,
+			availableWidth: 0
+		};
+	}
+
+	if (!c1) {
+		return {
+			page: c2.page,
+			x: c2.x,
+			y: c2.y,
+			availableHeight: c2.availableHeight,
+			availableWidth: c2.availableWidth
+		};
+	}
+
+	if (!c2) {
+		return {
+			page: c1.page,
+			x: c1.x,
+			y: c1.y,
+			availableHeight: c1.availableHeight,
+			availableWidth: c1.availableWidth
+		};
+	}
+
 	var r;
 
 	if (c1.page > c2.page) {
