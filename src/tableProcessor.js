@@ -7,6 +7,7 @@ var isPositiveInteger = require('./helpers').isPositiveInteger;
 
 function TableProcessor(tableNode) {
 	this.tableNode = tableNode;
+	this.collectFooterColumns = Boolean(tableNode.footerGapCollect === 'product-items');
 }
 
 TableProcessor.prototype.beginTable = function (writer) {
@@ -28,6 +29,9 @@ TableProcessor.prototype.beginTable = function (writer) {
 
 	availableWidth = writer.context().availableWidth - this.offsets.total;
 	ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth, this.offsets.total, tableNode);
+
+	const offsets = this.offsets || { left: 0 };
+	const leftOffset = offsets.left || 0;
 
 	this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
 	this.rowSpanData = prepareRowSpanData();
@@ -311,6 +315,21 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 	if (width === 0) {
 		return;
 	}
+
+	var ctx = writer && typeof writer.context === 'function' ? writer.context() : null;
+	if (ctx && this.collectFooterColumns) {
+		var footerOpt = ctx._footerGapOption;
+		if (footerOpt && footerOpt.enabled) {
+            var columns = footerOpt.columns || (footerOpt.columns = {});
+            var content = columns.content || (columns.content = { vLines: [] });
+            var contentVLinesLength = columns.content.vLines.length || 0;
+
+			if(contentVLinesLength <= (footerOpt.columns.widthLength)){
+				content.vLines.push((ctx.x || 0) + x);
+			}
+        }
+	}
+
 	var style = this.layout.vLineStyle(vLineColIndex, this.tableNode);
 	var dash;
 	if (style && style.dash) {

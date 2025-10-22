@@ -7,7 +7,7 @@ var isString = require('./helpers').isString;
  * Creates an instance of DocumentContext - a store for current x, y positions and available width/height.
  * It facilitates column divisions and vertical sync
  */
-function DocumentContext(pageSize, pageMargins) {
+function DocumentContext(pageSize, pageMargins, footerGapOption = {}) {
 	this.pages = [];
 
 	this.pageMargins = pageMargins;
@@ -16,6 +16,9 @@ function DocumentContext(pageSize, pageMargins) {
 	this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
 	this.availableHeight = 0;
 	this.page = -1;
+
+	this._footerColumnGuides = null;
+  	this._footerGapOption = footerGapOption;
 
 	this.snapshots = [];
 

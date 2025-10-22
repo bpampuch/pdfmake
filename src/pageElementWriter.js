@@ -71,6 +71,23 @@ PageElementWriter.prototype.alignCanvas = function (node) {
 };
 
 PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
+	if (isFooter) {
+		var ctxOpt = this.writer.context._footerGapOption;
+		if (ctxOpt && ctxOpt.enabled && fragment.footerGap !== false && !fragment._footerGapOption) {
+			fragment._footerGapOption = ctxOpt;
+		}
+		
+		if (this.writer.context._footerColumnGuides && !fragment.disableFooterColumnGuides && !fragment._footerGuideSpec) {
+			var g = this.writer.context._footerColumnGuides;
+			fragment._footerGuideSpec = {
+					widths: g.widths ? g.widths.slice() : undefined,
+					stops: g.stops ? g.stops.slice() : undefined,
+					style: g.style ? Object.assign({}, g.style) : {},
+					includeOuter: g.includeOuter
+			};
+		}
+	}
+
 	var result = this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
 	if (isFooter) {
 		if (result && isFooter == 1) {

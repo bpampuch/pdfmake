@@ -243,9 +243,53 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 		return false;
 	}
 
-	if(isFooter){
+	if (isFooter && block._footerGapOption && block._footerGapOption.enabled) {
+        var gapHeight = ctx.availableHeight - block.height;
+        if (gapHeight > 0) {
+            var gapTopY = ctx.y;
+            var colSpec = block._footerGapOption.columns || null;
+            if (colSpec) {
+                var rawWidths = colSpec.content.vLines || [];
+
+				if (rawWidths && rawWidths.length > 1) {
+					var span = rawWidths[rawWidths.length - 1];
+					if (span <= 0) span = 1;
+					var scale = ctx.availableWidth / span;
+					var style = (colSpec.style || {});
+					var lw = style.lineWidth != null ? style.lineWidth : 0.5;
+					var lc = style.color || '#000000';
+					var dashCfg = style.dash;
+					var includeOuter = colSpec.includeOuter !== false;
+					var startIndex = includeOuter ? 0 : 1;
+					var endIndex = includeOuter ? rawWidths.length : rawWidths.length - 1;
+
+					for (var ci = startIndex; ci < endIndex; ci++) {
+						var xGuide = ctx.x + rawWidths[ci] - 0.25;
+						page.items.push({
+							type: 'vector',
+							item: {
+								type: 'line',
+								x1: xGuide,
+								y1: gapTopY,
+								x2: xGuide,
+								y2: gapTopY + gapHeight,
+								lineWidth: lw,
+								lineColor: lc,
+								dash: dashCfg ? {
+									length: dashCfg.length,
+									space: dashCfg.space != null ? dashCfg.space : dashCfg.gap
+								} : undefined,
+								_footerGuideLine: true
+							}
+						});
+					}
+                }
+			}
+            ctx.moveDown(gapHeight);
+        }
+  	} else if(isFooter){
 		ctx.moveDown(ctx.availableHeight - block.height);
-	}
+	} 
 
 	block.items.forEach(function (item) {
 		switch (item.type) {
@@ -324,7 +368,11 @@ ElementWriter.prototype.pushContext = function (contextOrWidth, height) {
 	}
 
 	if (isNumber(contextOrWidth)) {
-		contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
+		if (this.context._footerGapOption) {
+			contextOrWidth = new DocumentContext({width: contextOrWidth, height: height}, {left: 0, right: 0, top: 0, bottom: 0}, this.context._footerGapOption);
+		} else {
+			contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
+		}
 	}
 
 	this.contextStack.push(this.context);

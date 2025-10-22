@@ -56,6 +56,9 @@ function LayoutBuilder(pageSize, pageMargins, imageMeasure, svgMeasure) {
 	this.nestedLevel = 0;
 	this.verticalAlignItemStack = [];
 	this.heightHeaderAndFooter = {};
+
+	this._footerColumnGuides = null;
+  	this._footerGapOption = null;
 }
 
 LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
@@ -164,7 +167,7 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 	this.verticalAlignItemStack = this.verticalAlignItemStack || [];
 	this.linearNodeList = [];
 	this.writer = new PageElementWriter(
-		new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
+		new DocumentContext(this.pageSize, this.pageMargins, this._footerGapOption), this.tracker);
 
 	this.heightHeaderAndFooter = this.addHeadersAndFooters(header, footer) || {};
 	if (!isUndefined(this.heightHeaderAndFooter.header)) {
@@ -201,7 +204,7 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 
 	this.verticalAlignItemStack = [];
 	this.writer = new PageElementWriter(
-		new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
+		new DocumentContext(this.pageSize, this.pageMargins, this._footerGapOption), this.tracker);
 
 	var _this = this;
 	this.writer.context().tracker.startTracking('pageAdded', function () {
@@ -220,6 +223,29 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 	return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
 };
 
+LayoutBuilder.prototype.applyFooterGapOption = function(opt) {
+    if (opt === true) {
+        opt = { enabled: true };
+    }
+	
+    if (!opt) return;
+
+    if (typeof opt !== 'object') {
+        this._footerGapOption = { enabled: true };
+        return;
+    }
+
+    this._footerGapOption = {
+        enabled: opt.enabled !== false,
+        columns: opt.columns ? {
+            widths: Array.isArray(opt.columns.widths) ? opt.columns.widths.slice() : undefined,
+            widthLength: opt.columns.widths.length || 0,
+            stops: Array.isArray(opt.columns.stops) ? opt.columns.stops.slice() : undefined,
+            style: opt.columns.style ? Object.assign({}, opt.columns.style) : {},
+            includeOuter: opt.columns.includeOuter !== false
+        } : null
+    };
+};
 
 LayoutBuilder.prototype.addBackground = function (background) {
 	var backgroundGetter = isFunction(background) ? background : function () {
@@ -298,6 +324,10 @@ LayoutBuilder.prototype.addHeadersAndFooters = function (header, footer, headerH
 			height: effectiveHeight
 		};
 	};
+
+	if (this._footerGapOption && !this.writer.context()._footerGapOption) {
+        this.writer.context()._footerGapOption = this._footerGapOption;
+    }
 
 	if (isFunction(header)) {
 		measured.header = this.addDynamicRepeatable(header, headerSizeFct);

@@ -151,6 +151,10 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 
 	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins), new ImageMeasure(this.pdfKitDoc, docDefinition.images), new SVGMeasure());
 
+	if (docDefinition.footerGapOption !== undefined) {
+		builder.applyFooterGapOption(docDefinition.footerGapOption);
+	}
+
 	registerDefaultTableLayouts(builder);
 	if (options.tableLayouts) {
 		builder.registerTableLayouts(options.tableLayouts);
