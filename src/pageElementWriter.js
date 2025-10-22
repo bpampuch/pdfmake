@@ -118,9 +118,10 @@ PageElementWriter.prototype.drawFooterVerticalLines = function (fragment) {
 		return;
 	}
 	
-	var vLines = footerOpt.columns.content.vLines;
-	var vLineWidths = footerOpt.columns.content.vLineWidths;
-	if (!vLines || vLines.length === 0) {
+	var colSpec = footerOpt.columns;
+	var rawWidths = colSpec.content.vLines || [];
+	
+	if (!rawWidths || rawWidths.length === 0) {
 		return;
 	}
 	
@@ -129,87 +130,43 @@ PageElementWriter.prototype.drawFooterVerticalLines = function (fragment) {
 	var bottomMargin = ctx.pageMargins.bottom;
 	var bottomY = pageHeight - bottomMargin;
 	
-	// Calculate where the footer content would start if it were on this page
 	// Use current Y position as the top of the vertical lines
-	var topY = ctx.y;
+	var gapTopY = ctx.y;
 	
 	// Store current page for drawing
 	var currentPage = ctx.page;
 	
-	// Get line style from footerGapOption (for color and dash, but NOT width)
-	var lineStyle = footerOpt.columns && footerOpt.columns.style ? footerOpt.columns.style : {};
-	var lineColor = lineStyle.color || footerOpt.lineColor || 'black';
-	var dash = lineStyle.dash || footerOpt.dash;
+	// Get style configuration - match elementWriter.js logic exactly
+	var style = colSpec.style || {};
+	var lw = style.lineWidth != null ? style.lineWidth : 0.5;
+	var lc = style.color || '#000000';
+	var dashCfg = style.dash;
+	var includeOuter = colSpec.includeOuter !== false;
 	
-	// Calculate positions based on column widths to ensure perfect alignment
-	var widths = footerOpt.columns.widths || [];
-	if (widths.length === 0) {
-		// Fallback to collected positions if widths not available
-		for (var i = 0; i < vLines.length; i++) {
-			var xPos = vLines[i];
-			var lineWidth = (vLineWidths && vLineWidths[i]) || 1;
-			var centeredX = xPos + (lineWidth / 2);
-			this.writer.addVector({
-				type: 'line',
-				x1: centeredX,
-				y1: topY,
-				x2: centeredX,
-				y2: bottomY,
-				lineWidth: lineWidth,
-				lineColor: lineColor,
-				dash: dash
-			}, true, true, undefined, currentPage);
-		}
-	} else {
-		// Calculate positions from column widths for perfect alignment
-		var startX = ctx.x;
-		var currentX = startX;
-		
-		// Draw leftmost border if includeOuter is true
-		if (footerOpt.columns.includeOuter && vLineWidths && vLineWidths[0]) {
-			var leftLineWidth = vLineWidths[0] || 1;
-			this.writer.addVector({
-				type: 'line',
-				x1: currentX + (leftLineWidth / 2),
-				y1: topY,
-				x2: currentX + (leftLineWidth / 2),
-				y2: bottomY,
-				lineWidth: leftLineWidth,
-				lineColor: lineColor,
-				dash: dash
-			}, true, true, undefined, currentPage);
-		}
-		
-		// Draw lines between columns
-		var vLineIndex = footerOpt.columns.includeOuter ? 1 : 0;
-		for (var col = 0; col < widths.length; col++) {
-			var colWidth = widths[col];
-			// Convert percentage or star widths to pixels if needed
-			if (typeof colWidth === 'string') {
-				// For now, skip string widths - they should have been calculated already
-				continue;
-			}
-			currentX += colWidth;
-			
-			if (vLineIndex < vLineWidths.length) {
-				var currentLineWidth = vLineWidths[vLineIndex] || 1;
-				this.writer.addVector({
-					type: 'line',
-					x1: currentX + (currentLineWidth / 2),
-					y1: topY,
-					x2: currentX + (currentLineWidth / 2),
-					y2: bottomY,
-					lineWidth: currentLineWidth,
-					lineColor: lineColor,
-					dash: dash
-				}, true, true, undefined, currentPage);
-				vLineIndex++;
-			}
-		}
+	// Draw ALL collected vertical lines
+	// When includeOuter is true, draw all lines including first and last borders
+	// When includeOuter is false, skip the first and last  
+	var startIndex = includeOuter ? 0 : 1;
+	var endIndex = includeOuter ? rawWidths.length : Math.max(1, rawWidths.length - 1);
+	
+	// Draw vertical lines using the same logic as elementWriter.js
+	for (var ci = startIndex; ci < endIndex; ci++) {
+		// Match elementWriter.js: ctx.x + rawWidths[ci] - 0.25
+		var xGuide = ctx.x + rawWidths[ci] - 0.25;
+		this.writer.addVector({
+			type: 'line',
+			x1: xGuide,
+			y1: gapTopY,
+			x2: xGuide,
+			y2: bottomY,
+			lineWidth: lw,
+			lineColor: lc,
+			dash: dashCfg ? {
+				length: dashCfg.length,
+				space: dashCfg.space != null ? dashCfg.space : dashCfg.gap
+			} : undefined
+		}, true, true, undefined, currentPage);
 	}
-	
-	// Don't clear the vLines array - they will be reused on the next page
-	// footerOpt.columns.content.vLines = [];
 };
 
 PageElementWriter.prototype.addFragment_test = function (fragment) {

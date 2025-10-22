@@ -326,7 +326,8 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 			var widthLength = footerOpt.columns.widthLength || 0;
 
 			// Only collect if we haven't exceeded the width length
-			if(widthLength === 0 || contentVLinesLength < widthLength){
+			// Need widthLength + 1 lines to include both left and right borders
+			if(widthLength === 0 || contentVLinesLength <= widthLength){
 				// Store the base X position (without width offset)
 				content.vLines.push((ctx.x || 0) + x);
 				// Store the actual line width used by the table
