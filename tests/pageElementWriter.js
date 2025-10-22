@@ -401,9 +401,9 @@ describe('PageElementWriter', function () {
 			assert.equal(ctx.y, MARGINS.top);
 			assert.equal(ctx.availableHeight, AVAILABLE_HEIGHT);
 			assert.equal(ctx.availableWidth, AVAILABLE_WIDTH);
-		// moveToNextPage emits both beforePageChanged and pageChanged events
-		assert.equal(tracker.emit.callCount, 3);
-			assert.deepEqual(tracker.emit.getCall(2).args, ['pageChanged', { prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top }]);
+			// moveToNextPage emits pageChanged event after the lineAdded emission
+			assert.equal(tracker.emit.callCount, 2);
+			assert.deepEqual(tracker.emit.getCall(1).args, ['pageChanged', { prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top }]);
 		});
 
 		it('should use existing page', function () {
@@ -418,9 +418,9 @@ describe('PageElementWriter', function () {
 			assert.equal(ctx.y, MARGINS.top);
 			assert.equal(ctx.availableHeight, AVAILABLE_HEIGHT);
 			assert.equal(ctx.availableWidth, AVAILABLE_WIDTH);
-		// moveToNextPage emits both beforePageChanged and pageChanged events
-		assert.equal(tracker.emit.callCount, 3);
-			assert.deepEqual(tracker.emit.getCall(2).args, ['pageChanged', { prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top }]);
+			// moveToNextPage emits pageChanged event after the lineAdded emission
+			assert.equal(tracker.emit.callCount, 2);
+			assert.deepEqual(tracker.emit.getCall(1).args, ['pageChanged', { prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top }]);
 		});
 	});
 });
