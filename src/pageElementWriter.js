@@ -97,6 +97,8 @@ PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, u
 			this.moveToNextPage();
 			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
 		} else if (!result && isFooter == 1) {
+			// Draw footer vertical lines before moving to next page
+			this.drawFooterVerticalLines(fragment);
 			this.moveToNextPage();
 		}
 	} else {
@@ -105,6 +107,109 @@ PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, u
 			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
 		}
 	}
+	return result;
+};
+
+PageElementWriter.prototype.drawFooterVerticalLines = function (fragment) {
+	var ctx = this.writer.context;
+	var footerOpt = fragment._footerGapOption || (ctx && ctx._footerGapOption);
+	
+	if (!footerOpt || !footerOpt.enabled || !footerOpt.columns || !footerOpt.columns.content) {
+		return;
+	}
+	
+	var vLines = footerOpt.columns.content.vLines;
+	var vLineWidths = footerOpt.columns.content.vLineWidths;
+	if (!vLines || vLines.length === 0) {
+		return;
+	}
+	
+	// Get the current page bottom position (accounting for margins)
+	var pageHeight = ctx.getCurrentPage().pageSize.height;
+	var bottomMargin = ctx.pageMargins.bottom;
+	var bottomY = pageHeight - bottomMargin;
+	
+	// Calculate where the footer content would start if it were on this page
+	// Use current Y position as the top of the vertical lines
+	var topY = ctx.y;
+	
+	// Store current page for drawing
+	var currentPage = ctx.page;
+	
+	// Get line style from footerGapOption (for color and dash, but NOT width)
+	var lineStyle = footerOpt.columns && footerOpt.columns.style ? footerOpt.columns.style : {};
+	var lineColor = lineStyle.color || footerOpt.lineColor || 'black';
+	var dash = lineStyle.dash || footerOpt.dash;
+	
+	// Calculate positions based on column widths to ensure perfect alignment
+	var widths = footerOpt.columns.widths || [];
+	if (widths.length === 0) {
+		// Fallback to collected positions if widths not available
+		for (var i = 0; i < vLines.length; i++) {
+			var xPos = vLines[i];
+			var lineWidth = (vLineWidths && vLineWidths[i]) || 1;
+			var centeredX = xPos + (lineWidth / 2);
+			this.writer.addVector({
+				type: 'line',
+				x1: centeredX,
+				y1: topY,
+				x2: centeredX,
+				y2: bottomY,
+				lineWidth: lineWidth,
+				lineColor: lineColor,
+				dash: dash
+			}, true, true, undefined, currentPage);
+		}
+	} else {
+		// Calculate positions from column widths for perfect alignment
+		var startX = ctx.x;
+		var currentX = startX;
+		
+		// Draw leftmost border if includeOuter is true
+		if (footerOpt.columns.includeOuter && vLineWidths && vLineWidths[0]) {
+			var leftLineWidth = vLineWidths[0] || 1;
+			this.writer.addVector({
+				type: 'line',
+				x1: currentX + (leftLineWidth / 2),
+				y1: topY,
+				x2: currentX + (leftLineWidth / 2),
+				y2: bottomY,
+				lineWidth: leftLineWidth,
+				lineColor: lineColor,
+				dash: dash
+			}, true, true, undefined, currentPage);
+		}
+		
+		// Draw lines between columns
+		var vLineIndex = footerOpt.columns.includeOuter ? 1 : 0;
+		for (var col = 0; col < widths.length; col++) {
+			var colWidth = widths[col];
+			// Convert percentage or star widths to pixels if needed
+			if (typeof colWidth === 'string') {
+				// For now, skip string widths - they should have been calculated already
+				continue;
+			}
+			currentX += colWidth;
+			
+			if (vLineIndex < vLineWidths.length) {
+				var currentLineWidth = vLineWidths[vLineIndex] || 1;
+				this.writer.addVector({
+					type: 'line',
+					x1: currentX + (currentLineWidth / 2),
+					y1: topY,
+					x2: currentX + (currentLineWidth / 2),
+					y2: bottomY,
+					lineWidth: currentLineWidth,
+					lineColor: lineColor,
+					dash: dash
+				}, true, true, undefined, currentPage);
+				vLineIndex++;
+			}
+		}
+	}
+	
+	// Don't clear the vLines array - they will be reused on the next page
+	// footerOpt.columns.content.vLines = [];
 };
 
 PageElementWriter.prototype.addFragment_test = function (fragment) {

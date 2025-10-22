@@ -321,11 +321,16 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 		var footerOpt = ctx._footerGapOption;
 		if (footerOpt && footerOpt.enabled) {
             var columns = footerOpt.columns || (footerOpt.columns = {});
-            var content = columns.content || (columns.content = { vLines: [] });
-            var contentVLinesLength = columns.content.vLines.length || 0;
+            var content = columns.content || (columns.content = { vLines: [], vLineWidths: [] });
+            var contentVLinesLength = content.vLines.length || 0;
+			var widthLength = footerOpt.columns.widthLength || 0;
 
-			if(contentVLinesLength <= (footerOpt.columns.widthLength)){
+			// Only collect if we haven't exceeded the width length
+			if(widthLength === 0 || contentVLinesLength < widthLength){
+				// Store the base X position (without width offset)
 				content.vLines.push((ctx.x || 0) + x);
+				// Store the actual line width used by the table
+				content.vLineWidths.push(width);
 			}
         }
 	}
