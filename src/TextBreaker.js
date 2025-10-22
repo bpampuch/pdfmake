@@ -9,9 +9,19 @@ import StyleContextStack from './StyleContextStack';
  */
 const splitWords = (text, noWrap) => {
 	let words = [];
+	if (text === undefined || text === null) {
+		text = '';
+	} else {
+		text = String(text);
+	}
 
 	if (noWrap) {
 		words.push({ text: text });
+		return words;
+	}
+
+	if (text.length === 0) {
+		words.push({ text: '' });
 		return words;
 	}
 

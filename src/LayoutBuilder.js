@@ -72,7 +72,17 @@ class LayoutBuilder {
 				return false;
 			}
 
-			linearNodeList = linearNodeList.filter(node => node.positions.length > 0);
+			const hasRenderableContent = node => {
+				if (!node || node.positions.length === 0) {
+					return false;
+				}
+				if (node.text === '' && !node.listMarker) {
+					return false;
+				}
+				return true;
+			};
+
+			linearNodeList = linearNodeList.filter(hasRenderableContent);
 
 			linearNodeList.forEach(node => {
 				let nodeInfo = {};
