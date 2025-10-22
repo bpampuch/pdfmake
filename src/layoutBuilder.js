@@ -519,10 +519,10 @@ LayoutBuilder.prototype.processNode = function (node) {
 		} else if (node.qr) {
 			self.processQr(node);
 		} else if (!node._span) {
-			throw new Error('Unrecognized document structure: ' + JSON.stringify(node, fontStringify));
+			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
 		}
 
-		if ((absPosition || relPosition) && !node.absoluteRepeatable) {
+		if (absPosition || relPosition) {
 			self.writer.context().endDetachedBlock();
 		}
 
@@ -1190,7 +1190,7 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
 			var maxChars = findMaxFitLength(inline.text, line.getAvailableWidth(), function (txt) {
 				return textTools.widthOfString(txt, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
-			});
+			})
 			if (maxChars < inline.text.length) {
 				var newInline = cloneInline(inline);
 
@@ -1435,7 +1435,7 @@ function processRow_test(columns, widths, gaps, tableBody, tableRow) {
 		if (column.rowSpan && column.rowSpan > 1) {
 			var endingRow = tableRow + column.rowSpan - 1;
 			if (endingRow >= tableBody.length) {
-				throw new Error('Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count');
+				throw 'Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count';
 			}
 			return tableBody[endingRow][columnIndex];
 		}
