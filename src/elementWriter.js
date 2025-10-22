@@ -235,13 +235,61 @@ function cloneLine(line) {
 	return result;
 }
 
-ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
+ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
 	var ctx = this.context;
 	var page = ctx.getCurrentPage();
 
 	if (!useBlockXOffset && block.height > ctx.availableHeight) {
 		return false;
 	}
+
+	if (isFooter && block._footerGapOption && block._footerGapOption.enabled) {
+        var gapHeight = ctx.availableHeight - block.height;
+        if (gapHeight > 0) {
+            var gapTopY = ctx.y;
+            var colSpec = block._footerGapOption.columns || null;
+            if (colSpec) {
+                var rawWidths = colSpec.content.vLines || [];
+
+				if (rawWidths && rawWidths.length > 1) {
+					var span = rawWidths[rawWidths.length - 1];
+					if (span <= 0) span = 1;
+					var scale = ctx.availableWidth / span;
+					var style = (colSpec.style || {});
+					var lw = style.lineWidth != null ? style.lineWidth : 0.5;
+					var lc = style.color || '#000000';
+					var dashCfg = style.dash;
+					var includeOuter = colSpec.includeOuter !== false;
+					var startIndex = includeOuter ? 0 : 1;
+					var endIndex = includeOuter ? rawWidths.length : rawWidths.length - 1;
+
+					for (var ci = startIndex; ci < endIndex; ci++) {
+						var xGuide = ctx.x + rawWidths[ci] - 0.25;
+						page.items.push({
+							type: 'vector',
+							item: {
+								type: 'line',
+								x1: xGuide,
+								y1: gapTopY,
+								x2: xGuide,
+								y2: gapTopY + gapHeight,
+								lineWidth: lw,
+								lineColor: lc,
+								dash: dashCfg ? {
+									length: dashCfg.length,
+									space: dashCfg.space != null ? dashCfg.space : dashCfg.gap
+								} : undefined,
+								_footerGuideLine: true
+							}
+						});
+					}
+                }
+			}
+            ctx.moveDown(gapHeight);
+        }
+  	} else if(isFooter){
+		ctx.moveDown(ctx.availableHeight - block.height);
+	} 
 
 	block.items.forEach(function (item) {
 		switch (item.type) {
@@ -283,14 +331,17 @@ ElementWriter.prototype.addFragment = function (block, useBlockXOffset, useBlock
 
 			case 'image':
 			case 'svg':
-				var img = pack(item.item);
-
-				img.x = (img.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
-				img.y = (img.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+			case 'beginVerticalAlign':
+			case 'endVerticalAlign':
+			case 'beginClip':
+			case 'endClip':
+				var it = pack(item.item);
+				it.x = (it.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
+				it.y = (it.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
 				page.items.push({
 					type: item.type,
-					item: img
+					item: it
 				});
 				break;
 		}
@@ -317,7 +368,11 @@ ElementWriter.prototype.pushContext = function (contextOrWidth, height) {
 	}
 
 	if (isNumber(contextOrWidth)) {
-		contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
+		if (this.context._footerGapOption) {
+			contextOrWidth = new DocumentContext({width: contextOrWidth, height: height}, {left: 0, right: 0, top: 0, bottom: 0}, this.context._footerGapOption);
+		} else {
+			contextOrWidth = new DocumentContext({ width: contextOrWidth, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
+		}
 	}
 
 	this.contextStack.push(this.context);
@@ -330,6 +385,49 @@ ElementWriter.prototype.popContext = function () {
 
 ElementWriter.prototype.getCurrentPositionOnPage = function () {
 	return (this.contextStack[0] || this.context).getCurrentPosition();
+};
+
+ElementWriter.prototype.beginClip = function (width, height) {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	var item = {
+		type: 'beginClip',
+		item: { x: ctx.x, y: ctx.y, width: width, height: height }
+	};
+	page.items.push(item);
+	return item;
+};
+
+ElementWriter.prototype.endClip = function () {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	var item = {
+		type: 'endClip'
+	};
+	page.items.push(item);
+	return item;
+};
+
+ElementWriter.prototype.beginVerticalAlign = function (verticalAlign) {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	var item = {
+		type: 'beginVerticalAlign',
+		item: { verticalAlign: verticalAlign }
+	};
+	page.items.push(item);
+	return item;
+};
+
+ElementWriter.prototype.endVerticalAlign = function (verticalAlign) {
+	var ctx = this.context;
+	var page = ctx.getCurrentPage();
+	var item = {
+		type: 'endVerticalAlign',
+		item: { verticalAlign: verticalAlign }
+	};
+	page.items.push(item);
+	return item;
 };
 
 

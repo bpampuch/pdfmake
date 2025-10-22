@@ -42,6 +42,14 @@ ImageMeasure.prototype.measureImage = function (src) {
 			return src;
 		}
 
+		if (Buffer.isBuffer && Buffer.isBuffer(img)) {
+			return img;
+		}
+
+		if (img instanceof Uint8Array) {
+			return Buffer.from(img);
+		}
+
 		if (typeof img === 'object') {
 			throw 'Not supported image definition: ' + JSON.stringify(img);
 		}

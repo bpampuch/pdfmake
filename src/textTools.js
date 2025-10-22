@@ -6,9 +6,16 @@ var isObject = require('./helpers').isObject;
 var isArray = require('./helpers').isArray;
 var isUndefined = require('./helpers').isUndefined;
 var LineBreaker = require('@foliojs-fork/linebreak');
+var Tokenizer = require('@flowaccount/node-icu-tokenizer');
+var fontkit = require('fontkit');
 
 var LEADING = /^(\s)+/g;
 var TRAILING = /(\s)+$/g;
+
+var fontCacheName = '';
+var fontCache = null;
+var fontSubstituteCache = {};
+var defaultFont = 'Roboto';
 
 /**
  * Creates an instance of TextTools - text measurement utility
@@ -29,6 +36,8 @@ function TextTools(fontProvider) {
  * @return {Object}                   collection of inlines, minWidth, maxWidth
  */
 TextTools.prototype.buildInlines = function (textArray, styleContextStack) {
+	primeFontCaches.call(this, styleContextStack);
+
 	var measured = measure(this.fontProvider, textArray, styleContextStack);
 
 	var minWidth = 0,
@@ -120,7 +129,9 @@ TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpa
 
 function splitWords(text, noWrap) {
 	var results = [];
+
 	text = text.replace(/\t/g, '    ');
+	text = text.replace(/\r/g, '');
 
 	if (noWrap) {
 		results.push({ text: text });
@@ -131,14 +142,39 @@ function splitWords(text, noWrap) {
 	var last = 0;
 	var bk;
 
-	while (bk = breaker.nextBreak()) {
+	while ((bk = breaker.nextBreak())) {
 		var word = text.slice(last, bk.position);
+		var isLineEnd = bk.required || /\r?\n$|\r$/.test(word);
+		var trimmed = word.trim();
+		var useTokenizer = !exceptTokenizer(trimmed) && needsTokenizer(trimmed);
 
-		if (bk.required || word.match(/\r?\n$|\r$/)) { // new line
-			word = word.replace(/\r?\n$|\r$/, '');
-			results.push({ text: word, lineEnd: true });
+		if (!useTokenizer) {
+			var output = word;
+			if (isLineEnd) {
+				output = output.replace(/\r?\n$|\r$/, '');
+			}
+			results.push({ text: output, lineEnd: isLineEnd });
 		} else {
-			results.push({ text: word });
+			var tokenWord = tokenizerWords(word);
+			for (var tIndex = 0; tIndex < tokenWord.length; tIndex++) {
+				var token = tokenWord[tIndex];
+				if (!token || token.del) {
+					continue;
+				}
+
+				var tokenText = token.token;
+				var tokenResult = { text: tokenText };
+
+				if (tokenText === '\n') {
+					tokenResult.lineEnd = true;
+					tokenResult.text = '';
+				} else if (isLineEnd && tIndex === tokenWord.length - 1) {
+					tokenResult.text = tokenText.replace(/\r?\n$|\r$/, '');
+					tokenResult.lineEnd = true;
+				}
+
+				results.push(tokenResult);
+			}
 		}
 
 		last = bk.position;
@@ -147,12 +183,31 @@ function splitWords(text, noWrap) {
 	return results;
 }
 
+function tokenizerWords(word) {
+	var regex = / /;
+	word = word.replace(regex, '[BLANK]');
+
+	var tokenizer = new Tokenizer().tokenize(word, { ignoreWhitespaceTokens: false });
+
+	for (var i = 0; i < tokenizer.length; i++) {
+		if (tokenizer[i] && tokenizer[i].token === '[' &&
+			tokenizer[i + 1] && tokenizer[i + 1].token === 'BLANK' &&
+			tokenizer[i + 2] && tokenizer[i + 2].token === ']') {
+			tokenizer[i].token = ' ';
+			tokenizer[i + 1].del = true;
+			tokenizer[i + 2].del = true;
+		}
+	}
+
+	return tokenizer;
+}
+
 function copyStyle(source, destination) {
 	destination = destination || {};
 	source = source || {}; //TODO: default style
 
 	for (var key in source) {
-		if (key != 'text' && source.hasOwnProperty(key)) {
+		if (key !== 'text' && Object.prototype.hasOwnProperty.call(source, key)) {
 			destination[key] = source[key];
 		}
 	}
@@ -161,9 +216,9 @@ function copyStyle(source, destination) {
 }
 
 function normalizeTextArray(array, styleContextStack) {
-	function flatten(array) {
-		return array.reduce(function (prev, cur) {
-			var current = isArray(cur.text) ? flatten(cur.text) : cur;
+	function flatten(target) {
+		return target.reduce(function (prev, cur) {
+			var current = isObject(cur) && isArray(cur.text) ? flatten(cur.text) : cur;
 			var more = [].concat(current).some(Array.isArray);
 			return prev.concat(more ? flatten(current) : current);
 		}, []);
@@ -207,7 +262,7 @@ function normalizeTextArray(array, styleContextStack) {
 
 		var noWrap = getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
 		if (isObject(item)) {
-			if (item._textRef && item._textRef._textNodeRef.text) {
+			if (item._textRef && item._textRef._textNodeRef && item._textRef._textNodeRef.text) {
 				item.text = item._textRef._textNodeRef.text;
 			}
 			words = splitWords(normalizeString(item.text), noWrap);
@@ -218,7 +273,6 @@ function normalizeTextArray(array, styleContextStack) {
 
 		if (lastWord && words.length) {
 			var firstWord = getOneWord(0, words, noWrap);
-
 			var wrapWords = splitWords(normalizeString(lastWord + firstWord), false);
 			if (wrapWords.length === 1) {
 				results[results.length - 1].noNewLine = true;
@@ -235,7 +289,6 @@ function normalizeTextArray(array, styleContextStack) {
 			}
 
 			copyStyle(style, result);
-
 			results.push(result);
 		}
 
@@ -263,12 +316,12 @@ function normalizeString(value) {
 function getStyleProperty(item, styleContextStack, property, defaultValue) {
 	var value;
 
-	if (item[property] !== undefined && item[property] !== null) {
+	if (item && item[property] !== undefined && item[property] !== null) {
 		// item defines this property
 		return item[property];
 	}
 
-	if (!styleContextStack) {
+	if (!styleContextStack || typeof styleContextStack.auto !== 'function') {
 		return defaultValue;
 	}
 
@@ -296,7 +349,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 	}
 
 	normalized.forEach(function (item) {
-		var fontName = getStyleProperty(item, styleContextStack, 'font', 'Roboto');
+		var fontName = getFontCompaitible(item);
 		var fontSize = getStyleProperty(item, styleContextStack, 'fontSize', 12);
 		var fontFeatures = getStyleProperty(item, styleContextStack, 'fontFeatures', null);
 		var bold = getStyleProperty(item, styleContextStack, 'bold', false);
@@ -340,7 +393,7 @@ function measure(fontProvider, textArray, styleContextStack) {
 		var trailingSpaces;
 		if (!preserveTrailingSpaces && (trailingSpaces = item.text.match(TRAILING))) {
 			item.trailingCut = widthOfString(trailingSpaces[0], font, fontSize, characterSpacing, fontFeatures);
-		} else {
+		} else if (item.trailingCut === undefined) {
 			item.trailingCut = 0;
 		}
 
@@ -368,6 +421,123 @@ function measure(fontProvider, textArray, styleContextStack) {
 
 function widthOfString(text, font, fontSize, characterSpacing, fontFeatures) {
 	return font.widthOfString(text, fontSize, fontFeatures) + ((characterSpacing || 0) * (text.length - 1));
+}
+
+function exceptTokenizer(word) {
+	var listExceptWord = [
+		'(ไทยแลนด์)',
+		'(ประเทศไทย)',
+		'(สำนักงานใหญ่)',
+		'(มหาชน)',
+		'(Thailand)',
+		'(Main Branch)',
+		'(Head office)',
+		'(กรุ๊ป)'
+	];
+
+	return listExceptWord.indexOf(word) > -1;
+}
+
+function needsTokenizer(word) {
+	if (!word) {
+		return false;
+	}
+
+	return /[\u0E00-\u0E7F]/.test(word);
+}
+
+function primeFontCaches(styleContextStack) {
+	if (styleContextStack && typeof styleContextStack.getProperty === 'function') {
+		var stackFont = styleContextStack.getProperty('font');
+		if (stackFont) {
+			defaultFont = stackFont;
+		}
+	}
+
+	if (!defaultFont) {
+		defaultFont = 'Roboto';
+	}
+
+	if (!this.fontProvider || !this.fontProvider.fonts) {
+		return;
+	}
+
+	if (defaultFont && fontCacheName !== defaultFont) {
+		var defaultFontDef = this.fontProvider.fonts[defaultFont];
+		var primaryFont = safeOpenFont(defaultFontDef && defaultFontDef.normal);
+
+		if (primaryFont) {
+			fontCacheName = defaultFont;
+			fontCache = primaryFont;
+		} else {
+			fontCacheName = '';
+			fontCache = null;
+		}
+	}
+
+	for (var fontItem in this.fontProvider.fonts) {
+		if (!Object.prototype.hasOwnProperty.call(this.fontProvider.fonts, fontItem)) {
+			continue;
+		}
+
+		if (fontItem === fontCacheName) {
+			continue;
+		}
+
+		if (!fontSubstituteCache[fontItem]) {
+			var substitute = safeOpenFont(this.fontProvider.fonts[fontItem].normal);
+			if (substitute) {
+				fontSubstituteCache[fontItem] = { Name: fontItem, FontObj: substitute };
+			}
+		}
+	}
+}
+
+function getFontCompaitible(item) {
+	var text = item.text || '';
+
+	if (fontCacheName && fontCache && !hasMissingGlyphs(fontCache.glyphsForString(text))) {
+		return fontCacheName;
+	}
+
+	for (var key in fontSubstituteCache) {
+		if (!Object.prototype.hasOwnProperty.call(fontSubstituteCache, key)) {
+			continue;
+		}
+
+		var fontItem = fontSubstituteCache[key];
+		if (!fontItem || !fontItem.FontObj || fontItem.Name === fontCacheName) {
+			continue;
+		}
+
+		if (!hasMissingGlyphs(fontItem.FontObj.glyphsForString(text))) {
+			return fontItem.Name;
+		}
+	}
+
+	return defaultFont || 'Roboto';
+}
+
+function hasMissingGlyphs(glyphList) {
+	for (var i = 0; i < glyphList.length; i++) {
+		if (!glyphList[i] || glyphList[i].id <= 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function safeOpenFont(path) {
+	if (!path) {
+		return null;
+	}
+
+	try {
+		return fontkit.openSync(path);
+	} catch (error) {
+		void error;
+		return null;
+	}
 }
 
 module.exports = TextTools;

@@ -19,6 +19,11 @@ var isPattern = require('./helpers').isPattern;
 var getPattern = require('./helpers').getPattern;
 var SVGtoPDF = require('./3rd-party/svg-to-pdfkit');
 
+var REMOTE_RESOLVED_KEY = '__pdfMakeRemoteImagesResolved';
+var REMOTE_PROTOCOL_REGEX = /^https?:\/\//i;
+var DATA_URL_REGEX = /^data:/i;
+var TRANSPARENT_PNG_PLACEHOLDER = (typeof Buffer !== 'undefined') ? Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWM8c+bMfQAI1gP2Ce279wAAAABJRU5ErkJggg==', 'base64') : null;
+
 var findFont = function (fonts, requiredFonts, defaultFont) {
 	for (var i = 0; i < requiredFonts.length; i++) {
 		var requiredFont = requiredFonts[i].toLowerCase();
@@ -55,6 +60,7 @@ var findFont = function (fonts, requiredFonts, defaultFont) {
  */
 function PdfPrinter(fontDescriptors) {
 	this.fontDescriptors = fontDescriptors;
+	this._remoteImageCache = new Map();
 }
 
 /**
@@ -145,6 +151,10 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 
 	var builder = new LayoutBuilder(pageSize, fixPageMargins(docDefinition.pageMargins), new ImageMeasure(this.pdfKitDoc, docDefinition.images), new SVGMeasure());
 
+	if (docDefinition.footerGapOption !== undefined) {
+		builder.applyFooterGapOption(docDefinition.footerGapOption);
+	}
+
 	registerDefaultTableLayouts(builder);
 	if (options.tableLayouts) {
 		builder.registerTableLayouts(options.tableLayouts);
@@ -180,6 +190,24 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		printActionRef.end();
 	}
 	return this.pdfKitDoc;
+};
+
+PdfPrinter.prototype.resolveRemoteImages = function (docDefinition, timeoutMs) {
+	return resolveRemoteImages.call(this, docDefinition, timeoutMs);
+};
+
+PdfPrinter.prototype.createPdfKitDocumentAsync = function (docDefinition, options) {
+	var createOptions = options ? Object.assign({}, options) : {};
+	var timeout;
+	if (Object.prototype.hasOwnProperty.call(createOptions, 'remoteImageTimeout')) {
+		timeout = createOptions.remoteImageTimeout;
+		delete createOptions.remoteImageTimeout;
+	}
+
+	var self = this;
+	return resolveRemoteImages.call(this, docDefinition, timeout).then(function () {
+		return self.createPdfKitDocument(docDefinition, createOptions);
+	});
 };
 
 function createMetadata(docDefinition) {
@@ -416,6 +444,12 @@ function renderPages(pages, fontProvider, pdfKitDoc, patterns, progressCallback)
 				case 'endClip':
 					endClip(pdfKitDoc);
 					break;
+				case 'beginVerticalAlign':
+					beginVerticalAlign(item.item, pdfKitDoc);
+					break;
+				case 'endVerticalAlign':
+					endVerticalAlign(item.item, pdfKitDoc);
+					break;
 			}
 			renderedItems++;
 			progressCallback(renderedItems / totalItems);
@@ -476,6 +510,10 @@ function renderLine(line, x, y, patterns, pdfKitDoc) {
 		preparePageNodeRefLine(line._pageNodeRef, line.inlines[0]);
 	}
 
+	if (line._tocItemNode) {
+		preparePageNodeRefLine(line._tocItemNode, line.inlines[0]);
+	}
+
 	x = x || 0;
 	y = y || 0;
 
@@ -492,6 +530,10 @@ function renderLine(line, x, y, patterns, pdfKitDoc) {
 
 		if (inline._pageNodeRef) {
 			preparePageNodeRefLine(inline._pageNodeRef, inline);
+		}
+
+		if (inline._tocItemNode) {
+			preparePageNodeRefLine(inline._tocItemNode, inline);
 		}
 
 		var options = {
@@ -525,7 +567,7 @@ function renderLine(line, x, y, patterns, pdfKitDoc) {
 		pdfKitDoc.text(inline.text, x + inline.x, shiftedY, options);
 
 		if (inline.linkToPage) {
-			var _ref = pdfKitDoc.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
+			pdfKitDoc.ref({ Type: 'Action', S: 'GoTo', D: [inline.linkToPage, 0, 0] }).end();
 			pdfKitDoc.annotate(x + inline.x, shiftedY, inline.width, inline.height, {
 				Subtype: 'Link',
 				Dest: [inline.linkToPage - 1, 'XYZ', null, null, null]
@@ -676,6 +718,28 @@ function renderImage(image, x, y, pdfKitDoc) {
 	}
 }
 
+function beginVerticalAlign(item, pdfKitDoc) {
+	switch (item.verticalAlign) {
+		case 'center':
+			pdfKitDoc.save();
+			pdfKitDoc.translate(0, -(item.nodeHeight - item.viewHeight) / 2);
+			break;
+		case 'bottom':
+			pdfKitDoc.save();
+			pdfKitDoc.translate(0, -(item.nodeHeight - item.viewHeight));
+			break;
+	}
+}
+
+function endVerticalAlign(item, pdfKitDoc) {
+	switch (item.verticalAlign) {
+		case 'center':
+		case 'bottom':
+			pdfKitDoc.restore();
+			break;
+	}
+}
+
 function renderSVG(svg, x, y, pdfKitDoc, fontProvider) {
 	var options = Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options);
 	options.fontCallback = function (family, bold, italic) {
@@ -724,4 +788,317 @@ function createPatterns(patternDefinitions, pdfKitDoc) {
 	return patterns;
 }
 
+function resolveRemoteImages(docDefinition, timeoutMs) {
+	if (!docDefinition || typeof docDefinition !== 'object') {
+		return Promise.resolve();
+	}
+
+	if (docDefinition[REMOTE_RESOLVED_KEY]) {
+		return Promise.resolve();
+	}
+
+	docDefinition.images = docDefinition.images || {};
+	var images = docDefinition.images;
+	var remoteTargets = new Map();
+	var cache = this._remoteImageCache || (this._remoteImageCache = new Map());
+
+	Object.keys(images).forEach(function (key) {
+		var descriptor = parseRemoteDescriptor(images[key]);
+		if (descriptor) {
+			remoteTargets.set(key, descriptor);
+		}
+	});
+
+	collectInlineImages(docDefinition.content, remoteTargets, images);
+
+	if (remoteTargets.size === 0) {
+		markRemoteResolved(docDefinition);
+		return Promise.resolve();
+	}
+
+	var timeout = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : undefined;
+	var tasks = [];
+
+	remoteTargets.forEach(function (descriptor, key) {
+		var cacheKey = createCacheKey(descriptor.url, descriptor.headers);
+		tasks.push(
+			ensureRemoteBuffer(descriptor.url, descriptor.headers, cacheKey, cache, timeout)
+				.then(function (buffer) {
+					images[key] = buffer;
+				})
+				.catch(function () {
+					if (TRANSPARENT_PNG_PLACEHOLDER) {
+						images[key] = Buffer.from(TRANSPARENT_PNG_PLACEHOLDER);
+					} else {
+						delete images[key];
+					}
+				})
+		);
+	});
+
+	var self = this;
+	return Promise.all(tasks).then(function () {
+		markRemoteResolved(docDefinition);
+		return self;
+	});
+}
+
+function collectInlineImages(node, remoteTargets, images) {
+	if (!node) {
+		return;
+	}
+
+	if (Array.isArray(node)) {
+		node.forEach(function (item) {
+			collectInlineImages(item, remoteTargets, images);
+		});
+		return;
+	}
+
+	if (typeof node !== 'object') {
+		return;
+	}
+
+	if (node.image) {
+		var resolvedKey = registerInlineImage(node, images);
+		if (resolvedKey) {
+			var descriptor = parseRemoteDescriptor(images[resolvedKey]);
+			if (descriptor) {
+				remoteTargets.set(resolvedKey, descriptor);
+			}
+		}
+	}
+
+	Object.keys(node).forEach(function (prop) {
+		if (prop === 'image' || prop.charAt(0) === '_') {
+			return;
+		}
+		collectInlineImages(node[prop], remoteTargets, images);
+	});
+}
+
+function registerInlineImage(node, images) {
+	var value = node.image;
+	if (typeof value === 'string') {
+		if (isRemoteUrl(value)) {
+			if (!images[value]) {
+				images[value] = value;
+			}
+			node.image = value;
+			return value;
+		}
+
+		var existing = images[value];
+		if (existing) {
+			var descriptor = parseRemoteDescriptor(existing);
+			if (descriptor) {
+				return value;
+			}
+		}
+	} else if (value && typeof value === 'object') {
+		if (typeof Buffer !== 'undefined' && Buffer.isBuffer && Buffer.isBuffer(value)) {
+			return null;
+		}
+
+		if (typeof Uint8Array !== 'undefined' && value instanceof Uint8Array) {
+			node.image = typeof Buffer !== 'undefined' ? Buffer.from(value) : value;
+			return null;
+		}
+
+		if (value.type === 'Buffer' && Array.isArray(value.data)) {
+			node.image = typeof Buffer !== 'undefined' ? Buffer.from(value.data) : value.data;
+			return null;
+		}
+
+		var url = value.url;
+		if (typeof url === 'string' && isRemoteUrl(url)) {
+			var key = url;
+			if (!images[key]) {
+				images[key] = value;
+			}
+			node.image = key;
+			return key;
+		}
+	}
+
+	return null;
+}
+
+function ensureRemoteBuffer(url, headers, cacheKey, cache, timeout) {
+	var existing = cache.get(cacheKey);
+	if (existing) {
+		return Promise.resolve(existing);
+	}
+
+	return fetchRemote(url, headers, timeout).then(function (buffer) {
+		cache.set(cacheKey, buffer);
+		return buffer;
+	});
+}
+
+function parseRemoteDescriptor(value) {
+	if (!value) {
+		return null;
+	}
+
+	if (typeof Buffer !== 'undefined' && Buffer.isBuffer && Buffer.isBuffer(value)) {
+		return null;
+	}
+
+	if (typeof Uint8Array !== 'undefined' && value instanceof Uint8Array) {
+		return null;
+	}
+
+	if (typeof value === 'string') {
+		if (isRemoteUrl(value)) {
+			return { url: value, headers: {} };
+		}
+		return null;
+	}
+
+	if (typeof value === 'object') {
+		if (typeof value.url === 'string' && isRemoteUrl(value.url)) {
+			return { url: value.url, headers: value.headers || {} };
+		}
+	}
+
+	return null;
+}
+
+function isRemoteUrl(value) {
+	return typeof value === 'string' && REMOTE_PROTOCOL_REGEX.test(value) && !DATA_URL_REGEX.test(value);
+}
+
+function createCacheKey(url, headers) {
+	var normalizedHeaders = {};
+	if (headers && typeof headers === 'object') {
+		Object.keys(headers).sort().forEach(function (key) {
+			normalizedHeaders[key.toLowerCase()] = headers[key];
+		});
+	}
+
+	return url + '::' + JSON.stringify(normalizedHeaders);
+}
+
+function markRemoteResolved(docDefinition) {
+	try {
+		Object.defineProperty(docDefinition, REMOTE_RESOLVED_KEY, {
+			value: true,
+			enumerable: false,
+			configurable: true,
+			writable: true
+		});
+	} catch (error) {
+		void error;
+		docDefinition[REMOTE_RESOLVED_KEY] = true;
+	}
+}
+
+function fetchRemote(url, headers, timeoutMs) {
+	if (typeof fetch === 'function') {
+		return fetchWithGlobal(url, headers, timeoutMs);
+	}
+
+	return fetchWithNode(url, headers, timeoutMs);
+}
+
+function fetchWithGlobal(url, headers, timeoutMs) {
+	var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+	var timer = null;
+	var options = { headers: headers || {} };
+	if (controller) {
+		options.signal = controller.signal;
+	}
+
+	if (controller && timeoutMs) {
+		timer = setTimeout(function () {
+			controller.abort();
+		}, timeoutMs);
+	}
+
+	return fetch(url, options).then(function (response) {
+		if (timer) {
+			clearTimeout(timer);
+		}
+
+		if (!response.ok) {
+			var statusText = response.statusText || 'Unknown error';
+			throw new Error('Failed to fetch remote image (' + response.status + ' ' + statusText + ')');
+		}
+
+		return response.arrayBuffer();
+	}).then(function (buffer) {
+		return typeof Buffer !== 'undefined' ? Buffer.from(buffer) : buffer;
+	});
+}
+
+function fetchWithNode(url, headers, timeoutMs) {
+	return new Promise(function (resolve, reject) {
+		var parsedUrl;
+		try {
+			parsedUrl = new URL(url);
+		} catch (err) {
+			reject(err);
+			return;
+		}
+
+		var transport = parsedUrl.protocol === 'https:' ? require('https') : require('http');
+		var requestOptions = {
+			protocol: parsedUrl.protocol,
+			hostname: parsedUrl.hostname,
+			port: parsedUrl.port,
+			path: parsedUrl.pathname + (parsedUrl.search || ''),
+			method: 'GET',
+			headers: headers || {}
+		};
+
+		var timeoutTriggered = false;
+		var req = transport.request(requestOptions, function (res) {
+			if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+				var redirectUrl = new URL(res.headers.location, parsedUrl);
+				res.resume();
+				fetchWithNode(redirectUrl.toString(), headers, timeoutMs).then(resolve, reject);
+				return;
+			}
+
+			if (res.statusCode < 200 || res.statusCode >= 300) {
+				reject(new Error('Failed to fetch remote image (' + res.statusCode + ')'));
+				res.resume();
+				return;
+			}
+
+			var chunks = [];
+			res.on('data', function (chunk) {
+				chunks.push(chunk);
+			});
+			res.on('end', function () {
+				if (timeoutTriggered) {
+					return;
+				}
+				resolve(Buffer.concat(chunks));
+			});
+		});
+
+		req.on('error', function (err) {
+			if (timeoutTriggered) {
+				return;
+			}
+			reject(err);
+		});
+
+		if (timeoutMs) {
+			req.setTimeout(timeoutMs, function () {
+				timeoutTriggered = true;
+				req.abort();
+				reject(new Error('Remote image request timed out'));
+			});
+		}
+
+		req.end();
+	});
+}
+
 module.exports = PdfPrinter;
+
+/* temporary browser extension */
+PdfPrinter.prototype.fs = require('fs');

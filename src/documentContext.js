@@ -7,7 +7,7 @@ var isString = require('./helpers').isString;
  * Creates an instance of DocumentContext - a store for current x, y positions and available width/height.
  * It facilitates column divisions and vertical sync
  */
-function DocumentContext(pageSize, pageMargins) {
+function DocumentContext(pageSize, pageMargins, footerGapOption = {}) {
 	this.pages = [];
 
 	this.pageMargins = pageMargins;
@@ -16,6 +16,9 @@ function DocumentContext(pageSize, pageMargins) {
 	this.availableWidth = pageSize.width - pageMargins.left - pageMargins.right;
 	this.availableHeight = 0;
 	this.page = -1;
+
+	this._footerColumnGuides = null;
+  	this._footerGapOption = footerGapOption;
 
 	this.snapshots = [];
 
@@ -52,9 +55,17 @@ DocumentContext.prototype.beginColumnGroup = function (marginXTopParent, bottomB
 
 DocumentContext.prototype.updateBottomByPage = function () {
 	const lastSnapshot = this.snapshots[this.snapshots.length - 1];
+	if (!lastSnapshot) {
+		return;
+	}
+
+	if (!lastSnapshot.bottomByPage) {
+		lastSnapshot.bottomByPage = {};
+	}
+
 	const lastPage = this.page;
 	let previousBottom = -Number.MIN_VALUE;
-	if (lastSnapshot.bottomByPage[lastPage]) {
+	if (lastSnapshot.bottomByPage[lastPage] !== undefined) {
 		previousBottom = lastSnapshot.bottomByPage[lastPage];
 	}
 	lastSnapshot.bottomByPage[lastPage] = Math.max(previousBottom, this.y);
@@ -126,6 +137,7 @@ DocumentContext.prototype.completeColumnGroup = function (height, endingCell) {
 
 	this.y = y;
 	this.page = saved.bottomMost.page;
+	this.height = saved.bottomMost.y - saved.y;
 	this.availableWidth = saved.availableWidth;
 	this.availableHeight = saved.bottomMost.availableHeight;
 	if (height) {
@@ -150,6 +162,7 @@ DocumentContext.prototype.moveDown = function (offset) {
 DocumentContext.prototype.initializePage = function () {
 	this.y = this.pageMargins.top;
 	this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+	this.fullHeight = this.availableHeight;
 	const { pageCtx, isSnapshot } = this.pageSnapshot();
 	pageCtx.availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
 	if (isSnapshot && this.marginXTopParent) {
@@ -318,6 +331,36 @@ DocumentContext.prototype.getCurrentPosition = function () {
 };
 
 function bottomMostContext(c1, c2) {
+	if (!c1 && !c2) {
+		return {
+			page: 0,
+			x: 0,
+			y: 0,
+			availableHeight: 0,
+			availableWidth: 0
+		};
+	}
+
+	if (!c1) {
+		return {
+			page: c2.page,
+			x: c2.x,
+			y: c2.y,
+			availableHeight: c2.availableHeight,
+			availableWidth: c2.availableWidth
+		};
+	}
+
+	if (!c2) {
+		return {
+			page: c1.page,
+			x: c1.x,
+			y: c1.y,
+			availableHeight: c1.availableHeight,
+			availableWidth: c1.availableWidth
+		};
+	}
+
 	var r;
 
 	if (c1.page > c2.page) {

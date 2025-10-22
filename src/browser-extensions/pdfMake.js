@@ -25,6 +25,7 @@ function Document(docDefinition, tableLayouts, fonts, vfs) {
 	this.tableLayouts = tableLayouts || null;
 	this.fonts = fonts || defaultClientFonts;
 	this.vfs = vfs;
+	this._remoteImagesPrefetched = false;
 }
 
 function canCreatePdf() {
@@ -120,9 +121,14 @@ Document.prototype._createDoc = function (options, cb) {
 	if (this.docDefinition.images) {
 		for (var image in this.docDefinition.images) {
 			if (this.docDefinition.images.hasOwnProperty(image)) {
-				var url = getExtendedUrl(this.docDefinition.images[image]);
-				urlResolver.resolve(url.url, url.headers);
-				this.docDefinition.images[image] = url.url;
+				var originalVal = this.docDefinition.images[image];
+				var urlImg = getExtendedUrl(originalVal);
+				if (typeof urlImg.url === 'string' && (urlImg.url.toLowerCase().startsWith('http://') || urlImg.url.toLowerCase().startsWith('https://'))) {
+					urlResolver.resolve(urlImg.url, urlImg.headers);
+					this.docDefinition.images[image] = urlImg.url; 
+				} else {
+					this.docDefinition.images[image] = urlImg.url;
+				}
 			}
 		}
 	}

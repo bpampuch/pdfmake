@@ -3,6 +3,8 @@
 var isUndefined = require('./helpers').isUndefined;
 var ElementWriter = require('./elementWriter');
 
+var newPageFooterBreak = true;
+
 /**
  * Creates an instance of PageElementWriter - an extended ElementWriter
  * which can handle:
@@ -68,11 +70,60 @@ PageElementWriter.prototype.alignCanvas = function (node) {
 	this.writer.alignCanvas(node);
 };
 
-PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-	if (!this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition)) {
-		this.moveToNextPage();
-		this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition);
+PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
+	if (isFooter) {
+		var ctxOpt = this.writer.context._footerGapOption;
+		if (ctxOpt && ctxOpt.enabled && fragment.footerGap !== false && !fragment._footerGapOption) {
+			fragment._footerGapOption = ctxOpt;
+		}
+		
+		if (this.writer.context._footerColumnGuides && !fragment.disableFooterColumnGuides && !fragment._footerGuideSpec) {
+			var g = this.writer.context._footerColumnGuides;
+			fragment._footerGuideSpec = {
+					widths: g.widths ? g.widths.slice() : undefined,
+					stops: g.stops ? g.stops.slice() : undefined,
+					style: g.style ? Object.assign({}, g.style) : {},
+					includeOuter: g.includeOuter
+			};
+		}
 	}
+
+	var result = this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+	if (isFooter) {
+		if (result && isFooter == 1) {
+			newPageFooterBreak = false;
+			return true;
+		} else if (!result && isFooter == 2 && newPageFooterBreak) {
+			this.moveToNextPage();
+			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+		} else if (!result && isFooter == 1) {
+			this.moveToNextPage();
+		}
+	} else {
+		if (!result) {
+			this.moveToNextPage();
+			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+		}
+	}
+};
+
+PageElementWriter.prototype.addFragment_test = function (fragment) {
+	if (fragment.height > this.writer.context.availableHeight) {
+		return false;
+	}
+	return true;
+};
+
+PageElementWriter.prototype.removeBeginClip = function (item) {
+	return this.writer.removeBeginClip(item);
+};
+
+PageElementWriter.prototype.beginVerticalAlign = function (verticalAlign) {
+	return this.writer.beginVerticalAlign(verticalAlign);
+};
+
+PageElementWriter.prototype.endVerticalAlign = function (verticalAlign) {
+	return this.writer.endVerticalAlign(verticalAlign);
 };
 
 PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
@@ -82,14 +133,15 @@ PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
 	// moveToNextPage is called multiple times for table, because is called for each column
 	// and repeatables are inserted only in the first time. If columns are used, is needed
 	// call for table in first column and then for table in the second column (is other repeatables).
-	this.repeatables.forEach(function (rep) {
-		if (isUndefined(rep.insertedOnPages[this.writer.context.page])) {
-			rep.insertedOnPages[this.writer.context.page] = true;
+	if (nextPage.newPageCreated) {
+		this.repeatables.forEach(function (rep) {
 			this.writer.addFragment(rep, true);
-		} else {
+		}, this);
+	} else {
+		this.repeatables.forEach(function (rep) {
 			this.writer.context.moveDown(rep.height);
-		}
-	}, this);
+		}, this);
+	}
 
 	this.writer.tracker.emit('pageChanged', {
 		prevPage: nextPage.prevPage,
@@ -105,7 +157,7 @@ PageElementWriter.prototype.beginUnbreakableBlock = function (width, height) {
 	}
 };
 
-PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY) {
+PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY, isFooter) {
 	if (--this.transactionLevel === 0) {
 		var unbreakableContext = this.writer.context;
 		this.writer.popContext();
@@ -135,8 +187,24 @@ PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY)
 			if (forcedX !== undefined || forcedY !== undefined) {
 				this.writer.addFragment(fragment, true, true, true);
 			} else {
-				this.addFragment(fragment);
+				return this.addFragment(fragment, undefined, undefined, undefined, isFooter);
 			}
+		}
+	}
+};
+
+PageElementWriter.prototype.commitUnbreakableBlock_test = function (forcedX, forcedY) {
+	if (--this.transactionLevel === 0) {
+		var unbreakableContext = this.writer.context;
+		this.writer.popContext();
+
+		var nbPages = unbreakableContext.pages.length;
+		if (nbPages > 0) {
+			var fragment = unbreakableContext.pages[0];
+			fragment.xOffset = forcedX;
+			fragment.yOffset = forcedY;
+			fragment.height = unbreakableContext.y;
+			return this.addFragment_test(fragment);
 		}
 	}
 };
