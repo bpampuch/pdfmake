@@ -589,7 +589,7 @@ DocMeasure.prototype.measureTable = function (node) {
 				var data = rowData[col];
 				if (data === undefined) {
 					console.error('Malformed table row ', rowData, 'in node ', node);
-					throw 'Malformed table row, a cell is undefined.';
+					throw new Error('Malformed table row, a cell is undefined.');
 				}
 				if (data === null) { // transform to object
 					data = '';
