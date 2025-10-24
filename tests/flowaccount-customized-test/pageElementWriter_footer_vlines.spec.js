@@ -28,12 +28,16 @@ describe('PageElementWriter - Footer Vertical Lines on Page Break', function () 
 			},
 			_footerGapOption: {
 				enabled: true,
-				lineWidth: 1,
-				lineColor: 'black',
 				columns: {
 					widthLength: 3,
+					includeOuter: true,
+					style: {
+						lineWidth: 0.5,
+						color: '#bbbbbb'
+					},
 					content: {
-						vLines: [100, 200, 300] // Three vertical lines collected during table processing
+						vLines: [0, 100, 200, 300], // Four vertical line positions (including borders)
+						vLineWidths: [0.5, 0.5, 0.5, 0.5]
 					}
 				}
 			}
@@ -71,12 +75,16 @@ describe('PageElementWriter - Footer Vertical Lines on Page Break', function () 
 			items: [],
 			_footerGapOption: {
 				enabled: true,
-				lineWidth: 1,
-				lineColor: 'black',
 				columns: {
 					widthLength: 3,
+					includeOuter: true,
+					style: {
+						lineWidth: 0.5,
+						color: '#bbbbbb'
+					},
 					content: {
-						vLines: [100, 200, 300]
+						vLines: [0, 100, 200, 300], // Collected X positions (ctx.x + x)
+						vLineWidths: [0.5, 0.5, 0.5, 0.5]
 					}
 				}
 			}
@@ -85,52 +93,58 @@ describe('PageElementWriter - Footer Vertical Lines on Page Break', function () 
 		// Call addFragment with isFooter=1 (first attempt)
 		var result = writer.addFragment(fragment, false, false, false, 1);
 
-		// Should return undefined (footer didn't fit and was retried)
-		assert.strictEqual(result, undefined);
+		// Should return false (footer didn't fit, drew lines, moved to next page)
+		assert.strictEqual(result, false);
 
 		// Should have called drawFooterVerticalLines, which draws vectors
-		assert.strictEqual(writer.writer.addVector.callCount, 3, 'Should draw 3 vertical lines');
+		// With includeOuter=true and 4 positions, should draw all 4 lines
+		assert.strictEqual(writer.writer.addVector.callCount, 4, 'Should draw 4 vertical lines');
 
 		// Verify each vertical line was drawn correctly
 		var expectedBottomY = 842 - 40; // pageHeight - bottomMargin = 802
 		var expectedTopY = 700; // Original Y position
 
-		// Check first vertical line
+		// Check lines are drawn using elementWriter.js logic: ctx.x + rawWidths[ci] - 0.25
 		var call1 = writer.writer.addVector.getCall(0);
 		assert.deepStrictEqual(call1.args[0], {
 			type: 'line',
-			x1: 100,
+			x1: 40 + 0 - 0.25, // ctx.x + vLines[0] - 0.25 = 39.75
 			y1: expectedTopY,
-			x2: 100,
+			x2: 40 + 0 - 0.25,
 			y2: expectedBottomY,
-			lineWidth: 1,
-			lineColor: 'black',
+			lineWidth: 0.5,
+			lineColor: '#bbbbbb',
 			dash: undefined
 		});
 		assert.strictEqual(call1.args[1], true, 'ignoreContextX should be true');
 		assert.strictEqual(call1.args[2], true, 'ignoreContextY should be true');
+		assert.strictEqual(call1.args[4], 0, 'Should draw on current page');
 
 		// Check second vertical line
 		var call2 = writer.writer.addVector.getCall(1);
-		assert.strictEqual(call2.args[0].x1, 200);
+		assert.strictEqual(call2.args[0].x1, 40 + 100 - 0.25); // 139.75
 		assert.strictEqual(call2.args[0].y1, expectedTopY);
 		assert.strictEqual(call2.args[0].y2, expectedBottomY);
+		assert.strictEqual(call2.args[0].lineWidth, 0.5);
+		assert.strictEqual(call2.args[0].lineColor, '#bbbbbb');
 
 		// Check third vertical line
 		var call3 = writer.writer.addVector.getCall(2);
-		assert.strictEqual(call3.args[0].x1, 300);
-		assert.strictEqual(call3.args[0].y1, expectedTopY);
-		assert.strictEqual(call3.args[0].y2, expectedBottomY);
+		assert.strictEqual(call3.args[0].x1, 40 + 200 - 0.25); // 239.75
+
+		// Check fourth vertical line (rightmost border)
+		var call4 = writer.writer.addVector.getCall(3);
+		assert.strictEqual(call4.args[0].x1, 40 + 300 - 0.25); // 339.75
 
 		// Should have moved to next page
 		assert.strictEqual(writer.moveToNextPage.callCount, 1);
 
 		// vLines should NOT be cleared - they will be reused on next page
-		assert.strictEqual(fragment._footerGapOption.columns.content.vLines.length, 3);
+		assert.strictEqual(fragment._footerGapOption.columns.content.vLines.length, 4);
 
-		// Should have re-attempted to add fragment with isFooter=2
-		assert.strictEqual(writer.writer.addFragment.callCount, 2);
-		assert.strictEqual(writer.writer.addFragment.getCall(1).args[4], 2, 'Second call should use isFooter=2');
+		// addFragment should only be called once (the initial attempt with isFooter=1)
+		// The retry with isFooter=2 would be handled by the caller (layoutBuilder)
+		assert.strictEqual(writer.writer.addFragment.callCount, 1);
 	});
 
 	it('should not draw vertical lines when _footerGapOption is not enabled', function () {
@@ -185,13 +199,14 @@ describe('PageElementWriter - Footer Vertical Lines on Page Break', function () 
 			_footerGapOption: {
 				enabled: true,
 				columns: {
+					includeOuter: true,
 					style: {
 						lineWidth: 2,
 						color: '#d5d5d5',
-						dash: { length: 3 }
+						dash: { length: 3, space: 2 }
 					},
 					content: {
-						vLines: [150]
+						vLines: [0, 150]
 					}
 				}
 			}
@@ -199,13 +214,17 @@ describe('PageElementWriter - Footer Vertical Lines on Page Break', function () 
 
 		writer.addFragment(fragment, false, false, false, 1);
 
-		// Should draw one vector with custom style from columns.style
-		assert.strictEqual(writer.writer.addVector.callCount, 1);
+		// Should draw two vectors with custom style from columns.style
+		assert.strictEqual(writer.writer.addVector.callCount, 2);
 		
-		var vectorArgs = writer.writer.addVector.getCall(0).args[0];
-		assert.strictEqual(vectorArgs.lineWidth, 2);
-		assert.strictEqual(vectorArgs.lineColor, '#d5d5d5');
-		assert.deepStrictEqual(vectorArgs.dash, { length: 3 });
+		var vectorArgs1 = writer.writer.addVector.getCall(0).args[0];
+		assert.strictEqual(vectorArgs1.lineWidth, 2);
+		assert.strictEqual(vectorArgs1.lineColor, '#d5d5d5');
+		assert.deepStrictEqual(vectorArgs1.dash, { length: 3, space: 2 });
+		
+		var vectorArgs2 = writer.writer.addVector.getCall(1).args[0];
+		assert.strictEqual(vectorArgs2.lineWidth, 2);
+		assert.strictEqual(vectorArgs2.lineColor, '#d5d5d5');
 	});
 
 	it('should fall back to context._footerGapOption if fragment does not have it', function () {
@@ -218,11 +237,14 @@ describe('PageElementWriter - Footer Vertical Lines on Page Break', function () 
 		// Context has _footerGapOption
 		context._footerGapOption = {
 			enabled: true,
-			lineWidth: 1,
-			lineColor: 'red',
 			columns: {
+				includeOuter: true,
+				style: {
+					lineWidth: 0.5,
+					color: '#ff0000'
+				},
 				content: {
-					vLines: [120, 240]
+					vLines: [0, 120, 240]
 				}
 			}
 		};
@@ -230,13 +252,77 @@ describe('PageElementWriter - Footer Vertical Lines on Page Break', function () 
 		writer.addFragment(fragment, false, false, false, 1);
 
 		// Should draw vectors from context._footerGapOption
-		assert.strictEqual(writer.writer.addVector.callCount, 2);
+		assert.strictEqual(writer.writer.addVector.callCount, 3);
 		
 		var call1 = writer.writer.addVector.getCall(0);
-		assert.strictEqual(call1.args[0].x1, 120);
-		assert.strictEqual(call1.args[0].lineColor, 'red');
+		assert.strictEqual(call1.args[0].x1, 40 + 0 - 0.25); // ctx.x + vLines[0] - 0.25
+		assert.strictEqual(call1.args[0].lineColor, '#ff0000');
+		assert.strictEqual(call1.args[0].lineWidth, 0.5);
 		
 		var call2 = writer.writer.addVector.getCall(1);
-		assert.strictEqual(call2.args[0].x1, 240);
+		assert.strictEqual(call2.args[0].x1, 40 + 120 - 0.25);
+		
+		var call3 = writer.writer.addVector.getCall(2);
+		assert.strictEqual(call3.args[0].x1, 40 + 240 - 0.25);
+	});
+
+	it('should respect includeOuter flag when drawing vertical lines', function () {
+		var fragment = {
+			height: 150,
+			items: [],
+			_footerGapOption: {
+				enabled: true,
+				columns: {
+					includeOuter: false, // Exclude outer borders
+					style: {
+						lineWidth: 0.5,
+						color: '#000000'
+					},
+					content: {
+						vLines: [0, 100, 200, 300, 400] // 5 positions
+					}
+				}
+			}
+		};
+
+		writer.addFragment(fragment, false, false, false, 1);
+
+		// With includeOuter=false, should skip first and last: draw indices 1-3
+		assert.strictEqual(writer.writer.addVector.callCount, 3, 'Should draw 3 middle lines');
+		
+		// Should draw lines at positions 1, 2, 3 (skipping 0 and 4)
+		var call1 = writer.writer.addVector.getCall(0);
+		assert.strictEqual(call1.args[0].x1, 40 + 100 - 0.25);
+		
+		var call2 = writer.writer.addVector.getCall(1);
+		assert.strictEqual(call2.args[0].x1, 40 + 200 - 0.25);
+		
+		var call3 = writer.writer.addVector.getCall(2);
+		assert.strictEqual(call3.args[0].x1, 40 + 300 - 0.25);
+	});
+
+	it('should default to includeOuter=true when not specified', function () {
+		var fragment = {
+			height: 150,
+			items: [],
+			_footerGapOption: {
+				enabled: true,
+				columns: {
+					// includeOuter not specified - should default to true
+					style: {
+						lineWidth: 0.5,
+						color: '#000000'
+					},
+					content: {
+						vLines: [0, 100, 200]
+					}
+				}
+			}
+		};
+
+		writer.addFragment(fragment, false, false, false, 1);
+
+		// Should draw all 3 lines
+		assert.strictEqual(writer.writer.addVector.callCount, 3);
 	});
 });
