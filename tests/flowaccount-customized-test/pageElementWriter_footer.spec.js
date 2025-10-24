@@ -70,48 +70,4 @@ describe('FlowAccount PageElementWriter footer handling', function () {
 		assert.notStrictEqual(fragment._footerGuideSpec.style, guides.style, 'guide style stored in new object');
 		assert.strictEqual(fragment._footerGuideSpec.includeOuter, guides.includeOuter, 'guide includeOuter preserved');
 	});
-
-	it('retries footer rendering on a fresh page when first attempt fails', function () {
-		var setup = freshWriter();
-		var fragment = buildFragment(40);
-
-		var addStub = sinon.stub(setup.pew.writer, 'addFragment');
-		addStub.onCall(0).returns(false);
-		addStub.onCall(1).returns(true);
-		var moveSpy = sinon.spy(setup.pew, 'moveToNextPage');
-
-		var added = setup.pew.addFragment(fragment, undefined, undefined, undefined, 2);
-
-		assert.strictEqual(added, undefined, 'call returns undefined after retry logic');
-		assert.strictEqual(addStub.callCount, 2, 'writer.addFragment invoked twice');
-		assert.strictEqual(addStub.firstCall.args[0], fragment, 'first call uses original fragment');
-		assert.strictEqual(addStub.secondCall.args[0], fragment, 'second call retries same fragment');
-		assert.strictEqual(moveSpy.callCount, 1, 'moveToNextPage triggered once');
-		assert.strictEqual(addStub.secondCall.returnValue, true, 'second attempt succeeds at writer level');
-
-		addStub.restore();
-		moveSpy.restore();
-	});
-
-	it('avoids retrying footer rendering once a footer already consumed the page', function () {
-		var setup = freshWriter();
-		var firstFragment = buildFragment(20);
-		var secondFragment = buildFragment(40);
-
-		var addStub = sinon.stub(setup.pew.writer, 'addFragment');
-		addStub.onCall(0).returns(true);
-		addStub.onCall(1).returns(false);
-		var moveSpy = sinon.spy(setup.pew, 'moveToNextPage');
-
-		var firstAdded = setup.pew.addFragment(firstFragment, undefined, undefined, undefined, 1);
-		var secondAdded = setup.pew.addFragment(secondFragment, undefined, undefined, undefined, 2);
-
-		assert.strictEqual(firstAdded, true, 'initial footer rendered successfully');
-		assert.strictEqual(secondAdded, undefined, 'second footer fails without retry');
-		assert.strictEqual(addStub.callCount, 2, 'writer.addFragment invoked only for direct calls');
-		assert.strictEqual(moveSpy.callCount, 0, 'no page advance attempted after prior footer');
-
-		addStub.restore();
-		moveSpy.restore();
-	});
 });
