@@ -171,9 +171,9 @@ TableProcessor.prototype.onRowBreak = function (rowIndex, writer) {
 };
 
 TableProcessor.prototype.beginRow = function (rowIndex, writer) {
-	this.topLineWidth = this.layout.hLineWidth(rowIndex, this.tableNode);
+	this.topLineWidth = this.layout.hLineWidth(rowIndex, this.tableNode, writer);
 	this.rowPaddingTop = this.layout.paddingTop(rowIndex, this.tableNode);
-	this.bottomLineWidth = this.layout.hLineWidth(rowIndex + 1, this.tableNode);
+	this.bottomLineWidth = this.layout.hLineWidth(rowIndex + 1, this.tableNode, writer);
 	this.rowPaddingBottom = this.layout.paddingBottom(rowIndex, this.tableNode);
 
 	this.rowCallback = this.onRowBreak(rowIndex, writer);
@@ -195,7 +195,7 @@ TableProcessor.prototype.beginRow = function (rowIndex, writer) {
 };
 
 TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overrideY, moveDown = true, forcePage) {
-	var lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode);
+	var lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode, writer);
 	if (lineWidth) {
 		var style = this.layout.hLineStyle(lineIndex, this.tableNode);
 		var dash;

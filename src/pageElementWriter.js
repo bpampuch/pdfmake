@@ -99,6 +99,8 @@ PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, u
 		} else if (!result && isFooter == 1) {
 			// Draw footer vertical lines before moving to next page
 			this.drawFooterVerticalLines(fragment);
+			// Draw footer horizontal line at the bottom of the page
+			this.drawFooterHorizontalLine(fragment);
 			this.moveToNextPage();
 		}
 	} else {
@@ -167,6 +169,55 @@ PageElementWriter.prototype.drawFooterVerticalLines = function (fragment) {
 			} : undefined
 		}, true, true, undefined, currentPage);
 	}
+};
+
+PageElementWriter.prototype.drawFooterHorizontalLine = function (fragment) {
+	var ctx = this.writer.context;
+	var footerOpt = fragment._footerGapOption || (ctx && ctx._footerGapOption);
+	
+	if (!footerOpt || !footerOpt.enabled || !footerOpt.columns || !footerOpt.columns.content) {
+		return;
+	}
+	
+	var colSpec = footerOpt.columns;
+	var rawWidths = colSpec.content.vLines || [];
+	
+	if (!rawWidths || rawWidths.length === 0) {
+		return;
+	}
+	
+	// Get the page bottom position (same as vertical lines bottom)
+	var pageHeight = ctx.getCurrentPage().pageSize.height;
+	var bottomMargin = ctx.pageMargins.bottom;
+	var y = pageHeight - bottomMargin;
+	
+	// Get the table width (from first to last vertical line position)
+	var x1 = ctx.x + rawWidths[0] - 0.25;
+	var x2 = ctx.x + rawWidths[rawWidths.length - 1] - 0.25;
+	
+	// Store current page for drawing
+	var currentPage = ctx.page;
+	
+	// Get style configuration
+	var style = colSpec.style || {};
+	var lw = style.lineWidth != null ? style.lineWidth : 0.5;
+	var lc = style.color || '#000000';
+	var dashCfg = style.dash;
+	
+	// Draw horizontal line at the bottom of the page (where vertical lines end)
+	this.writer.addVector({
+		type: 'line',
+		x1: x1,
+		y1: y,
+		x2: x2,
+		y2: y,
+		lineWidth: lw,
+		lineColor: lc,
+		dash: dashCfg ? {
+			length: dashCfg.length,
+			space: dashCfg.space != null ? dashCfg.space : dashCfg.gap
+		} : undefined
+	}, true, true, undefined, currentPage);
 };
 
 PageElementWriter.prototype.addFragment_test = function (fragment) {
