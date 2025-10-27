@@ -12,7 +12,7 @@
     "@foliojs-fork/linebreak": "^1.1.2",
     "@foliojs-fork/pdfkit": "^0.15.3",
     "iconv-lite": "^0.6.3",
-    "lodash": "^4.17.4",
+    "lodash": "^4.17.15",
     "xmldoc": "^2.0.1",
     "pdfkit": "^0.8.3"
   },
