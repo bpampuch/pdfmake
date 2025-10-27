@@ -171,9 +171,9 @@ TableProcessor.prototype.onRowBreak = function (rowIndex, writer) {
 };
 
 TableProcessor.prototype.beginRow = function (rowIndex, writer) {
-	this.topLineWidth = this.layout.hLineWidth(rowIndex, this.tableNode);
+	this.topLineWidth = this.layout.hLineWidth(rowIndex, this.tableNode, writer);
 	this.rowPaddingTop = this.layout.paddingTop(rowIndex, this.tableNode);
-	this.bottomLineWidth = this.layout.hLineWidth(rowIndex + 1, this.tableNode);
+	this.bottomLineWidth = this.layout.hLineWidth(rowIndex + 1, this.tableNode, writer);
 	this.rowPaddingBottom = this.layout.paddingBottom(rowIndex, this.tableNode);
 
 	this.rowCallback = this.onRowBreak(rowIndex, writer);
@@ -195,7 +195,7 @@ TableProcessor.prototype.beginRow = function (rowIndex, writer) {
 };
 
 TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overrideY, moveDown = true, forcePage) {
-	var lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode);
+	var lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode, writer);
 	if (lineWidth) {
 		var style = this.layout.hLineStyle(lineIndex, this.tableNode);
 		var dash;
@@ -321,11 +321,17 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 		var footerOpt = ctx._footerGapOption;
 		if (footerOpt && footerOpt.enabled) {
             var columns = footerOpt.columns || (footerOpt.columns = {});
-            var content = columns.content || (columns.content = { vLines: [] });
-            var contentVLinesLength = columns.content.vLines.length || 0;
+            var content = columns.content || (columns.content = { vLines: [], vLineWidths: [] });
+            var contentVLinesLength = content.vLines.length || 0;
+			var widthLength = footerOpt.columns.widthLength || 0;
 
-			if(contentVLinesLength <= (footerOpt.columns.widthLength)){
+			// Only collect if we haven't exceeded the width length
+			// Need widthLength + 1 lines to include both left and right borders
+			if(widthLength === 0 || contentVLinesLength <= widthLength){
+				// Store the base X position (without width offset)
 				content.vLines.push((ctx.x || 0) + x);
+				// Store the actual line width used by the table
+				content.vLineWidths.push(width);
 			}
         }
 	}

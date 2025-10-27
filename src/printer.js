@@ -243,44 +243,26 @@ function createMetadata(docDefinition) {
 	return info;
 }
 
+
 function calculatePageHeight(pages, margins) {
 	function getItemHeight(item) {
-		if (isFunction(item.item.getHeight)) {
+		if (typeof item.item.getHeight === 'function') {
 			return item.item.getHeight();
 		} else if (item.item._height) {
 			return item.item._height;
-		} else if (item.type === 'vector') {
-			if (typeof item.item.y1 !== 'undefined') {
-				return item.item.y1 > item.item.y2 ? item.item.y1 : item.item.y2;
-			} else {
-				return item.item.h;
-			}
 		} else {
 			// TODO: add support for next item types
 			return 0;
 		}
 	}
 
-	function getBottomPosition(item) {
-		var top = item.item.y || 0;
-		var height = getItemHeight(item);
-		return top + height;
-	}
-
 	var fixedMargins = fixPageMargins(margins || 40);
-	var height = fixedMargins.top;
-
+	var height = fixedMargins.top + fixedMargins.bottom;
 	pages.forEach(function (page) {
 		page.items.forEach(function (item) {
-			var bottomPosition = getBottomPosition(item);
-			if (bottomPosition > height) {
-				height = bottomPosition;
-			}
+			height += getItemHeight(item);
 		});
 	});
-
-	height += fixedMargins.bottom;
-
 	return height;
 }
 
