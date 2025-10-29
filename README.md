@@ -79,3 +79,59 @@ MIT
 pdfmake is based on a truly amazing library [pdfkit](https://github.com/devongovett/pdfkit) (credits to [@devongovett](https://github.com/devongovett)).
 
 Thanks to all contributors.
+
+---
+
+## FlowAccount Customizations (Fork Notes)
+
+This fork extends pdfmake 0.2.x with FlowAccount-specific features and behavior.
+
+### 1. Remote Image URLs (Browser & Node)
+You can now reference HTTP(S) image URLs directly in your `docDefinition.images` map or inline `image` properties.
+
+Browser usage (helper auto-fetch):
+```js
+pdfMake.createPdf(docDefinition).download(); // remote image URLs resolved before layout
+```
+
+Node usage (async prefetch):
+```js
+const printer = new PdfPrinter(fonts);
+await printer.resolveRemoteImages(docDefinition); // fetch & embed as data URLs
+const pdfDoc = await printer.createPdfKitDocumentAsync(docDefinition, options);
+pdfDoc.pipe(fs.createWriteStream('out.pdf'));
+pdfDoc.end();
+```
+Errors while fetching images are swallowed (image omitted) so a bad URL will not abort PDF generation.
+
+### 2. Dynamic Header/Footer Height Measurement
+If your header or footer function returns variable-height content, the layout engine performs a preliminary measurement pass and adjusts `pageMargins.top` / `pageMargins.bottom` so body content starts after real header/footer height.
+
+### 3. Vertical Alignment in Table Cells & Layers
+Table cells and layered content can specify `verticalAlign: 'top'|'middle'|'bottom'` (same values as legacy implementation). Markers are inserted to compute and realign content after row height is known.
+
+### 4. Layers
+Any node can include `layers: [ nodeA, nodeB, ... ]`. Layers share the same starting Y position; the tallest layer determines consumed height. Useful for overlaying backgrounds/watermarks behind foreground text without manual positioning.
+
+### 5. Remark Table Transformation
+Legacy pattern: when `docStructure[2][0]` contains a `remark` table and is immediately followed by a detail node, these two nodes are transformed into added header rows inside the remark table for consistent page-break behavior.
+
+### 6. footerBreak Logic
+Nodes marked with `footerBreak: true` after the first such node are skipped (prevents duplicate footer sections when custom flows generate repeated fragments).
+
+### 7. Async API Additions
+`printer.resolveRemoteImages(docDefinition, timeoutMs?)` – fetch remote images and inline them.
+
+`printer.createPdfKitDocumentAsync(docDefinition, options)` – async variant ensuring remote images (and any future async preprocessing) are complete before layout.
+
+### 8. Development Helpers
+Hot reload (playground) via `npm run dev:play` (nodemon + webpack watch) – see `dev-playground/README.md`.
+
+### 9. Testing
+Added unit tests covering remote image resolution and legacy layout customizations (`tests/layoutBuilder_legacy_custom.spec.js`).
+
+### 10. Caveats
+* Dynamic header/footer measurement is a heuristic single-pass; if header/footer height depends on total page count, final heights might differ slightly.
+* Remote image fetching uses global `fetch`; ensure Node >= 18 or polyfill fetch in earlier runtimes.
+
+---

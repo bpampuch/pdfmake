@@ -7,6 +7,7 @@ var isPositiveInteger = require('./helpers').isPositiveInteger;
 
 function TableProcessor(tableNode) {
 	this.tableNode = tableNode;
+	this.collectFooterColumns = Boolean(tableNode.footerGapCollect === 'product-items');
 }
 
 TableProcessor.prototype.beginTable = function (writer) {
@@ -17,9 +18,20 @@ TableProcessor.prototype.beginTable = function (writer) {
 	tableNode = this.tableNode;
 	this.offsets = tableNode._offsets;
 	this.layout = tableNode._layout;
+	this.beginNewPage = false;
+
+	if (tableNode.remark && writer.context().availableHeight) {
+		if (writer.context().availableHeight < 50) {
+			writer.context().moveDown(writer.context().availableHeight);
+			this.beginNewPage = true;
+		}
+	}
 
 	availableWidth = writer.context().availableWidth - this.offsets.total;
 	ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth, this.offsets.total, tableNode);
+
+	const offsets = this.offsets || { left: 0 };
+	const leftOffset = offsets.left || 0;
 
 	this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
 	this.rowSpanData = prepareRowSpanData();
@@ -54,7 +66,6 @@ TableProcessor.prototype.beginTable = function (writer) {
 		// Draw the top border of the table
 		this.drawHorizontalLine(0, writer);
 		if (this.rowsWithoutPageBreak && this.dontBreakRows) {
-			// We just increase the value of transactionLevel
 			writer.beginUnbreakableBlock();
 		}
 	}
@@ -79,6 +90,9 @@ TableProcessor.prototype.beginTable = function (writer) {
 
 		rsd.push({ left: 0, rowSpan: 0 });
 
+		if (!self.tableNode.table.body[0]) {
+			return rsd;
+		}
 		for (var i = 0, l = self.tableNode.table.body[0].length; i < l; i++) {
 			var paddings = self.layout.paddingLeft(i, self.tableNode) + self.layout.paddingRight(i, self.tableNode);
 			var lBorder = self.layout.vLineWidth(i, self.tableNode);
@@ -147,15 +161,19 @@ TableProcessor.prototype.onRowBreak = function (rowIndex, writer) {
 	var self = this;
 	return function () {
 		var offset = self.rowPaddingTop + (!self.headerRows ? self.topLineWidth : 0);
+		var currentPage = writer.context().getCurrentPage && writer.context().getCurrentPage();
+		if (currentPage && currentPage.items[0] && currentPage.items[0].item.remark) {
+			currentPage.items[0].item.lineColor = '#d5d5d5';
+		}
 		writer.context().availableHeight -= self.reservedAtBottom;
 		writer.context().moveDown(offset);
 	};
 };
 
 TableProcessor.prototype.beginRow = function (rowIndex, writer) {
-	this.topLineWidth = this.layout.hLineWidth(rowIndex, this.tableNode);
+	this.topLineWidth = this.layout.hLineWidth(rowIndex, this.tableNode, writer);
 	this.rowPaddingTop = this.layout.paddingTop(rowIndex, this.tableNode);
-	this.bottomLineWidth = this.layout.hLineWidth(rowIndex + 1, this.tableNode);
+	this.bottomLineWidth = this.layout.hLineWidth(rowIndex + 1, this.tableNode, writer);
 	this.rowPaddingBottom = this.layout.paddingBottom(rowIndex, this.tableNode);
 
 	this.rowCallback = this.onRowBreak(rowIndex, writer);
@@ -177,7 +195,7 @@ TableProcessor.prototype.beginRow = function (rowIndex, writer) {
 };
 
 TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overrideY, moveDown = true, forcePage) {
-	var lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode);
+	var lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode, writer);
 	if (lineWidth) {
 		var style = this.layout.hLineStyle(lineIndex, this.tableNode);
 		var dash;
@@ -232,7 +250,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 			}
 
 			if (borderColor == null) {
-				borderColor = isFunction(this.layout.hLineColor) ? this.layout.hLineColor(lineIndex, this.tableNode, i) : this.layout.hLineColor;
+				borderColor = isFunction(this.layout.hLineColor) ? this.layout.hLineColor(lineIndex, this.tableNode, i, this.beginNewPage) : this.layout.hLineColor;
 			}
 
 			if (!currentLine && shouldDrawLine) {
@@ -268,6 +286,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 				if (currentLine && currentLine.width) {
 					writer.addVector({
 						type: 'line',
+						remark: this.tableNode.remark,
 						x1: currentLine.left,
 						x2: currentLine.left + currentLine.width,
 						y1: y,
@@ -296,6 +315,27 @@ TableProcessor.prototype.drawVerticalLine = function (x, y0, y1, vLineColIndex, 
 	if (width === 0) {
 		return;
 	}
+
+	var ctx = writer && typeof writer.context === 'function' ? writer.context() : null;
+	if (ctx && this.collectFooterColumns) {
+		var footerOpt = ctx._footerGapOption;
+		if (footerOpt && footerOpt.enabled) {
+            var columns = footerOpt.columns || (footerOpt.columns = {});
+            var content = columns.content || (columns.content = { vLines: [], vLineWidths: [] });
+            var contentVLinesLength = content.vLines.length || 0;
+			var widthLength = footerOpt.columns.widthLength || 0;
+
+			// Only collect if we haven't exceeded the width length
+			// Need widthLength + 1 lines to include both left and right borders
+			if(widthLength === 0 || contentVLinesLength <= widthLength){
+				// Store the base X position (without width offset)
+				content.vLines.push((ctx.x || 0) + x);
+				// Store the actual line width used by the table
+				content.vLineWidths.push(width);
+			}
+        }
+	}
+
 	var style = this.layout.vLineStyle(vLineColIndex, this.tableNode);
 	var dash;
 	if (style && style.dash) {
@@ -372,6 +412,7 @@ TableProcessor.prototype.endTable = function (writer) {
 TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 	var l, i;
 	var self = this;
+
 	writer.tracker.stopTracking('pageChanged', this.rowCallback);
 	writer.context().moveDown(this.layout.paddingBottom(rowIndex, this.tableNode));
 	writer.context().availableHeight += this.reservedAtBottom;
@@ -402,7 +443,7 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 
 	ys[ys.length - 1].y1 = endingY;
 
-	var skipOrphanePadding = (ys[0].y1 - ys[0].y0 === this.rowPaddingTop);
+	var skipOrphanePadding = this.rowPaddingTop > 0 && (ys[0].y1 - ys[0].y0 === this.rowPaddingTop);
 	if (rowIndex === 0 && !skipOrphanePadding && !this.rowsWithoutPageBreak && !this.dontBreakRows) {
 		// Draw the top border of the table
 		var pageTableStartedAt = null;
@@ -445,21 +486,22 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			var colIndex = xs[i].index;
 
 			// current cell
+			var cell;
 			if (colIndex < body[rowIndex].length) {
-				var cell = body[rowIndex][colIndex];
+				cell = body[rowIndex][colIndex];
 				leftCellBorder = cell.border ? cell.border[0] : this.layout.defaultBorder;
 				rightCellBorder = cell.border ? cell.border[2] : this.layout.defaultBorder;
 			}
 
 			// before cell
 			if (colIndex > 0 && !leftCellBorder) {
-				var cell = body[rowIndex][colIndex - 1];
+				cell = body[rowIndex][colIndex - 1];
 				leftCellBorder = cell.border ? cell.border[2] : this.layout.defaultBorder;
 			}
 
 			// after cell
 			if (colIndex + 1 < body[rowIndex].length && !rightCellBorder) {
-				var cell = body[rowIndex][colIndex + 1];
+				cell = body[rowIndex][colIndex + 1];
 				rightCellBorder = cell.border ? cell.border[0] : this.layout.defaultBorder;
 			}
 
@@ -537,14 +579,14 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 
 			// fix colSpans
 			if (row[i].colSpan && row[i].colSpan > 1) {
-				for (var j = 1; j < row[i].rowSpan; j++) {
-					this.tableNode.table.body[rowIndex + j][i]._colSpan = row[i].colSpan;
+				for (var rowSpanIndex = 1; rowSpanIndex < row[i].rowSpan; rowSpanIndex++) {
+					this.tableNode.table.body[rowIndex + rowSpanIndex][i]._colSpan = row[i].colSpan;
 				}
 			}
 			// fix rowSpans
 			if (row[i].rowSpan && row[i].rowSpan > 1) {
-				for (var j = 1; j < row[i].rowSpan; j++) {
-					this.tableNode.table.body[rowIndex + j][i]._rowSpanCurrentOffset = j;
+				for (var spanOffset = 1; spanOffset < row[i].rowSpan; spanOffset++) {
+					this.tableNode.table.body[rowIndex + spanOffset][i]._rowSpanCurrentOffset = spanOffset;
 				}
 			}
 		}

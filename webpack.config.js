@@ -23,15 +23,24 @@ module.exports = {
 	target: ['web', 'es5'], // For Internet Explorer 11 support
 	resolve: {
 		alias: {
-			fs: path.join(__dirname, './src/browser-extensions/virtual-fs.js')
+			fs: path.join(__dirname, './src/browser-extensions/virtual-fs.js'),
+			// Provide a lightweight browser-friendly tokenizer shim to avoid native bindings in @flowaccount/node-icu-tokenizer
+			'@flowaccount/node-icu-tokenizer': path.join(__dirname, './src/browser-extensions/tokenizer-shim.js'),
+			// Force webpack to use CommonJS version instead of ES module to avoid default export issues
+			'@foliojs-fork/pdfkit': path.join(__dirname, 'node_modules/@foliojs-fork/pdfkit/js/pdfkit.js')
 		},
 		fallback: {
 			crypto: false,
+			// Webpack 5 no longer auto polyfills Node core modules; provide path polyfill for transitive deps (bindings -> path)
+			path: require.resolve('path-browserify'),
 			buffer: require.resolve('buffer/'),
 			util: require.resolve('util/'),
 			stream: require.resolve('stream-browserify'),
 			zlib: require.resolve('browserify-zlib'),
-			assert: require.resolve('assert/')
+			assert: require.resolve('assert/'),
+			// Browser build uses global fetch, not Node's http/https
+			http: false,
+			https: false
 		}
 	},
 	module: {
@@ -63,8 +72,21 @@ module.exports = {
 							{
 								pattern: "fs.readFileSync(`${__dirname}/data/sRGB_IEC61966_2_1.icc`)",
 								replacement: function () {
-									const data = fs.readFileSync('node_modules/pdfkit/js/data/sRGB_IEC61966_2_1.icc');
+									const data = fs.readFileSync('node_modules/@foliojs-fork/pdfkit/js/data/sRGB_IEC61966_2_1.icc');
 									return `Buffer("` + data.toString('base64') + `","base64");`;
+								}
+							},
+							{
+								// Inline AFM font files for standard PDF fonts
+								pattern: /fs\.readFileSync\(__dirname \+ '\/data\/([^']+\.afm)', 'utf8'\)/g,
+								replacement: function (match, filename) {
+									try {
+										const data = fs.readFileSync('node_modules/@foliojs-fork/pdfkit/js/data/' + filename, 'utf8');
+										return JSON.stringify(data);
+									} catch (err) {
+										console.error('Warning: Could not inline AFM file:', filename, err.message);
+										return match;
+									}
 								}
 							}
 						]

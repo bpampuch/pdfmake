@@ -3,6 +3,8 @@
 var isUndefined = require('./helpers').isUndefined;
 var ElementWriter = require('./elementWriter');
 
+var newPageFooterBreak = true;
+
 /**
  * Creates an instance of PageElementWriter - an extended ElementWriter
  * which can handle:
@@ -68,11 +70,173 @@ PageElementWriter.prototype.alignCanvas = function (node) {
 	this.writer.alignCanvas(node);
 };
 
-PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-	if (!this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition)) {
-		this.moveToNextPage();
-		this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition);
+PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter) {
+	if (isFooter) {
+		var ctxOpt = this.writer.context._footerGapOption;
+		if (ctxOpt && ctxOpt.enabled && fragment.footerGap !== false && !fragment._footerGapOption) {
+			fragment._footerGapOption = ctxOpt;
+		}
+		
+		if (this.writer.context._footerColumnGuides && !fragment.disableFooterColumnGuides && !fragment._footerGuideSpec) {
+			var g = this.writer.context._footerColumnGuides;
+			fragment._footerGuideSpec = {
+					widths: g.widths ? g.widths.slice() : undefined,
+					stops: g.stops ? g.stops.slice() : undefined,
+					style: g.style ? Object.assign({}, g.style) : {},
+					includeOuter: g.includeOuter
+			};
+		}
 	}
+
+	var result = this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+	if (isFooter) {
+		if (result && isFooter == 1) {
+			newPageFooterBreak = false;
+			return true;
+		} else if (!result && isFooter == 2 && newPageFooterBreak) {
+			this.moveToNextPage();
+			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+		} else if (!result && isFooter == 1) {
+			// Draw footer vertical lines before moving to next page
+			this.drawFooterVerticalLines(fragment);
+			// Draw footer horizontal line at the bottom of the page
+			this.drawFooterHorizontalLine(fragment);
+			this.moveToNextPage();
+		}
+	} else {
+		if (!result) {
+			this.moveToNextPage();
+			this.writer.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition, isFooter);
+		}
+	}
+	return result;
+};
+
+PageElementWriter.prototype.drawFooterVerticalLines = function (fragment) {
+	var ctx = this.writer.context;
+	var footerOpt = fragment._footerGapOption || (ctx && ctx._footerGapOption);
+	
+	if (!footerOpt || !footerOpt.enabled || !footerOpt.columns || !footerOpt.columns.content) {
+		return;
+	}
+	
+	var colSpec = footerOpt.columns;
+	var rawWidths = colSpec.content.vLines || [];
+	
+	if (!rawWidths || rawWidths.length === 0) {
+		return;
+	}
+	
+	// Get the current page bottom position (accounting for margins)
+	var pageHeight = ctx.getCurrentPage().pageSize.height;
+	var bottomMargin = ctx.pageMargins.bottom;
+	var bottomY = pageHeight - bottomMargin;
+	
+	// Use current Y position as the top of the vertical lines
+	var gapTopY = ctx.y;
+	
+	// Store current page for drawing
+	var currentPage = ctx.page;
+	
+	// Get style configuration - match elementWriter.js logic exactly
+	var style = colSpec.style || {};
+	var lw = style.lineWidth != null ? style.lineWidth : 0.5;
+	var lc = style.color || '#000000';
+	var dashCfg = style.dash;
+	var includeOuter = colSpec.includeOuter !== false;
+	
+	// Draw ALL collected vertical lines
+	// When includeOuter is true, draw all lines including first and last borders
+	// When includeOuter is false, skip the first and last  
+	var startIndex = includeOuter ? 0 : 1;
+	var endIndex = includeOuter ? rawWidths.length : Math.max(1, rawWidths.length - 1);
+	
+	// Draw vertical lines using the same logic as elementWriter.js
+	for (var ci = startIndex; ci < endIndex; ci++) {
+		// Match elementWriter.js: ctx.x + rawWidths[ci] - 0.25
+		var xGuide = ctx.x + rawWidths[ci] - 0.25;
+		this.writer.addVector({
+			type: 'line',
+			x1: xGuide,
+			y1: gapTopY,
+			x2: xGuide,
+			y2: bottomY,
+			lineWidth: lw,
+			lineColor: lc,
+			dash: dashCfg ? {
+				length: dashCfg.length,
+				space: dashCfg.space != null ? dashCfg.space : dashCfg.gap
+			} : undefined
+		}, true, true, undefined, currentPage);
+	}
+};
+
+PageElementWriter.prototype.drawFooterHorizontalLine = function (fragment) {
+	var ctx = this.writer.context;
+	var footerOpt = fragment._footerGapOption || (ctx && ctx._footerGapOption);
+	
+	if (!footerOpt || !footerOpt.enabled || !footerOpt.columns || !footerOpt.columns.content) {
+		return;
+	}
+	
+	var colSpec = footerOpt.columns;
+	var rawWidths = colSpec.content.vLines || [];
+	
+	if (!rawWidths || rawWidths.length === 0) {
+		return;
+	}
+	
+	// Get the page bottom position (same as vertical lines bottom)
+	var pageHeight = ctx.getCurrentPage().pageSize.height;
+	var bottomMargin = ctx.pageMargins.bottom;
+	var y = pageHeight - bottomMargin;
+	
+	// Get the table width (from first to last vertical line position)
+	var x1 = ctx.x + rawWidths[0] - 0.25;
+	var x2 = ctx.x + rawWidths[rawWidths.length - 1] - 0.25;
+	
+	// Store current page for drawing
+	var currentPage = ctx.page;
+	
+	// Get style configuration
+	var style = colSpec.style || {};
+	var lw = style.lineWidth != null ? style.lineWidth : 0.5;
+	var lc = style.color || '#000000';
+	var dashCfg = style.dash;
+	
+	// Draw horizontal line at the bottom of the page (where vertical lines end)
+	this.writer.addVector({
+		type: 'line',
+		x1: x1,
+		y1: y,
+		x2: x2,
+		y2: y,
+		lineWidth: lw,
+		lineColor: lc,
+		dash: dashCfg ? {
+			length: dashCfg.length,
+			space: dashCfg.space != null ? dashCfg.space : dashCfg.gap
+		} : undefined
+	}, true, true, undefined, currentPage);
+};
+
+PageElementWriter.prototype.addFragment_test = function (fragment) {
+	if (fragment.height > this.writer.context.availableHeight) {
+		return false;
+	}
+	return true;
+};
+
+PageElementWriter.prototype.removeBeginClip = function (item) {
+	return this.writer.removeBeginClip(item);
+};
+
+PageElementWriter.prototype.beginVerticalAlign = function (verticalAlign) {
+	return this.writer.beginVerticalAlign(verticalAlign);
+};
+
+PageElementWriter.prototype.endVerticalAlign = function (verticalAlign) {
+	return this.writer.endVerticalAlign(verticalAlign);
 };
 
 PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
@@ -82,14 +246,15 @@ PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
 	// moveToNextPage is called multiple times for table, because is called for each column
 	// and repeatables are inserted only in the first time. If columns are used, is needed
 	// call for table in first column and then for table in the second column (is other repeatables).
-	this.repeatables.forEach(function (rep) {
-		if (isUndefined(rep.insertedOnPages[this.writer.context.page])) {
-			rep.insertedOnPages[this.writer.context.page] = true;
+	if (nextPage.newPageCreated) {
+		this.repeatables.forEach(function (rep) {
 			this.writer.addFragment(rep, true);
-		} else {
+		}, this);
+	} else {
+		this.repeatables.forEach(function (rep) {
 			this.writer.context.moveDown(rep.height);
-		}
-	}, this);
+		}, this);
+	}
 
 	this.writer.tracker.emit('pageChanged', {
 		prevPage: nextPage.prevPage,
@@ -105,7 +270,7 @@ PageElementWriter.prototype.beginUnbreakableBlock = function (width, height) {
 	}
 };
 
-PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY) {
+PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY, isFooter) {
 	if (--this.transactionLevel === 0) {
 		var unbreakableContext = this.writer.context;
 		this.writer.popContext();
@@ -135,8 +300,24 @@ PageElementWriter.prototype.commitUnbreakableBlock = function (forcedX, forcedY)
 			if (forcedX !== undefined || forcedY !== undefined) {
 				this.writer.addFragment(fragment, true, true, true);
 			} else {
-				this.addFragment(fragment);
+				return this.addFragment(fragment, undefined, undefined, undefined, isFooter);
 			}
+		}
+	}
+};
+
+PageElementWriter.prototype.commitUnbreakableBlock_test = function (forcedX, forcedY) {
+	if (--this.transactionLevel === 0) {
+		var unbreakableContext = this.writer.context;
+		this.writer.popContext();
+
+		var nbPages = unbreakableContext.pages.length;
+		if (nbPages > 0) {
+			var fragment = unbreakableContext.pages[0];
+			fragment.xOffset = forcedX;
+			fragment.yOffset = forcedY;
+			fragment.height = unbreakableContext.y;
+			return this.addFragment_test(fragment);
 		}
 	}
 };
