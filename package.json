@@ -1,5 +1,5 @@
 {
-  "name": "@newpheeraphatflowaccount/pdfmake",
+  "name": "@flowaccount/pdfmake",
   "version": "0.2.20-staging.1",
   "description": "Client/server side PDF printing in pure JavaScript",
   "main": "src/printer.js",
