@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>صانع السيرة الذاتية الجزائرية</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body { font-family: 'Cairo', sans-serif; background: linear-gradient(to bottom, #f0f4f8, #d9e2ec); margin:0; padding:0;}
+header { background-color:#005f99; color:white; text-align:center; padding:30px 10px;}
+h1 { margin:0; font-size:28px;}
+main { max-width:900px; margin:30px auto; background:white; padding:30px; border-radius:12px; box-shadow:0 0 25px rgba(0,0,0,0.15);}
+label { display:block; margin-top:15px; font-weight:bold;}
+input, select, textarea { width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #ccc; font-size:16px;}
+button { background-color:#005f99; color:white; border:none; padding:15px 20px; border-radius:8px; font-size:16px; cursor:pointer; margin-top:20px;}
+button:hover { background-color:#004466;}
+.lang-switch { margin-bottom:20px; text-align:right; }
+.hidden { display:none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="title">صانع السيرة الذاتية الجزائرية</h1>
+  <div class="lang-switch">
+    <label for="ui-lang">اختر لغة الواجهة: </label>
+    <select id="ui-lang">
+      <option value="ar">العربية</option>
+      <option value="fr">Français</option>
+      <option value="en">English</option>
+    </select>
+  </div>
+</header>
+
+<main>
+<form id="cvForm">
+<label id="label-name">الاسم الكامل</label>
+<input type="text" id="name" required>
+
+<label id="label-email">البريد الإلكتروني</label>
+<input type="email" id="email" required>
+
+<label id="label-phone">رقم الهاتف</label>
+<input type="text" id="phone" required>
+
+<label id="label-education">المستوى الدراسي</label>
+<input type="text" id="education" required>
+
+<label id="label-experience">الخبرة / التدريب</label>
+<textarea id="experience" rows="3" required></textarea>
+
+<label id="label-skills">المهارات</label>
+<textarea id="skills" rows="2" required></textarea>
+
+<label id="label-cv-lang">اختر لغة السيرة الذاتية</label>
+<select id="cv-lang">
+  <option value="ar">العربية</option>
+  <option value="fr">Français</option>
+  <option value="en">English</option>
+</select>
+
+<label id="label-template">اختر تصميم السيرة الذاتية</label>
+<select id="template">
+  <option value="blue">أزرق</option>
+  <option value="gray">رمادي</option>
+  <option value="modern">حديث</option>
+</select>
+
+<label id="label-payment">الدفع عبر بريدي موب (500 دج)</label>
+<input type="text" id="payment" placeholder="أدخل رقم العملية بعد الدفع" required>
+<small>أرسل 500 دج إلى رقم بريدي موب: <strong id="mob-num">00799999004148414726</strong></small>
+
+<button type="submit" id="btn-generate">إنشاء السيرة الذاتية</button>
+</form>
+
+<div id="downloadSection" class="hidden">
+<h2 id="download-title">تحميل سيرتك الذاتية</h2>
+<button id="btn-download">تحميل PDF</button>
+</div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script>
+const form = document.getElementById('cvForm');
+const downloadSection = document.getElementById('downloadSection');
+const btnDownload = document.getElementById('btn-download');
+
+let pdfDocDefinition = null;
+
+form.addEventListener('submit', function(e){
+  e.preventDefault();
+  const payment = document.getElementById('payment').value;
+  if(payment.trim() === ''){
+    alert('يرجى إدخال رقم العملية بعد الدفع.');
+    return;
+  }
+
+  const name = document.getElementById('name').value;
+  const email = document.getElementById('email').value;
+  const phone = document.getElementById('phone').value;
+  const education = document.getElementById('education').value;
+  const experience = document.getElementById('experience').value;
+  const skills = document.getElementById('skills').value;
+  const cvLang = document.getElementById('cv-lang').value;
+  const template = document.getElementById('template').value;
+
+  // تحديد الاتجاه واللون حسب اللغة والقالب
+  let alignment = cvLang === 'ar' ? 'right' : 'left';
+  let titleText = cvLang === 'ar' ? 'السيرة الذاتية' : cvLang==='fr' ? 'CV' : 'Resume';
+
+  let bgColor = template==='blue' ? '#005f99' : template==='gray' ? '#808080' : '#ffffff';
+  let textColor = template==='blue' ? 'white' : 'black';
+
+  pdfDocDefinition = {
+    content: [
+      { text: titleText, fontSize: 22, bold:true, alignment: 'center', margin:[0,0,0,20]},
+      { text: `الاسم: ${name}`, alignment: alignment },
+      { text: `البريد الإلكتروني: ${email}`, alignment: alignment },
+      { text: `الهاتف: ${phone}`, alignment: alignment },
+      { text: `المستوى الدراسي: ${education}`, alignment: alignment },
+      { text: `الخبرة: ${experience}`, alignment: alignment },
+      { text: `المهارات: ${skills}`, alignment: alignment }
+    ],
+    defaultStyle: { font: 'Roboto' }
+  };
+
+  form.classList.add('hidden');
+  downloadSection.classList.remove('hidden');
+});
+
+btnDownload.onclick = function(){
+  if(pdfDocDefinition) pdfMake.createPdf(pdfDocDefinition).download(`CV_${document.getElementById('name').value}.pdf`);
+}
+
+// تبديل لغة الواجهة
+const uiLang = document.getElementById('ui-lang');
+uiLang.addEventListener('change', function(){
+  const lang = uiLang.value;
+  const labels = {
+    ar: {title:"صانع السيرة الذاتية الجزائرية", name:"الاسم الكامل", email:"البريد الإلكتروني", phone:"رقم الهاتف", education:"المستوى الدراسي", experience:"الخبرة / التدريب", skills:"المهارات", cvLang:"اختر لغة السيرة الذاتية", template:"اختر تصميم السيرة الذاتية", payment:"الدفع عبر بريدي موب (500 دج)", btn:"إنشاء السيرة الذاتية", download:"تحميل سيرتك الذاتية"},
+    fr: {title:"Créateur de CV Algérien", name:"Nom complet", email:"Email", phone:"Téléphone", education:"Éducation", experience:"Expérience / Stage", skills:"Compétences", cvLang:"Choisir la langue du CV", template:"Choisir le modèle du CV", payment:"Paiement via BaridiMob (500 DZD)", btn:"Créer le CV", download:"Télécharger votre CV"},
+    en: {title:"Algerian CV Maker", name:"Full Name", email:"Email", phone:"Phone", education:"Education", experience:"Experience / Training", skills:"Skills", cvLang:"Choose CV language", template:"Choose CV template", payment:"Payment via BaridiMob (500 DZD)", btn:"Generate CV", download:"Download your CV"}
+  };
+  const l = labels[lang];
+  document.getElementById('title').innerText = l.title;
+  document.getElementById('label-name').innerText = l.name;
+  document.getElementById('label-email').innerText = l.email;
+  document.getElementById('label-phone').innerText = l.phone;
+  document.getElementById('label-education').innerText = l.education;
+  document.getElementById('label-experience').innerText = l.experience;
+  document.getElementById('label-skills').innerText = l.skills;
+  document.getElementById('label-cv-lang').innerText = l.cvLang;
+  document.getElementById('label-template').innerText = l.template;
+  document.getElementById('label-payment').innerText = l.payment;
+  document.getElementById('btn-generate').innerText = l.btn;
+  document.getElementById('download-title').innerText = l.download;
+});
+</script>
+</body>
+</html>
