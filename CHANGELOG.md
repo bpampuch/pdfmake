@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Update Roboto font (version 3.013)
+
 ## 0.2.20 - 2025-05-09
 
 - Fixed text overflow with some non-wrappable texts
