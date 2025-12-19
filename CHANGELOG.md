@@ -3,7 +3,7 @@
 ## Unreleased
 
 - Used fetch API for downloading fonts and images
-- Update Roboto font (version 3.013)
+- Update Roboto font (version 3.014)
 
 ## 0.3.0-beta.18 - 2025-05-09
 
