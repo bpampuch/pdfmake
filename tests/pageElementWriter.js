@@ -401,7 +401,8 @@ describe('PageElementWriter', function () {
 			assert.equal(ctx.y, MARGINS.top);
 			assert.equal(ctx.availableHeight, AVAILABLE_HEIGHT);
 			assert.equal(ctx.availableWidth, AVAILABLE_WIDTH);
-			assert.equal(tracker.emit.callCount, 2); // move to first page to write a line, and then move to next page
+			// moveToNextPage emits pageChanged event after the lineAdded emission
+			assert.equal(tracker.emit.callCount, 2);
 			assert.deepEqual(tracker.emit.getCall(1).args, ['pageChanged', { prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top }]);
 		});
 
@@ -417,6 +418,7 @@ describe('PageElementWriter', function () {
 			assert.equal(ctx.y, MARGINS.top);
 			assert.equal(ctx.availableHeight, AVAILABLE_HEIGHT);
 			assert.equal(ctx.availableWidth, AVAILABLE_WIDTH);
+			// moveToNextPage emits pageChanged event after the lineAdded emission
 			assert.equal(tracker.emit.callCount, 2);
 			assert.deepEqual(tracker.emit.getCall(1).args, ['pageChanged', { prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top }]);
 		});

@@ -1,5 +1,6 @@
 'use strict';
 
+var cloneDeep = require('lodash/cloneDeep');
 var TraversalTracker = require('./traversalTracker');
 var DocPreprocessor = require('./docPreprocessor');
 var DocMeasure = require('./docMeasure');
@@ -21,7 +22,18 @@ var TextTools = require('./textTools');
 var StyleContextStack = require('./styleContextStack');
 var isNumber = require('./helpers').isNumber;
 
+var footerBreak = false;
+var testTracker;
+var testWriter;
+var testVerticalAlignStack = [];
+var testResult = false;
+var currentLayoutBuilder;
+
 function addAll(target, otherArray) {
+	if (!isArray(target) || !isArray(otherArray) || otherArray.length === 0) {
+		return;
+	}
+
 	otherArray.forEach(function (item) {
 		target.push(item);
 	});
@@ -42,6 +54,11 @@ function LayoutBuilder(pageSize, pageMargins, imageMeasure, svgMeasure) {
 	this.svgMeasure = svgMeasure;
 	this.tableLayouts = {};
 	this.nestedLevel = 0;
+	this.verticalAlignItemStack = [];
+	this.heightHeaderAndFooter = {};
+
+	this._footerColumnGuides = null;
+  	this._footerGapOption = null;
 }
 
 LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
@@ -73,7 +90,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 		linearNodeList.forEach(function (node) {
 			var nodeInfo = {};
 			[
-				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns',
+				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns', 'layers',
 				'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
 				'width', 'height'
 			].forEach(function (key) {
@@ -85,6 +102,7 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			nodeInfo.pageNumbers = Array.from(new Set(node.positions.map(function (node) { return node.pageNumber; })));
 			nodeInfo.pages = pages.length;
 			nodeInfo.stack = isArray(node.stack);
+			nodeInfo.layers = isArray(node.layers);
 
 			node.nodeInfo = nodeInfo;
 		});
@@ -108,9 +126,9 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 					}
 				}
 				if (pageBreakBeforeFct.length > 3) {
-					for (var ii = 0; ii < index; ii++) {
-						if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-							previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
+					for (var jj = 0; jj < index; jj++) {
+						if (linearNodeList[jj].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
+							previousNodesOnPage.push(linearNodeList[jj].nodeInfo);
 						}
 					}
 				}
@@ -143,14 +161,50 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 	return result.pages;
 };
 
-LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
+LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark) {
+	footerBreak = false;
+
+	this.verticalAlignItemStack = this.verticalAlignItemStack || [];
+	this.linearNodeList = [];
+	this.writer = new PageElementWriter(
+		new DocumentContext(this.pageSize, this.pageMargins, this._footerGapOption), this.tracker);
+
+	this.heightHeaderAndFooter = this.addHeadersAndFooters(header, footer) || {};
+	if (!isUndefined(this.heightHeaderAndFooter.header)) {
+		this.pageMargins.top = this.heightHeaderAndFooter.header + 1;
+	}
+
+	if (isArray(docStructure) && docStructure[2] && isArray(docStructure[2]) && docStructure[2][0] && docStructure[2][0].remark) {
+		var tableRemark = docStructure[2][0].remark;
+		var remarkLabel = docStructure[2][0];
+		var remarkDetail = docStructure[2][1] && docStructure[2][1].text;
+
+		docStructure[2].splice(0, 1);
+		if (docStructure[2].length > 0) {
+			docStructure[2].splice(0, 1);
+		}
+
+		var labelRow = [];
+		var detailRow = [];
+
+		labelRow.push(remarkLabel);
+		detailRow.push({ remarktest: true, text: remarkDetail });
+
+		tableRemark.table.body.push(labelRow);
+		tableRemark.table.body.push(detailRow);
+
+		tableRemark.table.headerRows = 1;
+
+		docStructure[2].push(tableRemark);
+	}
 
 	this.linearNodeList = [];
 	docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 	docStructure = this.docMeasure.measureDocument(docStructure);
 
+	this.verticalAlignItemStack = [];
 	this.writer = new PageElementWriter(
-		new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
+		new DocumentContext(this.pageSize, this.pageMargins, this._footerGapOption), this.tracker);
 
 	var _this = this;
 	this.writer.context().tracker.startTracking('pageAdded', function () {
@@ -159,7 +213,9 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 
 	this.addBackground(background);
 	this.processNode(docStructure);
-	this.addHeadersAndFooters(header, footer);
+	this.addHeadersAndFooters(header, footer,
+		(this.heightHeaderAndFooter.header || 0) + 1,
+		(this.heightHeaderAndFooter.footer || 0) + 1);
 	if (watermark != null) {
 		this.addWatermark(watermark, fontProvider, defaultStyle);
 	}
@@ -167,6 +223,29 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 	return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
 };
 
+LayoutBuilder.prototype.applyFooterGapOption = function(opt) {
+    if (opt === true) {
+        opt = { enabled: true };
+    }
+	
+    if (!opt) return;
+
+    if (typeof opt !== 'object') {
+        this._footerGapOption = { enabled: true };
+        return;
+    }
+
+    this._footerGapOption = {
+        enabled: opt.enabled !== false,
+        columns: opt.columns ? {
+            widths: Array.isArray(opt.columns.widths) ? opt.columns.widths.slice() : undefined,
+            widthLength: opt.columns.widths.length || 0,
+            stops: Array.isArray(opt.columns.stops) ? opt.columns.stops.slice() : undefined,
+            style: opt.columns.style ? Object.assign({}, opt.columns.style) : {},
+            includeOuter: opt.columns.includeOuter !== false
+        } : null
+    };
+};
 
 LayoutBuilder.prototype.addBackground = function (background) {
 	var backgroundGetter = isFunction(background) ? background : function () {
@@ -188,13 +267,14 @@ LayoutBuilder.prototype.addBackground = function (background) {
 };
 
 LayoutBuilder.prototype.addStaticRepeatable = function (headerOrFooter, sizeFunction) {
-	this.addDynamicRepeatable(function () {
+	return this.addDynamicRepeatable(function () {
 		return JSON.parse(JSON.stringify(headerOrFooter)); // copy to new object
 	}, sizeFunction);
 };
 
 LayoutBuilder.prototype.addDynamicRepeatable = function (nodeGetter, sizeFunction) {
 	var pages = this.writer.context().pages;
+	var measuredHeight;
 
 	for (var pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
 		this.writer.context().page = pageIndex;
@@ -207,40 +287,61 @@ LayoutBuilder.prototype.addDynamicRepeatable = function (nodeGetter, sizeFunctio
 			node = this.docPreprocessor.preprocessDocument(node);
 			this.processNode(this.docMeasure.measureDocument(node));
 			this.writer.commitUnbreakableBlock(sizes.x, sizes.y);
+			if (!isUndefined(node._height)) {
+				measuredHeight = node._height;
+			}
 		}
 	}
+
+	return measuredHeight;
 };
 
-LayoutBuilder.prototype.addHeadersAndFooters = function (header, footer) {
-	var headerSizeFct = function (pageSize, pageMargins) {
+LayoutBuilder.prototype.addHeadersAndFooters = function (header, footer, headerHeight, footerHeight) {
+	var measured = { header: undefined, footer: undefined };
+
+	var headerSizeFct = function (pageSize) {
+		var effectiveHeight = headerHeight;
+		if (isUndefined(effectiveHeight)) {
+			effectiveHeight = pageSize.height;
+		}
 		return {
 			x: 0,
 			y: 0,
 			width: pageSize.width,
-			height: pageMargins.top
+			height: effectiveHeight
 		};
 	};
 
-	var footerSizeFct = function (pageSize, pageMargins) {
+	var footerSizeFct = function (pageSize) {
+		var effectiveHeight = footerHeight;
+		if (isUndefined(effectiveHeight)) {
+			effectiveHeight = pageSize.height;
+		}
 		return {
 			x: 0,
-			y: pageSize.height - pageMargins.bottom,
+			y: pageSize.height - effectiveHeight,
 			width: pageSize.width,
-			height: pageMargins.bottom
+			height: effectiveHeight
 		};
 	};
 
+	if (this._footerGapOption && !this.writer.context()._footerGapOption) {
+        this.writer.context()._footerGapOption = this._footerGapOption;
+    }
+
 	if (isFunction(header)) {
-		this.addDynamicRepeatable(header, headerSizeFct);
+		measured.header = this.addDynamicRepeatable(header, headerSizeFct);
 	} else if (header) {
-		this.addStaticRepeatable(header, headerSizeFct);
+		measured.header = this.addStaticRepeatable(header, headerSizeFct);
 	}
 
 	if (isFunction(footer)) {
-		this.addDynamicRepeatable(footer, footerSizeFct);
+		measured.footer = this.addDynamicRepeatable(footer, footerSizeFct);
 	} else if (footer) {
-		this.addStaticRepeatable(footer, footerSizeFct);
+		measured.footer = this.addStaticRepeatable(footer, footerSizeFct);
 	}
+
+	return measured;
 };
 
 LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaultStyle) {
@@ -373,8 +474,32 @@ function decorateNode(node) {
 LayoutBuilder.prototype.processNode = function (node) {
 	var self = this;
 
+	if (footerBreak && (node.footerBreak || node.footer)) {
+		return;
+	}
+
+	if (node && node.unbreakable && node.summary && node.table && node.table.body &&
+		node.table.body[0] && node.table.body[0][0] && node.table.body[0][0].summaryBreak) {
+		testTracker = new TraversalTracker();
+		testWriter = new PageElementWriter(self.writer.context(), testTracker);
+		testVerticalAlignStack = self.verticalAlignItemStack.slice();
+		currentLayoutBuilder = self;
+		testResult = false;
+		var nodeForTest = cloneDeep(node);
+		if (nodeForTest.table.body[0]) {
+			nodeForTest.table.body[0].splice(0, 1);
+		}
+		processNode_test(nodeForTest);
+		currentLayoutBuilder = null;
+		if (testResult && node.table.body[0]) {
+			node.table.body[0].splice(0, 1);
+		}
+	}
+
 	this.linearNodeList.push(node);
 	decorateNode(node);
+
+	var prevTop = self.writer.context().getCurrentPosition().top;
 
 	applyMargins(function () {
 		var unbreakable = node.unbreakable;
@@ -394,8 +519,15 @@ LayoutBuilder.prototype.processNode = function (node) {
 			self.writer.context().moveToRelative(relPosition.x || 0, relPosition.y || 0);
 		}
 
+		var verticalAlignBegin;
+		if (node.verticalAlign) {
+			verticalAlignBegin = self.writer.beginVerticalAlign(node.verticalAlign);
+		}
+
 		if (node.stack) {
 			self.processVerticalContainer(node);
+		} else if (node.layers) {
+			self.processLayers(node);
 		} else if (node.columns) {
 			self.processColumns(node);
 		} else if (node.ul) {
@@ -417,96 +549,54 @@ LayoutBuilder.prototype.processNode = function (node) {
 		} else if (node.qr) {
 			self.processQr(node);
 		} else if (!node._span) {
-			throw 'Unrecognized document structure: ' + JSON.stringify(node, fontStringify);
+			throw new Error('Unrecognized document structure: ' + JSON.stringify(node, fontStringify));
 		}
 
-		if (absPosition || relPosition) {
+		if ((absPosition || relPosition) && !node.absoluteRepeatable) {
 			self.writer.context().endDetachedBlock();
 		}
 
 		if (unbreakable) {
-			self.writer.commitUnbreakableBlock();
+			if (node.footer) {
+				footerBreak = self.writer.commitUnbreakableBlock(undefined, undefined, node.footer);
+			} else {
+				self.writer.commitUnbreakableBlock();
+			}
+		}
+
+		if (node.verticalAlign) {
+			var stackEntry = {
+				begin: verticalAlignBegin,
+				end: self.writer.endVerticalAlign(node.verticalAlign)
+			};
+			self.verticalAlignItemStack.push(stackEntry);
+			node._verticalAlignIdx = self.verticalAlignItemStack.length - 1;
 		}
 	});
+
+	node._height = self.writer.context().getCurrentPosition().top - prevTop;
 
 	function applyMargins(callback) {
 		var margin = node._margin;
 
 		if (node.pageBreak === 'before') {
 			self.writer.moveToNextPage(node.pageOrientation);
-		} else if (node.pageBreak === 'beforeOdd') {
-			self.writer.moveToNextPage(node.pageOrientation);
-			if ((self.writer.context().page + 1) % 2 === 1) {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
-		} else if (node.pageBreak === 'beforeEven') {
-			self.writer.moveToNextPage(node.pageOrientation);
-			if ((self.writer.context().page + 1) % 2 === 0) {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
 		}
 
-		const isDetachedBlock = node.relativePosition || node.absolutePosition;
-
-		// Detached nodes have no margins, their position is only determined by 'x' and 'y'
-		if (margin && !isDetachedBlock) {
-			const availableHeight = self.writer.context().availableHeight;
-			// If top margin is bigger than available space, move to next page
-			// Necessary for nodes inside tables
-			if (availableHeight - margin[1] < 0) {
-				// Consume the whole available space
-				self.writer.context().moveDown(availableHeight);
-				self.writer.moveToNextPage(node.pageOrientation);
-				/**
-				 * TODO - Something to consider:
-				 * Right now the node starts at the top of next page (after header)
-				 * Another option would be to apply just the top margin that has not been consumed in the page before
-				 * It would something like: this.write.context().moveDown(margin[1] - availableHeight)
-				 */
-			} else {
-				self.writer.context().moveDown(margin[1]);
-			}
-
-			// Apply lateral margins
+		if (margin) {
+			self.writer.context().moveDown(margin[1]);
 			self.writer.context().addMargin(margin[0], margin[2]);
 		}
 
 		callback();
 
-		// Detached nodes have no margins, their position is only determined by 'x' and 'y'
-		if (margin && !isDetachedBlock) {
-			const availableHeight = self.writer.context().availableHeight;
-			// If bottom margin is bigger than available space, move to next page
-			// Necessary for nodes inside tables
-			if (availableHeight - margin[3] < 0) {
-				self.writer.context().moveDown(availableHeight);
-				self.writer.moveToNextPage(node.pageOrientation);
-				/**
-				 * TODO - Something to consider:
-				 * Right now next node starts at the top of next page (after header)
-				 * Another option would be to apply the bottom margin that has not been consumed in the next page?
-				 * It would something like: this.write.context().moveDown(margin[3] - availableHeight)
-				 */
-			} else {
-				self.writer.context().moveDown(margin[3]);
-			}
-
-			// Apply lateral margins
+		if (margin) {
 			self.writer.context().addMargin(-margin[0], -margin[2]);
+			self.writer.context().moveDown(margin[3]);
 		}
 
 		if (node.pageBreak === 'after') {
 			self.writer.moveToNextPage(node.pageOrientation);
-		} else if (node.pageBreak === 'afterOdd') {
-			self.writer.moveToNextPage(node.pageOrientation);
-			if ((self.writer.context().page + 1) % 2 === 1) {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
-		} else if (node.pageBreak === 'afterEven') {
-			self.writer.moveToNextPage(node.pageOrientation);
-			if ((self.writer.context().page + 1) % 2 === 0) {
-				self.writer.moveToNextPage(node.pageOrientation);
-			}
 		}
 	}
 };
@@ -520,6 +610,26 @@ LayoutBuilder.prototype.processVerticalContainer = function (node) {
 
 		//TODO: paragraph gap
 	});
+};
+
+// layers
+LayoutBuilder.prototype.processLayers = function(node) {
+	var self = this;
+	var ctxX = self.writer.context().x;
+	var ctxY = self.writer.context().y;
+	var maxX = ctxX;
+	var maxY = ctxY;
+	node.layers.forEach(function(item, i) {
+	  self.writer.context().x = ctxX;
+	  self.writer.context().y = ctxY;
+	  self.processNode(item);
+	  item._verticalAlignIdx = self.verticalAlignItemStack.length - 1;
+	  addAll(node.positions, item.positions);
+	  maxX = self.writer.context().x > maxX ? self.writer.context().x : maxX;
+	  maxY = self.writer.context().y > maxY ? self.writer.context().y : maxY;
+	});
+	self.writer.context().x = maxX;
+	self.writer.context().y = maxY;
 };
 
 // columns
@@ -737,6 +847,7 @@ LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows
 	var pageBreaksByRowSpan = [];
 	var positions = [];
 	var willBreakByHeight = false;
+	var columnAlignIndexes = {};
 	widths = widths || cells;
 
 	// Check if row should break by height
@@ -793,6 +904,9 @@ LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows
 				self.processNode(cell);
 				self.writer.context().updateBottomByPage();
 				addAll(positions, cell.positions);
+				if (cell.verticalAlign && cell._verticalAlignIdx !== undefined) {
+					columnAlignIndexes[i] = cell._verticalAlignIdx;
+				}
 			} else if (cell._columnEndingContext) {
 				var discountY = 0;
 				if (dontBreakRows) {
@@ -843,6 +957,31 @@ LayoutBuilder.prototype.processRow = function ({ marginX = [0, 0], dontBreakRows
 	}
 
 	var bottomByPage = this.writer.context().completeColumnGroup(height, endingSpanCell);
+	var rowHeight = this.writer.context().height;
+	for (var colIndex = 0, columnsLength = cells.length; colIndex < columnsLength; colIndex++) {
+		var columnNode = cells[colIndex];
+		if (columnNode._span) {
+			continue;
+		}
+		if (columnNode.verticalAlign && columnAlignIndexes[colIndex] !== undefined) {
+			var alignEntry = self.verticalAlignItemStack[columnAlignIndexes[colIndex]];
+			if (alignEntry && alignEntry.begin && alignEntry.begin.item) {
+				alignEntry.begin.item.viewHeight = rowHeight;
+				alignEntry.begin.item.nodeHeight = columnNode._height;
+			}
+		}
+		if (columnNode.layers) {
+			columnNode.layers.forEach(function (layer) {
+				if (layer.verticalAlign && layer._verticalAlignIdx !== undefined) {
+					var layerEntry = self.verticalAlignItemStack[layer._verticalAlignIdx];
+					if (layerEntry && layerEntry.begin && layerEntry.begin.item) {
+						layerEntry.begin.item.viewHeight = rowHeight;
+						layerEntry.begin.item.nodeHeight = layer._height;
+					}
+				}
+			});
+		}
+	}
 
 	if (tableNode) {
 		tableNode._bottomByPage = bottomByPage;
@@ -1080,7 +1219,7 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 
 		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
 			var maxChars = findMaxFitLength(inline.text, line.getAvailableWidth(), function (txt) {
-				return textTools.widthOfString(txt, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures)
+				return textTools.widthOfString(txt, inline.font, inline.fontSize, inline.characterSpacing, inline.fontFeatures);
 			});
 			if (maxChars < inline.text.length) {
 				var newInline = cloneInline(inline);
@@ -1141,5 +1280,258 @@ LayoutBuilder.prototype.processQr = function (node) {
 	var position = this.writer.addQr(node);
 	node.positions.push(position);
 };
+
+function processNode_test(node) {
+	decorateNode(node);
+
+	var prevTop = testWriter.context().getCurrentPosition().top;
+
+	applyMargins(function () {
+		var unbreakable = node.unbreakable;
+		if (unbreakable) {
+			testWriter.beginUnbreakableBlock();
+		}
+
+		var absPosition = node.absolutePosition;
+		if (absPosition) {
+			testWriter.context().beginDetachedBlock();
+			testWriter.context().moveTo(absPosition.x || 0, absPosition.y || 0);
+		}
+
+		var relPosition = node.relativePosition;
+		if (relPosition) {
+			testWriter.context().beginDetachedBlock();
+			if (typeof testWriter.context().moveToRelative === 'function') {
+				testWriter.context().moveToRelative(relPosition.x || 0, relPosition.y || 0);
+			} else if (currentLayoutBuilder && currentLayoutBuilder.writer) {
+				testWriter.context().moveTo(
+					(relPosition.x || 0) + currentLayoutBuilder.writer.context().x,
+					(relPosition.y || 0) + currentLayoutBuilder.writer.context().y
+				);
+			}
+		}
+
+		var verticalAlignBegin;
+		if (node.verticalAlign) {
+			verticalAlignBegin = testWriter.beginVerticalAlign(node.verticalAlign);
+		}
+
+		if (node.stack) {
+			processVerticalContainer_test(node);
+		} else if (node.table) {
+			processTable_test(node);
+		} else if (node.text !== undefined) {
+			processLeaf_test(node);
+		}
+
+		if (absPosition || relPosition) {
+			testWriter.context().endDetachedBlock();
+		}
+
+		if (unbreakable) {
+			testResult = testWriter.commitUnbreakableBlock_test();
+		}
+
+		if (node.verticalAlign) {
+			testVerticalAlignStack.push({ begin: verticalAlignBegin, end: testWriter.endVerticalAlign(node.verticalAlign) });
+		}
+	});
+
+	node._height = testWriter.context().getCurrentPosition().top - prevTop;
+
+	function applyMargins(callback) {
+		var margin = node._margin;
+
+		if (node.pageBreak === 'before') {
+			testWriter.moveToNextPage(node.pageOrientation);
+		}
+
+		if (margin) {
+			testWriter.context().moveDown(margin[1]);
+			testWriter.context().addMargin(margin[0], margin[2]);
+		}
+
+		callback();
+
+		if (margin) {
+			testWriter.context().addMargin(-margin[0], -margin[2]);
+			testWriter.context().moveDown(margin[3]);
+		}
+
+		if (node.pageBreak === 'after') {
+			testWriter.moveToNextPage(node.pageOrientation);
+		}
+	}
+}
+
+function processVerticalContainer_test(node) {
+	node.stack.forEach(function (item) {
+		processNode_test(item);
+		addAll(node.positions, item.positions);
+	});
+}
+
+function processTable_test(tableNode) {
+	var processor = new TableProcessor(tableNode);
+	processor.beginTable(testWriter);
+
+	for (var i = 0, l = tableNode.table.body.length; i < l; i++) {
+		processor.beginRow(i, testWriter);
+		var result = processRow_test(tableNode.table.body[i], tableNode.table.widths, tableNode._offsets ? tableNode._offsets.offsets : null, tableNode.table.body, i);
+		addAll(tableNode.positions, result.positions);
+		processor.endRow(i, testWriter, result.pageBreaks);
+	}
+
+	processor.endTable(testWriter);
+}
+
+function processRow_test(columns, widths, gaps, tableBody, tableRow) {
+	var pageBreaks = [];
+	var positions = [];
+
+	testTracker.auto('pageChanged', storePageBreakData, function () {
+		widths = widths || columns;
+
+		testWriter.context().beginColumnGroup();
+
+		var verticalAlignCols = {};
+
+		for (var i = 0, l = columns.length; i < l; i++) {
+			var column = columns[i];
+			var width = widths[i]._calcWidth || widths[i];
+			var leftOffset = colLeftOffset(i);
+			var colIndex = i;
+			if (column.colSpan && column.colSpan > 1) {
+				for (var j = 1; j < column.colSpan; j++) {
+					width += (widths[++i]._calcWidth || widths[i]) + (gaps ? gaps[i] : 0);
+				}
+			}
+
+			testWriter.context().beginColumn(width, leftOffset, getEndingCell(column, i));
+
+			if (!column._span) {
+				processNode_test(column);
+				verticalAlignCols[colIndex] = testVerticalAlignStack.length - 1;
+				addAll(positions, column.positions);
+			} else if (column._columnEndingContext) {
+				testWriter.context().markEnding(column);
+			}
+		}
+
+		testWriter.context().completeColumnGroup();
+
+		var rowHeight = testWriter.context().height;
+		for (var c = 0, clen = columns.length; c < clen; c++) {
+			var col = columns[c];
+			if (col._span) {
+				continue;
+			}
+			if (col.verticalAlign && verticalAlignCols[c] !== undefined) {
+				var alignItem = testVerticalAlignStack[verticalAlignCols[c]].begin.item;
+				alignItem.viewHeight = rowHeight;
+				alignItem.nodeHeight = col._height;
+			}
+		}
+	});
+
+	return { pageBreaks: pageBreaks, positions: positions };
+
+	function storePageBreakData(data) {
+		var pageDesc;
+		for (var idx = 0, len = pageBreaks.length; idx < len; idx++) {
+			var desc = pageBreaks[idx];
+			if (desc.prevPage === data.prevPage) {
+				pageDesc = desc;
+				break;
+			}
+		}
+
+		if (!pageDesc) {
+			pageDesc = data;
+			pageBreaks.push(pageDesc);
+		}
+		pageDesc.prevY = Math.max(pageDesc.prevY, data.prevY);
+		pageDesc.y = Math.min(pageDesc.y, data.y);
+	}
+
+	function colLeftOffset(i) {
+		if (gaps && gaps.length > i) {
+			return gaps[i];
+		}
+		return 0;
+	}
+
+	function getEndingCell(column, columnIndex) {
+		if (column.rowSpan && column.rowSpan > 1) {
+			var endingRow = tableRow + column.rowSpan - 1;
+			if (endingRow >= tableBody.length) {
+				throw new Error('Row span for column ' + columnIndex + ' (with indexes starting from 0) exceeded row count');
+			}
+			return tableBody[endingRow][columnIndex];
+		}
+		return null;
+	}
+}
+
+function processLeaf_test(node) {
+	var line = buildNextLine_test(node);
+	var currentHeight = line ? line.getHeight() : 0;
+	var maxHeight = node.maxHeight || -1;
+
+	while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
+		var positions = testWriter.addLine(line);
+		node.positions.push(positions);
+		line = buildNextLine_test(node);
+		if (line) {
+			currentHeight += line.getHeight();
+		}
+	}
+}
+
+function buildNextLine_test(textNode) {
+	function cloneInline(inline) {
+		var newInline = inline.constructor();
+		for (var key in inline) {
+			newInline[key] = inline[key];
+		}
+		return newInline;
+	}
+
+	if (!textNode._inlines || textNode._inlines.length === 0) {
+		return null;
+	}
+
+	var line = new Line(testWriter.context().availableWidth);
+	var textTools = new TextTools(null);
+
+	while (textNode._inlines && textNode._inlines.length > 0 && line.hasEnoughSpaceForInline(textNode._inlines[0])) {
+		var inline = textNode._inlines.shift();
+
+		if (!inline.noWrap && inline.text.length > 1 && inline.width > line.maxWidth) {
+			var widthPerChar = inline.width / inline.text.length;
+			var maxChars = Math.floor(line.maxWidth / widthPerChar);
+			if (maxChars < 1) {
+				maxChars = 1;
+			}
+			if (maxChars < inline.text.length) {
+				var newInline = cloneInline(inline);
+
+				newInline.text = inline.text.substr(maxChars);
+				inline.text = inline.text.substr(0, maxChars);
+
+				newInline.width = textTools.widthOfString(newInline.text, newInline.font, newInline.fontSize, newInline.characterSpacing);
+				inline.width = textTools.widthOfString(inline.text, inline.font, inline.fontSize, inline.characterSpacing);
+
+				textNode._inlines.unshift(newInline);
+			}
+		}
+
+		line.addInline(inline);
+	}
+
+	line.lastLineInParagraph = textNode._inlines.length === 0;
+
+	return line;
+}
 
 module.exports = LayoutBuilder;

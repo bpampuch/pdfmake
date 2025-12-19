@@ -13,8 +13,8 @@ function DocPreprocessor() {
 
 DocPreprocessor.prototype.preprocessDocument = function (docStructure) {
 	this.parentNode = null;
-	this.tocs = [];
-	this.nodeReferences = [];
+	this.tocs = {};
+	this.nodeReferences = {};
 	return this.preprocessNode(docStructure);
 };
 
@@ -38,6 +38,8 @@ DocPreprocessor.prototype.preprocessNode = function (node) {
 		return this.preprocessColumns(node);
 	} else if (node.stack) {
 		return this.preprocessVerticalContainer(node);
+	} else if (node.layers) {
+		return this.preprocessLayers(node);
 	} else if (node.ul) {
 		return this.preprocessList(node);
 	} else if (node.ol) {
@@ -83,6 +85,16 @@ DocPreprocessor.prototype.preprocessVerticalContainer = function (node) {
 	return node;
 };
 
+DocPreprocessor.prototype.preprocessLayers = function (node) {
+	var items = node.layers;
+
+	for (var i = 0, l = items.length; i < l; i++) {
+		items[i] = this.preprocessNode(items[i]);
+	}
+
+	return node;
+};
+
 DocPreprocessor.prototype.preprocessList = function (node) {
 	var items = node.ul || node.ol;
 
@@ -95,6 +107,10 @@ DocPreprocessor.prototype.preprocessList = function (node) {
 
 DocPreprocessor.prototype.preprocessTable = function (node) {
 	var col, row, cols, rows;
+
+	if (!node.table.body || !node.table.body[0]) {
+		return node;
+	}
 
 	for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
 		for (row = 0, rows = node.table.body.length; row < rows; row++) {
@@ -115,12 +131,15 @@ DocPreprocessor.prototype.preprocessTable = function (node) {
 };
 
 DocPreprocessor.prototype.preprocessText = function (node) {
+	var i;
+	var l;
+
 	if (node.tocItem) {
 		if (!isArray(node.tocItem)) {
 			node.tocItem = [node.tocItem];
 		}
 
-		for (var i = 0, l = node.tocItem.length; i < l; i++) {
+		for (i = 0, l = node.tocItem.length; i < l; i++) {
 			if (!isString(node.tocItem[i])) {
 				node.tocItem[i] = '_default_';
 			}
@@ -175,7 +194,10 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 
 	if (node.textReference) {
 		if (!this.nodeReferences[node.textReference]) {
-			this.nodeReferences[node.textReference] = { _nodeRef: {}, _pseudo: true };
+			this.nodeReferences[node.textReference] = {
+				_nodeRef: {},
+				_pseudo: true
+			};
 		}
 
 		node.text = '';
@@ -192,7 +214,7 @@ DocPreprocessor.prototype.preprocessText = function (node) {
 			isSetParentNode = true;
 		}
 
-		for (var i = 0, l = node.text.length; i < l; i++) {
+		for (i = 0, l = node.text.length; i < l; i++) {
 			node.text[i] = this.preprocessNode(node.text[i]);
 		}
 
