@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Update Roboto font (version 3.013)
+- Update Roboto font (version 3.014)
 
 ## 0.2.20 - 2025-05-09
 
