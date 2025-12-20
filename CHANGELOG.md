@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added `wordBreak` property for `text` node, supported values: `'normal'` (default), `'break-all'`
 - Update Roboto font (version 3.014)
 - Fixed render empty list entries
 

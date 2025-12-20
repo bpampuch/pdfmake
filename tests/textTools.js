@@ -139,6 +139,7 @@ describe('TextTools', function () {
 			font: 'Helvetica'
 		});
 	var styleStackNoWrap = new StyleContextStack({}, { noWrap: true });
+	var styleStackWordBreakBreakAll = new StyleContextStack({}, { wordBreak: 'break-all' });
 
 	describe('splitWords', function () {
 		it('should do basic splitting', function () {
@@ -252,6 +253,11 @@ describe('TextTools', function () {
 			assert.equal(result[7].text, '2016');
 			assert.equal(result[8].text, 'true');
 			assert.equal(result[9].text, 'false');
+		});
+
+		it('should support wordBreak break-all', function () {
+			var result = TextTools.__get__('normalizeTextArray')(sampleText, styleStackWordBreakBreakAll);
+			assert.equal(result.length, 76);
 		});
 
 		it('should support keep noWrap from style', function () {
