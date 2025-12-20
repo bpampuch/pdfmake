@@ -20,8 +20,8 @@ const splitWords = (text, noWrap, breakAll = false) => {
 		words.push({ text: text });
 		return words;
 	}
-	if(breakAll) {
-		return text.split('').map(c => { 
+	if (breakAll) {
+		return text.split('').map(c => {
 			if(c.match(/^\n$|^\r$/)) { // new line
 				return { text: '', lineEnd: true };
 			}
@@ -160,7 +160,7 @@ class TextBreaker {
 				lastWord = getLastWord(words, noWrap);
 			}
 		}
-		
+
 		return results;
 	}
 }
