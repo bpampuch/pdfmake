@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added `wordBreak` property for `text` node, supported values: `'normal'` (default), `'break-all'`
 - Used fetch API for downloading fonts and images
 - Update Roboto font (version 3.014)
 - Fixed render empty list entries
