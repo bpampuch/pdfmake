@@ -120,11 +120,23 @@ TextTools.prototype.widthOfString = function (text, font, fontSize, characterSpa
 
 function splitWords(text, noWrap) {
 	var results = [];
+
+	if (text === undefined || text === null) {
+		text = '';
+	} else {
+		text = String(text);
+	}
+
 	text = text.replace(/\t/g, '    ');
 
 	if (noWrap) {
 		results.push({ text: text });
 		return results;
+	}
+
+	if (text.length === 0) {
+	 	results.push({ text: '' });
+	 	return results;
 	}
 
 	var breaker = new LineBreaker(text);

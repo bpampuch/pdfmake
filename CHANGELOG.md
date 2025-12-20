@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Update Roboto font (version 3.014)
+- Fixed render empty list entries
 
 ## 0.2.20 - 2025-05-09
 

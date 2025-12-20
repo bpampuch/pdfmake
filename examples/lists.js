@@ -395,6 +395,23 @@ var docDefinition = {
 				{ text: 'item 3', listType: 'circle' }
 			]
 		},
+		{ text: '\n\nOrdered list with an empty item:', style: 'header' },
+		{
+			ol: [
+				'First item',
+				'Second item',
+				'',
+				'Fourth item'
+			]
+		},
+		{ text: '\n\nUnordered list with an empty item:', style: 'header' },
+		{
+			ul: [
+				'First bullet',
+				'',
+				'Third bullet'
+			]
+		},
 	],
 	styles: {
 		header: {

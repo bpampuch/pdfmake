@@ -66,9 +66,17 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 			return false;
 		}
 
-		linearNodeList = linearNodeList.filter(function (node) {
-			return node.positions.length > 0;
-		});
+		const hasRenderableContent = node => {
+			if (!node || node.positions.length === 0) {
+				return false;
+			}
+			if (node.text === '' && !node.listMarker) {
+				return false;
+			}
+			return true;
+		};
+
+		linearNodeList = linearNodeList.filter(hasRenderableContent);
 
 		linearNodeList.forEach(function (node) {
 			var nodeInfo = {};

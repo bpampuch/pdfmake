@@ -241,13 +241,17 @@ describe('TextTools', function () {
 		it('should support cast to text', function () {
 			var node = docPreprocessor.preprocessNode(mixedTextArrayWithVariousTypes);
 			var result = TextTools.__get__('normalizeTextArray')(node.stack, styleStack);
-			assert.equal(result.length, 6);
-			assert.equal(result[0].text, '2016');
-			assert.equal(result[1].text, 'true');
-			assert.equal(result[2].text, 'false');
-			assert.equal(result[3].text, '2016');
-			assert.equal(result[4].text, 'true');
-			assert.equal(result[5].text, 'false');
+			assert.equal(result.length, 10);
+			assert.equal(result[0].text, '');
+			assert.equal(result[1].text, '');
+			assert.equal(result[2].text, '2016');
+			assert.equal(result[3].text, 'true');
+			assert.equal(result[4].text, 'false');
+			assert.equal(result[5].text, '');
+			assert.equal(result[6].text, '');
+			assert.equal(result[7].text, '2016');
+			assert.equal(result[8].text, 'true');
+			assert.equal(result[9].text, 'false');
 		});
 
 		it('should support keep noWrap from style', function () {
