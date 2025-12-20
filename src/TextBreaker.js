@@ -10,6 +10,11 @@ import StyleContextStack from './StyleContextStack';
  */
 const splitWords = (text, noWrap, breakAll = false) => {
 	let words = [];
+	if (text === undefined || text === null) {
+		text = '';
+	} else {
+		text = String(text);
+	}
 
 	if (noWrap) {
 		words.push({ text: text });
@@ -22,6 +27,11 @@ const splitWords = (text, noWrap, breakAll = false) => {
 			}
 			return { text: c };
 		});
+	}
+
+	if (text.length === 0) {
+		words.push({ text: '' });
+		return words;
 	}
 
 	let breaker = new LineBreaker(text);
