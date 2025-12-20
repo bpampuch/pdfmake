@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Used fetch API for downloading fonts and images
+- Fixed render empty list entries
 
 ## 0.3.0-beta.18 - 2025-05-09
 
