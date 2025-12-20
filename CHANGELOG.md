@@ -4,6 +4,7 @@
 
 - Used fetch API for downloading fonts and images
 - Update Roboto font (version 3.014)
+- Fixed render empty list entries
 
 ## 0.3.0-beta.18 - 2025-05-09
 
