@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-beta.19 - 2025-12-22
 
 - Minimal supported version Node.js 20 LTS
 - Added `wordBreak` property for `text` node, supported values: `'normal'` (default), `'break-all'`
