@@ -121,13 +121,14 @@
 
 				eval(editor.getSession().getValue());
 
-				pdfMake.createPdf(dd).getDataUrl(function(outDoc) {
+				pdfMake.createPdf(dd).getDataUrl().then((outDoc) => {
 					$scope.$apply(function() {
 						$scope.stats = 'generated in ' + (new Date().getTime() - lastGen.getTime()) + ' ms';
 					});
 
 					document.getElementById('pdfV').src = outDoc;
-
+				}, err => {
+					console.error(err);
 				});
 			}
 
