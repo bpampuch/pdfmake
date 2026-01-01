@@ -17,8 +17,6 @@ PDF document generation library for server-side and client-side in pure JavaScri
 
 Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) and [examples](https://github.com/bpampuch/pdfmake/tree/master/examples).
 
-#### This is unstable master branch for version 0.3.x, for stable use version 0.2.x see [branch 0.2](https://github.com/bpampuch/pdfmake/tree/0.2) or older version 0.1.x see [branch 0.1](https://github.com/bpampuch/pdfmake/tree/0.1).
-
 ### Features
 
 * line-wrapping,
