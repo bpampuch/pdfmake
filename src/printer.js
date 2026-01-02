@@ -15,6 +15,7 @@ var isNumber = require('./helpers').isNumber;
 var isBoolean = require('./helpers').isBoolean;
 var isArray = require('./helpers').isArray;
 var isUndefined = require('./helpers').isUndefined;
+var isObject = require('./helpers').isObject;
 var isPattern = require('./helpers').isPattern;
 var getPattern = require('./helpers').getPattern;
 var SVGtoPDF = require('./3rd-party/svg-to-pdfkit');
@@ -110,6 +111,14 @@ function PdfPrinter(fontDescriptors) {
  */
 PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	options = options || {};
+
+	if (!isObject(docDefinition)) {
+		throw new Error("Parameter 'docDefinition' has an invalid type. Object expected.");
+	}
+
+	if (!isObject(options)) {
+		throw new Error("Parameter 'options' has an invalid type. Object expected.");
+	}
 
 	docDefinition.version = docDefinition.version || '1.3';
 	docDefinition.subset = docDefinition.subset || undefined;

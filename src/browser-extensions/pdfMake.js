@@ -1,6 +1,7 @@
 'use strict';
 
 var isFunction = require('../helpers').isFunction;
+var isObject = require('../helpers').isObject;
 var isUndefined = require('../helpers').isUndefined;
 //var isNull = require('../helpers').isNull;
 var pack = require('../helpers').pack;
@@ -321,6 +322,10 @@ Document.prototype.getStream = function (options, cb) {
 
 module.exports = {
 	createPdf: function (docDefinition, tableLayouts, fonts, vfs) {
+		if (!isObject(docDefinition)) {
+			throw new Error("Parameter 'docDefinition' has an invalid type. Object expected.");
+		}
+
 		if (!canCreatePdf()) {
 			throw 'Your browser does not provide the level of support needed';
 		}

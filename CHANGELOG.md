@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added object type validation for parameters in method `createPdf` and `createPdfKitDocument`
+
 ## 0.2.21 - 2025-12-22
 
 - Added `wordBreak` property for `text` node, supported values: `'normal'` (default), `'break-all'`

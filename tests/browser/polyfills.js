@@ -12,7 +12,7 @@ describe('core-js polyfill', function () {
 		};
 
 		var pdf = pdfmake.createPdf(docDefinition);
-		pdf.getStream(() => {
+		pdf.getStream({}, () => {
 			// noop
 		});
 
