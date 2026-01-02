@@ -102,12 +102,11 @@ class PdfPrinter {
 
 		// if pageSize.height is set to Infinity, calculate the actual height of the page that
 		// was laid out using the height of each of the items in the page.
-		if (pageSize.height === Infinity) {
-			let pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
-			pages.forEach(page => {
-				page.pageSize.height = pageHeight;
-			});
-		}
+		pages.forEach(page => {
+			if (page.pageSize.height === Infinity) {
+				page.pageSize.height = calculatePageHeight(page, page.pageMargins);
+			}
+		});
 
 		const renderer = new Renderer(this.pdfKitDoc, options.progressCallback);
 		renderer.renderPages(pages);
@@ -265,7 +264,7 @@ function embedFiles(docDefinition, pdfKitDoc) {
 	}
 }
 
-function calculatePageHeight(pages, margins) {
+function calculatePageHeight(page, margins) {
 	function getItemHeight(item) {
 		if (typeof item.item.getHeight === 'function') {
 			return item.item.getHeight();
@@ -292,13 +291,11 @@ function calculatePageHeight(pages, margins) {
 	let fixedMargins = normalizePageMargin(margins || 40);
 	let height = fixedMargins.top;
 
-	pages.forEach(page => {
-		page.items.forEach(item => {
-			let bottomPosition = getBottomPosition(item);
-			if (bottomPosition > height) {
-				height = bottomPosition;
-			}
-		});
+	page.items.forEach(item => {
+		let bottomPosition = getBottomPosition(item);
+		if (bottomPosition > height) {
+			height = bottomPosition;
+		}
 	});
 
 	height += fixedMargins.bottom;
