@@ -1,6 +1,7 @@
 import Printer from './Printer';
 import virtualfs from './virtual-fs';
 import { pack } from './helpers/tools';
+import { isObject } from './helpers/variableType';
 
 class pdfmake {
 
@@ -15,6 +16,14 @@ class pdfmake {
 	 * @returns {object}
 	 */
 	createPdf(docDefinition, options = {}) {
+		if (!isObject(docDefinition)) {
+			throw new Error("Parameter 'docDefinition' has an invalid type. Object expected.");
+		}
+
+		if (!isObject(options)) {
+			throw new Error("Parameter 'options' has an invalid type. Object expected.");
+		}
+
 		options.progressCallback = this.progressCallback;
 		options.tableLayouts = this.tableLayouts;
 

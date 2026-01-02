@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added type validation for parameters in method `createPdf`
+
 ## 0.3.0 - 2026-01-01
 
 - Reverted to the original `pdfkit` package, moving away from `@foliojs-fork`
