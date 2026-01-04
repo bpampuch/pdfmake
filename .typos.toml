@@ -1,0 +1,13 @@
+[files]
+extend-exclude = [
+	".git/",
+	".idea/",
+	"build/",
+	"dev-playground/",
+	"examples/",
+	"src/3rd-party/"
+]
+ignore-hidden = false
+
+[default.extend-identifiers]
+pn = "pn"

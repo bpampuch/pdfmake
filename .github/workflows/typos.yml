@@ -1,0 +1,11 @@
+name: Spell check
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+    - uses: crate-ci/typos@v1
