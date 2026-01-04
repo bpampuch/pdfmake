@@ -4,6 +4,7 @@
 
 - Added auto page height for multiple pages (for `section` or after custom page break)
 - Added type validation for parameters in method `createPdf`
+- Fixed a bug in the write method where it did not wait for the file write operation to complete
 
 ## 0.3.0 - 2026-01-01
 

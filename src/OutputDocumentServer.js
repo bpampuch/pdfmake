@@ -9,11 +9,22 @@ class OutputDocumentServer extends OutputDocument {
 	 */
 	async write(filename) {
 		const stream = await this.getStream();
-		return new Promise((resolve) => {
-			stream.pipe(fs.createWriteStream(filename));
+		const writeStream = fs.createWriteStream(filename);
+
+		const streamEnded = new Promise((resolve, reject) => {
 			stream.on('end', resolve);
-			stream.end();
+			stream.on('error', reject);
 		});
+
+		const writeClosed = new Promise((resolve, reject) => {
+			writeStream.on('close', resolve);
+			writeStream.on('error', reject);
+		});
+
+		stream.pipe(writeStream);
+		stream.end();
+
+		await Promise.all([streamEnded, writeClosed]);
 	}
 
 }
