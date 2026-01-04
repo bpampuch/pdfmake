@@ -55,7 +55,7 @@ class StyleContextStack {
 	/**
 	 * Creates a set of named styles or/and a style-overrides-object based on the item,
 	 * pushes those elements onto the stack for future evaluation and returns the number
-	 * of elements pushed, so they can be easily poped then.
+	 * of elements pushed, so they can be easily popped then.
 	 *
 	 * @param {object} item - an object with optional style property and/or style overrides
 	 * @returns {number} the number of items pushed onto the stack

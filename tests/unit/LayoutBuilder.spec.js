@@ -660,7 +660,7 @@ describe('LayoutBuilder', function () {
 			assert.equal(pages[0].items[0].item.y + pages[0].items[0].item.getHeight(), pages[0].items[1].item.y);
 		});
 
-		it('stack of paragraphs should inherit styles and overriden properties from column descriptors', function () {
+		it('stack of paragraphs should inherit styles and overridden properties from column descriptors', function () {
 			var desc = [
 				{
 					style: 'header',
@@ -973,7 +973,7 @@ describe('LayoutBuilder', function () {
 			}
 		});
 
-		it('numbers in ordered sublist should have indepentend counters', function () {
+		it('numbers in ordered sublist should have independent counters', function () {
 			var desc = [
 				{
 					ol: [

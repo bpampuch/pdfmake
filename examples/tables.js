@@ -89,7 +89,7 @@ var docDefinition = {
 			table: {
 				widths: ['*', 'auto'],
 				body: [
-					['This is a star-sized column. The next column over, an auto-sized column, will wrap to accomodate all the text in this cell.', 'I am auto sized.'],
+					['This is a star-sized column. The next column over, an auto-sized column, will wrap to accommodate all the text in this cell.', 'I am auto sized.'],
 				]
 			}
 		},
@@ -98,7 +98,7 @@ var docDefinition = {
 			table: {
 				widths: ['*', 'auto'],
 				body: [
-					['This is a star-sized column. The next column over, an auto-sized column, will not wrap to accomodate all the text in this cell, because it has been given the noWrap style.', { text: 'I am auto sized.', noWrap: true }],
+					['This is a star-sized column. The next column over, an auto-sized column, will not wrap to accommodate all the text in this cell, because it has been given the noWrap style.', { text: 'I am auto sized.', noWrap: true }],
 				]
 			}
 		},

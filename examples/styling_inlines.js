@@ -28,7 +28,7 @@ var docDefinition = {
 			text: [
 				'We can also mix named-styles and style-overrides at both paragraph and inline level. ',
 				'For example, this paragraph uses the "bigger" style, which changes fontSize to 15 and sets italics to true. ',
-				'Texts are not italics though. It\'s because we\'ve overriden italics back to false at ',
+				'Texts are not italics though. It\'s because we\'ve overridden italics back to false at ',
 				'the paragraph level. \n\n',
 				'We can also change the style of a single inline. Let\'s use a named style called header: ',
 				{ text: 'like here.\n', style: 'header' },

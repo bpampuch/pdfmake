@@ -16,7 +16,7 @@
 - All methods return promise instead of using callback **(breaking change)**
 - Change including virtual font storage in client-side **(breaking change)**
 - Change parameters of `pageBreakBefore` function **(breaking change)**
-- Support for loading font files and images via URL adresses (https:// or http:// protocol) in Node.js (client and server side now)
+- Support for loading font files and images via URL addresses (https:// or http:// protocol) in Node.js (client and server side now)
 - Used fetch API for downloading fonts and images
 - Attachments embedding
 - Added `section` node

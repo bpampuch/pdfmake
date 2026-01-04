@@ -3,11 +3,19 @@ extend-exclude = [
 	".git/",
 	".idea/",
 	"build/",
-	"dev-playground/",
-	"examples/",
+	"dev-playground/public/ace.js",
+	"dev-playground/public/mode-javascript.js",
+	"dev-playground/public/theme-monokai.js",
+	"dev-playground/public/worker-javascript.js",
 	"src/3rd-party/"
 ]
 ignore-hidden = false
 
-[default.extend-identifiers]
-pn = "pn"
+[default]
+extend-ignore-re = [
+	"Lorem ipsum.*",
+	"Mont-sur-Monnet",
+	"Leafs",
+	"leafs",
+	"pn"
+]

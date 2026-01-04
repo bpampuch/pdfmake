@@ -15,7 +15,7 @@ const stripUnits = textVal => {
 };
 
 /**
- * Make sure it's valid XML and the root tage is <svg/>, returns xmldoc DOM
+ * Make sure it's valid XML and the root tag is <svg/>, returns xmldoc DOM
  *
  * @param {string} svgString
  * @returns {object}

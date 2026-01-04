@@ -61,9 +61,9 @@ class TextInlines {
 		let flattenedTextArray = flattenTextArray(textArray);
 
 		const textBreaker = new TextBreaker();
-		let breakedText = textBreaker.getBreaks(flattenedTextArray, styleContextStack);
+		let brokenText = textBreaker.getBreaks(flattenedTextArray, styleContextStack);
 
-		let measuredText = this.measure(breakedText, styleContextStack);
+		let measuredText = this.measure(brokenText, styleContextStack);
 
 		measuredText.forEach(inline => {
 			minWidth = Math.max(minWidth, getTrimmedWidth(inline));

@@ -41,4 +41,4 @@ const vfsFileContent = vfsBefore + JSON.stringify(vfs, null, 2) + vfsAfter;
 fs.writeFileSync(vfsFilename, vfsFileContent);
 
 console.log('');
-console.log('Builded ' + files.length + ' files to ' + vfsFilename + '.');
+console.log('Built ' + files.length + ' files to ' + vfsFilename + '.');

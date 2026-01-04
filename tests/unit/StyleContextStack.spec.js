@@ -79,14 +79,14 @@ describe('StyleContextStack', function () {
 			assert.equal(stackWithDefaultStyle.getProperty('fontSize'), 12);
 		});
 
-		it('should return overriden property value from style overrides', function () {
+		it('should return overridden property value from style overrides', function () {
 			stackWithDefaultStyle.push({ fontSize: 50 });
 			assert.equal(stackWithDefaultStyle.getProperty('fontSize'), 50);
 			stackWithDefaultStyle.pop();
 			assert.equal(stackWithDefaultStyle.getProperty('fontSize'), 12);
 		});
 
-		it('should return latest overriden property value from style overrides if multiple style overrides have been provided', function () {
+		it('should return latest overridden property value from style overrides if multiple style overrides have been provided', function () {
 			stackWithDefaultStyle.push({ fontSize: 50 });
 			stackWithDefaultStyle.push({ fontSize: 150 });
 			assert.equal(stackWithDefaultStyle.getProperty('fontSize'), 150);
@@ -109,11 +109,11 @@ describe('StyleContextStack', function () {
 			fullStack.push('header');
 			assert.equal(fullStack.getProperty('fontSize'), 150);
 
-			// overriden value
+			// overridden value
 			fullStack.push({ fontSize: 50 });
 			assert.equal(fullStack.getProperty('fontSize'), 50);
 
-			// overriden second type with a named style
+			// overridden second type with a named style
 			fullStack.push('small');
 			assert.equal(fullStack.getProperty('fontSize'), 8);
 

@@ -7,7 +7,7 @@ pdfmake.addFonts(Roboto);
 
 var ct = [];
 
-ct.push({ text: 'Higlighted text', fontSize: 18, background: 'yellow' });
+ct.push({ text: 'Highlighted text', fontSize: 18, background: 'yellow' });
 ct.push(' ');
 ct.push({
 	columns: [

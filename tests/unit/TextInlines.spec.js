@@ -154,7 +154,7 @@ describe('TextInlines', function () {
 				assert.equal(result.items[0].width, 4 * 15);
 			});
 
-			it('should use overriden styles from styleStack', function () {
+			it('should use overridden styles from styleStack', function () {
 				styleStack.push('header');
 				var result = textInlines.buildInlines('Imię', styleStack);
 				assert.equal(result.items[0].width, 4 * 150);
