@@ -1,6 +1,6 @@
 import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
-import { isNumber } from './helpers/variableType';
+import { isNumber, isString } from './helpers/variableType';
 import SVGtoPDF from './3rd-party/svg-to-pdfkit';
 
 const findFont = (fonts, requiredFonts, defaultFont) => {
@@ -329,7 +329,13 @@ class Renderer {
 	}
 
 	renderSVG(svg) {
-		let options = Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options);
+		let options = {
+			width: svg._width,
+			height: svg._height,
+			assumePt: true,
+			...svg.options,
+			useCSS: !isString(svg.svg)
+		};
 		options.fontCallback = (family, bold, italic) => {
 			let fontsFamily = family.split(',').map(f => f.trim().replace(/('|")/g, ''));
 			let font = findFont(this.pdfDocument.fonts, fontsFamily, svg.font || 'Roboto');
