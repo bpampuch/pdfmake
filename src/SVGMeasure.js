@@ -1,4 +1,4 @@
-import xmldoc from 'xmldoc';
+import { XmlDocument } from "xmldoc";
 
 /**
  * Strip unit postfix, parse number, but return undefined instead of NaN for bad input
@@ -24,7 +24,7 @@ const parseSVG = (svgString) => {
 	let doc;
 
 	try {
-		doc = new xmldoc.XmlDocument(svgString);
+		doc = new XmlDocument(svgString);
 	} catch (err) {
 		throw new Error('SVGMeasure: ' + err);
 	}
