@@ -12,6 +12,13 @@ var inputBasic =
 	'    <rect width="105" height="222" fill="none" stroke="black"/>\n' +
 	'</svg>\n';
 
+var inputWithoutViewBox =
+	'<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n' +
+	'<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n' +
+	'<svg width="105pt" height="222pt" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n' +
+	'    <rect width="105" height="222" fill="none" stroke="black"/>\n' +
+	'</svg>\n';
+
 var inputWithNewline =
 	'<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n' +
 	'<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n' +
@@ -109,6 +116,12 @@ describe('SVGMeasure', function () {
 
 			assert.equal(updatedDimensions.width, 1984);
 			assert.equal(updatedDimensions.height, 2001);
+		});
+
+		it('add viewBox svg property', function () {
+			var updatedSVGString = svgMeasure.writeDimensions(inputWithoutViewBox, replacementDimensions);
+
+			assert.ok(updatedSVGString.includes('viewBox="0 0 105 222"'));
 		});
 	});
 });

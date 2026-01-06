@@ -6,6 +6,7 @@
 - Added type validation for parameters in method `createPdf`
 - Fixed a bug in the write method where it did not wait for the file write operation to complete
 - Fixed SVG loading
+- Fixed rendering SVG without viewBox
 
 ## 0.3.0 - 2026-01-01
 

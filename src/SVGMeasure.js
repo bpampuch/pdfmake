@@ -68,6 +68,10 @@ class SVGMeasure {
 
 	writeDimensions(svgString, dimensions) {
 		let doc = parseSVG(svgString);
+		
+		if (typeof doc.attr.viewBox !== 'string') {
+			doc.attr.viewBox = `0 0 ${stripUnits(doc.attr.width)} ${stripUnits(doc.attr.height)}`;
+		}
 
 		doc.attr.width = "" + dimensions.width;
 		doc.attr.height = "" + dimensions.height;
