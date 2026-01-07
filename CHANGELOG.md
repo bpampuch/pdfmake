@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed non-working `open()` and `print()` methods in browser
+
 ## 0.3.1 - 2026-01-07
 
 - Added auto page height for multiple pages (for `section` or after custom page break)

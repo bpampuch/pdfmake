@@ -60,8 +60,9 @@ class OutputDocumentBrowser extends OutputDocument {
 				}, 500);
 			}
 			*/
-		} finally {
+		} catch (e) {
 			win.close();
+			throw e;
 		}
 	}
 
