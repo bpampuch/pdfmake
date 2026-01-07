@@ -8,6 +8,7 @@ build/fonts/
 package-lock.json
 yarn.lock
 .editorconfig
+.typos.toml
 eslint.config.mjs
 build-fonts.js
 build-examples.js
