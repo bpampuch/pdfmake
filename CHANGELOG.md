@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Added object type validation for parameters in method `createPdf` and `createPdfKitDocument`
+- Added support `SVGElement` object for `svg` node (`SVGElement` object is available only in browser)
 - Fixed rendering SVG without viewBox
 
 ## 0.2.21 - 2025-12-22

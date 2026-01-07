@@ -686,7 +686,7 @@ function renderImage(image, x, y, pdfKitDoc) {
 }
 
 function renderSVG(svg, x, y, pdfKitDoc, fontProvider) {
-	var options = Object.assign({ width: svg._width, height: svg._height, assumePt: true }, svg.options);
+	var options = Object.assign({ width: svg._width, height: svg._height, assumePt: true, useCSS: !isString(svg.svg) }, svg.options);
 	options.fontCallback = function (family, bold, italic) {
 		var fontsFamily = family.split(',').map(function (f) { return f.trim().replace(/('|")/g, ''); });
 		var font = findFont(fontProvider.fonts, fontsFamily, svg.font || 'Roboto');
