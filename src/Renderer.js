@@ -333,8 +333,8 @@ class Renderer {
 			width: svg._width,
 			height: svg._height,
 			assumePt: true,
-			...svg.options,
-			useCSS: !isString(svg.svg)
+			useCSS: !isString(svg.svg),
+			...svg.options
 		};
 		options.fontCallback = (family, bold, italic) => {
 			let fontsFamily = family.split(',').map(f => f.trim().replace(/('|")/g, ''));
