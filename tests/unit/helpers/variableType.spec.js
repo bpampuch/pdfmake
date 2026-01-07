@@ -45,6 +45,10 @@ const variableCheckMap = [
 		type: [isNumber, isValue]
 	},
 	{
+		value: NaN,
+		type: [isValue]
+	},
+	{
 		value: true,
 		type: [isValue]
 	},
