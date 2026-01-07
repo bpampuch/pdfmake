@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.22 - 2026-01-07
 
 - Added object type validation for parameters in method `createPdf` and `createPdfKitDocument`
 - Added support `SVGElement` object for `svg` node (`SVGElement` object is available only in browser)
