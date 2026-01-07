@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 - 2026-01-07
 
 - Added auto page height for multiple pages (for `section` or after custom page break)
 - Added type validation for parameters in method `createPdf`
