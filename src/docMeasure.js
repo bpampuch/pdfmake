@@ -215,6 +215,15 @@ DocMeasure.prototype.measureSVG = function (node) {
 
 	node.font = this.styleStack.getProperty('font');
 
+	// SVG requires a defined width and height
+	if (!isNumber(node._width) && !isNumber(node._height)) {
+		throw new Error('SVG is missing defined width and height.');
+	} else if (!isNumber(node._width)) {
+		throw new Error('SVG is missing defined width.');
+	} else if (!isNumber(node._height)) {
+		throw new Error('SVG is missing defined height.');
+	}
+
 	// scale SVG based on final dimension
 	node.svg = this.svgMeasure.writeDimensions(node.svg, {
 		width: node._width,

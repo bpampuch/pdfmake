@@ -5,7 +5,7 @@ function isString(variable) {
 }
 
 function isNumber(variable) {
-	return typeof variable === 'number' || variable instanceof Number;
+	return ((typeof variable === 'number') || (variable instanceof Number)) && !Number.isNaN(variable);
 }
 
 function isBoolean(variable) {

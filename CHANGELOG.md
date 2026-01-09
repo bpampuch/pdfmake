@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added SVG validation: width and height must be specified (in SVG string/element or `svg` node)
+
 ## 0.2.22 - 2026-01-07
 
 - Added object type validation for parameters in method `createPdf` and `createPdfKitDocument`
