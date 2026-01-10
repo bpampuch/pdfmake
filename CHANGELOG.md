@@ -4,6 +4,7 @@
 
 - Fixed non-working `open()` and `print()` methods in browser
 - Added SVG validation: width and height must be specified (in SVG string/element or `svg` node)
+- Added support for image scaling with only `height` defined.
 
 ## 0.3.1 - 2026-01-07
 
