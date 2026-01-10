@@ -168,8 +168,10 @@ DocMeasure.prototype.measureImageWithDimensions = function (node, dimensions) {
 		node._width = node._minWidth = node._maxWidth = node.cover.width;
 		node._height = node._minHeight = node._maxHeight = node.cover.height;
 	} else {
-		node._width = node._minWidth = node._maxWidth = node.width || dimensions.width;
-		node._height = node.height || (dimensions.height * node._width / dimensions.width);
+		var ratio = dimensions.width / dimensions.height;
+
+		node._width = node._minWidth = node._maxWidth = node.width || (node.height ? (node.height * ratio) : dimensions.width);
+		node._height = node.height || (node.width ? node.width / ratio : dimensions.height);
 
 		if (isNumber(node.maxWidth) && node.maxWidth < node._width) {
 			node._width = node._minWidth = node._maxWidth = node.maxWidth;
