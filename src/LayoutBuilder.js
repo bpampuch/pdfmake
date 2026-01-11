@@ -1112,6 +1112,10 @@ class LayoutBuilder {
 	}
 
 	processToc(node) {
+		if (!node.toc._table && node.toc.hideEmpty === true) {
+			return;
+		}
+
 		if (node.toc.title) {
 			this.processNode(node.toc.title);
 		}

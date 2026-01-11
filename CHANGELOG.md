@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added property `hideEmpty` for ToC
+
 ## 0.3.2 - 2026-01-11
 
 - Fixed non-working `open()` and `print()` methods in browser
