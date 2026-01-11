@@ -395,4 +395,6 @@ function widthOfString(text, font, fontSize, characterSpacing, fontFeatures) {
 	return font.widthOfString(text, fontSize, fontFeatures) + ((characterSpacing || 0) * (text.length - 1));
 }
 
+TextTools.getStyleProperty = getStyleProperty;
+
 module.exports = TextTools;

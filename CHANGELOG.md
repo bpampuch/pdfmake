@@ -4,6 +4,7 @@
 
 - Added SVG validation: width and height must be specified (in SVG string/element or `svg` node)
 - Added support for image scaling with only `height` defined
+- Added custom `markerColor` for each item of `ul` and `ol`
 
 ## 0.2.22 - 2026-01-07
 
