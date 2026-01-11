@@ -273,7 +273,7 @@ var docDefinition = {
 			ul: [
 				'item 1',
 				'item 2',
-				'item 3'
+				{ text: 'item 3 with custom marker color', markerColor: 'lime' }
 			]
 		},
 		{ text: '\n\nColored ordered list', style: 'header' },
@@ -292,7 +292,7 @@ var docDefinition = {
 			ol: [
 				'item 1',
 				'item 2',
-				'item 3'
+				{ text: 'item 3 with custom marker color', markerColor: 'lime' }
 			]
 		},
 		{ text: '\n\nOrdered list - type: lower-alpha', style: 'header' },
