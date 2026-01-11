@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.2 - 2026-01-11
 
 - Fixed non-working `open()` and `print()` methods in browser
 - Added SVG validation: width and height must be specified (in SVG string/element or `svg` node)
