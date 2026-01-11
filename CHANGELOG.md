@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.23 - 2026-01-11
 
 - Added SVG validation: width and height must be specified (in SVG string/element or `svg` node)
 - Added support for image scaling with only `height` defined
