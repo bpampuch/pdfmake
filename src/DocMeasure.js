@@ -201,6 +201,13 @@ class DocMeasure {
 			let textStyle = node.toc.textStyle || {};
 			let numberStyle = node.toc.numberStyle || textStyle;
 			let textMargin = node.toc.textMargin || [0, 0, 0, 0];
+
+			if (node.toc.sortBy === 'title') {
+				node.toc._items.sort((a, b) => {
+					return a._textNodeRef.text.localeCompare(b._textNodeRef.text, node.toc.sortLocale);
+				});
+			}
+
 			for (let i = 0, l = node.toc._items.length; i < l; i++) {
 				let item = node.toc._items[i];
 				let lineStyle = item._textNodeRef.tocStyle || textStyle;

@@ -16,7 +16,9 @@ var docDefinition = {
 				title: { text: 'INDEX', style: 'header' },
 				//textMargin: [0, 0, 0, 0],
 				//textStyle: {italics: true},
-				numberStyle: { bold: true }
+				numberStyle: { bold: true },
+				sortBy: 'page', // 'page' (default) or 'title'
+				//sortLocale: 'cs', // custom locale to sort
 			}
 		},
 		{

@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-- Added property `hideEmpty` for ToC
+- Added properties for ToC:
+	- `hideEmpty` - set to `true` if you can hide an empty ToC
+	- `sortBy` -  `'page'` (default) or `'title'`
+	- `sortLocale` - custom locale to sort by property `sortBy`
 
 ## 0.3.2 - 2026-01-11
 
