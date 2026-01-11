@@ -484,6 +484,86 @@ describe('DocMeasure', function () {
 			assert.deepEqual(result._margin, [123, 3, 5, 6]);
 		});
 
+		it('should apply marginLeft: 10, margin: 20', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, { }, {});
+			var node = { text: 'test', marginLeft: 10, margin: 20 };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [20, 20, 20, 20]);
+		});
+
+		it('should apply marginLeft: 10, margin: 0', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, { }, {});
+			var node = { text: 'test', marginLeft: 10, margin: 0 };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [0, 0, 0, 0]);
+		});
+
+		it('should apply margin: 20 from style - overridden with margin: 10', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, { margin: { margin: 20 } }, {});
+			var node = { text: 'test', style: 'margin', margin: 10 };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [10, 10, 10, 10]);
+		});
+
+		it('should apply margin: 20 from style - marginLeft: 10, margin: 0', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, { margin: { margin: 20 } }, {});
+			var node = { text: 'test', style: 'margin', margin: 0 };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [0, 0, 0, 0]);
+		});
+
+		it('should apply margin: 20 from style - overridden with marginLeft: 10', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, { margin: { margin: 20 } }, {});
+			var node = { text: 'test', style: 'margin', marginLeft: 10 };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [10, 20, 20, 20]);
+		});
+
+		it('should apply margin: 20 from style - overridden with marginLeft: 0', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, { margin: { margin: 20 } }, {});
+			var node = { text: 'test', style: 'margin', marginLeft: 0 };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [0, 20, 20, 20]);
+		});
+
+		it('should apply marginLeft: 20 from style - overridden with 10', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, { marginLeft: { marginLeft: 20 } }, {});
+			var node = { text: 'test', style: 'marginLeft', marginLeft: 10 };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [10, 0, 0, 0]);
+		});
+
+		it('should apply marginLeft: 20 from style - overridden with 0', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, { marginLeft: { marginLeft: 20 } }, {});
+			var node = { text: 'test', style: 'marginLeft', marginLeft: 0 };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [0, 0, 0, 0]);
+		});
+
+		it('should apply marginLeft: 20 from style - overridden with margin: 10', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, { marginLeft: { marginLeft: 20 } }, {});
+			var node = { text: 'test', style: 'marginLeft', margin: 10 };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [10, 10, 10, 10]);
+		});
+
+		it('should apply marginLeft: 20 from style - overridden with margin: 0', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, { marginLeft: { marginLeft: 20 } }, {});
+			var node = { text: 'test', style: 'marginLeft', margin: 0 };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [0, 0, 0, 0]);
+		});
+
 		it('should apply sublevel styles not to parent', function () {
 			docMeasure = new DocMeasure(sampleTestProvider, { 'topLevel': { margin: [123, 3, 5, 6] }, 'subLevel': { margin: 5 } }, {});
 			var node = { ul: ['one', 'two', { text: 'three', style: 'subLevel' }], style: 'topLevel' };

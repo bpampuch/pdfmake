@@ -45,12 +45,12 @@ export function getNodeId(node) {
  */
 export function getNodeMargin(node, styleStack) {
 	function processSingleMargins(node, currentMargin) {
-		if (node.marginLeft || node.marginTop || node.marginRight || node.marginBottom) {
+		if (node.marginLeft !== undefined || node.marginTop !== undefined || node.marginRight !== undefined || node.marginBottom !== undefined) {
 			return [
-				node.marginLeft || currentMargin[0] || 0,
-				node.marginTop || currentMargin[1] || 0,
-				node.marginRight || currentMargin[2] || 0,
-				node.marginBottom || currentMargin[3] || 0
+				node.marginLeft ?? currentMargin[0] ?? 0,
+				node.marginTop ?? currentMargin[1] ?? 0,
+				node.marginRight ?? currentMargin[2] ?? 0,
+				node.marginBottom ?? currentMargin[3] ?? 0
 			];
 		}
 		return currentMargin;
@@ -98,7 +98,7 @@ export function getNodeMargin(node, styleStack) {
 
 	margin = processSingleMargins(node, margin);
 
-	if (node.margin) {
+	if (node.margin !== undefined) {
 		margin = convertMargin(node.margin);
 	}
 
