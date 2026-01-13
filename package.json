@@ -51,7 +51,7 @@
   },
   "scripts": {
     "test": "run-s build mocha lint",
-    "build": "run-s build:clean build:3rdparty build:node build:browser build:standard-fonts build:fonts build:vfs",
+    "build": "run-s build:clean build:node build:browser build:standard-fonts build:fonts build:vfs",
     "build:clean": "shx rm -rf js build",
     "build:3rdparty": "shx cp node_modules/svg-to-pdfkit/source.js src/3rd-party/svg-to-pdfkit/source.js && shx cp node_modules/svg-to-pdfkit/LICENSE src/3rd-party/svg-to-pdfkit/LICENSE && git apply src/3rd-party/svg-to-pdfkit/0001-fix-contains.patch",
     "build:node": "babel src --out-dir js",
