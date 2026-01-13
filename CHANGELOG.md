@@ -7,6 +7,7 @@
 	- `sortBy` -  `'page'` (default) or `'title'`
 	- `sortLocale` - custom locale to sort by property `sortBy`
 - Fixed margin override with 0 value
+- Fixed svg-to-pdfkit - TypeError: t.classList.contains is not a function
 
 ## 0.3.2 - 2026-01-11
 
@@ -14,7 +15,6 @@
 - Added SVG validation: width and height must be specified (in SVG string/element or `svg` node)
 - Added support for image scaling with only `height` defined
 - Added custom `markerColor` for each item of `ul` and `ol`
-- Fixed svg-to-pdfkit - TypeError: t.classList.contains is not a function
 
 ## 0.3.1 - 2026-01-07
 
