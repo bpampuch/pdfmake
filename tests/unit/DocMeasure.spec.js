@@ -564,6 +564,14 @@ describe('DocMeasure', function () {
 			assert.deepEqual(result._margin, [0, 0, 0, 0]);
 		});
 
+		it('should apply margin override from multiple styles', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, { quote: { margin: [20, 0, 20, 0] }, small: { margin: [0, 0, 0, 5] } }, {});
+			var node = {text: 'test', style: ['quote', 'small']};
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [0, 0, 0, 5]);
+		});
+
 		it('should apply sublevel styles not to parent', function () {
 			docMeasure = new DocMeasure(sampleTestProvider, { 'topLevel': { margin: [123, 3, 5, 6] }, 'subLevel': { margin: 5 } }, {});
 			var node = { ul: ['one', 'two', { text: 'three', style: 'subLevel' }], style: 'topLevel' };

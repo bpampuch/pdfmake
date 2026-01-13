@@ -7,6 +7,7 @@
 	- `sortBy` -  `'page'` (default) or `'title'`
 	- `sortLocale` - custom locale to sort by property `sortBy`
 - Fixed margin override with 0 value
+- Fixed margin override from multiple styles
 - Fixed svg-to-pdfkit - TypeError: t.classList.contains is not a function
 
 ## 0.3.2 - 2026-01-11

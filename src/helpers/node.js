@@ -62,7 +62,7 @@ export function getNodeMargin(node, styleStack) {
 			let styleName = styleArray[i];
 			let style = styleStack.styleDictionary[styleName];
 			for (let key in style) {
-				if (style.hasOwnProperty(key)) {
+				if (style.hasOwnProperty(key) && !flattenedStyles.hasOwnProperty(key)) {
 					flattenedStyles[key] = style[key];
 				}
 			}
