@@ -731,7 +731,7 @@ var SVGtoPDF = function(doc, svg, x, y, options) {
         if (selector.ids[i] !== elem.id) {return false;}
       }
       for (let i = 0; i < selector.classes.length; i++) {
-        if (!elem.classList.contains(selector.classes[i])) {return false;}
+        if (elem.classList.indexOf(selector.classes[i]) === -1) {return false;}
       }
       return true;
     }

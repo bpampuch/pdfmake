@@ -14,3 +14,4 @@ build-fonts.js
 build-examples.js
 babel.config.json
 webpack.config.js
+src/3rd-party/svg-to-pdfkit/*.patch
