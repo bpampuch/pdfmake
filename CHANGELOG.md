@@ -6,6 +6,7 @@
 	- `hideEmpty` - set to `true` if you can hide an empty ToC
 	- `sortBy` -  `'page'` (default) or `'title'`
 	- `sortLocale` - custom locale to sort by property `sortBy`
+- Added property `decorationThickness` for `text` to set width of the decoration line
 - Fixed margin override with 0 value
 - Fixed margin override from multiple styles
 - Fixed svg-to-pdfkit - TypeError: t.classList.contains is not a function

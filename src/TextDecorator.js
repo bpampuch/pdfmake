@@ -1,3 +1,5 @@
+import { isNumber } from './helpers/variableType';
+
 const groupDecorations = line => {
 	let groups = [];
 	let currentGroup = null;
@@ -13,6 +15,7 @@ const groupDecorations = line => {
 		}
 		let color = inline.decorationColor || inline.color || 'black';
 		let style = inline.decorationStyle || 'solid';
+		let thickness = isNumber(inline.decorationThickness) ? inline.decorationThickness : null;
 		for (let ii = 0, ll = decoration.length; ii < ll; ii++) {
 			let decorationItem = decoration[ii];
 			if (!currentGroup || decorationItem !== currentGroup.decoration ||
@@ -23,6 +26,7 @@ const groupDecorations = line => {
 					decoration: decorationItem,
 					decorationColor: color,
 					decorationStyle: style,
+					decorationThickness: thickness,
 					inlines: [inline]
 				};
 				groups.push(currentGroup);
@@ -96,7 +100,9 @@ class TextDecorator {
 		let height = biggerInline.height;
 		let descent = height - ascent;
 
-		let lw = 0.5 + Math.floor(Math.max(biggerInline.fontSize - 8, 0) / 2) * 0.12;
+		let lw = isNumber(group.decorationThickness)
+			? group.decorationThickness
+			: 0.5 + Math.floor(Math.max(biggerInline.fontSize - 8, 0) / 2) * 0.12;
 
 		switch (group.decoration) {
 			case 'underline':
@@ -114,7 +120,7 @@ class TextDecorator {
 		this.pdfDocument.save();
 
 		if (group.decorationStyle === 'double') {
-			let gap = Math.max(0.5, lw * 2);
+			let gap = Math.max(0.5, lw, biggerInline.fontSize * 0.15);
 			this.pdfDocument.fillColor(group.decorationColor)
 				.rect(x + firstInline.x, y - lw / 2, totalWidth, lw / 2).fill()
 				.rect(x + firstInline.x, y + gap - lw / 2, totalWidth, lw / 2).fill();
@@ -141,7 +147,7 @@ class TextDecorator {
 			let nbWaves = Math.ceil(totalWidth / (sh * 2)) + 1;
 			let rwx = x + firstInline.x - 1;
 			this.pdfDocument.rect(x + firstInline.x, y - sv, totalWidth, y + sv).clip();
-			this.pdfDocument.lineWidth(0.24);
+			this.pdfDocument.lineWidth(lw / 3);
 			this.pdfDocument.moveTo(rwx, y);
 			for (let i = 0; i < nbWaves; i++) {
 				this.pdfDocument.bezierCurveTo(rwx + sh, y - sv, rwx + sh * 2, y - sv, rwx + sh * 3, y)
