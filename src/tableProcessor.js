@@ -5,6 +5,8 @@ var isFunction = require('./helpers').isFunction;
 var isNumber = require('./helpers').isNumber;
 var isPositiveInteger = require('./helpers').isPositiveInteger;
 
+var TABLE_FILL_CORRECTION = 0.5;
+
 function TableProcessor(tableNode) {
 	this.tableNode = tableNode;
 }
@@ -439,6 +441,15 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 			this.drawHorizontalLine(rowIndex, writer, y1);
 		}
 
+		var lastIndex = -1;
+
+		// l = xs.length - 1 to avoid considering last table in existing element
+		for (i = 0, l = xs.length - 1; i < l; i++) {
+			if (xs[i].index > lastIndex) {
+				lastIndex = xs[i].index;
+			}
+		}
+
 		for (i = 0, l = xs.length; i < l; i++) {
 			var leftCellBorder = false;
 			var rightCellBorder = false;
@@ -493,13 +504,21 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 					var y1f = this.dontBreakRows ? y1 : y1 - (hzLineOffset / 2);
 					var x2f = xs[i + 1].x + widthRightBorder;
 					var y2f = this.dontBreakRows ? y2 + this.bottomLineWidth : y2 + (this.bottomLineWidth / 2);
-					var bgWidth = x2f - x1f;
-					var bgHeight = y2f - y1f;
+
+					// If the current cell is the first and last cell, don't add any correction
+					// But if this is the last cell or the first cell, just add left or right correction
+					// Else, add left and right corrections
+					var wCorrection = (lastIndex === 0 ? 0 : colIndex === lastIndex || colIndex === 0 ? TABLE_FILL_CORRECTION : 2 * TABLE_FILL_CORRECTION);
+
+					var startX = x1f - (colIndex === 0 ? 0 : TABLE_FILL_CORRECTION);
+					var startY = y1f - TABLE_FILL_CORRECTION;
+					var bgWidth = x2f - x1f + wCorrection;
+					var bgHeight = y2f - y1f + 2 * TABLE_FILL_CORRECTION;
 					if (fillColor) {
 						writer.addVector({
 							type: 'rect',
-							x: x1f,
-							y: y1f,
+							x: startX,
+							y: startY,
 							w: bgWidth,
 							h: bgHeight,
 							lineWidth: 0,
@@ -513,8 +532,8 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 					if (overlayPattern) {
 						writer.addVector({
 							type: 'rect',
-							x: x1f,
-							y: y1f,
+							x: startX,
+							y: startY,
 							w: bgWidth,
 							h: bgHeight,
 							lineWidth: 0,
