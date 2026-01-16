@@ -647,5 +647,71 @@ describe('DocMeasure', function () {
 			assert.deepEqual(result._margin, [123, 3, 5, 6]);
 			assert.deepEqual(result.ul[2]._margin, [5, 0, 0, 0]);
 		});
+
+		it('should process margin in extends styles', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {
+				header: {
+					margin: [1, 1, 1, 1],
+				},
+				subheader: {
+					marginLeft: 2,
+					extends: 'header',
+				}
+			}, {});
+			var node = { text: 'test', style: 'subheader' };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [2, 1, 1, 1]);
+		});
+
+		it('should process margin in multiple extends styles', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {
+				styleTop: {
+					marginTop: 1,
+				},
+				styleBottom: {
+					marginBottom: 2,
+				},
+				subheader: {
+					marginLeft: 3,
+					extends: ['styleTop', 'styleBottom'],
+				}
+			}, {});
+			var node = { text: 'test', style: 'subheader' };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [3, 1, 0, 2]);
+		});
+
+		it('should process margin in extends styles with infinite loop 1', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {
+				header: {
+					margin: [1, 1, 1, 1],
+					extends: 'subheader',
+				},
+				subheader: {
+					marginLeft: 2,
+					extends: 'header',
+				}
+			}, {});
+			var node = { text: 'test', style: 'subheader' };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [2, 1, 1, 1]);
+		});
+
+		it('should process margin in extends styles with infinite loop 2', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {
+				subheader: {
+					marginLeft: 2,
+					extends: 'subheader',
+				}
+			}, {});
+			var node = { text: 'test', style: 'subheader' };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [2, 0, 0, 0]);
+		});
+
 	});
 });

@@ -114,14 +114,43 @@ class StyleContextStack {
 	 * @returns {?any} property value or null if not found
 	 */
 	getProperty(property) {
+
+		const getStylePropertyFromStyle = (styleName, property, visited = new Set()) => {
+			if (visited.has(styleName)) {
+				return undefined;
+			}
+			visited.add(styleName);
+
+			const style = this.styleDictionary[styleName];
+			if (!style) {
+				return undefined;
+			}
+
+			if (isValue(style[property])) {
+				return style[property];
+			}
+
+			if (style.extends) {
+				let parents = Array.isArray(style.extends) ? style.extends : [style.extends];
+				for (let i = parents.length - 1; i >= 0; i--) {
+					let value = getStylePropertyFromStyle(parents[i], property, visited);
+					if (isValue(value)) {
+						return value;
+					}
+				}
+			}
+
+			return undefined;
+		};
+
 		if (this.styleOverrides) {
 			for (let i = this.styleOverrides.length - 1; i >= 0; i--) {
 				let item = this.styleOverrides[i];
 
 				if (isString(item)) { // named-style-override
-					let style = this.styleDictionary[item];
-					if (style && isValue(style[property])) {
-						return style[property];
+					let value = getStylePropertyFromStyle(item, property);
+					if (isValue(value)) {
+						return value;
 					}
 				} else if (isValue(item[property])) { // style-overrides-object
 					return item[property];

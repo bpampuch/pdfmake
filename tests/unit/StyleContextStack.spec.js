@@ -194,6 +194,73 @@ describe('StyleContextStack', function () {
 			assert.equal(StyleContextStack.getStyleProperty({ font: 'ZapfDingbats' }, styleStack, 'font', 'Arial'), 'ZapfDingbats');
 			assert.equal(StyleContextStack.getStyleProperty({ font: 'ZapfDingbats', bold: true }, null, 'font', 'Arial'), 'ZapfDingbats');
 		});
+
+		it('should process extends styles', function () {
+			var stack = new StyleContextStack({
+				header: {
+					fontSize: 18,
+					bold: true,
+					color: 'red',
+				},
+				subheader: {
+					fontSize: 15,
+					extends: 'header'
+				}
+			});
+			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'fontSize', undefined), 15);
+			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'bold', undefined), true);
+			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'color', undefined), 'red');
+		});
+
+		it('should process margin in multiple extends styles', function () {
+			var stack = new StyleContextStack({
+				style1: {
+					fontSize: 18,
+					color: 'black'
+				},
+				style2: {
+					bold: true,
+					color: 'red'
+				},
+				subheader: {
+					italics: true,
+					extends: ['style1', 'style2']
+				}
+			});
+			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'fontSize', undefined), 18);
+			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'bold', undefined), true);
+			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'color', undefined), 'red');
+			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'italics', undefined), true);
+		});
+
+		it('should process extends styles with infinite loop 1', function () {
+			var stack = new StyleContextStack({
+				header: {
+					fontSize: 18,
+					bold: true,
+					color: 'red',
+					extends: 'subheader'
+				},
+				subheader: {
+					fontSize: 15,
+					extends: 'header'
+				}
+			});
+			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'fontSize', undefined), 15);
+			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'bold', undefined), true);
+			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'color', undefined), 'red');
+		});
+
+		it('should process extends styles with infinite loop 2', function () {
+			var stack = new StyleContextStack({
+				subheader: {
+					fontSize: 15,
+					extends: 'subheader'
+				}
+			});
+			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'fontSize', undefined), 15);
+			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'bold', undefined), undefined);
+		});
 	});
 
 	describe('copyStyle', function () {

@@ -1,4 +1,4 @@
-import { isNumber } from './variableType';
+import { isNumber, isString } from './variableType';
 
 function fontStringify(key, val) {
 	if (key === 'font') {
@@ -44,29 +44,55 @@ export function getNodeId(node) {
  * @returns {?Array}
  */
 export function getNodeMargin(node, styleStack) {
-	function processSingleMargins(node, currentMargin) {
+
+	function processSingleMargins(node, currentMargin, defaultMargin = 0) {
 		if (node.marginLeft !== undefined || node.marginTop !== undefined || node.marginRight !== undefined || node.marginBottom !== undefined) {
 			return [
-				node.marginLeft ?? currentMargin[0] ?? 0,
-				node.marginTop ?? currentMargin[1] ?? 0,
-				node.marginRight ?? currentMargin[2] ?? 0,
-				node.marginBottom ?? currentMargin[3] ?? 0
+				node.marginLeft ?? currentMargin[0] ?? defaultMargin,
+				node.marginTop ?? currentMargin[1] ?? defaultMargin,
+				node.marginRight ?? currentMargin[2] ?? defaultMargin,
+				node.marginBottom ?? currentMargin[3] ?? defaultMargin
 			];
 		}
 		return currentMargin;
 	}
 
-	function flattenStyleArray(styleArray, styleStack) {
-		let flattenedStyles = {};
-		for (let i = styleArray.length - 1; i >= 0; i--) {
-			let styleName = styleArray[i];
-			let style = styleStack.styleDictionary[styleName];
-			for (let key in style) {
-				if (style.hasOwnProperty(key) && !flattenedStyles.hasOwnProperty(key)) {
-					flattenedStyles[key] = style[key];
-				}
-			}
+	function flattenStyleArray(styleArray, styleStack, visited = new Set()) {
+		styleArray = Array.isArray(styleArray) ? styleArray : [styleArray];
+
+		// style is not valid array of strings
+		if (!styleArray.every(item => isString(item))) {
+			return {};
 		}
+
+		let flattenedStyles = {};
+		for (let index = 0; index < styleArray.length; index++) {
+			let styleName = styleArray[index];
+			let style = styleStack.styleDictionary[styleName];
+
+			// style not found
+			if (style === undefined) {
+				continue;
+			}
+
+			if (visited.has(styleName)) {
+				continue;
+			}
+
+			visited.add(styleName);
+
+			if (style.extends !== undefined) {
+				flattenedStyles = { ...flattenStyleArray(style.extends, styleStack, visited), ...flattenedStyles };
+			}
+
+			if (style.margin !== undefined) {
+				flattenedStyles = { margin : convertMargin(style.margin) };
+				continue;
+			}
+
+			flattenedStyles = { margin: processSingleMargins(style, flattenedStyles.margin ?? {}, undefined) };
+		}
+
 		return flattenedStyles;
 	}
 
