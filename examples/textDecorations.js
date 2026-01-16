@@ -43,6 +43,45 @@ ct.push({
 	]
 });
 
+ct.push('');
+
+ct.push(
+	{
+		text: [
+			'Some text with',
+			{
+				text: 'superscript ',
+				sup: true,
+				decoration: 'lineThrough'
+			},
+			'and with',
+			{
+				text: 'subscript',
+				sub: true,
+				decoration: 'lineThrough'
+			},
+		]
+	});
+
+ct.push('');
+
+ct.push(
+	{
+		text: [
+			'Some text with',
+			{
+				text: 'superscript ',
+				sup: true,
+				decoration: 'underline'
+			},
+			'and with',
+			{
+				text: 'subscript',
+				sub: true,
+				decoration: 'underline'
+			},
+		]
+	});
 
 var docDefinition = {
 	content: ct

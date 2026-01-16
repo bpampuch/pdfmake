@@ -117,6 +117,14 @@ class TextDecorator {
 			default:
 				throw new Error(`Unknown decoration : ${group.decoration}`);
 		}
+
+		if (group.inlines[0].sup) {
+			y -= group.inlines[0].fontSize * 0.75;
+		}
+		if (group.inlines[0].sub) {
+			y += group.inlines[0].fontSize * 0.35;
+		}
+
 		this.pdfDocument.save();
 
 		if (group.decorationStyle === 'double') {

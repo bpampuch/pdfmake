@@ -10,6 +10,7 @@
 - Added inherited/extends styles, use property `extends` in style with style name or array of string with style names
 - Fixed margin override with 0 value
 - Fixed margin override from multiple styles
+- Fixed text decoration for superscript and subscript
 - Fixed svg-to-pdfkit - TypeError: t.classList.contains is not a function
 
 ## 0.3.2 - 2026-01-11
