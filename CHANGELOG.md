@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.3 - 2026-01-18
 
 - Added properties for ToC:
 	- `hideEmpty` - set to `true` if you can hide an empty ToC
