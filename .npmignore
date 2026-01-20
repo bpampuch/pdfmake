@@ -4,7 +4,6 @@ dev-playground/
 docs/
 examples/
 tests/
-build/fonts/
 package-lock.json
 yarn.lock
 .editorconfig
