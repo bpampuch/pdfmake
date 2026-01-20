@@ -1,4 +1,4 @@
-# pdfmake [![Node.js CI][githubactions_img]][githubactions_url] [![GitHub][github_img]][github_url] [![npm][npm_img]][npm_url] [![CDNJS][cdnjs_img]][cndjs_url]
+# pdfmake [![Node.js CI][githubactions_img]][githubactions_url] [![GitHub][github_img]][github_url] [![npm][npm_img]][npm_url]
 
 [githubactions_img]: https://github.com/bpampuch/pdfmake/actions/workflows/node.js.yml/badge.svg?branch=master
 [githubactions_url]: https://github.com/bpampuch/pdfmake/actions
@@ -8,9 +8,6 @@
 
 [npm_img]: https://img.shields.io/npm/v/pdfmake.svg?colorB=0E7FBF
 [npm_url]: https://www.npmjs.com/package/pdfmake
-
-[cdnjs_img]: https://img.shields.io/cdnjs/v/pdfmake.svg?colorB=0E7FBF
-[cndjs_url]: https://cdnjs.com/libraries/pdfmake
 
 
 PDF document generation library for server-side and client-side in pure JavaScript.
