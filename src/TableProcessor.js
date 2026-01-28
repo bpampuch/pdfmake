@@ -482,6 +482,9 @@ class TableProcessor {
 				}
 
 				if (i < l - 1) {
+					let y2fb = this.dontBreakRows ? y2 + this.bottomLineWidth : y2 + (this.bottomLineWidth / 2);
+					body[rowIndex][colIndex]._bottomY = y2fb - this.reservedAtBottom;
+
 					let fillColor = body[rowIndex][colIndex].fillColor;
 					let fillOpacity = body[rowIndex][colIndex].fillOpacity;
 					if (!fillColor) {

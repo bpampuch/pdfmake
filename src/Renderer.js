@@ -394,11 +394,11 @@ class Renderer {
 		switch(item.verticalAlignment) {
 			case 'middle':
 				this.pdfDocument.save();
-				this.pdfDocument.translate(0, -(item.nodeHeight - item.viewHeight) / 2);
+				this.pdfDocument.translate(0, -(item.getNodeHeight() - item.getViewHeight()) / 2);
 				break;
 			case 'bottom':
 				this.pdfDocument.save();
-				this.pdfDocument.translate(0, -(item.nodeHeight - item.viewHeight));
+				this.pdfDocument.translate(0, -(item.getNodeHeight() - item.getViewHeight()));
 				break;
 		}
 	}

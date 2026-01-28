@@ -881,11 +881,17 @@ class LayoutBuilder {
 			}
 
 			// if rowspan starts in this cell, we retrieve the last cell affected by the rowspan
-			const rowSpanEndingCell = this._getRowSpanEndingCell(tableBody, rowIndex, cell, i);
-			if (rowSpanEndingCell) {
+			const rowSpanRightEndingCell = this._getRowSpanEndingCell(tableBody, rowIndex, cell, i);
+			const rowSpanLeftEndingCell = this._getRowSpanEndingCell(tableBody, rowIndex, cell, cellIndexBegin);
+			if (rowSpanRightEndingCell) {
 				// We store a reference of the ending cell in the first cell of the rowspan
-				cell._endingCell = rowSpanEndingCell;
+				cell._endingCell = rowSpanRightEndingCell;
 				cell._endingCell._startingRowSpanY = cell._startingRowSpanY;
+			}
+			if (rowSpanLeftEndingCell) {
+				// We store a reference of the left ending cell in the first cell of the rowspan
+				cell._leftEndingCell = rowSpanLeftEndingCell;
+				cell._leftEndingCell._startingRowSpanY = cell._startingRowSpanY;
 			}
 
 			// If we are after a cell that started a rowspan
@@ -976,6 +982,18 @@ class LayoutBuilder {
 				let item = this.verticalAlignmentItemStack[verticalAlignmentCells[i]].begin.item;
 				item.viewHeight = rowHeight;
 				item.nodeHeight = cell.__height;
+				item.cell = cell;
+				item.bottomY = this.writer.context().y;
+				item.getViewHeight = function() {
+					if (this.cell.rowSpan > 1) {
+						return this.viewHeight + this.cell._leftEndingCell._bottomY - this.bottomY;
+					}
+
+					return this.viewHeight;
+				};
+				item.getNodeHeight = function() {
+					return this.nodeHeight;
+				};
 			}
 		}
 
