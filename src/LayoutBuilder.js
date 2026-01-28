@@ -392,7 +392,7 @@ class LayoutBuilder {
 		}
 	}
 
-	processNode(node) {
+	processNode(node, isVerticalAlignmentAllowed = false) {
 		const applyMargins = callback => {
 			let margin = node._margin;
 
@@ -478,7 +478,7 @@ class LayoutBuilder {
 
 		applyMargins(() => {
 			let verticalAlignment = node.verticalAlignment;
-			if (verticalAlignment) {
+			if (isVerticalAlignmentAllowed && verticalAlignment) {
 				var verticalAlignmentBegin = this.writer.beginVerticalAlignment(verticalAlignment);
 			}
 
@@ -537,7 +537,7 @@ class LayoutBuilder {
 				this.writer.commitUnbreakableBlock();
 			}
 
-			if (verticalAlignment) {
+			if (isVerticalAlignmentAllowed && verticalAlignment) {
 				this.verticalAlignmentItemStack.push({
 					begin: verticalAlignmentBegin,
 					end: this.writer.endVerticalAlignment(verticalAlignment)
@@ -904,7 +904,7 @@ class LayoutBuilder {
 			this.writer.context().beginColumn(width, leftOffset, endOfRowSpanCell);
 
 			if (!cell._span) {
-				this.processNode(cell);
+				this.processNode(cell, true);
 				this.writer.context().updateBottomByPage();
 
 				if (cell.verticalAlignment) {
