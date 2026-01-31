@@ -391,6 +391,10 @@ class Renderer {
 	}
 
 	beginVerticalAlignment(item) {
+		if (item.isCellContentMultiPage) {
+			return;
+		}
+
 		switch(item.verticalAlignment) {
 			case 'middle':
 				this.pdfDocument.save();
@@ -404,6 +408,10 @@ class Renderer {
 	}
 
 	endVerticalAlignment(item) {
+		if (item.isCellContentMultiPage) {
+			return;
+		}
+
 		switch(item.verticalAlignment) {
 			case 'middle':
 			case 'bottom':

@@ -979,12 +979,13 @@ class LayoutBuilder {
 		for (let i = 0, l = cells.length; i < l; i++) {
 			let cell = cells[i];
 			if (!cell._span && cell.verticalAlignment) {
-				let item = this.verticalAlignmentItemStack[verticalAlignmentCells[i]].begin.item;
-				item.viewHeight = rowHeight;
-				item.nodeHeight = cell.__height;
-				item.cell = cell;
-				item.bottomY = this.writer.context().y;
-				item.getViewHeight = function() {
+				let itemBegin = this.verticalAlignmentItemStack[verticalAlignmentCells[i]].begin.item;
+				itemBegin.viewHeight = rowHeight;
+				itemBegin.nodeHeight = cell.__height;
+				itemBegin.cell = cell;
+				itemBegin.bottomY = this.writer.context().y;
+				itemBegin.isCellContentMultiPage = !itemBegin.cell.positions.every(item => item.pageNumber === itemBegin.cell.positions[0].pageNumber);
+				itemBegin.getViewHeight = function() {
 					if (this.cell.rowSpan > 1) {
 						if (dontBreakRows) {
 							return this.cell._leftEndingCell._rowTopPageY - this.cell._leftEndingCell._startingRowSpanY + this.cell._leftEndingCell._bottomY;
@@ -993,11 +994,18 @@ class LayoutBuilder {
 						}
 					}
 
+					if (this.cell._willBreak) {
+						return this.cell._bottomY - this.cell._rowTopPageY;
+					}
+
 					return this.viewHeight;
 				};
-				item.getNodeHeight = function() {
+				itemBegin.getNodeHeight = function() {
 					return this.nodeHeight;
 				};
+
+				let itemEnd = this.verticalAlignmentItemStack[verticalAlignmentCells[i]].end.item;
+				itemEnd.isCellContentMultiPage = itemBegin.isCellContentMultiPage;
 			}
 		}
 

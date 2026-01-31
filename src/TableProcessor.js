@@ -485,8 +485,11 @@ class TableProcessor {
 				}
 
 				if (i < l - 1) {
-					let y2fb = this.dontBreakRows ? y2 + this.bottomLineWidth : y2 + (this.bottomLineWidth / 2);
-					body[rowIndex][colIndex]._bottomY = y2fb - this.reservedAtBottom;
+					body[rowIndex][colIndex]._willBreak = body[rowIndex][colIndex]._willBreak ?? willBreak;
+					if (body[rowIndex][colIndex]._bottomY === undefined) {
+						let bottomY = this.dontBreakRows ? y2 + this.bottomLineWidth : y2 + (this.bottomLineWidth / 2);
+						body[rowIndex][colIndex]._bottomY = bottomY - this.reservedAtBottom;
+					}
 					body[rowIndex][colIndex]._rowTopPageY = this.rowTopPageY;
 
 					let fillColor = body[rowIndex][colIndex].fillColor;
