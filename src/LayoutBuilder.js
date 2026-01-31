@@ -986,7 +986,11 @@ class LayoutBuilder {
 				item.bottomY = this.writer.context().y;
 				item.getViewHeight = function() {
 					if (this.cell.rowSpan > 1) {
-						return this.viewHeight + this.cell._leftEndingCell._bottomY - this.bottomY;
+						if (dontBreakRows) {
+							return this.cell._leftEndingCell._rowTopPageY - this.cell._leftEndingCell._startingRowSpanY + this.cell._leftEndingCell._bottomY;
+						}  else {
+							return this.viewHeight + this.cell._leftEndingCell._bottomY - this.bottomY;
+						}
 					}
 
 					return this.viewHeight;
