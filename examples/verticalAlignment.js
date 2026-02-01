@@ -142,8 +142,124 @@ var docDefinition = {
 				]
 			}
 		},
+		{
+		  pageBreak: 'before',
+			table: {
+				body: [
+					['Column 1', 'Column 2', 'Column 3'],
+					[
+						'One value goes here One value goes here One value goes here \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nOne value goes here One value goes here One value goes here One value goes here \nOne value goes here',
+						{ text: "Middle 3 \n(rowSpan)", verticalAlignment: "middle", colSpan: 2, rowSpan: 3 },
+						''
+					],
+					['Column A1', '', ''],
+					['Column B1', '', ''],
+				]
+			}
+		},
+		{
+			pageBreak: 'before',
+			table: {
+				body: [
+					['Column 1', 'Column 2', 'Column 3'],
+					[
+						'One value goes here One value goes here One value goes here \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nOne value goes here One value goes here One value goes here One value goes here \nOne value goes here',
+						{ text: "Bottom 3 \n(rowSpan)", verticalAlignment: "bottom", colSpan: 2, rowSpan: 3 },
+						''
+					],
+					['Column A1', '', ''],
+					['Column B1', '', ''],
+				]
+			}
+		},
+		{
+			pageBreak: 'before',
+			table: {
+				body: [
+					['Column 1', 'Column 2', 'Column 3'],
+					[
+						'One value goes here One value goes here One value goes here \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nOne value goes here One value goes here One value goes here One value goes here \nOne value goes here',
+						{ text: "Middle 3 \n(rowSpan)", verticalAlignment: "middle", colSpan: 2, rowSpan: 3 },
+						''
+					],
+					['Column A1', '', ''],
+					['Column B1', '', ''],
+				]
+			}
+		},
+		{
+			pageBreak: 'before',
+			table: {
+				body: [
+					['Column 1', 'Column 2', 'Column 3'],
+					[
+						'One value goes here One value goes here One value goes here \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nOne value goes here One value goes here One value goes here One value goes here \nOne value goes here',
+						{ text: "Bottom 3 \n(rowSpan)", verticalAlignment: "bottom", colSpan: 2, rowSpan: 3 },
+						''
+					],
+					['Column A1', '', ''],
+					['Column B1', '', ''],
+				]
+			}
+		},
+		{
+			pageBreak: 'before',
+			table: {
+				body: [
+					['Column 1', 'Column 2', 'Column 3'],
+					[
+						'One value goes here One value goes here One value goes here \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nOne value goes here One value goes here One value goes here One value goes here \nOne value goes here',
+						{ text: "Middle 3 \n(rowSpan)", verticalAlignment: "middle", colSpan: 2, rowSpan: 3 },
+						''
+					],
+					['Column A1', '', ''],
+					['Column B1', '', ''],
+				]
+			}
+		},
+		{
+			pageBreak: 'before',
+			table: {
+				body: [
+					['Column 1', 'Column 2', 'Column 3'],
+					[
+						'One value goes here One value goes here One value goes here \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nOne value goes here One value goes here One value goes here One value goes here \nOne value goes here',
+						{ text: "Bottom 3 \n(rowSpan)", verticalAlignment: "bottom", colSpan: 2, rowSpan: 3 },
+						''
+					],
+					['Column A1', '', ''],
+					['Column B1', '', ''],
+				]
+			}
+		},
+		{
+			pageBreak: 'before',
+			table: {
+				body: [
+					['Column 1', 'Column 2', 'Column 3'],
+					[
+						'One value goes here\n One value goes here One value goes here \nOne value goes here One \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nvalue goes here One value goes here One value goes here \nOne value goes here',
+						{ text: "Middle\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nEnd!", verticalAlignment: "middle" },
+						{ text: "Bottom", verticalAlignment: "bottom" }
+					]
+				]
+			}
+		},
+		{
+			pageBreak: 'before',
+			table: {
+				body: [
+					['Column 1', 'Column 2', 'Column 3'],
+					[
+						'One value goes here\n One value goes here One value goes here \nOne value goes here One \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nvalue goes here One value goes here One value goes here \nOne value goes here',
+						{ text: "Bottom\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nEnd!", verticalAlignment: "bottom" },
+						{ text: "Middle", verticalAlignment: "middle" }
+					]
+				]
+			}
+		},
 
-		{ text: 'dontBreakRows:', pageBreak: 'after' },
+		{ text: 'dontBreakRows:', pageBreak: 'before' },
 
 		{
 			table: {
