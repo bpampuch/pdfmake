@@ -119,21 +119,22 @@ class DocPreprocessor {
 		let cols;
 		let rows;
 
-		for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
-			for (row = 0, rows = node.table.body.length; row < rows; row++) {
-				let rowData = node.table.body[row];
-				let data = rowData[col];
-				if (data !== undefined) {
-					if (data === null) { // transform to object
-						data = '';
-					}
-					if (!data._span) {
-						rowData[col] = this.preprocessNode(data);
+		if(node && node.table && isArray(node.table.body) && node.table.body.length ){
+				for (col = 0, cols = node.table.body[0].length; col < cols; col++) {
+				for (row = 0, rows = node.table.body.length; row < rows; row++) {
+					let rowData = node.table.body[row];
+					let data = rowData[col];
+					if (data !== undefined) {
+						if (data === null) { // transform to object
+							data = '';
+						}
+						if (!data._span) {
+							rowData[col] = this.preprocessNode(data);
+						}
 					}
 				}
 			}
 		}
-
 		return node;
 	}
 
