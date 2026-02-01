@@ -160,6 +160,9 @@ class TableProcessor {
 			this._tableTopBorderY = writer.context().y;
 			writer.context().moveDown(this.topLineWidth);
 		}
+
+		this.rowTopPageY = writer.context().y;
+
 		if (this.dontBreakRows && rowIndex > 0) {
 			writer.beginUnbreakableBlock();
 		}
@@ -482,6 +485,14 @@ class TableProcessor {
 				}
 
 				if (i < l - 1) {
+					body[rowIndex][colIndex]._willBreak = body[rowIndex][colIndex]._willBreak ?? willBreak;
+					if (body[rowIndex][colIndex]._bottomY === undefined) {
+						let bottomY = this.dontBreakRows ? y2 + this.bottomLineWidth : y2 + (this.bottomLineWidth / 2);
+						body[rowIndex][colIndex]._bottomY = bottomY - this.reservedAtBottom;
+					}
+					body[rowIndex][colIndex]._rowTopPageY = this.rowTopPageY;
+					body[rowIndex][colIndex]._lastPageNumber = ys[yi].page + 1;
+
 					let fillColor = body[rowIndex][colIndex].fillColor;
 					let fillOpacity = body[rowIndex][colIndex].fillOpacity;
 					if (!fillColor) {

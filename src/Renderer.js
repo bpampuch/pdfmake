@@ -83,6 +83,12 @@ class Renderer {
 					case 'endClip':
 						this.endClip();
 						break;
+					case 'beginVerticalAlignment':
+						this.beginVerticalAlignment(item.item);
+						break;
+					case 'endVerticalAlignment':
+						this.endVerticalAlignment(item.item);
+						break;
 				}
 				renderedItems++;
 				if (this.progressCallback) {
@@ -382,6 +388,36 @@ class Renderer {
 
 	endClip() {
 		this.pdfDocument.restore();
+	}
+
+	beginVerticalAlignment(item) {
+		if (item.isCellContentMultiPage) {
+			return;
+		}
+
+		switch(item.verticalAlignment) {
+			case 'middle':
+				this.pdfDocument.save();
+				this.pdfDocument.translate(0, -(item.getNodeHeight() - item.getViewHeight()) / 2);
+				break;
+			case 'bottom':
+				this.pdfDocument.save();
+				this.pdfDocument.translate(0, -(item.getNodeHeight() - item.getViewHeight()));
+				break;
+		}
+	}
+
+	endVerticalAlignment(item) {
+		if (item.isCellContentMultiPage) {
+			return;
+		}
+
+		switch(item.verticalAlignment) {
+			case 'middle':
+			case 'bottom':
+				this.pdfDocument.restore();
+				break;
+		}
 	}
 
 	renderWatermark(page) {

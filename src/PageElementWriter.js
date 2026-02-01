@@ -57,6 +57,14 @@ class PageElementWriter extends ElementWriter {
 		return super.endClip();
 	}
 
+	beginVerticalAlignment(verticalAlignment) {
+		return super.beginVerticalAlignment(verticalAlignment);
+	}
+
+	endVerticalAlignment(verticalAlignment) {
+		return super.endVerticalAlignment(verticalAlignment);
+	}
+
 	addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
 		return this._fitOnPage(() => super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition));
 	}

@@ -80,8 +80,8 @@ describe('TableProcessor', function () {
 		var tableNode = {
 			table: {
 				body: [
-					['A1', 'A2'],
-					['B1', 'B2']
+					[{ text: 'A1' }, { text: 'A2' }],
+					[{ text: 'B1' }, { text: 'B2' }]
 				]
 			}
 		};
@@ -112,8 +112,8 @@ describe('TableProcessor', function () {
 		var tableNode = {
 			table: {
 				body: [
-					['A1', 'A2'],
-					['B1', 'B2']
+					[{ text: 'A1' }, { text: 'A2' }],
+					[{ text: 'B1' }, { text: 'B2' }]
 				]
 			}
 		};
@@ -160,11 +160,11 @@ describe('TableProcessor', function () {
 			var header = {};
 
 			var nestedTableNode = fakeTableNode();
-			nestedTableNode.table.body = [['nested table cell']];
+			nestedTableNode.table.body = [[{ text: 'nested table cell' }]];
 
 			var tableNode = fakeTableNode();
 			tableNode.table.body = [
-				['Header'],
+				[{ text: 'Header' }],
 				[nestedTableNode]
 			];
 			tableNode.table.headerRows = 1;

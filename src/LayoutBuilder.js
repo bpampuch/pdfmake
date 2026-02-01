@@ -33,6 +33,7 @@ class LayoutBuilder {
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = {};
 		this.nestedLevel = 0;
+		this.verticalAlignmentItemStack = [];
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -391,7 +392,7 @@ class LayoutBuilder {
 		}
 	}
 
-	processNode(node) {
+	processNode(node, isVerticalAlignmentAllowed = false) {
 		const applyMargins = callback => {
 			let margin = node._margin;
 
@@ -473,7 +474,14 @@ class LayoutBuilder {
 		this.linearNodeList.push(node);
 		decorateNode(node);
 
+		var prevTop = this.writer.context().getCurrentPosition().top;
+
 		applyMargins(() => {
+			let verticalAlignment = node.verticalAlignment;
+			if (isVerticalAlignmentAllowed && verticalAlignment) {
+				var verticalAlignmentBegin = this.writer.beginVerticalAlignment(verticalAlignment);
+			}
+
 			let unbreakable = node.unbreakable;
 			if (unbreakable) {
 				this.writer.beginUnbreakableBlock();
@@ -528,7 +536,17 @@ class LayoutBuilder {
 			if (unbreakable) {
 				this.writer.commitUnbreakableBlock();
 			}
+
+			if (isVerticalAlignmentAllowed && verticalAlignment) {
+				this.verticalAlignmentItemStack.push({
+					begin: verticalAlignmentBegin,
+					end: this.writer.endVerticalAlignment(verticalAlignment)
+				});
+			}
 		});
+
+		// TODO: for vertical alignment and does not work (at least) when page break in node
+		node.__height = this.writer.context().getCurrentPosition().top - prevTop;
 	}
 
 	// vertical container
@@ -822,6 +840,7 @@ class LayoutBuilder {
 		let pageBreaksByRowSpan = [];
 		let positions = [];
 		let willBreakByHeight = false;
+		let verticalAlignmentCells = {};
 		widths = widths || cells;
 
 		// Check if row should break by height
@@ -836,6 +855,7 @@ class LayoutBuilder {
 
 		for (let i = 0, l = cells.length; i < l; i++) {
 			let cell = cells[i];
+			let cellIndexBegin = i;
 
 			// Page change handler
 			const storePageBreakClosure = data => {
@@ -861,11 +881,17 @@ class LayoutBuilder {
 			}
 
 			// if rowspan starts in this cell, we retrieve the last cell affected by the rowspan
-			const rowSpanEndingCell = this._getRowSpanEndingCell(tableBody, rowIndex, cell, i);
-			if (rowSpanEndingCell) {
+			const rowSpanRightEndingCell = this._getRowSpanEndingCell(tableBody, rowIndex, cell, i);
+			const rowSpanLeftEndingCell = this._getRowSpanEndingCell(tableBody, rowIndex, cell, cellIndexBegin);
+			if (rowSpanRightEndingCell) {
 				// We store a reference of the ending cell in the first cell of the rowspan
-				cell._endingCell = rowSpanEndingCell;
+				cell._endingCell = rowSpanRightEndingCell;
 				cell._endingCell._startingRowSpanY = cell._startingRowSpanY;
+			}
+			if (rowSpanLeftEndingCell) {
+				// We store a reference of the left ending cell in the first cell of the rowspan
+				cell._leftEndingCell = rowSpanLeftEndingCell;
+				cell._leftEndingCell._startingRowSpanY = cell._startingRowSpanY;
 			}
 
 			// If we are after a cell that started a rowspan
@@ -884,8 +910,13 @@ class LayoutBuilder {
 			this.writer.context().beginColumn(width, leftOffset, endOfRowSpanCell);
 
 			if (!cell._span) {
-				this.processNode(cell);
+				this.processNode(cell, true);
 				this.writer.context().updateBottomByPage();
+
+				if (cell.verticalAlignment) {
+					verticalAlignmentCells[cellIndexBegin] = this.verticalAlignmentItemStack.length - 1;
+				}
+
 				addAll(positions, cell.positions);
 			} else if (cell._columnEndingContext) {
 				let discountY = 0;
@@ -942,6 +973,44 @@ class LayoutBuilder {
 			tableNode._bottomByPage = bottomByPage;
 			// If there are page breaks in this row, update data with prevY of last cell
 			this._updatePageBreaksData(pageBreaks, tableNode, rowIndex);
+		}
+
+		let rowHeight = this.writer.context().height;
+		for (let i = 0, l = cells.length; i < l; i++) {
+			let cell = cells[i];
+			if (!cell._span && cell.verticalAlignment) {
+				let itemBegin = this.verticalAlignmentItemStack[verticalAlignmentCells[i]].begin.item;
+				itemBegin.viewHeight = rowHeight;
+				itemBegin.nodeHeight = cell.__height;
+				itemBegin.cell = cell;
+				itemBegin.bottomY = this.writer.context().y;
+				itemBegin.isCellContentMultiPage = !itemBegin.cell.positions.every(item => item.pageNumber === itemBegin.cell.positions[0].pageNumber);
+				itemBegin.getViewHeight = function() {
+					if (this.cell._willBreak) {
+						return this.cell._bottomY - this.cell._rowTopPageY;
+					}
+
+					if (this.cell.rowSpan && this.cell.rowSpan > 1) {
+						if (dontBreakRows) {
+							return this.cell._leftEndingCell._rowTopPageY - this.cell._leftEndingCell._startingRowSpanY + this.cell._leftEndingCell._bottomY;
+						} else {
+							if (this.cell.positions[0].pageNumber !== this.cell._leftEndingCell._lastPageNumber) {
+								return this.bottomY - this.cell._leftEndingCell._bottomY;
+							}
+
+							return this.viewHeight + this.cell._leftEndingCell._bottomY - this.bottomY;
+						}
+					}
+
+					return this.viewHeight;
+				};
+				itemBegin.getNodeHeight = function() {
+					return this.nodeHeight;
+				};
+
+				let itemEnd = this.verticalAlignmentItemStack[verticalAlignmentCells[i]].end.item;
+				itemEnd.isCellContentMultiPage = itemBegin.isCellContentMultiPage;
+			}
 		}
 
 		return {

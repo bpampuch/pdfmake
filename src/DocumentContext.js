@@ -124,6 +124,13 @@ class DocumentContext extends EventEmitter {
 		if (height) {
 			this.availableHeight -= (y - saved.bottomMost.y);
 		}
+
+		 if (height && (saved.bottomMost.y - saved.y < height)) {
+		 	this.height = height;
+		 } else {
+			this.height = saved.bottomMost.y - saved.y;
+		 }
+
 		this.lastColumnWidth = saved.lastColumnWidth;
 		return saved.bottomByPage;
 	}

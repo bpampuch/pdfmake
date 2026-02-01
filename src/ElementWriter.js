@@ -303,6 +303,26 @@ class ElementWriter extends EventEmitter {
 		return true;
 	}
 
+	beginVerticalAlignment(verticalAlignment) {
+		let page = this.context().getCurrentPage();
+		let item = {
+			type: 'beginVerticalAlignment',
+			item: { verticalAlignment: verticalAlignment }
+		};
+		page.items.push(item);
+		return item;
+	}
+
+	endVerticalAlignment(verticalAlignment) {
+		let page = this.context().getCurrentPage();
+		let item = {
+			type: 'endVerticalAlignment',
+			item: { verticalAlignment: verticalAlignment }
+		};
+		page.items.push(item);
+		return item;
+	}
+
 	addFragment(block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
 		let ctx = this.context();
 		let page = ctx.getCurrentPage();
@@ -351,6 +371,10 @@ class ElementWriter extends EventEmitter {
 
 				case 'image':
 				case 'svg':
+				case 'beginClip':
+				case 'endClip':
+				case 'beginVerticalAlignment':
+				case 'endVerticalAlignment':
 					var img = pack(item.item);
 
 					img.x = (img.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);

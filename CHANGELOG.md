@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added vertical alignment for table cells via `verticalAlignment` property, values: `top` (default), `middle`, `bottom`
+
 ## 0.3.3 - 2026-01-18
 
 - Added properties for ToC:
