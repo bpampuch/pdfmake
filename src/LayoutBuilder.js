@@ -986,16 +986,20 @@ class LayoutBuilder {
 				itemBegin.bottomY = this.writer.context().y;
 				itemBegin.isCellContentMultiPage = !itemBegin.cell.positions.every(item => item.pageNumber === itemBegin.cell.positions[0].pageNumber);
 				itemBegin.getViewHeight = function() {
-					if (this.cell.rowSpan > 1) {
-						if (dontBreakRows) {
-							return this.cell._leftEndingCell._rowTopPageY - this.cell._leftEndingCell._startingRowSpanY + this.cell._leftEndingCell._bottomY;
-						}  else {
-							return this.viewHeight + this.cell._leftEndingCell._bottomY - this.bottomY;
-						}
-					}
-
 					if (this.cell._willBreak) {
 						return this.cell._bottomY - this.cell._rowTopPageY;
+					}
+
+					if (this.cell.rowSpan && this.cell.rowSpan > 1) {
+						if (dontBreakRows) {
+							return this.cell._leftEndingCell._rowTopPageY - this.cell._leftEndingCell._startingRowSpanY + this.cell._leftEndingCell._bottomY;
+						} else {
+							if (this.cell.positions[0].pageNumber !== this.cell._leftEndingCell._lastPageNumber) {
+								return this.bottomY - this.cell._leftEndingCell._bottomY;
+							}
+
+							return this.viewHeight + this.cell._leftEndingCell._bottomY - this.bottomY;
+						}
 					}
 
 					return this.viewHeight;

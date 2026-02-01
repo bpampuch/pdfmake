@@ -491,6 +491,7 @@ class TableProcessor {
 						body[rowIndex][colIndex]._bottomY = bottomY - this.reservedAtBottom;
 					}
 					body[rowIndex][colIndex]._rowTopPageY = this.rowTopPageY;
+					body[rowIndex][colIndex]._lastPageNumber = ys[yi].page + 1;
 
 					let fillColor = body[rowIndex][colIndex].fillColor;
 					let fillOpacity = body[rowIndex][colIndex].fillOpacity;
