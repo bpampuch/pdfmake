@@ -992,7 +992,8 @@ class LayoutBuilder {
 
 					if (this.cell.rowSpan && this.cell.rowSpan > 1) {
 						if (dontBreakRows) {
-							return this.cell._leftEndingCell._rowTopPageY - this.cell._leftEndingCell._startingRowSpanY + this.cell._leftEndingCell._bottomY;
+							let rowTopPageY = this.cell._leftEndingCell._startingRowSpanY + this.cell._leftEndingCell._rowTopPageYPadding;
+							return this.cell._leftEndingCell._rowTopPageY - rowTopPageY + this.cell._leftEndingCell._bottomY;
 						} else {
 							if (this.cell.positions[0].pageNumber !== this.cell._leftEndingCell._lastPageNumber) {
 								return this.bottomY - this.cell._leftEndingCell._bottomY;
