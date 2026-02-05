@@ -2,13 +2,14 @@
 
 ## Unreleased
 
+- Added `snakingColumns` property for columns to enable newspaper-like column flow
 - Added vertical alignment for table cells via `verticalAlignment` property, values: `top` (default), `middle`, `bottom`
 
 ## 0.3.3 - 2026-01-18
 
 - Added properties for ToC:
 	- `hideEmpty` - set to `true` if you can hide an empty ToC
-	- `sortBy` -  `'page'` (default) or `'title'`
+	- `sortBy` - `'page'` (default) or `'title'`
 	- `sortLocale` - custom locale to sort by property `sortBy`
 - Added property `decorationThickness` for `text` to set width of the decoration line
 - Added inherited/extends styles, use property `extends` in style with style name or array of string with style names

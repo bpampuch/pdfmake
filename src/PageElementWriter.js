@@ -173,11 +173,105 @@ class PageElementWriter extends ElementWriter {
 		this.repeatables.pop();
 	}
 
+	/**
+	 * Move to the next column in a column group (snaking columns).
+	 * Handles repeatables and emits columnChanged event.
+	 */
+	moveToNextColumn() {
+		let nextColumn = this.context().moveToNextColumn();
+
+		// Handle repeatables (like table headers) for the new column
+		this.repeatables.forEach(function (rep) {
+			// Repeatables are shared across columns on the same page
+			if (rep.insertedOnPages[this.context().page] === undefined) {
+				rep.insertedOnPages[this.context().page] = true;
+				this.addFragment(rep, true);
+			} else {
+				this.context().moveDown(rep.height);
+			}
+		}, this);
+
+		this.emit('columnChanged', {
+			prevY: nextColumn.prevY,
+			y: this.context().y
+		});
+	}
+
+	/**
+	 * Check if currently in a column group that can move to next column.
+	 * Only returns true if snakingColumns is enabled for the column group.
+	 * @returns {boolean}
+	 */
+	canMoveToNextColumn() {
+		let ctx = this.context();
+		let snakingSnapshot = ctx.getSnakingSnapshot();
+
+		if (snakingSnapshot) {
+			let overflowCount = 0;
+			for (let i = ctx.snapshots.length - 1; i >= 0; i--) {
+				if (ctx.snapshots[i].overflowed) {
+					overflowCount++;
+				} else {
+					break;
+				}
+			}
+
+			if (snakingSnapshot.columnWidths &&
+				overflowCount >= snakingSnapshot.columnWidths.length - 1) {
+				return false;
+			}
+
+			let currentColumnWidth = ctx.availableWidth || ctx.lastColumnWidth || 0;
+			let nextColumnWidth = snakingSnapshot.columnWidths ?
+				snakingSnapshot.columnWidths[overflowCount + 1] : currentColumnWidth;
+			let nextX = ctx.x + currentColumnWidth + (snakingSnapshot.gap || 0);
+			let page = ctx.getCurrentPage();
+			let pageWidth = page.pageSize.width;
+			let rightMargin = page.pageMargins ? page.pageMargins.right : 0;
+			let parentRightMargin = ctx.marginXTopParent ? ctx.marginXTopParent[1] : 0;
+			let rightBoundary = pageWidth - rightMargin - parentRightMargin;
+
+			return (nextX + nextColumnWidth) <= (rightBoundary + 1);
+		}
+		return false;
+	}
+
 	_fitOnPage(addFct) {
 		let position = addFct();
 		if (!position) {
-			this.moveToNextPage();
-			position = addFct();
+			if (this.canMoveToNextColumn()) {
+				this.moveToNextColumn();
+				position = addFct();
+			}
+
+			if (!position) {
+				let ctx = this.context();
+				let snakingSnapshot = ctx.getSnakingSnapshot();
+
+				if (snakingSnapshot) {
+					this.moveToNextPage();
+
+					// Reset snaking column state for the new page
+					ctx.resetSnakingColumnsForNewPage();
+
+					position = addFct();
+				} else {
+					while (ctx.snapshots.length > 0 && ctx.snapshots[ctx.snapshots.length - 1].overflowed) {
+						let popped = ctx.snapshots.pop();
+						let prevSnapshot = ctx.snapshots[ctx.snapshots.length - 1];
+						if (prevSnapshot) {
+							ctx.x = prevSnapshot.x;
+							ctx.y = prevSnapshot.y;
+							ctx.availableHeight = prevSnapshot.availableHeight;
+							ctx.availableWidth = popped.availableWidth;
+							ctx.lastColumnWidth = prevSnapshot.lastColumnWidth;
+						}
+					}
+
+					this.moveToNextPage();
+					position = addFct();
+				}
+			}
 		}
 		return position;
 	}
