@@ -259,11 +259,11 @@ var docDefinition = {
 				vLineWidth: function (i, node) {
 					return (i === 0 || i === node.table.widths.length) ? 2 : 1;
 				},
-				hLineColor: function (i, node) {
-					return (i === 0 || i === node.table.body.length) ? 'black' : 'gray';
+				hLineColor: function (rowIndex, node, columnIndex) {
+					return (rowIndex === 0 || rowIndex === node.table.body.length) ? 'black' : 'gray';
 				},
-				vLineColor: function (i, node) {
-					return (i === 0 || i === node.table.widths.length) ? 'black' : 'gray';
+				vLineColor: function (rowIndex, node, columnIndex) {
+					return (rowIndex === 0 || rowIndex === node.table.widths.length) ? 'black' : 'gray';
 				},
 				// hLineStyle: function (i, node) { return {dash: { length: 10, space: 4 }}; },
 				// vLineStyle: function (i, node) { return {dash: { length: 10, space: 4 }}; },
@@ -376,10 +376,10 @@ var docDefinition = {
 				vLineWidth: function (i, node) {
 					return (i === 0 || i === node.table.widths.length) ? 2 : 1;
 				},
-				hLineColor: function (i, node) {
+				hLineColor: function (rowIndex, node, columnIndex) {
 					return 'black';
 				},
-				vLineColor: function (i, node) {
+				vLineColor: function (rowIndex, node, columnIndex) {
 					return 'black';
 				},
 				hLineStyle: function (i, node) {
@@ -398,7 +398,7 @@ var docDefinition = {
 				// paddingRight: function(i, node) { return 4; },
 				// paddingTop: function(i, node) { return 2; },
 				// paddingBottom: function(i, node) { return 2; },
-				// fillColor: function (i, node) { return null; }
+				// fillColor: function (rowIndex, node, columnIndex) { return null; }
 			}
 		},
 		{ text: 'Optional border', fontSize: 14, bold: true, pageBreak: 'before', margin: [0, 0, 0, 8] },
