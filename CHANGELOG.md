@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Added vertical alignment for table cells via `verticalAlignment` property, values: `top` (default), `middle`, `bottom`
+- Fixed margin inheritance when styles are extended multiple times
 
 ## 0.3.3 - 2026-01-18
 

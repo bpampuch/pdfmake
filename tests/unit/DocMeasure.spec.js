@@ -485,7 +485,7 @@ describe('DocMeasure', function () {
 		});
 
 		it('should apply marginLeft: 10, margin: 20', function () {
-			docMeasure = new DocMeasure(sampleTestProvider, { }, {});
+			docMeasure = new DocMeasure(sampleTestProvider, {}, {});
 			var node = { text: 'test', marginLeft: 10, margin: 20 };
 			docPreprocessor.preprocessDocument(node);
 			var result = docMeasure.measureDocument(node);
@@ -493,7 +493,7 @@ describe('DocMeasure', function () {
 		});
 
 		it('should apply marginLeft: 10, margin: 0', function () {
-			docMeasure = new DocMeasure(sampleTestProvider, { }, {});
+			docMeasure = new DocMeasure(sampleTestProvider, {}, {});
 			var node = { text: 'test', marginLeft: 10, margin: 0 };
 			docPreprocessor.preprocessDocument(node);
 			var result = docMeasure.measureDocument(node);
@@ -566,7 +566,7 @@ describe('DocMeasure', function () {
 
 		it('should apply margin override from multiple styles', function () {
 			docMeasure = new DocMeasure(sampleTestProvider, { quote: { margin: [20, 0, 20, 0] }, small: { margin: [0, 0, 0, 5] } }, {});
-			var node = {text: 'test', style: ['quote', 'small']};
+			var node = { text: 'test', style: ['quote', 'small'] };
 			docPreprocessor.preprocessDocument(node);
 			var result = docMeasure.measureDocument(node);
 			assert.deepEqual(result._margin, [0, 0, 0, 5]);
@@ -681,6 +681,122 @@ describe('DocMeasure', function () {
 			docPreprocessor.preprocessDocument(node);
 			var result = docMeasure.measureDocument(node);
 			assert.deepEqual(result._margin, [3, 1, 0, 2]);
+		});
+
+		it('should process margin in multiple extends styles from styles 1', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {
+				marginLeft: {
+					marginLeft: 50,
+					color: 'red',
+				},
+				margin: {
+					margin: [20, 20, 20, 20],
+					color: 'green',
+				},
+				marginExtends1: {
+					extends: ['margin', 'marginLeft']
+				},
+				marginExtends2: {
+					extends: ['marginLeft', 'margin']
+				},
+				marginExtends3: {
+					extends: ['marginExtends1', 'marginExtends2'],
+				},
+				marginExtends4: {
+					extends: ['marginExtends2', 'marginExtends1'],
+				},
+			}, {});
+			var node = { text: 'test', style: 'marginExtends3' };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [20, 20, 20, 20]);
+		});
+
+		it('should process margin in multiple extends styles from styles 2', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {
+				marginLeft: {
+					marginLeft: 50,
+					color: 'red',
+				},
+				margin: {
+					margin: [20, 20, 20, 20],
+					color: 'green',
+				},
+				marginExtends1: {
+					extends: ['margin', 'marginLeft']
+				},
+				marginExtends2: {
+					extends: ['marginLeft', 'margin']
+				},
+				marginExtends3: {
+					extends: ['marginExtends1', 'marginExtends2'],
+				},
+				marginExtends4: {
+					extends: ['marginExtends2', 'marginExtends1'],
+				},
+			}, {});
+			var node = { text: 'test', style: 'marginExtends4' };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [50, 20, 20, 20]);
+		});
+
+		it('should process margin in multiple extends styles from styles 3', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {
+				marginLeft: {
+					marginLeft: 50,
+					color: 'red',
+				},
+				margin: {
+					margin: [20, 20, 20, 20],
+					color: 'green',
+				},
+				marginExtends1: {
+					extends: ['margin', 'marginLeft']
+				},
+				marginExtends2: {
+					extends: ['marginLeft', 'margin']
+				},
+				marginExtends3: {
+					extends: ['marginExtends1', 'marginExtends2'],
+				},
+				marginExtends4: {
+					extends: ['marginExtends2', 'marginExtends1'],
+				},
+			}, {});
+			var node = { text: 'test', style: ['marginExtends1', 'marginExtends2'] };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [20, 20, 20, 20]);
+		});
+
+		it('should process margin in multiple extends styles from styles 4', function () {
+			docMeasure = new DocMeasure(sampleTestProvider, {
+				marginLeft: {
+					marginLeft: 50,
+					color: 'red',
+				},
+				margin: {
+					margin: [20, 20, 20, 20],
+					color: 'green',
+				},
+				marginExtends1: {
+					extends: ['margin', 'marginLeft']
+				},
+				marginExtends2: {
+					extends: ['marginLeft', 'margin']
+				},
+				marginExtends3: {
+					extends: ['marginExtends1', 'marginExtends2'],
+				},
+				marginExtends4: {
+					extends: ['marginExtends2', 'marginExtends1'],
+				},
+			}, {});
+			var node = { text: 'test', style: ['marginExtends2', 'marginExtends1'] };
+			docPreprocessor.preprocessDocument(node);
+			var result = docMeasure.measureDocument(node);
+			assert.deepEqual(result._margin, [50, 20, 20, 20]);
 		});
 
 		it('should process margin in extends styles with infinite loop 1', function () {
