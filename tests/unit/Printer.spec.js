@@ -14,7 +14,7 @@ describe('Printer', function () {
 	beforeEach(function () {
 		fontDescriptors = {
 			Roboto: {
-				normal: 'tests/fonts/Roboto-Regular.ttf'
+				normal: 'fonts/Roboto/Roboto-Regular.ttf'
 			}
 		};
 		PDFDocument.prototype.addPage = sinon.spy(PDFDocument.prototype.addPage);
