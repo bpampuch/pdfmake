@@ -474,7 +474,9 @@ class LayoutBuilder {
 		this.linearNodeList.push(node);
 		decorateNode(node);
 
-		var prevTop = this.writer.context().getCurrentPosition().top;
+		if (this.writer.context().getCurrentPage() !== null) {
+			var prevTop = this.writer.context().getCurrentPosition().top;
+		}
 
 		applyMargins(() => {
 			let verticalAlignment = node.verticalAlignment;
@@ -545,8 +547,10 @@ class LayoutBuilder {
 			}
 		});
 
-		// TODO: for vertical alignment and does not work (at least) when page break in node
-		node.__height = this.writer.context().getCurrentPosition().top - prevTop;
+		if (prevTop !== undefined) {
+			// TODO: for vertical alignment and does not work (at least) when page break in node
+			node.__height = this.writer.context().getCurrentPosition().top - prevTop;
+		}
 	}
 
 	// vertical container
