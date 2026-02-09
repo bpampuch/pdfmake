@@ -39,11 +39,11 @@ describe('Integration test: snaking columns nested checks', function () {
 		assert.ok(itemsP2.length > 0, 'Page 2 should have content');
 
 		// Verify Page 2 starts at correct margin
-		// Default page margin left is usually 40.
-		// With marginLeft: 100, it should be 140.
+		// Default page margin left comes from testHelper.MARGINS.left.
+		// With marginLeft: 100, it should be testHelper.MARGINS.left + 100.
 
 		var firstItemX = itemsP2[0].item.x;
-		var expectedX = 40 + margin; // 140
+		var expectedX = testHelper.MARGINS.left + margin;
 
 		assert.ok(Math.abs(firstItemX - expectedX) < 1,
 			'Page 2 content should start at left margin + indented margin (' + expectedX + '), found: ' + firstItemX);

@@ -228,17 +228,17 @@ describe('Integration test: snaking columns', function () {
 
 		// Page 1: 2 cols
 		var itemsP1 = pages[0].items;
-		var uniqueXP1 = [...new Set(itemsP1.map(node => node.item.x))];
+		var uniqueXP1 = [...new Set(itemsP1.map(node => normalizeX(node.item.x)))];
 		assert.equal(uniqueXP1.length, 2);
 
 		// Page 2: 2 cols
 		var itemsP2 = pages[1].items;
-		var uniqueXP2 = [...new Set(itemsP2.map(node => node.item.x))];
+		var uniqueXP2 = [...new Set(itemsP2.map(node => normalizeX(node.item.x)))];
 		assert.equal(uniqueXP2.length, 2);
 
 		// Page 3: 2 cols
 		var itemsP3 = pages[2].items;
-		var uniqueXP3 = [...new Set(itemsP3.map(node => node.item.x))];
+		var uniqueXP3 = [...new Set(itemsP3.map(node => normalizeX(node.item.x)))];
 		assert.equal(uniqueXP3.length, 2);
 	});
 
@@ -264,7 +264,7 @@ describe('Integration test: snaking columns', function () {
 		assert.equal(pages.length, 2);
 
 		var itemsP1 = pages[0].items;
-		var uniqueXP1 = [...new Set(itemsP1.map(node => node.item.x))];
+		var uniqueXP1 = [...new Set(itemsP1.map(node => normalizeX(node.item.x)))];
 		assert.equal(uniqueXP1.length, 2, 'A5 Page 1 should have 2 columns');
 	});
 
@@ -291,7 +291,7 @@ describe('Integration test: snaking columns', function () {
 		assert.equal(pages.length, 2);
 
 		var itemsP1 = pages[0].items;
-		var uniqueXP1 = [...new Set(itemsP1.map(node => node.item.x))];
+		var uniqueXP1 = [...new Set(itemsP1.map(node => normalizeX(node.item.x)))];
 		assert.equal(uniqueXP1.length, 2, 'Landscape Page 1 should have 2 columns');
 	});
 
@@ -367,7 +367,7 @@ describe('Integration test: snaking columns', function () {
 
 		// Also verify Page 1 has content in 2 columns
 		var itemsP1 = pages[0].items;
-		var uniqueXP1 = [...new Set(itemsP1.map(node => node.item.x))];
+		var uniqueXP1 = [...new Set(itemsP1.map(node => normalizeX(node.item.x)))];
 		assert.equal(uniqueXP1.length, 2, 'Page 1 should have content in 2 columns');
 	});
 
@@ -552,7 +552,7 @@ describe('Integration test: snaking columns', function () {
 		assert.equal(pages.length, 1);
 
 		var items = pages[0].items;
-		var xPositions = [...new Set(items.map(n => n.item.x))].sort((a, b) => a - b);
+		var xPositions = [...new Set(items.map(n => normalizeX(n.item.x)))].sort((a, b) => a - b);
 		assert.equal(xPositions.length, 3, 'Should use all 3 columns');
 
 		// Column 1 starts at margin.left (40)
@@ -787,7 +787,7 @@ describe('Integration test: snaking columns', function () {
 		assert.equal(pages.length, 1, 'Unbreakable table should fit within snaking columns on one page');
 
 		var items = pages[0].items;
-		var uniqueX = [...new Set(items.map(n => n.item.x))].sort((a, b) => a - b);
+		var uniqueX = [...new Set(items.map(n => normalizeX(n.item.x)))].sort((a, b) => a - b);
 		assert.ok(uniqueX.length >= 2, 'Content should span at least 2 columns (table moved to column 2)');
 	});
 
@@ -822,7 +822,7 @@ describe('Integration test: snaking columns', function () {
 		assert.equal(pages.length, 1, 'Should work on one page with nested columns');
 
 		var items = pages[0].items;
-		var uniqueX = [...new Set(items.map(n => n.item.x))].sort((a, b) => a - b);
+		var uniqueX = [...new Set(items.map(n => normalizeX(n.item.x)))].sort((a, b) => a - b);
 		assert.ok(uniqueX.length >= 2, 'Outer snaking should flow to column 2');
 	});
 
@@ -980,7 +980,7 @@ describe('Integration test: snaking columns', function () {
 		// bounds is safer. No item should start > 350 + 100 = 450 approximately.
 		// We want to ensure text *wrapped*. If it didn't wrap, we'd see a long line.
 		// We can check the width of the text line if available, or just rightmost point.
-		col2Items.forEach(function(node) {
+		col2Items.forEach(function (node) {
 			if (node.item.inlines) { // Text line
 				// Check that the line fits within reasonable bounds check for 100 width
 				// Allow small buffer for calculation diffs
