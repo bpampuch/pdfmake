@@ -673,6 +673,28 @@ class LayoutBuilder {
 			availableWidth -= (gaps.length - 1) * columnNode._gap;
 		}
 
+		// Snaking columns validation: warn if user provided content in columns > 0.
+		// When snakingColumns is enabled, only the first column should contain content;
+		// subsequent columns serve as overflow targets. Silently ignoring user content
+		// would be a poor developer experience, so we warn early.
+		if (columnNode.snakingColumns && columns.length > 1) {
+			for (let j = 1; j < columns.length; j++) {
+				const col = columns[j];
+				// Simple heuristic: check if column is non-empty (not '', ' ', or empty object).
+				// This is forward-compatible with any future content types.
+				const isEmpty = col === '' || col === ' ' ||
+					(typeof col === 'object' && col !== null && col.text === '' && Object.keys(col).filter(k => k !== 'text' && k !== 'width').length === 0);
+				if (col && !isEmpty) {
+					console.warn(
+						'pdfmake: snakingColumns only uses the first column for content. ' +
+						'Content in subsequent columns will be ignored. ' +
+						'Use empty placeholders like { text: \'\', width: \'*\' } for overflow targets.'
+					);
+					break; // Warn once, not per-column
+				}
+			}
+		}
+
 		ColumnCalculator.buildColumnWidths(columns, availableWidth);
 		let result = this.processRow({
 			marginX: columnNode._margin ? [columnNode._margin[0], columnNode._margin[2]] : [0, 0],
@@ -893,6 +915,12 @@ class LayoutBuilder {
 		this.writer.context().beginColumnGroup(marginXParent, _bottomByPage,
 			snakingColumns, columnGapForGroup, columnWidthsForContext);
 
+		// IMPORTANT: We iterate ALL columns even when snakingColumns is enabled.
+		// This is intentional — beginColumn() must be called for each column to set up
+		// proper geometry (widths, offsets) and rowspan/colspan tracking. The
+		// completeColumnGroup() call at the end depends on this bookkeeping to compute
+		// heights correctly. Content processing is skipped for columns > 0 via
+		// skipForSnaking below, but the column structure must still be established.
 		for (let i = 0, l = cells.length; i < l; i++) {
 			let cell = cells[i];
 			let cellIndexBegin = i;
@@ -949,8 +977,10 @@ class LayoutBuilder {
 			// We pass the endingSpanCell reference to store the context just after processing rowspan cell
 			this.writer.context().beginColumn(width, leftOffset, endOfRowSpanCell);
 
-			// When snaking, only process content from first column.
-			// Content will overflow into subsequent columns via moveToNextColumn.
+			// When snaking, only process content from the first column (i === 0).
+			// Content overflows into subsequent columns via moveToNextColumn().
+			// We skip content processing here but NOT the beginColumn() call above —
+			// the column geometry setup is still needed for proper layout bookkeeping.
 			const skipForSnaking = snakingColumns && i > 0;
 
 			if (!cell._span && !skipForSnaking) {

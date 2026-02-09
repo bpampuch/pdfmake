@@ -2,7 +2,34 @@
 
 This document outlines the known limitations of the Snaking Columns implementation in `pdfmake`. It allows developers to understand architectural constraints and recommended usage patterns.
 
-## 1. Nested Snaking Columns (Limited Support)
+## 1. Single-Source-Column Contract
+
+**Status**: By Design.
+
+**Description**:
+When `snakingColumns: true` is enabled, only the **first column** should contain content. Subsequent columns serve as empty placeholders for overflow.
+
+```javascript
+// Correct usage
+{
+  columns: [
+    { text: myLongContent, width: '*' },  // Content goes here
+    { text: '', width: '*' },              // Empty overflow target
+    { text: '', width: '*' }               // Empty overflow target
+  ],
+  snakingColumns: true
+}
+```
+
+**Runtime Validation**:
+If content is detected in columns > 0, pdfmake will emit a console warning:
+```
+pdfmake: snakingColumns only uses the first column for content. Content in subsequent columns will be ignored.
+```
+
+This warning uses a forward-compatible heuristic and does not halt PDF generation.
+
+## 2. Nested Snaking Columns (Limited Support)
 
 **Status**: Experimental / Limited.
 
@@ -18,7 +45,7 @@ The `pdfmake` engine manages content flow using a stack of `DocumentContext` sna
 - Standard columns (non-snaking) _can_ be safely nested inside snaking columns.
 - Snaking columns _can_ be safely nested inside standard columns.
 
-## 2. Dynamic Header Repetition
+## 3. Dynamic Header Repetition
 
 **Status**: Not Supported.
 
@@ -33,7 +60,7 @@ Table headers are supported because tables possess a rigid, row-based structure 
 - Manually place headers at the start of your content groups.
 - If repeated headers are critical (e.g., for data-heavy reports), consider using a standard Table instead of Snaking Columns, as Tables natively support `headerRows` and page-break repetition.
 
-## 3. Orphan Control ("Keep With Next")
+## 4. Orphan Control ("Keep With Next")
 
 **Status**: Standard Limitation.
 
@@ -47,3 +74,4 @@ The `unbreakable: true` property is designed to keep a block of content together
 
 - Wrap small groups (e.g., a Header and its first paragraph) in a `stack` with `unbreakable: true` to enforce cohesion.
 - Be aware that strictly enforcing `unbreakable` blocks in columns may result in uneven gaps at the bottom of the previous column.
+
