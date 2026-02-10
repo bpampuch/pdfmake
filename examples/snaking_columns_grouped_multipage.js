@@ -182,7 +182,11 @@ var docDefinition = {
 	}
 };
 
+var now = new Date();
+
 var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/snaking_columns_grouped_multipage.pdf').then(function () {
-	console.log('PDF saved to pdfs/snaking_columns_grouped_multipage.pdf');
+pdf.write('pdfs/snaking_columns_grouped_multipage.pdf').then(() => {
+	console.log(new Date() - now);
+}, err => {
+	console.error(err);
 });

@@ -23,7 +23,7 @@ Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) an
   * auto/fixed/star-sized widths,
   * col-spans and row-spans,
   * headers automatically repeated in case of a page-break,
-  * snaking columns (newspaper-style layout where content flows column-to-column),
+  * snaking columns (newspaper-style layout where content flows column-to-column) - [see limitations](examples/snaking_columns_limitations.md),
 * images and vector graphics,
 * convenient styling and style inheritance,
 * page headers and footers:

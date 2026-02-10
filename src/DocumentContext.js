@@ -83,7 +83,19 @@ class DocumentContext extends EventEmitter {
 	}
 
 	beginColumn(width, offset, endingCell) {
+		// Find the correct snapshot for this column group.
+		// When a snaking column break (moveToNextColumn) occurs during inner column
+		// processing, overflowed snapshots may sit above this column group's snapshot.
+		// We need to skip past those to find the one from our beginColumnGroup call.
 		let saved = this.snapshots[this.snapshots.length - 1];
+		if (saved && saved.overflowed) {
+			for (let i = this.snapshots.length - 1; i >= 0; i--) {
+				if (!this.snapshots[i].overflowed) {
+					saved = this.snapshots[i];
+					break;
+				}
+			}
+		}
 
 		this.calculateBottomMost(saved, endingCell);
 
@@ -192,9 +204,9 @@ class DocumentContext extends EventEmitter {
 			this.availableHeight -= (y - saved.bottomMost.y);
 		}
 
-		 if (height && (saved.bottomMost.y - saved.y < height)) {
+		if (height && (saved.bottomMost.y - saved.y < height)) {
 			this.height = height;
-		 } else {
+		} else {
 			this.height = saved.bottomMost.y - saved.y;
 		}
 
@@ -262,6 +274,26 @@ class DocumentContext extends EventEmitter {
 		this.availableHeight = snakingSnapshot.availableHeight;
 		this.availableWidth = nextColumnWidth;
 
+		// Sync non-overflowed inner snapshots (e.g. inner column groups for
+		// product/price rows) with the new snaking column position.
+		// Without this, inner beginColumn would read stale y/page/x values.
+		for (let i = this.snapshots.length - 2; i >= 0; i--) {
+			let snapshot = this.snapshots[i];
+			if (snapshot.overflowed || snapshot.snakingColumns) {
+				break; // Stop at first overflowed or snaking snapshot
+			}
+			snapshot.x = newX;
+			snapshot.y = newY;
+			snapshot.page = this.page;
+			snapshot.availableHeight = snakingSnapshot.availableHeight;
+			if (snapshot.bottomMost) {
+				snapshot.bottomMost.x = newX;
+				snapshot.bottomMost.y = newY;
+				snapshot.bottomMost.page = this.page;
+				snapshot.bottomMost.availableHeight = snakingSnapshot.availableHeight;
+			}
+		}
+
 		return { prevY: prevY, y: this.y };
 	}
 
@@ -296,20 +328,17 @@ class DocumentContext extends EventEmitter {
 
 		// Sync all snapshots to new page state.
 		// When page break occurs within snaking columns, update ALL snapshots
-		// (not just first) to reflect new page coordinates. This ensures nested
-		// structures don't retain stale values that would cause truncation.
+		// (not just snaking column snapshots) to reflect new page coordinates.
+		// This ensures nested structures (like inner product/price columns)
+		// don't retain stale values that would cause layout corruption.
 		for (let i = 0; i < this.snapshots.length; i++) {
 			let snapshot = this.snapshots[i];
-			if (snapshot.snakingColumns) {
-				snapshot.x = this.x;
-				if (snapshot.bottomMost) {
-					snapshot.bottomMost.x = this.x;
-				}
-			}
+			snapshot.x = this.x;
 			snapshot.y = this.y;
 			snapshot.availableHeight = this.availableHeight;
 			snapshot.page = this.page;
 			if (snapshot.bottomMost) {
+				snapshot.bottomMost.x = this.x;
 				snapshot.bottomMost.y = this.y;
 				snapshot.bottomMost.availableHeight = this.availableHeight;
 				snapshot.bottomMost.page = this.page;
@@ -408,12 +437,15 @@ class DocumentContext extends EventEmitter {
 		let createNewPage = nextPageIndex >= this.pages.length;
 		if (createNewPage) {
 			let currentAvailableWidth = this.availableWidth;
-			let currentPageOrientation = this.getCurrentPage().pageSize.orientation;
+			// Current page might be null if we are at the very beginning (page -1).
+			// Handle this case safely.
+			let currentPageOrientation = this.getCurrentPage() ? this.getCurrentPage().pageSize.orientation : null;
 
 			let pageSize = getPageSize(this.getCurrentPage(), pageOrientation);
-			this.addPage(pageSize, null, this.getCurrentPage().customProperties);
+			// Pass empty customProperties if no current page exists.
+			this.addPage(pageSize, null, this.getCurrentPage() ? this.getCurrentPage().customProperties : {});
 
-			if (currentPageOrientation === pageSize.orientation) {
+			if (currentPageOrientation && currentPageOrientation === pageSize.orientation) {
 				this.availableWidth = currentAvailableWidth;
 			}
 		} else {
@@ -456,7 +488,22 @@ class DocumentContext extends EventEmitter {
 	}
 
 	getCurrentPosition() {
-		let pageSize = this.getCurrentPage().pageSize;
+		let page = this.getCurrentPage();
+		// If no page exists (e.g. at start of document processing), return null
+		// to avoid crashing when accessing pageSize.
+		if (!page) {
+			return {
+				pageNumber: 0,
+				pageOrientation: 'portrait',
+				pageInnerHeight: 0,
+				pageInnerWidth: 0,
+				left: 0,
+				top: 0,
+				verticalRatio: 0,
+				horizontalRatio: 0
+			};
+		}
+		let pageSize = page.pageSize;
 		let innerHeight = pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
 		let innerWidth = pageSize.width - this.pageMargins.left - this.pageMargins.right;
 

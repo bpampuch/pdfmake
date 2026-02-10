@@ -35,7 +35,11 @@ var docDefinition = {
 	}
 };
 
+var now = new Date();
+
 var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/snaking_columns_stack_test.pdf').then(function () {
-	console.log('PDF saved to pdfs/snaking_columns_stack_test.pdf');
+pdf.write('pdfs/snaking_columns_stack_test.pdf').then(() => {
+	console.log(new Date() - now);
+}, err => {
+	console.error(err);
 });

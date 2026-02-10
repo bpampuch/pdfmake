@@ -63,7 +63,11 @@ var docDefinition = {
 	}
 };
 
+var now = new Date();
+
 var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/snaking_columns_unbreakable.pdf').then(function () {
-	console.log('PDF saved to pdfs/snaking_columns_unbreakable.pdf');
+pdf.write('pdfs/snaking_columns_unbreakable.pdf').then(() => {
+	console.log(new Date() - now);
+}, err => {
+	console.error(err);
 });

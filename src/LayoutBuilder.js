@@ -580,7 +580,12 @@ class LayoutBuilder {
 		this.writer.moveToNextPage(pageOrientation);
 
 		// Reset snaking column state for the new page
+		// Save lastColumnWidth before reset — if we're inside a nested
+		// column group (e.g. product/price row), the reset would overwrite
+		// it with the snaking column width, corrupting inner column layout.
+		let savedLastColumnWidth = ctx.lastColumnWidth;
 		ctx.resetSnakingColumnsForNewPage();
+		ctx.lastColumnWidth = savedLastColumnWidth;
 	}
 
 	// vertical container
@@ -680,11 +685,16 @@ class LayoutBuilder {
 		if (columnNode.snakingColumns && columns.length > 1) {
 			for (let j = 1; j < columns.length; j++) {
 				const col = columns[j];
-				// Simple heuristic: check if column is non-empty (not '', ' ', or empty object).
-				// This is forward-compatible with any future content types.
-				const isEmpty = col === '' || col === ' ' ||
-					(typeof col === 'object' && col !== null && col.text === '' && Object.keys(col).filter(k => k !== 'text' && k !== 'width').length === 0);
-				if (col && !isEmpty) {
+				// Check if column has actual content (text, stack, image, etc)
+				// We don't use Object.keys() as that flags internal properties (e.g. _margin) or styles.
+				const hasContent = (col.text !== undefined && col.text !== '' && col.text !== null) ||
+					(col.stack && col.stack.length > 0) ||
+					(col.ol && col.ol.length > 0) ||
+					(col.ul && col.ul.length > 0) ||
+					col.table || col.image || col.svg || col.qr ||
+					(col.canvas && col.canvas.length > 0);
+
+				if (col && hasContent) {
 					console.warn(
 						'pdfmake: snakingColumns only uses the first column for content. ' +
 						'Content in subsequent columns will be ignored. ' +
@@ -1063,7 +1073,7 @@ class LayoutBuilder {
 				itemBegin.cell = cell;
 				itemBegin.bottomY = this.writer.context().y;
 				itemBegin.isCellContentMultiPage = !itemBegin.cell.positions.every(item => item.pageNumber === itemBegin.cell.positions[0].pageNumber);
-				itemBegin.getViewHeight = function() {
+				itemBegin.getViewHeight = function () {
 					if (this.cell._willBreak) {
 						return this.cell._bottomY - this.cell._rowTopPageY;
 					}
@@ -1083,7 +1093,7 @@ class LayoutBuilder {
 
 					return this.viewHeight;
 				};
-				itemBegin.getNodeHeight = function() {
+				itemBegin.getNodeHeight = function () {
 					return this.nodeHeight;
 				};
 

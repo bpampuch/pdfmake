@@ -207,6 +207,20 @@ class PageElementWriter extends ElementWriter {
 		let snakingSnapshot = ctx.getSnakingSnapshot();
 
 		if (snakingSnapshot) {
+			// Check if we're inside a nested (non-snaking) column group.
+			// If so, don't allow a snaking column move — it would corrupt
+			// the inner row's layout (e.g. product name in col 1, price in col 2).
+			// The inner row should complete via normal page break instead.
+			for (let i = ctx.snapshots.length - 1; i >= 0; i--) {
+				let snap = ctx.snapshots[i];
+				if (snap.snakingColumns) {
+					break; // Reached the snaking snapshot, no inner groups found
+				}
+				if (!snap.overflowed) {
+					return false; // Found a non-snaking, non-overflowed inner group
+				}
+			}
+
 			let overflowCount = 0;
 			for (let i = ctx.snapshots.length - 1; i >= 0; i--) {
 				if (ctx.snapshots[i].overflowed) {
@@ -251,8 +265,12 @@ class PageElementWriter extends ElementWriter {
 				if (snakingSnapshot) {
 					this.moveToNextPage();
 
-					// Reset snaking column state for the new page
+					// Save lastColumnWidth before reset — if we're inside a nested
+					// column group (e.g. product/price row), the reset would overwrite
+					// it with the snaking column width, corrupting inner column layout.
+					let savedLastColumnWidth = ctx.lastColumnWidth;
 					ctx.resetSnakingColumnsForNewPage();
+					ctx.lastColumnWidth = savedLastColumnWidth;
 
 					position = addFct();
 				} else {

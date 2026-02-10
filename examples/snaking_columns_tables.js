@@ -18,6 +18,11 @@ var prices = [
 	18.75, 55.00, 9.99, 38.50, 22.00, 71.25, 14.50, 48.99, 6.75, 31.00,
 	25.99, 59.50, 11.25, 36.00, 19.75, 64.99, 13.00, 41.50, 7.99, 28.25,
 	23.50, 52.75, 10.00, 34.99, 20.50, 68.25, 16.75, 44.00, 8.50, 30.99,
+	26.25, 57.00, 12.50, 39.75, 21.00, 66.50, 15.25, 46.99, 9.25, 32.50,
+	19.99, 24.50, 12.75, 45.00, 8.25, 33.99, 67.50, 15.00, 29.99, 42.25,
+	18.75, 55.00, 9.99, 38.50, 22.00, 71.25, 14.50, 48.99, 6.75, 31.00,
+	25.99, 59.50, 11.25, 36.00, 19.75, 64.99, 13.00, 41.50, 7.99, 28.25,
+	23.50, 52.75, 10.00, 34.99, 20.50, 68.25, 16.75, 44.00, 8.50, 30.99,
 	26.25, 57.00, 12.50, 39.75, 21.00, 66.50, 15.25, 46.99, 9.25, 32.50
 ];
 
@@ -42,15 +47,19 @@ function buildRow(product, price, isHeader) {
 		margin: [0, 2, 0, 2]
 	};
 
-	return [row, divider];
+	return {
+		stack: [row, divider],
+		unbreakable: true
+	};
 }
 
 var catalogStack = [];
 
-catalogStack = catalogStack.concat(buildRow('Product', 'Price', true));
+catalogStack.push(buildRow('Product', 'Price', true));
 
-for (var i = 1; i <= 50; i++) {
-	catalogStack = catalogStack.concat(buildRow('Product ' + i, '$' + prices[i - 1].toFixed(2), false));
+for (var i = 1; i <= 200; i++) {
+	var price = prices[(i - 1) % prices.length];
+	catalogStack.push(buildRow('Product ' + i, '$' + price.toFixed(2), false));
 }
 
 var docDefinition = {
@@ -98,7 +107,11 @@ var docDefinition = {
 	}
 };
 
+var now = new Date();
+
 var pdf = pdfmake.createPdf(docDefinition);
-pdf.write('pdfs/snaking_columns_tables.pdf').then(function () {
-	console.log('PDF saved to pdfs/snaking_columns_tables.pdf');
+pdf.write('pdfs/snaking_columns_tables.pdf').then(() => {
+	console.log(new Date() - now);
+}, err => {
+	console.error(err);
 });
