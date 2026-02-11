@@ -241,4 +241,55 @@ describe('Integration test: snaking columns with real table nodes', function () 
 
 		assert.ok(uniqueX.length >= 2, 'Table with custom widths should snake correctly');
 	});
+
+	it('should draw top border at continuation point after column and page breaks', function () {
+		var tableBody = [['Header 1', 'Header 2', 'Header 3']];
+		for (var i = 1; i <= 200; i++) {
+			tableBody.push(['Row ' + i, 'Column 2', 'Column 3']);
+		}
+
+		var dd = {
+			content: [
+				{
+					columns: [
+						{
+							table: {
+								body: tableBody
+							},
+							width: '*'
+						},
+						{ text: '', width: '*' }
+					],
+					columnGap: 30,
+					snakingColumns: true
+				}
+			]
+		};
+
+		var pages = testHelper.renderPages('A4', dd);
+
+		assert.ok(pages.length >= 2, 'Should span multiple pages');
+
+		// On each page, column 2 should have a horizontal border line near the top
+		// (same Y as column 1's top border), confirming the continuation border is drawn
+		pages.forEach(function (page, pi) {
+			var hLines = page.items.filter(function (n) {
+				return n.type === 'vector' && n.item.type === 'line' && n.item.y1 === n.item.y2;
+			});
+			var col2Lines = hLines.filter(function (v) { return v.item.x1 >= 300; });
+
+			if (col2Lines.length > 0) {
+				var col1Lines = hLines.filter(function (v) { return v.item.x1 < 300; });
+				var col1TopY = Math.min.apply(null, col1Lines.map(function (v) { return v.item.y1; }));
+				var col2TopY = Math.min.apply(null, col2Lines.map(function (v) { return v.item.y1; }));
+
+				// Col2 top border should be at approximately the same Y as col1 top border
+				assert.ok(
+					Math.abs(col2TopY - col1TopY) < 5,
+					'Page ' + (pi + 1) + ': Col2 top border (' + Math.round(col2TopY) +
+					') should match Col1 top border (' + Math.round(col1TopY) + ')'
+				);
+			}
+		});
+	});
 });

@@ -1177,6 +1177,14 @@ class LayoutBuilder {
 				);
 				if (this.writer.context().availableHeight < minRowHeight) {
 					this.snakingAwarePageBreak();
+
+					// Draw top border at the continuation point in the new column/page,
+					// just like regular page breaks do (see endRow's hLineWhenBroken logic).
+					// The previous endRow already drew this line at the old column position;
+					// we redraw it here so the continuation has a proper top border.
+					if (processor.layout.hLineWhenBroken !== false) {
+						processor.drawHorizontalLine(i, this.writer);
+					}
 				}
 			}
 
