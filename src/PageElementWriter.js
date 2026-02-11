@@ -263,14 +263,21 @@ class PageElementWriter extends ElementWriter {
 				let snakingSnapshot = ctx.getSnakingSnapshot();
 
 				if (snakingSnapshot) {
-					this.moveToNextPage();
+					if (ctx.isInNestedNonSnakingGroup()) {
+						// Inside a table cell within snaking columns — use standard page break.
+						// Don't reset snaking state; the table handles its own breaks.
+						// Column breaks happen between rows in processTable instead.
+						this.moveToNextPage();
+					} else {
+						this.moveToNextPage();
 
-					// Save lastColumnWidth before reset — if we're inside a nested
-					// column group (e.g. product/price row), the reset would overwrite
-					// it with the snaking column width, corrupting inner column layout.
-					let savedLastColumnWidth = ctx.lastColumnWidth;
-					ctx.resetSnakingColumnsForNewPage();
-					ctx.lastColumnWidth = savedLastColumnWidth;
+						// Save lastColumnWidth before reset — if we're inside a nested
+						// column group (e.g. product/price row), the reset would overwrite
+						// it with the snaking column width, corrupting inner column layout.
+						let savedLastColumnWidth = ctx.lastColumnWidth;
+						ctx.resetSnakingColumnsForNewPage();
+						ctx.lastColumnWidth = savedLastColumnWidth;
+					}
 
 					position = addFct();
 				} else {

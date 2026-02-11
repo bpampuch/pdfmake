@@ -82,6 +82,26 @@ class DocumentContext extends EventEmitter {
 		return !!this.getSnakingSnapshot();
 	}
 
+	/**
+	 * Check if we're inside a nested non-snaking column group (e.g., a table row)
+	 * within an outer snaking column group. This is used to prevent snaking-specific
+	 * breaks inside table cells — the table's own page break mechanism should handle
+	 * row breaks, and column breaks should happen between rows.
+	 * @returns {boolean}
+	 */
+	isInNestedNonSnakingGroup() {
+		for (let i = this.snapshots.length - 1; i >= 0; i--) {
+			let snap = this.snapshots[i];
+			if (snap.snakingColumns) {
+				return false; // Reached snaking snapshot without finding inner group
+			}
+			if (!snap.overflowed) {
+				return true; // Found non-snaking, non-overflowed inner group
+			}
+		}
+		return false;
+	}
+
 	beginColumn(width, offset, endingCell) {
 		// Find the correct snapshot for this column group.
 		// When a snaking column break (moveToNextColumn) occurs during inner column
