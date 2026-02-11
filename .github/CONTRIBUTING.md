@@ -8,8 +8,6 @@ Bug reports require example for reproduce issue runnable on [playground](http://
 
 ## Pull requests
 
-**Please do not commit changes in `build` folder.**
-
 **Please do not commit changes in `package.json` file if is not related to the pull request changes.**
 
 Use [EditorConfig](https://editorconfig.org/) in your IDE for keep code style. Do not make code style changes unless it is related to the pull request.
