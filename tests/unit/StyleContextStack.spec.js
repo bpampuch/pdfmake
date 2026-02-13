@@ -212,7 +212,7 @@ describe('StyleContextStack', function () {
 			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'color', undefined), 'red');
 		});
 
-		it('should process margin in multiple extends styles', function () {
+		it('should process style in multiple extends styles', function () {
 			var stack = new StyleContextStack({
 				style1: {
 					fontSize: 18,
@@ -260,6 +260,110 @@ describe('StyleContextStack', function () {
 			});
 			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'fontSize', undefined), 15);
 			assert.equal(StyleContextStack.getStyleProperty({style: 'subheader'}, stack, 'bold', undefined), undefined);
+		});
+
+		it('should process style in multiple extends styles from styles 1', function () {
+			var stack = new StyleContextStack({
+				marginLeft: {
+					marginLeft: 50,
+					color: 'red',
+				},
+				margin: {
+					margin: [20, 20, 20, 20],
+					color: 'green',
+				},
+				marginExtends1: {
+					extends: ['margin', 'marginLeft']
+				},
+				marginExtends2: {
+					extends: ['marginLeft', 'margin']
+				},
+				marginExtends3: {
+					extends: ['marginExtends1', 'marginExtends2'],
+				},
+				marginExtends4: {
+					extends: ['marginExtends2', 'marginExtends1'],
+				},
+			});
+			assert.equal(StyleContextStack.getStyleProperty({ style: 'marginExtends3' }, stack, 'color', undefined), 'green');
+		});
+
+		it('should process style in multiple extends styles from styles 2', function () {
+			var stack = new StyleContextStack({
+				marginLeft: {
+					marginLeft: 50,
+					color: 'red',
+				},
+				margin: {
+					margin: [20, 20, 20, 20],
+					color: 'green',
+				},
+				marginExtends1: {
+					extends: ['margin', 'marginLeft']
+				},
+				marginExtends2: {
+					extends: ['marginLeft', 'margin']
+				},
+				marginExtends3: {
+					extends: ['marginExtends1', 'marginExtends2'],
+				},
+				marginExtends4: {
+					extends: ['marginExtends2', 'marginExtends1'],
+				},
+			});
+			assert.equal(StyleContextStack.getStyleProperty({ style: 'marginExtends4' }, stack, 'color', undefined), 'red');
+		});
+
+		it('should process style in multiple extends styles from styles 3', function () {
+			var stack = new StyleContextStack({
+				marginLeft: {
+					marginLeft: 50,
+					color: 'red',
+				},
+				margin: {
+					margin: [20, 20, 20, 20],
+					color: 'green',
+				},
+				marginExtends1: {
+					extends: ['margin', 'marginLeft']
+				},
+				marginExtends2: {
+					extends: ['marginLeft', 'margin']
+				},
+				marginExtends3: {
+					extends: ['marginExtends1', 'marginExtends2'],
+				},
+				marginExtends4: {
+					extends: ['marginExtends2', 'marginExtends1'],
+				},
+			});
+			assert.equal(StyleContextStack.getStyleProperty({ style: ['marginExtends1', 'marginExtends2'] }, stack, 'color', undefined), 'green');
+		});
+
+		it('should process style in multiple extends styles from styles 4', function () {
+			var stack = new StyleContextStack({
+				marginLeft: {
+					marginLeft: 50,
+					color: 'red',
+				},
+				margin: {
+					margin: [20, 20, 20, 20],
+					color: 'green',
+				},
+				marginExtends1: {
+					extends: ['margin', 'marginLeft']
+				},
+				marginExtends2: {
+					extends: ['marginLeft', 'margin']
+				},
+				marginExtends3: {
+					extends: ['marginExtends1', 'marginExtends2'],
+				},
+				marginExtends4: {
+					extends: ['marginExtends2', 'marginExtends1'],
+				},
+			});
+			assert.equal(StyleContextStack.getStyleProperty({ style: ['marginExtends2', 'marginExtends1'] }, stack, 'color', undefined), 'red');
 		});
 	});
 
