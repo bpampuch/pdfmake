@@ -1155,6 +1155,15 @@ class LayoutBuilder {
 			}
 		}
 
+		if (node.outline) {
+			line._outline = {
+				id: node.id,
+				parentId: node.outlineParentId,
+				text: node.outlineText || node.text,
+				expanded: node.outlineExpanded || false
+			}
+		}
+
 		if (node._tocItemRef) {
 			line._pageNodeRef = node._tocItemRef;
 		}
