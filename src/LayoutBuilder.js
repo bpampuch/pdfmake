@@ -1161,7 +1161,7 @@ class LayoutBuilder {
 				parentId: node.outlineParentId,
 				text: node.outlineText || node.text,
 				expanded: node.outlineExpanded || false
-			}
+			};
 		}
 
 		if (node._tocItemRef) {
