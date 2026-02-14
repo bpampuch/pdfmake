@@ -45,20 +45,27 @@ The `pdfmake` engine manages content flow using a stack of `DocumentContext` sna
 - Standard columns (non-snaking) _can_ be safely nested inside snaking columns.
 - Snaking columns _can_ be safely nested inside standard columns.
 
-## 3. Dynamic Header Repetition
+## 3. Dynamic Header Repetition (Non-Table Content)
 
-**Status**: Not Supported.
+**Status**: Not supported for arbitrary content; supported for tables via `headerRows`/`keepWithHeaderRows`.
 
 **Description**:
-The library does not currently support automatically repeating "Group Headers" (e.g., repeating a category title) when a column group breaks across a page or column. This differs from standard Table headers, which do support automatic repetition.
+The library does not support automatically repeating arbitrary "Group Headers" (e.g., repeating a category title from a `stack` or `text` node) when a snaking column group breaks across a column or page.
+
+However, table `headerRows` and `keepWithHeaderRows` are supported inside snaking columns. When a table with `headerRows` is placed inside a snaking column layout, header rows are repeated at column and page transitions.
 
 **Technical Context**:
-Table headers are supported because tables possess a rigid, row-based structure that allows the engine to predict header placement. Snaking columns, by definition, are unstructured vertical flows. Dynamically injecting header nodes during the column-flow process interferes with the pre-calculated dimensions of the layout tree, preventing accurate placement without causing reflow cycles.
+Table headers work through the table repeatable-fragment path in `PageElementWriter` (used on both `moveToNextColumn()` and `moveToNextPage()`), combined with snaking-state reset/snapshot synchronization on page breaks in `DocumentContext` (`resetSnakingColumnsForNewPage()`). Together these ensure table headers continue to render correctly when flow crosses columns and pages.
+
+This behavior is covered by integration tests in `tests/integration/snaking_columns_table_headerRows.spec.js` and example documents (`snaking_columns_table_headerRows.js`, `snaking_columns_table_keepWithHeaderRows.js`).
+
+For non-table content (plain `text`, `stack`, etc.), there is no equivalent mechanism to automatically repeat a header block when content overflows into a new column.
 
 **Recommendation**:
 
-- Manually place headers at the start of your content groups.
-- If repeated headers are critical (e.g., for data-heavy reports), consider using a standard Table instead of Snaking Columns, as Tables natively support `headerRows` and page-break repetition.
+- For data-heavy reports requiring repeated headers, use a table with `headerRows` (and optionally `keepWithHeaderRows`) inside snaking columns. See `snaking_columns_table_headerRows.js` and `snaking_columns_table_keepWithHeaderRows.js`.
+- How to spot the difference: with `keepWithHeaderRows`, flow moves earlier, leaving a slightly larger bottom gap instead of placing a repeated header with too few following rows.
+- For non-table content, manually place headers at the start of your content groups.
 
 ## 4. Orphan Control ("Keep With Next")
 

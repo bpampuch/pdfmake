@@ -182,13 +182,13 @@ class PageElementWriter extends ElementWriter {
 
 		// Handle repeatables (like table headers) for the new column
 		this.repeatables.forEach(function (rep) {
-			// Repeatables are shared across columns on the same page
-			if (rep.insertedOnPages[this.context().page] === undefined) {
-				rep.insertedOnPages[this.context().page] = true;
-				this.addFragment(rep, true);
-			} else {
-				this.context().moveDown(rep.height);
-			}
+			// In snaking columns, we WANT headers to repeat.
+			// However, in Standard Page Breaks, headers are drawn using useBlockXOffset=true (original absolute X).
+			// This works for page breaks because margins are consistent.
+			// In Snaking Columns, the X position changes for each column.
+			// If we use true, the header is drawn at the *original* X position (Col 1), overlapping/invisible.
+			// We MUST use false to force drawing relative to the CURRENT context X (new column start).
+			this.addFragment(rep, false);
 		}, this);
 
 		this.emit('columnChanged', {

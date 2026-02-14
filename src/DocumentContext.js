@@ -328,6 +328,9 @@ class DocumentContext extends EventEmitter {
 			return;
 		}
 
+		let pageTopY = this.pageMargins.top;
+		let pageInnerHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+
 		// When moving to new page, start at first column.
 		// Reset width to FIRST column width, not last column from previous page.
 		let firstColumnWidth = snakingSnapshot.columnWidths ? snakingSnapshot.columnWidths[0] : (this.lastColumnWidth || this.availableWidth);
@@ -353,14 +356,15 @@ class DocumentContext extends EventEmitter {
 		// don't retain stale values that would cause layout corruption.
 		for (let i = 0; i < this.snapshots.length; i++) {
 			let snapshot = this.snapshots[i];
+			let isSnakingSnapshot = !!snapshot.snakingColumns;
 			snapshot.x = this.x;
-			snapshot.y = this.y;
-			snapshot.availableHeight = this.availableHeight;
+			snapshot.y = isSnakingSnapshot ? pageTopY : this.y;
+			snapshot.availableHeight = isSnakingSnapshot ? pageInnerHeight : this.availableHeight;
 			snapshot.page = this.page;
 			if (snapshot.bottomMost) {
 				snapshot.bottomMost.x = this.x;
-				snapshot.bottomMost.y = this.y;
-				snapshot.bottomMost.availableHeight = this.availableHeight;
+				snapshot.bottomMost.y = isSnakingSnapshot ? pageTopY : this.y;
+				snapshot.bottomMost.availableHeight = isSnakingSnapshot ? pageInnerHeight : this.availableHeight;
 				snapshot.bottomMost.page = this.page;
 			}
 		}
@@ -509,8 +513,8 @@ class DocumentContext extends EventEmitter {
 
 	getCurrentPosition() {
 		let page = this.getCurrentPage();
-		// If no page exists (e.g. at start of document processing), return null
-		// to avoid crashing when accessing pageSize.
+		// If no page exists (e.g. at start of document processing), return a
+		// zeroed-out position object to avoid crashing when accessing pageSize.
 		if (!page) {
 			return {
 				pageNumber: 0,
