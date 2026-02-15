@@ -461,15 +461,12 @@ class DocumentContext extends EventEmitter {
 		let createNewPage = nextPageIndex >= this.pages.length;
 		if (createNewPage) {
 			let currentAvailableWidth = this.availableWidth;
-			// Current page might be null if we are at the very beginning (page -1).
-			// Handle this case safely.
-			let currentPageOrientation = this.getCurrentPage() ? this.getCurrentPage().pageSize.orientation : null;
+			let currentPageOrientation = this.getCurrentPage().pageSize.orientation;
 
 			let pageSize = getPageSize(this.getCurrentPage(), pageOrientation);
-			// Pass empty customProperties if no current page exists.
-			this.addPage(pageSize, null, this.getCurrentPage() ? this.getCurrentPage().customProperties : {});
+			this.addPage(pageSize, null, this.getCurrentPage().customProperties);
 
-			if (currentPageOrientation && currentPageOrientation === pageSize.orientation) {
+			if (currentPageOrientation === pageSize.orientation) {
 				this.availableWidth = currentAvailableWidth;
 			}
 		} else {
