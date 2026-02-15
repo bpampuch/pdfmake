@@ -7,6 +7,7 @@
 	- `outlineText` (optional) - set custom bookmark text, otherwise text from node
 	- `outlineExpanded` (optional) - set to `true` for expanded/opened bookmark
 	- `outlineParentId` (optional) - parent bookmark `id`
+- Added property `outlines` for ToC, which adds all items to outlines / bookmarks (any existing outline settings on texts are respected)
 
 ## 0.3.4 - 2026-02-13
 

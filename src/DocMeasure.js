@@ -218,6 +218,10 @@ class DocMeasure {
 					{ text: item._textNodeRef.text, linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin },
 					{ text: '00000', linkToDestination: destination, alignment: 'right', _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
 				]);
+
+				if (node.toc.outlines) {
+					item._textNodeRef.outline = item._textNodeRef.outline || true;
+				}
 			}
 
 			node.toc._table = {

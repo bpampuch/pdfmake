@@ -1162,6 +1162,18 @@ class LayoutBuilder {
 				text: node.outlineText || node.text,
 				expanded: node.outlineExpanded || false
 			};
+		} else if (Array.isArray(node.text)) {
+			for (let i = 0, l = node.text.length; i < l; i++) {
+				let item = node.text[i];
+				if (item.outline) {
+					line._outline = {
+						id: item.id,
+						parentId: item.outlineParentId,
+						text: item.outlineText || item.text,
+						expanded: item.outlineExpanded || false
+					};
+				}
+			}
 		}
 
 		if (node._tocItemRef) {
