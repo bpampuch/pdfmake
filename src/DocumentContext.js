@@ -512,22 +512,7 @@ class DocumentContext extends EventEmitter {
 	}
 
 	getCurrentPosition() {
-		let page = this.getCurrentPage();
-		// If no page exists (e.g. at start of document processing), return a
-		// zeroed-out position object to avoid crashing when accessing pageSize.
-		if (!page) {
-			return {
-				pageNumber: 0,
-				pageOrientation: 'portrait',
-				pageInnerHeight: 0,
-				pageInnerWidth: 0,
-				left: 0,
-				top: 0,
-				verticalRatio: 0,
-				horizontalRatio: 0
-			};
-		}
-		let pageSize = page.pageSize;
+		let pageSize = this.getCurrentPage().pageSize;
 		let innerHeight = pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
 		let innerWidth = pageSize.width - this.pageMargins.left - this.pageMargins.right;
 
