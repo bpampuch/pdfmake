@@ -79,14 +79,12 @@ export function getNodeMargin(node, styleStack) {
 				continue;
 			}
 
-			visited.add(styleName);
-
 			if (style.extends !== undefined) {
-				flattenedStyles = { ...flattenStyleArray(style.extends, styleStack, visited), ...flattenedStyles };
+				flattenedStyles = { ...flattenedStyles, ...flattenStyleArray(style.extends, styleStack, new Set([...visited, styleName])) };
 			}
 
 			if (style.margin !== undefined) {
-				flattenedStyles = { margin : convertMargin(style.margin) };
+				flattenedStyles = { margin: convertMargin(style.margin) };
 				continue;
 			}
 

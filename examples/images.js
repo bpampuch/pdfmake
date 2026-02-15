@@ -11,28 +11,28 @@ var docDefinition = {
 		'pdfmake (since it\'s based on pdfkit) supports JPEG and PNG format',
 		'If no width/height/fit is provided, image original size will be used',
 		{
-			image: 'fonts/sampleImage.jpg',
+			image: 'images/sampleImage.jpg',
 		},
 		'If you specify width, image will scale proportionally',
 		{
-			image: 'fonts/sampleImage.jpg',
+			image: 'images/sampleImage.jpg',
 			width: 150
 		},
 		'If you specify both width and height - image will be stretched',
 		{
-			image: 'fonts/sampleImage.jpg',
+			image: 'images/sampleImage.jpg',
 			width: 150,
 			height: 150,
 		},
 		'You can also fit the image inside a rectangle',
 		{
-			image: 'fonts/sampleImage.jpg',
+			image: 'images/sampleImage.jpg',
 			fit: [100, 100],
 			pageBreak: 'after'
 		},
 		'You can also cover the image inside a rectangle',
 		{
-			image: 'fonts/sampleImage.jpg',
+			image: 'images/sampleImage.jpg',
 			cover: { width: 100, height: 100, valign: "bottom", align: "right" },
 			pageBreak: 'after'
 		},
@@ -53,7 +53,7 @@ var docDefinition = {
 		},
 		'and opacity is supported:',
 		{
-			image: 'fonts/sampleImage.jpg',
+			image: 'images/sampleImage.jpg',
 			width: 150,
 			opacity: 0.5
 		},

@@ -3,7 +3,17 @@
 ## Unreleased
 
 - Added `snakingColumns` property for columns to enable newspaper-like column flow
+- Added outlines / bookmarks for `text` node
+	- `outline` - set to `true` for add to bookmarks
+	- `outlineText` (optional) - set custom bookmark text, otherwise text from node
+	- `outlineExpanded` (optional) - set to `true` for expanded/opened bookmark
+	- `outlineParentId` (optional) - parent bookmark `id`
+- Added property `outlines` for ToC, which adds all items to outlines / bookmarks (any existing outline settings on texts are respected)
+
+## 0.3.4 - 2026-02-13
+
 - Added vertical alignment for table cells via `verticalAlignment` property, values: `top` (default), `middle`, `bottom`
+- Fixed margin inheritance when styles are extended multiple times
 
 ## 0.3.3 - 2026-01-18
 

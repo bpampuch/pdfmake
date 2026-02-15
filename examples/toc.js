@@ -19,6 +19,7 @@ var docDefinition = {
 				numberStyle: { bold: true },
 				sortBy: 'page', // 'page' (default) or 'title'
 				//sortLocale: 'cs', // custom locale to sort
+				//outlines: true,
 			}
 		},
 		{

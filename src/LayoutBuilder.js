@@ -482,7 +482,9 @@ class LayoutBuilder {
 		this.linearNodeList.push(node);
 		decorateNode(node);
 
-		var prevTop = this.writer.context().getCurrentPosition().top;
+		if (this.writer.context().getCurrentPage() !== null) {
+			var prevTop = this.writer.context().getCurrentPosition().top;
+		}
 
 		applyMargins(() => {
 			let verticalAlignment = node.verticalAlignment;
@@ -553,8 +555,10 @@ class LayoutBuilder {
 			}
 		});
 
-		// TODO: for vertical alignment and does not work (at least) when page break in node
-		node.__height = this.writer.context().getCurrentPosition().top - prevTop;
+		if (prevTop !== undefined) {
+			// TODO: for vertical alignment and does not work (at least) when page break in node
+			node.__height = this.writer.context().getCurrentPosition().top - prevTop;
+		}
 	}
 
 	/**
@@ -1270,6 +1274,27 @@ class LayoutBuilder {
 			let nodeId = getNodeId(node);
 			if (nodeId) {
 				line.id = nodeId;
+			}
+		}
+
+		if (node.outline) {
+			line._outline = {
+				id: node.id,
+				parentId: node.outlineParentId,
+				text: node.outlineText || node.text,
+				expanded: node.outlineExpanded || false
+			};
+		} else if (Array.isArray(node.text)) {
+			for (let i = 0, l = node.text.length; i < l; i++) {
+				let item = node.text[i];
+				if (item.outline) {
+					line._outline = {
+						id: item.id,
+						parentId: item.outlineParentId,
+						text: item.outlineText || item.text,
+						expanded: item.outlineExpanded || false
+					};
+				}
 			}
 		}
 

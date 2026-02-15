@@ -38,7 +38,7 @@ var docDefinition = {
 		},
 		'For better customization, add an image and attach a file to it with linkToFile:',
 		{
-			image: 'fonts/sampleImage.jpg',
+			image: 'images/sampleImage.jpg',
 			width: 150,
 			linkToFile: 'sampleImage'
 		},
@@ -54,7 +54,7 @@ var docDefinition = {
 	],
 	attachments: {
 		sampleImage: {
-			src: 'fonts/sampleImage.jpg',
+			src: 'images/sampleImage.jpg',
 			name: 'sampleImage.png'
 		}
 	},

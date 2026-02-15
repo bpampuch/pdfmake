@@ -10,10 +10,10 @@ describe('PDFDocument', function () {
 	beforeEach(function () {
 		var fontDefinitions = {
 			Roboto: {
-				normal: 'tests/fonts/Roboto-Regular.ttf',
-				bold: 'tests/fonts/Roboto-Medium.ttf',
-				italics: 'tests/fonts/Roboto-Italic.ttf',
-				bolditalics: 'tests/fonts/Roboto-MediumItalic.ttf'
+				normal: 'fonts/Roboto/Roboto-Regular.ttf',
+				bold: 'fonts/Roboto/Roboto-Medium.ttf',
+				italics: 'fonts/Roboto/Roboto-Italic.ttf',
+				bolditalics: 'fonts/Roboto/Roboto-MediumItalic.ttf'
 			}
 		};
 		pdfDocument = new PDFDocument(fontDefinitions);

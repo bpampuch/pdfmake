@@ -41,6 +41,7 @@ class Renderer {
 	constructor(pdfDocument, progressCallback) {
 		this.pdfDocument = pdfDocument;
 		this.progressCallback = progressCallback;
+		this.outlineMap = [];
 	}
 
 	renderPages(pages) {
@@ -125,6 +126,18 @@ class Renderer {
 				case 'center':
 					inline.x += diffWidth / 2;
 					break;
+			}
+		}
+
+		if (line._outline) {
+			let parentOutline = this.pdfDocument.outline;
+			if (line._outline.parentId && this.outlineMap[line._outline.parentId]) {
+				parentOutline = this.outlineMap[line._outline.parentId];
+			}
+
+			let outline = parentOutline.addItem(line._outline.text, { expanded: line._outline.expanded });
+			if (line._outline.id) {
+				this.outlineMap[line._outline.id] = outline;
 			}
 		}
 
