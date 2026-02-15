@@ -27,6 +27,10 @@ class IntegrationTestHelper {
 
 		var pageSize = { width: size[0], height: size[1], orientation: 'portrait' };
 
+		if (docDefinition.pageOrientation === 'landscape') {
+			pageSize = { width: size[1], height: size[0], orientation: 'landscape' };
+		}
+
 		this.pdfDocument = new PDFDocument(fontDescriptors, docDefinition.images, docDefinition.attachments, { size: [pageSize.width, pageSize.height], compress: false });
 		var builder = new LayoutBuilder(pageSize, { left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom }, new SVGMeasure());
 
@@ -37,7 +41,6 @@ class IntegrationTestHelper {
 			docDefinition.background,
 			docDefinition.header,
 			docDefinition.footer,
-			docDefinition.images,
 			docDefinition.watermark,
 			docDefinition.pageBreakBefore
 		);
