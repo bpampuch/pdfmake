@@ -234,6 +234,63 @@ describe('Integration test: snaking columns with table headerRows and keepWithHe
 					'Page ' + (pos.page + 1) + ': data row should follow header at x=' + pos.x);
 			});
 		});
+
+		it('should not draw duplicate horizontal lines at header-data boundary in continuation columns', function () {
+			var tableBody = [];
+			tableBody.push(['Header 1', 'Header 2', 'Header 3']);
+			tableBody.push(['Row 1', 'Column 2', 'Column 3']);
+			for (var i = 2; i <= 200; i++) {
+				tableBody.push(['Row ' + i, 'Column 2', 'Column 3']);
+			}
+
+			var dd = {
+				content: [{
+					columns: [
+						{
+							table: {
+								headerRows: 2,
+								keepWithHeaderRows: 1,
+								body: tableBody
+							},
+							width: '*'
+						},
+						{ text: '', width: '*' }
+					],
+					columnGap: 30,
+					snakingColumns: true
+				}]
+			};
+
+			var pages = testHelper.renderPages('A4', dd);
+
+			var hLines = [];
+			pages[0].items.forEach(function (item) {
+				if (item.type === 'vector' && item.item && item.item.type === 'line') {
+					var v = item.item;
+					if (Math.abs(v.y1 - v.y2) < 0.01) {
+						hLines.push({
+							y: Math.round(v.y1 * 100) / 100,
+							x1: Math.round(v.x1 * 100) / 100,
+							x2: Math.round(v.x2 * 100) / 100
+						});
+					}
+				}
+			});
+
+			var seen = {};
+			var duplicates = [];
+			hLines.forEach(function (line) {
+				var key = line.y + '|' + line.x1 + '|' + line.x2;
+				if (seen[key]) {
+					duplicates.push(line);
+				}
+				seen[key] = true;
+			});
+
+			assert.equal(duplicates.length, 0,
+				'Found ' + duplicates.length + ' duplicate horizontal line(s): ' +
+				duplicates.map(function (d) { return 'y=' + d.y + ' x1=' + d.x1 + ' x2=' + d.x2; }).join('; '));
+		});
 	});
 
 	describe('headerRows + keepWithHeaderRows combo in snaking columns', function () {
