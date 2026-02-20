@@ -682,33 +682,6 @@ class LayoutBuilder {
 			availableWidth -= (gaps.length - 1) * columnNode._gap;
 		}
 
-		// Snaking columns validation: warn if user provided content in columns > 0.
-		// When snakingColumns is enabled, only the first column should contain content;
-		// subsequent columns serve as overflow targets. Silently ignoring user content
-		// would be a poor developer experience, so we warn early.
-		if (columnNode.snakingColumns && columns.length > 1) {
-			for (let j = 1; j < columns.length; j++) {
-				const col = columns[j];
-				// Check if column has actual content (text, stack, image, etc)
-				// We don't use Object.keys() as that flags internal properties (e.g. _margin) or styles.
-				const hasContent = (col.text !== undefined && col.text !== '' && col.text !== null) ||
-					(col.stack && col.stack.length > 0) ||
-					(col.ol && col.ol.length > 0) ||
-					(col.ul && col.ul.length > 0) ||
-					col.table || col.image || col.svg || col.qr ||
-					(col.canvas && col.canvas.length > 0);
-
-				if (col && hasContent) {
-					console.warn(
-						'pdfmake: snakingColumns only uses the first column for content. ' +
-						'Content in subsequent columns will be ignored. ' +
-						'Use empty placeholders like { text: \'\', width: \'*\' } for overflow targets.'
-					);
-					break; // Warn once, not per-column
-				}
-			}
-		}
-
 		ColumnCalculator.buildColumnWidths(columns, availableWidth);
 		let result = this.processRow({
 			marginX: columnNode._margin ? [columnNode._margin[0], columnNode._margin[2]] : [0, 0],
