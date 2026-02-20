@@ -420,7 +420,11 @@ class LayoutBuilder {
 				if (availableHeight - margin[1] < 0) {
 					// Consume the whole available space
 					this.writer.context().moveDown(availableHeight);
-					this.writer.moveToNextPage(node.pageOrientation);
+					if (this.writer.context().inSnakingColumns() && !this.writer.context().isInNestedNonSnakingGroup()) {
+						this.snakingAwarePageBreak(node.pageOrientation);
+					} else {
+						this.writer.moveToNextPage(node.pageOrientation);
+					}
 					/**
 					 * TODO - Something to consider:
 					 * Right now the node starts at the top of next page (after header)
@@ -442,7 +446,11 @@ class LayoutBuilder {
 				// Necessary for nodes inside tables
 				if (availableHeight - margin[3] < 0) {
 					this.writer.context().moveDown(availableHeight);
-					this.writer.moveToNextPage(node.pageOrientation);
+					if (this.writer.context().inSnakingColumns() && !this.writer.context().isInNestedNonSnakingGroup()) {
+						this.snakingAwarePageBreak(node.pageOrientation);
+					} else {
+						this.writer.moveToNextPage(node.pageOrientation);
+					}
 					/**
 					 * TODO - Something to consider:
 					 * Right now next node starts at the top of next page (after header)
@@ -553,6 +561,37 @@ class LayoutBuilder {
 		}
 	}
 
+	/**
+	 * Helper for page breaks that respects snaking column context.
+	 * When in snaking columns, first tries moving to next column.
+	 * If no columns available, moves to next page and resets x to left margin.
+	 * @param {string} pageOrientation - Optional page orientation for the new page
+	 */
+	snakingAwarePageBreak(pageOrientation) {
+		let ctx = this.writer.context();
+		let snakingSnapshot = ctx.getSnakingSnapshot();
+		if (!snakingSnapshot) {
+			return;
+		}
+
+		// Try flowing to next column first
+		if (this.writer.canMoveToNextColumn()) {
+			this.writer.moveToNextColumn();
+			return;
+		}
+
+		// No more columns available, move to new page
+		this.writer.moveToNextPage(pageOrientation);
+
+		// Reset snaking column state for the new page
+		// Save lastColumnWidth before reset — if we're inside a nested
+		// column group (e.g. product/price row), the reset would overwrite
+		// it with the snaking column width, corrupting inner column layout.
+		let savedLastColumnWidth = ctx.lastColumnWidth;
+		ctx.resetSnakingColumnsForNewPage();
+		ctx.lastColumnWidth = savedLastColumnWidth;
+	}
+
 	// vertical container
 	processVerticalContainer(node) {
 		node.stack.forEach(item => {
@@ -648,7 +687,8 @@ class LayoutBuilder {
 			marginX: columnNode._margin ? [columnNode._margin[0], columnNode._margin[2]] : [0, 0],
 			cells: columns,
 			widths: columns,
-			gaps
+			gaps,
+			snakingColumns: columnNode.snakingColumns
 		});
 		addAll(columnNode.positions, result.positions);
 		this.nestedLevel--;
@@ -838,7 +878,7 @@ class LayoutBuilder {
 		return null;
 	}
 
-	processRow({ marginX = [0, 0], dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableNode, tableBody, rowIndex, height }) {
+	processRow({ marginX = [0, 0], dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableNode, tableBody, rowIndex, height, snakingColumns = false }) {
 		const isUnbreakableRow = dontBreakRows || rowIndex <= rowsWithoutPageBreak - 1;
 		let pageBreaks = [];
 		let pageBreaksByRowSpan = [];
@@ -855,8 +895,19 @@ class LayoutBuilder {
 		// Use the marginX if we are in a top level table/column (not nested)
 		const marginXParent = this.nestedLevel === 1 ? marginX : null;
 		const _bottomByPage = tableNode ? tableNode._bottomByPage : null;
-		this.writer.context().beginColumnGroup(marginXParent, _bottomByPage);
+		// Pass column gap and widths to context snapshot for snaking columns
+		// to advance correctly and reset to first-column width on new pages.
+		const columnGapForGroup = (gaps && gaps.length > 1) ? gaps[1] : 0;
+		const columnWidthsForContext = widths.map(w => w._calcWidth);
+		this.writer.context().beginColumnGroup(marginXParent, _bottomByPage,
+			snakingColumns, columnGapForGroup, columnWidthsForContext);
 
+		// IMPORTANT: We iterate ALL columns even when snakingColumns is enabled.
+		// This is intentional — beginColumn() must be called for each column to set up
+		// proper geometry (widths, offsets) and rowspan/colspan tracking. The
+		// completeColumnGroup() call at the end depends on this bookkeeping to compute
+		// heights correctly. Content processing is skipped for columns > 0 via
+		// skipForSnaking below, but the column structure must still be established.
 		for (let i = 0, l = cells.length; i < l; i++) {
 			let cell = cells[i];
 			let cellIndexBegin = i;
@@ -913,7 +964,13 @@ class LayoutBuilder {
 			// We pass the endingSpanCell reference to store the context just after processing rowspan cell
 			this.writer.context().beginColumn(width, leftOffset, endOfRowSpanCell);
 
-			if (!cell._span) {
+			// When snaking, only process content from the first column (i === 0).
+			// Content overflows into subsequent columns via moveToNextColumn().
+			// We skip content processing here but NOT the beginColumn() call above —
+			// the column geometry setup is still needed for proper layout bookkeeping.
+			const skipForSnaking = snakingColumns && i > 0;
+
+			if (!cell._span && !skipForSnaking) {
 				this.processNode(cell, true);
 				this.writer.context().updateBottomByPage();
 
@@ -968,7 +1025,11 @@ class LayoutBuilder {
 		// If content did not break page, check if we should break by height
 		if (willBreakByHeight && !isUnbreakableRow && pageBreaks.length === 0) {
 			this.writer.context().moveDown(this.writer.context().availableHeight);
-			this.writer.moveToNextPage();
+			if (snakingColumns) {
+				this.snakingAwarePageBreak();
+			} else {
+				this.writer.moveToNextPage();
+			}
 		}
 
 		const bottomByPage = this.writer.context().completeColumnGroup(height, endingSpanCell);
@@ -989,7 +1050,7 @@ class LayoutBuilder {
 				itemBegin.cell = cell;
 				itemBegin.bottomY = this.writer.context().y;
 				itemBegin.isCellContentMultiPage = !itemBegin.cell.positions.every(item => item.pageNumber === itemBegin.cell.positions[0].pageNumber);
-				itemBegin.getViewHeight = function() {
+				itemBegin.getViewHeight = function () {
 					if (this.cell._willBreak) {
 						return this.cell._bottomY - this.cell._rowTopPageY;
 					}
@@ -1009,7 +1070,7 @@ class LayoutBuilder {
 
 					return this.viewHeight;
 				};
-				itemBegin.getNodeHeight = function() {
+				itemBegin.getNodeHeight = function () {
 					return this.nodeHeight;
 				};
 
@@ -1077,7 +1138,32 @@ class LayoutBuilder {
 		processor.beginTable(this.writer);
 
 		let rowHeights = tableNode.table.heights;
+		let lastRowHeight = 0;
+
 		for (let i = 0, l = tableNode.table.body.length; i < l; i++) {
+			// Between table rows: check if we should move to the next snaking column.
+			// This must happen AFTER the previous row's endRow (borders drawn) and
+			// BEFORE this row's beginRow. At this point, the table row column group
+			// has been completed, so canMoveToNextColumn() works correctly.
+			if (i > 0 && this.writer.context().inSnakingColumns()) {
+				// Estimate minimum space for next row: use last row's height as heuristic,
+				// or fall back to a minimum of padding + line height + border
+				let minRowHeight = lastRowHeight > 0 ? lastRowHeight : (
+					processor.rowPaddingTop + 14 + processor.rowPaddingBottom +
+					processor.bottomLineWidth + processor.topLineWidth
+				);
+				if (this.writer.context().availableHeight < minRowHeight) {
+					this.snakingAwarePageBreak();
+
+					// Skip border when headerRows present (header repeat includes it)
+					if (processor.layout.hLineWhenBroken !== false && !processor.headerRows) {
+						processor.drawHorizontalLine(i, this.writer);
+					}
+				}
+			}
+
+			let rowYBefore = this.writer.context().y;
+
 			// if dontBreakRows and row starts a rowspan
 			// we store the 'y' of the beginning of each rowSpan
 			if (processor.dontBreakRows) {
@@ -1130,6 +1216,12 @@ class LayoutBuilder {
 			}
 
 			processor.endRow(i, this.writer, result.pageBreaks);
+
+			// Track the height of the completed row for the next row's estimate
+			let rowYAfter = this.writer.context().y;
+			if (this.writer.context().page === pageBeforeProcessing) {
+				lastRowHeight = rowYAfter - rowYBefore;
+			}
 		}
 
 		processor.endTable(this.writer);
@@ -1197,6 +1289,28 @@ class LayoutBuilder {
 		}
 
 		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
+			// Check if line fits vertically in current context
+			if (line.getHeight() > this.writer.context().availableHeight && this.writer.context().y > this.writer.context().pageMargins.top) {
+				// Line doesn't fit, forced move to next page/column
+				// Only do snaking-specific break if we're in snaking columns AND NOT inside
+				// a nested non-snaking group (like a table row). Table cells should use
+				// standard page breaks — column breaks happen between table rows instead.
+				if (this.writer.context().inSnakingColumns() && !this.writer.context().isInNestedNonSnakingGroup()) {
+					this.snakingAwarePageBreak(node.pageOrientation);
+
+					// Always reflow text after a snaking break (column or page).
+					// This ensures text adapts to the new column width, whether it's narrower or wider.
+					if (line.inlines && line.inlines.length > 0) {
+						node._inlines.unshift(...line.inlines);
+					}
+					// Rebuild line with new width
+					line = this.buildNextLine(node);
+					continue;
+				} else {
+					this.writer.moveToNextPage(node.pageOrientation);
+				}
+			}
+
 			let positions = this.writer.addLine(line);
 			node.positions.push(positions);
 			line = this.buildNextLine(node);

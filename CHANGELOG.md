@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added `snakingColumns` property for columns to enable newspaper-like column flow
 - Added outlines / bookmarks for `text` node
 	- `outline` - set to `true` for add to bookmarks
 	- `outlineText` (optional) - set custom bookmark text, otherwise text from node
@@ -18,7 +19,7 @@
 
 - Added properties for ToC:
 	- `hideEmpty` - set to `true` if you can hide an empty ToC
-	- `sortBy` -  `'page'` (default) or `'title'`
+	- `sortBy` - `'page'` (default) or `'title'`
 	- `sortLocale` - custom locale to sort by property `sortBy`
 - Added property `decorationThickness` for `text` to set width of the decoration line
 - Added inherited/extends styles, use property `extends` in style with style name or array of string with style names
