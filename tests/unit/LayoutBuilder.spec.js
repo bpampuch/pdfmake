@@ -1797,7 +1797,7 @@ describe('LayoutBuilder', function () {
 
 
 	describe('dynamic header/footer', function () {
-		var docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction;
+		var docStructure, pdfDocument, styleDictionary, defaultStyle = undefined, background = undefined, header = undefined, footer = undefined, watermark = undefined, pageBreakBeforeFunction = undefined;
 
 		beforeEach(function () {
 			pdfDocument = sampleTestProvider;
@@ -1824,7 +1824,7 @@ describe('LayoutBuilder', function () {
 	});
 
 	describe('dynamic background', function () {
-		var docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction;
+		var docStructure, pdfDocument, styleDictionary, defaultStyle = undefined, background = undefined, header = undefined, footer = undefined, watermark = undefined, pageBreakBeforeFunction = undefined;
 
 		beforeEach(function () {
 			pdfDocument = sampleTestProvider;
@@ -1845,7 +1845,7 @@ describe('LayoutBuilder', function () {
 
 	describe('dynamic page break control', function () {
 
-		var docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction;
+		var docStructure, pdfDocument, styleDictionary, defaultStyle = undefined, background = undefined, header = undefined, footer = undefined, watermark = undefined, pageBreakBeforeFunction = undefined;
 
 
 		beforeEach(function () {

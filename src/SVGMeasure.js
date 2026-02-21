@@ -26,8 +26,8 @@ const parseSVG = (svgString) => {
 
 	try {
 		doc = new XmlDocument(svgString);
-	} catch (err) {
-		throw new Error('Invalid svg document (' + err + ')');
+	} catch (error) {
+		throw new Error('Invalid svg document (' + error + ')', { cause: error });
 	}
 
 	if (doc.name !== "svg") {

@@ -6,7 +6,7 @@ async function fetchUrl(url, headers = {}) {
 		}
 		return await response.arrayBuffer();
 	} catch (error) {
-		throw new Error(`Network request failed (url: "${url}", error: ${error.message})`);
+		throw new Error(`Network request failed (url: "${url}", error: ${error.message})`, { cause: error });
 	}
 }
 

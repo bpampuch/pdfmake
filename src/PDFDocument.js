@@ -114,7 +114,7 @@ class PDFDocument extends PDFKit {
 				throw new Error('No image');
 			}
 		} catch (error) {
-			throw new Error(`Invalid image: ${error.toString()}\nImages dictionary should contain dataURL entries (or local file paths in node.js)`);
+			throw new Error(`Invalid image: ${error.toString()}\nImages dictionary should contain dataURL entries (or local file paths in node.js)`, { cause: error });
 		}
 
 		image.embed(this);

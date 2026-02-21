@@ -1376,7 +1376,6 @@ class LayoutBuilder {
 			(line.hasEnoughSpaceForInline(textNode._inlines[0], textNode._inlines.slice(1)) || isForceContinue)) {
 			let isHardWrap = false;
 			let inline = textNode._inlines.shift();
-			isForceContinue = false;
 
 			if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
 				let maxChars = findMaxFitLength(inline.text, line.getAvailableWidth(), (txt) =>

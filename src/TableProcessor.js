@@ -20,7 +20,7 @@ class TableProcessor {
 		const prepareRowSpanData = () => {
 			let rsd = [];
 			let x = 0;
-			let lastWidth = 0;
+			let lastWidth;
 
 			rsd.push({ left: 0, rowSpan: 0 });
 
@@ -274,7 +274,6 @@ class TableProcessor {
 							lineColor: borderColor
 						}, false, isNumber(overrideY), null, forcePage);
 						currentLine = null;
-						borderColor = null;
 						cellAbove = null;
 						currentCell = null;
 						rowCellAbove = null;
@@ -356,9 +355,6 @@ class TableProcessor {
 			dash: dash,
 			lineColor: borderColor
 		}, false, true);
-		cellBefore = null;
-		currentCell = null;
-		borderColor = null;
 	}
 
 	endTable(writer) {
