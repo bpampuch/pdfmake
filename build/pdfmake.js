@@ -1,4 +1,4 @@
-/*! pdfmake v0.3.4, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.3.5, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -23,7 +23,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 // EXTERNAL MODULE: ./node_modules/pdfkit/js/pdfkit.es.js
-var pdfkit_es = __webpack_require__(9325);
+var pdfkit_es = __webpack_require__(3801);
 ;// ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(783)["Buffer"];
 
@@ -136,7 +136,9 @@ class PDFDocument extends pdfkit_es/* default */.A {
         throw new Error('No image');
       }
     } catch (error) {
-      throw new Error(`Invalid image: ${error.toString()}\nImages dictionary should contain dataURL entries (or local file paths in node.js)`);
+      throw new Error(`Invalid image: ${error.toString()}\nImages dictionary should contain dataURL entries (or local file paths in node.js)`, {
+        cause: error
+      });
     }
     image.embed(this);
     this._imageRegistry[src] = image;
@@ -3766,6 +3768,9 @@ class DocMeasure {
           style: lineNumberStyle,
           margin: [0, lineMargin[1], 0, lineMargin[3]]
         }]);
+        if (node.toc.outlines) {
+          item._textNodeRef.outline = item._textNodeRef.outline || true;
+        }
       }
       node.toc._table = {
         table: {
@@ -4240,9 +4245,18 @@ class DocumentContext extends events.EventEmitter {
     this.snapshots = [];
     this.backgroundLength = [];
   }
-  beginColumnGroup(marginXTopParent, bottomByPage) {
+  beginColumnGroup(marginXTopParent, bottomByPage, snakingColumns, columnGap, columnWidths) {
     if (bottomByPage === void 0) {
       bottomByPage = {};
+    }
+    if (snakingColumns === void 0) {
+      snakingColumns = false;
+    }
+    if (columnGap === void 0) {
+      columnGap = 0;
+    }
+    if (columnWidths === void 0) {
+      columnWidths = null;
     }
     this.snapshots.push({
       x: this.x,
@@ -4258,7 +4272,10 @@ class DocumentContext extends events.EventEmitter {
         availableWidth: this.availableWidth,
         page: this.page
       },
-      lastColumnWidth: this.lastColumnWidth
+      lastColumnWidth: this.lastColumnWidth,
+      snakingColumns: snakingColumns,
+      gap: columnGap,
+      columnWidths: columnWidths
     });
     this.lastColumnWidth = 0;
     if (marginXTopParent) {
@@ -4267,18 +4284,71 @@ class DocumentContext extends events.EventEmitter {
   }
   updateBottomByPage() {
     const lastSnapshot = this.snapshots[this.snapshots.length - 1];
+    if (!lastSnapshot) {
+      return;
+    }
     const lastPage = this.page;
     let previousBottom = -Number.MIN_VALUE;
-    if (lastSnapshot.bottomByPage[lastPage]) {
+    if (lastSnapshot.bottomByPage && lastSnapshot.bottomByPage[lastPage]) {
       previousBottom = lastSnapshot.bottomByPage[lastPage];
     }
-    lastSnapshot.bottomByPage[lastPage] = Math.max(previousBottom, this.y);
+    if (lastSnapshot.bottomByPage) {
+      lastSnapshot.bottomByPage[lastPage] = Math.max(previousBottom, this.y);
+    }
   }
   resetMarginXTopParent() {
     this.marginXTopParent = null;
   }
+
+  /**
+   * Find the most recent (deepest) snaking column group snapshot.
+   * @returns {object|null}
+   */
+  getSnakingSnapshot() {
+    for (let i = this.snapshots.length - 1; i >= 0; i--) {
+      if (this.snapshots[i].snakingColumns) {
+        return this.snapshots[i];
+      }
+    }
+    return null;
+  }
+  inSnakingColumns() {
+    return !!this.getSnakingSnapshot();
+  }
+
+  /**
+   * Check if we're inside a nested non-snaking column group (e.g., a table row)
+   * within an outer snaking column group. This is used to prevent snaking-specific
+   * breaks inside table cells — the table's own page break mechanism should handle
+   * row breaks, and column breaks should happen between rows.
+   * @returns {boolean}
+   */
+  isInNestedNonSnakingGroup() {
+    for (let i = this.snapshots.length - 1; i >= 0; i--) {
+      let snap = this.snapshots[i];
+      if (snap.snakingColumns) {
+        return false; // Reached snaking snapshot without finding inner group
+      }
+      if (!snap.overflowed) {
+        return true; // Found non-snaking, non-overflowed inner group
+      }
+    }
+    return false;
+  }
   beginColumn(width, offset, endingCell) {
+    // Find the correct snapshot for this column group.
+    // When a snaking column break (moveToNextColumn) occurs during inner column
+    // processing, overflowed snapshots may sit above this column group's snapshot.
+    // We need to skip past those to find the one from our beginColumnGroup call.
     let saved = this.snapshots[this.snapshots.length - 1];
+    if (saved && saved.overflowed) {
+      for (let i = this.snapshots.length - 1; i >= 0; i--) {
+        if (!this.snapshots[i].overflowed) {
+          saved = this.snapshots[i];
+          break;
+        }
+      }
+    }
     this.calculateBottomMost(saved, endingCell);
     this.page = saved.page;
     this.x = this.x + this.lastColumnWidth + (offset || 0);
@@ -4314,6 +4384,40 @@ class DocumentContext extends events.EventEmitter {
   }
   completeColumnGroup(height, endingCell) {
     let saved = this.snapshots.pop();
+
+    // Track the maximum bottom position across all columns (including overflowed).
+    // Critical for snaking: content after columns must appear below the tallest column.
+    let maxBottomY = this.y;
+    let maxBottomPage = this.page;
+    let maxBottomAvailableHeight = this.availableHeight;
+
+    // Pop overflowed snapshots created by moveToNextColumn (snaking columns).
+    // Merge their bottomMost values to find the true maximum.
+    while (saved && saved.overflowed) {
+      let bm = bottomMostContext({
+        page: maxBottomPage,
+        y: maxBottomY,
+        availableHeight: maxBottomAvailableHeight
+      }, saved.bottomMost || {});
+      maxBottomPage = bm.page;
+      maxBottomY = bm.y;
+      maxBottomAvailableHeight = bm.availableHeight;
+      saved = this.snapshots.pop();
+    }
+    if (!saved) {
+      return {};
+    }
+
+    // Apply the max bottom from all overflowed columns to this base snapshot
+    if (maxBottomPage > saved.bottomMost.page || maxBottomPage === saved.bottomMost.page && maxBottomY > saved.bottomMost.y) {
+      saved.bottomMost = {
+        x: saved.x,
+        y: maxBottomY,
+        page: maxBottomPage,
+        availableHeight: maxBottomAvailableHeight,
+        availableWidth: saved.availableWidth
+      };
+    }
     this.calculateBottomMost(saved, endingCell);
     this.x = saved.x;
     let y = saved.bottomMost.y;
@@ -4340,6 +4444,140 @@ class DocumentContext extends events.EventEmitter {
     }
     this.lastColumnWidth = saved.lastColumnWidth;
     return saved.bottomByPage;
+  }
+
+  /**
+   * Move to the next column in a column group (snaking columns).
+   * Creates an overflowed snapshot to track that we've moved to the next column.
+   * @returns {object} Position info for the new column
+   */
+  moveToNextColumn() {
+    let prevY = this.y;
+    let snakingSnapshot = this.getSnakingSnapshot();
+    if (!snakingSnapshot) {
+      return {
+        prevY: prevY,
+        y: this.y
+      };
+    }
+
+    // Update snaking snapshot's bottomMost with current position BEFORE resetting.
+    // This captures where content reached in the current column (overflow point).
+    this.calculateBottomMost(snakingSnapshot, null);
+
+    // Calculate new X position: move right by current column width + gap
+    let overflowCount = 0;
+    for (let i = this.snapshots.length - 1; i >= 0; i--) {
+      if (this.snapshots[i].overflowed) {
+        overflowCount++;
+      } else {
+        break;
+      }
+    }
+    let currentColumnWidth = snakingSnapshot.columnWidths && snakingSnapshot.columnWidths[overflowCount] || this.lastColumnWidth || this.availableWidth;
+    let nextColumnWidth = snakingSnapshot.columnWidths && snakingSnapshot.columnWidths[overflowCount + 1] || currentColumnWidth;
+    this.lastColumnWidth = nextColumnWidth;
+    let newX = this.x + (currentColumnWidth || 0) + (snakingSnapshot.gap || 0);
+    let newY = snakingSnapshot.y;
+    this.snapshots.push({
+      x: newX,
+      y: newY,
+      availableHeight: snakingSnapshot.availableHeight,
+      availableWidth: nextColumnWidth,
+      page: this.page,
+      overflowed: true,
+      bottomMost: {
+        x: newX,
+        y: newY,
+        availableHeight: snakingSnapshot.availableHeight,
+        availableWidth: nextColumnWidth,
+        page: this.page
+      },
+      lastColumnWidth: nextColumnWidth,
+      snakingColumns: true,
+      gap: snakingSnapshot.gap,
+      columnWidths: snakingSnapshot.columnWidths
+    });
+    this.x = newX;
+    this.y = newY;
+    this.availableHeight = snakingSnapshot.availableHeight;
+    this.availableWidth = nextColumnWidth;
+
+    // Sync non-overflowed inner snapshots (e.g. inner column groups for
+    // product/price rows) with the new snaking column position.
+    // Without this, inner beginColumn would read stale y/page/x values.
+    for (let i = this.snapshots.length - 2; i >= 0; i--) {
+      let snapshot = this.snapshots[i];
+      if (snapshot.overflowed || snapshot.snakingColumns) {
+        break; // Stop at first overflowed or snaking snapshot
+      }
+      snapshot.x = newX;
+      snapshot.y = newY;
+      snapshot.page = this.page;
+      snapshot.availableHeight = snakingSnapshot.availableHeight;
+      if (snapshot.bottomMost) {
+        snapshot.bottomMost.x = newX;
+        snapshot.bottomMost.y = newY;
+        snapshot.bottomMost.page = this.page;
+        snapshot.bottomMost.availableHeight = snakingSnapshot.availableHeight;
+      }
+    }
+    return {
+      prevY: prevY,
+      y: this.y
+    };
+  }
+
+  /**
+   * Reset snaking column state when moving to a new page.
+   * Clears overflowed snapshots, resets X to left margin, sets width to first column,
+   * and syncs all snapshots to new page coordinates.
+   */
+  resetSnakingColumnsForNewPage() {
+    let snakingSnapshot = this.getSnakingSnapshot();
+    if (!snakingSnapshot) {
+      return;
+    }
+    let pageTopY = this.pageMargins.top;
+    let pageInnerHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+
+    // When moving to new page, start at first column.
+    // Reset width to FIRST column width, not last column from previous page.
+    let firstColumnWidth = snakingSnapshot.columnWidths ? snakingSnapshot.columnWidths[0] : this.lastColumnWidth || this.availableWidth;
+
+    // Clean up overflowed snapshots
+    while (this.snapshots.length > 1 && this.snapshots[this.snapshots.length - 1].overflowed) {
+      this.snapshots.pop();
+    }
+
+    // Reset X to start of first column (left margin)
+    if (this.marginXTopParent) {
+      this.x = this.pageMargins.left + this.marginXTopParent[0];
+    } else {
+      this.x = this.pageMargins.left;
+    }
+    this.availableWidth = firstColumnWidth;
+    this.lastColumnWidth = firstColumnWidth;
+
+    // Sync all snapshots to new page state.
+    // When page break occurs within snaking columns, update ALL snapshots
+    // (not just snaking column snapshots) to reflect new page coordinates.
+    // This ensures nested structures (like inner product/price columns)
+    // don't retain stale values that would cause layout corruption.
+    for (let i = 0; i < this.snapshots.length; i++) {
+      let snapshot = this.snapshots[i];
+      let isSnakingSnapshot = !!snapshot.snakingColumns;
+      snapshot.x = this.x;
+      snapshot.y = isSnakingSnapshot ? pageTopY : this.y;
+      snapshot.availableHeight = isSnakingSnapshot ? pageInnerHeight : this.availableHeight;
+      snapshot.page = this.page;
+      if (snapshot.bottomMost) {
+        snapshot.bottomMost.x = this.x;
+        snapshot.bottomMost.y = isSnakingSnapshot ? pageTopY : this.y;
+        snapshot.bottomMost.availableHeight = isSnakingSnapshot ? pageInnerHeight : this.availableHeight;
+        snapshot.bottomMost.page = this.page;
+      }
+    }
   }
   addMargin(left, right) {
     this.x += left;
@@ -5187,11 +5425,118 @@ class PageElementWriter extends src_ElementWriter {
   popFromRepeatables() {
     this.repeatables.pop();
   }
+
+  /**
+   * Move to the next column in a column group (snaking columns).
+   * Handles repeatables and emits columnChanged event.
+   */
+  moveToNextColumn() {
+    let nextColumn = this.context().moveToNextColumn();
+
+    // Handle repeatables (like table headers) for the new column
+    this.repeatables.forEach(function (rep) {
+      // In snaking columns, we WANT headers to repeat.
+      // However, in Standard Page Breaks, headers are drawn using useBlockXOffset=true (original absolute X).
+      // This works for page breaks because margins are consistent.
+      // In Snaking Columns, the X position changes for each column.
+      // If we use true, the header is drawn at the *original* X position (Col 1), overlapping/invisible.
+      // We MUST use false to force drawing relative to the CURRENT context X (new column start).
+      this.addFragment(rep, false);
+    }, this);
+    this.emit('columnChanged', {
+      prevY: nextColumn.prevY,
+      y: this.context().y
+    });
+  }
+
+  /**
+   * Check if currently in a column group that can move to next column.
+   * Only returns true if snakingColumns is enabled for the column group.
+   * @returns {boolean}
+   */
+  canMoveToNextColumn() {
+    let ctx = this.context();
+    let snakingSnapshot = ctx.getSnakingSnapshot();
+    if (snakingSnapshot) {
+      // Check if we're inside a nested (non-snaking) column group.
+      // If so, don't allow a snaking column move — it would corrupt
+      // the inner row's layout (e.g. product name in col 1, price in col 2).
+      // The inner row should complete via normal page break instead.
+      for (let i = ctx.snapshots.length - 1; i >= 0; i--) {
+        let snap = ctx.snapshots[i];
+        if (snap.snakingColumns) {
+          break; // Reached the snaking snapshot, no inner groups found
+        }
+        if (!snap.overflowed) {
+          return false; // Found a non-snaking, non-overflowed inner group
+        }
+      }
+      let overflowCount = 0;
+      for (let i = ctx.snapshots.length - 1; i >= 0; i--) {
+        if (ctx.snapshots[i].overflowed) {
+          overflowCount++;
+        } else {
+          break;
+        }
+      }
+      if (snakingSnapshot.columnWidths && overflowCount >= snakingSnapshot.columnWidths.length - 1) {
+        return false;
+      }
+      let currentColumnWidth = ctx.availableWidth || ctx.lastColumnWidth || 0;
+      let nextColumnWidth = snakingSnapshot.columnWidths ? snakingSnapshot.columnWidths[overflowCount + 1] : currentColumnWidth;
+      let nextX = ctx.x + currentColumnWidth + (snakingSnapshot.gap || 0);
+      let page = ctx.getCurrentPage();
+      let pageWidth = page.pageSize.width;
+      let rightMargin = page.pageMargins ? page.pageMargins.right : 0;
+      let parentRightMargin = ctx.marginXTopParent ? ctx.marginXTopParent[1] : 0;
+      let rightBoundary = pageWidth - rightMargin - parentRightMargin;
+      return nextX + nextColumnWidth <= rightBoundary + 1;
+    }
+    return false;
+  }
   _fitOnPage(addFct) {
     let position = addFct();
     if (!position) {
-      this.moveToNextPage();
-      position = addFct();
+      if (this.canMoveToNextColumn()) {
+        this.moveToNextColumn();
+        position = addFct();
+      }
+      if (!position) {
+        let ctx = this.context();
+        let snakingSnapshot = ctx.getSnakingSnapshot();
+        if (snakingSnapshot) {
+          if (ctx.isInNestedNonSnakingGroup()) {
+            // Inside a table cell within snaking columns — use standard page break.
+            // Don't reset snaking state; the table handles its own breaks.
+            // Column breaks happen between rows in processTable instead.
+            this.moveToNextPage();
+          } else {
+            this.moveToNextPage();
+
+            // Save lastColumnWidth before reset — if we're inside a nested
+            // column group (e.g. product/price row), the reset would overwrite
+            // it with the snaking column width, corrupting inner column layout.
+            let savedLastColumnWidth = ctx.lastColumnWidth;
+            ctx.resetSnakingColumnsForNewPage();
+            ctx.lastColumnWidth = savedLastColumnWidth;
+          }
+          position = addFct();
+        } else {
+          while (ctx.snapshots.length > 0 && ctx.snapshots[ctx.snapshots.length - 1].overflowed) {
+            let popped = ctx.snapshots.pop();
+            let prevSnapshot = ctx.snapshots[ctx.snapshots.length - 1];
+            if (prevSnapshot) {
+              ctx.x = prevSnapshot.x;
+              ctx.y = prevSnapshot.y;
+              ctx.availableHeight = prevSnapshot.availableHeight;
+              ctx.availableWidth = popped.availableWidth;
+              ctx.lastColumnWidth = prevSnapshot.lastColumnWidth;
+            }
+          }
+          this.moveToNextPage();
+          position = addFct();
+        }
+      }
     }
     return position;
   }
@@ -5215,7 +5560,7 @@ class TableProcessor {
     const prepareRowSpanData = () => {
       let rsd = [];
       let x = 0;
-      let lastWidth = 0;
+      let lastWidth;
       rsd.push({
         left: 0,
         rowSpan: 0
@@ -5448,7 +5793,6 @@ class TableProcessor {
               lineColor: borderColor
             }, false, isNumber(overrideY), null, forcePage);
             currentLine = null;
-            borderColor = null;
             cellAbove = null;
             currentCell = null;
             rowCellAbove = null;
@@ -5523,9 +5867,6 @@ class TableProcessor {
       dash: dash,
       lineColor: borderColor
     }, false, true);
-    cellBefore = null;
-    currentCell = null;
-    borderColor = null;
   }
   endTable(writer) {
     if (this.cleanUpRepeatables) {
@@ -6220,7 +6561,11 @@ class LayoutBuilder {
         if (availableHeight - margin[1] < 0) {
           // Consume the whole available space
           this.writer.context().moveDown(availableHeight);
-          this.writer.moveToNextPage(node.pageOrientation);
+          if (this.writer.context().inSnakingColumns() && !this.writer.context().isInNestedNonSnakingGroup()) {
+            this.snakingAwarePageBreak(node.pageOrientation);
+          } else {
+            this.writer.moveToNextPage(node.pageOrientation);
+          }
           /**
            * TODO - Something to consider:
            * Right now the node starts at the top of next page (after header)
@@ -6242,7 +6587,11 @@ class LayoutBuilder {
         // Necessary for nodes inside tables
         if (availableHeight - margin[3] < 0) {
           this.writer.context().moveDown(availableHeight);
-          this.writer.moveToNextPage(node.pageOrientation);
+          if (this.writer.context().inSnakingColumns() && !this.writer.context().isInNestedNonSnakingGroup()) {
+            this.snakingAwarePageBreak(node.pageOrientation);
+          } else {
+            this.writer.moveToNextPage(node.pageOrientation);
+          }
           /**
            * TODO - Something to consider:
            * Right now next node starts at the top of next page (after header)
@@ -6341,6 +6690,37 @@ class LayoutBuilder {
     }
   }
 
+  /**
+   * Helper for page breaks that respects snaking column context.
+   * When in snaking columns, first tries moving to next column.
+   * If no columns available, moves to next page and resets x to left margin.
+   * @param {string} pageOrientation - Optional page orientation for the new page
+   */
+  snakingAwarePageBreak(pageOrientation) {
+    let ctx = this.writer.context();
+    let snakingSnapshot = ctx.getSnakingSnapshot();
+    if (!snakingSnapshot) {
+      return;
+    }
+
+    // Try flowing to next column first
+    if (this.writer.canMoveToNextColumn()) {
+      this.writer.moveToNextColumn();
+      return;
+    }
+
+    // No more columns available, move to new page
+    this.writer.moveToNextPage(pageOrientation);
+
+    // Reset snaking column state for the new page
+    // Save lastColumnWidth before reset — if we're inside a nested
+    // column group (e.g. product/price row), the reset would overwrite
+    // it with the snaking column width, corrupting inner column layout.
+    let savedLastColumnWidth = ctx.lastColumnWidth;
+    ctx.resetSnakingColumnsForNewPage();
+    ctx.lastColumnWidth = savedLastColumnWidth;
+  }
+
   // vertical container
   processVerticalContainer(node) {
     node.stack.forEach(item => {
@@ -6421,7 +6801,8 @@ class LayoutBuilder {
       marginX: columnNode._margin ? [columnNode._margin[0], columnNode._margin[2]] : [0, 0],
       cells: columns,
       widths: columns,
-      gaps
+      gaps,
+      snakingColumns: columnNode.snakingColumns
     });
     addAll(columnNode.positions, result.positions);
     this.nestedLevel--;
@@ -6608,7 +6989,8 @@ class LayoutBuilder {
       tableNode,
       tableBody,
       rowIndex,
-      height
+      height,
+      snakingColumns = false
     } = _ref;
     const isUnbreakableRow = dontBreakRows || rowIndex <= rowsWithoutPageBreak - 1;
     let pageBreaks = [];
@@ -6626,7 +7008,18 @@ class LayoutBuilder {
     // Use the marginX if we are in a top level table/column (not nested)
     const marginXParent = this.nestedLevel === 1 ? marginX : null;
     const _bottomByPage = tableNode ? tableNode._bottomByPage : null;
-    this.writer.context().beginColumnGroup(marginXParent, _bottomByPage);
+    // Pass column gap and widths to context snapshot for snaking columns
+    // to advance correctly and reset to first-column width on new pages.
+    const columnGapForGroup = gaps && gaps.length > 1 ? gaps[1] : 0;
+    const columnWidthsForContext = widths.map(w => w._calcWidth);
+    this.writer.context().beginColumnGroup(marginXParent, _bottomByPage, snakingColumns, columnGapForGroup, columnWidthsForContext);
+
+    // IMPORTANT: We iterate ALL columns even when snakingColumns is enabled.
+    // This is intentional — beginColumn() must be called for each column to set up
+    // proper geometry (widths, offsets) and rowspan/colspan tracking. The
+    // completeColumnGroup() call at the end depends on this bookkeeping to compute
+    // heights correctly. Content processing is skipped for columns > 0 via
+    // skipForSnaking below, but the column structure must still be established.
     for (let i = 0, l = cells.length; i < l; i++) {
       let cell = cells[i];
       let cellIndexBegin = i;
@@ -6679,7 +7072,13 @@ class LayoutBuilder {
 
       // We pass the endingSpanCell reference to store the context just after processing rowspan cell
       this.writer.context().beginColumn(width, leftOffset, endOfRowSpanCell);
-      if (!cell._span) {
+
+      // When snaking, only process content from the first column (i === 0).
+      // Content overflows into subsequent columns via moveToNextColumn().
+      // We skip content processing here but NOT the beginColumn() call above —
+      // the column geometry setup is still needed for proper layout bookkeeping.
+      const skipForSnaking = snakingColumns && i > 0;
+      if (!cell._span && !skipForSnaking) {
         this.processNode(cell, true);
         this.writer.context().updateBottomByPage();
         if (cell.verticalAlignment) {
@@ -6732,7 +7131,11 @@ class LayoutBuilder {
     // If content did not break page, check if we should break by height
     if (willBreakByHeight && !isUnbreakableRow && pageBreaks.length === 0) {
       this.writer.context().moveDown(this.writer.context().availableHeight);
-      this.writer.moveToNextPage();
+      if (snakingColumns) {
+        this.snakingAwarePageBreak();
+      } else {
+        this.writer.moveToNextPage();
+      }
     }
     const bottomByPage = this.writer.context().completeColumnGroup(height, endingSpanCell);
     if (tableNode) {
@@ -6822,7 +7225,27 @@ class LayoutBuilder {
     let processor = new src_TableProcessor(tableNode);
     processor.beginTable(this.writer);
     let rowHeights = tableNode.table.heights;
+    let lastRowHeight = 0;
     for (let i = 0, l = tableNode.table.body.length; i < l; i++) {
+      // Between table rows: check if we should move to the next snaking column.
+      // This must happen AFTER the previous row's endRow (borders drawn) and
+      // BEFORE this row's beginRow. At this point, the table row column group
+      // has been completed, so canMoveToNextColumn() works correctly.
+      if (i > 0 && this.writer.context().inSnakingColumns()) {
+        // Estimate minimum space for next row: use last row's height as heuristic,
+        // or fall back to a minimum of padding + line height + border
+        let minRowHeight = lastRowHeight > 0 ? lastRowHeight : processor.rowPaddingTop + 14 + processor.rowPaddingBottom + processor.bottomLineWidth + processor.topLineWidth;
+        if (this.writer.context().availableHeight < minRowHeight) {
+          this.snakingAwarePageBreak();
+
+          // Skip border when headerRows present (header repeat includes it)
+          if (processor.layout.hLineWhenBroken !== false && !processor.headerRows) {
+            processor.drawHorizontalLine(i, this.writer);
+          }
+        }
+      }
+      let rowYBefore = this.writer.context().y;
+
       // if dontBreakRows and row starts a rowspan
       // we store the 'y' of the beginning of each rowSpan
       if (processor.dontBreakRows) {
@@ -6867,6 +7290,12 @@ class LayoutBuilder {
         }
       }
       processor.endRow(i, this.writer, result.pageBreaks);
+
+      // Track the height of the completed row for the next row's estimate
+      let rowYAfter = this.writer.context().y;
+      if (this.writer.context().page === pageBeforeProcessing) {
+        lastRowHeight = rowYAfter - rowYBefore;
+      }
     }
     processor.endTable(this.writer);
     this.nestedLevel--;
@@ -6889,6 +7318,26 @@ class LayoutBuilder {
         line.id = nodeId;
       }
     }
+    if (node.outline) {
+      line._outline = {
+        id: node.id,
+        parentId: node.outlineParentId,
+        text: node.outlineText || node.text,
+        expanded: node.outlineExpanded || false
+      };
+    } else if (Array.isArray(node.text)) {
+      for (let i = 0, l = node.text.length; i < l; i++) {
+        let item = node.text[i];
+        if (item.outline) {
+          line._outline = {
+            id: item.id,
+            parentId: item.outlineParentId,
+            text: item.outlineText || item.text,
+            expanded: item.outlineExpanded || false
+          };
+        }
+      }
+    }
     if (node._tocItemRef) {
       line._pageNodeRef = node._tocItemRef;
     }
@@ -6906,6 +7355,27 @@ class LayoutBuilder {
       }
     }
     while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
+      // Check if line fits vertically in current context
+      if (line.getHeight() > this.writer.context().availableHeight && this.writer.context().y > this.writer.context().pageMargins.top) {
+        // Line doesn't fit, forced move to next page/column
+        // Only do snaking-specific break if we're in snaking columns AND NOT inside
+        // a nested non-snaking group (like a table row). Table cells should use
+        // standard page breaks — column breaks happen between table rows instead.
+        if (this.writer.context().inSnakingColumns() && !this.writer.context().isInNestedNonSnakingGroup()) {
+          this.snakingAwarePageBreak(node.pageOrientation);
+
+          // Always reflow text after a snaking break (column or page).
+          // This ensures text adapts to the new column width, whether it's narrower or wider.
+          if (line.inlines && line.inlines.length > 0) {
+            node._inlines.unshift(...line.inlines);
+          }
+          // Rebuild line with new width
+          line = this.buildNextLine(node);
+          continue;
+        } else {
+          this.writer.moveToNextPage(node.pageOrientation);
+        }
+      }
       let positions = this.writer.addLine(line);
       node.positions.push(positions);
       line = this.buildNextLine(node);
@@ -6959,7 +7429,6 @@ class LayoutBuilder {
     while (textNode._inlines && textNode._inlines.length > 0 && (line.hasEnoughSpaceForInline(textNode._inlines[0], textNode._inlines.slice(1)) || isForceContinue)) {
       let isHardWrap = false;
       let inline = textNode._inlines.shift();
-      isForceContinue = false;
       if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
         let maxChars = findMaxFitLength(inline.text, line.getAvailableWidth(), txt => textInlines.widthOfText(txt, inline));
         if (maxChars < inline.text.length) {
@@ -7064,8 +7533,10 @@ const parseSVG = svgString => {
   let doc;
   try {
     doc = new xmldoc.XmlDocument(svgString);
-  } catch (err) {
-    throw new Error('Invalid svg document (' + err + ')');
+  } catch (error) {
+    throw new Error('Invalid svg document (' + error + ')', {
+      cause: error
+    });
   }
   if (doc.name !== "svg") {
     throw new Error('Invalid svg document (expected <svg>)');
@@ -7317,6 +7788,7 @@ class Renderer {
   constructor(pdfDocument, progressCallback) {
     this.pdfDocument = pdfDocument;
     this.progressCallback = progressCallback;
+    this.outlineMap = [];
   }
   renderPages(pages) {
     this.pdfDocument._pdfMakePages = pages; // TODO: Why?
@@ -7394,6 +7866,18 @@ class Renderer {
         case 'center':
           inline.x += diffWidth / 2;
           break;
+      }
+    }
+    if (line._outline) {
+      let parentOutline = this.pdfDocument.outline;
+      if (line._outline.parentId && this.outlineMap[line._outline.parentId]) {
+        parentOutline = this.outlineMap[line._outline.parentId];
+      }
+      let outline = parentOutline.addItem(line._outline.text, {
+        expanded: line._outline.expanded
+      });
+      if (line._outline.id) {
+        this.outlineMap[line._outline.id] = outline;
       }
     }
     if (line._pageNodeRef) {
@@ -8107,7 +8591,7 @@ class OutputDocument {
 }
 /* harmony default export */ const src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(5957);
+var FileSaver_min = __webpack_require__(656);
 ;// ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -8210,7 +8694,9 @@ async function fetchUrl(url, headers) {
     }
     return await response.arrayBuffer();
   } catch (error) {
-    throw new Error(`Network request failed (url: "${url}", error: ${error.message})`);
+    throw new Error(`Network request failed (url: "${url}", error: ${error.message})`, {
+      cause: error
+    });
   }
 }
 class URLResolver {
@@ -21545,7 +22031,7 @@ module.exports = {
 
 /***/ },
 
-/***/ 9325
+/***/ 3801
 (__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -48656,7 +49142,7 @@ module.exports = function whichTypedArray(value) {
 
 /***/ },
 
-/***/ 5957
+/***/ 656
 (module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
