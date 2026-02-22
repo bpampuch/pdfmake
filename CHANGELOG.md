@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.5 - 2026-02-22
 
 - Added `snakingColumns` property for columns to enable newspaper-like column flow
 - Added outlines / bookmarks for `text` node
