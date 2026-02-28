@@ -1,6 +1,5 @@
 import pdfmakeBase from '../base';
 import OutputDocumentBrowser from './OutputDocumentBrowser';
-import URLResolver from '../URLResolver';
 import fs from 'fs';
 import configurator from 'core-js/configurator';
 
@@ -21,7 +20,6 @@ let defaultClientFonts = {
 class pdfmake extends pdfmakeBase {
 	constructor() {
 		super();
-		this.urlResolver = () => new URLResolver(this.virtualfs);
 		this.fonts = defaultClientFonts;
 	}
 

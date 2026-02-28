@@ -7,21 +7,6 @@ import Renderer from './Renderer';
 import { isNumber, isValue } from './helpers/variableType';
 import { convertToDynamicContent } from './helpers/tools';
 
-/**
- * Printer which turns document definition into a pdf
- *
- * @example
- * var fontDescriptors = {
- *	Roboto: {
- *		normal: 'fonts/Roboto-Regular.ttf',
- *		bold: 'fonts/Roboto-Medium.ttf',
- *		italics: 'fonts/Roboto-Italic.ttf',
- *		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
- *	}
- * };
- *
- * var printer = new PdfPrinter(fontDescriptors);
- */
 class PdfPrinter {
 
 	/**
@@ -29,7 +14,7 @@ class PdfPrinter {
 	 * @param {object} virtualfs
 	 * @param {object} urlResolver
 	 */
-	constructor(fontDescriptors, virtualfs = null, urlResolver = null) {
+	constructor(fontDescriptors, virtualfs, urlResolver) {
 		this.fontDescriptors = fontDescriptors;
 		this.virtualfs = virtualfs;
 		this.urlResolver = urlResolver;
@@ -126,10 +111,6 @@ class PdfPrinter {
 
 			return { url: url, headers: {} };
 		};
-
-		if (this.urlResolver === null) {
-			return;
-		}
 
 		for (let font in this.fontDescriptors) {
 			if (this.fontDescriptors.hasOwnProperty(font)) {

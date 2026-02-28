@@ -2,12 +2,12 @@ import Printer from './Printer';
 import virtualfs from './virtual-fs';
 import { pack } from './helpers/tools';
 import { isObject } from './helpers/variableType';
+import URLResolver from './URLResolver';
 
 class pdfmake {
 
 	constructor() {
 		this.virtualfs = virtualfs;
-		this.urlResolver = null;
 	}
 
 	/**
@@ -27,7 +27,9 @@ class pdfmake {
 		options.progressCallback = this.progressCallback;
 		options.tableLayouts = this.tableLayouts;
 
-		let printer = new Printer(this.fonts, this.virtualfs, this.urlResolver());
+		let urlResolver = new URLResolver(this.virtualfs);
+
+		let printer = new Printer(this.fonts, this.virtualfs, urlResolver);
 		const pdfDocumentPromise = printer.createPdfKitDocument(docDefinition, options);
 
 		return this._transformToDocument(pdfDocumentPromise);
