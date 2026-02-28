@@ -18,7 +18,7 @@ pdfmake.addFonts({
 
 describe('Node interface', function () {
 	describe('getBuffer', function () {
-		it('should return buffer', function () {
+		it('should return buffer', async function () {
 
 			var docDefinition = {
 				content: [
@@ -28,7 +28,7 @@ describe('Node interface', function () {
 			};
 
 			var pdf = pdfmake.createPdf(docDefinition);
-			pdf.getBuffer().then(() => {
+			await pdf.getBuffer().then(() => {
 				//
 			}, err => {
 				throw err;
