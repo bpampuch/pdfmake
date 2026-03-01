@@ -95,10 +95,12 @@ class DocMeasure {
 			node._width = node._minWidth = node._maxWidth = node.cover.width;
 			node._height = node._minHeight = node._maxHeight = node.cover.height;
 		} else {
+			let nodeWidth = isNumber(node.width) ? node.width : undefined;
+			let nodeHeight = isNumber(node.height) ? node.height : undefined;
 			let ratio = dimensions.width / dimensions.height;
 
-			node._width = node._minWidth = node._maxWidth = node.width || (node.height ? (node.height * ratio) : dimensions.width);
-			node._height = node.height || (node.width ? node.width / ratio : dimensions.height);
+			node._width = node._minWidth = node._maxWidth = nodeWidth || (nodeHeight ? (nodeHeight * ratio) : dimensions.width);
+			node._height = nodeHeight || (nodeWidth ? nodeWidth / ratio : dimensions.height);
 
 			if (isNumber(node.maxWidth) && node.maxWidth < node._width) {
 				node._width = node._minWidth = node._maxWidth = node.maxWidth;

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added validation for image height and width values
+
 ## 0.3.5 - 2026-02-22
 
 - Added `snakingColumns` property for columns to enable newspaper-like column flow

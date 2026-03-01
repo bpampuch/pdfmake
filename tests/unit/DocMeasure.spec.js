@@ -458,6 +458,28 @@ describe('DocMeasure', function () {
 	});
 
 	describe('measureImage', function () {
+		it('should measure images with invalid width', function () {
+			var imageNode = {
+				image: '...',
+				width: 'auto',
+			}
+			docMeasure.measureImageWithDimensions(imageNode, { width: 42, height: 42 });
+
+			assert.equal(imageNode._height, 42);
+			assert.equal(imageNode._width, 42);
+		});
+
+		it('should measure images with invalid height', function () {
+			var imageNode = {
+				image: '...',
+				height: 'auto',
+			}
+			docMeasure.measureImageWithDimensions(imageNode, { width: 42, height: 42 });
+
+			assert.equal(imageNode._height, 42);
+			assert.equal(imageNode._width, 42);
+		});
+
 		it('should scale height proportionally if only image width is provided');
 		it('should stretch image if both width and height are specified');
 		it('should scales image to fit whole picture in a rectangle if fit is specified');
