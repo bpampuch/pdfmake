@@ -462,7 +462,7 @@ describe('DocMeasure', function () {
 			var imageNode = {
 				image: '...',
 				width: 'auto',
-			}
+			};
 			docMeasure.measureImageWithDimensions(imageNode, { width: 42, height: 42 });
 
 			assert.equal(imageNode._height, 42);
@@ -473,7 +473,7 @@ describe('DocMeasure', function () {
 			var imageNode = {
 				image: '...',
 				height: 'auto',
-			}
+			};
 			docMeasure.measureImageWithDimensions(imageNode, { width: 42, height: 42 });
 
 			assert.equal(imageNode._height, 42);
