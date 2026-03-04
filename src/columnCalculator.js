@@ -1,4 +1,4 @@
-import { isString } from './helpers/variableType';
+import { isNumber, isString } from './helpers/variableType';
 
 function buildColumnWidths(columns, availableWidth, offsetTotal = 0, tableNode) {
 	let autoColumns = [];
@@ -19,8 +19,11 @@ function buildColumnWidths(columns, availableWidth, offsetTotal = 0, tableNode) 
 			starColumns.push(column);
 			starMaxMin = Math.max(starMaxMin, column._minWidth);
 			starMaxMax = Math.max(starMaxMax, column._maxWidth);
-		} else {
+		} else if (isFixedColumn(column)) {
 			fixedColumns.push(column);
+		}
+		else {
+			throwColumnTypeError(column);
 		}
 	});
 
@@ -113,6 +116,14 @@ function isStarColumn(column) {
 	return column.width === null || column.width === undefined || column.width === '*' || column.width === 'star';
 }
 
+function isFixedColumn(column) {
+	return isNumber(column.width);
+}
+
+function throwColumnTypeError(column) {
+	throw new Error(`Invalid column width: ${column.width} (width must be a number, "*" or "auto")`);
+}
+
 //TODO: refactor and reuse in measureTable
 function measureMinMax(columns) {
 	let result = { min: 0, max: 0 };
@@ -129,9 +140,12 @@ function measureMinMax(columns) {
 		} else if (isAutoColumn(c)) {
 			result.min += c._minWidth;
 			result.max += c._maxWidth;
-		} else {
+		} else if (isFixedColumn(c)) {
 			result.min += ((c.width !== undefined && c.width) || c._minWidth);
 			result.max += ((c.width !== undefined && c.width) || c._maxWidth);
+		}
+		else {
+			throwColumnTypeError(c);
 		}
 	}
 
@@ -150,5 +164,6 @@ export default {
 	buildColumnWidths: buildColumnWidths,
 	measureMinMax: measureMinMax,
 	isAutoColumn: isAutoColumn,
-	isStarColumn: isStarColumn
+	isStarColumn: isStarColumn,
+	isFixedColumn: isFixedColumn
 };
