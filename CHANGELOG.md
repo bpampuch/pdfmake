@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Added `setUrlAccessPolicy()` for defining a custom access policy for external URLs before download
+
+	Example:
+	```js
+	pdfmake.setUrlAccessPolicy((url) => {
+		// check allowed domain
+		return url.startsWith("https://example.com/");
+	});
+	For details see [documentation](https://pdfmake.github.io/docs/0.3/getting-started/server-side/methods/#url-access-policy)
 - Added validation for image height and width values
 
 ## 0.3.5 - 2026-02-22
