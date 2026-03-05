@@ -121,7 +121,7 @@ function isFixedColumn(column) {
 }
 
 function throwColumnTypeError(column) {
-	throw new Error(`Invalid column width: ${column.width} (width must be a number, "*" or "auto")`);
+	throw new Error(`Invalid column width: ${column.width} of type ${typeof column.width} (width must be a number, "*" or "auto")`);
 }
 
 //TODO: refactor and reuse in measureTable
@@ -141,8 +141,8 @@ function measureMinMax(columns) {
 			result.min += c._minWidth;
 			result.max += c._maxWidth;
 		} else if (isFixedColumn(c)) {
-			result.min += ((c.width !== undefined && c.width) || c._minWidth);
-			result.max += ((c.width !== undefined && c.width) || c._maxWidth);
+			result.min += c.width;
+			result.max += c.width;
 		}
 		else {
 			throwColumnTypeError(c);
