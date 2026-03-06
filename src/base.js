@@ -28,6 +28,13 @@ class pdfmake {
 		options.progressCallback = this.progressCallback;
 		options.tableLayouts = this.tableLayouts;
 
+		const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+		if (typeof this.urlAccessPolicy === 'undefined' && !isBrowser) {
+			console.warn(
+				'No URL access policy defined. Consider using setUrlAccessPolicy() to restrict external resource downloads.'
+			);
+		}
+
 		let urlResolver = new URLResolver(this.virtualfs);
 		urlResolver.setUrlAccessPolicy(this.urlAccessPolicy);
 
