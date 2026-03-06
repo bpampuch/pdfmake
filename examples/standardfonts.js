@@ -16,6 +16,11 @@ pdfmake.addFonts(Times);
 //var ZapfDingbats = require('../standard-fonts/ZapfDingbats');
 //pdfmake.addFonts(ZapfDingbats);
 
+pdfmake.setUrlAccessPolicy((url) => {
+	// this can be used to restrict allowed domains
+	return url.startsWith('https://');;
+});
+
 
 var docDefinition = {
 	content: [

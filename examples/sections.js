@@ -4,6 +4,12 @@ var pdfmake = require('../js/index'); // only during development, otherwise use 
 var Roboto = require('../fonts/Roboto');
 pdfmake.addFonts(Roboto);
 
+pdfmake.setUrlAccessPolicy((url) => {
+	// this can be used to restrict allowed domains
+	return url.startsWith('https://');;
+});
+
+
 var docDefinition = {
 	header: function () { return 'default header'; },
 	footer: function () { return 'default footer'; },
