@@ -1,7 +1,7 @@
-var pdfmake = require('../j/index'); // only during development, otherwie ue the following line
+var pdfmake = require('../js/index'); // only during development, otherwise use the following line
 //var pdfmake = require('pdfmake');
 
-var Roboto = require('../font/Roboto');
+var Roboto = require('../fonts/Roboto');
 pdfmake.addFonts(Roboto);
 
 pdfmake.setUrlAccessPolicy((url) => {
