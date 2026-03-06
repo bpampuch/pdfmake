@@ -28,8 +28,8 @@ class pdfmake {
 		options.progressCallback = this.progressCallback;
 		options.tableLayouts = this.tableLayouts;
 
-		const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
-		if (typeof this.urlAccessPolicy === 'undefined' && !isBrowser) {
+		const isServer = typeof process !== 'undefined' && process?.versions?.node;
+		if (typeof this.urlAccessPolicy === 'undefined' && isServer) {
 			console.warn(
 				'No URL access policy defined. Consider using setUrlAccessPolicy() to restrict external resource downloads.'
 			);
