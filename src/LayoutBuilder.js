@@ -159,10 +159,12 @@ class LayoutBuilder {
 			});
 		}
 
+		const MAX_LAYOUT_PASSES = 10;
 		let pagesCount = 0;
+		let layoutPass = 0;
 		let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pagesCount);
 
-		while (true) {
+		while (++layoutPass < MAX_LAYOUT_PASSES) {
 			if (result.pageMarginFunctionUsed && pagesCount !== result.pages.length) {
 				pagesCount = result.pages.length;
 				resetXYs(result);
