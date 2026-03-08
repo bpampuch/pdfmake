@@ -32,7 +32,8 @@ class IntegrationTestHelper {
 		}
 
 		this.pdfDocument = new PDFDocument(fontDescriptors, docDefinition.images, docDefinition.attachments, { size: [pageSize.width, pageSize.height], compress: false });
-		var builder = new LayoutBuilder(pageSize, { left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom }, new SVGMeasure());
+		var pageMargins = docDefinition.pageMargins || { left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom };
+		var builder = new LayoutBuilder(pageSize, pageMargins, new SVGMeasure());
 
 		return builder.layoutDocument(
 			docDefinition.content,
