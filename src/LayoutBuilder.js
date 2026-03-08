@@ -159,10 +159,24 @@ class LayoutBuilder {
 			});
 		}
 
-		let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
-		while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
-			resetXYs(result);
-			result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
+		let pagesCount = 0;
+		let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pagesCount);
+
+		while (true) {
+			if (result.pageMarginFunctionUsed && pagesCount !== result.pages.length) {
+				pagesCount = result.pages.length;
+				resetXYs(result);
+				result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pagesCount);
+				continue;
+			}
+
+			if (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
+				resetXYs(result);
+				result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pagesCount);
+				continue;
+			}
+
+			break;
 		}
 
 		return result.pages;
@@ -176,7 +190,8 @@ class LayoutBuilder {
 		background,
 		header,
 		footer,
-		watermark
+		watermark,
+		pageCount
 	) {
 
 		const isNecessaryAddFirstPage = (docStructure) => {
@@ -193,7 +208,10 @@ class LayoutBuilder {
 		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
-		this.writer = new PageElementWriter(new DocumentContext());
+		let documentContext = new DocumentContext();
+		documentContext.pageMargins = this.pageMargins;
+		documentContext.pageCount = pageCount;
+		this.writer = new PageElementWriter(documentContext);
 
 		this.writer.context().addListener('pageAdded', (page) => {
 			let backgroundGetter = background;
@@ -216,7 +234,7 @@ class LayoutBuilder {
 		this.addHeadersAndFooters(header, footer);
 		this.addWatermark(watermark, pdfDocument, defaultStyle);
 
-		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
+		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList, pageMarginFunctionUsed: this.writer.context().pageMarginFunctionUsed };
 	}
 
 	addBackground(background) {
