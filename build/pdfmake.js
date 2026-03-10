@@ -1,4 +1,4 @@
-/*! pdfmake v0.3.5, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.3.6, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -23,7 +23,7 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 // EXTERNAL MODULE: ./node_modules/pdfkit/js/pdfkit.es.js
-var pdfkit_es = __webpack_require__(3801);
+var pdfkit_es = __webpack_require__(1254);
 ;// ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(783)["Buffer"];
 
@@ -3650,9 +3650,11 @@ class DocMeasure {
       node._width = node._minWidth = node._maxWidth = node.cover.width;
       node._height = node._minHeight = node._maxHeight = node.cover.height;
     } else {
+      let nodeWidth = isNumber(node.width) ? node.width : undefined;
+      let nodeHeight = isNumber(node.height) ? node.height : undefined;
       let ratio = dimensions.width / dimensions.height;
-      node._width = node._minWidth = node._maxWidth = node.width || (node.height ? node.height * ratio : dimensions.width);
-      node._height = node.height || (node.width ? node.width / ratio : dimensions.height);
+      node._width = node._minWidth = node._maxWidth = nodeWidth || (nodeHeight ? nodeHeight * ratio : dimensions.width);
+      node._height = nodeHeight || (nodeWidth ? nodeWidth / ratio : dimensions.height);
       if (isNumber(node.maxWidth) && node.maxWidth < node._width) {
         node._width = node._minWidth = node._maxWidth = node.maxWidth;
         node._height = node._width * dimensions.height / dimensions.width;
@@ -8183,22 +8185,6 @@ class Renderer {
 
 
 
-
-/**
- * Printer which turns document definition into a pdf
- *
- * @example
- * var fontDescriptors = {
- *	Roboto: {
- *		normal: 'fonts/Roboto-Regular.ttf',
- *		bold: 'fonts/Roboto-Medium.ttf',
- *		italics: 'fonts/Roboto-Italic.ttf',
- *		bolditalics: 'fonts/Roboto-MediumItalic.ttf'
- *	}
- * };
- *
- * var printer = new PdfPrinter(fontDescriptors);
- */
 class PdfPrinter {
   /**
    * @param {object} fontDescriptors font definition dictionary
@@ -8206,12 +8192,6 @@ class PdfPrinter {
    * @param {object} urlResolver
    */
   constructor(fontDescriptors, virtualfs, urlResolver) {
-    if (virtualfs === void 0) {
-      virtualfs = null;
-    }
-    if (urlResolver === void 0) {
-      urlResolver = null;
-    }
     this.fontDescriptors = fontDescriptors;
     this.virtualfs = virtualfs;
     this.urlResolver = urlResolver;
@@ -8308,9 +8288,6 @@ class PdfPrinter {
         headers: {}
       };
     };
-    if (this.urlResolver === null) {
-      return;
-    }
     for (let font in this.fontDescriptors) {
       if (this.fontDescriptors.hasOwnProperty(font)) {
         if (this.fontDescriptors[font].normal) {
@@ -8470,7 +8447,68 @@ function calculatePageHeight(page, margins) {
 /* harmony default export */ const Printer = (PdfPrinter);
 // EXTERNAL MODULE: ./src/virtual-fs.js
 var virtual_fs = __webpack_require__(6811);
+;// ./src/URLResolver.js
+async function fetchUrl(url, headers) {
+  if (headers === void 0) {
+    headers = {};
+  }
+  try {
+    const response = await fetch(url, {
+      headers
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch (status code: ${response.status}, url: "${url}")`);
+    }
+    return await response.arrayBuffer();
+  } catch (error) {
+    throw new Error(`Network request failed (url: "${url}", error: ${error.message})`, {
+      cause: error
+    });
+  }
+}
+class URLResolver {
+  constructor(fs) {
+    this.fs = fs;
+    this.resolving = {};
+    this.urlAccessPolicy = undefined;
+  }
+
+  /**
+   * @param {(url: string) => boolean} callback
+   */
+  setUrlAccessPolicy(callback) {
+    this.urlAccessPolicy = callback;
+  }
+  resolve(url, headers) {
+    if (headers === void 0) {
+      headers = {};
+    }
+    const resolveUrlInternal = async () => {
+      if (url.toLowerCase().startsWith('https://') || url.toLowerCase().startsWith('http://')) {
+        if (this.fs.existsSync(url)) {
+          return; // url was downloaded earlier
+        }
+        if (typeof this.urlAccessPolicy !== 'undefined' && this.urlAccessPolicy(url) !== true) {
+          throw new Error(`Access to URL denied by resource access policy: ${url}`);
+        }
+        const buffer = await fetchUrl(url, headers);
+        this.fs.writeFileSync(url, buffer);
+      }
+      // else cannot be resolved
+    };
+    if (!this.resolving[url]) {
+      this.resolving[url] = resolveUrlInternal();
+    }
+    return this.resolving[url];
+  }
+  resolved() {
+    return Promise.all(Object.values(this.resolving));
+  }
+}
+/* harmony default export */ const src_URLResolver = (URLResolver);
 ;// ./src/base.js
+/* provided dependency */ var process = __webpack_require__(9964);
+
 
 
 
@@ -8478,7 +8516,7 @@ var virtual_fs = __webpack_require__(6811);
 class pdfmake {
   constructor() {
     this.virtualfs = virtual_fs["default"];
-    this.urlResolver = null;
+    this.urlAccessPolicy = undefined;
   }
 
   /**
@@ -8498,9 +8536,25 @@ class pdfmake {
     }
     options.progressCallback = this.progressCallback;
     options.tableLayouts = this.tableLayouts;
-    let printer = new Printer(this.fonts, this.virtualfs, this.urlResolver());
+    const isServer = typeof process !== 'undefined' && process?.versions?.node;
+    if (typeof this.urlAccessPolicy === 'undefined' && isServer) {
+      console.warn('No URL access policy defined. Consider using setUrlAccessPolicy() to restrict external resource downloads.');
+    }
+    let urlResolver = new src_URLResolver(this.virtualfs);
+    urlResolver.setUrlAccessPolicy(this.urlAccessPolicy);
+    let printer = new Printer(this.fonts, this.virtualfs, urlResolver);
     const pdfDocumentPromise = printer.createPdfKitDocument(docDefinition, options);
     return this._transformToDocument(pdfDocumentPromise);
+  }
+
+  /**
+   * @param {(url: string) => boolean} callback
+   */
+  setUrlAccessPolicy(callback) {
+    if (callback !== undefined && typeof callback !== 'function') {
+      throw new Error("Parameter 'callback' has an invalid type. Function or undefined expected.");
+    }
+    this.urlAccessPolicy = callback;
   }
   setProgressCallback(callback) {
     this.progressCallback = callback;
@@ -8591,7 +8645,7 @@ class OutputDocument {
 }
 /* harmony default export */ const src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(656);
+var FileSaver_min = __webpack_require__(8667);
 ;// ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -8680,54 +8734,6 @@ class OutputDocumentBrowser extends src_OutputDocument {
   }
 }
 /* harmony default export */ const browser_extensions_OutputDocumentBrowser = (OutputDocumentBrowser);
-;// ./src/URLResolver.js
-async function fetchUrl(url, headers) {
-  if (headers === void 0) {
-    headers = {};
-  }
-  try {
-    const response = await fetch(url, {
-      headers
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch (status code: ${response.status}, url: "${url}")`);
-    }
-    return await response.arrayBuffer();
-  } catch (error) {
-    throw new Error(`Network request failed (url: "${url}", error: ${error.message})`, {
-      cause: error
-    });
-  }
-}
-class URLResolver {
-  constructor(fs) {
-    this.fs = fs;
-    this.resolving = {};
-  }
-  resolve(url, headers) {
-    if (headers === void 0) {
-      headers = {};
-    }
-    const resolveUrlInternal = async () => {
-      if (url.toLowerCase().startsWith('https://') || url.toLowerCase().startsWith('http://')) {
-        if (this.fs.existsSync(url)) {
-          return; // url was downloaded earlier
-        }
-        const buffer = await fetchUrl(url, headers);
-        this.fs.writeFileSync(url, buffer);
-      }
-      // else cannot be resolved
-    };
-    if (!this.resolving[url]) {
-      this.resolving[url] = resolveUrlInternal();
-    }
-    return this.resolving[url];
-  }
-  resolved() {
-    return Promise.all(Object.values(this.resolving));
-  }
-}
-/* harmony default export */ const src_URLResolver = (URLResolver);
 // EXTERNAL MODULE: ./src/browser-extensions/virtual-fs-cjs.js
 var virtual_fs_cjs = __webpack_require__(2416);
 var virtual_fs_cjs_default = /*#__PURE__*/__webpack_require__.n(virtual_fs_cjs);
@@ -8735,7 +8741,6 @@ var virtual_fs_cjs_default = /*#__PURE__*/__webpack_require__.n(virtual_fs_cjs);
 var configurator = __webpack_require__(890);
 var configurator_default = /*#__PURE__*/__webpack_require__.n(configurator);
 ;// ./src/browser-extensions/index.js
-
 
 
 
@@ -8756,7 +8761,6 @@ let defaultClientFonts = {
 class browser_extensions_pdfmake extends base {
   constructor() {
     super();
-    this.urlResolver = () => new src_URLResolver(this.virtualfs);
     this.fonts = defaultClientFonts;
   }
   addFontContainer(fontContainer) {
@@ -22031,7 +22035,7 @@ module.exports = {
 
 /***/ },
 
-/***/ 3801
+/***/ 1254
 (__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -42631,6 +42635,9 @@ module.exports = function regexTester(regex) {
     parser.opt = opt || {}
     parser.opt.lowercase = parser.opt.lowercase || parser.opt.lowercasetags
     parser.looseCase = parser.opt.lowercase ? 'toLowerCase' : 'toUpperCase'
+    parser.opt.maxEntityCount = parser.opt.maxEntityCount || 512
+    parser.opt.maxEntityDepth = parser.opt.maxEntityDepth || 4
+    parser.entityCount = parser.entityDepth = 0
     parser.tags = []
     parser.closed = parser.closedRoot = parser.sawRoot = false
     parser.tag = parser.error = null
@@ -44176,9 +44183,24 @@ module.exports = function regexTester(regex) {
               parser.opt.unparsedEntities &&
               !Object.values(sax.XML_ENTITIES).includes(parsedEntity)
             ) {
+              if ((parser.entityCount += 1) > parser.opt.maxEntityCount) {
+                error(
+                  parser,
+                  'Parsed entity count exceeds max entity count'
+                )
+              }
+
+              if ((parser.entityDepth += 1) > parser.opt.maxEntityDepth) {
+                error(
+                  parser,
+                  'Parsed entity depth exceeds max entity depth'
+                )
+              }
+
               parser.entity = ''
               parser.state = returnState
               parser.write(parsedEntity)
+              parser.entityDepth -= 1
             } else {
               parser[buffer] += parsedEntity
               parser.entity = ''
@@ -49142,7 +49164,7 @@ module.exports = function whichTypedArray(value) {
 
 /***/ },
 
-/***/ 656
+/***/ 8667
 (module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
