@@ -11,6 +11,7 @@
 		// check allowed domain
 		return url.startsWith("https://example.com/");
 	});
+	```
 	For details see [documentation](https://pdfmake.github.io/docs/0.3/getting-started/server-side/methods/#url-access-policy)
 - Added validation for image height and width values
 
