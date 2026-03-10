@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Added `setUrlAccessPolicy()` for defining a custom access policy for external URLs before download
+	(addresses a potential server vulnerability **CVE-2026-26801**)
 
 	Example:
 	```js
