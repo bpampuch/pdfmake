@@ -1,5 +1,6 @@
 import { isString } from './helpers/variableType';
 import { EventEmitter } from 'events';
+import { normalizePageMargin } from './PageSize';
 
 /**
  * A store for current x, y positions and available width/height.
@@ -10,6 +11,8 @@ class DocumentContext extends EventEmitter {
 		super();
 		this.pages = [];
 		this.pageMargins = undefined;
+		this.pageCount = 0;
+		this.pageMarginFunctionUsed = false;
 		this.x = undefined;
 		this.availableWidth = undefined;
 		this.availableHeight = undefined;
@@ -328,8 +331,8 @@ class DocumentContext extends EventEmitter {
 			return;
 		}
 
-		let pageTopY = this.pageMargins.top;
-		let pageInnerHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+		let pageTopY = this.getCurrentPage().pageMargins.top;
+		let pageInnerHeight = this.getCurrentPage().pageSize.height - this.getCurrentPage().pageMargins.top - this.getCurrentPage().pageMargins.bottom;
 
 		// When moving to new page, start at first column.
 		// Reset width to FIRST column width, not last column from previous page.
@@ -342,9 +345,9 @@ class DocumentContext extends EventEmitter {
 
 		// Reset X to start of first column (left margin)
 		if (this.marginXTopParent) {
-			this.x = this.pageMargins.left + this.marginXTopParent[0];
+			this.x = this.getCurrentPage().pageMargins.left + this.marginXTopParent[0];
 		} else {
-			this.x = this.pageMargins.left;
+			this.x = this.getCurrentPage().pageMargins.left;
 		}
 		this.availableWidth = firstColumnWidth;
 		this.lastColumnWidth = firstColumnWidth;
@@ -383,10 +386,10 @@ class DocumentContext extends EventEmitter {
 	}
 
 	initializePage() {
-		this.y = this.pageMargins.top;
-		this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+		this.y = this.getCurrentPage().pageMargins.top;
+		this.availableHeight = this.getCurrentPage().pageSize.height - this.getCurrentPage().pageMargins.top - this.getCurrentPage().pageMargins.bottom;
 		const { pageCtx, isSnapshot } = this.pageSnapshot();
-		pageCtx.availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
+		pageCtx.availableWidth = this.getCurrentPage().pageSize.width - this.getCurrentPage().pageMargins.left - this.getCurrentPage().pageMargins.right;
 		if (isSnapshot && this.marginXTopParent) {
 			pageCtx.availableWidth -= this.marginXTopParent[0];
 			pageCtx.availableWidth -= this.marginXTopParent[1];
@@ -404,11 +407,11 @@ class DocumentContext extends EventEmitter {
 	moveTo(x, y) {
 		if (x !== undefined && x !== null) {
 			this.x = x;
-			this.availableWidth = this.getCurrentPage().pageSize.width - this.x - this.pageMargins.right;
+			this.availableWidth = this.getCurrentPage().pageSize.width - this.x - this.getCurrentPage().pageMargins.right;
 		}
 		if (y !== undefined && y !== null) {
 			this.y = y;
-			this.availableHeight = this.getCurrentPage().pageSize.height - this.y - this.pageMargins.bottom;
+			this.availableHeight = this.getCurrentPage().pageSize.height - this.y - this.getCurrentPage().pageMargins.bottom;
 		}
 	}
 
@@ -485,11 +488,22 @@ class DocumentContext extends EventEmitter {
 	addPage(pageSize, pageMargin = null, customProperties = {}) {
 		if (pageMargin !== null) {
 			this.pageMargins = pageMargin;
-			this.x = pageMargin.left;
-			this.availableWidth = pageSize.width - pageMargin.left - pageMargin.right;
 		}
 
-		let page = { items: [], pageSize: pageSize, pageMargins: this.pageMargins, customProperties: customProperties };
+		let currentMargin = pageMargin || this.pageMargins;
+		let evaluatedMargin = currentMargin;
+
+		if (typeof currentMargin === 'function') {
+			this.pageMarginFunctionUsed = true;
+			evaluatedMargin = normalizePageMargin(currentMargin(this.pages.length + 1, this.pageCount, pageSize));
+		}
+
+		if (evaluatedMargin !== undefined && evaluatedMargin !== null) {
+			this.x = evaluatedMargin.left;
+			this.availableWidth = pageSize.width - evaluatedMargin.left - evaluatedMargin.right;
+		}
+
+		let page = { items: [], pageSize: pageSize, pageMargins: evaluatedMargin, customProperties: customProperties };
 		this.pages.push(page);
 		this.backgroundLength.push(0);
 		this.page = this.pages.length - 1;
@@ -510,8 +524,8 @@ class DocumentContext extends EventEmitter {
 
 	getCurrentPosition() {
 		let pageSize = this.getCurrentPage().pageSize;
-		let innerHeight = pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-		let innerWidth = pageSize.width - this.pageMargins.left - this.pageMargins.right;
+		let innerHeight = pageSize.height - this.getCurrentPage().pageMargins.top - this.getCurrentPage().pageMargins.bottom;
+		let innerWidth = pageSize.width - this.getCurrentPage().pageMargins.left - this.getCurrentPage().pageMargins.right;
 
 		return {
 			pageNumber: this.page + 1,
@@ -520,8 +534,8 @@ class DocumentContext extends EventEmitter {
 			pageInnerWidth: innerWidth,
 			left: this.x,
 			top: this.y,
-			verticalRatio: ((this.y - this.pageMargins.top) / innerHeight),
-			horizontalRatio: ((this.x - this.pageMargins.left) / innerWidth)
+			verticalRatio: ((this.y - this.getCurrentPage().pageMargins.top) / innerHeight),
+			horizontalRatio: ((this.x - this.getCurrentPage().pageMargins.left) / innerWidth)
 		};
 	}
 }
