@@ -8,6 +8,7 @@ class pdfmake {
 
 	constructor() {
 		this.virtualfs = virtualfs;
+		this.urlAccessPolicy = undefined;
 	}
 
 	/**
@@ -27,12 +28,31 @@ class pdfmake {
 		options.progressCallback = this.progressCallback;
 		options.tableLayouts = this.tableLayouts;
 
+		const isServer = typeof process !== 'undefined' && process?.versions?.node;
+		if (typeof this.urlAccessPolicy === 'undefined' && isServer) {
+			console.warn(
+				'No URL access policy defined. Consider using setUrlAccessPolicy() to restrict external resource downloads.'
+			);
+		}
+
 		let urlResolver = new URLResolver(this.virtualfs);
+		urlResolver.setUrlAccessPolicy(this.urlAccessPolicy);
 
 		let printer = new Printer(this.fonts, this.virtualfs, urlResolver);
 		const pdfDocumentPromise = printer.createPdfKitDocument(docDefinition, options);
 
 		return this._transformToDocument(pdfDocumentPromise);
+	}
+
+	/**
+	 * @param {(url: string) => boolean} callback
+	 */
+	setUrlAccessPolicy(callback) {
+		if (callback !== undefined && typeof callback !== 'function') {
+			throw new Error("Parameter 'callback' has an invalid type. Function or undefined expected.");
+		}
+
+		this.urlAccessPolicy = callback;
 	}
 
 	setProgressCallback(callback) {

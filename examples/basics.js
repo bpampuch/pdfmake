@@ -16,6 +16,12 @@ pdfmake.addFonts({
 });
 */
 
+pdfmake.setUrlAccessPolicy((url) => {
+	// this can be used to restrict allowed domains
+	return url.startsWith('https://');;
+});
+
+
 var docDefinition = {
 	content: [
 		'First paragraph',

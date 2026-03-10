@@ -4,6 +4,12 @@ var pdfmake = require('../js/index'); // only during development, otherwise use 
 var Roboto = require('../fonts/Roboto');
 pdfmake.addFonts(Roboto);
 
+pdfmake.setUrlAccessPolicy((url) => {
+	// this can be used to restrict allowed domains
+	return url.startsWith('https://');;
+});
+
+
 var docDefinition = {
 	version: '1.5', // PDF version
 	subset: 'PDF/A-3a', // Subset types: // PDF/A-1, PDF/A-1a, PDF/A-1b, PDF/A-2, PDF/A-2a, PDF/A-2b, PDF/A-3, PDF/A-3a, PDF/A-3b, PDF/UA

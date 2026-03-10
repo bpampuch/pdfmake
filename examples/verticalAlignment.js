@@ -4,17 +4,11 @@ var pdfmake = require('../js/index'); // only during development, otherwise use 
 var Roboto = require('../fonts/Roboto');
 pdfmake.addFonts(Roboto);
 
-// or you can define the font manually:
-/*
-pdfmake.addFonts({
-	Roboto: {
-		normal: '../fonts/Roboto/Roboto-Regular.ttf',
-		bold: '../fonts/Roboto/Roboto-Medium.ttf',
-		italics: '../fonts/Roboto/Roboto-Italic.ttf',
-		bolditalics: '../fonts/Roboto/Roboto-MediumItalic.ttf'
-	}
+pdfmake.setUrlAccessPolicy((url) => {
+	// this can be used to restrict allowed domains
+	return url.startsWith('https://');;
 });
-*/
+
 
 var docDefinition = {
 	content: [

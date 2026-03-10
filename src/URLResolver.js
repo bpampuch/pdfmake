@@ -14,6 +14,14 @@ class URLResolver {
 	constructor(fs) {
 		this.fs = fs;
 		this.resolving = {};
+		this.urlAccessPolicy = undefined;
+	}
+
+	/**
+	 * @param {(url: string) => boolean} callback
+	 */
+	setUrlAccessPolicy(callback) {
+		this.urlAccessPolicy = callback;
 	}
 
 	resolve(url, headers = {}) {
@@ -22,6 +30,11 @@ class URLResolver {
 				if (this.fs.existsSync(url)) {
 					return; // url was downloaded earlier
 				}
+
+				if ((typeof this.urlAccessPolicy !== 'undefined') && (this.urlAccessPolicy(url) !== true)) {
+					throw new Error(`Access to URL denied by resource access policy: ${url}`);
+				}
+
 				const buffer = await fetchUrl(url, headers);
 				this.fs.writeFileSync(url, buffer);
 			}
