@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.6 - 2026-03-10
 
 - Added `setUrlAccessPolicy()` for defining a custom access policy for external URLs before download
 	(addresses a potential server vulnerability **CVE-2026-26801**)
