@@ -2060,6 +2060,152 @@ describe('LayoutBuilder', function () {
 
 		});
 
+		// Fills most of page 1 so a 60px-tall unbreakable block won't fit and moves to page 2
+		function fillerAndHeadingWithUnbreakable(stackContent, blockId) {
+			var fillerBreaks = new Array(57).join("\n");
+			return [
+				{ text: 'Filler' + fillerBreaks, id: 'filler' },
+				{ text: 'Heading', id: 'heading', headlineLevel: 1 },
+				{
+					stack: stackContent,
+					unbreakable: true,
+					id: blockId
+				}
+			];
+		}
+
+		function getPageBreakBeforeCalls(spy) {
+			return Array.from({ length: spy.callCount }, function (_, i) {
+				return spy.getCall(i);
+			});
+		}
+
+		function findCallById(spy, id) {
+			var calls = getPageBreakBeforeCalls(spy);
+			var call = calls.find(function (call) { return call.args[0].id === id; });
+			assert(call, id + ' should be passed to pageBreakBefore');
+			return call;
+		}
+
+		it('should update page numbers when unbreakable block moves to next page', function () {
+			// Content without id/tocItem to ensure _node is set on all lines
+			docStructure = fillerAndHeadingWithUnbreakable([
+				{ text: 'Line 1' },
+				{ text: 'Line 2' },
+				{ text: 'Line 3' },
+				{ text: 'Line 4' },
+				{ text: 'Line 5' }
+			], 'unbreakable-block');
+
+			pageBreakBeforeFunction = sinon.spy();
+
+			builder.layoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
+
+			var headingCall = findCallById(pageBreakBeforeFunction, 'heading');
+
+			// The unbreakable block moved to page 2, so the heading on page 1
+			// should have no following nodes on the same page
+			var following = headingCall.args[1].getFollowingNodesOnPage();
+			assert.equal(following.length, 0,
+				'heading should have no following nodes on page 1, got ' + following.length);
+		});
+
+		it('should allow pageBreakBefore to fix orphaned heading before unbreakable block', function () {
+			// Content without id/tocItem — the fix ensures _node is set on all
+			// lines, not just those with id or tocItem
+			docStructure = fillerAndHeadingWithUnbreakable([
+				{ text: 'Line 1' },
+				{ text: 'Line 2' },
+				{ text: 'Line 3' },
+				{ text: 'Line 4' },
+				{ text: 'Line 5' }
+			], 'unbreakable-block');
+
+			// Callback that moves orphaned headings: if a heading has no following
+			// content on the same page, insert a page break before it
+			pageBreakBeforeFunction = function (nodeInfo, followingInfo) {
+				if (nodeInfo.headlineLevel && followingInfo.getFollowingNodesOnPage().length === 0) {
+					return true;
+				}
+				return false;
+			};
+
+			var pages = builder.layoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
+
+			// The heading should have moved to page 2 along with the unbreakable block
+			assert.equal(pages.length, 2, 'should have 2 pages');
+
+			var page2Lines = pages[1].items
+				.filter(function (item) { return item.type === 'line'; })
+				.map(function (item) {
+					return item.item.inlines.map(function (inline) { return inline.text; }).join('');
+				});
+			assert.ok(page2Lines.indexOf('Heading') > -1, 'heading should be on page 2, got lines: ' + JSON.stringify(page2Lines));
+			assert.ok(page2Lines.indexOf('Line 1') > -1, 'unbreakable content should be on page 2');
+		});
+
+		it('should update page numbers for canvas in unbreakable block', function () {
+			docStructure = fillerAndHeadingWithUnbreakable([
+				{ canvas: [{ type: 'rect', x: 0, y: 0, w: 100, h: 60 }], id: 'canvas-node' }
+			], 'unbreakable-canvas-block');
+
+			pageBreakBeforeFunction = sinon.spy();
+
+			builder.layoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
+
+			var canvasCall = findCallById(pageBreakBeforeFunction, 'canvas-node');
+			assert.deepEqual(canvasCall.args[0].pageNumbers, [2], 'canvas should be on page 2, got: ' + JSON.stringify(canvasCall.args[0].pageNumbers));
+		});
+
+		it('should update page numbers for qr in unbreakable block', function () {
+			docStructure = fillerAndHeadingWithUnbreakable([
+				{ qr: 'test', fit: 60, id: 'qr-node' }
+			], 'unbreakable-qr-block');
+
+			pageBreakBeforeFunction = sinon.spy();
+
+			builder.layoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
+
+			var qrCall = findCallById(pageBreakBeforeFunction, 'qr-node');
+			assert.deepEqual(qrCall.args[0].pageNumbers, [2], 'qr should be on page 2, got: ' + JSON.stringify(qrCall.args[0].pageNumbers));
+		});
+
+		it('should render attachment inside unbreakable block on same page', function () {
+			docStructure = [
+				{
+					stack: [
+						{ attachment: 'test.pdf', width: 10, height: 18, id: 'att-same-page' }
+					],
+					unbreakable: true,
+					id: 'unbreakable-att-same'
+				}
+			];
+
+			pageBreakBeforeFunction = sinon.spy();
+
+			var pages = builder.layoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
+
+			var page1Items = pages[0].items.map(function (item) { return item.type; });
+			assert.ok(page1Items.indexOf('attachment') > -1, 'attachment should be rendered on page 1, got items: ' + JSON.stringify(page1Items));
+		});
+
+		it('should update page numbers for attachment in unbreakable block', function () {
+			docStructure = fillerAndHeadingWithUnbreakable([
+				{ attachment: 'test.pdf', width: 10, height: 60, id: 'att-node' }
+			], 'unbreakable-att-block');
+
+			pageBreakBeforeFunction = sinon.spy();
+
+			var pages = builder.layoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
+
+			// Verify the attachment item is actually present on page 2
+			var page2Items = pages[1].items.map(function (item) { return item.type; });
+			assert.ok(page2Items.indexOf('attachment') > -1, 'attachment should be rendered on page 2, got items: ' + JSON.stringify(page2Items));
+
+			var attCall = findCallById(pageBreakBeforeFunction, 'att-node');
+			assert.deepEqual(attCall.args[0].pageNumbers, [2], 'attachment should be on page 2, got: ' + JSON.stringify(attCall.args[0].pageNumbers));
+		});
+
 		it('should provide all page numbers of the node', function () {
 			var eightyLineBreaks = new Array(80).join("\n");
 			docStructure = [
@@ -2075,6 +2221,27 @@ describe('LayoutBuilder', function () {
 			assert.deepEqual(pageBreakBeforeFunction.getCall(1).args[0].pageNumbers, [1]);
 			assert.deepEqual(pageBreakBeforeFunction.getCall(2).args[0].pageNumbers, [1, 2]);
 			assert.deepEqual(pageBreakBeforeFunction.getCall(3).args[0].pageNumbers, [2]);
+		});
+
+		it('should not include header/footer nodes in pageBreakBefore calls', function () {
+			docStructure = [
+				{ text: 'Body text', id: 'body' }
+			];
+			header = function () {
+				return { text: 'Header text', id: 'header-text' };
+			};
+			footer = function () {
+				return { text: 'Footer text', id: 'footer-text' };
+			};
+
+			pageBreakBeforeFunction = sinon.spy();
+
+			builder.layoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pageBreakBeforeFunction);
+
+			var calls = getPageBreakBeforeCalls(pageBreakBeforeFunction);
+			var ids = calls.map(function (call) { return call.args[0].id; });
+			assert.ok(ids.indexOf('header-text') === -1, 'header nodes should not appear in pageBreakBefore, got ids: ' + JSON.stringify(ids));
+			assert.ok(ids.indexOf('footer-text') === -1, 'footer nodes should not appear in pageBreakBefore, got ids: ' + JSON.stringify(ids));
 		});
 	});
 
