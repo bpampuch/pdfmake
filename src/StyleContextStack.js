@@ -1,5 +1,7 @@
 import { isString, isValue } from './helpers/variableType';
 
+const isInheritValue = value => isString(value) && value.toLowerCase() === 'inherit';
+
 /**
  * Used for style inheritance and style overrides
  */
@@ -127,7 +129,9 @@ class StyleContextStack {
 			}
 
 			if (isValue(style[property])) {
-				return style[property];
+				if (!isInheritValue(style[property])) {
+					return style[property];
+				}
 			}
 
 			if (style.extends) {
@@ -153,12 +157,16 @@ class StyleContextStack {
 						return value;
 					}
 				} else if (isValue(item[property])) { // style-overrides-object
+					if (isInheritValue(item[property])) {
+						continue;
+					}
 					return item[property];
 				}
 			}
 		}
 
-		return this.defaultStyle && this.defaultStyle[property];
+		let defaultValue = this.defaultStyle && this.defaultStyle[property];
+		return isInheritValue(defaultValue) ? undefined : defaultValue;
 	}
 
 	/**
@@ -172,7 +180,9 @@ class StyleContextStack {
 		let value;
 
 		if (isValue(item[property])) { // item defines this property
-			return item[property];
+			if (!isInheritValue(item[property])) {
+				return item[property];
+			}
 		}
 
 		if (!styleContextStack) {

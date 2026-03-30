@@ -195,6 +195,37 @@ describe('StyleContextStack', function () {
 			assert.equal(StyleContextStack.getStyleProperty({ font: 'ZapfDingbats', bold: true }, null, 'font', 'Arial'), 'ZapfDingbats');
 		});
 
+		it('should resolve "inherit" from node style overrides', function () {
+			var stack = new StyleContextStack({
+				parent: {
+					color: 'blue',
+				},
+				child: {
+					extends: 'parent'
+				}
+			}, {
+				color: 'black'
+			});
+
+			assert.equal(StyleContextStack.getStyleProperty({ style: 'child', color: 'inherit' }, stack, 'color', 'red'), 'blue');
+		});
+
+		it('should resolve "inherit" declared in named style definitions', function () {
+			var stack = new StyleContextStack({
+				parent: {
+					color: 'blue',
+				},
+				child: {
+					color: 'inherit',
+					extends: 'parent'
+				}
+			}, {
+				color: 'black'
+			});
+
+			assert.equal(StyleContextStack.getStyleProperty({ style: 'child' }, stack, 'color', 'red'), 'blue');
+		});
+
 		it('should process extends styles', function () {
 			var stack = new StyleContextStack({
 				header: {
