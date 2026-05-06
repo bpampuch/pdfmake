@@ -1,4 +1,4 @@
-/*! pdfmake v0.3.7, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.3.8, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -25,168 +25,7 @@ __webpack_require__.d(__webpack_exports__, {
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.includes.js
 var es_array_includes = __webpack_require__(187);
 // EXTERNAL MODULE: ./node_modules/pdfkit/js/pdfkit.es.js
-var pdfkit_es = __webpack_require__(5167);
-;// ./src/PDFDocument.js
-/* provided dependency */ var Buffer = __webpack_require__(783)["Buffer"];
-
-const typeName = (bold, italics) => {
-  let type = 'normal';
-  if (bold && italics) {
-    type = 'bolditalics';
-  } else if (bold) {
-    type = 'bold';
-  } else if (italics) {
-    type = 'italics';
-  }
-  return type;
-};
-class PDFDocument extends pdfkit_es/* default */.A {
-  constructor(fonts, images, patterns, attachments, options, virtualfs) {
-    if (fonts === void 0) {
-      fonts = {};
-    }
-    if (images === void 0) {
-      images = {};
-    }
-    if (patterns === void 0) {
-      patterns = {};
-    }
-    if (attachments === void 0) {
-      attachments = {};
-    }
-    if (options === void 0) {
-      options = {};
-    }
-    if (virtualfs === void 0) {
-      virtualfs = null;
-    }
-    super(options);
-    this.fonts = {};
-    this.fontCache = {};
-    for (let font in fonts) {
-      if (fonts.hasOwnProperty(font)) {
-        let fontDef = fonts[font];
-        this.fonts[font] = {
-          normal: fontDef.normal,
-          bold: fontDef.bold,
-          italics: fontDef.italics,
-          bolditalics: fontDef.bolditalics
-        };
-      }
-    }
-    this.patterns = {};
-    for (let pattern in patterns) {
-      if (patterns.hasOwnProperty(pattern)) {
-        let patternDef = patterns[pattern];
-        this.patterns[pattern] = this.pattern(patternDef.boundingBox, patternDef.xStep, patternDef.yStep, patternDef.pattern, patternDef.colored);
-      }
-    }
-    this.images = images;
-    this.attachments = attachments;
-    this.virtualfs = virtualfs;
-  }
-  getFontType(bold, italics) {
-    return typeName(bold, italics);
-  }
-  getFontFile(familyName, bold, italics) {
-    let type = this.getFontType(bold, italics);
-    if (!this.fonts[familyName] || !this.fonts[familyName][type]) {
-      return null;
-    }
-    return this.fonts[familyName][type];
-  }
-  provideFont(familyName, bold, italics) {
-    let type = this.getFontType(bold, italics);
-    if (this.getFontFile(familyName, bold, italics) === null) {
-      throw new Error(`Font '${familyName}' in style '${type}' is not defined in the font section of the document definition.`);
-    }
-    this.fontCache[familyName] = this.fontCache[familyName] || {};
-    if (!this.fontCache[familyName][type]) {
-      let def = this.fonts[familyName][type];
-      if (!Array.isArray(def)) {
-        def = [def];
-      }
-      if (this.virtualfs && this.virtualfs.existsSync(def[0])) {
-        def[0] = this.virtualfs.readFileSync(def[0]);
-      }
-      this.fontCache[familyName][type] = this.font(...def)._font;
-    }
-    return this.fontCache[familyName][type];
-  }
-  provideImage(src) {
-    const realImageSrc = src => {
-      let image = this.images[src];
-      if (!image) {
-        return src;
-      }
-      if (this.virtualfs && this.virtualfs.existsSync(image)) {
-        return this.virtualfs.readFileSync(image);
-      }
-      let index = image.indexOf('base64,');
-      if (index < 0) {
-        return this.images[src];
-      }
-      return Buffer.from(image.substring(index + 7), 'base64');
-    };
-    if (this._imageRegistry[src]) {
-      return this._imageRegistry[src];
-    }
-    let image;
-    try {
-      image = this.openImage(realImageSrc(src));
-      if (!image) {
-        throw new Error('No image');
-      }
-    } catch (error) {
-      throw new Error(`Invalid image: ${error.toString()}\nImages dictionary should contain dataURL entries (or local file paths in node.js)`, {
-        cause: error
-      });
-    }
-    image.embed(this);
-    this._imageRegistry[src] = image;
-    return image;
-  }
-
-  /**
-   * @param {Array} color pdfmake format: [<pattern name>, <color>]
-   * @returns {Array} pdfkit format: [<pattern object>, <color>]
-   */
-  providePattern(color) {
-    if (Array.isArray(color) && color.length === 2) {
-      return [this.patterns[color[0]], color[1]];
-    }
-    return null;
-  }
-  provideAttachment(src) {
-    const checkRequired = obj => {
-      if (!obj) {
-        throw new Error('No attachment');
-      }
-      if (!obj.src) {
-        throw new Error('The "src" key is required for attachments');
-      }
-      return obj;
-    };
-    if (typeof src === 'object') {
-      return checkRequired(src);
-    }
-    let attachment = checkRequired(this.attachments[src]);
-    if (this.virtualfs && this.virtualfs.existsSync(attachment.src)) {
-      return this.virtualfs.readFileSync(attachment.src);
-    }
-    return attachment;
-  }
-  setOpenActionAsPrint() {
-    let printActionRef = this.ref({
-      Type: 'Action',
-      S: 'Named',
-      N: 'Print'
-    });
-    this._root.data.OpenAction = printActionRef;
-    printActionRef.end();
-  }
-}
-/* harmony default export */ const src_PDFDocument = (PDFDocument);
+var pdfkit_es = __webpack_require__(6649);
 ;// ./src/helpers/variableType.js
 /**
  * @param {any} variable
@@ -238,6 +77,208 @@ function isEmptyObject(variable) {
 function isValue(variable) {
   return variable !== undefined && variable !== null;
 }
+;// ./src/PDFDocument.js
+/* provided dependency */ var Buffer = __webpack_require__(783)["Buffer"];
+
+
+const typeName = (bold, italics) => {
+  let type = 'normal';
+  if (bold && italics) {
+    type = 'bolditalics';
+  } else if (bold) {
+    type = 'bold';
+  } else if (italics) {
+    type = 'italics';
+  }
+  return type;
+};
+class PDFDocument extends pdfkit_es/* default */.A {
+  constructor(fonts, images, patterns, attachments, options, virtualfs, localAccessPolicy) {
+    if (fonts === void 0) {
+      fonts = {};
+    }
+    if (images === void 0) {
+      images = {};
+    }
+    if (patterns === void 0) {
+      patterns = {};
+    }
+    if (attachments === void 0) {
+      attachments = {};
+    }
+    if (options === void 0) {
+      options = {};
+    }
+    if (virtualfs === void 0) {
+      virtualfs = null;
+    }
+    if (localAccessPolicy === void 0) {
+      localAccessPolicy = undefined;
+    }
+    super(options);
+    this.fonts = {};
+    this.fontCache = {};
+    for (let font in fonts) {
+      if (fonts.hasOwnProperty(font)) {
+        let fontDef = fonts[font];
+        this.fonts[font] = {
+          normal: fontDef.normal,
+          bold: fontDef.bold,
+          italics: fontDef.italics,
+          bolditalics: fontDef.bolditalics
+        };
+      }
+    }
+    this.patterns = {};
+    for (let pattern in patterns) {
+      if (patterns.hasOwnProperty(pattern)) {
+        let patternDef = patterns[pattern];
+        this.patterns[pattern] = this.pattern(patternDef.boundingBox, patternDef.xStep, patternDef.yStep, patternDef.pattern, patternDef.colored);
+      }
+    }
+    this.images = images;
+    this.attachments = attachments;
+    this.virtualfs = virtualfs;
+    this.localAccessPolicy = localAccessPolicy;
+  }
+  getFontType(bold, italics) {
+    return typeName(bold, italics);
+  }
+  getFontFile(familyName, bold, italics) {
+    let type = this.getFontType(bold, italics);
+    if (!this.fonts[familyName] || !this.fonts[familyName][type]) {
+      return null;
+    }
+    return this.fonts[familyName][type];
+  }
+  provideFont(familyName, bold, italics) {
+    let type = this.getFontType(bold, italics);
+    if (this.getFontFile(familyName, bold, italics) === null) {
+      throw new Error(`Font '${familyName}' in style '${type}' is not defined in the font section of the document definition.`);
+    }
+    this.fontCache[familyName] = this.fontCache[familyName] || {};
+    if (!this.fontCache[familyName][type]) {
+      let def = this.fonts[familyName][type];
+      if (!Array.isArray(def)) {
+        def = [def];
+      }
+      if (this.virtualfs && this.virtualfs.existsSync(def[0])) {
+        def[0] = this.virtualfs.readFileSync(def[0]);
+      } else {
+        this.validateLocalFile(def[0]);
+      }
+      this.fontCache[familyName][type] = this.font(...def)._font;
+    }
+    return this.fontCache[familyName][type];
+  }
+  provideImage(src) {
+    const realImageSrc = src => {
+      let image = this.images[src];
+      if (!image) {
+        return src;
+      }
+      if (this.virtualfs && this.virtualfs.existsSync(image)) {
+        return this.virtualfs.readFileSync(image);
+      }
+      let index = image.indexOf('base64,');
+      if (index < 0) {
+        return this.images[src];
+      }
+      return Buffer.from(image.substring(index + 7), 'base64');
+    };
+    if (this._imageRegistry[src]) {
+      return this._imageRegistry[src];
+    }
+    let image;
+    let imageSrc = realImageSrc(src);
+    this.validateLocalFile(imageSrc);
+    try {
+      image = this.openImage(imageSrc);
+      if (!image) {
+        throw new Error('No image');
+      }
+    } catch (error) {
+      throw new Error(`Invalid image: ${error.toString()}\nImages dictionary should contain dataURL entries (or local file paths in node.js)`, {
+        cause: error
+      });
+    }
+    image.embed(this);
+    this._imageRegistry[src] = image;
+    return image;
+  }
+
+  /**
+   * @param {Array} color pdfmake format: [<pattern name>, <color>]
+   * @returns {Array} pdfkit format: [<pattern object>, <color>]
+   */
+  providePattern(color) {
+    if (Array.isArray(color) && color.length === 2) {
+      return [this.patterns[color[0]], color[1]];
+    }
+    return null;
+  }
+  provideAttachment(src) {
+    const checkRequired = obj => {
+      if (!obj) {
+        throw new Error('No attachment');
+      }
+      if (!obj.src) {
+        throw new Error('The "src" key is required for attachments');
+      }
+      return obj;
+    };
+    if (typeof src === 'object') {
+      return checkRequired(src);
+    }
+    let attachment = checkRequired(this.attachments[src]);
+    if (this.virtualfs && this.virtualfs.existsSync(attachment.src)) {
+      return this.virtualfs.readFileSync(attachment.src);
+    }
+    this.validateLocalFile(attachment.src);
+    return attachment;
+  }
+  resolveColor(color, defaultColor) {
+    color = color || defaultColor;
+    if (typeof this._normalizeColor === 'function') {
+      if (isString(color) && this._normalizeColor(color) === null) {
+        // color is not valid
+        return defaultColor;
+      }
+    }
+    return color;
+  }
+  setOpenActionAsPrint() {
+    let printActionRef = this.ref({
+      Type: 'Action',
+      S: 'Named',
+      N: 'Print'
+    });
+    this._root.data.OpenAction = printActionRef;
+    printActionRef.end();
+  }
+  file(src, options) {
+    if (options === void 0) {
+      options = {};
+    }
+    this.validateLocalFile(src);
+    return super.file(src, options);
+  }
+  validateLocalFile(path) {
+    if (typeof this.localAccessPolicy === 'undefined') {
+      return;
+    }
+    if (!isString(path)) {
+      return;
+    }
+    if (/^data:/.test(path)) {
+      return;
+    }
+    if (this.localAccessPolicy(path) !== true) {
+      throw new Error(`Access to local file denied by resource access policy: ${path}`);
+    }
+  }
+}
+/* harmony default export */ const src_PDFDocument = (PDFDocument);
 ;// ./src/helpers/node.js
 
 function fontStringify(key, val) {
@@ -4595,10 +4636,9 @@ class DocumentContext extends events.EventEmitter {
   initializePage() {
     this.y = this.pageMargins.top;
     this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-    const {
-      pageCtx,
-      isSnapshot
-    } = this.pageSnapshot();
+    const _this$pageSnapshot = this.pageSnapshot(),
+      pageCtx = _this$pageSnapshot.pageCtx,
+      isSnapshot = _this$pageSnapshot.isSnapshot;
     pageCtx.availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
     if (isSnapshot && this.marginXTopParent) {
       pageCtx.availableWidth -= this.marginXTopParent[0];
@@ -5549,9 +5589,17 @@ class PageElementWriter extends src_ElementWriter {
 ;// ./src/TableProcessor.js
 
 
+const PAGE_BREAK_VALUES = new Set(['before', 'beforeOdd', 'beforeEven', 'after', 'afterOdd', 'afterEven']);
+const hasExplicitPageBreak = cell => {
+  if (!cell || typeof cell !== 'object') {
+    return false;
+  }
+  return PAGE_BREAK_VALUES.has(cell.pageBreak);
+};
 class TableProcessor {
   constructor(tableNode) {
     this.tableNode = tableNode;
+    this._isCurrentRowUnbreakable = false;
   }
   beginTable(writer) {
     const getTableInnerContentWidth = () => {
@@ -5690,7 +5738,10 @@ class TableProcessor {
       writer.context().moveDown(this.topLineWidth);
     }
     this.rowTopPageY = writer.context().y + this.rowPaddingTop;
-    if (this.dontBreakRows && rowIndex > 0) {
+    const rowCells = this.tableNode.table.body[rowIndex] || [];
+    const rowHasPageBreak = rowCells.some(hasExplicitPageBreak);
+    this._isCurrentRowUnbreakable = this.dontBreakRows && rowIndex > 0 && !rowHasPageBreak;
+    if (this._isCurrentRowUnbreakable) {
       writer.beginUnbreakableBlock();
     }
     this.rowTopY = writer.context().y;
@@ -6083,7 +6134,8 @@ class TableProcessor {
     if (this.headerRows && rowIndex === this.headerRows - 1) {
       this.headerRepeatable = writer.currentBlockToRepeatable();
     }
-    if (this.dontBreakRows) {
+    const shouldCommitCurrentRowUnbreakable = this.dontBreakRows && (rowIndex === 0 || this._isCurrentRowUnbreakable);
+    if (shouldCommitCurrentRowUnbreakable) {
       const pageChangedCallback = () => {
         if (rowIndex > 0 && !this.headerRows && this.layout.hLineWhenBroken !== false) {
           // Draw the top border of the row after a page break
@@ -6094,6 +6146,7 @@ class TableProcessor {
       writer.commitUnbreakableBlock();
       writer.removeListener('pageChanged', pageChangedCallback);
     }
+    this._isCurrentRowUnbreakable = false;
     if (this.headerRepeatable && (rowIndex === this.rowsWithoutPageBreak - 1 || rowIndex === this.tableNode.table.body.length - 1)) {
       writer.commitUnbreakableBlock();
       writer.pushToRepeatables(this.headerRepeatable);
@@ -6983,19 +7036,21 @@ class LayoutBuilder {
     return null;
   }
   processRow(_ref) {
-    let {
-      marginX = [0, 0],
-      dontBreakRows = false,
-      rowsWithoutPageBreak = 0,
-      cells,
-      widths,
-      gaps,
-      tableNode,
-      tableBody,
-      rowIndex,
-      height,
-      snakingColumns = false
-    } = _ref;
+    let _ref$marginX = _ref.marginX,
+      marginX = _ref$marginX === void 0 ? [0, 0] : _ref$marginX,
+      _ref$dontBreakRows = _ref.dontBreakRows,
+      dontBreakRows = _ref$dontBreakRows === void 0 ? false : _ref$dontBreakRows,
+      _ref$rowsWithoutPageB = _ref.rowsWithoutPageBreak,
+      rowsWithoutPageBreak = _ref$rowsWithoutPageB === void 0 ? 0 : _ref$rowsWithoutPageB,
+      cells = _ref.cells,
+      widths = _ref.widths,
+      gaps = _ref.gaps,
+      tableNode = _ref.tableNode,
+      tableBody = _ref.tableBody,
+      rowIndex = _ref.rowIndex,
+      height = _ref.height,
+      _ref$snakingColumns = _ref.snakingColumns,
+      snakingColumns = _ref$snakingColumns === void 0 ? false : _ref$snakingColumns;
     const isUnbreakableRow = dontBreakRows || rowIndex <= rowsWithoutPageBreak - 1;
     let pageBreaks = [];
     let pageBreaksByRowSpan = [];
@@ -7055,11 +7110,13 @@ class LayoutBuilder {
         // We store a reference of the ending cell in the first cell of the rowspan
         cell._endingCell = rowSpanRightEndingCell;
         cell._endingCell._startingRowSpanY = cell._startingRowSpanY;
+        cell._endingCell._startingRowSpanPage = cell._startingRowSpanPage;
       }
       if (rowSpanLeftEndingCell) {
         // We store a reference of the left ending cell in the first cell of the rowspan
         cell._leftEndingCell = rowSpanLeftEndingCell;
         cell._leftEndingCell._startingRowSpanY = cell._startingRowSpanY;
+        cell._leftEndingCell._startingRowSpanPage = cell._startingRowSpanPage;
       }
 
       // If we are after a cell that started a rowspan
@@ -7094,7 +7151,13 @@ class LayoutBuilder {
         if (dontBreakRows) {
           // Calculate how many points we have to discount to Y when dontBreakRows and rowSpan are combined
           const ctxBeforeRowSpanLastRow = this.writer.contextStack[this.writer.contextStack.length - 1];
-          discountY = ctxBeforeRowSpanLastRow.y - cell._startingRowSpanY;
+          const startsOnCurrentPage = typeof cell._startingRowSpanPage === 'number' && cell._startingRowSpanPage === ctxBeforeRowSpanLastRow.page;
+          if (startsOnCurrentPage && typeof cell._startingRowSpanY === 'number') {
+            discountY = ctxBeforeRowSpanLastRow.y - cell._startingRowSpanY;
+          }
+
+          // Do not increase Y by applying a negative discount.
+          discountY = Math.max(0, discountY);
         }
         let originalXOffset = 0;
         // If context was saved from an unbreakable block and we are not in an unbreakable block anymore
@@ -7256,6 +7319,7 @@ class LayoutBuilder {
         tableNode.table.body[i].forEach(cell => {
           if (cell.rowSpan && cell.rowSpan > 1) {
             cell._startingRowSpanY = this.writer.context().y;
+            cell._startingRowSpanPage = this.writer.context().page;
           }
         });
       }
@@ -7603,7 +7667,7 @@ class SVGMeasure {
 /* harmony default export */ const src_SVGMeasure = (SVGMeasure);
 ;// ./src/TextDecorator.js
 
-const groupDecorations = line => {
+const groupDecorations = (line, pdfDocument) => {
   let groups = [];
   let currentGroup = null;
   for (let i = 0, l = line.inlines.length; i < l; i++) {
@@ -7616,7 +7680,7 @@ const groupDecorations = line => {
     if (!Array.isArray(decoration)) {
       decoration = [decoration];
     }
-    let color = inline.decorationColor || inline.color || 'black';
+    let color = pdfDocument.resolveColor(pdfDocument.resolveColor(inline.decorationColor, inline.color), 'black');
     let style = inline.decorationStyle || 'solid';
     let thickness = isNumber(inline.decorationThickness) ? inline.decorationThickness : null;
     for (let ii = 0, ll = decoration.length; ii < ll; ii++) {
@@ -7646,10 +7710,10 @@ class TextDecorator {
     let height = line.getHeight();
     for (let i = 0, l = line.inlines.length; i < l; i++) {
       let inline = line.inlines[i];
-      if (!inline.background) {
+      let color = this.pdfDocument.resolveColor(inline.background, undefined);
+      if (!color) {
         continue;
       }
-      let color = inline.background;
       let patternColor = this.pdfDocument.providePattern(inline.background);
       if (patternColor !== null) {
         color = patternColor;
@@ -7659,7 +7723,7 @@ class TextDecorator {
     }
   }
   drawDecorations(line, x, y) {
-    let groups = groupDecorations(line);
+    let groups = groupDecorations(line, this.pdfDocument);
     for (let i = 0, l = groups.length; i < l; i++) {
       this._drawDecoration(groups[i], x, y);
     }
@@ -7921,7 +7985,7 @@ class Renderer {
       }
       let opacity = isNumber(inline.opacity) ? inline.opacity : 1;
       this.pdfDocument.opacity(opacity);
-      this.pdfDocument.fill(inline.color || 'black');
+      this.pdfDocument.fill(this.pdfDocument.resolveColor(inline.color, 'black'));
       this.pdfDocument._font = inline.font;
       this.pdfDocument.fontSize(inline.fontSize);
       let shiftedY = offsetText(y + shiftToBaseline, inline);
@@ -8014,14 +8078,14 @@ class Renderer {
     let fillOpacity = isNumber(vector.fillOpacity) ? vector.fillOpacity : 1;
     let strokeOpacity = isNumber(vector.strokeOpacity) ? vector.strokeOpacity : 1;
     if (vector.color && vector.lineColor) {
-      this.pdfDocument.fillColor(vector.color, fillOpacity);
-      this.pdfDocument.strokeColor(vector.lineColor, strokeOpacity);
+      this.pdfDocument.fillColor(this.pdfDocument.resolveColor(vector.color, 'black'), fillOpacity);
+      this.pdfDocument.strokeColor(this.pdfDocument.resolveColor(vector.lineColor, 'black'), strokeOpacity);
       this.pdfDocument.fillAndStroke();
     } else if (vector.color) {
-      this.pdfDocument.fillColor(vector.color, fillOpacity);
+      this.pdfDocument.fillColor(this.pdfDocument.resolveColor(vector.color, 'black'), fillOpacity);
       this.pdfDocument.fill();
     } else {
-      this.pdfDocument.strokeColor(vector.lineColor || 'black', strokeOpacity);
+      this.pdfDocument.strokeColor(this.pdfDocument.resolveColor(vector.lineColor, 'black'), strokeOpacity);
       this.pdfDocument.stroke();
     }
   }
@@ -8161,7 +8225,7 @@ class Renderer {
   }
   renderWatermark(page) {
     let watermark = page.watermark;
-    this.pdfDocument.fill(watermark.color);
+    this.pdfDocument.fill(this.pdfDocument.resolveColor(watermark.color, 'black'));
     this.pdfDocument.opacity(watermark.opacity);
     this.pdfDocument.save();
     this.pdfDocument.rotate(watermark.angle, {
@@ -8193,11 +8257,13 @@ class PdfPrinter {
    * @param {object} fontDescriptors font definition dictionary
    * @param {object} virtualfs
    * @param {object} urlResolver
+   * @param {(path: string) => boolean} localAccessPolicy
    */
-  constructor(fontDescriptors, virtualfs, urlResolver) {
+  constructor(fontDescriptors, virtualfs, urlResolver, localAccessPolicy) {
     this.fontDescriptors = fontDescriptors;
     this.virtualfs = virtualfs;
     this.urlResolver = urlResolver;
+    this.localAccessPolicy = localAccessPolicy;
   }
 
   /**
@@ -8246,7 +8312,7 @@ class PdfPrinter {
       info: createMetadata(docDefinition),
       font: null
     };
-    this.pdfKitDoc = new src_PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.patterns, docDefinition.attachments, pdfOptions, this.virtualfs);
+    this.pdfKitDoc = new src_PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.patterns, docDefinition.attachments, pdfOptions, this.virtualfs, this.localAccessPolicy);
     embedFiles(docDefinition, this.pdfKitDoc);
     const builder = new src_LayoutBuilder(pageSize, normalizePageMargin(docDefinition.pageMargins), new src_SVGMeasure());
     builder.registerTableLayouts(tableLayouts);
@@ -8451,23 +8517,55 @@ function calculatePageHeight(page, margins) {
 // EXTERNAL MODULE: ./src/virtual-fs.js
 var virtual_fs = __webpack_require__(6811);
 ;// ./src/URLResolver.js
-async function fetchUrl(url, headers) {
+const MAX_REDIRECTS = 30;
+
+/**
+ * @param {string} url
+ * @param {object} headers
+ * @param {(url: string) => boolean} urlAccessPolicy
+ * @returns {Promise<Response>}
+ */
+async function fetchUrl(url, headers, urlAccessPolicy) {
   if (headers === void 0) {
     headers = {};
   }
-  try {
-    const response = await fetch(url, {
-      headers
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch (status code: ${response.status}, url: "${url}")`);
+  for (let i = 0; i <= MAX_REDIRECTS; i++) {
+    if (typeof urlAccessPolicy !== 'undefined' && urlAccessPolicy(url) !== true) {
+      throw new Error(`Access to URL denied by resource access policy: ${url}`);
     }
-    return await response.arrayBuffer();
-  } catch (error) {
-    throw new Error(`Network request failed (url: "${url}", error: ${error.message})`, {
-      cause: error
-    });
+    try {
+      let response = await fetch(url, {
+        headers,
+        redirect: 'manual'
+      });
+
+      // redirect url
+      if (response.status >= 300 && response.status < 400) {
+        let location = response.headers.get('location');
+        if (!location) {
+          throw new Error('Redirect response missing Location header');
+        }
+        url = new URL(location, url).href;
+        continue;
+      }
+
+      // browsers do not support redirect: 'manual'
+      if (response.type === 'opaqueredirect') {
+        response = await fetch(url, {
+          headers
+        });
+      }
+      if (!response.ok) {
+        throw new Error(`Failed to fetch (status code: ${response.status})`);
+      }
+      return response;
+    } catch (error) {
+      throw new Error(`Network request failed (url: "${url}", error: ${error.message})`, {
+        cause: error
+      });
+    }
   }
+  throw new Error(`Network request failed (url: "${url}", error: Too many redirects)`);
 }
 class URLResolver {
   constructor(fs) {
@@ -8491,10 +8589,15 @@ class URLResolver {
         if (this.fs.existsSync(url)) {
           return; // url was downloaded earlier
         }
-        if (typeof this.urlAccessPolicy !== 'undefined' && this.urlAccessPolicy(url) !== true) {
-          throw new Error(`Access to URL denied by resource access policy: ${url}`);
+        const response = await fetchUrl(url, headers, this.urlAccessPolicy);
+
+        // validate access policy on redirected url (in browsers, only the final URL is validated)
+        if (response.redirected) {
+          if (typeof this.urlAccessPolicy !== 'undefined' && this.urlAccessPolicy(response.url) !== true) {
+            throw new Error(`Access to URL denied by resource access policy: ${response.url}`);
+          }
         }
-        const buffer = await fetchUrl(url, headers);
+        const buffer = await response.arrayBuffer();
         this.fs.writeFileSync(url, buffer);
       }
       // else cannot be resolved
@@ -8520,6 +8623,7 @@ class pdfmake {
   constructor() {
     this.virtualfs = virtual_fs["default"];
     this.urlAccessPolicy = undefined;
+    this.localAccessPolicy = undefined;
   }
 
   /**
@@ -8543,9 +8647,12 @@ class pdfmake {
     if (typeof this.urlAccessPolicy === 'undefined' && isServer) {
       console.warn('No URL access policy defined. Consider using setUrlAccessPolicy() to restrict external resource downloads.');
     }
+    if (typeof this.localAccessPolicy === 'undefined' && isServer) {
+      console.warn('No local access policy defined. Consider using setLocalAccessPolicy() to restrict local file system access.');
+    }
     let urlResolver = new src_URLResolver(this.virtualfs);
     urlResolver.setUrlAccessPolicy(this.urlAccessPolicy);
-    let printer = new Printer(this.fonts, this.virtualfs, urlResolver);
+    let printer = new Printer(this.fonts, this.virtualfs, urlResolver, this.localAccessPolicy);
     const pdfDocumentPromise = printer.createPdfKitDocument(docDefinition, options);
     return this._transformToDocument(pdfDocumentPromise);
   }
@@ -8648,7 +8755,7 @@ class OutputDocument {
 }
 /* harmony default export */ const src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(6457);
+var FileSaver_min = __webpack_require__(6946);
 ;// ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -14553,7 +14660,10 @@ class StateMachine {
    */
 
   apply(str, actions) {
-    for (var [start, end, tags] of this.match(str)) {
+    for (var _ref of this.match(str)) {
+      var start = _ref[0];
+      var end = _ref[1];
+      var tags = _ref[2];
       for (var tag of tags) {
         if (typeof actions[tag] === 'function') {
           actions[tag](start, end, str.slice(start, end + 1));
@@ -14677,370 +14787,6 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   exports.toByteArray = b64ToByteArray;
   exports.fromByteArray = uint8ToBase64;
 })( false ? 0 : exports);
-
-/***/ },
-
-/***/ 336
-(module, __unused_webpack_exports, __webpack_require__) {
-
-"use strict";
-/* provided dependency */ var Buffer = __webpack_require__(783)["Buffer"];
-
-
-__webpack_require__(187);
-/*
- * MIT LICENSE
- * Copyright (c) 2011 Devon Govett
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this
- * software and associated documentation files (the "Software"), to deal in the Software
- * without restriction, including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
- * to whom the Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
-
-const fs = __webpack_require__(2416);
-const zlib = __webpack_require__(6729);
-module.exports = class PNG {
-  static decode(path, fn) {
-    return fs.readFile(path, function (err, file) {
-      const png = new PNG(file);
-      return png.decode(pixels => fn(pixels));
-    });
-  }
-  static load(path) {
-    const file = fs.readFileSync(path);
-    return new PNG(file);
-  }
-  constructor(data) {
-    let i;
-    this.data = data;
-    this.pos = 8; // Skip the default header
-
-    this.palette = [];
-    this.imgData = [];
-    this.transparency = {};
-    this.text = {};
-    while (true) {
-      const chunkSize = this.readUInt32();
-      let section = '';
-      for (i = 0; i < 4; i++) {
-        section += String.fromCharCode(this.data[this.pos++]);
-      }
-      switch (section) {
-        case 'IHDR':
-          // we can grab  interesting values from here (like width, height, etc)
-          this.width = this.readUInt32();
-          this.height = this.readUInt32();
-          this.bits = this.data[this.pos++];
-          this.colorType = this.data[this.pos++];
-          this.compressionMethod = this.data[this.pos++];
-          this.filterMethod = this.data[this.pos++];
-          this.interlaceMethod = this.data[this.pos++];
-          break;
-        case 'PLTE':
-          this.palette = this.read(chunkSize);
-          break;
-        case 'IDAT':
-          for (i = 0; i < chunkSize; i++) {
-            this.imgData.push(this.data[this.pos++]);
-          }
-          break;
-        case 'tRNS':
-          // This chunk can only occur once and it must occur after the
-          // PLTE chunk and before the IDAT chunk.
-          this.transparency = {};
-          switch (this.colorType) {
-            case 3:
-              // Indexed color, RGB. Each byte in this chunk is an alpha for
-              // the palette index in the PLTE ("palette") chunk up until the
-              // last non-opaque entry. Set up an array, stretching over all
-              // palette entries which will be 0 (opaque) or 1 (transparent).
-              this.transparency.indexed = this.read(chunkSize);
-              var short = 255 - this.transparency.indexed.length;
-              if (short > 0) {
-                for (i = 0; i < short; i++) {
-                  this.transparency.indexed.push(255);
-                }
-              }
-              break;
-            case 0:
-              // Greyscale. Corresponding to entries in the PLTE chunk.
-              // Grey is two bytes, range 0 .. (2 ^ bit-depth) - 1
-              this.transparency.grayscale = this.read(chunkSize)[0];
-              break;
-            case 2:
-              // True color with proper alpha channel.
-              this.transparency.rgb = this.read(chunkSize);
-              break;
-          }
-          break;
-        case 'tEXt':
-          var text = this.read(chunkSize);
-          var index = text.indexOf(0);
-          var key = String.fromCharCode.apply(String, text.slice(0, index));
-          this.text[key] = String.fromCharCode.apply(String, text.slice(index + 1));
-          break;
-        case 'IEND':
-          // we've got everything we need!
-          switch (this.colorType) {
-            case 0:
-            case 3:
-            case 4:
-              this.colors = 1;
-              break;
-            case 2:
-            case 6:
-              this.colors = 3;
-              break;
-          }
-          this.hasAlphaChannel = [4, 6].includes(this.colorType);
-          var colors = this.colors + (this.hasAlphaChannel ? 1 : 0);
-          this.pixelBitlength = this.bits * colors;
-          switch (this.colors) {
-            case 1:
-              this.colorSpace = 'DeviceGray';
-              break;
-            case 3:
-              this.colorSpace = 'DeviceRGB';
-              break;
-          }
-          this.imgData = new Buffer(this.imgData);
-          return;
-          // removed by dead control flow
-
-        default:
-          // unknown (or unimportant) section, skip it
-          this.pos += chunkSize;
-      }
-      this.pos += 4; // Skip the CRC
-
-      if (this.pos > this.data.length) {
-        throw new Error('Incomplete or corrupt PNG file');
-      }
-    }
-  }
-  read(bytes) {
-    const result = new Array(bytes);
-    for (let i = 0; i < bytes; i++) {
-      result[i] = this.data[this.pos++];
-    }
-    return result;
-  }
-  readUInt32() {
-    const b1 = this.data[this.pos++] << 24;
-    const b2 = this.data[this.pos++] << 16;
-    const b3 = this.data[this.pos++] << 8;
-    const b4 = this.data[this.pos++];
-    return b1 | b2 | b3 | b4;
-  }
-  readUInt16() {
-    const b1 = this.data[this.pos++] << 8;
-    const b2 = this.data[this.pos++];
-    return b1 | b2;
-  }
-  decodePixels(fn) {
-    return zlib.inflate(this.imgData, (err, data) => {
-      if (err) {
-        throw err;
-      }
-      const {
-        width,
-        height
-      } = this;
-      const pixelBytes = this.pixelBitlength / 8;
-      const pixels = new Buffer(width * height * pixelBytes);
-      const {
-        length
-      } = data;
-      let pos = 0;
-      function pass(x0, y0, dx, dy, singlePass) {
-        if (singlePass === void 0) {
-          singlePass = false;
-        }
-        const w = Math.ceil((width - x0) / dx);
-        const h = Math.ceil((height - y0) / dy);
-        const scanlineLength = pixelBytes * w;
-        const buffer = singlePass ? pixels : new Buffer(scanlineLength * h);
-        let row = 0;
-        let c = 0;
-        while (row < h && pos < length) {
-          var byte, col, i, left, upper;
-          switch (data[pos++]) {
-            case 0:
-              // None
-              for (i = 0; i < scanlineLength; i++) {
-                buffer[c++] = data[pos++];
-              }
-              break;
-            case 1:
-              // Sub
-              for (i = 0; i < scanlineLength; i++) {
-                byte = data[pos++];
-                left = i < pixelBytes ? 0 : buffer[c - pixelBytes];
-                buffer[c++] = (byte + left) % 256;
-              }
-              break;
-            case 2:
-              // Up
-              for (i = 0; i < scanlineLength; i++) {
-                byte = data[pos++];
-                col = (i - i % pixelBytes) / pixelBytes;
-                upper = row && buffer[(row - 1) * scanlineLength + col * pixelBytes + i % pixelBytes];
-                buffer[c++] = (upper + byte) % 256;
-              }
-              break;
-            case 3:
-              // Average
-              for (i = 0; i < scanlineLength; i++) {
-                byte = data[pos++];
-                col = (i - i % pixelBytes) / pixelBytes;
-                left = i < pixelBytes ? 0 : buffer[c - pixelBytes];
-                upper = row && buffer[(row - 1) * scanlineLength + col * pixelBytes + i % pixelBytes];
-                buffer[c++] = (byte + Math.floor((left + upper) / 2)) % 256;
-              }
-              break;
-            case 4:
-              // Paeth
-              for (i = 0; i < scanlineLength; i++) {
-                var paeth, upperLeft;
-                byte = data[pos++];
-                col = (i - i % pixelBytes) / pixelBytes;
-                left = i < pixelBytes ? 0 : buffer[c - pixelBytes];
-                if (row === 0) {
-                  upper = upperLeft = 0;
-                } else {
-                  upper = buffer[(row - 1) * scanlineLength + col * pixelBytes + i % pixelBytes];
-                  upperLeft = col && buffer[(row - 1) * scanlineLength + (col - 1) * pixelBytes + i % pixelBytes];
-                }
-                const p = left + upper - upperLeft;
-                const pa = Math.abs(p - left);
-                const pb = Math.abs(p - upper);
-                const pc = Math.abs(p - upperLeft);
-                if (pa <= pb && pa <= pc) {
-                  paeth = left;
-                } else if (pb <= pc) {
-                  paeth = upper;
-                } else {
-                  paeth = upperLeft;
-                }
-                buffer[c++] = (byte + paeth) % 256;
-              }
-              break;
-            default:
-              throw new Error(`Invalid filter algorithm: ${data[pos - 1]}`);
-          }
-          if (!singlePass) {
-            let pixelsPos = ((y0 + row * dy) * width + x0) * pixelBytes;
-            let bufferPos = row * scanlineLength;
-            for (i = 0; i < w; i++) {
-              for (let j = 0; j < pixelBytes; j++) pixels[pixelsPos++] = buffer[bufferPos++];
-              pixelsPos += (dx - 1) * pixelBytes;
-            }
-          }
-          row++;
-        }
-      }
-      if (this.interlaceMethod === 1) {
-        /*
-          1 6 4 6 2 6 4 6
-          7 7 7 7 7 7 7 7
-          5 6 5 6 5 6 5 6
-          7 7 7 7 7 7 7 7
-          3 6 4 6 3 6 4 6
-          7 7 7 7 7 7 7 7
-          5 6 5 6 5 6 5 6
-          7 7 7 7 7 7 7 7
-        */
-        pass(0, 0, 8, 8); // 1
-        pass(4, 0, 8, 8); // 2
-        pass(0, 4, 4, 8); // 3
-        pass(2, 0, 4, 4); // 4
-        pass(0, 2, 2, 4); // 5
-        pass(1, 0, 2, 2); // 6
-        pass(0, 1, 1, 2); // 7
-      } else {
-        pass(0, 0, 1, 1, true);
-      }
-      return fn(pixels);
-    });
-  }
-  decodePalette() {
-    const {
-      palette
-    } = this;
-    const {
-      length
-    } = palette;
-    const transparency = this.transparency.indexed || [];
-    const ret = new Buffer(transparency.length + length);
-    let pos = 0;
-    let c = 0;
-    for (let i = 0; i < length; i += 3) {
-      var left;
-      ret[pos++] = palette[i];
-      ret[pos++] = palette[i + 1];
-      ret[pos++] = palette[i + 2];
-      ret[pos++] = (left = transparency[c++]) != null ? left : 255;
-    }
-    return ret;
-  }
-  copyToImageData(imageData, pixels) {
-    let j, k;
-    let {
-      colors
-    } = this;
-    let palette = null;
-    let alpha = this.hasAlphaChannel;
-    if (this.palette.length) {
-      palette = this._decodedPalette || (this._decodedPalette = this.decodePalette());
-      colors = 4;
-      alpha = true;
-    }
-    const data = imageData.data || imageData;
-    const {
-      length
-    } = data;
-    const input = palette || pixels;
-    let i = j = 0;
-    if (colors === 1) {
-      while (i < length) {
-        k = palette ? pixels[i / 4] * 4 : j;
-        const v = input[k++];
-        data[i++] = v;
-        data[i++] = v;
-        data[i++] = v;
-        data[i++] = alpha ? input[k++] : 255;
-        j = k;
-      }
-    } else {
-      while (i < length) {
-        k = palette ? pixels[i / 4] * 4 : j;
-        data[i++] = input[k++];
-        data[i++] = input[k++];
-        data[i++] = input[k++];
-        data[i++] = alpha ? input[k++] : 255;
-        j = k;
-      }
-    }
-  }
-  decode(fn) {
-    const ret = new Buffer(this.width * this.height * 4);
-    return this.decodePixels(pixels => {
-      this.copyToImageData(ret, pixels);
-      return fn(ret);
-    });
-  }
-};
 
 /***/ },
 
@@ -15373,9 +15119,8 @@ __webpack_require__(8376);
 __webpack_require__(6401);
 __webpack_require__(2017);
 const inflate = __webpack_require__(3483);
-const {
-  swap32LE
-} = __webpack_require__(6016);
+const _require = __webpack_require__(6016),
+  swap32LE = _require.swap32LE;
 
 // Shift size for getting the index-1 table offset.
 const SHIFT_1 = 6 + 5;
@@ -15466,11 +15211,10 @@ class UnicodeTrie {
       this.data = new Uint32Array(data.buffer);
     } else {
       // pre-parsed data
-      ({
-        data: this.data,
-        highStart: this.highStart,
-        errorValue: this.errorValue
-      } = data);
+      var _data = data;
+      this.data = _data.data;
+      this.highStart = _data.highStart;
+      this.errorValue = _data.errorValue;
     }
   }
   get(codePoint) {
@@ -15540,7 +15284,7 @@ module.exports = {
 
 /***/ },
 
-/***/ 5167
+/***/ 6649
 (__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -15566,7 +15310,7 @@ var _aes = __webpack_require__(2651);
 var fontkit = _interopRequireWildcard(__webpack_require__(1715));
 var _events = __webpack_require__(4785);
 var _linebreak = _interopRequireDefault(__webpack_require__(2532));
-var _pngJs = _interopRequireDefault(__webpack_require__(336));
+var _pngJs = _interopRequireDefault(__webpack_require__(381));
 function _interopRequireWildcard(e, t) { if ("function" == typeof WeakMap) var r = new WeakMap(), n = new WeakMap(); return (_interopRequireWildcard = function (e, t) { if (!t && e && e.__esModule) return e; var o, i, f = { __proto__: null, default: e }; if (null === e || "object" != typeof e && "function" != typeof e) return f; if (o = t ? n : r) { if (o.has(e)) return o.get(e); o.set(e, f); } for (const t in e) "default" !== t && {}.hasOwnProperty.call(e, t) && ((i = (o = Object.defineProperty) && Object.getOwnPropertyDescriptor(e, t)) && (i.get || i.set) ? o(f, t, i) : f[t] = e[t]); return f; })(e, t); }
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
 var fs = __webpack_require__(2416);
@@ -16035,13 +15779,17 @@ function rc4(data, key) {
   let j = 0;
   for (let i = 0; i < 256; i++) {
     j = j + s[i] + key[i % key.length] & 0xff;
-    [s[i], s[j]] = [s[j], s[i]];
+    var _ref3 = [s[j], s[i]];
+    s[i] = _ref3[0];
+    s[j] = _ref3[1];
   }
   const output = new Uint8Array(data.length);
   for (let i = 0, j = 0, k = 0; k < data.length; k++) {
     i = i + 1 & 0xff;
     j = j + s[i] & 0xff;
-    [s[i], s[j]] = [s[j], s[i]];
+    var _ref4 = [s[j], s[i]];
+    s[i] = _ref4[0];
+    s[j] = _ref4[1];
     output[k] = data[k] ^ s[s[i] + s[j] & 0xff];
   }
   return output;
@@ -16480,9 +16228,7 @@ function processPasswordR5() {
   return out;
 }
 const PASSWORD_PADDING = [0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00, 0x4e, 0x56, 0xff, 0xfa, 0x01, 0x08, 0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68, 0x3e, 0x80, 0x2f, 0x0c, 0xa9, 0xfe, 0x64, 0x53, 0x69, 0x7a];
-const {
-  number: number$2
-} = PDFObject;
+const number$2 = PDFObject.number;
 class PDFGradient$1 {
   constructor(doc) {
     this.doc = doc;
@@ -16631,8 +16377,20 @@ class PDFGradient$1 {
     return pattern;
   }
   apply(stroke) {
-    const [m0, m1, m2, m3, m4, m5] = this.doc._ctm;
-    const [m11, m12, m21, m22, dx, dy] = this.transform;
+    const _this$doc$_ctm = this.doc._ctm,
+      m0 = _this$doc$_ctm[0],
+      m1 = _this$doc$_ctm[1],
+      m2 = _this$doc$_ctm[2],
+      m3 = _this$doc$_ctm[3],
+      m4 = _this$doc$_ctm[4],
+      m5 = _this$doc$_ctm[5];
+    const _this$transform = this.transform,
+      m11 = _this$transform[0],
+      m12 = _this$transform[1],
+      m21 = _this$transform[2],
+      m22 = _this$transform[3],
+      dx = _this$transform[4],
+      dy = _this$transform[5];
     const m = [m0 * m11 + m2 * m12, m1 * m11 + m3 * m12, m0 * m21 + m2 * m22, m1 * m21 + m3 * m22, m0 * dx + m2 * dy + m4, m1 * dx + m3 * dy + m5];
     if (!this.embedded || m.join(' ') !== this.matrix.join(' ')) {
       this.embed(m);
@@ -16704,8 +16462,19 @@ class PDFTilingPattern$1 {
   createPattern() {
     const resources = this.doc.ref();
     resources.end();
-    const [m0, m1, m2, m3, m4, m5] = this.doc._ctm;
-    const [m11, m12, m21, m22, dx, dy] = [1, 0, 0, 1, 0, 0];
+    const _this$doc$_ctm2 = this.doc._ctm,
+      m0 = _this$doc$_ctm2[0],
+      m1 = _this$doc$_ctm2[1],
+      m2 = _this$doc$_ctm2[2],
+      m3 = _this$doc$_ctm2[3],
+      m4 = _this$doc$_ctm2[4],
+      m5 = _this$doc$_ctm2[5];
+    const m11 = 1,
+      m12 = 0,
+      m21 = 0,
+      m22 = 1,
+      dx = 0,
+      dy = 0;
     const m = [m0 * m11 + m2 * m12, m1 * m11 + m3 * m12, m0 * m21 + m2 * m22, m1 * m21 + m3 * m22, m0 * dx + m2 * dy + m4, m1 * dx + m3 * dy + m5];
     const pattern = this.doc.ref({
       Type: 'Pattern',
@@ -16757,14 +16526,10 @@ class PDFTilingPattern$1 {
 var pattern = {
   PDFTilingPattern: PDFTilingPattern$1
 };
-const {
-  PDFGradient,
-  PDFLinearGradient,
-  PDFRadialGradient
-} = Gradient;
-const {
-  PDFTilingPattern
-} = pattern;
+const PDFGradient = Gradient.PDFGradient,
+  PDFLinearGradient = Gradient.PDFLinearGradient,
+  PDFRadialGradient = Gradient.PDFRadialGradient;
+const PDFTilingPattern = pattern.PDFTilingPattern;
 var ColorMixin = {
   initColor() {
     this.spotColors = {};
@@ -16873,7 +16638,9 @@ var ColorMixin = {
     }
     const key = `${fillOpacity}_${strokeOpacity}`;
     if (this._opacityRegistry[key]) {
-      [dictionary, name] = this._opacityRegistry[key];
+      var _this$_opacityRegistr = this._opacityRegistry[key];
+      dictionary = _this$_opacityRegistr[0];
+      name = _this$_opacityRegistr[1];
     } else {
       dictionary = {
         Type: 'ExtGState'
@@ -17205,11 +16972,15 @@ const parse = function (path) {
       const position = args.length;
       if (position === 0 || position === 1) {
         if (c !== '+' && c !== '-') {
-          [newCursor, number] = readNumber(path, i);
+          var _readNumber = readNumber(path, i);
+          newCursor = _readNumber[0];
+          number = _readNumber[1];
         }
       }
       if (position === 2 || position === 5 || position === 6) {
-        [newCursor, number] = readNumber(path, i);
+        var _readNumber2 = readNumber(path, i);
+        newCursor = _readNumber2[0];
+        number = _readNumber2[1];
       }
       if (position === 3 || position === 4) {
         if (c === '0') {
@@ -17220,7 +16991,9 @@ const parse = function (path) {
         }
       }
     } else {
-      [newCursor, number] = readNumber(path, i);
+      var _readNumber3 = readNumber(path, i);
+      newCursor = _readNumber3[0];
+      number = _readNumber3[1];
     }
     if (number == null) {
       return pathData;
@@ -17403,7 +17176,13 @@ const runners = {
   }
 };
 const solveArc = function (doc, x, y, coords) {
-  const [rx, ry, rot, large, sweep, ex, ey] = coords;
+  const rx = coords[0],
+    ry = coords[1],
+    rot = coords[2],
+    large = coords[3],
+    sweep = coords[4],
+    ex = coords[5],
+    ey = coords[6];
   const segs = arcToSegments(ex, ey, rx, ry, large, sweep, rot, x, y);
   for (let seg of segs) {
     const bez = segmentToBezier(...seg);
@@ -17481,9 +17260,7 @@ class SVGPath {
     apply(commands, doc);
   }
 }
-const {
-  number: number$1
-} = PDFObject;
+const number$1 = PDFObject.number;
 const KAPPA = 4.0 * ((Math.sqrt(2) - 1.0) / 3.0);
 var VectorMixin = {
   initVector() {
@@ -17698,7 +17475,12 @@ var VectorMixin = {
       return this;
     }
     const m = this._ctm;
-    const [m0, m1, m2, m3, m4, m5] = m;
+    const m0 = m[0],
+      m1 = m[1],
+      m2 = m[2],
+      m3 = m[3],
+      m4 = m[4],
+      m5 = m[5];
     m[0] = m0 * m11 + m2 * m12;
     m[1] = m1 * m11 + m3 * m12;
     m[2] = m0 * m21 + m2 * m22;
@@ -17719,7 +17501,9 @@ var VectorMixin = {
     const sin = Math.sin(rad);
     let x = y = 0;
     if (options.origin != null) {
-      [x, y] = options.origin;
+      var _options$origin = options.origin;
+      x = _options$origin[0];
+      y = _options$origin[1];
       const x1 = x * cos - y * sin;
       const y1 = x * sin + y * cos;
       x -= x1;
@@ -17739,7 +17523,9 @@ var VectorMixin = {
     }
     let x = y = 0;
     if (options.origin != null) {
-      [x, y] = options.origin;
+      var _options$origin2 = options.origin;
+      x = _options$origin2[0];
+      y = _options$origin2[1];
       x -= xFactor * x;
       y -= yFactor * y;
     }
@@ -18018,14 +17804,13 @@ class StandardFont extends PDFFont {
     this.name = name;
     this.id = id;
     this.font = new AFMFont(STANDARD_FONTS[this.name]());
-    ({
-      ascender: this.ascender,
-      descender: this.descender,
-      bbox: this.bbox,
-      lineGap: this.lineGap,
-      xHeight: this.xHeight,
-      capHeight: this.capHeight
-    } = this.font);
+    var _this$font = this.font;
+    this.ascender = _this$font.ascender;
+    this.descender = _this$font.descender;
+    this.bbox = _this$font.bbox;
+    this.lineGap = _this$font.lineGap;
+    this.xHeight = _this$font.xHeight;
+    this.capHeight = _this$font.capHeight;
   }
   embed() {
     this.dictionary.data = {
@@ -18144,10 +17929,9 @@ class EmbeddedFont extends PDFFont {
     };
   }
   encode(text, features) {
-    const {
-      glyphs,
-      positions
-    } = this.layout(text, features);
+    const _this$layout = this.layout(text, features),
+      glyphs = _this$layout.glyphs,
+      positions = _this$layout.positions;
     const res = [];
     for (let i = 0; i < glyphs.length; i++) {
       const glyph = glyphs[i];
@@ -18191,9 +17975,7 @@ class EmbeddedFont extends PDFFont {
     }
     const tag = [1, 2, 3, 4, 5, 6].map(i => String.fromCharCode((this.id.charCodeAt(i) || 73) + 17)).join('');
     const name = tag + '+' + this.font.postscriptName?.replaceAll(' ', '_');
-    const {
-      bbox
-    } = this.font;
+    const bbox = this.font.bbox;
     const descriptor = this.document.ref({
       Type: 'FontDescriptor',
       FontName: name,
@@ -18349,10 +18131,9 @@ var FontsMixin = {
     }
     if (typeof src === 'string' && this._registeredFonts[src]) {
       cacheKey = src;
-      ({
-        src,
-        family
-      } = this._registeredFonts[src]);
+      var _this$_registeredFont = this._registeredFonts[src];
+      src = _this$_registeredFont.src;
+      family = _this$_registeredFont.family;
     } else {
       cacheKey = family || src;
       if (typeof cacheKey !== 'string') {
@@ -18504,9 +18285,7 @@ class LineWrapper extends _events.EventEmitter {
       });
     });
     this.on('lastLine', options => {
-      const {
-        align
-      } = options;
+      const align = options.align;
       if (align === 'justify') {
         options.align = 'left';
       }
@@ -18604,16 +18383,12 @@ class LineWrapper extends _events.EventEmitter {
     let textWidth = 0;
     let wc = 0;
     let lc = 0;
-    let {
-      y
-    } = this.document;
+    let y = this.document.y;
     const emitLine = () => {
       options.textWidth = textWidth + this.wordSpacing * (wc - 1);
       options.wordCount = wc;
       options.lineWidth = this.lineWidth;
-      ({
-        y
-      } = this.document);
+      y = this.document.y;
       this.emit('line', buffer, options, this);
       return lc++;
     };
@@ -18727,9 +18502,7 @@ class LineWrapper extends _events.EventEmitter {
     return true;
   }
 }
-const {
-  number
-} = PDFObject;
+const number = PDFObject.number;
 function formatListLabel(n, listType) {
   if (listType === 'numbered') {
     return `${n}.`;
@@ -18810,10 +18583,8 @@ var TextMixin = {
   },
   boundsOfString(string, x, y, options) {
     options = this._initOptions(x, y, options);
-    ({
-      x,
-      y
-    } = this);
+    x = this.x;
+    y = this.y;
     const lineGap = options.lineGap ?? this._lineGap ?? 0;
     const lineHeight = this.currentLineHeight(true) + lineGap;
     let contentWidth = 0;
@@ -18901,10 +18672,8 @@ var TextMixin = {
     };
   },
   heightOfString(text, options) {
-    const {
-      x,
-      y
-    } = this;
+    const x = this.x,
+      y = this.y;
     options = this._initOptions(options);
     options.height = Infinity;
     const lineGap = options.lineGap || this._lineGap || 0;
@@ -18954,9 +18723,14 @@ var TextMixin = {
         let item, itemType, labelType, bodyType;
         if (options.structParent) {
           if (options.structTypes) {
-            [itemType, labelType, bodyType] = options.structTypes;
+            var _options$structTypes = options.structTypes;
+            itemType = _options$structTypes[0];
+            labelType = _options$structTypes[1];
+            bodyType = _options$structTypes[2];
           } else {
-            [itemType, labelType, bodyType] = ['LI', 'Lbl', 'LBody'];
+            itemType = 'LI';
+            labelType = 'Lbl';
+            bodyType = 'LBody';
           }
         }
         if (itemType) {
@@ -19198,7 +18972,9 @@ var TextMixin = {
       encoded = [];
       positions = [];
       for (let word of words) {
-        const [encodedWord, positionsWord] = this._font.encode(word, options.features);
+        const _this$_font$encode = this._font.encode(word, options.features),
+          encodedWord = _this$_font$encode[0],
+          positionsWord = _this$_font$encode[1];
         encoded = encoded.concat(encodedWord);
         positions = positions.concat(positionsWord);
         const space = {};
@@ -19211,7 +18987,9 @@ var TextMixin = {
         positions[positions.length - 1] = space;
       }
     } else {
-      [encoded, positions] = this._font.encode(text, options.features);
+      var _this$_font$encode2 = this._font.encode(text, options.features);
+      encoded = _this$_font$encode2[0];
+      positions = _this$_font$encode2[1];
     }
     const scale = this._fontSize / 1000;
     const commands = [];
@@ -19401,9 +19179,7 @@ class PNGImage {
       const val = this.image.transparency.grayscale;
       this.obj.data['Mask'] = [val, val];
     } else if (this.image.transparency.rgb) {
-      const {
-        rgb
-      } = this.image.transparency;
+      const rgb = this.image.transparency.rgb;
       const mask = [];
       for (let x of rgb) {
         mask.push(x, x);
@@ -19545,12 +19321,13 @@ var ImagesMixin = {
     if (this.page.xobjects[image.label] == null) {
       this.page.xobjects[image.label] = image.obj;
     }
-    let {
-      width,
-      height
-    } = image;
+    let _image = image,
+      width = _image.width,
+      height = _image.height;
     if (!ignoreOrientation && image.orientation > 4) {
-      [width, height] = [height, width];
+      var _ref5 = [height, width];
+      width = _ref5[0];
+      height = _ref5[1];
     }
     let w = options.width || width;
     let h = options.height || height;
@@ -19566,7 +19343,9 @@ var ImagesMixin = {
       w = width * options.scale;
       h = height * options.scale;
     } else if (options.fit) {
-      [bw, bh] = options.fit;
+      var _options$fit = options.fit;
+      bw = _options$fit[0];
+      bh = _options$fit[1];
       bp = bw / bh;
       ip = width / height;
       if (ip > bp) {
@@ -19577,7 +19356,9 @@ var ImagesMixin = {
         w = bh * ip;
       }
     } else if (options.cover) {
-      [bw, bh] = options.cover;
+      var _options$cover = options.cover;
+      bw = _options$cover[0];
+      bh = _options$cover[1];
       bp = bw / bh;
       ip = width / height;
       if (ip > bp) {
@@ -19788,7 +19569,11 @@ var AnnotationsMixin = {
   },
   _markup(x, y, w, h) {
     let options = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
-    const [x1, y1, x2, y2] = this._convertRect(x, y, w, h);
+    const _this$_convertRect = this._convertRect(x, y, w, h),
+      x1 = _this$_convertRect[0],
+      y1 = _this$_convertRect[1],
+      x2 = _this$_convertRect[2],
+      y2 = _this$_convertRect[3];
     options.QuadPoints = [x1, y2, x2, y2, x1, y1, x2, y1];
     options.Contents = new String();
     return this.annotate(x, y, w, h, options);
@@ -19856,7 +19641,13 @@ var AnnotationsMixin = {
     let y2 = y1;
     y1 += h;
     let x2 = x1 + w;
-    const [m0, m1, m2, m3, m4, m5] = this._ctm;
+    const _this$_ctm = this._ctm,
+      m0 = _this$_ctm[0],
+      m1 = _this$_ctm[1],
+      m2 = _this$_ctm[2],
+      m3 = _this$_ctm[3],
+      m4 = _this$_ctm[4],
+      m5 = _this$_ctm[5];
     x1 = m0 * x1 + m2 * y1 + m4;
     y1 = m1 * x1 + m3 * y1 + m5;
     x2 = m0 * x2 + m2 * y2 + m4;
@@ -20016,10 +19807,8 @@ class PDFStructureElement {
   }
   _addContentToParentTree(content) {
     content.refs.forEach(_ref => {
-      let {
-        pageRef,
-        mcid
-      } = _ref;
+      let pageRef = _ref.pageRef,
+        mcid = _ref.mcid;
       const pageStructParents = this.document.getStructParentTree().get(pageRef.data.StructParents);
       pageStructParents[mcid] = this.dictionary;
     });
@@ -20107,10 +19896,8 @@ class PDFStructureElement {
     }
     if (child instanceof PDFStructureContent) {
       child.refs.forEach(_ref2 => {
-        let {
-          pageRef,
-          mcid
-        } = _ref2;
+        let pageRef = _ref2.pageRef,
+          mcid = _ref2.mcid;
         if (!this.dictionary.data.Pg) {
           this.dictionary.data.Pg = pageRef;
         }
@@ -20673,10 +20460,9 @@ var AttachmentsMixin = {
         if (!data) {
           throw new Error(`Could not read contents of file at filepath ${src}`);
         }
-        const {
-          birthtime,
-          ctime
-        } = fs.statSync(src);
+        const _fs$statSync = fs.statSync(src),
+          birthtime = _fs$statSync.birthtime,
+          ctime = _fs$statSync.ctime;
         refBody.Params.CreationDate = birthtime;
         refBody.Params.ModDate = ctime;
       }
@@ -20872,11 +20658,11 @@ function normalizedDefaultStyle(defaultStyleInternal) {
     text: defaultStyle
   };
   const defaultRowStyle = Object.fromEntries(Object.entries(defaultStyle).filter(_ref => {
-    let [k] = _ref;
+    let k = _ref[0];
     return ROW_FIELDS.includes(k);
   }));
   const defaultColStyle = Object.fromEntries(Object.entries(defaultStyle).filter(_ref2 => {
-    let [k] = _ref2;
+    let k = _ref2[0];
     return COLUMN_FIELDS.includes(k);
   }));
   defaultStyle.padding = normalizeSides(defaultStyle.padding);
@@ -20950,11 +20736,10 @@ function normalizeTable() {
     y: doc.sizeToPoint(opts.position?.y, doc.y)
   };
   this._maxWidth = doc.sizeToPoint(opts.maxWidth, doc.page.width - doc.page.margins.right - this._position.x);
-  const {
-    defaultStyle,
-    defaultColStyle,
-    defaultRowStyle
-  } = normalizedDefaultStyle(opts.defaultStyle);
+  const _normalizedDefaultSty = normalizedDefaultStyle(opts.defaultStyle),
+    defaultStyle = _normalizedDefaultSty.defaultStyle,
+    defaultColStyle = _normalizedDefaultSty.defaultColStyle,
+    defaultRowStyle = _normalizedDefaultSty.defaultRowStyle;
   this._defaultStyle = defaultStyle;
   let colStyle;
   if (opts.columnStyles) {
@@ -21151,10 +20936,9 @@ function measureCell(cell, rowHeight) {
   const textAllocatedWidth = cellWidth - cell.padding.left - cell.padding.right;
   const textAllocatedHeight = cellHeight - cell.padding.top - cell.padding.bottom;
   const rotation = cell.textOptions.rotation ?? 0;
-  const {
-    width: textMaxWidth,
-    height: textMaxHeight
-  } = computeBounds(rotation, textAllocatedWidth, textAllocatedHeight);
+  const _computeBounds = computeBounds(rotation, textAllocatedWidth, textAllocatedHeight),
+    textMaxWidth = _computeBounds.width,
+    textMaxHeight = _computeBounds.height;
   const textOptions = {
     align: cell.align.x,
     ellipsis: true,
@@ -21392,7 +21176,8 @@ function renderCellText(cell) {
 }
 function renderBorder(border, borderColor, x, y, width, height, mask) {
   border = Object.fromEntries(Object.entries(border).map(_ref => {
-    let [k, v] = _ref;
+    let k = _ref[0],
+      v = _ref[1];
     return [k, mask && !mask[k] ? 0 : v];
   }));
   const doc = this.document;
@@ -21437,10 +21222,9 @@ class PDFTable {
     row = Array.from(row);
     row = normalizeRow.call(this, row, this._currRowIndex);
     if (this._currRowIndex === 0) ensure.call(this, row);
-    const {
-      newPage,
-      toRender
-    } = measure.call(this, row, this._currRowIndex);
+    const _measure$call = measure.call(this, row, this._currRowIndex),
+      newPage = _measure$call.newPage,
+      toRender = _measure$call.toRender;
     if (newPage) this.document.continueOnNewPage();
     const yPos = renderRow.call(this, toRender, this._currRowIndex);
     this.document.x = this._position.x;
@@ -21659,9 +21443,7 @@ class PDFDocument extends _stream.default.Readable {
   }
   addPage(options) {
     if (options == null) {
-      ({
-        options
-      } = this);
+      options = this.options;
     }
     if (!this.options.bufferPages) {
       this.flushPages();
@@ -29452,17 +29234,17 @@ module.exports = function callBoundIntrinsic(name, allowMissing) {
 
 var setFunctionLength = __webpack_require__(6255);
 
-var $defineProperty = __webpack_require__(6649);
+var $defineProperty = __webpack_require__(9030);
 
 var callBindBasic = __webpack_require__(6688);
 var applyBind = __webpack_require__(8619);
 
 module.exports = function callBind(originalFunction) {
 	var func = callBindBasic(arguments);
-	var adjustedLength = originalFunction.length - (arguments.length - 1);
+	var adjustedLength = 1 + originalFunction.length - (arguments.length - 1);
 	return setFunctionLength(
 		func,
-		1 + (adjustedLength > 0 ? adjustedLength : 0),
+		adjustedLength > 0 ? adjustedLength : 0,
 		true
 	);
 };
@@ -29774,7 +29556,7 @@ if ( true && module.exports) {
 "use strict";
 
 
-var $defineProperty = __webpack_require__(6649);
+var $defineProperty = __webpack_require__(9030);
 
 var $SyntaxError = __webpack_require__(7770);
 var $TypeError = __webpack_require__(6785);
@@ -29925,7 +29707,7 @@ module.exports = desc && typeof desc.get === 'function'
 
 /***/ },
 
-/***/ 6649
+/***/ 9030
 (module) {
 
 "use strict";
@@ -30873,7 +30655,7 @@ var getEvalledConstructor = function (expressionSyntax) {
 };
 
 var $gOPD = __webpack_require__(8109);
-var $defineProperty = __webpack_require__(6649);
+var $defineProperty = __webpack_require__(9030);
 
 var throwTypeError = function () {
 	throw new $TypeError();
@@ -31325,7 +31107,7 @@ module.exports = $gOPD;
 "use strict";
 
 
-var $defineProperty = __webpack_require__(6649);
+var $defineProperty = __webpack_require__(9030);
 
 var hasPropertyDescriptors = function hasPropertyDescriptors() {
 	return !!$defineProperty;
@@ -46110,7 +45892,7 @@ module.exports = function whichTypedArray(value) {
 
 /***/ },
 
-/***/ 6457
+/***/ 6946
 (module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
@@ -63465,6 +63247,403 @@ class $f898ea50f3b38ab8$var$LineBreaker {
 module.exports = $f898ea50f3b38ab8$var$LineBreaker;
 
 
+
+
+/***/ },
+
+/***/ 381
+(module, __unused_webpack_exports, __webpack_require__) {
+
+"use strict";
+/* provided dependency */ var Buffer = __webpack_require__(783)["Buffer"];
+
+
+var zlib = __webpack_require__(6729);
+
+function _interopDefaultCompat (e) { return e && typeof e === 'object' && 'default' in e ? e : { default: e }; }
+
+var zlib__default = /*#__PURE__*/_interopDefaultCompat(zlib);
+
+class PNG {
+  static decode(path, fn) {
+    {
+      throw new Error('PNG.decode not available in browser build');
+    }
+  }
+
+  static load(path) {
+    {
+      throw new Error('PNG.load not available in browser build');
+    }
+  }
+
+  constructor(data) {
+    let i;
+    this.data = data;
+    this.pos = 8; // Skip the default header
+
+    this.palette = [];
+    this.imgData = [];
+    this.transparency = {};
+    this.text = {};
+
+    while (true) {
+      const chunkSize = this.readUInt32();
+      let section = '';
+      for (i = 0; i < 4; i++) {
+        section += String.fromCharCode(this.data[this.pos++]);
+      }
+
+      switch (section) {
+        case 'IHDR':
+          // we can grab  interesting values from here (like width, height, etc)
+          this.width = this.readUInt32();
+          this.height = this.readUInt32();
+          this.bits = this.data[this.pos++];
+          this.colorType = this.data[this.pos++];
+          this.compressionMethod = this.data[this.pos++];
+          this.filterMethod = this.data[this.pos++];
+          this.interlaceMethod = this.data[this.pos++];
+          break;
+
+        case 'PLTE':
+          this.palette = this.read(chunkSize);
+          break;
+
+        case 'IDAT':
+          for (i = 0; i < chunkSize; i++) {
+            this.imgData.push(this.data[this.pos++]);
+          }
+          break;
+
+        case 'tRNS':
+          // This chunk can only occur once and it must occur after the
+          // PLTE chunk and before the IDAT chunk.
+          this.transparency = {};
+          switch (this.colorType) {
+            case 3:
+              // Indexed color, RGB. Each byte in this chunk is an alpha for
+              // the palette index in the PLTE ("palette") chunk up until the
+              // last non-opaque entry. Set up an array, stretching over all
+              // palette entries which will be 0 (opaque) or 1 (transparent).
+              this.transparency.indexed = this.read(chunkSize);
+              var short = 255 - this.transparency.indexed.length;
+              if (short > 0) {
+                for (i = 0; i < short; i++) {
+                  this.transparency.indexed.push(255);
+                }
+              }
+              break;
+            case 0:
+              // Greyscale. Corresponding to entries in the PLTE chunk.
+              // Grey is two bytes, range 0 .. (2 ^ bit-depth) - 1
+              this.transparency.grayscale = this.read(chunkSize)[0];
+              break;
+            case 2:
+              // True color with proper alpha channel.
+              this.transparency.rgb = this.read(chunkSize);
+              break;
+          }
+          break;
+
+        case 'tEXt':
+          var text = this.read(chunkSize);
+          var index = text.indexOf(0);
+          var key = String.fromCharCode.apply(String, text.slice(0, index));
+          this.text[key] = String.fromCharCode.apply(
+            String,
+            text.slice(index + 1)
+          );
+          break;
+
+        case 'IEND':
+          // we've got everything we need!
+          switch (this.colorType) {
+            case 0:
+            case 3:
+            case 4:
+              this.colors = 1;
+              break;
+            case 2:
+            case 6:
+              this.colors = 3;
+              break;
+          }
+
+          this.hasAlphaChannel = [4, 6].includes(this.colorType);
+          var colors = this.colors + (this.hasAlphaChannel ? 1 : 0);
+          this.pixelBitlength = this.bits * colors;
+
+          switch (this.colors) {
+            case 1:
+              this.colorSpace = 'DeviceGray';
+              break;
+            case 3:
+              this.colorSpace = 'DeviceRGB';
+              break;
+          }
+
+          this.imgData = Buffer.from(this.imgData);
+          return;
+
+        default:
+          // unknown (or unimportant) section, skip it
+          this.pos += chunkSize;
+      }
+
+      this.pos += 4; // Skip the CRC
+
+      if (this.pos > this.data.length) {
+        throw new Error('Incomplete or corrupt PNG file');
+      }
+    }
+  }
+
+  read(bytes) {
+    const result = new Array(bytes);
+    for (let i = 0; i < bytes; i++) {
+      result[i] = this.data[this.pos++];
+    }
+    return result;
+  }
+
+  readUInt32() {
+    const b1 = this.data[this.pos++] << 24;
+    const b2 = this.data[this.pos++] << 16;
+    const b3 = this.data[this.pos++] << 8;
+    const b4 = this.data[this.pos++];
+    return b1 | b2 | b3 | b4;
+  }
+
+  readUInt16() {
+    const b1 = this.data[this.pos++] << 8;
+    const b2 = this.data[this.pos++];
+    return b1 | b2;
+  }
+
+  decodePixels(fn) {
+    return zlib__default.default.inflate(this.imgData, (err, data) => {
+      if (err) {
+        throw err;
+      }
+
+      const { width, height } = this;
+      const pixelBytes = this.pixelBitlength / 8;
+
+      const pixels = Buffer.alloc(width * height * pixelBytes);
+      const { length } = data;
+      let pos = 0;
+
+      function pass(x0, y0, dx, dy, singlePass = false) {
+        const w = Math.ceil((width - x0) / dx);
+        const h = Math.ceil((height - y0) / dy);
+        const scanlineLength = pixelBytes * w;
+        const buffer = singlePass ? pixels : Buffer.alloc(scanlineLength * h);
+        let row = 0;
+        let c = 0;
+        while (row < h && pos < length) {
+          var byte, col, i, left, upper;
+          switch (data[pos++]) {
+            case 0: // None
+              for (i = 0; i < scanlineLength; i++) {
+                buffer[c++] = data[pos++];
+              }
+              break;
+
+            case 1: // Sub
+              for (i = 0; i < scanlineLength; i++) {
+                byte = data[pos++];
+                left = i < pixelBytes ? 0 : buffer[c - pixelBytes];
+                buffer[c++] = (byte + left) % 256;
+              }
+              break;
+
+            case 2: // Up
+              for (i = 0; i < scanlineLength; i++) {
+                byte = data[pos++];
+                col = (i - (i % pixelBytes)) / pixelBytes;
+                upper =
+                  row &&
+                  buffer[
+                    (row - 1) * scanlineLength +
+                      col * pixelBytes +
+                      (i % pixelBytes)
+                  ];
+                buffer[c++] = (upper + byte) % 256;
+              }
+              break;
+
+            case 3: // Average
+              for (i = 0; i < scanlineLength; i++) {
+                byte = data[pos++];
+                col = (i - (i % pixelBytes)) / pixelBytes;
+                left = i < pixelBytes ? 0 : buffer[c - pixelBytes];
+                upper =
+                  row &&
+                  buffer[
+                    (row - 1) * scanlineLength +
+                      col * pixelBytes +
+                      (i % pixelBytes)
+                  ];
+                buffer[c++] = (byte + Math.floor((left + upper) / 2)) % 256;
+              }
+              break;
+
+            case 4: // Paeth
+              for (i = 0; i < scanlineLength; i++) {
+                var paeth, upperLeft;
+                byte = data[pos++];
+                col = (i - (i % pixelBytes)) / pixelBytes;
+                left = i < pixelBytes ? 0 : buffer[c - pixelBytes];
+
+                if (row === 0) {
+                  upper = upperLeft = 0;
+                } else {
+                  upper =
+                    buffer[
+                      (row - 1) * scanlineLength +
+                        col * pixelBytes +
+                        (i % pixelBytes)
+                    ];
+                  upperLeft =
+                    col &&
+                    buffer[
+                      (row - 1) * scanlineLength +
+                        (col - 1) * pixelBytes +
+                        (i % pixelBytes)
+                    ];
+                }
+
+                const p = left + upper - upperLeft;
+                const pa = Math.abs(p - left);
+                const pb = Math.abs(p - upper);
+                const pc = Math.abs(p - upperLeft);
+
+                if (pa <= pb && pa <= pc) {
+                  paeth = left;
+                } else if (pb <= pc) {
+                  paeth = upper;
+                } else {
+                  paeth = upperLeft;
+                }
+
+                buffer[c++] = (byte + paeth) % 256;
+              }
+              break;
+
+            default:
+              throw new Error(`Invalid filter algorithm: ${data[pos - 1]}`);
+          }
+
+          if (!singlePass) {
+            let pixelsPos = ((y0 + row * dy) * width + x0) * pixelBytes;
+            let bufferPos = row * scanlineLength;
+            for (i = 0; i < w; i++) {
+              for (let j = 0; j < pixelBytes; j++)
+                pixels[pixelsPos++] = buffer[bufferPos++];
+              pixelsPos += (dx - 1) * pixelBytes;
+            }
+          }
+
+          row++;
+        }
+      }
+
+      if (this.interlaceMethod === 1) {
+        /*
+          1 6 4 6 2 6 4 6
+          7 7 7 7 7 7 7 7
+          5 6 5 6 5 6 5 6
+          7 7 7 7 7 7 7 7
+          3 6 4 6 3 6 4 6
+          7 7 7 7 7 7 7 7
+          5 6 5 6 5 6 5 6
+          7 7 7 7 7 7 7 7
+        */
+        pass(0, 0, 8, 8); // 1
+        pass(4, 0, 8, 8); // 2
+        pass(0, 4, 4, 8); // 3
+        pass(2, 0, 4, 4); // 4
+        pass(0, 2, 2, 4); // 5
+        pass(1, 0, 2, 2); // 6
+        pass(0, 1, 1, 2); // 7
+      } else {
+        pass(0, 0, 1, 1, true);
+      }
+
+      return fn(pixels);
+    });
+  }
+
+  decodePalette() {
+    const { palette } = this;
+    const { length } = palette;
+    const transparency = this.transparency.indexed || [];
+    const ret = Buffer.alloc(transparency.length + length);
+    let pos = 0;
+    let c = 0;
+
+    for (let i = 0; i < length; i += 3) {
+      var left;
+      ret[pos++] = palette[i];
+      ret[pos++] = palette[i + 1];
+      ret[pos++] = palette[i + 2];
+      ret[pos++] = (left = transparency[c++]) != null ? left : 255;
+    }
+
+    return ret;
+  }
+
+  copyToImageData(imageData, pixels) {
+    let j, k;
+    let { colors } = this;
+    let palette = null;
+    let alpha = this.hasAlphaChannel;
+
+    if (this.palette.length) {
+      palette =
+        this._decodedPalette || (this._decodedPalette = this.decodePalette());
+      colors = 4;
+      alpha = true;
+    }
+
+    const data = imageData.data || imageData;
+    const { length } = data;
+    const input = palette || pixels;
+    let i = (j = 0);
+
+    if (colors === 1) {
+      while (i < length) {
+        k = palette ? pixels[i / 4] * 4 : j;
+        const v = input[k++];
+        data[i++] = v;
+        data[i++] = v;
+        data[i++] = v;
+        data[i++] = alpha ? input[k++] : 255;
+        j = k;
+      }
+    } else {
+      while (i < length) {
+        k = palette ? pixels[i / 4] * 4 : j;
+        data[i++] = input[k++];
+        data[i++] = input[k++];
+        data[i++] = input[k++];
+        data[i++] = alpha ? input[k++] : 255;
+        j = k;
+      }
+    }
+  }
+
+  decode(fn) {
+    const ret = Buffer.alloc(this.width * this.height * 4);
+    return this.decodePixels(pixels => {
+      this.copyToImageData(ret, pixels);
+      return fn(ret);
+    });
+  }
+}
+
+module.exports = PNG;
 
 
 /***/ },
