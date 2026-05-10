@@ -325,6 +325,42 @@ describe('DocMeasure', function () {
 			docMeasure.measureTable(tableNode);
 		});
 
+		it('reverses column order for an RTL table without crashing on colSpan', function () {
+			// Regression: a naive row.reverse() left the colSpan descriptor at the
+			// wrong end of its span block, which then made extendWidthsForColSpans
+			// dereference widths past the table's last column.
+			var rtlDocMeasure = new DocMeasure(sampleTestProvider, {}, { rtl: true });
+			tableNode.table.body.push([{ text: 'Column 1', colSpan: 2 }, {}, 'Column 3', 'Column 4']);
+			docPreprocessor.preprocessTable(tableNode);
+			// must not throw
+			rtlDocMeasure.measureTable(tableNode);
+			// after reverse, Column 4 is the visually-leftmost cell of the row
+			var lastRow = tableNode.table.body[tableNode.table.body.length - 1];
+			assert.equal(lastRow[0].text, 'Column 4');
+			assert.equal(lastRow[1].text, 'Column 3');
+			// colSpan descriptor sits at the START of its span block
+			assert.equal(lastRow[2].text, 'Column 1');
+			assert.equal(lastRow[2].colSpan, 2);
+		});
+
+		it('handles a plain RTL table (no spans) by reversing both widths and rows', function () {
+			var rtlDocMeasure = new DocMeasure(sampleTestProvider, {}, { rtl: true });
+			var node = {
+				table: {
+					widths: [80, '*', 60],
+					body: [['A', 'B', 'C'], ['D', 'E', 'F']],
+				},
+				layout: tableNode.layout,
+			};
+			docPreprocessor.preprocessTable(node);
+			rtlDocMeasure.measureTable(node);
+			// cells get wrapped into measured nodes - read back via .text
+			assert.equal(node.table.body[0][0].text, 'C');
+			assert.equal(node.table.body[0][2].text, 'A');
+			assert.equal(node.table.widths[0].width, 60);
+			assert.equal(node.table.widths[2].width, 80);
+		});
+
 		it('should mark cells directly following colSpan-cell with _span property and set min/maxWidth to 0', function () {
 			tableNode.table.body.push([{ text: 'Col 1', colSpan: 3 }, {}, {}, 'Col 4']);
 			docPreprocessor.preprocessTable(tableNode);

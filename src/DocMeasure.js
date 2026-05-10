@@ -429,6 +429,7 @@ class DocMeasure {
 		let items = node.ul;
 		node.type = node.type || 'disc';
 		node._gapSize = this.gapSizeForList();
+		node._rtl = !!this.styleStack.getProperty('rtl');
 		node._minWidth = 0;
 		node._maxWidth = 0;
 
@@ -456,6 +457,7 @@ class DocMeasure {
 			node.start = node.reversed ? items.length : 1;
 		}
 		node._gapSize = this.gapSizeForList();
+		node._rtl = !!this.styleStack.getProperty('rtl');
 		node._minWidth = 0;
 		node._maxWidth = 0;
 
@@ -521,6 +523,12 @@ class DocMeasure {
 	}
 
 	measureTable(node) {
+		// RTL: reverse the column order so that cells in declaration order
+		// appear right-to-left visually. Done up-front so that all subsequent
+		// width/offset/span/cell logic operates on the already-mirrored layout.
+		if (this.styleStack.getProperty('rtl')) {
+			reverseTableColumnsForRtl(node);
+		}
 		extendTableWidths(node);
 		node._layout = getLayout(this.tableLayouts);
 		node._offsets = getOffsets(node._layout);
@@ -694,6 +702,51 @@ class DocMeasure {
 				if (isNumber(w) || isString(w)) {
 					node.table.widths[i] = { width: w };
 				}
+			}
+		}
+
+		function reverseTableColumnsForRtl(node) {
+			if (!node.table || !Array.isArray(node.table.body) || node.table.body.length === 0) return;
+			const cols = node.table.body[0].length;
+			if (cols < 2) return;
+
+			if (Array.isArray(node.table.widths) && node.table.widths.length === cols) {
+				node.table.widths.reverse();
+			}
+
+			// Reverse each row, preserving colSpan structure. The cell descriptor
+			// for a colSpan cell must end up at the LEFTMOST position of its
+			// (visual) span block - that's the layout invariant the rest of
+			// measureTable relies on. A naive `row.reverse()` would put the
+			// descriptor at the rightmost slot of the block, which then makes
+			// extendWidthsForColSpans access widths past the table's last column
+			// and fail with "_minWidth on undefined".
+			//
+			// We walk the original row left→right (treating each cell+placeholders
+			// group as one unit) and write each unit into the new row from the
+			// RIGHT-most position backwards. The descriptor lands at the start of
+			// its block in the new row; the placeholders follow.
+			//
+			// rowSpan is unaffected: rowSpan placeholders live in subsequent rows,
+			// at the same column index as the descriptor. Each row is reversed
+			// independently, so the placeholders move with their descriptor.
+			for (let r = 0; r < node.table.body.length; r++) {
+				const row = node.table.body[r];
+				const newRow = new Array(row.length);
+				let i = 0;
+				let writeEnd = row.length;
+				while (i < row.length) {
+					const cell = row[i];
+					const span = (cell && cell.colSpan && cell.colSpan > 1) ? cell.colSpan : 1;
+					const safeSpan = Math.min(span, row.length - i);
+					writeEnd -= safeSpan;
+					newRow[writeEnd] = cell;
+					for (let k = 1; k < safeSpan; k++) {
+						newRow[writeEnd + k] = row[i + k];
+					}
+					i += safeSpan;
+				}
+				node.table.body[r] = newRow;
 			}
 		}
 	}

@@ -109,7 +109,8 @@ class TextInlines {
 
 			item.font = this.pdfDocument.provideFont(font, bold, italics);
 
-			item.alignment = StyleContextStack.getStyleProperty(item, styleContextStack, 'alignment', 'left');
+			item.rtl = StyleContextStack.getStyleProperty(item, styleContextStack, 'rtl', false);
+			item.alignment = StyleContextStack.getStyleProperty(item, styleContextStack, 'alignment', item.rtl ? 'right' : 'left');
 			item.fontSize = StyleContextStack.getStyleProperty(item, styleContextStack, 'fontSize', 12);
 			item.fontFeatures = StyleContextStack.getStyleProperty(item, styleContextStack, 'fontFeatures', null);
 			item.characterSpacing = StyleContextStack.getStyleProperty(item, styleContextStack, 'characterSpacing', 0);
