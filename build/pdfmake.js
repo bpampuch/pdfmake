@@ -1,4 +1,4 @@
-/*! pdfmake v0.3.8, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.3.9, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -25,7 +25,7 @@ __webpack_require__.d(__webpack_exports__, {
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.includes.js
 var es_array_includes = __webpack_require__(187);
 // EXTERNAL MODULE: ./node_modules/pdfkit/js/pdfkit.es.js
-var pdfkit_es = __webpack_require__(6649);
+var pdfkit_es = __webpack_require__(8259);
 ;// ./src/helpers/variableType.js
 /**
  * @param {any} variable
@@ -4435,6 +4435,7 @@ class DocumentContext extends events.EventEmitter {
     let maxBottomY = this.y;
     let maxBottomPage = this.page;
     let maxBottomAvailableHeight = this.availableHeight;
+    let overflowed = saved.overflowed;
 
     // Pop overflowed snapshots created by moveToNextColumn (snaking columns).
     // Merge their bottomMost values to find the true maximum.
@@ -4452,16 +4453,17 @@ class DocumentContext extends events.EventEmitter {
     if (!saved) {
       return {};
     }
-
-    // Apply the max bottom from all overflowed columns to this base snapshot
-    if (maxBottomPage > saved.bottomMost.page || maxBottomPage === saved.bottomMost.page && maxBottomY > saved.bottomMost.y) {
-      saved.bottomMost = {
-        x: saved.x,
-        y: maxBottomY,
-        page: maxBottomPage,
-        availableHeight: maxBottomAvailableHeight,
-        availableWidth: saved.availableWidth
-      };
+    if (overflowed) {
+      // Apply the max bottom from all overflowed columns to this base snapshot
+      if (maxBottomPage > saved.bottomMost.page || maxBottomPage === saved.bottomMost.page && maxBottomY > saved.bottomMost.y) {
+        saved.bottomMost = {
+          x: saved.x,
+          y: maxBottomY,
+          page: maxBottomPage,
+          availableHeight: maxBottomAvailableHeight,
+          availableWidth: saved.availableWidth
+        };
+      }
     }
     this.calculateBottomMost(saved, endingCell);
     this.x = saved.x;
@@ -8755,7 +8757,7 @@ class OutputDocument {
 }
 /* harmony default export */ const src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(6946);
+var FileSaver_min = __webpack_require__(7286);
 ;// ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -15284,7 +15286,7 @@ module.exports = {
 
 /***/ },
 
-/***/ 6649
+/***/ 8259
 (__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -21649,10 +21651,11 @@ module.exports = ___EXPOSE_LOADER_IMPORT___;
 (__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
+var __webpack_unused_export__;
 
-Object.defineProperty(exports, "__esModule", ({ value: true }));
+__webpack_unused_export__ = ({ value: true });
 exports.polyval = exports.ghash = void 0;
-exports._toGHASHKey = _toGHASHKey;
+__webpack_unused_export__ = _toGHASHKey;
 /**
  * GHash from AES-GCM and its little-endian "mirror image" Polyval from AES-SIV.
  *
@@ -22802,37 +22805,38 @@ exports.unsafe = {
 (__unused_webpack_module, exports) {
 
 "use strict";
+var __webpack_unused_export__;
 
 /**
  * Utilities for hex, bytes, CSPRNG.
  * @module
  */
 /*! noble-ciphers - MIT License (c) 2023 Paul Miller (paulmillr.com) */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.wrapCipher = exports.Hash = exports.nextTick = exports.isLE = void 0;
-exports.isBytes = isBytes;
-exports.abool = abool;
-exports.anumber = anumber;
+__webpack_unused_export__ = ({ value: true });
+exports.wrapCipher = __webpack_unused_export__ = __webpack_unused_export__ = exports.qv = void 0;
+__webpack_unused_export__ = isBytes;
+__webpack_unused_export__ = abool;
+__webpack_unused_export__ = anumber;
 exports.abytes = abytes;
-exports.ahash = ahash;
+__webpack_unused_export__ = ahash;
 exports.aexists = aexists;
 exports.aoutput = aoutput;
 exports.u8 = u8;
 exports.u32 = u32;
 exports.clean = clean;
 exports.createView = createView;
-exports.bytesToHex = bytesToHex;
-exports.hexToBytes = hexToBytes;
-exports.hexToNumber = hexToNumber;
-exports.bytesToNumberBE = bytesToNumberBE;
-exports.numberToBytesBE = numberToBytesBE;
-exports.utf8ToBytes = utf8ToBytes;
-exports.bytesToUtf8 = bytesToUtf8;
+__webpack_unused_export__ = bytesToHex;
+__webpack_unused_export__ = hexToBytes;
+__webpack_unused_export__ = hexToNumber;
+__webpack_unused_export__ = bytesToNumberBE;
+__webpack_unused_export__ = numberToBytesBE;
+__webpack_unused_export__ = utf8ToBytes;
+__webpack_unused_export__ = bytesToUtf8;
 exports.toBytes = toBytes;
 exports.overlapBytes = overlapBytes;
 exports.complexOverlapBytes = complexOverlapBytes;
 exports.concatBytes = concatBytes;
-exports.checkOpts = checkOpts;
+__webpack_unused_export__ = checkOpts;
 exports.equalBytes = equalBytes;
 exports.getOutput = getOutput;
 exports.setBigUint64 = setBigUint64;
@@ -22905,7 +22909,7 @@ function createView(arr) {
     return new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
 }
 /** Is current platform little-endian? Most are. Big-Endian platform: IBM */
-exports.isLE = (() => new Uint8Array(new Uint32Array([0x11223344]).buffer)[0] === 0x44)();
+exports.qv = (() => new Uint8Array(new Uint32Array([0x11223344]).buffer)[0] === 0x44)();
 // Built-in hex conversion https://caniuse.com/mdn-javascript_builtins_uint8array_fromhex
 const hasHexBuiltin = /* @__PURE__ */ (() => 
 // @ts-ignore
@@ -22985,7 +22989,7 @@ function numberToBytesBE(n, len) {
 // call of async fn will return Promise, which will be fullfiled only on
 // next scheduler queue processing step and this is exactly what we need.
 const nextTick = async () => { };
-exports.nextTick = nextTick;
+__webpack_unused_export__ = nextTick;
 /**
  * Converts string to bytes using UTF8 encoding.
  * @example utf8ToBytes('abc') // new Uint8Array([97, 98, 99])
@@ -23073,7 +23077,7 @@ function equalBytes(a, b) {
 /** For runtime check if class implements interface. */
 class Hash {
 }
-exports.Hash = Hash;
+__webpack_unused_export__ = Hash;
 /**
  * Wraps a cipher: validates args, ensures encrypt() can only be called once.
  * @__NO_SIDE_EFFECTS__
@@ -23083,7 +23087,7 @@ const wrapCipher = (params, constructor) => {
         // Validate key
         abytes(key);
         // Big-Endian hardware is rare. Just in case someone still decides to run ciphers:
-        if (!exports.isLE)
+        if (!exports.qv)
             throw new Error('Non little-endian hardware is not yet supported');
         // Validate nonce if nonceLength is present
         if (params.nonceLength !== undefined) {
@@ -23183,10 +23187,11 @@ function copyBytes(bytes) {
 (__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
+var __webpack_unused_export__;
 
-Object.defineProperty(exports, "__esModule", ({ value: true }));
+__webpack_unused_export__ = ({ value: true });
 exports.SHA512_IV = exports.SHA384_IV = exports.SHA224_IV = exports.SHA256_IV = exports.HashMD = void 0;
-exports.setBigUint64 = setBigUint64;
+__webpack_unused_export__ = setBigUint64;
 exports.Chi = Chi;
 exports.Maj = Maj;
 /**
@@ -23352,11 +23357,12 @@ exports.SHA512_IV = Uint32Array.from([
 (__unused_webpack_module, exports) {
 
 "use strict";
+var __webpack_unused_export__;
 
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.toBig = exports.shrSL = exports.shrSH = exports.rotrSL = exports.rotrSH = exports.rotrBL = exports.rotrBH = exports.rotr32L = exports.rotr32H = exports.rotlSL = exports.rotlSH = exports.rotlBL = exports.rotlBH = exports.add5L = exports.add5H = exports.add4L = exports.add4H = exports.add3L = exports.add3H = void 0;
+__webpack_unused_export__ = ({ value: true });
+__webpack_unused_export__ = exports.shrSL = exports.shrSH = exports.rotrSL = exports.rotrSH = exports.rotrBL = exports.rotrBH = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = exports.add5L = exports.add5H = exports.add4L = exports.add4H = exports.add3L = exports.add3H = void 0;
 exports.add = add;
-exports.fromBig = fromBig;
+__webpack_unused_export__ = fromBig;
 exports.split = split;
 /**
  * Internal helpers for u64. BigUint64Array is too slow as per 2025, so we implement it using Uint32Array.
@@ -23381,7 +23387,7 @@ function split(lst, le = false) {
     return [Ah, Al];
 }
 const toBig = (h, l) => (BigInt(h >>> 0) << _32n) | BigInt(l >>> 0);
-exports.toBig = toBig;
+__webpack_unused_export__ = toBig;
 // for Shift in [0, 32)
 const shrSH = (h, _l, s) => h >>> s;
 exports.shrSH = shrSH;
@@ -23399,19 +23405,19 @@ const rotrBL = (h, l, s) => (h >>> (s - 32)) | (l << (64 - s));
 exports.rotrBL = rotrBL;
 // Right rotate for shift===32 (just swaps l&h)
 const rotr32H = (_h, l) => l;
-exports.rotr32H = rotr32H;
+__webpack_unused_export__ = rotr32H;
 const rotr32L = (h, _l) => h;
-exports.rotr32L = rotr32L;
+__webpack_unused_export__ = rotr32L;
 // Left rotate for Shift in [1, 32)
 const rotlSH = (h, l, s) => (h << s) | (l >>> (32 - s));
-exports.rotlSH = rotlSH;
+__webpack_unused_export__ = rotlSH;
 const rotlSL = (h, l, s) => (l << s) | (h >>> (32 - s));
-exports.rotlSL = rotlSL;
+__webpack_unused_export__ = rotlSL;
 // Left rotate for Shift in (32, 64), NOTE: 32 is special case.
 const rotlBH = (h, l, s) => (l << (s - 32)) | (h >>> (64 - s));
-exports.rotlBH = rotlBH;
+__webpack_unused_export__ = rotlBH;
 const rotlBL = (h, l, s) => (h << (s - 32)) | (l >>> (64 - s));
-exports.rotlBL = rotlBL;
+__webpack_unused_export__ = rotlBL;
 // JS uses 32-bit signed integers for bitwise operations which means we cannot
 // simple take carry out of low bit sum by shift, we need to use division.
 function add(Ah, Al, Bh, Bl) {
@@ -23440,7 +23446,7 @@ const u64 = {
     rotlSH, rotlSL, rotlBH, rotlBL,
     add, add3L, add3H, add4L, add4H, add5H, add5L,
 };
-exports["default"] = u64;
+__webpack_unused_export__ = u64;
 
 
 /***/ },
@@ -23449,8 +23455,9 @@ exports["default"] = u64;
 (__unused_webpack_module, exports) {
 
 "use strict";
+var __webpack_unused_export__;
 
-Object.defineProperty(exports, "__esModule", ({ value: true }));
+__webpack_unused_export__ = ({ value: true });
 exports.crypto = void 0;
 exports.crypto = typeof globalThis === 'object' && 'crypto' in globalThis ? globalThis.crypto : undefined;
 
@@ -23461,9 +23468,10 @@ exports.crypto = typeof globalThis === 'object' && 'crypto' in globalThis ? glob
 (__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
+var __webpack_unused_export__;
 
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.sha512_224 = exports.sha512_256 = exports.sha384 = exports.sha512 = exports.sha224 = exports.sha256 = exports.SHA512_256 = exports.SHA512_224 = exports.SHA384 = exports.SHA512 = exports.SHA224 = exports.SHA256 = void 0;
+__webpack_unused_export__ = ({ value: true });
+__webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = exports.sha224 = exports.sha256 = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = exports.SHA224 = exports.SHA256 = void 0;
 /**
  * SHA2 hash function. A.k.a. sha256, sha384, sha512, sha512_224, sha512_256.
  * SHA256 is the fastest hash implementable in JS, even faster than Blake3.
@@ -23737,7 +23745,7 @@ class SHA512 extends _md_ts_1.HashMD {
         this.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 }
-exports.SHA512 = SHA512;
+__webpack_unused_export__ = SHA512;
 class SHA384 extends SHA512 {
     constructor() {
         super(48);
@@ -23759,7 +23767,7 @@ class SHA384 extends SHA512 {
         this.Hl = _md_ts_1.SHA384_IV[15] | 0;
     }
 }
-exports.SHA384 = SHA384;
+__webpack_unused_export__ = SHA384;
 /**
  * Truncated SHA512/256 and SHA512/224.
  * SHA512_IV is XORed with 0xa5a5a5a5a5a5a5a5, then used as "intermediary" IV of SHA512/t.
@@ -23797,7 +23805,7 @@ class SHA512_224 extends SHA512 {
         this.Hl = T224_IV[15] | 0;
     }
 }
-exports.SHA512_224 = SHA512_224;
+__webpack_unused_export__ = SHA512_224;
 class SHA512_256 extends SHA512 {
     constructor() {
         super(32);
@@ -23819,7 +23827,7 @@ class SHA512_256 extends SHA512 {
         this.Hl = T256_IV[15] | 0;
     }
 }
-exports.SHA512_256 = SHA512_256;
+__webpack_unused_export__ = SHA512_256;
 /**
  * SHA2-256 hash function from RFC 4634.
  *
@@ -23831,19 +23839,19 @@ exports.sha256 = (0, utils_ts_1.createHasher)(() => new SHA256());
 /** SHA2-224 hash function from RFC 4634 */
 exports.sha224 = (0, utils_ts_1.createHasher)(() => new SHA224());
 /** SHA2-512 hash function from RFC 4634. */
-exports.sha512 = (0, utils_ts_1.createHasher)(() => new SHA512());
+__webpack_unused_export__ = (0, utils_ts_1.createHasher)(() => new SHA512());
 /** SHA2-384 hash function from RFC 4634. */
-exports.sha384 = (0, utils_ts_1.createHasher)(() => new SHA384());
+__webpack_unused_export__ = (0, utils_ts_1.createHasher)(() => new SHA384());
 /**
  * SHA2-512/256 "truncated" hash function, with improved resistance to length extension attacks.
  * See the paper on [truncated SHA512](https://eprint.iacr.org/2010/548.pdf).
  */
-exports.sha512_256 = (0, utils_ts_1.createHasher)(() => new SHA512_256());
+__webpack_unused_export__ = (0, utils_ts_1.createHasher)(() => new SHA512_256());
 /**
  * SHA2-512/224 "truncated" hash function, with improved resistance to length extension attacks.
  * See the paper on [truncated SHA512](https://eprint.iacr.org/2010/548.pdf).
  */
-exports.sha512_224 = (0, utils_ts_1.createHasher)(() => new SHA512_224());
+__webpack_unused_export__ = (0, utils_ts_1.createHasher)(() => new SHA512_224());
 
 
 /***/ },
@@ -29234,7 +29242,7 @@ module.exports = function callBoundIntrinsic(name, allowMissing) {
 
 var setFunctionLength = __webpack_require__(6255);
 
-var $defineProperty = __webpack_require__(9030);
+var $defineProperty = __webpack_require__(6649);
 
 var callBindBasic = __webpack_require__(6688);
 var applyBind = __webpack_require__(8619);
@@ -29556,7 +29564,7 @@ if ( true && module.exports) {
 "use strict";
 
 
-var $defineProperty = __webpack_require__(9030);
+var $defineProperty = __webpack_require__(6649);
 
 var $SyntaxError = __webpack_require__(7770);
 var $TypeError = __webpack_require__(6785);
@@ -29707,7 +29715,7 @@ module.exports = desc && typeof desc.get === 'function'
 
 /***/ },
 
-/***/ 9030
+/***/ 6649
 (module) {
 
 "use strict";
@@ -30655,7 +30663,7 @@ var getEvalledConstructor = function (expressionSyntax) {
 };
 
 var $gOPD = __webpack_require__(8109);
-var $defineProperty = __webpack_require__(9030);
+var $defineProperty = __webpack_require__(6649);
 
 var throwTypeError = function () {
 	throw new $TypeError();
@@ -31107,7 +31115,7 @@ module.exports = $gOPD;
 "use strict";
 
 
-var $defineProperty = __webpack_require__(9030);
+var $defineProperty = __webpack_require__(6649);
 
 var hasPropertyDescriptors = function hasPropertyDescriptors() {
 	return !!$defineProperty;
@@ -31540,7 +31548,7 @@ var getProto = __webpack_require__(7106);
 var toStr = callBound('Object.prototype.toString');
 var fnToStr = callBound('Function.prototype.toString');
 
-var getGeneratorFunction = __webpack_require__(3011);
+var getGeneratorFunction = __webpack_require__(9294).c;
 
 /** @type {import('.')} */
 module.exports = function isGeneratorFunction(fn) {
@@ -45892,7 +45900,7 @@ module.exports = function whichTypedArray(value) {
 
 /***/ },
 
-/***/ 6946
+/***/ 7286
 (module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
@@ -65291,6 +65299,24 @@ exports["default"] = XmlDocument;
 
 /***/ },
 
+/***/ 9294
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   c: () => (/* reexport default export from named module */ _index_js__WEBPACK_IMPORTED_MODULE_0__)
+/* harmony export */ });
+/* unused harmony import specifier */ var getGeneratorFunction;
+/* harmony import */ var _index_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(3011);
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = ((/* unused pure expression or super */ null && (getGeneratorFunction)));
+
+
+
+
+/***/ },
+
 /***/ 1635
 (__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
 
@@ -65626,10 +65652,10 @@ function __addDisposableResource(env, value, async) {
   return value;
 }
 
-var _SuppressedError = typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
+var _SuppressedError = (/* unused pure expression or super */ null && (typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
   var e = new Error(message);
   return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
-};
+}));
 
 function __disposeResources(env) {
   function fail(e) {
@@ -65666,7 +65692,7 @@ function __rewriteRelativeImportExtension(path, preserveJsx) {
   return path;
 }
 
-/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = ({
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = ((/* unused pure expression or super */ null && ({
   __extends,
   __assign,
   __rest,
@@ -65699,7 +65725,7 @@ function __rewriteRelativeImportExtension(path, preserveJsx) {
   __addDisposableResource,
   __disposeResources,
   __rewriteRelativeImportExtension,
-});
+})));
 
 
 /***/ }
