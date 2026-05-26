@@ -585,7 +585,7 @@ class LayoutBuilder {
 		this.writer.moveToNextPage(pageOrientation);
 
 		// Reset snaking column state for the new page
-		// Save lastColumnWidth before reset — if we're inside a nested
+		// Save lastColumnWidth before reset - if we're inside a nested
 		// column group (e.g. product/price row), the reset would overwrite
 		// it with the snaking column width, corrupting inner column layout.
 		let savedLastColumnWidth = ctx.lastColumnWidth;
@@ -904,7 +904,7 @@ class LayoutBuilder {
 			snakingColumns, columnGapForGroup, columnWidthsForContext);
 
 		// IMPORTANT: We iterate ALL columns even when snakingColumns is enabled.
-		// This is intentional — beginColumn() must be called for each column to set up
+		// This is intentional - beginColumn() must be called for each column to set up
 		// proper geometry (widths, offsets) and rowspan/colspan tracking. The
 		// completeColumnGroup() call at the end depends on this bookkeeping to compute
 		// heights correctly. Content processing is skipped for columns > 0 via
@@ -969,7 +969,7 @@ class LayoutBuilder {
 
 			// When snaking, only process content from the first column (i === 0).
 			// Content overflows into subsequent columns via moveToNextColumn().
-			// We skip content processing here but NOT the beginColumn() call above —
+			// We skip content processing here but NOT the beginColumn() call above -
 			// the column geometry setup is still needed for proper layout bookkeeping.
 			const skipForSnaking = snakingColumns && i > 0;
 
@@ -1103,19 +1103,6 @@ class LayoutBuilder {
 	processList(orderedList, node) {
 		const isRtl = !!node._rtl;
 		const gapWidth = node._gapSize.width;
-		// Visual width of the marker glyph itself (NOT the reserved block).
-		// Used to position the marker at the inner edge of its block in RTL,
-		// mirroring how LTR puts the marker at the outer (left) edge of its
-		// block - keeping the same visible gap between marker and text.
-		const markerInnerWidth = (marker) => {
-			if (marker.canvas && marker.canvas[0]) {
-				const v = marker.canvas[0];
-				if (v.type === 'ellipse') return (v.r1 || 0) * 2;
-				if (v.type === 'rect') return v.w || 0;
-			}
-			if (marker._inlines && marker._inlines[0]) return marker._inlines[0].width || 0;
-			return 0;
-		};
 
 		const addMarkerToFirstLeaf = line => {
 			// I'm not very happy with the way list processing is implemented
@@ -1128,12 +1115,8 @@ class LayoutBuilder {
 					let vector = marker.canvas[0];
 
 					if (isRtl) {
-						// Pin marker to the right end of its reserved block so the
-						// gap to the (right-aligned) text matches LTR's inverse.
-						const innerW = markerInnerWidth(marker);
-						const blockX = this.writer.context().availableWidth;
-						const innerOffset = gapWidth - innerW;
-						offsetVector(vector, blockX + innerOffset, 0);
+						const x = this.writer.context().availableWidth + gapWidth;
+						offsetVector(vector, x, 0);
 					} else {
 						offsetVector(vector, -marker._minWidth, 0);
 					}
@@ -1142,8 +1125,8 @@ class LayoutBuilder {
 					let markerLine = new Line(this.pageSize.width);
 					markerLine.addInline(marker._inlines[0]);
 					if (isRtl) {
-						const innerW = markerInnerWidth(marker);
-						markerLine.x = this.writer.context().availableWidth + (gapWidth - innerW);
+						markerLine.x = this.writer.context().availableWidth + gapWidth - (marker._leadingCharsWidth || 0);
+						markerLine.inlines[0].alignment = 'left';
 					} else {
 						markerLine.x = -marker._minWidth;
 					}
@@ -1349,7 +1332,7 @@ class LayoutBuilder {
 				// Line doesn't fit, forced move to next page/column
 				// Only do snaking-specific break if we're in snaking columns AND NOT inside
 				// a nested non-snaking group (like a table row). Table cells should use
-				// standard page breaks — column breaks happen between table rows instead.
+				// standard page breaks - column breaks happen between table rows instead.
 				if (this.writer.context().inSnakingColumns() && !this.writer.context().isInNestedNonSnakingGroup()) {
 					this.snakingAwarePageBreak(node.pageOrientation);
 

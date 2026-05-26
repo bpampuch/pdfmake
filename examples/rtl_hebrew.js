@@ -186,6 +186,18 @@ async function main() {
 				],
 			},
 
+			{ text: '8b. RTL nested ordered list - sub-list markers should be indented inward:', style: 'caption' },
+			{
+				rtl: true,
+				ol: [
+					'תפוח אדום',
+					{ text: 'פרי עם תת-רשימה', ol: ['תת-פריט ראשון', 'תת-פריט שני', 'תת-פריט שלישי ארוך יותר'] },
+					'בננה טרופית',
+					{ text: 'עוד פריט עם תת-רשימה', ol: ['תפוז', 'אשכולית', 'לימון', 'מלון', 'אבטיח', 'תות', 'פטל', 'אוכמנית', 'דובדבן', 'מנגו'] },
+					'תפוז עסיסי',
+				],
+			},
+
 			{ text: '9. RTL bullet list:', style: 'caption' },
 			{
 				rtl: true,

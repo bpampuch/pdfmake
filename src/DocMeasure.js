@@ -335,7 +335,7 @@ class DocMeasure {
 		return marker;
 	}
 
-	buildOrderedMarker(item, counter, styleStack, type, separator) {
+	buildOrderedMarker(item, counter, styleStack, type, separator, isRtl) {
 		function prepareAlpha(counter) {
 			function toAlpha(num) {
 				return (num >= 26 ? toAlpha((num / 26 >> 0) - 1) : '') + 'abcdefghijklmnopqrstuvwxyz'[num % 26 >> 0];
@@ -400,28 +400,52 @@ class DocMeasure {
 			return {};
 		}
 
+		const body = counterText;
+
 		if (separator) {
 			if (Array.isArray(separator)) {
-				if (separator[0]) {
-					counterText = separator[0] + counterText;
+				if (isRtl) {
+					counterText = ' ';
+					if (separator[1]) {
+						counterText += separator[1];
+					}
+					counterText += body;
+					if (separator[0]) {
+						counterText += separator[0];
+					}
+				} else {
+					if (separator[0]) {
+						counterText = separator[0] + body;
+					} else {
+						counterText = body;
+					}
+					if (separator[1]) {
+						counterText += separator[1];
+					}
+					counterText += ' ';
 				}
-
-				if (separator[1]) {
-					counterText += separator[1];
-				}
-				counterText += ' ';
 			} else {
-				counterText += `${separator} `;
+				if (isRtl) {
+					counterText = `${separator}${body}`;
+				} else {
+					counterText = `${body}${separator} `;
+				}
 			}
 		}
 
 		let markerColor = StyleContextStack.getStyleProperty(item, styleStack, 'markerColor', undefined) || styleStack.getProperty('color') || 'black';
 		let textArray = {
 			text: counterText,
-			color: markerColor
+			color: markerColor,
 		};
 
-		return { _inlines: this.textInlines.buildInlines(textArray, styleStack).items };
+		let result = { _inlines: this.textInlines.buildInlines(textArray, styleStack).items };
+
+		if (isRtl) {
+			result._leadingCharsWidth = this.textInlines.sizeOfText(separator, styleStack).width;
+		}
+
+		return result;
 	}
 
 	measureUnorderedList(node) {
@@ -467,7 +491,7 @@ class DocMeasure {
 
 			if (!item.ol && !item.ul) {
 				let counterValue = isNumber(item.counter) ? item.counter : counter;
-				item.listMarker = this.buildOrderedMarker(item, counterValue, style, item.listType || node.type, node.separator);
+				item.listMarker = this.buildOrderedMarker(item, counterValue, style, item.listType || node.type, node.separator, node._rtl);
 				if (item.listMarker._inlines) {
 					node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
 				}
