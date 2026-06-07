@@ -1,4 +1,4 @@
-/*! pdfmake v0.3.9, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.3.10, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -25,7 +25,7 @@ __webpack_require__.d(__webpack_exports__, {
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.includes.js
 var es_array_includes = __webpack_require__(187);
 // EXTERNAL MODULE: ./node_modules/pdfkit/js/pdfkit.es.js
-var pdfkit_es = __webpack_require__(8259);
+var pdfkit_es = __webpack_require__(7101);
 ;// ./src/helpers/variableType.js
 /**
  * @param {any} variable
@@ -8757,7 +8757,7 @@ class OutputDocument {
 }
 /* harmony default export */ const src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(7286);
+var FileSaver_min = __webpack_require__(1438);
 ;// ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -15286,7 +15286,7 @@ module.exports = {
 
 /***/ },
 
-/***/ 8259
+/***/ 7101
 (__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -15307,13 +15307,11 @@ var _stream = _interopRequireDefault(__webpack_require__(9760));
 var _zlib = _interopRequireDefault(__webpack_require__(6729));
 var _utils = __webpack_require__(3973);
 var _jsMd = _interopRequireDefault(__webpack_require__(1632));
-var _sha = __webpack_require__(7785);
+var _sha = __webpack_require__(2650);
 var _aes = __webpack_require__(2651);
-var fontkit = _interopRequireWildcard(__webpack_require__(1715));
-var _events = __webpack_require__(4785);
+var _fontkit = __webpack_require__(1715);
 var _linebreak = _interopRequireDefault(__webpack_require__(2532));
 var _pngJs = _interopRequireDefault(__webpack_require__(381));
-function _interopRequireWildcard(e, t) { if ("function" == typeof WeakMap) var r = new WeakMap(), n = new WeakMap(); return (_interopRequireWildcard = function (e, t) { if (!t && e && e.__esModule) return e; var o, i, f = { __proto__: null, default: e }; if (null === e || "object" != typeof e && "function" != typeof e) return f; if (o = t ? n : r) { if (o.has(e)) return o.get(e); o.set(e, f); } for (const t in e) "default" !== t && {}.hasOwnProperty.call(e, t) && ((i = (o = Object.defineProperty) && Object.getOwnPropertyDescriptor(e, t)) && (i.get || i.set) ? o(f, t, i) : f[t] = e[t]); return f; })(e, t); }
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
 var fs = __webpack_require__(2416);
 class PDFAbstractReference {
@@ -15322,8 +15320,10 @@ class PDFAbstractReference {
   }
 }
 class PDFTree {
-  constructor() {
-    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  constructor(options) {
+    if (options === void 0) {
+      options = {};
+    }
     this._items = {};
     this.limits = typeof options.limits === 'boolean' ? options.limits : true;
   }
@@ -15364,7 +15364,7 @@ class SpotColor {
     this.id = 'CS' + Object.keys(doc.spotColors).length;
     this.name = name;
     this.values = [C, M, Y, K];
-    this.ref = doc.ref(['Separation', this.name, 'DeviceCMYK', {
+    this.ref = doc.ref(['Separation', escapeName(this.name), 'DeviceCMYK', {
       Range: [0, 1, 0, 1, 0, 1, 0, 1],
       C0: [0, 0, 0, 0],
       C1: this.values.map(value => value / 100),
@@ -15379,6 +15379,10 @@ class SpotColor {
   }
 }
 const pad = (str, length) => (Array(length + 1).join('0') + str).slice(-length);
+const isSafeCharCode = code => {
+  if (code > 0x7f) return true;
+  return code > 0x20 && code !== 0x7f && code !== 0x23 && code !== 0x25 && code !== 0x28 && code !== 0x29 && code !== 0x2f && code !== 0x3c && code !== 0x3e && code !== 0x5b && code !== 0x5d && code !== 0x7b && code !== 0x7d;
+};
 const escapableRe = /[\n\r\t\b\f()\\]/g;
 const escapable = {
   '\n': '\\n',
@@ -15389,6 +15393,18 @@ const escapable = {
   '\\': '\\\\',
   '(': '\\(',
   ')': '\\)'
+};
+const escapeName = function (name) {
+  let escapedName = '';
+  for (const char of name) {
+    const code = char.charCodeAt(0);
+    if (isSafeCharCode(code)) {
+      escapedName += char;
+    } else {
+      escapedName += `#${code.toString(16).toUpperCase().padStart(2, '0')}`;
+    }
+  }
+  return escapedName;
 };
 const swapBytes = function (buff) {
   const l = buff.length;
@@ -15404,8 +15420,10 @@ const swapBytes = function (buff) {
   return buff;
 };
 class PDFObject {
-  static convert(object) {
-    let encryptFn = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+  static convert(object, encryptFn) {
+    if (encryptFn === void 0) {
+      encryptFn = null;
+    }
     if (typeof object === 'string') {
       return `/${object}`;
     } else if (object instanceof String) {
@@ -15466,8 +15484,10 @@ class PDFObject {
   }
 }
 class PDFReference extends PDFAbstractReference {
-  constructor(document, id) {
-    let data = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+  constructor(document, id, data) {
+    if (data === void 0) {
+      data = {};
+    }
     super();
     this.document = document;
     this.id = id;
@@ -15538,9 +15558,13 @@ function PDFNumber(n) {
   }
   return fArray[0];
 }
-function normalizeSides(sides) {
-  let defaultDefinition = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : undefined;
-  let transformer = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : v => v;
+function normalizeSides(sides, defaultDefinition, transformer) {
+  if (defaultDefinition === void 0) {
+    defaultDefinition = undefined;
+  }
+  if (transformer === void 0) {
+    transformer = v => v;
+  }
   if (sides == null || typeof sides === 'object' && Object.keys(sides).length === 0) {
     sides = defaultDefinition;
   }
@@ -15659,8 +15683,10 @@ const SIZES = {
   TABLOID: [792.0, 1224.0]
 };
 class PDFPage {
-  constructor(document) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  constructor(document, options) {
+    if (options === void 0) {
+      options = {};
+    }
     this.document = document;
     this._options = options;
     this.size = options.size || 'letter';
@@ -15762,8 +15788,10 @@ function md5Hex(data) {
 function sha256Hash(data) {
   return (0, _sha.sha256)(data);
 }
-function aesCbcEncrypt(data, key, iv) {
-  let padding = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
+function aesCbcEncrypt(data, key, iv, padding) {
+  if (padding === void 0) {
+    padding = true;
+  }
   return (0, _aes.cbc)(key, iv, {
     disablePadding: !padding
   }).encrypt(data);
@@ -15781,28 +15809,24 @@ function rc4(data, key) {
   let j = 0;
   for (let i = 0; i < 256; i++) {
     j = j + s[i] + key[i % key.length] & 0xff;
-    var _ref3 = [s[j], s[i]];
-    s[i] = _ref3[0];
-    s[j] = _ref3[1];
+    var _ref = [s[j], s[i]];
+    s[i] = _ref[0];
+    s[j] = _ref[1];
   }
   const output = new Uint8Array(data.length);
   for (let i = 0, j = 0, k = 0; k < data.length; k++) {
     i = i + 1 & 0xff;
     j = j + s[i] & 0xff;
-    var _ref4 = [s[j], s[i]];
-    s[i] = _ref4[0];
-    s[j] = _ref4[1];
+    var _ref2 = [s[j], s[i]];
+    s[i] = _ref2[0];
+    s[j] = _ref2[1];
     output[k] = data[k] ^ s[s[i] + s[j] & 0xff];
   }
   return output;
 }
 function randomBytes(length) {
   const bytes = new Uint8Array(length);
-  if (globalThis.crypto?.getRandomValues) {
-    globalThis.crypto.getRandomValues(bytes);
-  } else {
-    (__webpack_require__(5470).randomFillSync)(bytes);
-  }
+  globalThis.crypto.getRandomValues(bytes);
   return bytes;
 }
 function inRange(value, rangeGroup) {
@@ -15859,8 +15883,10 @@ function toCodePoints(input) {
   }
   return codepoints;
 }
-function saslprep(input) {
-  let opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+function saslprep(input, opts) {
+  if (opts === void 0) {
+    opts = {};
+  }
   if (typeof input !== 'string') {
     throw new TypeError('Expected string.');
   }
@@ -15893,8 +15919,10 @@ function saslprep(input) {
   return normalized_input;
 }
 class PDFSecurity {
-  static generateFileID() {
-    let info = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  static generateFileID(info) {
+    if (info === void 0) {
+      info = {};
+    }
     let infoStr = `${info.CreationDate.getTime()}\n`;
     for (let key in info) {
       if (!info.hasOwnProperty(key)) {
@@ -15907,15 +15935,19 @@ class PDFSecurity {
   static generateRandomWordArray(bytes) {
     return randomBytes(bytes);
   }
-  static create(document) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  static create(document, options) {
+    if (options === void 0) {
+      options = {};
+    }
     if (!options.ownerPassword && !options.userPassword) {
       return null;
     }
     return new PDFSecurity(document, options);
   }
-  constructor(document) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  constructor(document, options) {
+    if (options === void 0) {
+      options = {};
+    }
     if (!options.ownerPassword && !options.userPassword) {
       throw new Error('None of owner password and user password is defined.');
     }
@@ -16064,8 +16096,10 @@ class PDFSecurity {
     this.dictionary.end();
   }
 }
-function getPermissionsR2() {
-  let permissionObject = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+function getPermissionsR2(permissionObject) {
+  if (permissionObject === void 0) {
+    permissionObject = {};
+  }
   let permissions = 0xffffffc0 >> 0;
   if (permissionObject.printing) {
     permissions |= 0b000000000100;
@@ -16081,8 +16115,10 @@ function getPermissionsR2() {
   }
   return permissions;
 }
-function getPermissionsR3() {
-  let permissionObject = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+function getPermissionsR3(permissionObject) {
+  if (permissionObject === void 0) {
+    permissionObject = {};
+  }
   let permissions = 0xfffff0c0 >> 0;
   if (permissionObject.printing === 'lowResolution') {
     permissions |= 0b000000000100;
@@ -16200,8 +16236,10 @@ function getEncryptedPermissionsR5(permissions, encryptionKey, generateRandomWor
   data.set(randomPart, 12);
   return aesEcbEncrypt(data, encryptionKey);
 }
-function processPasswordR2R3R4() {
-  let password = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+function processPasswordR2R3R4(password) {
+  if (password === void 0) {
+    password = '';
+  }
   const out = new Uint8Array(32);
   const length = password.length;
   let index = 0;
@@ -16219,8 +16257,10 @@ function processPasswordR2R3R4() {
   }
   return out;
 }
-function processPasswordR5() {
-  let password = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+function processPasswordR5(password) {
+  if (password === void 0) {
+    password = '';
+  }
   password = unescape(encodeURIComponent(saslprep(password)));
   const length = Math.min(127, password.length);
   const out = new Uint8Array(length);
@@ -16231,7 +16271,7 @@ function processPasswordR5() {
 }
 const PASSWORD_PADDING = [0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00, 0x4e, 0x56, 0xff, 0xfa, 0x01, 0x08, 0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68, 0x3e, 0x80, 0x2f, 0x0c, 0xa9, 0xfe, 0x64, 0x53, 0x69, 0x7a];
 const number$2 = PDFObject.number;
-class PDFGradient$1 {
+let PDFGradient$1 = class PDFGradient {
   constructor(doc) {
     this.doc = doc;
     this.stops = [];
@@ -16401,8 +16441,8 @@ class PDFGradient$1 {
     const op = stroke ? 'SCN' : 'scn';
     return this.doc.addContent(`/${this.id} ${op}`);
   }
-}
-class PDFLinearGradient$1 extends PDFGradient$1 {
+};
+let PDFLinearGradient$1 = class PDFLinearGradient extends PDFGradient$1 {
   constructor(doc, x1, y1, x2, y2) {
     super(doc);
     this.x1 = x1;
@@ -16420,10 +16460,10 @@ class PDFLinearGradient$1 extends PDFGradient$1 {
     });
   }
   opacityGradient() {
-    return new PDFLinearGradient$1(this.doc, this.x1, this.y1, this.x2, this.y2);
+    return new PDFLinearGradient(this.doc, this.x1, this.y1, this.x2, this.y2);
   }
-}
-class PDFRadialGradient$1 extends PDFGradient$1 {
+};
+let PDFRadialGradient$1 = class PDFRadialGradient extends PDFGradient$1 {
   constructor(doc, x1, y1, r1, x2, y2, r2) {
     super(doc);
     this.doc = doc;
@@ -16444,16 +16484,16 @@ class PDFRadialGradient$1 extends PDFGradient$1 {
     });
   }
   opacityGradient() {
-    return new PDFRadialGradient$1(this.doc, this.x1, this.y1, this.r1, this.x2, this.y2, this.r2);
+    return new PDFRadialGradient(this.doc, this.x1, this.y1, this.r1, this.x2, this.y2, this.r2);
   }
-}
+};
 var Gradient = {
   PDFGradient: PDFGradient$1,
   PDFLinearGradient: PDFLinearGradient$1,
   PDFRadialGradient: PDFRadialGradient$1
 };
 const underlyingColorSpaces = ['DeviceCMYK', 'DeviceRGB'];
-class PDFTilingPattern$1 {
+let PDFTilingPattern$1 = class PDFTilingPattern {
   constructor(doc, bBox, xStep, yStep, stream) {
     this.doc = doc;
     this.bBox = bBox;
@@ -16524,7 +16564,7 @@ class PDFTilingPattern$1 {
     const op = stroke ? 'SCN' : 'scn';
     return this.doc.addContent(`${normalizedColor.join(' ')} /${this.id} ${op}`);
   }
-}
+};
 var pattern = {
   PDFTilingPattern: PDFTilingPattern$1
 };
@@ -17308,8 +17348,10 @@ var VectorMixin = {
   miterLimit(m) {
     return this.addContent(`${number$1(m)} M`);
   },
-  dash(length) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  dash(length, options) {
+    if (options === void 0) {
+      options = {};
+    }
     const originalLength = length;
     if (!Array.isArray(length)) {
       length = [length, options.space || length];
@@ -17339,21 +17381,42 @@ var VectorMixin = {
   rect(x, y, w, h) {
     return this.addContent(`${number$1(x)} ${number$1(y)} ${number$1(w)} ${number$1(h)} re`);
   },
-  roundedRect(x, y, w, h, r) {
-    if (r == null) {
-      r = 0;
+  roundedRect(x, y, w, h, borderRadius) {
+    if (borderRadius == null) {
+      borderRadius = 0;
     }
-    r = Math.min(r, 0.5 * w, 0.5 * h);
-    const c = r * (1.0 - KAPPA);
-    this.moveTo(x + r, y);
-    this.lineTo(x + w - r, y);
-    this.bezierCurveTo(x + w - c, y, x + w, y + c, x + w, y + r);
-    this.lineTo(x + w, y + h - r);
-    this.bezierCurveTo(x + w, y + h - c, x + w - c, y + h, x + w - r, y + h);
-    this.lineTo(x + r, y + h);
-    this.bezierCurveTo(x + c, y + h, x, y + h - c, x, y + h - r);
-    this.lineTo(x, y + r);
-    this.bezierCurveTo(x, y + c, x + c, y, x + r, y);
+    let radii;
+    if (Array.isArray(borderRadius)) {
+      radii = borderRadius.slice(0, 4);
+    } else {
+      radii = [borderRadius, borderRadius, borderRadius, borderRadius];
+    }
+    const limit = Math.min(0.5 * w, 0.5 * h);
+    const rTL = Math.max(0, Math.min(radii[0] || 0, limit));
+    const rTR = Math.max(0, Math.min(radii[1] || 0, limit));
+    const rBR = Math.max(0, Math.min(radii[2] || 0, limit));
+    const rBL = Math.max(0, Math.min(radii[3] || 0, limit));
+    const cpTR = rTR * (1.0 - KAPPA);
+    const cpBR = rBR * (1.0 - KAPPA);
+    const cpBL = rBL * (1.0 - KAPPA);
+    const cpTL = rTL * (1.0 - KAPPA);
+    this.moveTo(x + rTL, y);
+    this.lineTo(x + w - rTR, y);
+    if (rTR > 0) {
+      this.bezierCurveTo(x + w - cpTR, y, x + w, y + cpTR, x + w, y + rTR);
+    }
+    this.lineTo(x + w, y + h - rBR);
+    if (rBR > 0) {
+      this.bezierCurveTo(x + w, y + h - cpBR, x + w - cpBR, y + h, x + w - rBR, y + h);
+    }
+    this.lineTo(x + rBL, y + h);
+    if (rBL > 0) {
+      this.bezierCurveTo(x + cpBL, y + h, x, y + h - cpBL, x, y + h - rBL);
+    }
+    this.lineTo(x, y + rTL);
+    if (rTL > 0) {
+      this.bezierCurveTo(x, y + cpTL, x + cpTL, y, x + rTL, y);
+    }
     return this.closePath();
   },
   ellipse(x, y, r1, r2) {
@@ -17495,8 +17558,10 @@ var VectorMixin = {
   translate(x, y) {
     return this.transform(1, 0, 0, 1, x, y);
   },
-  rotate(angle) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  rotate(angle, options) {
+    if (options === void 0) {
+      options = {};
+    }
     let y;
     const rad = angle * Math.PI / 180;
     const cos = Math.cos(rad);
@@ -17513,8 +17578,10 @@ var VectorMixin = {
     }
     return this.transform(cos, sin, -sin, cos, x, y);
   },
-  scale(xFactor, yFactor) {
-    let options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+  scale(xFactor, yFactor, options) {
+    if (options === void 0) {
+      options = {};
+    }
     let y;
     if (yFactor == null) {
       yFactor = xFactor;
@@ -17658,7 +17725,7 @@ class AFMFont {
       if (match = line.match(/^Start(\w+)/)) {
         section = match[1];
         continue;
-      } else if (match = line.match(/^End(\w+)/)) {
+      } else if (line.match(/^End(\w+)/)) {
         section = '';
         continue;
       }
@@ -17749,8 +17816,10 @@ class PDFFont {
   embed() {
     throw new Error('Must be implemented by subclasses');
   }
-  lineHeight(size) {
-    let includeGap = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+  lineHeight(size, includeGap) {
+    if (includeGap === void 0) {
+      includeGap = false;
+    }
     const gap = includeGap ? this.lineGap : 0;
     return (this.ascender + gap - this.descender) / 1000 * size;
   }
@@ -17996,9 +18065,15 @@ class EmbeddedFont extends PDFFont {
       descriptor.data.FontFile2 = fontFile;
     }
     if (this.document.subset && this.document.subset === 1) {
-      const CIDSet = Buffer.from('FFFFFFFFC0', 'hex');
+      const maxCID = this.widths.length - 1;
+      const cidSetBuffer = Buffer.alloc(Math.ceil((maxCID + 1) / 8), 0);
+      for (let cid = 0; cid <= maxCID; cid++) {
+        if (this.widths[cid] != null) {
+          cidSetBuffer[Math.floor(cid / 8)] |= 0x80 >> cid % 8;
+        }
+      }
       const CIDSetRef = this.document.ref();
-      CIDSetRef.write(CIDSet);
+      CIDSetRef.write(cidSetBuffer);
       CIDSetRef.end();
       descriptor.data.CIDSet = CIDSetRef;
     }
@@ -18089,9 +18164,9 @@ class PDFFontFactory {
       src = fs.readFileSync(src);
     }
     if (src instanceof Uint8Array) {
-      font = fontkit.create(src, family);
+      font = (0, _fontkit.create)(src, family);
     } else if (src instanceof ArrayBuffer) {
-      font = fontkit.create(new Uint8Array(src), family);
+      font = (0, _fontkit.create)(new Uint8Array(src), family);
     }
     if (font == null) {
       throw new Error('Not a supported font format or standard PDF font.');
@@ -18109,10 +18184,16 @@ const isEqualFont = (font1, font2) => {
   return true;
 };
 var FontsMixin = {
-  initFonts() {
-    let defaultFont = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'Helvetica';
-    let defaultFontFamily = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-    let defaultFontSize = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 12;
+  initFonts(defaultFont, defaultFontFamily, defaultFontSize) {
+    if (defaultFont === void 0) {
+      defaultFont = 'Helvetica';
+    }
+    if (defaultFontFamily === void 0) {
+      defaultFontFamily = null;
+    }
+    if (defaultFontSize === void 0) {
+      defaultFontSize = 12;
+    }
     this._fontFamilies = {};
     this._fontCount = 0;
     this._fontSource = defaultFont;
@@ -18160,8 +18241,11 @@ var FontsMixin = {
     if (cacheKey) {
       this._fontFamilies[cacheKey] = this._font;
     }
-    if (this._font.name) {
+    if (this._font.name && !this._fontFamilies[this._font.name]) {
       this._fontFamilies[this._font.name] = this._font;
+    }
+    if (!cacheKey && (!this._font.name || this._fontFamilies[this._font.name] !== this._font)) {
+      this._fontFamilies[this._font.id] = this._font;
     }
     return this;
   },
@@ -18179,10 +18263,16 @@ var FontsMixin = {
     };
     return this;
   },
-  sizeToPoint(size) {
-    let defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    let page = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : this.page;
-    let percentageWidth = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : undefined;
+  sizeToPoint(size, defaultValue, page, percentageWidth) {
+    if (defaultValue === void 0) {
+      defaultValue = 0;
+    }
+    if (page === void 0) {
+      page = this.page;
+    }
+    if (percentageWidth === void 0) {
+      percentageWidth = undefined;
+    }
     if (!percentageWidth) percentageWidth = this._fontSize;
     if (typeof defaultValue !== 'number') defaultValue = this.sizeToPoint(defaultValue);
     if (size === undefined) return defaultValue;
@@ -18243,9 +18333,9 @@ var FontsMixin = {
 };
 const SOFT_HYPHEN = '\u00AD';
 const HYPHEN = '-';
-class LineWrapper extends _events.EventEmitter {
+class LineWrapper {
   constructor(document, options) {
-    super();
+    this._listeners = Object.create(null);
     this.document = document;
     this.horizontalScaling = options.horizontalScaling || 100;
     this.indent = (options.indent || 0) * this.horizontalScaling / 100;
@@ -18298,6 +18388,26 @@ class LineWrapper extends _events.EventEmitter {
         return this.lastLine = false;
       });
     });
+  }
+  on(event, listener) {
+    (this._listeners[event] || (this._listeners[event] = [])).push(listener);
+  }
+  once(event, listener) {
+    var _this = this;
+    const wrapper = function () {
+      const listeners = _this._listeners[event];
+      listeners.splice(listeners.indexOf(wrapper), 1);
+      listener(...arguments);
+    };
+    this.on(event, wrapper);
+  }
+  emit(event) {
+    const listeners = this._listeners[event];
+    if (!listeners) return;
+    for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+      args[_key2 - 1] = arguments[_key2];
+    }
+    for (const listener of listeners.slice()) listener(...args);
   }
   wordWidth(word) {
     return PDFNumber(this.document.widthOfString(word, this) + this.characterSpacing + this.wordSpacing);
@@ -18364,6 +18474,7 @@ class LineWrapper extends _events.EventEmitter {
     }
   }
   wrap(text, options) {
+    const document = this.document;
     this.horizontalScaling = options.horizontalScaling || 100;
     if (options.indent != null) {
       this.indent = options.indent * this.horizontalScaling / 100;
@@ -18377,20 +18488,20 @@ class LineWrapper extends _events.EventEmitter {
     if (options.ellipsis != null) {
       this.ellipsis = options.ellipsis;
     }
-    const nextY = this.document.y + this.document.currentLineHeight(true);
-    if (this.document.y > this.maxY || nextY > this.maxY) {
+    const nextY = document.y + document.currentLineHeight(true);
+    if (document.y > this.maxY || nextY > this.maxY) {
       this.nextSection();
     }
     let buffer = '';
     let textWidth = 0;
     let wc = 0;
     let lc = 0;
-    let y = this.document.y;
+    let continueY = document.y;
     const emitLine = () => {
       options.textWidth = textWidth + this.wordSpacing * (wc - 1);
       options.wordCount = wc;
       options.lineWidth = this.lineWidth;
-      y = this.document.y;
+      continueY = document.y;
       this.emit('line', buffer, options, this);
       return lc++;
     };
@@ -18406,8 +18517,8 @@ class LineWrapper extends _events.EventEmitter {
         wc++;
       }
       if (bk.required || !this.canFit(word, w)) {
-        const lh = this.document.currentLineHeight(true);
-        if (this.height != null && this.ellipsis && PDFNumber(this.document.y + lh * 2) > this.maxY && this.column >= this.columns) {
+        const lh = document.currentLineHeight(true);
+        if (this.height != null && this.ellipsis && PDFNumber(document.y + lh * 2) > this.maxY && this.column >= this.columns) {
           if (this.ellipsis === true) {
             this.ellipsis = '…';
           }
@@ -18436,7 +18547,7 @@ class LineWrapper extends _events.EventEmitter {
           this.spaceLeft -= this.wordWidth(HYPHEN);
         }
         emitLine();
-        if (PDFNumber(this.document.y + lh) > this.maxY) {
+        if (PDFNumber(document.y + lh) > this.maxY) {
           this.emit('sectionEnd', options, this);
           const shouldContinue = this.nextSection();
           if (!shouldContinue) {
@@ -18471,9 +18582,9 @@ class LineWrapper extends _events.EventEmitter {
         this.continuedX = 0;
       }
       this.continuedX += options.textWidth || 0;
-      this.document.y = y;
+      document.y = continueY;
     } else {
-      this.document.x = this.startX;
+      document.x = this.startX;
     }
   }
   nextSection(options) {
@@ -18578,8 +18689,10 @@ var TextMixin = {
   text(text, x, y, options) {
     return this._text(text, x, y, options, this._line);
   },
-  widthOfString(string) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  widthOfString(string, options) {
+    if (options === void 0) {
+      options = {};
+    }
     const horizontalScaling = options.horizontalScaling || 100;
     return (this._font.widthOfString(string, this._fontSize, options.features) + (options.characterSpacing || 0) * (string.length - 1)) * horizontalScaling / 100;
   },
@@ -18786,11 +18899,14 @@ var TextMixin = {
     }
     return this;
   },
-  _initOptions() {
-    let x = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    let y = arguments.length > 1 ? arguments[1] : undefined;
-    let options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-    if (typeof x === 'object') {
+  _initOptions(x, y, options) {
+    if (x === void 0) {
+      x = {};
+    }
+    if (options === void 0) {
+      options = {};
+    }
+    if (x && typeof x === 'object') {
       options = x;
       x = null;
     }
@@ -18823,13 +18939,14 @@ var TextMixin = {
     if (result.columnGap == null) {
       result.columnGap = 18;
     }
-    result.rotation = Number(options.rotation ?? 0) % 360;
+    result.rotation = Number(result.rotation ?? 0) % 360;
     if (result.rotation < 0) result.rotation += 360;
     return result;
   },
-  _line(text) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    let wrapper = arguments.length > 2 ? arguments[2] : undefined;
+  _line(text, options, wrapper) {
+    if (options === void 0) {
+      options = {};
+    }
     this._fragment(text, this.x, this.y, options);
     if (wrapper) {
       const lineGap = options.lineGap || this._lineGap || 0;
@@ -19035,28 +19152,61 @@ var TextMixin = {
     this.restore();
   }
 };
+const toBinaryString = bytes => {
+  const chunkSize = 0x8000;
+  let out = '';
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const end = Math.min(i + chunkSize, bytes.length);
+    out += String.fromCharCode.apply(null, bytes.subarray(i, end));
+  }
+  return out;
+};
+const readUInt16BE = function (bytes, offset) {
+  if (offset === void 0) {
+    offset = 0;
+  }
+  return (bytes[offset] << 8 | bytes[offset + 1]) >>> 0;
+};
+const readUInt16LE = function (bytes, offset) {
+  if (offset === void 0) {
+    offset = 0;
+  }
+  return (bytes[offset + 1] << 8 | bytes[offset]) >>> 0;
+};
+const readUInt32BE = function (bytes, offset) {
+  if (offset === void 0) {
+    offset = 0;
+  }
+  return bytes[offset] * 0x1000000 + (bytes[offset + 1] << 16 | bytes[offset + 2] << 8 | bytes[offset + 3]) >>> 0;
+};
+const readUInt32LE = function (bytes, offset) {
+  if (offset === void 0) {
+    offset = 0;
+  }
+  return (bytes[offset] | bytes[offset + 1] << 8 | bytes[offset + 2] << 16) + bytes[offset + 3] * 0x1000000 >>> 0;
+};
 const parseExifOrientation = data => {
   if (!data || data.length < 20) return null;
   let pos = 2;
   while (pos < data.length - 4) {
     while (pos < data.length && data[pos] !== 0xff) pos++;
     if (pos >= data.length - 4) return null;
-    const marker = data.readUInt16BE(pos);
+    const marker = readUInt16BE(data, pos);
     pos += 2;
     if (marker === 0xffda) return null;
     if (marker >= 0xffd0 && marker <= 0xffd9 || marker === 0xff01) continue;
     if (pos + 2 > data.length) return null;
-    const segmentLength = data.readUInt16BE(pos);
+    const segmentLength = readUInt16BE(data, pos);
     if (marker === 0xffe1 && pos + 8 <= data.length) {
-      const exifHeader = data.subarray(pos + 2, pos + 8).toString('binary');
+      const exifHeader = toBinaryString(data.subarray(pos + 2, pos + 8));
       if (exifHeader === 'Exif\x00\x00') {
         const tiffStart = pos + 8;
         if (tiffStart + 8 > data.length) return null;
-        const byteOrder = data.subarray(tiffStart, tiffStart + 2).toString('ascii');
+        const byteOrder = toBinaryString(data.subarray(tiffStart, tiffStart + 2));
         const isLittleEndian = byteOrder === 'II';
         if (!isLittleEndian && byteOrder !== 'MM') return null;
-        const read16 = isLittleEndian ? o => data.readUInt16LE(o) : o => data.readUInt16BE(o);
-        const read32 = isLittleEndian ? o => data.readUInt32LE(o) : o => data.readUInt32BE(o);
+        const read16 = isLittleEndian ? o => readUInt16LE(data, o) : o => readUInt16BE(data, o);
+        const read32 = isLittleEndian ? o => readUInt32LE(data, o) : o => readUInt32BE(data, o);
         if (read16(tiffStart + 2) !== 42) return null;
         const ifdPos = tiffStart + read32(tiffStart + 4);
         if (ifdPos + 2 > data.length) return null;
@@ -19111,7 +19261,7 @@ class JPEG {
     pos += 2;
     this.width = this.data.readUInt16BE(pos);
     pos += 2;
-    const channels = this.data[pos++];
+    const channels = this.data[pos + 1];
     this.colorSpace = COLOR_SPACE_MAP[channels];
     this.obj = null;
   }
@@ -19145,56 +19295,56 @@ class PNGImage {
     this.obj = null;
   }
   embed(document) {
-    let dataDecoded = false;
     this.document = document;
     if (this.obj) {
       return;
     }
-    const hasAlphaChannel = this.image.hasAlphaChannel;
-    const isInterlaced = this.image.interlaceMethod === 1;
-    this.obj = this.document.ref({
+    const image = this.image,
+      height = this.height,
+      width = this.width;
+    const hasAlphaChannel = image.hasAlphaChannel;
+    const isInterlaced = image.interlaceMethod === 1;
+    const obj = this.obj = document.ref({
       Type: 'XObject',
       Subtype: 'Image',
-      BitsPerComponent: hasAlphaChannel ? 8 : this.image.bits,
-      Width: this.width,
-      Height: this.height,
+      BitsPerComponent: hasAlphaChannel ? 8 : image.bits,
+      Width: width,
+      Height: height,
       Filter: 'FlateDecode'
     });
     if (!hasAlphaChannel) {
-      const params = this.document.ref({
+      const params = document.ref({
         Predictor: isInterlaced ? 1 : 15,
-        Colors: this.image.colors,
-        BitsPerComponent: this.image.bits,
-        Columns: this.width
+        Colors: image.colors,
+        BitsPerComponent: image.bits,
+        Columns: width
       });
-      this.obj.data['DecodeParms'] = params;
+      obj.data['DecodeParms'] = params;
       params.end();
     }
-    if (this.image.palette.length === 0) {
-      this.obj.data['ColorSpace'] = this.image.colorSpace;
+    if (image.palette.length === 0) {
+      obj.data['ColorSpace'] = image.colorSpace;
     } else {
-      const palette = this.document.ref();
-      palette.end(Buffer.from(this.image.palette));
-      this.obj.data['ColorSpace'] = ['Indexed', 'DeviceRGB', this.image.palette.length / 3 - 1, palette];
+      const palette = document.ref();
+      palette.end(Buffer.from(image.palette));
+      obj.data['ColorSpace'] = ['Indexed', 'DeviceRGB', image.palette.length / 3 - 1, palette];
     }
-    if (this.image.transparency.grayscale != null) {
-      const val = this.image.transparency.grayscale;
-      this.obj.data['Mask'] = [val, val];
-    } else if (this.image.transparency.rgb) {
-      const rgb = this.image.transparency.rgb;
+    if (image.transparency.grayscale != null) {
+      const val = image.transparency.grayscale;
+      obj.data['Mask'] = [val, val];
+    } else if (image.transparency.rgb) {
+      const rgb = image.transparency.rgb;
       const mask = [];
       for (let x of rgb) {
         mask.push(x, x);
       }
-      this.obj.data['Mask'] = mask;
-    } else if (this.image.transparency.indexed) {
-      dataDecoded = true;
+      obj.data['Mask'] = mask;
+    } else if (image.transparency.indexed) {
       return this.loadIndexedAlphaChannel();
     } else if (hasAlphaChannel) {
-      dataDecoded = true;
       return this.splitAlphaChannel();
     }
-    if (isInterlaced && !dataDecoded) {
+    if (isInterlaced && true) {
       return this.decodeData();
     }
     this.finalize();
@@ -19284,7 +19434,7 @@ class PDFImage {
     }
     if (data[0] === 0xff && data[1] === 0xd8) {
       return new JPEG(data, label);
-    } else if (data[0] === 0x89 && data.toString('ascii', 1, 4) === 'PNG') {
+    } else if (data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4e && data[3] === 0x47) {
       return new PNGImage(data, label);
     } else {
       throw new Error('Unknown image format.');
@@ -19296,8 +19446,10 @@ var ImagesMixin = {
     this._imageRegistry = {};
     this._imageCount = 0;
   },
-  image(src, x, y) {
-    let options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+  image(src, x, y, options) {
+    if (options === void 0) {
+      options = {};
+    }
     let bh, bp, bw, image, ip, left, left1, originX, originY;
     if (typeof x === 'object') {
       options = x;
@@ -19327,9 +19479,9 @@ var ImagesMixin = {
       width = _image.width,
       height = _image.height;
     if (!ignoreOrientation && image.orientation > 4) {
-      var _ref5 = [height, width];
-      width = _ref5[0];
-      height = _ref5[1];
+      var _ref3 = [height, width];
+      width = _ref3[0];
+      height = _ref3[1];
     }
     let w = options.width || width;
     let h = options.height || height;
@@ -19460,6 +19612,9 @@ var ImagesMixin = {
       this.y += h;
     }
     this.save();
+    if (options.opacity != null) {
+      this._doOpacity(options.opacity, null);
+    }
     if (rotateAngle) {
       this.rotate(rotateAngle, {
         origin: [originX, originY]
@@ -19521,8 +19676,10 @@ var AnnotationsMixin = {
     ref.end();
     return this;
   },
-  note(x, y, w, h, contents) {
-    let options = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
+  note(x, y, w, h, contents, options) {
+    if (options === void 0) {
+      options = {};
+    }
     options.Subtype = 'Text';
     options.Contents = new String(contents);
     if (options.Name == null) {
@@ -19533,8 +19690,10 @@ var AnnotationsMixin = {
     }
     return this.annotate(x, y, w, h, options);
   },
-  goTo(x, y, w, h, name) {
-    let options = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
+  goTo(x, y, w, h, name, options) {
+    if (options === void 0) {
+      options = {};
+    }
     options.Subtype = 'Link';
     options.A = this.ref({
       S: 'GoTo',
@@ -19543,8 +19702,10 @@ var AnnotationsMixin = {
     options.A.end();
     return this.annotate(x, y, w, h, options);
   },
-  link(x, y, w, h, url) {
-    let options = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
+  link(x, y, w, h, url, options) {
+    if (options === void 0) {
+      options = {};
+    }
     options.Subtype = 'Link';
     if (typeof url === 'number') {
       const pages = this._root.data.Pages.data;
@@ -19569,8 +19730,10 @@ var AnnotationsMixin = {
     }
     return this.annotate(x, y, w, h, options);
   },
-  _markup(x, y, w, h) {
-    let options = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+  _markup(x, y, w, h, options) {
+    if (options === void 0) {
+      options = {};
+    }
     const _this$_convertRect = this._convertRect(x, y, w, h),
       x1 = _this$_convertRect[0],
       y1 = _this$_convertRect[1],
@@ -19580,53 +19743,71 @@ var AnnotationsMixin = {
     options.Contents = new String();
     return this.annotate(x, y, w, h, options);
   },
-  highlight(x, y, w, h) {
-    let options = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+  highlight(x, y, w, h, options) {
+    if (options === void 0) {
+      options = {};
+    }
     options.Subtype = 'Highlight';
     if (options.color == null) {
       options.color = [241, 238, 148];
     }
     return this._markup(x, y, w, h, options);
   },
-  underline(x, y, w, h) {
-    let options = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+  underline(x, y, w, h, options) {
+    if (options === void 0) {
+      options = {};
+    }
     options.Subtype = 'Underline';
     return this._markup(x, y, w, h, options);
   },
-  strike(x, y, w, h) {
-    let options = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+  strike(x, y, w, h, options) {
+    if (options === void 0) {
+      options = {};
+    }
     options.Subtype = 'StrikeOut';
     return this._markup(x, y, w, h, options);
   },
-  lineAnnotation(x1, y1, x2, y2) {
-    let options = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+  lineAnnotation(x1, y1, x2, y2, options) {
+    if (options === void 0) {
+      options = {};
+    }
     options.Subtype = 'Line';
     options.Contents = new String();
     options.L = [x1, this.page.height - y1, x2, this.page.height - y2];
     return this.annotate(x1, y1, x2, y2, options);
   },
-  rectAnnotation(x, y, w, h) {
-    let options = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+  rectAnnotation(x, y, w, h, options) {
+    if (options === void 0) {
+      options = {};
+    }
     options.Subtype = 'Square';
     options.Contents = new String();
     return this.annotate(x, y, w, h, options);
   },
-  ellipseAnnotation(x, y, w, h) {
-    let options = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+  ellipseAnnotation(x, y, w, h, options) {
+    if (options === void 0) {
+      options = {};
+    }
     options.Subtype = 'Circle';
     options.Contents = new String();
     return this.annotate(x, y, w, h, options);
   },
-  textAnnotation(x, y, w, h, text) {
-    let options = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
+  textAnnotation(x, y, w, h, text, options) {
+    if (options === void 0) {
+      options = {};
+    }
     options.Subtype = 'FreeText';
     options.Contents = new String(text);
     options.DA = new String();
     return this.annotate(x, y, w, h, options);
   },
-  fileAnnotation(x, y, w, h) {
-    let file = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
-    let options = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
+  fileAnnotation(x, y, w, h, file, options) {
+    if (file === void 0) {
+      file = {};
+    }
+    if (options === void 0) {
+      options = {};
+    }
     const filespec = this.file(file.src, Object.assign({
       hidden: true
     }, file));
@@ -19666,8 +19847,10 @@ const DEFAULT_OPTIONS = {
   expanded: false
 };
 class PDFOutline {
-  constructor(document, parent, title, dest) {
-    let options = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : DEFAULT_OPTIONS;
+  constructor(document, parent, title, dest, options) {
+    if (options === void 0) {
+      options = DEFAULT_OPTIONS;
+    }
     this.document = document;
     this.options = options;
     this.outlineData = {};
@@ -19688,8 +19871,10 @@ class PDFOutline {
     this.dictionary = this.document.ref(this.outlineData);
     this.children = [];
   }
-  addItem(title) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_OPTIONS;
+  addItem(title, options) {
+    if (options === void 0) {
+      options = DEFAULT_OPTIONS;
+    }
     const pages = this.document._root.data.Pages.data.Kids;
     const dest = options.pageNumber != null ? pages[options.pageNumber] : this.document.page.dictionary;
     const result = new PDFOutline(this.document, this.dictionary, title, dest, options);
@@ -19743,9 +19928,13 @@ class PDFStructureContent {
   }
 }
 class PDFStructureElement {
-  constructor(document, type) {
-    let options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-    let children = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
+  constructor(document, type, options, children) {
+    if (options === void 0) {
+      options = {};
+    }
+    if (children === void 0) {
+      children = null;
+    }
     this.document = document;
     this._attached = false;
     this._ended = false;
@@ -19758,20 +19947,40 @@ class PDFStructureElement {
       children = options;
       options = {};
     }
-    if (typeof options.title !== 'undefined') {
+    if (options.title) {
       data.T = new String(options.title);
     }
-    if (typeof options.lang !== 'undefined') {
+    if (options.lang) {
       data.Lang = new String(options.lang);
     }
-    if (typeof options.alt !== 'undefined') {
+    if (options.alt) {
       data.Alt = new String(options.alt);
     }
-    if (typeof options.expanded !== 'undefined') {
+    if (options.expanded) {
       data.E = new String(options.expanded);
     }
-    if (typeof options.actual !== 'undefined') {
+    if (options.actual) {
       data.ActualText = new String(options.actual);
+    }
+    const hasBbox = Array.isArray(options.bbox) && options.bbox.length === 4;
+    const hasPlacement = typeof options.placement === 'string';
+    if (hasBbox || hasPlacement) {
+      const attrs = {
+        O: 'Layout'
+      };
+      attrs.Placement = hasPlacement ? options.placement : 'Block';
+      if (hasBbox) {
+        const height = document.page.height;
+        attrs.BBox = [options.bbox[0], height - options.bbox[3], options.bbox[2], height - options.bbox[1]];
+      }
+      data.A = attrs;
+    }
+    if (options.scope) {
+      data.A = {
+        ...(data.A || {}),
+        O: 'Table',
+        Scope: options.scope
+      };
     }
     this._children = [];
     if (children) {
@@ -19808,9 +20017,9 @@ class PDFStructureElement {
     return this;
   }
   _addContentToParentTree(content) {
-    content.refs.forEach(_ref => {
-      let pageRef = _ref.pageRef,
-        mcid = _ref.mcid;
+    content.refs.forEach(_ref4 => {
+      let pageRef = _ref4.pageRef,
+        mcid = _ref4.mcid;
       const pageStructParents = this.document.getStructParentTree().get(pageRef.data.StructParents);
       pageStructParents[mcid] = this.dictionary;
     });
@@ -19897,9 +20106,9 @@ class PDFStructureElement {
       this.dictionary.data.K.push(child.dictionary);
     }
     if (child instanceof PDFStructureContent) {
-      child.refs.forEach(_ref2 => {
-        let pageRef = _ref2.pageRef,
-          mcid = _ref2.mcid;
+      child.refs.forEach(_ref5 => {
+        let pageRef = _ref5.pageRef,
+          mcid = _ref5.mcid;
         if (!this.dictionary.data.Pg) {
           this.dictionary.data.Pg = pageRef;
         }
@@ -19944,8 +20153,10 @@ var MarkingsMixin = {
       this.getStructTreeRoot();
     }
   },
-  markContent(tag) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+  markContent(tag, options) {
+    if (options === void 0) {
+      options = null;
+    }
     if (tag === 'Artifact' || options && options.mcid) {
       let toClose = 0;
       this.page.markings.forEach(marking => {
@@ -20000,8 +20211,10 @@ var MarkingsMixin = {
     this.addContent(`/${tag} ${PDFObject.convert(dictionary)} BDC`);
     return this;
   },
-  markStructureContent(tag) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  markStructureContent(tag, options) {
+    if (options === void 0) {
+      options = {};
+    }
     const pageStructParents = this.getStructParentTree().get(this.page.structParentTreeKey);
     const mcid = pageStructParents.length;
     pageStructParents.push(null);
@@ -20025,9 +20238,13 @@ var MarkingsMixin = {
     }
     return this;
   },
-  struct(type) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    let children = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+  struct(type, options, children) {
+    if (options === void 0) {
+      options = {};
+    }
+    if (children === void 0) {
+      children = null;
+    }
     return new PDFStructureElement(this, type, options, children);
   },
   addStructure(structElem) {
@@ -20191,15 +20408,19 @@ var AcroFormMixin = {
     }
     return this;
   },
-  formField(name) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  formField(name, options) {
+    if (options === void 0) {
+      options = {};
+    }
     let fieldDict = this._fieldDict(name, null, options);
     let fieldRef = this.ref(fieldDict);
     this._addToParent(fieldRef);
     return fieldRef;
   },
-  formAnnotation(name, type, x, y, w, h) {
-    let options = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : {};
+  formAnnotation(name, type, x, y, w, h, options) {
+    if (options === void 0) {
+      options = {};
+    }
     let fieldDict = this._fieldDict(name, type, options);
     fieldDict.Subtype = 'Widget';
     if (fieldDict.F === undefined) {
@@ -20209,28 +20430,40 @@ var AcroFormMixin = {
     let annotRef = this.page.annotations[this.page.annotations.length - 1];
     return this._addToParent(annotRef);
   },
-  formText(name, x, y, w, h) {
-    let options = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
+  formText(name, x, y, w, h, options) {
+    if (options === void 0) {
+      options = {};
+    }
     return this.formAnnotation(name, 'text', x, y, w, h, options);
   },
-  formPushButton(name, x, y, w, h) {
-    let options = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
+  formPushButton(name, x, y, w, h, options) {
+    if (options === void 0) {
+      options = {};
+    }
     return this.formAnnotation(name, 'pushButton', x, y, w, h, options);
   },
-  formCombo(name, x, y, w, h) {
-    let options = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
+  formCombo(name, x, y, w, h, options) {
+    if (options === void 0) {
+      options = {};
+    }
     return this.formAnnotation(name, 'combo', x, y, w, h, options);
   },
-  formList(name, x, y, w, h) {
-    let options = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
+  formList(name, x, y, w, h, options) {
+    if (options === void 0) {
+      options = {};
+    }
     return this.formAnnotation(name, 'list', x, y, w, h, options);
   },
-  formRadioButton(name, x, y, w, h) {
-    let options = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
+  formRadioButton(name, x, y, w, h, options) {
+    if (options === void 0) {
+      options = {};
+    }
     return this.formAnnotation(name, 'radioButton', x, y, w, h, options);
   },
-  formCheckbox(name, x, y, w, h) {
-    let options = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
+  formCheckbox(name, x, y, w, h, options) {
+    if (options === void 0) {
+      options = {};
+    }
     return this.formAnnotation(name, 'checkbox', x, y, w, h, options);
   },
   _addToParent(fieldRef) {
@@ -20245,8 +20478,10 @@ var AcroFormMixin = {
     }
     return this;
   },
-  _fieldDict(name, type) {
-    let options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+  _fieldDict(name, type, options) {
+    if (options === void 0) {
+      options = {};
+    }
     if (!this._acroform) {
       throw new Error('Call document.initForm() method before adding form elements to document');
     }
@@ -20434,8 +20669,10 @@ var AcroFormMixin = {
   }
 };
 var AttachmentsMixin = {
-  file(src) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  file(src, options) {
+    if (options === void 0) {
+      options = {};
+    }
     options.name = options.name || src;
     options.relationship = options.relationship || 'Unspecified';
     const refBody = {
@@ -20454,7 +20691,7 @@ var AttachmentsMixin = {
       const match = /^data:(.*?);base64,(.*)$/.exec(src);
       if (match) {
         if (match[1]) {
-          refBody.Subtype = match[1].replace('/', '#2F');
+          refBody.Subtype = escapeName(match[1]);
         }
         data = Buffer.from(match[2], 'base64');
       } else {
@@ -20476,7 +20713,7 @@ var AttachmentsMixin = {
       refBody.Params.ModDate = options.modifiedDate;
     }
     if (options.type) {
-      refBody.Subtype = options.type.replace('/', '#2F');
+      refBody.Subtype = escapeName(options.type);
     }
     const checksum = md5Hex(new Uint8Array(data));
     refBody.Params.CheckSum = new String(checksum);
@@ -20629,8 +20866,8 @@ function isObject(item) {
 function deepMerge(target) {
   if (!isObject(target)) return target;
   target = deepClone(target);
-  for (var _len = arguments.length, sources = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-    sources[_key - 1] = arguments[_key];
+  for (var _len3 = arguments.length, sources = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
+    sources[_key3 - 1] = arguments[_key3];
   }
   for (const source of sources) {
     if (isObject(source)) {
@@ -20659,12 +20896,12 @@ function normalizedDefaultStyle(defaultStyleInternal) {
   if (typeof defaultStyle !== 'object') defaultStyle = {
     text: defaultStyle
   };
-  const defaultRowStyle = Object.fromEntries(Object.entries(defaultStyle).filter(_ref => {
-    let k = _ref[0];
+  const defaultRowStyle = Object.fromEntries(Object.entries(defaultStyle).filter(_ref6 => {
+    let k = _ref6[0];
     return ROW_FIELDS.includes(k);
   }));
-  const defaultColStyle = Object.fromEntries(Object.entries(defaultStyle).filter(_ref2 => {
-    let k = _ref2[0];
+  const defaultColStyle = Object.fromEntries(Object.entries(defaultStyle).filter(_ref7 => {
+    let k = _ref7[0];
     return COLUMN_FIELDS.includes(k);
   }));
   defaultStyle.padding = normalizeSides(defaultStyle.padding);
@@ -21177,9 +21414,9 @@ function renderCellText(cell) {
   if (cell.font) doc.font(rollbackFont, rollbackFontFamily, rollbackFontSize);
 }
 function renderBorder(border, borderColor, x, y, width, height, mask) {
-  border = Object.fromEntries(Object.entries(border).map(_ref => {
-    let k = _ref[0],
-      v = _ref[1];
+  border = Object.fromEntries(Object.entries(border).map(_ref8 => {
+    let k = _ref8[0],
+      v = _ref8[1];
     return [k, mask && !mask[k] ? 0 : v];
   }));
   const doc = this.document;
@@ -21203,8 +21440,10 @@ function renderBorder(border, borderColor, x, y, width, height, mask) {
   }
 }
 class PDFTable {
-  constructor(document) {
-    let opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  constructor(document, opts) {
+    if (opts === void 0) {
+      opts = {};
+    }
     this.document = document;
     this.opts = Object.freeze(opts);
     normalizeTable.call(this);
@@ -21216,8 +21455,10 @@ class PDFTable {
       return this.end();
     }
   }
-  row(row) {
-    let lastRow = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+  row(row, lastRow) {
+    if (lastRow === void 0) {
+      lastRow = false;
+    }
     if (this._ended) {
       throw new Error(`Table was marked as ended on row ${this._currRowIndex}`);
     }
@@ -21265,8 +21506,10 @@ class PDFMetadata {
         <?xpacket end="w"?>
         `);
   }
-  append(xml) {
-    let newline = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+  append(xml, newline) {
+    if (newline === void 0) {
+      newline = true;
+    }
     this._metadata = this._metadata.concat(xml);
     if (newline) this._metadata = this._metadata.concat('\n');
   }
@@ -21285,8 +21528,10 @@ var MetadataMixin = {
   initMetadata() {
     this.metadata = new PDFMetadata();
   },
-  appendXML(xml) {
-    let newline = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+  appendXML(xml, newline) {
+    if (newline === void 0) {
+      newline = true;
+    }
     this.metadata.append(xml, newline);
   },
   _addInfo() {
@@ -21333,7 +21578,7 @@ var MetadataMixin = {
     }
     this.appendXML(`
         <rdf:Description rdf:about="" xmlns:pdf="http://ns.adobe.com/pdf/1.3/">
-            <pdf:Producer>${this.info.Creator}</pdf:Producer>`, false);
+            <pdf:Producer>${this.info.Producer}</pdf:Producer>`, false);
     if (this.info.Keywords) {
       this.appendXML(`
             <pdf:Keywords>${this.info.Keywords}</pdf:Keywords>`, false);
@@ -21359,8 +21604,10 @@ var MetadataMixin = {
   }
 };
 class PDFDocument extends _stream.default.Readable {
-  constructor() {
-    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  constructor(options) {
+    if (options === void 0) {
+      options = {};
+    }
     super(options);
     this.options = options;
     switch (options.pdfVersion) {
@@ -21491,8 +21738,8 @@ class PDFDocument extends _stream.default.Readable {
     }
   }
   addNamedDestination(name) {
-    for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      args[_key - 1] = arguments[_key];
+    for (var _len4 = arguments.length, args = new Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
+      args[_key4 - 1] = arguments[_key4];
     }
     if (args.length === 0) {
       args = ['XYZ', null, null, null];
@@ -23468,10 +23715,9 @@ exports.crypto = typeof globalThis === 'object' && 'crypto' in globalThis ? glob
 (__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
-var __webpack_unused_export__;
 
-__webpack_unused_export__ = ({ value: true });
-__webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = exports.sha224 = exports.sha256 = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = __webpack_unused_export__ = exports.SHA224 = exports.SHA256 = void 0;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sha512_224 = exports.sha512_256 = exports.sha384 = exports.sha512 = exports.sha224 = exports.sha256 = exports.SHA512_256 = exports.SHA512_224 = exports.SHA384 = exports.SHA512 = exports.SHA224 = exports.SHA256 = void 0;
 /**
  * SHA2 hash function. A.k.a. sha256, sha384, sha512, sha512_224, sha512_256.
  * SHA256 is the fastest hash implementable in JS, even faster than Blake3.
@@ -23745,7 +23991,7 @@ class SHA512 extends _md_ts_1.HashMD {
         this.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 }
-__webpack_unused_export__ = SHA512;
+exports.SHA512 = SHA512;
 class SHA384 extends SHA512 {
     constructor() {
         super(48);
@@ -23767,7 +24013,7 @@ class SHA384 extends SHA512 {
         this.Hl = _md_ts_1.SHA384_IV[15] | 0;
     }
 }
-__webpack_unused_export__ = SHA384;
+exports.SHA384 = SHA384;
 /**
  * Truncated SHA512/256 and SHA512/224.
  * SHA512_IV is XORed with 0xa5a5a5a5a5a5a5a5, then used as "intermediary" IV of SHA512/t.
@@ -23805,7 +24051,7 @@ class SHA512_224 extends SHA512 {
         this.Hl = T224_IV[15] | 0;
     }
 }
-__webpack_unused_export__ = SHA512_224;
+exports.SHA512_224 = SHA512_224;
 class SHA512_256 extends SHA512 {
     constructor() {
         super(32);
@@ -23827,7 +24073,7 @@ class SHA512_256 extends SHA512 {
         this.Hl = T256_IV[15] | 0;
     }
 }
-__webpack_unused_export__ = SHA512_256;
+exports.SHA512_256 = SHA512_256;
 /**
  * SHA2-256 hash function from RFC 4634.
  *
@@ -23839,49 +24085,19 @@ exports.sha256 = (0, utils_ts_1.createHasher)(() => new SHA256());
 /** SHA2-224 hash function from RFC 4634 */
 exports.sha224 = (0, utils_ts_1.createHasher)(() => new SHA224());
 /** SHA2-512 hash function from RFC 4634. */
-__webpack_unused_export__ = (0, utils_ts_1.createHasher)(() => new SHA512());
+exports.sha512 = (0, utils_ts_1.createHasher)(() => new SHA512());
 /** SHA2-384 hash function from RFC 4634. */
-__webpack_unused_export__ = (0, utils_ts_1.createHasher)(() => new SHA384());
+exports.sha384 = (0, utils_ts_1.createHasher)(() => new SHA384());
 /**
  * SHA2-512/256 "truncated" hash function, with improved resistance to length extension attacks.
  * See the paper on [truncated SHA512](https://eprint.iacr.org/2010/548.pdf).
  */
-__webpack_unused_export__ = (0, utils_ts_1.createHasher)(() => new SHA512_256());
+exports.sha512_256 = (0, utils_ts_1.createHasher)(() => new SHA512_256());
 /**
  * SHA2-512/224 "truncated" hash function, with improved resistance to length extension attacks.
  * See the paper on [truncated SHA512](https://eprint.iacr.org/2010/548.pdf).
  */
-__webpack_unused_export__ = (0, utils_ts_1.createHasher)(() => new SHA512_224());
-
-
-/***/ },
-
-/***/ 7785
-(__unused_webpack_module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.sha224 = exports.SHA224 = exports.sha256 = exports.SHA256 = void 0;
-/**
- * SHA2-256 a.k.a. sha256. In JS, it is the fastest hash, even faster than Blake3.
- *
- * To break sha256 using birthday attack, attackers need to try 2^128 hashes.
- * BTC network is doing 2^70 hashes/sec (2^95 hashes/year) as per 2025.
- *
- * Check out [FIPS 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
- * @module
- * @deprecated
- */
-const sha2_ts_1 = __webpack_require__(2650);
-/** @deprecated Use import from `noble/hashes/sha2` module */
-exports.SHA256 = sha2_ts_1.SHA256;
-/** @deprecated Use import from `noble/hashes/sha2` module */
-exports.sha256 = sha2_ts_1.sha256;
-/** @deprecated Use import from `noble/hashes/sha2` module */
-exports.SHA224 = sha2_ts_1.SHA224;
-/** @deprecated Use import from `noble/hashes/sha2` module */
-exports.sha224 = sha2_ts_1.sha224;
+exports.sha512_224 = (0, utils_ts_1.createHasher)(() => new SHA512_224());
 
 
 /***/ },
@@ -45791,6 +46007,9 @@ var typedArrays = availableTypedArrays();
 
 var $slice = callBound('String.prototype.slice');
 
+/** @import { BoundSet, BoundSlice, Cache, Getter } from './types' */
+/** @import { TypedArrayName } from '.' */
+
 /** @type {<T = unknown>(array: readonly T[], value: unknown) => number} */
 var $indexOf = callBound('Array.prototype.indexOf', true) || function indexOf(array, value) {
 	for (var i = 0; i < array.length; i += 1) {
@@ -45801,8 +46020,7 @@ var $indexOf = callBound('Array.prototype.indexOf', true) || function indexOf(ar
 	return -1;
 };
 
-/** @typedef {import('./types').Getter} Getter */
-/** @type {import('./types').Cache} */
+/** @type {Cache} */
 var cache = { __proto__: null };
 if (hasToStringTag && gOPD && getProto) {
 	forEach(typedArrays, function (typedArray) {
@@ -45819,7 +46037,8 @@ if (hasToStringTag && gOPD && getProto) {
 			if (descriptor && descriptor.get) {
 				var bound = callBind(descriptor.get);
 				cache[
-					/** @type {`$${import('.').TypedArrayName}`} */ ('$' + typedArray)
+					/** @type {`$${TypedArrayName}`} */
+					('$' + typedArray)
 				] = bound;
 			}
 		}
@@ -45829,62 +46048,72 @@ if (hasToStringTag && gOPD && getProto) {
 		var arr = new g[typedArray]();
 		var fn = arr.slice || arr.set;
 		if (fn) {
-			var bound = /** @type {import('./types').BoundSlice | import('./types').BoundSet} */ (
+			var bound = /** @type {BoundSlice | BoundSet} */ (
 				// @ts-expect-error TODO FIXME
 				callBind(fn)
 			);
 			cache[
-				/** @type {`$${import('.').TypedArrayName}`} */ ('$' + typedArray)
+				/** @type {`$${TypedArrayName}`} */
+				('$' + typedArray)
 			] = bound;
 		}
 	});
 }
 
-/** @type {(value: object) => false | import('.').TypedArrayName} */
-var tryTypedArrays = function tryAllTypedArrays(value) {
-	/** @type {ReturnType<typeof tryAllTypedArrays>} */ var found = false;
+/** @type {(value: object) => false | TypedArrayName} */
+function tryTypedArrays(value) {
+	/** @type {ReturnType<typeof tryTypedArrays>} */ var found = false;
 	forEach(
-		/** @type {Record<`\$${import('.').TypedArrayName}`, Getter>} */ (cache),
-		/** @type {(getter: Getter, name: `\$${import('.').TypedArrayName}`) => void} */
+		/** @type {Record<`$${TypedArrayName}`, Getter>} */ (cache),
+		/** @param {Getter} getter @param {`$${TypedArrayName}`} typedArray */
 		function (getter, typedArray) {
 			if (!found) {
 				try {
 					// @ts-expect-error a throw is fine here
 					if ('$' + getter(value) === typedArray) {
-						found = /** @type {import('.').TypedArrayName} */ ($slice(typedArray, 1));
+						found = /** @type {TypedArrayName} */ ($slice(typedArray, 1));
 					}
 				} catch (e) { /**/ }
 			}
 		}
 	);
 	return found;
-};
+}
 
-/** @type {(value: object) => false | import('.').TypedArrayName} */
-var trySlices = function tryAllSlices(value) {
-	/** @type {ReturnType<typeof tryAllSlices>} */ var found = false;
+/** @type {(value: object) => false | TypedArrayName} */
+function trySlices(value) {
+	/** @type {ReturnType<typeof trySlices>} */ var found = false;
 	forEach(
-		/** @type {Record<`\$${import('.').TypedArrayName}`, Getter>} */(cache),
-		/** @type {(getter: Getter, name: `\$${import('.').TypedArrayName}`) => void} */ function (getter, name) {
+		/** @type {Record<`$${TypedArrayName}`, Getter>} */(cache),
+		/** @param {Getter} getter @param {`$${TypedArrayName}`} name */ function (getter, name) {
 			if (!found) {
 				try {
 					// @ts-expect-error a throw is fine here
 					getter(value);
-					found = /** @type {import('.').TypedArrayName} */ ($slice(name, 1));
+					found = /** @type {TypedArrayName} */ ($slice(name, 1));
 				} catch (e) { /**/ }
 			}
 		}
 	);
 	return found;
-};
+}
 
-/** @type {import('.')} */
+/** @type {(tag: unknown) => tag is typeof typedArrays[number]} */
+function isTATag(tag) {
+	return $indexOf(typedArrays, tag) > -1;
+}
+
+/**
+ * @type {import('.')}
+ * @param {unknown} value
+ */
 module.exports = function whichTypedArray(value) {
-	if (!value || typeof value !== 'object') { return false; }
+	if (!value || typeof value !== 'object') {
+		return false;
+	}
 	if (!hasToStringTag) {
-		/** @type {string} */
 		var tag = $slice($toString(value), 8, -1);
-		if ($indexOf(typedArrays, tag) > -1) {
+		if (isTATag(tag)) {
 			return tag;
 		}
 		if (tag !== 'Object') {
@@ -45900,7 +46129,7 @@ module.exports = function whichTypedArray(value) {
 
 /***/ },
 
-/***/ 7286
+/***/ 1438
 (module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
@@ -45921,13 +46150,6 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 /***/ },
 
 /***/ 8535
-() {
-
-/* (ignored) */
-
-/***/ },
-
-/***/ 5470
 () {
 
 /* (ignored) */
