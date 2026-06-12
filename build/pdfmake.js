@@ -1,4 +1,4 @@
-/*! pdfmake v0.3.10, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.3.11, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -25,7 +25,7 @@ __webpack_require__.d(__webpack_exports__, {
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.includes.js
 var es_array_includes = __webpack_require__(187);
 // EXTERNAL MODULE: ./node_modules/pdfkit/js/pdfkit.es.js
-var pdfkit_es = __webpack_require__(7101);
+var pdfkit_es = __webpack_require__(1771);
 ;// ./src/helpers/variableType.js
 /**
  * @param {any} variable
@@ -8757,7 +8757,7 @@ class OutputDocument {
 }
 /* harmony default export */ const src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(1438);
+var FileSaver_min = __webpack_require__(5127);
 ;// ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -15286,7 +15286,7 @@ module.exports = {
 
 /***/ },
 
-/***/ 7101
+/***/ 1771
 (__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -19261,7 +19261,7 @@ class JPEG {
     pos += 2;
     this.width = this.data.readUInt16BE(pos);
     pos += 2;
-    const channels = this.data[pos + 1];
+    const channels = this.data[pos];
     this.colorSpace = COLOR_SPACE_MAP[channels];
     this.obj = null;
   }
@@ -46129,7 +46129,7 @@ module.exports = function whichTypedArray(value) {
 
 /***/ },
 
-/***/ 1438
+/***/ 5127
 (module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
