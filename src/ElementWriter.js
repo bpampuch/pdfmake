@@ -331,16 +331,17 @@ class ElementWriter extends EventEmitter {
 			return false;
 		}
 
+		let xOffset = useBlockXOffset ? (block.xOffset || 0) : ctx.x;
+		let yOffset = useBlockYOffset ? (block.yOffset || 0) : ctx.y;
+
 		block.items.forEach(item => {
 			switch (item.type) {
 				case 'line':
 					var l = item.item.clone();
 
-					if (l._node) {
-						l._node.positions[0].pageNumber = ctx.page + 1;
-					}
-					l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
-					l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+					updateNodePageNumber(l, ctx.page + 1);
+					l.x = (l.x || 0) + xOffset;
+					l.y = (l.y || 0) + yOffset;
 
 					page.items.push({
 						type: 'line',
@@ -351,7 +352,9 @@ class ElementWriter extends EventEmitter {
 				case 'vector':
 					var v = pack(item.item);
 
-					offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+					updateNodePageNumber(v, ctx.page + 1);
+
+					offsetVector(v, xOffset, yOffset);
 					if (v._isFillColorFromUnbreakable) {
 						// If the item is a fillColor from an unbreakable block
 						// We have to add it at the beginning of the items body array of the page
@@ -371,14 +374,17 @@ class ElementWriter extends EventEmitter {
 
 				case 'image':
 				case 'svg':
+				case 'attachment':
 				case 'beginClip':
 				case 'endClip':
 				case 'beginVerticalAlignment':
 				case 'endVerticalAlignment':
 					var img = pack(item.item);
 
-					img.x = (img.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
-					img.y = (img.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+					updateNodePageNumber(img, ctx.page + 1);
+
+					img.x = (img.x || 0) + xOffset;
+					img.y = (img.y || 0) + yOffset;
 
 					page.items.push({
 						type: item.type,
@@ -435,6 +441,12 @@ function addPageItem(page, item, index) {
 		page.items.push(item);
 	} else {
 		page.items.splice(index, 0, item);
+	}
+}
+
+function updateNodePageNumber(item, pageNumber) {
+	if (item._node && item._node.positions.length > 0) {
+		item._node.positions[0].pageNumber = pageNumber;
 	}
 }
 

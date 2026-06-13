@@ -34,6 +34,7 @@ class LayoutBuilder {
 		this.tableLayouts = {};
 		this.nestedLevel = 0;
 		this.verticalAlignmentItemStack = [];
+		this._suppressLinearNodeList = false;
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -259,7 +260,9 @@ class LayoutBuilder {
 				let sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.writer.context().getCurrentPage().pageMargins);
 				this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
 				node = this.docPreprocessor.preprocessBlock(node);
+				this._suppressLinearNodeList = true;
 				this.processNode(this.docMeasure.measureBlock(node));
+				this._suppressLinearNodeList = false;
 				this.writer.commitUnbreakableBlock(sizes.x, sizes.y);
 			}
 		}
@@ -479,7 +482,9 @@ class LayoutBuilder {
 			}
 		};
 
-		this.linearNodeList.push(node);
+		if (!this._suppressLinearNodeList) {
+			this.linearNodeList.push(node);
+		}
 		decorateNode(node);
 
 		if (this.writer.context().getCurrentPage() !== null) {
@@ -1247,7 +1252,7 @@ class LayoutBuilder {
 	// leafs (texts)
 	processLeaf(node) {
 		let line = this.buildNextLine(node);
-		if (line && (node.tocItem || node.id)) {
+		if (line) {
 			line._node = node;
 		}
 		let currentHeight = (line) ? line.getHeight() : 0;
@@ -1419,29 +1424,40 @@ class LayoutBuilder {
 	}
 
 	// images
+	// _node references allow addFragment to update page numbers when unbreakable blocks move pages.
+	// For canvas/qr, _node is set on the first vector since individual vectors are the page items.
 	processImage(node) {
 		let position = this.writer.addImage(node);
 		node.positions.push(position);
+		node._node = node;
 	}
 
 	processCanvas(node) {
 		let positions = this.writer.addCanvas(node);
 		addAll(node.positions, positions);
+		if (node.canvas.length > 0) {
+			node.canvas[0]._node = node;
+		}
 	}
 
 	processSVG(node) {
 		let position = this.writer.addSVG(node);
 		node.positions.push(position);
+		node._node = node;
 	}
 
 	processQr(node) {
 		let position = this.writer.addQr(node);
 		node.positions.push(position);
+		if (node._canvas && node._canvas.length > 0) {
+			node._canvas[0]._node = node;
+		}
 	}
 
 	processAttachment(node) {
 		let position = this.writer.addAttachment(node);
 		node.positions.push(position);
+		node._node = node;
 	}
 }
 
