@@ -127,7 +127,7 @@ class DocMeasure {
 	}
 
 	convertIfBase64Image(node) {
-		if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) { // base64 image
+		if (/^data:(image\/(jpeg|jpg|png)|application\/octet-stream);base64,/.test(node.image)) { // base64 data URL (image/* or application/octet-stream)
 			let label = `$$pdfmake$$${this.autoImageIndex++}`;
 			this.pdfDocument.images[label] = node.image;
 			node.image = label;
