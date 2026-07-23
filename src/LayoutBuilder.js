@@ -10,6 +10,7 @@ import { stringifyNode, getNodeId } from './helpers/node';
 import { pack, offsetVector, convertToDynamicContent } from './helpers/tools';
 import TextInlines from './TextInlines';
 import StyleContextStack from './StyleContextStack';
+import { applyBidiToLine } from './helpers/bidi';
 
 function addAll(target, otherArray) {
 	otherArray.forEach(item => {
@@ -584,7 +585,7 @@ class LayoutBuilder {
 		this.writer.moveToNextPage(pageOrientation);
 
 		// Reset snaking column state for the new page
-		// Save lastColumnWidth before reset — if we're inside a nested
+		// Save lastColumnWidth before reset - if we're inside a nested
 		// column group (e.g. product/price row), the reset would overwrite
 		// it with the snaking column width, corrupting inner column layout.
 		let savedLastColumnWidth = ctx.lastColumnWidth;
@@ -903,7 +904,7 @@ class LayoutBuilder {
 			snakingColumns, columnGapForGroup, columnWidthsForContext);
 
 		// IMPORTANT: We iterate ALL columns even when snakingColumns is enabled.
-		// This is intentional — beginColumn() must be called for each column to set up
+		// This is intentional - beginColumn() must be called for each column to set up
 		// proper geometry (widths, offsets) and rowspan/colspan tracking. The
 		// completeColumnGroup() call at the end depends on this bookkeeping to compute
 		// heights correctly. Content processing is skipped for columns > 0 via
@@ -968,7 +969,7 @@ class LayoutBuilder {
 
 			// When snaking, only process content from the first column (i === 0).
 			// Content overflows into subsequent columns via moveToNextColumn().
-			// We skip content processing here but NOT the beginColumn() call above —
+			// We skip content processing here but NOT the beginColumn() call above -
 			// the column geometry setup is still needed for proper layout bookkeeping.
 			const skipForSnaking = snakingColumns && i > 0;
 
@@ -1100,6 +1101,22 @@ class LayoutBuilder {
 
 	// lists
 	processList(orderedList, node) {
+		const isRtl = !!node._rtl;
+		const gapWidth = node._gapSize.width;
+		// Visual width of the marker itself (NOT of its reserved block). RTL
+		// flushes the marker against the outer (right) edge of that block, so we
+		// need the marker's own width to offset it - mirroring how LTR pins every
+		// marker to the block's left edge whatever its width.
+		const markerVisualWidth = marker => {
+			if (marker.canvas && marker.canvas[0]) {
+				const v = marker.canvas[0];
+				if (v.type === 'ellipse') return (v.r1 || 0) * 2;
+				if (v.type === 'rect') return v.w || 0;
+			}
+			if (marker._inlines && marker._inlines[0]) return marker._inlines[0].width || 0;
+			return 0;
+		};
+
 		const addMarkerToFirstLeaf = line => {
 			// I'm not very happy with the way list processing is implemented
 			// (both code and algorithm should be rethinked)
@@ -1110,12 +1127,25 @@ class LayoutBuilder {
 				if (marker.canvas) {
 					let vector = marker.canvas[0];
 
-					offsetVector(vector, -marker._minWidth, 0);
+					if (isRtl) {
+						const x = this.writer.context().availableWidth + gapWidth - markerVisualWidth(marker);
+						offsetVector(vector, x, 0);
+					} else {
+						offsetVector(vector, -marker._minWidth, 0);
+					}
 					this.writer.addVector(vector);
 				} else if (marker._inlines) {
 					let markerLine = new Line(this.pageSize.width);
 					markerLine.addInline(marker._inlines[0]);
-					markerLine.x = -marker._minWidth;
+					if (isRtl) {
+						markerLine.x = this.writer.context().availableWidth + gapWidth - markerVisualWidth(marker);
+						// Without this the marker line inherits the RTL 'right' alignment and
+						// alignLine() shifts it by the whole available width, pushing it off
+						// the page entirely.
+						markerLine.inlines[0].alignment = 'left';
+					} else {
+						markerLine.x = -marker._minWidth;
+					}
 					markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
 					this.writer.addLine(markerLine, true);
 				}
@@ -1125,7 +1155,14 @@ class LayoutBuilder {
 		let items = orderedList ? node.ol : node.ul;
 		let gapSize = node._gapSize;
 
-		this.writer.context().addMargin(gapSize.width);
+		// LTR: reserve gap on the left (text shifts right). RTL: reserve gap on
+		// the right (text width shrinks but x stays the same; markers go on the
+		// right edge).
+		if (isRtl) {
+			this.writer.context().addMargin(0, gapSize.width);
+		} else {
+			this.writer.context().addMargin(gapSize.width);
+		}
 
 		let nextMarker;
 
@@ -1139,7 +1176,11 @@ class LayoutBuilder {
 
 		this.writer.removeListener('lineAdded', addMarkerToFirstLeaf);
 
-		this.writer.context().addMargin(-gapSize.width);
+		if (isRtl) {
+			this.writer.context().addMargin(0, -gapSize.width);
+		} else {
+			this.writer.context().addMargin(-gapSize.width);
+		}
 	}
 
 	// tables
@@ -1307,7 +1348,7 @@ class LayoutBuilder {
 				// Line doesn't fit, forced move to next page/column
 				// Only do snaking-specific break if we're in snaking columns AND NOT inside
 				// a nested non-snaking group (like a table row). Table cells should use
-				// standard page breaks — column breaks happen between table rows instead.
+				// standard page breaks - column breaks happen between table rows instead.
 				if (this.writer.context().inSnakingColumns() && !this.writer.context().isInNestedNonSnakingGroup()) {
 					this.snakingAwarePageBreak(node.pageOrientation);
 
@@ -1414,6 +1455,10 @@ class LayoutBuilder {
 		}
 
 		line.lastLineInParagraph = textNode._inlines.length === 0;
+
+		// Apply bidirectional reordering (UAX #9). No-op if the line contains no
+		// RTL characters and no `rtl: true` is set on any inline.
+		applyBidiToLine(line, this.docMeasure ? this.docMeasure.textInlines : null);
 
 		return line;
 	}
