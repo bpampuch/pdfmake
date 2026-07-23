@@ -203,6 +203,13 @@ class DocMeasure {
 			let textStyle = node.toc.textStyle || {};
 			let numberStyle = node.toc.numberStyle || textStyle;
 			let textMargin = node.toc.textMargin || [0, 0, 0, 0];
+			// measureTable() mirrors the column order when rtl is in effect, so the
+			// title cell ends up in the right-hand column and the page number in the
+			// left-hand one. The alignments have to be mirrored with them, otherwise
+			// the title hugs the inner edge of its column instead of the margin.
+			let isRtl = !!this.styleStack.getProperty('rtl');
+			let titleAlignment = isRtl ? 'right' : 'left';
+			let numberAlignment = isRtl ? 'left' : 'right';
 
 			if (node.toc.sortBy === 'title') {
 				node.toc._items.sort((a, b) => {
@@ -217,8 +224,8 @@ class DocMeasure {
 				let lineNumberStyle = item._textNodeRef.tocNumberStyle || numberStyle;
 				let destination = getNodeId(item._nodeRef);
 				body.push([
-					{ text: item._textNodeRef.text, linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin },
-					{ text: '00000', linkToDestination: destination, alignment: 'right', _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
+					{ text: item._textNodeRef.text, linkToDestination: destination, alignment: titleAlignment, style: lineStyle, margin: lineMargin },
+					{ text: '00000', linkToDestination: destination, alignment: numberAlignment, _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
 				]);
 
 				if (node.toc.outlines) {
