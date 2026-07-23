@@ -439,13 +439,7 @@ class DocMeasure {
 			color: markerColor,
 		};
 
-		let result = { _inlines: this.textInlines.buildInlines(textArray, styleStack).items };
-
-		if (isRtl) {
-			result._leadingCharsWidth = this.textInlines.sizeOfText(separator, styleStack).width;
-		}
-
-		return result;
+		return { _inlines: this.textInlines.buildInlines(textArray, styleStack).items };
 	}
 
 	measureUnorderedList(node) {

@@ -1103,6 +1103,19 @@ class LayoutBuilder {
 	processList(orderedList, node) {
 		const isRtl = !!node._rtl;
 		const gapWidth = node._gapSize.width;
+		// Visual width of the marker itself (NOT of its reserved block). RTL
+		// flushes the marker against the outer (right) edge of that block, so we
+		// need the marker's own width to offset it - mirroring how LTR pins every
+		// marker to the block's left edge whatever its width.
+		const markerVisualWidth = marker => {
+			if (marker.canvas && marker.canvas[0]) {
+				const v = marker.canvas[0];
+				if (v.type === 'ellipse') return (v.r1 || 0) * 2;
+				if (v.type === 'rect') return v.w || 0;
+			}
+			if (marker._inlines && marker._inlines[0]) return marker._inlines[0].width || 0;
+			return 0;
+		};
 
 		const addMarkerToFirstLeaf = line => {
 			// I'm not very happy with the way list processing is implemented
@@ -1115,7 +1128,7 @@ class LayoutBuilder {
 					let vector = marker.canvas[0];
 
 					if (isRtl) {
-						const x = this.writer.context().availableWidth + gapWidth;
+						const x = this.writer.context().availableWidth + gapWidth - markerVisualWidth(marker);
 						offsetVector(vector, x, 0);
 					} else {
 						offsetVector(vector, -marker._minWidth, 0);
@@ -1125,7 +1138,10 @@ class LayoutBuilder {
 					let markerLine = new Line(this.pageSize.width);
 					markerLine.addInline(marker._inlines[0]);
 					if (isRtl) {
-						markerLine.x = this.writer.context().availableWidth + gapWidth - (marker._leadingCharsWidth || 0);
+						markerLine.x = this.writer.context().availableWidth + gapWidth - markerVisualWidth(marker);
+						// Without this the marker line inherits the RTL 'right' alignment and
+						// alignLine() shifts it by the whole available width, pushing it off
+						// the page entirely.
 						markerLine.inlines[0].alignment = 'left';
 					} else {
 						markerLine.x = -marker._minWidth;
