@@ -397,16 +397,16 @@ class LayoutBuilder {
 			let margin = node._margin;
 
 			if (node.pageBreak === 'before') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.pageFlip, node.pageRotation);
 			} else if (node.pageBreak === 'beforeOdd') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation,node.pageFlip, node.pageRotation);
 				if ((this.writer.context().page + 1) % 2 === 1) {
-					this.writer.moveToNextPage(node.pageOrientation);
+					this.writer.moveToNextPage(node.pageOrientation,node.pageFlip, node.pageRotation);
 				}
 			} else if (node.pageBreak === 'beforeEven') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.pageFlip, node.pageRotation);
 				if ((this.writer.context().page + 1) % 2 === 0) {
-					this.writer.moveToNextPage(node.pageOrientation);
+					this.writer.moveToNextPage(node.pageOrientation, node.pageFlip, node.pageRotation);
 				}
 			}
 
@@ -423,7 +423,7 @@ class LayoutBuilder {
 					if (this.writer.context().inSnakingColumns() && !this.writer.context().isInNestedNonSnakingGroup()) {
 						this.snakingAwarePageBreak(node.pageOrientation);
 					} else {
-						this.writer.moveToNextPage(node.pageOrientation);
+						this.writer.moveToNextPage(node.pageOrientation, node.pageFlip, node.pageRotation);
 					}
 					/**
 					 * TODO - Something to consider:
@@ -449,7 +449,7 @@ class LayoutBuilder {
 					if (this.writer.context().inSnakingColumns() && !this.writer.context().isInNestedNonSnakingGroup()) {
 						this.snakingAwarePageBreak(node.pageOrientation);
 					} else {
-						this.writer.moveToNextPage(node.pageOrientation);
+						this.writer.moveToNextPage(node.pageOrientation, node.pageFlip, node.pageRotation);
 					}
 					/**
 					 * TODO - Something to consider:
@@ -465,16 +465,16 @@ class LayoutBuilder {
 			}
 
 			if (node.pageBreak === 'after') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.pageFlip, node.pageRotation);
 			} else if (node.pageBreak === 'afterOdd') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.pageFlip, node.pageRotation);
 				if ((this.writer.context().page + 1) % 2 === 1) {
-					this.writer.moveToNextPage(node.pageOrientation);
+					this.writer.moveToNextPage(node.pageOrientation, node.pageFlip, node.pageRotation);
 				}
 			} else if (node.pageBreak === 'afterEven') {
-				this.writer.moveToNextPage(node.pageOrientation);
+				this.writer.moveToNextPage(node.pageOrientation, node.pageFlip, node.pageRotation);
 				if ((this.writer.context().page + 1) % 2 === 0) {
-					this.writer.moveToNextPage(node.pageOrientation);
+					this.writer.moveToNextPage(node.pageOrientation, node.pageFlip, node.pageRotation);
 				}
 			}
 		};
@@ -566,8 +566,9 @@ class LayoutBuilder {
 	 * When in snaking columns, first tries moving to next column.
 	 * If no columns available, moves to next page and resets x to left margin.
 	 * @param {string} pageOrientation - Optional page orientation for the new page
+	 * @param {string} pageFlip - Optional page flip for the new page
 	 */
-	snakingAwarePageBreak(pageOrientation) {
+	snakingAwarePageBreak(pageOrientation, pageFlip) {
 		let ctx = this.writer.context();
 		let snakingSnapshot = ctx.getSnakingSnapshot();
 		if (!snakingSnapshot) {
@@ -581,7 +582,7 @@ class LayoutBuilder {
 		}
 
 		// No more columns available, move to new page
-		this.writer.moveToNextPage(pageOrientation);
+		this.writer.moveToNextPage(pageOrientation, pageFlip);
 
 		// Reset snaking column state for the new page
 		// Save lastColumnWidth before reset — if we're inside a nested

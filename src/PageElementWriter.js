@@ -69,8 +69,8 @@ class PageElementWriter extends ElementWriter {
 		return this._fitOnPage(() => super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition));
 	}
 
-	moveToNextPage(pageOrientation) {
-		let nextPage = this.context().moveToNextPage(pageOrientation);
+	moveToNextPage(pageOrientation, pageFlip, pageRotation) {
+		let nextPage = this.context().moveToNextPage(pageOrientation, pageFlip, pageRotation);
 
 		// moveToNextPage is called multiple times for table, because is called for each column
 		// and repeatables are inserted only in the first time. If columns are used, is needed
