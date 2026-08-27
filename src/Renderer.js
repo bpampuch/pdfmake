@@ -57,9 +57,14 @@ class Renderer {
 		let renderedItems = 0;
 
 		for (let i = 0; i < pages.length; i++) {
-			this.pdfDocument.addPage({ size: [pages[i].pageSize.width, pages[i].pageSize.height] });
-
+			if(pages[i].pageRotation === 90 || pages[i].pageRotation === 270){
+				this.pdfDocument.addPage({ size: [pages[i].pageSize.height, pages[i].pageSize.width] });
+			}
+			else{
+				this.pdfDocument.addPage({ size: [pages[i].pageSize.width, pages[i].pageSize.height] });
+			}
 			let page = pages[i];
+			let pageStateSaved = this.applyPageRotation(page);
 			for (let ii = 0, il = page.items.length; ii < il; ii++) {
 				let item = page.items[ii];
 				switch (item.type) {
@@ -98,6 +103,9 @@ class Renderer {
 			}
 			if (page.watermark) {
 				this.renderWatermark(page);
+			}
+			if(pageStateSaved){
+				this.pdfDocument.restore();
 			}
 		}
 	}
@@ -431,6 +439,37 @@ class Renderer {
 				this.pdfDocument.restore();
 				break;
 		}
+	}
+
+	applyPageRotation(page) {
+		const rotation = page.pageRotation;
+		if (rotation === undefined) {
+			return false;
+		}
+
+		const width = page.pageSize.width;
+		const height = page.pageSize.height;
+
+		this.pdfDocument.save();
+
+		switch (rotation) {
+			case 90:
+				this.pdfDocument.rotate(90);
+				this.pdfDocument.translate(0, -height);
+				break;
+
+			case 180:
+				this.pdfDocument.rotate(180);
+				this.pdfDocument.translate(-width, -height);
+				break;
+
+			case 270:
+				this.pdfDocument.rotate(270);
+				this.pdfDocument.translate(-width, 0);
+				break;
+		}
+
+		return true;
 	}
 
 	renderWatermark(page) {

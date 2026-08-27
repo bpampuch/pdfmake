@@ -1289,6 +1289,104 @@ describe('LayoutBuilder', function () {
 			assert.equal(pages[2].pageSize.orientation, 'landscape');
 		});
 
+		it('should apply document page rotation to every page', function () {
+
+			var desc = [
+				{ text: 'Page 1' },
+				{ text: 'Page 2', pageBreak: 'before' }
+			];
+
+			var pages = builder.layoutDocument(
+				desc,
+				sampleTestProvider,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				90
+			);
+
+			assert.equal(pages.length, 2);
+			assert.equal(pages[0].pageRotation, 90);
+			assert.equal(pages[1].pageRotation, 90);
+		});
+
+		it('should allow a node to override document page rotation', function () {
+
+			var desc = [
+				{
+					text: 'Page 1'
+				},
+				{
+					text: 'Page 2',
+					pageBreak: 'before',
+					pageRotation: 180
+				},
+				{
+					text: 'Page 3',
+					pageBreak: 'before'
+				}
+			];
+			
+			var pages = builder.layoutDocument(
+				desc,
+				sampleTestProvider,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				90
+			);
+
+			assert.equal(pages.length, 3);
+			assert.equal(pages[0].pageRotation, 90);
+			assert.equal(pages[1].pageRotation, 180);
+			assert.equal(pages[2].pageRotation, 90);
+		});
+
+		it('should support page rotation on a node without a document rotation', function () {
+			var desc = [
+				{
+					text: 'Page 1'
+				},
+				{
+					text: 'Page 2',
+					pageBreak: 'before',
+					pageRotation: 270
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 2);
+			assert.equal(pages[0].pageRotation, undefined);
+			assert.equal(pages[1].pageRotation, 270);
+		});
+
+		it('should leave page rotation undefined when no rotation is specified', function () {
+			var desc = [
+				{
+					text: 'Page 1'
+				},
+				{
+					text: 'Page 2',
+					pageBreak: 'before'
+				}
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 2);
+			assert.equal(pages[0].pageRotation, undefined);
+			assert.equal(pages[1].pageRotation, undefined);
+		});
+
 		it('should use the absolutePosition attribute to position in absolute coordinates', function () {
 			var desc = [
 				{
