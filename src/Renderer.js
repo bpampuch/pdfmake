@@ -64,7 +64,7 @@ class Renderer {
 				this.pdfDocument.addPage({ size: [pages[i].pageSize.width, pages[i].pageSize.height] });
 			}
 			let page = pages[i];
-			let flipped = this.applyPageFlip(page);
+			let pageStateSaved = this.applyPageRotation(page);
 			for (let ii = 0, il = page.items.length; ii < il; ii++) {
 				let item = page.items[ii];
 				switch (item.type) {
@@ -104,7 +104,7 @@ class Renderer {
 			if (page.watermark) {
 				this.renderWatermark(page);
 			}
-			if(flipped){
+			if(pageStateSaved){
 				this.pdfDocument.restore();
 			}
 		}
@@ -441,10 +441,9 @@ class Renderer {
 		}
 	}
 
-	applyPageFlip(page) {
-		const flip = page.pageFlip;
+	applyPageRotation(page) {
 		const rotation = page.pageRotation;
-		if (!flip && rotation === undefined) {
+		if (rotation === undefined) {
 			return false;
 		}
 
@@ -468,21 +467,6 @@ class Renderer {
 				this.pdfDocument.rotate(270);
 				this.pdfDocument.translate(-width, 0);
 				break;
-		}
-
-		if(flip?.vertical){
-			this.pdfDocument.transform(
-				1, 0,
-				0, -1,
-				0, height
-			);
-		}
-		if(flip?.horizontal){
-			this.pdfDocument.transform(
-				-1, 0,
-				0, 1,
-				width, 0
-			);
 		}
 
 		return true;

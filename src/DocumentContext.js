@@ -447,7 +447,7 @@ class DocumentContext extends EventEmitter {
 		this.lastColumnWidth = saved.lastColumnWidth;
 	}
 
-	moveToNextPage(pageOrientation, pageFlip, pageRotation) {
+	moveToNextPage(pageOrientation, pageRotation) {
 		let nextPageIndex = this.page + 1;
 		let prevPage = this.page;
 		let prevY = this.y;
@@ -469,7 +469,7 @@ class DocumentContext extends EventEmitter {
 
 			let pageSize = getPageSize(this.getCurrentPage(), pageOrientation);
 
-			this.addPage(pageSize, null, this.getCurrentPage().customProperties, pageFlip, pageRotation);
+			this.addPage(pageSize, null, this.getCurrentPage().customProperties, pageRotation);
 
 			if (currentPageOrientation === pageSize.orientation) {
 				this.availableWidth = currentAvailableWidth;
@@ -487,14 +487,14 @@ class DocumentContext extends EventEmitter {
 		};
 	}
 
-	addPage(pageSize, pageMargin = null, customProperties = {}, pageFlip = {}, pageRotation = undefined) {
+	addPage(pageSize, pageMargin = null, customProperties = {}, pageRotation = undefined) {
 		if (pageMargin !== null) {
 			this.pageMargins = pageMargin;
 			this.x = pageMargin.left;
 			this.availableWidth = pageSize.width - pageMargin.left - pageMargin.right;
 		}
 
-		let page = { items: [], pageSize: pageSize, pageMargins: this.pageMargins, customProperties: customProperties, pageFlip, pageRotation };
+		let page = { items: [], pageSize: pageSize, pageMargins: this.pageMargins, customProperties: customProperties, pageRotation };
 		this.pages.push(page);
 		this.backgroundLength.push(0);
 		this.page = this.pages.length - 1;

@@ -14,9 +14,11 @@ class PageElementWriter extends ElementWriter {
 
 	/**
 	 * @param {DocumentContext} context
+	 * @param {number} pageRotation
 	 */
-	constructor(context) {
+	constructor(context, pageRotation) {
 		super(context);
+		this.pageRotation = pageRotation;
 		this.transactionLevel = 0;
 		this.repeatables = [];
 	}
@@ -69,8 +71,8 @@ class PageElementWriter extends ElementWriter {
 		return this._fitOnPage(() => super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition));
 	}
 
-	moveToNextPage(pageOrientation, pageFlip, pageRotation) {
-		let nextPage = this.context().moveToNextPage(pageOrientation, pageFlip, pageRotation);
+	moveToNextPage(pageOrientation, pageRotation) {
+		let nextPage = this.context().moveToNextPage(pageOrientation, pageRotation ?? this.pageRotation);
 
 		// moveToNextPage is called multiple times for table, because is called for each column
 		// and repeatables are inserted only in the first time. If columns are used, is needed
@@ -91,11 +93,11 @@ class PageElementWriter extends ElementWriter {
 		});
 	}
 
-	addPage(pageSize, pageOrientation, pageMargin, customProperties = {}) {
+	addPage(pageSize, pageOrientation, pageMargin, customProperties = {}, pageRotation = undefined) {
 		let prevPage = this.page;
 		let prevY = this.y;
 
-		this.context().addPage(normalizePageSize(pageSize, pageOrientation), normalizePageMargin(pageMargin), customProperties);
+		this.context().addPage(normalizePageSize(pageSize, pageOrientation), normalizePageMargin(pageMargin), customProperties, pageRotation ?? this.pageRotation);
 
 		this.emit('pageChanged', {
 			prevPage: prevPage,
