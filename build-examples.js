@@ -36,9 +36,6 @@ function buildExamples() {
 			}
 
 			if (position === files.length) {
-				console.log('PDFs are generated reproducibly, so `git status` lists exactly the examples');
-				console.log('affected by your changes.');
-
 				if (errCount) {
 					console.error('Errors count: ', errCount);
 					process.exitCode = 1;
