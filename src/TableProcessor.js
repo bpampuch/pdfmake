@@ -163,10 +163,11 @@ class TableProcessor {
 		this.rowPaddingTop = this.layout.paddingTop(rowIndex, this.tableNode);
 		this.bottomLineWidth = this.layout.hLineWidth(rowIndex + 1, this.tableNode);
 		this.rowPaddingBottom = this.layout.paddingBottom(rowIndex, this.tableNode);
-		const currentPage = writer.context().getCurrentPage();
-		// Row borders are drawn later in endRow, potentially on a different page.
-		// Keep the row's offset from the page margin so it can be reanchored safely.
-		this.rowXOffset = currentPage && currentPage.pageMargins ? writer.context().x - currentPage.pageMargins.left : writer.context().x;
+		// Row borders are drawn later in endRow, potentially on a page whose margins
+		// differ. Record where the row starts together with the page that X belongs to,
+		// so endRow can re-anchor it through the context.
+		this.rowStartX = writer.context().x;
+		this.rowStartPage = writer.context().page;
 
 		this.rowCallback = this.onRowBreak(rowIndex, writer);
 		writer.addListener('pageChanged', this.rowCallback);
@@ -465,13 +466,9 @@ class TableProcessor {
 				this.reservedAtBottom = 0;
 			}
 
-			const currentPage = writer.context().getCurrentPage();
-			if (currentPage && currentPage.pageMargins) {
-				// Broken rows reuse the same column geometry on the next page, but their
-				// absolute X must be recalculated from that page's margins.
-				writer.context().x = currentPage.pageMargins.left + this.rowXOffset;
-				writer.context().availableWidth = currentPage.pageSize.width - writer.context().x - currentPage.pageMargins.right;
-			}
+			// Broken rows reuse the same column geometry on each page they span, so the
+			// row's starting X is re-anchored onto whichever page we are drawing on.
+			writer.context().moveToTranslatedX(this.rowStartX, this.rowStartPage);
 
 			// Draw horizontal lines before the vertical lines so they are not overridden
 			if (willBreak && this.layout.hLineWhenBroken !== false) {

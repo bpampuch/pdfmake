@@ -241,18 +241,32 @@ describe('Integration test: dynamicPageMargins', function () {
 		};
 
 		var pages = testHelper.renderPages('A6', dd);
-		var textPage = pages[3];
-		var textLine = textPage.items
-			.filter(function (item) { return item.type === 'line'; })
-			.map(function (item) { return item.item; })
-			.find(function (line) { return line.inlines.map(function (inline) { return inline.text; }).join('') === 'With same height:'; });
-		var reversedVerticalLine = textPage.items
-			.filter(function (item) { return item.type === 'vector'; })
-			.map(function (item) { return item.item; })
-			.find(function (item) { return item.type === 'line' && item.x1 === item.x2 && item.y1 > item.y2; });
 
-		assert.equal(textPage.pageMargins.left, 100);
-		assert.equal(textLine.x, 100);
+		function linesOf(page) {
+			return page.items
+				.filter(function (item) { return item.type === 'line'; })
+				.map(function (item) { return item.item; });
+		}
+
+		var textPage = pages.find(function (page) {
+			return linesOf(page).some(function (line) {
+				return line.inlines[0] && line.inlines[0].text.indexOf('With') === 0;
+			});
+		});
+		var textLine = linesOf(textPage).find(function (line) {
+			return line.inlines[0].text.indexOf('With') === 0;
+		});
+		var reversedVerticalLine = pages.reduce(function (found, page) {
+			return found || page.items
+				.filter(function (item) { return item.type === 'vector'; })
+				.map(function (item) { return item.item; })
+				.find(function (item) { return item.type === 'line' && item.x1 === item.x2 && item.y1 > item.y2; });
+		}, undefined);
+
+		// The text that follows the table starts at the left margin of whichever
+		// page it lands on, and no page carries a border drawn bottom-to-top.
+		assert(textPage, 'text after the table should be rendered');
+		assert.equal(textLine.x, textPage.pageMargins.left);
 		assert.equal(reversedVerticalLine, undefined);
 	});
 

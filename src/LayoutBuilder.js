@@ -24,12 +24,14 @@ function addAll(target, otherArray) {
 class LayoutBuilder {
 	/**
 	 * @param {object} pageSize - an object defining page width and height
-	 * @param {object} pageMargins - an object defining top, left, right and bottom margins
+	 * @param {object|Function} pageMargins - an object defining top, left, right and bottom
+	 *   margins, or a callback returning one per page. Held unresolved; DocumentContext
+	 *   resolves it against each page as that page is added.
 	 * @param {object} svgMeasure
 	 */
 	constructor(pageSize, pageMargins, svgMeasure) {
 		this.pageSize = pageSize;
-		this.pageMargins = pageMargins;
+		this.pageMarginsSetting = pageMargins;
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = {};
 		this.nestedLevel = 0;
@@ -167,10 +169,20 @@ class LayoutBuilder {
 			}
 		}
 
+		const layoutOptions = {
+			docStructure,
+			pdfDocument,
+			defaultStyle,
+			background,
+			header,
+			footer,
+			watermark
+		};
+
 		const MAX_LAYOUT_PASSES = 10;
 		let pagesCount = 0;
 		let layoutPass = 0;
-		let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pagesCount);
+		let result = this.tryLayoutDocument({ ...layoutOptions, pageCount: pagesCount });
 		let pageMarginAssumptionOrder = [pagesCount];
 		let pageMarginWarned = false;
 
@@ -190,13 +202,13 @@ class LayoutBuilder {
 				pagesCount = nextPagesCount;
 				pageMarginAssumptionOrder.push(pagesCount);
 				resetXYs(result);
-				result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pagesCount);
+				result = this.tryLayoutDocument({ ...layoutOptions, pageCount: pagesCount });
 				continue;
 			}
 
 			if (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
 				resetXYs(result);
-				result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark, pagesCount);
+				result = this.tryLayoutDocument({ ...layoutOptions, pageCount: pagesCount });
 				continue;
 			}
 
@@ -206,17 +218,16 @@ class LayoutBuilder {
 		return result.pages;
 	}
 
-	tryLayoutDocument(
+	tryLayoutDocument({
 		docStructure,
 		pdfDocument,
-		styleDictionary,
 		defaultStyle,
 		background,
 		header,
 		footer,
 		watermark,
 		pageCount
-	) {
+	}) {
 
 		const isNecessaryAddFirstPage = (docStructure) => {
 			if (docStructure.stack && docStructure.stack.length > 0 && docStructure.stack[0].section) {
@@ -233,7 +244,7 @@ class LayoutBuilder {
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
 		let documentContext = new DocumentContext();
-		documentContext.pageMargins = this.pageMargins;
+		documentContext.pageMarginsSetting = this.pageMarginsSetting;
 		documentContext.pageCount = pageCount;
 		this.writer = new PageElementWriter(documentContext);
 
@@ -250,7 +261,7 @@ class LayoutBuilder {
 			this.writer.addPage(
 				this.pageSize,
 				null,
-				this.pageMargins
+				this.pageMarginsSetting
 			);
 		}
 
@@ -705,7 +716,7 @@ class LayoutBuilder {
 			this.writer.addPage(
 				sectionNode.pageSize || this.pageSize,
 				sectionNode.pageOrientation,
-				sectionNode.pageMargins || this.pageMargins,
+				sectionNode.pageMargins || this.pageMarginsSetting,
 				customProperties
 			);
 		}
@@ -1342,7 +1353,7 @@ class LayoutBuilder {
 
 		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
 			// Check if line fits vertically in current context
-			if (line.getHeight() > this.writer.context().availableHeight && this.writer.context().y > this.writer.context().pageMargins.top) {
+			if (line.getHeight() > this.writer.context().availableHeight && this.writer.context().y > this.writer.context().getPageMargins().top) {
 				// Line doesn't fit, forced move to next page/column
 				// Only do snaking-specific break if we're in snaking columns AND NOT inside
 				// a nested non-snaking group (like a table row). Table cells should use

@@ -1693,6 +1693,47 @@ describe('LayoutBuilder', function () {
 			assert.equal(result.pageBreaks.length, 0);
 		});
 
+		it('on a row taller than the remaining space should return an entry even though the content itself did not break', function () {
+			// A fixed `heights` entry can push a row onto the next page while all of its
+			// cell content still fits on the current one, so no pageChanged event fires.
+			// TableProcessor still needs the break recorded, otherwise it draws the row's
+			// borders as a single span across two pages (bottom-to-top vertical lines).
+			var doc = createTable(0, 1);
+			var availableHeight = builder2.writer.context().availableHeight;
+
+			var result = builder2.processRow({
+				cells: doc.table.body[0],
+				widths: doc.table.widths,
+				gaps: doc._offsets.offsets,
+				tableBody: doc.table.body,
+				rowIndex: 0,
+				height: availableHeight + 100
+			});
+
+			assert.equal(result.pageBreaks.length, 1);
+			assert.equal(result.pageBreaks[0].prevPage, 0);
+			assert.equal(result.pageBreaks[0].prevY, 40 + availableHeight);
+			assert.equal(result.pageBreaks[0].y, 40);
+			assert.equal(result.pageBreaks[0].rowIndex, 0);
+		});
+
+		it('should not break a row taller than the remaining space when the row is unbreakable', function () {
+			var doc = createTable(0, 1);
+			var availableHeight = builder2.writer.context().availableHeight;
+
+			var result = builder2.processRow({
+				cells: doc.table.body[0],
+				widths: doc.table.widths,
+				gaps: doc._offsets.offsets,
+				tableBody: doc.table.body,
+				rowIndex: 0,
+				height: availableHeight + 100,
+				dontBreakRows: true
+			});
+
+			assert.equal(result.pageBreaks.length, 0);
+		});
+
 		it('on page break should return an entry with ending/starting positions', function () {
 			var doc = createTable(0, 1, 10, 5, 5);
 			var result = builder2.processRow({
