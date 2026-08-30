@@ -1032,6 +1032,42 @@ describe('Integration test: snaking columns', function () {
 		assert.ok(lineWidth > 150, 'Page 2 separate column should have reset to wide width (>150), found: ' + lineWidth);
 	});
 
+	it('should reflow the first carried line when dynamic margins snake into a narrower column', function () {
+		var dd = {
+			pageMargins: function (currentPage) {
+				return {
+					left: currentPage % 2 === 0 ? 100 : 20,
+					top: 20,
+					right: currentPage % 2 === 0 ? 20 : 100,
+					bottom: 20
+				};
+			},
+			content: [
+				{
+					columns: [
+						{ text: 'Wide content ' + 'text '.repeat(2000), width: 300, fontSize: 10 },
+						{ text: '', width: '*' }
+					],
+					columnGap: 10,
+					snakingColumns: true
+				}
+			]
+		};
+
+		var pages = testHelper.renderPages('A4', dd);
+		var page1 = pages[0];
+		var lines = page1.items.filter(function (item) { return item.type === 'line'; }).map(function (item) { return item.item; });
+		var secondColumnLines = lines.filter(function (line) { return line.x > 320; });
+		var firstSecondColumnLine = secondColumnLines[0];
+		var rightLimit = page1.pageSize.width - page1.pageMargins.right;
+
+		assert.ok(firstSecondColumnLine, 'Page 1 should continue into the second snaking column');
+		assert.ok(
+			firstSecondColumnLine.x + firstSecondColumnLine.getWidth() <= rightLimit + 0.5,
+			'The first carried line in the second column should respect the page right margin'
+		);
+	});
+
 	describe('snaking columns nested checks', function () {
 
 		it('should respect left margin when snaking columns break to next page', function () {

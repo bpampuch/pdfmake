@@ -1,5 +1,6 @@
 import { isString } from './helpers/variableType';
 import { EventEmitter } from 'events';
+import { normalizePageMargin } from './PageSize';
 
 /**
  * A store for current x, y positions and available width/height.
@@ -9,7 +10,9 @@ class DocumentContext extends EventEmitter {
 	constructor() {
 		super();
 		this.pages = [];
-		this.pageMargins = undefined;
+		this.pageMarginsSetting = undefined;
+		this.pageCount = 0;
+		this.pageMarginFunctionUsed = false;
 		this.x = undefined;
 		this.availableWidth = undefined;
 		this.availableHeight = undefined;
@@ -102,6 +105,59 @@ class DocumentContext extends EventEmitter {
 		return false;
 	}
 
+	/**
+	 * The resolved margins of a page: always a concrete {left, right, top, bottom},
+	 * unlike pageMarginsSetting, which may still be the user's callback.
+	 *
+	 * @param {number} [pageIndex] - defaults to the current page
+	 * @returns {object|undefined}
+	 */
+	getPageMargins(pageIndex = this.page) {
+		let page = this.pages[pageIndex];
+
+		return page ? page.pageMargins : undefined;
+	}
+
+	/**
+	 * Re-anchor an absolute X measured on `fromPage` so it means the same thing on
+	 * `toPage`. Only moves the coordinate when the two pages have different left
+	 * margins, which can only happen with a dynamic `pageMargins` callback.
+	 *
+	 * Every X that outlives the page it was measured on goes through here, so each
+	 * caller has to say which page it came from rather than re-deriving the offset.
+	 *
+	 * @param {number} x
+	 * @param {number} fromPage - index of the page x was measured on
+	 * @param {number} toPage - index of the page x should apply to
+	 * @returns {number}
+	 */
+	translateXBetweenPages(x, fromPage, toPage) {
+		let from = this.getPageMargins(fromPage);
+		let to = this.getPageMargins(toPage);
+		if (!from || !to) {
+			return x;
+		}
+
+		return x + (to.left - from.left);
+	}
+
+	/**
+	 * Move the cursor to where `x`, measured on `fromPage`, lands on the current page,
+	 * and refit the available width to the current page's right margin.
+	 *
+	 * @param {number} x
+	 * @param {number} fromPage - index of the page x was measured on
+	 */
+	moveToTranslatedX(x, fromPage) {
+		let page = this.getCurrentPage();
+		if (!page || !page.pageMargins) {
+			return;
+		}
+
+		this.x = this.translateXBetweenPages(x, fromPage, this.page);
+		this.availableWidth = page.pageSize.width - this.x - page.pageMargins.right;
+	}
+
 	beginColumn(width, offset, endingCell) {
 		// Find the correct snapshot for this column group.
 		// When a snaking column break (moveToNextColumn) occurs during inner column
@@ -119,8 +175,10 @@ class DocumentContext extends EventEmitter {
 
 		this.calculateBottomMost(saved, endingCell);
 
+		// The previous column may have ended on a later page than the one this group
+		// started on, so bring its X back onto the group's page before advancing.
+		this.x = this.translateXBetweenPages(this.x, this.page, saved.page) + this.lastColumnWidth + (offset || 0);
 		this.page = saved.page;
-		this.x = this.x + this.lastColumnWidth + (offset || 0);
 		this.y = saved.y;
 		this.availableWidth = width;	//saved.availableWidth - offset;
 		this.availableHeight = saved.availableHeight;
@@ -207,7 +265,9 @@ class DocumentContext extends EventEmitter {
 
 		this.calculateBottomMost(saved, endingCell);
 
-		this.x = saved.x;
+		// The group started on saved.page but ends on saved.bottomMost.page; its left
+		// edge has to be re-anchored when those two pages have different margins.
+		this.x = this.translateXBetweenPages(saved.x, saved.page, saved.bottomMost.page);
 
 		let y = saved.bottomMost.y;
 		if (height) {
@@ -332,8 +392,9 @@ class DocumentContext extends EventEmitter {
 			return;
 		}
 
-		let pageTopY = this.pageMargins.top;
-		let pageInnerHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+		let margins = this.getPageMargins();
+		let pageTopY = margins.top;
+		let pageInnerHeight = this.getCurrentPage().pageSize.height - margins.top - margins.bottom;
 
 		// When moving to new page, start at first column.
 		// Reset width to FIRST column width, not last column from previous page.
@@ -346,9 +407,9 @@ class DocumentContext extends EventEmitter {
 
 		// Reset X to start of first column (left margin)
 		if (this.marginXTopParent) {
-			this.x = this.pageMargins.left + this.marginXTopParent[0];
+			this.x = margins.left + this.marginXTopParent[0];
 		} else {
-			this.x = this.pageMargins.left;
+			this.x = margins.left;
 		}
 		this.availableWidth = firstColumnWidth;
 		this.lastColumnWidth = firstColumnWidth;
@@ -387,10 +448,13 @@ class DocumentContext extends EventEmitter {
 	}
 
 	initializePage() {
-		this.y = this.pageMargins.top;
-		this.availableHeight = this.getCurrentPage().pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
+		let pageSize = this.getCurrentPage().pageSize;
+		let margins = this.getPageMargins();
+
+		this.y = margins.top;
+		this.availableHeight = pageSize.height - margins.top - margins.bottom;
 		const { pageCtx, isSnapshot } = this.pageSnapshot();
-		pageCtx.availableWidth = this.getCurrentPage().pageSize.width - this.pageMargins.left - this.pageMargins.right;
+		pageCtx.availableWidth = pageSize.width - margins.left - margins.right;
 		if (isSnapshot && this.marginXTopParent) {
 			pageCtx.availableWidth -= this.marginXTopParent[0];
 			pageCtx.availableWidth -= this.marginXTopParent[1];
@@ -406,13 +470,16 @@ class DocumentContext extends EventEmitter {
 	}
 
 	moveTo(x, y) {
+		let pageSize = this.getCurrentPage().pageSize;
+		let margins = this.getPageMargins();
+
 		if (x !== undefined && x !== null) {
 			this.x = x;
-			this.availableWidth = this.getCurrentPage().pageSize.width - this.x - this.pageMargins.right;
+			this.availableWidth = pageSize.width - this.x - margins.right;
 		}
 		if (y !== undefined && y !== null) {
 			this.y = y;
-			this.availableHeight = this.getCurrentPage().pageSize.height - this.y - this.pageMargins.bottom;
+			this.availableHeight = pageSize.height - this.y - margins.bottom;
 		}
 	}
 
@@ -470,13 +537,20 @@ class DocumentContext extends EventEmitter {
 			let pageSize = getPageSize(this.getCurrentPage(), pageOrientation);
 			this.addPage(pageSize, null, this.getCurrentPage().customProperties);
 
-			if (currentPageOrientation === pageSize.orientation) {
+			// Inside a column group the column width has to survive the page break;
+			// outside of one the new page's own inner width (set by initializePage)
+			// is what applies, which matters when page margins vary per page.
+			if (currentPageOrientation === pageSize.orientation && this.snapshots.length > 0) {
 				this.availableWidth = currentAvailableWidth;
 			}
 		} else {
 			this.page = nextPageIndex;
 			this.initializePage();
 		}
+
+		// The position we carry onto the new page was measured against the margins of
+		// the page we just left, which may differ (dynamic pageMargins).
+		this.x = this.translateXBetweenPages(this.x, prevPage, this.page);
 
 		return {
 			newPageCreated: createNewPage,
@@ -488,12 +562,25 @@ class DocumentContext extends EventEmitter {
 
 	addPage(pageSize, pageMargin = null, customProperties = {}) {
 		if (pageMargin !== null) {
-			this.pageMargins = pageMargin;
-			this.x = pageMargin.left;
-			this.availableWidth = pageSize.width - pageMargin.left - pageMargin.right;
+			this.pageMarginsSetting = pageMargin;
 		}
 
-		let page = { items: [], pageSize: pageSize, pageMargins: this.pageMargins, customProperties: customProperties };
+		let currentMargin = pageMargin !== null ? pageMargin : this.pageMarginsSetting;
+
+		if (typeof currentMargin === 'function') {
+			this.pageMarginFunctionUsed = true;
+			currentMargin = normalizePageMargin(currentMargin(this.pages.length + 1, this.pageCount, pageSize));
+		}
+
+		if (pageMargin !== null && currentMargin) {
+			// An explicit page break starts a fresh flow at the new page's left margin.
+			// An implicit one (from moveToNextPage) instead keeps the horizontal
+			// position, which moveToNextPage then shifts onto the new margins.
+			this.x = currentMargin.left;
+			this.availableWidth = pageSize.width - currentMargin.left - currentMargin.right;
+		}
+
+		let page = { items: [], pageSize: pageSize, pageMargins: currentMargin, customProperties: customProperties };
 		this.pages.push(page);
 		this.backgroundLength.push(0);
 		this.page = this.pages.length - 1;
@@ -514,8 +601,9 @@ class DocumentContext extends EventEmitter {
 
 	getCurrentPosition() {
 		let pageSize = this.getCurrentPage().pageSize;
-		let innerHeight = pageSize.height - this.pageMargins.top - this.pageMargins.bottom;
-		let innerWidth = pageSize.width - this.pageMargins.left - this.pageMargins.right;
+		let margins = this.getPageMargins();
+		let innerHeight = pageSize.height - margins.top - margins.bottom;
+		let innerWidth = pageSize.width - margins.left - margins.right;
 
 		return {
 			pageNumber: this.page + 1,
@@ -524,8 +612,8 @@ class DocumentContext extends EventEmitter {
 			pageInnerWidth: innerWidth,
 			left: this.x,
 			top: this.y,
-			verticalRatio: ((this.y - this.pageMargins.top) / innerHeight),
-			horizontalRatio: ((this.x - this.pageMargins.left) / innerWidth)
+			verticalRatio: ((this.y - margins.top) / innerHeight),
+			horizontalRatio: ((this.x - margins.left) / innerWidth)
 		};
 	}
 }

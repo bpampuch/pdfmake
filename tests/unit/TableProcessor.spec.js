@@ -52,7 +52,14 @@ describe('TableProcessor', function () {
 		addVectorCallCount = 0;
 
 		contextFake = {
-			moveDown: function () { }
+			x: 40,
+			y: 40,
+			availableWidth: 515,
+			page: 0,
+			moveDown: function () { },
+			moveToTranslatedX: function (x) {
+				this.x = x;
+			}
 		};
 
 		writerFake = {
@@ -173,7 +180,9 @@ describe('TableProcessor', function () {
 				context: function () {
 					return {
 						availableWidth: 56473,
-						moveDown: function () { }
+						page: 0,
+						moveDown: function () { },
+						moveToTranslatedX: function () { }
 					};
 				},
 				repeatables: [],

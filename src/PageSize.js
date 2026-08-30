@@ -37,6 +37,10 @@ export function normalizePageSize(pageSize, pageOrientation) {
 }
 
 export function normalizePageMargin(margin) {
+	if (typeof margin === 'function') {
+		return margin;
+	}
+
 	if (isNumber(margin)) {
 		margin = { left: margin, right: margin, top: margin, bottom: margin };
 	} else if (Array.isArray(margin)) {

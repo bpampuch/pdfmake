@@ -163,6 +163,11 @@ class TableProcessor {
 		this.rowPaddingTop = this.layout.paddingTop(rowIndex, this.tableNode);
 		this.bottomLineWidth = this.layout.hLineWidth(rowIndex + 1, this.tableNode);
 		this.rowPaddingBottom = this.layout.paddingBottom(rowIndex, this.tableNode);
+		// Row borders are drawn later in endRow, potentially on a page whose margins
+		// differ. Record where the row starts together with the page that X belongs to,
+		// so endRow can re-anchor it through the context.
+		this.rowStartX = writer.context().x;
+		this.rowStartPage = writer.context().page;
 
 		this.rowCallback = this.onRowBreak(rowIndex, writer);
 		writer.addListener('pageChanged', this.rowCallback);
@@ -406,6 +411,8 @@ class TableProcessor {
 
 		let endingPage = writer.context().page;
 		let endingY = writer.context().y;
+		let endingX = writer.context().x;
+		let endingAvailableWidth = writer.context().availableWidth;
 
 		let xs = getLineXs();
 
@@ -458,6 +465,10 @@ class TableProcessor {
 				// TableProcessor should be pageChanged listener, instead of processRow
 				this.reservedAtBottom = 0;
 			}
+
+			// Broken rows reuse the same column geometry on each page they span, so the
+			// row's starting X is re-anchored onto whichever page we are drawing on.
+			writer.context().moveToTranslatedX(this.rowStartX, this.rowStartPage);
 
 			// Draw horizontal lines before the vertical lines so they are not overridden
 			if (willBreak && this.layout.hLineWhenBroken !== false) {
@@ -572,6 +583,8 @@ class TableProcessor {
 
 		writer.context().page = endingPage;
 		writer.context().y = endingY;
+		writer.context().x = endingX;
+		writer.context().availableWidth = endingAvailableWidth;
 
 		let row = this.tableNode.table.body[rowIndex];
 		for (let i = 0, l = row.length; i < l; i++) {

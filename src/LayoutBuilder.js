@@ -24,12 +24,14 @@ function addAll(target, otherArray) {
 class LayoutBuilder {
 	/**
 	 * @param {object} pageSize - an object defining page width and height
-	 * @param {object} pageMargins - an object defining top, left, right and bottom margins
+	 * @param {object|Function} pageMargins - an object defining top, left, right and bottom
+	 *   margins, or a callback returning one per page. Held unresolved; DocumentContext
+	 *   resolves it against each page as that page is added.
 	 * @param {object} svgMeasure
 	 */
 	constructor(pageSize, pageMargins, svgMeasure) {
 		this.pageSize = pageSize;
-		this.pageMargins = pageMargins;
+		this.pageMarginsSetting = pageMargins;
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = {};
 		this.nestedLevel = 0;
@@ -159,25 +161,73 @@ class LayoutBuilder {
 			});
 		}
 
-		let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
-		while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
-			resetXYs(result);
-			result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
+		function warnAboutPageMarginCycle() {
+			if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+				console.warn('Non-convergent dynamic pageMargins detected. Layout may not be rendered as expected semantically.' 
+					+ ' Look at the docs on how to apply dynamic page margins correctly to avoid this warning.'
+				);
+			}
+		}
+
+		const layoutOptions = {
+			docStructure,
+			pdfDocument,
+			defaultStyle,
+			background,
+			header,
+			footer,
+			watermark
+		};
+
+		const MAX_LAYOUT_PASSES = 10;
+		let pagesCount = 0;
+		let layoutPass = 0;
+		let result = this.tryLayoutDocument({ ...layoutOptions, pageCount: pagesCount });
+		let pageMarginAssumptionOrder = [pagesCount];
+		let pageMarginWarned = false;
+
+		while (++layoutPass < MAX_LAYOUT_PASSES) {
+			if (result.pageMarginFunctionUsed && pagesCount !== result.pages.length) {
+				let nextPagesCount = result.pages.length;
+				if (!pageMarginWarned) {
+					let cycleStartIndex = pageMarginAssumptionOrder.indexOf(nextPagesCount);
+					if (cycleStartIndex !== -1) {
+						// A repeated assumed page count means the callback is feeding
+						// pagination back into itself (for example 1 -> 2 -> 1 -> 2).
+						warnAboutPageMarginCycle();
+						pageMarginWarned = true;
+					}
+				}
+
+				pagesCount = nextPagesCount;
+				pageMarginAssumptionOrder.push(pagesCount);
+				resetXYs(result);
+				result = this.tryLayoutDocument({ ...layoutOptions, pageCount: pagesCount });
+				continue;
+			}
+
+			if (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
+				resetXYs(result);
+				result = this.tryLayoutDocument({ ...layoutOptions, pageCount: pagesCount });
+				continue;
+			}
+
+			break;
 		}
 
 		return result.pages;
 	}
 
-	tryLayoutDocument(
+	tryLayoutDocument({
 		docStructure,
 		pdfDocument,
-		styleDictionary,
 		defaultStyle,
 		background,
 		header,
 		footer,
-		watermark
-	) {
+		watermark,
+		pageCount
+	}) {
 
 		const isNecessaryAddFirstPage = (docStructure) => {
 			if (docStructure.stack && docStructure.stack.length > 0 && docStructure.stack[0].section) {
@@ -193,7 +243,10 @@ class LayoutBuilder {
 		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
-		this.writer = new PageElementWriter(new DocumentContext());
+		let documentContext = new DocumentContext();
+		documentContext.pageMarginsSetting = this.pageMarginsSetting;
+		documentContext.pageCount = pageCount;
+		this.writer = new PageElementWriter(documentContext);
 
 		this.writer.context().addListener('pageAdded', (page) => {
 			let backgroundGetter = background;
@@ -208,7 +261,7 @@ class LayoutBuilder {
 			this.writer.addPage(
 				this.pageSize,
 				null,
-				this.pageMargins
+				this.pageMarginsSetting
 			);
 		}
 
@@ -216,7 +269,7 @@ class LayoutBuilder {
 		this.addHeadersAndFooters(header, footer);
 		this.addWatermark(watermark, pdfDocument, defaultStyle);
 
-		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
+		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList, pageMarginFunctionUsed: this.writer.context().pageMarginFunctionUsed };
 	}
 
 	addBackground(background) {
@@ -663,7 +716,7 @@ class LayoutBuilder {
 			this.writer.addPage(
 				sectionNode.pageSize || this.pageSize,
 				sectionNode.pageOrientation,
-				sectionNode.pageMargins || this.pageMargins,
+				sectionNode.pageMargins || this.pageMarginsSetting,
 				customProperties
 			);
 		}
@@ -1037,10 +1090,20 @@ class LayoutBuilder {
 		// If content did not break page, check if we should break by height
 		if (willBreakByHeight && !isUnbreakableRow && pageBreaks.length === 0) {
 			this.writer.context().moveDown(this.writer.context().availableHeight);
+			let pageBreakData;
 			if (snakingColumns) {
 				this.snakingAwarePageBreak();
 			} else {
-				this.writer.moveToNextPage();
+				pageBreakData = this.writer.moveToNextPage();
+			}
+
+			if (pageBreakData) {
+				pageBreaks.push({
+					prevPage: pageBreakData.prevPage,
+					prevY: pageBreakData.prevY,
+					y: this.writer.context().y,
+					rowIndex: rowIndex
+				});
 			}
 		}
 
@@ -1303,7 +1366,7 @@ class LayoutBuilder {
 
 		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
 			// Check if line fits vertically in current context
-			if (line.getHeight() > this.writer.context().availableHeight && this.writer.context().y > this.writer.context().pageMargins.top) {
+			if (line.getHeight() > this.writer.context().availableHeight && this.writer.context().y > this.writer.context().getPageMargins().top) {
 				// Line doesn't fit, forced move to next page/column
 				// Only do snaking-specific break if we're in snaking columns AND NOT inside
 				// a nested non-snaking group (like a table row). Table cells should use
@@ -1325,6 +1388,17 @@ class LayoutBuilder {
 			}
 
 			let positions = this.writer.addLine(line);
+			if (!positions && this.writer.context().inSnakingColumns() && !this.writer.context().isInNestedNonSnakingGroup()) {
+				this.snakingAwarePageBreak(node.pageOrientation);
+
+				if (line.inlines && line.inlines.length > 0) {
+					node._inlines.unshift(...line.inlines);
+				}
+
+				line = this.buildNextLine(node);
+				continue;
+			}
+
 			node.positions.push(positions);
 			line = this.buildNextLine(node);
 			if (line) {

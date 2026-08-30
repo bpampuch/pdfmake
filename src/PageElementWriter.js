@@ -22,6 +22,12 @@ class PageElementWriter extends ElementWriter {
 	}
 
 	addLine(line, dontUpdateContextPosition, index) {
+		// Outer snaking text needs LayoutBuilder to rebuild the line after a column/page
+		// break so the first carried line wraps to the new column width correctly.
+		if (this.context().inSnakingColumns() && !this.context().isInNestedNonSnakingGroup()) {
+			return super.addLine(line, dontUpdateContextPosition, index);
+		}
+
 		return this._fitOnPage(() => super.addLine(line, dontUpdateContextPosition, index));
 	}
 
@@ -78,7 +84,13 @@ class PageElementWriter extends ElementWriter {
 		this.repeatables.forEach(function (rep) {
 			if (rep.insertedOnPages[this.context().page] === undefined) {
 				rep.insertedOnPages[this.context().page] = true;
-				this.addFragment(rep, true);
+				// rep.xOffset is an absolute X measured on the page the repeatable was
+				// captured on, so it has to be re-anchored onto the page we are inserting
+				// it into. Identical margins leave it untouched.
+				let xOffset = this.context().translateXBetweenPages(rep.xOffset, rep.page, this.context().page);
+				let fragment = xOffset === rep.xOffset ? rep : Object.assign({}, rep, { xOffset: xOffset });
+
+				this.addFragment(fragment, true);
 			} else {
 				this.context().moveDown(rep.height);
 			}
@@ -89,6 +101,8 @@ class PageElementWriter extends ElementWriter {
 			prevY: nextPage.prevY,
 			y: this.context().y
 		});
+
+		return nextPage;
 	}
 
 	addPage(pageSize, pageOrientation, pageMargin, customProperties = {}) {
@@ -107,6 +121,9 @@ class PageElementWriter extends ElementWriter {
 	beginUnbreakableBlock(width, height) {
 		if (this.transactionLevel++ === 0) {
 			this.originalX = this.context().x;
+			// The page originalX was measured on; pushContext swaps in a throwaway
+			// context whose single page has no margins of its own.
+			this.originalPage = this.context().page;
 			this.pushContext(width, height);
 		}
 	}
@@ -127,9 +144,11 @@ class PageElementWriter extends ElementWriter {
 				if (nbPages > 1) {
 					// on out-of-context blocs (headers, footers, background) height should be the whole DocumentContext height
 					if (forcedX !== undefined || forcedY !== undefined) {
-						fragment.height = unbreakableContext.getCurrentPage().pageSize.height - unbreakableContext.pageMargins.top - unbreakableContext.pageMargins.bottom;
+						let margins = unbreakableContext.getPageMargins();
+						fragment.height = unbreakableContext.getCurrentPage().pageSize.height - margins.top - margins.bottom;
 					} else {
-						fragment.height = this.context().getCurrentPage().pageSize.height - this.context().pageMargins.top - this.context().pageMargins.bottom;
+						let margins = this.context().getPageMargins();
+						fragment.height = this.context().getCurrentPage().pageSize.height - margins.top - margins.bottom;
 						for (let i = 0, l = this.repeatables.length; i < l; i++) {
 							fragment.height -= this.repeatables[i].height;
 						}
@@ -156,6 +175,7 @@ class PageElementWriter extends ElementWriter {
 		});
 
 		rep.xOffset = this.originalX;
+		rep.page = this.originalPage;
 
 		//TODO: vectors can influence height in some situations
 		rep.height = unbreakableContext.y;

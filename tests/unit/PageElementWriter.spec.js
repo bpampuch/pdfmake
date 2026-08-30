@@ -421,7 +421,7 @@ describe('PageElementWriter', function () {
 
 		it('should use existing page', function () {
 			addOneTenthLines(1);
-			ctx.pages.push({ items: [], pageSize: pageSize });
+			ctx.pages.push({ items: [], pageSize: pageSize, pageMargins: MARGINS });
 			ctx.availableWidth = 'garbage';
 			ctx.availableHeight = 'garbage';
 

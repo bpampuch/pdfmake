@@ -27,6 +27,7 @@
 - Fixed extra blank page when using headerRows, dontBreakRows and cell pageBreak together
 - Fixed rendering of an invalid color name - previously it used the last valid color; now it defaults to black
 - Fixed dontBreakRows rowSpan ending offset across pages
+- Added dynamic `pageMargins`
 
 ## 0.3.7 - 2026-03-17
 

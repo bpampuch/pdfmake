@@ -407,13 +407,16 @@ class ElementWriter extends EventEmitter {
 	 */
 	pushContext(contextOrWidth, height) {
 		if (contextOrWidth === undefined) {
-			height = this.context().getCurrentPage().height - this.context().pageMargins.top - this.context().pageMargins.bottom;
+			let margins = this.context().getPageMargins();
+			height = this.context().getCurrentPage().height - margins.top - margins.bottom;
 			contextOrWidth = this.context().availableWidth;
 		}
 
 		if (isNumber(contextOrWidth)) {
 			let width = contextOrWidth;
 			contextOrWidth = new DocumentContext();
+			contextOrWidth.pageMarginsSetting = this.context().pageMarginsSetting;
+			contextOrWidth.pageCount = this.context().pageCount;
 			contextOrWidth.addPage({ width: width, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
 		}
 
