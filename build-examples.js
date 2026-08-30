@@ -5,7 +5,7 @@ const exec = require('child_process').exec;
 if (require.main === module) {
 	buildExamples();
 } else {
-	setDeterministicPdfBinaries();
+	makePdfReproducible();
 }
 
 function buildExamples() {
@@ -51,7 +51,7 @@ function buildExamples() {
 /**
  * Implement mechanisms that allow PDf binaries to not be different if the pdf contents are same.
  */
-function setDeterministicPdfBinaries() {
+function makePdfReproducible() {
 	const pdfmake = require('./js/index');
 	
 	const fixedCreationDate = new Date(process.env.SOURCE_DATE_EPOCH
