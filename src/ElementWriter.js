@@ -331,6 +331,8 @@ class ElementWriter extends EventEmitter {
 			return false;
 		}
 
+		let unbreakableFillsInserted = 0;
+
 		block.items.forEach(item => {
 			switch (item.type) {
 				case 'line':
@@ -354,9 +356,11 @@ class ElementWriter extends EventEmitter {
 					offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 					if (v._isFillColorFromUnbreakable) {
 						// If the item is a fillColor from an unbreakable block
-						// We have to add it at the beginning of the items body array of the page
+						// We have to add it at the beginning of the items body array of the page,
+						// after the fills already inserted from this block so that they keep their draw order
 						delete v._isFillColorFromUnbreakable;
-						const endOfBackgroundItemsIndex = ctx.backgroundLength[ctx.page];
+						const endOfBackgroundItemsIndex = ctx.backgroundLength[ctx.page] + unbreakableFillsInserted;
+						unbreakableFillsInserted++;
 						page.items.splice(endOfBackgroundItemsIndex, 0, {
 							type: 'vector',
 							item: v
