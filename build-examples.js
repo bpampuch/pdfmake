@@ -5,7 +5,7 @@ const exec = require('child_process').exec;
 if (require.main === module) {
 	buildExamples();
 } else {
-	pinCreationDate();
+	setDeterministicPdfBinaries();
 }
 
 function buildExamples() {
@@ -20,7 +20,9 @@ function buildExamples() {
 	const files = items.filter(file => file.substring(file.length - 3, file.length) === '.js');
 
 	files.forEach(function (file) {
-		exec(`node --require "${preloadModule}" ${file}`, function (err, stdout, stderr) {
+		const env = { ...process.env, UV_THREADPOOL_SIZE: '1' };
+
+		exec(`node --require "${preloadModule}" ${file}`, { env }, function (err, stdout, stderr) {
 			position++;
 			console.log('FILE: ', file, ` (${position}/${files.length})`);
 			console.log(stdout);
@@ -34,9 +36,8 @@ function buildExamples() {
 			}
 
 			if (position === files.length) {
-				console.log('PDFs are generated with a pinned creation date, so `git status` lists exactly the');
-				console.log('examples affected by your changes (pdfs/images.pdf embeds a remote image and may');
-				console.log('change independently).');
+				console.log('PDFs are generated reproducibly, so `git status` lists exactly the examples');
+				console.log('affected by your changes.');
 
 				if (errCount) {
 					console.error('Errors count: ', errCount);
@@ -47,12 +48,12 @@ function buildExamples() {
 	});
 }
 
-
-function pinCreationDate() {
+/**
+ * Implement mechanisms that allow PDf binaries to not be different if the pdf contents are same.
+ */
+function setDeterministicPdfBinaries() {
 	const pdfmake = require('./js/index');
-
-	// SOURCE_DATE_EPOCH (seconds since the epoch) overrides the default,
-	// following the reproducible-builds.org convention.
+	
 	const fixedCreationDate = new Date(process.env.SOURCE_DATE_EPOCH
 		? Number(process.env.SOURCE_DATE_EPOCH) * 1000
 		: Date.UTC(2000, 0, 1));
