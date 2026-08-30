@@ -223,6 +223,8 @@ class DocumentContext extends EventEmitter {
 		let maxBottomPage = this.page;
 		let maxBottomAvailableHeight = this.availableHeight;
 
+		let overflowed = saved.overflowed;
+
 		// Pop overflowed snapshots created by moveToNextColumn (snaking columns).
 		// Merge their bottomMost values to find the true maximum.
 		while (saved && saved.overflowed) {
@@ -244,19 +246,21 @@ class DocumentContext extends EventEmitter {
 			return {};
 		}
 
-		// Apply the max bottom from all overflowed columns to this base snapshot
-		if (
-			maxBottomPage > saved.bottomMost.page ||
-			(maxBottomPage === saved.bottomMost.page &&
-				maxBottomY > saved.bottomMost.y)
-		) {
-			saved.bottomMost = {
-				x: saved.x,
-				y: maxBottomY,
-				page: maxBottomPage,
-				availableHeight: maxBottomAvailableHeight,
-				availableWidth: saved.availableWidth
-			};
+		if (overflowed) {
+			// Apply the max bottom from all overflowed columns to this base snapshot
+			if (
+				maxBottomPage > saved.bottomMost.page ||
+				(maxBottomPage === saved.bottomMost.page &&
+					maxBottomY > saved.bottomMost.y)
+			) {
+				saved.bottomMost = {
+					x: saved.x,
+					y: maxBottomY,
+					page: maxBottomPage,
+					availableHeight: maxBottomAvailableHeight,
+					availableWidth: saved.availableWidth
+				};
+			}
 		}
 
 		this.calculateBottomMost(saved, endingCell);

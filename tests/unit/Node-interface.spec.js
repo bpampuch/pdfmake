@@ -27,6 +27,14 @@ describe('Node interface', function () {
 				]
 			};
 
+			pdfmake.setUrlAccessPolicy(() => {
+				return true;
+			});
+
+			pdfmake.setLocalAccessPolicy(() => {
+				return true;
+			});
+
 			var pdf = pdfmake.createPdf(docDefinition);
 			await pdf.getBuffer().then(() => {
 				//
@@ -47,6 +55,14 @@ describe('Node interface', function () {
 					'Another paragraph, this time a little bit longer to make sure, this line will be divided into at least two lines'
 				]
 			};
+
+			pdfmake.setUrlAccessPolicy(() => {
+				return true;
+			});
+
+			pdfmake.setLocalAccessPolicy(() => {
+				return true;
+			});
 
 			const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'pdfmake-'));
 			const pdfFilename = path.join(tmpDir, 'document.pdf');

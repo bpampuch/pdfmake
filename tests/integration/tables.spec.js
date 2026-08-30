@@ -338,4 +338,68 @@ describe('Integration test: tables', function () {
 		});
 	});
 
+	it('keeps row heights stable when rowSpan crosses pages with dontBreakRows (#2895)', function () {
+		var dd = {
+			content: {
+				table: {
+					dontBreakRows: true,
+					heights: 45,
+					widths: [50, 100, 200, 50],
+					body: [
+						['1', '2', '3', '4'],
+						[{ rowSpan: 4, text: '4span' }, null, null, null],
+						[null, null, null, null],
+						[{ rowSpan: 2, text: '2span' }, null, null, null],
+						[null, null, null, null],
+						[{ rowSpan: 2, text: null }, null, null, null],
+						[null, null, null, null],
+						[{ rowSpan: 2, text: null }, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[{ rowSpan: 15, text: 'span 15', maxHeight: 50 }, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null],
+						[{ rowSpan: 5, text: 'span 5' }, null, null, null],
+						[null, null, null, null],
+						[{ rowSpan: 2, text: null }, null, null, null],
+						[null, null, null, null],
+						[null, null, null, null]
+					]
+				}
+			}
+		};
+
+		var pages = testHelper.renderPages('A4', dd);
+		var lastPage = pages[pages.length - 1];
+		var horizontalLineYs = [...new Set(
+			lastPage.items
+				.filter(node => node.type === 'vector' && node.item.type === 'line' && Math.abs(node.item.y1 - node.item.y2) < 0.001)
+				.map(node => Number(node.item.y1.toFixed(3)))
+		)].sort((a, b) => a - b);
+
+		var maxGap = 0;
+		for (var i = 1; i < horizontalLineYs.length; i++) {
+			maxGap = Math.max(maxGap, horizontalLineYs[i] - horizontalLineYs[i - 1]);
+		}
+
+		// Each row is 45pt tall. A gap above ~90pt would indicate a blown-out row caused
+		// by a negative discountY when a rowspan started on a previous page. Allow up to
+		// 2x row height (90pt) as a safe upper bound; anything beyond that is the bug.
+		assert.ok(maxGap < 90, 'max gap between horizontal lines was ' + maxGap + 'pt, expected < 90pt');
+	});
+
 });

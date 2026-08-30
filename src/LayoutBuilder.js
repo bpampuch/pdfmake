@@ -995,11 +995,13 @@ class LayoutBuilder {
 				// We store a reference of the ending cell in the first cell of the rowspan
 				cell._endingCell = rowSpanRightEndingCell;
 				cell._endingCell._startingRowSpanY = cell._startingRowSpanY;
+				cell._endingCell._startingRowSpanPage = cell._startingRowSpanPage;
 			}
 			if (rowSpanLeftEndingCell) {
 				// We store a reference of the left ending cell in the first cell of the rowspan
 				cell._leftEndingCell = rowSpanLeftEndingCell;
 				cell._leftEndingCell._startingRowSpanY = cell._startingRowSpanY;
+				cell._leftEndingCell._startingRowSpanPage = cell._startingRowSpanPage;
 			}
 
 			// If we are after a cell that started a rowspan
@@ -1037,7 +1039,17 @@ class LayoutBuilder {
 				if (dontBreakRows) {
 					// Calculate how many points we have to discount to Y when dontBreakRows and rowSpan are combined
 					const ctxBeforeRowSpanLastRow = this.writer.contextStack[this.writer.contextStack.length - 1];
-					discountY = ctxBeforeRowSpanLastRow.y - cell._startingRowSpanY;
+					const startsOnCurrentPage = (
+						typeof cell._startingRowSpanPage === 'number' &&
+						cell._startingRowSpanPage === ctxBeforeRowSpanLastRow.page
+					);
+
+					if (startsOnCurrentPage && typeof cell._startingRowSpanY === 'number') {
+						discountY = ctxBeforeRowSpanLastRow.y - cell._startingRowSpanY;
+					}
+
+					// Do not increase Y by applying a negative discount.
+					discountY = Math.max(0, discountY);
 				}
 				let originalXOffset = 0;
 				// If context was saved from an unbreakable block and we are not in an unbreakable block anymore
@@ -1233,6 +1245,7 @@ class LayoutBuilder {
 				tableNode.table.body[i].forEach(cell => {
 					if (cell.rowSpan && cell.rowSpan > 1) {
 						cell._startingRowSpanY = this.writer.context().y;
+						cell._startingRowSpanPage = this.writer.context().page;
 					}
 				});
 			}
