@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Added horizontal table alignment via `tableAlignment`: `left` (default), `center`, or `right`
+- Added the style property `lineHeightMode`. With `lineHeightMode: 'css'` (and an explicit `lineHeight`), the height of a line is `fontSize * lineHeight` and the height of the font is centered in the line box (half-leading), as in CSS. The default (`'legacy'`) is unchanged: `lineHeight` multiplies the height of the font. List markers, text decorations and text backgrounds follow the new baseline.
 - Fixed PDF stream errors not rejecting promises returned by `getBuffer()`, `getBase64()` and `getDataUrl()`
 - Fixed attachments loaded from the virtual file system (including downloaded URL attachments) failing with "No src specified"
 - Fixed sections with automatic page height sharing the first section's height and clipping content in subsequent sections
