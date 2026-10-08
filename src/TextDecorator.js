@@ -61,6 +61,14 @@ class TextDecorator {
 				color = patternColor;
 			}
 
+			let top = y;
+			let inlineHeight = height;
+			if (inline.baseline !== undefined) {
+				// lineHeightMode 'css': the background covers the content area of the font, not the whole line box
+				top = y + line.getAscenderHeight() - inline.font.ascender / 1000 * inline.fontSize;
+				inlineHeight = inline.naturalHeight;
+			}
+
 			let justifyShift = (inline.justifyShift || 0);
 			let rectX = x + inline.x - justifyShift;
 			let rectWidth = inline.width + justifyShift;
@@ -77,7 +85,7 @@ class TextDecorator {
 			}
 
 			this.pdfDocument.fillColor(color)
-				.rect(rectX, y, rectWidth, height)
+				.rect(rectX, top, rectWidth, inlineHeight)
 				.fill();
 		}
 	}
@@ -113,7 +121,7 @@ class TextDecorator {
 		let totalWidth = width();
 		let lineAscent = group.line.getAscenderHeight();
 		let ascent = biggerInline.font.ascender / 1000 * biggerInline.fontSize;
-		let height = biggerInline.height;
+		let height = biggerInline.naturalHeight !== undefined ? biggerInline.naturalHeight : biggerInline.height;
 		let descent = height - ascent;
 
 		let lw = isNumber(group.decorationThickness)
