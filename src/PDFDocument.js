@@ -154,11 +154,7 @@ class PDFDocument extends PDFKitDocument {
 			return obj;
 		};
 
-		if (typeof src === 'object') {
-			return checkRequired(src);
-		}
-
-		let attachment = checkRequired(this.attachments[src]);
+		let attachment = checkRequired(typeof src === 'object' ? src : this.attachments[src]);
 
 		if (this.virtualfs && this.virtualfs.existsSync(attachment.src)) {
 			return {

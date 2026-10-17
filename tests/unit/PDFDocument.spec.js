@@ -60,7 +60,7 @@ describe('PDFDocument', function () {
 
 	describe('provideAttachment', function () {
 
-		it('should resolve a VFS attachment while preserving its metadata and original definition', function () {
+		it('should resolve a named VFS attachment without changing its metadata or original definition', function () {
 			var content = Buffer.from('Attachment contents');
 			var attachment = { src: 'report.txt', name: 'report.txt', description: 'Report description' };
 			pdfDocument.attachments = { report: attachment };
@@ -71,6 +71,24 @@ describe('PDFDocument', function () {
 
 			assert.deepStrictEqual(pdfDocument.provideAttachment('report'), { ...attachment, src: content });
 			assert.strictEqual(attachment.src, 'report.txt');
+		});
+
+		it('should resolve an inline VFS attachment without changing its metadata or original definition', function () {
+			var content = Buffer.from('Attachment contents');
+			var attachment = { src: 'report.txt', name: 'report.txt', description: 'Report description' };
+			pdfDocument.virtualfs = {
+				existsSync: filename => filename === 'report.txt',
+				readFileSync: () => content
+			};
+
+			assert.deepStrictEqual(pdfDocument.provideAttachment(attachment), { ...attachment, src: content });
+			assert.strictEqual(attachment.src, 'report.txt');
+		});
+
+		it('should enforce the local access policy for inline attachments', function () {
+			pdfDocument.localAccessPolicy = () => false;
+
+			assert.throws(() => pdfDocument.provideAttachment({ src: 'report.txt' }), /Access to local file denied/);
 		});
 
 	});
