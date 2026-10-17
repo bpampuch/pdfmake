@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fixed PDF stream errors not rejecting promises returned by `getBuffer()`, `getBase64()` and `getDataUrl()`
+- Fixed attachments loaded from the virtual file system (including downloaded URL attachments) failing with "No src specified"
 
 ## 0.3.12 - 2026-10-17
 

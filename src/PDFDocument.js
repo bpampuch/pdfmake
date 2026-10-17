@@ -161,7 +161,10 @@ class PDFDocument extends PDFKitDocument {
 		let attachment = checkRequired(this.attachments[src]);
 
 		if (this.virtualfs && this.virtualfs.existsSync(attachment.src)) {
-			return this.virtualfs.readFileSync(attachment.src);
+			return {
+				...attachment,
+				src: this.virtualfs.readFileSync(attachment.src)
+			};
 		}
 
 		this.validateLocalFile(attachment.src);

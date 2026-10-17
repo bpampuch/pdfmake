@@ -58,6 +58,23 @@ describe('PDFDocument', function () {
 
 	});
 
+	describe('provideAttachment', function () {
+
+		it('should resolve a VFS attachment while preserving its metadata and original definition', function () {
+			var content = Buffer.from('Attachment contents');
+			var attachment = { src: 'report.txt', name: 'report.txt', description: 'Report description' };
+			pdfDocument.attachments = { report: attachment };
+			pdfDocument.virtualfs = {
+				existsSync: filename => filename === 'report.txt',
+				readFileSync: () => content
+			};
+
+			assert.deepStrictEqual(pdfDocument.provideAttachment('report'), { ...attachment, src: content });
+			assert.strictEqual(attachment.src, 'report.txt');
+		});
+
+	});
+
 	describe('resolveColor', function () {
 
 		it('should resolve valid color name', function () {
