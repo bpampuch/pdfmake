@@ -1,12 +1,10 @@
-var fs = require('fs');
-
 var fontContainer = {
-	vfs: {
-		'data/Courier.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Courier.afm', 'utf8'), encoding: 'utf8' },
-		'data/Courier-Bold.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Courier-Bold.afm', 'utf8'), encoding: 'utf8' },
-		'data/Courier-Oblique.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Courier-Oblique.afm', 'utf8'), encoding: 'utf8' },
-		'data/Courier-BoldOblique.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Courier-BoldOblique.afm', 'utf8'), encoding: 'utf8' }
-	},
+	standardFonts: [
+		require('pdfkit/standard-fonts/Courier'),
+		require('pdfkit/standard-fonts/CourierBold'),
+		require('pdfkit/standard-fonts/CourierOblique'),
+		require('pdfkit/standard-fonts/CourierBoldOblique')
+	],
 	fonts: {
 		Courier: {
 			normal: 'Courier',

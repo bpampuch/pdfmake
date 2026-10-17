@@ -1,9 +1,5 @@
-var fs = require('fs');
-
 var fontContainer = {
-	vfs: {
-		'data/Symbol.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Symbol.afm', 'utf8'), encoding: 'utf8' }
-	},
+	standardFonts: [require('pdfkit/standard-fonts/Symbol')],
 	fonts: {
 		Symbol: {
 			normal: 'Symbol'

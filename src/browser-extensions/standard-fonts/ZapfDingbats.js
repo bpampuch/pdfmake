@@ -1,9 +1,5 @@
-var fs = require('fs');
-
 var fontContainer = {
-	vfs: {
-		'data/ZapfDingbats.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/ZapfDingbats.afm', 'utf8'), encoding: 'utf8' }
-	},
+	standardFonts: [require('pdfkit/standard-fonts/ZapfDingbats')],
 	fonts: {
 		ZapfDingbats: {
 			normal: 'ZapfDingbats'

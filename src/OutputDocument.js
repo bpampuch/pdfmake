@@ -4,7 +4,6 @@ class OutputDocument {
 	 * @param {Promise<object>} pdfDocumentPromise
 	 */
 	constructor(pdfDocumentPromise) {
-		this.bufferSize = 1073741824;
 		this.pdfDocumentPromise = pdfDocumentPromise;
 		this.bufferPromise = null;
 	}
@@ -24,11 +23,8 @@ class OutputDocument {
 			const stream = await this.getStream();
 			return new Promise((resolve) => {
 				let chunks = [];
-				stream.on('readable', () => {
-					let chunk;
-					while ((chunk = stream.read(this.bufferSize)) !== null) {
-						chunks.push(chunk);
-					}
+				stream.on('data', chunk => {
+					chunks.push(chunk);
 				});
 				stream.on('end', () => {
 					resolve(Buffer.concat(chunks));

@@ -10,6 +10,7 @@ yarn.lock
 .typos.toml
 eslint.config.mjs
 build-fonts.js
+build-standard-fonts.js
 build-examples.js
 babel.config.json
 webpack.config.js

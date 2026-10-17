@@ -1,4 +1,4 @@
-import PDFKit from 'pdfkit';
+import { PDFDocument as PDFKitDocument } from 'pdfkit';
 import { isString } from './helpers/variableType';
 
 const typeName = (bold, italics) => {
@@ -13,7 +13,7 @@ const typeName = (bold, italics) => {
 	return type;
 };
 
-class PDFDocument extends PDFKit {
+class PDFDocument extends PDFKitDocument {
 	constructor(fonts = {}, images = {}, patterns = {}, attachments = {}, options = {}, virtualfs = null, localAccessPolicy = undefined) {
 		super(options);
 
