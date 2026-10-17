@@ -4,6 +4,7 @@
 
 - **Reduced browser bundle size by over 20%**
 - Updated pdfkit to 0.20.2
+- Fixed `setLocalAccessPolicy` being bypassed for local images embedded in SVG
 
 ## 0.3.11 - 2026-06-12
 
