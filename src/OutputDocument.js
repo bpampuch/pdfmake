@@ -21,7 +21,7 @@ class OutputDocument {
 	getBuffer() {
 		const getBufferInternal = (async () => {
 			const stream = await this.getStream();
-			return new Promise((resolve) => {
+			return new Promise((resolve, reject) => {
 				let chunks = [];
 				stream.on('data', chunk => {
 					chunks.push(chunk);
@@ -29,6 +29,7 @@ class OutputDocument {
 				stream.on('end', () => {
 					resolve(Buffer.concat(chunks));
 				});
+				stream.on('error', reject);
 				stream.end();
 			});
 		});

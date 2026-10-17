@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed PDF stream errors not rejecting promises returned by `getBuffer()`, `getBase64()` and `getDataUrl()`
+
 ## 0.3.12 - 2026-10-17
 
 - **Reduced browser bundle size by over 20%**
