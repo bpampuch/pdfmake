@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.12 - 2026-10-17
 
 - **Reduced browser bundle size by over 20%**
 - Updated pdfkit to 0.20.2
