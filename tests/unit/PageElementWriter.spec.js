@@ -348,7 +348,26 @@ describe('PageElementWriter', function () {
 		});
 
 		it('should add a repeatable fragment to the top when reusing page only once', function () {
-			// TODO
+			var repeatable = createRepeatable('header', 50);
+			pew.pushToRepeatables(repeatable);
+			ctx.beginColumnGroup();
+			ctx.beginColumn(200);
+			addOneTenthLines(11);
+			assert.equal(ctx.page, 1);
+			assert.equal(ctx.y, MARGINS.top + 50 + 100);
+
+			// The second column revisits the same page after overflowing independently.
+			ctx.beginColumn(200);
+			addOneTenthLines(11);
+			assert.equal(ctx.pages.length, 2);
+			var headers = ctx.pages[1].items.filter(item => item.item.marker === 'header');
+			assert.equal(headers.length, 1);
+			assert.equal(headers[0].item.y, MARGINS.top);
+			var lines = ctx.pages[1].items.filter(item => !item.item.marker);
+			assert.equal(lines.length, 2);
+			assert.deepEqual(lines.map(item => item.item.y), [MARGINS.top + 50, MARGINS.top + 50]);
+			assert.deepEqual(lines.map(item => item.item.x), [MARGINS.left, MARGINS.left + 200]);
+			assert.equal(ctx.y, MARGINS.top + 50 + 100);
 		});
 
 		it('should add repeatable fragments in the same order they have been added to the repeatable fragments collection', function () {

@@ -87,22 +87,38 @@ describe('Line', function () {
 	});
 
 	describe('getHeight', function () {
-
-		// TODO
-
-		/*
-		it('should return highest inline height when baselines are equal', function () {
+		it('should return zero for an empty line', function () {
+			assert.equal(new Line(100).getHeight(), 0);
 		});
 
-		it('should take into account baseline offsets', function () {
+		it('should return the highest inline height regardless of inline order', function () {
+			[[10, 30, 20], [30, 20, 10]].forEach(function (heights) {
+				var line = new Line(100);
+				heights.forEach(height => line.addInline({ width: 10, height: height }));
+				assert.equal(line.getHeight(), 30);
+			});
 		});
-		*/
+
+		it('should ignore inlines without a height', function () {
+			var line = new Line(100);
+			line.addInline({ width: 10 });
+			line.addInline({ width: 10, height: 20 });
+			assert.equal(line.getHeight(), 20);
+		});
 	});
 
 	describe('getAscenderHeight', function () {
+		it('should return zero for an empty line', function () {
+			assert.equal(new Line(100).getAscenderHeight(), 0);
+		});
 
-		// TODO
-
+		it('should use the largest scaled ascender rather than the largest font size', function () {
+			var line = new Line(100);
+			line.addInline({ width: 10, fontSize: 30, font: { ascender: 500 } });
+			line.addInline({ width: 10, fontSize: 20, font: { ascender: 900 } });
+			line.addInline({ width: 10, fontSize: 10, font: { ascender: 800 } });
+			assert.equal(line.getAscenderHeight(), 18);
+		});
 	});
 
 	describe('getWidth', function () {
@@ -132,9 +148,22 @@ describe('Line', function () {
 	});
 
 	describe('getAvailableWidth', function () {
+		it('should return the full width for an empty line', function () {
+			assert.equal(new Line(100).getAvailableWidth(), 100);
+		});
 
-		// TODO
+		it('should account for leading and trailing cuts', function () {
+			var line = new Line(100);
+			line.addInline({ width: 50, leadingCut: 10 });
+			line.addInline({ width: 30, trailingCut: 5 });
+			assert.equal(line.getAvailableWidth(), 35);
+		});
 
+		it('should return a negative width when the line overflows', function () {
+			var line = new Line(100);
+			line.addInline({ width: 120 });
+			assert.equal(line.getAvailableWidth(), -20);
+		});
 	});
 
 	describe('hasEnoughSpaceForInline', function () {
@@ -182,6 +211,40 @@ describe('Line', function () {
 			assert(!line.hasEnoughSpaceForInline({ width: 31 }));
 		});
 
-		// TODO: test for nextInlines with noNewLine
+		it('should reject an inline when its unbreakable continuation does not fit', function () {
+			var line = new Line(100);
+			line.addInline({ width: 40 });
+			assert.equal(line.hasEnoughSpaceForInline({ width: 20, noNewLine: true }, [
+				{ width: 30, noNewLine: true }, { width: 20 }
+			]), false);
+		});
+
+		it('should stop measuring the continuation at the first allowed line break', function () {
+			var line = new Line(100);
+			line.addInline({ width: 40 });
+			assert.equal(line.hasEnoughSpaceForInline({ width: 20, noNewLine: true }, [
+				{ width: 20, noNewLine: true }, { width: 20 }, { width: 100 }
+			]), true);
+		});
+
+		it('should account for trimming when an unbreakable continuation exactly fits', function () {
+			var line = new Line(100);
+			line.addInline({ width: 50, leadingCut: 10 });
+			assert.equal(line.hasEnoughSpaceForInline({ width: 30, noNewLine: true }, [
+				{ width: 40, trailingCut: 10 }
+			]), true);
+		});
+
+		it('should ignore following inlines when the current inline allows a line break', function () {
+			var line = new Line(100);
+			line.addInline({ width: 40 });
+			assert.equal(line.hasEnoughSpaceForInline({ width: 20 }, [{ width: 100 }]), true);
+		});
+
+		it('should reject further inlines after an explicit line break', function () {
+			var line = new Line(100);
+			line.addInline({ width: 10, lineEnd: true });
+			assert.equal(line.hasEnoughSpaceForInline({ width: 10 }), false);
+		});
 	});
 });
