@@ -109,6 +109,7 @@ class TableProcessor {
 		ColumnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth, this.offsets.total, tableNode);
 
 		this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
+		this.alignTable(writer.context());
 		this.rowSpanData = prepareRowSpanData();
 		this.cleanUpRepeatables = false;
 
@@ -148,6 +149,17 @@ class TableProcessor {
 
 		// update the border properties of all cells before drawing any lines
 		prepareCellBorders(this.tableNode.table.body);
+	}
+
+	alignTable(context) {
+		const freeWidth = Math.max(0, context.availableWidth - this.tableWidth);
+		this.alignmentOffset = this.tableNode.tableAlignment === 'center' ? freeWidth / 2 :
+			(this.tableNode.tableAlignment === 'right' ? freeWidth : 0);
+		if (this.alignmentOffset) {
+			// Keep the container width intact: column widths have already been resolved.
+			// Row snapshots preserve this origin across page breaks.
+			context.addMargin(this.alignmentOffset, -this.alignmentOffset);
+		}
 	}
 
 	onRowBreak(rowIndex, writer) {
@@ -375,6 +387,9 @@ class TableProcessor {
 	endTable(writer) {
 		if (this.cleanUpRepeatables) {
 			writer.popFromRepeatables();
+		}
+		if (this.alignmentOffset) {
+			writer.context().addMargin(-this.alignmentOffset, this.alignmentOffset);
 		}
 	}
 
