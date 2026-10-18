@@ -7,6 +7,9 @@
 - Fixed attachments loaded from the virtual file system (including downloaded URL attachments) failing with "No src specified"
 - Fixed sections with automatic page height sharing the first section's height and clipping content in subsequent sections
 - Fixed vertical alignment of row-spanned table header cells when the table starts on a subsequent page
+- Fixed text decoration positioning and automatic thickness for mixed font sizes depending on the order of text fragments
+- Fixed adjacent text fragments with different `decorationThickness` values being rendered with the same decoration thickness
+- Fixed wavy text decoration clipping height incorrectly depending on the vertical position on the page
 
 ## 0.3.12 - 2026-10-17
 

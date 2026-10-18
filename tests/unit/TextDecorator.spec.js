@@ -102,11 +102,24 @@ describe('TextDecorator', function () {
 			assertRectangle(1, [70, 38.6, 40, 2]);
 		});
 
+		it('should keep different decoration thicknesses separate', function () {
+			decorator.drawDecorations(createLine([{ decorationThickness: 1 }, { decorationThickness: 3 }]), 10, 20);
+			assertRectangle(0, [10, 39.1, 40, 1]);
+			assertRectangle(1, [50, 38.1, 40, 3]);
+		});
+
 		it('should support multiple decorations on the same inline', function () {
 			decorator.drawDecorations(createLine([{ decoration: ['underline', 'lineThrough'] }]), 10, 20);
 			assert.equal(pdfDocument.rect.callCount, 2);
 			assertRectangle(0, [10, 38.6, 40, 2]);
 			assertRectangle(1, [10, 31, 40, 2]);
+		});
+
+		[[30, 20, 10], [10, 30, 20], [10, 20, 30]].forEach(function (sizes) {
+			it('should use the largest font metrics in a group ordered ' + sizes.join(', '), function () {
+				decorator.drawDecorations(createLine(sizes.map(size => ({ fontSize: size, height: size * 1.2 }))), 10, 20);
+				assertRectangle(0, [10, 48.4, 120, 2]);
+			});
 		});
 
 		it('should derive the default thickness from the font size', function () {
@@ -136,6 +149,14 @@ describe('TextDecorator', function () {
 			assertRectangle(0, [10, 39.6, 10, 2]);
 			assertRectangle(1, [10, 38.6, 2, 2]);
 			assertRectangle(2, [16, 38.6, 2, 2]);
+		});
+
+		it('should clip wavy decorations to their width and wave height', function () {
+			decorator.drawDecorations(createLine([{ width: 7, decorationStyle: 'wavy' }]), 10, 20);
+			assertRectangle(0, [10, 38.6, 7, 2]);
+			assert(pdfDocument.bezierCurveTo.callCount > 0);
+			sinon.assert.calledOnceWithExactly(pdfDocument.stroke, 'black');
+			sinon.assert.callOrder(pdfDocument.save, pdfDocument.clip, pdfDocument.moveTo, pdfDocument.bezierCurveTo, pdfDocument.stroke, pdfDocument.restore);
 		});
 
 		[{ position: 'sub', y: 45.6 }, { position: 'sup', y: 23.6 }].forEach(function (testCase) {
