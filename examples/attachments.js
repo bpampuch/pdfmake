@@ -67,7 +67,7 @@ var docDefinition = {
 	attachments: {
 		sampleImage: {
 			src: 'images/sampleImage.jpg',
-			name: 'sampleImage.png'
+			name: 'sampleImage.jpg'
 		}
 	},
 	files: {
