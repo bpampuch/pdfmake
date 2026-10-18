@@ -310,12 +310,13 @@ describe('DocMeasure', function () {
 			});
 		});
 
-		it.skip('should set _minWidth and _maxWidth to the sum of column min/max widths', function () {
+		it('should combine star, fixed and auto column widths when measuring a table', function () {
 			docPreprocessor.preprocessTable(tableNode);
 			docMeasure.measureTable(tableNode);
 
-			assert.equal(tableNode._minWidth, 150 + 6 * 12 + 4 * 12 + 6 * 12);
-			assert.equal(tableNode._maxWidth, 912);
+			// Star and auto columns use their measured widths; the fixed column uses 150.
+			assert.equal(tableNode._minWidth, 72 + 150 + 72 + 80);
+			assert.equal(tableNode._maxWidth, 312 + 150 + 240 + 96);
 		});
 
 		it('should support column spans', function () {
@@ -480,12 +481,56 @@ describe('DocMeasure', function () {
 			assert.equal(imageNode._width, 42);
 		});
 
-		it('should scale height proportionally if only image width is provided');
-		it('should stretch image if both width and height are specified');
-		it('should scales image to fit whole picture in a rectangle if fit is specified');
-		it('should copy alignment from styleStack into image definition object');
-		it('should support dataUri images', function () {
+		it('should scale height proportionally if only image width is provided', function () {
+			var node = { width: 100 };
+			docMeasure.measureImageWithDimensions(node, { width: 200, height: 80 });
+			assert.equal(node._width, 100);
+			assert.equal(node._height, 40);
+			assert.equal(node._minWidth, 100);
+			assert.equal(node._maxWidth, 100);
+		});
 
+		it('should stretch image if both width and height are specified', function () {
+			var node = { width: 100, height: 30 };
+			docMeasure.measureImageWithDimensions(node, { width: 200, height: 80 });
+			assert.equal(node._width, 100);
+			assert.equal(node._height, 30);
+		});
+
+		it('should scale images to fit within either dimension of a rectangle', function () {
+			[{ width: 200, height: 80 }, { width: 80, height: 200 }].forEach(function (dimensions) {
+				var node = { fit: [100, 60] };
+				docMeasure.measureImageWithDimensions(node, dimensions);
+				assert(node._width <= 100);
+				assert(node._height <= 60);
+				assert(node._width === 100 || node._height === 60);
+				assert.equal(node._width / node._height, dimensions.width / dimensions.height);
+			});
+		});
+
+		it('should copy alignment from styleStack into image definition object', function () {
+			var measure = new DocMeasure(sampleTestProvider);
+			measure.styleStack.push({ alignment: 'right' });
+			var node = {};
+			measure.measureImageWithDimensions(node, { width: 20, height: 10 });
+			assert.equal(node._alignment, 'right');
+		});
+
+		it('should support dataUri images', function () {
+			var dataUri = 'data:image/png;base64,iVBORw0KGgo=';
+			var provider = {
+				images: {},
+				provideImage: function (key) {
+					assert.equal(this.images[key], dataUri);
+					return { width: 20, height: 10 };
+				}
+			};
+			var measure = new DocMeasure(provider);
+			var node = { image: dataUri, width: 40 };
+			assert.strictEqual(measure.measureImage(node), node);
+			assert.equal(provider.images[node.image], dataUri);
+			assert.equal(node._width, 40);
+			assert.equal(node._height, 20);
 		});
 	});
 

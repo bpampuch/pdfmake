@@ -855,10 +855,10 @@ describe('Integration test: snaking columns', function () {
 		assert.ok(items.length > 0, 'Should have rendered content');
 	});
 
-	xit('should support nested snaking columns (inner snaking respected)', function () {
+	it('should support nested snaking columns (inner snaking respected)', function () {
 		// Test nested snaking columns where inner columns also snake
 		var lines = [];
-		for (var i = 1; i <= 30; i++) lines.push('Inner Line ' + i);
+		for (var i = 1; i <= 80; i++) lines.push('Inner Line ' + i);
 		var innerText = lines.join('\n');
 
 		var dd = {
@@ -887,11 +887,17 @@ describe('Integration test: snaking columns', function () {
 
 		var items = pages[0].items;
 		// Find inner text items
-		var innerItems = items.filter(n => n.item.inlines && n.item.inlines[0].text.startsWith('Inner Line'));
+		var innerItems = items.filter(n => n.item.inlines && n.item.inlines.map(inline => inline.text).join('').startsWith('Inner Line'));
+		assert.deepEqual(innerItems.map(n => n.item.inlines.map(inline => inline.text).join('')), lines);
 
 		// Group by X position
 		var uniqueX = [...new Set(innerItems.map(n => n.item.x))].sort((a, b) => a - b);
-		assert.ok(uniqueX.length >= 2, 'Inner content should snake to 2nd inner column');
+		assert.equal(uniqueX.length, 2, 'Inner content should snake to 2nd inner column');
+		var outerStart = items.find(n => n.item.inlines && n.item.inlines.map(inline => inline.text).join('') === 'Outer Column 1 Start');
+		var outerEnd = items.find(n => n.item.inlines && n.item.inlines.map(inline => inline.text).join('') === 'Outer Column 1 End');
+		assert.equal(uniqueX[0], outerStart.item.x);
+		assert.ok(outerEnd.item.x > uniqueX[1], 'Following outer content should flow into the next outer column when it cannot fit below the inner columns');
+		assert.equal(outerEnd.item.y, outerStart.item.y);
 	});
 
 	it('should synchronize all snapshots when page breaks occur in nested structures', function () {
