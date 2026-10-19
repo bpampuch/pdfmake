@@ -10,7 +10,7 @@ function buildColumnWidths(columns, availableWidth, offsetTotal = 0, tableNode) 
 	let fixedColumns = [];
 	let initial_availableWidth = availableWidth;
 
-	columns.forEach(column => {
+	columns.forEach((column, colIndex) => {
 		if (isAutoColumn(column)) {
 			autoColumns.push(column);
 			autoMin += column._minWidth;
@@ -20,11 +20,11 @@ function buildColumnWidths(columns, availableWidth, offsetTotal = 0, tableNode) 
 			starMaxMin = Math.max(starMaxMin, column._minWidth);
 			starMaxMax = Math.max(starMaxMax, column._maxWidth);
 		} else {
-			fixedColumns.push(column);
+			fixedColumns.push({ column, colIndex });
 		}
 	});
 
-	fixedColumns.forEach((col, colIndex) => {
+	fixedColumns.forEach(({ column: col, colIndex }) => {
 		// width specified as %
 		if (isString(col.width) && /\d+%/.test(col.width)) {
 			// In tables we have to take into consideration the reserved width for paddings and borders
@@ -38,7 +38,7 @@ function buildColumnWidths(columns, availableWidth, offsetTotal = 0, tableNode) 
 					// first column assumes whole borderLeft and half of border right
 					reservedWidth = paddingLeft + paddingRight + borderLeft + (borderRight / 2);
 
-				} else if (colIndex === fixedColumns.length - 1) {
+				} else if (colIndex === columns.length - 1) {
 					// last column assumes whole borderRight and half of border left
 					reservedWidth = paddingLeft + paddingRight + (borderLeft / 2) + borderRight;
 

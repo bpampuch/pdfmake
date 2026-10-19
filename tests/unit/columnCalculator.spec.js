@@ -129,6 +129,34 @@ describe('ColumnCalculator', function () {
 			assert.equal(columns[2]._calcWidth, 50);
 		});
 
+		[
+			{ widths: ['50%', 'auto', '*'], index: 0, expectedWidth: 81 },
+			{ widths: ['*', '50%', 'auto'], index: 1, expectedWidth: 69 },
+			{ widths: ['auto', '*', '50%'], index: 2, expectedWidth: 50 }
+		].forEach(function (testCase) {
+			it('should use table column indices for percentage widths mixed with auto and star widths at index ' + testCase.index, function () {
+				const columns = testCase.widths.map(function (width) {
+					return { width: width, _minWidth: 0, _maxWidth: 5 };
+				});
+				const tableNode = {
+					table: { widths: columns, body: [['A', 'B', 'C']] },
+					_layout: {
+						paddingLeft: function (i) { return [5, 11, 17][i]; },
+						paddingRight: function (i) { return [7, 13, 19][i]; },
+						vLineWidth: function (i) { return [4, 6, 8, 10][i]; }
+					}
+				};
+
+				// Total width is 200, including 72 points of padding and 28 of borders.
+				ColumnCalculator.buildColumnWidths(columns, 100, 100, tableNode);
+
+				assert.equal(columns[testCase.index]._calcWidth, testCase.expectedWidth);
+				assert.equal(columns.reduce(function (sum, column) {
+					return sum + column._calcWidth;
+				}, 0), 100);
+			});
+		});
+
 		it('should calculate widths of the table columns correctly when using percentages', function () {
 			const availableWidth = 149;
 			const offsetTotal = 51;
