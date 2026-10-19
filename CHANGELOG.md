@@ -10,6 +10,7 @@
 - Fixed text decoration positioning and automatic thickness for mixed font sizes depending on the order of text fragments
 - Fixed adjacent text fragments with different `decorationThickness` values being rendered with the same decoration thickness
 - Fixed wavy text decoration clipping height incorrectly depending on the vertical position on the page
+- Fixed reversed paint order of table cell background fills in unbreakable blocks, which caused outer table fills to cover nested table fills
 
 ## 0.3.12 - 2026-10-17
 
