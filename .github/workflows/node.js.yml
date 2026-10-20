@@ -5,6 +5,13 @@ name: Node.js CI
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
 
@@ -22,6 +29,17 @@ jobs:
       uses: actions/setup-node@v7
       with:
         node-version: ${{ matrix.node-version }}
-    - run: npm install
+        cache: npm
+    - run: npm ci
+    - run: npm audit --audit-level=low
+      if: matrix.os == 'ubuntu-latest' && matrix.node-version == '24.x'
     - run: npm test
     - run: npm run build:examples
+    - run: npm run test:typescript
+    - run: npm run test:package
+    - name: Build standalone playground
+      if: matrix.os == 'ubuntu-latest' && matrix.node-version == '24.x'
+      run: npm run build:playground
+    - name: Audit standalone playground tooling
+      if: matrix.os == 'ubuntu-latest' && matrix.node-version == '24.x'
+      run: npm --prefix dev-playground audit --audit-level=low

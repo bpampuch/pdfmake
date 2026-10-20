@@ -4,6 +4,10 @@ dev-playground/
 docs/
 examples/
 tests/
+scripts/
+benchmarks/
+AGENTS.md
+release-package/
 package-lock.json
 yarn.lock
 .editorconfig

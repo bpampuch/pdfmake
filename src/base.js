@@ -3,6 +3,7 @@ import virtualfs from './virtual-fs';
 import { pack } from './helpers/tools';
 import { isObject } from './helpers/variableType';
 import URLResolver from './URLResolver';
+import { validateDocument, assertValidDocument } from './DocumentValidator';
 
 class pdfmake {
 
@@ -26,6 +27,8 @@ class pdfmake {
 			throw new Error("Parameter 'options' has an invalid type. Object expected.");
 		}
 
+		if (options.validation) assertValidDocument(docDefinition, options.validation === true ? {} : options.validation, this);
+
 		options.progressCallback = this.progressCallback;
 		options.tableLayouts = this.tableLayouts;
 
@@ -45,7 +48,12 @@ class pdfmake {
 		urlResolver.setUrlAccessPolicy(this.urlAccessPolicy);
 
 		let printer = new Printer(this.fonts, this.virtualfs, urlResolver, this.localAccessPolicy);
-		const pdfDocumentPromise = printer.createPdfKitDocument(docDefinition, options);
+		const pdfDocumentPromise = printer.createPdfKitDocument(docDefinition, options).catch(error => {
+			if (!(error instanceof Error)) error = new Error(String(error));
+			if (!error.code) error.code = 'PDFMAKE_RENDER_ERROR';
+			if (!error.phase) error.phase = 'render';
+			throw error;
+		});
 
 		return this._transformToDocument(pdfDocumentPromise);
 	}
@@ -59,6 +67,10 @@ class pdfmake {
 		}
 
 		this.urlAccessPolicy = callback;
+	}
+
+	validateDocument(docDefinition, options) {
+		return validateDocument(docDefinition, options, this);
 	}
 
 	setProgressCallback(callback) {

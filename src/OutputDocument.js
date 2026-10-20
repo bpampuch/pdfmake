@@ -22,6 +22,8 @@ class OutputDocument {
 		const getBufferInternal = (async () => {
 			const stream = await this.getStream();
 			return new Promise((resolve, reject) => {
+				if (stream.errored) { reject(stream.errored); return; }
+				if (stream.destroyed) { reject(new Error('PDF output stream was destroyed before it could be read.')); return; }
 				let chunks = [];
 				stream.on('data', chunk => {
 					chunks.push(chunk);
@@ -30,6 +32,9 @@ class OutputDocument {
 					resolve(Buffer.concat(chunks));
 				});
 				stream.on('error', reject);
+				stream.on('close', () => {
+					if (!stream.readableEnded) reject(new Error('PDF output stream closed before completion.'));
+				});
 				stream.end();
 			});
 		});
