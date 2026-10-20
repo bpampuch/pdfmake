@@ -203,6 +203,13 @@ class DocMeasure {
 			let textStyle = node.toc.textStyle || {};
 			let numberStyle = node.toc.numberStyle || textStyle;
 			let textMargin = node.toc.textMargin || [0, 0, 0, 0];
+			// measureTable() mirrors the column order when rtl is in effect, so the
+			// title cell ends up in the right-hand column and the page number in the
+			// left-hand one. The alignments have to be mirrored with them, otherwise
+			// the title hugs the inner edge of its column instead of the margin.
+			let isRtl = !!this.styleStack.getProperty('rtl');
+			let titleAlignment = isRtl ? 'right' : 'left';
+			let numberAlignment = isRtl ? 'left' : 'right';
 
 			if (node.toc.sortBy === 'title') {
 				node.toc._items.sort((a, b) => {
@@ -217,8 +224,8 @@ class DocMeasure {
 				let lineNumberStyle = item._textNodeRef.tocNumberStyle || numberStyle;
 				let destination = getNodeId(item._nodeRef);
 				body.push([
-					{ text: item._textNodeRef.text, linkToDestination: destination, alignment: 'left', style: lineStyle, margin: lineMargin },
-					{ text: '00000', linkToDestination: destination, alignment: 'right', _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
+					{ text: item._textNodeRef.text, linkToDestination: destination, alignment: titleAlignment, style: lineStyle, margin: lineMargin },
+					{ text: '00000', linkToDestination: destination, alignment: numberAlignment, _tocItemRef: item._nodeRef, style: lineNumberStyle, margin: [0, lineMargin[1], 0, lineMargin[3]] }
 				]);
 
 				if (node.toc.outlines) {
@@ -335,7 +342,7 @@ class DocMeasure {
 		return marker;
 	}
 
-	buildOrderedMarker(item, counter, styleStack, type, separator) {
+	buildOrderedMarker(item, counter, styleStack, type, separator, isRtl) {
 		function prepareAlpha(counter) {
 			function toAlpha(num) {
 				return (num >= 26 ? toAlpha((num / 26 >> 0) - 1) : '') + 'abcdefghijklmnopqrstuvwxyz'[num % 26 >> 0];
@@ -400,25 +407,43 @@ class DocMeasure {
 			return {};
 		}
 
+		const body = counterText;
+
 		if (separator) {
 			if (Array.isArray(separator)) {
-				if (separator[0]) {
-					counterText = separator[0] + counterText;
+				if (isRtl) {
+					counterText = ' ';
+					if (separator[1]) {
+						counterText += separator[1];
+					}
+					counterText += body;
+					if (separator[0]) {
+						counterText += separator[0];
+					}
+				} else {
+					if (separator[0]) {
+						counterText = separator[0] + body;
+					} else {
+						counterText = body;
+					}
+					if (separator[1]) {
+						counterText += separator[1];
+					}
+					counterText += ' ';
 				}
-
-				if (separator[1]) {
-					counterText += separator[1];
-				}
-				counterText += ' ';
 			} else {
-				counterText += `${separator} `;
+				if (isRtl) {
+					counterText = `${separator}${body}`;
+				} else {
+					counterText = `${body}${separator} `;
+				}
 			}
 		}
 
 		let markerColor = StyleContextStack.getStyleProperty(item, styleStack, 'markerColor', undefined) || styleStack.getProperty('color') || 'black';
 		let textArray = {
 			text: counterText,
-			color: markerColor
+			color: markerColor,
 		};
 
 		return { _inlines: this.textInlines.buildInlines(textArray, styleStack).items };
@@ -429,6 +454,7 @@ class DocMeasure {
 		let items = node.ul;
 		node.type = node.type || 'disc';
 		node._gapSize = this.gapSizeForList();
+		node._rtl = !!this.styleStack.getProperty('rtl');
 		node._minWidth = 0;
 		node._maxWidth = 0;
 
@@ -456,6 +482,7 @@ class DocMeasure {
 			node.start = node.reversed ? items.length : 1;
 		}
 		node._gapSize = this.gapSizeForList();
+		node._rtl = !!this.styleStack.getProperty('rtl');
 		node._minWidth = 0;
 		node._maxWidth = 0;
 
@@ -465,7 +492,7 @@ class DocMeasure {
 
 			if (!item.ol && !item.ul) {
 				let counterValue = isNumber(item.counter) ? item.counter : counter;
-				item.listMarker = this.buildOrderedMarker(item, counterValue, style, item.listType || node.type, node.separator);
+				item.listMarker = this.buildOrderedMarker(item, counterValue, style, item.listType || node.type, node.separator, node._rtl);
 				if (item.listMarker._inlines) {
 					node._gapSize.width = Math.max(node._gapSize.width, item.listMarker._inlines[0].width);
 				}
@@ -521,6 +548,12 @@ class DocMeasure {
 	}
 
 	measureTable(node) {
+		// RTL: reverse the column order so that cells in declaration order
+		// appear right-to-left visually. Done up-front so that all subsequent
+		// width/offset/span/cell logic operates on the already-mirrored layout.
+		if (this.styleStack.getProperty('rtl')) {
+			reverseTableColumnsForRtl(node);
+		}
 		extendTableWidths(node);
 		node._layout = getLayout(this.tableLayouts);
 		node._offsets = getOffsets(node._layout);
@@ -694,6 +727,51 @@ class DocMeasure {
 				if (isNumber(w) || isString(w)) {
 					node.table.widths[i] = { width: w };
 				}
+			}
+		}
+
+		function reverseTableColumnsForRtl(node) {
+			if (!node.table || !Array.isArray(node.table.body) || node.table.body.length === 0) return;
+			const cols = node.table.body[0].length;
+			if (cols < 2) return;
+
+			if (Array.isArray(node.table.widths) && node.table.widths.length === cols) {
+				node.table.widths.reverse();
+			}
+
+			// Reverse each row, preserving colSpan structure. The cell descriptor
+			// for a colSpan cell must end up at the LEFTMOST position of its
+			// (visual) span block - that's the layout invariant the rest of
+			// measureTable relies on. A naive `row.reverse()` would put the
+			// descriptor at the rightmost slot of the block, which then makes
+			// extendWidthsForColSpans access widths past the table's last column
+			// and fail with "_minWidth on undefined".
+			//
+			// We walk the original row left→right (treating each cell+placeholders
+			// group as one unit) and write each unit into the new row from the
+			// RIGHT-most position backwards. The descriptor lands at the start of
+			// its block in the new row; the placeholders follow.
+			//
+			// rowSpan is unaffected: rowSpan placeholders live in subsequent rows,
+			// at the same column index as the descriptor. Each row is reversed
+			// independently, so the placeholders move with their descriptor.
+			for (let r = 0; r < node.table.body.length; r++) {
+				const row = node.table.body[r];
+				const newRow = new Array(row.length);
+				let i = 0;
+				let writeEnd = row.length;
+				while (i < row.length) {
+					const cell = row[i];
+					const span = (cell && cell.colSpan && cell.colSpan > 1) ? cell.colSpan : 1;
+					const safeSpan = Math.min(span, row.length - i);
+					writeEnd -= safeSpan;
+					newRow[writeEnd] = cell;
+					for (let k = 1; k < safeSpan; k++) {
+						newRow[writeEnd + k] = row[i + k];
+					}
+					i += safeSpan;
+				}
+				node.table.body[r] = newRow;
 			}
 		}
 	}

@@ -130,5 +130,14 @@ export function getNodeMargin(node, styleStack) {
 		return null;
 	}
 
+	// In RTL mode the user thinks in logical terms - `margin: [10, 0, 0, 0]`
+	// means 10pt before the START of the content, and in an RTL layout the
+	// start is the visual RIGHT. Mirror left/right so the existing LTR-oriented
+	// layout machinery (which reads index 0 as visual left) produces the right
+	// visual result: the user's margin[0] ends up at index 2, the visual right.
+	if (styleStack && styleStack.getProperty('rtl')) {
+		margin = [margin[2], margin[1], margin[0], margin[3]];
+	}
+
 	return margin;
 }
