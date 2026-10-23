@@ -4,6 +4,8 @@
 
 - Added horizontal table alignment via `tableAlignment`: `left` (default), `center`, or `right`
 - Fixed PDF stream errors not rejecting promises returned by `getBuffer()`, `getBase64()` and `getDataUrl()`
+- Fixed `getStream()` returning an already consumed stream; subsequent stream access now rejects
+- Fixed `write()` hanging or failing after `getBuffer()`, `getBase64()` or `getDataUrl()` by reusing buffered PDF data
 - Fixed attachments loaded from the virtual file system (including downloaded URL attachments) failing with "No src specified"
 - Fixed sections with automatic page height sharing the first section's height and clipping content in subsequent sections
 - Fixed vertical alignment of row-spanned table header cells when the table starts on a subsequent page
