@@ -12,6 +12,7 @@
 - Fixed wavy text decoration clipping height incorrectly depending on the vertical position on the page
 - Fixed reversed paint order of table cell background fills in unbreakable blocks, which caused outer table fills to cover nested table fills
 - Fixed percentage table column widths using incorrect padding and border widths when mixed with `auto` or star-sized columns
+- Fixed reversed ordered lists starting at a too high number when they contain nested lists
 
 ## 0.3.12 - 2026-10-17
 

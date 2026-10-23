@@ -188,6 +188,16 @@ describe('DocMeasure', function () {
 			assert.equal(result.ol[2].listMarker._inlines[0].text, '2. ');
 		});
 
+		it('should not count nested lists when calculating the start of a reversed list', function () {
+			var node = { reversed: true, ol: ['parent item 1', { ol: ['nested item 1', 'nested item 2'] }, 'parent item 2'] };
+			docPreprocessor.preprocessList(node);
+			var result = docMeasure.measureOrderedList(node);
+
+			assert.equal(result.start, 2);
+			assert.equal(result.ol[0].listMarker._inlines[0].text, '2. ');
+			assert.equal(result.ol[2].listMarker._inlines[0].text, '1. ');
+		});
+
 		it('should calculate _minWidth and _maxWidth of all elements', function () {
 			var node = { ol: ['this is a test', 'another one'] };
 			docPreprocessor.preprocessList(node);
