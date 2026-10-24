@@ -1,6 +1,5 @@
 var path = require('path');
 var TerserPlugin = require('terser-webpack-plugin');
-var StringReplacePlugin = require("string-replace-webpack-plugin");
 var webpack = require('webpack');
 var pkg = require('./package.json');
 
@@ -88,16 +87,7 @@ module.exports = {
 			{
 				test: /FileSaver.min.js$/,
 				use: {
-					loader: StringReplacePlugin.replace({
-						replacements: [
-							{
-								pattern: '"download"in HTMLAnchorElement.prototype',
-								replacement: function () {
-									return '(typeof HTMLAnchorElement !== "undefined" && "download" in HTMLAnchorElement.prototype)';
-								}
-							}
-						]
-					})
+					loader: path.join(__dirname, 'scripts/file-saver-loader.cjs')
 				}
 			},
 		]
@@ -126,7 +116,6 @@ module.exports = {
 			process: 'process/browser', // require "process" library, fix "process is not defined" error, source: https://stackoverflow.com/a/64553486
 			Buffer: ['buffer', 'Buffer'] // require "buffer" library, fix "Buffer is not defined" error, source: https://github.com/webpack/changelog-v5/issues/10#issuecomment-615877593
 		}),
-		new StringReplacePlugin(),
 		new webpack.BannerPlugin({
 			banner: banner,
 			raw: true

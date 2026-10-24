@@ -9,23 +9,48 @@ const TRAILING = /(\s)+$/g;
  * @returns {Array}
  */
 const flattenTextArray = array => {
-	function flatten(array) {
-		return array.reduce((prev, cur) => {
-			let current = Array.isArray(cur.text) ? flatten(cur.text) : cur;
-			let more = [].concat(current).some(Array.isArray);
-			return prev.concat(more ? flatten(current) : current);
-		}, []);
-	}
-
 	if (!Array.isArray(array)) {
 		array = [array];
 	}
 
 	// TODO: Styling in nested text (issue: https://github.com/bpampuch/pdfmake/issues/1174)
 
-	array = flatten(array);
-
-	return array;
+	// Append each leaf once instead of copying the accumulated prefix with concat.
+	// Explicit frames also avoid overflowing the call stack for deeply nested text.
+	const result = [];
+	const stack = [{ array, index: 0 }];
+	while (stack.length) {
+		const frame = stack[stack.length - 1];
+		if (frame.index >= frame.array.length) {
+			stack.pop();
+			continue;
+		}
+		const index = frame.index++;
+		if (!(index in frame.array)) {
+			continue; // Array.reduce skipped sparse entries in the previous implementation.
+		}
+		const item = frame.array[index];
+		if (Array.isArray(item.text)) {
+			stack.push({ array: item.text, index: 0 });
+		} else if (Array.isArray(item)) {
+			if (item.some(Array.isArray)) {
+				stack.push({ array: item, index: 0 });
+			} else {
+				// concat previously copied a flat array without inspecting its objects.
+				// Preserve that behavior, including sparse entries and nested styles.
+				for (let i = 0; i < item.length; i++) {
+					if (i in item) {
+						result.push(item[i]);
+					} else {
+						result.length++;
+					}
+				}
+			}
+		} else {
+			result.push(item);
+		}
+	}
+	return result;
 };
 
 

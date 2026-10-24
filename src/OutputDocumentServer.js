@@ -1,5 +1,6 @@
 import OutputDocument from './OutputDocument';
 import fs from 'fs';
+import { pipeline } from 'stream/promises';
 
 class OutputDocumentServer extends OutputDocument {
 
@@ -17,20 +18,13 @@ class OutputDocumentServer extends OutputDocument {
 		const stream = await this.getStream();
 		const writeStream = fs.createWriteStream(filename);
 
-		const streamEnded = new Promise((resolve, reject) => {
-			stream.on('end', resolve);
-			stream.on('error', reject);
-		});
-
-		const writeClosed = new Promise((resolve, reject) => {
-			writeStream.on('close', resolve);
-			writeStream.on('error', reject);
-		});
-
-		stream.pipe(writeStream);
-		stream.end();
-
-		await Promise.all([streamEnded, writeClosed]);
+		const completed = pipeline(stream, writeStream);
+		try {
+			stream.end();
+		} catch (error) {
+			stream.destroy(error);
+		}
+		await completed;
 	}
 
 }

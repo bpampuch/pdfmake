@@ -16,6 +16,17 @@ jobs:
         with:
           node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
-      - run: npm install
-      - run: npm run build
-      - run: npm publish --provenance --access public
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=low
+      - run: npm run release:check
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+      - run: npm test
+      - run: npm run build:examples
+      - run: npm run test:typescript
+      - run: npm run test:package
+        env:
+          PDFMAKE_PACK_DEST: release-package
+      - name: Publish the tested tarball
+        run: npm publish release-package/pdfmake-*.tgz --provenance --access public
