@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.13 - 2026-10-25
 
 - Added horizontal table alignment via `tableAlignment`: `left` (default), `center`, or `right`
 - Fixed PDF stream errors not rejecting promises returned by `getBuffer()`, `getBase64()` and `getDataUrl()`
