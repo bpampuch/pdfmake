@@ -59,6 +59,16 @@ class ElementWriter extends EventEmitter {
 
 		let alignment = line.inlines && line.inlines.length > 0 && line.inlines[0].alignment;
 
+		// For an RTL paragraph with `justify`, the natural fallback for the
+		// last line / a force-broken line is right-alignment (the visual
+		// "start" side in RTL). Without this the last line snaps to the left
+		// margin, which looks broken next to the right-aligned justified lines
+		// above it.
+		const isLineRtl = !!(line.inlines && line.inlines.length > 0 &&
+			line.inlines.some(i => i._bidiLevel !== undefined ? (i._bidiLevel & 1) : i.rtl));
+		const isJustifyEdge = alignment === 'justify' &&
+			(line.lastLineInParagraph || line.newLineForced || line.inlines.length <= 1);
+
 		let offset = 0;
 		switch (alignment) {
 			case 'right':
@@ -66,6 +76,11 @@ class ElementWriter extends EventEmitter {
 				break;
 			case 'center':
 				offset = (width - lineWidth) / 2;
+				break;
+			case 'justify':
+				if (isJustifyEdge && isLineRtl) {
+					offset = width - lineWidth;
+				}
 				break;
 		}
 
