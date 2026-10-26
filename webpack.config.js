@@ -39,10 +39,8 @@ module.exports = {
 		rules: [
 			{
 				test: /pdfkit[/\\]js[/\\]/,
-				// PDFKit bundles the ICC profile and uses its URL only as an in-memory registry key.
-				parser: {
-					url: false
-				}
+				// PDFKit embeds the ICC profile; use a stable key without constructing a file URL.
+				use: { loader: path.join(__dirname, 'scripts/pdfkit-profile-loader.cjs') }
 			},
 			{
 				enforce: 'pre',

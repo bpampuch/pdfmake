@@ -50,11 +50,20 @@ function check(bytes) {
   check(buffer);
   assert.strictEqual(await output.getBuffer(), buffer);
   assert.equal(await output.getBase64(), buffer.toString('base64'));
+  await assert.rejects(output.getStream(), /PDF stream has already been consumed/);
+  await output.write('cached.pdf');
+  assert.deepEqual(fs.readFileSync('cached.pdf'), buffer);
   await pdfmake.createPdf(definition()).write('smoke.pdf');
   check(fs.readFileSync('smoke.pdf'));
   // Exercise both distributed browser bundles and the shipped VFS assets.
   for (const bundle of ['pdfmake', 'pdfmake.min']) {
-    const browser = require('pdfmake/build/' + bundle);
+    // React Native supplies URL without support for relative module base URLs.
+    const nativeURL = global.URL;
+    let browser;
+    try {
+      global.URL = class { constructor() { throw new TypeError('Invalid base URL'); } };
+      browser = require('pdfmake/build/' + bundle);
+    } finally { global.URL = nativeURL; }
     browser.addVirtualFileSystem(require('pdfmake/build/vfs_fonts'));
     const dd = definition();
     dd.defaultStyle.font = 'Roboto';

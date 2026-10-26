@@ -6,13 +6,27 @@ class OutputDocument {
 	constructor(pdfDocumentPromise) {
 		this.pdfDocumentPromise = pdfDocumentPromise;
 		this.bufferPromise = null;
+		this.streamEnded = false;
+		this.streamEndListenerAttached = false;
 	}
 
 	/**
 	 * @returns {Promise<object>}
 	 */
-	getStream() {
-		return this.pdfDocumentPromise;
+	async getStream() {
+		const stream = await this.pdfDocumentPromise;
+		if (this.streamEnded) {
+			throw new Error('PDF stream has already been consumed.');
+		}
+
+		if (!this.streamEndListenerAttached) {
+			stream.once('end', () => {
+				this.streamEnded = true;
+			});
+			this.streamEndListenerAttached = true;
+		}
+
+		return stream;
 	}
 
 	/**

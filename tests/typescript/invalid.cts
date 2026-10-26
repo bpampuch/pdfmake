@@ -8,6 +8,10 @@ pdfmake.setUrlAccessPolicy(async () => true);
 pdfmake.createPdf({ content: ['Valid'] }).getBuffer(() => {});
 void invalid;
 
+// @ts-expect-error Whole-table alignment does not support justified text alignment.
+const invalidTable: TDocumentDefinitions = { content: [{ tableAlignment: 'justify', table: { body: [['x']] } }] };
+void invalidTable;
+
 // @ts-expect-error Node output cannot download in a browser.
 pdfmake.createPdf({ content: ['x'] }).download();
 // @ts-expect-error Node entry cannot register browser VFS containers.

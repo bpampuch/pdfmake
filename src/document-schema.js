@@ -10,7 +10,7 @@ export default {
 					"optional": false
 				},
 				"background": {
-					"type": 530,
+					"type": 531,
 					"optional": true
 				},
 				"compress": {
@@ -18,27 +18,27 @@ export default {
 					"optional": true
 				},
 				"defaultStyle": {
-					"type": 587,
-					"optional": true
-				},
-				"footer": {
-					"type": 522,
-					"optional": true
-				},
-				"header": {
-					"type": 522,
-					"optional": true
-				},
-				"images": {
 					"type": 588,
 					"optional": true
 				},
+				"footer": {
+					"type": 523,
+					"optional": true
+				},
+				"header": {
+					"type": 523,
+					"optional": true
+				},
+				"images": {
+					"type": 589,
+					"optional": true
+				},
 				"info": {
-					"type": 594,
+					"type": 595,
 					"optional": true
 				},
 				"pageBreakBefore": {
-					"type": 602,
+					"type": 603,
 					"optional": true
 				},
 				"pageMargins": {
@@ -50,11 +50,11 @@ export default {
 					"optional": true
 				},
 				"pageSize": {
-					"type": 604,
+					"type": 605,
 					"optional": true
 				},
 				"styles": {
-					"type": 605,
+					"type": 606,
 					"optional": true
 				},
 				"userPassword": {
@@ -66,15 +66,15 @@ export default {
 					"optional": true
 				},
 				"permissions": {
-					"type": 609,
+					"type": 610,
 					"optional": true
 				},
 				"version": {
-					"type": 614,
+					"type": 615,
 					"optional": true
 				},
 				"subset": {
-					"type": 621,
+					"type": 622,
 					"optional": true
 				},
 				"tagged": {
@@ -86,11 +86,11 @@ export default {
 					"optional": true
 				},
 				"watermark": {
-					"type": 632,
+					"type": 633,
 					"optional": true
 				},
 				"patterns": {
-					"type": 633,
+					"type": 634,
 					"optional": true
 				},
 				"language": {
@@ -98,11 +98,11 @@ export default {
 					"optional": true
 				},
 				"attachments": {
-					"type": 636,
+					"type": 637,
 					"optional": true
 				},
 				"files": {
-					"type": 636,
+					"type": 637,
 					"optional": true
 				}
 			}
@@ -119,21 +119,21 @@ export default {
 				9,
 				10,
 				299,
-				408,
 				409,
 				410,
 				411,
-				400,
 				412,
+				401,
 				413,
 				414,
 				415,
-				422,
-				430,
-				433,
-				443,
-				466,
-				523
+				416,
+				423,
+				431,
+				434,
+				444,
+				467,
+				524
 			]
 		},
 		{
@@ -2275,7 +2275,6 @@ export default {
 				310,
 				311,
 				313,
-				574,
 				575,
 				576,
 				577,
@@ -2287,7 +2286,8 @@ export default {
 				583,
 				584,
 				585,
-				586
+				586,
+				587
 			]
 		},
 		{
@@ -3300,7 +3300,6 @@ export default {
 				329,
 				330,
 				331,
-				562,
 				563,
 				564,
 				565,
@@ -3311,7 +3310,8 @@ export default {
 				570,
 				571,
 				572,
-				573
+				573,
+				574
 			]
 		},
 		{
@@ -4588,7 +4588,6 @@ export default {
 				349,
 				350,
 				353,
-				551,
 				552,
 				553,
 				554,
@@ -4598,7 +4597,8 @@ export default {
 				558,
 				559,
 				560,
-				561
+				561,
+				562
 			]
 		},
 		{
@@ -5904,12 +5904,16 @@ export default {
 		{
 			"kind": "object",
 			"properties": {
-				"table": {
+				"tableAlignment": {
 					"type": 354,
+					"optional": true
+				},
+				"table": {
+					"type": 355,
 					"optional": false
 				},
 				"layout": {
-					"type": 380,
+					"type": 381,
 					"optional": true
 				},
 				"overlayPattern": {
@@ -6139,18 +6143,27 @@ export default {
 			}
 		},
 		{
+			"kind": "union",
+			"items": [
+				12,
+				262,
+				263,
+				264
+			]
+		},
+		{
 			"kind": "object",
 			"properties": {
 				"body": {
-					"type": 355,
+					"type": 356,
 					"optional": false
 				},
 				"widths": {
-					"type": 544,
+					"type": 545,
 					"optional": true
 				},
 				"heights": {
-					"type": 548,
+					"type": 549,
 					"optional": true
 				},
 				"headerRows": {
@@ -6169,40 +6182,40 @@ export default {
 		},
 		{
 			"kind": "array",
-			"item": 356
+			"item": 357
 		},
 		{
 			"kind": "array",
-			"item": 357
+			"item": 358
 		},
 		{
 			"kind": "union",
 			"items": [
 				2,
 				7,
-				358,
 				359,
 				360,
 				361,
 				362,
-				373,
+				363,
 				374,
 				375,
 				376,
 				377,
 				378,
 				379,
-				398,
-				403,
+				380,
+				399,
 				404,
 				405,
-				537,
+				406,
 				538,
 				539,
 				540,
 				541,
 				542,
-				543
+				543,
+				544
 			]
 		},
 		{
@@ -6231,11 +6244,11 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"overlayPattern": {
@@ -6243,11 +6256,11 @@ export default {
 					"optional": true
 				},
 				"overlayOpacity": {
-					"type": 368,
+					"type": 369,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			},
@@ -6257,16 +6270,16 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				364
+				365
 			]
 		},
 		{
 			"kind": "tuple",
 			"items": [
-				365,
-				365,
-				365,
-				365
+				366,
+				366,
+				366,
+				366
 			]
 		},
 		{
@@ -6280,7 +6293,7 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				367
+				368
 			]
 		},
 		{
@@ -6304,9 +6317,9 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				370,
 				371,
-				372
+				372,
+				373
 			]
 		},
 		{
@@ -6585,15 +6598,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -6834,15 +6847,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -7079,15 +7092,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -7328,15 +7341,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -7589,15 +7602,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -7605,12 +7618,16 @@ export default {
 		{
 			"kind": "object",
 			"properties": {
-				"table": {
+				"tableAlignment": {
 					"type": 354,
+					"optional": true
+				},
+				"table": {
+					"type": 355,
 					"optional": false
 				},
 				"layout": {
-					"type": 380,
+					"type": 381,
 					"optional": true
 				},
 				"overlayPattern": {
@@ -7838,15 +7855,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -7856,58 +7873,58 @@ export default {
 			"items": [
 				12,
 				3,
-				381
+				382
 			]
 		},
 		{
 			"kind": "object",
 			"properties": {
 				"hLineWidth": {
-					"type": 382,
+					"type": 383,
 					"optional": true
 				},
 				"vLineWidth": {
-					"type": 384,
+					"type": 385,
 					"optional": true
 				},
 				"hLineColor": {
-					"type": 386,
+					"type": 387,
 					"optional": true
 				},
 				"vLineColor": {
-					"type": 388,
+					"type": 389,
 					"optional": true
 				},
 				"hLineStyle": {
-					"type": 390,
+					"type": 391,
 					"optional": true
 				},
 				"vLineStyle": {
-					"type": 392,
+					"type": 393,
 					"optional": true
 				},
 				"paddingLeft": {
-					"type": 384,
+					"type": 385,
 					"optional": true
 				},
 				"paddingRight": {
-					"type": 384,
+					"type": 385,
 					"optional": true
 				},
 				"paddingTop": {
-					"type": 382,
+					"type": 383,
 					"optional": true
 				},
 				"paddingBottom": {
-					"type": 382,
+					"type": 383,
 					"optional": true
 				},
 				"fillColor": {
-					"type": 394,
+					"type": 395,
 					"optional": true
 				},
 				"fillOpacity": {
-					"type": 396,
+					"type": 397,
 					"optional": true
 				},
 				"defaultBorder": {
@@ -7920,7 +7937,7 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				383
+				384
 			]
 		},
 		{
@@ -7930,18 +7947,7 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				385
-			]
-		},
-		{
-			"kind": "function"
-		},
-		{
-			"kind": "union",
-			"items": [
-				12,
-				3,
-				387
+				386
 			]
 		},
 		{
@@ -7952,7 +7958,7 @@ export default {
 			"items": [
 				12,
 				3,
-				389
+				388
 			]
 		},
 		{
@@ -7962,7 +7968,8 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				391
+				3,
+				390
 			]
 		},
 		{
@@ -7972,7 +7979,17 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				393
+				392
+			]
+		},
+		{
+			"kind": "function"
+		},
+		{
+			"kind": "union",
+			"items": [
+				12,
+				394
 			]
 		},
 		{
@@ -7984,7 +8001,7 @@ export default {
 				12,
 				3,
 				16,
-				395
+				396
 			]
 		},
 		{
@@ -7995,7 +8012,7 @@ export default {
 			"items": [
 				12,
 				4,
-				397
+				398
 			]
 		},
 		{
@@ -8005,7 +8022,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"text": {
-					"type": 399,
+					"type": 400,
 					"optional": false
 				},
 				"id": {
@@ -8237,15 +8254,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -8254,15 +8271,15 @@ export default {
 			"kind": "union",
 			"items": [
 				3,
-				400,
-				401
+				401,
+				402
 			]
 		},
 		{
 			"kind": "object",
 			"properties": {
 				"text": {
-					"type": 399,
+					"type": 400,
 					"optional": false
 				},
 				"id": {
@@ -8489,13 +8506,13 @@ export default {
 		},
 		{
 			"kind": "array",
-			"item": 402
+			"item": 403
 		},
 		{
 			"kind": "union",
 			"items": [
 				3,
-				400
+				401
 			]
 		},
 		{
@@ -8730,15 +8747,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -8975,15 +8992,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -8992,7 +9009,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"toc": {
-					"type": 406,
+					"type": 407,
 					"optional": false
 				},
 				"overlayPattern": {
@@ -9220,15 +9237,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -9237,7 +9254,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"title": {
-					"type": 407,
+					"type": 408,
 					"optional": true
 				},
 				"textMargin": {
@@ -9261,7 +9278,7 @@ export default {
 					"optional": true
 				},
 				"sortBy": {
-					"type": 534,
+					"type": 535,
 					"optional": true
 				},
 				"sortLocale": {
@@ -9287,21 +9304,21 @@ export default {
 				9,
 				10,
 				299,
-				408,
 				409,
 				410,
 				411,
-				400,
 				412,
+				401,
 				413,
 				414,
 				415,
-				422,
-				430,
-				433,
-				443,
-				466,
-				523
+				416,
+				423,
+				431,
+				434,
+				444,
+				467,
+				524
 			]
 		},
 		{
@@ -10002,12 +10019,16 @@ export default {
 		{
 			"kind": "object",
 			"properties": {
-				"table": {
+				"tableAlignment": {
 					"type": 354,
+					"optional": true
+				},
+				"table": {
+					"type": 355,
 					"optional": false
 				},
 				"layout": {
-					"type": 380,
+					"type": 381,
 					"optional": true
 				},
 				"overlayPattern": {
@@ -10682,7 +10703,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"toc": {
-					"type": 406,
+					"type": 407,
 					"optional": false
 				},
 				"overlayPattern": {
@@ -10907,11 +10928,11 @@ export default {
 			"kind": "object",
 			"properties": {
 				"text": {
-					"type": 416,
+					"type": 417,
 					"optional": false
 				},
 				"tocItem": {
-					"type": 419,
+					"type": 420,
 					"optional": false
 				},
 				"tocStyle": {
@@ -11148,19 +11169,19 @@ export default {
 			"kind": "union",
 			"items": [
 				3,
-				415,
-				417
+				416,
+				418
 			]
 		},
 		{
 			"kind": "array",
-			"item": 418
+			"item": 419
 		},
 		{
 			"kind": "union",
 			"items": [
 				3,
-				415
+				416
 			]
 		},
 		{
@@ -11169,12 +11190,12 @@ export default {
 				3,
 				5,
 				6,
-				420
+				421
 			]
 		},
 		{
 			"kind": "array",
-			"item": 421
+			"item": 422
 		},
 		{
 			"kind": "union",
@@ -11200,15 +11221,15 @@ export default {
 					"optional": true
 				},
 				"fit": {
-					"type": 423,
-					"optional": true
-				},
-				"cover": {
 					"type": 424,
 					"optional": true
 				},
+				"cover": {
+					"type": 425,
+					"optional": true
+				},
 				"linkToFile": {
-					"type": 428,
+					"type": 429,
 					"optional": true
 				},
 				"link": {
@@ -11452,7 +11473,7 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				425
+				426
 			]
 		},
 		{
@@ -11467,11 +11488,11 @@ export default {
 					"optional": true
 				},
 				"align": {
-					"type": 426,
+					"type": 427,
 					"optional": true
 				},
 				"valign": {
-					"type": 427,
+					"type": 428,
 					"optional": true
 				}
 			}
@@ -11490,8 +11511,8 @@ export default {
 			"items": [
 				12,
 				262,
-				370,
-				371
+				371,
+				372
 			]
 		},
 		{
@@ -11499,7 +11520,7 @@ export default {
 			"items": [
 				12,
 				3,
-				429
+				430
 			]
 		},
 		{
@@ -11523,7 +11544,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"svg": {
-					"type": 431,
+					"type": 432,
 					"optional": false
 				},
 				"width": {
@@ -11535,7 +11556,7 @@ export default {
 					"optional": true
 				},
 				"fit": {
-					"type": 423,
+					"type": 424,
 					"optional": true
 				},
 				"overlayPattern": {
@@ -11772,7 +11793,7 @@ export default {
 			"kind": "union",
 			"items": [
 				3,
-				432
+				433
 			]
 		},
 		{
@@ -11803,11 +11824,11 @@ export default {
 					"optional": true
 				},
 				"eccLevel": {
-					"type": 434,
+					"type": 435,
 					"optional": true
 				},
 				"mode": {
-					"type": 439,
+					"type": 440,
 					"optional": true
 				},
 				"mask": {
@@ -12036,10 +12057,10 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				435,
 				436,
 				437,
-				438
+				438,
+				439
 			]
 		},
 		{
@@ -12062,9 +12083,9 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				440,
 				441,
-				442
+				442,
+				443
 			]
 		},
 		{
@@ -12083,7 +12104,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"canvas": {
-					"type": 444,
+					"type": 445,
 					"optional": false
 				},
 				"overlayPattern": {
@@ -12306,22 +12327,22 @@ export default {
 		},
 		{
 			"kind": "array",
-			"item": 445
+			"item": 446
 		},
 		{
 			"kind": "union",
 			"items": [
-				446,
-				456,
-				462,
-				464
+				447,
+				457,
+				463,
+				465
 			]
 		},
 		{
 			"kind": "object",
 			"properties": {
 				"type": {
-					"type": 447,
+					"type": 448,
 					"optional": false
 				},
 				"x": {
@@ -12357,11 +12378,11 @@ export default {
 					"optional": true
 				},
 				"dash": {
-					"type": 448,
+					"type": 449,
 					"optional": true
 				},
 				"lineJoin": {
-					"type": 450,
+					"type": 451,
 					"optional": true
 				},
 				"color": {
@@ -12373,7 +12394,7 @@ export default {
 					"optional": true
 				},
 				"linearGradient": {
-					"type": 454,
+					"type": 455,
 					"optional": true
 				}
 			}
@@ -12386,7 +12407,7 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				449
+				450
 			]
 		},
 		{
@@ -12406,9 +12427,9 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				451,
 				452,
-				453
+				453,
+				454
 			]
 		},
 		{
@@ -12427,7 +12448,7 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				455
+				456
 			]
 		},
 		{
@@ -12438,11 +12459,11 @@ export default {
 			"kind": "object",
 			"properties": {
 				"type": {
-					"type": 457,
+					"type": 458,
 					"optional": false
 				},
 				"points": {
-					"type": 458,
+					"type": 459,
 					"optional": false
 				},
 				"closePath": {
@@ -12450,7 +12471,7 @@ export default {
 					"optional": true
 				},
 				"lineCap": {
-					"type": 460,
+					"type": 461,
 					"optional": true
 				},
 				"lineWidth": {
@@ -12466,11 +12487,11 @@ export default {
 					"optional": true
 				},
 				"dash": {
-					"type": 448,
+					"type": 449,
 					"optional": true
 				},
 				"lineJoin": {
-					"type": 450,
+					"type": 451,
 					"optional": true
 				},
 				"color": {
@@ -12482,7 +12503,7 @@ export default {
 					"optional": true
 				},
 				"linearGradient": {
-					"type": 454,
+					"type": 455,
 					"optional": true
 				}
 			}
@@ -12493,7 +12514,7 @@ export default {
 		},
 		{
 			"kind": "array",
-			"item": 459
+			"item": 460
 		},
 		{
 			"kind": "object",
@@ -12513,8 +12534,8 @@ export default {
 			"items": [
 				12,
 				323,
-				461,
-				451
+				462,
+				452
 			]
 		},
 		{
@@ -12525,7 +12546,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"type": {
-					"type": 463,
+					"type": 464,
 					"optional": false
 				},
 				"x1": {
@@ -12545,7 +12566,7 @@ export default {
 					"optional": false
 				},
 				"lineCap": {
-					"type": 460,
+					"type": 461,
 					"optional": true
 				},
 				"lineWidth": {
@@ -12561,11 +12582,11 @@ export default {
 					"optional": true
 				},
 				"dash": {
-					"type": 448,
+					"type": 449,
 					"optional": true
 				},
 				"lineJoin": {
-					"type": 450,
+					"type": 451,
 					"optional": true
 				}
 			}
@@ -12578,7 +12599,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"type": {
-					"type": 465,
+					"type": 466,
 					"optional": false
 				},
 				"x": {
@@ -12610,11 +12631,11 @@ export default {
 					"optional": true
 				},
 				"dash": {
-					"type": 448,
+					"type": 449,
 					"optional": true
 				},
 				"lineJoin": {
-					"type": 450,
+					"type": 451,
 					"optional": true
 				},
 				"color": {
@@ -12626,7 +12647,7 @@ export default {
 					"optional": true
 				},
 				"linearGradient": {
-					"type": 454,
+					"type": 455,
 					"optional": true
 				}
 			}
@@ -12643,31 +12664,31 @@ export default {
 					"optional": false
 				},
 				"pageSize": {
-					"type": 467,
+					"type": 468,
 					"optional": true
 				},
 				"pageOrientation": {
-					"type": 520,
-					"optional": true
-				},
-				"pageMargins": {
 					"type": 521,
 					"optional": true
 				},
-				"header": {
+				"pageMargins": {
 					"type": 522,
+					"optional": true
+				},
+				"header": {
+					"type": 523,
 					"optional": true
 				},
 				"footer": {
-					"type": 522,
+					"type": 523,
 					"optional": true
 				},
 				"background": {
-					"type": 530,
+					"type": 531,
 					"optional": true
 				},
 				"watermark": {
-					"type": 532,
+					"type": 533,
 					"optional": true
 				},
 				"attachment": {
@@ -12733,7 +12754,6 @@ export default {
 			"items": [
 				12,
 				2,
-				468,
 				469,
 				470,
 				471,
@@ -12782,7 +12802,8 @@ export default {
 				514,
 				515,
 				516,
-				517
+				517,
+				518
 			]
 		},
 		{
@@ -12989,7 +13010,7 @@ export default {
 					"optional": false
 				},
 				"height": {
-					"type": 518,
+					"type": 519,
 					"optional": false
 				}
 			}
@@ -12998,7 +13019,7 @@ export default {
 			"kind": "union",
 			"items": [
 				4,
-				519
+				520
 			]
 		},
 		{
@@ -13010,7 +13031,7 @@ export default {
 			"items": [
 				12,
 				2,
-				468,
+				469,
 				297,
 				298
 			]
@@ -13021,7 +13042,7 @@ export default {
 				12,
 				2,
 				4,
-				468,
+				469,
 				280,
 				281
 			]
@@ -13039,33 +13060,33 @@ export default {
 				9,
 				10,
 				299,
-				408,
 				409,
 				410,
 				411,
-				400,
 				412,
+				401,
 				413,
 				414,
 				415,
-				422,
-				430,
-				433,
-				443,
-				466,
-				523,
-				529
+				416,
+				423,
+				431,
+				434,
+				444,
+				467,
+				524,
+				530
 			]
 		},
 		{
 			"kind": "object",
 			"properties": {
 				"attachment": {
-					"type": 524,
+					"type": 525,
 					"optional": false
 				},
 				"icon": {
-					"type": 525,
+					"type": 526,
 					"optional": true
 				},
 				"columns": {
@@ -13130,16 +13151,16 @@ export default {
 			"kind": "union",
 			"items": [
 				3,
-				429
+				430
 			]
 		},
 		{
 			"kind": "union",
 			"items": [
 				12,
-				526,
 				527,
-				528
+				528,
+				529
 			]
 		},
 		{
@@ -13170,22 +13191,22 @@ export default {
 				9,
 				10,
 				299,
-				408,
 				409,
 				410,
 				411,
-				400,
 				412,
+				401,
 				413,
 				414,
 				415,
-				422,
-				430,
-				433,
-				443,
-				466,
-				523,
-				531
+				416,
+				423,
+				431,
+				434,
+				444,
+				467,
+				524,
+				532
 			]
 		},
 		{
@@ -13197,7 +13218,7 @@ export default {
 				12,
 				2,
 				3,
-				533
+				534
 			]
 		},
 		{
@@ -13241,8 +13262,8 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				535,
-				536
+				536,
+				537
 			]
 		},
 		{
@@ -13257,11 +13278,11 @@ export default {
 			"kind": "object",
 			"properties": {
 				"text": {
-					"type": 416,
+					"type": 417,
 					"optional": false
 				},
 				"tocItem": {
-					"type": 419,
+					"type": 420,
 					"optional": false
 				},
 				"tocStyle": {
@@ -13501,15 +13522,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -13530,15 +13551,15 @@ export default {
 					"optional": true
 				},
 				"fit": {
-					"type": 423,
-					"optional": true
-				},
-				"cover": {
 					"type": 424,
 					"optional": true
 				},
+				"cover": {
+					"type": 425,
+					"optional": true
+				},
 				"linkToFile": {
-					"type": 428,
+					"type": 429,
 					"optional": true
 				},
 				"link": {
@@ -13778,15 +13799,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -13795,7 +13816,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"svg": {
-					"type": 431,
+					"type": 432,
 					"optional": false
 				},
 				"width": {
@@ -13807,7 +13828,7 @@ export default {
 					"optional": true
 				},
 				"fit": {
-					"type": 423,
+					"type": 424,
 					"optional": true
 				},
 				"overlayPattern": {
@@ -14047,15 +14068,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -14084,11 +14105,11 @@ export default {
 					"optional": true
 				},
 				"eccLevel": {
-					"type": 434,
+					"type": 435,
 					"optional": true
 				},
 				"mode": {
-					"type": 439,
+					"type": 440,
 					"optional": true
 				},
 				"mask": {
@@ -14320,15 +14341,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -14337,7 +14358,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"canvas": {
-					"type": 444,
+					"type": 445,
 					"optional": false
 				},
 				"overlayPattern": {
@@ -14565,15 +14586,15 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -14586,31 +14607,31 @@ export default {
 					"optional": false
 				},
 				"pageSize": {
-					"type": 467,
+					"type": 468,
 					"optional": true
 				},
 				"pageOrientation": {
-					"type": 520,
-					"optional": true
-				},
-				"pageMargins": {
 					"type": 521,
 					"optional": true
 				},
-				"header": {
+				"pageMargins": {
 					"type": 522,
+					"optional": true
+				},
+				"header": {
+					"type": 523,
 					"optional": true
 				},
 				"footer": {
-					"type": 522,
+					"type": 523,
 					"optional": true
 				},
 				"background": {
-					"type": 530,
+					"type": 531,
 					"optional": true
 				},
 				"watermark": {
-					"type": 532,
+					"type": 533,
 					"optional": true
 				},
 				"attachment": {
@@ -14678,11 +14699,11 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"overlayPattern": {
@@ -14690,11 +14711,11 @@ export default {
 					"optional": true
 				},
 				"overlayOpacity": {
-					"type": 368,
+					"type": 369,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -14703,11 +14724,11 @@ export default {
 			"kind": "object",
 			"properties": {
 				"attachment": {
-					"type": 524,
+					"type": 525,
 					"optional": false
 				},
 				"icon": {
-					"type": 525,
+					"type": 526,
 					"optional": true
 				},
 				"columns": {
@@ -14775,11 +14796,11 @@ export default {
 					"optional": true
 				},
 				"border": {
-					"type": 363,
+					"type": 364,
 					"optional": true
 				},
 				"borderColor": {
-					"type": 366,
+					"type": 367,
 					"optional": true
 				},
 				"overlayPattern": {
@@ -14787,11 +14808,11 @@ export default {
 					"optional": true
 				},
 				"overlayOpacity": {
-					"type": 368,
+					"type": 369,
 					"optional": true
 				},
 				"verticalAlignment": {
-					"type": 369,
+					"type": 370,
 					"optional": true
 				}
 			}
@@ -14800,9 +14821,9 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				519,
-				545,
-				546
+				520,
+				546,
+				547
 			]
 		},
 		{
@@ -14811,7 +14832,7 @@ export default {
 		},
 		{
 			"kind": "array",
-			"item": 547
+			"item": 548
 		},
 		{
 			"kind": "union",
@@ -14825,14 +14846,14 @@ export default {
 			"items": [
 				12,
 				4,
-				519,
-				549,
-				550
+				520,
+				550,
+				551
 			]
 		},
 		{
 			"kind": "array",
-			"item": 518
+			"item": 519
 		},
 		{
 			"kind": "function"
@@ -14841,7 +14862,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"text": {
-					"type": 399,
+					"type": 400,
 					"optional": false
 				},
 				"id": {
@@ -15544,7 +15565,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"toc": {
-					"type": 406,
+					"type": 407,
 					"optional": false
 				},
 				"overlayPattern": {
@@ -15777,11 +15798,11 @@ export default {
 			"kind": "object",
 			"properties": {
 				"text": {
-					"type": 416,
+					"type": 417,
 					"optional": false
 				},
 				"tocItem": {
-					"type": 419,
+					"type": 420,
 					"optional": false
 				},
 				"tocStyle": {
@@ -16038,15 +16059,15 @@ export default {
 					"optional": true
 				},
 				"fit": {
-					"type": 423,
-					"optional": true
-				},
-				"cover": {
 					"type": 424,
 					"optional": true
 				},
+				"cover": {
+					"type": 425,
+					"optional": true
+				},
 				"linkToFile": {
-					"type": 428,
+					"type": 429,
 					"optional": true
 				},
 				"link": {
@@ -16291,7 +16312,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"svg": {
-					"type": 431,
+					"type": 432,
 					"optional": false
 				},
 				"width": {
@@ -16303,7 +16324,7 @@ export default {
 					"optional": true
 				},
 				"fit": {
-					"type": 423,
+					"type": 424,
 					"optional": true
 				},
 				"overlayPattern": {
@@ -16568,11 +16589,11 @@ export default {
 					"optional": true
 				},
 				"eccLevel": {
-					"type": 434,
+					"type": 435,
 					"optional": true
 				},
 				"mode": {
-					"type": 439,
+					"type": 440,
 					"optional": true
 				},
 				"mask": {
@@ -16809,7 +16830,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"canvas": {
-					"type": 444,
+					"type": 445,
 					"optional": false
 				},
 				"overlayPattern": {
@@ -17046,31 +17067,31 @@ export default {
 					"optional": false
 				},
 				"pageSize": {
-					"type": 467,
+					"type": 468,
 					"optional": true
 				},
 				"pageOrientation": {
-					"type": 520,
-					"optional": true
-				},
-				"pageMargins": {
 					"type": 521,
 					"optional": true
 				},
-				"header": {
+				"pageMargins": {
 					"type": 522,
+					"optional": true
+				},
+				"header": {
+					"type": 523,
 					"optional": true
 				},
 				"footer": {
-					"type": 522,
+					"type": 523,
 					"optional": true
 				},
 				"background": {
-					"type": 530,
+					"type": 531,
 					"optional": true
 				},
 				"watermark": {
-					"type": 532,
+					"type": 533,
 					"optional": true
 				},
 				"attachment": {
@@ -17147,11 +17168,11 @@ export default {
 			"kind": "object",
 			"properties": {
 				"attachment": {
-					"type": 524,
+					"type": 525,
 					"optional": false
 				},
 				"icon": {
-					"type": 525,
+					"type": 526,
 					"optional": true
 				},
 				"columns": {
@@ -17227,12 +17248,16 @@ export default {
 		{
 			"kind": "object",
 			"properties": {
-				"table": {
+				"tableAlignment": {
 					"type": 354,
+					"optional": true
+				},
+				"table": {
+					"type": 355,
 					"optional": false
 				},
 				"layout": {
-					"type": 380,
+					"type": 381,
 					"optional": true
 				},
 				"overlayPattern": {
@@ -17461,7 +17486,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"text": {
-					"type": 399,
+					"type": 400,
 					"optional": false
 				},
 				"id": {
@@ -18152,7 +18177,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"toc": {
-					"type": 406,
+					"type": 407,
 					"optional": false
 				},
 				"overlayPattern": {
@@ -18381,11 +18406,11 @@ export default {
 			"kind": "object",
 			"properties": {
 				"text": {
-					"type": 416,
+					"type": 417,
 					"optional": false
 				},
 				"tocItem": {
-					"type": 419,
+					"type": 420,
 					"optional": false
 				},
 				"tocStyle": {
@@ -18638,15 +18663,15 @@ export default {
 					"optional": true
 				},
 				"fit": {
-					"type": 423,
-					"optional": true
-				},
-				"cover": {
 					"type": 424,
 					"optional": true
 				},
+				"cover": {
+					"type": 425,
+					"optional": true
+				},
 				"linkToFile": {
-					"type": 428,
+					"type": 429,
 					"optional": true
 				},
 				"link": {
@@ -18887,7 +18912,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"svg": {
-					"type": 431,
+					"type": 432,
 					"optional": false
 				},
 				"width": {
@@ -18899,7 +18924,7 @@ export default {
 					"optional": true
 				},
 				"fit": {
-					"type": 423,
+					"type": 424,
 					"optional": true
 				},
 				"overlayPattern": {
@@ -19160,11 +19185,11 @@ export default {
 					"optional": true
 				},
 				"eccLevel": {
-					"type": 434,
+					"type": 435,
 					"optional": true
 				},
 				"mode": {
-					"type": 439,
+					"type": 440,
 					"optional": true
 				},
 				"mask": {
@@ -19397,7 +19422,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"canvas": {
-					"type": 444,
+					"type": 445,
 					"optional": false
 				},
 				"overlayPattern": {
@@ -19630,31 +19655,31 @@ export default {
 					"optional": false
 				},
 				"pageSize": {
-					"type": 467,
+					"type": 468,
 					"optional": true
 				},
 				"pageOrientation": {
-					"type": 520,
-					"optional": true
-				},
-				"pageMargins": {
 					"type": 521,
 					"optional": true
 				},
-				"header": {
+				"pageMargins": {
 					"type": 522,
+					"optional": true
+				},
+				"header": {
+					"type": 523,
 					"optional": true
 				},
 				"footer": {
-					"type": 522,
+					"type": 523,
 					"optional": true
 				},
 				"background": {
-					"type": 530,
+					"type": 531,
 					"optional": true
 				},
 				"watermark": {
-					"type": 532,
+					"type": 533,
 					"optional": true
 				},
 				"attachment": {
@@ -19727,11 +19752,11 @@ export default {
 			"kind": "object",
 			"properties": {
 				"attachment": {
-					"type": 524,
+					"type": 525,
 					"optional": false
 				},
 				"icon": {
-					"type": 525,
+					"type": 526,
 					"optional": true
 				},
 				"columns": {
@@ -20048,12 +20073,16 @@ export default {
 		{
 			"kind": "object",
 			"properties": {
-				"table": {
+				"tableAlignment": {
 					"type": 354,
+					"optional": true
+				},
+				"table": {
+					"type": 355,
 					"optional": false
 				},
 				"layout": {
-					"type": 380,
+					"type": 381,
 					"optional": true
 				},
 				"overlayPattern": {
@@ -20282,7 +20311,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"text": {
-					"type": 399,
+					"type": 400,
 					"optional": false
 				},
 				"id": {
@@ -20973,7 +21002,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"toc": {
-					"type": 406,
+					"type": 407,
 					"optional": false
 				},
 				"overlayPattern": {
@@ -21202,11 +21231,11 @@ export default {
 			"kind": "object",
 			"properties": {
 				"text": {
-					"type": 416,
+					"type": 417,
 					"optional": false
 				},
 				"tocItem": {
-					"type": 419,
+					"type": 420,
 					"optional": false
 				},
 				"tocStyle": {
@@ -21459,15 +21488,15 @@ export default {
 					"optional": true
 				},
 				"fit": {
-					"type": 423,
-					"optional": true
-				},
-				"cover": {
 					"type": 424,
 					"optional": true
 				},
+				"cover": {
+					"type": 425,
+					"optional": true
+				},
 				"linkToFile": {
-					"type": 428,
+					"type": 429,
 					"optional": true
 				},
 				"link": {
@@ -21704,7 +21733,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"svg": {
-					"type": 431,
+					"type": 432,
 					"optional": false
 				},
 				"width": {
@@ -21716,7 +21745,7 @@ export default {
 					"optional": true
 				},
 				"fit": {
-					"type": 423,
+					"type": 424,
 					"optional": true
 				},
 				"overlayPattern": {
@@ -21973,11 +22002,11 @@ export default {
 					"optional": true
 				},
 				"eccLevel": {
-					"type": 434,
+					"type": 435,
 					"optional": true
 				},
 				"mode": {
-					"type": 439,
+					"type": 440,
 					"optional": true
 				},
 				"mask": {
@@ -22210,7 +22239,7 @@ export default {
 			"kind": "object",
 			"properties": {
 				"canvas": {
-					"type": 444,
+					"type": 445,
 					"optional": false
 				},
 				"overlayPattern": {
@@ -22443,31 +22472,31 @@ export default {
 					"optional": false
 				},
 				"pageSize": {
-					"type": 467,
+					"type": 468,
 					"optional": true
 				},
 				"pageOrientation": {
-					"type": 520,
-					"optional": true
-				},
-				"pageMargins": {
 					"type": 521,
 					"optional": true
 				},
-				"header": {
+				"pageMargins": {
 					"type": 522,
+					"optional": true
+				},
+				"header": {
+					"type": 523,
 					"optional": true
 				},
 				"footer": {
-					"type": 522,
+					"type": 523,
 					"optional": true
 				},
 				"background": {
-					"type": 530,
+					"type": 531,
 					"optional": true
 				},
 				"watermark": {
-					"type": 532,
+					"type": 533,
 					"optional": true
 				},
 				"attachment": {
@@ -22536,11 +22565,11 @@ export default {
 			"kind": "object",
 			"properties": {
 				"attachment": {
-					"type": 524,
+					"type": 525,
 					"optional": false
 				},
 				"icon": {
-					"type": 525,
+					"type": 526,
 					"optional": true
 				},
 				"columns": {
@@ -22616,19 +22645,19 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				589
+				590
 			]
 		},
 		{
 			"kind": "object",
 			"properties": {},
-			"index": 590
+			"index": 591
 		},
 		{
 			"kind": "union",
 			"items": [
 				3,
-				591
+				592
 			]
 		},
 		{
@@ -22639,7 +22668,7 @@ export default {
 					"optional": false
 				},
 				"headers": {
-					"type": 592,
+					"type": 593,
 					"optional": true
 				}
 			}
@@ -22648,7 +22677,7 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				593
+				594
 			]
 		},
 		{
@@ -22660,7 +22689,7 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				595
+				596
 			]
 		},
 		{
@@ -22691,15 +22720,15 @@ export default {
 					"optional": true
 				},
 				"creationDate": {
-					"type": 596,
+					"type": 597,
 					"optional": true
 				},
 				"modDate": {
-					"type": 596,
+					"type": 597,
 					"optional": true
 				},
 				"trapped": {
-					"type": 598,
+					"type": 599,
 					"optional": true
 				}
 			}
@@ -22708,7 +22737,7 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				597
+				598
 			]
 		},
 		{
@@ -22719,9 +22748,9 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				599,
 				600,
-				601
+				601,
+				602
 			]
 		},
 		{
@@ -22740,7 +22769,7 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				603
+				604
 			]
 		},
 		{
@@ -22750,7 +22779,6 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				469,
 				470,
 				471,
 				472,
@@ -22798,26 +22826,27 @@ export default {
 				514,
 				515,
 				516,
-				517
+				517,
+				518
 			]
 		},
 		{
 			"kind": "union",
 			"items": [
 				12,
-				606
+				607
 			]
 		},
 		{
 			"kind": "object",
 			"properties": {},
-			"index": 607
+			"index": 608
 		},
 		{
 			"kind": "object",
 			"properties": {
 				"extends": {
-					"type": 608,
+					"type": 609,
 					"optional": true
 				},
 				"font": {
@@ -22951,14 +22980,14 @@ export default {
 			"items": [
 				12,
 				3,
-				455
+				456
 			]
 		},
 		{
 			"kind": "union",
 			"items": [
 				12,
-				610
+				611
 			]
 		},
 		{
@@ -22989,7 +23018,7 @@ export default {
 					"optional": true
 				},
 				"printing": {
-					"type": 611,
+					"type": 612,
 					"optional": true
 				}
 			}
@@ -22998,8 +23027,8 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				612,
-				613
+				613,
+				614
 			]
 		},
 		{
@@ -23014,12 +23043,12 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				615,
 				616,
 				617,
 				618,
 				619,
-				620
+				620,
+				621
 			]
 		},
 		{
@@ -23050,7 +23079,6 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				622,
 				623,
 				624,
 				625,
@@ -23059,7 +23087,8 @@ export default {
 				628,
 				629,
 				630,
-				631
+				631,
+				632
 			]
 		},
 		{
@@ -23107,20 +23136,20 @@ export default {
 			"items": [
 				12,
 				3,
-				533
+				534
 			]
 		},
 		{
 			"kind": "union",
 			"items": [
 				12,
-				634
+				635
 			]
 		},
 		{
 			"kind": "object",
 			"properties": {},
-			"index": 635
+			"index": 636
 		},
 		{
 			"kind": "object",
@@ -23147,13 +23176,13 @@ export default {
 			"kind": "union",
 			"items": [
 				12,
-				637
+				638
 			]
 		},
 		{
 			"kind": "object",
 			"properties": {},
-			"index": 429
+			"index": 430
 		}
 	]
 };

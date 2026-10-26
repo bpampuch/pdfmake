@@ -14,8 +14,8 @@ or let a browser download the result. No browser process is needed on the server
 
 > **Development branch:** this checkout targets 0.3.x and includes unreleased
 > bundled TypeScript declarations and document preflight validation. The published
-> 0.3.12 package does not include those additions. Build and pack this checkout to
-> try them locally; do not assume installing 0.3.12 from npm installs this branch.
+> 0.3.13 package does not include those additions. Build and pack this checkout to
+> try them locally; do not assume installing 0.3.13 from npm installs this branch.
 
 ## Start with a PDF
 

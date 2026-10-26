@@ -3,6 +3,13 @@ const pdfmake = require('../../js');
 const validate = (doc, options) => pdfmake.validateDocument(doc, options);
 
 describe('Document validation', function () {
+	it('accepts 0.3.13 table alignment and rejects unsupported alignment values', function () {
+		for (const tableAlignment of ['left', 'center', 'right']) {
+			assert.equal(validate({ content: [{ tableAlignment, table: { body: [['x']] } }] }, { strict: true }).valid, true);
+		}
+		const invalid = validate({ content: [{ tableAlignment: 'justify', table: { body: [['x']] } }] });
+		assert(invalid.errors.some(item => item.path === '$.content[0].tableAlignment'));
+	});
 	it('collects independent field errors with exact paths', function () {
 		const result = validate({ content: [{ text: 'a', fontSize: 'large' }, { text: 'b', alignment: 'middle', opacity: 2 }], pageOrientation: 'sideways' });
 		assert.equal(result.valid, false);

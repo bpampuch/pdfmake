@@ -9,6 +9,12 @@ class OutputDocumentServer extends OutputDocument {
 	 * @returns {Promise}
 	 */
 	async write(filename) {
+		await this.pdfDocumentPromise;
+		if (this.bufferPromise !== null) {
+			await fs.promises.writeFile(filename, await this.getBuffer());
+			return;
+		}
+
 		const stream = await this.getStream();
 		const writeStream = fs.createWriteStream(filename);
 

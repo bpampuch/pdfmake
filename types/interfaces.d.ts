@@ -1280,6 +1280,8 @@ export interface ContentImage extends ContentLink, ContentBase, ForbidOtherEleme
  * Table element.
  */
 export interface ContentTable extends ContentBase, ForbidOtherElementProperties<"table"> {
+    /** Horizontal alignment of the whole table within the available width. Since 0.3.13. Defaults to left. */
+    tableAlignment?: "left" | "center" | "right";
     /**
      * Renders a table.
      *
