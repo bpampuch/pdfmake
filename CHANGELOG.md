@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed reversed ordered lists starting at a too high number when they contain nested lists
+
 ## 0.3.13 - 2026-10-25
 
 - Added horizontal table alignment via `tableAlignment`: `left` (default), `center`, or `right`
