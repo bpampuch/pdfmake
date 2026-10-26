@@ -40,9 +40,18 @@ module.exports = {
 		rules: [
 			{
 				test: /pdfkit[/\\]js[/\\]/,
-				// PDFKit bundles the ICC profile and uses its URL only as an in-memory registry key.
-				parser: {
-					url: false
+				// pdfkit bundles the ICC profile; use a stable registry key without requiring file
+				use: {
+					loader: StringReplacePlugin.replace({
+						replacements: [
+							{
+								pattern: /new URL\(\s*['"]\.\/data\/sRGB_IEC61966_2_1\.icc['"],\s*import\.meta\.url\s*,?\s*\)\.href/g,
+								replacement: function () {
+									return "'pdfkit/builtin/sRGB_IEC61966_2_1.icc'";
+								}
+							}
+						]
+					})
 				}
 			},
 			{

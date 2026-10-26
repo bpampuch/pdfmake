@@ -2,8 +2,14 @@
 
 ## Unreleased
 
+- Fixed reversed ordered lists starting at a too high number when they contain nested lists
+
+## 0.3.13 - 2026-10-25
+
 - Added horizontal table alignment via `tableAlignment`: `left` (default), `center`, or `right`
 - Fixed PDF stream errors not rejecting promises returned by `getBuffer()`, `getBase64()` and `getDataUrl()`
+- Fixed `getStream()` returning an already consumed stream; subsequent stream access now rejects
+- Fixed `write()` hanging or failing after `getBuffer()`, `getBase64()` or `getDataUrl()` by reusing buffered PDF data
 - Fixed attachments loaded from the virtual file system (including downloaded URL attachments) failing with "No src specified"
 - Fixed sections with automatic page height sharing the first section's height and clipping content in subsequent sections
 - Fixed vertical alignment of row-spanned table header cells when the table starts on a subsequent page
@@ -12,7 +18,7 @@
 - Fixed wavy text decoration clipping height incorrectly depending on the vertical position on the page
 - Fixed reversed paint order of table cell background fills in unbreakable blocks, which caused outer table fills to cover nested table fills
 - Fixed percentage table column widths using incorrect padding and border widths when mixed with `auto` or star-sized columns
-- Fixed reversed ordered lists starting at a too high number when they contain nested lists
+- Fixed `TypeError: Invalid base URL` when loading the browser build in React Native
 
 ## 0.3.12 - 2026-10-17
 
