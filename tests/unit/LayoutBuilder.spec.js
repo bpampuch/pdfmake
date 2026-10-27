@@ -1312,6 +1312,32 @@ describe('LayoutBuilder', function () {
 			assert.equal(pages[0].items[1].item.y, 0);
 		});
 
+		[1, 2].forEach(function (pageBreakCount) {
+			it('should preserve absolute polyline points after ' + pageBreakCount + ' layout retries', function () {
+				var desc = [{ text: 'First page' }];
+				for (var i = 0; i < pageBreakCount; i++) {
+					desc.push({ text: 'Next page', id: 'break' + i });
+				}
+				desc.push({
+					absolutePosition: { x: 40, y: 250 },
+					canvas: [{
+						type: 'polyline',
+						closePath: true,
+						points: [{ x: 0, y: 0 }, { x: 26, y: 26 }, { x: 18, y: 8 }]
+					}]
+				});
+
+				var pages = builder.layoutDocument(desc, sampleTestProvider, {}, undefined, undefined, undefined, undefined, undefined, function (node) {
+					return typeof node.id === 'string' && node.id.indexOf('break') === 0;
+				});
+
+				assert.equal(pages.length, pageBreakCount + 1);
+				var vectors = pages[pageBreakCount].items.filter(item => item.type === 'vector');
+				assert.equal(vectors.length, 1);
+				assert.deepStrictEqual(vectors[0].item.points, [{ x: 40, y: 250 }, { x: 66, y: 276 }, { x: 58, y: 258 }]);
+			});
+		});
+
 		it('should use the absolutePosition attribute without pagebreak in canvas', function () {
 			var builderAP = new LayoutBuilder({ width: 841.89, height: 555.28, orientation: 'portrait' }, { left: 40, right: 40, top: 40, bottom: 40 });
 			builderAP.pages = [];

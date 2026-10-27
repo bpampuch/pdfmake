@@ -1471,6 +1471,7 @@ function decorateNode(node) {
 			let y1 = vector.y1;
 			let x2 = vector.x2;
 			let y2 = vector.y2;
+			let points = vector.type === 'polyline' ? vector.points.map(point => ({ x: point.x, y: point.y })) : null;
 			vector.resetXY = () => {
 				vector.x = x;
 				vector.y = y;
@@ -1478,6 +1479,12 @@ function decorateNode(node) {
 				vector.y1 = y1;
 				vector.x2 = x2;
 				vector.y2 = y2;
+				if (points) {
+					points.forEach((point, index) => {
+						vector.points[index].x = point.x;
+						vector.points[index].y = point.y;
+					});
+				}
 			};
 		});
 	}
