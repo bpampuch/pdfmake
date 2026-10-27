@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Improved performance for large documents when using `pageBreakBefore`
 - Fixed reversed ordered lists starting at a too high number when they contain nested lists
 
 ## 0.3.13 - 2026-10-25
