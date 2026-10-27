@@ -3,6 +3,7 @@
 var assert = require('assert');
 
 var ElementWriter = require('../../js/ElementWriter').default;
+var DocumentContext = require('../../js/DocumentContext').default;
 
 describe('ElementWriter', function () {
 	var ew, ctx, page, fakePosition;
@@ -76,15 +77,37 @@ describe('ElementWriter', function () {
 			assert.equal(position, fakePosition);
 		});
 
-		it('should return position on page', function () {
-			var line = buildLine(20);
+		it('should resolve positions through nested fragments when they are committed', function () {
+			var context = new DocumentContext();
+			context.addPage({ width: 200, height: 300, orientation: 'portrait' }, { left: 10, right: 10, top: 10, bottom: 10 });
+			context.moveDown(10);
+			var writer = new ElementWriter(context);
+			writer.pushContext(80, 100);
+			writer.pushContext(40, 60);
+			writer.context().moveDown(5);
+			var position = writer.addLine(buildLine(20));
+			assert.equal(position.left, 0);
+			assert.equal(position.top, 5);
 
-			ew.pushContext(50, 50);
-			ew.pushContext(20, 30);
-			ew.pushContext(11, 40);
-			var position = ew.addLine(line);
+			var innerFragment = writer.context().getCurrentPage();
+			innerFragment.height = 25;
+			writer.popContext();
+			writer.context().x = 7;
+			writer.context().moveDown(11);
+			writer.addFragment(innerFragment);
+			assert.equal(position.left, 7);
+			assert.equal(position.top, 16);
 
-			assert.equal(position, fakePosition);
+			var outerFragment = writer.context().getCurrentPage();
+			outerFragment.height = 36;
+			writer.popContext();
+			writer.addFragment(outerFragment);
+			assert.deepEqual(position, {
+				pageNumber: 1, pageOrientation: 'portrait', pageInnerHeight: 280, pageInnerWidth: 180,
+				left: 17, top: 36, horizontalRatio: 7 / 180, verticalRatio: 26 / 280
+			});
+			assert.equal(context.getCurrentPage().items[0].item.x, position.left);
+			assert.equal(context.getCurrentPage().items[0].item.y, position.top);
 		});
 
 		it('should not add line and return false if there\'s not enough space', function () {

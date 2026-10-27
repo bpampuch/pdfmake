@@ -2041,6 +2041,66 @@ describe('LayoutBuilder', function () {
 			styleDictionary = {};
 		});
 
+		['text', 'canvas', 'image'].forEach(function (type) {
+			[false, true].forEach(function (dontBreakRows) {
+				it('should report committed positions for ' + type + ' in ' + (dontBreakRows ? 'unbreakable rows' : 'an unbreakable table') + ' (#2130)', function () {
+					var cell = { id: 'cell' };
+					if (type === 'text') {
+						cell.text = 'First\nSecond\nThird';
+					} else if (type === 'canvas') {
+						cell.canvas = [{ type: 'rect', x: 0, y: 0, w: 20, h: 36 }];
+					} else {
+						cell.image = 'test.jpg';
+						cell.width = 20;
+						cell.height = 36;
+					}
+					var table = {
+						id: 'table',
+						unbreakable: !dontBreakRows,
+						layout: emptyTableLayout,
+						table: { dontBreakRows: dontBreakRows, body: [[cell]] }
+					};
+					var callback = sinon.spy(function () { return false; });
+					var pages = builder.layoutDocument([
+						{ text: 'Filler', margin: [0, 680, 0, 0] },
+						{ text: 'Heading', id: 'heading' },
+						table
+					], sampleTestProvider, {}, undefined, undefined, undefined, undefined, undefined, callback);
+
+					assert.equal(pages.length, 2);
+					var headingCall = callback.getCalls().find(call => call.args[0].id === 'heading');
+					assert.deepEqual(headingCall.args[1].getFollowingNodesOnPage(), []);
+					assert.deepEqual(headingCall.args[1].getNodesOnNextPage().map(node => node.id), ['table', 'cell']);
+					assert.deepEqual(cell.nodeInfo.pageNumbers, [2]);
+					assert.deepEqual(table.nodeInfo.pageNumbers, [2]);
+					cell.positions.forEach((position, index) => {
+						assert.equal(position.pageNumber, 2);
+						assert.equal(position.left, 40);
+						assert.equal(position.top, 40 + (type === 'text' ? index * 12 : 0));
+						assert.equal(position.pageInnerHeight, 720);
+						assert.equal(position.verticalRatio, (position.top - 40) / 720);
+					});
+				});
+			});
+		});
+
+		it('should keep an orphan heading with a multiline unbreakable table (#2130)', function () {
+			var heading = { text: 'Heading', headlineLevel: 1 };
+			var table = {
+				unbreakable: true,
+				table: { body: Array.from({ length: 3 }, () => [{ text: 'First\nSecond\nThird' }]) }
+			};
+			var pages = builder.layoutDocument([
+				{ text: 'Filler', margin: [0, 680, 0, 0] }, heading, table
+			], sampleTestProvider, {}, undefined, undefined, undefined, undefined, undefined,
+			(node, container) => node.headlineLevel === 1 && container.getFollowingNodesOnPage().length <= 2);
+
+			assert.equal(pages.length, 2);
+			assert.equal(heading.positions[0].pageNumber, 2);
+			assert.equal(heading.positions[0].top, 40);
+			assert(table.positions.every(position => position.pageNumber === 2));
+		});
+
 		['header', 'footer'].forEach(function (type) {
 			it('should reset reused ' + type + ' canvas positions when content is laid out again', function () {
 				var firstPageNode = { stack: ['Heading', { canvas: [{ type: 'rect', x: 0, y: 0, w: 10, h: 10 }] }] };

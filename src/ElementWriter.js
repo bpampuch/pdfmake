@@ -331,6 +331,24 @@ class ElementWriter extends EventEmitter {
 			return false;
 		}
 
+		// Positions are shared by leaf nodes and their containers. Update each
+		// recorded position once, after the fragment has found its destination.
+		(block.positions || []).forEach(position => {
+			let left = position.left + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
+			let top = position.top + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+			let pagePosition = ctx.getCurrentPosition();
+			Object.assign(position, pagePosition, {
+				left,
+				top,
+				horizontalRatio: (left - ctx.pageMargins.left) / pagePosition.pageInnerWidth,
+				verticalRatio: (top - ctx.pageMargins.top) / pagePosition.pageInnerHeight
+			});
+			if (this.contextStack.length > 0) {
+				page.positions = page.positions || [];
+				page.positions.push(position);
+			}
+		});
+
 		let unbreakableFillsInserted = 0;
 
 		block.items.forEach(item => {
@@ -338,9 +356,6 @@ class ElementWriter extends EventEmitter {
 				case 'line':
 					var l = item.item.clone();
 
-					if (l._node) {
-						l._node.positions[0].pageNumber = ctx.page + 1;
-					}
 					l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 					l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
@@ -433,7 +448,14 @@ class ElementWriter extends EventEmitter {
 	}
 
 	getCurrentPositionOnPage() {
-		return (this.contextStack[0] || this.context()).getCurrentPosition();
+		let context = this.context();
+		let position = context.getCurrentPosition();
+		if (this.contextStack.length > 0) {
+			let page = context.getCurrentPage();
+			page.positions = page.positions || [];
+			page.positions.push(position);
+		}
+		return position;
 	}
 }
 
