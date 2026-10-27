@@ -128,7 +128,7 @@ describe('Integration test: alignment', function () {
 	[
 		{ name: 'a comma in a separate fragment', prefix: [{ text: 'Hello' }, { text: ', ' }] },
 		{ name: 'a comma after a bold fragment', prefix: [{ text: 'Hello', bold: true }, { text: ', ' }] },
-		{ name: 'a word split by a style change', prefix: [{ text: 'Hel', bold: true }, { text: 'lo ' }] },
+		{ name: 'a word split by a style change', prefix: [{ text: 'He', bold: true }, { text: 'llo ' }] },
 		{ name: 'a non-breaking space across styles', prefix: [{ text: 'Hello\u00a0', bold: true }, { text: 'world ' }] },
 		{ name: 'a word joiner across styles', prefix: [{ text: 'Hello\u2060', bold: true }, { text: 'world ' }] },
 		{ name: 'an empty fragment', prefix: [{ text: 'Hello', bold: true }, { text: '' }] }
@@ -159,13 +159,13 @@ describe('Integration test: alignment', function () {
 	});
 
 	[
-		{ name: 'explicit newlines', text: [{ text: 'Hel', bold: true }, { text: 'lo, world\nnext words\n' }] },
-		{ name: 'a single split word', text: [{ text: 'Hel', bold: true }, { text: 'lo' }] },
+		{ name: 'explicit newlines', text: [{ text: 'He', bold: true }, { text: 'llo, world\nnext words\n' }] },
+		{ name: 'a single split word', text: [{ text: 'He', bold: true }, { text: 'llo' }] },
 		{ name: 'a word wider than the page', text: [{ text: 'a'.repeat(150), bold: true }, { text: 'b'.repeat(150) }] },
 		{ name: 'noWrap fragments', text: [{ text: 'Hello', bold: true }, { text: ', world', noWrap: true }, { text: ' next words '.repeat(10) }] },
 		{ name: 'break-all fragments', text: [{ text: 'Hello', bold: true }, { text: 'world'.repeat(30), wordBreak: 'break-all' }] },
 		{ name: 'Chinese text', text: [{ text: '\u4e2d\u6587'.repeat(30), bold: true }, { text: '\u6d4b\u8bd5'.repeat(30) }] },
-		{ name: 'preserved whitespace', text: [{ text: '  Hel', bold: true }, { text: 'lo   world next words '.repeat(10) }], preserveLeadingSpaces: true, preserveTrailingSpaces: true }
+		{ name: 'preserved whitespace', text: [{ text: '  He', bold: true }, { text: 'llo   world next words '.repeat(10) }], preserveLeadingSpaces: true, preserveTrailingSpaces: true }
 	].forEach(function (example) {
 		it('preserves wrapping and finite positions with ' + example.name, function () {
 			function render(alignment) {
@@ -203,7 +203,7 @@ describe('Integration test: alignment', function () {
 			function render(alignment) {
 				var paragraph = {
 					text: Array.from({ length: 80 }, () => [
-						{ text: 'Hel', bold: true }, { text: 'lo' }, { text: ', ' }, { text: 'world next words ' }
+						{ text: 'He', bold: true }, { text: 'llo' }, { text: ', ' }, { text: 'world next words ' }
 					]).flat(),
 					alignment: alignment,
 					id: 'paragraph'
