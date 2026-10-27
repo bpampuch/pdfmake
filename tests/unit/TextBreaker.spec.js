@@ -173,18 +173,17 @@ describe('TextBreaker', function () {
 			assert.equal(result[1].noNewLine, undefined);
 		});
 
-		it.skip('should support no line break if is text inlines and is space on begin', function () {
+		it('should keep noWrap inlines together when the next inline begins with a space', function () {
 			var arrayText = [
 				{ text: 'First line', noWrap: true },
 				{ text: ' Second line', noWrap: true }
 			];
 
-			// TODO: Fix a test.
-
 			var result = textBreaker.getBreaks(arrayText);
-			assert.equal(result.length, 2);
-			assert.equal(result[0].noNewLine, undefined);
-			assert.equal(result[1].noNewLine, undefined);
+			assert.deepEqual(result, [
+				{ text: 'First line', noWrap: true, noNewLine: true },
+				{ text: ' Second line', noWrap: true }
+			]);
 		});
 
 		it('should support plain strings', function () {

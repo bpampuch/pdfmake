@@ -2,6 +2,7 @@ import pdfmakeBase from '../base';
 import OutputDocumentBrowser from './OutputDocumentBrowser';
 import fs from 'fs';
 import configurator from 'core-js/configurator';
+import { registerStdFonts } from 'pdfkit';
 
 // core-js: Polyfills will be used only if natives completely unavailable.
 configurator({
@@ -24,7 +25,12 @@ class pdfmake extends pdfmakeBase {
 	}
 
 	addFontContainer(fontContainer) {
-		this.addVirtualFileSystem(fontContainer.vfs);
+		if (fontContainer.standardFonts) {
+			registerStdFonts(...fontContainer.standardFonts);
+		}
+		if (fontContainer.vfs) {
+			this.addVirtualFileSystem(fontContainer.vfs);
+		}
 		this.addFonts(fontContainer.fonts);
 	}
 

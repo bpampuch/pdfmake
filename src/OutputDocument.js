@@ -4,16 +4,29 @@ class OutputDocument {
 	 * @param {Promise<object>} pdfDocumentPromise
 	 */
 	constructor(pdfDocumentPromise) {
-		this.bufferSize = 1073741824;
 		this.pdfDocumentPromise = pdfDocumentPromise;
 		this.bufferPromise = null;
+		this.streamEnded = false;
+		this.streamEndListenerAttached = false;
 	}
 
 	/**
 	 * @returns {Promise<object>}
 	 */
-	getStream() {
-		return this.pdfDocumentPromise;
+	async getStream() {
+		const stream = await this.pdfDocumentPromise;
+		if (this.streamEnded) {
+			throw new Error('PDF stream has already been consumed.');
+		}
+
+		if (!this.streamEndListenerAttached) {
+			stream.once('end', () => {
+				this.streamEnded = true;
+			});
+			this.streamEndListenerAttached = true;
+		}
+
+		return stream;
 	}
 
 	/**
@@ -22,17 +35,15 @@ class OutputDocument {
 	getBuffer() {
 		const getBufferInternal = (async () => {
 			const stream = await this.getStream();
-			return new Promise((resolve) => {
+			return new Promise((resolve, reject) => {
 				let chunks = [];
-				stream.on('readable', () => {
-					let chunk;
-					while ((chunk = stream.read(this.bufferSize)) !== null) {
-						chunks.push(chunk);
-					}
+				stream.on('data', chunk => {
+					chunks.push(chunk);
 				});
 				stream.on('end', () => {
 					resolve(Buffer.concat(chunks));
 				});
+				stream.on('error', reject);
 				stream.end();
 			});
 		});

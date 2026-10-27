@@ -178,6 +178,24 @@ describe('Printer', function () {
 
 	});
 
+	it('should calculate automatic height independently for each section', async function () {
+		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs));
+		var docDefinition = {
+			pageSize: { width: 300, height: 'auto' },
+			pageMargins: 40,
+			content: [
+				{ section: [{ canvas: [{ type: 'rect', x: 0, y: 0, w: 100, h: 30 }] }] },
+				{ section: [{ canvas: [{ type: 'rect', x: 0, y: 0, w: 100, h: 150 }] }] }
+			]
+		};
+
+		await printer.createPdfKitDocument(docDefinition);
+
+		assert.equal(PDFDocument.prototype.addPage.callCount, 2);
+		assert.deepEqual(PDFDocument.prototype.addPage.firstCall.args[0].size, [300, 110]);
+		assert.deepEqual(PDFDocument.prototype.addPage.secondCall.args[0].size, [300, 230]);
+	});
+
 	it('should print only the require number of pages', async function () {
 		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs));
 

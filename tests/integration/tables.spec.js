@@ -26,6 +26,126 @@ describe('Integration test: tables', function () {
 	var startX = testHelper.MARGINS.left + TABLE_PADDING_X + TABLE_BORDER_STRENGTH;
 	var startY = testHelper.MARGINS.top + TABLE_PADDING_Y + TABLE_BORDER_STRENGTH;
 
+	['left', 'center', 'right'].forEach(function (alignment) {
+		[false, true].forEach(function (dontBreakRows) {
+			it('aligns a multipage table ' + alignment + ' with dontBreakRows=' + dontBreakRows, function () {
+				var body = [['Header']];
+				for (var i = 0; i < 40; i++) {
+					body.push(['Row ' + i]);
+				}
+				var pages = testHelper.renderPages('A6', {
+					content: [
+						{ margin: [13, 0, 27, 0], tableAlignment: alignment, table: { widths: [80], headerRows: 1, dontBreakRows: dontBreakRows, body: body } },
+						{ text: 'After' }
+					]
+				});
+				var tableWidth = 80 + 2 * TABLE_PADDING_X + 2 * TABLE_BORDER_STRENGTH;
+				var freeWidth = sizes.A6[0] - 80 - 13 - 27 - tableWidth;
+				var offset = alignment === 'center' ? freeWidth / 2 : (alignment === 'right' ? freeWidth : 0);
+				assert(pages.length > 1);
+				pages.forEach(function (page) {
+					var lines = page.items.filter(node => node.type === 'line');
+					lines.forEach(function (node) {
+						var text = node.item.inlines.map(inline => inline.text).join('');
+						assert.equal(node.item.x, text === 'After' ? 40 : startX + 13 + offset);
+					});
+					var borders = page.items.filter(node => node.type === 'vector' && node.item.type === 'line');
+					borders.forEach(function (node) {
+						assert(node.item.x1 >= 40 + 13 + offset);
+						assert(node.item.x2 <= 40 + 13 + offset + tableWidth);
+					});
+				});
+			});
+		});
+	});
+
+	it('aligns a nested table within its cell without changing text alignment', function () {
+		var pages = testHelper.renderPages('A6', {
+			content: [
+				{ table: { widths: [180], body: [[
+					{ tableAlignment: 'center', table: { widths: [60], body: [['Nested']] } }
+				]] } },
+				{ text: 'After' }
+			]
+		});
+		var lines = getCells(pages, { pageNumber: 0 });
+		assert.equal(lines[0].item.x, startX + (180 - 70) / 2 + 5);
+		assert.equal(lines[1].item.x, 40);
+	});
+
+	it('centers auto columns including custom padding, borders and fills', function () {
+		function render(alignment) {
+			return testHelper.renderPages('A6', {
+				content: {
+					layout: {
+						paddingLeft: () => 7,
+						paddingRight: () => 11,
+						vLineWidth: () => 3,
+						fillColor: () => 'yellow'
+					},
+					tableAlignment: alignment,
+					table: { widths: ['auto', 'auto'], body: [['A', 'B']] }
+				}
+			})[0].items;
+		}
+		var left = render('left');
+		var centered = render('center');
+		var borders = left.filter(node => node.type === 'vector' && node.item.type === 'line');
+		var rightEdge = Math.max(...borders.map(node => Math.max(node.item.x1, node.item.x2))) + 1.5;
+		var offset = (sizes.A6[0] - 40 - rightEdge) / 2;
+		assert.equal(left.length, centered.length);
+		left.forEach(function (node, index) {
+			var item = centered[index].item;
+			if (node.type === 'line' || node.item.type === 'rect') {
+				assert(Math.abs(item.x - node.item.x - offset) < 0.000001);
+			} else {
+				assert(Math.abs(item.x1 - node.item.x1 - offset) < 0.000001);
+				assert(Math.abs(item.x2 - node.item.x2 - offset) < 0.000001);
+			}
+		});
+	});
+
+	['*', 300].forEach(function (width) {
+		it('keeps full-width and overflowing tables at the left origin (width=' + width + ')', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: { tableAlignment: 'center', table: { widths: [width], body: [['A']] } }
+			});
+			assert.equal(getCells(pages, { pageNumber: 0 })[0].item.x, startX);
+		});
+	});
+
+	it('keeps a centered table aligned when flowing to the next snaking column', function () {
+		var body = [['Header']];
+		for (var i = 0; i < 40; i++) {
+			body.push(['Row']);
+		}
+		var pages = testHelper.renderPages('A6', {
+			content: {
+				columns: [{ stack: [
+					{ tableAlignment: 'center', table: { widths: [40], headerRows: 1, body: body } },
+					{ text: 'After' }
+				] }, {}],
+				columnGap: 10,
+				snakingColumns: true
+			}
+		});
+		var columnWidth = (sizes.A6[0] - 80 - 10) / 2;
+		var offset = (columnWidth - 50) / 2;
+		var origins = [40, 40 + columnWidth + 10];
+		var foundSecondColumn = false;
+		pages.forEach(function (page) {
+			page.items.filter(node => node.type === 'line').forEach(function (node) {
+				var isAfter = node.item.inlines[0].text === 'After';
+				var expected = origins.map(x => x + (isAfter ? 0 : offset + 5));
+				assert(expected.some(x => Math.abs(x - node.item.x) < 0.000001), 'Unexpected x: ' + node.item.x);
+				if (node.item.x > origins[1]) {
+					foundSecondColumn = true;
+				}
+			});
+		});
+		assert(foundSecondColumn);
+	});
+
 	it('renders a simple table', function () {
 		var dd = {
 			content: {
@@ -400,6 +520,66 @@ describe('Integration test: tables', function () {
 		// by a negative discountY when a rowspan started on a previous page. Allow up to
 		// 2x row height (90pt) as a safe upper bound; anything beyond that is the bug.
 		assert.ok(maxGap < 90, 'max gap between horizontal lines was ' + maxGap + 'pt, expected < 90pt');
+	});
+
+	it('keeps rowSpan header verticalAlignment stable on repeated tables (#2925)', function () {
+		function createReportTable() {
+			var rows = [
+				['D-001', '500', '480', '-20', 'In Progress'],
+				['D-002', '300', '350', '+50', 'Exceeded'],
+				['D-003', '750', '750', '0', 'Achieved'],
+				['D-004', '200', '180', '-20', 'Under Review'],
+				['D-005', '400', '410', '+10', 'Achieved']
+			];
+
+			return {
+				margin: [0, 5, 0, 15],
+				table: {
+					headerRows: 2,
+					widths: ['auto', '*', '*', '*', 'auto'],
+					body: [
+						[
+							{ text: 'Dept ID', style: 'tableHeader', rowSpan: 2, verticalAlignment: 'middle' },
+							{ text: 'Performance Indicators', style: 'tableHeader', colSpan: 3 },
+							{},
+							{},
+							{ text: 'Status', style: 'tableHeader', rowSpan: 2 }
+						],
+						[{}, { text: 'Target', style: 'tableHeader' }, { text: 'Actual', style: 'tableHeader' }, { text: 'Gap', style: 'tableHeader' }, {}],
+						...rows,
+						...rows,
+						...rows
+					]
+				}
+			};
+		}
+
+		var content = [];
+		for (var i = 1; i <= 3; i++) {
+			content.push({ text: 'Statistical Report - Page ' + i, style: 'header' });
+			content.push(createReportTable());
+			if (i < 3) {
+				content.push({ text: '', pageBreak: 'after' });
+			}
+		}
+
+		var pages = testHelper.renderPages('A4', {
+			content,
+			styles: {
+				header: { fontSize: 18, bold: true, alignment: 'center' },
+				tableHeader: { bold: true, fillColor: '#eeeeee' }
+			}
+		});
+
+		var viewHeights = pages.map(page => {
+			var verticalAlignmentMarker = page.items.find(node => node.type === 'beginVerticalAlignment');
+
+			return verticalAlignmentMarker.item.getViewHeight();
+		});
+
+		assert.equal(pages.length, 3);
+		assert.deepEqual(viewHeights, [viewHeights[0], viewHeights[0], viewHeights[0]]);
+		assert.ok(viewHeights[0] > 0, 'rowSpan header view height must remain positive');
 	});
 
 });

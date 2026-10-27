@@ -571,8 +571,9 @@ class LayoutBuilder {
 	 * When in snaking columns, first tries moving to next column.
 	 * If no columns available, moves to next page and resets x to left margin.
 	 * @param {string} pageOrientation - Optional page orientation for the new page
+	 * @param {TableProcessor} [tableProcessor] - Reapply table alignment in the new column
 	 */
-	snakingAwarePageBreak(pageOrientation) {
+	snakingAwarePageBreak(pageOrientation, tableProcessor) {
 		let ctx = this.writer.context();
 		let snakingSnapshot = ctx.getSnakingSnapshot();
 		if (!snakingSnapshot) {
@@ -581,7 +582,7 @@ class LayoutBuilder {
 
 		// Try flowing to next column first
 		if (this.writer.canMoveToNextColumn()) {
-			this.writer.moveToNextColumn();
+			this.writer.moveToNextColumn(tableProcessor ? context => tableProcessor.alignTable(context) : undefined);
 			return;
 		}
 
@@ -595,6 +596,9 @@ class LayoutBuilder {
 		let savedLastColumnWidth = ctx.lastColumnWidth;
 		ctx.resetSnakingColumnsForNewPage();
 		ctx.lastColumnWidth = savedLastColumnWidth;
+		if (tableProcessor) {
+			tableProcessor.alignTable(ctx);
+		}
 	}
 
 	// vertical container
@@ -1077,7 +1081,7 @@ class LayoutBuilder {
 							let rowTopPageY = this.cell._leftEndingCell._startingRowSpanY + this.cell._leftEndingCell._rowTopPageYPadding;
 							return this.cell._leftEndingCell._rowTopPageY - rowTopPageY + this.cell._leftEndingCell._bottomY;
 						} else {
-							if (this.cell.positions[0].pageNumber !== this.cell._leftEndingCell._lastPageNumber) {
+							if (this.cell._lastPageNumber !== this.cell._leftEndingCell._lastPageNumber) {
 								return this.bottomY - this.cell._leftEndingCell._bottomY;
 							}
 
@@ -1170,7 +1174,11 @@ class LayoutBuilder {
 					processor.bottomLineWidth + processor.topLineWidth
 				);
 				if (this.writer.context().availableHeight < minRowHeight) {
-					this.snakingAwarePageBreak();
+					// Column selection needs the container origin, before table alignment.
+					if (processor.alignmentOffset) {
+						this.writer.context().addMargin(-processor.alignmentOffset, processor.alignmentOffset);
+					}
+					this.snakingAwarePageBreak(undefined, processor);
 
 					// Skip border when headerRows present (header repeat includes it)
 					if (processor.layout.hLineWhenBroken !== false && !processor.headerRows) {

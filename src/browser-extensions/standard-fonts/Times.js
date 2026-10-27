@@ -1,12 +1,10 @@
-var fs = require('fs');
-
 var fontContainer = {
-	vfs: {
-		'data/Times-Roman.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Times-Roman.afm', 'utf8'), encoding: 'utf8' },
-		'data/Times-Bold.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Times-Bold.afm', 'utf8'), encoding: 'utf8' },
-		'data/Times-Italic.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Times-Italic.afm', 'utf8'), encoding: 'utf8' },
-		'data/Times-BoldItalic.afm': { data: fs.readFileSync(__dirname + '/../../../node_modules/pdfkit/js/data/Times-BoldItalic.afm', 'utf8'), encoding: 'utf8' }
-	},
+	standardFonts: [
+		require('pdfkit/standard-fonts/TimesRoman'),
+		require('pdfkit/standard-fonts/TimesBold'),
+		require('pdfkit/standard-fonts/TimesItalic'),
+		require('pdfkit/standard-fonts/TimesBoldItalic')
+	],
 	fonts: {
 		Times: {
 			normal: 'Times-Roman',

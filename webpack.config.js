@@ -1,5 +1,4 @@
 var path = require('path');
-var fs = require('fs');
 var TerserPlugin = require('terser-webpack-plugin');
 var StringReplacePlugin = require("string-replace-webpack-plugin");
 var webpack = require('webpack');
@@ -10,8 +9,8 @@ var banner = '/*! ' + pkg.name + ' v' + pkg.version + ', @license ' + pkg.licens
 var supportedBrowsers = {
 	"chrome": "109",
 	"edge": "109",
-	"firefox": "102",
-	"safari": "14"
+	"firefox": "115",
+	"safari": "16"
 };
 
 module.exports = {
@@ -34,14 +33,27 @@ module.exports = {
 		fallback: {
 			crypto: false,
 			buffer: require.resolve('buffer/'),
-			util: require.resolve('util/'),
-			stream: require.resolve('stream-browserify'),
-			zlib: require.resolve('browserify-zlib'),
-			assert: require.resolve('assert/')
+			stream: false
 		}
 	},
 	module: {
 		rules: [
+			{
+				test: /pdfkit[/\\]js[/\\]/,
+				// pdfkit bundles the ICC profile; use a stable registry key without requiring file
+				use: {
+					loader: StringReplacePlugin.replace({
+						replacements: [
+							{
+								pattern: /new URL\(\s*['"]\.\/data\/sRGB_IEC61966_2_1\.icc['"],\s*import\.meta\.url\s*,?\s*\)\.href/g,
+								replacement: function () {
+									return "'pdfkit/builtin/sRGB_IEC61966_2_1.icc'";
+								}
+							}
+						]
+					})
+				}
+			},
 			{
 				enforce: 'pre',
 				test: /\.js$/,
@@ -65,68 +77,10 @@ module.exports = {
 					}
 				}
 			},
-			// for fs don't use babel _interopDefault command
-			{
-				enforce: 'pre',
-				test: /pdfkit[/\\]js[/\\]/,
-				use: {
-					loader: StringReplacePlugin.replace({
-						replacements: [
-							{
-								pattern: "import fs from 'fs';",
-								replacement: function () {
-									return "var fs = require('fs');";
-								}
-							}
-						]
-					})
-				}
-			},
-			// transpile to inline only required file
-			{
-				enforce: 'pre',
-				test: /pdfkit[/\\]js[/\\]/,
-				use: {
-					loader: StringReplacePlugin.replace({
-						replacements: [
-							{
-								pattern: "fs.readFileSync(`${__dirname}/data/sRGB_IEC61966_2_1.icc`)",
-								replacement: function () {
-									const data = fs.readFileSync('node_modules/pdfkit/js/data/sRGB_IEC61966_2_1.icc');
-									return `Buffer("` + data.toString('base64') + `","base64");`;
-								}
-							}
-						]
-					})
-				}
-			},
 			{
 				enforce: "pre",
 				test: /\.(cjs|js)$/,
 				use: ["source-map-loader"],
-			},
-			{
-				test: /\.js$/,
-				include: /(pdfkit|linebreak|fontkit|saslprep|restructure|unicode-trie|unicode-properties|dfa|buffer|png-js|crypto-js)/,
-				use: {
-					loader: 'babel-loader',
-					options: {
-						presets: [
-							[
-								"@babel/preset-env",
-								{
-									targets: supportedBrowsers,
-									modules: false,
-									useBuiltIns: 'usage',
-									// TODO: after fix in babel remove corejs version and remove core-js dependency in package.json
-									corejs: "3.0.0",
-									loose: true
-								}
-							]
-						],
-						plugins: ["@babel/plugin-transform-modules-commonjs"]
-					}
-				}
 			},
 			{
 				test: /pdfMake.js$/,

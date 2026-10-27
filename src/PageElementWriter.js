@@ -176,9 +176,13 @@ class PageElementWriter extends ElementWriter {
 	/**
 	 * Move to the next column in a column group (snaking columns).
 	 * Handles repeatables and emits columnChanged event.
+	 * @param {Function} [updateContext] - Adjust the new column before inserting repeatables
 	 */
-	moveToNextColumn() {
+	moveToNextColumn(updateContext) {
 		let nextColumn = this.context().moveToNextColumn();
+		if (updateContext) {
+			updateContext(this.context());
+		}
 
 		// Handle repeatables (like table headers) for the new column
 		this.repeatables.forEach(function (rep) {

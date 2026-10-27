@@ -148,6 +148,18 @@ var docDefinition = {
 				]
 			}
 		},
+		{ text: 'A centered table with left-aligned cell text', style: 'subheader' },
+		{
+			style: 'tableExample',
+			tableAlignment: 'center', // aligns the whole table: left (default), center or right
+			table: {
+				widths: ['auto', 'auto'],
+				body: [
+					['Item', 'Quantity'],
+					['Example', '2']
+				]
+			}
+		},
 		{ text: 'Column/row spans', pageBreak: 'before', style: 'subheader' },
 		'Each cell-element can set a rowSpan or colSpan',
 		{

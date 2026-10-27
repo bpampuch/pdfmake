@@ -367,6 +367,12 @@ class Renderer {
 
 			return fontFile;
 		};
+		options.imageCallback = link => {
+			let src = link.replace(/\s+/g, '');
+			this.pdfDocument.validateLocalFile(src);
+
+			return src;
+		};
 
 		SVGtoPDF(this.pdfDocument, svg.svg, svg.x, svg.y, options);
 

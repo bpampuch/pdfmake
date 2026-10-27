@@ -11,7 +11,9 @@ var sampleTestProvider = {
 			},
 			lineHeight: function (size) {
 				return size;
-			}
+			},
+			ascender: 800,
+			descender: -200
 		};
 	}
 };
@@ -277,11 +279,62 @@ describe('TextInlines', function () {
 	});
 
 	describe('widthOfText', function () {
-		// TODO
+		it('should measure the string using the requested font size and features', function () {
+			var font = { widthOfString: function (text, size, features) {
+				assert.equal(text, 'office');
+				assert.equal(size, 18);
+				assert.deepEqual(features, ['liga']);
+				return 42;
+			} };
+			assert.equal(textInlines.widthOfText('office', { font: font, fontSize: 18, fontFeatures: ['liga'] }), 42);
+		});
+
+		[2, 0, -1].forEach(function (spacing) {
+			it('should apply characterSpacing=' + spacing + ' between characters', function () {
+				var font = sampleTestProvider.provideFont();
+				assert.equal(textInlines.widthOfText('abcd', { font: font, fontSize: 10, characterSpacing: spacing }), 40 + 3 * spacing);
+				assert.equal(textInlines.widthOfText('a', { font: font, fontSize: 10, characterSpacing: spacing }), 10);
+			});
+		});
 	});
 
 	describe('sizeOfText', function () {
-		// TODO
+		it('should return default font metrics without breaking or trimming the text', function () {
+			assert.deepEqual(textInlines.sizeOfText(' a b '), {
+				width: 60, height: 12, fontSize: 12, lineHeight: 1, ascender: 12 * 0.8, descender: -12 * 0.2
+			});
+		});
+
+		it('should apply font style, line height and character spacing from the style stack', function () {
+			var stack = new StyleContextStack({}, { fontSize: 10, bold: true, italics: true, lineHeight: 1.5, characterSpacing: 2 });
+			var size = textInlines.sizeOfText('abcd', stack);
+			assert(Math.abs(size.width - 72) < 1e-10);
+			assert.deepEqual({ ...size, width: 72 }, {
+				width: 72, height: 15, fontSize: 10, lineHeight: 1.5, ascender: 8, descender: -2
+			});
+		});
+
+		it('should pass the selected font and features to the font provider', function () {
+			var features = ['kern'];
+			var provider = { provideFont: function (name, bold, italics) {
+				assert.equal(name, 'Custom');
+				assert.equal(bold, true);
+				assert.equal(italics, false);
+				return {
+					widthOfString: function (text, size, selectedFeatures) {
+						assert.equal(text, 'text');
+						assert.equal(size, 20);
+						assert.strictEqual(selectedFeatures, features);
+						return 50;
+					},
+					lineHeight: size => size * 1.2, ascender: 750, descender: -250
+				};
+			} };
+			var stack = new StyleContextStack({}, { font: 'Custom', bold: true, fontSize: 20, fontFeatures: features });
+			assert.deepEqual(new TextInlines(provider).sizeOfText('text', stack), {
+				width: 50, height: 24, fontSize: 20, lineHeight: 1, ascender: 15, descender: -5
+			});
+		});
 	});
 
 });

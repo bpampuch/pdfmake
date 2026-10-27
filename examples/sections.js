@@ -82,8 +82,8 @@ var docDefinition = {
 			]
 		},
 		{
-			header: function (currentPage, pageCount) { return 'header in section 8: ' + currentPage.toString() + ' of ' + pageCount; },
-			footer: function (currentPage, pageCount) { return 'footer in section 8: ' + currentPage.toString() + ' of ' + pageCount; },
+			header: function (currentPage, pageCount) { return 'header in section 7: ' + currentPage.toString() + ' of ' + pageCount; },
+			footer: function (currentPage, pageCount) { return 'footer in section 7: ' + currentPage.toString() + ' of ' + pageCount; },
 			section: [
 				'SECTION 7',
 				'Text in section with page definition as defined in document.'

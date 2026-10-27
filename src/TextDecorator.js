@@ -19,7 +19,8 @@ const groupDecorations = (line, pdfDocument) => {
 		for (let ii = 0, ll = decoration.length; ii < ll; ii++) {
 			let decorationItem = decoration[ii];
 			if (!currentGroup || decorationItem !== currentGroup.decoration ||
-				style !== currentGroup.decorationStyle || color !== currentGroup.decorationColor) {
+				style !== currentGroup.decorationStyle || color !== currentGroup.decorationColor ||
+				thickness !== currentGroup.decorationThickness) {
 
 				currentGroup = {
 					line: line,
@@ -79,7 +80,7 @@ class TextDecorator {
 			let max = 0;
 			for (let i = 0, l = group.inlines.length; i < l; i++) {
 				let inline = group.inlines[i];
-				max = inline.fontSize > max ? i : max;
+				max = inline.fontSize > group.inlines[max].fontSize ? i : max;
 			}
 			return group.inlines[max];
 		};
@@ -155,7 +156,7 @@ class TextDecorator {
 			let sh = 0.7, sv = 1;
 			let nbWaves = Math.ceil(totalWidth / (sh * 2)) + 1;
 			let rwx = x + firstInline.x - 1;
-			this.pdfDocument.rect(x + firstInline.x, y - sv, totalWidth, y + sv).clip();
+			this.pdfDocument.rect(x + firstInline.x, y - sv, totalWidth, 2 * sv).clip();
 			this.pdfDocument.lineWidth(lw / 3);
 			this.pdfDocument.moveTo(rwx, y);
 			for (let i = 0; i < nbWaves; i++) {

@@ -237,5 +237,22 @@ describe('ElementWriter', function () {
 			assert.equal(fragment.items[3].item.x, 40);
 			assert.equal(fragment.items[3].item.y, 60);
 		});
+
+		it('should keep the draw order of fill colors from an unbreakable block', function () {
+			ctx.page = 0;
+			ctx.backgroundLength = [1];
+			page.items = [{ type: 'vector', item: { type: 'rect', color: 'pageBackground' } }];
+
+			fragment.items = [
+				{ type: 'vector', item: { type: 'rect', color: 'firstFill', _isFillColorFromUnbreakable: true } },
+				{ type: 'vector', item: { type: 'rect', color: 'secondFill', _isFillColorFromUnbreakable: true } },
+				{ type: 'vector', item: { type: 'rect', color: 'thirdFill', _isFillColorFromUnbreakable: true } },
+				{ type: 'vector', item: { type: 'rect', color: 'border' } }
+			];
+
+			ew.addFragment(fragment);
+
+			assert.deepEqual(page.items.map(item => item.item.color), ['pageBackground', 'firstFill', 'secondFill', 'thirdFill', 'border']);
+		});
 	});
 });

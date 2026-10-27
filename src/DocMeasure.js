@@ -453,7 +453,7 @@ class DocMeasure {
 		node.separator = node.separator || '.';
 		node.reversed = node.reversed || false;
 		if (!isNumber(node.start)) {
-			node.start = node.reversed ? items.length : 1;
+			node.start = node.reversed ? items.filter(item => !item.ol && !item.ul).length : 1;
 		}
 		node._gapSize = this.gapSizeForList();
 		node._minWidth = 0;

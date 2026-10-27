@@ -1,4 +1,4 @@
-import PDFKit from 'pdfkit';
+import { PDFDocument as PDFKitDocument } from 'pdfkit';
 import { isString } from './helpers/variableType';
 
 const typeName = (bold, italics) => {
@@ -13,7 +13,7 @@ const typeName = (bold, italics) => {
 	return type;
 };
 
-class PDFDocument extends PDFKit {
+class PDFDocument extends PDFKitDocument {
 	constructor(fonts = {}, images = {}, patterns = {}, attachments = {}, options = {}, virtualfs = null, localAccessPolicy = undefined) {
 		super(options);
 
@@ -154,14 +154,13 @@ class PDFDocument extends PDFKit {
 			return obj;
 		};
 
-		if (typeof src === 'object') {
-			return checkRequired(src);
-		}
-
-		let attachment = checkRequired(this.attachments[src]);
+		let attachment = checkRequired(typeof src === 'object' ? src : this.attachments[src]);
 
 		if (this.virtualfs && this.virtualfs.existsSync(attachment.src)) {
-			return this.virtualfs.readFileSync(attachment.src);
+			return {
+				...attachment,
+				src: this.virtualfs.readFileSync(attachment.src)
+			};
 		}
 
 		this.validateLocalFile(attachment.src);

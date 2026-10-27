@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+- Fixed reversed ordered lists starting at a too high number when they contain nested lists
+
+## 0.3.13 - 2026-10-25
+
+- Added horizontal table alignment via `tableAlignment`: `left` (default), `center`, or `right`
+- Fixed PDF stream errors not rejecting promises returned by `getBuffer()`, `getBase64()` and `getDataUrl()`
+- Fixed `getStream()` returning an already consumed stream; subsequent stream access now rejects
+- Fixed `write()` hanging or failing after `getBuffer()`, `getBase64()` or `getDataUrl()` by reusing buffered PDF data
+- Fixed attachments loaded from the virtual file system (including downloaded URL attachments) failing with "No src specified"
+- Fixed sections with automatic page height sharing the first section's height and clipping content in subsequent sections
+- Fixed vertical alignment of row-spanned table header cells when the table starts on a subsequent page
+- Fixed text decoration positioning and automatic thickness for mixed font sizes depending on the order of text fragments
+- Fixed adjacent text fragments with different `decorationThickness` values being rendered with the same decoration thickness
+- Fixed wavy text decoration clipping height incorrectly depending on the vertical position on the page
+- Fixed reversed paint order of table cell background fills in unbreakable blocks, which caused outer table fills to cover nested table fills
+- Fixed percentage table column widths using incorrect padding and border widths when mixed with `auto` or star-sized columns
+- Fixed `TypeError: Invalid base URL` when loading the browser build in React Native
+
+## 0.3.12 - 2026-10-17
+
+- **Reduced browser bundle size by over 20%**
+- Updated pdfkit to 0.20.2
+- Fixed `setLocalAccessPolicy` being bypassed for local images embedded in SVG
+
 ## 0.3.11 - 2026-06-12
 
 - Updated pdfkit to 0.19.1 (fixed RGB JPEG embedded as DeviceGray, bug introduced in 0.19.0)
