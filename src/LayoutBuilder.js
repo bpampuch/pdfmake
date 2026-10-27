@@ -1155,6 +1155,10 @@ class LayoutBuilder {
 
 	// tables
 	processTable(tableNode) {
+		// Page breaks and row bottoms belong to the current layout pass only.
+		delete tableNode._bottomByPage;
+		delete tableNode._breaksBySpan;
+
 		this.nestedLevel++;
 		let processor = new TableProcessor(tableNode);
 
