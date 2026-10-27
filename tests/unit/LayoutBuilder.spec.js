@@ -2041,6 +2041,103 @@ describe('LayoutBuilder', function () {
 			styleDictionary = {};
 		});
 
+		['header', 'footer'].forEach(function (type) {
+			it('should reset reused ' + type + ' canvas positions when content is laid out again', function () {
+				var firstPageNode = { stack: ['Heading', { canvas: [{ type: 'rect', x: 0, y: 0, w: 10, h: 10 }] }] };
+				var repeatable = function (pageNumber) {
+					return pageNumber === 1 ? firstPageNode : { text: 'Other page' };
+				};
+				var pages = builder.layoutDocument(
+					[{ text: 'First' }, { text: 'Second', id: 'second' }],
+					sampleTestProvider, {}, undefined, undefined,
+					type === 'header' ? repeatable : undefined,
+					type === 'footer' ? repeatable : undefined,
+					undefined, node => node.id === 'second'
+				);
+
+				assert.equal(pages.length, 2);
+				var vector = pages[0].items.find(item => item.type === 'vector');
+				assert.equal(vector.item.y, (type === 'header' ? 0 : 760) + 12);
+			});
+
+			it('should not apply pageBreakBefore to dynamic ' + type + ' nodes (issue #1095)', function () {
+				var repeatableCalls = 0;
+				var repeatable = function () {
+					assert(++repeatableCalls <= 5, 'Page layout keeps recreating the ' + type);
+					return { stack: [{ text: 'Page number', id: 'page-number' }] };
+				};
+				var pageBreakBefore = sinon.spy(function (node) {
+					return node.startPosition.top >= 730;
+				});
+				var pages = builder.layoutDocument(
+					[{ text: 'Text', id: 'content', margin: [0, 680, 0, 0] }],
+					sampleTestProvider, {}, undefined, undefined,
+					type === 'header' ? repeatable : undefined,
+					type === 'footer' ? repeatable : undefined,
+					undefined, pageBreakBefore
+				);
+
+				assert.equal(pages.length, 1);
+				assert.equal(repeatableCalls, 1);
+				assert.deepEqual(pageBreakBefore.getCalls().map(call => call.args[0].id), [undefined, 'content']);
+				assert.deepEqual(pageBreakBefore.getCall(1).args[1].getFollowingNodesOnPage(), []);
+				var lines = pages[0].items.filter(item => item.type === 'line');
+				assert.equal(lines.length, 2);
+				assert.equal(lines[1].item.inlines.map(inline => inline.text).join(''), 'Page number');
+				assert.equal(lines[1].item.y, type === 'header' ? 0 : 760);
+			});
+		});
+
+		[false, true].forEach(function (useSection) {
+			it('should expose only content in surrounding node lists' + (useSection ? ' with section headers and footers' : ''), function () {
+				var content = {
+					id: 'body',
+					stack: [
+						{ text: 'First page', id: 'first' },
+						{ text: 'Second page', id: 'second', pageBreak: 'before' },
+						{ text: 'Third page', id: 'third', pageBreak: 'before' }
+					]
+				};
+				var pageHeader = { text: 'Header', id: 'page-header' };
+				var pageFooter = { text: 'Footer', id: 'page-footer' };
+				var callback = sinon.spy(function (node, container) {
+					var surrounding = container.getFollowingNodesOnPage().concat(container.getPreviousNodesOnPage(), container.getNodesOnNextPage());
+					assert(surrounding.every(item => item.id !== 'page-header' && item.id !== 'page-footer'));
+					if (node.id === 'first') {
+						assert.deepEqual(container.getFollowingNodesOnPage(), []);
+						assert.deepEqual(container.getNodesOnNextPage().map(item => item.id), ['second']);
+					}
+					return false;
+				});
+				var structure = useSection ? [{ section: content, header: pageHeader, footer: pageFooter }] : content;
+				var pages = builder.layoutDocument(structure, sampleTestProvider, {}, undefined, undefined,
+					() => JSON.parse(JSON.stringify(pageHeader)), () => JSON.parse(JSON.stringify(pageFooter)), undefined, callback);
+
+				assert.equal(pages.length, 3);
+				assert.deepEqual(callback.getCalls().map(call => call.args[0].id), ['body', 'first']);
+				pages.forEach(page => {
+					var lines = page.items.filter(item => item.type === 'line');
+					assert.deepEqual(lines.slice(-2).map(line => line.item.inlines[0].text), ['Header', 'Footer']);
+				});
+			});
+		});
+
+		it('should move an orphan heading to the next page even when a footer follows it', function () {
+			var content = [
+				{ text: Array(59).fill('Filler').join('\n') },
+				{ text: 'Heading', id: 'heading', headlineLevel: 1 },
+				{ text: 'Paragraph', id: 'paragraph' }
+			];
+			var pages = builder.layoutDocument(content, sampleTestProvider, {}, undefined, undefined, undefined,
+				() => ({ text: 'Footer' }), undefined,
+				(node, container) => node.headlineLevel === 1 && container.getFollowingNodesOnPage().length === 0);
+
+			assert.equal(pages.length, 2);
+			assert.equal(content[1].positions[0].pageNumber, 2);
+			assert.equal(content[2].positions[0].pageNumber, 2);
+			assert.equal(content[1].positions[0].top, 40);
+		});
+
 		it('should create a pageBreak before', function () {
 
 			docStructure = [

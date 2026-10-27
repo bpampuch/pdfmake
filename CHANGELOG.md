@@ -6,6 +6,7 @@
 - Fixed reversed ordered lists starting at a too high number when they contain nested lists
 - Fixed canvas polylines being shifted and affecting column widths when layout is recalculated by `pageBreakBefore`
 - Fixed canvas polylines in repeated table headers shifting across pages due to shared points
+- Fixed infinite loops when using `pageBreakBefore` with headers or footers
 
 ## 0.3.13 - 2026-10-25
 

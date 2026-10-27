@@ -165,7 +165,7 @@ class LayoutBuilder {
 		}
 
 		let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
-		while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
+		while (addPageBreaksIfNecessary(result.pageBreakNodes, result.pages)) {
 			resetXYs(result);
 			result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
 		}
@@ -218,10 +218,12 @@ class LayoutBuilder {
 		}
 
 		this.processNode(docStructure);
+		// Headers and footers must not participate in content page break decisions.
+		const pageBreakNodes = this.linearNodeList.slice();
 		this.addHeadersAndFooters(header, footer);
 		this.addWatermark(watermark, pdfDocument, defaultStyle);
 
-		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
+		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList, pageBreakNodes };
 	}
 
 	addBackground(background) {
