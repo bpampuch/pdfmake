@@ -202,7 +202,7 @@ class Renderer {
 			}
 		}
 
-		// Decorations won't draw correctly for superscript
+		// TODO: Decorations won't draw correctly for superscript
 		textDecorator.drawDecorations(line, x, y);
 	}
 
