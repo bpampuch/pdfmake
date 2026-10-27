@@ -352,6 +352,9 @@ class ElementWriter extends EventEmitter {
 
 				case 'vector':
 					var v = pack(item.item);
+					if (v.type === 'polyline') {
+						v.points = v.points.map(point => pack(point));
+					}
 
 					offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 					if (v._isFillColorFromUnbreakable) {

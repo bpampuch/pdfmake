@@ -170,6 +170,21 @@ describe('ElementWriter', function () {
 	});
 
 	describe('addFragment', function () {
+		it('should copy polyline points independently for each fragment insertion', function () {
+			var vector = { type: 'polyline', points: [{ x: 2, y: 3 }, { x: 22, y: 13 }], closePath: true };
+			var fragment = { height: 20, items: [{ type: 'vector', item: vector }] };
+
+			ew.addFragment(fragment);
+			ctx.x = 40;
+			ctx.y = 50;
+			ew.addFragment(fragment);
+
+			assert.deepStrictEqual(vector.points, [{ x: 2, y: 3 }, { x: 22, y: 13 }]);
+			assert.deepStrictEqual(page.items[0].item.points, [{ x: 12, y: 23 }, { x: 32, y: 33 }]);
+			assert.deepStrictEqual(page.items[1].item.points, [{ x: 42, y: 53 }, { x: 62, y: 63 }]);
+			assert.equal(page.items[0].item.closePath, true);
+		});
+
 		var fragment;
 
 		beforeEach(function () {
