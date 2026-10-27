@@ -85,7 +85,8 @@ class LayoutBuilder {
 
 			linearNodeList = linearNodeList.filter(hasRenderableContent);
 
-			linearNodeList.forEach(node => {
+			const nodesByPage = [];
+			linearNodeList.forEach((node, index) => {
 				let nodeInfo = {};
 				[
 					'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns',
@@ -102,43 +103,47 @@ class LayoutBuilder {
 				nodeInfo.stack = Array.isArray(node.stack);
 
 				node.nodeInfo = nodeInfo;
+
+				nodeInfo.pageNumbers.forEach(pageNumber => {
+					nodesByPage[pageNumber] = nodesByPage[pageNumber] || [];
+					nodesByPage[pageNumber].push({ index, nodeInfo });
+				});
 			});
+
+			const findFirstNodeAtOrAfter = (nodes, index) => {
+				let low = 0;
+				let high = nodes.length;
+
+				while (low < high) {
+					const middle = Math.floor((low + high) / 2);
+					if (nodes[middle].index < index) {
+						low = middle + 1;
+					} else {
+						high = middle;
+					}
+				}
+
+				return low;
+			};
+
+			const getNodeInfos = (nodes, start, end) => nodes.slice(start, end).map(entry => entry.nodeInfo);
 
 			for (let index = 0; index < linearNodeList.length; index++) {
 				let node = linearNodeList[index];
 				if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 					node.pageBreakCalculated = true;
 					let pageNumber = node.nodeInfo.pageNumbers[0];
+					const nodesOnPage = nodesByPage[pageNumber] || [];
+					const nodeOnPageIndex = findFirstNodeAtOrAfter(nodesOnPage, index);
 
 					if (
 						pageBreakBeforeFct(node.nodeInfo, {
-							getFollowingNodesOnPage: () => {
-								let followingNodesOnPage = [];
-								for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
-									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-										followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
-									}
-								}
-								return followingNodesOnPage;
-							},
+							getFollowingNodesOnPage: () => getNodeInfos(nodesOnPage, nodeOnPageIndex + 1),
 							getNodesOnNextPage: () => {
-								let nodesOnNextPage = [];
-								for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
-									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
-										nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
-									}
-								}
-								return nodesOnNextPage;
+								const nextPageNodes = nodesByPage[pageNumber + 1] || [];
+								return getNodeInfos(nextPageNodes, findFirstNodeAtOrAfter(nextPageNodes, index + 1));
 							},
-							getPreviousNodesOnPage: () => {
-								let previousNodesOnPage = [];
-								for (let ii = 0; ii < index; ii++) {
-									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-										previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
-									}
-								}
-								return previousNodesOnPage;
-							},
+							getPreviousNodesOnPage: () => getNodeInfos(nodesOnPage, 0, nodeOnPageIndex),
 						})
 					) {
 						node.pageBreak = 'before';
