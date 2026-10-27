@@ -444,7 +444,7 @@ var docDefinition = {
 						},
 						// More content to demonstrate overflow
 						{ text: 'Quarterly Breakdown', style: 'sectionTitle' },
-						{ text: Array.from({ length: 100 }, function (_, i) { return 'Q' + ((i % 4) + 1) + ' FY' + (2020 + Math.floor(i / 4)) + ' Entry ' + (i + 1) + ': Revenue $' + ((Math.random() * 100).toFixed(2)) + 'K recorded.'; }).join('\n'), fontSize: 9 }
+						{ text: Array.from({ length: 100 }, function (_, i) { return 'Q' + ((i % 4) + 1) + ' FY' + (2020 + Math.floor(i / 4)) + ' Entry ' + (i + 1) + ': Revenue $' + (((i * 7919) % 10000 / 100).toFixed(2)) + 'K recorded.'; }).join('\n'), fontSize: 9 }
 					]
 				},
 				{ text: '' }
