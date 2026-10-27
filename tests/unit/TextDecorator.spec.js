@@ -2,6 +2,7 @@ var assert = require('assert');
 var sinon = require('sinon');
 var TextDecorator = require('../../js/TextDecorator').default;
 var Line = require('../../js/Line').default;
+var ElementWriter = require('../../js/ElementWriter').default;
 
 describe('TextDecorator', function () {
 	var pdfDocument, decorator;
@@ -33,6 +34,24 @@ describe('TextDecorator', function () {
 		args.forEach((value, index) => assert(Math.abs(value - expected[index]) < 1e-10,
 			'Rectangle coordinate ' + index + ': expected ' + expected[index] + ', received ' + value));
 	}
+
+	it('should keep backgrounds and underline continuous across justified connected fragments', function () {
+		var line = createLine([
+			{ alignment: 'justify', background: 'yellow' },
+			{ noNewLine: true, background: 'yellow' },
+			{ background: 'yellow' }
+		]);
+		new ElementWriter({ availableWidth: 500 }).alignLine(line);
+
+		decorator.drawBackground(line, 10, 20);
+		assertRectangle(0, [10, 20, 40, 24]);
+		assertRectangle(1, [50, 20, 420, 24]);
+		assertRectangle(2, [470, 20, 40, 24]);
+
+		decorator.drawDecorations(line, 10, 20);
+		assertRectangle(3, [10, 38.6, 500, 2]);
+		assert.equal(pdfDocument.rect.callCount, 4);
+	});
 
 	describe('drawBackground', function () {
 		it('should skip inlines without a background', function () {

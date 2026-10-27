@@ -77,13 +77,20 @@ class ElementWriter extends EventEmitter {
 			!line.newLineForced &&
 			!line.lastLineInParagraph &&
 			line.inlines.length > 1) {
-			let additionalSpacing = (width - lineWidth) / (line.inlines.length - 1);
+			let gaps = 0;
+			for (let i = 0, l = line.inlines.length - 1; i < l; i++) {
+				if (!line.inlines[i].noNewLine) {
+					gaps++;
+				}
+			}
+			let additionalSpacing = gaps > 0 ? (width - lineWidth) / gaps : 0;
 
 			for (let i = 1, l = line.inlines.length; i < l; i++) {
-				offset = i * additionalSpacing;
+				let justifyShift = line.inlines[i - 1].noNewLine ? 0 : additionalSpacing;
+				offset += justifyShift;
 
 				line.inlines[i].x += offset;
-				line.inlines[i].justifyShift = additionalSpacing;
+				line.inlines[i].justifyShift = justifyShift;
 			}
 		}
 	}

@@ -154,6 +154,67 @@ describe('ElementWriter', function () {
 				assert.equal(line.inlines[1].x, 30 + additionalSpacing);
 				assert.equal(line.inlines[2].x, 50 + 2 * additionalSpacing);
 			});
+
+			it('should keep connected fragments together after a justified gap', function () {
+				var line = buildLine(30, 'justify');
+				line.inlines[1].noNewLine = true;
+
+				ew.addLine(line);
+
+				assert.equal(line.inlines[1].x, 70);
+				assert.equal(line.inlines[1].justifyShift, 40);
+				assert.equal(line.inlines[2].x, 90);
+				assert.equal(line.inlines[2].justifyShift, 0);
+			});
+
+			it('should leave a line without justifiable gaps unchanged', function () {
+				var line = buildLine(30, 'justify');
+				line.inlines[0].noNewLine = true;
+				line.inlines[1].noNewLine = true;
+
+				ew.addLine(line);
+
+				assert.deepEqual(line.inlines.map(inline => inline.x), [0, 30, 50]);
+				assert.equal(line.inlines[1].justifyShift, 0);
+				assert.equal(line.inlines[2].justifyShift, 0);
+			});
+
+			it('should preserve connected fragments for every combination of gaps', function () {
+				for (var mask = 0; mask < 64; mask++) {
+					var line = buildLine(30, 'justify');
+					line.inlines = Array.from({ length: 6 }, (_, i) => ({
+						alignment: 'justify', x: i * 10, width: 10, noNewLine: Boolean(mask & (1 << i))
+					}));
+					ew.alignLine(line);
+
+					var gaps = [];
+					for (var i = 1; i < line.inlines.length; i++) {
+						var previous = line.inlines[i - 1];
+						var gap = line.inlines[i].x - previous.x - previous.width;
+						assert(Number.isFinite(line.inlines[i].x));
+						if (previous.noNewLine) {
+							assert(Math.abs(gap) < 1e-8);
+							assert.equal(line.inlines[i].justifyShift, 0);
+						} else {
+							gaps.push(gap);
+						}
+					}
+					gaps.forEach(gap => assert(Math.abs(gap - gaps[0]) < 1e-8));
+					var end = line.inlines[5].x + line.inlines[5].width;
+					assert(Math.abs(end - (gaps.length ? 100 : 60)) < 1e-8);
+				}
+			});
+
+			['newLineForced', 'lastLineInParagraph'].forEach(function (flag) {
+				it('should not justify a line marked ' + flag, function () {
+					var line = buildLine(30, 'justify');
+					line[flag] = true;
+					line.inlines[0].noNewLine = true;
+					ew.alignLine(line);
+					assert.deepEqual(line.inlines.map(inline => inline.x), [0, 30, 50]);
+					line.inlines.forEach(inline => assert.equal(inline.justifyShift, undefined));
+				});
+			});
 		});
 	});
 
