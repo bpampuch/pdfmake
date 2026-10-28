@@ -34,6 +34,7 @@ class LayoutBuilder {
 		this.tableLayouts = {};
 		this.nestedLevel = 0;
 		this.verticalAlignmentItemStack = [];
+		this.backgroundLevel = 0;
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -235,11 +236,16 @@ class LayoutBuilder {
 		let pageBackground = backgroundGetter(context.page + 1, pageSize);
 
 		if (pageBackground) {
-			this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
-			pageBackground = this.docPreprocessor.preprocessBlock(pageBackground);
-			this.processNode(this.docMeasure.measureBlock(pageBackground));
-			this.writer.commitUnbreakableBlock(0, 0);
-			context.backgroundLength[context.page] += pageBackground.positions.length;
+			this.backgroundLevel++;
+			try {
+				this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
+				pageBackground = this.docPreprocessor.preprocessBlock(pageBackground);
+				this.processNode(this.docMeasure.measureBlock(pageBackground));
+				this.writer.commitUnbreakableBlock(0, 0);
+				context.backgroundLength[context.page] += pageBackground.positions.length;
+			} finally {
+				this.backgroundLevel--;
+			}
 		}
 	}
 
@@ -1120,10 +1126,12 @@ class LayoutBuilder {
 
 	// lists
 	processList(orderedList, node) {
+		const backgroundLevel = this.backgroundLevel;
 		const addMarkerToFirstLeaf = line => {
 			// I'm not very happy with the way list processing is implemented
 			// (both code and algorithm should be rethinked)
-			if (nextMarker) {
+			// Background lines must only consume markers from lists in that background.
+			if (nextMarker && this.backgroundLevel === backgroundLevel) {
 				let marker = nextMarker;
 				nextMarker = null;
 
