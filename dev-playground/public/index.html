@@ -1,136 +1,29 @@
-<!DOCTYPE html>
-<html lang='en' ng-app='pdfmake'>
-
+<!doctype html>
+<html lang="en">
 <head>
-	<meta charset='utf-8'>
-	<link rel='stylesheet' href='//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css'>
-	<!--<link rel='stylesheet' href='pdfjs/viewer.css'>-->
-	<link rel='stylesheet' href='/pdfmake.css'>
-	<link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Explore pdfmake 0.3 with an editable JavaScript definition, local PDF preview, runnable examples and download tools.">
+  <title>Playground · pdfmake 0.3</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="./brand/icon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./brand/icon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./brand/icon-180.png">
+  <script src="./theme.js"></script>
+  <link rel="stylesheet" href="./playground.css">
+  <script type="module" src="./standalone.js"></script>
 </head>
-
-<body ng-controller='PlaygroundController'>
-
-	<header id='top' class='navbar navbar-default' role='navigation'>
-		<div class='container'>
-			<div class='navbar-header'>
-				<button type='button' class='navbar-toggle' data-toggle='collapse' data-target='.navbar-collapse'>
-					<span class='sr-only'>Toggle navigation</span>
-					<span class='icon-bar'></span>
-					<span class='icon-bar'></span>
-					<span class='icon-bar'></span>
-				</button>
-				<a class='navbar-brand' href='index.html#'>pdf<span style='font-weight: 600'>make</span></a>
-			</div>
-			<nav class='navbar-collapse collapse' role='navigation' style='height: 1px;'>
-				<ul class='nav navbar-nav navbar-right'>
-				</ul>
-			</nav>
-		</div>
-	</header>
-
-	<div class='playground'>
-		<div class='container'>
-
-			<ul id='exampleList'>
-				<li ng-repeat='e in examples' ng-click='e.activate()'>{{e.name}}</li>
-			</ul>
-		</div>
-	</div>
-
-	<div class='playgroundBody'>
-		<div class='notEnoughSpace'>
-			<div class='container'>
-				<h1>Playground does not make too much sense when horizontal resolution is below 300px</h1>
-			</div>
-		</div>
-		<div class='content'>
-			<div id='editor'></div>
-			<iframe id='pdfV'></iframe>
-
-		</div>
-	</div>
-
-
-	<script type="text/javascript" charset="utf-8">
-		function PlaygroundController($scope, $http) {
-			$scope.examples = [];
-
-			var editor = ace.edit('editor');
-			setupEditor(editor);
-			var names = ['basics', 'styles1', 'styles2', 'styles3', 'columns', 'tables', 'lists', 'margin', 'images', 'svgs', 'attachments'];
-
-			var i = 0;
-			['basics', 'named-styles', 'inline-styling', 'style-overrides', 'columns', 'tables', 'lists', 'margins', 'images', 'svgs', 'attachments'].forEach(function (example) {
-				$scope.examples.push({
-					name: names[i++],
-					activate: function () {
-						$http.get('samples/' + example).success(function (data) {
-							editor.getSession().setValue('// playground requires you to assign document definition to a variable called dd\n\nvar dd = {\n' + data.replace(/(\r?)\n/g, '\n').replace(/(^)/gm, '\t') + '\n}');
-						});
-					}
-				});
-			});
-
-			var old = localStorage.pdfMakeDD;
-
-			if (!old) {
-				$scope.examples[0].activate();
-			} else {
-				editor.getSession().setValue(old);
-			}
-
-			var timer;
-
-			function setupEditor() {
-				var lastGen, lastChanged;
-
-				editor.setTheme('ace/theme/monokai');
-				editor.getSession().setMode('ace/mode/javascript');
-
-				editor.getSession().on('change', function (e) {
-					if (timer) {
-						clearTimeout(timer);
-					}
-					lastChanged = new Date();
-
-					localStorage.pdfMakeDD = editor.getSession().getValue();
-
-					timer = setTimeout(function () {
-						if (!lastGen || lastGen < lastChanged) {
-							generate();
-						};
-					}, 300);
-				});
-
-				function generate() {
-					lastGen = new Date();
-
-					var content = editor.getSession().getValue();
-
-					$http.post('/pdf', { content: content }).
-						success(function (data, status, headers, config) {
-
-							document.getElementById('pdfV').src = data;
-						}).
-						error(function (data, status, headers, config) {
-							console.log('ERROR', data);
-						});
-				}
-			}
-		};
-	</script>
-
-	<script src='https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js'></script>
-	<script src='//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js'></script>
-	<script src='//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.10/angular.min.js'></script>
-	<script src='//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.10/angular-route.min.js'></script>
-
-	<script type="text/javascript" src="/playground.js"></script>
-
-	<!--<script type="text/javascript" charset="utf-8" src='ace-builds/src-min/ace.js'></script>-->
-	<script type="text/javascript" charset="utf-8" src='/ace.js'></script>
-
+<body>
+  <header><a class="brand" href="../"><img class="brand-logo" src="./brand/pdfmake-logo.png" alt="pdfMake" width="900" height="202"><small>PLAYGROUND</small></a><div class="header-right"><span id="version">0.3.x</span><a href="../">Documentation ↗</a><a href="https://github.com/bpampuch/pdfmake">GitHub ↗</a></div></header>
+  <main>
+    <div class="intro"><div><p class="eyebrow">TRY / LEARN / BUILD</p><h1>A small idea.<br><span>A real document.</span></h1></div><p>Edit a definition. Run it locally. See your PDF.<br>No account. No server-side PDF generation.</p></div>
+    <div class="toolbar"><label for="example">Example <select id="example"></select></label><div class="actions"><button id="undo" type="button" disabled>Undo</button><button id="redo" type="button" disabled>Redo</button><button id="reset" type="button">Reset example</button><label class="import" for="import">Import code<input id="import" type="file" accept=".js,.ts,.txt,text/javascript,text/plain"></label><button id="export" type="button">Export code</button><label><input id="auto-run" type="checkbox" checked> Live preview</label><button id="run" class="primary" type="button">Run <kbd>Ctrl/⌘ ↵</kbd></button><button id="cancel" type="button" hidden>Cancel</button></div></div>
+    <div class="saved-documents"><label for="document-name">Local document <input id="document-name" maxlength="80" placeholder="My invoice"></label><button id="save-document" type="button">Save document</button><label for="saved-documents">Saved <select id="saved-documents"><option value="">Choose a saved document…</option></select></label><button id="delete-document" type="button" disabled>Delete saved document</button><span>Workspace and undo history are saved automatically in this browser.</span></div>
+    <div class="workspace">
+      <section class="panel editor-panel" aria-labelledby="editor-title"><div class="panel-head"><h2 id="editor-title">Document definition</h2><label>Language <select id="code-language" aria-label="Code language"><option value="javascript">JavaScript</option><option value="typescript">TypeScript</option></select></label></div><div id="editor"></div><div class="editor-footer"><span id="draft-state">Workspace autosave ready</span><button id="clear-workspace" type="button">Clear workspace autosave</button><button id="save-draft" type="button">Save draft locally</button><button id="restore-draft" type="button" disabled>Restore draft</button><button id="clear-draft" type="button" disabled>Clear saved draft</button></div></section>
+      <section class="panel preview-panel" aria-labelledby="preview-title"><div class="panel-head"><h2 id="preview-title">PDF preview</h2><div><a id="open-pdf" target="_blank" rel="noopener" hidden>Open PDF ↗</a><button id="download" type="button" disabled>Download PDF</button></div></div><div id="preview-empty">Your document will appear here.<br>Choose an example and select Run.</div><div id="preview" hidden><div class="preview-controls"><button id="previous-page" type="button" aria-label="Previous page">←</button><span id="page-count"></span><button id="next-page" type="button" aria-label="Next page">→</button><label for="zoom">Zoom <select id="zoom"><option value="fit">Fit width</option><option value="1">100%</option><option value="1.5">150%</option><option value="2">200%</option></select></label></div><div class="canvas-scroll"><canvas id="pdf-canvas" role="img" aria-label="Generated PDF page"></canvas></div><details class="page-text"><summary>Page text</summary><p id="page-text"></p></details></div><div class="preview-footer"><span id="metrics">Ready to render</span><a id="example-docs" href="../document-definition-object/">Example reference ↗</a></div></section>
+    </div>
+    <div class="status-row"><p id="status" role="status" aria-live="polite">Ready. Run an example to begin.</p><span>10 s render limit · Embedded resources only</span></div>
+    <pre id="error" role="alert" hidden></pre><button id="go-error" type="button" hidden>Go to error in editor</button>
+    <details class="help"><summary>How it works & keyboard shortcuts</summary><p>Define <code>var dd = { content: [...] };</code>. Use Ctrl/⌘ + Enter to run, Tab to indent, and Ctrl + Space for completions. The engine runs in a disposable worker so Cancel and the time limit can stop a blocked render. PDF.js renders the preview directly, including page navigation, zoom and extracted page text. Open PDF and Download PDF are also available.</p><p>Run only JavaScript you trust. Custom code executes in your browser and is not a security sandbox. Live preview updates imports and restored documents automatically when enabled. Turn it off before importing code you want to inspect first. Your current workspace, selection and undo history are autosaved in this browser. Named documents and quick drafts are separate local saves. Clear workspace autosave removes the last workspace until you type again. No code or PDF is uploaded by this playground. URL resources are disabled in the PDF API; use embedded images and bundled fonts.</p></details>
+  </main>
 </body>
-
 </html>

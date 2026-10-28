@@ -1,8 +1,23 @@
 {
   "name": "pdfmake-server-playground",
   "version": "0.0.0",
-  "dependencies": {
-    "body-parser": "^1.20.2",
-    "express": "^4.18.2"
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node ../scripts/build-playground.cjs && node server.js"
+  },
+  "devDependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/state": "^6.7.6",
+    "@lezer/highlight": "^1.2.5",
+    "acorn": "^8.19.0",
+    "codemirror": "^6.0.2",
+    "esbuild": "^0.25.12",
+    "pdfjs-dist": "6.4.299"
   }
 }

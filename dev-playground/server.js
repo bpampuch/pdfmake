@@ -1,48 +1,36 @@
 
-var http = require('http');
-var express = require('express');
-var path = require('path');
-var bodyParser = require('body-parser');
+// Static localhost server only. Edited definitions never execute in this process.
+const http = require('node:http');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const root = path.join(__dirname, 'public');
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
 
-var pdfmake = require('../js/index');
-
-var app = express();
-
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ extended: false }));
-
-function createPdfBinary(docDefinition) {
-	var fonts = {
-		Roboto: {
-			normal: path.join(__dirname, '..', 'examples', '/fonts/Roboto-Regular.ttf'),
-			bold: path.join(__dirname, '..', 'examples', '/fonts/Roboto-Medium.ttf'),
-			italics: path.join(__dirname, '..', 'examples', '/fonts/Roboto-Italic.ttf'),
-			bolditalics: path.join(__dirname, '..', 'examples', '/fonts/Roboto-MediumItalic.ttf')
-		}
-	};
-
-	pdfmake.setFonts(fonts);
-
-	var pdf = pdfmake.createPdf(docDefinition);
-	return pdf.getDataUrl();
-}
-
-app.post('/pdf', function (req, res) {
-	const dd = new Function(req.body.content + '; return dd;')();
-
-	createPdfBinary(dd).then(function (binary) {
-		res.contentType('application/pdf');
-		res.send(binary);
-	}, function (error) {
-		res.send('ERROR:' + error);
+function createServer() {
+	const docsBase = (process.env.PDFMAKE_DOCS_URL || 'https://pdfmake.github.io/docs/0.3/').replace(/\/?$/, '/');
+	return http.createServer(async (req, res) => {
+		if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405).end(); return; }
+		try {
+			const url = new URL(req.url, 'http://localhost');
+			if (url.pathname === '/') { res.writeHead(302, { Location: docsBase }).end(); return; }
+			if (!url.pathname.startsWith('/playground/')) {
+				res.writeHead(302, { Location: new URL('.' + url.pathname, docsBase).href }).end(); return;
+			}
+			let file = path.resolve(root, '.' + decodeURIComponent(url.pathname.slice('/playground'.length)));
+			if (file !== root && !file.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
+			if ((await fs.stat(file)).isDirectory()) file = path.join(file, 'index.html');
+			const bytes = await fs.readFile(file);
+			res.setHeader('Content-Type', (types[path.extname(file)] || 'application/octet-stream') + '; charset=utf-8');
+			res.setHeader('X-Content-Type-Options', 'nosniff');
+			if (path.basename(file) === 'worker.js') res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self' 'unsafe-eval'; connect-src 'none'");
+			res.writeHead(200).end(req.method === 'HEAD' ? undefined : bytes);
+		} catch { res.writeHead(404).end('Not found'); }
 	});
-
-});
-
-var server = http.createServer(app);
-var port = process.env.PORT || 1234;
-server.listen(port);
-
-console.log('http server listening on port %d', port);
-console.log('dev-playground is available at http://localhost:%d', port);
+}
+module.exports = { createServer };
+if (require.main === module) {
+	const server = createServer();
+	server.listen(Number(process.env.PORT || 1234), '127.0.0.1', () => {
+		console.log(`Playground: http://127.0.0.1:${server.address().port}/playground/`);
+	});
+}
