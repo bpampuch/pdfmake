@@ -891,6 +891,7 @@ class LayoutBuilder {
 
 	processRow({ marginX = [0, 0], dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableNode, tableBody, rowIndex, height, snakingColumns = false }) {
 		const isUnbreakableRow = dontBreakRows || rowIndex <= rowsWithoutPageBreak - 1;
+		const repeatablesAtRowStart = this.writer.repeatables.length;
 		let pageBreaks = [];
 		let pageBreaksByRowSpan = [];
 		let positions = [];
@@ -925,6 +926,14 @@ class LayoutBuilder {
 
 			// Page change handler
 			const storePageBreakClosure = data => {
+				// Each row needs its own break position. Headers belonging to nested
+				// tables are inside this row's borders, unlike its own/ancestor headers.
+				data = { ...data };
+				if (tableNode) {
+					for (let j = repeatablesAtRowStart; j < this.writer.repeatables.length; j++) {
+						data.y -= this.writer.repeatables[j].height;
+					}
+				}
 				const startsRowSpan = cell.rowSpan && cell.rowSpan > 1;
 				if (startsRowSpan) {
 					data.rowSpan = cell.rowSpan;

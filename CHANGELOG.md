@@ -10,6 +10,7 @@
 - Fixed oversized table borders after layout is recalculated by `pageBreakBefore`
 - Fixed incorrect node positions reported to `pageBreakBefore` after unbreakable blocks or table rows move to another page
 - Fixed extra spacing between inline fragments in justified text
+- Fixed repeated nested table headers appearing outside the parent table's borders and background fills on subsequent pages
 
 ## 0.3.13 - 2026-10-25
 

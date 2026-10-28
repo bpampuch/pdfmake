@@ -282,6 +282,48 @@ describe('Integration test: tables', function () {
 		assert.deepEqual(getColumnText(lines, { cell: 4 }), 'Some Value');
 	});
 
+	[0, 1].forEach(function (outerHeaderRows) {
+		[1, 2].forEach(function (innerHeaderRows) {
+			[1, 2].forEach(function (depth) {
+				it('encloses repeated nested headers (#2090), outer headers=' + outerHeaderRows + ', inner headers=' + innerHeaderRows + ', depth=' + depth, function () {
+					var body = Array.from({ length: innerHeaderRows }, (_, i) => ['Inner ' + i, 'Header']);
+					for (var i = 0; i < 40; i++) body.push(['Row ' + i, 'Value']);
+					var nested = { table: { widths: ['*', '*'], headerRows: innerHeaderRows, body: body } };
+					var colors = ['red', 'blue'];
+					for (var level = 0; level < depth; level++) {
+						let color = colors[level];
+						nested.fillColor = color;
+						nested = {
+							layout: { hLineColor: () => color, vLineColor: () => color },
+							table: { widths: ['*'], headerRows: outerHeaderRows, body: [['Outer ' + level], [nested]] }
+						};
+					}
+					var pages = testHelper.renderPages('A6', { content: [nested] });
+					assert(pages.length > 2);
+					pages.forEach(function (page) {
+						var lines = page.items.filter(node => node.type === 'line');
+						var headers = lines.filter(node => /^Inner /.test(node.item.inlines.map(inline => inline.text).join('')));
+						assert.equal(headers.length, innerHeaderRows);
+						colors.slice(0, depth).forEach(function (color) {
+							var borders = page.items.filter(node => node.type === 'vector' && node.item.type === 'line' &&
+								node.item.lineColor === color && node.item.x1 === node.item.x2);
+							var fills = page.items.filter(node => node.type === 'vector' && node.item.type === 'rect' && node.item.color === color);
+							headers.forEach(function (header) {
+								assert.equal(borders.filter(node => node.item.y1 <= header.item.y &&
+									node.item.y2 >= header.item.y + header.item.getHeight()).length, 2);
+								assert(fills.some(node => node.item.y <= header.item.y &&
+									node.item.y + node.item.h >= header.item.y + header.item.getHeight()));
+							});
+						});
+					});
+					var rowTexts = pages.flatMap(page => page.items.filter(node => node.type === 'line'))
+						.map(node => node.item.inlines.map(inline => inline.text).join('')).filter(text => /^Row /.test(text));
+					assert.deepEqual(rowTexts, Array.from({ length: 40 }, (_, i) => 'Row ' + i));
+				});
+			});
+		});
+	});
+
 	it('renders a simple table with star width', function () {
 		var definedWidth = 25;
 		var dd = {
