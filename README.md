@@ -10,58 +10,103 @@
 [npm_url]: https://www.npmjs.com/package/pdfmake
 
 
-PDF document generation library for server-side and client-side in pure JavaScript.
+PDF document generation library for Node.js and browsers, written in pure JavaScript.
 
 Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) and [examples](https://github.com/bpampuch/pdfmake/tree/master/examples).
 
-### Features
+## Features
 
-* line-wrapping,
-* text-alignments (left, right, centered, justified),
-* numbered and bulleted lists,
-* tables and columns
-  * auto/fixed/star-sized widths,
-  * col-spans and row-spans,
-  * headers automatically repeated in case of a page-break,
-  * snaking columns (newspaper-style layout where content flows column-to-column),
-* images and vector graphics,
-* convenient styling and style inheritance,
+* line wrapping
+* text alignment (left, right, centered, justified)
+* numbered and bulleted lists
+* tables and columns:
+  * auto/fixed/star-sized widths
+  * column spans and row spans
+  * headers automatically repeated after a page break
+  * snaking columns (newspaper-style layout where content flows from column to column)
+* images, SVG and vector graphics
+* QR codes
+* convenient styling and style inheritance
 * page headers and footers:
-  * static or dynamic content,
-  * access to current page number and page count,
-* background-layer,
-* page dimensions and orientations,
-* margins,
-* document sections,
-* custom page breaks,
-* font embedding,
-* support for complex, multi-level (nested) structures,
-* table of contents,
-* helper methods for opening/printing/downloading the generated PDF,
-* setting of PDF metadata (e.g. author, subject).
+  * static or dynamic content
+  * access to current page number and page count
+* background layer
+* watermarks
+* page dimensions and orientations
+* margins
+* document sections
+* custom page breaks
+* font embedding
+* support for complex, multi-level (nested) structures
+* table of contents
+* document outlines (bookmarks)
+* external links and internal navigation
+* file attachments
+* encryption, password protection and document permissions
+* PDF/A support
+* helper methods for opening/printing/downloading the generated PDF
+* PDF metadata (e.g. author, subject)
+
+## Installation
+
+Install with npm:
+
+```sh
+npm install pdfmake
+```
+
+## Quick start
+
+### Node.js
+
+Save the following as `example.js`:
+
+```js
+const pdfmake = require('pdfmake');
+const Roboto = require('pdfmake/fonts/Roboto');
+
+pdfmake.addFonts(Roboto);
+
+const docDefinition = {
+	content: ['Hello from pdfmake!']
+};
+
+pdfmake.createPdf(docDefinition).write('document.pdf').catch(console.error);
+```
+
+Run `node example.js` to create `document.pdf` in the current directory.
+
+### Browser
+
+Save the following as `index.html` next to your `node_modules` directory and open it in a browser.
+
+```html
+<!doctype html>
+<meta charset="utf-8">
+<script src="node_modules/pdfmake/build/pdfmake.min.js"></script>
+<script src="node_modules/pdfmake/build/vfs_fonts.js"></script>
+
+<button onclick="pdfMake.createPdf(docDefinition).download('document.pdf').catch(console.error)">Download PDF</button>
+<script>
+	const docDefinition = {
+		content: ['Hello from pdfmake!']
+	};
+</script>
+```
 
 ## Documentation
 
-**Documentation URL: https://pdfmake.github.io/docs/**
+See the [documentation](https://pdfmake.github.io/docs/) for usage and API details.
 
-Source of documentation: https://github.com/pdfmake/docs **Improvements are welcome!**
+Documentation improvements are welcome in the [documentation repository](https://github.com/pdfmake/docs).
 
-## Building from sources
+## Building from source
 
-using npm:
-```
+```sh
 git clone https://github.com/bpampuch/pdfmake.git
 cd pdfmake
 npm install
 npm run build
-```
-
-using yarn:
-```
-git clone https://github.com/bpampuch/pdfmake.git
-cd pdfmake
-yarn
-yarn run build
 ```
 
 ## License
@@ -71,6 +116,6 @@ MIT
 * [@bpampuch](https://github.com/bpampuch) (founder)
 * [@liborm85](https://github.com/liborm85)
 
-pdfmake is based on a truly amazing library [pdfkit](https://github.com/devongovett/pdfkit) (credits to [@devongovett](https://github.com/devongovett)).
+pdfmake is based on [PDFKit](https://github.com/foliojs/pdfkit).
 
 Thanks to all contributors.
