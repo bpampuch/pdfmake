@@ -1,4 +1,4 @@
-/*! pdfmake v0.3.12, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.3.13, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -3840,7 +3840,7 @@ if ( true && module && typeof module.exports !== 'undefined') {
 
 /***/ },
 
-/***/ 212
+/***/ 1862
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -5588,10 +5588,10 @@ var SHARED = '__core-js_shared__';
 var store = module.exports = globalThis[SHARED] || defineGlobalProperty(SHARED, {});
 
 (store.versions || (store.versions = [])).push({
-  version: '3.50.0',
+  version: '3.51.0',
   mode: IS_PURE ? 'pure' : 'global',
   copyright: '© 2013–2025 Denis Pushkarev (zloirock.ru), 2025–2026 CoreJS Company (core-js.io). All rights reserved.',
-  license: 'https://github.com/zloirock/core-js/blob/v3.50.0/LICENSE',
+  license: 'https://github.com/zloirock/core-js/blob/v3.51.0/LICENSE',
   source: 'https://github.com/zloirock/core-js'
 });
 
@@ -33728,7 +33728,7 @@ function isSameDate(a, b) {
   return a.getTime() === b.getTime();
 }
 
-const ICC_PROFILE_PATH = new URL('./data/sRGB_IEC61966_2_1.icc', "file:///home/runner/work/pdfmake/pdfmake/node_modules/pdfkit/js/pdfkit.browser.mjs").href;
+const ICC_PROFILE_PATH = 'pdfkit/builtin/sRGB_IEC61966_2_1.icc';
 let iccProfile;
 var PDFA = {
   initPDFA(pSubset) {
@@ -35060,12 +35060,12 @@ class PDFDocument extends pdfkit_browser_PDFDocument {
       }
       return obj;
     };
-    if (typeof src === 'object') {
-      return checkRequired(src);
-    }
-    let attachment = checkRequired(this.attachments[src]);
+    let attachment = checkRequired(typeof src === 'object' ? src : this.attachments[src]);
     if (this.virtualfs && this.virtualfs.existsSync(attachment.src)) {
-      return this.virtualfs.readFileSync(attachment.src);
+      return {
+        ...attachment,
+        src: this.virtualfs.readFileSync(attachment.src)
+      };
     }
     this.validateLocalFile(attachment.src);
     return attachment;
@@ -36077,7 +36077,7 @@ function buildColumnWidths(columns, availableWidth, offsetTotal, tableNode) {
   let starMaxMax = 0;
   let fixedColumns = [];
   let initial_availableWidth = availableWidth;
-  columns.forEach(column => {
+  columns.forEach((column, colIndex) => {
     if (isAutoColumn(column)) {
       autoColumns.push(column);
       autoMin += column._minWidth;
@@ -36087,10 +36087,17 @@ function buildColumnWidths(columns, availableWidth, offsetTotal, tableNode) {
       starMaxMin = Math.max(starMaxMin, column._minWidth);
       starMaxMax = Math.max(starMaxMax, column._maxWidth);
     } else {
-      fixedColumns.push(column);
+      fixedColumns.push({
+        column,
+        colIndex
+      });
     }
   });
-  fixedColumns.forEach((col, colIndex) => {
+  fixedColumns.forEach(_ref => {
+    let {
+      column: col,
+      colIndex
+    } = _ref;
     // width specified as %
     if (isString(col.width) && /\d+%/.test(col.width)) {
       // In tables we have to take into consideration the reserved width for paddings and borders
@@ -36103,7 +36110,7 @@ function buildColumnWidths(columns, availableWidth, offsetTotal, tableNode) {
         if (colIndex === 0) {
           // first column assumes whole borderLeft and half of border right
           reservedWidth = paddingLeft + paddingRight + borderLeft + borderRight / 2;
-        } else if (colIndex === fixedColumns.length - 1) {
+        } else if (colIndex === columns.length - 1) {
           // last column assumes whole borderRight and half of border left
           reservedWidth = paddingLeft + paddingRight + borderLeft / 2 + borderRight;
         } else {
@@ -38206,7 +38213,9 @@ class DocumentContext extends (events_namespaceFn().EventEmitter) {
     }
     let page = {
       items: [],
-      pageSize: pageSize,
+      pageSize: {
+        ...pageSize
+      },
       pageMargins: this.pageMargins,
       customProperties: customProperties
     };
@@ -38558,6 +38567,7 @@ class ElementWriter extends (events_namespaceFn().EventEmitter) {
     if (!useBlockXOffset && block.height > ctx.availableHeight) {
       return false;
     }
+    let unbreakableFillsInserted = 0;
     block.items.forEach(item => {
       switch (item.type) {
         case 'line':
@@ -38577,9 +38587,11 @@ class ElementWriter extends (events_namespaceFn().EventEmitter) {
           offsetVector(v, useBlockXOffset ? block.xOffset || 0 : ctx.x, useBlockYOffset ? block.yOffset || 0 : ctx.y);
           if (v._isFillColorFromUnbreakable) {
             // If the item is a fillColor from an unbreakable block
-            // We have to add it at the beginning of the items body array of the page
+            // We have to add it at the beginning of the items body array of the page,
+            // after the fills already inserted from this block so that they keep their draw order
             delete v._isFillColorFromUnbreakable;
-            const endOfBackgroundItemsIndex = ctx.backgroundLength[ctx.page];
+            const endOfBackgroundItemsIndex = ctx.backgroundLength[ctx.page] + unbreakableFillsInserted;
+            unbreakableFillsInserted++;
             page.items.splice(endOfBackgroundItemsIndex, 0, {
               type: 'vector',
               item: v
@@ -38936,9 +38948,13 @@ class PageElementWriter extends src_ElementWriter {
   /**
    * Move to the next column in a column group (snaking columns).
    * Handles repeatables and emits columnChanged event.
+   * @param {Function} [updateContext] - Adjust the new column before inserting repeatables
    */
-  moveToNextColumn() {
+  moveToNextColumn(updateContext) {
     let nextColumn = this.context().moveToNextColumn();
+    if (updateContext) {
+      updateContext(this.context());
+    }
 
     // Handle repeatables (like table headers) for the new column
     this.repeatables.forEach(function (rep) {
@@ -39149,6 +39165,7 @@ class TableProcessor {
     availableWidth = writer.context().availableWidth - this.offsets.total;
     columnCalculator.buildColumnWidths(tableNode.table.widths, availableWidth, this.offsets.total, tableNode);
     this.tableWidth = tableNode._offsets.total + getTableInnerContentWidth();
+    this.alignTable(writer.context());
     this.rowSpanData = prepareRowSpanData();
     this.cleanUpRepeatables = false;
 
@@ -39180,6 +39197,15 @@ class TableProcessor {
 
     // update the border properties of all cells before drawing any lines
     prepareCellBorders(this.tableNode.table.body);
+  }
+  alignTable(context) {
+    const freeWidth = Math.max(0, context.availableWidth - this.tableWidth);
+    this.alignmentOffset = this.tableNode.tableAlignment === 'center' ? freeWidth / 2 : this.tableNode.tableAlignment === 'right' ? freeWidth : 0;
+    if (this.alignmentOffset) {
+      // Keep the container width intact: column widths have already been resolved.
+      // Row snapshots preserve this origin across page breaks.
+      context.addMargin(this.alignmentOffset, -this.alignmentOffset);
+    }
   }
   onRowBreak(rowIndex, writer) {
     return () => {
@@ -39389,6 +39415,9 @@ class TableProcessor {
   endTable(writer) {
     if (this.cleanUpRepeatables) {
       writer.popFromRepeatables();
+    }
+    if (this.alignmentOffset) {
+      writer.context().addMargin(-this.alignmentOffset, this.alignmentOffset);
     }
   }
   endRow(rowIndex, writer, pageBreaks) {
@@ -40215,8 +40244,9 @@ class LayoutBuilder {
    * When in snaking columns, first tries moving to next column.
    * If no columns available, moves to next page and resets x to left margin.
    * @param {string} pageOrientation - Optional page orientation for the new page
+   * @param {TableProcessor} [tableProcessor] - Reapply table alignment in the new column
    */
-  snakingAwarePageBreak(pageOrientation) {
+  snakingAwarePageBreak(pageOrientation, tableProcessor) {
     let ctx = this.writer.context();
     let snakingSnapshot = ctx.getSnakingSnapshot();
     if (!snakingSnapshot) {
@@ -40225,7 +40255,7 @@ class LayoutBuilder {
 
     // Try flowing to next column first
     if (this.writer.canMoveToNextColumn()) {
-      this.writer.moveToNextColumn();
+      this.writer.moveToNextColumn(tableProcessor ? context => tableProcessor.alignTable(context) : undefined);
       return;
     }
 
@@ -40239,6 +40269,9 @@ class LayoutBuilder {
     let savedLastColumnWidth = ctx.lastColumnWidth;
     ctx.resetSnakingColumnsForNewPage();
     ctx.lastColumnWidth = savedLastColumnWidth;
+    if (tableProcessor) {
+      tableProcessor.alignTable(ctx);
+    }
   }
 
   // vertical container
@@ -40690,7 +40723,7 @@ class LayoutBuilder {
               let rowTopPageY = this.cell._leftEndingCell._startingRowSpanY + this.cell._leftEndingCell._rowTopPageYPadding;
               return this.cell._leftEndingCell._rowTopPageY - rowTopPageY + this.cell._leftEndingCell._bottomY;
             } else {
-              if (this.cell.positions[0].pageNumber !== this.cell._leftEndingCell._lastPageNumber) {
+              if (this.cell._lastPageNumber !== this.cell._leftEndingCell._lastPageNumber) {
                 return this.bottomY - this.cell._leftEndingCell._bottomY;
               }
               return this.viewHeight + this.cell._leftEndingCell._bottomY - this.bottomY;
@@ -40764,7 +40797,11 @@ class LayoutBuilder {
         // or fall back to a minimum of padding + line height + border
         let minRowHeight = lastRowHeight > 0 ? lastRowHeight : processor.rowPaddingTop + 14 + processor.rowPaddingBottom + processor.bottomLineWidth + processor.topLineWidth;
         if (this.writer.context().availableHeight < minRowHeight) {
-          this.snakingAwarePageBreak();
+          // Column selection needs the container origin, before table alignment.
+          if (processor.alignmentOffset) {
+            this.writer.context().addMargin(-processor.alignmentOffset, processor.alignmentOffset);
+          }
+          this.snakingAwarePageBreak(undefined, processor);
 
           // Skip border when headerRows present (header repeat includes it)
           if (processor.layout.hLineWhenBroken !== false && !processor.headerRows) {
@@ -41147,7 +41184,7 @@ const groupDecorations = (line, pdfDocument) => {
     let thickness = isNumber(inline.decorationThickness) ? inline.decorationThickness : null;
     for (let ii = 0, ll = decoration.length; ii < ll; ii++) {
       let decorationItem = decoration[ii];
-      if (!currentGroup || decorationItem !== currentGroup.decoration || style !== currentGroup.decorationStyle || color !== currentGroup.decorationColor) {
+      if (!currentGroup || decorationItem !== currentGroup.decoration || style !== currentGroup.decorationStyle || color !== currentGroup.decorationColor || thickness !== currentGroup.decorationThickness) {
         currentGroup = {
           line: line,
           decoration: decorationItem,
@@ -41195,7 +41232,7 @@ class TextDecorator {
       let max = 0;
       for (let i = 0, l = group.inlines.length; i < l; i++) {
         let inline = group.inlines[i];
-        max = inline.fontSize > max ? i : max;
+        max = inline.fontSize > group.inlines[max].fontSize ? i : max;
       }
       return group.inlines[max];
     };
@@ -41261,7 +41298,7 @@ class TextDecorator {
         sv = 1;
       let nbWaves = Math.ceil(totalWidth / (sh * 2)) + 1;
       let rwx = x + firstInline.x - 1;
-      this.pdfDocument.rect(x + firstInline.x, y - sv, totalWidth, y + sv).clip();
+      this.pdfDocument.rect(x + firstInline.x, y - sv, totalWidth, 2 * sv).clip();
       this.pdfDocument.lineWidth(lw / 3);
       this.pdfDocument.moveTo(rwx, y);
       for (let i = 0; i < nbWaves; i++) {
@@ -42172,13 +42209,25 @@ class OutputDocument {
   constructor(pdfDocumentPromise) {
     this.pdfDocumentPromise = pdfDocumentPromise;
     this.bufferPromise = null;
+    this.streamEnded = false;
+    this.streamEndListenerAttached = false;
   }
 
   /**
    * @returns {Promise<object>}
    */
-  getStream() {
-    return this.pdfDocumentPromise;
+  async getStream() {
+    const stream = await this.pdfDocumentPromise;
+    if (this.streamEnded) {
+      throw new Error('PDF stream has already been consumed.');
+    }
+    if (!this.streamEndListenerAttached) {
+      stream.once('end', () => {
+        this.streamEnded = true;
+      });
+      this.streamEndListenerAttached = true;
+    }
+    return stream;
   }
 
   /**
@@ -42187,7 +42236,7 @@ class OutputDocument {
   getBuffer() {
     const getBufferInternal = async () => {
       const stream = await this.getStream();
-      return new Promise(resolve => {
+      return new Promise((resolve, reject) => {
         let chunks = [];
         stream.on('data', chunk => {
           chunks.push(chunk);
@@ -42195,6 +42244,7 @@ class OutputDocument {
         stream.on('end', () => {
           resolve(OutputDocument_Buffer.concat(chunks));
         });
+        stream.on('error', reject);
         stream.end();
       });
     };
@@ -42222,7 +42272,7 @@ class OutputDocument {
 }
 /* harmony default export */ const src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(8802);
+var FileSaver_min = __webpack_require__(3643);
 ;// ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -42378,7 +42428,7 @@ class browser_extensions_pdfmake extends src_base {
 /***/ 1001
 (module, __unused_webpack_exports, __webpack_require__) {
 
-module.exports = __webpack_require__(212)["default"];
+module.exports = __webpack_require__(1862)["default"];
 
 /***/ },
 
@@ -49795,7 +49845,7 @@ module.exports = {
 
 /***/ },
 
-/***/ 8802
+/***/ 3643
 (module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
