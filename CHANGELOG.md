@@ -13,6 +13,7 @@
 - Fixed repeated nested table headers appearing outside the parent table's borders and background fills on subsequent pages
 - Fixed list markers being misplaced on subsequent pages when using text backgrounds
 - Fixed invalid page height in temporary contexts used for unbreakable blocks and table rows
+- Fixed `background` of trimmed leading whitespace being drawn to the left of the text, into the page margin or outside the table cell
 
 ## 0.3.13 - 2026-10-25
 

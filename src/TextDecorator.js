@@ -62,8 +62,22 @@ class TextDecorator {
 			}
 
 			let justifyShift = (inline.justifyShift || 0);
+			let rectX = x + inline.x - justifyShift;
+			let rectWidth = inline.width + justifyShift;
+
+			let lineStart = x + Math.min(0, line.inlines[0].leadingIndent || 0);
+			if (line.leadingCut > 0 && rectX < lineStart) {
+				// Clip the background of trimmed whitespace at the line start,
+				// keeping any negative leading indent used by the visible text.
+				rectWidth = rectX + rectWidth - lineStart;
+				rectX = lineStart;
+				if (rectWidth <= 0) {
+					continue;
+				}
+			}
+
 			this.pdfDocument.fillColor(color)
-				.rect(x + inline.x - justifyShift, y, inline.width + justifyShift, height)
+				.rect(rectX, y, rectWidth, height)
 				.fill();
 		}
 	}
