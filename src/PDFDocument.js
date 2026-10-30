@@ -71,6 +71,12 @@ class PDFDocument extends PDFKitDocument {
 			let def = this.fonts[familyName][type];
 			if (!Array.isArray(def)) {
 				def = [def];
+			} else {
+				def = def.slice();
+			}
+
+			if (typeof def[0] === 'object' && def[0].url) {
+				def[0] = def[0].url;
 			}
 
 			if (this.virtualfs && this.virtualfs.existsSync(def[0])) {
@@ -93,13 +99,17 @@ class PDFDocument extends PDFKitDocument {
 				return src;
 			}
 
+			if (typeof image === 'object' && image.url) {
+				image = image.url;
+			}
+
 			if (this.virtualfs && this.virtualfs.existsSync(image)) {
 				return this.virtualfs.readFileSync(image);
 			}
 
 			let index = image.indexOf('base64,');
 			if (index < 0) {
-				return this.images[src];
+				return image;
 			}
 
 			return Buffer.from(image.substring(index + 7), 'base64');
@@ -155,6 +165,10 @@ class PDFDocument extends PDFKitDocument {
 		};
 
 		let attachment = checkRequired(typeof src === 'object' ? src : this.attachments[src]);
+
+		if (typeof attachment.src === 'object' && attachment.src.url) {
+			attachment = { ...attachment, src: attachment.src.url };
+		}
 
 		if (this.virtualfs && this.virtualfs.existsSync(attachment.src)) {
 			return {

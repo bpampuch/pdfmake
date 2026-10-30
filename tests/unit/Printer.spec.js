@@ -7,6 +7,7 @@ var PDFDocument = require('../../js/PDFDocument').default;
 var Printer = require('../../js/Printer').default;
 var virtualfs = require('../../js/virtual-fs').default;
 var URLResolver = require('../../js/URLResolver').default;
+var embedFiles = require('rewire')('../../js/Printer').__get__('embedFiles');
 
 describe('Printer', function () {
 
@@ -21,6 +22,81 @@ describe('Printer', function () {
 		};
 		PDFDocument.prototype.addPage = sinon.spy(PDFDocument.prototype.addPage);
 
+	});
+
+	describe('resolveUrls', function () {
+		it('should preserve resource URLs and headers on repeated resolution', async function () {
+			var source = { url: 'https://example.com/resource', headers: { Authorization: 'Bearer token' } };
+			var plain = 'https://example.com/plain';
+			var fonts = { Remote: {}, Collection: {} };
+			['normal', 'bold', 'italics', 'bolditalics'].forEach(function (style) {
+				fonts.Remote[style] = source;
+				fonts.Collection[style] = [source, 'CollectionFont'];
+			});
+			var docDefinition = {
+				images: { logo: source, plain: plain },
+				attachments: { report: { src: source }, plain: { src: plain } },
+				files: { report: { src: source }, plain: { src: plain } }
+			};
+			var original = JSON.parse(JSON.stringify({ fonts: fonts, doc: docDefinition }));
+			var resolver = { resolve: sinon.spy(), resolved: sinon.stub().resolves() };
+			printer = new Printer(fonts, virtualfs, resolver);
+			var expected = Array(8).fill([source.url, source.headers]).concat([
+				[source.url, source.headers], [plain, {}],
+				[source.url, source.headers], [plain, {}],
+				[source.url, source.headers], [plain, {}]
+			]);
+
+			await printer.resolveUrls(docDefinition);
+			await printer.resolveUrls(docDefinition);
+
+			assert.deepStrictEqual({ fonts: fonts, doc: docDefinition }, original);
+			assert.deepStrictEqual(resolver.resolve.getCalls().map(call => call.args), expected.concat(expected));
+		});
+	});
+
+	describe('embedFiles', function () {
+		it('should preserve file definitions when embedding from each document virtual file system', function () {
+			var url = 'https://example.com/report.txt';
+			var source = { url: url, headers: { Authorization: 'Bearer token' } };
+			var docDefinition = {
+				files: {
+					report: { src: source, description: 'Report description' },
+					named: { src: url, name: 'custom.txt' }
+				}
+			};
+			var original = JSON.parse(JSON.stringify(docDefinition));
+			var content = Buffer.from('File contents');
+
+			for (var i = 0; i < 2; i++) {
+				var doc = {
+					virtualfs: {
+						existsSync: filename => filename === url,
+						readFileSync: sinon.stub().withArgs(url).returns(content)
+					},
+					file: sinon.spy()
+				};
+				embedFiles(docDefinition, doc);
+				assert.deepStrictEqual(doc.file.firstCall.args, [content, { src: content, description: 'Report description', name: 'report' }]);
+				assert.deepStrictEqual(doc.file.secondCall.args, [content, { src: content, name: 'custom.txt' }]);
+				assert.equal(doc.virtualfs.readFileSync.callCount, 2);
+				assert.deepStrictEqual(docDefinition, original);
+			}
+		});
+
+		it('should resolve file sources with headers without a virtual file system', function () {
+			var source = { url: 'report.txt', headers: {} };
+			var docDefinition = { files: { report: { src: source } } };
+			var doc = { file: sinon.spy() };
+			embedFiles(docDefinition, doc);
+			sinon.assert.calledOnceWithExactly(doc.file, 'report.txt', { src: 'report.txt', name: 'report' });
+			assert.deepStrictEqual(docDefinition.files.report, { src: source });
+		});
+
+		it('should enforce the local access policy for file sources with headers', function () {
+			var doc = new PDFDocument({}, {}, {}, {}, {}, null, () => false);
+			assert.throws(() => embedFiles({ files: { report: { src: { url: 'private.txt', headers: {} } } } }, doc), /Access to local file denied.*private\.txt/);
+		});
 	});
 
 	it('should pass switched width and height to pdfkit if page orientation changes from default portrait to landscape', async function () {

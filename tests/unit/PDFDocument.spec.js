@@ -22,6 +22,49 @@ describe('PDFDocument', function () {
 
 	describe('provideFont', function () {
 
+		it('should load URL font definitions from each document virtual file system without changing them', function () {
+			var source = { url: 'https://example.com/font.ttf', headers: { Authorization: 'Bearer token' } };
+			var fonts = { Remote: { normal: source, bold: source, italics: source, bolditalics: source } };
+			var data = require('fs').readFileSync('fonts/Roboto/Roboto-Regular.ttf');
+			var original = JSON.parse(JSON.stringify(fonts));
+
+			for (var i = 0; i < 2; i++) {
+				var vfs = {
+					existsSync: sinon.stub().withArgs(source.url).returns(true),
+					readFileSync: sinon.stub().withArgs(source.url).returns(data)
+				};
+				var doc = new PDFDocument(fonts, {}, {}, {}, {}, vfs, () => false);
+				[[false, false], [true, false], [false, true], [true, true]].forEach(function (style) {
+					assert.equal(doc.provideFont('Remote', ...style).font.postscriptName, 'Roboto-Regular');
+				});
+				assert.equal(vfs.readFileSync.callCount, 4);
+				assert.deepStrictEqual(fonts, original);
+			}
+		});
+
+		it('should preserve collection definitions with and without headers', function () {
+			var url = 'https://example.com/font.ttc';
+			var source = { url: url, headers: { Authorization: 'Bearer token' } };
+			var fonts = { Remote: { normal: [url, 'CollectionFont'], bold: [source, 'CollectionFont'] } };
+			var data = Buffer.from('collection font data');
+			var original = JSON.parse(JSON.stringify(fonts));
+
+			for (var i = 0; i < 2; i++) {
+				var vfs = {
+					existsSync: filename => filename === url,
+					readFileSync: sinon.stub().withArgs(url).returns(data)
+				};
+				var doc = new PDFDocument(fonts, {}, {}, {}, {}, vfs, () => false);
+				var font = {};
+				var loadFont = sinon.stub(doc, 'font').returns({ _font: font });
+
+				assert.strictEqual(doc.provideFont('Remote', false, false), font);
+				assert.strictEqual(doc.provideFont('Remote', true, false), font);
+				assert.deepStrictEqual(loadFont.getCalls().map(call => call.args), [[data, 'CollectionFont'], [data, 'CollectionFont']]);
+				assert.deepStrictEqual(fonts, original);
+			}
+		});
+
 		it('throws error when given font not present', function () {
 			assert.throws(function () {
 				pdfDocument.provideFont('Arial', true, false);
@@ -97,6 +140,41 @@ describe('PDFDocument', function () {
 			assert.equal(image.height, 6);
 		});
 
+		it('should load URL image definitions from each document virtual file system without changing them', function () {
+			var source = { url: 'https://example.com/image.png', headers: { Authorization: 'Bearer token' } };
+			var images = { logo: source };
+			var original = JSON.parse(JSON.stringify(images));
+			var data = Buffer.from(imageData.split(',')[1], 'base64');
+
+			for (var i = 0; i < 2; i++) {
+				var vfs = {
+					existsSync: sinon.stub().withArgs(source.url).returns(true),
+					readFileSync: sinon.stub().withArgs(source.url).returns(data)
+				};
+				var doc = new PDFDocument({}, images, {}, {}, {}, vfs, () => false);
+				var image = doc.provideImage('logo');
+				assert.equal(image.width, 12);
+				assert.equal(image.height, 6);
+				sinon.assert.calledOnceWithExactly(vfs.readFileSync, source.url);
+				assert.deepStrictEqual(images, original);
+			}
+		});
+
+		it('should decode data URLs in image definitions with headers', function () {
+			pdfDocument.images = { logo: { url: imageData, headers: {} } };
+			var image = pdfDocument.provideImage('logo');
+			assert.equal(image.width, 12);
+			assert.equal(image.height, 6);
+		});
+
+		it('should enforce the local access policy for image definitions with headers', function () {
+			pdfDocument.images = { logo: { url: 'private.png', headers: {} } };
+			pdfDocument.localAccessPolicy = () => false;
+			var openImage = sinon.spy(pdfDocument, 'openImage');
+			assert.throws(() => pdfDocument.provideImage('logo'), /Access to local file denied.*private\.png/);
+			sinon.assert.notCalled(openImage);
+		});
+
 		it('should resolve named local image paths before opening them', function () {
 			pdfDocument.images = { logo: 'logo.png' };
 			var image = { embed: sinon.spy() };
@@ -127,6 +205,38 @@ describe('PDFDocument', function () {
 	});
 
 	describe('provideAttachment', function () {
+
+		it('should preserve URL attachment definitions when loading by name or inline', function () {
+			var source = { url: 'https://example.com/report.txt', headers: { Authorization: 'Bearer token' } };
+			var attachment = { src: source, name: 'report.txt', description: 'Report description' };
+			var attachments = { report: attachment };
+			var original = JSON.parse(JSON.stringify(attachments));
+			var content = Buffer.from('Attachment contents');
+
+			for (var i = 0; i < 2; i++) {
+				var vfs = {
+					existsSync: sinon.stub().withArgs(source.url).returns(true),
+					readFileSync: sinon.stub().withArgs(source.url).returns(content)
+				};
+				var doc = new PDFDocument({}, {}, {}, attachments, {}, vfs, () => false);
+				assert.deepStrictEqual(doc.provideAttachment('report'), { ...attachment, src: content });
+				assert.deepStrictEqual(doc.provideAttachment(attachment), { ...attachment, src: content });
+				assert.equal(vfs.readFileSync.callCount, 2);
+				assert.deepStrictEqual(attachments, original);
+			}
+		});
+
+		it('should resolve attachment sources with headers without a virtual file system', function () {
+			var attachment = { src: { url: 'report.txt', headers: {} }, name: 'report.txt' };
+			pdfDocument.localAccessPolicy = filename => filename === 'report.txt';
+			assert.deepStrictEqual(pdfDocument.provideAttachment(attachment), { src: 'report.txt', name: 'report.txt' });
+			assert.deepStrictEqual(attachment.src, { url: 'report.txt', headers: {} });
+		});
+
+		it('should enforce the local access policy for attachment sources with headers', function () {
+			pdfDocument.localAccessPolicy = () => false;
+			assert.throws(() => pdfDocument.provideAttachment({ src: { url: 'private.txt', headers: {} } }), /Access to local file denied.*private\.txt/);
+		});
 
 		it('should resolve a named VFS attachment without changing its metadata or original definition', function () {
 			var content = Buffer.from('Attachment contents');
