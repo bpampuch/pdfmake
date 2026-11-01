@@ -400,6 +400,7 @@ class ElementWriter extends EventEmitter {
 
 				case 'image':
 				case 'svg':
+				case 'attachment':
 				case 'beginClip':
 				case 'endClip':
 				case 'beginVerticalAlignment':
