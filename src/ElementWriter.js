@@ -77,16 +77,21 @@ class ElementWriter extends EventEmitter {
 			!line.newLineForced &&
 			!line.lastLineInParagraph &&
 			line.inlines.length > 1) {
+			// Whitespace trimmed from the line start is not a word gap (leadingCut includes -leadingIndent)
+			let firstInline = line.inlines[0];
+			let isFirstInlineTrimmed = line.leadingCut + (firstInline.leadingIndent || 0) > 0 && firstInline.text.trim() === '';
+			let hasGapAfter = i => !line.inlines[i].noNewLine && !(i === 0 && isFirstInlineTrimmed);
+
 			let gaps = 0;
 			for (let i = 0, l = line.inlines.length - 1; i < l; i++) {
-				if (!line.inlines[i].noNewLine) {
+				if (hasGapAfter(i)) {
 					gaps++;
 				}
 			}
 			let additionalSpacing = gaps > 0 ? (width - lineWidth) / gaps : 0;
 
 			for (let i = 1, l = line.inlines.length; i < l; i++) {
-				let justifyShift = line.inlines[i - 1].noNewLine ? 0 : additionalSpacing;
+				let justifyShift = hasGapAfter(i - 1) ? additionalSpacing : 0;
 				offset += justifyShift;
 
 				line.inlines[i].x += offset;
