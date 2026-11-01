@@ -10,9 +10,10 @@ const normalizeFilename = filename => {
 	return filename;
 };
 
-class VirtualFileSystem {
-	constructor() {
+export class VirtualFileSystem {
+	constructor(parent = null) {
 		this.storage = {};
+		this.parent = parent;
 	}
 
 	/**
@@ -20,6 +21,10 @@ class VirtualFileSystem {
 	 * @returns {boolean}
 	 */
 	existsSync(filename) {
+		if (this.parent && this.parent.existsSync(filename)) {
+			return true;
+		}
+
 		const normalizedFilename = normalizeFilename(filename);
 		return typeof this.storage[normalizedFilename] !== 'undefined';
 	}
@@ -30,6 +35,10 @@ class VirtualFileSystem {
 	 * @returns {string|Buffer}
 	 */
 	readFileSync(filename, options) {
+		if (this.parent && this.parent.existsSync(filename)) {
+			return this.parent.readFileSync(filename, options);
+		}
+
 		const normalizedFilename = normalizeFilename(filename);
 		const encoding = typeof options === 'object' ? options.encoding : options;
 
@@ -59,6 +68,19 @@ class VirtualFileSystem {
 		}
 
 		this.storage[normalizedFilename] = encoding || typeof content === 'string' ? new Buffer(content, encoding) : content;
+	}
+
+	/**
+	 * @param {string} filename
+	 */
+	unlinkSync(filename) {
+		const normalizedFilename = normalizeFilename(filename);
+
+		if (typeof this.storage[normalizedFilename] === 'undefined') {
+			throw new Error(`File '${normalizedFilename}' not found in virtual file system`);
+		}
+
+		delete this.storage[normalizedFilename];
 	}
 
 }

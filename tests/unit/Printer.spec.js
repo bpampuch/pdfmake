@@ -26,7 +26,7 @@ describe('Printer', function () {
 
 	describe('resolveUrls', function () {
 		it('should preserve resource URLs and headers on repeated resolution', async function () {
-			var source = { url: 'https://example.com/resource', headers: { Authorization: 'Bearer token' } };
+			var source = { url: 'https://example.com/resource', headers: { Authorization: 'Bearer token' }, cache: true };
 			var plain = 'https://example.com/plain';
 			var fonts = { Remote: {}, Collection: {} };
 			['normal', 'bold', 'italics', 'bolditalics'].forEach(function (style) {
@@ -41,10 +41,10 @@ describe('Printer', function () {
 			var original = JSON.parse(JSON.stringify({ fonts: fonts, doc: docDefinition }));
 			var resolver = { resolve: sinon.spy(), resolved: sinon.stub().resolves() };
 			printer = new Printer(fonts, virtualfs, resolver);
-			var expected = Array(8).fill([source.url, source.headers]).concat([
-				[source.url, source.headers], [plain, {}],
-				[source.url, source.headers], [plain, {}],
-				[source.url, source.headers], [plain, {}]
+			var expected = Array(8).fill([source.url, source.headers, true]).concat([
+				[source.url, source.headers, true], [plain, {}, false],
+				[source.url, source.headers, true], [plain, {}, false],
+				[source.url, source.headers, true], [plain, {}, false]
 			]);
 
 			await printer.resolveUrls(docDefinition);
