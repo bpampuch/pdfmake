@@ -67,7 +67,7 @@ export class VirtualFileSystem {
 			throw new Error('No content');
 		}
 
-		this.storage[normalizedFilename] = encoding || typeof content === 'string' ? new Buffer(content, encoding) : content;
+		this.storage[normalizedFilename] = encoding || typeof content === 'string' ? Buffer.from(content, encoding) : content;
 	}
 
 	/**
