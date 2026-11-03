@@ -37,6 +37,7 @@
 - Fixed `background` of trimmed leading whitespace being drawn to the left of the text, into the page margin or outside the table cell
 - Fixed file attachment annotations disappearing inside unbreakable blocks and table rows
 - Fixed the first word of justified text being shifted right when the line starts with whitespace
+- Fixed svg-to-pdfkit - Fixed excessive memory usage and stack overflows caused by nested SVG `<use>` references by limiting expansion size and depth
 
 ## 0.3.13 - 2026-10-25
 
