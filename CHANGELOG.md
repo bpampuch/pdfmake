@@ -36,6 +36,7 @@
 - Fixed invalid page height in temporary contexts used for unbreakable blocks and table rows
 - Fixed `background` of trimmed leading whitespace being drawn to the left of the text, into the page margin or outside the table cell
 - Fixed file attachment annotations disappearing inside unbreakable blocks and table rows
+- Fixed svg-to-pdfkit - Fixed excessive memory usage and stack overflows caused by nested SVG `<use>` references by limiting expansion size and depth
 
 ## 0.3.13 - 2026-10-25
 
