@@ -21,6 +21,14 @@ describe('PDFDocument', function () {
 	});
 
 	describe('provideFont', function () {
+		it('should load an ArrayBuffer font with a document virtual file system', function () {
+			var VirtualFileSystem = require('../../js/virtual-fs').VirtualFileSystem;
+			var data = Uint8Array.from(require('fs').readFileSync('fonts/Roboto/Roboto-Regular.ttf')).buffer;
+			var vfs = new VirtualFileSystem(new VirtualFileSystem());
+			var doc = new PDFDocument({ Roboto: { normal: data } }, {}, {}, {}, {}, vfs, () => false);
+
+			assert.equal(doc.provideFont('Roboto', false, false).font.postscriptName, 'Roboto-Regular');
+		});
 
 		it('should load URL font definitions from each document virtual file system without changing them', function () {
 			var source = { url: 'https://example.com/font.ttf', headers: { Authorization: 'Bearer token' } };
@@ -106,6 +114,28 @@ describe('PDFDocument', function () {
 			assert.equal(image.height, 6);
 			assert(image.obj, 'The image should be embedded as a PDF object');
 			assert.strictEqual(pdfDocument._imageRegistry.logo, image);
+		});
+
+		['Buffer', 'Uint8Array', 'ArrayBuffer'].forEach(function (type) {
+			it('should load a named ' + type + ' image with a document virtual file system', function () {
+				var VirtualFileSystem = require('../../js/virtual-fs').VirtualFileSystem;
+				var data = Buffer.from(imageData.split(',')[1], 'base64');
+				if (type === 'Uint8Array') {
+					data = Uint8Array.from(data);
+				} else if (type === 'ArrayBuffer') {
+					data = Uint8Array.from(data).buffer;
+				}
+				pdfDocument.images = { logo: data };
+				pdfDocument.virtualfs = new VirtualFileSystem(new VirtualFileSystem());
+				pdfDocument.localAccessPolicy = () => false;
+
+				var image = pdfDocument.provideImage('logo');
+				assert.equal(image.width, 12);
+				assert.equal(image.height, 6);
+				assert(image.obj, 'The image should be embedded as a PDF object');
+				assert.strictEqual(pdfDocument._imageRegistry.logo, image);
+				assert.strictEqual(pdfDocument.images.logo, data);
+			});
 		});
 
 		it('should reuse a cached image without opening or embedding it again', function () {

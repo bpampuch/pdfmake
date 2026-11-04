@@ -21,6 +21,10 @@ export class VirtualFileSystem {
 	 * @returns {boolean}
 	 */
 	existsSync(filename) {
+		if (typeof filename !== 'string') {
+			return false;
+		}
+
 		if (this.parent && this.parent.existsSync(filename)) {
 			return true;
 		}

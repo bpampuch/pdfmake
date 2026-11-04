@@ -4,6 +4,18 @@ var assert = require('assert');
 var VirtualFileSystem = require('../../js/virtual-fs').VirtualFileSystem;
 
 describe('VirtualFileSystem', function () {
+	describe('existsSync', function () {
+		it('should return false for non-string filenames before consulting the parent', function () {
+			var parent = { existsSync: () => { throw new Error('Unexpected parent lookup'); } };
+			var fs = new VirtualFileSystem(parent);
+			var inputs = [undefined, null, 42, false, {}, Buffer.from('file'), new Uint8Array([1, 2]), new ArrayBuffer(2)];
+
+			for (const filename of inputs) {
+				assert.strictEqual(fs.existsSync(filename), false);
+			}
+		});
+	});
+
 	describe('unlinkSync', function () {
 		it('should delete the requested file and preserve other files', function () {
 			var fs = new VirtualFileSystem();

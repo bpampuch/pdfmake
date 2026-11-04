@@ -32,6 +32,22 @@ describe('Document virtual file system', function () {
 		assert.throws(() => document.readFileSync('missing'), /not found/);
 	});
 
+	it('should ignore non-string inputs without serializing or tracking them', async function () {
+		var circular = {};
+		circular.self = circular;
+		var inputs = [undefined, null, 42, false, Buffer.from('font'), new Uint8Array([1, 2]), new ArrayBuffer(2), circular];
+
+		for (const input of inputs) {
+			var result = resolver.resolve(input);
+			assert.ok(result instanceof Promise);
+			await result;
+		}
+		await resolver.resolved();
+
+		sinon.assert.notCalled(fetchStub);
+		assert.deepStrictEqual(resolver.resolving, {});
+	});
+
 	it('should download once into the document VFS by default', async function () {
 		await Promise.all([resolver.resolve(url), resolver.resolve(url, {}, false)]);
 		await resolver.resolved();

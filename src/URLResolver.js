@@ -61,6 +61,10 @@ class URLResolver {
 	}
 
 	resolve(url, headers = {}, cache = false) {
+		if (typeof url !== 'string') {
+			return Promise.resolve();
+		}
+
 		const key = JSON.stringify([url, cache === true]);
 		const resolveUrlInternal = async () => {
 			if (url.toLowerCase().startsWith('https://') || url.toLowerCase().startsWith('http://')) {
