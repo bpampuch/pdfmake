@@ -38,6 +38,8 @@
 - Fixed file attachment annotations disappearing inside unbreakable blocks and table rows
 - Fixed the first word of justified text being shifted right when the line starts with whitespace
 - Fixed svg-to-pdfkit - Fixed excessive memory usage and stack overflows caused by nested SVG `<use>` references by limiting expansion size and depth
+- Fixed SVG font loading from VFS and TrueType collections
+- Fixed SVG fonts bypassing `setLocalAccessPolicy`
 
 ## 0.3.13 - 2026-10-25
 

@@ -359,13 +359,10 @@ class Renderer {
 			let fontsFamily = family.split(',').map(f => f.trim().replace(/('|")/g, ''));
 			let font = findFont(this.pdfDocument.fonts, fontsFamily, svg.font || 'Roboto');
 
-			let fontFile = this.pdfDocument.getFontFile(font, bold, italic);
-			if (fontFile === null) {
-				let type = this.pdfDocument.getFontType(bold, italic);
-				throw new Error(`Font '${font}' in style '${type}' is not defined in the font section of the document definition.`);
-			}
-
-			return fontFile;
+			let loadedFont = this.pdfDocument.provideFont(font, bold, italic);
+			let alias = `pdfmake:${JSON.stringify([font, this.pdfDocument.getFontType(bold, italic)])}`;
+			this.pdfDocument._fontFamilies[alias] = loadedFont;
+			return alias;
 		};
 		options.imageCallback = link => {
 			let src = link.replace(/\s+/g, '');
