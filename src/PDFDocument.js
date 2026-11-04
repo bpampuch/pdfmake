@@ -44,6 +44,33 @@ class PDFDocument extends PDFKitDocument {
 		this.attachments = attachments;
 		this.virtualfs = virtualfs;
 		this.localAccessPolicy = localAccessPolicy;
+		// horizontal bounds annotations are clipped to (see annotate)
+		this.annotationClip = null;
+	}
+
+	/**
+	 * Adds an annotation (e.g. a link). While content is clipped to a table cell (`clipCells`
+	 * of tables), the annotation is clipped to the cell's horizontal bounds too, and not added
+	 * at all if it is entirely outside of them (annotations are not affected by clipping paths).
+	 *
+	 * @param {number} x
+	 * @param {number} y
+	 * @param {number} w
+	 * @param {number} h
+	 * @param {object} options
+	 * @returns {PDFDocument}
+	 */
+	annotate(x, y, w, h, options) {
+		if (this.annotationClip) {
+			const left = Math.max(x, this.annotationClip.x);
+			const right = Math.min(x + w, this.annotationClip.x + this.annotationClip.width);
+			if (right <= left) {
+				return this;
+			}
+			x = left;
+			w = right - left;
+		}
+		return super.annotate(x, y, w, h, options);
 	}
 
 	getFontType(bold, italics) {

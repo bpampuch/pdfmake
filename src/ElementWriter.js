@@ -3,6 +3,16 @@ import { pack, offsetVector } from './helpers/tools';
 import DocumentContext from './DocumentContext';
 import { EventEmitter } from 'events';
 
+// intersection of horizontal clip bounds (`x` and `width`, bounds being null when not clipped)
+function intersectCellClips(bounds, other) {
+	if (!bounds || !other) {
+		return bounds || other;
+	}
+	const left = Math.max(bounds.x, other.x);
+	const right = Math.min(bounds.x + bounds.width, other.x + other.width);
+	return { x: left, width: Math.max(0, right - left) };
+}
+
 /**
  * A line/vector writer, which adds elements to current page and sets
  * their positions based on the context
@@ -16,6 +26,7 @@ class ElementWriter extends EventEmitter {
 		super();
 		this._context = context;
 		this.contextStack = [];
+		this.cellClips = [];
 	}
 
 	/**
@@ -67,6 +78,11 @@ class ElementWriter extends EventEmitter {
 			case 'center':
 				offset = (width - lineWidth) / 2;
 				break;
+		}
+
+		// (in a clipped table cell, a line too long for the cell keeps its start)
+		if (offset < 0 && this.getCellClip()) {
+			offset = 0;
 		}
 
 		if (offset) {
@@ -310,6 +326,50 @@ class ElementWriter extends EventEmitter {
 		return true;
 	}
 
+	/**
+	 * Begins clipping content to the horizontal bounds of a table cell on the current page
+	 * (`clipCells` of tables). Content is clipped until the matching `endCellClip` item.
+	 *
+	 * @param {number} x left edge of the cell
+	 * @param {number} width width of the cell
+	 * @returns {object} page item beginning the clip
+	 */
+	beginCellClip(x, width) {
+		const item = {
+			type: 'beginCellClip',
+			item: { x: x, width: width }
+		};
+		this.context().getCurrentPage().items.push(item);
+		return item;
+	}
+
+	/**
+	 * Ends clipping content to a table cell on a page.
+	 *
+	 * @param {object} page page on which the clip began
+	 */
+	endCellClip(page) {
+		page.items.push({
+			type: 'endCellClip',
+			item: {}
+		});
+	}
+
+	/**
+	 * Returns the horizontal bounds content is clipped to on the current page while table cells
+	 * with clipped content (`clipCells` of tables) are laid out in the current context: those of
+	 * the innermost cell, within those of the cells around it.
+	 *
+	 * @returns {object|null} left edge (`x`) and `width`, or null if no clipped cell is laid out
+	 */
+	getCellClip() {
+		const page = this.context().getCurrentPage();
+		return this.cellClips.filter(cellClip => cellClip.context === this.context()).reduce((bounds, cellClip) => {
+			const open = cellClip.open.find(clip => clip.page === page);
+			return open ? intersectCellClips(bounds, open.item.item) : bounds;
+		}, null);
+	}
+
 	beginVerticalAlignment(verticalAlignment) {
 		let page = this.context().getCurrentPage();
 		let item = {
@@ -379,11 +439,17 @@ class ElementWriter extends EventEmitter {
 					}
 
 					offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+					if (v._cellClip) {
+						// the cell clip of a fill moves with the fill (copied, as the fill, for each insertion)
+						v._cellClip = { ...v._cellClip, x: v._cellClip.x + (useBlockXOffset ? (block.xOffset || 0) : ctx.x) };
+					}
 					if (v._isFillColorFromUnbreakable) {
 						// If the item is a fillColor from an unbreakable block
 						// We have to add it at the beginning of the items body array of the page,
 						// after the fills already inserted from this block so that they keep their draw order
 						delete v._isFillColorFromUnbreakable;
+						// (in a clipped table cell, the block being in it: clipped to the cell too)
+						v._cellClip = intersectCellClips(v._cellClip, this.getCellClip());
 						const endOfBackgroundItemsIndex = ctx.backgroundLength[ctx.page] + unbreakableFillsInserted;
 						unbreakableFillsInserted++;
 						page.items.splice(endOfBackgroundItemsIndex, 0, {
@@ -413,6 +479,19 @@ class ElementWriter extends EventEmitter {
 					page.items.push({
 						type: item.type,
 						item: img
+					});
+					break;
+				case 'beginCellClip':
+					// cell clips span the whole page height, only their horizontal position is offset
+					page.items.push({
+						type: item.type,
+						item: { ...item.item, x: item.item.x + (useBlockXOffset ? (block.xOffset || 0) : ctx.x) }
+					});
+					break;
+				case 'endCellClip':
+					page.items.push({
+						type: item.type,
+						item: {}
 					});
 					break;
 			}

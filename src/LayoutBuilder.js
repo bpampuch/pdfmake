@@ -200,6 +200,8 @@ class LayoutBuilder {
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
 		this.writer = new PageElementWriter(new DocumentContext());
+		// clips of clipped table cells continuing on a new page (one listener for all cells)
+		this.writer.addListener('pageChanged', () => this.beginCellClipsOnPage());
 
 		this.writer.context().addListener('pageAdded', (page) => {
 			let backgroundGetter = background;
@@ -999,7 +1001,17 @@ class LayoutBuilder {
 			const skipForSnaking = snakingColumns && i > 0;
 
 			if (!cell._span && !skipForSnaking) {
-				this.processNode(cell, true);
+				if (tableNode && tableNode.table.clipCells) {
+					const layout = tableNode._layout;
+					// the content is clipped to the cell including its paddings, or without them
+					// with clipCells: 'content'
+					const clipsPaddings = tableNode.table.clipCells !== 'content';
+					const paddingLeft = clipsPaddings ? layout.paddingLeft(cellIndexBegin, tableNode) : 0;
+					const paddingRight = clipsPaddings ? layout.paddingRight(i, tableNode) : 0;
+					this.processClippedCell(paddingLeft, paddingLeft + width + paddingRight, () => this.processNode(cell, true));
+				} else {
+					this.processNode(cell, true);
+				}
 				this.writer.context().updateBottomByPage();
 
 				if (cell.verticalAlignment) {
@@ -1122,6 +1134,42 @@ class LayoutBuilder {
 			pageBreaks: pageBreaks,
 			positions: positions
 		};
+	}
+
+	/**
+	 * Lays out a table cell with its content clipped to the cell's horizontal bounds
+	 * (`clipCells` of tables). The cell's items on each page it is laid out on are
+	 * enclosed in items beginning and ending the clip.
+	 *
+	 * @param {number} paddingLeft left padding of the cell (0 when clipping to its content)
+	 * @param {number} width width of the cell, including its paddings (unless clipping to its content)
+	 * @param {Function} processCell lays out the cell's content
+	 */
+	processClippedCell(paddingLeft, width, processCell) {
+		const context = this.writer.context();
+		// the cell keeps its horizontal position on the pages it continues on
+		const cellClip = { context: context, x: context.x - paddingLeft, width: width, open: [] };
+
+		this.writer.cellClips.push(cellClip);
+		this.beginCellClipsOnPage();
+		processCell();
+		this.writer.cellClips.pop();
+		cellClip.open.forEach(clip => this.writer.endCellClip(clip.page));
+	}
+
+	/**
+	 * Begins the clips of the clipped table cells laid out in the current context on its current
+	 * page, if not begun there yet: when a cell begins, and on each page the cells continue on
+	 * (after repeated table headers), the outermost cell first.
+	 */
+	beginCellClipsOnPage() {
+		const context = this.writer.context();
+		const page = context.getCurrentPage();
+		this.writer.cellClips.forEach(cellClip => {
+			if (cellClip.context === context && !cellClip.open.some(clip => clip.page === page)) {
+				cellClip.open.push({ page: page, item: this.writer.beginCellClip(cellClip.x, cellClip.width) });
+			}
+		});
 	}
 
 	// lists

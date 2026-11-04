@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added clipping of table cell content to the cells via `clipCells` of tables, so that wider content (e.g. text with `noWrap` or nested tables) does not overflow into other cells (`clipCells: 'content'` clips it to the cells without their paddings; lines too long for a clipped cell keep their start whatever their alignment)
 - Changed URL resource caching: downloaded fonts, images, attachments and embedded files are now stored per document by default instead of being automatically shared across documents
 - Added `pdfmake.setUrlResourceCaching(true | false)` to control caching of downloaded URL resources across documents (default: `false`). Per-URL `cache` values override this setting.
 

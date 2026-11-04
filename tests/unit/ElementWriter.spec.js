@@ -353,5 +353,89 @@ describe('ElementWriter', function () {
 
 			assert.deepEqual(page.items.map(item => item.item.color), ['pageBackground', 'firstFill', 'secondFill', 'thirdFill', 'border']);
 		});
+
+		it('should offset cell clips horizontally only', function () {
+			fragment.items = [
+				{ type: 'beginCellClip', item: { x: 5, width: 30 } },
+				{ type: 'endCellClip', item: {} }
+			];
+
+			ew.addFragment(fragment);
+
+			assert.deepEqual(page.items, [
+				{ type: 'beginCellClip', item: { x: 15, width: 30 } },
+				{ type: 'endCellClip', item: {} }
+			]);
+			assert.deepEqual(fragment.items[0].item, { x: 5, width: 30 });
+		});
+
+		it('should move the cell clips of fills with them, without modifying the original ones', function () {
+			fragment.items = [
+				{ type: 'vector', item: { type: 'rect', x: 5, y: 0, w: 40, h: 10, _cellClip: { x: 5, width: 30 } } }
+			];
+
+			ew.addFragment(fragment);
+
+			assert.deepEqual(page.items[0].item._cellClip, { x: 15, width: 30 });
+			assert.deepEqual(fragment.items[0].item._cellClip, { x: 5, width: 30 });
+		});
+
+		it('should clip fills of an unbreakable block to the clipped cell it is added in', function () {
+			ctx.page = 0;
+			ctx.backgroundLength = [0];
+			var item = ew.beginCellClip(12, 20);
+			ew.cellClips.push({ context: ctx, open: [{ page: page, item: item }] });
+
+			fragment.items = [
+				{ type: 'vector', item: { type: 'rect', color: 'fill', _isFillColorFromUnbreakable: true, _cellClip: null } },
+				{ type: 'vector', item: { type: 'rect', color: 'nestedFill', _isFillColorFromUnbreakable: true, _cellClip: { x: 0, width: 15 } } }
+			];
+
+			ew.addFragment(fragment);
+
+			var clipOf = color => page.items.find(node => node.item.color === color).item._cellClip;
+			assert.deepEqual(clipOf('fill'), { x: 12, width: 20 });
+			assert.deepEqual(clipOf('nestedFill'), { x: 12, width: 13 });
+		});
+	});
+
+	describe('cell clips', function () {
+		it('should begin and end a cell clip', function () {
+			var item = ew.beginCellClip(5, 30);
+			ew.endCellClip(page);
+
+			assert.deepEqual(page.items, [
+				{ type: 'beginCellClip', item: { x: 5, width: 30 } },
+				{ type: 'endCellClip', item: {} }
+			]);
+			assert.equal(item, page.items[0]);
+		});
+
+		it('should not return a cell clip without a clipped cell', function () {
+			assert.equal(ew.getCellClip(), null);
+		});
+
+		it('should return the bounds of the innermost cell clip within the cell clips around it', function () {
+			var outer = ew.beginCellClip(5, 30);
+			var inner = ew.beginCellClip(20, 30);
+			ew.cellClips.push({ context: ctx, open: [{ page: page, item: outer }] });
+			ew.cellClips.push({ context: ctx, open: [{ page: page, item: inner }] });
+
+			assert.deepEqual(ew.getCellClip(), { x: 20, width: 15 });
+		});
+
+		it('should not return a cell clip for a clipped cell of another context', function () {
+			var item = ew.beginCellClip(5, 30);
+			ew.cellClips.push({ context: {}, open: [{ page: page, item: item }] });
+
+			assert.equal(ew.getCellClip(), null);
+		});
+
+		it('should not return a cell clip for a clipped cell not begun on the current page yet', function () {
+			var item = ew.beginCellClip(5, 30);
+			ew.cellClips.push({ context: ctx, open: [{ page: { items: [] }, item: item }] });
+
+			assert.equal(ew.getCellClip(), null);
+		});
 	});
 });
