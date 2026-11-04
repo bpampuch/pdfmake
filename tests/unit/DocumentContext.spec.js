@@ -329,6 +329,15 @@ describe('DocumentContext', function () {
 			assert.equal(pc.x, 150);
 			assert.equal(pc.y, 300);
 		});
+
+		it('should change the available height by the vertical offset, not the available width', function () {
+			pc.availableWidth = 300;
+			pc.availableHeight = 400;
+			pc.moveToRelative(50, -100);
+
+			assert.equal(pc.availableWidth, 300);
+			assert.equal(pc.availableHeight, 500);
+		});
 	});
 
 	describe('addPage', function () {

@@ -422,6 +422,8 @@ class DocumentContext extends EventEmitter {
 		}
 		if (y !== undefined && y !== null) {
 			this.y = this.y + y;
+			// (the space below moves with the position, e.g. more of it for a node moved up)
+			this.availableHeight = this.availableHeight - y;
 		}
 	}
 

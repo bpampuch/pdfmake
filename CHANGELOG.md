@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed nodes moved up with `relativePosition` near the bottom of a page starting a new page when not fitting the space below their original position (e.g. an overlay drawn over the last row of a table on a page)
 - Changed URL resource caching: downloaded fonts, images, attachments and embedded files are now stored per document by default instead of being automatically shared across documents
 - Added `pdfmake.setUrlResourceCaching(true | false)` to control caching of downloaded URL resources across documents (default: `false`). Per-URL `cache` values override this setting.
 

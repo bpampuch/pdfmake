@@ -1465,6 +1465,20 @@ describe('LayoutBuilder', function () {
 			assert.equal(pages[0].items[1].item.y, 40);
 		});
 
+		it('should keep a node moved up by relativePosition on the page when it fits there', function () {
+			// (720 high content area: 20 left below the first rect, the second one moved up to where it fits)
+			var desc = [
+				{ canvas: [{ type: 'rect', x: 0, y: 0, w: 10, h: 700 }] },
+				{ canvas: [{ type: 'rect', x: 0, y: 0, w: 10, h: 30 }], relativePosition: { x: 0, y: -40 } }
+			];
+
+			var pages = builder.layoutDocument(desc, sampleTestProvider);
+
+			assert.equal(pages.length, 1);
+			assert.equal(pages[0].items.length, 2);
+			assert.equal(pages[0].items[1].item.y, 700);
+		});
+
 		it('should not break nodes across multiple pages when unbreakable attribute is passed', function () {
 			var desc = [
 				{
