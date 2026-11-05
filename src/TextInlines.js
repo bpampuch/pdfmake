@@ -132,10 +132,20 @@ class TextInlines {
 				item.fontSize *= 0.58;
 			}
 
-			let lineHeight = StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeight', 1);
+			let lineHeight = StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeight', null);
+			let naturalHeight = item.font.lineHeight(item.fontSize);
 
 			item.width = this.widthOfText(item.text, item);
-			item.height = item.font.lineHeight(item.fontSize) * lineHeight;
+
+			if (lineHeight !== null && StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeightMode', 'legacy') === 'css') {
+				// same as CSS: the line box is `lineHeight * fontSize` high and the height of the
+				// font (ascender + descender) is centered in it (half-leading above and below)
+				item.height = item.fontSize * lineHeight;
+				item.naturalHeight = naturalHeight;
+				item.baseline = item.font.ascender / 1000 * item.fontSize + (item.height - naturalHeight) / 2;
+			} else {
+				item.height = naturalHeight * (lineHeight === null ? 1 : lineHeight);
+			}
 
 			if (!item.leadingCut) {
 				item.leadingCut = 0;
@@ -188,12 +198,13 @@ class TextInlines {
 		let fontFeatures = StyleContextStack.getStyleProperty({}, styleContextStack, 'fontFeatures', null);
 		let bold = StyleContextStack.getStyleProperty({}, styleContextStack, 'bold', false);
 		let italics = StyleContextStack.getStyleProperty({}, styleContextStack, 'italics', false);
-		let lineHeight = StyleContextStack.getStyleProperty({}, styleContextStack, 'lineHeight', 1);
+		let lineHeightStyle = StyleContextStack.getStyleProperty({}, styleContextStack, 'lineHeight', null);
+		let lineHeight = lineHeightStyle === null ? 1 : lineHeightStyle;
 		let characterSpacing = StyleContextStack.getStyleProperty({}, styleContextStack, 'characterSpacing', 0);
 
 		let font = this.pdfDocument.provideFont(fontName, bold, italics);
 
-		return {
+		let size = {
 			width: this.widthOfText(text, { font: font, fontSize: fontSize, characterSpacing: characterSpacing, fontFeatures: fontFeatures }),
 			height: font.lineHeight(fontSize) * lineHeight,
 			fontSize: fontSize,
@@ -201,6 +212,13 @@ class TextInlines {
 			ascender: font.ascender / 1000 * fontSize,
 			descender: font.descender / 1000 * fontSize
 		};
+
+		if (lineHeightStyle !== null && StyleContextStack.getStyleProperty({}, styleContextStack, 'lineHeightMode', 'legacy') === 'css') {
+			// distance the baseline is moved down by the half-leading (see measure)
+			size.baselineOffset = (fontSize * lineHeight - font.lineHeight(fontSize)) / 2;
+		}
+
+		return size;
 	}
 
 	/**
