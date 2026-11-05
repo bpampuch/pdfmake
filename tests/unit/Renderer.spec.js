@@ -88,6 +88,56 @@ describe('Renderer', function () {
 		sinon.assert.callOrder(pdfDocument.save, pdfDocument.addContent, pdfDocument.clip, pdfDocument.restore);
 	});
 
+	it('should clip a table cell to its horizontal bounds over the whole page height', function () {
+		pdfDocument.page = { height: 500 };
+		renderer.beginCellClip({ x: 10, width: 30 });
+		renderer.endClip();
+		sinon.assert.calledOnceWithExactly(pdfDocument.addContent, '10 0 30 500 re');
+		sinon.assert.callOrder(pdfDocument.save, pdfDocument.addContent, pdfDocument.clip, pdfDocument.restore);
+	});
+
+	it('should clip annotations to the innermost clipped table cell, intersected with the outer ones', function () {
+		pdfDocument.page = { height: 500 };
+		renderer.beginCellClip({ x: 10, width: 100 });
+		assert.deepEqual(pdfDocument.annotationClip, { x: 10, width: 100 });
+		renderer.beginCellClip({ x: 80, width: 50 });
+		assert.deepEqual(pdfDocument.annotationClip, { x: 80, width: 30 });
+		renderer.endCellClip();
+		assert.deepEqual(pdfDocument.annotationClip, { x: 10, width: 100 });
+		renderer.endCellClip();
+		assert.equal(pdfDocument.annotationClip, null);
+		sinon.assert.calledTwice(pdfDocument.restore);
+	});
+
+	it('should save and restore the graphics state around clipped table cells of a page', function () {
+		pdfDocument.page = { height: 500 };
+		pdfDocument.addPage = sinon.stub().returnsThis();
+		renderer.renderPages([{
+			pageSize: { width: 300, height: 500, orientation: 'portrait' },
+			items: [
+				{ type: 'beginCellClip', item: { x: 10, width: 30 } },
+				{ type: 'vector', item: { type: 'rect', x: 0, y: 0, w: 100, h: 10, color: 'red' } },
+				{ type: 'endCellClip', item: {} }
+			]
+		}]);
+		sinon.assert.calledWith(pdfDocument.addContent, '10 0 30 500 re');
+		sinon.assert.callOrder(pdfDocument.save, pdfDocument.clip, pdfDocument.rect, pdfDocument.restore);
+	});
+
+	it('should clip fills of table cells in clipped cells to their own cell clip', function () {
+		pdfDocument.page = { height: 500 };
+		pdfDocument.addPage = sinon.stub().returnsThis();
+		renderer.renderPages([{
+			pageSize: { width: 300, height: 500, orientation: 'portrait' },
+			items: [
+				{ type: 'vector', item: { type: 'rect', x: 0, y: 0, w: 100, h: 10, color: 'red', _cellClip: { x: 10, width: 30 } } }
+			]
+		}]);
+		sinon.assert.calledWith(pdfDocument.addContent, '10 0 30 500 re');
+		sinon.assert.callOrder(pdfDocument.save, pdfDocument.clip, pdfDocument.rect, pdfDocument.restore);
+		assert.equal(pdfDocument.annotationClip, null);
+	});
+
 	it('should resolve forward page and text references and link them to their destination', function () {
 		var builder = new LayoutBuilder({ width: 400, height: 800 }, { left: 40, right: 40, top: 40, bottom: 40 });
 		var pages = builder.layoutDocument([

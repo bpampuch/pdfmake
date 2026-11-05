@@ -42,6 +42,9 @@ class Renderer {
 		this.pdfDocument = pdfDocument;
 		this.progressCallback = progressCallback;
 		this.outlineMap = [];
+		// clips of table cells in effect while rendering: their horizontal bounds, each intersected
+		// with the ones around it (as the PDF intersects nested clips), for clipping annotations
+		this.activeCellClips = [];
 	}
 
 	renderPages(pages) {
@@ -62,6 +65,12 @@ class Renderer {
 			let page = pages[i];
 			for (let ii = 0, il = page.items.length; ii < il; ii++) {
 				let item = page.items[ii];
+				// item with its own clip to a table cell (`clipCells` of tables, e.g. fills of table cells,
+				// placed outside of the items beginning and ending the clips of the cells they are in)
+				const cellClip = item.item && item.item._cellClip;
+				if (cellClip) {
+					this.beginCellClip(cellClip);
+				}
 				switch (item.type) {
 					case 'vector':
 						this.renderVector(item.item);
@@ -90,6 +99,15 @@ class Renderer {
 					case 'endVerticalAlignment':
 						this.endVerticalAlignment(item.item);
 						break;
+					case 'beginCellClip':
+						this.beginCellClip(item.item);
+						break;
+					case 'endCellClip':
+						this.endCellClip();
+						break;
+				}
+				if (cellClip) {
+					this.endCellClip();
 				}
 				renderedItems++;
 				if (this.progressCallback) {
@@ -404,6 +422,29 @@ class Renderer {
 
 	endClip() {
 		this.pdfDocument.restore();
+	}
+
+	/**
+	 * Clips content to the horizontal bounds of a table cell, over the whole page height
+	 * (table rows grow with their content, so content only overflows a cell horizontally).
+	 * Annotations (e.g. links) are clipped to the cell too.
+	 *
+	 * @param {object} clip left edge (`x`) and `width` of the cell
+	 */
+	beginCellClip(clip) {
+		this.beginClip({ x: clip.x, y: 0, width: clip.width, height: this.pdfDocument.page.height });
+
+		const outer = this.activeCellClips[this.activeCellClips.length - 1];
+		const left = outer ? Math.max(clip.x, outer.x) : clip.x;
+		const right = outer ? Math.min(clip.x + clip.width, outer.x + outer.width) : clip.x + clip.width;
+		this.activeCellClips.push({ x: left, width: Math.max(0, right - left) });
+		this.pdfDocument.annotationClip = this.activeCellClips[this.activeCellClips.length - 1];
+	}
+
+	endCellClip() {
+		this.endClip();
+		this.activeCellClips.pop();
+		this.pdfDocument.annotationClip = this.activeCellClips.length > 0 ? this.activeCellClips[this.activeCellClips.length - 1] : null;
 	}
 
 	beginVerticalAlignment(item) {

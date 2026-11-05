@@ -4,6 +4,7 @@ var assert = require('assert');
 var sizes = require('../../js/standardPageSizes').default;
 
 var integrationTestHelper = require('./integrationTestHelper');
+var Renderer = require('../../js/Renderer').default;
 
 describe('Integration test: tables', function () {
 
@@ -704,6 +705,452 @@ describe('Integration test: tables', function () {
 		assert.equal(pages.length, 3);
 		assert.deepEqual(viewHeights, [viewHeights[0], viewHeights[0], viewHeights[0]]);
 		assert.ok(viewHeights[0] > 0, 'rowSpan header view height must remain positive');
+	});
+
+	describe('clipCells', function () {
+		var LONG_TEXT = 'A text much longer than the width of its cell';
+
+		// items of a page with the innermost cell clip enclosing each of them, or their own one (fills of cells), checking that clips are balanced
+		function getClippedItems(page) {
+			var clips = [];
+			var result = page.items.filter(node => node.type !== 'beginCellClip' && node.type !== 'endCellClip').map(() => null);
+			var index = 0;
+			page.items.forEach(function (node) {
+				if (node.type === 'beginCellClip') {
+					clips.push(node.item);
+				} else if (node.type === 'endCellClip') {
+					assert(clips.length > 0, 'endCellClip without beginCellClip');
+					clips.pop();
+				} else {
+					result[index++] = { node: node, clip: node.item._cellClip || (clips.length > 0 ? clips[clips.length - 1] : null) };
+				}
+			});
+			assert.equal(clips.length, 0, 'beginCellClip without endCellClip');
+			return result;
+		}
+
+		function getClippedLines(page) {
+			return getClippedItems(page).filter(clipped => clipped.node.type === 'line').map(clipped => ({
+				text: clipped.node.item.inlines.map(inline => inline.text).join(''),
+				x: clipped.node.item.x,
+				clip: clipped.clip
+			}));
+		}
+
+		it('does not clip cells by default', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: { table: { widths: [50], body: [[{ text: LONG_TEXT, noWrap: true }]] } }
+			});
+
+			assert(!pages[0].items.some(node => node.type === 'beginCellClip' || node.type === 'endCellClip'));
+		});
+
+		it('clips the content of each cell to the cell including its paddings', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: { table: { clipCells: true, widths: [50, 50], body: [[{ text: LONG_TEXT, noWrap: true }, 'B']] } }
+			});
+
+			var lines = getClippedLines(pages[0]);
+			assert.equal(lines.length, 2);
+			assert.equal(lines[0].text, LONG_TEXT);
+			assert.equal(lines[0].x, startX);
+			assert.deepEqual(lines[0].clip, { x: startX - TABLE_PADDING_X, width: 50 + 2 * TABLE_PADDING_X });
+			assert.equal(lines[1].text, 'B');
+			assert.deepEqual(lines[1].clip, { x: startX + 50 + TABLE_PADDING_X + TABLE_BORDER_STRENGTH, width: 50 + 2 * TABLE_PADDING_X });
+		});
+
+		it('clips the content of each cell to the cell without its paddings with clipCells: content', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: { table: { clipCells: 'content', widths: [50, 50], body: [[{ text: LONG_TEXT, noWrap: true }, 'B']] } }
+			});
+
+			var lines = getClippedLines(pages[0]);
+			assert.equal(lines.length, 2);
+			assert.equal(lines[0].x, startX);
+			assert.deepEqual(lines[0].clip, { x: startX, width: 50 });
+			assert.deepEqual(lines[1].clip, { x: startX + 50 + 2 * TABLE_PADDING_X + TABLE_BORDER_STRENGTH, width: 50 });
+		});
+
+		it('clips a cell spanning columns to the content of all of its columns with clipCells: content', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: { table: { clipCells: 'content', widths: [50, 50], body: [[{ text: LONG_TEXT, noWrap: true, colSpan: 2 }, {}]] } }
+			});
+
+			var lines = getClippedLines(pages[0]);
+			assert.equal(lines.length, 1);
+			// (the paddings between the spanned columns are part of the cell's content)
+			assert.deepEqual(lines[0].clip, { x: startX, width: 2 * 50 + 2 * TABLE_PADDING_X + TABLE_BORDER_STRENGTH });
+		});
+
+		it('keeps the start of centered and right-aligned lines too long for a clipped cell', function () {
+			var body = [[
+				{ text: LONG_TEXT, noWrap: true, alignment: 'center' },
+				{ text: LONG_TEXT, noWrap: true, alignment: 'right' },
+				{ text: 'B', alignment: 'center' }
+			]];
+			var clipped = getClippedLines(testHelper.renderPages('A6', {
+				content: { table: { clipCells: true, widths: [50, 50, 50], body: body } }
+			})[0]);
+			var unclipped = getClippedLines(testHelper.renderPages('A6', {
+				content: { table: { widths: [50, 50, 50], body: body } }
+			})[0]);
+
+			var cellX = column => startX + column * (50 + 2 * TABLE_PADDING_X + TABLE_BORDER_STRENGTH);
+			assert.equal(clipped[0].x, cellX(0));
+			assert.equal(clipped[1].x, cellX(1));
+			// (a line that fits keeps its alignment)
+			assert(clipped[2].x > cellX(2));
+			assert.equal(unclipped[2].x, clipped[2].x);
+			// (not clipped: aligned as before, its start outside of the cell)
+			assert(unclipped[0].x < cellX(0));
+			assert(unclipped[1].x < cellX(1));
+		});
+
+		it('clips a cell spanning columns to all of its columns', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: { table: { clipCells: true, widths: [50, 50], body: [[{ text: LONG_TEXT, noWrap: true, colSpan: 2 }, {}]] } }
+			});
+
+			var lines = getClippedLines(pages[0]);
+			assert.equal(lines.length, 1);
+			assert.deepEqual(lines[0].clip, { x: startX - TABLE_PADDING_X, width: 2 * (50 + 2 * TABLE_PADDING_X) + TABLE_BORDER_STRENGTH });
+		});
+
+		it('clips each page of a cell broken across pages and repeated header rows to their own cells', function () {
+			var cellLines = [];
+			for (var i = 0; i < 40; i++) {
+				cellLines.push('Line ' + i);
+			}
+			var pages = testHelper.renderPages('A6', {
+				content: { table: { clipCells: true, headerRows: 1, widths: [50, 50], body: [['Header 1', 'Header 2'], [{ stack: cellLines }, 'B']] } }
+			});
+
+			assert(pages.length > 1);
+			pages.forEach(function (page, pageIndex) {
+				var lines = getClippedLines(page);
+				assert(lines.some(line => line.text === 'Header 2'), 'header repeated on page ' + pageIndex);
+				lines.forEach(function (line) {
+					var column = line.text === 'Header 2' || line.text === 'B' ? 1 : 0;
+					assert.deepEqual(line.clip, {
+						x: startX - TABLE_PADDING_X + column * (50 + 2 * TABLE_PADDING_X + TABLE_BORDER_STRENGTH),
+						width: 50 + 2 * TABLE_PADDING_X
+					}, 'line ' + line.text + ' on page ' + pageIndex);
+				});
+			});
+		});
+
+		it('clips a cell spanning rows to its column', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: { table: { clipCells: true, widths: [50, 50], body: [[{ text: LONG_TEXT, noWrap: true, rowSpan: 2 }, 'B'], [{}, 'D']] } }
+			});
+
+			var lines = getClippedLines(pages[0]);
+			assert.deepEqual(lines.map(line => line.text), [LONG_TEXT, 'B', 'D']);
+			assert.deepEqual(lines[0].clip, { x: startX - TABLE_PADDING_X, width: 50 + 2 * TABLE_PADDING_X });
+		});
+
+		it('clips cells of a table nested in a clipped cell to the nested cells', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: {
+					table: {
+						clipCells: true,
+						widths: [100],
+						body: [[{ table: { clipCells: true, widths: [30], body: [[{ text: LONG_TEXT, noWrap: true }]] } }]]
+					}
+				}
+			});
+
+			var clips = pages[0].items.filter(node => node.type === 'beginCellClip').map(node => node.item);
+			var lines = getClippedLines(pages[0]);
+			assert.deepEqual(clips, [
+				{ x: startX - TABLE_PADDING_X, width: 100 + 2 * TABLE_PADDING_X },
+				{ x: startX + TABLE_BORDER_STRENGTH, width: 30 + 2 * TABLE_PADDING_X }
+			]);
+			assert.equal(lines.length, 1);
+			assert.equal(lines[0].clip, clips[1]);
+		});
+
+		it('clips cells of unbreakable rows', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: [
+					{ text: 'Before' },
+					{ table: { clipCells: true, dontBreakRows: true, widths: [50, 50], body: [['A', 'B'], [{ text: LONG_TEXT, noWrap: true }, 'D']] } }
+				]
+			});
+
+			var lines = getClippedLines(pages[0]);
+			assert.deepEqual(lines.map(line => line.text), ['Before', 'A', 'B', LONG_TEXT, 'D']);
+			assert.equal(lines[0].clip, null);
+			[1, 2, 3, 4].forEach(function (index) {
+				var column = index % 2 === 1 ? 0 : 1;
+				assert.deepEqual(lines[index].clip, {
+					x: startX - TABLE_PADDING_X + column * (50 + 2 * TABLE_PADDING_X + TABLE_BORDER_STRENGTH),
+					width: 50 + 2 * TABLE_PADDING_X
+				});
+			});
+		});
+
+		it('clips links in a cell to the cell', function () {
+			var image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAGAQMAAADNIO3CAAAAA1BMVEUAAN7GEcIJAAAAAWJLR0QAiAUdSAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB98DBREbA3IZ3d8AAAALSURBVAjXY2BABwAAEgAB74lUpAAAAABJRU5ErkJggg==';
+			var pages = testHelper.renderPages('A6', {
+				content: {
+					table: {
+						clipCells: true,
+						widths: [50, 50],
+						body: [
+							[{ text: LONG_TEXT, noWrap: true, link: 'https://example.com' }, 'B'],
+							[{ image: image, width: 200, link: 'https://example.com' }, 'D']
+						]
+					}
+				}
+			});
+			new Renderer(testHelper.pdfDocument).renderPages(pages);
+
+			var annotations = testHelper.pdfDocument.page.annotations;
+			assert.equal(annotations.length, 2);
+			annotations.forEach(function (annotation) {
+				assert.equal(annotation.data.Rect[0], startX);
+				assert.equal(annotation.data.Rect[2], startX + 50 + TABLE_PADDING_X);
+			});
+		});
+
+		it('clips absolutely positioned content of a cell to the cell, as the rest of its content', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: { table: { clipCells: true, widths: [50], body: [[{ text: 'Absolute', absolutePosition: { x: 150, y: 150 } }]] } }
+			});
+
+			var lines = getClippedLines(pages[0]);
+			assert.equal(lines.length, 1);
+			assert.equal(lines[0].x, 150);
+			assert.deepEqual(lines[0].clip, { x: startX - TABLE_PADDING_X, width: 50 + 2 * TABLE_PADDING_X });
+		});
+
+		it('clips background fills of nested tables with the cell', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: {
+					table: {
+						clipCells: true,
+						widths: [50],
+						body: [[{ table: { widths: ['*'], body: [[{ text: LONG_TEXT, noWrap: true, fillColor: 'yellow' }]] } }]]
+					}
+				}
+			});
+
+			var items = getClippedItems(pages[0]);
+			var fill = items.find(clipped => clipped.node.type === 'vector' && clipped.node.item.color === 'yellow');
+			var line = items.find(clipped => clipped.node.type === 'line');
+			assert(fill.node.item.w > 50, 'the nested table is wider than the cell');
+			assert.deepEqual(fill.clip, { x: startX - TABLE_PADDING_X, width: 50 + 2 * TABLE_PADDING_X });
+			assert.deepEqual(line.clip, fill.clip);
+			assert(items.indexOf(fill) < items.indexOf(line), 'the fill is drawn below the text');
+		});
+
+		it('clips background fills of nested tables to the content of the cell with clipCells: content', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: {
+					table: {
+						clipCells: 'content',
+						widths: [50],
+						body: [[{ table: { widths: ['*'], body: [[{ text: LONG_TEXT, noWrap: true, fillColor: 'yellow' }]] } }]]
+					}
+				}
+			});
+
+			var items = getClippedItems(pages[0]);
+			var fill = items.find(clipped => clipped.node.type === 'vector' && clipped.node.item.color === 'yellow');
+			var line = items.find(clipped => clipped.node.type === 'line');
+			assert.deepEqual(fill.clip, { x: startX, width: 50 });
+			assert.deepEqual(line.clip, fill.clip);
+		});
+
+		it('clips background fills of tables nested in clipped cells of nested tables to both cells', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: {
+					table: {
+						clipCells: true,
+						widths: [50],
+						body: [[{
+							table: {
+								clipCells: true,
+								widths: [100],
+								body: [[{ table: { widths: ['*'], body: [[{ text: LONG_TEXT, noWrap: true, fillColor: 'yellow' }]] } }]]
+							}
+						}]]
+					}
+				}
+			});
+
+			var fill = getClippedItems(pages[0]).find(clipped => clipped.node.type === 'vector' && clipped.node.item.color === 'yellow');
+			assert(fill.node.item.w > 50, 'the nested table is wider than the outer cell');
+			// from the left edge of the inner cell to the right edge of the outer one
+			assert.deepEqual(fill.clip, { x: startX + TABLE_BORDER_STRENGTH, width: 50 + TABLE_PADDING_X - TABLE_BORDER_STRENGTH });
+		});
+
+		it('clips background fills of repeated header rows to their cells on each page', function () {
+			var cellLines = [];
+			for (var i = 0; i < 40; i++) {
+				cellLines.push('Line ' + i);
+			}
+			var pages = testHelper.renderPages('A6', {
+				content: {
+					table: {
+						clipCells: true,
+						headerRows: 1,
+						widths: [50],
+						body: [
+							[{ table: { widths: ['*'], body: [[{ text: LONG_TEXT, noWrap: true, fillColor: 'yellow' }]] } }],
+							[{ stack: cellLines }]
+						]
+					}
+				}
+			});
+
+			assert(pages.length > 1);
+			pages.forEach(function (page, pageIndex) {
+				var fills = getClippedItems(page).filter(clipped => clipped.node.type === 'vector' && clipped.node.item.color === 'yellow');
+				assert.equal(fills.length, 1, 'header repeated on page ' + pageIndex);
+				assert.deepEqual(fills[0].clip, { x: startX - TABLE_PADDING_X, width: 50 + 2 * TABLE_PADDING_X }, 'page ' + pageIndex);
+			});
+		});
+
+		it('clips background fills of nested tables in cells of unbreakable rows', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: {
+					table: {
+						clipCells: true,
+						dontBreakRows: true,
+						widths: [50],
+						body: [[{ table: { widths: ['*'], body: [[{ text: LONG_TEXT, noWrap: true, fillColor: 'yellow' }]] } }]]
+					}
+				}
+			});
+
+			var items = getClippedItems(pages[0]);
+			var fill = items.find(clipped => clipped.node.type === 'vector' && clipped.node.item.color === 'yellow');
+			var line = items.find(clipped => clipped.node.type === 'line');
+			assert(fill.node.item.w > 50, 'the nested table is wider than the cell');
+			assert.deepEqual(fill.clip, { x: startX - TABLE_PADDING_X, width: 50 + 2 * TABLE_PADDING_X });
+			assert.deepEqual(line.clip, fill.clip);
+			assert(items.indexOf(fill) < items.indexOf(line), 'the fill is drawn below the text');
+		});
+
+		it('clips background fills of nested tables in an unbreakable block in the cell', function () {
+			var pages = testHelper.renderPages('A6', {
+				content: {
+					table: {
+						clipCells: true,
+						widths: [50],
+						body: [[{ unbreakable: true, stack: [{ table: { widths: ['*'], body: [[{ text: LONG_TEXT, noWrap: true, fillColor: 'yellow' }]] } }] }]]
+					}
+				}
+			});
+
+			var items = getClippedItems(pages[0]);
+			var fill = items.find(clipped => clipped.node.type === 'vector' && clipped.node.item.color === 'yellow');
+			var line = items.find(clipped => clipped.node.type === 'line');
+			assert(fill.node.item.w > 50, 'the nested table is wider than the cell');
+			assert.deepEqual(fill.clip, { x: startX - TABLE_PADDING_X, width: 50 + 2 * TABLE_PADDING_X });
+			assert.deepEqual(line.clip, fill.clip);
+			assert(items.indexOf(fill) < items.indexOf(line), 'the fill is drawn below the text');
+		});
+
+		it('clips background fills of nested tables in an unbreakable block moved to the next page of the cell', function () {
+			var cellLines = [];
+			for (var i = 0; i < 15; i++) {
+				cellLines.push('Line ' + i);
+			}
+			var pages = testHelper.renderPages('A6', {
+				content: {
+					table: {
+						clipCells: true,
+						widths: [50],
+						body: [[{
+							stack: cellLines.concat([{
+								unbreakable: true,
+								stack: cellLines.concat([{ table: { widths: ['*'], body: [[{ text: LONG_TEXT, noWrap: true, fillColor: 'yellow' }]] } }])
+							}])
+						}]]
+					}
+				}
+			});
+
+			assert.equal(pages.length, 2);
+			var items = getClippedItems(pages[1]);
+			var fill = items.find(clipped => clipped.node.type === 'vector' && clipped.node.item.color === 'yellow');
+			var line = items.find(clipped => clipped.node.type === 'line' && clipped.node.item.inlines.map(inline => inline.text).join('') === LONG_TEXT);
+			assert(fill, 'the fill is on the next page');
+			assert.deepEqual(fill.clip, { x: startX - TABLE_PADDING_X, width: 50 + 2 * TABLE_PADDING_X });
+			assert.deepEqual(line.clip, fill.clip);
+			assert(items.indexOf(fill) < items.indexOf(line), 'the fill is drawn below the text');
+		});
+
+		it('clips cells of rows flowing to the next snaking column at their position in that column', function () {
+			var body = [];
+			for (var i = 0; i < 25; i++) {
+				body.push(['Row ' + i]);
+			}
+			var pages = testHelper.renderPages('A6', {
+				content: {
+					columns: [{ table: { clipCells: true, widths: [40], body: body } }, {}],
+					columnGap: 10,
+					snakingColumns: true
+				}
+			});
+
+			var columnWidth = (sizes.A6[0] - 80 - 10) / 2;
+			var lines = getClippedLines(pages[0]);
+			assert(lines.some(line => line.x > 40 + columnWidth), 'rows flow to the second column');
+			lines.forEach(function (line) {
+				assert.deepEqual(line.clip, { x: line.x - TABLE_PADDING_X, width: 40 + 2 * TABLE_PADDING_X }, 'line ' + line.text);
+			});
+		});
+
+		it('keeps the clip of a cell at the cell when its columns break across pages', function () {
+			var columnLines = [];
+			for (var i = 0; i < 40; i++) {
+				columnLines.push('Line ' + i);
+			}
+			var pages = testHelper.renderPages('A6', {
+				content: {
+					table: {
+						clipCells: true,
+						widths: [150],
+						body: [[{ columns: [{ stack: columnLines.slice() }, { stack: columnLines.slice() }] }]]
+					}
+				}
+			});
+
+			assert(pages.length > 1);
+			pages.forEach(function (page, pageIndex) {
+				var lines = getClippedLines(page);
+				assert(lines.some(line => line.x > startX + 50), 'second column on page ' + pageIndex);
+				lines.forEach(function (line) {
+					assert.deepEqual(line.clip, { x: startX - TABLE_PADDING_X, width: 150 + 2 * TABLE_PADDING_X }, 'line ' + line.text + ' on page ' + pageIndex);
+				});
+			});
+		});
+
+		it('keeps the clip of a cell at the cell when it contains snaking columns', function () {
+			var columnLines = [];
+			for (var i = 0; i < 30; i++) {
+				columnLines.push('Line ' + i);
+			}
+			var pages = testHelper.renderPages('A6', {
+				content: {
+					table: {
+						clipCells: true,
+						widths: [150],
+						body: [[{ columns: [{ stack: columnLines }, {}], columnGap: 10, snakingColumns: true }]]
+					}
+				}
+			});
+
+			var lines = getClippedLines(pages[0]);
+			assert(lines.some(line => line.x > startX + 50), 'content snakes to the second column');
+			lines.forEach(function (line) {
+				assert.deepEqual(line.clip, { x: startX - TABLE_PADDING_X, width: 150 + 2 * TABLE_PADDING_X }, 'line ' + line.text);
+			});
+		});
 	});
 
 });

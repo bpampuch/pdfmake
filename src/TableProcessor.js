@@ -564,7 +564,9 @@ class TableProcessor {
 								color: fillColor,
 								fillOpacity: fillOpacity,
 								// mark if we are in an unbreakable block
-								_isFillColorFromUnbreakable: !!writer.transactionLevel
+								_isFillColorFromUnbreakable: !!writer.transactionLevel,
+								// in a cell of a table with clipCells: clipped to the cell, as the cell's content
+								_cellClip: writer.getCellClip()
 							}, false, true, writer.context().backgroundLength[writer.context().page]);
 						}
 

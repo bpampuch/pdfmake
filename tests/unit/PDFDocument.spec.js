@@ -20,6 +20,33 @@ describe('PDFDocument', function () {
 		pdfDocument = new PDFDocument(fontDefinitions);
 	});
 
+	describe('annotate', function () {
+		function getAnnotationXs() {
+			return pdfDocument.page.annotations.map(annotation => [annotation.data.Rect[0], annotation.data.Rect[2]]);
+		}
+
+		it('should not clip annotations by default', function () {
+			pdfDocument.link(10, 20, 100, 10, 'https://example.com');
+
+			assert.deepEqual(getAnnotationXs(), [[10, 110]]);
+		});
+
+		it('should clip annotations to the horizontal bounds of annotationClip', function () {
+			pdfDocument.annotationClip = { x: 50, width: 30 };
+			pdfDocument.link(10, 20, 100, 10, 'https://example.com');
+			pdfDocument.link(60, 20, 10, 10, 'https://example.com');
+
+			assert.deepEqual(getAnnotationXs(), [[50, 80], [60, 70]]);
+		});
+
+		it('should not add annotations outside of annotationClip', function () {
+			pdfDocument.annotationClip = { x: 50, width: 30 };
+			pdfDocument.link(100, 20, 10, 10, 'https://example.com');
+
+			assert.deepEqual(getAnnotationXs(), []);
+		});
+	});
+
 	describe('provideFont', function () {
 		it('should load an ArrayBuffer font with a document virtual file system', function () {
 			var VirtualFileSystem = require('../../js/virtual-fs').VirtualFileSystem;

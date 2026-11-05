@@ -160,6 +160,39 @@ var docDefinition = {
 				]
 			}
 		},
+		{ text: 'Clipping content to its cells', style: 'subheader' },
+		'Content wider than its cell (e.g. text with noWrap, or a nested table with fixed widths) overflows into the next cells. With clipCells, the content of each cell is clipped to the cell:',
+		{
+			style: 'tableExample',
+			table: {
+				widths: [80, 80],
+				body: [
+					[{ text: 'Not clipped: this text is too long for its cell', noWrap: true }, 'Next cell']
+				]
+			}
+		},
+		{
+			style: 'tableExample',
+			table: {
+				clipCells: true, // clips the content of each cell to the cell (horizontally)
+				widths: [80, 80],
+				body: [
+					[{ text: 'Clipped: this text is too long for its cell', noWrap: true }, 'Next cell'],
+					[{ table: { widths: [120], body: [[{ text: 'Nested table, clipped with its fill', fillColor: '#eeeeee' }]] } }, 'Next cell']
+				]
+			}
+		},
+		'With clipCells: \'content\', the content is clipped to the cells without their paddings (keeping the paddings as a gap to the next cell):',
+		{
+			style: 'tableExample',
+			table: {
+				clipCells: 'content', // clips the content of each cell to the cell without its paddings
+				widths: [80, 80],
+				body: [
+					[{ text: 'Clipped: this text is too long for its cell', noWrap: true }, 'Next cell']
+				]
+			}
+		},
 		{ text: 'Column/row spans', pageBreak: 'before', style: 'subheader' },
 		'Each cell-element can set a rowSpan or colSpan',
 		{
