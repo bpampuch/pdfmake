@@ -7,7 +7,9 @@ doc
 *.ipr
 *.iws
 nbproject
-package-lock.json
 yarn.lock
 /build
 /js
+/dev-playground/public/editor.js
+/dev-playground/public/vendor/
+/release-package/
