@@ -193,6 +193,20 @@ describe('PageElementWriter', function () {
 	});
 
 	describe('beginUnbreakableBlock', function () {
+		it('should paginate the transaction using the full page height excluding margins', function () {
+			addOneTenthLines(8);
+			pew.beginUnbreakableBlock();
+			addOneTenthLines(11);
+
+			var transactionCtx = pew.context();
+			assert.equal(transactionCtx.pages.length, 2);
+			assert.equal(transactionCtx.pages[0].items.length, 10);
+			assert.equal(transactionCtx.pages[1].items.length, 1);
+			assert.equal(transactionCtx.availableHeight, AVAILABLE_HEIGHT * 0.9);
+			assert.equal(ctx.pages.length, 1);
+			assert.equal(ctx.pages[0].items.length, 8);
+		});
+
 		it('should begin a new transaction only once', function () {
 			assert(pew.transactionLevel === 0);
 			pew.beginUnbreakableBlock();

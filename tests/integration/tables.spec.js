@@ -282,6 +282,48 @@ describe('Integration test: tables', function () {
 		assert.deepEqual(getColumnText(lines, { cell: 4 }), 'Some Value');
 	});
 
+	[0, 1].forEach(function (outerHeaderRows) {
+		[1, 2].forEach(function (innerHeaderRows) {
+			[1, 2].forEach(function (depth) {
+				it('encloses repeated nested headers (#2090), outer headers=' + outerHeaderRows + ', inner headers=' + innerHeaderRows + ', depth=' + depth, function () {
+					var body = Array.from({ length: innerHeaderRows }, (_, i) => ['Inner ' + i, 'Header']);
+					for (var i = 0; i < 40; i++) body.push(['Row ' + i, 'Value']);
+					var nested = { table: { widths: ['*', '*'], headerRows: innerHeaderRows, body: body } };
+					var colors = ['red', 'blue'];
+					for (var level = 0; level < depth; level++) {
+						let color = colors[level];
+						nested.fillColor = color;
+						nested = {
+							layout: { hLineColor: () => color, vLineColor: () => color },
+							table: { widths: ['*'], headerRows: outerHeaderRows, body: [['Outer ' + level], [nested]] }
+						};
+					}
+					var pages = testHelper.renderPages('A6', { content: [nested] });
+					assert(pages.length > 2);
+					pages.forEach(function (page) {
+						var lines = page.items.filter(node => node.type === 'line');
+						var headers = lines.filter(node => /^Inner /.test(node.item.inlines.map(inline => inline.text).join('')));
+						assert.equal(headers.length, innerHeaderRows);
+						colors.slice(0, depth).forEach(function (color) {
+							var borders = page.items.filter(node => node.type === 'vector' && node.item.type === 'line' &&
+								node.item.lineColor === color && node.item.x1 === node.item.x2);
+							var fills = page.items.filter(node => node.type === 'vector' && node.item.type === 'rect' && node.item.color === color);
+							headers.forEach(function (header) {
+								assert.equal(borders.filter(node => node.item.y1 <= header.item.y &&
+									node.item.y2 >= header.item.y + header.item.getHeight()).length, 2);
+								assert(fills.some(node => node.item.y <= header.item.y &&
+									node.item.y + node.item.h >= header.item.y + header.item.getHeight()));
+							});
+						});
+					});
+					var rowTexts = pages.flatMap(page => page.items.filter(node => node.type === 'line'))
+						.map(node => node.item.inlines.map(inline => inline.text).join('')).filter(text => /^Row /.test(text));
+					assert.deepEqual(rowTexts, Array.from({ length: 40 }, (_, i) => 'Row ' + i));
+				});
+			});
+		});
+	});
+
 	it('renders a simple table with star width', function () {
 		var definedWidth = 25;
 		var dd = {
@@ -406,6 +448,88 @@ describe('Integration test: tables', function () {
 
 		assert.deepEqual(getColumnText(lines, { cell: 0 }), 'Row 1 with rowspan 2');
 		assert.deepEqual(getColumnText(lines, { cell: 1 }), 'Row 2');
+	});
+
+	[false, true].forEach(function (dontBreakRows) {
+		[0, 1].forEach(function (headerRows) {
+			it('keeps table borders around content after pageBreakBefore (#2826), dontBreakRows=' + dontBreakRows + ', headerRows=' + headerRows, function () {
+				function createDefinition() {
+					return {
+						content: [{
+							table: {
+								dontBreakRows: dontBreakRows,
+								headerRows: headerRows,
+								body: Array.from({ length: 50 }, (_, i) => [{
+									id: 'row_' + i,
+									text: 'line ' + i + '\nMultiline: true\npreserveLeadingSpaces: true',
+									preserveLeadingSpaces: true
+								}])
+							}
+						}]
+					};
+					}
+
+				function getPageItems(pages) {
+					return pages.map(page => page.items.map(node => {
+						if (node.type === 'line') {
+							return { text: node.item.inlines.map(inline => inline.text).join(''), x: node.item.x, y: node.item.y };
+						}
+						return node.item;
+					}));
+				}
+
+				var dd = createDefinition();
+				dd.pageBreakBefore = node => node.startPosition.top >= 430;
+				var pages = testHelper.renderPages('A4', dd);
+				var explicit = createDefinition();
+				dd.content[0].table.body.forEach(function (row, index) {
+					if (row[0].pageBreak === 'before') {
+						explicit.content[0].table.body[index][0].pageBreak = 'before';
+					}
+				});
+
+				assert(pages.length > 1);
+				assert.deepEqual(getPageItems(pages), getPageItems(testHelper.renderPages('A4', explicit)));
+				var texts = pages.flatMap(page => page.items.filter(node => node.type === 'line'))
+					.map(node => node.item.inlines.map(inline => inline.text).join(''));
+				assert.deepEqual(texts.filter(text => /^line /.test(text) && text !== 'line 0'),
+					Array.from({ length: 49 }, (_, i) => 'line ' + (i + 1)));
+				pages.forEach(function (page) {
+					var lines = page.items.filter(node => node.type === 'line');
+					var bottom = Math.max(...lines.map(node => node.item.y + node.item.getHeight()));
+					page.items.filter(node => node.type === 'vector' && node.item.type === 'line').forEach(function (node) {
+						assert(Math.max(node.item.y1, node.item.y2) <= bottom + TABLE_PADDING_Y + TABLE_BORDER_STRENGTH);
+					});
+				});
+			});
+		});
+	});
+
+	it('recalculates rowSpan page breaks when pageBreakBefore changes the table layout', function () {
+		function render(useCallback) {
+			var dd = {
+				content: [{
+					table: {
+						widths: [100, 100],
+						body: Array.from({ length: 20 }, (_, i) => [
+							i % 2 === 0 ? { text: 'Span ' + i, rowSpan: 2 } : {},
+							{ id: 'row_' + i, text: 'line ' + i + '\nSecond line', pageBreak: !useCallback && i === 6 ? 'before' : undefined }
+						])
+					}
+				}]
+			};
+			if (useCallback) {
+				dd.pageBreakBefore = node => node.id === 'row_6';
+			}
+			return testHelper.renderPages('A6', dd).map(page => page.items.map(node => {
+				if (node.type === 'line') {
+					return { text: node.item.inlines.map(inline => inline.text).join(''), x: node.item.x, y: node.item.y };
+				}
+				return node.item;
+			}));
+		}
+
+		assert.deepEqual(render(true), render(false));
 	});
 
 	it('does not insert an extra page when combining headerRows, dontBreakRows and cell pageBreak', function () {

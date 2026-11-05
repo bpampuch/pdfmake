@@ -44,7 +44,9 @@ switch (process.argv[2]) {
 	}
 	case 'third-party':
 		for (const name of ['source.js', 'LICENSE']) fs.copyFileSync(path.join(root, 'node_modules/svg-to-pdfkit', name), destination('src/3rd-party/svg-to-pdfkit/' + name));
-		execFileSync('git', ['apply', 'src/3rd-party/svg-to-pdfkit/0001-fix-contains.patch'], { cwd: root, stdio: 'inherit' });
+		for (const patch of ['0001-fix-contains.patch', '0002-limit-use-expansion.patch']) {
+			execFileSync('git', ['apply', 'src/3rd-party/svg-to-pdfkit/' + patch], { cwd: root, stdio: 'inherit' });
+		}
 		break;
 	default:
 		throw new Error('Expected one of: clean, node, fonts, third-party');

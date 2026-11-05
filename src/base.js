@@ -1,5 +1,5 @@
 import Printer from './Printer';
-import virtualfs from './virtual-fs';
+import virtualfs, { VirtualFileSystem } from './virtual-fs';
 import { pack } from './helpers/tools';
 import { isObject } from './helpers/variableType';
 import URLResolver from './URLResolver';
@@ -8,7 +8,8 @@ import { validateDocument, assertValidDocument } from './DocumentValidator';
 class pdfmake {
 
 	constructor() {
-		this.virtualfs = virtualfs;
+		this.sharedVirtualfs = virtualfs;
+		this.urlResourceCaching = false;
 		this.urlAccessPolicy = undefined;
 		this.localAccessPolicy = undefined;
 	}
@@ -44,10 +45,11 @@ class pdfmake {
 			);
 		}
 
-		let urlResolver = new URLResolver(this.virtualfs);
+		const documentVirtualfs = new VirtualFileSystem(this.sharedVirtualfs);
+		let urlResolver = new URLResolver(documentVirtualfs, this.sharedVirtualfs);
 		urlResolver.setUrlAccessPolicy(this.urlAccessPolicy);
 
-		let printer = new Printer(this.fonts, this.virtualfs, urlResolver, this.localAccessPolicy);
+		let printer = new Printer(this.fonts, documentVirtualfs, urlResolver, this.localAccessPolicy, this.urlResourceCaching);
 		const pdfDocumentPromise = printer.createPdfKitDocument(docDefinition, options).catch(error => {
 			if (!(error instanceof Error)) error = new Error(String(error));
 			if (!error.code) error.code = 'PDFMAKE_RENDER_ERROR';
@@ -71,6 +73,25 @@ class pdfmake {
 
 	validateDocument(docDefinition, options) {
 		return validateDocument(docDefinition, options, this);
+	}
+
+	/**
+	 * @param {boolean} enabled
+	 */
+	setUrlResourceCaching(enabled) {
+		if (typeof enabled !== 'boolean') {
+			throw new Error("Parameter 'enabled' has an invalid type. Boolean expected.");
+		}
+
+		this.urlResourceCaching = enabled;
+	}
+
+	clearUrlResourceCache() {
+		for (const filename of Object.keys(this.sharedVirtualfs.storage)) {
+			if (/^https?:\/\//i.test(filename)) {
+				this.sharedVirtualfs.unlinkSync(filename);
+			}
+		}
 	}
 
 	setProgressCallback(callback) {

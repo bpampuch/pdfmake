@@ -14,12 +14,14 @@ class PdfPrinter {
 	 * @param {object} virtualfs
 	 * @param {object} urlResolver
 	 * @param {(path: string) => boolean} localAccessPolicy
+	 * @param {boolean} urlResourceCaching
 	 */
-	constructor(fontDescriptors, virtualfs, urlResolver, localAccessPolicy) {
+	constructor(fontDescriptors, virtualfs, urlResolver, localAccessPolicy, urlResourceCaching = false) {
 		this.fontDescriptors = fontDescriptors;
 		this.virtualfs = virtualfs;
 		this.urlResolver = urlResolver;
 		this.localAccessPolicy = localAccessPolicy;
+		this.urlResourceCaching = urlResourceCaching;
 	}
 
 	/**
@@ -108,10 +110,10 @@ class PdfPrinter {
 	async resolveUrls(docDefinition) {
 		const getExtendedUrl = url => {
 			if (typeof url === 'object') {
-				return { url: url.url, headers: url.headers };
+				return { url: url.url, headers: url.headers, cache: url.cache === undefined ? this.urlResourceCaching : url.cache === true };
 			}
 
-			return { url: url, headers: {} };
+			return { url: url, headers: {}, cache: this.urlResourceCaching };
 		};
 
 		for (let font in this.fontDescriptors) {
@@ -119,45 +121,37 @@ class PdfPrinter {
 				if (this.fontDescriptors[font].normal) {
 					if (Array.isArray(this.fontDescriptors[font].normal)) { // TrueType Collection
 						let url = getExtendedUrl(this.fontDescriptors[font].normal[0]);
-						this.urlResolver.resolve(url.url, url.headers);
-						this.fontDescriptors[font].normal[0] = url.url;
+						this.urlResolver.resolve(url.url, url.headers, url.cache);
 					} else {
 						let url = getExtendedUrl(this.fontDescriptors[font].normal);
-						this.urlResolver.resolve(url.url, url.headers);
-						this.fontDescriptors[font].normal = url.url;
+						this.urlResolver.resolve(url.url, url.headers, url.cache);
 					}
 				}
 				if (this.fontDescriptors[font].bold) {
 					if (Array.isArray(this.fontDescriptors[font].bold)) { // TrueType Collection
 						let url = getExtendedUrl(this.fontDescriptors[font].bold[0]);
-						this.urlResolver.resolve(url.url, url.headers);
-						this.fontDescriptors[font].bold[0] = url.url;
+						this.urlResolver.resolve(url.url, url.headers, url.cache);
 					} else {
 						let url = getExtendedUrl(this.fontDescriptors[font].bold);
-						this.urlResolver.resolve(url.url, url.headers);
-						this.fontDescriptors[font].bold = url.url;
+						this.urlResolver.resolve(url.url, url.headers, url.cache);
 					}
 				}
 				if (this.fontDescriptors[font].italics) {
 					if (Array.isArray(this.fontDescriptors[font].italics)) { // TrueType Collection
 						let url = getExtendedUrl(this.fontDescriptors[font].italics[0]);
-						this.urlResolver.resolve(url.url, url.headers);
-						this.fontDescriptors[font].italics[0] = url.url;
+						this.urlResolver.resolve(url.url, url.headers, url.cache);
 					} else {
 						let url = getExtendedUrl(this.fontDescriptors[font].italics);
-						this.urlResolver.resolve(url.url, url.headers);
-						this.fontDescriptors[font].italics = url.url;
+						this.urlResolver.resolve(url.url, url.headers, url.cache);
 					}
 				}
 				if (this.fontDescriptors[font].bolditalics) {
 					if (Array.isArray(this.fontDescriptors[font].bolditalics)) { // TrueType Collection
 						let url = getExtendedUrl(this.fontDescriptors[font].bolditalics[0]);
-						this.urlResolver.resolve(url.url, url.headers);
-						this.fontDescriptors[font].bolditalics[0] = url.url;
+						this.urlResolver.resolve(url.url, url.headers, url.cache);
 					} else {
 						let url = getExtendedUrl(this.fontDescriptors[font].bolditalics);
-						this.urlResolver.resolve(url.url, url.headers);
-						this.fontDescriptors[font].bolditalics = url.url;
+						this.urlResolver.resolve(url.url, url.headers, url.cache);
 					}
 				}
 			}
@@ -167,8 +161,7 @@ class PdfPrinter {
 			for (let image in docDefinition.images) {
 				if (docDefinition.images.hasOwnProperty(image)) {
 					let url = getExtendedUrl(docDefinition.images[image]);
-					this.urlResolver.resolve(url.url, url.headers);
-					docDefinition.images[image] = url.url;
+					this.urlResolver.resolve(url.url, url.headers, url.cache);
 				}
 			}
 		}
@@ -177,8 +170,7 @@ class PdfPrinter {
 			for (let attachment in docDefinition.attachments) {
 				if (docDefinition.attachments.hasOwnProperty(attachment) && docDefinition.attachments[attachment].src) {
 					let url = getExtendedUrl(docDefinition.attachments[attachment].src);
-					this.urlResolver.resolve(url.url, url.headers);
-					docDefinition.attachments[attachment].src = url.url;
+					this.urlResolver.resolve(url.url, url.headers, url.cache);
 				}
 			}
 		}
@@ -187,8 +179,7 @@ class PdfPrinter {
 			for (let file in docDefinition.files) {
 				if (docDefinition.files.hasOwnProperty(file) && docDefinition.files[file].src) {
 					let url = getExtendedUrl(docDefinition.files[file].src);
-					this.urlResolver.resolve(url.url, url.headers);
-					docDefinition.files[file].src = url.url;
+					this.urlResolver.resolve(url.url, url.headers, url.cache);
 				}
 			}
 		}
@@ -233,9 +224,13 @@ function createMetadata(docDefinition) {
 function embedFiles(docDefinition, pdfKitDoc) {
 	if (docDefinition.files) {
 		for (const key in docDefinition.files) {
-			const file = docDefinition.files[key];
+			const file = { ...docDefinition.files[key] };
 
 			if (!file.src) return;
+
+			if (typeof file.src === 'object' && file.src.url) {
+				file.src = file.src.url;
+			}
 
 			if (pdfKitDoc.virtualfs && pdfKitDoc.virtualfs.existsSync(file.src)) {
 				file.src = pdfKitDoc.virtualfs.readFileSync(file.src);

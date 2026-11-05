@@ -106,6 +106,28 @@ describe('Renderer', function () {
 		assert.equal(pdfDocument.text.args[3][3].destination, 'target');
 	});
 
+	[false, true].forEach(function (useTable) {
+		it('should render the TOC page of a heading moved with an image in ' + (useTable ? 'an unbreakable row' : 'an unbreakable stack') + ' (#1288)', function () {
+			pdfDocument.provideImage = () => ({ width: 100, height: 100 });
+			var builder = new LayoutBuilder({ width: 400, height: 800 }, { left: 40, right: 40, top: 40, bottom: 40 });
+			var heading = { text: 'Image heading', tocItem: true };
+			var group = [heading, { image: 'test.jpg', width: 80, height: 80 }];
+			var block = useTable ? {
+				table: { dontBreakRows: true, body: [[group]] }
+			} : { unbreakable: true, stack: group };
+			var pages = builder.layoutDocument([
+				{ toc: {} }, { text: 'Filler', margin: [0, 650, 0, 0] }, block
+			], pdfDocument, {}, { fontSize: 12 });
+
+			assert.equal(pages.length, 2);
+			assert(pages[1].items.some(item => item.type === 'line' && item.item._node === heading));
+			assert(pages[1].items.some(item => item.type === 'image'));
+			var tocLine = pages[0].items.find(item => item.type === 'line' && item.item._pageNodeRef === heading).item;
+			renderer.renderLine(tocLine, tocLine.x, tocLine.y);
+			assert.equal(pdfDocument.text.firstCall.args[0], '2');
+		});
+	});
+
 	['sub', 'sup'].forEach(function (position) {
 		it('should reduce font size and shift the baseline for ' + (position === 'sub' ? 'subscript' : 'superscript'), function () {
 			var inlines = new TextInlines(pdfDocument).buildInlines([

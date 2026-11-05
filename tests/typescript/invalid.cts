@@ -19,3 +19,8 @@ pdfmake.addVirtualFileSystem({});
 const diagnostics = pdfmake.validateDocument({ content: [{ text: 'x' }] });
 const valid: boolean = diagnostics.valid;
 void valid;
+// @ts-expect-error Caching must be configured with a boolean.
+pdfmake.setUrlResourceCaching('yes');
+// @ts-expect-error URL cache overrides must be booleans.
+const invalidCache: TDocumentDefinitions = { content: ['x'], images: { logo: { url: 'https://example.com/logo.png', cache: 'yes' } } };
+void invalidCache;

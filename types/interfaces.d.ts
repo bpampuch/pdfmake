@@ -170,7 +170,7 @@ export interface TFontContainer {
 /**
  * Definition of a font family.
  */
-export type FontSource = string | ImageDefinition | [string | ImageDefinition, string];
+export type FontSource = string | Uint8Array | ArrayBuffer | ImageDefinition | [string | Uint8Array | ArrayBuffer | ImageDefinition, string];
 
 export interface TFontFamilyTypes {
     /** Font variant that is neither bold nor italic. */
@@ -2211,6 +2211,9 @@ export interface ImageDefinition {
      * HTTP headers to include in the image request, if {@link url} is a remote URL.
      */
     headers?: Record<string, string>;
+
+    /** Override shared URL caching for new downloads (since 0.3.14). Existing shared entries remain readable. */
+    cache?: boolean;
 }
 
 /**
@@ -2225,7 +2228,7 @@ export interface Attachment {
      * - Remote URLs via http:// or https://
      * - File paths (on the server)
      */
-    src: string;
+    src: string | ImageDefinition;
 
     /**
      * File name of the attachment.
@@ -2309,7 +2312,7 @@ export interface TDocumentDefinitions {
      *
      * SVG images can only be used in the document content using the `svg` property.
      */
-    images?: Record<string, string | ImageDefinition> | undefined;
+    images?: Record<string, string | Uint8Array | ArrayBuffer | ImageDefinition> | undefined;
 
     /**
      * Metadata to embed into the document.
@@ -2646,6 +2649,10 @@ export interface PdfMakeBase<Output extends TCreatedPdf> {
     setTableLayouts(layouts: Record<string, CustomTableLayout>): void;
     clearTableLayouts(): void;
     setUrlAccessPolicy(callback?: (url: string) => boolean): void;
+    /** Store new URL downloads across documents; disabled by default (since 0.3.14). */
+    setUrlResourceCaching(enabled: boolean): void;
+    /** Synchronously clear shared HTTP/HTTPS entries between generations (since 0.3.14). */
+    clearUrlResourceCache(): void;
 }
 export interface NodePdfMake extends PdfMakeBase<NodeOutputDocument> {
     setLocalAccessPolicy(callback?: (path: string) => boolean): void;

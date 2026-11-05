@@ -2,7 +2,45 @@
 
 ## Unreleased
 
+- Changed URL resource caching: downloaded fonts, images, attachments and embedded files are now stored per document by default instead of being automatically shared across documents
+- Added `pdfmake.setUrlResourceCaching(true | false)` to control caching of downloaded URL resources across documents (default: `false`). Per-URL `cache` values override this setting.
+
+	To restore the behavior of previous versions, call `pdfmake.setUrlResourceCaching(true)` before generating documents.
+
+	```js
+	pdfmake.setUrlResourceCaching(true);
+
+	pdfmake.createPdf({
+		content: [{ image: 'logo' }],
+		images: {
+			logo: {
+				url: 'https://example.com/logo.png',
+				cache: false // Override the default for new downloads.
+			}
+		}
+	});
+	```
+
+	These options control cache writes. Existing shared entries remain available regardless of `cache`. Shared entries are keyed by URL only, without request headers. `setUrlAccessPolicy()` applies to network downloads, not cache reads.
+- Added `pdfmake.clearUrlResourceCache()` to remove URL resource cache.
+- Added support for binary font definitions and image dictionary entries using `Buffer`, `Uint8Array` or `ArrayBuffer`
+- Improved performance for large documents when using `pageBreakBefore`
 - Fixed reversed ordered lists starting at a too high number when they contain nested lists
+- Fixed canvas polylines being shifted and affecting column widths when layout is recalculated by `pageBreakBefore`
+- Fixed canvas polylines in repeated table headers shifting across pages due to shared points
+- Fixed infinite loops when using `pageBreakBefore` with headers or footers
+- Fixed oversized table borders after layout is recalculated by `pageBreakBefore`
+- Fixed incorrect node positions reported to `pageBreakBefore` after unbreakable blocks or table rows move to another page
+- Fixed extra spacing between inline fragments in justified text
+- Fixed repeated nested table headers appearing outside the parent table's borders and background fills on subsequent pages
+- Fixed list markers being misplaced on subsequent pages when using text backgrounds
+- Fixed invalid page height in temporary contexts used for unbreakable blocks and table rows
+- Fixed `background` of trimmed leading whitespace being drawn to the left of the text, into the page margin or outside the table cell
+- Fixed file attachment annotations disappearing inside unbreakable blocks and table rows
+- Fixed the first word of justified text being shifted right when the line starts with whitespace
+- Fixed svg-to-pdfkit - Fixed excessive memory usage and stack overflows caused by nested SVG `<use>` references by limiting expansion size and depth
+- Fixed SVG font loading from VFS and TrueType collections
+- Fixed SVG fonts bypassing `setLocalAccessPolicy`
 
 ## 0.3.13 - 2026-10-25
 

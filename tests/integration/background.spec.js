@@ -8,6 +8,42 @@ describe('Integration test: background', function () {
 
 	var testHelper = new integrationTestHelper();
 
+	['ul', 'ol'].forEach(listType => {
+		['text', 'ul', 'ol'].forEach(backgroundType => {
+			it(`keeps ${listType} markers aligned across pages with a ${backgroundType} background`, function () {
+				function background() {
+					return backgroundType === 'text'
+						? { text: 'Background', margin: [20, 20, 20, 20] }
+						: { [backgroundType]: ['Background 1', 'Background 2'], margin: [20, 20, 20, 20] };
+				}
+
+				function content() {
+					return { [listType]: Array.from({ length: 50 }, () => 'hello world') };
+				}
+
+				function items(page) {
+					return page.items.map(({ type, item }) => ({
+						type,
+						text: item.inlines && item.inlines.map(inline => inline.text).join(''),
+						x: item.x,
+						y: item.y
+					}));
+				}
+
+				const expectedPages = testHelper.renderPages('A6', { content: content() });
+				const backgroundPage = testHelper.renderPages('A6', { content: 'Plain text', background })[0];
+				const expectedBackground = items(backgroundPage).slice(0, -1);
+				const pages = testHelper.renderPages('A6', { content: content(), background });
+
+				assert.ok(pages.length >= 3);
+				assert.equal(pages.length, expectedPages.length);
+				pages.forEach((page, index) => {
+					assert.deepStrictEqual(items(page), expectedBackground.concat(items(expectedPages[index])));
+				});
+			});
+		});
+	});
+
 	it('renders on every page', function () {
 		var dd = {
 			background: function (page) {

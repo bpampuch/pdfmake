@@ -3,6 +3,16 @@ const pdfmake = require('../../js');
 const validate = (doc, options) => pdfmake.validateDocument(doc, options);
 
 describe('Document validation', function () {
+	it('accepts binary image resources and URL cache overrides without inspecting image bytes', function () {
+		for (const image of [Buffer.from([137, 80]), new Uint8Array(50001), new ArrayBuffer(8)]) {
+			assert.equal(validate({ content: [{ image: 'logo' }], images: { logo: image } }, { strict: true }).valid, true);
+		}
+		const doc = { content: ['resources'], images: { logo: { url: 'https://example.com/logo.png', cache: false } }, attachments: { report: { src: { url: 'https://example.com/report.pdf', cache: true } } }, files: { guide: { src: { url: 'https://example.com/guide.pdf', cache: false } } } };
+		assert.equal(validate(doc, { strict: true }).valid, true);
+		doc.images.logo.cache = 'yes';
+		assert.equal(validate(doc).valid, false);
+		assert.equal(validate({ content: ['x'], images: { logo: new Uint16Array(2) } }).valid, false);
+	});
 	it('accepts 0.3.13 table alignment and rejects unsupported alignment values', function () {
 		for (const tableAlignment of ['left', 'center', 'right']) {
 			assert.equal(validate({ content: [{ tableAlignment, table: { body: [['x']] } }] }, { strict: true }).valid, true);

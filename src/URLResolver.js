@@ -46,8 +46,9 @@ async function fetchUrl(url, headers = {}, urlAccessPolicy) {
 }
 
 class URLResolver {
-	constructor(fs) {
+	constructor(fs, sharedFs) {
 		this.fs = fs;
+		this.sharedFs = sharedFs;
 		this.resolving = {};
 		this.urlAccessPolicy = undefined;
 	}
@@ -59,11 +60,20 @@ class URLResolver {
 		this.urlAccessPolicy = callback;
 	}
 
-	resolve(url, headers = {}) {
+	resolve(url, headers = {}, cache = false) {
+		if (typeof url !== 'string') {
+			return Promise.resolve();
+		}
+
+		const key = JSON.stringify([url, cache === true]);
 		const resolveUrlInternal = async () => {
 			if (url.toLowerCase().startsWith('https://') || url.toLowerCase().startsWith('http://')) {
 				if (this.fs.existsSync(url)) {
-					return; // url was downloaded earlier
+					if ((cache === true) && !this.sharedFs.existsSync(url)) {
+						this.fs.unlinkSync(url);
+					} else {
+						return; // url was downloaded earlier
+					}
 				}
 
 				const response = await fetchUrl(url, headers, this.urlAccessPolicy);
@@ -76,15 +86,16 @@ class URLResolver {
 				}
 
 				const buffer = await response.arrayBuffer();
-				this.fs.writeFileSync(url, buffer);
+				const target = cache === true ? this.sharedFs : this.fs;
+				target.writeFileSync(url, buffer);
 			}
 			// else cannot be resolved
 		};
 
-		if (!this.resolving[url]) {
-			this.resolving[url] = resolveUrlInternal();
+		if (!this.resolving[key]) {
+			this.resolving[key] = resolveUrlInternal();
 		}
-		return this.resolving[url];
+		return this.resolving[key];
 	}
 
 	resolved() {

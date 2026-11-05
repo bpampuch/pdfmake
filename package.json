@@ -82,5 +82,9 @@
     "url": "https://github.com/bpampuch/pdfmake/issues"
   },
   "homepage": "http://pdfmake.org",
-  "types": "types/index.d.ts"
+  "types": "types/index.d.ts",
+  "overrides": {
+    "minimatch@>=7 <11.0.1": "^11.0.4",
+    "glob@>=9 <14.0.2": "^14.0.3"
+  }
 }

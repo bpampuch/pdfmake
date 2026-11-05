@@ -34,6 +34,7 @@ class LayoutBuilder {
 		this.tableLayouts = {};
 		this.nestedLevel = 0;
 		this.verticalAlignmentItemStack = [];
+		this.backgroundLevel = 0;
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -85,7 +86,8 @@ class LayoutBuilder {
 
 			linearNodeList = linearNodeList.filter(hasRenderableContent);
 
-			linearNodeList.forEach(node => {
+			const nodesByPage = [];
+			linearNodeList.forEach((node, index) => {
 				let nodeInfo = {};
 				[
 					'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns',
@@ -102,43 +104,47 @@ class LayoutBuilder {
 				nodeInfo.stack = Array.isArray(node.stack);
 
 				node.nodeInfo = nodeInfo;
+
+				nodeInfo.pageNumbers.forEach(pageNumber => {
+					nodesByPage[pageNumber] = nodesByPage[pageNumber] || [];
+					nodesByPage[pageNumber].push({ index, nodeInfo });
+				});
 			});
+
+			const findFirstNodeAtOrAfter = (nodes, index) => {
+				let low = 0;
+				let high = nodes.length;
+
+				while (low < high) {
+					const middle = Math.floor((low + high) / 2);
+					if (nodes[middle].index < index) {
+						low = middle + 1;
+					} else {
+						high = middle;
+					}
+				}
+
+				return low;
+			};
+
+			const getNodeInfos = (nodes, start, end) => nodes.slice(start, end).map(entry => entry.nodeInfo);
 
 			for (let index = 0; index < linearNodeList.length; index++) {
 				let node = linearNodeList[index];
 				if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
 					node.pageBreakCalculated = true;
 					let pageNumber = node.nodeInfo.pageNumbers[0];
+					const nodesOnPage = nodesByPage[pageNumber] || [];
+					const nodeOnPageIndex = findFirstNodeAtOrAfter(nodesOnPage, index);
 
 					if (
 						pageBreakBeforeFct(node.nodeInfo, {
-							getFollowingNodesOnPage: () => {
-								let followingNodesOnPage = [];
-								for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
-									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-										followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
-									}
-								}
-								return followingNodesOnPage;
-							},
+							getFollowingNodesOnPage: () => getNodeInfos(nodesOnPage, nodeOnPageIndex + 1),
 							getNodesOnNextPage: () => {
-								let nodesOnNextPage = [];
-								for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
-									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
-										nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
-									}
-								}
-								return nodesOnNextPage;
+								const nextPageNodes = nodesByPage[pageNumber + 1] || [];
+								return getNodeInfos(nextPageNodes, findFirstNodeAtOrAfter(nextPageNodes, index + 1));
 							},
-							getPreviousNodesOnPage: () => {
-								let previousNodesOnPage = [];
-								for (let ii = 0; ii < index; ii++) {
-									if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-										previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
-									}
-								}
-								return previousNodesOnPage;
-							},
+							getPreviousNodesOnPage: () => getNodeInfos(nodesOnPage, 0, nodeOnPageIndex),
 						})
 					) {
 						node.pageBreak = 'before';
@@ -160,7 +166,7 @@ class LayoutBuilder {
 		}
 
 		let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
-		while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
+		while (addPageBreaksIfNecessary(result.pageBreakNodes, result.pages)) {
 			resetXYs(result);
 			result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
 		}
@@ -213,10 +219,12 @@ class LayoutBuilder {
 		}
 
 		this.processNode(docStructure);
+		// Headers and footers must not participate in content page break decisions.
+		const pageBreakNodes = this.linearNodeList.slice();
 		this.addHeadersAndFooters(header, footer);
 		this.addWatermark(watermark, pdfDocument, defaultStyle);
 
-		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
+		return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList, pageBreakNodes };
 	}
 
 	addBackground(background) {
@@ -228,11 +236,16 @@ class LayoutBuilder {
 		let pageBackground = backgroundGetter(context.page + 1, pageSize);
 
 		if (pageBackground) {
-			this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
-			pageBackground = this.docPreprocessor.preprocessBlock(pageBackground);
-			this.processNode(this.docMeasure.measureBlock(pageBackground));
-			this.writer.commitUnbreakableBlock(0, 0);
-			context.backgroundLength[context.page] += pageBackground.positions.length;
+			this.backgroundLevel++;
+			try {
+				this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
+				pageBackground = this.docPreprocessor.preprocessBlock(pageBackground);
+				this.processNode(this.docMeasure.measureBlock(pageBackground));
+				this.writer.commitUnbreakableBlock(0, 0);
+				context.backgroundLength[context.page] += pageBackground.positions.length;
+			} finally {
+				this.backgroundLevel--;
+			}
 		}
 	}
 
@@ -884,6 +897,7 @@ class LayoutBuilder {
 
 	processRow({ marginX = [0, 0], dontBreakRows = false, rowsWithoutPageBreak = 0, cells, widths, gaps, tableNode, tableBody, rowIndex, height, snakingColumns = false }) {
 		const isUnbreakableRow = dontBreakRows || rowIndex <= rowsWithoutPageBreak - 1;
+		const repeatablesAtRowStart = this.writer.repeatables.length;
 		let pageBreaks = [];
 		let pageBreaksByRowSpan = [];
 		let positions = [];
@@ -918,6 +932,14 @@ class LayoutBuilder {
 
 			// Page change handler
 			const storePageBreakClosure = data => {
+				// Each row needs its own break position. Headers belonging to nested
+				// tables are inside this row's borders, unlike its own/ancestor headers.
+				data = { ...data };
+				if (tableNode) {
+					for (let j = repeatablesAtRowStart; j < this.writer.repeatables.length; j++) {
+						data.y -= this.writer.repeatables[j].height;
+					}
+				}
 				const startsRowSpan = cell.rowSpan && cell.rowSpan > 1;
 				if (startsRowSpan) {
 					data.rowSpan = cell.rowSpan;
@@ -1104,10 +1126,12 @@ class LayoutBuilder {
 
 	// lists
 	processList(orderedList, node) {
+		const backgroundLevel = this.backgroundLevel;
 		const addMarkerToFirstLeaf = line => {
 			// I'm not very happy with the way list processing is implemented
 			// (both code and algorithm should be rethinked)
-			if (nextMarker) {
+			// Background lines must only consume markers from lists in that background.
+			if (nextMarker && this.backgroundLevel === backgroundLevel) {
 				let marker = nextMarker;
 				nextMarker = null;
 
@@ -1148,6 +1172,10 @@ class LayoutBuilder {
 
 	// tables
 	processTable(tableNode) {
+		// Page breaks and row bottoms belong to the current layout pass only.
+		delete tableNode._bottomByPage;
+		delete tableNode._breaksBySpan;
+
 		this.nestedLevel++;
 		let processor = new TableProcessor(tableNode);
 
@@ -1466,6 +1494,7 @@ function decorateNode(node) {
 			let y1 = vector.y1;
 			let x2 = vector.x2;
 			let y2 = vector.y2;
+			let points = vector.type === 'polyline' ? vector.points.map(point => ({ x: point.x, y: point.y })) : null;
 			vector.resetXY = () => {
 				vector.x = x;
 				vector.y = y;
@@ -1473,6 +1502,12 @@ function decorateNode(node) {
 				vector.y1 = y1;
 				vector.x2 = x2;
 				vector.y2 = y2;
+				if (points) {
+					points.forEach((point, index) => {
+						vector.points[index].x = point.x;
+						vector.points[index].y = point.y;
+					});
+				}
 			};
 		});
 	}

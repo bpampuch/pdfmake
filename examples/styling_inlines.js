@@ -51,6 +51,39 @@ var docDefinition = {
 				{ text: 'wow! it works!', style: 'header', bold: false },
 				'\n\nMake sure to take a look into the sources to understand what\'s going on here.'
 			]
+		},
+		{ text: 'Justified text with inline styles', style: 'header', pageBreak: 'before', margin: [0, 0, 0, 20] },
+		{
+			text: [
+				{ bold: true, text: 'psychotomimetic' },
+				{ text: ' psychotomimetic ' },
+				{ bold: true, text: 'psychotomimetic' },
+				{ text: ', psychotomimetic ' },
+				{ bold: true, text: 'psychotomimetic' },
+				{ text: ', psychotomimetic ' },
+				{ bold: true, text: '52245525/2245524' },
+				{ text: ', ' },
+				{ bold: true, text: 'A' },
+				{ text: 'ds ' },
+				{ bold: true, text: 'D' },
+				{ text: 'nics' },
+				{ bold: true, text: 'O' },
+				{ text: 'registering: ' },
+				{ bold: true, text: 'psychotomimetic' },
+				{ text: ', e-mail: ' },
+				{ bold: true, text: 'office@example.ro' },
+				{ text: ', phoneee: ' },
+				{ bold: true, text: '+64822645484848' },
+				{ text: ', oagee ehsjrhr ' },
+				{ bold: true, text: 'noun isdn-eokiorieori' },
+				{ text: ', sdkfnsdddddd ' },
+				{ bold: true, text: 'psychotomimetic' },
+				{ text: ', cgdgsdfsddddddddddddsf ' },
+				{ bold: true, text: 'sfsdfsdd' },
+				{ text: '.' }
+			],
+			alignment: 'justify',
+			margin: [57, 0, 1, 0]
 		}
 	],
 	styles: {

@@ -138,6 +138,9 @@ then explore the [document definition reference](https://pdfmake.github.io/docs/
 Development tools require Node >=20.19 on 20.x or >=22.12 on newer lines.
 The optional standalone playground requires Node >=22.13.
 
+Development-only dependency overrides keep `glob` and `minimatch` on patched
+versions while Mocha and ESLint still request the affected major versions.
+
 ```sh
 npm ci
 npm test
@@ -149,7 +152,7 @@ npm run test:package
 `npm test` verifies the generated validation contract, builds both environments,
 runs the test suite and lints source. Consumer tests install the real npm tarball
 without `@types/pdfmake`, compile strict Node/browser fixtures and render PDFs.
-CI runs these checks on Linux, macOS and Windows with Node 20, 22 and 24.
+CI runs these checks on Linux, macOS and Windows with Node 20, 22, 24 and 26.
 
 After editing `types/interfaces.d.ts`, run `npm run schema:generate` and commit
 the generated contract with the declaration change. Never edit `js/` or `build/`.

@@ -77,13 +77,25 @@ class ElementWriter extends EventEmitter {
 			!line.newLineForced &&
 			!line.lastLineInParagraph &&
 			line.inlines.length > 1) {
-			let additionalSpacing = (width - lineWidth) / (line.inlines.length - 1);
+			// Whitespace trimmed from the line start is not a word gap (leadingCut includes -leadingIndent)
+			let firstInline = line.inlines[0];
+			let isFirstInlineTrimmed = line.leadingCut + (firstInline.leadingIndent || 0) > 0 && firstInline.text.trim() === '';
+			let hasGapAfter = i => !line.inlines[i].noNewLine && !(i === 0 && isFirstInlineTrimmed);
+
+			let gaps = 0;
+			for (let i = 0, l = line.inlines.length - 1; i < l; i++) {
+				if (hasGapAfter(i)) {
+					gaps++;
+				}
+			}
+			let additionalSpacing = gaps > 0 ? (width - lineWidth) / gaps : 0;
 
 			for (let i = 1, l = line.inlines.length; i < l; i++) {
-				offset = i * additionalSpacing;
+				let justifyShift = hasGapAfter(i - 1) ? additionalSpacing : 0;
+				offset += justifyShift;
 
 				line.inlines[i].x += offset;
-				line.inlines[i].justifyShift = additionalSpacing;
+				line.inlines[i].justifyShift = justifyShift;
 			}
 		}
 	}
@@ -331,6 +343,24 @@ class ElementWriter extends EventEmitter {
 			return false;
 		}
 
+		// Positions are shared by leaf nodes and their containers. Update each
+		// recorded position once, after the fragment has found its destination.
+		(block.positions || []).forEach(position => {
+			let left = position.left + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
+			let top = position.top + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+			let pagePosition = ctx.getCurrentPosition();
+			Object.assign(position, pagePosition, {
+				left,
+				top,
+				horizontalRatio: (left - ctx.pageMargins.left) / pagePosition.pageInnerWidth,
+				verticalRatio: (top - ctx.pageMargins.top) / pagePosition.pageInnerHeight
+			});
+			if (this.contextStack.length > 0) {
+				page.positions = page.positions || [];
+				page.positions.push(position);
+			}
+		});
+
 		let unbreakableFillsInserted = 0;
 
 		block.items.forEach(item => {
@@ -338,9 +368,6 @@ class ElementWriter extends EventEmitter {
 				case 'line':
 					var l = item.item.clone();
 
-					if (l._node) {
-						l._node.positions[0].pageNumber = ctx.page + 1;
-					}
 					l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
 					l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 
@@ -352,6 +379,9 @@ class ElementWriter extends EventEmitter {
 
 				case 'vector':
 					var v = pack(item.item);
+					if (v.type === 'polyline') {
+						v.points = v.points.map(point => pack(point));
+					}
 
 					offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 					if (v._isFillColorFromUnbreakable) {
@@ -375,6 +405,7 @@ class ElementWriter extends EventEmitter {
 
 				case 'image':
 				case 'svg':
+				case 'attachment':
 				case 'beginClip':
 				case 'endClip':
 				case 'beginVerticalAlignment':
@@ -411,7 +442,7 @@ class ElementWriter extends EventEmitter {
 	 */
 	pushContext(contextOrWidth, height) {
 		if (contextOrWidth === undefined) {
-			height = this.context().getCurrentPage().height - this.context().pageMargins.top - this.context().pageMargins.bottom;
+			height = this.context().getCurrentPage().pageSize.height - this.context().pageMargins.top - this.context().pageMargins.bottom;
 			contextOrWidth = this.context().availableWidth;
 		}
 
@@ -430,7 +461,14 @@ class ElementWriter extends EventEmitter {
 	}
 
 	getCurrentPositionOnPage() {
-		return (this.contextStack[0] || this.context()).getCurrentPosition();
+		let context = this.context();
+		let position = context.getCurrentPosition();
+		if (this.contextStack.length > 0) {
+			let page = context.getCurrentPage();
+			page.positions = page.positions || [];
+			page.positions.push(position);
+		}
+		return position;
 	}
 }
 

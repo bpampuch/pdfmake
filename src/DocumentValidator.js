@@ -73,7 +73,7 @@ export function validateDocument(definition, options = {}, context = {}) {
 			case 'string': case 'undefined': return typeof value === schema.kind ? [] : fail(`Expected ${schema.kind}.`);
 			case 'function': return typeof value === 'function' ? [] : fail('Expected a function.');
 			case 'opaque': {
-				const valid = schema.name === 'Date' ? value instanceof Date && Number.isFinite(value.getTime()) : schema.name === 'ArrayBuffer' ? value instanceof ArrayBuffer : schema.name === 'SVGElement' ? false : ArrayBuffer.isView(value);
+				const valid = schema.name === 'Date' ? value instanceof Date && Number.isFinite(value.getTime()) : schema.name === 'ArrayBuffer' ? value instanceof ArrayBuffer : schema.name === 'SVGElement' ? false : value instanceof Uint8Array;
 				return valid ? [] : fail(`Expected ${schema.name}${schema.name === 'SVGElement' ? '; prefer an SVG string for portable validation' : ''}.`);
 			}
 			case 'union': {
