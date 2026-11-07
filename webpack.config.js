@@ -1,6 +1,5 @@
 var path = require('path');
 var TerserPlugin = require('terser-webpack-plugin');
-var StringReplacePlugin = require("string-replace-webpack-plugin");
 var webpack = require('webpack');
 var pkg = require('./package.json');
 
@@ -40,19 +39,8 @@ module.exports = {
 		rules: [
 			{
 				test: /pdfkit[/\\]js[/\\]/,
-				// pdfkit bundles the ICC profile; use a stable registry key without requiring file
-				use: {
-					loader: StringReplacePlugin.replace({
-						replacements: [
-							{
-								pattern: /new URL\(\s*['"]\.\/data\/sRGB_IEC61966_2_1\.icc['"],\s*import\.meta\.url\s*,?\s*\)\.href/g,
-								replacement: function () {
-									return "'pdfkit/builtin/sRGB_IEC61966_2_1.icc'";
-								}
-							}
-						]
-					})
-				}
+				// PDFKit embeds the ICC profile; use a stable key without constructing a file URL.
+				use: { loader: path.join(__dirname, 'scripts/pdfkit-profile-loader.cjs') }
 			},
 			{
 				enforce: 'pre',
@@ -97,16 +85,7 @@ module.exports = {
 			{
 				test: /FileSaver.min.js$/,
 				use: {
-					loader: StringReplacePlugin.replace({
-						replacements: [
-							{
-								pattern: '"download"in HTMLAnchorElement.prototype',
-								replacement: function () {
-									return '(typeof HTMLAnchorElement !== "undefined" && "download" in HTMLAnchorElement.prototype)';
-								}
-							}
-						]
-					})
+					loader: path.join(__dirname, 'scripts/file-saver-loader.cjs')
 				}
 			},
 		]
@@ -135,7 +114,6 @@ module.exports = {
 			process: 'process/browser', // require "process" library, fix "process is not defined" error, source: https://stackoverflow.com/a/64553486
 			Buffer: ['buffer', 'Buffer'] // require "buffer" library, fix "Buffer is not defined" error, source: https://github.com/webpack/changelog-v5/issues/10#issuecomment-615877593
 		}),
-		new StringReplacePlugin(),
 		new webpack.BannerPlugin({
 			banner: banner,
 			raw: true

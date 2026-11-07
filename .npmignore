@@ -5,6 +5,9 @@ dev-playground/
 docs/
 examples/
 tests/
+scripts/
+benchmarks/
+release-package/
 package-lock.json
 yarn.lock
 .editorconfig

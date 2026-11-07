@@ -17,6 +17,7 @@ const convertValueToString = value => {
 
 class DocPreprocessor {
 	preprocessDocument(docStructure) {
+		this.documentRoot = docStructure;
 		this.parentNode = null;
 		this.tocs = [];
 		this.nodeReferences = [];
@@ -24,6 +25,7 @@ class DocPreprocessor {
 	}
 
 	preprocessBlock(node) {
+		this.documentRoot = node;
 		this.parentNode = null;
 		this.tocs = [];
 		this.nodeReferences = [];
@@ -31,6 +33,29 @@ class DocPreprocessor {
 	}
 
 	preprocessNode(node, isSectionAllowed = false) {
+		return this.preprocessNodeAt(node, isSectionAllowed, this.currentPath || 'content');
+	}
+
+	preprocessNodeAt(node, isSectionAllowed, path) {
+		const previousPath = this.currentPath;
+		this.currentPath = path;
+		try {
+			return this.preprocessNodeInternal(node, isSectionAllowed);
+		} catch (caught) {
+			const error = caught instanceof Error ? caught : new Error(String(caught));
+			if (!error.path) {
+				error.path = path;
+				error.code = 'PDFMAKE_INVALID_DOCUMENT';
+				error.phase = 'preprocess';
+				error.message += `\nDocument path: ${path}`;
+			}
+			throw error;
+		} finally {
+			this.currentPath = previousPath;
+		}
+	}
+
+	preprocessNodeInternal(node, isSectionAllowed = false) {
 		// expand shortcuts and casting values
 		if (Array.isArray(node)) {
 			node = { stack: node };
@@ -78,16 +103,17 @@ class DocPreprocessor {
 	}
 
 	preprocessSection(node) {
-		node.section = this.preprocessNode(node.section);
+		node.section = this.preprocessNodeAt(node.section, false, `${this.currentPath}.section`);
 
 		return node;
 	}
 
 	preprocessColumns(node) {
 		let columns = node.columns;
+		if (!Array.isArray(columns)) throw new Error('columns must be an array of content nodes.');
 
 		for (let i = 0, l = columns.length; i < l; i++) {
-			columns[i] = this.preprocessNode(columns[i]);
+			columns[i] = this.preprocessNodeAt(columns[i], false, `${this.currentPath}.columns[${i}]`);
 		}
 
 		return node;
@@ -95,9 +121,11 @@ class DocPreprocessor {
 
 	preprocessVerticalContainer(node, isSectionAllowed) {
 		let items = node.stack;
+		if (!Array.isArray(items)) throw new Error('stack must be an array of content nodes.');
 
 		for (let i = 0, l = items.length; i < l; i++) {
-			items[i] = this.preprocessNode(items[i], isSectionAllowed);
+			const path = this.currentPath || 'content';
+			items[i] = this.preprocessNodeAt(items[i], isSectionAllowed, path === 'content' && Array.isArray(this.documentRoot) ? `${path}[${i}]` : `${path}.stack[${i}]`);
 		}
 
 		return node;
@@ -105,15 +133,31 @@ class DocPreprocessor {
 
 	preprocessList(node) {
 		let items = node.ul || node.ol;
+		if (!Array.isArray(items)) throw new Error('List items must be an array.');
 
 		for (let i = 0, l = items.length; i < l; i++) {
-			items[i] = this.preprocessNode(items[i]);
+			items[i] = this.preprocessNodeAt(items[i], false, `${this.currentPath}.${node.ul ? 'ul' : 'ol'}[${i}]`);
 		}
 
 		return node;
 	}
 
 	preprocessTable(node) {
+		if (!node.table || !Array.isArray(node.table.body) || !node.table.body.length || !Array.isArray(node.table.body[0]) || !node.table.body[0].length) {
+			throw new Error('table.body must be a non-empty array of non-empty row arrays.');
+		}
+		const columnCount = node.table.body[0].length;
+		for (let rowIndex = 0; rowIndex < node.table.body.length; rowIndex++) {
+			const data = node.table.body[rowIndex];
+			if (!Array.isArray(data) || data.length !== columnCount) {
+				const error = new Error(`Malformed table row: expected ${columnCount} cells, including placeholders for spans.`);
+				error.path = `${this.currentPath}.table.body[${rowIndex}]`;
+				error.code = 'PDFMAKE_INVALID_DOCUMENT';
+				error.phase = 'preprocess';
+				error.message += `\nDocument path: ${error.path}`;
+				throw error;
+			}
+		}
 		let col;
 		let row;
 		let cols;
@@ -123,12 +167,20 @@ class DocPreprocessor {
 			for (row = 0, rows = node.table.body.length; row < rows; row++) {
 				let rowData = node.table.body[row];
 				let data = rowData[col];
+				if (data === undefined) {
+					const error = new Error('Malformed table row: a cell is undefined. Use an empty string or an empty object for a blank cell.');
+					error.path = `${this.currentPath}.table.body[${row}][${col}]`;
+					error.code = 'PDFMAKE_INVALID_DOCUMENT';
+					error.phase = 'preprocess';
+					error.message += `\nDocument path: ${error.path}`;
+					throw error;
+				}
 				if (data !== undefined) {
 					if (data === null) { // transform to object
 						data = '';
 					}
 					if (!data._span) {
-						rowData[col] = this.preprocessNode(data);
+						rowData[col] = this.preprocessNodeAt(data, false, `${this.currentPath}.table.body[${row}][${col}]`);
 					}
 				}
 			}
@@ -207,7 +259,7 @@ class DocPreprocessor {
 		}
 
 		if (node.text && node.text.text) {
-			node.text = [this.preprocessNode(node.text)];
+			node.text = [this.preprocessNodeAt(node.text, false, `${this.currentPath}.text`)];
 		} else if (Array.isArray(node.text)) {
 			let isSetParentNode = false;
 			if (this.parentNode === null) {
@@ -216,7 +268,7 @@ class DocPreprocessor {
 			}
 
 			for (let i = 0, l = node.text.length; i < l; i++) {
-				node.text[i] = this.preprocessNode(node.text[i]);
+				node.text[i] = this.preprocessNodeAt(node.text[i], false, `${this.currentPath}.text[${i}]`);
 			}
 
 			if (isSetParentNode) {
