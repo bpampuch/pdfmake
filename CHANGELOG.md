@@ -24,6 +24,7 @@
 	These options control cache writes. Existing shared entries remain available regardless of `cache`. Shared entries are keyed by URL only, without request headers. `setUrlAccessPolicy()` applies to network downloads, not cache reads.
 - Added `pdfmake.clearUrlResourceCache()` to remove URL resource cache.
 - Added support for binary font definitions and image dictionary entries using `Buffer`, `Uint8Array` or `ArrayBuffer`
+- Update Roboto font (version 3.016)
 - Improved performance for large documents when using `pageBreakBefore`
 - Fixed reversed ordered lists starting at a too high number when they contain nested lists
 - Fixed canvas polylines being shifted and affecting column widths when layout is recalculated by `pageBreakBefore`
