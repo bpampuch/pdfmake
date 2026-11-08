@@ -198,7 +198,7 @@ class DocMeasure {
 			node.toc.title = this.measureNode(node.toc.title);
 		}
 
-		if (node.toc._items.length > 0) {
+		if (!node.toc._table && node.toc._items.length > 0) {
 			let body = [];
 			let textStyle = node.toc.textStyle || {};
 			let numberStyle = node.toc.numberStyle || textStyle;
@@ -234,7 +234,9 @@ class DocMeasure {
 				},
 				layout: 'noBorders'
 			};
+		}
 
+		if (node.toc._table) {
 			node.toc._table = this.measureNode(node.toc._table);
 		}
 
