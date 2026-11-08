@@ -1,4 +1,4 @@
-/*! pdfmake v0.3.13, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.3.14, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -2157,6 +2157,14 @@ var SVGtoPDF = function (doc, svg, x, y, options) {
     };
   };
   var SvgElem = function (obj, inherits) {
+    // Bound both the size and depth of trees expanded through <use> references.
+    this.useDepth = inherits ? inherits.useDepth + (inherits instanceof SvgElemUse ? 1 : 0) : 0;
+    if (this.useDepth > MAX_USE_DEPTH) {
+      throw new Error('SVGtoPDF: <use> reference depth limit exceeded (' + MAX_USE_DEPTH + ')');
+    }
+    if (this.useDepth && ++useExpansionElements > MAX_USE_EXPANSION_ELEMENTS) {
+      throw new Error('SVGtoPDF: <use> expansion limit exceeded (' + MAX_USE_EXPANSION_ELEMENTS + ' elements)');
+    }
     let styleCache = Object.create(null);
     let childrenCache = null;
     this.name = obj.nodeName;
@@ -3699,7 +3707,10 @@ var SVGtoPDF = function (doc, svg, x, y, options) {
     groupStack = [],
     documentCache = {},
     links = [],
-    styleRules = [];
+    styleRules = [],
+    useExpansionElements = 0;
+  const MAX_USE_EXPANSION_ELEMENTS = 20000,
+    MAX_USE_DEPTH = 64;
   if (typeof warningCallback !== 'function') {
     warningCallback = function (str) {
       if (typeof console !== undefined && typeof console.warn === 'function') {
@@ -3840,7 +3851,7 @@ if ( true && module && typeof module.exports !== 'undefined') {
 
 /***/ },
 
-/***/ 1862
+/***/ 8069
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -11883,408 +11894,22 @@ function _define_property(obj, key, value) {
 }
 
 
-;// ./node_modules/tslib/tslib.es6.mjs
-/******************************************************************************
-Copyright (c) Microsoft Corporation.
-
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-***************************************************************************** */
-/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
-
-var extendStatics = function(d, b) {
-  extendStatics = Object.setPrototypeOf ||
-      ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-      function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-  return extendStatics(d, b);
-};
-
-function __extends(d, b) {
-  if (typeof b !== "function" && b !== null)
-      throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-  extendStatics(d, b);
-  function __() { this.constructor = d; }
-  d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-}
-
-var __assign = function() {
-  __assign = Object.assign || function __assign(t) {
-      for (var s, i = 1, n = arguments.length; i < n; i++) {
-          s = arguments[i];
-          for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
-      }
-      return t;
-  }
-  return __assign.apply(this, arguments);
-}
-
-function __rest(s, e) {
-  var t = {};
-  for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-      t[p] = s[p];
-  if (s != null && typeof Object.getOwnPropertySymbols === "function")
-      for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-          if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-              t[p[i]] = s[p[i]];
-      }
-  return t;
-}
-
-function __decorate(decorators, target, key, desc) {
-  var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-  if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-  else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-  return c > 3 && r && Object.defineProperty(target, key, r), r;
-}
-
-function __param(paramIndex, decorator) {
-  return function (target, key) { decorator(target, key, paramIndex); }
-}
-
-function __esDecorate(ctor, descriptorIn, decorators, contextIn, initializers, extraInitializers) {
-  function accept(f) { if (f !== void 0 && typeof f !== "function") throw new TypeError("Function expected"); return f; }
-  var kind = contextIn.kind, key = kind === "getter" ? "get" : kind === "setter" ? "set" : "value";
-  var target = !descriptorIn && ctor ? contextIn["static"] ? ctor : ctor.prototype : null;
-  var descriptor = descriptorIn || (target ? Object.getOwnPropertyDescriptor(target, contextIn.name) : {});
-  var _, done = false;
-  for (var i = decorators.length - 1; i >= 0; i--) {
-      var context = {};
-      for (var p in contextIn) context[p] = p === "access" ? {} : contextIn[p];
-      for (var p in contextIn.access) context.access[p] = contextIn.access[p];
-      context.addInitializer = function (f) { if (done) throw new TypeError("Cannot add initializers after decoration has completed"); extraInitializers.push(accept(f || null)); };
-      var result = (0, decorators[i])(kind === "accessor" ? { get: descriptor.get, set: descriptor.set } : descriptor[key], context);
-      if (kind === "accessor") {
-          if (result === void 0) continue;
-          if (result === null || typeof result !== "object") throw new TypeError("Object expected");
-          if (_ = accept(result.get)) descriptor.get = _;
-          if (_ = accept(result.set)) descriptor.set = _;
-          if (_ = accept(result.init)) initializers.unshift(_);
-      }
-      else if (_ = accept(result)) {
-          if (kind === "field") initializers.unshift(_);
-          else descriptor[key] = _;
-      }
-  }
-  if (target) Object.defineProperty(target, contextIn.name, descriptor);
-  done = true;
-};
-
-function __runInitializers(thisArg, initializers, value) {
-  var useValue = arguments.length > 2;
-  for (var i = 0; i < initializers.length; i++) {
-      value = useValue ? initializers[i].call(thisArg, value) : initializers[i].call(thisArg);
-  }
-  return useValue ? value : void 0;
-};
-
-function __propKey(x) {
-  return typeof x === "symbol" ? x : "".concat(x);
-};
-
-function __setFunctionName(f, name, prefix) {
-  if (typeof name === "symbol") name = name.description ? "[".concat(name.description, "]") : "";
-  return Object.defineProperty(f, "name", { configurable: true, value: prefix ? "".concat(prefix, " ", name) : name });
-};
-
-function __metadata(metadataKey, metadataValue) {
-  if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(metadataKey, metadataValue);
-}
-
-function __awaiter(thisArg, _arguments, P, generator) {
-  function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-  return new (P || (P = Promise))(function (resolve, reject) {
-      function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-      function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-      function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-  });
-}
-
-function __generator(thisArg, body) {
-  var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
-  return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-  function verb(n) { return function (v) { return step([n, v]); }; }
-  function step(op) {
-      if (f) throw new TypeError("Generator is already executing.");
-      while (g && (g = 0, op[0] && (_ = 0)), _) try {
-          if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-          if (y = 0, t) op = [op[0] & 2, t.value];
-          switch (op[0]) {
-              case 0: case 1: t = op; break;
-              case 4: _.label++; return { value: op[1], done: false };
-              case 5: _.label++; y = op[1]; op = [0]; continue;
-              case 7: op = _.ops.pop(); _.trys.pop(); continue;
-              default:
-                  if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                  if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                  if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                  if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                  if (t[2]) _.ops.pop();
-                  _.trys.pop(); continue;
-          }
-          op = body.call(thisArg, _);
-      } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-      if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-  }
-}
-
-var __createBinding = Object.create ? (function(o, m, k, k2) {
-  if (k2 === undefined) k2 = k;
-  var desc = Object.getOwnPropertyDescriptor(m, k);
-  if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-  }
-  Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-  if (k2 === undefined) k2 = k;
-  o[k2] = m[k];
-});
-
-function __exportStar(m, o) {
-  for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(o, p)) __createBinding(o, m, p);
-}
-
-function __values(o) {
-  var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m) return m.call(o);
-  if (o && typeof o.length === "number") return {
-      next: function () {
-          if (o && i >= o.length) o = void 0;
-          return { value: o && o[i++], done: !o };
-      }
-  };
-  throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
-}
-
-function __read(o, n) {
-  var m = typeof Symbol === "function" && o[Symbol.iterator];
-  if (!m) return o;
-  var i = m.call(o), r, ar = [], e;
-  try {
-      while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
-  }
-  catch (error) { e = { error: error }; }
-  finally {
-      try {
-          if (r && !r.done && (m = i["return"])) m.call(i);
-      }
-      finally { if (e) throw e.error; }
-  }
-  return ar;
-}
-
-/** @deprecated */
-function __spread() {
-  for (var ar = [], i = 0; i < arguments.length; i++)
-      ar = ar.concat(__read(arguments[i]));
-  return ar;
-}
-
-/** @deprecated */
-function __spreadArrays() {
-  for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-  for (var r = Array(s), k = 0, i = 0; i < il; i++)
-      for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-          r[k] = a[j];
-  return r;
-}
-
-function __spreadArray(to, from, pack) {
-  if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-      if (ar || !(i in from)) {
-          if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-          ar[i] = from[i];
-      }
-  }
-  return to.concat(ar || Array.prototype.slice.call(from));
-}
-
-function __await(v) {
-  return this instanceof __await ? (this.v = v, this) : new __await(v);
-}
-
-function __asyncGenerator(thisArg, _arguments, generator) {
-  if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-  var g = generator.apply(thisArg, _arguments || []), i, q = [];
-  return i = Object.create((typeof AsyncIterator === "function" ? AsyncIterator : Object).prototype), verb("next"), verb("throw"), verb("return", awaitReturn), i[Symbol.asyncIterator] = function () { return this; }, i;
-  function awaitReturn(f) { return function (v) { return Promise.resolve(v).then(f, reject); }; }
-  function verb(n, f) { if (g[n]) { i[n] = function (v) { return new Promise(function (a, b) { q.push([n, v, a, b]) > 1 || resume(n, v); }); }; if (f) i[n] = f(i[n]); } }
-  function resume(n, v) { try { step(g[n](v)); } catch (e) { settle(q[0][3], e); } }
-  function step(r) { r.value instanceof __await ? Promise.resolve(r.value.v).then(fulfill, reject) : settle(q[0][2], r); }
-  function fulfill(value) { resume("next", value); }
-  function reject(value) { resume("throw", value); }
-  function settle(f, v) { if (f(v), q.shift(), q.length) resume(q[0][0], q[0][1]); }
-}
-
-function __asyncDelegator(o) {
-  var i, p;
-  return i = {}, verb("next"), verb("throw", function (e) { throw e; }), verb("return"), i[Symbol.iterator] = function () { return this; }, i;
-  function verb(n, f) { i[n] = o[n] ? function (v) { return (p = !p) ? { value: __await(o[n](v)), done: false } : f ? f(v) : v; } : f; }
-}
-
-function __asyncValues(o) {
-  if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-  var m = o[Symbol.asyncIterator], i;
-  return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
-  function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
-  function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
-}
-
-function __makeTemplateObject(cooked, raw) {
-  if (Object.defineProperty) { Object.defineProperty(cooked, "raw", { value: raw }); } else { cooked.raw = raw; }
-  return cooked;
-};
-
-var __setModuleDefault = Object.create ? (function(o, v) {
-  Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-  o["default"] = v;
-};
-
-var tslib_es6_ownKeys = function(o) {
-  tslib_es6_ownKeys = Object.getOwnPropertyNames || function (o) {
-    var ar = [];
-    for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-    return ar;
-  };
-  return tslib_es6_ownKeys(o);
-};
-
-function __importStar(mod) {
-  if (mod && mod.__esModule) return mod;
-  var result = {};
-  if (mod != null) for (var k = tslib_es6_ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-  __setModuleDefault(result, mod);
-  return result;
-}
-
-function tslib_es6_importDefault(mod) {
-  return (mod && mod.__esModule) ? mod : { default: mod };
-}
-
-function __classPrivateFieldGet(receiver, state, kind, f) {
-  if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
-  if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
-  return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
-}
-
-function __classPrivateFieldSet(receiver, state, value, kind, f) {
-  if (kind === "m") throw new TypeError("Private method is not writable");
-  if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
-  if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
-  return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
-}
-
-function __classPrivateFieldIn(state, receiver) {
-  if (receiver === null || (typeof receiver !== "object" && typeof receiver !== "function")) throw new TypeError("Cannot use 'in' operator on non-object");
-  return typeof state === "function" ? receiver === state : state.has(receiver);
-}
-
-function __addDisposableResource(env, value, async) {
-  if (value !== null && value !== void 0) {
-    if (typeof value !== "object" && typeof value !== "function") throw new TypeError("Object expected.");
-    var dispose, inner;
-    if (async) {
-      if (!Symbol.asyncDispose) throw new TypeError("Symbol.asyncDispose is not defined.");
-      dispose = value[Symbol.asyncDispose];
-    }
-    if (dispose === void 0) {
-      if (!Symbol.dispose) throw new TypeError("Symbol.dispose is not defined.");
-      dispose = value[Symbol.dispose];
-      if (async) inner = dispose;
-    }
-    if (typeof dispose !== "function") throw new TypeError("Object not disposable.");
-    if (inner) dispose = function() { try { inner.call(this); } catch (e) { return Promise.reject(e); } };
-    env.stack.push({ value: value, dispose: dispose, async: async });
-  }
-  else if (async) {
-    env.stack.push({ async: true });
-  }
-  return value;
-}
-
-var _SuppressedError = (/* unused pure expression or super */ null && (typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
-  var e = new Error(message);
-  return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
-}));
-
-function __disposeResources(env) {
-  function fail(e) {
-    env.error = env.hasError ? new _SuppressedError(e, env.error, "An error was suppressed during disposal.") : e;
-    env.hasError = true;
-  }
-  var r, s = 0;
-  function next() {
-    while (r = env.stack.pop()) {
-      try {
-        if (!r.async && s === 1) return s = 0, env.stack.push(r), Promise.resolve().then(next);
-        if (r.dispose) {
-          var result = r.dispose.call(r.value);
-          if (r.async) return s |= 2, Promise.resolve(result).then(next, function(e) { fail(e); return next(); });
+;// ./node_modules/@swc/helpers/esm/_ts_decorate.js
+function _ts_decorate(decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") {
+        r = Reflect.decorate(decorators, target, key, desc);
+    } else {
+        for (var i = decorators.length - 1; i >= 0; i--) {
+            if (d = decorators[i]) {
+                r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+            }
         }
-        else s |= 1;
-      }
-      catch (e) {
-        fail(e);
-      }
     }
-    if (s === 1) return env.hasError ? Promise.reject(env.error) : Promise.resolve();
-    if (env.hasError) throw env.error;
-  }
-  return next();
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
 }
 
-function __rewriteRelativeImportExtension(path, preserveJsx) {
-  if (typeof path === "string" && /^\.\.?\//.test(path)) {
-      return path.replace(/\.(tsx)$|((?:\.d)?)((?:\.[^./]+?)?)\.([cm]?)ts$/i, function (m, tsx, d, ext, cm) {
-          return tsx ? preserveJsx ? ".jsx" : ".js" : d && (!ext || !cm) ? m : (d + ext + "." + cm.toLowerCase() + "js");
-      });
-  }
-  return path;
-}
 
-/* harmony default export */ const tslib_es6 = ((/* unused pure expression or super */ null && ({
-  __extends,
-  __assign,
-  __rest,
-  __decorate,
-  __param,
-  __esDecorate,
-  __runInitializers,
-  __propKey,
-  __setFunctionName,
-  __metadata,
-  __awaiter,
-  __generator,
-  __createBinding,
-  __exportStar,
-  __values,
-  __read,
-  __spread,
-  __spreadArrays,
-  __spreadArray,
-  __await,
-  __asyncGenerator,
-  __asyncDelegator,
-  __asyncValues,
-  __makeTemplateObject,
-  __importStar,
-  __importDefault: tslib_es6_importDefault,
-  __classPrivateFieldGet,
-  __classPrivateFieldSet,
-  __classPrivateFieldIn,
-  __addDisposableResource,
-  __disposeResources,
-  __rewriteRelativeImportExtension,
-})));
 
 ;// ./node_modules/fast-deep-equal/index.js
 fast_deep_equal_namespaceFn();
@@ -18064,10 +17689,10 @@ class $f08dd41ef10b694c$export$2e2bcd8739ae039 {
         if (this.uvs && this.uvs.version !== 14) this.uvs = null;
     }
 }
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $f08dd41ef10b694c$export$2e2bcd8739ae039.prototype, "getCharacterSet", null);
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $f08dd41ef10b694c$export$2e2bcd8739ae039.prototype, "codePointsForGlyph", null);
 
@@ -19279,7 +18904,7 @@ class $ff5ce077dae0f144$export$2e2bcd8739ae039 {
         this.table = table;
     }
 }
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $ff5ce077dae0f144$export$2e2bcd8739ae039.prototype, "glyphsForValue", null);
 
@@ -19603,7 +19228,7 @@ class $55f71433a605c87d$export$2e2bcd8739ae039 {
         this.inputCache = null;
     }
 }
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $55f71433a605c87d$export$2e2bcd8739ae039.prototype, "getStateMachine", null);
 // swaps the glyphs in rangeA with those in rangeB
@@ -23233,22 +22858,22 @@ class $f92906be28e61769$export$2e2bcd8739ae039 {
         this.isLigature = this.codePoints.length > 1;
     }
 }
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $f92906be28e61769$export$2e2bcd8739ae039.prototype, "cbox", null);
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $f92906be28e61769$export$2e2bcd8739ae039.prototype, "bbox", null);
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $f92906be28e61769$export$2e2bcd8739ae039.prototype, "path", null);
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $f92906be28e61769$export$2e2bcd8739ae039.prototype, "advanceWidth", null);
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $f92906be28e61769$export$2e2bcd8739ae039.prototype, "advanceHeight", null);
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $f92906be28e61769$export$2e2bcd8739ae039.prototype, "name", null);
 
@@ -25205,25 +24830,25 @@ class $4c1709dee528ea76$export$2e2bcd8739ae039 {
         }
     }
 }
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $4c1709dee528ea76$export$2e2bcd8739ae039.prototype, "bbox", null);
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $4c1709dee528ea76$export$2e2bcd8739ae039.prototype, "_cmapProcessor", null);
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $4c1709dee528ea76$export$2e2bcd8739ae039.prototype, "characterSet", null);
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $4c1709dee528ea76$export$2e2bcd8739ae039.prototype, "_layoutEngine", null);
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $4c1709dee528ea76$export$2e2bcd8739ae039.prototype, "variationAxes", null);
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $4c1709dee528ea76$export$2e2bcd8739ae039.prototype, "namedVariations", null);
-(0, __decorate)([
+(0, _ts_decorate)([
     (0, $e71565f2ce09cb6b$export$69a3209f1a06c04d)
 ], $4c1709dee528ea76$export$2e2bcd8739ae039.prototype, "_variationProcessor", null);
 
@@ -34994,6 +34619,11 @@ class PDFDocument extends pdfkit_browser_PDFDocument {
       let def = this.fonts[familyName][type];
       if (!Array.isArray(def)) {
         def = [def];
+      } else {
+        def = def.slice();
+      }
+      if (typeof def[0] === 'object' && def[0].url) {
+        def[0] = def[0].url;
       }
       if (this.virtualfs && this.virtualfs.existsSync(def[0])) {
         def[0] = this.virtualfs.readFileSync(def[0]);
@@ -35010,12 +34640,18 @@ class PDFDocument extends pdfkit_browser_PDFDocument {
       if (!image) {
         return src;
       }
+      if (typeof image === 'object' && image.url) {
+        image = image.url;
+      }
       if (this.virtualfs && this.virtualfs.existsSync(image)) {
         return this.virtualfs.readFileSync(image);
       }
+      if (typeof image !== 'string') {
+        return image;
+      }
       let index = image.indexOf('base64,');
       if (index < 0) {
-        return this.images[src];
+        return image;
       }
       return Buffer.from(image.substring(index + 7), 'base64');
     };
@@ -35061,6 +34697,12 @@ class PDFDocument extends pdfkit_browser_PDFDocument {
       return obj;
     };
     let attachment = checkRequired(typeof src === 'object' ? src : this.attachments[src]);
+    if (typeof attachment.src === 'object' && attachment.src.url) {
+      attachment = {
+        ...attachment,
+        src: attachment.src.url
+      };
+    }
     if (this.virtualfs && this.virtualfs.existsSync(attachment.src)) {
       return {
         ...attachment,
@@ -37486,7 +37128,7 @@ class DocMeasure {
     node.separator = node.separator || '.';
     node.reversed = node.reversed || false;
     if (!isNumber(node.start)) {
-      node.start = node.reversed ? items.length : 1;
+      node.start = node.reversed ? items.filter(item => !item.ol && !item.ul).length : 1;
     }
     node._gapSize = this.gapSizeForList();
     node._minWidth = 0;
@@ -38355,11 +37997,22 @@ class ElementWriter extends (events_namespaceFn().EventEmitter) {
       line.x = (line.x || 0) + offset;
     }
     if (alignment === 'justify' && !line.newLineForced && !line.lastLineInParagraph && line.inlines.length > 1) {
-      let additionalSpacing = (width - lineWidth) / (line.inlines.length - 1);
+      // Whitespace trimmed from the line start is not a word gap (leadingCut includes -leadingIndent)
+      let firstInline = line.inlines[0];
+      let isFirstInlineTrimmed = line.leadingCut + (firstInline.leadingIndent || 0) > 0 && firstInline.text.trim() === '';
+      let hasGapAfter = i => !line.inlines[i].noNewLine && !(i === 0 && isFirstInlineTrimmed);
+      let gaps = 0;
+      for (let i = 0, l = line.inlines.length - 1; i < l; i++) {
+        if (hasGapAfter(i)) {
+          gaps++;
+        }
+      }
+      let additionalSpacing = gaps > 0 ? (width - lineWidth) / gaps : 0;
       for (let i = 1, l = line.inlines.length; i < l; i++) {
-        offset = i * additionalSpacing;
+        let justifyShift = hasGapAfter(i - 1) ? additionalSpacing : 0;
+        offset += justifyShift;
         line.inlines[i].x += offset;
-        line.inlines[i].justifyShift = additionalSpacing;
+        line.inlines[i].justifyShift = justifyShift;
       }
     }
   }
@@ -38567,14 +38220,29 @@ class ElementWriter extends (events_namespaceFn().EventEmitter) {
     if (!useBlockXOffset && block.height > ctx.availableHeight) {
       return false;
     }
+
+    // Positions are shared by leaf nodes and their containers. Update each
+    // recorded position once, after the fragment has found its destination.
+    (block.positions || []).forEach(position => {
+      let left = position.left + (useBlockXOffset ? block.xOffset || 0 : ctx.x);
+      let top = position.top + (useBlockYOffset ? block.yOffset || 0 : ctx.y);
+      let pagePosition = ctx.getCurrentPosition();
+      Object.assign(position, pagePosition, {
+        left,
+        top,
+        horizontalRatio: (left - ctx.pageMargins.left) / pagePosition.pageInnerWidth,
+        verticalRatio: (top - ctx.pageMargins.top) / pagePosition.pageInnerHeight
+      });
+      if (this.contextStack.length > 0) {
+        page.positions = page.positions || [];
+        page.positions.push(position);
+      }
+    });
     let unbreakableFillsInserted = 0;
     block.items.forEach(item => {
       switch (item.type) {
         case 'line':
           var l = item.item.clone();
-          if (l._node) {
-            l._node.positions[0].pageNumber = ctx.page + 1;
-          }
           l.x = (l.x || 0) + (useBlockXOffset ? block.xOffset || 0 : ctx.x);
           l.y = (l.y || 0) + (useBlockYOffset ? block.yOffset || 0 : ctx.y);
           page.items.push({
@@ -38584,6 +38252,9 @@ class ElementWriter extends (events_namespaceFn().EventEmitter) {
           break;
         case 'vector':
           var v = pack(item.item);
+          if (v.type === 'polyline') {
+            v.points = v.points.map(point => pack(point));
+          }
           offsetVector(v, useBlockXOffset ? block.xOffset || 0 : ctx.x, useBlockYOffset ? block.yOffset || 0 : ctx.y);
           if (v._isFillColorFromUnbreakable) {
             // If the item is a fillColor from an unbreakable block
@@ -38605,6 +38276,7 @@ class ElementWriter extends (events_namespaceFn().EventEmitter) {
           break;
         case 'image':
         case 'svg':
+        case 'attachment':
         case 'beginClip':
         case 'endClip':
         case 'beginVerticalAlignment':
@@ -38637,7 +38309,7 @@ class ElementWriter extends (events_namespaceFn().EventEmitter) {
    */
   pushContext(contextOrWidth, height) {
     if (contextOrWidth === undefined) {
-      height = this.context().getCurrentPage().height - this.context().pageMargins.top - this.context().pageMargins.bottom;
+      height = this.context().getCurrentPage().pageSize.height - this.context().pageMargins.top - this.context().pageMargins.bottom;
       contextOrWidth = this.context().availableWidth;
     }
     if (isNumber(contextOrWidth)) {
@@ -38660,7 +38332,14 @@ class ElementWriter extends (events_namespaceFn().EventEmitter) {
     this._context = this.contextStack.pop();
   }
   getCurrentPositionOnPage() {
-    return (this.contextStack[0] || this.context()).getCurrentPosition();
+    let context = this.context();
+    let position = context.getCurrentPosition();
+    if (this.contextStack.length > 0) {
+      let page = context.getCurrentPage();
+      page.positions = page.positions || [];
+      page.positions.push(position);
+    }
+    return position;
   }
 }
 function addPageItem(page, item, index) {
@@ -39789,6 +39468,7 @@ class LayoutBuilder {
     this.tableLayouts = {};
     this.nestedLevel = 0;
     this.verticalAlignmentItemStack = [];
+    this.backgroundLevel = 0;
   }
   registerTableLayouts(tableLayouts) {
     this.tableLayouts = pack(this.tableLayouts, tableLayouts);
@@ -39824,7 +39504,8 @@ class LayoutBuilder {
         return true;
       };
       linearNodeList = linearNodeList.filter(hasRenderableContent);
-      linearNodeList.forEach(node => {
+      const nodesByPage = [];
+      linearNodeList.forEach((node, index) => {
         let nodeInfo = {};
         ['id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns', 'headlineLevel', 'style', 'pageBreak', 'pageOrientation', 'width', 'height'].forEach(key => {
           if (node[key] !== undefined) {
@@ -39836,40 +39517,42 @@ class LayoutBuilder {
         nodeInfo.pages = pages.length;
         nodeInfo.stack = Array.isArray(node.stack);
         node.nodeInfo = nodeInfo;
+        nodeInfo.pageNumbers.forEach(pageNumber => {
+          nodesByPage[pageNumber] = nodesByPage[pageNumber] || [];
+          nodesByPage[pageNumber].push({
+            index,
+            nodeInfo
+          });
+        });
       });
+      const findFirstNodeAtOrAfter = (nodes, index) => {
+        let low = 0;
+        let high = nodes.length;
+        while (low < high) {
+          const middle = Math.floor((low + high) / 2);
+          if (nodes[middle].index < index) {
+            low = middle + 1;
+          } else {
+            high = middle;
+          }
+        }
+        return low;
+      };
+      const getNodeInfos = (nodes, start, end) => nodes.slice(start, end).map(entry => entry.nodeInfo);
       for (let index = 0; index < linearNodeList.length; index++) {
         let node = linearNodeList[index];
         if (node.pageBreak !== 'before' && !node.pageBreakCalculated) {
           node.pageBreakCalculated = true;
           let pageNumber = node.nodeInfo.pageNumbers[0];
+          const nodesOnPage = nodesByPage[pageNumber] || [];
+          const nodeOnPageIndex = findFirstNodeAtOrAfter(nodesOnPage, index);
           if (pageBreakBeforeFct(node.nodeInfo, {
-            getFollowingNodesOnPage: () => {
-              let followingNodesOnPage = [];
-              for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
-                if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-                  followingNodesOnPage.push(linearNodeList[ii].nodeInfo);
-                }
-              }
-              return followingNodesOnPage;
-            },
+            getFollowingNodesOnPage: () => getNodeInfos(nodesOnPage, nodeOnPageIndex + 1),
             getNodesOnNextPage: () => {
-              let nodesOnNextPage = [];
-              for (let ii = index + 1, l = linearNodeList.length; ii < l; ii++) {
-                if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber + 1) > -1) {
-                  nodesOnNextPage.push(linearNodeList[ii].nodeInfo);
-                }
-              }
-              return nodesOnNextPage;
+              const nextPageNodes = nodesByPage[pageNumber + 1] || [];
+              return getNodeInfos(nextPageNodes, findFirstNodeAtOrAfter(nextPageNodes, index + 1));
             },
-            getPreviousNodesOnPage: () => {
-              let previousNodesOnPage = [];
-              for (let ii = 0; ii < index; ii++) {
-                if (linearNodeList[ii].nodeInfo.pageNumbers.indexOf(pageNumber) > -1) {
-                  previousNodesOnPage.push(linearNodeList[ii].nodeInfo);
-                }
-              }
-              return previousNodesOnPage;
-            }
+            getPreviousNodesOnPage: () => getNodeInfos(nodesOnPage, 0, nodeOnPageIndex)
           })) {
             node.pageBreak = 'before';
             return true;
@@ -39886,7 +39569,7 @@ class LayoutBuilder {
       });
     }
     let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
-    while (addPageBreaksIfNecessary(result.linearNodeList, result.pages)) {
+    while (addPageBreaksIfNecessary(result.pageBreakNodes, result.pages)) {
       resetXYs(result);
       result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
     }
@@ -39916,11 +39599,14 @@ class LayoutBuilder {
       this.writer.addPage(this.pageSize, null, this.pageMargins);
     }
     this.processNode(docStructure);
+    // Headers and footers must not participate in content page break decisions.
+    const pageBreakNodes = this.linearNodeList.slice();
     this.addHeadersAndFooters(header, footer);
     this.addWatermark(watermark, pdfDocument, defaultStyle);
     return {
       pages: this.writer.context().pages,
-      linearNodeList: this.linearNodeList
+      linearNodeList: this.linearNodeList,
+      pageBreakNodes
     };
   }
   addBackground(background) {
@@ -39929,11 +39615,16 @@ class LayoutBuilder {
     let pageSize = context.getCurrentPage().pageSize;
     let pageBackground = backgroundGetter(context.page + 1, pageSize);
     if (pageBackground) {
-      this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
-      pageBackground = this.docPreprocessor.preprocessBlock(pageBackground);
-      this.processNode(this.docMeasure.measureBlock(pageBackground));
-      this.writer.commitUnbreakableBlock(0, 0);
-      context.backgroundLength[context.page] += pageBackground.positions.length;
+      this.backgroundLevel++;
+      try {
+        this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
+        pageBackground = this.docPreprocessor.preprocessBlock(pageBackground);
+        this.processNode(this.docMeasure.measureBlock(pageBackground));
+        this.writer.commitUnbreakableBlock(0, 0);
+        context.backgroundLength[context.page] += pageBackground.positions.length;
+      } finally {
+        this.backgroundLevel--;
+      }
     }
   }
   addDynamicRepeatable(nodeGetter, sizeFunction, customPropertyName) {
@@ -40546,6 +40237,7 @@ class LayoutBuilder {
       snakingColumns = false
     } = _ref;
     const isUnbreakableRow = dontBreakRows || rowIndex <= rowsWithoutPageBreak - 1;
+    const repeatablesAtRowStart = this.writer.repeatables.length;
     let pageBreaks = [];
     let pageBreaksByRowSpan = [];
     let positions = [];
@@ -40579,6 +40271,16 @@ class LayoutBuilder {
 
       // Page change handler
       const storePageBreakClosure = data => {
+        // Each row needs its own break position. Headers belonging to nested
+        // tables are inside this row's borders, unlike its own/ancestor headers.
+        data = {
+          ...data
+        };
+        if (tableNode) {
+          for (let j = repeatablesAtRowStart; j < this.writer.repeatables.length; j++) {
+            data.y -= this.writer.repeatables[j].height;
+          }
+        }
         const startsRowSpan = cell.rowSpan && cell.rowSpan > 1;
         if (startsRowSpan) {
           data.rowSpan = cell.rowSpan;
@@ -40747,10 +40449,12 @@ class LayoutBuilder {
 
   // lists
   processList(orderedList, node) {
+    const backgroundLevel = this.backgroundLevel;
     const addMarkerToFirstLeaf = line => {
       // I'm not very happy with the way list processing is implemented
       // (both code and algorithm should be rethinked)
-      if (nextMarker) {
+      // Background lines must only consume markers from lists in that background.
+      if (nextMarker && this.backgroundLevel === backgroundLevel) {
         let marker = nextMarker;
         nextMarker = null;
         if (marker.canvas) {
@@ -40782,6 +40486,9 @@ class LayoutBuilder {
 
   // tables
   processTable(tableNode) {
+    // Page breaks and row bottoms belong to the current layout pass only.
+    delete tableNode._bottomByPage;
+    delete tableNode._breaksBySpan;
     this.nestedLevel++;
     let processor = new src_TableProcessor(tableNode);
     processor.beginTable(this.writer);
@@ -41048,6 +40755,10 @@ function decorateNode(node) {
       let y1 = vector.y1;
       let x2 = vector.x2;
       let y2 = vector.y2;
+      let points = vector.type === 'polyline' ? vector.points.map(point => ({
+        x: point.x,
+        y: point.y
+      })) : null;
       vector.resetXY = () => {
         vector.x = x;
         vector.y = y;
@@ -41055,6 +40766,12 @@ function decorateNode(node) {
         vector.y1 = y1;
         vector.x2 = x2;
         vector.y2 = y2;
+        if (points) {
+          points.forEach((point, index) => {
+            vector.points[index].x = point.x;
+            vector.points[index].y = point.y;
+          });
+        }
       };
     });
   }
@@ -41218,7 +40935,19 @@ class TextDecorator {
         color = patternColor;
       }
       let justifyShift = inline.justifyShift || 0;
-      this.pdfDocument.fillColor(color).rect(x + inline.x - justifyShift, y, inline.width + justifyShift, height).fill();
+      let rectX = x + inline.x - justifyShift;
+      let rectWidth = inline.width + justifyShift;
+      let lineStart = x + Math.min(0, line.inlines[0].leadingIndent || 0);
+      if (line.leadingCut > 0 && rectX < lineStart) {
+        // Clip the background of trimmed whitespace at the line start,
+        // keeping any negative leading indent used by the visible text.
+        rectWidth = rectX + rectWidth - lineStart;
+        rectX = lineStart;
+        if (rectWidth <= 0) {
+          continue;
+        }
+      }
+      this.pdfDocument.fillColor(color).rect(rectX, y, rectWidth, height).fill();
     }
   }
   drawDecorations(line, x, y) {
@@ -41506,7 +41235,7 @@ class Renderer {
       }
     }
 
-    // Decorations won't draw correctly for superscript
+    // TODO: Decorations won't draw correctly for superscript
     textDecorator.drawDecorations(line, x, y);
   }
   renderVector(vector) {
@@ -41658,12 +41387,10 @@ class Renderer {
     options.fontCallback = (family, bold, italic) => {
       let fontsFamily = family.split(',').map(f => f.trim().replace(/('|")/g, ''));
       let font = findFont(this.pdfDocument.fonts, fontsFamily, svg.font || 'Roboto');
-      let fontFile = this.pdfDocument.getFontFile(font, bold, italic);
-      if (fontFile === null) {
-        let type = this.pdfDocument.getFontType(bold, italic);
-        throw new Error(`Font '${font}' in style '${type}' is not defined in the font section of the document definition.`);
-      }
-      return fontFile;
+      let loadedFont = this.pdfDocument.provideFont(font, bold, italic);
+      let alias = `pdfmake:${JSON.stringify([font, this.pdfDocument.getFontType(bold, italic)])}`;
+      this.pdfDocument._fontFamilies[alias] = loadedFont;
+      return alias;
     };
     options.imageCallback = link => {
       let src = link.replace(/\s+/g, '');
@@ -41766,12 +41493,17 @@ class PdfPrinter {
    * @param {object} virtualfs
    * @param {object} urlResolver
    * @param {(path: string) => boolean} localAccessPolicy
+   * @param {boolean} urlResourceCaching
    */
-  constructor(fontDescriptors, virtualfs, urlResolver, localAccessPolicy) {
+  constructor(fontDescriptors, virtualfs, urlResolver, localAccessPolicy, urlResourceCaching) {
+    if (urlResourceCaching === void 0) {
+      urlResourceCaching = false;
+    }
     this.fontDescriptors = fontDescriptors;
     this.virtualfs = virtualfs;
     this.urlResolver = urlResolver;
     this.localAccessPolicy = localAccessPolicy;
+    this.urlResourceCaching = urlResourceCaching;
   }
 
   /**
@@ -41857,12 +41589,14 @@ class PdfPrinter {
       if (typeof url === 'object') {
         return {
           url: url.url,
-          headers: url.headers
+          headers: url.headers,
+          cache: url.cache === undefined ? this.urlResourceCaching : url.cache === true
         };
       }
       return {
         url: url,
-        headers: {}
+        headers: {},
+        cache: this.urlResourceCaching
       };
     };
     for (let font in this.fontDescriptors) {
@@ -41871,48 +41605,40 @@ class PdfPrinter {
           if (Array.isArray(this.fontDescriptors[font].normal)) {
             // TrueType Collection
             let url = getExtendedUrl(this.fontDescriptors[font].normal[0]);
-            this.urlResolver.resolve(url.url, url.headers);
-            this.fontDescriptors[font].normal[0] = url.url;
+            this.urlResolver.resolve(url.url, url.headers, url.cache);
           } else {
             let url = getExtendedUrl(this.fontDescriptors[font].normal);
-            this.urlResolver.resolve(url.url, url.headers);
-            this.fontDescriptors[font].normal = url.url;
+            this.urlResolver.resolve(url.url, url.headers, url.cache);
           }
         }
         if (this.fontDescriptors[font].bold) {
           if (Array.isArray(this.fontDescriptors[font].bold)) {
             // TrueType Collection
             let url = getExtendedUrl(this.fontDescriptors[font].bold[0]);
-            this.urlResolver.resolve(url.url, url.headers);
-            this.fontDescriptors[font].bold[0] = url.url;
+            this.urlResolver.resolve(url.url, url.headers, url.cache);
           } else {
             let url = getExtendedUrl(this.fontDescriptors[font].bold);
-            this.urlResolver.resolve(url.url, url.headers);
-            this.fontDescriptors[font].bold = url.url;
+            this.urlResolver.resolve(url.url, url.headers, url.cache);
           }
         }
         if (this.fontDescriptors[font].italics) {
           if (Array.isArray(this.fontDescriptors[font].italics)) {
             // TrueType Collection
             let url = getExtendedUrl(this.fontDescriptors[font].italics[0]);
-            this.urlResolver.resolve(url.url, url.headers);
-            this.fontDescriptors[font].italics[0] = url.url;
+            this.urlResolver.resolve(url.url, url.headers, url.cache);
           } else {
             let url = getExtendedUrl(this.fontDescriptors[font].italics);
-            this.urlResolver.resolve(url.url, url.headers);
-            this.fontDescriptors[font].italics = url.url;
+            this.urlResolver.resolve(url.url, url.headers, url.cache);
           }
         }
         if (this.fontDescriptors[font].bolditalics) {
           if (Array.isArray(this.fontDescriptors[font].bolditalics)) {
             // TrueType Collection
             let url = getExtendedUrl(this.fontDescriptors[font].bolditalics[0]);
-            this.urlResolver.resolve(url.url, url.headers);
-            this.fontDescriptors[font].bolditalics[0] = url.url;
+            this.urlResolver.resolve(url.url, url.headers, url.cache);
           } else {
             let url = getExtendedUrl(this.fontDescriptors[font].bolditalics);
-            this.urlResolver.resolve(url.url, url.headers);
-            this.fontDescriptors[font].bolditalics = url.url;
+            this.urlResolver.resolve(url.url, url.headers, url.cache);
           }
         }
       }
@@ -41921,8 +41647,7 @@ class PdfPrinter {
       for (let image in docDefinition.images) {
         if (docDefinition.images.hasOwnProperty(image)) {
           let url = getExtendedUrl(docDefinition.images[image]);
-          this.urlResolver.resolve(url.url, url.headers);
-          docDefinition.images[image] = url.url;
+          this.urlResolver.resolve(url.url, url.headers, url.cache);
         }
       }
     }
@@ -41930,8 +41655,7 @@ class PdfPrinter {
       for (let attachment in docDefinition.attachments) {
         if (docDefinition.attachments.hasOwnProperty(attachment) && docDefinition.attachments[attachment].src) {
           let url = getExtendedUrl(docDefinition.attachments[attachment].src);
-          this.urlResolver.resolve(url.url, url.headers);
-          docDefinition.attachments[attachment].src = url.url;
+          this.urlResolver.resolve(url.url, url.headers, url.cache);
         }
       }
     }
@@ -41939,8 +41663,7 @@ class PdfPrinter {
       for (let file in docDefinition.files) {
         if (docDefinition.files.hasOwnProperty(file) && docDefinition.files[file].src) {
           let url = getExtendedUrl(docDefinition.files[file].src);
-          this.urlResolver.resolve(url.url, url.headers);
-          docDefinition.files[file].src = url.url;
+          this.urlResolver.resolve(url.url, url.headers, url.cache);
         }
       }
     }
@@ -41978,8 +41701,13 @@ function createMetadata(docDefinition) {
 function embedFiles(docDefinition, pdfKitDoc) {
   if (docDefinition.files) {
     for (const key in docDefinition.files) {
-      const file = docDefinition.files[key];
+      const file = {
+        ...docDefinition.files[key]
+      };
       if (!file.src) return;
+      if (typeof file.src === 'object' && file.src.url) {
+        file.src = file.src.url;
+      }
       if (pdfKitDoc.virtualfs && pdfKitDoc.virtualfs.existsSync(file.src)) {
         file.src = pdfKitDoc.virtualfs.readFileSync(file.src);
       }
@@ -42076,8 +41804,9 @@ async function fetchUrl(url, headers, urlAccessPolicy) {
   throw new Error(`Network request failed (url: "${url}", error: Too many redirects)`);
 }
 class URLResolver {
-  constructor(fs) {
+  constructor(fs, sharedFs) {
     this.fs = fs;
+    this.sharedFs = sharedFs;
     this.resolving = {};
     this.urlAccessPolicy = undefined;
   }
@@ -42088,14 +41817,25 @@ class URLResolver {
   setUrlAccessPolicy(callback) {
     this.urlAccessPolicy = callback;
   }
-  resolve(url, headers) {
+  resolve(url, headers, cache) {
     if (headers === void 0) {
       headers = {};
     }
+    if (cache === void 0) {
+      cache = false;
+    }
+    if (typeof url !== 'string') {
+      return Promise.resolve();
+    }
+    const key = JSON.stringify([url, cache === true]);
     const resolveUrlInternal = async () => {
       if (url.toLowerCase().startsWith('https://') || url.toLowerCase().startsWith('http://')) {
         if (this.fs.existsSync(url)) {
-          return; // url was downloaded earlier
+          if (cache === true && !this.sharedFs.existsSync(url)) {
+            this.fs.unlinkSync(url);
+          } else {
+            return; // url was downloaded earlier
+          }
         }
         const response = await fetchUrl(url, headers, this.urlAccessPolicy);
 
@@ -42106,14 +41846,15 @@ class URLResolver {
           }
         }
         const buffer = await response.arrayBuffer();
-        this.fs.writeFileSync(url, buffer);
+        const target = cache === true ? this.sharedFs : this.fs;
+        target.writeFileSync(url, buffer);
       }
       // else cannot be resolved
     };
-    if (!this.resolving[url]) {
-      this.resolving[url] = resolveUrlInternal();
+    if (!this.resolving[key]) {
+      this.resolving[key] = resolveUrlInternal();
     }
-    return this.resolving[url];
+    return this.resolving[key];
   }
   resolved() {
     return Promise.all(Object.values(this.resolving));
@@ -42129,7 +41870,8 @@ class URLResolver {
 
 class pdfmake {
   constructor() {
-    this.virtualfs = virtual_fs["default"];
+    this.sharedVirtualfs = virtual_fs["default"];
+    this.urlResourceCaching = false;
     this.urlAccessPolicy = undefined;
     this.localAccessPolicy = undefined;
   }
@@ -42158,9 +41900,10 @@ class pdfmake {
     if (typeof this.localAccessPolicy === 'undefined' && isServer) {
       console.warn('No local access policy defined. Consider using setLocalAccessPolicy() to restrict local file system access.');
     }
-    let urlResolver = new src_URLResolver(this.virtualfs);
+    const documentVirtualfs = new virtual_fs/* VirtualFileSystem */.r(this.sharedVirtualfs);
+    let urlResolver = new src_URLResolver(documentVirtualfs, this.sharedVirtualfs);
     urlResolver.setUrlAccessPolicy(this.urlAccessPolicy);
-    let printer = new Printer(this.fonts, this.virtualfs, urlResolver, this.localAccessPolicy);
+    let printer = new Printer(this.fonts, documentVirtualfs, urlResolver, this.localAccessPolicy, this.urlResourceCaching);
     const pdfDocumentPromise = printer.createPdfKitDocument(docDefinition, options);
     return this._transformToDocument(pdfDocumentPromise);
   }
@@ -42173,6 +41916,23 @@ class pdfmake {
       throw new Error("Parameter 'callback' has an invalid type. Function or undefined expected.");
     }
     this.urlAccessPolicy = callback;
+  }
+
+  /**
+   * @param {boolean} enabled
+   */
+  setUrlResourceCaching(enabled) {
+    if (typeof enabled !== 'boolean') {
+      throw new Error("Parameter 'enabled' has an invalid type. Boolean expected.");
+    }
+    this.urlResourceCaching = enabled;
+  }
+  clearUrlResourceCache() {
+    for (const filename of Object.keys(this.sharedVirtualfs.storage)) {
+      if (/^https?:\/\//i.test(filename)) {
+        this.sharedVirtualfs.unlinkSync(filename);
+      }
+    }
   }
   setProgressCallback(callback) {
     this.progressCallback = callback;
@@ -42272,7 +42032,7 @@ class OutputDocument {
 }
 /* harmony default export */ const src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(3643);
+var FileSaver_min = __webpack_require__(633);
 ;// ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -42428,7 +42188,7 @@ class browser_extensions_pdfmake extends src_base {
 /***/ 1001
 (module, __unused_webpack_exports, __webpack_require__) {
 
-module.exports = __webpack_require__(1862)["default"];
+module.exports = __webpack_require__(8069)["default"];
 
 /***/ },
 
@@ -42444,6 +42204,9 @@ module.exports = __webpack_require__(6402)["default"];
 
 "use strict";
 var __webpack_dirname__ = "/";
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   r: () => (/* binding */ VirtualFileSystem)
+/* harmony export */ });
 /* provided dependency */ var Buffer = __webpack_require__(2313).hp;
 const normalizeFilename = filename => {
   if (filename.indexOf(__webpack_dirname__) === 0) {
@@ -42455,8 +42218,12 @@ const normalizeFilename = filename => {
   return filename;
 };
 class VirtualFileSystem {
-  constructor() {
+  constructor(parent) {
+    if (parent === void 0) {
+      parent = null;
+    }
     this.storage = {};
+    this.parent = parent;
   }
 
   /**
@@ -42464,6 +42231,12 @@ class VirtualFileSystem {
    * @returns {boolean}
    */
   existsSync(filename) {
+    if (typeof filename !== 'string') {
+      return false;
+    }
+    if (this.parent && this.parent.existsSync(filename)) {
+      return true;
+    }
     const normalizedFilename = normalizeFilename(filename);
     return typeof this.storage[normalizedFilename] !== 'undefined';
   }
@@ -42474,6 +42247,9 @@ class VirtualFileSystem {
    * @returns {string|Buffer}
    */
   readFileSync(filename, options) {
+    if (this.parent && this.parent.existsSync(filename)) {
+      return this.parent.readFileSync(filename, options);
+    }
     const normalizedFilename = normalizeFilename(filename);
     const encoding = typeof options === 'object' ? options.encoding : options;
     if (!this.existsSync(normalizedFilename)) {
@@ -42497,7 +42273,18 @@ class VirtualFileSystem {
     if (!content && !options) {
       throw new Error('No content');
     }
-    this.storage[normalizedFilename] = encoding || typeof content === 'string' ? new Buffer(content, encoding) : content;
+    this.storage[normalizedFilename] = encoding || typeof content === 'string' ? Buffer.from(content, encoding) : content;
+  }
+
+  /**
+   * @param {string} filename
+   */
+  unlinkSync(filename) {
+    const normalizedFilename = normalizeFilename(filename);
+    if (typeof this.storage[normalizedFilename] === 'undefined') {
+      throw new Error(`File '${normalizedFilename}' not found in virtual file system`);
+    }
+    delete this.storage[normalizedFilename];
   }
 }
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (new VirtualFileSystem());
@@ -49845,7 +49632,7 @@ module.exports = {
 
 /***/ },
 
-/***/ 3643
+/***/ 633
 (module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
