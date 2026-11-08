@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed absolutely positioned content inside unbreakable blocks and table rows being shifted by the fragment's position
+
 ## 0.3.14 - 2026-11-08
 
 - Changed URL resource caching: downloaded fonts, images, attachments and embedded files are now stored per document by default instead of being automatically shared across documents

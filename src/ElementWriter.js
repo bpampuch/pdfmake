@@ -40,7 +40,7 @@ class ElementWriter extends EventEmitter {
 
 		this.alignLine(line);
 
-		addPageItem(page, {
+		this.addPageItem(page, {
 			type: 'line',
 			item: line
 		}, index);
@@ -118,7 +118,7 @@ class ElementWriter extends EventEmitter {
 
 		this.alignImage(image);
 
-		addPageItem(page, {
+		this.addPageItem(page, {
 			type: 'image',
 			item: image
 		}, index);
@@ -175,7 +175,7 @@ class ElementWriter extends EventEmitter {
 
 		this.alignImage(image);
 
-		addPageItem(page, {
+		this.addPageItem(page, {
 			type: 'svg',
 			item: image
 		}, index);
@@ -231,7 +231,7 @@ class ElementWriter extends EventEmitter {
 		attachment.x = context.x + attachment._x;
 		attachment.y = context.y;
 
-		addPageItem(page, {
+		this.addPageItem(page, {
 			type: 'attachment',
 			item: attachment
 		}, index);
@@ -288,7 +288,7 @@ class ElementWriter extends EventEmitter {
 
 		if (page) {
 			offsetVector(vector, ignoreContextX ? 0 : context.x, ignoreContextY ? 0 : context.y);
-			addPageItem(page, {
+			this.addPageItem(page, {
 				type: 'vector',
 				item: vector
 			}, index);
@@ -299,7 +299,7 @@ class ElementWriter extends EventEmitter {
 	beginClip(width, height) {
 		let ctx = this.context();
 		let page = ctx.getCurrentPage();
-		page.items.push({
+		this.addPageItem(page, {
 			type: 'beginClip',
 			item: { x: ctx.x, y: ctx.y, width: width, height: height }
 		});
@@ -309,7 +309,7 @@ class ElementWriter extends EventEmitter {
 	endClip() {
 		let ctx = this.context();
 		let page = ctx.getCurrentPage();
-		page.items.push({
+		this.addPageItem(page, {
 			type: 'endClip'
 		});
 		return true;
@@ -321,7 +321,7 @@ class ElementWriter extends EventEmitter {
 			type: 'beginVerticalAlignment',
 			item: { verticalAlignment: verticalAlignment }
 		};
-		page.items.push(item);
+		this.addPageItem(page, item);
 		return item;
 	}
 
@@ -331,7 +331,7 @@ class ElementWriter extends EventEmitter {
 			type: 'endVerticalAlignment',
 			item: { verticalAlignment: verticalAlignment }
 		};
-		page.items.push(item);
+		this.addPageItem(page, item);
 		return item;
 	}
 
@@ -346,8 +346,8 @@ class ElementWriter extends EventEmitter {
 		// Positions are shared by leaf nodes and their containers. Update each
 		// recorded position once, after the fragment has found its destination.
 		(block.positions || []).forEach(position => {
-			let left = position.left + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
-			let top = position.top + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+			let left = position.left + (position._isAbsolutePosition ? 0 : useBlockXOffset ? (block.xOffset || 0) : ctx.x);
+			let top = position.top + (position._isAbsolutePosition ? 0 : useBlockYOffset ? (block.yOffset || 0) : ctx.y);
 			let pagePosition = ctx.getCurrentPosition();
 			Object.assign(position, pagePosition, {
 				left,
@@ -355,6 +355,9 @@ class ElementWriter extends EventEmitter {
 				horizontalRatio: (left - ctx.pageMargins.left) / pagePosition.pageInnerWidth,
 				verticalRatio: (top - ctx.pageMargins.top) / pagePosition.pageInnerHeight
 			});
+			if (ctx.isAbsolutePosition) {
+				position._isAbsolutePosition = true;
+			}
 			if (this.contextStack.length > 0) {
 				page.positions = page.positions || [];
 				page.positions.push(position);
@@ -364,17 +367,19 @@ class ElementWriter extends EventEmitter {
 		let unbreakableFillsInserted = 0;
 
 		block.items.forEach(item => {
+			const xOffset = item._isAbsolutePosition ? 0 : useBlockXOffset ? (block.xOffset || 0) : ctx.x;
+			const yOffset = item._isAbsolutePosition ? 0 : useBlockYOffset ? (block.yOffset || 0) : ctx.y;
 			switch (item.type) {
 				case 'line':
 					var l = item.item.clone();
 
-					l.x = (l.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
-					l.y = (l.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+					l.x = (l.x || 0) + xOffset;
+					l.y = (l.y || 0) + yOffset;
 
-					page.items.push({
+					this.addPageItem(page, {
 						type: 'line',
 						item: l
-					});
+					}, undefined, item._isAbsolutePosition || ctx.isAbsolutePosition);
 					break;
 
 				case 'vector':
@@ -383,7 +388,7 @@ class ElementWriter extends EventEmitter {
 						v.points = v.points.map(point => pack(point));
 					}
 
-					offsetVector(v, useBlockXOffset ? (block.xOffset || 0) : ctx.x, useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+					offsetVector(v, xOffset, yOffset);
 					if (v._isFillColorFromUnbreakable) {
 						// If the item is a fillColor from an unbreakable block
 						// We have to add it at the beginning of the items body array of the page,
@@ -391,15 +396,15 @@ class ElementWriter extends EventEmitter {
 						delete v._isFillColorFromUnbreakable;
 						const endOfBackgroundItemsIndex = ctx.backgroundLength[ctx.page] + unbreakableFillsInserted;
 						unbreakableFillsInserted++;
-						page.items.splice(endOfBackgroundItemsIndex, 0, {
+						this.addPageItem(page, {
 							type: 'vector',
 							item: v
-						});
+						}, endOfBackgroundItemsIndex, item._isAbsolutePosition || ctx.isAbsolutePosition);
 					} else {
-						page.items.push({
+						this.addPageItem(page, {
 							type: 'vector',
 							item: v
-						});
+						}, undefined, item._isAbsolutePosition || ctx.isAbsolutePosition);
 					}
 					break;
 
@@ -412,13 +417,13 @@ class ElementWriter extends EventEmitter {
 				case 'endVerticalAlignment':
 					var img = pack(item.item);
 
-					img.x = (img.x || 0) + (useBlockXOffset ? (block.xOffset || 0) : ctx.x);
-					img.y = (img.y || 0) + (useBlockYOffset ? (block.yOffset || 0) : ctx.y);
+					img.x = (img.x || 0) + xOffset;
+					img.y = (img.y || 0) + yOffset;
 
-					page.items.push({
+					this.addPageItem(page, {
 						type: item.type,
 						item: img
-					});
+					}, undefined, item._isAbsolutePosition || ctx.isAbsolutePosition);
 					break;
 			}
 		});
@@ -463,6 +468,9 @@ class ElementWriter extends EventEmitter {
 	getCurrentPositionOnPage() {
 		let context = this.context();
 		let position = context.getCurrentPosition();
+		if (context.isAbsolutePosition) {
+			position._isAbsolutePosition = true;
+		}
 		if (this.contextStack.length > 0) {
 			let page = context.getCurrentPage();
 			page.positions = page.positions || [];
@@ -470,13 +478,17 @@ class ElementWriter extends EventEmitter {
 		}
 		return position;
 	}
-}
 
-function addPageItem(page, item, index) {
-	if (index === null || index === undefined || index < 0 || index > page.items.length) {
-		page.items.push(item);
-	} else {
-		page.items.splice(index, 0, item);
+	addPageItem(page, item, index, isAbsolutePosition = this.context().isAbsolutePosition) {
+		// keep the flag on this occurrence, not on a reusable input node or vector
+		if (isAbsolutePosition) {
+			item._isAbsolutePosition = true;
+		}
+		if (index === null || index === undefined || index < 0 || index > page.items.length) {
+			page.items.push(item);
+		} else {
+			page.items.splice(index, 0, item);
+		}
 	}
 }
 

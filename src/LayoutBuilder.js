@@ -512,6 +512,8 @@ class LayoutBuilder {
 
 			let absPosition = node.absolutePosition;
 			if (absPosition) {
+				var previousAbsolutePosition = this.writer.context().isAbsolutePosition;
+				this.writer.context().isAbsolutePosition = true;
 				this.writer.context().beginDetachedBlock();
 				this.writer.context().moveTo(absPosition.x || 0, absPosition.y || 0);
 			}
@@ -550,6 +552,10 @@ class LayoutBuilder {
 				this.processAttachment(node);
 			} else if (!node._span) {
 				throw new Error(`Unrecognized document structure: ${stringifyNode(node)}`);
+			}
+
+			if (absPosition) {
+				this.writer.context().isAbsolutePosition = previousAbsolutePosition;
 			}
 
 			if (absPosition || relPosition) {
