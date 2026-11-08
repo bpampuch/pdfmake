@@ -623,64 +623,66 @@ class LayoutBuilder {
 	processSection(sectionNode) {
 		// TODO: properties
 
+		let { pageSize, pageOrientation, pageMargins, header, footer, background, watermark } = sectionNode;
+
 		let page = this.writer.context().getCurrentPage();
 		if (!page || (page && page.items.length)) { // move to new empty page
 			// page definition inherit from current page
-			if (sectionNode.pageSize === 'inherit') {
-				sectionNode.pageSize = page ? { width: page.pageSize.width, height: page.pageSize.height } : undefined;
+			if (pageSize === 'inherit') {
+				pageSize = page ? { width: page.pageSize.width, height: page.pageSize.height } : undefined;
 			}
-			if (sectionNode.pageOrientation === 'inherit') {
-				sectionNode.pageOrientation = page ? page.pageSize.orientation : undefined;
+			if (pageOrientation === 'inherit') {
+				pageOrientation = page ? page.pageSize.orientation : undefined;
 			}
-			if (sectionNode.pageMargins === 'inherit') {
-				sectionNode.pageMargins = page ? page.pageMargins : undefined;
-			}
-
-			if (sectionNode.header === 'inherit') {
-				sectionNode.header = page ? page.customProperties.header : undefined;
+			if (pageMargins === 'inherit') {
+				pageMargins = page ? page.pageMargins : undefined;
 			}
 
-			if (sectionNode.footer === 'inherit') {
-				sectionNode.footer = page ? page.customProperties.footer : undefined;
+			if (header === 'inherit') {
+				header = page ? page.customProperties.header : undefined;
 			}
 
-			if (sectionNode.background === 'inherit') {
-				sectionNode.background = page ? page.customProperties.background : undefined;
+			if (footer === 'inherit') {
+				footer = page ? page.customProperties.footer : undefined;
 			}
 
-			if (sectionNode.watermark === 'inherit') {
-				sectionNode.watermark = page ? page.customProperties.watermark : undefined;
+			if (background === 'inherit') {
+				background = page ? page.customProperties.background : undefined;
 			}
 
-			if (sectionNode.header && typeof sectionNode.header !== 'function' && sectionNode.header !== null) {
-				sectionNode.header = convertToDynamicContent(sectionNode.header);
+			if (watermark === 'inherit') {
+				watermark = page ? page.customProperties.watermark : undefined;
 			}
 
-			if (sectionNode.footer && typeof sectionNode.footer !== 'function' && sectionNode.footer !== null) {
-				sectionNode.footer = convertToDynamicContent(sectionNode.footer);
+			if (header && typeof header !== 'function' && header !== null) {
+				header = convertToDynamicContent(header);
+			}
+
+			if (footer && typeof footer !== 'function' && footer !== null) {
+				footer = convertToDynamicContent(footer);
 			}
 
 			let customProperties = {};
-			if (typeof sectionNode.header !== 'undefined') {
-				customProperties.header = sectionNode.header;
+			if (typeof header !== 'undefined') {
+				customProperties.header = header;
 			}
 
-			if (typeof sectionNode.footer !== 'undefined') {
-				customProperties.footer = sectionNode.footer;
+			if (typeof footer !== 'undefined') {
+				customProperties.footer = footer;
 			}
 
-			if (typeof sectionNode.background !== 'undefined') {
-				customProperties.background = sectionNode.background;
+			if (typeof background !== 'undefined') {
+				customProperties.background = background;
 			}
 
-			if (typeof sectionNode.watermark !== 'undefined') {
-				customProperties.watermark = sectionNode.watermark;
+			if (typeof watermark !== 'undefined') {
+				customProperties.watermark = watermark;
 			}
 
 			this.writer.addPage(
-				sectionNode.pageSize || this.pageSize,
-				sectionNode.pageOrientation,
-				sectionNode.pageMargins || this.pageMargins,
+				pageSize || this.pageSize,
+				pageOrientation,
+				pageMargins || this.pageMargins,
 				customProperties
 			);
 		}
