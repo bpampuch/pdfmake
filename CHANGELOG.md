@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.3.14 - 2026-11-08
 
 - Changed URL resource caching: downloaded fonts, images, attachments and embedded files are now stored per document by default instead of being automatically shared across documents
+
+	Addresses CVE-2026-119743 in server-side applications that let untrusted users specify resource URLs, such as image URLs in the document definition's `images` dictionary.
 - Added `pdfmake.setUrlResourceCaching(true | false)` to control caching of downloaded URL resources across documents (default: `false`). Per-URL `cache` values override this setting.
 
 	To restore the behavior of previous versions, call `pdfmake.setUrlResourceCaching(true)` before generating documents.
