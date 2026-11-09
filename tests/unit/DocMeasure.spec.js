@@ -469,6 +469,18 @@ describe('DocMeasure', function () {
 	});
 
 	describe('measureImage', function () {
+		it('should re-register a data URL when a node is reused in another document', function () {
+			var dataUrl = 'data:image/png;base64,AAAA';
+			var node = { image: dataUrl };
+			var first = { images: {}, provideImage: function () { return { width: 1, height: 1 }; } };
+			var second = { images: {}, provideImage: function () { return { width: 1, height: 1 }; } };
+
+			new DocMeasure(first).convertIfBase64Image(node);
+			new DocMeasure(second).convertIfBase64Image(node);
+
+			assert.equal(second.images[node.image], dataUrl);
+		});
+
 		it('should measure images with invalid width', function () {
 			var imageNode = {
 				image: '...',
