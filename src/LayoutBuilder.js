@@ -1188,6 +1188,10 @@ class LayoutBuilder {
 		// Page breaks and row bottoms belong to the current layout pass only.
 		delete tableNode._bottomByPage;
 		delete tableNode._breaksBySpan;
+		tableNode.table.body.forEach(row => row.forEach(cell => {
+			delete cell._willBreak;
+			delete cell._bottomY;
+		}));
 
 		this.nestedLevel++;
 		let processor = new TableProcessor(tableNode);

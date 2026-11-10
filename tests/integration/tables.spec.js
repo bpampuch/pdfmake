@@ -9,6 +9,54 @@ describe('Integration test: tables', function () {
 
 	var testHelper = new integrationTestHelper();
 
+	['middle', 'bottom'].forEach(function (verticalAlignment) {
+		[false, true].forEach(function (rowSpan) {
+			[[15, 12], [20, 6], [20, 12]].forEach(function ([precedingLines, cellLines]) {
+				it('restores ' + verticalAlignment + ' cell alignment after pageBreakBefore, rowspan=' + rowSpan + ', preceding=' + precedingLines + ', cell=' + cellLines, function () {
+					function lines(count, prefix) {
+						return Array.from({ length: count }, (_, index) => ({ text: prefix + index }));
+					}
+
+					function render(callback) {
+						var cell = { text: 'Aligned cell', verticalAlignment: verticalAlignment };
+						var body = [[cell, { stack: lines(cellLines, 'right-') }]];
+						if (rowSpan) {
+							cell.rowSpan = 2;
+							body.push([{}, { stack: lines(3, 'last-') }]);
+						}
+						var table = { id: 'table', table: { widths: ['*', '*'], body: body } };
+						if (!callback) {
+							table.pageBreak = 'before';
+						}
+						return new integrationTestHelper().renderPages('A6', {
+							content: lines(precedingLines, 'before-').concat([table]),
+							pageBreakBefore: callback ? node => node.id === 'table' : undefined
+						});
+					}
+
+					function snapshot(pages) {
+						return pages.map(page => ({
+							lines: page.items.filter(entry => entry.type === 'line').map(entry => ({
+								x: entry.item.x,
+								y: entry.item.y,
+								text: entry.item.inlines.map(inline => inline.text).join('')
+							})),
+							alignment: page.items.filter(entry => entry.type === 'beginVerticalAlignment').map(entry => ({
+								height: entry.item.getViewHeight(),
+								nodeHeight: entry.item.getNodeHeight()
+							}))
+						}));
+					}
+
+					var expected = render(false);
+					assert.equal(expected.length, 2);
+					assert.equal(expected[1].items.filter(entry => entry.type === 'beginVerticalAlignment').length, 1);
+					assert.deepStrictEqual(snapshot(render(true)), snapshot(expected));
+				});
+			});
+		});
+	});
+
 	function getColumnText(lines, options) {
 		return lines[options.cell].item.inlines.map(inline => inline.text).join('');
 	}
