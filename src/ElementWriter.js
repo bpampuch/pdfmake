@@ -446,7 +446,11 @@ class ElementWriter extends EventEmitter {
 	 * @param {number} height
 	 */
 	pushContext(contextOrWidth, height) {
+		let absolutePositionContext;
 		if (contextOrWidth === undefined) {
+			// Ordinary fragments retain the page dimensions for absolute content.
+			// Explicitly sized contexts (headers, footers, backgrounds) keep their own.
+			absolutePositionContext = this.context().absolutePositionContext || this.context();
 			height = this.context().getCurrentPage().pageSize.height - this.context().pageMargins.top - this.context().pageMargins.bottom;
 			contextOrWidth = this.context().availableWidth;
 		}
@@ -455,6 +459,7 @@ class ElementWriter extends EventEmitter {
 			let width = contextOrWidth;
 			contextOrWidth = new DocumentContext();
 			contextOrWidth.addPage({ width: width, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
+			contextOrWidth.absolutePositionContext = absolutePositionContext;
 		}
 
 		this.contextStack.push(this.context());

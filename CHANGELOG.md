@@ -4,6 +4,7 @@
 
 - Fixed absolutely positioned content inside unbreakable blocks and table rows being shifted by the fragment's position
 - Fixed incorrect table borders caused by page breaks in long backgrounds
+- Fixed incorrect wrapping and missing absolutely positioned text inside unbreakable blocks and table rows
 
 ## 0.3.14 - 2026-11-08
 

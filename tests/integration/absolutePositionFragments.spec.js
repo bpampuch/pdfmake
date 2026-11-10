@@ -40,6 +40,97 @@ function snapshot(pages) {
 	}));
 }
 
+describe('Integration test: absolute text dimensions in fragments', function () {
+	function textLines(pages) {
+		return pages.flatMap(page => page.items.filter(entry => entry.type === 'line' &&
+			entry.item.inlines[0].text.startsWith('word')).map(entry => ({
+				x: entry.item.x,
+				y: entry.item.y,
+				width: entry.item.maxWidth,
+				text: entry.item.inlines.map(inline => inline.text).join('')
+			})));
+	}
+
+	['block', 'row', 'nested table', 'table header', 'column'].forEach(function (container) {
+		[0, 70].forEach(function (x) {
+			it('uses page dimensions for absolute text in a ' + container + ', x=' + x, function () {
+				function render(wrapped) {
+					var node = { absolutePosition: { x: x, y: 90 }, text: 'word '.repeat(15) };
+					var content = node;
+					if (wrapped) {
+						if (container === 'block') {
+							content = { unbreakable: true, margin: [10, 5, 20, 0], stack: [node, 'flow'] };
+						} else if (container === 'column') {
+							content = { columns: [{ width: 80, unbreakable: true, stack: [node, 'flow'] }, 'other'] };
+						} else {
+							var cell = container === 'nested table'
+								? { table: { widths: [50], dontBreakRows: true, body: [[node]] } }
+								: node;
+							content = { table: { widths: [100], dontBreakRows: true, body: [[{ stack: [cell, 'flow'] }]] } };
+							if (container === 'table header') {
+								content.table.headerRows = 1;
+								content.table.body.push(['data']);
+							}
+						}
+					}
+					var helper = new IntegrationTestHelper();
+					helper.MARGINS.right = 25;
+					return helper.renderPages('A6', { content: [content, 'after'] });
+				}
+				var expected = textLines(render(false));
+				assert.ok(expected.length > 1);
+				assert.deepStrictEqual(textLines(render(true)), expected);
+			});
+		});
+	});
+
+	it('keeps absolute text near the page bottom inside an unbreakable block', function () {
+		function render(unbreakable) {
+			return new IntegrationTestHelper().renderPages('A6', {
+				content: [{ unbreakable: unbreakable, stack: [
+					{ text: 'word', absolutePosition: { x: 70, y: 350 } }, 'flow'
+				] }]
+			});
+		}
+		var expected = textLines(render(false));
+		assert.equal(expected.length, 1);
+		assert.equal(expected[0].y, 350);
+		assert.deepStrictEqual(textLines(render(true)), expected);
+	});
+
+	['header', 'footer', 'background'].forEach(function (location) {
+		[0, 30].forEach(function (x) {
+			it('preserves the full width of absolute text in the ' + location + ', x=' + x, function () {
+				var pages = new IntegrationTestHelper().renderPages('A6', {
+					content: ['body'],
+					[location]: () => ({ text: 'word '.repeat(12), absolutePosition: { x: x, y: 0 } })
+				});
+				var lines = textLines(pages);
+				assert.ok(lines.length > 0);
+				assert.equal(lines.map(line => line.text).join(''), 'word '.repeat(12));
+				lines.forEach(line => {
+					assert.equal(line.x, x);
+					assert.equal(line.width, pages[0].pageSize.width - x);
+				});
+			});
+		});
+	});
+
+	[350, 380, 390, 400].forEach(function (y) {
+		it('preserves absolute background text at y=' + y, function () {
+			var pages = new IntegrationTestHelper().renderPages('A6', {
+				content: ['body'],
+				background: { text: 'word', absolutePosition: { x: 10, y: y } }
+			});
+			var lines = textLines(pages);
+			assert.equal(pages.length, 1);
+			assert.equal(lines.length, 1);
+			assert.equal(lines[0].x, 10);
+			assert.equal(lines[0].y, y);
+		});
+	});
+});
+
 describe('Integration test: absolute coordinates when inserting fragments', function () {
 	['text', 'canvas', 'image', 'cover', 'svg', 'qr', 'attachment', 'table'].forEach(function (type) {
 		[false, true].forEach(function (nested) {

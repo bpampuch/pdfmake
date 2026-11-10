@@ -406,13 +406,14 @@ class DocumentContext extends EventEmitter {
 	}
 
 	moveTo(x, y) {
+		const context = this.absolutePositionContext || this;
 		if (x !== undefined && x !== null) {
 			this.x = x;
-			this.availableWidth = this.getCurrentPage().pageSize.width - this.x - this.pageMargins.right;
+			this.availableWidth = context.getCurrentPage().pageSize.width - this.x - context.pageMargins.right;
 		}
 		if (y !== undefined && y !== null) {
 			this.y = y;
-			this.availableHeight = this.getCurrentPage().pageSize.height - this.y - this.pageMargins.bottom;
+			this.availableHeight = context.getCurrentPage().pageSize.height - this.y - context.pageMargins.bottom;
 		}
 	}
 
