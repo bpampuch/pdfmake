@@ -148,6 +148,61 @@ describe('PDFDocument', function () {
 			sinon.assert.notCalled(embed);
 		});
 
+		it('should reuse identical image bytes across names and binary representations', function () {
+			var data = Buffer.from(imageData.split(',')[1], 'base64');
+			var padded = Buffer.concat([Buffer.from('prefix'), data, Buffer.from('suffix')]);
+			pdfDocument.images = {
+				logo: imageData,
+				copy: imageData,
+				buffer: Buffer.from(data),
+				array: new Uint8Array(padded.buffer, padded.byteOffset + 6, data.length),
+				arrayBuffer: Uint8Array.from(data).buffer
+			};
+			var first = pdfDocument.provideImage('logo');
+			var embed = sinon.spy(first, 'embed');
+			['copy', 'buffer', 'array', 'arrayBuffer'].forEach(function (name) {
+				assert.strictEqual(pdfDocument.provideImage(name), first);
+				assert.strictEqual(pdfDocument._imageRegistry[name], first);
+			});
+			sinon.assert.notCalled(embed);
+		});
+
+		it('should deduplicate JPEG data URLs and buffers without hashing local files', function () {
+			var path = 'examples/images/sampleImage.jpg';
+			var data = require('fs').readFileSync(path);
+			var localImage = pdfDocument.provideImage(path);
+			assert.equal(pdfDocument.imageCache.size, 0);
+			assert.strictEqual(pdfDocument.provideImage(path), localImage);
+			var image = pdfDocument.provideImage('data:image/jpeg;base64,' + data.toString('base64'));
+			assert.notStrictEqual(image, localImage);
+			assert.strictEqual(pdfDocument.provideImage(Buffer.from(data)), image);
+			assert.notStrictEqual(pdfDocument.provideImage(imageData), image);
+		});
+
+		it('should reuse image bytes loaded from the virtual file system', function () {
+			var VirtualFileSystem = require('../../js/virtual-fs').VirtualFileSystem;
+			pdfDocument.virtualfs = new VirtualFileSystem();
+			pdfDocument.virtualfs.writeFileSync('logo.png', Buffer.from(imageData.split(',')[1], 'base64'));
+			pdfDocument.images = { logo: imageData, copy: 'logo.png' };
+			pdfDocument.localAccessPolicy = () => false;
+			var image = pdfDocument.provideImage('logo');
+			assert.strictEqual(pdfDocument.provideImage('copy'), image);
+			assert.strictEqual(pdfDocument.provideImage('logo.png'), image);
+			assert.strictEqual(pdfDocument.openImage('logo.png'), image);
+		});
+
+		it('should keep image objects separate between documents', function () {
+			var other = new PDFDocument();
+			assert.notStrictEqual(pdfDocument.provideImage(imageData), other.provideImage(imageData));
+		});
+
+		it('should check local access before reading an image already cached by content', function () {
+			var path = 'examples/images/sampleImage.jpg';
+			pdfDocument.provideImage(require('fs').readFileSync(path));
+			pdfDocument.localAccessPolicy = () => false;
+			assert.throws(() => pdfDocument.provideImage(path), /Access to local file denied/);
+		});
+
 		it('should read named images from the virtual file system', function () {
 			pdfDocument.images = { logo: 'logo.png' };
 			pdfDocument.virtualfs = {
@@ -206,11 +261,14 @@ describe('PDFDocument', function () {
 		});
 
 		it('should resolve named local image paths before opening them', function () {
-			pdfDocument.images = { logo: 'logo.png' };
+			var path = 'examples/images/sampleImage.jpg';
+			pdfDocument.images = { logo: path };
 			var image = { embed: sinon.spy() };
 			var openImage = sinon.stub(pdfDocument, 'openImage').returns(image);
 			assert.strictEqual(pdfDocument.provideImage('logo'), image);
-			sinon.assert.calledOnceWithExactly(openImage, 'logo.png');
+			sinon.assert.calledOnce(openImage);
+			sinon.assert.calledOnceWithExactly(openImage, path);
+			assert.equal(pdfDocument.imageCache.size, 0);
 			sinon.assert.calledOnceWithExactly(image.embed, pdfDocument);
 		});
 
@@ -225,12 +283,13 @@ describe('PDFDocument', function () {
 		it('should report invalid image data without caching it', function () {
 			assert.throws(() => pdfDocument.provideImage(Buffer.from('invalid image')), /Invalid image:.*Unknown image format/);
 			assert.equal(Object.keys(pdfDocument._imageRegistry).length, 0);
+			assert.equal(pdfDocument.imageCache.size, 0);
 		});
 
 		it('should report an image loader returning no image', function () {
 			sinon.stub(pdfDocument, 'openImage').returns(null);
-			assert.throws(() => pdfDocument.provideImage('missing.png'), /Invalid image: Error: No image/);
-			assert.equal(pdfDocument._imageRegistry['missing.png'], undefined);
+			assert.throws(() => pdfDocument.provideImage(imageData), /Invalid image: Error: No image/);
+			assert.equal(pdfDocument._imageRegistry[imageData], undefined);
 		});
 	});
 

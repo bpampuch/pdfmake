@@ -1,4 +1,5 @@
 import { PDFDocument as PDFKitDocument } from 'pdfkit';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { isString } from './helpers/variableType';
 
 const typeName = (bold, italics) => {
@@ -16,6 +17,7 @@ const typeName = (bold, italics) => {
 class PDFDocument extends PDFKitDocument {
 	constructor(fonts = {}, images = {}, patterns = {}, attachments = {}, options = {}, virtualfs = null, localAccessPolicy = undefined) {
 		super(options);
+		this.imageCache = new Map();
 
 		this.fonts = {};
 		this.fontCache = {};
@@ -93,11 +95,7 @@ class PDFDocument extends PDFKitDocument {
 
 	provideImage(src) {
 		const realImageSrc = src => {
-			let image = this.images[src];
-
-			if (!image) {
-				return src;
-			}
+			let image = this.images[src] || src;
 
 			if (typeof image === 'object' && image.url) {
 				image = image.url;
@@ -119,18 +117,23 @@ class PDFDocument extends PDFKitDocument {
 			return Buffer.from(image.substring(index + 7), 'base64');
 		};
 
-		if (this._imageRegistry[src]) {
+		if (typeof src === 'string' && this._imageRegistry[src]) {
 			return this._imageRegistry[src];
 		}
 
 		let image;
+		let hash;
 
 		let imageSrc = realImageSrc(src);
 
 		this.validateLocalFile(imageSrc);
 
 		try {
-			image = this.openImage(imageSrc);
+			if (typeof imageSrc !== 'string') {
+				const data = imageSrc instanceof ArrayBuffer ? new Uint8Array(imageSrc) : imageSrc;
+				hash = Buffer.from(sha256(data)).toString('base64');
+			}
+			image = this.imageCache.get(hash) || this.openImage(imageSrc);
 			if (!image) {
 				throw new Error('No image');
 			}
@@ -138,8 +141,15 @@ class PDFDocument extends PDFKitDocument {
 			throw new Error(`Invalid image: ${error.toString()}\nImages dictionary should contain dataURL entries (or local file paths in node.js)`, { cause: error });
 		}
 
-		image.embed(this);
-		this._imageRegistry[src] = image;
+		if (!image.obj) {
+			image.embed(this);
+		}
+		if (hash) {
+			this.imageCache.set(hash, image);
+		}
+		if (typeof src === 'string') {
+			this._imageRegistry[src] = image;
+		}
 
 		return image;
 	}

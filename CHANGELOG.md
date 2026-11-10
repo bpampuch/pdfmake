@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reduced PDF size by deduplicating identical base64 and binary images, including raster images embedded in SVG
+- Invalid or missing images embedded in SVG now throw an error instead of being silently skipped
 - Fixed absolutely positioned content inside unbreakable blocks and table rows being shifted by the fragment's position
 - Fixed incorrect table borders caused by page breaks in long backgrounds
 - Fixed incorrect wrapping and missing absolutely positioned text inside unbreakable blocks and table rows

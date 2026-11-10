@@ -1,8 +1,10 @@
 'use strict';
 
 var assert = require('assert');
+var sinon = require('sinon');
 
 var integrationTestHelper = require('./integrationTestHelper');
+var Renderer = require('../../js/Renderer').default;
 
 describe('Integration Test: images', function () {
 
@@ -11,6 +13,82 @@ describe('Integration Test: images', function () {
 	var INLINE_TEST_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAGAQMAAADNIO3CAAAAA1BMVEUAAN7GEcIJAAAAAWJLR0QAiAUdSAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB98DBREbA3IZ3d8AAAALSURBVAjXY2BABwAAEgAB74lUpAAAAABJRU5ErkJggg==';
 
 	describe('basics', function () {
+		it('hashes repeated inline base64 images only once across content, headers and footers', function () {
+			var hash = sinon.spy(require('@noble/hashes/sha2.js'), 'sha256');
+			var dd = {
+				content: [
+					{ image: INLINE_TEST_IMAGE, width: 20 },
+					{ image: INLINE_TEST_IMAGE, width: 40, pageBreak: 'before' }
+				],
+				header: () => ({ image: INLINE_TEST_IMAGE, width: 10 }),
+				footer: () => ({ image: INLINE_TEST_IMAGE, width: 10 })
+			};
+			try {
+				var pages = testHelper.renderPages('A6', dd);
+				assert.equal(pages.length, 2);
+				assert.deepStrictEqual(dd.images, {});
+				pages.forEach(function (page) {
+					var images = page.items.filter(item => item.type === 'image');
+					assert.equal(images.length, 3);
+					images.forEach(item => assert.equal(item.item.image, INLINE_TEST_IMAGE));
+				});
+				new Renderer(testHelper.pdfDocument).renderPages(pages);
+				sinon.assert.calledOnce(hash);
+			} finally {
+				hash.restore();
+			}
+		});
+
+		['data:image/png;base64,aW52YWxpZA==', 'missing-svg-image.png'].forEach(function (src) {
+			it('throws for an invalid SVG image: ' + src, function () {
+				var pages = testHelper.renderPages('A6', {
+					content: [{ svg: '<svg width="12" height="6"><image href="' + src + '" width="12" height="6"/></svg>' }]
+				});
+				assert.throws(() => new Renderer(testHelper.pdfDocument).renderPages(pages), /Invalid image:/);
+			});
+		});
+
+		it('resolves named and VFS images in SVG before opening them from the registry', function () {
+			var pages = testHelper.renderPages('A6', {
+				images: { logo: INLINE_TEST_IMAGE },
+				content: [{ svg: '<svg width="24" height="6"><image href="logo" width="12" height="6"/><image href="virtual.png" x="12" width="12" height="6"/></svg>' }]
+			});
+			var doc = testHelper.pdfDocument;
+			var VirtualFileSystem = require('../../js/virtual-fs').VirtualFileSystem;
+			doc.virtualfs = new VirtualFileSystem();
+			doc.virtualfs.writeFileSync('virtual.png', Buffer.from(INLINE_TEST_IMAGE.split(',')[1], 'base64'));
+			doc.localAccessPolicy = () => false;
+			new Renderer(doc).renderPages(pages);
+			assert.strictEqual(doc._imageRegistry.logo, doc._imageRegistry['virtual.png']);
+			assert.strictEqual(doc.page.xobjects[doc._imageRegistry.logo.label], doc._imageRegistry.logo.obj);
+		});
+
+		it('embeds identical inline, named and SVG images only once across pages', async function () {
+			var pages = testHelper.renderPages('A6', {
+				images: { logo: INLINE_TEST_IMAGE, copy: Buffer.from(INLINE_TEST_IMAGE.split(',')[1], 'base64') },
+				content: [
+					{ image: INLINE_TEST_IMAGE, width: 20 },
+					{ image: INLINE_TEST_IMAGE, width: 40 },
+					{ image: 'logo', width: 30, pageBreak: 'before' },
+					{ image: 'copy', width: 10 },
+					{ svg: '<svg width="12" height="6"><image href="' + INLINE_TEST_IMAGE + '" width="12" height="6"/></svg>' }
+				]
+			});
+			assert.equal(pages.length, 2);
+			var doc = testHelper.pdfDocument;
+			var chunks = [];
+			var result = new Promise((resolve, reject) => {
+				doc.on('data', chunk => chunks.push(chunk));
+				doc.on('end', () => resolve(Buffer.concat(chunks).toString('latin1')));
+				doc.on('error', reject);
+			});
+			new Renderer(doc).renderPages(pages);
+			doc.end();
+			var pdf = await result;
+			assert.equal((pdf.match(/\/Subtype \/Image\b/g) || []).length, 1);
+			assert.equal((pdf.match(/\/I1 Do/g) || []).length, 5);
+		});
+
 		it('renders next element below image', function () {
 			var imageHeight = 150;
 			var dd = {

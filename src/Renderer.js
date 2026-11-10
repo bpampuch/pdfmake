@@ -366,7 +366,7 @@ class Renderer {
 		};
 		options.imageCallback = link => {
 			let src = link.replace(/\s+/g, '');
-			this.pdfDocument.validateLocalFile(src);
+			this.pdfDocument.provideImage(src);
 
 			return src;
 		};

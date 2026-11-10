@@ -20,7 +20,6 @@ class DocMeasure {
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = tableLayouts;
-		this.autoImageIndex = 1;
 	}
 
 	/**
@@ -126,17 +125,7 @@ class DocMeasure {
 		node._alignment = this.styleStack.getProperty('alignment');
 	}
 
-	convertIfBase64Image(node) {
-		if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) { // base64 image
-			let label = `$$pdfmake$$${this.autoImageIndex++}`;
-			this.pdfDocument.images[label] = node.image;
-			node.image = label;
-		}
-	}
-
 	measureImage(node) {
-		this.convertIfBase64Image(node);
-
 		let image = this.pdfDocument.provideImage(node.image);
 
 		let imageSize = { width: image.width, height: image.height };
