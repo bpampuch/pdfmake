@@ -8,6 +8,30 @@ describe('Integration test: background', function () {
 
 	var testHelper = new integrationTestHelper();
 
+	it('ignores page breaks in a temporary background context when laying out table rows', function () {
+		function content() {
+			return { table: { widths: ['*'], body: Array.from({ length: 40 }, (_, index) => [{ text: 'row-' + index }]) } };
+		}
+
+		function tableItems(page) {
+			return page.items.filter(entry => entry.type === 'vector' || (entry.type === 'line' && entry.item.inlines[0].text.startsWith('row-'))).map(entry => {
+				var item = entry.item;
+				return entry.type === 'line'
+					? { text: item.inlines.map(inline => inline.text).join(''), x: item.x, y: item.y }
+					: { type: item.type, x1: item.x1, y1: item.y1, x2: item.x2, y2: item.y2, lineWidth: item.lineWidth };
+			});
+		}
+
+		var expected = testHelper.renderPages('A6', { content: content() });
+		var actual = testHelper.renderPages('A6', {
+			background: () => ({ stack: Array.from({ length: 50 }, (_, index) => ({ text: 'background-' + index })) }),
+			content: content()
+		});
+
+		assert.equal(actual.length, expected.length);
+		actual.forEach((page, index) => assert.deepStrictEqual(tableItems(page), tableItems(expected[index])));
+	});
+
 	['ul', 'ol'].forEach(listType => {
 		['text', 'ul', 'ol'].forEach(backgroundType => {
 			it(`keeps ${listType} markers aligned across pages with a ${backgroundType} background`, function () {
