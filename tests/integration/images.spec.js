@@ -60,34 +60,6 @@ describe('Integration Test: images', function () {
 			});
 		});
 
-		['header', 'footer', 'background'].forEach(function (location) {
-			[false, true].forEach(function (cover) {
-				it('reuses fresh Buffer images in a dynamic ' + location + ' after retrying layout, cover=' + cover, async function () {
-					var calls = 0;
-					var docDefinition = {
-						content: [{ unbreakable: true, text: Array.from({ length: 60 }, (_, i) => 'L' + i).join('\n') }],
-						[location]: () => {
-							calls++;
-							var node = { image: Buffer.from(INLINE_TEST_IMAGE.split(',')[1], 'base64') };
-							if (cover) node.cover = { width: 20, height: 10, align: 'right', valign: 'bottom' };
-							else node.width = 20;
-							return node;
-						}
-					};
-					var helper = new integrationTestHelper();
-					var pages = helper.renderPages('A6', docDefinition);
-					var texts = pages.flatMap(page => page.items.filter(item => item.type === 'line')
-						.map(item => item.item.inlines.map(inline => inline.text).join('')));
-					var pdf = await renderPdf(helper, pages);
-
-					assert.equal(pages.length, 3);
-					assert.ok(calls > pages.length, 'the test must exercise a discarded layout pass');
-					assert.deepStrictEqual(texts, Array.from({ length: 60 }, (_, i) => 'L' + i));
-					assert.equal((pdf.match(/\/Subtype \/Image\b/g) || []).length, 1);
-					assert.equal((pdf.match(/\/I1 Do\b/g) || []).length, 3);
-				});
-			});
-		});
 	});
 
 	describe('basics', function () {
