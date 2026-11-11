@@ -12,6 +12,84 @@ describe('Integration Test: images', function () {
 
 	var INLINE_TEST_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAGAQMAAADNIO3CAAAAA1BMVEUAAN7GEcIJAAAAAWJLR0QAiAUdSAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB98DBREbA3IZ3d8AAAALSURBVAjXY2BABwAAEgAB74lUpAAAAABJRU5ErkJggg==';
 
+	describe('binary image rendering', function () {
+		function renderPdf(helper, pages) {
+			var doc = helper.pdfDocument;
+			var chunks = [];
+			var result = new Promise((resolve, reject) => {
+				doc.on('data', chunk => chunks.push(chunk));
+				doc.on('end', () => resolve(Buffer.concat(chunks).toString('latin1')));
+				doc.on('error', reject);
+			});
+			new Renderer(doc).renderPages(pages);
+			doc.end();
+			return result;
+		}
+
+		['png', 'jpeg'].forEach(function (format) {
+			['Buffer', 'Uint8Array', 'ArrayBuffer'].forEach(function (type) {
+				[false, true].forEach(function (cover) {
+					it('reuses ' + format + ' ' + type + ' images across sources and pages, cover=' + cover, async function () {
+						var data = format === 'png' ? Buffer.from(INLINE_TEST_IMAGE.split(',')[1], 'base64') : require('fs').readFileSync('examples/images/sampleImage.jpg');
+						var dataUrl = 'data:image/' + format + ';base64,' + data.toString('base64');
+						function source() {
+							if (type === 'Buffer') return Buffer.from(data);
+							if (type === 'Uint8Array') return Uint8Array.from(data);
+							return Uint8Array.from(data).buffer;
+						}
+						function image(src, width) {
+							return cover ? { image: src, cover: { width: width, height: width * 0.6, align: 'right', valign: 'bottom' } } : { image: src, width: width };
+						}
+						var shared = source();
+						var content = [image(shared, 20), image(shared, 40), image(source(), 30), image('logo', 20), image(dataUrl, 20),
+							{ svg: '<svg width="20" height="10"><image href="' + dataUrl + '" width="20" height="10"/></svg>' }];
+						content[1].pageBreak = 'before';
+						content[0].link = 'https://example.com/';
+						var helper = new integrationTestHelper();
+						var pages = helper.renderPages('A6', { images: { logo: source() }, content: content });
+						var pdf = await renderPdf(helper, pages);
+
+						assert.equal(pages.length, 2);
+						assert.equal((pdf.match(/\/Subtype \/Image\b/g) || []).length, 1);
+						assert.equal((pdf.match(/\/I1 Do\b/g) || []).length, 6);
+						assert.equal((pdf.match(/\/Subtype \/Link\b/g) || []).length, 1);
+						assert.strictEqual(content[0].image, shared);
+						assert.strictEqual(content[1].image, shared);
+					});
+				});
+			});
+		});
+
+		['header', 'footer', 'background'].forEach(function (location) {
+			[false, true].forEach(function (cover) {
+				it('reuses fresh Buffer images in a dynamic ' + location + ' after retrying layout, cover=' + cover, async function () {
+					var calls = 0;
+					var docDefinition = {
+						content: [{ unbreakable: true, text: Array.from({ length: 60 }, (_, i) => 'L' + i).join('\n') }],
+						[location]: () => {
+							calls++;
+							var node = { image: Buffer.from(INLINE_TEST_IMAGE.split(',')[1], 'base64') };
+							if (cover) node.cover = { width: 20, height: 10, align: 'right', valign: 'bottom' };
+							else node.width = 20;
+							return node;
+						}
+					};
+					var helper = new integrationTestHelper();
+					var pages = helper.renderPages('A6', docDefinition);
+					var texts = pages.flatMap(page => page.items.filter(item => item.type === 'line')
+						.map(item => item.item.inlines.map(inline => inline.text).join('')));
+					var pdf = await renderPdf(helper, pages);
+
+					assert.equal(pages.length, 3);
+					assert.ok(calls > pages.length, 'the test must exercise a discarded layout pass');
+					assert.deepStrictEqual(texts, Array.from({ length: 60 }, (_, i) => 'L' + i));
+					assert.equal((pdf.match(/\/Subtype \/Image\b/g) || []).length, 1);
+					assert.equal((pdf.match(/\/I1 Do\b/g) || []).length, 3);
+				});
+			});
+		});
+	});
+
 	describe('basics', function () {
 		it('hashes repeated inline base64 images only once across content, headers and footers', function () {
 			var hash = sinon.spy(require('@noble/hashes/sha2.js'), 'sha256');

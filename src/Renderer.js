@@ -300,6 +300,7 @@ class Renderer {
 	}
 
 	renderImage(image) {
+		const source = this.pdfDocument.provideImage(image.image);
 		let opacity = isNumber(image.opacity) ? image.opacity : 1;
 		this.pdfDocument.opacity(opacity);
 		if (image.cover) {
@@ -309,10 +310,10 @@ class Renderer {
 			const height = image.cover.height ? image.cover.height : image.height;
 			this.pdfDocument.save();
 			this.pdfDocument.rect(image.x, image.y, width, height).clip();
-			this.pdfDocument.image(image.image, image.x, image.y, { cover: [width, height], align: align, valign: valign });
+			this.pdfDocument.image(source, image.x, image.y, { cover: [width, height], align: align, valign: valign });
 			this.pdfDocument.restore();
 		} else {
-			this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+			this.pdfDocument.image(source, image.x, image.y, { width: image._width, height: image._height });
 		}
 		if (image.link) {
 			this.pdfDocument.link(image.x, image.y, image._width, image._height, image.link);
