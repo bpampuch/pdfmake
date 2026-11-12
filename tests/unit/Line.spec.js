@@ -112,12 +112,26 @@ describe('Line', function () {
 			assert.equal(new Line(100).getAscenderHeight(), 0);
 		});
 
+		it('should return the biggest ascender of the inlines', function () {
+			var line = new Line(100);
+			line.addInline({ width: 10, fontSize: 10, font: { ascender: 900 } });
+			line.addInline({ width: 10, fontSize: 20, font: { ascender: 900 } });
+			assert.equal(line.getAscenderHeight(), 18);
+		});
+
 		it('should use the largest scaled ascender rather than the largest font size', function () {
 			var line = new Line(100);
 			line.addInline({ width: 10, fontSize: 30, font: { ascender: 500 } });
 			line.addInline({ width: 10, fontSize: 20, font: { ascender: 900 } });
 			line.addInline({ width: 10, fontSize: 10, font: { ascender: 800 } });
 			assert.equal(line.getAscenderHeight(), 18);
+		});
+
+		it('should use the baseline of the inline when it is defined (lineHeightMode css)', function () {
+			var line = new Line(100);
+			line.addInline({ width: 10, fontSize: 10, font: { ascender: 900 }, baseline: 11.5 });
+			line.addInline({ width: 10, fontSize: 10, font: { ascender: 900 } });
+			assert.equal(line.getAscenderHeight(), 11.5);
 		});
 	});
 
