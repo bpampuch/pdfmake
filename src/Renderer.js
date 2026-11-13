@@ -1,7 +1,7 @@
 import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
 import { isNumber, isString } from './helpers/variableType';
-import SVGtoPDF from './3rd-party/svg-to-pdfkit';
+import SVGtoPDF from '@pdfmake/svg-to-pdfkit';
 
 const findFont = (fonts, requiredFonts, defaultFont) => {
 	for (let i = 0; i < requiredFonts.length; i++) {

@@ -4,6 +4,7 @@
 
 - Reduced PDF size by deduplicating identical base64 and binary images
 - Invalid or missing images embedded in SVG now throw an error instead of being silently skipped
+- Replaced the unmaintained `svg-to-pdfkit` dependency and local patches with the maintained `@pdfmake/svg-to-pdfkit` fork
 - Fixed absolutely positioned content inside unbreakable blocks and table rows being shifted by the fragment's position
 - Fixed incorrect table borders caused by page breaks in long backgrounds
 - Fixed incorrect wrapping and missing absolutely positioned text inside unbreakable blocks and table rows

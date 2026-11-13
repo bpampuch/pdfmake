@@ -3,9 +3,6 @@ import globals from "globals";
 import js from "@eslint/js";
 
 export default [
-	{
-		ignores: ["src/3rd-party/svg-to-pdfkit/*"],
-	},
 
 	js.configs.recommended,
 
