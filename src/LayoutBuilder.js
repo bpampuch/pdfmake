@@ -35,6 +35,7 @@ class LayoutBuilder {
 		this.nestedLevel = 0;
 		this.verticalAlignmentItemStack = [];
 		this.backgroundLevel = 0;
+		this.contentNodes = [];
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -196,6 +197,7 @@ class LayoutBuilder {
 		};
 
 		this.linearNodeList = [];
+		this.contentNodes = [];
 		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
@@ -219,8 +221,8 @@ class LayoutBuilder {
 		}
 
 		this.processNode(docStructure);
-		// Headers and footers must not participate in content page break decisions.
-		const pageBreakNodes = this.linearNodeList.slice();
+		// Backgrounds, headers and footers must not participate in page break decisions.
+		const pageBreakNodes = this.contentNodes.slice();
 		this.addHeadersAndFooters(header, footer);
 		this.addWatermark(watermark, pdfDocument, defaultStyle);
 
@@ -493,6 +495,9 @@ class LayoutBuilder {
 		};
 
 		this.linearNodeList.push(node);
+		if (this.backgroundLevel === 0) {
+			this.contentNodes.push(node);
+		}
 		decorateNode(node);
 
 		if (this.writer.context().getCurrentPage() !== null) {
