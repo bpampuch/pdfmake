@@ -563,9 +563,10 @@ class TableProcessor {
 								lineWidth: 0,
 								color: fillColor,
 								fillOpacity: fillOpacity,
-								// mark if we are in an unbreakable block
-								_isFillColorFromUnbreakable: !!writer.transactionLevel
-							}, false, true, writer.context().backgroundLength[writer.context().page]);
+								// mark if we are in an unbreakable block,
+								// fills inside a vertical alignment block of this unbreakable block keep their position
+								_isFillColorFromUnbreakable: !!writer.transactionLevel && !writer.getOpenVerticalAlignment()
+							}, false, true, writer.getBackgroundInsertIndex());
 						}
 
 						if (overlayPattern) {
