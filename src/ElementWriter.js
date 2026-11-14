@@ -16,6 +16,7 @@ class ElementWriter extends EventEmitter {
 		super();
 		this._context = context;
 		this.contextStack = [];
+		this.verticalAlignmentStack = [];
 	}
 
 	/**
@@ -322,6 +323,7 @@ class ElementWriter extends EventEmitter {
 			item: { verticalAlignment: verticalAlignment }
 		};
 		this.addPageItem(page, item);
+		this.verticalAlignmentStack.push({ item: item, page: page });
 		return item;
 	}
 
@@ -332,7 +334,38 @@ class ElementWriter extends EventEmitter {
 			item: { verticalAlignment: verticalAlignment }
 		};
 		this.addPageItem(page, item);
+		this.verticalAlignmentStack.pop();
 		return item;
+	}
+
+	/**
+	 * Returns the begin item of the innermost vertical alignment block
+	 * if it is still open and was started on the current page.
+	 *
+	 * @returns {object|null}
+	 */
+	getOpenVerticalAlignment() {
+		let verticalAlignment = this.verticalAlignmentStack[this.verticalAlignmentStack.length - 1];
+		if (verticalAlignment && verticalAlignment.page === this.context().getCurrentPage()) {
+			return verticalAlignment.item;
+		}
+		return null;
+	}
+
+	/**
+	 * Returns the index on the current page where cell backgrounds are inserted.
+	 * Inside an open vertical alignment block, backgrounds are inserted right after
+	 * its begin item, so they are moved together with the aligned content.
+	 *
+	 * @returns {number}
+	 */
+	getBackgroundInsertIndex() {
+		let ctx = this.context();
+		let verticalAlignment = this.getOpenVerticalAlignment();
+		if (verticalAlignment) {
+			return ctx.getCurrentPage().items.indexOf(verticalAlignment) + 1;
+		}
+		return ctx.backgroundLength[ctx.page];
 	}
 
 	addFragment(block, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
@@ -391,10 +424,11 @@ class ElementWriter extends EventEmitter {
 					offsetVector(v, xOffset, yOffset);
 					if (v._isFillColorFromUnbreakable) {
 						// If the item is a fillColor from an unbreakable block
-						// We have to add it at the beginning of the items body array of the page,
+						// We have to add it at the beginning of the items body array of the page
+						// (or of the open vertical alignment block, see getBackgroundInsertIndex),
 						// after the fills already inserted from this block so that they keep their draw order
 						delete v._isFillColorFromUnbreakable;
-						const endOfBackgroundItemsIndex = ctx.backgroundLength[ctx.page] + unbreakableFillsInserted;
+						const endOfBackgroundItemsIndex = this.getBackgroundInsertIndex() + unbreakableFillsInserted;
 						unbreakableFillsInserted++;
 						this.addPageItem(page, {
 							type: 'vector',

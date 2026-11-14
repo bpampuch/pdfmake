@@ -10,6 +10,7 @@
 - Fixed incorrect wrapping and missing absolutely positioned text inside unbreakable blocks and table rows
 - Fixed incorrect vertical alignment of table cells after layout is recalculated by `pageBreakBefore`
 - Fixed infinite layout loops and disappearing backgrounds when using `pageBreakBefore`
+- Fixed backgrounds of nested table cells not being moved with the content of table cells with `verticalAlignment` set to `middle` or `bottom`
 
 ## 0.3.14 - 2026-11-08
 
