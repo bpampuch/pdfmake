@@ -606,18 +606,15 @@ class LayoutBuilder {
 		}
 
 		// No more columns available, move to new page
-		this.writer.moveToNextPage(pageOrientation);
-
-		// Reset snaking column state for the new page
-		// Save lastColumnWidth before reset — if we're inside a nested
-		// column group (e.g. product/price row), the reset would overwrite
-		// it with the snaking column width, corrupting inner column layout.
-		let savedLastColumnWidth = ctx.lastColumnWidth;
-		ctx.resetSnakingColumnsForNewPage();
-		ctx.lastColumnWidth = savedLastColumnWidth;
-		if (tableProcessor) {
-			tableProcessor.alignTable(ctx);
-		}
+		this.writer.moveToNextPage(pageOrientation, context => {
+			// Reset and align the column before inserting repeated table headers.
+			let savedLastColumnWidth = context.lastColumnWidth;
+			context.resetSnakingColumnsForNewPage();
+			context.lastColumnWidth = savedLastColumnWidth;
+			if (tableProcessor) {
+				tableProcessor.alignTable(context);
+			}
+		});
 	}
 
 	// vertical container

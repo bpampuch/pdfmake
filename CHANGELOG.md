@@ -21,6 +21,8 @@
 - Fixed reused canvas backgrounds accumulating coordinate offsets across pages and layout passes
 - Fixed list indentation, container margins and available text width being lost across snaking columns and pages
 - Fixed percentage column widths retaining sizes from a previous layout context in tables and columns
+- Fixed repeated table headers keeping their original column position when snaking columns continue on a new page
+- Fixed ancestor table headers being repeated inside nested snaking columns
 
 ## 0.3.14 - 2026-11-08
 
