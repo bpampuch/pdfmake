@@ -268,6 +268,10 @@ class DocPreprocessor {
 	}
 
 	preprocessAttachment(node) {
+		let src = node.attachment.src;
+		if (src && src.type === 'Buffer' && Array.isArray(src.data)) {
+			node.attachment.src = Buffer.from(src.data);
+		}
 		return node;
 	}
 
