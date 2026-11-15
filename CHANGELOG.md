@@ -13,6 +13,7 @@
 - Fixed backgrounds of nested table cells not being moved with the content of table cells with `verticalAlignment` set to `middle` or `bottom`
 - Fixed supplementary Unicode characters being split into invalid UTF-16 surrogates with `wordBreak: 'break-all'` and when wrapping text wider than the available space
 - Fixed CRLF line endings producing extra line breaks and pages with `wordBreak: 'break-all'`
+- Fixed missing `characterSpacing` between inline fragments
 
 ## 0.3.14 - 2026-11-08
 
