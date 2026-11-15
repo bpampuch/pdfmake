@@ -1414,14 +1414,14 @@ class LayoutBuilder {
 			return newInline;
 		}
 
-		function findMaxFitLength(text, maxWidth, measureFn) {
+		function findMaxFitLength(characters, maxWidth, measureFn) {
 			let low = 1;
-			let high = text.length;
+			let high = characters.length;
 			let bestFit = 1;
 
 			while (low <= high) {
 				const mid = Math.floor((low + high) / 2);
-				const part = text.substring(0, mid);
+				const part = characters.slice(0, mid).join('');
 				const width = measureFn(part);
 
 				if (width <= maxWidth) {
@@ -1449,14 +1449,15 @@ class LayoutBuilder {
 			let inline = textNode._inlines.shift();
 
 			if (!inline.noWrap && inline.text.length > 1 && inline.width > line.getAvailableWidth()) {
-				let maxChars = findMaxFitLength(inline.text, line.getAvailableWidth(), (txt) =>
+				const characters = Array.from(inline.text);
+				let maxChars = findMaxFitLength(characters, line.getAvailableWidth(), (txt) =>
 					textInlines.widthOfText(txt, inline)
 				);
-				if (maxChars < inline.text.length) {
+				if (maxChars < characters.length) {
 					let newInline = cloneInline(inline);
 
-					newInline.text = inline.text.substr(maxChars);
-					inline.text = inline.text.substr(0, maxChars);
+					newInline.text = characters.slice(maxChars).join('');
+					inline.text = characters.slice(0, maxChars).join('');
 
 					newInline.width = textInlines.widthOfText(newInline.text, newInline);
 					inline.width = textInlines.widthOfText(inline.text, inline);

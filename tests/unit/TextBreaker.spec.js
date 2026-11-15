@@ -98,6 +98,24 @@ describe('TextBreaker', function () {
 			assert.equal(result.length, 76);
 		});
 
+		it('should preserve supplementary Unicode characters with wordBreak break-all', function () {
+			var result = textBreaker.getBreaks('A\u{1f600}\u{10400}B', styleStackWordBreakBreakAll);
+			assert.deepEqual(result.map(item => item.text), ['A', '\u{1f600}', '\u{10400}', 'B']);
+		});
+
+		['\n', '\r', '\r\n'].forEach(function (newline) {
+			it('should preserve hard breaks with break-all for ' + JSON.stringify(newline), function () {
+				var result = textBreaker.getBreaks('A' + newline + newline + '\u{1f600}' + newline, styleStackWordBreakBreakAll);
+				assert.deepEqual(result, [
+					{ text: 'A' },
+					{ text: '', lineEnd: true },
+					{ text: '', lineEnd: true },
+					{ text: '\u{1f600}' },
+					{ text: '', lineEnd: true }
+				]);
+			});
+		});
+
 		it('should support keep noWrap from style', function () {
 			var result = textBreaker.getBreaks([{ text: 'very long text' }], styleStackNoWrap);
 			assert.equal(result.length, 1);
