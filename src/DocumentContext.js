@@ -14,6 +14,8 @@ class DocumentContext extends EventEmitter {
 		this.availableWidth = undefined;
 		this.availableHeight = undefined;
 		this.page = -1;
+		this.activeMarginLeft = 0;
+		this.activeMarginRight = 0;
 
 		this.snapshots = [];
 		this.backgroundLength = [];
@@ -36,6 +38,9 @@ class DocumentContext extends EventEmitter {
 			},
 			lastColumnWidth: this.lastColumnWidth,
 			snakingColumns: snakingColumns,
+			activeMarginLeft: this.activeMarginLeft,
+			activeMarginRight: this.activeMarginRight,
+			columnOffset: this.pageMargins ? this.x - this.pageMargins.left : 0,
 			gap: columnGap,
 			columnWidths: columnWidths
 		});
@@ -267,6 +272,7 @@ class DocumentContext extends EventEmitter {
 
 		let currentColumnWidth = (snakingSnapshot.columnWidths && snakingSnapshot.columnWidths[overflowCount]) || this.lastColumnWidth || this.availableWidth;
 		let nextColumnWidth = (snakingSnapshot.columnWidths && snakingSnapshot.columnWidths[overflowCount + 1]) || currentColumnWidth;
+		let marginWidth = this.activeMarginLeft - (snakingSnapshot.activeMarginLeft || 0) + this.activeMarginRight - (snakingSnapshot.activeMarginRight || 0);
 
 		this.lastColumnWidth = nextColumnWidth;
 
@@ -289,6 +295,9 @@ class DocumentContext extends EventEmitter {
 			},
 			lastColumnWidth: nextColumnWidth,
 			snakingColumns: true,
+			activeMarginLeft: snakingSnapshot.activeMarginLeft,
+			activeMarginRight: snakingSnapshot.activeMarginRight,
+			columnOffset: snakingSnapshot.columnOffset,
 			gap: snakingSnapshot.gap,
 			columnWidths: snakingSnapshot.columnWidths
 		});
@@ -296,7 +305,7 @@ class DocumentContext extends EventEmitter {
 		this.x = newX;
 		this.y = newY;
 		this.availableHeight = snakingSnapshot.availableHeight;
-		this.availableWidth = nextColumnWidth;
+		this.availableWidth = nextColumnWidth - marginWidth;
 
 		// Sync non-overflowed inner snapshots (e.g. inner column groups for
 		// product/price rows) with the new snaking column position.
@@ -344,13 +353,12 @@ class DocumentContext extends EventEmitter {
 			this.snapshots.pop();
 		}
 
-		// Reset X to start of first column (left margin)
-		if (this.marginXTopParent) {
-			this.x = this.pageMargins.left + this.marginXTopParent[0];
-		} else {
-			this.x = this.pageMargins.left;
-		}
-		this.availableWidth = firstColumnWidth;
+		// Preserve margins opened inside the column group, including list indentation.
+		let columnX = this.pageMargins.left + (snakingSnapshot.columnOffset ?? (this.marginXTopParent ? this.marginXTopParent[0] : 0));
+		let marginLeft = this.activeMarginLeft - (snakingSnapshot.activeMarginLeft || 0);
+		let marginRight = this.activeMarginRight - (snakingSnapshot.activeMarginRight || 0);
+		this.x = columnX + marginLeft;
+		this.availableWidth = firstColumnWidth - marginLeft - marginRight;
 		this.lastColumnWidth = firstColumnWidth;
 
 		// Sync all snapshots to new page state.
@@ -361,12 +369,12 @@ class DocumentContext extends EventEmitter {
 		for (let i = 0; i < this.snapshots.length; i++) {
 			let snapshot = this.snapshots[i];
 			let isSnakingSnapshot = !!snapshot.snakingColumns;
-			snapshot.x = this.x;
+			snapshot.x = columnX + (snapshot.activeMarginLeft || 0) - (snakingSnapshot.activeMarginLeft || 0);
 			snapshot.y = isSnakingSnapshot ? pageTopY : this.y;
 			snapshot.availableHeight = isSnakingSnapshot ? pageInnerHeight : this.availableHeight;
 			snapshot.page = this.page;
 			if (snapshot.bottomMost) {
-				snapshot.bottomMost.x = this.x;
+				snapshot.bottomMost.x = snapshot.x;
 				snapshot.bottomMost.y = isSnakingSnapshot ? pageTopY : this.y;
 				snapshot.bottomMost.availableHeight = isSnakingSnapshot ? pageInnerHeight : this.availableHeight;
 				snapshot.bottomMost.page = this.page;
@@ -375,6 +383,8 @@ class DocumentContext extends EventEmitter {
 	}
 
 	addMargin(left, right) {
+		this.activeMarginLeft += left;
+		this.activeMarginRight += right || 0;
 		this.x += left;
 		this.availableWidth -= left + (right || 0);
 	}
