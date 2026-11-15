@@ -15,6 +15,7 @@
 - Fixed CRLF line endings producing extra line breaks and pages with `wordBreak: 'break-all'`
 - Fixed missing `characterSpacing` between inline fragments
 - Fixed text lines fitting exactly within `maxHeight` being omitted and `maxHeight: 0` being treated as unlimited
+- Fixed `beforeOdd`, `beforeEven`, `afterOdd` and `afterEven` page breaks selecting the opposite page parity
 
 ## 0.3.14 - 2026-11-08
 
