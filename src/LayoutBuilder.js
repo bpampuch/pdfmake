@@ -1309,7 +1309,7 @@ class LayoutBuilder {
 			line._node = node;
 		}
 		let currentHeight = (line) ? line.getHeight() : 0;
-		let maxHeight = node.maxHeight || -1;
+		let maxHeight = node.maxHeight ?? -1;
 
 		if (line) {
 			let nodeId = getNodeId(node);
@@ -1359,7 +1359,7 @@ class LayoutBuilder {
 			}
 		}
 
-		while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
+		while (line && (maxHeight === -1 || currentHeight <= maxHeight)) {
 			// Check if line fits vertically in current context
 			if (line.getHeight() > this.writer.context().availableHeight && this.writer.context().y > this.writer.context().pageMargins.top) {
 				// Line doesn't fit, forced move to next page/column

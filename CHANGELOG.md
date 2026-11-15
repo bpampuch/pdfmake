@@ -14,6 +14,7 @@
 - Fixed supplementary Unicode characters being split into invalid UTF-16 surrogates with `wordBreak: 'break-all'` and when wrapping text wider than the available space
 - Fixed CRLF line endings producing extra line breaks and pages with `wordBreak: 'break-all'`
 - Fixed missing `characterSpacing` between inline fragments
+- Fixed text lines fitting exactly within `maxHeight` being omitted and `maxHeight: 0` being treated as unlimited
 
 ## 0.3.14 - 2026-11-08
 
