@@ -526,8 +526,8 @@ class TableProcessor {
 
 					body[rowIndex][colIndex]._lastPageNumber = ys[yi].page + 1;
 
-					let fillColor = body[rowIndex][colIndex].fillColor;
-					let fillOpacity = body[rowIndex][colIndex].fillOpacity;
+					let fillColor = body[rowIndex][colIndex]._fillColor;
+					let fillOpacity = body[rowIndex][colIndex]._fillOpacity;
 					if (!fillColor) {
 						fillColor = typeof this.layout.fillColor === 'function' ? this.layout.fillColor(rowIndex, this.tableNode, colIndex) : this.layout.fillColor;
 					}

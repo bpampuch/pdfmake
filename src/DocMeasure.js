@@ -145,7 +145,7 @@ class DocMeasure {
 
 		this.measureImageWithDimensions(node, dimensions);
 
-		node.font = this.styleStack.getProperty('font');
+		node._font = this.styleStack.getProperty('font');
 
 		// SVG requires a defined width and height
 		if (!isNumber(node._width) && !isNumber(node._height)) {
@@ -567,8 +567,8 @@ class DocMeasure {
 		function measureCb(_this, data) {
 			return () => {
 				if (isObject(data)) {
-					data.fillColor = _this.styleStack.getProperty('fillColor');
-					data.fillOpacity = _this.styleStack.getProperty('fillOpacity');
+					data._fillColor = _this.styleStack.getProperty('fillColor');
+					data._fillOpacity = _this.styleStack.getProperty('fillOpacity');
 				}
 				return _this.measureNode(data);
 			};
@@ -661,8 +661,8 @@ class DocMeasure {
 					_span: true,
 					_minWidth: 0,
 					_maxWidth: 0,
-					fillColor: table.body[row][col].fillColor,
-					fillOpacity: table.body[row][col].fillOpacity
+					_fillColor: table.body[row][col]._fillColor,
+					_fillOpacity: table.body[row][col]._fillOpacity
 				};
 			}
 		}

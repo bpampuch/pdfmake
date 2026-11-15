@@ -16,6 +16,7 @@
 - Fixed missing `characterSpacing` between inline fragments
 - Fixed text lines fitting exactly within `maxHeight` being omitted and `maxHeight: 0` being treated as unlimited
 - Fixed `beforeOdd`, `beforeEven`, `afterOdd` and `afterEven` page breaks selecting the opposite page parity
+- Fixed reused table cells and SVG nodes retaining inherited fill styles and fonts from a previous context
 
 ## 0.3.14 - 2026-11-08
 

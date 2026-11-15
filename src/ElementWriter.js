@@ -178,7 +178,7 @@ class ElementWriter extends EventEmitter {
 
 		this.addPageItem(page, {
 			type: 'svg',
-			item: image
+			item: pack(image)
 		}, index);
 
 		context.moveDown(image._height);

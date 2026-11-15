@@ -358,7 +358,7 @@ class Renderer {
 		};
 		options.fontCallback = (family, bold, italic) => {
 			let fontsFamily = family.split(',').map(f => f.trim().replace(/('|")/g, ''));
-			let font = findFont(this.pdfDocument.fonts, fontsFamily, svg.font || 'Roboto');
+			let font = findFont(this.pdfDocument.fonts, fontsFamily, svg._font || svg.font || 'Roboto');
 
 			let loadedFont = this.pdfDocument.provideFont(font, bold, italic);
 			let alias = `pdfmake:${JSON.stringify([font, this.pdfDocument.getFontType(bold, italic)])}`;
