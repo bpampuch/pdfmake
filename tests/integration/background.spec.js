@@ -10,6 +10,50 @@ describe('Integration test: background', function () {
 
 	var testHelper = new integrationTestHelper();
 
+	['left', 'center', 'right'].forEach(function (alignment) {
+		['static', 'shared-function', 'fresh-function'].forEach(function (mode) {
+			[false, true].forEach(function (relayout) {
+				it('keeps canvas coordinates stable for ' + mode + ', alignment=' + alignment + ', relayout=' + relayout, function () {
+					function makeBackground() {
+						return {
+							alignment: alignment,
+							absolutePosition: { x: 70, y: 80 },
+							canvas: [
+								{ type: 'rect', x: 3, y: 4, w: 20, h: 15, color: 'red' },
+								{ type: 'line', x1: 3, y1: 4, x2: 23, y2: 19, lineColor: 'blue' },
+								{ type: 'ellipse', x: 8, y: 9, r1: 5, r2: 4, color: 'green' },
+								{ type: 'polyline', points: [{ x: 3, y: 4 }, { x: 23, y: 19 }], lineColor: 'orange' }
+							]
+						};
+					}
+					function render(background) {
+						return testHelper.renderPages('A6', {
+							background: background,
+							content: [{ text: 'P1' }, { text: 'MOVE' }, { text: 'P2', pageBreak: 'before' }, { text: 'P3', pageBreak: 'before' }],
+							pageBreakBefore: relayout ? node => node.text === 'MOVE' && node.startPosition.pageNumber === 1 : undefined
+						}).map(page => page.items.filter(item => item.type === 'vector').map(entry => {
+							var item = entry.item;
+							return { type: item.type, x: item.x, y: item.y, x1: item.x1, y1: item.y1, x2: item.x2, y2: item.y2, points: item.points };
+						}));
+					}
+					var shared = makeBackground();
+					var background = mode === 'static' ? shared : mode === 'shared-function' ? () => shared : makeBackground;
+					var actual = render(background);
+					assert.equal(actual.length, relayout ? 4 : 3);
+					assert.deepStrictEqual(actual, render(makeBackground));
+					actual.forEach(page => assert.deepStrictEqual(page, actual[0]));
+					assert.equal(shared.canvas[0].x, 3);
+					assert.equal(shared.canvas[0].y, 4);
+					assert.deepStrictEqual(shared.canvas[3].points, [{ x: 3, y: 4 }, { x: 23, y: 19 }]);
+					if (alignment === 'left') {
+						assert.equal(actual[0][0].x, 73);
+						assert.equal(actual[0][0].y, 84);
+					}
+				});
+			});
+		});
+	});
+
 	it('resets static background coordinates when a content page break repeats layout', function () {
 		function background() {
 			return { margin: [20, 30, 0, 0], stack: [

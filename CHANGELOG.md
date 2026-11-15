@@ -18,6 +18,7 @@
 - Fixed `beforeOdd`, `beforeEven`, `afterOdd` and `afterEven` page breaks selecting the opposite page parity
 - Fixed reused table cells and SVG nodes retaining inherited fill styles and fonts from a previous context
 - Fixed Buffer attachments in static document and section headers and footers causing PDF generation to fail
+- Fixed reused canvas backgrounds accumulating coordinate offsets across pages and layout passes
 
 ## 0.3.14 - 2026-11-08
 

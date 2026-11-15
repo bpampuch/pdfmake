@@ -142,6 +142,15 @@ class ElementWriter extends EventEmitter {
 			return false;
 		}
 
+		node = pack(node);
+		node.canvas = node.canvas.map(vector => {
+			let copy = pack(vector);
+			if (copy.type === 'polyline') {
+				copy.points = copy.points.map(point => pack(point));
+			}
+			return copy;
+		});
+
 		this.alignCanvas(node);
 
 		node.canvas.forEach(function (vector) {
