@@ -20,6 +20,7 @@
 - Fixed Buffer attachments in static document and section headers and footers causing PDF generation to fail
 - Fixed reused canvas backgrounds accumulating coordinate offsets across pages and layout passes
 - Fixed list indentation, container margins and available text width being lost across snaking columns and pages
+- Fixed percentage column widths retaining sizes from a previous layout context in tables and columns
 
 ## 0.3.14 - 2026-11-08
 
