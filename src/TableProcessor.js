@@ -350,16 +350,6 @@ class TableProcessor {
 			}
 		}
 
-		// the current cell
-		if (borderColor == null && vLineColIndex < body.length) {
-			currentCell = body[vLineRowIndex][vLineColIndex];
-			if (currentCell && currentCell.borderColor) {
-				if (currentCell.border ? currentCell.border[0] : this.layout.defaultBorder) {
-					borderColor = currentCell.borderColor[0];
-				}
-			}
-		}
-
 		if (borderColor == null && cellBefore && cellBefore._rowSpanCurrentOffset) {
 			let rowCellBeforeAbove = body[vLineRowIndex - cellBefore._rowSpanCurrentOffset][beforeVLineColIndex];
 			if (rowCellBeforeAbove.borderColor) {
@@ -369,11 +359,21 @@ class TableProcessor {
 			}
 		}
 
+		// the current cell
+		if (borderColor == null && vLineColIndex < body[vLineRowIndex].length) {
+			currentCell = body[vLineRowIndex][vLineColIndex];
+			if (currentCell && currentCell.borderColor) {
+				if (currentCell.border ? currentCell.border[0] : this.layout.defaultBorder) {
+					borderColor = currentCell.borderColor[0];
+				}
+			}
+		}
+
 		if (borderColor == null && currentCell && currentCell._rowSpanCurrentOffset) {
 			let rowCurrentCellAbove = body[vLineRowIndex - currentCell._rowSpanCurrentOffset][vLineColIndex];
 			if (rowCurrentCellAbove.borderColor) {
-				if (rowCurrentCellAbove.border ? rowCurrentCellAbove.border[2] : this.layout.defaultBorder) {
-					borderColor = rowCurrentCellAbove.borderColor[2];
+				if (rowCurrentCellAbove.border ? rowCurrentCellAbove.border[0] : this.layout.defaultBorder) {
+					borderColor = rowCurrentCellAbove.borderColor[0];
 				}
 			}
 		}

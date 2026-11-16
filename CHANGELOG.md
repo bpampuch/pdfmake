@@ -41,6 +41,7 @@
 - Fixed page breaks in absolutely or relatively positioned cell content creating false table borders
 - Fixed oversized unbreakable children of absolutely or relatively positioned parents starting on the wrong page
 - Fixed positioned content using its parent's snaking columns and changing the position of following content
+- Fixed vertical table border colors depending on the total number of rows, using the opposite side of a row span, or losing the preceding row span's border color priority
 
 ## 0.3.14 - 2026-11-08
 
