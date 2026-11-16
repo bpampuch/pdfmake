@@ -58,4 +58,21 @@ describe('Integration test: basics', function () {
 		assert.equal(pages[0].items[3].item.y.toFixed(3), (testHelper.MARGINS.top + customMargin * 4 + anotherCustomMargin * 2 + testHelper.LINE_HEIGHT * 3).toFixed(3));
 	});
 
+	it('renders empty text without height', function () {
+		var pages = testHelper.renderPages('A7', {
+			content: [
+				{ text: 'A' },
+				{ text: '' },
+				{ text: null },
+				'',
+				{ text: 'B' }
+			]
+		});
+
+		assert.equal(pages.length, 1);
+		assert.equal(pages[0].items.length, 2);
+		assert.deepEqual(testHelper.getInlineTexts(pages, { page: 0, item: 1 }), ['B']);
+		assert.equal(pages[0].items[1].item.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT);
+	});
+
 });

@@ -855,4 +855,26 @@ describe('Integration test: lists', function () {
 		assert.equal(item5.bullet.inlines.map(inline => inline.text).join(''), 'b. ');
 	});
 
+	['ul', 'ol'].forEach(function (listType) {
+		it('renders a marker and one line for an empty ' + listType + ' entry', function () {
+			var dd = {
+				content: {}
+			};
+			dd.content[listType] = ['item 1', '', 'item 3'];
+
+			var pages = testHelper.renderPages('A6', dd);
+
+			assert.equal(pages.length, 1);
+
+			var item2 = getBulletListLine(pages, { pageNumber: 0, itemNumber: 2 });
+			assert.equal(item2.content.inlines.map(inline => inline.text).join(''), '');
+			assert.ok(item2.bullet);
+			assert.equal(item2.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT);
+
+			var item3 = getBulletListLine(pages, { pageNumber: 0, itemNumber: 3 });
+			assert.equal(item3.content.inlines.map(inline => inline.text).join(''), 'item 3');
+			assert.equal(item3.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 2);
+		});
+	});
+
 });
