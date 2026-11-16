@@ -248,6 +248,8 @@ class LayoutBuilder {
 		let pageBackground = backgroundGetter(context.page + 1, pageSize);
 
 		if (pageBackground) {
+			const repeatables = this.writer.repeatables;
+			this.writer.repeatables = [];
 			this.backgroundLevel++;
 			try {
 				const page = context.getCurrentPage();
@@ -258,6 +260,7 @@ class LayoutBuilder {
 				this.writer.commitUnbreakableBlock(0, 0);
 				context.backgroundLength[context.page] += page.items.length - itemsLength;
 			} finally {
+				this.writer.repeatables = repeatables;
 				this.backgroundLevel--;
 			}
 		}

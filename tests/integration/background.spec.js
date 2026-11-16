@@ -10,6 +10,54 @@ describe('Integration test: background', function () {
 
 	var testHelper = new integrationTestHelper();
 
+	[0, 20, 60, 'table'].forEach(backgroundSize => {
+		[false, true].forEach(dontBreakRows => {
+			['plain', 'snaking', 'nested'].forEach(context => {
+				[false, true].forEach(relayout => {
+					it(`keeps table headers independent of background pages, background=${backgroundSize}, dontBreakRows=${dontBreakRows}, context=${context}, relayout=${relayout}`, function () {
+						function background() {
+							if (backgroundSize === 'table') {
+								return { table: { headerRows: 1, body: [['BG_HEADER']].concat(
+									Array.from({ length: 45 }, (_, index) => ['BG_' + index])
+								) } };
+							}
+							return backgroundSize ? { text: Array.from({ length: backgroundSize }, (_, index) => 'BG_' + index).join('\n') } : null;
+						}
+						function document(withBackground) {
+							var table = { table: { headerRows: 1, dontBreakRows, body: [
+								['HEADER'],
+								[{ text: Array.from({ length: 60 }, (_, index) => 'row' + index).join('\n') }],
+								['END']
+							] } };
+							var nodes = (relayout ? [{ text: 'RETRY' }] : []).concat([table]);
+							var content = context === 'snaking'
+								? [{ snakingColumns: true, columnGap: 10, columns: [{ stack: nodes }, { text: '' }] }]
+								: context === 'nested' ? [{ table: { body: [[{ stack: nodes }, 'SIBLING']] } }] : nodes;
+							return { background: withBackground ? background : undefined, content,
+								pageBreakBefore: relayout ? node => node.text === 'RETRY' : undefined };
+						}
+						function lines(pages) {
+							return pages.map(page => page.items.filter(entry => entry.type === 'line').map(entry => ({
+								text: entry.item.inlines.map(inline => inline.text).join(''), x: entry.item.x, y: entry.item.y
+							})).filter(line => !line.text.startsWith('BG_')));
+						}
+						var expected = lines(testHelper.renderPages('A6', document(false)));
+						var pages = testHelper.renderPages('A6', document(true));
+						var actual = lines(pages);
+
+						assert.deepStrictEqual(actual, expected);
+						assert.deepStrictEqual(actual.flat().filter(line => /^row\d+$/.test(line.text)).map(line => line.text),
+							Array.from({ length: 60 }, (_, index) => 'row' + index));
+						assert.equal(actual.flat().filter(line => line.text === 'END').length, 1);
+						if (backgroundSize === 'table') {
+							pages.forEach(page => assert.equal(page.items.filter(entry => entry.type === 'line' && entry.item.inlines.map(inline => inline.text).join('') === 'BG_HEADER').length, 1));
+						}
+					});
+				});
+			});
+		});
+	});
+
 	['left', 'center', 'right'].forEach(function (alignment) {
 		['static', 'shared-function', 'fresh-function'].forEach(function (mode) {
 			[false, true].forEach(function (relayout) {

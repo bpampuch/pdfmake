@@ -37,6 +37,7 @@
 - Fixed reused table cells changing the vertical alignment of an earlier occurrence
 - Fixed vertical alignment of row spans and cells whose content or bottom margin crosses a page boundary
 - Fixed unnecessary pages before oversized unbreakable content and incorrect cell fill order with QR or table backgrounds
+- Fixed long backgrounds suppressing repeated table headers in the document body
 
 ## 0.3.14 - 2026-11-08
 

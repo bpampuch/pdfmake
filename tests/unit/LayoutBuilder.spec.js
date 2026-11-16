@@ -2070,6 +2070,26 @@ describe('LayoutBuilder', function () {
 			styleDictionary = {};
 		});
 
+		it('restores document repeatables when processing a background fails', function () {
+			builder.layoutDocument(['Text'], pdfDocument, styleDictionary);
+			var repeatables = [{ items: [] }];
+			var error = new Error('Background failure');
+			builder.writer.repeatables = repeatables;
+			var stub = sinon.stub(builder.docPreprocessor, 'preprocessBlock').callsFake(() => {
+				assert.notStrictEqual(builder.writer.repeatables, repeatables);
+				assert.deepStrictEqual(builder.writer.repeatables, []);
+				throw error;
+			});
+
+			try {
+				assert.throws(() => builder.addBackground({ text: 'BACKGROUND' }), actual => actual === error);
+				assert.strictEqual(builder.writer.repeatables, repeatables);
+				assert.equal(builder.backgroundLevel, 0);
+			} finally {
+				stub.restore();
+			}
+		});
+
 		it('should provide the current page and page size', function () {
 			docStructure = ['Text'];
 			background = sinon.spy();
