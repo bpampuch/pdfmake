@@ -518,16 +518,48 @@ describe('Integration test: oversized unbreakable blocks', function () {
 		assert.deepEqual(texts(pages[0]), ['before']);
 	});
 
-	it('does not add a blank page before an oversized table with a top margin and background', function () {
-		var pages = testHelper.renderPages('A6', {
-			background: { text: 'background' },
-			content: { margin: [0, 10, 0, 0], table: {
-				dontBreakRows: true,
-				body: [[{ stack: lines(60, 'long-') }]]
-			} }
+	['text', 'qr', 'table'].forEach(function (backgroundType) {
+		function background() {
+			if (backgroundType === 'qr') {
+				return { qr: 'background', fit: 40 };
+			}
+			if (backgroundType === 'table') {
+				return { table: { body: [['background']] } };
+			}
+			return { text: 'background' };
+		}
+
+		[false, true].forEach(function (precedingContent) {
+			it('starts an oversized table after preceding content only, background=' + backgroundType + ', precedingContent=' + precedingContent, function () {
+				var pages = testHelper.renderPages('A6', {
+					background: background(),
+					content: (precedingContent ? [{ text: 'before' }] : []).concat([{
+						margin: [0, 10, 0, 0], table: {
+							dontBreakRows: true,
+							body: [[{ stack: lines(60, 'long-') }]]
+						}
+					}])
+				});
+
+				assert.deepEqual(allTexts(pages).filter(text => text.startsWith('long-')), lines(60, 'long-').map(node => node.text));
+				assert.equal(pages.length, precedingContent ? 4 : 3);
+				if (precedingContent) {
+					assert.deepEqual(texts(pages[0]).filter(text => text !== 'background'), ['before']);
+				}
+				pages.slice(precedingContent ? 1 : 0).forEach(page => assert.ok(texts(page).some(text => text.startsWith('long-'))));
+			});
 		});
 
-		assert.deepEqual(allTexts(pages).filter(text => text !== 'background'), lines(60, 'long-').map(node => node.text));
-		pages.forEach(page => assert.ok(texts(page).some(text => text.startsWith('long-'))));
+		it('inserts cell fills after the whole page background, background=' + backgroundType, function () {
+			var backgroundItems = testHelper.renderPages('A6', { background: background(), content: [] })[0].items;
+			var pages = testHelper.renderPages('A6', {
+				background: background(),
+				content: { table: { body: [[{ text: 'body', fillColor: 'red' }]] } }
+			});
+			var fillIndex = pages[0].items.findIndex(entry => entry.type === 'vector' && entry.item.color === 'red');
+
+			assert.ok(fillIndex >= backgroundItems.length);
+			assert.deepEqual(pages[0].items.slice(0, backgroundItems.length).map(entry => entry.type), backgroundItems.map(entry => entry.type));
+		});
 	});
 });

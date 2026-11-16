@@ -250,11 +250,13 @@ class LayoutBuilder {
 		if (pageBackground) {
 			this.backgroundLevel++;
 			try {
+				const page = context.getCurrentPage();
+				const itemsLength = page.items.length;
 				this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
 				pageBackground = this.docPreprocessor.preprocessBlock(pageBackground);
 				this.processNode(this.docMeasure.measureBlock(pageBackground));
 				this.writer.commitUnbreakableBlock(0, 0);
-				context.backgroundLength[context.page] += pageBackground.positions.length;
+				context.backgroundLength[context.page] += page.items.length - itemsLength;
 			} finally {
 				this.backgroundLevel--;
 			}
