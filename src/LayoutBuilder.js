@@ -26,16 +26,19 @@ class LayoutBuilder {
 	 * @param {object} pageSize - an object defining page width and height
 	 * @param {object} pageMargins - an object defining top, left, right and bottom margins
 	 * @param {object} svgMeasure
+	 * @param {string} unbreakableOverflow
 	 */
-	constructor(pageSize, pageMargins, svgMeasure) {
+	constructor(pageSize, pageMargins, svgMeasure, unbreakableOverflow = 'allowBreak') {
 		this.pageSize = pageSize;
 		this.pageMargins = pageMargins;
 		this.svgMeasure = svgMeasure;
+		this.unbreakableOverflow = unbreakableOverflow;
 		this.tableLayouts = {};
 		this.nestedLevel = 0;
 		this.verticalAlignmentItemStack = [];
 		this.backgroundLevel = 0;
 		this.contentNodes = [];
+		this.breakableBlocks = new Set();
 	}
 
 	registerTableLayouts(tableLayouts) {
@@ -166,11 +169,18 @@ class LayoutBuilder {
 			});
 		}
 
-		let result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
-		while (addPageBreaksIfNecessary(result.pageBreakNodes, result.pages)) {
-			resetXYs(result);
+		this.breakableBlocks.clear();
+		let result;
+		let repeatLayout;
+		do {
+			const breakableBlockCount = this.breakableBlocks.size;
 			result = this.tryLayoutDocument(docStructure, pdfDocument, styleDictionary, defaultStyle, background, header, footer, watermark);
-		}
+			// Reuse the normal layout pass to restore consumed text and table state.
+			repeatLayout = this.breakableBlocks.size !== breakableBlockCount || addPageBreaksIfNecessary(result.pageBreakNodes, result.pages);
+			if (repeatLayout) {
+				resetXYs(result);
+			}
+		} while (repeatLayout);
 
 		return result.pages;
 	}
@@ -201,7 +211,7 @@ class LayoutBuilder {
 		docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 		docStructure = this.docMeasure.measureDocument(docStructure);
 
-		this.writer = new PageElementWriter(new DocumentContext());
+		this.writer = new PageElementWriter(new DocumentContext(), this.unbreakableOverflow);
 
 		this.writer.context().addListener('pageAdded', (page) => {
 			let backgroundGetter = background;
@@ -426,6 +436,9 @@ class LayoutBuilder {
 			}
 
 			const isDetachedBlock = node.relativePosition || node.absolutePosition;
+			if (this.breakableBlocks.has(node) && !isDetachedBlock) {
+				this.moveToNextPageIfNeeded();
+			}
 
 			// Detached nodes have no margins, their position is only determined by 'x' and 'y'
 			if (margin && !isDetachedBlock) {
@@ -452,7 +465,20 @@ class LayoutBuilder {
 				// Apply lateral margins
 				this.writer.context().addMargin(margin[0], margin[2]);
 			}
+
+			const contentPage = this.writer.context().getCurrentPage();
+			const contentTop = this.writer.context().y;
+
 			callback();
+
+			// Measure before a bottom margin or an explicit break can change the page.
+			// Margins belong to the aligned box even when they do not fit on this page.
+			node.__height = contentPage && contentPage === this.writer.context().getCurrentPage()
+				? this.writer.context().y - contentTop
+				: undefined;
+			if (node.__height !== undefined && margin && !isDetachedBlock) {
+				node.__height += margin[1] + margin[3];
+			}
 
 			// Detached nodes have no margins, their position is only determined by 'x' and 'y'
 			if (margin && !isDetachedBlock) {
@@ -500,17 +526,14 @@ class LayoutBuilder {
 		}
 		decorateNode(node);
 
-		if (this.writer.context().getCurrentPage() !== null) {
-			var prevTop = this.writer.context().getCurrentPosition().top;
-		}
-
 		applyMargins(() => {
 			let verticalAlignment = node.verticalAlignment;
 			if (isVerticalAlignmentAllowed && verticalAlignment) {
+				var verticalAlignmentPage = this.writer.context().getCurrentPage();
 				var verticalAlignmentBegin = this.writer.beginVerticalAlignment(verticalAlignment);
 			}
 
-			let unbreakable = node.unbreakable;
+			let unbreakable = node.unbreakable && !this.breakableBlocks.has(node);
 			if (unbreakable) {
 				this.writer.beginUnbreakableBlock();
 			}
@@ -568,20 +591,36 @@ class LayoutBuilder {
 			}
 
 			if (unbreakable) {
-				this.writer.commitUnbreakableBlock();
+				if (this.writer.commitUnbreakableBlock()) {
+					this.releaseUnbreakableBlock(node);
+				}
 			}
 
 			if (isVerticalAlignmentAllowed && verticalAlignment) {
+				// A transform cannot start on one page and finish on another, even
+				// when all of the cell's content moved to the next page together.
+				verticalAlignmentBegin.item.isCellContentMultiPage = verticalAlignmentPage !== this.writer.context().getCurrentPage();
 				this.verticalAlignmentItemStack.push({
 					begin: verticalAlignmentBegin,
 					end: this.writer.endVerticalAlignment(verticalAlignment)
 				});
 			}
 		});
+	}
 
-		if (prevTop !== undefined) {
-			// TODO: for vertical alignment and does not work (at least) when page break in node
-			node.__height = this.writer.context().getCurrentPosition().top - prevTop;
+	releaseUnbreakableBlock(node) {
+		const isPlainStack = block => block.stack && !block.absolutePosition && !block.relativePosition && !block.pageBreak &&
+			(!block._margin || block._margin.every(value => value === 0));
+
+		this.breakableBlocks.add(node);
+		// Single-child wrappers with identical geometry overflow together.
+		while (isPlainStack(node) && node.stack.length === 1) {
+			const child = node.stack[0];
+			if (!child.unbreakable || !isPlainStack(child)) {
+				break;
+			}
+			this.breakableBlocks.add(child);
+			node = child;
 		}
 	}
 
@@ -800,6 +839,51 @@ class LayoutBuilder {
 		return breaksBySpan.find(desc => desc.prevPage === page && rowIndex === desc.rowIndexOfSpanEnd);
 	}
 
+	_addRowSpanPageBreaks(pageBreaks, breaksBySpan, rowIndex, firstPage, lastPage) {
+		if (!breaksBySpan || firstPage >= lastPage) {
+			return;
+		}
+
+		// Track row breaks and active spans together, without searching the lists per page.
+		const breaksByPage = new Map(pageBreaks.map(rowBreak => [rowBreak.prevPage, { rowBreak }]));
+		let hasEndingSpan = false;
+		breaksBySpan.forEach(spanBreak => {
+			const page = spanBreak.prevPage;
+			if (page < firstPage || page >= lastPage || rowIndex > spanBreak.rowIndexOfSpanEnd) {
+				return;
+			}
+			let entry = breaksByPage.get(page);
+			if (!entry) {
+				entry = {};
+				breaksByPage.set(page, entry);
+			}
+			if (entry.spanBreak) {
+				this._resolveBreakY(entry.spanBreak, spanBreak, entry.spanBreak);
+			} else {
+				entry.spanBreak = { prevPage: page, prevY: spanBreak.prevY, y: spanBreak.y };
+			}
+			if (rowIndex === spanBreak.rowIndexOfSpanEnd) {
+				entry.endsHere = true;
+				hasEndingSpan = true;
+			}
+		});
+
+		if (!hasEndingSpan) {
+			return;
+		}
+		breaksByPage.forEach(({ rowBreak, spanBreak, endsHere }) => {
+			if (!endsHere) {
+				return;
+			}
+			if (rowBreak) {
+				this._resolveBreakY(rowBreak, spanBreak, rowBreak);
+			} else {
+				pageBreaks.push(spanBreak);
+			}
+		});
+		pageBreaks.sort((a, b) => a.prevPage - b.prevPage);
+	}
+
 	_updatePageBreaksData(pageBreaks, tableNode, rowIndex) {
 		Object.keys(tableNode._bottomByPage).forEach(p => {
 			const page = Number(p);
@@ -1014,6 +1098,13 @@ class LayoutBuilder {
 			const skipForSnaking = snakingColumns && i > 0;
 
 			if (!cell._span && !skipForSnaking) {
+				if (cell.verticalAlignment) {
+					cell._verticalAlignmentFirstPage = {
+						start: this.writer.getCurrentPositionOnPage(),
+						ends: [],
+						hasPageBreak: false
+					};
+				}
 				this.processNode(cell, true);
 				this.writer.context().updateBottomByPage();
 
@@ -1027,7 +1118,9 @@ class LayoutBuilder {
 				if (dontBreakRows) {
 					// Calculate how many points we have to discount to Y when dontBreakRows and rowSpan are combined
 					const ctxBeforeRowSpanLastRow = this.writer.contextStack[this.writer.contextStack.length - 1];
+					// Explicit page breaks can leave the row without an unbreakable context.
 					const startsOnCurrentPage = (
+						ctxBeforeRowSpanLastRow &&
 						typeof cell._startingRowSpanPage === 'number' &&
 						cell._startingRowSpanPage === ctxBeforeRowSpanLastRow.page
 					);
@@ -1101,26 +1194,16 @@ class LayoutBuilder {
 				itemBegin.viewHeight = rowHeight;
 				itemBegin.nodeHeight = cell.__height;
 				itemBegin.cell = cell;
-				itemBegin.bottomY = this.writer.context().y;
-				itemBegin.isCellContentMultiPage = !itemBegin.cell.positions.every(item => item.pageNumber === itemBegin.cell.positions[0].pageNumber);
+				itemBegin.isCellContentMultiPage = itemBegin.isCellContentMultiPage || !itemBegin.cell.positions.every(item => item.pageNumber === itemBegin.cell.positions[0].pageNumber);
+				// Keep this occurrence's positions when the same cell is processed again.
+				const firstPage = cell._verticalAlignmentFirstPage;
 				itemBegin.getViewHeight = function () {
-					if (this.cell._willBreak) {
-						return this.cell._bottomY - this.cell._rowTopPageY;
+					if (firstPage && (this.cell.rowSpan > 1 || firstPage.hasPageBreak || firstPage.ends.some(end => end.pageNumber !== firstPage.start.pageNumber))) {
+						// Fragment insertion updates these positions, including moves between
+						// whole unbreakable rows and through enclosing temporary contexts.
+						const bottom = firstPage.ends.reduce((value, end) => end.pageNumber === firstPage.start.pageNumber ? Math.max(value, end.top) : value, firstPage.start.top);
+						return bottom - firstPage.start.top;
 					}
-
-					if (this.cell.rowSpan && this.cell.rowSpan > 1) {
-						if (dontBreakRows) {
-							let rowTopPageY = this.cell._leftEndingCell._startingRowSpanY + this.cell._leftEndingCell._rowTopPageYPadding;
-							return this.cell._leftEndingCell._rowTopPageY - rowTopPageY + this.cell._leftEndingCell._bottomY;
-						} else {
-							if (this.cell._lastPageNumber !== this.cell._leftEndingCell._lastPageNumber) {
-								return this.bottomY - this.cell._leftEndingCell._bottomY;
-							}
-
-							return this.viewHeight + this.cell._leftEndingCell._bottomY - this.bottomY;
-						}
-					}
-
 					return this.viewHeight;
 				};
 				itemBegin.getNodeHeight = function () {
@@ -1129,6 +1212,8 @@ class LayoutBuilder {
 
 				let itemEnd = this.verticalAlignmentItemStack[verticalAlignmentCells[i]].end.item;
 				itemEnd.isCellContentMultiPage = itemBegin.isCellContentMultiPage;
+				itemEnd.getViewHeight = itemBegin.getViewHeight.bind(itemBegin);
+				itemEnd.getNodeHeight = itemBegin.getNodeHeight.bind(itemBegin);
 			}
 		}
 
@@ -1185,6 +1270,35 @@ class LayoutBuilder {
 		this.writer.context().addMargin(-gapSize.width);
 	}
 
+	moveToNextPageIfNeeded(tableProcessor) {
+		const context = this.writer.context();
+		const snapshot = context.snapshots[context.snapshots.length - 1];
+		// Content in a sibling column does not precede this block in its own column.
+		if (snapshot && !snapshot.snakingColumns && snapshot.columnStart &&
+			snapshot.columnStart.page === context.page &&
+			snapshot.columnStart.itemsLength === context.getCurrentPage().items.length) {
+			return;
+		}
+		const pageTop = context.pageMargins.top + this.writer.repeatables.reduce((height, repeatable) => height + repeatable.height, 0);
+		const backgroundLength = context.backgroundLength[context.page] || 0;
+		if (context.y > pageTop && context.getCurrentPage().items.length > backgroundLength) {
+			const resetColumns = context.inSnakingColumns() && !context.isInNestedNonSnakingGroup();
+			this.writer.moveToNextPage(undefined, resetColumns ? () => {
+				if (tableProcessor) {
+					context.addMargin(-tableProcessor.alignmentOffset, tableProcessor.alignmentOffset);
+				}
+				context.resetSnakingColumnsForNewPage();
+				if (tableProcessor) {
+					tableProcessor.alignTable(context);
+					if (tableProcessor.cleanUpRepeatables) {
+						// Row continuations use the header's origin without resetting columns.
+						this.writer.repeatables[this.writer.repeatables.length - 1].xOffset = context.x;
+					}
+				}
+			} : undefined);
+		}
+	}
+
 	// tables
 	processTable(tableNode) {
 		// Page breaks and row bottoms belong to the current layout pass only.
@@ -1193,10 +1307,14 @@ class LayoutBuilder {
 		tableNode.table.body.forEach(row => row.forEach(cell => {
 			delete cell._willBreak;
 			delete cell._bottomY;
+			delete cell._verticalAlignmentFirstPage;
 		}));
 
 		this.nestedLevel++;
-		let processor = new TableProcessor(tableNode);
+		let processor = new TableProcessor(tableNode, this.breakableBlocks);
+		if (this.breakableBlocks.has(tableNode.table.body[0]) || this.breakableBlocks.has(tableNode.table)) {
+			this.moveToNextPageIfNeeded();
+		}
 
 		processor.beginTable(this.writer);
 
@@ -1204,6 +1322,13 @@ class LayoutBuilder {
 		let lastRowHeight = 0;
 
 		for (let i = 0, l = tableNode.table.body.length; i < l; i++) {
+			if (i > 0 && this.breakableBlocks.has(tableNode.table.body[i]) && !tableNode.table.body[i].some(cell => cell._rowSpanCurrentOffset)) {
+				const pageBefore = this.writer.context().page;
+				this.moveToNextPageIfNeeded(processor);
+				if (this.writer.context().page !== pageBefore && !processor.headerRows && processor.layout.hLineWhenBroken !== false) {
+					processor.drawHorizontalLine(i, this.writer);
+				}
+			}
 			// Between table rows: check if we should move to the next snaking column.
 			// This must happen AFTER the previous row's endRow (borders drawn) and
 			// BEFORE this row's beginRow. At this point, the table row column group
@@ -1233,7 +1358,7 @@ class LayoutBuilder {
 
 			// if dontBreakRows and row starts a rowspan
 			// we store the 'y' of the beginning of each rowSpan
-			if (processor.dontBreakRows) {
+			if (tableNode.table.dontBreakRows && !this.breakableBlocks.has(tableNode.table.body[i])) {
 				tableNode.table.body[i].forEach(cell => {
 					if (cell.rowSpan && cell.rowSpan > 1) {
 						cell._startingRowSpanY = this.writer.context().y;
@@ -1274,14 +1399,7 @@ class LayoutBuilder {
 
 			addAll(tableNode.positions, result.positions);
 
-			if (!result.pageBreaks || result.pageBreaks.length === 0) {
-				const breaksBySpan = tableNode && tableNode._breaksBySpan || null;
-				const breakBySpanData = this._findSameRowPageBreakByRowSpanData(breaksBySpan, pageBeforeProcessing, i);
-				if (breakBySpanData) {
-					const finalBreakBySpanData = this._getPageBreakListBySpan(tableNode, breakBySpanData.prevPage, i);
-					result.pageBreaks.push(finalBreakBySpanData);
-				}
-			}
+			this._addRowSpanPageBreaks(result.pageBreaks, tableNode._breaksBySpan, i, pageBeforeProcessing, this.writer.context().page);
 
 			processor.endRow(i, this.writer, result.pageBreaks);
 
@@ -1356,6 +1474,7 @@ class LayoutBuilder {
 			}
 		}
 
+		let triedNewPage = false;
 		while (line && (maxHeight === -1 || currentHeight <= maxHeight)) {
 			// Check if line fits vertically in current context
 			if (line.getHeight() > this.writer.context().availableHeight && this.writer.context().y > this.writer.context().pageMargins.top) {
@@ -1364,7 +1483,17 @@ class LayoutBuilder {
 				// a nested non-snaking group (like a table row). Table cells should use
 				// standard page breaks — column breaks happen between table rows instead.
 				if (this.writer.context().inSnakingColumns() && !this.writer.context().isInNestedNonSnakingGroup()) {
+					let context = this.writer.context();
+					let pageCount = context.pages.length;
 					this.snakingAwarePageBreak(node.pageOrientation);
+					if (context.pages.length > pageCount) {
+						// Existing pages may have different geometry. Once a new page's columns
+						// are exhausted without placing text, more new pages cannot help.
+						if (triedNewPage) {
+							throw new Error('Content cannot fit on a page within the available space.');
+						}
+						triedNewPage = true;
+					}
 
 					// Always reflow text after a snaking break (column or page).
 					// This ensures text adapts to the new column width, whether it's narrower or wider.
@@ -1381,6 +1510,7 @@ class LayoutBuilder {
 
 			let positions = this.writer.addLine(line);
 			node.positions.push(positions);
+			triedNewPage = false;
 			line = this.buildNextLine(node);
 			if (line) {
 				currentHeight += line.getHeight();

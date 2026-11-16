@@ -12,8 +12,9 @@ const hasExplicitPageBreak = cell => {
 };
 
 class TableProcessor {
-	constructor(tableNode) {
+	constructor(tableNode, breakableBlocks = new Set()) {
 		this.tableNode = tableNode;
+		this.breakableBlocks = breakableBlocks;
 		this._isCurrentRowUnbreakable = false;
 	}
 
@@ -130,12 +131,13 @@ class TableProcessor {
 
 			const keepWithHeaderRows = tableNode.table.keepWithHeaderRows;
 
-			if (isPositiveInteger(keepWithHeaderRows)) {
+			if (isPositiveInteger(keepWithHeaderRows) && !this.breakableBlocks.has(tableNode.table)) {
 				this.rowsWithoutPageBreak += keepWithHeaderRows;
 			}
 		}
 
-		this.dontBreakRows = tableNode.table.dontBreakRows || false;
+		this.dontBreakRows = !!tableNode.table.dontBreakRows && !this.breakableBlocks.has(tableNode.table.body[0]);
+		this.headerInUnbreakableBlock = writer.transactionLevel > 0;
 
 		if (this.rowsWithoutPageBreak || this.dontBreakRows) {
 			writer.beginUnbreakableBlock();
@@ -171,6 +173,7 @@ class TableProcessor {
 	}
 
 	beginRow(rowIndex, writer) {
+		this.dontBreakRows = !!this.tableNode.table.dontBreakRows && !this.breakableBlocks.has(this.tableNode.table.body[rowIndex]);
 		this.topLineWidth = this.layout.hLineWidth(rowIndex, this.tableNode);
 		this.rowPaddingTop = this.layout.paddingTop(rowIndex, this.tableNode);
 		this.bottomLineWidth = this.layout.hLineWidth(rowIndex + 1, this.tableNode);
@@ -188,6 +191,9 @@ class TableProcessor {
 
 		const rowCells = this.tableNode.table.body[rowIndex] || [];
 		const rowHasPageBreak = rowCells.some(hasExplicitPageBreak);
+		if (this.dontBreakRows && rowHasPageBreak) {
+			writer.checkUnbreakableOverflow(true);
+		}
 		this._isCurrentRowUnbreakable = this.dontBreakRows && rowIndex > 0 && !rowHasPageBreak;
 
 		if (this._isCurrentRowUnbreakable) {
@@ -393,6 +399,38 @@ class TableProcessor {
 		}
 	}
 
+	releaseRowSpans(rowIndex) {
+		const body = this.tableNode.table.body;
+		if (!this.rowSpanGroups) {
+			// Index connected spans once per table layout, including transitive overlaps.
+			this.rowSpanGroups = new Array(body.length);
+			for (let firstRow = 0; firstRow < body.length;) {
+				let lastRow = firstRow;
+				for (let i = firstRow; i <= lastRow; i++) {
+					body[i].forEach(cell => {
+						lastRow = Math.max(lastRow, i + (cell.rowSpan || 1) - 1);
+					});
+				}
+				const group = { firstRow, lastRow };
+				for (let i = firstRow; i <= lastRow; i++) {
+					this.rowSpanGroups[i] = group;
+				}
+				firstRow = lastRow + 1;
+			}
+		}
+		const { firstRow, lastRow } = this.rowSpanGroups[rowIndex];
+		if (firstRow === lastRow) {
+			return;
+		}
+		for (let i = firstRow; i <= lastRow; i++) {
+			this.breakableBlocks.add(body[i]);
+			// Discard temporary contexts only within this connected span group.
+			body[i].forEach(cell => delete cell._columnEndingContext);
+		}
+		delete this.tableNode._breaksBySpan;
+		delete this.tableNode._bottomByPage;
+	}
+
 	endRow(rowIndex, writer, pageBreaks) {
 		const getLineXs = () => {
 			let result = [];
@@ -482,6 +520,7 @@ class TableProcessor {
 				this.drawHorizontalLine(rowIndex, writer, y1);
 			}
 
+			let alignmentBottomPosition;
 			for (let i = 0, l = xs.length; i < l; i++) {
 				let leftCellBorder = false;
 				let rightCellBorder = false;
@@ -512,12 +551,24 @@ class TableProcessor {
 
 				if (i < l - 1) {
 					body[rowIndex][colIndex]._willBreak = body[rowIndex][colIndex]._willBreak ?? willBreak;
+					let bottomY = this.dontBreakRows ? y2 + this.bottomLineWidth : y2 + (this.bottomLineWidth / 2);
+					if (willBreak || this.dontBreakRows) {
+						bottomY = bottomY - this.rowPaddingBottom;
+					}
+					bottomY -= this.reservedAtBottom;
 					if (body[rowIndex][colIndex]._bottomY === undefined) {
-						let bottomY = this.dontBreakRows ? y2 + this.bottomLineWidth : y2 + (this.bottomLineWidth / 2);
-						if (willBreak || this.dontBreakRows) {
-							bottomY = bottomY - this.rowPaddingBottom;
+						body[rowIndex][colIndex]._bottomY = bottomY;
+					}
+					const spanOffset = body[rowIndex][colIndex]._rowSpanCurrentOffset || 0;
+					const firstPage = body[rowIndex - spanOffset][colIndex]._verticalAlignmentFirstPage;
+					if (firstPage) {
+						firstPage.hasPageBreak = firstPage.hasPageBreak || hasBreaks;
+						if (!alignmentBottomPosition) {
+							alignmentBottomPosition = writer.getCurrentPositionOnPage();
+							// Whole rows end before their bottom padding; split rows use the break boundary.
+							alignmentBottomPosition.top = this.dontBreakRows && !hasBreaks ? y2 - this.rowPaddingBottom : bottomY;
 						}
-						body[rowIndex][colIndex]._bottomY = bottomY - this.reservedAtBottom;
+						firstPage.ends.push(alignmentBottomPosition);
 					}
 					body[rowIndex][colIndex]._rowTopPageY = this.rowTopPageY;
 					if (this.dontBreakRows) {
@@ -632,7 +683,10 @@ class TableProcessor {
 
 			writer.addListener('pageChanged', pageChangedCallback);
 
-			writer.commitUnbreakableBlock();
+			if (writer.commitUnbreakableBlock()) {
+				this.breakableBlocks.add(this.tableNode.table.body[rowIndex]);
+				this.releaseRowSpans(rowIndex);
+			}
 
 			writer.removeListener('pageChanged', pageChangedCallback);
 		}
@@ -640,9 +694,19 @@ class TableProcessor {
 		this._isCurrentRowUnbreakable = false;
 
 		if (this.headerRepeatable && (rowIndex === (this.rowsWithoutPageBreak - 1) || rowIndex === this.tableNode.table.body.length - 1)) {
-			writer.commitUnbreakableBlock();
-			writer.pushToRepeatables(this.headerRepeatable);
-			this.cleanUpRepeatables = true;
+			if (writer.commitUnbreakableBlock()) {
+				if (this.rowsWithoutPageBreak === this.headerRows) {
+					throw new Error('Table header cannot fit on a page within the available space.');
+				}
+				// Release keepWithHeaderRows, but always preserve the repeating header.
+				this.breakableBlocks.add(this.tableNode.table);
+				this.releaseRowSpans(rowIndex);
+			}
+			// Nested headers are measured with their enclosing block and repeated after it is released.
+			if (!this.headerInUnbreakableBlock) {
+				writer.pushToRepeatables(this.headerRepeatable);
+				this.cleanUpRepeatables = true;
+			}
 			this.headerRepeatable = null;
 		}
 	}

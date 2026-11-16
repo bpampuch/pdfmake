@@ -2,9 +2,20 @@
 
 ## Unreleased
 
+- Added the `unbreakableOverflow` option (`'allowBreak'` by default or `'error'`) and explicit errors for content that cannot fit below repeating headers
+
+	Example:
+
+	```js
+	pdfmake.createPdf(docDefinition, { unbreakableOverflow: 'error' });
+	```
+
+	Omit the option or use `{ unbreakableOverflow: 'allowBreak' }` to allow oversized blocks to split across pages when possible.
+
 - Reduced PDF size by deduplicating identical base64 and binary images
 - Invalid or missing images embedded in SVG now throw an error instead of being silently skipped
 - Replaced the unmaintained `svg-to-pdfkit` dependency and local patches with the maintained `@pdfmake/svg-to-pdfkit` fork
+- Fixed missing content in oversized unbreakable blocks, table rows and row spans by retrying layout with page breaks enabled (see option `unbreakableOverflow`)
 - Fixed absolutely positioned content inside unbreakable blocks and table rows being shifted by the fragment's position
 - Fixed incorrect table borders caused by page breaks in long backgrounds
 - Fixed incorrect wrapping and missing absolutely positioned text inside unbreakable blocks and table rows
@@ -23,6 +34,8 @@
 - Fixed percentage column widths retaining sizes from a previous layout context in tables and columns
 - Fixed repeated table headers keeping their original column position when snaking columns continue on a new page
 - Fixed ancestor table headers being repeated inside nested snaking columns
+- Fixed reused table cells changing the vertical alignment of an earlier occurrence
+- Fixed vertical alignment of row spans and cells whose content or bottom margin crosses a page boundary
 
 ## 0.3.14 - 2026-11-08
 

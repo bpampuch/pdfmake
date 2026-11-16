@@ -14,9 +14,12 @@ class PageElementWriter extends ElementWriter {
 
 	/**
 	 * @param {DocumentContext} context
+	 * @param {string} unbreakableOverflow
 	 */
-	constructor(context) {
+	constructor(context, unbreakableOverflow = 'allowBreak') {
 		super(context);
+		this.unbreakableOverflow = unbreakableOverflow;
+		this.isAuxiliaryContext = false;
 		this.transactionLevel = 0;
 		this.repeatables = [];
 	}
@@ -66,7 +69,7 @@ class PageElementWriter extends ElementWriter {
 	}
 
 	addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-		return this._fitOnPage(() => super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition));
+		return this._fitOnPage(() => super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition), true);
 	}
 
 	moveToNextPage(pageOrientation, updateContext) {
@@ -90,6 +93,14 @@ class PageElementWriter extends ElementWriter {
 			}
 		}, this);
 
+		if (snakingColumnGroup) {
+			// Every inner column starts below ancestor headers, which repeat only on pages.
+			const ancestorHeight = this.repeatables.reduce((height, rep) =>
+				height + (rep.snakingColumnGroup !== snakingColumnGroup ? rep.height : 0), 0);
+			snakingColumnGroup.y += ancestorHeight;
+			snakingColumnGroup.availableHeight -= ancestorHeight;
+		}
+
 		this.emit('pageChanged', {
 			prevPage: nextPage.prevPage,
 			prevY: nextPage.prevY,
@@ -112,6 +123,7 @@ class PageElementWriter extends ElementWriter {
 
 	beginUnbreakableBlock(width, height) {
 		if (this.transactionLevel++ === 0) {
+			this.isAuxiliaryContext = width !== undefined || height !== undefined;
 			this.originalX = this.context().x;
 			this.pushContext(width, height);
 		}
@@ -123,8 +135,9 @@ class PageElementWriter extends ElementWriter {
 			this.popContext();
 
 			let nbPages = unbreakableContext.pages.length;
+			let overflowed = nbPages > 1;
 			if (nbPages > 0) {
-				// no support for multi-page unbreakableBlocks
+				// Commit a single fragment; oversized content is retried by the layout builder.
 				let fragment = unbreakableContext.pages[0];
 				fragment.xOffset = forcedX;
 				fragment.yOffset = forcedY;
@@ -147,9 +160,24 @@ class PageElementWriter extends ElementWriter {
 				if (forcedX !== undefined || forcedY !== undefined) {
 					super.addFragment(fragment, true, true, true);
 				} else {
-					this.addFragment(fragment);
+					// Repeatable headers can leave less space than the temporary context.
+					overflowed = !this.addFragment(fragment) || overflowed;
 				}
 			}
+
+			// Report oversized content so the layout can be retried with page breaks enabled.
+			const needsBreak = overflowed && forcedX === undefined && forcedY === undefined;
+			this.checkUnbreakableOverflow(needsBreak);
+			this.isAuxiliaryContext = false;
+			return needsBreak;
+		}
+	}
+
+	checkUnbreakableOverflow(overflowed) {
+		if (overflowed && this.unbreakableOverflow === 'error' && !this.isAuxiliaryContext) {
+			const error = new Error('Unbreakable block cannot fit on a single page within the available space.');
+			error.code = 'UNBREAKABLE_BLOCK_OVERFLOW';
+			throw error;
 		}
 	}
 
@@ -258,7 +286,7 @@ class PageElementWriter extends ElementWriter {
 		return false;
 	}
 
-	_fitOnPage(addFct) {
+	_fitOnPage(addFct, allowFailure = false) {
 		let position = addFct();
 		if (!position) {
 			if (this.canMoveToNextColumn()) {
@@ -303,6 +331,9 @@ class PageElementWriter extends ElementWriter {
 					position = addFct();
 				}
 			}
+		}
+		if (!position && !allowFailure) {
+			throw new Error('Content cannot fit on a page within the available space.');
 		}
 		return position;
 	}

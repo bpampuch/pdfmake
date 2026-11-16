@@ -78,7 +78,7 @@ describe('Integration test: background', function () {
 	});
 
 	[false, true].forEach(dynamic => {
-		['observe', 'pageBreak'].forEach(mode => {
+		['observe', 'pageBreak', 'fallback'].forEach(mode => {
 			it(`excludes a ${dynamic ? 'dynamic' : 'static'} background from page break decisions during ${mode}`, function () {
 				function background() {
 					return { id: 'decor-stack', stack: [
@@ -92,7 +92,7 @@ describe('Integration test: background', function () {
 					return [
 						{ text: 'FIRST' },
 						{ id: 'second', text: 'SECOND', pageBreak: expected && mode === 'pageBreak' ? 'before' : undefined },
-						{ stack: Array.from({ length: 60 }, (_, index) => ({ text: 'row-' + index })) }
+						{ unbreakable: mode === 'fallback', stack: Array.from({ length: 60 }, (_, index) => ({ text: 'row-' + index })) }
 					];
 				}
 

@@ -55,7 +55,7 @@ var docDefinition = {
 			watermark: 'inherit',
 			pageSize: 'A6',
 			pageOrientation: 'portrait',
-			pageMargins: 5,
+			pageMargins: 15,
 			section: [
 				'SECTION 4',
 				'Text in section as A6 page with margin.'
@@ -65,7 +65,7 @@ var docDefinition = {
 			watermark: 'watermark for inherit',
 			pageSize: 'A6',
 			pageOrientation: 'landscape',
-			pageMargins: 10,
+			pageMargins: 20,
 			section: [
 				'SECTION 5',
 				'Text in section as A6 landscape page with margin.'

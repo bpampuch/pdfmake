@@ -33,6 +33,11 @@ class PdfPrinter {
 	 * @returns {Promise<PDFDocument>} resolved promise return a pdfkit document
 	 */
 	async createPdfKitDocument(docDefinition, options = {}) {
+		const unbreakableOverflow = options.unbreakableOverflow === undefined ? 'allowBreak' : options.unbreakableOverflow;
+		if (unbreakableOverflow !== 'allowBreak' && unbreakableOverflow !== 'error') {
+			throw new Error("Invalid unbreakableOverflow option. Expected 'allowBreak' or 'error'.");
+		}
+
 		await this.resolveUrls(docDefinition);
 
 		docDefinition.version = docDefinition.version || '1.3';
@@ -76,7 +81,7 @@ class PdfPrinter {
 		this.pdfKitDoc = new PDFDocument(this.fontDescriptors, docDefinition.images, docDefinition.patterns, docDefinition.attachments, pdfOptions, this.virtualfs, this.localAccessPolicy);
 		embedFiles(docDefinition, this.pdfKitDoc);
 
-		const builder = new LayoutBuilder(pageSize, normalizePageMargin(docDefinition.pageMargins), new SVGMeasure());
+		const builder = new LayoutBuilder(pageSize, normalizePageMargin(docDefinition.pageMargins), new SVGMeasure(), unbreakableOverflow);
 
 		builder.registerTableLayouts(tableLayouts);
 		if (options.tableLayouts) {

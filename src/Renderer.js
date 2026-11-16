@@ -407,33 +407,37 @@ class Renderer {
 		this.pdfDocument.restore();
 	}
 
-	beginVerticalAlignment(item) {
-		if (item.isCellContentMultiPage) {
-			return;
+	getVerticalAlignmentOffset(item) {
+		if (item.isCellContentMultiPage || (item.verticalAlignment !== 'middle' && item.verticalAlignment !== 'bottom')) {
+			return null;
 		}
 
-		switch(item.verticalAlignment) {
-			case 'middle':
-				this.pdfDocument.save();
-				this.pdfDocument.translate(0, -(item.getNodeHeight() - item.getViewHeight()) / 2);
-				break;
-			case 'bottom':
-				this.pdfDocument.save();
-				this.pdfDocument.translate(0, -(item.getNodeHeight() - item.getViewHeight()));
-				break;
+		const nodeHeight = item.getNodeHeight();
+		const viewHeight = item.getViewHeight();
+
+		if (!Number.isFinite(nodeHeight) || !Number.isFinite(viewHeight) || nodeHeight < 0 || viewHeight < nodeHeight) {
+			return null;
+		}
+
+		if (item.verticalAlignment === 'middle') {
+			return (viewHeight - nodeHeight) / 2;
+		}
+
+		// bottom
+		return (viewHeight - nodeHeight);
+	}
+
+	beginVerticalAlignment(item) {
+		const offset = this.getVerticalAlignmentOffset(item);
+		if (offset !== null) {
+			this.pdfDocument.save();
+			this.pdfDocument.translate(0, offset);
 		}
 	}
 
 	endVerticalAlignment(item) {
-		if (item.isCellContentMultiPage) {
-			return;
-		}
-
-		switch(item.verticalAlignment) {
-			case 'middle':
-			case 'bottom':
-				this.pdfDocument.restore();
-				break;
+		if (this.getVerticalAlignmentOffset(item) !== null) {
+			this.pdfDocument.restore();
 		}
 	}
 

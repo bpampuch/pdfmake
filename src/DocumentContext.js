@@ -131,6 +131,7 @@ class DocumentContext extends EventEmitter {
 		this.availableHeight = saved.availableHeight;
 
 		this.lastColumnWidth = width;
+		saved.columnStart = { page: this.page, itemsLength: this.getCurrentPage().items.length };
 	}
 
 	calculateBottomMost(destContext, endingCell) {

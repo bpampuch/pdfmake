@@ -12,7 +12,7 @@ class IntegrationTestHelper {
 		this.DEFAULT_BULLET_SPACER = '9. ';
 	}
 
-	renderPages(sizeName, docDefinition) {
+	renderPages(sizeName, docDefinition, options = {}) {
 		var size = sizes[sizeName];
 		docDefinition.images = docDefinition.images || {};
 		docDefinition.attachments = docDefinition.attachments || {};
@@ -32,7 +32,7 @@ class IntegrationTestHelper {
 		}
 
 		this.pdfDocument = new PDFDocument(fontDescriptors, docDefinition.images, docDefinition.patterns || {}, docDefinition.attachments, { size: [pageSize.width, pageSize.height], compress: false });
-		var builder = new LayoutBuilder(pageSize, { left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom }, new SVGMeasure());
+		var builder = new LayoutBuilder(pageSize, { left: this.MARGINS.left, right: this.MARGINS.right, top: this.MARGINS.top, bottom: this.MARGINS.bottom }, new SVGMeasure(), options.unbreakableOverflow);
 
 		return builder.layoutDocument(
 			docDefinition.content,
