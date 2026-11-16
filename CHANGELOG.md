@@ -39,6 +39,8 @@
 - Fixed unnecessary pages before oversized unbreakable content and incorrect cell fill order with QR or table backgrounds
 - Fixed long backgrounds suppressing repeated table headers in the document body
 - Fixed page breaks in absolutely or relatively positioned cell content creating false table borders
+- Fixed oversized unbreakable children of absolutely or relatively positioned parents starting on the wrong page
+- Fixed positioned content using its parent's snaking columns and changing the position of following content
 
 ## 0.3.14 - 2026-11-08
 

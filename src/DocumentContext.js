@@ -76,6 +76,10 @@ class DocumentContext extends EventEmitter {
 	 */
 	getSnakingSnapshot() {
 		for (let i = this.snapshots.length - 1; i >= 0; i--) {
+			// Positioned content must not flow through its parent's columns.
+			if (this.snapshots[i].isDetachedBlock) {
+				break;
+			}
 			if (this.snapshots[i].snakingColumns) {
 				return this.snapshots[i];
 			}
@@ -362,13 +366,15 @@ class DocumentContext extends EventEmitter {
 		this.availableWidth = firstColumnWidth - marginLeft - marginRight;
 		this.lastColumnWidth = firstColumnWidth;
 
-		// Sync all snapshots to new page state.
-		// When page break occurs within snaking columns, update ALL snapshots
-		// (not just snaking column snapshots) to reflect new page coordinates.
+		// Sync snapshots in this flow to the new page state, preserving detached parents.
+		// Inner non-snaking groups also need the new page coordinates.
 		// This ensures nested structures (like inner product/price columns)
 		// don't retain stale values that would cause layout corruption.
-		for (let i = 0; i < this.snapshots.length; i++) {
+		for (let i = this.snapshots.length - 1; i >= 0; i--) {
 			let snapshot = this.snapshots[i];
+			if (snapshot.isDetachedBlock) {
+				break;
+			}
 			let isSnakingSnapshot = !!snapshot.snakingColumns;
 			snapshot.x = columnX + (snapshot.activeMarginLeft || 0) - (snakingSnapshot.activeMarginLeft || 0);
 			snapshot.y = isSnakingSnapshot ? pageTopY : this.y;
@@ -439,6 +445,7 @@ class DocumentContext extends EventEmitter {
 
 	beginDetachedBlock() {
 		this.snapshots.push({
+			isDetachedBlock: true,
 			detachedBlock: this.detachedBlock,
 			x: this.x,
 			y: this.y,

@@ -1278,6 +1278,10 @@ class LayoutBuilder {
 
 	moveToNextPageIfNeeded(tableProcessor) {
 		const context = this.writer.context();
+		// Released children must retain their positioned parent's current page and origin.
+		if (context.detachedBlock) {
+			return;
+		}
 		const snapshot = context.snapshots[context.snapshots.length - 1];
 		// Content in a sibling column does not precede this block in its own column.
 		if (snapshot && !snapshot.snakingColumns && snapshot.columnStart &&
