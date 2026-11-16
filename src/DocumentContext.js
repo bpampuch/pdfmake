@@ -439,6 +439,7 @@ class DocumentContext extends EventEmitter {
 
 	beginDetachedBlock() {
 		this.snapshots.push({
+			detachedBlock: this.detachedBlock,
 			x: this.x,
 			y: this.y,
 			availableHeight: this.availableHeight,
@@ -446,11 +447,13 @@ class DocumentContext extends EventEmitter {
 			page: this.page,
 			lastColumnWidth: this.lastColumnWidth
 		});
+		this.detachedBlock = {};
 	}
 
 	endDetachedBlock() {
 		let saved = this.snapshots.pop();
 
+		this.detachedBlock = saved.detachedBlock;
 		this.x = saved.x;
 		this.y = saved.y;
 		this.availableWidth = saved.availableWidth;

@@ -503,6 +503,8 @@ class ElementWriter extends EventEmitter {
 			contextOrWidth = new DocumentContext();
 			contextOrWidth.addPage({ width: width, height: height }, { left: 0, right: 0, top: 0, bottom: 0 });
 			contextOrWidth.absolutePositionContext = absolutePositionContext;
+			// Ordinary fragments remain in the same detached flow as their parent.
+			contextOrWidth.detachedBlock = absolutePositionContext ? this.context().detachedBlock : undefined;
 		}
 
 		this.contextStack.push(this.context());

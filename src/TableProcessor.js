@@ -165,7 +165,11 @@ class TableProcessor {
 	}
 
 	onRowBreak(rowIndex, writer) {
+		const detachedBlock = writer.context().detachedBlock;
 		return () => {
+			if (writer.context().detachedBlock !== detachedBlock) {
+				return;
+			}
 			let offset = this.rowPaddingTop + (!this.headerRows ? this.topLineWidth : 0);
 			writer.context().availableHeight -= this.reservedAtBottom;
 			writer.context().moveDown(offset);
