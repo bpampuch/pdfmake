@@ -11,8 +11,8 @@
   "dependencies": {
     "@noble/hashes": "^1.8.0",
     "@pdfmake/svg-to-pdfkit": "~0.2.0",
-    "linebreak": "^1.1.0",
-    "pdfkit": "^0.20.2",
+    "linebreak": "^2.0.0",
+    "pdfkit": "^0.21.0",
     "xmldoc": "^2.0.3"
   },
   "devDependencies": {
@@ -42,7 +42,7 @@
     "webpack-cli": "^7.0.3"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19.0"
   },
   "scripts": {
     "test": "run-s build mocha lint",
