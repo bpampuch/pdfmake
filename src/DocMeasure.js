@@ -259,7 +259,7 @@ class DocMeasure {
 			return {
 				canvas: [{
 					x: radius,
-					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender + (gapSize.baselineOffset || 0) - gapSize.fontSize / 3,
 					r1: radius,
 					r2: radius,
 					type: 'ellipse',
@@ -274,7 +274,7 @@ class DocMeasure {
 			return {
 				canvas: [{
 					x: 0,
-					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - (gapSize.fontSize / 3) - (size / 2),
+					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender + (gapSize.baselineOffset || 0) - (gapSize.fontSize / 3) - (size / 2),
 					h: size,
 					w: size,
 					type: 'rect',
@@ -289,7 +289,7 @@ class DocMeasure {
 			return {
 				canvas: [{
 					x: radius,
-					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender - gapSize.fontSize / 3,
+					y: (gapSize.height / gapSize.lineHeight) + gapSize.descender + (gapSize.baselineOffset || 0) - gapSize.fontSize / 3,
 					r1: radius,
 					r2: radius,
 					type: 'ellipse',
