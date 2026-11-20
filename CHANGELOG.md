@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.15 - 2026-11-20
 
 - Added the `unbreakableOverflow` option (`'allowBreak'` by default or `'error'`) and explicit errors for content that cannot fit below repeating headers
 
