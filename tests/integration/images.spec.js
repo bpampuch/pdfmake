@@ -2,8 +2,9 @@
 
 var assert = require('assert');
 var sinon = require('sinon');
+var rewire = require('rewire');
 
-var integrationTestHelper = require('./integrationTestHelper');
+var integrationTestHelper = rewire('./integrationTestHelper');
 var Renderer = require('../../js/Renderer').default;
 
 describe('Integration Test: images', function () {
@@ -92,7 +93,10 @@ describe('Integration Test: images', function () {
 
 	describe('basics', function () {
 		it('hashes repeated inline base64 images only once across content, headers and footers', function () {
-			var hash = sinon.spy(require('@noble/hashes/sha2.js'), 'sha256');
+			var PDFDocument = rewire('../../js/PDFDocument');
+			var hash = sinon.spy(require('@noble/hashes/sha2.js').sha256);
+			var restoreHash = PDFDocument.__set__('_sha', { sha256: hash });
+			var restoreDocument = integrationTestHelper.__set__('PDFDocument', PDFDocument.default);
 			var dd = {
 				content: [
 					{ image: INLINE_TEST_IMAGE, width: 20 },
@@ -113,7 +117,8 @@ describe('Integration Test: images', function () {
 				new Renderer(testHelper.pdfDocument).renderPages(pages);
 				sinon.assert.calledOnce(hash);
 			} finally {
-				hash.restore();
+				restoreDocument();
+				restoreHash();
 			}
 		});
 

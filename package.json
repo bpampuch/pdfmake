@@ -9,7 +9,7 @@
     "test": "tests"
   },
   "dependencies": {
-    "@noble/hashes": "^1.8.0",
+    "@noble/hashes": "^2.4.0",
     "@pdfmake/svg-to-pdfkit": "~0.2.0",
     "linebreak": "^2.0.0",
     "pdfkit": "^0.21.0",
