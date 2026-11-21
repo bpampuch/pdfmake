@@ -7,6 +7,7 @@ var PDFDocument = require('../../js/PDFDocument').default;
 var Printer = require('../../js/Printer').default;
 var virtualfs = require('../../js/virtual-fs').default;
 var URLResolver = require('../../js/URLResolver').default;
+var defaultUrlProtocols = require('../../js/URLResolver').defaultUrlProtocols;
 var embedFiles = require('rewire')('../../js/Printer').__get__('embedFiles');
 
 describe('Printer', function () {
@@ -100,7 +101,7 @@ describe('Printer', function () {
 	});
 
 	it('should pass switched width and height to pdfkit if page orientation changes from default portrait to landscape', async function () {
-		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs));
+		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs, undefined, 5, defaultUrlProtocols));
 		var docDefinition = {
 			pageSize: { width: SHORT_SIDE, height: LONG_SIDE },
 			content: [
@@ -123,7 +124,7 @@ describe('Printer', function () {
 	});
 
 	it('should pass switched width and height to pdfkit if page orientation changes from portrait to landscape', async function () {
-		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs));
+		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs, undefined, 5, defaultUrlProtocols));
 		var docDefinition = {
 			pageOrientation: 'portrait',
 			pageSize: { width: SHORT_SIDE, height: LONG_SIDE },
@@ -147,7 +148,7 @@ describe('Printer', function () {
 	});
 
 	it('should pass switched width and height to pdfkit if page orientation changes from landscape to portrait', async function () {
-		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs));
+		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs, undefined, 5, defaultUrlProtocols));
 
 		var docDefinition = {
 			pageOrientation: 'landscape',
@@ -178,7 +179,7 @@ describe('Printer', function () {
 
 
 	it('should not switch width and height for pdfkit if page orientation changes from landscape to landscape', async function () {
-		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs));
+		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs, undefined, 5, defaultUrlProtocols));
 		var docDefinition = {
 			pageOrientation: 'portrait',
 			pageSize: { width: SHORT_SIDE, height: LONG_SIDE },
@@ -209,7 +210,7 @@ describe('Printer', function () {
 	});
 
 	it('should print bullet vectors as ellipses', async function () {
-		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs));
+		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs, undefined, 5, defaultUrlProtocols));
 		var docDefinition = {
 			pageOrientation: 'portrait',
 			pageSize: { width: SHORT_SIDE, height: LONG_SIDE },
@@ -255,7 +256,7 @@ describe('Printer', function () {
 	});
 
 	it('should calculate automatic height independently for each section', async function () {
-		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs));
+		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs, undefined, 5, defaultUrlProtocols));
 		var docDefinition = {
 			pageSize: { width: 300, height: 'auto' },
 			pageMargins: 40,
@@ -273,7 +274,7 @@ describe('Printer', function () {
 	});
 
 	it('should print only the require number of pages', async function () {
-		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs));
+		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs, undefined, 5, defaultUrlProtocols));
 
 		var docDefinition = {
 			pageSize: 'A4',
@@ -295,7 +296,7 @@ describe('Printer', function () {
 	});
 
 	it('should print all pages when maxPagesNumber is undefined', async function () {
-		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs));
+		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs, undefined, 5, defaultUrlProtocols));
 
 		var docDefinition = {
 			pageSize: 'A4',
@@ -321,7 +322,7 @@ describe('Printer', function () {
 
 	it('should report progress on each rendered item when a progressCallback is passed', async function () {
 
-		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs));
+		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs, undefined, 5, defaultUrlProtocols));
 
 		var progressCallback = sinon.spy(function () { });
 
@@ -357,7 +358,7 @@ describe('Printer', function () {
 	});
 
 	it('should work without a progressCallback', async function () {
-		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs));
+		printer = new Printer(fontDescriptors, virtualfs, new URLResolver(virtualfs, undefined, 5, defaultUrlProtocols));
 
 		var docDefinition = {
 			pageSize: 'A4',

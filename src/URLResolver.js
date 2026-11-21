@@ -4,14 +4,12 @@ const MAX_REDIRECTS = 30;
 /**
  * @param {string} url
  * @param {object} headers
- * @param {(url: string) => boolean} urlAccessPolicy
- * @returns {Promise<Response>}
+ * @param {(url: string) => void} validateUrlAccessPolicy
+ * @returns {Promise<{buffer: ArrayBuffer, url: string}>}
  */
-async function fetchUrl(url, headers = {}, urlAccessPolicy) {
+export async function fetchUrl(url, headers = {}, validateUrlAccessPolicy) {
 	for (let i = 0; i <= MAX_REDIRECTS; i++) {
-		if ((typeof urlAccessPolicy !== 'undefined') && (urlAccessPolicy(url) !== true)) {
-			throw new Error(`Access to URL denied by resource access policy: ${url}`);
-		}
+		validateUrlAccessPolicy(url);
 
 		try {
 			let response = await fetch(url, { headers, redirect: 'manual' });
@@ -28,14 +26,18 @@ async function fetchUrl(url, headers = {}, urlAccessPolicy) {
 
 			// browsers do not support redirect: 'manual'
 			if (response.type === 'opaqueredirect') {
-				response = await fetch(url, {headers});
+				response = await fetch(url, { headers });
 			}
 
 			if (!response.ok) {
 				throw new Error(`Failed to fetch (status code: ${response.status})`);
 			}
 
-			return response;
+			// validate access policy on redirected url (in browsers, only the final URL is validated)
+			const finalUrl = response.redirected ? response.url : url;
+			validateUrlAccessPolicy(finalUrl);
+
+			return { buffer: await response.arrayBuffer(), url: finalUrl };
 
 		} catch (error) {
 			throw new Error(`Network request failed (url: "${url}", error: ${error.message})`, {cause: error});
@@ -45,12 +47,23 @@ async function fetchUrl(url, headers = {}, urlAccessPolicy) {
 	throw new Error(`Network request failed (url: "${url}", error: Too many redirects)`);
 }
 
+export const defaultUrlProtocols = new Map([['http', fetchUrl], ['https', fetchUrl]]);
+
 class URLResolver {
-	constructor(fs, sharedFs) {
+	constructor(fs, sharedFs, concurrency, urlProtocols) {
+		if (!Number.isInteger(concurrency) || concurrency < 1) {
+			throw new Error("Parameter 'concurrency' must be a positive integer.");
+		}
+
 		this.fs = fs;
 		this.sharedFs = sharedFs;
 		this.resolving = {};
 		this.urlAccessPolicy = undefined;
+		this.validateUrlAccessPolicy = this.validateUrlAccessPolicy.bind(this);
+		this.urlProtocols = new Map(urlProtocols);
+		this.concurrency = concurrency;
+		this.activeDownloads = 0;
+		this.queue = [];
 	}
 
 	/**
@@ -60,6 +73,15 @@ class URLResolver {
 		this.urlAccessPolicy = callback;
 	}
 
+	/**
+	 * @param {string} url
+	 */
+	validateUrlAccessPolicy(url) {
+		if ((typeof this.urlAccessPolicy !== 'undefined') && (this.urlAccessPolicy(url) !== true)) {
+			throw new Error(`Access to URL denied by resource access policy: ${url}`);
+		}
+	}
+
 	resolve(url, headers = {}, cache = false) {
 		if (typeof url !== 'string') {
 			return Promise.resolve();
@@ -67,7 +89,9 @@ class URLResolver {
 
 		const key = JSON.stringify([url, cache === true]);
 		const resolveUrlInternal = async () => {
-			if (url.toLowerCase().startsWith('https://') || url.toLowerCase().startsWith('http://')) {
+			const protocol = /^([a-z][a-z\d+.-]*):/i.exec(url);
+			const handler = protocol && this.urlProtocols.get(protocol[1].toLowerCase());
+			if (handler) {
 				if (this.fs.existsSync(url)) {
 					if ((cache === true) && !this.sharedFs.existsSync(url)) {
 						this.fs.unlinkSync(url);
@@ -76,26 +100,46 @@ class URLResolver {
 					}
 				}
 
-				const response = await fetchUrl(url, headers, this.urlAccessPolicy);
+				this.validateUrlAccessPolicy(url);
 
-				// validate access policy on redirected url (in browsers, only the final URL is validated)
-				if (response.redirected) {
-					if ((typeof this.urlAccessPolicy !== 'undefined') && (this.urlAccessPolicy(response.url) !== true)) {
-						throw new Error(`Access to URL denied by resource access policy: ${response.url}`);
-					}
+				const response = await handler(url, headers, this.validateUrlAccessPolicy);
+
+				if (!response || typeof response !== 'object') {
+					throw new Error(`Invalid protocol handler response (url: "${url}"): Object with buffer and url expected.`);
+				}
+				if (!(response.buffer instanceof ArrayBuffer) && !(response.buffer instanceof Uint8Array)) {
+					throw new Error(`Invalid protocol handler response (url: "${url}"): 'buffer' must be an ArrayBuffer or Uint8Array.`);
+				}
+				if (typeof response.url !== 'string' || response.url.trim().length === 0) {
+					throw new Error(`Invalid protocol handler response (url: "${url}"): 'url' must be a non-empty string.`);
 				}
 
-				const buffer = await response.arrayBuffer();
+				this.validateUrlAccessPolicy(response.url);
+
 				const target = cache === true ? this.sharedFs : this.fs;
-				target.writeFileSync(url, buffer);
+				target.writeFileSync(url, response.buffer);
 			}
 			// else cannot be resolved
 		};
 
 		if (!this.resolving[key]) {
-			this.resolving[key] = resolveUrlInternal();
+			this.resolving[key] = new Promise((resolve, reject) => {
+				this.queue.push({ run: resolveUrlInternal, resolve, reject });
+			});
+			this.processQueue();
 		}
 		return this.resolving[key];
+	}
+
+	processQueue() {
+		while (this.activeDownloads < this.concurrency && this.queue.length > 0) {
+			const task = this.queue.shift();
+			this.activeDownloads++;
+			task.run().then(task.resolve, task.reject).finally(() => {
+				this.activeDownloads--;
+				this.processQueue();
+			});
+		}
 	}
 
 	resolved() {

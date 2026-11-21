@@ -2,14 +2,16 @@ import Printer from './Printer';
 import virtualfs, { VirtualFileSystem } from './virtual-fs';
 import { pack } from './helpers/tools';
 import { isObject } from './helpers/variableType';
-import URLResolver from './URLResolver';
+import URLResolver, { defaultUrlProtocols, fetchUrl } from './URLResolver';
 
 class pdfmake {
 
 	constructor() {
 		this.sharedVirtualfs = virtualfs;
 		this.urlResourceCaching = false;
+		this.urlResourceConcurrency = 5;
 		this.urlAccessPolicy = undefined;
+		this.urlProtocols = new Map(defaultUrlProtocols);
 		this.localAccessPolicy = undefined;
 	}
 
@@ -43,7 +45,7 @@ class pdfmake {
 		}
 
 		const documentVirtualfs = new VirtualFileSystem(this.sharedVirtualfs);
-		let urlResolver = new URLResolver(documentVirtualfs, this.sharedVirtualfs);
+		let urlResolver = new URLResolver(documentVirtualfs, this.sharedVirtualfs, this.urlResourceConcurrency, this.urlProtocols);
 		urlResolver.setUrlAccessPolicy(this.urlAccessPolicy);
 
 		let printer = new Printer(this.fonts, documentVirtualfs, urlResolver, this.localAccessPolicy, this.urlResourceCaching);
@@ -64,6 +66,38 @@ class pdfmake {
 	}
 
 	/**
+	 * @param {string} protocol
+	 * @param {(url: string, headers: object, validateUrlAccessPolicy: Function) => Promise<{buffer: (ArrayBuffer|Uint8Array), url: string}>} [handler]
+	 */
+	registerUrlProtocol(protocol, handler = fetchUrl) {
+		if (typeof protocol !== 'string' || !/^[a-z][a-z\d+.-]*:?$/i.test(protocol)) {
+			throw new Error("Parameter 'protocol' has an invalid value. URL scheme expected.");
+		}
+		if (typeof handler !== 'function') {
+			throw new Error("Parameter 'handler' has an invalid type. Function expected.");
+		}
+
+		this.urlProtocols.set(protocol.replace(/:$/, '').toLowerCase(), handler);
+	}
+
+	/**
+	 * @param {string} protocol
+	 */
+	unregisterUrlProtocol(protocol) {
+		if (typeof protocol !== 'string' || !/^[a-z][a-z\d+.-]*:?$/i.test(protocol)) {
+			throw new Error("Parameter 'protocol' has an invalid value. URL scheme expected.");
+		}
+
+		protocol = protocol.replace(/:$/, '').toLowerCase();
+		this.urlProtocols.delete(protocol);
+		for (const filename of Object.keys(this.sharedVirtualfs.storage)) {
+			if (filename.toLowerCase().startsWith(protocol + ':')) {
+				this.sharedVirtualfs.unlinkSync(filename);
+			}
+		}
+	}
+
+	/**
 	 * @param {boolean} enabled
 	 */
 	setUrlResourceCaching(enabled) {
@@ -74,9 +108,21 @@ class pdfmake {
 		this.urlResourceCaching = enabled;
 	}
 
+	/**
+	 * @param {number} concurrency
+	 */
+	setUrlResourceConcurrency(concurrency) {
+		if (!Number.isInteger(concurrency) || concurrency < 1) {
+			throw new Error("Parameter 'concurrency' must be a positive integer.");
+		}
+
+		this.urlResourceConcurrency = concurrency;
+	}
+
 	clearUrlResourceCache() {
 		for (const filename of Object.keys(this.sharedVirtualfs.storage)) {
-			if (/^https?:\/\//i.test(filename)) {
+			const protocol = /^([a-z][a-z\d+.-]*):/i.exec(filename);
+			if (protocol && this.urlProtocols.has(protocol[1].toLowerCase())) {
 				this.sharedVirtualfs.unlinkSync(filename);
 			}
 		}

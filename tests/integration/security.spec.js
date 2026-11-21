@@ -5,9 +5,10 @@ var assert = require('assert');
 var Printer = require('../../js/Printer').default;
 var virtualfs = require('../../js/virtual-fs').default;
 var URLResolver = require('../../js/URLResolver').default;
+var defaultUrlProtocols = require('../../js/URLResolver').defaultUrlProtocols;
 
 async function renderPdf(options) {
-	var printer = new Printer({ Roboto: { normal: 'fonts/Roboto/Roboto-Regular.ttf' } }, virtualfs, new URLResolver(virtualfs));
+	var printer = new Printer({ Roboto: { normal: 'fonts/Roboto/Roboto-Regular.ttf' } }, virtualfs, new URLResolver(virtualfs, undefined, 5, defaultUrlProtocols));
 	var document = await printer.createPdfKitDocument(Object.assign({ content: ['secured text'] }, options));
 	return new Promise(function (resolve, reject) {
 		var chunks = [];

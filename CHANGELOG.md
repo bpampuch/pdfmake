@@ -1,5 +1,43 @@
 # Changelog
 
+## Unreleased
+
+- Added `pdfmake.setUrlResourceConcurrency(concurrency)` to limit concurrent URL resource downloads per document (default: `5`)
+- Added `pdfmake.registerUrlProtocol(protocol, handler)` to support custom URL protocols and replace existing protocol handlers; omitting the handler uses the default fetch downloader
+
+	Example of registering the `blob` protocol with the default fetch downloader:
+
+	```js
+	pdfmake.registerUrlProtocol('blob');
+	```
+
+	Example of registering a custom `asset` protocol with a custom downloader:
+
+	```js
+	pdfmake.registerUrlProtocol('asset', async (url, headers, validateUrlAccessPolicy) => {
+
+		// Fetch logoBytes using url and headers, eg:
+ 		// var logoBytes = await fs.readFile(filename);
+
+		// Call validateUrlAccessPolicy(targetUrl) before following each redirect; it throws if access is denied.
+		// Return the final URL after all redirects, or the original url if there were none.
+		return { buffer: logoBytes, url: finalUrl };
+	});
+	```
+
+	Usage in a document definition:
+
+	```js
+	pdfmake.createPdf({
+		content: [{ image: 'logo' }],
+		images: { logo: 'asset://logo' }
+	});
+	```
+
+	The handler receives the URL, request headers and a `validateUrlAccessPolicy(url)` function, and returns the binary data and final URL. Call `validateUrlAccessPolicy(targetUrl)` before following each redirect; it throws if access is denied.
+
+- Added `pdfmake.unregisterUrlProtocol(protocol)` to remove a URL protocol handler and clear its shared resource cache
+
 ## 0.3.15 - 2026-11-20
 
 - Added the `unbreakableOverflow` option (`'allowBreak'` by default or `'error'`) and explicit errors for content that cannot fit below repeating headers

@@ -4,6 +4,7 @@ var assert = require('assert');
 var sinon = require('sinon');
 var VirtualFileSystem = require('../../js/virtual-fs').VirtualFileSystem;
 var URLResolver = require('../../js/URLResolver').default;
+var defaultUrlProtocols = require('../../js/URLResolver').defaultUrlProtocols;
 var PdfMake = require('../../js/base').default;
 
 describe('Document virtual file system', function () {
@@ -13,7 +14,7 @@ describe('Document virtual file system', function () {
 	beforeEach(function () {
 		shared = new VirtualFileSystem();
 		document = new VirtualFileSystem(shared);
-		resolver = new URLResolver(document, shared);
+		resolver = new URLResolver(document, shared, 5, defaultUrlProtocols);
 		fetchStub = sinon.stub(globalThis, 'fetch').callsFake(async function () {
 			return { ok: true, status: 200, arrayBuffer: async () => Buffer.from('download') };
 		});
@@ -57,11 +58,88 @@ describe('Document virtual file system', function () {
 		assert.equal(new VirtualFileSystem(shared).existsSync(url), false);
 	});
 
+	[1, 2, 5].forEach(function (concurrency) {
+		it('should limit downloads to ' + concurrency + ' until response bodies finish', async function () {
+			resolver = new URLResolver(document, shared, concurrency, defaultUrlProtocols);
+			var finishBodies = [];
+			fetchStub.callsFake(async function () {
+				return {
+					ok: true,
+					arrayBuffer: () => new Promise(resolve => finishBodies.push(() => resolve(Buffer.from('download'))))
+				};
+			});
+			var downloads = Array.from({ length: 8 }, (_, index) => resolver.resolve(url + '/' + index));
+			assert.strictEqual(resolver.resolve(url + '/0'), downloads[0]);
+			var complete = false;
+			var all = resolver.resolved().then(() => { complete = true; });
+			await new Promise(resolve => setImmediate(resolve));
+			assert.strictEqual(fetchStub.callCount, concurrency);
+			assert.strictEqual(complete, false);
+
+			for (var index = 0; index < downloads.length; index++) {
+				finishBodies.shift()();
+				await new Promise(resolve => setImmediate(resolve));
+				assert.strictEqual(fetchStub.callCount, Math.min(downloads.length, concurrency + index + 1));
+			}
+			await all;
+			for (var resource = 0; resource < downloads.length; resource++) {
+				assert.strictEqual(document.readFileSync(url + '/' + resource, 'utf8'), 'download');
+			}
+		});
+	});
+
+	['fetch', 'body', 'policy', 'write'].forEach(function (failure) {
+		it('should release the download slot after a ' + failure + ' failure', async function () {
+			resolver = new URLResolver(document, shared, 1, defaultUrlProtocols);
+			if (failure === 'fetch') fetchStub.onFirstCall().rejects(new Error('download failed'));
+			if (failure === 'body') fetchStub.onFirstCall().resolves({ ok: true, arrayBuffer: async () => { throw new Error('download failed'); } });
+			if (failure === 'policy') resolver.setUrlAccessPolicy(resource => resource !== url);
+			if (failure === 'write') sinon.stub(document, 'writeFileSync').onFirstCall().throws(new Error('download failed')).callThrough();
+			var first = resolver.resolve(url);
+			var second = resolver.resolve(url + '/next');
+			var rejected = assert.rejects(first, /download failed|Access to URL denied/);
+			await assert.rejects(resolver.resolved(), /download failed|Access to URL denied/);
+			await rejected;
+			await second;
+			assert.strictEqual(document.readFileSync(url + '/next', 'utf8'), 'download');
+		});
+	});
+
+	it('should apply the configured concurrency to createPdf downloads', async function () {
+		var pdfmake = new PdfMake();
+		pdfmake.setUrlAccessPolicy(() => true);
+		pdfmake.localAccessPolicy = () => true;
+		pdfmake.setUrlResourceConcurrency(1);
+		var finishFirst;
+		fetchStub.onFirstCall().resolves({
+			ok: true,
+			arrayBuffer: () => new Promise(resolve => { finishFirst = () => resolve(Buffer.from('download')); })
+		});
+		var result = pdfmake.createPdf({ content: [], images: { first: url, second: url + '/next' } });
+		await new Promise(resolve => setImmediate(resolve));
+		sinon.assert.calledOnce(fetchStub);
+		finishFirst();
+		await result;
+		sinon.assert.calledTwice(fetchStub);
+	});
+
+	it('should reject invalid concurrency limits without changing the current setting', function () {
+		var pdfmake = new PdfMake();
+		assert.strictEqual(pdfmake.urlResourceConcurrency, 5);
+		pdfmake.setUrlResourceConcurrency(2);
+		[undefined, null, 0, -1, 1.5, NaN, Infinity, '2', true, {}, []].forEach(function (value) {
+			assert.throws(() => pdfmake.setUrlResourceConcurrency(value), /positive integer/);
+			assert.strictEqual(pdfmake.urlResourceConcurrency, 2);
+			assert.throws(() => new URLResolver(document, shared, value, defaultUrlProtocols), /positive integer/);
+		});
+		assert.throws(() => new URLResolver(document, shared, undefined, defaultUrlProtocols), /positive integer/);
+	});
+
 	it('should write shared downloads where other documents can read them', async function () {
 		var headers = { Authorization: 'Bearer token' };
 		await resolver.resolve(url, headers, true);
 		var nextDocument = new VirtualFileSystem(shared);
-		await new URLResolver(nextDocument, shared).resolve(url);
+		await new URLResolver(nextDocument, shared, 5, defaultUrlProtocols).resolve(url);
 		sinon.assert.calledOnceWithExactly(fetchStub, url, { headers: headers, redirect: 'manual' });
 		assert.equal(shared.readFileSync(url, 'utf8'), 'download');
 		assert.equal(nextDocument.readFileSync(url, 'utf8'), 'download');
