@@ -63,6 +63,12 @@ describe('TextBreaker', function () {
 			assert.equal(result[9].lineEnd, true);
 		});
 
+		it('should return no inlines for empty text', function () {
+			assert.deepEqual(textBreaker.getBreaks(''), []);
+			assert.deepEqual(textBreaker.getBreaks(null), []);
+			assert.deepEqual(textBreaker.getBreaks([{ text: '' }]), []);
+		});
+
 		it('should support whitespace-only lines', function () {
 			var result = textBreaker.getBreaks(sampleText2);
 			assert.equal(result[6].text, ' ');
