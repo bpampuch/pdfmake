@@ -13,6 +13,33 @@ describe('Integration Test: images', function () {
 
 	var INLINE_TEST_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAGAQMAAADNIO3CAAAAA1BMVEUAAN7GEcIJAAAAAWJLR0QAiAUdSAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB98DBREbA3IZ3d8AAAALSURBVAjXY2BABwAAEgAB74lUpAAAAABJRU5ErkJggg==';
 
+	['image', 'svg', 'qr', 'canvas'].forEach(function (type) {
+		['left', 'center', 'right'].forEach(function (alignment) {
+			[[0, 50, 0, 0], [0, 50, 50, 0], [20, 50, 50, 0]].forEach(function (margin) {
+				[false, true].forEach(function (background) {
+					it(`aligns ${type} with margins ${margin}, alignment=${alignment}, background=${background}`, function () {
+						var node = type === 'image' ? { image: INLINE_TEST_IMAGE, fit: [100, 100] }
+							: type === 'svg' ? { svg: '<svg width="100" height="50"><rect width="100" height="50"/></svg>' }
+								: type === 'qr' ? { qr: 'test', fit: 100 }
+									: { canvas: [{ type: 'rect', x: 0, y: 0, w: 100, h: 50 }] };
+						node.alignment = alignment;
+						node.margin = margin;
+						var pages = testHelper.renderPages('A4', background ? { background: node, content: ['Test'] } : { content: [node] });
+						var item = pages[0].items[0].item;
+						var pageMargin = background ? 0 : testHelper.MARGINS.left;
+						var width = type === 'qr' ? node._width : 100;
+						var availableWidth = pages[0].pageSize.width - 2 * pageMargin - margin[0] - margin[2];
+						var offset = alignment === 'right' ? availableWidth - width : alignment === 'center' ? (availableWidth - width) / 2 : 0;
+
+						assert.equal(pages.length, 1);
+						assert.ok(Math.abs(item.x - (pageMargin + margin[0] + offset)) < 0.000001);
+						assert.equal(item.y, pageMargin + margin[1]);
+					});
+				});
+			});
+		});
+	});
+
 	describe('binary image rendering', function () {
 		function renderPdf(helper, pages) {
 			var doc = helper.pdfDocument;

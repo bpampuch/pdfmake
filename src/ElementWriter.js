@@ -254,6 +254,9 @@ class ElementWriter extends EventEmitter {
 	alignImage(image) {
 		let width = this.context().availableWidth;
 		let imageWidth = image._minWidth;
+		if (image._margin) {
+			imageWidth -= image._margin[0] + image._margin[2];
+		}
 		let offset = 0;
 		switch (image._alignment) {
 			case 'right':
@@ -272,6 +275,9 @@ class ElementWriter extends EventEmitter {
 	alignCanvas(node) {
 		let width = this.context().availableWidth;
 		let canvasWidth = node._minWidth;
+		if (node._margin) {
+			canvasWidth -= node._margin[0] + node._margin[2];
+		}
 		let offset = 0;
 		switch (node._alignment) {
 			case 'right':

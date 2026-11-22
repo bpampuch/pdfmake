@@ -37,6 +37,7 @@
 	The handler receives the URL, request headers and a `validateUrlAccessPolicy(url)` function, and returns the binary data and final URL. Call `validateUrlAccessPolicy(targetUrl)` before following each redirect; it throws if access is denied.
 
 - Added `pdfmake.unregisterUrlProtocol(protocol)` to remove a URL protocol handler and clear its shared resource cache
+- Fixed double-counted horizontal margins when centering or right-aligning images, SVGs, QR codes and canvases
 
 ## 0.3.15 - 2026-11-20
 
