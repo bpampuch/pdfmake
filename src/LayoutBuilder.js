@@ -1237,19 +1237,30 @@ class LayoutBuilder {
 			// I'm not very happy with the way list processing is implemented
 			// (both code and algorithm should be rethinked)
 			// Background lines must only consume markers from lists in that background.
-			if (nextMarker && this.backgroundLevel === backgroundLevel) {
+			if (nextMarker && this.backgroundLevel === backgroundLevel && !line._isListMarker) {
 				let marker = nextMarker;
 				nextMarker = null;
+
+				// The marker precedes the first line of its item, so it has to follow
+				// the alignment shift of that line and stay at this list's margin
+				// even when nested lists or inner margins indent the first line.
+				let context = this.writer.context();
+				let alignmentOffset = line.x - context.x;
+				let innerMarginOffset = context === listContext ? context.activeMarginLeft - listMarginLeft : context.activeMarginLeft;
+				let markerOffset = alignmentOffset - innerMarginOffset - marker._minWidth;
 
 				if (marker.canvas) {
 					let vector = marker.canvas[0];
 
-					offsetVector(vector, -marker._minWidth, 0);
+					offsetVector(vector, markerOffset, 0);
 					this.writer.addVector(vector);
 				} else if (marker._inlines) {
 					let markerLine = new Line(this.pageSize.width);
-					markerLine.addInline(marker._inlines[0]);
-					markerLine.x = -marker._minWidth;
+					markerLine._isListMarker = true;
+					// The marker is already positioned relative to the line, so it must
+					// not be aligned on its own by the writer.
+					markerLine.addInline(Object.assign({}, marker._inlines[0], { alignment: 'left' }));
+					markerLine.x = markerOffset;
 					markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
 					this.writer.addLine(markerLine, true);
 				}
@@ -1260,6 +1271,8 @@ class LayoutBuilder {
 		let gapSize = node._gapSize;
 
 		this.writer.context().addMargin(gapSize.width);
+		let listContext = this.writer.context();
+		let listMarginLeft = listContext.activeMarginLeft;
 
 		let nextMarker;
 
