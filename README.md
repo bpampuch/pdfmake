@@ -12,7 +12,7 @@
 
 PDF document generation library for Node.js and browsers, written in pure JavaScript.
 
-Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) and [examples](https://github.com/bpampuch/pdfmake/tree/master/examples).
+Check out [the playground](https://pdfmake.github.io/playground.html) and [examples](https://github.com/bpampuch/pdfmake/tree/master/examples).
 
 ## Features
 
