@@ -83,6 +83,7 @@
 - Fixed oversized unbreakable children of absolutely or relatively positioned parents starting on the wrong page
 - Fixed positioned content using its parent's snaking columns and changing the position of following content
 - Fixed vertical table border colors depending on the total number of rows, using the opposite side of a row span, or losing the preceding row span's border color priority
+- Fixed empty text nodes and empty table cells taking the height of a full line (empty list entries keep their marker)
 
 ## 0.3.14 - 2026-11-08
 

@@ -30,7 +30,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 			table: {
 				body: [
@@ -43,7 +43,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 			table: {
 				body: [
@@ -56,7 +56,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 			table: {
 				body: [
@@ -70,7 +70,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 			table: {
 				body: [
@@ -85,7 +85,7 @@ var docDefinition = {
 			}
 		},
 		{ text: '', pageBreak: 'after' },
-		'',
+		' ',
 		{
 
 			table: {
@@ -99,7 +99,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 			table: {
 				body: [
@@ -112,7 +112,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 			table: {
 				body: [
@@ -127,7 +127,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 			table: {
 				body: [
@@ -274,7 +274,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 			table: {
 				dontBreakRows: true,
@@ -288,7 +288,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 			table: {
 				dontBreakRows: true,
@@ -302,7 +302,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 			table: {
 				dontBreakRows: true,
@@ -317,7 +317,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 			table: {
 				dontBreakRows: true,
@@ -333,7 +333,7 @@ var docDefinition = {
 			}
 		},
 		{ text: '', pageBreak: 'after' },
-		'',
+		' ',
 		{
 			table: {
 				dontBreakRows: true,
@@ -347,7 +347,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 
 			table: {
@@ -362,7 +362,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 			table: {
 				dontBreakRows: true,
@@ -378,7 +378,7 @@ var docDefinition = {
 				]
 			}
 		},
-		'',
+		' ',
 		{
 			table: {
 				dontBreakRows: true,

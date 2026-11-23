@@ -151,8 +151,7 @@ describe('Integration test: vertical alignment across pages', function () {
 			for (var cell of [{ text: '' }, { stack: [] }, { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 20, y2: 0, lineColor: 'red' }] }]) {
 				var pages = new IntegrationTestHelper().renderPages('A6', definition(cell));
 				var begin = pages[0].items.find(item => item.type === 'beginVerticalAlignment').item;
-				var expectedHeight = cell.text === '' ? 14.0625 : 0;
-				assert.equal(begin.getNodeHeight(), expectedHeight);
+				assert.equal(begin.getNodeHeight(), 0);
 				var linePositions = [];
 				var rendered = await renderedTexts(definition(cell), function (vector) {
 					if (vector.type === 'line' && vector.lineColor === 'red') {

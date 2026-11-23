@@ -415,6 +415,20 @@ class DocMeasure {
 		return { _inlines: this.textInlines.buildInlines(textArray, styleStack).items };
 	}
 
+	measureListItem(item) {
+		item = this.measureNode(item);
+
+		if (item._inlines && item._inlines.length === 0) {
+			this.styleStack.auto(item, () => {
+				let styleStack = this.styleStack.clone();
+				styleStack.push(item);
+				item._inlines = this.textInlines.measure([{ text: '' }], styleStack);
+			});
+		}
+
+		return item;
+	}
+
 	measureUnorderedList(node) {
 		let style = this.styleStack.clone();
 		let items = node.ul;
@@ -424,7 +438,7 @@ class DocMeasure {
 		node._maxWidth = 0;
 
 		for (let i = 0, l = items.length; i < l; i++) {
-			let item = items[i] = this.measureNode(items[i]);
+			let item = items[i] = this.measureListItem(items[i]);
 
 			if (!item.ol && !item.ul) {
 				item.listMarker = this.buildUnorderedMarker(item, style, node._gapSize, item.listType || node.type);
@@ -452,7 +466,7 @@ class DocMeasure {
 
 		let counter = node.start;
 		for (let i = 0, l = items.length; i < l; i++) {
-			let item = items[i] = this.measureNode(items[i]);
+			let item = items[i] = this.measureListItem(items[i]);
 
 			if (!item.ol && !item.ul) {
 				let counterValue = isNumber(item.counter) ? item.counter : counter;

@@ -116,6 +116,7 @@ class TextBreaker {
 		}
 
 		let lastWord = null;
+		let hasContent = false;
 		for (let i = 0, l = texts.length; i < l; i++) {
 			let item = texts[i];
 			let style = null;
@@ -130,6 +131,10 @@ class TextBreaker {
 				style = StyleContextStack.copyStyle(item);
 			} else {
 				words = splitWords(item, noWrap, breakAll);
+			}
+
+			if (noWrap || words.some(word => word.text !== '' || word.lineEnd)) {
+				hasContent = true;
 			}
 
 			if (lastWord && words.length) {
@@ -161,7 +166,7 @@ class TextBreaker {
 			}
 		}
 
-		return results;
+		return hasContent ? results : [];
 	}
 }
 

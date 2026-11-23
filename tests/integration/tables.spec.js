@@ -604,7 +604,7 @@ describe('Integration test: tables', function () {
 		var page2Texts = getCells(pages, { pageNumber: 1 }).map(node => node.item.inlines.map(inline => inline.text).join(''));
 
 		assert.equal(pages.length, 2);
-		assert.deepEqual(page1Texts, ['row Header', 'column B', 'row 1', 'column B', 'row 2', 'column B', 'row 3', 'column B', '', '']);
+		assert.deepEqual(page1Texts, ['row Header', 'column B', 'row 1', 'column B', 'row 2', 'column B', 'row 3', 'column B']);
 		assert.deepEqual(page2Texts, ['row Header', 'column B', 'row 4', 'column B', 'row 5', 'column B']);
 	});
 
@@ -835,6 +835,27 @@ describe('Integration test: tables', function () {
 
 		var lastItems = pages[pages.length - 1].items;
 		assert.ok(findFillIndex(lastItems, '#0000ff') < findLineIndex(lastItems, 'Nested'));
+	});
+
+	it('renders an empty cell with only padding height', function () {
+		var dd = {
+			content: {
+				table: {
+					body: [
+						[{}],
+						['Value']
+					]
+				}
+			}
+		};
+
+		var pages = testHelper.renderPages('A6', dd);
+		var lines = getCells(pages, { pageNumber: 0 });
+
+		assert.equal(pages.length, 1);
+		assert.equal(lines.length, 1);
+		assert.equal(getColumnText(lines, { cell: 0 }), 'Value');
+		assert.equal(lines[0].item.y, startY + 2 * TABLE_PADDING_Y + TABLE_BORDER_STRENGTH);
 	});
 
 });
