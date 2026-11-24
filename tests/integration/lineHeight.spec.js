@@ -112,5 +112,28 @@ describe('Integration test: lineHeight', function () {
 			var halfLeading = (10 * 2 - FONT_HEIGHT * 10) / 2;
 			assert.ok(Math.abs(baselineOf(lines(css)[0]) - (baselineOf(lines(legacy)[0]) + halfLeading)) < 1e-9);
 		});
+
+		it('keeps list markers on the baseline of their item when the item has its own lineHeight', function () {
+			var pages = testHelper.renderPages('A4', {
+				defaultStyle: { font: 'Roboto', fontSize: 12 },
+				content: [{
+					lineHeightMode: 'css',
+					lineHeight: 1,
+					ul: [
+						{ text: 'First item', lineHeight: 2 },
+						{ text: 'Second item', lineHeight: 2 }
+					]
+				}]
+			});
+			var all_items = pages[0].items.map(node => node.item);
+			var bullets = all_items.filter(item => item.type === 'ellipse');
+			var text_lines = all_items.filter(item => typeof item.getAscenderHeight === 'function');
+
+			assert.equal(bullets.length, 2);
+			assert.equal(text_lines.length, 2);
+			bullets.forEach(function (bullet, index) {
+				assert.ok(Math.abs(baselineOf(text_lines[index]) - bullet.y - 12 / 3) < 1e-9, 'item ' + index);
+			});
+		});
 	});
 });

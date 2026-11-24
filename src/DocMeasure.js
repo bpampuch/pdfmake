@@ -436,7 +436,11 @@ class DocMeasure {
 			let item = items[i] = this.measureNode(items[i]);
 
 			if (!item.ol && !item.ul) {
-				item.listMarker = this.buildUnorderedMarker(item, style, node._gapSize, item.listType || node.type);
+				let pushes = this.styleStack.autopush(item);
+				let item_gap_size = this.gapSizeForList();
+				this.styleStack.pop(pushes);
+
+				item.listMarker = this.buildUnorderedMarker(item, style, item_gap_size, item.listType || node.type);
 			}
 
 			node._minWidth = Math.max(node._minWidth, items[i]._minWidth + node._gapSize.width);
