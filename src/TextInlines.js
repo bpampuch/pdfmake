@@ -137,7 +137,7 @@ class TextInlines {
 
 			item.width = this.widthOfText(item.text, item);
 
-			if (lineHeight !== null && StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeightMode', 'legacy') === 'css') {
+			if (lineHeight !== null && StyleContextStack.getStyleProperty(item, styleContextStack, 'lineHeightMode', 'fontHeight') === 'css') {
 				// same as CSS: the line box is `lineHeight * fontSize` high and the height of the
 				// font (ascender + descender) is centered in it (half-leading above and below)
 				item.height = item.fontSize * lineHeight;
@@ -213,7 +213,7 @@ class TextInlines {
 			descender: font.descender / 1000 * fontSize
 		};
 
-		if (lineHeightStyle !== null && StyleContextStack.getStyleProperty({}, styleContextStack, 'lineHeightMode', 'legacy') === 'css') {
+		if (lineHeightStyle !== null && StyleContextStack.getStyleProperty({}, styleContextStack, 'lineHeightMode', 'fontHeight') === 'css') {
 			// distance the baseline is moved down by the half-leading (see measure)
 			size.baselineOffset = (fontSize * lineHeight - font.lineHeight(fontSize)) / 2;
 		}

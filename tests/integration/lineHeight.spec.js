@@ -31,7 +31,7 @@ describe('Integration test: lineHeight', function () {
 		return line.y + line.getAscenderHeight();
 	}
 
-	describe('default mode (legacy)', function () {
+	describe('default mode (fontHeight)', function () {
 		it('multiplies the height of the font by lineHeight', function () {
 			var pages = testHelper.renderPages('A4', dd(10, 2, undefined, ['a', 'b']));
 			var l = lines(pages);
@@ -58,10 +58,10 @@ describe('Integration test: lineHeight', function () {
 		});
 
 		it('does not change anything when lineHeight is not defined', function () {
-			var legacy = lines(testHelper.renderPages('A4', dd(10, undefined, undefined, ['a', 'b'])));
+			var fontHeight = lines(testHelper.renderPages('A4', dd(10, undefined, undefined, ['a', 'b'])));
 			var css = lines(testHelper.renderPages('A4', dd(10, undefined, 'css', ['a', 'b'])));
 
-			assert.deepEqual(css.map(l => [l.y, l.getHeight(), l.getAscenderHeight()]), legacy.map(l => [l.y, l.getHeight(), l.getAscenderHeight()]));
+			assert.deepEqual(css.map(l => [l.y, l.getHeight(), l.getAscenderHeight()]), fontHeight.map(l => [l.y, l.getHeight(), l.getAscenderHeight()]));
 		});
 
 		it('keeps the baselines of inlines with different font sizes aligned', function () {
@@ -106,11 +106,11 @@ describe('Integration test: lineHeight', function () {
 		});
 
 		it('moves the text of a column by the half-leading', function () {
-			var legacy = testHelper.renderPages('A4', dd(10, undefined, undefined, [{ columns: [{ text: 'a' }, { text: 'b' }] }]));
+			var fontHeight = testHelper.renderPages('A4', dd(10, undefined, undefined, [{ columns: [{ text: 'a' }, { text: 'b' }] }]));
 			var css = testHelper.renderPages('A4', dd(10, 2, 'css', [{ columns: [{ text: 'a' }, { text: 'b' }] }]));
 
 			var halfLeading = (10 * 2 - FONT_HEIGHT * 10) / 2;
-			assert.ok(Math.abs(baselineOf(lines(css)[0]) - (baselineOf(lines(legacy)[0]) + halfLeading)) < 1e-9);
+			assert.ok(Math.abs(baselineOf(lines(css)[0]) - (baselineOf(lines(fontHeight)[0]) + halfLeading)) < 1e-9);
 		});
 
 		it('keeps list markers on the baseline of their item when the item has its own lineHeight', function () {
