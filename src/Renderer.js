@@ -207,6 +207,10 @@ class Renderer {
 	}
 
 	renderVector(vector) {
+		if (vector.type === 'path') {
+			this.pdfDocument.save();
+			this.pdfDocument.translate(vector.x || 0, vector.y || 0);
+		}
 		//TODO: pdf optimization (there's no need to write all properties everytime)
 		this.pdfDocument.lineWidth(vector.lineWidth || 1);
 		if (vector.dash) {
@@ -296,6 +300,9 @@ class Renderer {
 		} else {
 			this.pdfDocument.strokeColor(this.pdfDocument.resolveColor(vector.lineColor, 'black'), strokeOpacity);
 			this.pdfDocument.stroke();
+		}
+		if (vector.type === 'path') {
+			this.pdfDocument.restore();
 		}
 	}
 

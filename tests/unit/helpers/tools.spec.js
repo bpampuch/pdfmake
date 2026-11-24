@@ -29,6 +29,13 @@ describe('helpers/tools', function () {
 	});
 
 	describe('offsetVector', function () {
+		it('should accumulate path translations without modifying path commands', function () {
+			var vector = { type: 'path', d: 'm 10 10 h 200', x: 2, y: -4 };
+			offsetVector(vector, 40, 40);
+			offsetVector(vector, -5, 20);
+			assert.deepStrictEqual(vector, { type: 'path', d: 'm 10 10 h 200', x: 37, y: 56 });
+		});
+
 		['rect', 'ellipse'].forEach(function (type) {
 			it('should translate a ' + type + ' without changing its dimensions or styling', function () {
 				var vector = { type: type, x: 5, y: 10, w: 30, h: 40, r1: 15, r2: 20, color: 'red' };

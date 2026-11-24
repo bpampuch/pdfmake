@@ -18,6 +18,10 @@ export function pack(...args) {
 
 export function offsetVector(vector, x, y) {
 	switch (vector.type) {
+		case 'path':
+			vector.x = (vector.x || 0) + x;
+			vector.y = (vector.y || 0) + y;
+			break;
 		case 'ellipse':
 		case 'rect':
 			vector.x += x;

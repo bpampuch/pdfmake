@@ -6,6 +6,7 @@ import { isString, isNumber, isObject } from './helpers/variableType';
 import { stringifyNode, getNodeId, getNodeMargin } from './helpers/node';
 import { pack } from './helpers/tools';
 import qrEncoder from './qrEnc.js';
+import measurePath from './PathMeasure';
 
 class DocMeasure {
 	constructor(
@@ -692,11 +693,18 @@ class DocMeasure {
 	measureCanvas(node) {
 		let w = 0;
 		let h = 0;
+		let bounds;
 
 		for (let i = 0, l = node.canvas.length; i < l; i++) {
 			let vector = node.canvas[i];
 
 			switch (vector.type) {
+				case 'path':
+					bounds = measurePath(vector.d);
+					w = Math.max(w, bounds.width + (vector.x || 0));
+					h = Math.max(h, bounds.height + (vector.y || 0));
+					break;
+
 				case 'ellipse':
 					w = Math.max(w, vector.x + vector.r1);
 					h = Math.max(h, vector.y + vector.r2);

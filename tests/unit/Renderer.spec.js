@@ -18,7 +18,7 @@ describe('Renderer', function () {
 			'lineWidth', 'dash', 'undash', 'lineJoin', 'lineCap', 'moveTo', 'lineTo',
 			'rect', 'roundedRect', 'path', 'closePath', 'fillColor', 'strokeColor',
 			'fill', 'stroke', 'fillAndStroke', 'save', 'restore', 'addContent', 'clip',
-			'opacity', 'fontSize', 'text'
+			'opacity', 'fontSize', 'text', 'translate'
 		].forEach(function (method) {
 			pdfDocument[method] = sinon.stub().returnsThis();
 		});
@@ -33,6 +33,14 @@ describe('Renderer', function () {
 	});
 
 	describe('renderVector', function () {
+		it('should keep path translation active through filling and stroking and then restore it', function () {
+			renderer.renderVector({ type: 'path', d: 'M 0 0 L 30 0 L 30 40 Z', x: 15, y: 25, color: 'red', lineColor: 'blue' });
+			sinon.assert.calledOnceWithExactly(pdfDocument.translate, 15, 25);
+			sinon.assert.callOrder(pdfDocument.save, pdfDocument.translate, pdfDocument.path, pdfDocument.fillAndStroke, pdfDocument.restore);
+			sinon.assert.calledOnce(pdfDocument.save);
+			sinon.assert.calledOnce(pdfDocument.restore);
+		});
+
 		[
 			{ name: 'lines', vector: { type: 'line', x1: 1, y1: 2, x2: 30, y2: 40 }, calls: [['moveTo', [1, 2]], ['lineTo', [30, 40]]] },
 			{ name: 'paths', vector: { type: 'path', d: 'M 1 2 L 30 40' }, calls: [['path', ['M 1 2 L 30 40']]] },
