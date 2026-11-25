@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Tagged PDFs (`tagged: true`) now get a structure tree. Text is tagged by the node's `role` (`'H1'`..`'H6'`, `'P'` and so on; the default is `'P'`), and the lines of one node share one element. Images and SVGs become `Figure` elements with the node's `alt` text. Lines, rectangles, table borders and watermarks become artifacts, and `role: 'Artifact'` marks any node as decoration. Links get `Link` elements and a description. Untagged documents are unchanged
 - Added `pdfmake.setUrlResourceConcurrency(concurrency)` to limit concurrent URL resource downloads per document (default: `5`)
 - Added `pdfmake.registerUrlProtocol(protocol, handler)` to support custom URL protocols and replace existing protocol handlers; omitting the handler uses the default fetch downloader
 

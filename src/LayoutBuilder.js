@@ -1611,6 +1611,8 @@ class LayoutBuilder {
 
 		line.lastLineInParagraph = textNode._inlines.length === 0;
 
+		line._tagNode = textNode; // the structure element of a tagged PDF (Renderer)
+
 		return line;
 	}
 
