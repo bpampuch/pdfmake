@@ -1,4 +1,4 @@
-import LineBreaker from 'linebreak';
+import { LineBreaker } from 'linebreak';
 import { isObject } from './helpers/variableType';
 import StyleContextStack from './StyleContextStack';
 
@@ -21,7 +21,7 @@ const splitWords = (text, noWrap, breakAll = false) => {
 		return words;
 	}
 	if (breakAll) {
-		return text.split('').map(c => {
+		return Array.from(text.replace(/\r\n/g, '\n')).map(c => {
 			if(c.match(/^\n$|^\r$/)) { // new line
 				return { text: '', lineEnd: true };
 			}

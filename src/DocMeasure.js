@@ -6,6 +6,7 @@ import { isString, isNumber, isObject } from './helpers/variableType';
 import { stringifyNode, getNodeId, getNodeMargin } from './helpers/node';
 import { pack } from './helpers/tools';
 import qrEncoder from './qrEnc.js';
+import measurePath from './PathMeasure';
 
 class DocMeasure {
 	constructor(
@@ -20,7 +21,6 @@ class DocMeasure {
 		this.styleStack = new StyleContextStack(styleDictionary, defaultStyle);
 		this.svgMeasure = svgMeasure;
 		this.tableLayouts = tableLayouts;
-		this.autoImageIndex = 1;
 	}
 
 	/**
@@ -126,17 +126,7 @@ class DocMeasure {
 		node._alignment = this.styleStack.getProperty('alignment');
 	}
 
-	convertIfBase64Image(node) {
-		if (/^data:image\/(jpeg|jpg|png);base64,/.test(node.image)) { // base64 image
-			let label = `$$pdfmake$$${this.autoImageIndex++}`;
-			this.pdfDocument.images[label] = node.image;
-			node.image = label;
-		}
-	}
-
 	measureImage(node) {
-		this.convertIfBase64Image(node);
-
 		let image = this.pdfDocument.provideImage(node.image);
 
 		let imageSize = { width: image.width, height: image.height };
@@ -156,7 +146,7 @@ class DocMeasure {
 
 		this.measureImageWithDimensions(node, dimensions);
 
-		node.font = this.styleStack.getProperty('font');
+		node._font = this.styleStack.getProperty('font');
 
 		// SVG requires a defined width and height
 		if (!isNumber(node._width) && !isNumber(node._height)) {
@@ -198,7 +188,7 @@ class DocMeasure {
 			node.toc.title = this.measureNode(node.toc.title);
 		}
 
-		if (node.toc._items.length > 0) {
+		if (!node.toc._table && node.toc._items.length > 0) {
 			let body = [];
 			let textStyle = node.toc.textStyle || {};
 			let numberStyle = node.toc.numberStyle || textStyle;
@@ -234,7 +224,9 @@ class DocMeasure {
 				},
 				layout: 'noBorders'
 			};
+		}
 
+		if (node.toc._table) {
 			node.toc._table = this.measureNode(node.toc._table);
 		}
 
@@ -580,8 +572,8 @@ class DocMeasure {
 		function measureCb(_this, data) {
 			return () => {
 				if (isObject(data)) {
-					data.fillColor = _this.styleStack.getProperty('fillColor');
-					data.fillOpacity = _this.styleStack.getProperty('fillOpacity');
+					data._fillColor = _this.styleStack.getProperty('fillColor');
+					data._fillOpacity = _this.styleStack.getProperty('fillOpacity');
 				}
 				return _this.measureNode(data);
 			};
@@ -674,8 +666,8 @@ class DocMeasure {
 					_span: true,
 					_minWidth: 0,
 					_maxWidth: 0,
-					fillColor: table.body[row][col].fillColor,
-					fillOpacity: table.body[row][col].fillOpacity
+					_fillColor: table.body[row][col]._fillColor,
+					_fillOpacity: table.body[row][col]._fillOpacity
 				};
 			}
 		}
@@ -705,11 +697,18 @@ class DocMeasure {
 	measureCanvas(node) {
 		let w = 0;
 		let h = 0;
+		let bounds;
 
 		for (let i = 0, l = node.canvas.length; i < l; i++) {
 			let vector = node.canvas[i];
 
 			switch (vector.type) {
+				case 'path':
+					bounds = measurePath(vector.d);
+					w = Math.max(w, bounds.width + (vector.x || 0));
+					h = Math.max(h, bounds.height + (vector.y || 0));
+					break;
+
 				case 'ellipse':
 					w = Math.max(w, vector.x + vector.r1);
 					h = Math.max(h, vector.y + vector.r2);

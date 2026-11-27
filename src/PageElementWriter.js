@@ -14,9 +14,12 @@ class PageElementWriter extends ElementWriter {
 
 	/**
 	 * @param {DocumentContext} context
+	 * @param {string} unbreakableOverflow
 	 */
-	constructor(context) {
+	constructor(context, unbreakableOverflow = 'allowBreak') {
 		super(context);
+		this.unbreakableOverflow = unbreakableOverflow;
+		this.isAuxiliaryContext = false;
 		this.transactionLevel = 0;
 		this.repeatables = [];
 	}
@@ -66,11 +69,15 @@ class PageElementWriter extends ElementWriter {
 	}
 
 	addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition) {
-		return this._fitOnPage(() => super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition));
+		return this._fitOnPage(() => super.addFragment(fragment, useBlockXOffset, useBlockYOffset, dontUpdateContextPosition), true);
 	}
 
-	moveToNextPage(pageOrientation) {
+	moveToNextPage(pageOrientation, updateContext) {
+		let snakingColumnGroup = updateContext && this.context().snapshots.filter(snapshot => snapshot.snakingColumns && !snapshot.overflowed).pop();
 		let nextPage = this.context().moveToNextPage(pageOrientation);
+		if (updateContext) {
+			updateContext(this.context());
+		}
 
 		// moveToNextPage is called multiple times for table, because is called for each column
 		// and repeatables are inserted only in the first time. If columns are used, is needed
@@ -78,11 +85,21 @@ class PageElementWriter extends ElementWriter {
 		this.repeatables.forEach(function (rep) {
 			if (rep.insertedOnPages[this.context().page] === undefined) {
 				rep.insertedOnPages[this.context().page] = true;
-				this.addFragment(rep, true);
+				// Ancestor headers keep their original X; only this group's headers move.
+				let useCurrentX = snakingColumnGroup && rep.snakingColumnGroup === snakingColumnGroup;
+				this.addFragment(rep, !useCurrentX);
 			} else {
 				this.context().moveDown(rep.height);
 			}
 		}, this);
+
+		if (snakingColumnGroup) {
+			// Every inner column starts below ancestor headers, which repeat only on pages.
+			const ancestorHeight = this.repeatables.reduce((height, rep) =>
+				height + (rep.snakingColumnGroup !== snakingColumnGroup ? rep.height : 0), 0);
+			snakingColumnGroup.y += ancestorHeight;
+			snakingColumnGroup.availableHeight -= ancestorHeight;
+		}
 
 		this.emit('pageChanged', {
 			prevPage: nextPage.prevPage,
@@ -106,6 +123,7 @@ class PageElementWriter extends ElementWriter {
 
 	beginUnbreakableBlock(width, height) {
 		if (this.transactionLevel++ === 0) {
+			this.isAuxiliaryContext = width !== undefined || height !== undefined;
 			this.originalX = this.context().x;
 			this.pushContext(width, height);
 		}
@@ -117,8 +135,9 @@ class PageElementWriter extends ElementWriter {
 			this.popContext();
 
 			let nbPages = unbreakableContext.pages.length;
+			let overflowed = nbPages > 1;
 			if (nbPages > 0) {
-				// no support for multi-page unbreakableBlocks
+				// Commit a single fragment; oversized content is retried by the layout builder.
 				let fragment = unbreakableContext.pages[0];
 				fragment.xOffset = forcedX;
 				fragment.yOffset = forcedY;
@@ -141,9 +160,24 @@ class PageElementWriter extends ElementWriter {
 				if (forcedX !== undefined || forcedY !== undefined) {
 					super.addFragment(fragment, true, true, true);
 				} else {
-					this.addFragment(fragment);
+					// Repeatable headers can leave less space than the temporary context.
+					overflowed = !this.addFragment(fragment) || overflowed;
 				}
 			}
+
+			// Report oversized content so the layout can be retried with page breaks enabled.
+			const needsBreak = overflowed && forcedX === undefined && forcedY === undefined;
+			this.checkUnbreakableOverflow(needsBreak);
+			this.isAuxiliaryContext = false;
+			return needsBreak;
+		}
+	}
+
+	checkUnbreakableOverflow(overflowed) {
+		if (overflowed && this.unbreakableOverflow === 'error' && !this.isAuxiliaryContext) {
+			const error = new Error('Unbreakable block cannot fit on a single page within the available space.');
+			error.code = 'UNBREAKABLE_BLOCK_OVERFLOW';
+			throw error;
 		}
 	}
 
@@ -166,6 +200,7 @@ class PageElementWriter extends ElementWriter {
 	}
 
 	pushToRepeatables(rep) {
+		rep.snakingColumnGroup = this.context().snapshots.filter(snapshot => snapshot.snakingColumns && !snapshot.overflowed).pop();
 		this.repeatables.push(rep);
 	}
 
@@ -179,20 +214,17 @@ class PageElementWriter extends ElementWriter {
 	 * @param {Function} [updateContext] - Adjust the new column before inserting repeatables
 	 */
 	moveToNextColumn(updateContext) {
+		let snakingColumnGroup = this.context().snapshots.filter(snapshot => snapshot.snakingColumns && !snapshot.overflowed).pop();
 		let nextColumn = this.context().moveToNextColumn();
 		if (updateContext) {
 			updateContext(this.context());
 		}
 
-		// Handle repeatables (like table headers) for the new column
+		// Only this group's headers repeat between columns; ancestor headers repeat on new pages.
 		this.repeatables.forEach(function (rep) {
-			// In snaking columns, we WANT headers to repeat.
-			// However, in Standard Page Breaks, headers are drawn using useBlockXOffset=true (original absolute X).
-			// This works for page breaks because margins are consistent.
-			// In Snaking Columns, the X position changes for each column.
-			// If we use true, the header is drawn at the *original* X position (Col 1), overlapping/invisible.
-			// We MUST use false to force drawing relative to the CURRENT context X (new column start).
-			this.addFragment(rep, false);
+			if (snakingColumnGroup && rep.snakingColumnGroup === snakingColumnGroup) {
+				this.addFragment(rep, false);
+			}
 		}, this);
 
 		this.emit('columnChanged', {
@@ -254,7 +286,7 @@ class PageElementWriter extends ElementWriter {
 		return false;
 	}
 
-	_fitOnPage(addFct) {
+	_fitOnPage(addFct, allowFailure = false) {
 		let position = addFct();
 		if (!position) {
 			if (this.canMoveToNextColumn()) {
@@ -273,14 +305,12 @@ class PageElementWriter extends ElementWriter {
 						// Column breaks happen between rows in processTable instead.
 						this.moveToNextPage();
 					} else {
-						this.moveToNextPage();
-
-						// Save lastColumnWidth before reset — if we're inside a nested
-						// column group (e.g. product/price row), the reset would overwrite
-						// it with the snaking column width, corrupting inner column layout.
-						let savedLastColumnWidth = ctx.lastColumnWidth;
-						ctx.resetSnakingColumnsForNewPage();
-						ctx.lastColumnWidth = savedLastColumnWidth;
+						this.moveToNextPage(undefined, context => {
+							// Keep the inner column width while resetting the snaking group.
+							let savedLastColumnWidth = context.lastColumnWidth;
+							context.resetSnakingColumnsForNewPage();
+							context.lastColumnWidth = savedLastColumnWidth;
+						});
 					}
 
 					position = addFct();
@@ -301,6 +331,9 @@ class PageElementWriter extends ElementWriter {
 					position = addFct();
 				}
 			}
+		}
+		if (!position && !allowFailure) {
+			throw new Error('Content cannot fit on a page within the available space.');
 		}
 		return position;
 	}

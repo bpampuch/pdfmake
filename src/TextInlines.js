@@ -181,7 +181,12 @@ class TextInlines {
 	 * @returns {number}
 	 */
 	widthOfText(text, inline) {
-		return inline.font.widthOfString(text, inline.fontSize, inline.fontFeatures) + ((inline.characterSpacing || 0) * (text.length - 1));
+		let width = inline.font.widthOfString(text, inline.fontSize, inline.fontFeatures);
+		if (inline.characterSpacing) {
+			// Include spacing after the last character to keep adjacent inlines spaced.
+			width += inline.characterSpacing * Array.from(text).length;
+		}
+		return width;
 	}
 
 	/**

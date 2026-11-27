@@ -99,6 +99,57 @@ describe('LayoutBuilder', function () {
 		builder.styleStack = new StyleContextStack();
 	});
 
+	describe('row span page breaks', function () {
+		it('merges overlapping spans and existing row breaks only on pages where a span ends', function () {
+			var spans = [
+				{ prevPage: 0, prevY: 680, y: 50, rowIndexOfSpanEnd: 2 },
+				{ prevPage: 0, prevY: 700, y: 40, rowIndexOfSpanEnd: 4 },
+				{ prevPage: 1, prevY: 700, y: 40, rowIndexOfSpanEnd: 4 },
+				{ prevPage: 2, prevY: 690, y: 45, rowIndexOfSpanEnd: 2 },
+				{ prevPage: 2, prevY: 720, y: 35, rowIndexOfSpanEnd: 4 },
+				{ prevPage: 2, prevY: 790, y: 10, rowIndexOfSpanEnd: 1 },
+				{ prevPage: 3, prevY: 700, y: 40, rowIndexOfSpanEnd: 2 }
+			];
+			var originalSpans = JSON.parse(JSON.stringify(spans));
+			var breaks = [{ prevPage: 4, prevY: 710, y: 40 }, { prevPage: 0, prevY: 710, y: 60 }];
+			builder._addRowSpanPageBreaks(breaks, spans, 2, 0, 3);
+			assert.deepStrictEqual(breaks, [
+				{ prevPage: 0, prevY: 710, y: 40 },
+				{ prevPage: 2, prevY: 720, y: 35 },
+				{ prevPage: 4, prevY: 710, y: 40 }
+			]);
+			assert.deepStrictEqual(spans, originalSpans);
+		});
+
+		[100, 400].forEach(function (count) {
+			it('bounds visits to page break records when completing a span across ' + count + ' pages', function () {
+				var spanReads = 0;
+				var rowReads = 0;
+				var spans = new Proxy(Array.from({ length: count }, (_, page) => ({ prevPage: page, prevY: 700, y: 40, rowIndexOfSpanEnd: 2 })), {
+					get(target, key) {
+						if (typeof key === 'string' && /^\d+$/.test(key)) {
+							spanReads++;
+						}
+						return Reflect.get(target, key);
+					}
+				});
+				var breaks = new Proxy(Array.from({ length: count }, (_, page) => ({ prevPage: page, prevY: 600, y: 50 })), {
+					get(target, key) {
+						if (typeof key === 'string' && /^\d+$/.test(key)) {
+							rowReads++;
+						}
+						return Reflect.get(target, key);
+					}
+				});
+				builder._addRowSpanPageBreaks(breaks, spans, 2, 0, count);
+				assert.ok(spanReads <= count * 2, 'Span records must not be scanned for every page');
+				assert.ok(rowReads <= count * 5, 'Row breaks must not be scanned for every page');
+				assert.equal(breaks.length, count);
+				breaks.forEach((pageBreak, page) => assert.deepStrictEqual(pageBreak, { prevPage: page, prevY: 700, y: 40 }));
+			});
+		});
+	});
+
 	describe('processDocument', function () {
 		it('should arrange texts one below another', function () {
 			var desc = [
@@ -2017,6 +2068,26 @@ describe('LayoutBuilder', function () {
 		beforeEach(function () {
 			pdfDocument = sampleTestProvider;
 			styleDictionary = {};
+		});
+
+		it('restores document repeatables when processing a background fails', function () {
+			builder.layoutDocument(['Text'], pdfDocument, styleDictionary);
+			var repeatables = [{ items: [] }];
+			var error = new Error('Background failure');
+			builder.writer.repeatables = repeatables;
+			var stub = sinon.stub(builder.docPreprocessor, 'preprocessBlock').callsFake(() => {
+				assert.notStrictEqual(builder.writer.repeatables, repeatables);
+				assert.deepStrictEqual(builder.writer.repeatables, []);
+				throw error;
+			});
+
+			try {
+				assert.throws(() => builder.addBackground({ text: 'BACKGROUND' }), actual => actual === error);
+				assert.strictEqual(builder.writer.repeatables, repeatables);
+				assert.equal(builder.backgroundLevel, 0);
+			} finally {
+				stub.restore();
+			}
 		});
 
 		it('should provide the current page and page size', function () {

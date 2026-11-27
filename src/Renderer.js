@@ -1,7 +1,7 @@
 import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
 import { isNumber, isString } from './helpers/variableType';
-import SVGtoPDF from './3rd-party/svg-to-pdfkit';
+import SVGtoPDF from '@pdfmake/svg-to-pdfkit';
 
 const findFont = (fonts, requiredFonts, defaultFont) => {
 	for (let i = 0; i < requiredFonts.length; i++) {
@@ -207,6 +207,10 @@ class Renderer {
 	}
 
 	renderVector(vector) {
+		if (vector.type === 'path') {
+			this.pdfDocument.save();
+			this.pdfDocument.translate(vector.x || 0, vector.y || 0);
+		}
 		//TODO: pdf optimization (there's no need to write all properties everytime)
 		this.pdfDocument.lineWidth(vector.lineWidth || 1);
 		if (vector.dash) {
@@ -297,9 +301,13 @@ class Renderer {
 			this.pdfDocument.strokeColor(this.pdfDocument.resolveColor(vector.lineColor, 'black'), strokeOpacity);
 			this.pdfDocument.stroke();
 		}
+		if (vector.type === 'path') {
+			this.pdfDocument.restore();
+		}
 	}
 
 	renderImage(image) {
+		const source = this.pdfDocument.provideImage(image.image);
 		let opacity = isNumber(image.opacity) ? image.opacity : 1;
 		this.pdfDocument.opacity(opacity);
 		if (image.cover) {
@@ -309,10 +317,10 @@ class Renderer {
 			const height = image.cover.height ? image.cover.height : image.height;
 			this.pdfDocument.save();
 			this.pdfDocument.rect(image.x, image.y, width, height).clip();
-			this.pdfDocument.image(image.image, image.x, image.y, { cover: [width, height], align: align, valign: valign });
+			this.pdfDocument.image(source, image.x, image.y, { cover: [width, height], align: align, valign: valign });
 			this.pdfDocument.restore();
 		} else {
-			this.pdfDocument.image(image.image, image.x, image.y, { width: image._width, height: image._height });
+			this.pdfDocument.image(source, image.x, image.y, { width: image._width, height: image._height });
 		}
 		if (image.link) {
 			this.pdfDocument.link(image.x, image.y, image._width, image._height, image.link);
@@ -357,19 +365,16 @@ class Renderer {
 		};
 		options.fontCallback = (family, bold, italic) => {
 			let fontsFamily = family.split(',').map(f => f.trim().replace(/('|")/g, ''));
-			let font = findFont(this.pdfDocument.fonts, fontsFamily, svg.font || 'Roboto');
+			let font = findFont(this.pdfDocument.fonts, fontsFamily, svg._font || svg.font || 'Roboto');
 
-			let fontFile = this.pdfDocument.getFontFile(font, bold, italic);
-			if (fontFile === null) {
-				let type = this.pdfDocument.getFontType(bold, italic);
-				throw new Error(`Font '${font}' in style '${type}' is not defined in the font section of the document definition.`);
-			}
-
-			return fontFile;
+			let loadedFont = this.pdfDocument.provideFont(font, bold, italic);
+			let alias = `pdfmake:${JSON.stringify([font, this.pdfDocument.getFontType(bold, italic)])}`;
+			this.pdfDocument._fontFamilies[alias] = loadedFont;
+			return alias;
 		};
 		options.imageCallback = link => {
 			let src = link.replace(/\s+/g, '');
-			this.pdfDocument.validateLocalFile(src);
+			this.pdfDocument.provideImage(src);
 
 			return src;
 		};
@@ -409,33 +414,37 @@ class Renderer {
 		this.pdfDocument.restore();
 	}
 
-	beginVerticalAlignment(item) {
-		if (item.isCellContentMultiPage) {
-			return;
+	getVerticalAlignmentOffset(item) {
+		if (item.isCellContentMultiPage || (item.verticalAlignment !== 'middle' && item.verticalAlignment !== 'bottom')) {
+			return null;
 		}
 
-		switch(item.verticalAlignment) {
-			case 'middle':
-				this.pdfDocument.save();
-				this.pdfDocument.translate(0, -(item.getNodeHeight() - item.getViewHeight()) / 2);
-				break;
-			case 'bottom':
-				this.pdfDocument.save();
-				this.pdfDocument.translate(0, -(item.getNodeHeight() - item.getViewHeight()));
-				break;
+		const nodeHeight = item.getNodeHeight();
+		const viewHeight = item.getViewHeight();
+
+		if (!Number.isFinite(nodeHeight) || !Number.isFinite(viewHeight) || nodeHeight < 0 || viewHeight < nodeHeight) {
+			return null;
+		}
+
+		if (item.verticalAlignment === 'middle') {
+			return (viewHeight - nodeHeight) / 2;
+		}
+
+		// bottom
+		return (viewHeight - nodeHeight);
+	}
+
+	beginVerticalAlignment(item) {
+		const offset = this.getVerticalAlignmentOffset(item);
+		if (offset !== null) {
+			this.pdfDocument.save();
+			this.pdfDocument.translate(0, offset);
 		}
 	}
 
 	endVerticalAlignment(item) {
-		if (item.isCellContentMultiPage) {
-			return;
-		}
-
-		switch(item.verticalAlignment) {
-			case 'middle':
-			case 'bottom':
-				this.pdfDocument.restore();
-				break;
+		if (this.getVerticalAlignmentOffset(item) !== null) {
+			this.pdfDocument.restore();
 		}
 	}
 

@@ -6,6 +6,80 @@ var TableProcessor = require('../../js/TableProcessor').default;
 
 describe('TableProcessor', function () {
 
+	describe('releaseRowSpans', function () {
+		it('checks each cell only once when releasing independent rows', function () {
+			var reads = 0;
+			var body = Array.from({ length: 80 }, () => [{
+				get rowSpan() {
+					reads++;
+					return undefined;
+				}
+			}]);
+			var processor = new TableProcessor({ table: { body } });
+
+			body.forEach((row, index) => processor.releaseRowSpans(index));
+
+			assert.ok(reads <= body.length, 'rowSpan checks must grow linearly');
+		});
+
+		it('releases transitive overlaps starting before and ending after the requested row', function () {
+			var body = [
+				[{ rowSpan: 3 }, {}],
+				[{}, {}],
+				[{}, { rowSpan: 3 }],
+				[{}, {}],
+				[{}, {}],
+				[{}, {}]
+			];
+			var processor = new TableProcessor({ table: { body } });
+
+			processor.releaseRowSpans(3);
+
+			assert.deepEqual(Array.from(processor.breakableBlocks), body.slice(0, 5));
+		});
+
+		it('does not release an adjacent independent span group', function () {
+			var body = [[{ rowSpan: 2 }], [{}], [{ rowSpan: 2 }], [{}]];
+			var processor = new TableProcessor({ table: { body } });
+
+			processor.releaseRowSpans(1);
+
+			assert.deepEqual(Array.from(processor.breakableBlocks), body.slice(0, 2));
+		});
+
+		it('preserves saved contexts outside the connected span group (#207-29)', function () {
+			var body = [
+				[{ rowSpan: 3 }, {}],
+				[{}, {}],
+				[{}, { rowSpan: 3 }],
+				[{}, {}],
+				[{}, {}],
+				[{ rowSpan: 2 }, {}],
+				[{}, {}]
+			];
+			var contexts = body.map((row, index) => row.map(() => ({ page: index })));
+			body.forEach((row, i) => row.forEach((cell, j) => cell._columnEndingContext = contexts[i][j]));
+			var processor = new TableProcessor({ table: { body } });
+
+			processor.releaseRowSpans(3);
+
+			body.forEach((row, i) => row.forEach((cell, j) => {
+				assert.strictEqual(cell._columnEndingContext, i < 5 ? undefined : contexts[i][j]);
+			}));
+		});
+
+		it('clears a context recreated after releasing the same span group (#207-29)', function () {
+			var body = [[{ rowSpan: 2 }], [{}]];
+			var processor = new TableProcessor({ table: { body } });
+			processor.releaseRowSpans(0);
+			body[1][0]._columnEndingContext = { page: 2 };
+
+			processor.releaseRowSpans(1);
+
+			assert.strictEqual(body[1][0]._columnEndingContext, undefined);
+		});
+	});
+
 	var defaultLayout, addVectorCallCount, contextFake, writerFake;
 
 	beforeEach(function () {

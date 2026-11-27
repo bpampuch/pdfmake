@@ -21,6 +21,57 @@ describe('PDFDocument', function () {
 	});
 
 	describe('provideFont', function () {
+		it('should load an ArrayBuffer font with a document virtual file system', function () {
+			var VirtualFileSystem = require('../../js/virtual-fs').VirtualFileSystem;
+			var data = Uint8Array.from(require('fs').readFileSync('fonts/Roboto/Roboto-Regular.ttf')).buffer;
+			var vfs = new VirtualFileSystem(new VirtualFileSystem());
+			var doc = new PDFDocument({ Roboto: { normal: data } }, {}, {}, {}, {}, vfs, () => false);
+
+			assert.equal(doc.provideFont('Roboto', false, false).font.postscriptName, 'Roboto-Regular');
+		});
+
+		it('should load URL font definitions from each document virtual file system without changing them', function () {
+			var source = { url: 'https://example.com/font.ttf', headers: { Authorization: 'Bearer token' } };
+			var fonts = { Remote: { normal: source, bold: source, italics: source, bolditalics: source } };
+			var data = require('fs').readFileSync('fonts/Roboto/Roboto-Regular.ttf');
+			var original = JSON.parse(JSON.stringify(fonts));
+
+			for (var i = 0; i < 2; i++) {
+				var vfs = {
+					existsSync: sinon.stub().withArgs(source.url).returns(true),
+					readFileSync: sinon.stub().withArgs(source.url).returns(data)
+				};
+				var doc = new PDFDocument(fonts, {}, {}, {}, {}, vfs, () => false);
+				[[false, false], [true, false], [false, true], [true, true]].forEach(function (style) {
+					assert.equal(doc.provideFont('Remote', ...style).font.postscriptName, 'Roboto-Regular');
+				});
+				assert.equal(vfs.readFileSync.callCount, 4);
+				assert.deepStrictEqual(fonts, original);
+			}
+		});
+
+		it('should preserve collection definitions with and without headers', function () {
+			var url = 'https://example.com/font.ttc';
+			var source = { url: url, headers: { Authorization: 'Bearer token' } };
+			var fonts = { Remote: { normal: [url, 'CollectionFont'], bold: [source, 'CollectionFont'] } };
+			var data = Buffer.from('collection font data');
+			var original = JSON.parse(JSON.stringify(fonts));
+
+			for (var i = 0; i < 2; i++) {
+				var vfs = {
+					existsSync: filename => filename === url,
+					readFileSync: sinon.stub().withArgs(url).returns(data)
+				};
+				var doc = new PDFDocument(fonts, {}, {}, {}, {}, vfs, () => false);
+				var font = {};
+				var loadFont = sinon.stub(doc, 'font').returns({ _font: font });
+
+				assert.strictEqual(doc.provideFont('Remote', false, false), font);
+				assert.strictEqual(doc.provideFont('Remote', true, false), font);
+				assert.deepStrictEqual(loadFont.getCalls().map(call => call.args), [[data, 'CollectionFont'], [data, 'CollectionFont']]);
+				assert.deepStrictEqual(fonts, original);
+			}
+		});
 
 		it('throws error when given font not present', function () {
 			assert.throws(function () {
@@ -65,6 +116,28 @@ describe('PDFDocument', function () {
 			assert.strictEqual(pdfDocument._imageRegistry.logo, image);
 		});
 
+		['Buffer', 'Uint8Array', 'ArrayBuffer'].forEach(function (type) {
+			it('should load a named ' + type + ' image with a document virtual file system', function () {
+				var VirtualFileSystem = require('../../js/virtual-fs').VirtualFileSystem;
+				var data = Buffer.from(imageData.split(',')[1], 'base64');
+				if (type === 'Uint8Array') {
+					data = Uint8Array.from(data);
+				} else if (type === 'ArrayBuffer') {
+					data = Uint8Array.from(data).buffer;
+				}
+				pdfDocument.images = { logo: data };
+				pdfDocument.virtualfs = new VirtualFileSystem(new VirtualFileSystem());
+				pdfDocument.localAccessPolicy = () => false;
+
+				var image = pdfDocument.provideImage('logo');
+				assert.equal(image.width, 12);
+				assert.equal(image.height, 6);
+				assert(image.obj, 'The image should be embedded as a PDF object');
+				assert.strictEqual(pdfDocument._imageRegistry.logo, image);
+				assert.strictEqual(pdfDocument.images.logo, data);
+			});
+		});
+
 		it('should reuse a cached image without opening or embedding it again', function () {
 			pdfDocument.images = { logo: imageData };
 			var first = pdfDocument.provideImage('logo');
@@ -73,6 +146,61 @@ describe('PDFDocument', function () {
 			assert.strictEqual(pdfDocument.provideImage('logo'), first);
 			sinon.assert.notCalled(openImage);
 			sinon.assert.notCalled(embed);
+		});
+
+		it('should reuse identical image bytes across names and binary representations', function () {
+			var data = Buffer.from(imageData.split(',')[1], 'base64');
+			var padded = Buffer.concat([Buffer.from('prefix'), data, Buffer.from('suffix')]);
+			pdfDocument.images = {
+				logo: imageData,
+				copy: imageData,
+				buffer: Buffer.from(data),
+				array: new Uint8Array(padded.buffer, padded.byteOffset + 6, data.length),
+				arrayBuffer: Uint8Array.from(data).buffer
+			};
+			var first = pdfDocument.provideImage('logo');
+			var embed = sinon.spy(first, 'embed');
+			['copy', 'buffer', 'array', 'arrayBuffer'].forEach(function (name) {
+				assert.strictEqual(pdfDocument.provideImage(name), first);
+				assert.strictEqual(pdfDocument._imageRegistry[name], first);
+			});
+			sinon.assert.notCalled(embed);
+		});
+
+		it('should deduplicate JPEG data URLs and buffers without hashing local files', function () {
+			var path = 'examples/images/sampleImage.jpg';
+			var data = require('fs').readFileSync(path);
+			var localImage = pdfDocument.provideImage(path);
+			assert.equal(pdfDocument.imageCache.size, 0);
+			assert.strictEqual(pdfDocument.provideImage(path), localImage);
+			var image = pdfDocument.provideImage('data:image/jpeg;base64,' + data.toString('base64'));
+			assert.notStrictEqual(image, localImage);
+			assert.strictEqual(pdfDocument.provideImage(Buffer.from(data)), image);
+			assert.notStrictEqual(pdfDocument.provideImage(imageData), image);
+		});
+
+		it('should reuse image bytes loaded from the virtual file system', function () {
+			var VirtualFileSystem = require('../../js/virtual-fs').VirtualFileSystem;
+			pdfDocument.virtualfs = new VirtualFileSystem();
+			pdfDocument.virtualfs.writeFileSync('logo.png', Buffer.from(imageData.split(',')[1], 'base64'));
+			pdfDocument.images = { logo: imageData, copy: 'logo.png' };
+			pdfDocument.localAccessPolicy = () => false;
+			var image = pdfDocument.provideImage('logo');
+			assert.strictEqual(pdfDocument.provideImage('copy'), image);
+			assert.strictEqual(pdfDocument.provideImage('logo.png'), image);
+			assert.strictEqual(pdfDocument.openImage('logo.png'), image);
+		});
+
+		it('should keep image objects separate between documents', function () {
+			var other = new PDFDocument();
+			assert.notStrictEqual(pdfDocument.provideImage(imageData), other.provideImage(imageData));
+		});
+
+		it('should check local access before reading an image already cached by content', function () {
+			var path = 'examples/images/sampleImage.jpg';
+			pdfDocument.provideImage(require('fs').readFileSync(path));
+			pdfDocument.localAccessPolicy = () => false;
+			assert.throws(() => pdfDocument.provideImage(path), /Access to local file denied/);
 		});
 
 		it('should read named images from the virtual file system', function () {
@@ -97,12 +225,50 @@ describe('PDFDocument', function () {
 			assert.equal(image.height, 6);
 		});
 
+		it('should load URL image definitions from each document virtual file system without changing them', function () {
+			var source = { url: 'https://example.com/image.png', headers: { Authorization: 'Bearer token' } };
+			var images = { logo: source };
+			var original = JSON.parse(JSON.stringify(images));
+			var data = Buffer.from(imageData.split(',')[1], 'base64');
+
+			for (var i = 0; i < 2; i++) {
+				var vfs = {
+					existsSync: sinon.stub().withArgs(source.url).returns(true),
+					readFileSync: sinon.stub().withArgs(source.url).returns(data)
+				};
+				var doc = new PDFDocument({}, images, {}, {}, {}, vfs, () => false);
+				var image = doc.provideImage('logo');
+				assert.equal(image.width, 12);
+				assert.equal(image.height, 6);
+				sinon.assert.calledOnceWithExactly(vfs.readFileSync, source.url);
+				assert.deepStrictEqual(images, original);
+			}
+		});
+
+		it('should decode data URLs in image definitions with headers', function () {
+			pdfDocument.images = { logo: { url: imageData, headers: {} } };
+			var image = pdfDocument.provideImage('logo');
+			assert.equal(image.width, 12);
+			assert.equal(image.height, 6);
+		});
+
+		it('should enforce the local access policy for image definitions with headers', function () {
+			pdfDocument.images = { logo: { url: 'private.png', headers: {} } };
+			pdfDocument.localAccessPolicy = () => false;
+			var openImage = sinon.spy(pdfDocument, 'openImage');
+			assert.throws(() => pdfDocument.provideImage('logo'), /Access to local file denied.*private\.png/);
+			sinon.assert.notCalled(openImage);
+		});
+
 		it('should resolve named local image paths before opening them', function () {
-			pdfDocument.images = { logo: 'logo.png' };
+			var path = 'examples/images/sampleImage.jpg';
+			pdfDocument.images = { logo: path };
 			var image = { embed: sinon.spy() };
 			var openImage = sinon.stub(pdfDocument, 'openImage').returns(image);
 			assert.strictEqual(pdfDocument.provideImage('logo'), image);
-			sinon.assert.calledOnceWithExactly(openImage, 'logo.png');
+			sinon.assert.calledOnce(openImage);
+			sinon.assert.calledOnceWithExactly(openImage, path);
+			assert.equal(pdfDocument.imageCache.size, 0);
 			sinon.assert.calledOnceWithExactly(image.embed, pdfDocument);
 		});
 
@@ -117,16 +283,49 @@ describe('PDFDocument', function () {
 		it('should report invalid image data without caching it', function () {
 			assert.throws(() => pdfDocument.provideImage(Buffer.from('invalid image')), /Invalid image:.*Unknown image format/);
 			assert.equal(Object.keys(pdfDocument._imageRegistry).length, 0);
+			assert.equal(pdfDocument.imageCache.size, 0);
 		});
 
 		it('should report an image loader returning no image', function () {
 			sinon.stub(pdfDocument, 'openImage').returns(null);
-			assert.throws(() => pdfDocument.provideImage('missing.png'), /Invalid image: Error: No image/);
-			assert.equal(pdfDocument._imageRegistry['missing.png'], undefined);
+			assert.throws(() => pdfDocument.provideImage(imageData), /Invalid image: Error: No image/);
+			assert.equal(pdfDocument._imageRegistry[imageData], undefined);
 		});
 	});
 
 	describe('provideAttachment', function () {
+
+		it('should preserve URL attachment definitions when loading by name or inline', function () {
+			var source = { url: 'https://example.com/report.txt', headers: { Authorization: 'Bearer token' } };
+			var attachment = { src: source, name: 'report.txt', description: 'Report description' };
+			var attachments = { report: attachment };
+			var original = JSON.parse(JSON.stringify(attachments));
+			var content = Buffer.from('Attachment contents');
+
+			for (var i = 0; i < 2; i++) {
+				var vfs = {
+					existsSync: sinon.stub().withArgs(source.url).returns(true),
+					readFileSync: sinon.stub().withArgs(source.url).returns(content)
+				};
+				var doc = new PDFDocument({}, {}, {}, attachments, {}, vfs, () => false);
+				assert.deepStrictEqual(doc.provideAttachment('report'), { ...attachment, src: content });
+				assert.deepStrictEqual(doc.provideAttachment(attachment), { ...attachment, src: content });
+				assert.equal(vfs.readFileSync.callCount, 2);
+				assert.deepStrictEqual(attachments, original);
+			}
+		});
+
+		it('should resolve attachment sources with headers without a virtual file system', function () {
+			var attachment = { src: { url: 'report.txt', headers: {} }, name: 'report.txt' };
+			pdfDocument.localAccessPolicy = filename => filename === 'report.txt';
+			assert.deepStrictEqual(pdfDocument.provideAttachment(attachment), { src: 'report.txt', name: 'report.txt' });
+			assert.deepStrictEqual(attachment.src, { url: 'report.txt', headers: {} });
+		});
+
+		it('should enforce the local access policy for attachment sources with headers', function () {
+			pdfDocument.localAccessPolicy = () => false;
+			assert.throws(() => pdfDocument.provideAttachment({ src: { url: 'private.txt', headers: {} } }), /Access to local file denied.*private\.txt/);
+		});
 
 		it('should resolve a named VFS attachment without changing its metadata or original definition', function () {
 			var content = Buffer.from('Attachment contents');

@@ -12,7 +12,7 @@ When reporting a bug, include:
 - The pdfmake version you are using.
 - A description of the expected and actual behavior.
 - A minimal reproducible example that runs in the
-  [playground](http://pdfmake.org/playground.html),
+  [playground](https://pdfmake.github.io/playground.html),
   [JSFiddle](https://jsfiddle.net/), or a similar service.
 
 If the issue only occurs in Node.js, provide a minimal runnable script

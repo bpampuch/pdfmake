@@ -530,15 +530,16 @@ describe('DocMeasure', function () {
 			var dataUri = 'data:image/png;base64,iVBORw0KGgo=';
 			var provider = {
 				images: {},
-				provideImage: function (key) {
-					assert.equal(this.images[key], dataUri);
+				provideImage: function (src) {
+					assert.equal(src, dataUri);
 					return { width: 20, height: 10 };
 				}
 			};
 			var measure = new DocMeasure(provider);
 			var node = { image: dataUri, width: 40 };
 			assert.strictEqual(measure.measureImage(node), node);
-			assert.equal(provider.images[node.image], dataUri);
+			assert.equal(node.image, dataUri);
+			assert.deepStrictEqual(provider.images, {});
 			assert.equal(node._width, 40);
 			assert.equal(node._height, 20);
 		});

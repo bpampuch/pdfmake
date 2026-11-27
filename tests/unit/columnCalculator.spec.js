@@ -5,7 +5,34 @@ var assert = require('assert');
 var ColumnCalculator = require('../../js/columnCalculator').default;
 
 describe('ColumnCalculator', function () {
+	describe('measureMinMax', function () {
+		it('should measure percentage columns from their content independently of previous layout widths', function () {
+			var columns = [{ width: '50%', _minWidth: 10, _maxWidth: 20 }, { width: '50%', _minWidth: 15, _maxWidth: 25 }];
+			assert.deepEqual(ColumnCalculator.measureMinMax(columns), { min: 25, max: 45 });
+			ColumnCalculator.buildColumnWidths(columns, 200);
+			assert.deepEqual(ColumnCalculator.measureMinMax(columns), { min: 25, max: 45 });
+		});
+	});
+
 	describe('buildColumnWidths', function () {
+		it('should recalculate percentage widths without changing their definitions', function () {
+			var columns = [{ width: '50%', _minWidth: 0, _maxWidth: 0 }, { width: '50%', _minWidth: 0, _maxWidth: 0 }];
+			[200, 100, 300].forEach(function (width) {
+				ColumnCalculator.buildColumnWidths(columns, width);
+				assert.deepEqual(columns.map(col => col._calcWidth), [width / 2, width / 2]);
+				assert.deepEqual(columns.map(col => col.width), ['50%', '50%']);
+			});
+		});
+
+		it('should apply elasticWidth to the current percentage width', function () {
+			var columns = [{ width: '50%', _minWidth: 30, _maxWidth: 80, elasticWidth: true }];
+			[200, 40, 300].forEach(function (width) {
+				ColumnCalculator.buildColumnWidths(columns, width);
+				assert.equal(columns[0]._calcWidth, Math.max(30, width / 2));
+				assert.equal(columns[0].width, '50%');
+			});
+		});
+
 		it('should set calcWidth to specified width for fixed columns', function () {
 			var columns = [
 				{ width: 50, _minWidth: 30, _maxWidth: 80 },
@@ -210,13 +237,14 @@ describe('ColumnCalculator', function () {
 			// 200 Total available width (availableWidth + offsetTotal) === 149 + 51
 			// Fist column is 50% width of 200 === 100
 			// 100 - 4 borderLeft - 6/2 = 3 borderRight - 5 paddingLeft - 7 paddingRight
-			assert.equal(columns[0].width, 81);
+			assert.equal(columns[0]._calcWidth, 81);
 			// Second column has 25% width of 200 which is 50
 			// 50 - 3 (6/2) borderLeft - 2.5 (5/2) borderRight - 3 paddingLeft - 7 paddingRight
-			assert.equal(columns[1].width, 34.5);
+			assert.equal(columns[1]._calcWidth, 34.5);
 			// Third column has 25% width of 200 which is 50
 			// 50 - 2.5 (5/2) borderLeft - 4 borderRight - 3 paddingLeft - 7 paddingRight
-			assert.equal(columns[2].width, 33.5);
+			assert.equal(columns[2]._calcWidth, 33.5);
+			assert.deepEqual(columns.map(col => col.width), ['50%', '25%', '25%']);
 			// The sum of all column width should be equal to totalAvailableWidth - offsetTotal
 			assert.equal(availableWidth, 81 + 34.5 + 33.5);
 		});

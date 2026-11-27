@@ -1,4 +1,5 @@
 import { PDFDocument as PDFKitDocument } from 'pdfkit';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { isString } from './helpers/variableType';
 
 const typeName = (bold, italics) => {
@@ -16,6 +17,7 @@ const typeName = (bold, italics) => {
 class PDFDocument extends PDFKitDocument {
 	constructor(fonts = {}, images = {}, patterns = {}, attachments = {}, options = {}, virtualfs = null, localAccessPolicy = undefined) {
 		super(options);
+		this.imageCache = new Map();
 
 		this.fonts = {};
 		this.fontCache = {};
@@ -71,6 +73,12 @@ class PDFDocument extends PDFKitDocument {
 			let def = this.fonts[familyName][type];
 			if (!Array.isArray(def)) {
 				def = [def];
+			} else {
+				def = def.slice();
+			}
+
+			if (typeof def[0] === 'object' && def[0].url) {
+				def[0] = def[0].url;
 			}
 
 			if (this.virtualfs && this.virtualfs.existsSync(def[0])) {
@@ -87,36 +95,45 @@ class PDFDocument extends PDFKitDocument {
 
 	provideImage(src) {
 		const realImageSrc = src => {
-			let image = this.images[src];
+			let image = this.images[src] || src;
 
-			if (!image) {
-				return src;
+			if (typeof image === 'object' && image.url) {
+				image = image.url;
 			}
 
 			if (this.virtualfs && this.virtualfs.existsSync(image)) {
 				return this.virtualfs.readFileSync(image);
 			}
 
+			if (typeof image !== 'string') {
+				return image;
+			}
+
 			let index = image.indexOf('base64,');
 			if (index < 0) {
-				return this.images[src];
+				return image;
 			}
 
 			return Buffer.from(image.substring(index + 7), 'base64');
 		};
 
-		if (this._imageRegistry[src]) {
+		if (typeof src === 'string' && this._imageRegistry[src]) {
 			return this._imageRegistry[src];
 		}
 
 		let image;
+		let hash;
 
 		let imageSrc = realImageSrc(src);
 
 		this.validateLocalFile(imageSrc);
 
 		try {
-			image = this.openImage(imageSrc);
+			if (typeof imageSrc !== 'string') {
+				const data = imageSrc instanceof ArrayBuffer ? new Uint8Array(imageSrc) : imageSrc;
+				hash = Buffer.from(sha256(data)).toString('base64');
+			}
+			image = this.imageCache.get(hash) || this.openImage(imageSrc);
 			if (!image) {
 				throw new Error('No image');
 			}
@@ -124,8 +141,15 @@ class PDFDocument extends PDFKitDocument {
 			throw new Error(`Invalid image: ${error.toString()}\nImages dictionary should contain dataURL entries (or local file paths in node.js)`, { cause: error });
 		}
 
-		image.embed(this);
-		this._imageRegistry[src] = image;
+		if (!image.obj) {
+			image.embed(this);
+		}
+		if (hash) {
+			this.imageCache.set(hash, image);
+		}
+		if (typeof src === 'string') {
+			this._imageRegistry[src] = image;
+		}
 
 		return image;
 	}
@@ -155,6 +179,10 @@ class PDFDocument extends PDFKitDocument {
 		};
 
 		let attachment = checkRequired(typeof src === 'object' ? src : this.attachments[src]);
+
+		if (typeof attachment.src === 'object' && attachment.src.url) {
+			attachment = { ...attachment, src: attachment.src.url };
+		}
 
 		if (this.virtualfs && this.virtualfs.existsSync(attachment.src)) {
 			return {

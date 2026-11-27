@@ -290,10 +290,14 @@ describe('TextInlines', function () {
 		});
 
 		[2, 0, -1].forEach(function (spacing) {
-			it('should apply characterSpacing=' + spacing + ' between characters', function () {
+			it('should apply characterSpacing=' + spacing + ' after every character', function () {
 				var font = sampleTestProvider.provideFont();
-				assert.equal(textInlines.widthOfText('abcd', { font: font, fontSize: 10, characterSpacing: spacing }), 40 + 3 * spacing);
-				assert.equal(textInlines.widthOfText('a', { font: font, fontSize: 10, characterSpacing: spacing }), 10);
+				var inline = { font: font, fontSize: 10, characterSpacing: spacing };
+				assert.equal(textInlines.widthOfText('abcd', inline), 40 + 4 * spacing);
+				assert.equal(textInlines.widthOfText('a', inline), 10 + spacing);
+				assert.equal(textInlines.widthOfText('\u{1f600}', inline), 20 + spacing);
+				assert.equal(textInlines.widthOfText('A\u{1f600}B', inline), 40 + 3 * spacing);
+				assert.equal(textInlines.widthOfText('', inline), 0);
 			});
 		});
 	});
@@ -308,9 +312,9 @@ describe('TextInlines', function () {
 		it('should apply font style, line height and character spacing from the style stack', function () {
 			var stack = new StyleContextStack({}, { fontSize: 10, bold: true, italics: true, lineHeight: 1.5, characterSpacing: 2 });
 			var size = textInlines.sizeOfText('abcd', stack);
-			assert(Math.abs(size.width - 72) < 1e-10);
-			assert.deepEqual({ ...size, width: 72 }, {
-				width: 72, height: 15, fontSize: 10, lineHeight: 1.5, ascender: 8, descender: -2
+			assert(Math.abs(size.width - 74) < 1e-10);
+			assert.deepEqual({ ...size, width: 74 }, {
+				width: 74, height: 15, fontSize: 10, lineHeight: 1.5, ascender: 8, descender: -2
 			});
 		});
 

@@ -5,6 +5,7 @@ var sinon = require('sinon');
 
 var DocumentContext = require('../../js/DocumentContext').default;
 var PageElementWriter = require('../../js/PageElementWriter').default;
+var originalEmit = PageElementWriter.prototype.emit;
 
 describe('PageElementWriter', function () {
 	var pew, ctx, pageSize;
@@ -103,9 +104,12 @@ describe('PageElementWriter', function () {
 		ctx = new DocumentContext();
 		ctx.addPage(pageSize, MARGINS);
 
-		PageElementWriter.prototype.emit = sinon.spy(PageElementWriter.prototype.emit);
-
 		pew = new PageElementWriter(ctx);
+		sinon.spy(pew, 'emit');
+	});
+
+	afterEach(function () {
+		pew.emit.restore();
 	});
 
 	describe('addLine', function () {
@@ -467,5 +471,13 @@ describe('PageElementWriter', function () {
 			assert.equal(pew.emit.callCount, 2);
 			assert.deepEqual(pew.emit.getCall(1).args, ['pageChanged', { prevPage: 0, prevY: MARGINS.top + AVAILABLE_HEIGHT / 10, y: MARGINS.top }]);
 		});
+	});
+});
+
+describe('PageElementWriter test isolation', function () {
+	it('leaves emit unchanged for subsequent writers', function () {
+		assert.strictEqual(PageElementWriter.prototype.emit, originalEmit);
+		var writer = new PageElementWriter(new DocumentContext());
+		assert.strictEqual(writer.emit, originalEmit);
 	});
 });

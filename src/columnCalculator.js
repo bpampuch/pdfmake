@@ -25,8 +25,9 @@ function buildColumnWidths(columns, availableWidth, offsetTotal = 0, tableNode) 
 	});
 
 	fixedColumns.forEach(({ column: col, colIndex }) => {
+		let width = col.width;
 		// width specified as %
-		if (isString(col.width) && /\d+%/.test(col.width)) {
+		if (isPercentageColumn(col)) {
 			// In tables we have to take into consideration the reserved width for paddings and borders
 			let reservedWidth = 0;
 			if (tableNode) {
@@ -48,12 +49,12 @@ function buildColumnWidths(columns, availableWidth, offsetTotal = 0, tableNode) 
 				}
 			}
 			const totalAvailableWidth = initial_availableWidth + offsetTotal;
-			col.width = (parseFloat(col.width) * totalAvailableWidth / 100) - reservedWidth;
+			width = (parseFloat(col.width) * totalAvailableWidth / 100) - reservedWidth;
 		}
-		if (col.width < (col._minWidth) && col.elasticWidth) {
+		if (width < (col._minWidth) && col.elasticWidth) {
 			col._calcWidth = col._minWidth;
 		} else {
-			col._calcWidth = col.width;
+			col._calcWidth = width;
 		}
 
 		availableWidth -= col._calcWidth;
@@ -113,6 +114,10 @@ function isStarColumn(column) {
 	return column.width === null || column.width === undefined || column.width === '*' || column.width === 'star';
 }
 
+function isPercentageColumn(column) {
+	return isString(column.width) && /\d+%/.test(column.width);
+}
+
 //TODO: refactor and reuse in measureTable
 function measureMinMax(columns) {
 	let result = { min: 0, max: 0 };
@@ -126,7 +131,7 @@ function measureMinMax(columns) {
 			maxStar.min = Math.max(maxStar.min, c._minWidth);
 			maxStar.max = Math.max(maxStar.max, c._maxWidth);
 			starCount++;
-		} else if (isAutoColumn(c)) {
+		} else if (isAutoColumn(c) || isPercentageColumn(c)) {
 			result.min += c._minWidth;
 			result.max += c._maxWidth;
 		} else {
@@ -150,5 +155,6 @@ export default {
 	buildColumnWidths: buildColumnWidths,
 	measureMinMax: measureMinMax,
 	isAutoColumn: isAutoColumn,
-	isStarColumn: isStarColumn
+	isStarColumn: isStarColumn,
+	isPercentageColumn: isPercentageColumn
 };

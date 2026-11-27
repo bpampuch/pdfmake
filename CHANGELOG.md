@@ -2,6 +2,117 @@
 
 ## Unreleased
 
+- Added `pdfmake.setUrlResourceConcurrency(concurrency)` to limit concurrent URL resource downloads per document (default: `5`)
+- Added `pdfmake.registerUrlProtocol(protocol, handler)` to support custom URL protocols and replace existing protocol handlers; omitting the handler uses the default fetch downloader
+
+	Example of registering the `blob` protocol with the default fetch downloader:
+
+	```js
+	pdfmake.registerUrlProtocol('blob');
+	```
+
+	Example of registering a custom `asset` protocol with a custom downloader:
+
+	```js
+	pdfmake.registerUrlProtocol('asset', async (url, headers, validateUrlAccessPolicy) => {
+
+		// Fetch logoBytes using url and headers, eg:
+ 		// var logoBytes = await fs.readFile(filename);
+
+		// Call validateUrlAccessPolicy(targetUrl) before following each redirect; it throws if access is denied.
+		// Return the final URL after all redirects, or the original url if there were none.
+		return { buffer: logoBytes, url: finalUrl };
+	});
+	```
+
+	Usage in a document definition:
+
+	```js
+	pdfmake.createPdf({
+		content: [{ image: 'logo' }],
+		images: { logo: 'asset://logo' }
+	});
+	```
+
+	The handler receives the URL, request headers and a `validateUrlAccessPolicy(url)` function, and returns the binary data and final URL. Call `validateUrlAccessPolicy(targetUrl)` before following each redirect; it throws if access is denied.
+
+- Added `pdfmake.unregisterUrlProtocol(protocol)` to remove a URL protocol handler and clear its shared resource cache
+- Fixed double-counted horizontal margins when centering or right-aligning images, SVGs, QR codes and canvases
+- Fixed canvas paths ignoring canvas positioning and alignment, and not reserving space for their drawn content
+- Fixed list bullet and number markers not following the alignment of centered or right-aligned lists
+
+## 0.3.15 - 2026-11-20
+
+- Added the `unbreakableOverflow` option (`'allowBreak'` by default or `'error'`) and explicit errors for content that cannot fit below repeating headers
+
+	Example:
+
+	```js
+	pdfmake.createPdf(docDefinition, { unbreakableOverflow: 'error' });
+	```
+
+	Omit the option or use `{ unbreakableOverflow: 'allowBreak' }` to allow oversized blocks to split across pages when possible.
+
+- Reduced PDF size by deduplicating identical base64 and binary images
+- Invalid or missing images embedded in SVG now throw an error instead of being silently skipped
+- Replaced the unmaintained `svg-to-pdfkit` dependency and local patches with the maintained `@pdfmake/svg-to-pdfkit` fork
+- Updated pdfkit to 0.21.0
+- Updated linebreak to 2.0.0
+- Fixed missing content in oversized unbreakable blocks, table rows and row spans by retrying layout with page breaks enabled (see option `unbreakableOverflow`)
+- Fixed absolutely positioned content inside unbreakable blocks and table rows being shifted by the fragment's position
+- Fixed incorrect table borders caused by page breaks in long backgrounds
+- Fixed incorrect wrapping and missing absolutely positioned text inside unbreakable blocks and table rows
+- Fixed incorrect vertical alignment of table cells after layout is recalculated by `pageBreakBefore`
+- Fixed infinite layout loops and disappearing backgrounds when using `pageBreakBefore`
+- Fixed backgrounds of nested table cells not being moved with the content of table cells with `verticalAlignment` set to `middle` or `bottom`
+- Fixed supplementary Unicode characters being split into invalid UTF-16 surrogates with `wordBreak: 'break-all'` and when wrapping text wider than the available space
+- Fixed CRLF line endings producing extra line breaks and pages with `wordBreak: 'break-all'`
+- Fixed missing `characterSpacing` between inline fragments
+- Fixed text lines fitting exactly within `maxHeight` being omitted and `maxHeight: 0` being treated as unlimited
+- Fixed `beforeOdd`, `beforeEven`, `afterOdd` and `afterEven` page breaks selecting the opposite page parity
+- Fixed reused table cells and SVG nodes retaining inherited fill styles and fonts from a previous context
+- Fixed Buffer attachments in static document and section headers and footers causing PDF generation to fail
+- Fixed reused canvas backgrounds accumulating coordinate offsets across pages and layout passes
+- Fixed list indentation, container margins and available text width being lost across snaking columns and pages
+- Fixed percentage column widths retaining sizes from a previous layout context in tables and columns
+- Fixed repeated table headers keeping their original column position when snaking columns continue on a new page
+- Fixed ancestor table headers being repeated inside nested snaking columns
+- Fixed reused table cells changing the vertical alignment of an earlier occurrence
+- Fixed vertical alignment of row spans and cells whose content or bottom margin crosses a page boundary
+- Fixed unnecessary pages before oversized unbreakable content and incorrect cell fill order with QR or table backgrounds
+- Fixed long backgrounds suppressing repeated table headers in the document body
+- Fixed page breaks in absolutely or relatively positioned cell content creating false table borders
+- Fixed oversized unbreakable children of absolutely or relatively positioned parents starting on the wrong page
+- Fixed positioned content using its parent's snaking columns and changing the position of following content
+- Fixed vertical table border colors depending on the total number of rows, using the opposite side of a row span, or losing the preceding row span's border color priority
+
+## 0.3.14 - 2026-11-08
+
+- Changed URL resource caching: downloaded fonts, images, attachments and embedded files are now stored per document by default instead of being automatically shared across documents
+
+	Addresses CVE-2026-119743 in server-side applications that let untrusted users specify resource URLs, such as image URLs in the document definition's `images` dictionary.
+- Added `pdfmake.setUrlResourceCaching(true | false)` to control caching of downloaded URL resources across documents (default: `false`). Per-URL `cache` values override this setting.
+
+	To restore the behavior of previous versions, call `pdfmake.setUrlResourceCaching(true)` before generating documents.
+
+	```js
+	pdfmake.setUrlResourceCaching(true);
+
+	pdfmake.createPdf({
+		content: [{ image: 'logo' }],
+		images: {
+			logo: {
+				url: 'https://example.com/logo.png',
+				cache: false // Override the default for new downloads.
+			}
+		}
+	});
+	```
+
+	These options control cache writes. Existing shared entries remain available regardless of `cache`. Shared entries are keyed by URL only, without request headers. `setUrlAccessPolicy()` applies to network downloads, not cache reads.
+- Added `pdfmake.clearUrlResourceCache()` to remove URL resource cache.
+- Added support for binary font definitions and image dictionary entries using `Buffer`, `Uint8Array` or `ArrayBuffer`
+- Update Roboto font (version 3.016)
 - Improved performance for large documents when using `pageBreakBefore`
 - Fixed reversed ordered lists starting at a too high number when they contain nested lists
 - Fixed canvas polylines being shifted and affecting column widths when layout is recalculated by `pageBreakBefore`
@@ -14,6 +125,11 @@
 - Fixed list markers being misplaced on subsequent pages when using text backgrounds
 - Fixed invalid page height in temporary contexts used for unbreakable blocks and table rows
 - Fixed `background` of trimmed leading whitespace being drawn to the left of the text, into the page margin or outside the table cell
+- Fixed file attachment annotations disappearing inside unbreakable blocks and table rows
+- Fixed the first word of justified text being shifted right when the line starts with whitespace
+- Fixed svg-to-pdfkit - Fixed excessive memory usage and stack overflows caused by nested SVG `<use>` references by limiting expansion size and depth
+- Fixed SVG font loading from VFS and TrueType collections
+- Fixed SVG fonts bypassing `setLocalAccessPolicy`
 
 ## 0.3.13 - 2026-10-25
 

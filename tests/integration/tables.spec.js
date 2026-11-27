@@ -9,6 +9,54 @@ describe('Integration test: tables', function () {
 
 	var testHelper = new integrationTestHelper();
 
+	['middle', 'bottom'].forEach(function (verticalAlignment) {
+		[false, true].forEach(function (rowSpan) {
+			[[15, 12], [20, 6], [20, 12]].forEach(function ([precedingLines, cellLines]) {
+				it('restores ' + verticalAlignment + ' cell alignment after pageBreakBefore, rowspan=' + rowSpan + ', preceding=' + precedingLines + ', cell=' + cellLines, function () {
+					function lines(count, prefix) {
+						return Array.from({ length: count }, (_, index) => ({ text: prefix + index }));
+					}
+
+					function render(callback) {
+						var cell = { text: 'Aligned cell', verticalAlignment: verticalAlignment };
+						var body = [[cell, { stack: lines(cellLines, 'right-') }]];
+						if (rowSpan) {
+							cell.rowSpan = 2;
+							body.push([{}, { stack: lines(3, 'last-') }]);
+						}
+						var table = { id: 'table', table: { widths: ['*', '*'], body: body } };
+						if (!callback) {
+							table.pageBreak = 'before';
+						}
+						return new integrationTestHelper().renderPages('A6', {
+							content: lines(precedingLines, 'before-').concat([table]),
+							pageBreakBefore: callback ? node => node.id === 'table' : undefined
+						});
+					}
+
+					function snapshot(pages) {
+						return pages.map(page => ({
+							lines: page.items.filter(entry => entry.type === 'line').map(entry => ({
+								x: entry.item.x,
+								y: entry.item.y,
+								text: entry.item.inlines.map(inline => inline.text).join('')
+							})),
+							alignment: page.items.filter(entry => entry.type === 'beginVerticalAlignment').map(entry => ({
+								height: entry.item.getViewHeight(),
+								nodeHeight: entry.item.getNodeHeight()
+							}))
+						}));
+					}
+
+					var expected = render(false);
+					assert.equal(expected.length, 2);
+					assert.equal(expected[1].items.filter(entry => entry.type === 'beginVerticalAlignment').length, 1);
+					assert.deepStrictEqual(snapshot(render(true)), snapshot(expected));
+				});
+			});
+		});
+	});
+
 	function getColumnText(lines, options) {
 		return lines[options.cell].item.inlines.map(inline => inline.text).join('');
 	}
@@ -704,6 +752,89 @@ describe('Integration test: tables', function () {
 		assert.equal(pages.length, 3);
 		assert.deepEqual(viewHeights, [viewHeights[0], viewHeights[0], viewHeights[0]]);
 		assert.ok(viewHeights[0] > 0, 'rowSpan header view height must remain positive');
+	});
+
+	function findFillIndex(items, color) {
+		return items.findIndex(node => node.type === 'vector' && node.item.color === color);
+	}
+
+	function findLineIndex(items, text) {
+		return items.findIndex(node => node.type === 'line' && node.item.inlines.map(inline => inline.text).join('') === text);
+	}
+
+	['middle', 'bottom'].forEach(function (verticalAlignment) {
+		[[false, false], [true, false], [false, true]].forEach(function ([outerDontBreakRows, innerDontBreakRows]) {
+			it('moves nested table backgrounds with ' + verticalAlignment + ' aligned cell content, outer dontBreakRows=' + outerDontBreakRows + ', inner dontBreakRows=' + innerDontBreakRows + ' (#2965)', function () {
+				var pages = testHelper.renderPages('A6', {
+					content: [{
+						table: {
+							dontBreakRows: outerDontBreakRows,
+							widths: ['*', '*'],
+							heights: [150],
+							body: [[
+								{ text: 'Sibling', fillColor: '#ff0000' },
+								{
+									verticalAlignment: verticalAlignment,
+									fillColor: '#00ff00',
+									stack: [
+										{ text: 'Before nested' },
+										{
+											table: {
+												dontBreakRows: innerDontBreakRows,
+												body: [[{ text: 'Nested', fillColor: '#0000ff' }]]
+											}
+										}
+									]
+								}
+							]]
+						}
+					}]
+				});
+
+				var items = pages[0].items;
+				var beginIndex = items.findIndex(node => node.type === 'beginVerticalAlignment');
+				var endIndex = items.findIndex(node => node.type === 'endVerticalAlignment');
+				var nestedFillIndex = findFillIndex(items, '#0000ff');
+
+				assert.equal(pages.length, 1);
+				assert.ok(beginIndex >= 0 && beginIndex < endIndex);
+
+				// background of the nested table is shifted together with the aligned content
+				assert.ok(nestedFillIndex > beginIndex, 'nested fill (' + nestedFillIndex + ') must follow the vertical alignment begin (' + beginIndex + ')');
+				assert.ok(nestedFillIndex < findLineIndex(items, 'Before nested'), 'nested fill must be drawn before the aligned text');
+				assert.ok(nestedFillIndex < findLineIndex(items, 'Nested'), 'nested fill must be drawn before the nested text');
+
+				// backgrounds of the aligned cell and its siblings fill the whole row and are not shifted
+				assert.ok(findFillIndex(items, '#00ff00') < beginIndex);
+				assert.ok(findFillIndex(items, '#ff0000') < findLineIndex(items, 'Sibling'));
+			});
+		});
+	});
+
+	it('keeps sibling cell backgrounds below their text when a vertically aligned cell breaks across pages', function () {
+		var lines = Array.from({ length: 40 }, (_, index) => ({ text: 'Line ' + index }));
+		var pages = testHelper.renderPages('A6', {
+			content: [{
+				table: {
+					widths: ['*', '*'],
+					body: [[
+						{ text: 'Sibling', fillColor: '#ff0000' },
+						{
+							verticalAlignment: 'bottom',
+							stack: lines.concat([{ table: { body: [[{ text: 'Nested', fillColor: '#0000ff' }]] } }])
+						}
+					]]
+				}
+			}]
+		});
+
+		assert.ok(pages.length > 1);
+		var items = pages[0].items;
+		assert.ok(findFillIndex(items, '#ff0000') < findLineIndex(items, 'Sibling'));
+		assert.ok(findFillIndex(items, '#ff0000') < findLineIndex(items, 'Line 0'));
+
+		var lastItems = pages[pages.length - 1].items;
+		assert.ok(findFillIndex(lastItems, '#0000ff') < findLineIndex(lastItems, 'Nested'));
 	});
 
 });

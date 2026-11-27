@@ -126,6 +126,27 @@ describe('Integration test: alignment', function () {
 	});
 
 	[
+		{ name: 'a leading space', text: ' Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.' },
+		{ name: 'leading spaces after a newline', text: 'First line\n   Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.' },
+		{ name: 'a leading space and leadingIndent', text: ' Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.', leadingIndent: 20 }
+	].forEach(function (example) {
+		it('justifies text without a gap after trimmed whitespace with ' + example.name, function () {
+			function render(alignment) {
+				var pages = testHelper.renderPages('A6', { content: [Object.assign({}, example, { alignment: alignment })] });
+				return pages[0].items.map(item => item.item).find(line => line.inlines[0].text.trim() === '');
+			}
+			var left = render('left');
+			var justified = render('justify');
+
+			assert.equal(justified.inlines[1].x, left.inlines[1].x);
+			assert.equal(justified.inlines[1].justifyShift, 0);
+
+			var last = justified.inlines[justified.inlines.length - 1];
+			assert(Math.abs(last.x + last.width - last.trailingCut - justified.maxWidth) < 1e-8);
+		});
+	});
+
+	[
 		{ name: 'a comma in a separate fragment', prefix: [{ text: 'Hello' }, { text: ', ' }] },
 		{ name: 'a comma after a bold fragment', prefix: [{ text: 'Hello', bold: true }, { text: ', ' }] },
 		{ name: 'a word split by a style change', prefix: [{ text: 'He', bold: true }, { text: 'llo ' }] },
