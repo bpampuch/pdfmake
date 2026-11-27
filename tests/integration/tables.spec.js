@@ -472,6 +472,56 @@ describe('Integration test: tables', function () {
 		assert.deepEqual(getColumnText(lines, { cell: 1 }), 'Column 2');
 	});
 
+	it('keeps the auto column width when a full-width colspan wraps (#1388)', function () {
+		var comment = 'Long comment '.repeat(20).trim();
+
+		function render(withComment) {
+			var body = [['Provider', 'Units'], ['Bar', '2.5']];
+			if (withComment) {
+				body.push([{ text: comment, colSpan: 2 }, '']);
+			}
+
+			var pages = testHelper.renderPages('A4', {
+				content: { table: { widths: ['*', 'auto'], body: body } }
+			});
+			assert.equal(pages.length, 1);
+			return getCells(pages, { pageNumber: 0 });
+		}
+
+		var baseline = render(false);
+		var lines = render(true);
+		assert.equal(lines[1].item.x, baseline[1].item.x);
+		assert.equal(lines[1].item.maxWidth, baseline[1].item.maxWidth);
+		assert(lines.length > baseline.length + 1);
+		assert.equal(lines.slice(baseline.length).map(line => line.item.inlines.map(inline => inline.text).join('')).join(''), comment);
+	});
+
+	it('fits percentage cells in an auto-sized nested table with a full-width colspan (#1388)', function () {
+		var pages = testHelper.renderPages('A4', {
+			content: {
+				columnGap: 6,
+				columns: [
+					{
+						width: 'auto',
+						table: {
+							widths: ['*', '*', 'auto', '17%'],
+							body: [
+								['Several words Several words', 'B', 'N', { text: 'Percent data', noWrap: true }],
+								[{ text: 'Comment wraps here '.repeat(3).trim(), colSpan: 4 }, '', '', '']
+							]
+						}
+					},
+					{ width: 30, text: 'Peer' }
+				]
+			}
+		});
+
+		var lines = getCells(pages, { pageNumber: 0 });
+		var percentageCell = lines.find(line => line.item.inlines.map(inline => inline.text).join('') === 'Percent data');
+		assert(percentageCell);
+		assert(percentageCell.item.getWidth() <= percentageCell.item.maxWidth);
+	});
+
 	it('renders a simple table with rowspan', function () {
 		var dd = {
 			content: {

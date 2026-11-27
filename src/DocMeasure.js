@@ -560,12 +560,24 @@ class DocMeasure {
 			}
 		}
 
-		extendWidthsForColSpans();
+		let widths = node.table.widths;
+		let preserveAutoWidths = colSpans.some(span => span.span === widths.length) &&
+			widths.some(ColumnCalculator.isStarColumn) && widths.some(ColumnCalculator.isAutoColumn);
+		let widthsBeforeSpans = preserveAutoWidths
+			? widths.map(({ _minWidth, _maxWidth }) => ({ _minWidth, _maxWidth }))
+			: null;
 
-		let measures = ColumnCalculator.measureMinMax(node.table.widths);
+		extendWidthsForColSpans();
+		let measures = ColumnCalculator.measureMinMax(widths);
 
 		node._minWidth = measures.min + node._offsets.total;
 		node._maxWidth = measures.max + node._offsets.total;
+
+		if (widthsBeforeSpans) {
+			// Keep the width requested from parent containers while adjusting the rendered column widths.
+			widths.forEach((width, index) => Object.assign(width, widthsBeforeSpans[index]));
+			extendWidthsForColSpans(true);
+		}
 
 		return node;
 
@@ -609,30 +621,28 @@ class DocMeasure {
 			};
 		}
 
-		function extendWidthsForColSpans() {
-			let q;
-			let j;
-
-			for (let i = 0, l = colSpans.length; i < l; i++) {
-				let span = colSpans[i];
-
+		function extendWidthsForColSpans(ignoreFullSpanMaxWidth = false) {
+			for (let span of colSpans) {
 				let currentMinMax = getMinMax(span.col, span.span, node._offsets);
 				let minDifference = span.minWidth - currentMinMax.minWidth;
 				let maxDifference = span.maxWidth - currentMinMax.maxWidth;
+				let ignoreMaxWidth = ignoreFullSpanMaxWidth && span.span === widths.length;
 
 				if (minDifference > 0) {
-					q = minDifference / span.span;
-
-					for (j = 0; j < span.span; j++) {
-						node.table.widths[span.col + j]._minWidth += q;
+					let increase = minDifference / span.span;
+					for (let j = 0; j < span.span; j++) {
+						let width = widths[span.col + j];
+						width._minWidth += increase;
+						if (ignoreMaxWidth) {
+							width._maxWidth = Math.max(width._maxWidth, width._minWidth);
+						}
 					}
 				}
 
-				if (maxDifference > 0) {
-					q = maxDifference / span.span;
-
-					for (j = 0; j < span.span; j++) {
-						node.table.widths[span.col + j]._maxWidth += q;
+				if (!ignoreMaxWidth && maxDifference > 0) {
+					let increase = maxDifference / span.span;
+					for (let j = 0; j < span.span; j++) {
+						widths[span.col + j]._maxWidth += increase;
 					}
 				}
 			}
@@ -642,8 +652,9 @@ class DocMeasure {
 			let result = { minWidth: 0, maxWidth: 0 };
 
 			for (let i = 0; i < span; i++) {
-				result.minWidth += node.table.widths[col + i]._minWidth + (i ? offsets.offsets[col + i] : 0);
-				result.maxWidth += node.table.widths[col + i]._maxWidth + (i ? offsets.offsets[col + i] : 0);
+				let offset = i ? offsets.offsets[col + i] : 0;
+				result.minWidth += widths[col + i]._minWidth + offset;
+				result.maxWidth += widths[col + i]._maxWidth + offset;
 			}
 
 			return result;
