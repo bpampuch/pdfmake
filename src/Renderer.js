@@ -2,6 +2,7 @@ import TextDecorator from './TextDecorator';
 import TextInlines from './TextInlines';
 import { isNumber, isString } from './helpers/variableType';
 import SVGtoPDF from '@pdfmake/svg-to-pdfkit';
+import StructureTagger from './StructureTagger';
 
 const findFont = (fonts, requiredFonts, defaultFont) => {
 	for (let i = 0; i < requiredFonts.length; i++) {
@@ -42,9 +43,32 @@ class Renderer {
 		this.pdfDocument = pdfDocument;
 		this.progressCallback = progressCallback;
 		this.outlineMap = [];
+		this.tagger = new StructureTagger(pdfDocument);
+		if (this.tagger.enabled && pdfDocument.annotate) {
+			const annotate = pdfDocument.annotate;
+			const tagger = this.tagger;
+			pdfDocument.annotate = function (x, y, w, h, options) {
+				let element = tagger.link(options);
+				try {
+					return annotate.call(this, x, y, w, h, options);
+				} finally {
+					if (element) {
+						element.end();
+					}
+				}
+			};
+		}
 	}
 
 	renderPages(pages) {
+		try {
+			this.renderAllPages(pages);
+		} finally {
+			this.tagger.finish();
+		}
+	}
+
+	renderAllPages(pages) {
 		this.pdfDocument._pdfMakePages = pages; // TODO: Why?
 
 		let totalItems = 0;
@@ -64,16 +88,16 @@ class Renderer {
 				let item = page.items[ii];
 				switch (item.type) {
 					case 'vector':
-						this.renderVector(item.item);
+						this.tagged(this.renderVector, item.item, 'Artifact');
 						break;
 					case 'line':
-						this.renderLine(item.item, item.item.x, item.item.y);
+						this.renderTaggedLine(item.item);
 						break;
 					case 'image':
-						this.renderImage(item.item);
+						this.tagged(this.renderImage, item.item, item.item.role || 'Figure');
 						break;
 					case 'svg':
-						this.renderSVG(item.item);
+						this.tagged(this.renderSVG, item.item, item.item.role || 'Figure');
 						break;
 					case 'attachment':
 						this.renderAttachment(item.item);
@@ -97,8 +121,27 @@ class Renderer {
 				}
 			}
 			if (page.watermark) {
-				this.renderWatermark(page);
+				this.tagged(this.renderWatermark, page, 'Artifact');
 			}
+		}
+	}
+
+	tagged(render, item, role) {
+		let started = this.tagger.begin(role, item, item.alt);
+		try {
+			render.call(this, item);
+		} finally {
+			this.tagger.end(started);
+		}
+	}
+
+	renderTaggedLine(line) {
+		let node = line._tagNode;
+		let started = this.tagger.begin(node ? (node.role || 'P') : 'P', node, node && node.alt);
+		try {
+			this.renderLine(line, line.x, line.y);
+		} finally {
+			this.tagger.end(started);
 		}
 	}
 
