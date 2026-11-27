@@ -37,6 +37,9 @@
 	The handler receives the URL, request headers and a `validateUrlAccessPolicy(url)` function, and returns the binary data and final URL. Call `validateUrlAccessPolicy(targetUrl)` before following each redirect; it throws if access is denied.
 
 - Added `pdfmake.unregisterUrlProtocol(protocol)` to remove a URL protocol handler and clear its shared resource cache
+- Added the `lineHeightMode` style property to control how `lineHeight` is applied:
+	- `'fontHeight'` (default; previous behavior) - the line height is the font's natural height multiplied by `lineHeight`
+	- `'css'` - the line height is `fontSize * lineHeight` and the text is vertically centered in the line box (half-leading), as in CSS
 - Fixed double-counted horizontal margins when centering or right-aligning images, SVGs, QR codes and canvases
 - Fixed canvas paths ignoring canvas positioning and alignment, and not reserving space for their drawn content
 - Fixed list bullet and number markers not following the alignment of centered or right-aligned lists

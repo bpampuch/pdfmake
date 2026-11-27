@@ -72,6 +72,12 @@ describe('TextDecorator', function () {
 			assertRectangle(0, [5, 20, 45, 24]);
 		});
 
+		it('should cover the content area of the font when the inline has a baseline (lineHeightMode css)', function () {
+			// the baseline is 18 below the top of the line and the ascender is 16: the content area starts 2 below the top
+			decorator.drawBackground(createLine([{ background: 'yellow', baseline: 18, naturalHeight: 22 }]), 10, 20);
+			assertRectangle(0, [10, 22, 40, 22]);
+		});
+
 		it('should use a resolved pattern for the background fill', function () {
 			var pattern = [{ name: 'stripes' }, 'red'];
 			pdfDocument.providePattern = () => pattern;
