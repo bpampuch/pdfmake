@@ -105,6 +105,8 @@ describe('Integration test: unbreakable overflow policy', function () {
 	it('rejects through the public API and isolates concurrent policies', async function () {
 		var pdfmake = require('../../js/index');
 		pdfmake.addFonts(require('../../fonts/Roboto'));
+		pdfmake.setLocalAccessPolicy(() => true);
+		pdfmake.setUrlAccessPolicy(() => false);
 		function definition() {
 			return { pageSize: 'A6', content: [cases.block()] };
 		}
@@ -118,12 +120,17 @@ describe('Integration test: unbreakable overflow policy', function () {
 	it('allows long unbreakable content on an automatically sized page', async function () {
 		var pdfmake = require('../../js/index');
 		pdfmake.addFonts(require('../../fonts/Roboto'));
+		pdfmake.setLocalAccessPolicy(() => true);
+		pdfmake.setUrlAccessPolicy(() => false);
 		var buffer = await pdfmake.createPdf({ pageSize: { width: 300, height: 'auto' }, content: [cases.block()] }, strict).getBuffer();
 		assert.ok(buffer.length > 0);
 	});
 
 	it('rejects write before opening an output file', async function () {
 		var pdfmake = require('../../js/index');
+		pdfmake.addFonts(require('../../fonts/Roboto'));
+		pdfmake.setLocalAccessPolicy(() => true);
+		pdfmake.setUrlAccessPolicy(() => false);
 		var fs = require('fs');
 		var path = require('path');
 		var directory = fs.mkdtempSync(path.join(require('os').tmpdir(), 'pdfmake-overflow-'));

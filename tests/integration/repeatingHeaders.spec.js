@@ -81,6 +81,8 @@ describe('Integration test: repeating header overflow', function () {
 		it('rejects impossible content through the public API with a page reference, dontBreakRows=' + dontBreakRows, async function () {
 			var pdfmake = require('../../js/index');
 			pdfmake.addFonts(require('../../fonts/Roboto'));
+			pdfmake.setLocalAccessPolicy(() => true);
+			pdfmake.setUrlAccessPolicy(() => false);
 			var definition = document({ text: 'BIG', fontSize: 96, id: 'big' }, 20, dontBreakRows);
 			definition.content.push({ pageReference: 'big' });
 			await assert.rejects(pdfmake.createPdf(definition).getBuffer(), contentError);
