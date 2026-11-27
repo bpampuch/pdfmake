@@ -39,6 +39,7 @@
 - Added `pdfmake.unregisterUrlProtocol(protocol)` to remove a URL protocol handler and clear its shared resource cache
 - Fixed double-counted horizontal margins when centering or right-aligning images, SVGs, QR codes and canvases
 - Fixed canvas paths ignoring canvas positioning and alignment, and not reserving space for their drawn content
+- Fixed list bullet and number markers not following the alignment of centered or right-aligned lists
 
 ## 0.3.15 - 2026-11-20
 

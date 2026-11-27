@@ -156,6 +156,113 @@ describe('Integration test: lists', function () {
 		assert.equal(item4.content.y, testHelper.MARGINS.top + testHelper.LINE_HEIGHT * 3);
 	});
 
+	it('keeps the markers of a unordered list next to its aligned content', function () {
+		var leftPages = testHelper.renderPages('A6', { content: { ul: ['item 1', 'item 2'] } });
+		var leftItem1 = getBulletListLine(leftPages, { pageNumber: 0, itemNumber: 1 });
+
+		['center', 'right'].forEach(function (alignment) {
+			var pages = testHelper.renderPages('A6', { content: { ul: ['item 1', 'item 2'], alignment: alignment } });
+			var item1 = getBulletListLine(pages, { pageNumber: 0, itemNumber: 1 });
+			var contentShift = item1.content.x - leftItem1.content.x;
+
+			assert.ok(contentShift > 0, alignment + ': the content is shifted');
+			assert.equal(item1.content.y, leftItem1.content.y);
+			assert.equal(item1.bullet.x - leftItem1.bullet.x, contentShift);
+		});
+	});
+
+	it('keeps the markers of a ordered list next to its aligned content', function () {
+		var leftPages = testHelper.renderPages('A6', { content: { ol: ['item 1', 'item 2'] } });
+		var leftItem1 = getBulletListLine(leftPages, { pageNumber: 0, itemNumber: 1 });
+
+		['center', 'right'].forEach(function (alignment) {
+			var pages = testHelper.renderPages('A6', { content: { ol: ['item 1', 'item 2'], alignment: alignment } });
+			var item1 = getBulletListLine(pages, { pageNumber: 0, itemNumber: 1 });
+			var contentShift = item1.content.x - leftItem1.content.x;
+
+			assert.ok(contentShift > 0, alignment + ': the content is shifted');
+			assert.equal(item1.content.y, leftItem1.content.y);
+			assert.equal(item1.bullet.x - leftItem1.bullet.x, contentShift);
+		});
+	});
+
+	it('keeps outer and inner markers of nested lists inside stack aligned across alignments', function () {
+		var outerNumberWidth = testHelper.getWidthOfString('1. ');
+		var bulletSpacerWidth = testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER);
+		var bulletRadius = 2;
+
+		['left', 'center', 'right'].forEach(function (alignment) {
+			var olUlPages = testHelper.renderPages('A4', {
+				content: {
+					ol: [{ stack: [{ ul: ['Inner item 1', 'Inner item 2'] }] }],
+					alignment: alignment
+				}
+			});
+			var olUlItems = olUlPages[0].items;
+			var olUlInner1 = olUlItems[0].item;
+			var olUlOuterMarker = olUlItems[1].item;
+			var olUlInnerBullet1 = olUlItems[2].item;
+			var olUlInner2 = olUlItems[3].item;
+			var olUlInnerBullet2 = olUlItems[4].item;
+
+			assert.equal(olUlInner1.inlines.map(inline => inline.text).join(''), 'Inner item 1');
+			assert.equal(olUlOuterMarker.inlines.map(inline => inline.text).join(''), '1. ');
+			assert.equal(olUlInnerBullet1.type, 'ellipse');
+			assert.equal(olUlInner2.inlines.map(inline => inline.text).join(''), 'Inner item 2');
+			assert.equal(olUlInnerBullet2.type, 'ellipse');
+
+			assert.ok(Math.abs((olUlInner1.x - olUlInnerBullet1.x) - (bulletSpacerWidth - bulletRadius)) < 1e-6);
+			assert.ok(Math.abs((olUlInner1.x - olUlOuterMarker.x) - (bulletSpacerWidth + outerNumberWidth)) < 1e-6);
+			assert.ok(Math.abs(olUlInnerBullet2.x - olUlInnerBullet1.x) < 1e-6);
+
+			var ulOlPages = testHelper.renderPages('A4', {
+				content: {
+					ul: [{ stack: [{ ol: ['Inner item 1', 'Inner item 2'] }] }],
+					alignment: alignment
+				}
+			});
+			var ulOlItems = ulOlPages[0].items;
+			var ulOlInner1 = ulOlItems[0].item;
+			var ulOlOuterBullet = ulOlItems[1].item;
+			var ulOlInnerMarker1 = ulOlItems[2].item;
+			var ulOlInner2 = ulOlItems[3].item;
+			var ulOlInnerMarker2 = ulOlItems[4].item;
+
+			assert.equal(ulOlInner1.inlines.map(inline => inline.text).join(''), 'Inner item 1');
+			assert.equal(ulOlOuterBullet.type, 'ellipse');
+			assert.equal(ulOlInnerMarker1.inlines.map(inline => inline.text).join(''), '1. ');
+			assert.equal(ulOlInner2.inlines.map(inline => inline.text).join(''), 'Inner item 2');
+			assert.equal(ulOlInnerMarker2.inlines.map(inline => inline.text).join(''), '2. ');
+
+			assert.ok(Math.abs((ulOlInner1.x - ulOlInnerMarker1.x) - outerNumberWidth) < 1e-6);
+			assert.ok(Math.abs((ulOlInner1.x - ulOlOuterBullet.x) - (outerNumberWidth + bulletSpacerWidth - bulletRadius)) < 1e-6);
+			assert.ok(Math.abs(ulOlInnerMarker2.x - ulOlInnerMarker1.x) < 1e-6);
+		});
+	});
+
+	it('keeps outer and inner markers aligned in unbreakable nested lists', function () {
+		var outerNumberWidth = testHelper.getWidthOfString('1. ');
+		var bulletSpacerWidth = testHelper.getWidthOfString(testHelper.DEFAULT_BULLET_SPACER);
+		var bulletRadius = 2;
+
+		var pages = testHelper.renderPages('A4', {
+			content: {
+				ol: [{ stack: [{ ul: ['Inner item 1', 'Inner item 2'] }], unbreakable: true }],
+				alignment: 'center'
+			}
+		});
+		var items = pages[0].items;
+		var inner1 = items[0].item;
+		var outerMarker = items[1].item;
+		var innerBullet1 = items[2].item;
+
+		assert.equal(inner1.inlines.map(inline => inline.text).join(''), 'Inner item 1');
+		assert.equal(outerMarker.inlines.map(inline => inline.text).join(''), '1. ');
+		assert.equal(innerBullet1.type, 'ellipse');
+		assert.ok(Math.abs((inner1.x - innerBullet1.x) - (bulletSpacerWidth - bulletRadius)) < 1e-6);
+		assert.ok(Math.abs((inner1.x - outerMarker.x) - (bulletSpacerWidth + outerNumberWidth)) < 1e-6);
+	});
+
 	it('renders a unordered list and keeps constant small margin', function () {
 		var dd = {
 			content: {
