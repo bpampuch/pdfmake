@@ -37,6 +37,9 @@
 	The handler receives the URL, request headers and a `validateUrlAccessPolicy(url)` function, and returns the binary data and final URL. Call `validateUrlAccessPolicy(targetUrl)` before following each redirect; it throws if access is denied.
 
 - Added `pdfmake.unregisterUrlProtocol(protocol)` to remove a URL protocol handler and clear its shared resource cache
+- Added the `lineHeightMode` style property to control how `lineHeight` is applied:
+	- `'fontHeight'` (default; previous behavior) - the line height is the font's natural height multiplied by `lineHeight`
+	- `'css'` - the line height is `fontSize * lineHeight` and the text is vertically centered in the line box (half-leading), as in CSS
 - Fixed double-counted horizontal margins when centering or right-aligning images, SVGs, QR codes and canvases
 - Fixed canvas paths ignoring canvas positioning and alignment, and not reserving space for their drawn content
 - Fixed list bullet and number markers not following the alignment of centered or right-aligned lists
@@ -134,7 +137,6 @@
 ## 0.3.13 - 2026-10-25
 
 - Added horizontal table alignment via `tableAlignment`: `left` (default), `center`, or `right`
-- Added the style property `lineHeightMode`. With `lineHeightMode: 'css'` (and an explicit `lineHeight`), the height of a line is `fontSize * lineHeight` and the height of the font is centered in the line box (half-leading), as in CSS. The default (`'fontHeight'`) is unchanged: `lineHeight` multiplies the height of the font. List markers, text decorations and text backgrounds follow the new baseline.
 - Fixed PDF stream errors not rejecting promises returned by `getBuffer()`, `getBase64()` and `getDataUrl()`
 - Fixed `getStream()` returning an already consumed stream; subsequent stream access now rejects
 - Fixed `write()` hanging or failing after `getBuffer()`, `getBase64()` or `getDataUrl()` by reusing buffered PDF data
