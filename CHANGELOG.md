@@ -44,6 +44,7 @@
 - Fixed canvas paths ignoring canvas positioning and alignment, and not reserving space for their drawn content
 - Fixed list bullet and number markers not following the alignment of centered or right-aligned lists
 - Fixed long text in full-width `colSpan` cells unnecessarily widening `auto` columns in tables with `*` columns
+- Fixed line breaking across inline fragments and preserved explicit line breaks with `noWrap`
 
 ## 0.3.15 - 2026-11-20
 

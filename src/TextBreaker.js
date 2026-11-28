@@ -4,50 +4,28 @@ import StyleContextStack from './StyleContextStack';
 
 /**
  * @param {string} text
- * @param {boolean} noWrap
- * @param {boolean} breakAll
  * @returns {Array}
  */
-const splitWords = (text, noWrap, breakAll = false) => {
-	let words = [];
-	if (text === undefined || text === null) {
-		text = '';
-	} else {
-		text = String(text);
-	}
-
-	if (noWrap) {
-		words.push({ text: text });
-		return words;
-	}
-	if (breakAll) {
-		return Array.from(text.replace(/\r\n/g, '\n')).map(c => {
-			if(c.match(/^\n$|^\r$/)) { // new line
-				return { text: '', lineEnd: true };
-			}
-			return { text: c };
-		});
-	}
-
-	if (text.length === 0) {
-		words.push({ text: '' });
-		return words;
-	}
-
-	let breaker = new LineBreaker(text);
+const splitWords = text => {
+	const words = [];
+	const breaker = new LineBreaker(text);
 	let last = 0;
 	let bk;
 
 	while ((bk = breaker.nextBreak())) {
-		let word = text.slice(last, bk.position);
+		const word = text.slice(last, bk.position);
 
-		if (bk.required || word.match(/\r?\n$|\r$/)) { // new line
-			word = word.replace(/\r?\n$|\r$/, '');
-			words.push({ text: word, lineEnd: true });
-		} else {
-			words.push({ text: word });
+		// linebreak 2.0.0 does not mark a hard break at the end of the text as required.
+		// A newer version will fix this.
+		if (word.match(/\r?\n$|\r$/)) {
+			bk.required = true;
 		}
 
+		const result = { end: bk.position };
+		if (bk.required) {
+			result.lineEnd = true;
+		}
+		words.push(result);
 		last = bk.position;
 	}
 
@@ -55,51 +33,73 @@ const splitWords = (text, noWrap, breakAll = false) => {
 };
 
 /**
- * @param {Array} words
- * @param {boolean} noWrap
- * @returns {?string}
+ * @param {string} text
+ * @param {Array} fragments
  */
-const getFirstWord = (words, noWrap) => {
-	let word = words[0];
-	if (word === undefined) {
-		return null;
-	}
+const prepareBreaks = (text, fragments) => {
+	const words = splitWords(text);
+	const naturalBreaks = new Map(words.map(word => [word.end, word]));
+	let wordIndex = 0;
 
-	if (noWrap) { // text was not wrapped, we need only first word
-		let tmpWords = splitWords(word.text, false);
-		if (tmpWords[0] === undefined) {
-			return null;
+	for (let index = 0; index < fragments.length; index++) {
+		const fragment = fragments[index];
+		// keep each code point in the fragment where it starts, including across empty fragments
+		fragment.start = index > 0 ? fragments[index - 1].end : 0;
+		if (fragment.end > 0 && String.fromCodePoint(text.codePointAt(fragment.end - 1)).length === 2) {
+			fragment.end++;
 		}
-		word = tmpWords[0];
-	}
+		const ends = [];
 
-	return word.text;
-};
-
-/**
- * @param {Array} words
- * @param {boolean} noWrap
- * @returns {?string}
- */
-const getLastWord = (words, noWrap) => {
-	let word = words[words.length - 1];
-	if (word === undefined) {
-		return null;
-	}
-
-	if (word.lineEnd) {
-		return null;
-	}
-
-	if (noWrap) { // text was not wrapped, we need only last word
-		let tmpWords = splitWords(word.text, false);
-		if (tmpWords[tmpWords.length - 1] === undefined) {
-			return null;
+		const firstWordIndex = wordIndex;
+		while (wordIndex < words.length && words[wordIndex].end <= fragment.end) {
+			wordIndex++;
 		}
-		word = tmpWords[tmpWords.length - 1];
-	}
 
-	return word.text;
+		if (fragment.noWrap) {
+			for (let i = firstWordIndex; i < wordIndex; i++) {
+				const word = words[i];
+				if (word.end > fragment.start && word.lineEnd) {
+					ends.push(word.end);
+				}
+			}
+		} else if (fragment.breakAll) {
+			for (let position = fragment.start; position < fragment.end;) {
+				const character = String.fromCodePoint(text.codePointAt(position));
+				position += character.length;
+				ends.push(position);
+			}
+		} else {
+			for (let i = firstWordIndex; i < wordIndex; i++) {
+				const word = words[i];
+				if (word.end > fragment.start) {
+					ends.push(word.end);
+				}
+			}
+		}
+
+		if (ends[ends.length - 1] !== fragment.end) {
+			ends.push(fragment.end);
+		}
+
+		let start = fragment.start;
+		fragment.breaks = ends.map(end => {
+			const hasText = end > start;
+			const word = naturalBreaks.get(end);
+			const continuesNoWrap = end === fragment.end && fragment.noWrap && fragments[index + 1]?.noWrap;
+			const canBreak = !continuesNoWrap && (word || !fragment.noWrap && fragment.breakAll && hasText);
+			const boundary = { end: end };
+
+			if (hasText && word?.lineEnd) {
+				boundary.lineEnd = true;
+			}
+			if (end > 0 && end < text.length && !boundary.lineEnd && !canBreak) {
+				boundary.noNewLine = true;
+			}
+			start = end;
+
+			return boundary;
+		});
+	}
 };
 
 class TextBreaker {
@@ -109,55 +109,58 @@ class TextBreaker {
 	 * @returns {Array}
 	 */
 	getBreaks(texts, styleContextStack) {
-		let results = [];
-
 		if (!Array.isArray(texts)) {
 			texts = [texts];
 		}
 
-		let lastWord = null;
-		for (let i = 0, l = texts.length; i < l; i++) {
-			let item = texts[i];
+		let length = 0;
+		const fragments = texts.map(item => {
+			let text = item;
 			let style = null;
-			let words;
-			let breakAll = StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'wordBreak', 'normal') === 'break-all';
-			let noWrap = StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'noWrap', false);
+
 			if (isObject(item)) {
 				if (item._textRef && item._textRef._textNodeRef.text) {
 					item.text = item._textRef._textNodeRef.text;
 				}
-				words = splitWords(item.text, noWrap, breakAll);
+				text = item.text;
 				style = StyleContextStack.copyStyle(item);
-			} else {
-				words = splitWords(item, noWrap, breakAll);
 			}
 
-			if (lastWord && words.length) {
-				let firstWord = getFirstWord(words, noWrap);
+			text = (text === undefined) || text === null ? '' : String(text);
 
-				let wrapWords = splitWords(lastWord + firstWord, false);
-				if (wrapWords.length === 1) {
-					results[results.length - 1].noNewLine = true;
-				}
+			if (text.length) {
+				text = text.replace(/\r\n?/g, '\n');
 			}
 
-			for (let i2 = 0, l2 = words.length; i2 < l2; i2++) {
-				let result = {
-					text: words[i2].text
-				};
+			const fragment = {
+				start: length,
+				end: length + text.length,
+				text: text,
+				style: style,
+				noWrap: StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'noWrap', false),
+				breakAll: StyleContextStack.getStyleProperty(item || {}, styleContextStack, 'wordBreak', 'normal') === 'break-all'
+			};
 
-				if (words[i2].lineEnd) {
-					result.lineEnd = true;
+			length = fragment.end;
+
+			return fragment;
+		});
+
+		const text = fragments.map(fragment => fragment.text).join('');
+
+		prepareBreaks(text, fragments);
+
+		const results = [];
+		for (const fragment of fragments) {
+			let start = fragment.start;
+			for (const { end, ...flags } of fragment.breaks) {
+				const result = { text: text.slice(start, end), ...flags };
+				if (result.lineEnd) {
+					result.text = result.text.slice(0, -1);
 				}
-
-				StyleContextStack.copyStyle(style, result);
-
+				StyleContextStack.copyStyle(fragment.style, result);
 				results.push(result);
-			}
-
-			lastWord = null;
-			if (i + 1 < l) {
-				lastWord = getLastWord(words, noWrap);
+				start = end;
 			}
 		}
 

@@ -57,6 +57,11 @@ describe('TextBreaker', function () {
 			assert.equal(result.length, 14);
 		});
 
+		it('should mark a newline after the last word as a hard break', function () {
+			var result = textBreaker.getBreaks('First second\n');
+			assert.deepEqual(result, [{ text: 'First ' }, { text: 'second', lineEnd: true }]);
+		});
+
 		it('should split properly when adjacent newlines appear', function () {
 			var result = textBreaker.getBreaks(sampleText2);
 			assert.equal(result[9].text.length, 0);
@@ -101,6 +106,29 @@ describe('TextBreaker', function () {
 		it('should preserve supplementary Unicode characters with wordBreak break-all', function () {
 			var result = textBreaker.getBreaks('A\u{1f600}\u{10400}B', styleStackWordBreakBreakAll);
 			assert.deepEqual(result.map(item => item.text), ['A', '\u{1f600}', '\u{10400}', 'B']);
+		});
+
+		['\u{1f600}', '\u{10400}'].forEach(function (character) {
+			[false, true].forEach(function (emptyFragment) {
+				it('should preserve a split supplementary character with break-all, character=' + character + ', emptyFragment=' + emptyFragment, function () {
+					var input = [{ text: 'A' + character[0], bold: true }];
+					if (emptyFragment) {
+						input.push({ text: '', fontSize: 24 });
+					}
+					input.push({ text: character[1] + 'B', italics: true });
+					var result = textBreaker.getBreaks(input, styleStackWordBreakBreakAll);
+
+					assert.equal(result.map(item => item.text).join(''), 'A' + character + 'B');
+					assert.deepEqual(result.filter(item => item.text), [
+						{ text: 'A', bold: true },
+						{ text: character, bold: true },
+						{ text: 'B', italics: true }
+					]);
+					if (emptyFragment) {
+						assert.equal(result.find(item => item.fontSize === 24).text, '');
+					}
+				});
+			});
 		});
 
 		['\n', '\r', '\r\n'].forEach(function (newline) {
@@ -245,6 +273,88 @@ describe('TextBreaker', function () {
 			assert.equal(result.length, 8);
 			assert.equal(result[5].unknownStyle, 123);
 			assert.equal(result[6].unknownStyle, 123);
+		});
+
+		it('should preserve styles and prohibit breaks across empty fragments before a word joiner', function () {
+			var result = textBreaker.getBreaks([
+				{ text: 'AB', bold: true }, '', { text: '', fontSize: 24 }, '\uFEFFCD'
+			]);
+
+			assert.deepEqual(result.map(token => token.text), ['AB', '', '', '\uFEFFCD']);
+			assert.equal(result[0].bold, true);
+			assert.equal(result[2].fontSize, 24);
+			result.slice(0, -1).forEach(token => assert.equal(token.noNewLine, true));
+		});
+
+		it('should preserve separate CR and LF breaks and their styles across fragments', function () {
+			var result = textBreaker.getBreaks([
+				{ text: 'A\r', bold: true }, { text: '\nB', italics: true }
+			]);
+
+			assert.deepEqual(result, [
+				{ text: 'A', lineEnd: true, bold: true },
+				{ text: '', lineEnd: true, italics: true },
+				{ text: 'B', italics: true }
+			]);
+		});
+
+		[
+			{ text: ['A\r\nB'], normalized: ['A\nB'] },
+			{ text: ['A\r', '\nB'], normalized: ['A\n', '\nB'] },
+			{ text: ['A\r', '', '\nB'], normalized: ['A\n', '', '\nB'] },
+			{ text: ['A\r', '\r\nB'], normalized: ['A\n', '\nB'] },
+			{ text: ['A\r', '\r', '\nB'], normalized: ['A\n', '\n', '\nB'] },
+			{ text: ['A\r\r', '\nB'], normalized: ['A\n\n', '\nB'] },
+			{ text: ['A\r', '\n\nB'], normalized: ['A\n', '\n\nB'] },
+			{ text: ['A\r', '\n', '\nB'], normalized: ['A\n', '\n', '\nB'] },
+			{ text: ['A\r', 'B'], normalized: ['A\n', 'B'] }
+		].forEach(function (testCase) {
+			[styleStackWrap, styleStackNoWrap, styleStackWordBreakBreakAll].forEach(function (styleStack, mode) {
+				it('should normalize CR and CRLF within each fragment, text=' + JSON.stringify(testCase.text) + ', mode=' + mode, function () {
+					var input = testCase.text.map((text, index) => ({ text: text, color: index % 2 ? 'blue' : 'red' }));
+					var normalized = testCase.normalized.map((text, index) => ({ text: text, color: index % 2 ? 'blue' : 'red' }));
+
+					assert.deepEqual(textBreaker.getBreaks(input, styleStack), textBreaker.getBreaks(normalized, styleStack));
+					assert.deepEqual(input.map(item => item.text), testCase.text);
+				});
+			});
+		});
+
+		it('should apply noWrap and break-all only to their original fragments', function () {
+			var result = textBreaker.getBreaks([
+				{ text: 'AB CD', noWrap: true }, { text: ' EF', wordBreak: 'break-all' }, ' GH'
+			]);
+
+			assert.deepEqual(result, [
+				{ text: 'AB CD', noWrap: true, noNewLine: true },
+				{ text: ' ', wordBreak: 'break-all' },
+				{ text: 'E', wordBreak: 'break-all' },
+				{ text: 'F', wordBreak: 'break-all' },
+				{ text: ' ' },
+				{ text: 'GH' }
+			]);
+		});
+
+		['\n', '\r', '\r\n'].forEach(function (separator) {
+			it('should preserve hard breaks and empty lines with noWrap for ' + JSON.stringify(separator), function () {
+				var result = textBreaker.getBreaks('AB CD' + separator + separator + 'EF GH' + separator, styleStackNoWrap);
+
+				assert.deepEqual(result, [
+					{ text: 'AB CD', lineEnd: true },
+					{ text: '', lineEnd: true },
+					{ text: 'EF GH', lineEnd: true }
+				]);
+			});
+		});
+
+		it('should not wrap between adjacent styled noWrap fragments', function () {
+			var result = textBreaker.getBreaks([{ text: 'AB ', bold: true }, '', { text: 'CD', italics: true }], styleStackNoWrap);
+
+			assert.deepEqual(result, [
+				{ text: 'AB ', bold: true, noNewLine: true },
+				{ text: '', noNewLine: true },
+				{ text: 'CD', italics: true }
+			]);
 		});
 
 	});

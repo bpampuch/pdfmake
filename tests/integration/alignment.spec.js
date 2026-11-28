@@ -172,7 +172,12 @@ describe('Integration test: alignment', function () {
 			var lastInline = firstLine.inlines[firstLine.inlines.length - 1];
 			var availableWidth = sizes.A6[0] - testHelper.MARGINS.left - testHelper.MARGINS.right;
 			assert(Math.abs(lastInline.x + lastInline.width - lastInline.trailingCut - availableWidth) < 1e-8);
-			assert(firstLine.inlines[2].justifyShift > 0);
+			var firstJustifiedIndex = 2;
+			if (example.prefix[1].text === '') {
+				assert.equal(firstLine.inlines[2].x, firstLine.inlines[1].x);
+				firstJustifiedIndex = 3;
+			}
+			assert(firstLine.inlines[firstJustifiedIndex].justifyShift > 0);
 
 			assert.equal(lines[1].inlines[0].x, 0);
 			assert.equal(lines[1].inlines[0].justifyShift, undefined);
